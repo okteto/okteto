@@ -20,6 +20,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/rest"
 )
@@ -92,6 +93,14 @@ func (fe *fakeExecutor) Execute(command string, _ []string) error {
 func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
 		proxy:    p,
 		executor: e,
@@ -120,6 +129,14 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
 		getManifest:       getManifestWithError,
 		proxy:             p,
@@ -148,6 +165,14 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{
 		err: assert.AnError,
+	}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
 	}
 	c := &deployCommand{
 		getManifest:       getFakeManifest,
@@ -182,6 +207,14 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		errOnShutdown: assert.AnError,
 	}
 	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
 		getManifest:       getFakeManifest,
 		proxy:             p,
@@ -213,6 +246,14 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 func TestDeployWithoutErrors(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
 		getManifest:       getFakeManifest,
 		proxy:             p,
