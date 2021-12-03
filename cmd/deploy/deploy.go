@@ -52,8 +52,8 @@ type Options struct {
 	Namespace    string
 	K8sContext   string
 	Variables    []string
-	Wait         bool
 	Timeout      time.Duration
+	OutputMode   string
 	Manifest     *model.Manifest
 }
 
@@ -154,7 +154,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				getManifest: contextCMD.GetManifest,
 
 				kubeconfig: kubeconfig,
-				executor:   utils.NewExecutor(),
+				executor:   utils.NewExecutor(options.OutputMode),
 				proxy: newProxy(proxyConfig{
 					port:  port,
 					token: sessionToken,
@@ -171,6 +171,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&options.K8sContext, "context", "", "k8s context")
 
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
+	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "plain", "show plain/json deploy output")
 
 	return cmd
 }
@@ -202,6 +203,10 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all the Okteto commands executed within this command execution
 		// should not overwrite the server and the credentials in the kubeconfig
 		fmt.Sprintf("%s=true", model.OktetoWithinDeployCommandContextEnvVar),
+		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
+		fmt.Sprintf("%s=true", model.OktetoDisableSpinnerEnvVar),
+		// Set BUILDKIT_PROGRESS=plain env variable, so all the commands disable docker tty builds
+		fmt.Sprintf("%s=true", model.BuildkitProgressEnvVar), "BUILDKIT_PROGRESS=plain",
 	)
 
 	for _, command := range opts.Manifest.Deploy.Commands {

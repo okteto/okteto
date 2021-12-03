@@ -56,6 +56,7 @@ type Options struct {
 	Namespace      string
 	DestroyVolumes bool
 	ForceDestroy   bool
+	OutputMode     string
 	K8sContext     string
 }
 
@@ -80,7 +81,10 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			ctxOptions := &contextCMD.ContextOptions{
+				Show: true,
+			}
+			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 
@@ -116,7 +120,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			c := &destroyCommand{
 				getManifest: contextCMD.GetManifest,
 
-				executor:    utils.NewExecutor(),
+				executor:    utils.NewExecutor(options.OutputMode),
 				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:     secrets.NewSecrets(k8sClient),
 			}
@@ -126,6 +130,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "tty", "show plain/tty deploy output")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the application destroy even if there is an error executing the custom destroy commands defined in the manifest")
 	cmd.Flags().StringVar(&options.Namespace, "namespace", "", "application name")
