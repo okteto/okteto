@@ -24,13 +24,16 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
@@ -70,7 +73,7 @@ type deployCommand struct {
 
 	proxy              proxyInterface
 	kubeconfig         kubeConfigHandler
-	executor           utils.ManifestExecutor
+	executor           executor.ManifestExecutor
 	tempKubeconfigFile string
 }
 
@@ -150,7 +153,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				getManifest: contextCMD.GetManifest,
 
 				kubeconfig: kubeconfig,
-				executor:   utils.NewExecutor(options.OutputMode),
+				executor:   executor.NewExecutor(options.OutputMode),
 				proxy: newProxy(proxyConfig{
 					port:  port,
 					token: sessionToken,
@@ -167,7 +170,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&options.K8sContext, "context", "", "k8s context")
 
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
-	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "plain", "show plain/json deploy output")
+	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "plain", "show tty/plain/json deploy output")
 
 	return cmd
 }
@@ -205,13 +208,33 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		"BUILDKIT_PROGRESS=plain",
 	)
 
-	for _, command := range opts.Manifest.Deploy.Commands {
-		if err := dc.executor.Execute(command, opts.Variables); err != nil {
-			log.Infof("error executing command '%s': %s", command, err.Error())
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+		for _, command := range opts.Manifest.Deploy.Commands {
+			if err := dc.executor.Execute(command, opts.Variables); err != nil {
+				log.Infof("error executing command '%s': %s", command, err.Error())
+				exit <- fmt.Errorf("error executing command '%s': %s", command, err.Error())
+				return
+			}
+		}
+		exit <- nil
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		dc.cleanUp(ctx)
+		return errors.ErrIntSig
+	case err := <-exit:
+		dc.cleanUp(ctx)
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
-
 	return nil
 }
 
