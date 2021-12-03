@@ -211,7 +211,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		}
 	}
 
-	if os.Getenv(model.OktetoWithinDeployCommandContextEnvVar) != "" {
+	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		if err := dc.showEndpoints(ctx, opts); err != nil {
 			log.Infof("could not retrieve endpoints: %s", err)
 		}
