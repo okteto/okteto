@@ -34,8 +34,8 @@ type jsonExecutorDisplayer struct {
 	cmdInfo *commandInfo
 }
 
-func newJsonExecutorDisplayer() *plainExecutorDisplayer {
-	return &plainExecutorDisplayer{}
+func newJsonExecutorDisplayer() *jsonExecutorDisplayer {
+	return &jsonExecutorDisplayer{}
 }
 
 func (*jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
