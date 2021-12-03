@@ -1778,3 +1778,41 @@ compose:
 		})
 	}
 }
+
+func TestManifestBuildUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name            string
+		buildManifest   []byte
+		expected        ManifestBuild
+		isErrorExpected bool
+	}{
+		{
+			name: "build params at manifest",
+			buildManifest: []byte(`firstBuild: ./first
+secondBuild:
+  context: ./second
+  dockerfile: Dockerfile
+`),
+			expected: ManifestBuild{
+				"firstBuild":  {Context: "./first"},
+				"secondBuild": {Context: "./second", File: "Dockerfile"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result ManifestBuild
+			err := yaml.UnmarshalStrict(tt.buildManifest, &result)
+			if err != nil && !tt.isErrorExpected {
+				t.Fatalf("Not expecting error but got %s", err)
+			} else if tt.isErrorExpected && err == nil {
+				t.Fatal("Expected error but got none")
+			}
+
+			if !assert.Equal(t, tt.expected, result) {
+				t.Fatal("Failed")
+			}
+		})
+	}
+}
