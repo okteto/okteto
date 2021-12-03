@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"runtime"
 	"text/template"
 
 	"github.com/manifoldco/promptui"
@@ -43,6 +44,7 @@ func (e *ttyExecutorDisplayer) addCommandInfo(cmdInfo *commandInfo) {
 
 func (e *ttyExecutorDisplayer) display(scanner *bufio.Scanner) {
 	queue := []string{}
+	e.hideCursor()
 	commandLine := renderCommand(e.cmdInfo.command)
 	e.cmdInfo.sb.Write(commandLine)
 	e.cmdInfo.sb.Flush()
@@ -67,6 +69,7 @@ func (e *ttyExecutorDisplayer) display(scanner *bufio.Scanner) {
 func (e *ttyExecutorDisplayer) cleanUp() {
 	e.cmdInfo.sb.Reset()
 	e.cmdInfo.sb.Flush()
+	e.showCursor()
 }
 
 func collapseTTY(command string, err error, sb *screenbuf.ScreenBuf) {
@@ -141,4 +144,16 @@ func render(tpl *template.Template, data interface{}) []byte {
 		return []byte(fmt.Sprintf("%v", data))
 	}
 	return buf.Bytes()
+}
+
+func (e *ttyExecutorDisplayer) hideCursor() {
+	if runtime.GOOS != "windows" {
+		fmt.Print("\033[?25l")
+	}
+}
+
+func (e *ttyExecutorDisplayer) showCursor() {
+	if runtime.GOOS != "windows" {
+		fmt.Print("\033[?25h")
+	}
 }

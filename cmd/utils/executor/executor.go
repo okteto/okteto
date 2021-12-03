@@ -24,6 +24,7 @@ import (
 
 type ManifestExecutor interface {
 	Execute(command string, env []string) error
+	CleanUp()
 }
 
 type Executor struct {
@@ -100,4 +101,9 @@ func startCommand(cmd *exec.Cmd) (io.Reader, error) {
 		return nil, err
 	}
 	return reader, nil
+}
+
+// Execute executes the specified command adding `env` to the execution environment
+func (e *Executor) CleanUp() {
+	e.displayer.cleanUp()
 }

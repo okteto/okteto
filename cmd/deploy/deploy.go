@@ -248,6 +248,7 @@ func (dc *deployCommand) cleanUp(ctx context.Context) {
 	if err := dc.proxy.Shutdown(ctx); err != nil {
 		log.Infof("could not stop local server: %s", err)
 	}
+	dc.executor.CleanUp()
 }
 
 func newProtocolTransport(clusterConfig *rest.Config, disableHTTP2 bool) (http.RoundTripper, error) {
