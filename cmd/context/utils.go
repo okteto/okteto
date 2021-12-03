@@ -196,6 +196,9 @@ func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*
 			log.Infof("could not load manifest: %s", err.Error())
 		}
 
+		if manifest.Name == "" {
+			manifest.Name = opts.Name
+		}
 		manifest.Type = "pipeline"
 		manifest.Filename = pipelinePath
 		return manifest, nil

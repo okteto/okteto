@@ -699,9 +699,15 @@ func (d *devRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type manifestDevsList []string
+	devsList := manifestDevsList{}
+	err := unmarshal(&devsList)
+	if err == nil {
+		return nil
+	}
 	type manifestDevs map[string]devRaw
 	devs := make(manifestDevs)
-	err := unmarshal(&devs)
+	err = unmarshal(&devs)
 	if err != nil {
 		return err
 	}

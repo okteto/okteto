@@ -81,8 +81,7 @@ services:
       - 8080:80
 `
 
-	githubUrl    = "https://github.com"
-	pipelineRepo = "okteto/movies"
+	githubUrl = "https://github.com"
 )
 
 var (
