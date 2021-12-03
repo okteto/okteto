@@ -16,19 +16,7 @@ func Test_GetBuildManifest(t *testing.T) {
 		expectedManifest  *ManifestBuild
 	}{
 		{
-			name: "exists-manifest-yaml",
-			manifestYAML: []byte(`build:
-  firstImage: ./first
-  secondImage:
-    context: ./second`),
-			expectedErr: false,
-			expectedManifest: &ManifestBuild{
-				"firstImage":  {Context: "./first"},
-				"secondImage": {Context: "./second"},
-			},
-		},
-		{
-			name: "exists-manifest-yml",
+			name: "exists-manifest",
 			manifestYAML: []byte(`build:
   firstImage: ./first
   secondImage:
