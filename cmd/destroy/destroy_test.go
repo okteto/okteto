@@ -86,6 +86,8 @@ func (fe *fakeExecutor) Execute(command string, _ []string) error {
 	return nil
 }
 
+func (fe *fakeExecutor) CleanUp() {}
+
 func getManifestWithError(_ context.Context, _ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return nil, assert.AnError
 }

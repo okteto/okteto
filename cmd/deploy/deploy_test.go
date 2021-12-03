@@ -87,6 +87,7 @@ func (fe *fakeExecutor) Execute(command string, _ []string) error {
 
 	return nil
 }
+func (fe *fakeExecutor) CleanUp() {}
 
 func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 	p := &fakeProxy{}
