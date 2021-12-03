@@ -44,6 +44,7 @@ type BuildOptions struct {
 
 // Run runs the build sequence
 func Run(ctx context.Context, buildOptions BuildOptions) error {
+	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
 	if okteto.Context().Builder == "" {
 		if err := buildWithDocker(ctx, buildOptions); err != nil {
 			return err
@@ -54,6 +55,16 @@ func Run(ctx context.Context, buildOptions BuildOptions) error {
 		}
 	}
 	return nil
+}
+
+func setOutputMode(outputMode string) string {
+	if buildOutput := os.Getenv("BUILDKIT_PROGRESS"); buildOutput != "" {
+		return buildOutput
+	}
+	if isInsideDeploy := os.Getenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT"); isInsideDeploy == "true" {
+		return "plain"
+	}
+	return outputMode
 }
 
 func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
