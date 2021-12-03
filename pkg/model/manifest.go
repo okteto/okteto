@@ -59,3 +59,14 @@ func NewDeployInfo() *DeployInfo {
 		Commands: make([]string, 0),
 	}
 }
+
+// GetBuildManifest Loads a the build manifest
+func GetBuildManifest(path string) (*ManifestBuild, error) {
+	manifest, err := Get(path)
+	if err != nil {
+		return nil, err
+	}
+
+	manifestBuild := &manifest.Build
+	return manifestBuild, nil
+}
