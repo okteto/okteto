@@ -655,10 +655,11 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Icon    string       `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy  *DeployInfo  `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev     ManifestDevs `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy []string     `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Icon    string        `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy  *DeployInfo   `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev     ManifestDevs  `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build   ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
 }
@@ -685,6 +686,7 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	d.Destroy = manifest.Destroy
 	d.Dev = manifest.Dev
 	d.Icon = manifest.Icon
+	d.Build = manifest.Build
 	return nil
 }
 
