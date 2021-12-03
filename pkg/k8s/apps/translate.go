@@ -14,7 +14,6 @@
 package apps
 
 import (
-	"encoding/json"
 	"fmt"
 	"path"
 	"strconv"
@@ -57,15 +56,14 @@ func (tr *Translation) translate() error {
 	delete(tr.App.ObjectMeta().Annotations, model.StateBeforeSleepingAnnontation)
 
 	tr.DevApp = tr.App.DevClone()
-	annotationsString, _ := json.Marshal(tr.App.ObjectMeta().Annotations)
 
 	tr.App.ObjectMeta().Annotations[model.AppReplicasAnnotation] = strconv.Itoa(int(replicas))
-	tr.App.ObjectMeta().Annotations[model.AppAnnotationsAnnotation] = string(annotationsString)
 	tr.App.ObjectMeta().Labels[model.DevLabel] = "true"
 	tr.App.SetReplicas(0)
 
 	for k, v := range tr.Dev.Metadata.Annotations {
 		tr.App.ObjectMeta().Annotations[k] = v
+		tr.App.TemplateObjectMeta().Annotations[k] = v
 		tr.DevApp.ObjectMeta().Annotations[k] = v
 		tr.DevApp.TemplateObjectMeta().Annotations[k] = v
 	}
@@ -113,18 +111,9 @@ func (tr *Translation) DevModeOff() error {
 	tr.App.SetReplicas(getPreviousAppReplicas(tr.App))
 	delete(tr.App.ObjectMeta().Annotations, model.AppReplicasAnnotation)
 
-	if value, ok := tr.App.ObjectMeta().Annotations[model.AppAnnotationsAnnotation]; ok {
-		previousAppAnnotations := map[string]string{}
-		if err := json.Unmarshal([]byte(value), &previousAppAnnotations); err != nil {
-			return err
-		}
-		for k := range tr.App.ObjectMeta().Annotations {
-			delete(tr.App.ObjectMeta().Annotations, k)
-			if v, ok := previousAppAnnotations[k]; ok {
-				tr.App.ObjectMeta().Annotations[k] = v
-			}
-		}
-		delete(tr.App.ObjectMeta().Annotations, model.AppAnnotationsAnnotation)
+	for k := range tr.Dev.Metadata.Annotations {
+		delete(tr.App.ObjectMeta().Annotations, k)
+		delete(tr.App.TemplateObjectMeta().Annotations, k)
 	}
 
 	//TODO: this is for backward compatibility: remove when people is on CLI >= 1.14

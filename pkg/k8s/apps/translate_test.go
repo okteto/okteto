@@ -1930,41 +1930,22 @@ func Test_translateAnnotations(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "overwrite-annotations",
-			annotations: model.Annotations{
-				"key1": "value1",
-				"key2": "value2",
-				"key3": "value3",
-			},
-			tr: Translation{
-				App: &DeploymentApp{
-					d: &appsv1.Deployment{
-						ObjectMeta: metav1.ObjectMeta{
-							Annotations: map[string]string{
-								"key1": "value10",
-							},
-						},
-						Spec: appsv1.DeploymentSpec{
-							Replicas: pointer.Int32(1),
-						},
-					},
-				},
-				Dev: &model.Dev{
-					Metadata: &model.Metadata{},
-				},
-			},
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.tr.Dev.Metadata.Annotations = tt.annotations
 			tt.tr.MainDev = tt.tr.Dev
 
-			previousAppAnnotations := map[string]string{}
+			previousAppObjectMetaAnnotations := map[string]string{}
 			// Copy from the original annotations to the target map
 			for key, value := range tt.tr.App.ObjectMeta().Annotations {
-				previousAppAnnotations[key] = value
+				previousAppObjectMetaAnnotations[key] = value
+			}
+
+			previousAppTemplateAnnotations := map[string]string{}
+			// Copy from the original annotations to the target map
+			for key, value := range tt.tr.App.TemplateObjectMeta().Annotations {
+				previousAppTemplateAnnotations[key] = value
 			}
 			tt.tr.translate()
 			for key, value := range tt.annotations {
@@ -1984,7 +1965,8 @@ func Test_translateAnnotations(t *testing.T) {
 				}
 			}
 			tt.tr.DevModeOff()
-			assert.Equal(t, previousAppAnnotations, tt.tr.App.ObjectMeta().Annotations)
+			assert.Equal(t, previousAppObjectMetaAnnotations, tt.tr.App.ObjectMeta().Annotations)
+			assert.Equal(t, previousAppTemplateAnnotations, tt.tr.App.TemplateObjectMeta().Annotations)
 		})
 	}
 
