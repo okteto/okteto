@@ -21,9 +21,11 @@ import (
 
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/pkg/errors"
@@ -58,10 +60,10 @@ func Run(ctx context.Context, buildOptions BuildOptions) error {
 }
 
 func setOutputMode(outputMode string) string {
-	if buildOutput := os.Getenv("BUILDKIT_PROGRESS"); buildOutput != "" {
+	if buildOutput := os.Getenv(model.BuildkitProgressEnvVar); buildOutput != "" {
 		return buildOutput
 	}
-	if isInsideDeploy := os.Getenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT"); isInsideDeploy == "true" {
+	if utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		return "plain"
 	}
 	return outputMode

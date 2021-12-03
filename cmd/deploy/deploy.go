@@ -206,7 +206,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
 		fmt.Sprintf("%s=true", model.OktetoDisableSpinnerEnvVar),
 		// Set BUILDKIT_PROGRESS=plain env variable, so all the commands disable docker tty builds
-		fmt.Sprintf("%s=true", model.BuildkitProgressEnvVar), "BUILDKIT_PROGRESS=plain",
+		fmt.Sprintf("%s=true", model.BuildkitProgressEnvVar),
 	)
 
 	for _, command := range opts.Manifest.Deploy.Commands {
