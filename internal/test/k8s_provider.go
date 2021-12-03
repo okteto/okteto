@@ -14,6 +14,9 @@
 package test
 
 import (
+	"context"
+
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
@@ -31,4 +34,9 @@ func NewFakeK8sProvider(objects []runtime.Object) *FakeK8sProvider {
 
 func (f *FakeK8sProvider) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
 	return fake.NewSimpleClientset(f.objects...), nil, nil
+}
+
+func (f *FakeK8sProvider) GetIngressClient(_ context.Context) (*ingresses.Client, error) {
+	c := fake.NewSimpleClientset(f.objects...)
+	return ingresses.NewIngressClient(c, true), nil
 }

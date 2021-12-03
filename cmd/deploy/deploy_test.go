@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/rest"
@@ -179,10 +180,11 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	}
 	e := &fakeExecutor{}
 	c := &deployCommand{
-		getManifest: getFakeManifest,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+		getManifest:       getFakeManifest,
+		proxy:             p,
+		executor:          e,
+		kubeconfig:        &fakeKubeConfig{},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -209,10 +211,11 @@ func TestDeployWithoutErrors(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
 	c := &deployCommand{
-		getManifest: getFakeManifest,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+		getManifest:       getFakeManifest,
+		proxy:             p,
+		executor:          e,
+		kubeconfig:        &fakeKubeConfig{},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"

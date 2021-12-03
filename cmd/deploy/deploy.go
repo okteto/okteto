@@ -32,7 +32,6 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -76,6 +75,7 @@ type deployCommand struct {
 	kubeconfig         kubeConfigHandler
 	executor           utils.ManifestExecutor
 	tempKubeconfigFile string
+	k8sClientProvider  okteto.K8sClientProvider
 }
 
 //Deploy deploys the okteto manifest
@@ -160,6 +160,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 					token: sessionToken,
 				}, s),
 				tempKubeconfigFile: fmt.Sprintf(tempKubeConfigTemplate, config.GetUserHomeDir(), options.Name),
+				k8sClientProvider:  okteto.NewK8sClientProvider(),
 			}
 			return c.runDeploy(ctx, cwd, options)
 		},
@@ -373,16 +374,12 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 }
 
-func (*deployCommand) showEndpoints(ctx context.Context, opts *Options) error {
+func (dc *deployCommand) showEndpoints(ctx context.Context, opts *Options) error {
 	spinner := utils.NewSpinner("Retrieving endpoints...")
 	spinner.Start()
 	defer spinner.Stop()
 	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
-	c, _, err := okteto.GetK8sClient()
-	if err != nil {
-		return err
-	}
-	iClient, err := ingresses.GetClient(ctx, c)
+	iClient, err := dc.k8sClientProvider.GetIngressClient(ctx)
 	if err != nil {
 		return err
 	}

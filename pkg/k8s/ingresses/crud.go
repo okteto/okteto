@@ -31,6 +31,13 @@ type Client struct {
 	isV1 bool
 }
 
+func NewIngressClient(c kubernetes.Interface, isV1 bool) *Client {
+	return &Client{
+		c:    c,
+		isV1: isV1,
+	}
+}
+
 type Ingress struct {
 	V1      *networkingv1.Ingress
 	V1Beta1 *networkingv1beta1.Ingress
@@ -43,17 +50,11 @@ func GetClient(ctx context.Context, c *kubernetes.Clientset) (*Client, error) {
 	}
 	for _, apiResource := range rList.APIResources {
 		if apiResource.Kind == "Ingress" {
-			return &Client{
-				c:    c,
-				isV1: true,
-			}, nil
+			return NewIngressClient(c, true), nil
 		}
 	}
 
-	return &Client{
-		c:    c,
-		isV1: false,
-	}, nil
+	return NewIngressClient(c, false), nil
 }
 
 //Get results the ingress
