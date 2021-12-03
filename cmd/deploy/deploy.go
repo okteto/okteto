@@ -170,7 +170,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&options.K8sContext, "context", "", "k8s context")
 
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
-	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "plain", "show tty/plain/json deploy output")
+	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "tty", "show tty/plain/json deploy output")
 
 	return cmd
 }
