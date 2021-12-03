@@ -125,7 +125,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
-	cmd.Flags().StringVarP(&options.OutputMode, "output", "", "tty", "show plain/tty deploy output")
+	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "tty", "show plain/tty deploy output")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the application destroy even if there is an error executing the custom destroy commands defined in the manifest")
 
