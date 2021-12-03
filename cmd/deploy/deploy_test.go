@@ -98,6 +98,7 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 		kubeconfig: &fakeKubeConfig{
 			errOnModify: assert.AnError,
 		},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -120,10 +121,11 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
 	c := &deployCommand{
-		getManifest: getManifestWithError,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+		getManifest:       getManifestWithError,
+		proxy:             p,
+		executor:          e,
+		kubeconfig:        &fakeKubeConfig{},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -148,10 +150,11 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		err: assert.AnError,
 	}
 	c := &deployCommand{
-		getManifest: getFakeManifest,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+		getManifest:       getFakeManifest,
+		proxy:             p,
+		executor:          e,
+		kubeconfig:        &fakeKubeConfig{},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
