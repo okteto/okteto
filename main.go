@@ -62,7 +62,7 @@ func init() {
 
 	utilRuntime.ErrorHandlers = errorHandlers
 
-	if bin := os.Getenv("OKTETO_BIN"); bin != "" {
+	if bin := os.Getenv(model.OktetoBinEnvVar); bin != "" {
 		model.OktetoBinImageTag = bin
 		log.Infof("using %s as the bin image", bin)
 	}

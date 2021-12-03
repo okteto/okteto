@@ -26,6 +26,7 @@ import (
 	dockerterm "github.com/moby/term"
 	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/term"
@@ -118,7 +119,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		}
 	}
 
-	sockEnvVar, ok := os.LookupEnv("SSH_AUTH_SOCK")
+	sockEnvVar, ok := os.LookupEnv(model.SshAuthSockEnvVar)
 	if !ok {
 		log.Info("SSH_AUTH_SOCK is not set, not forwarding socket")
 	} else {

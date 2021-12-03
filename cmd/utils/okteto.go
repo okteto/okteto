@@ -19,6 +19,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 )
 
+// HasAccessToNamespace checks if the user has access to a namespace/preview
 func HasAccessToNamespace(ctx context.Context, namespace string, oktetoClient types.NamespaceInterface) (bool, error) {
 
 	nList, err := oktetoClient.ListNamespaces(ctx)
@@ -31,5 +32,17 @@ func HasAccessToNamespace(ctx context.Context, namespace string, oktetoClient ty
 			return true, nil
 		}
 	}
+
+	previewList, err := oktetoClient.ListPreviews(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	for i := range previewList {
+		if previewList[i].ID == namespace {
+			return true, nil
+		}
+	}
+
 	return false, nil
 }

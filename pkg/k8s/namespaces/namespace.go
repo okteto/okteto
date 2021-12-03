@@ -15,16 +15,24 @@ package namespaces
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/ibuildthecloud/finalizers/pkg/world"
+	"github.com/okteto/okteto/pkg/k8s/statefulsets"
+	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 )
@@ -48,14 +56,16 @@ type Namespaces struct {
 	dynClient  dynamic.Interface
 	discClient discovery.DiscoveryInterface
 	restConfig *rest.Config
+	k8sClient  kubernetes.Interface
 }
 
 // NewNamespace allows to create a new Namespace object
-func NewNamespace(dynClient dynamic.Interface, discClient discovery.DiscoveryInterface, restConfig *rest.Config) *Namespaces {
+func NewNamespace(dynClient dynamic.Interface, discClient discovery.DiscoveryInterface, restConfig *rest.Config, k8s kubernetes.Interface) *Namespaces {
 	return &Namespaces{
 		dynClient:  dynClient,
 		discClient: discClient,
 		restConfig: restConfig,
+		k8sClient:  k8s,
 	}
 }
 
@@ -124,4 +134,56 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 		log.Debugf("successfully deleted '%s' '%s'", gvk.Kind, m.GetName())
 		return nil
 	}))
+}
+
+// DestroySFSVolumes This function deletes volumes for any statefulset that matches with opts.LabelSelector but it doesn't have any
+// dev.okteto.com/deployed-by label. This is to avoid to left PVCs behind when everything deployed with okteto deploy
+// command is deleted
+func (n *Namespaces) DestroySFSVolumes(ctx context.Context, ns string, opts DeleteAllOptions) error {
+	if !opts.IncludeVolumes {
+		return nil
+	}
+	pvcNames := []string{}
+
+	ssList, err := statefulsets.List(ctx, ns, opts.LabelSelector, n.k8sClient)
+	if err != nil {
+		return fmt.Errorf("error getting statefulsets: %s", err)
+	}
+	for _, ss := range ssList {
+		for _, pvcTemplate := range ss.Spec.VolumeClaimTemplates {
+			pvcNames = append(pvcNames, fmt.Sprintf("%s-%s-", pvcTemplate.Name, ss.Name))
+		}
+	}
+
+	if len(pvcNames) == 0 {
+		return nil
+	}
+
+	// We only need to delete all the volumes without deployed-by label. The ones with the label will be deleted by
+	// DestroyWithLabel function
+	deployedByNotExist, err := labels.NewRequirement(
+		model.DeployedByLabel,
+		selection.DoesNotExist,
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+	deployedByNotExistSelector := labels.NewSelector().Add(*deployedByNotExist).String()
+	vList, err := volumes.List(ctx, ns, deployedByNotExistSelector, n.k8sClient)
+	if err != nil {
+		return fmt.Errorf("error getting volumes: %s", err)
+	}
+	for _, v := range vList {
+		for _, pvcName := range pvcNames {
+			if strings.HasPrefix(v.Name, pvcName) {
+				if err := volumes.DestroyWithoutTimeout(ctx, v.Name, ns, n.k8sClient); err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
+
+	return nil
 }

@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	env = `A=1
+	env = `A=hello
 # comment
 
 
@@ -47,6 +47,7 @@ D="4
 5 $B
 \"6\"
 '7'"`
+	envOverride = "A=1"
 )
 
 func Test_translate(t *testing.T) {
@@ -75,14 +76,24 @@ func Test_translateEnvVars(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpFile.Name())
 
+	tmpFile2, err := os.CreateTemp("", ".env")
+	if err != nil {
+		t.Fatalf("failed to create dynamic env file: %s", err.Error())
+	}
+	if err := os.WriteFile(tmpFile2.Name(), []byte(envOverride), 0600); err != nil {
+		t.Fatalf("failed to write env file: %s", err.Error())
+	}
+	defer os.RemoveAll(tmpFile2.Name())
+
 	os.Setenv("B", "2")
 	os.Setenv("ENV_PATH", tmpFile.Name())
+	os.Setenv("ENV_PATH2", tmpFile2.Name())
 	stack := &model.Stack{
 		Name: "name",
 		Services: map[string]*model.Service{
 			"1": {
 				Image:    "image",
-				EnvFiles: []string{"${ENV_PATH}"},
+				EnvFiles: []string{"${ENV_PATH}", "${ENV_PATH2}"},
 				Environment: []model.EnvVar{
 					{
 						Name:  "C",

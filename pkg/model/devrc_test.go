@@ -51,6 +51,7 @@ resources:
 					},
 				},
 				Sync: Sync{
+					Compression:    true,
 					Verbose:        false,
 					RescanInterval: 300,
 					Folders: []SyncFolder{
@@ -96,6 +97,7 @@ resources:
 					},
 				},
 				Sync: Sync{
+					Compression:    true,
 					Verbose:        true,
 					RescanInterval: 300,
 					Folders: []SyncFolder{
@@ -458,11 +460,11 @@ func TestDevRCSync(t *testing.T) {
 				Compression: true,
 			}},
 			expected: Sync{
-				Compression: true,
+				Compression: false,
 			},
 		},
 		{
-			name: "compression",
+			name: "verbose",
 			dev: &Dev{Sync: Sync{
 				Verbose: true,
 			}},

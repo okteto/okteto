@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -79,13 +80,13 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			varList := []okteto.Variable{}
+			varList := []types.Variable{}
 			for _, v := range variables {
 				kv := strings.SplitN(v, "=", 2)
 				if len(kv) != 2 {
 					return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
 				}
-				varList = append(varList, okteto.Variable{
+				varList = append(varList, types.Variable{
 					Name:  kv[0],
 					Value: kv[1],
 				})
@@ -186,7 +187,7 @@ func getRandomName(ctx context.Context, scope string) string {
 	return name
 }
 
-func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []okteto.Variable, wait bool, timeout time.Duration) (*okteto.PreviewResponse, error) {
+func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, wait bool, timeout time.Duration) (*types.PreviewResponse, error) {
 	spinner := utils.NewSpinner("Deploying your preview environment...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -203,7 +204,7 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 	return resp, nil
 }
 
-func waitUntilRunning(ctx context.Context, name string, a *okteto.Action, timeout time.Duration) error {
+func waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Waiting for preview environment to be deployed...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -237,7 +238,7 @@ func waitUntilRunning(ctx context.Context, name string, a *okteto.Action, timeou
 
 	return nil
 }
-func waitToBeDeployed(ctx context.Context, name string, a *okteto.Action, timeout time.Duration) error {
+func waitToBeDeployed(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
 	if a == nil {
 		return deprecatedWaitToBeDeployed(ctx, name, timeout)
 	}

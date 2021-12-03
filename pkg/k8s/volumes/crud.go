@@ -192,6 +192,21 @@ func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientse
 
 }
 
+// DestroyWithoutTimeout destroys a PVC without checking if it was detached or not
+func DestroyWithoutTimeout(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
+	vClient := c.CoreV1().PersistentVolumeClaims(namespace)
+	log.Infof("destroying volume '%s'", name)
+
+	err := vClient.Delete(ctx, name, metav1.DeleteOptions{})
+	if err != nil {
+		if !errors.IsNotFound(err) {
+			return fmt.Errorf("error deleting kubernetes volume: %s", err)
+		}
+	}
+
+	return nil
+}
+
 func checkIfAttached(ctx context.Context, name, namespace string, c *kubernetes.Clientset) error {
 	pods, err := c.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {

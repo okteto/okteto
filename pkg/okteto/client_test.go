@@ -16,13 +16,15 @@ package okteto
 import (
 	"os"
 	"testing"
+
+	"github.com/okteto/okteto/pkg/model"
 )
 
 func TestInDevContainer(t *testing.T) {
-	v := os.Getenv("OKTETO_NAME")
-	os.Setenv("OKTETO_NAME", "")
+	v := os.Getenv(model.OktetoNameEnvVar)
+	os.Setenv(model.OktetoNameEnvVar, "")
 	defer func() {
-		os.Setenv("OKTETO_NAME", v)
+		os.Setenv(model.OktetoNameEnvVar, v)
 	}()
 
 	in := InDevContainer()
@@ -30,13 +32,13 @@ func TestInDevContainer(t *testing.T) {
 		t.Errorf("in dev container when there was no marker env var")
 	}
 
-	os.Setenv("OKTETO_NAME", "")
+	os.Setenv(model.OktetoNameEnvVar, "")
 	in = InDevContainer()
 	if in {
 		t.Errorf("in dev container when there was an empty marker env var")
 	}
 
-	os.Setenv("OKTETO_NAME", "1")
+	os.Setenv(model.OktetoNameEnvVar, "1")
 	in = InDevContainer()
 	if !in {
 		t.Errorf("not in dev container when there was a marker env var")

@@ -17,4 +17,5 @@ package types
 type Namespace struct {
 	ID       string `json:"id" yaml:"id"`
 	Sleeping bool   `json:"sleeping" yaml:"sleeping"`
+	Status   string `json:"status" yaml:"status"`
 }

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/okteto/okteto/cmd/utils"
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
@@ -26,7 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var fakeManifest *utils.Manifest = &utils.Manifest{
+var fakeManifest *model.Manifest = &model.Manifest{
 	Destroy: []string{
 		"printenv",
 		"ls -la",
@@ -35,8 +35,10 @@ var fakeManifest *utils.Manifest = &utils.Manifest{
 }
 
 type fakeDestroyer struct {
-	destroyed bool
-	err       error
+	destroyed        bool
+	destroyedVolumes bool
+	err              error
+	errOnVolumes     error
 }
 
 type fakeSecretHandler struct {
@@ -58,6 +60,15 @@ func (fd *fakeDestroyer) DestroyWithLabel(_ context.Context, _ string, _ namespa
 	return nil
 }
 
+func (fd *fakeDestroyer) DestroySFSVolumes(_ context.Context, _ string, _ namespaces.DeleteAllOptions) error {
+	if fd.errOnVolumes != nil {
+		return fd.errOnVolumes
+	}
+
+	fd.destroyedVolumes = true
+	return nil
+}
+
 func (fd *fakeSecretHandler) List(_ context.Context, _, _ string) ([]v1.Secret, error) {
 	if fd.err != nil {
 		return nil, fd.err
@@ -75,12 +86,37 @@ func (fe *fakeExecutor) Execute(command string, _ []string) error {
 	return nil
 }
 
-func getManifestWithError(_, _, _ string) (*utils.Manifest, error) {
+func getManifestWithError(_ context.Context, _ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_, _, _ string) (*utils.Manifest, error) {
+func getFakeManifest(_ context.Context, _ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return fakeManifest, nil
+}
+
+func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
+	ctx := context.Background()
+	executor := &fakeExecutor{}
+	opts := &Options{
+		Name: "test-app",
+	}
+	cwd := "/okteto/src"
+	destroyer := &fakeDestroyer{
+		errOnVolumes: assert.AnError,
+	}
+
+	cmd := &destroyCommand{
+		getManifest: getFakeManifest,
+		nsDestroyer: destroyer,
+		executor:    executor,
+	}
+
+	err := cmd.runDestroy(ctx, cwd, opts)
+
+	assert.Error(t, err)
+	assert.Equal(t, 3, len(executor.executed))
+	assert.False(t, destroyer.destroyed)
+	assert.False(t, destroyer.destroyedVolumes)
 }
 
 func TestDestroyWithErrorListingSecrets(t *testing.T) {
@@ -91,7 +127,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
-		getManifest func(cwd, name, filename string) (*utils.Manifest, error)
+		getManifest func(ctx context.Context, cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 		want        int
 	}{
 		{
@@ -115,6 +151,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 			cmd := &destroyCommand{
 				getManifest: tt.getManifest,
 				secrets:     &secretHandler,
+				nsDestroyer: &fakeDestroyer{},
 				executor:    executor,
 			}
 
@@ -131,7 +168,7 @@ func TestDestroyWithError(t *testing.T) {
 	cwd := "/okteto/src"
 	tests := []struct {
 		name        string
-		getManifest func(cwd, name, filename string) (*utils.Manifest, error)
+		getManifest func(ctx context.Context, cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 		secrets     []v1.Secret
 		want        []string
 	}{
@@ -233,6 +270,7 @@ func TestDestroyWithError(t *testing.T) {
 			assert.Error(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
 			assert.False(t, destroyer.destroyed)
+			assert.True(t, destroyer.destroyedVolumes)
 		})
 	}
 }
@@ -242,7 +280,7 @@ func TestDestroyWithoutError(t *testing.T) {
 	cwd := "/okteto/src"
 	tests := []struct {
 		name        string
-		getManifest func(cwd, name, filename string) (*utils.Manifest, error)
+		getManifest func(ctx context.Context, cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 		secrets     []v1.Secret
 		want        []string
 	}{
@@ -425,6 +463,7 @@ func TestDestroyWithoutError(t *testing.T) {
 			assert.NoError(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
 			assert.True(t, destroyer.destroyed)
+			assert.True(t, destroyer.destroyedVolumes)
 		})
 	}
 }
@@ -455,6 +494,7 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, 1, len(executor.executed))
 	assert.False(t, destroyer.destroyed)
+	assert.False(t, destroyer.destroyedVolumes)
 }
 
 func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
@@ -483,4 +523,5 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	assert.Error(t, err)
 	assert.ElementsMatch(t, fakeManifest.Destroy, executor.executed)
 	assert.True(t, destroyer.destroyed)
+	assert.True(t, destroyer.destroyedVolumes)
 }
