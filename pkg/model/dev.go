@@ -28,6 +28,7 @@ import (
 
 	"github.com/a8m/envsubst"
 	"github.com/google/uuid"
+	oktetoError "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -52,8 +53,6 @@ type Dev struct {
 	Name                 string                `json:"name" yaml:"name"`
 	Username             string                `json:"-" yaml:"-"`
 	RegistryURL          string                `json:"-" yaml:"-"`
-	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
-	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Selector             Selector              `json:"selector,omitempty" yaml:"selector,omitempty"`
 	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
@@ -64,10 +63,8 @@ type Dev struct {
 	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
 	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
-	Healthchecks         bool                  `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 	Probes               *Probes               `json:"probes,omitempty" yaml:"probes,omitempty"`
 	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
 	Workdir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
@@ -75,7 +72,6 @@ type Dev struct {
 	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
 	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
 	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
-	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
 	Sync                 Sync                  `json:"sync,omitempty" yaml:"sync,omitempty"`
 	parentSyncFolder     string                `json:"-" yaml:"-"`
@@ -93,6 +89,13 @@ type Dev struct {
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
+	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
+	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+
+	//Deprecated fields
+	Healthchecks bool   `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
+	Labels       Labels `json:"labels,omitempty" yaml:"labels,omitempty"`
 }
 
 type Affinity apiv1.Affinity
@@ -264,37 +267,37 @@ type Environment []EnvVar
 type EnvFiles []string
 
 // Get returns a Dev object from a given file
-func Get(devPath string) (*Dev, error) {
+func Get(devPath string) (*Manifest, error) {
 	b, err := os.ReadFile(devPath)
 	if err != nil {
 		return nil, err
 	}
 
-	dev, err := Read(b)
+	manifest, err := Read(b)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := dev.translateDeprecatedVolumeFields(); err != nil {
-		return nil, err
+	for _, dev := range manifest.Dev {
+		if err := dev.translateDeprecatedVolumeFields(); err != nil {
+			return nil, err
+		}
+
+		if err := dev.loadAbsPaths(devPath); err != nil {
+			return nil, err
+		}
+
+		if err := dev.validate(); err != nil {
+			return nil, err
+		}
+
+		dev.computeParentSyncFolder()
 	}
 
-	if err := dev.loadAbsPaths(devPath); err != nil {
-		return nil, err
-	}
-
-	if err := dev.validate(); err != nil {
-		return nil, err
-	}
-
-	dev.computeParentSyncFolder()
-
-	return dev, nil
+	return manifest, nil
 }
-
-// Read reads an okteto manifests
-func Read(bytes []byte) (*Dev, error) {
-	dev := &Dev{
+func NewDev() *Dev {
+	return &Dev{
 		Image:       &BuildInfo{},
 		Push:        &BuildInfo{},
 		Environment: make(Environment, 0),
@@ -310,15 +313,19 @@ func Read(bytes []byte) (*Dev, error) {
 		Lifecycle:            &Lifecycle{},
 		InitContainer:        InitContainer{Image: OktetoBinImageTag},
 	}
+}
 
+// Read reads an okteto manifests
+func Read(bytes []byte) (*Manifest, error) {
+	manifest := NewManifest()
 	if bytes != nil {
-		if err := yaml.UnmarshalStrict(bytes, dev); err != nil {
+		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
 			if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 				var sb strings.Builder
 				_, _ = sb.WriteString("Invalid manifest:\n")
 				l := strings.Split(err.Error(), "\n")
 				for i := 1; i < len(l); i++ {
-					e := strings.TrimSuffix(l[i], "in type model.Dev")
+					e := strings.TrimSuffix(l[i], "in type model.Manifest")
 					e = strings.TrimSpace(e)
 					_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
 				}
@@ -328,39 +335,43 @@ func Read(bytes []byte) (*Dev, error) {
 			}
 
 			msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid manifest:", 1)
-			msg = strings.TrimSuffix(msg, "in type model.Dev")
+			msg = strings.TrimSuffix(msg, "in type model.Manifest")
 			return nil, errors.New(msg)
 		}
 	}
-
-	if err := dev.expandEnvVars(); err != nil {
-		return nil, err
-	}
-	for _, s := range dev.Services {
-		if err := s.expandEnvVars(); err != nil {
-			return nil, err
+	for dName, d := range manifest.Dev {
+		if d.Name == "" {
+			d.Name = dName
 		}
-		if err := s.validateForExtraFields(); err != nil {
-			return nil, err
+		if err := d.expandEnvVars(); err != nil {
+			return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
 		}
+		for _, s := range d.Services {
+			if err := s.expandEnvVars(); err != nil {
+				return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+			}
+			if err := s.validateForExtraFields(); err != nil {
+				return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+			}
+		}
+
+		if err := d.SetDefaults(); err != nil {
+			return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+		}
+		if err := d.translateDeprecatedMetadataFields(); err != nil {
+			return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+		}
+
+		sort.SliceStable(d.Forward, func(i, j int) bool {
+			return d.Forward[i].less(&d.Forward[j])
+		})
+
+		sort.SliceStable(d.Reverse, func(i, j int) bool {
+			return d.Reverse[i].Local < d.Reverse[j].Local
+		})
 	}
 
-	if err := dev.setDefaults(); err != nil {
-		return nil, err
-	}
-	if err := dev.translateDeprecatedMetadataFields(); err != nil {
-		return nil, err
-	}
-
-	sort.SliceStable(dev.Forward, func(i, j int) bool {
-		return dev.Forward[i].less(&dev.Forward[j])
-	})
-
-	sort.SliceStable(dev.Reverse, func(i, j int) bool {
-		return dev.Reverse[i].Local < dev.Reverse[j].Local
-	})
-
-	return dev, nil
+	return manifest, nil
 }
 
 func (dev *Dev) loadAbsPaths(devPath string) error {
@@ -482,7 +493,7 @@ func (dev *Dev) loadImage() error {
 	return nil
 }
 
-func (dev *Dev) setDefaults() error {
+func (dev *Dev) SetDefaults() error {
 	if dev.Command.Values == nil {
 		dev.Command.Values = []string{"sh"}
 	}
@@ -529,8 +540,8 @@ func (dev *Dev) setDefaults() error {
 	}
 	dev.setRunAsUserDefaults(dev)
 
-	if os.Getenv("OKTETO_RESCAN_INTERVAL") != "" {
-		rescanInterval, err := strconv.Atoi(os.Getenv("OKTETO_RESCAN_INTERVAL"))
+	if os.Getenv(OktetoRescanIntervalEnvVar) != "" {
+		rescanInterval, err := strconv.Atoi(os.Getenv(OktetoRescanIntervalEnvVar))
 		if err != nil {
 			return fmt.Errorf("cannot parse 'OKTETO_RESCAN_INTERVAL' into an integer: %s", err.Error())
 		}
@@ -589,6 +600,9 @@ func (dev *Dev) setDefaults() error {
 }
 
 func setBuildDefaults(build *BuildInfo) {
+	if build == nil {
+		build = &BuildInfo{}
+	}
 	if build.Context == "" {
 		build.Context = "."
 	}
@@ -670,6 +684,10 @@ func (dev *Dev) validate() error {
 		return err
 	}
 
+	if err := dev.validateSync(); err != nil {
+		return err
+	}
+
 	if _, err := resource.ParseQuantity(dev.PersistentVolumeSize()); err != nil {
 		return fmt.Errorf("'persistentVolume.size' is not valid. A sample value would be '10Gi'")
 	}
@@ -692,6 +710,32 @@ func (dev *Dev) validate() error {
 		return fmt.Errorf("Docker support requires persistent volume to be enabled")
 	}
 
+	return nil
+}
+
+func (dev *Dev) validateSync() error {
+	for _, folder := range dev.Sync.Folders {
+		validPath, err := os.Stat(folder.LocalPath)
+
+		if err == nil {
+			if !validPath.IsDir() {
+				return oktetoError.UserError{
+					E:    fmt.Errorf("File paths are not supported on sync fields"),
+					Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+				}
+			}
+		} else if errors.Is(err, os.ErrNotExist) {
+			return oktetoError.UserError{
+				E:    fmt.Errorf("path '%s' does not exist", folder.LocalPath),
+				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+			}
+		} else if err != nil {
+			return oktetoError.UserError{
+				E:    fmt.Errorf("File paths are not supported on sync fields"),
+				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+			}
+		}
+	}
 	return nil
 }
 
@@ -1055,7 +1099,7 @@ func (dev *Dev) RemoteModeEnabled() bool {
 		return true
 	}
 
-	if v, ok := os.LookupEnv("OKTETO_EXECUTE_SSH"); ok && v == "false" {
+	if v, ok := os.LookupEnv(OktetoExecuteSSHEnvVar); ok && v == "false" {
 		return false
 	}
 	return true
@@ -1084,7 +1128,7 @@ func ExpandEnv(value string) (string, error) {
 func GetTimeout() (time.Duration, error) {
 	defaultTimeout := (60 * time.Second)
 
-	t := os.Getenv("OKTETO_TIMEOUT")
+	t := os.Getenv(OktetoTimeoutEnvVar)
 	if t == "" {
 		return defaultTimeout, nil
 	}

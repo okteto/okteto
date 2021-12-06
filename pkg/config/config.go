@@ -75,7 +75,7 @@ func GetBinaryFullPath() string {
 
 // GetOktetoHome returns the path of the okteto folder
 func GetOktetoHome() string {
-	if v, ok := os.LookupEnv("OKTETO_FOLDER"); ok {
+	if v, ok := os.LookupEnv(model.OktetoFolderEnvVar); ok {
 		if !model.FileExists(v) {
 			log.Fatalf("OKTETO_FOLDER doesn't exist: %s", v)
 		}
@@ -179,7 +179,7 @@ func GetState(dev *model.Dev) (UpState, error) {
 
 // GetUserHomeDir returns the OS home dir
 func GetUserHomeDir() string {
-	if v, ok := os.LookupEnv("OKTETO_HOME"); ok {
+	if v, ok := os.LookupEnv(model.OktetoHomeEnvVar); ok {
 		if !model.FileExists(v) {
 			log.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
 		}
@@ -196,21 +196,21 @@ func GetUserHomeDir() string {
 		return home
 	}
 
-	return os.Getenv("HOME")
+	return os.Getenv(model.HomeEnvVar)
 
 }
 
 func homedirWindows() (string, error) {
-	if home := os.Getenv("HOME"); home != "" {
+	if home := os.Getenv(model.HomeEnvVar); home != "" {
 		return home, nil
 	}
 
-	if home := os.Getenv("USERPROFILE"); home != "" {
+	if home := os.Getenv(model.UserProfileEnvVar); home != "" {
 		return home, nil
 	}
 
-	drive := os.Getenv("HOMEDRIVE")
-	path := os.Getenv("HOMEPATH")
+	drive := os.Getenv(model.HomeDriveEnvVar)
+	path := os.Getenv(model.HomePathEnvVar)
 	home := drive + path
 	if drive == "" || path == "" {
 		return "", fmt.Errorf("HOME, HOMEDRIVE, HOMEPATH, or USERPROFILE are empty. Use $OKTETO_HOME to set your home directory")
@@ -220,21 +220,21 @@ func homedirWindows() (string, error) {
 }
 
 // GetKubeconfigPath returns the path to the kubeconfig file, taking the KUBECONFIG env var into consideration
-func GetKubeconfigPath() string {
+func GetKubeconfigPath() []string {
 	home := GetUserHomeDir()
-	kubeconfig := filepath.Join(home, ".kube", "config")
-	kubeconfigEnv := os.Getenv("KUBECONFIG")
+	kubeconfig := []string{filepath.Join(home, ".kube", "config")}
+	kubeconfigEnv := os.Getenv(model.KubeConfigEnvVar)
 	if len(kubeconfigEnv) > 0 {
 		kubeconfig = splitKubeConfigEnv(kubeconfigEnv)
 	}
 	return kubeconfig
 }
 
-func splitKubeConfigEnv(value string) string {
+func splitKubeConfigEnv(value string) []string {
 	if runtime.GOOS == "windows" {
-		return strings.Split(value, ";")[0]
+		return strings.Split(value, ";")
 	}
-	return strings.Split(value, ":")[0]
+	return strings.Split(value, ":")
 }
 
 func GetTokenPathDeprecated() string {

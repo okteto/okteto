@@ -16,14 +16,12 @@ package utils
 import (
 	"context"
 
-	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 )
 
-func HasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return false, nil
-	}
+// HasAccessToNamespace checks if the user has access to a namespace/preview
+func HasAccessToNamespace(ctx context.Context, namespace string, oktetoClient types.NamespaceInterface) (bool, error) {
+
 	nList, err := oktetoClient.ListNamespaces(ctx)
 	if err != nil {
 		return false, err
@@ -34,5 +32,17 @@ func HasAccessToNamespace(ctx context.Context, namespace string) (bool, error) {
 			return true, nil
 		}
 	}
+
+	previewList, err := oktetoClient.ListPreviews(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	for i := range previewList {
+		if previewList[i].ID == namespace {
+			return true, nil
+		}
+	}
+
 	return false, nil
 }

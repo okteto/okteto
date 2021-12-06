@@ -46,10 +46,10 @@ var (
 	ErrCommandFailed = errors.New("command execution failed")
 
 	// ErrNotLogged is raised when we can't get the user token
-	ErrNotLogged = "your token is invalid. Please run 'okteto context %s' and try again"
+	ErrNotLogged = "your token is invalid. Please run 'okteto context use %s' and try again"
 
 	// ErrNotOktetoCluster is raised when we a command is only available on an okteto cluster
-	ErrNotOktetoCluster = fmt.Errorf("user is not logged in okteto cluster. Please run 'okteto context' and try again")
+	ErrNotOktetoCluster = fmt.Errorf("user is not logged in okteto cluster. Please run 'okteto context use' and select your context")
 
 	// ErrNotFound is raised when an object is not found
 	ErrNotFound = fmt.Errorf("not found")
@@ -134,7 +134,7 @@ func IsForbidden(err error) bool {
 
 // IsNotFound returns true if err is of the type not found
 func IsNotFound(err error) bool {
-	return err != nil && (strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "doesn't exist"))
+	return err != nil && (strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "doesn't exist") || strings.Contains(err.Error(), "not-found"))
 }
 
 // IsNotExist returns true if err is of the type does not exist
@@ -170,12 +170,13 @@ func IsTransient(err error) bool {
 		strings.Contains(err.Error(), "connection reset by peer"),
 		strings.Contains(err.Error(), "client connection lost"),
 		strings.Contains(err.Error(), "nodename nor servname provided, or not known"),
+		strings.Contains(err.Error(), "no route to host"),
 		strings.Contains(err.Error(), "unexpected EOF"),
 		strings.Contains(err.Error(), "TLS handshake timeout"),
 		strings.Contains(err.Error(), "in the time allotted"),
 		strings.Contains(err.Error(), "broken pipe"),
 		strings.Contains(err.Error(), "No connection could be made"),
-		strings.Contains(err.Error(), "dial tcp: operation was canceled"),
+		strings.Contains(err.Error(), "operation was canceled"),
 		strings.Contains(err.Error(), "network is unreachable"),
 		strings.Contains(err.Error(), "development container has been removed"):
 		return true

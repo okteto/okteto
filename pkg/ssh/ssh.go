@@ -45,6 +45,7 @@ func add(path, name, iface string, port int) error {
 	host.params = []*param{
 		newParam(forwardAgentKeyword, []string{"yes"}, nil),
 		newParam(pubkeyAcceptedKeyTypesKeyword, []string{"+ssh-rsa"}, nil),
+		newParam(hostKeyAlgorithms, []string{"+ssh-rsa"}, nil),
 		newParam(hostNameKeyword, []string{iface}, nil),
 		newParam(portKeyword, []string{strconv.Itoa(port)}, nil),
 		newParam(strictHostKeyCheckingKeyword, []string{"no"}, nil),

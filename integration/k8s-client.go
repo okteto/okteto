@@ -24,10 +24,11 @@ func K8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	return client, config, nil
 }
 
-func GetClientConfig(kubeconfigPath, kubeContext string) clientcmd.ClientConfig {
+func GetClientConfig(kubeconfigPaths []string, kubeContext string) clientcmd.ClientConfig {
+
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	loadingRules.DefaultClientConfig = &clientcmd.DefaultClientConfig
-	loadingRules.ExplicitPath = kubeconfigPath
+	loadingRules.Precedence = kubeconfigPaths
 
 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		loadingRules,

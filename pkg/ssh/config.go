@@ -52,6 +52,7 @@ const (
 	hostNameKeyword               = "HostName"
 	portKeyword                   = "Port"
 	strictHostKeyCheckingKeyword  = "StrictHostKeyChecking"
+	hostKeyAlgorithms             = "HostKeyAlgorithms"
 	userKnownHostsFileKeyword     = "UserKnownHostsFile"
 	identityFile                  = "IdentityFile"
 )

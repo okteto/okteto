@@ -49,7 +49,7 @@ func UpdateKubeconfigCMD() *cobra.Command {
 }
 
 func ExecuteUpdateKubeconfig(ctx context.Context) error {
-	if err := kubeconfig.Write(okteto.Context().Cfg, config.GetKubeconfigPath()); err != nil {
+	if err := kubeconfig.Write(okteto.Context().Cfg, config.GetKubeconfigPath()[0]); err != nil {
 		return err
 	}
 	k8sContext := okteto.Context().Name

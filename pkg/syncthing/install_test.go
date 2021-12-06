@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 func TestInstall(t *testing.T) {
@@ -190,20 +191,20 @@ func TestGetMinimumVersion(t *testing.T) {
 		},
 	}
 
-	env := os.Getenv(syncthingVersionEnvVar)
-	if err := os.Setenv(syncthingVersionEnvVar, ""); err != nil {
+	env := os.Getenv(model.SyncthingVersionEnvVar)
+	if err := os.Setenv(model.SyncthingVersionEnvVar, ""); err != nil {
 		t.Fatal(err)
 	}
 
 	defer func() {
-		if err := os.Setenv(syncthingVersionEnvVar, env); err != nil {
+		if err := os.Setenv(model.SyncthingVersionEnvVar, env); err != nil {
 			t.Fatal(err)
 		}
 	}()
 
 	for _, tt := range tests {
 		t.Run(tt.version, func(t *testing.T) {
-			if err := os.Setenv(syncthingVersionEnvVar, tt.version); err != nil {
+			if err := os.Setenv(model.SyncthingVersionEnvVar, tt.version); err != nil {
 				t.Fatal(err)
 			}
 			got := GetMinimumVersion()

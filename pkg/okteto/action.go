@@ -6,23 +6,12 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
 
-// ActionBody top body answer
-type ActionBody struct {
-	Action Action `json:"action"`
-}
-
-//Action represents an action
-type Action struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	Status string `json:"status"`
-}
-
 // GetAction gets a installer job given its name
-func (c *OktetoClient) GetAction(ctx context.Context, name string) (*Action, error) {
+func (c *OktetoClient) GetAction(ctx context.Context, name string) (*types.Action, error) {
 	namespace := Context().Namespace
 	var query struct {
 		Action struct {
@@ -40,7 +29,7 @@ func (c *OktetoClient) GetAction(ctx context.Context, name string) (*Action, err
 	if err != nil {
 		return nil, err
 	}
-	action := &Action{
+	action := &types.Action{
 		ID:     string(query.Action.Id),
 		Name:   string(query.Action.Name),
 		Status: string(query.Action.Status),

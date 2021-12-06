@@ -41,6 +41,7 @@ const (
 
 type destroyer interface {
 	DestroyWithLabel(ctx context.Context, ns string, opts namespaces.DeleteAllOptions) error
+	DestroySFSVolumes(ctx context.Context, ns string, opts namespaces.DeleteAllOptions) error
 }
 
 type secretHandler interface {
@@ -55,10 +56,12 @@ type Options struct {
 	Namespace      string
 	DestroyVolumes bool
 	ForceDestroy   bool
+	OutputMode     string
+	K8sContext     string
 }
 
 type destroyCommand struct {
-	getManifest func(cwd, name, filename string) (*utils.Manifest, error)
+	getManifest func(ctx context.Context, cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 
 	executor    utils.ManifestExecutor
 	nsDestroyer destroyer
@@ -78,7 +81,10 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			ctxOptions := &contextCMD.ContextOptions{
+				Show: true,
+			}
+			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 
@@ -107,12 +113,15 @@ func Destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			options.Namespace = okteto.Context().Namespace
-			c := &destroyCommand{
-				getManifest: utils.GetManifest,
+			if options.Namespace == "" {
+				options.Namespace = okteto.Context().Namespace
+			}
 
-				executor:    utils.NewExecutor(),
-				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg),
+			c := &destroyCommand{
+				getManifest: contextCMD.GetManifest,
+
+				executor:    utils.NewExecutor(options.OutputMode),
+				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:     secrets.NewSecrets(k8sClient),
 			}
 			return c.runDestroy(ctx, cwd, options)
@@ -121,19 +130,22 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "tty", "show plain/tty deploy output")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the application destroy even if there is an error executing the custom destroy commands defined in the manifest")
+	cmd.Flags().StringVar(&options.Namespace, "namespace", "", "application name")
+	cmd.Flags().StringVar(&options.K8sContext, "context", "", "k8s context")
 
 	return cmd
 }
 
 func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Options) error {
 	// Read manifest file with the commands to be executed
-	manifest, err := dc.getManifest(cwd, opts.Name, opts.ManifestPath)
+	manifest, err := dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace, K8sContext: opts.K8sContext})
 	if err != nil {
 		// Log error message but application can still be deleted
-		log.Errorf("could not find manifest file to be executed: %s", err)
-		manifest = &utils.Manifest{
+		log.Infof("could not find manifest file to be executed: %s", err)
+		manifest = &model.Manifest{
 			Destroy: []string{},
 		}
 	}
@@ -141,7 +153,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	var commandErr error
 	for _, command := range manifest.Destroy {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
-			log.Errorf("error executing command '%s': %s", command, err.Error())
+			log.Infof("error executing command '%s': %s", command, err.Error())
 			if !opts.ForceDestroy {
 				return err
 			}
@@ -160,6 +172,14 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		return err
 	}
 	deployedBySelector := labels.NewSelector().Add(*deployedByLs).String()
+	deleteOpts := namespaces.DeleteAllOptions{
+		LabelSelector:  deployedBySelector,
+		IncludeVolumes: opts.DestroyVolumes,
+	}
+
+	if err := dc.nsDestroyer.DestroySFSVolumes(ctx, opts.Namespace, deleteOpts); err != nil {
+		return err
+	}
 
 	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
 		if !opts.ForceDestroy {
@@ -168,12 +188,8 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	}
 
 	log.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
-	deleteOpts := namespaces.DeleteAllOptions{
-		LabelSelector:  deployedBySelector,
-		IncludeVolumes: opts.DestroyVolumes,
-	}
 	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
-		log.Errorf("could not delete all the resources: %s", err)
+		log.Infof("could not delete all the resources: %s", err)
 		return err
 	}
 
@@ -204,7 +220,7 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 		log.Debugf("uninstalling helm release %s", releaseName)
 		cmd := fmt.Sprintf(helmUninstallCommand, releaseName)
 		if err := dc.executor.Execute(cmd, opts.Variables); err != nil {
-			log.Errorf("could not uninstall helm release '%s': %s", releaseName, err)
+			log.Infof("could not uninstall helm release '%s': %s", releaseName, err)
 			if !opts.ForceDestroy {
 				return err
 			}

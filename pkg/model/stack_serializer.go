@@ -15,7 +15,7 @@ package model
 
 import (
 	"fmt"
-	"regexp"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -270,9 +270,6 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			return err
 		}
 	}
-	if err := validateDependsOn(s); err != nil {
-		return err
-	}
 
 	s.Warnings.NotSupportedFields = getNotSupportedFields(&stackRaw)
 	s.Warnings.SanitizedServices = sanitizedServicesNames
@@ -490,45 +487,63 @@ func validateHealthcheck(healthcheck *HealthCheck) error {
 }
 
 func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
-	localPortTestRegex := `^curl ((-f|--fail) )?'?((http|https)://)?(localhost|0.0.0.0):\d+(\/\w*)?'?$`
-	regexp, err := regexp.Compile(localPortTestRegex)
+	// Join and then split the strings by space to ensure that
+	// each element in the string slice is a contiguous string with
+	// no spaces.
+	s := strings.Join(healthcheck.Test, " ")
+	testStrings := strings.Split(s, " ")
+
+	// There should be at least two strings, the curl binary and url.
+	if len(testStrings) < 2 {
+		return
+	}
+
+	if testStrings[0] != "curl" {
+		return
+	}
+
+	var checkURL *url.URL
+	for _, possibleURL := range testStrings[1:] {
+		if possibleURL == "-f" || possibleURL == "--fail" {
+			continue
+		}
+
+		u, err := url.ParseRequestURI(possibleURL)
+		// It's possible to have a healthcheck url without the scheme. If
+		// that happens then we inject one and attempt parsing again.
+		if err != nil || u.Host == "" {
+			u, err = url.ParseRequestURI("https://" + possibleURL)
+			if err != nil {
+				u = nil
+				continue
+			}
+		}
+		checkURL = u
+		break
+	}
+
+	if checkURL == nil {
+		return
+	}
+
+	p := checkURL.Port()
+	if p == "" {
+		return
+	}
+	port, err := strconv.Atoi(p)
 	if err != nil {
 		return
 	}
-	testString := strings.Join(healthcheck.Test, " ")
-	if regexp.MatchString(testString) {
-		var firstSlashIndex, portStart int
-		if strings.Contains(testString, "://") {
-			testStringCopy := testString
-			for i := 0; i < 3; i++ {
-				firstSlashIndex += strings.Index(testStringCopy[firstSlashIndex:], "/") + 1
-			}
-			testStringCopy = testString
-			for i := 0; i < 2; i++ {
-				portStart += strings.Index(testStringCopy[portStart:], ":") + 1
-			}
-			portStart--
-			firstSlashIndex--
-		} else {
-			firstSlashIndex = strings.Index(testString, "/")
-			portStart = strings.Index(testString, ":")
-		}
 
-		var port, path string
-		if firstSlashIndex != -1 {
-			port = testString[portStart+1 : firstSlashIndex]
-			path = testString[firstSlashIndex:]
-		} else {
-			port = testString[portStart+1:]
-			path = "/"
-		}
-		p, err := strconv.Atoi(port)
-		if err != nil {
-			return
-		}
-		healthcheck.HTTP = &HTTPHealtcheck{Path: path, Port: int32(p)}
-		healthcheck.Test = make(HealtcheckTest, 0)
+	var path string
+	if checkURL.Path == "" {
+		path = "/"
+	} else {
+		path = checkURL.Path
 	}
+
+	healthcheck.HTTP = &HTTPHealtcheck{Path: path, Port: int32(port)}
+	healthcheck.Test = make(HealtcheckTest, 0)
 }
 
 func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, error) {
@@ -627,7 +642,8 @@ func splitVolumesByType(volumes []StackVolume, s *Stack) ([]StackVolume, []Stack
 	topLevelVolumes := make([]StackVolume, 0)
 	mountedVolumes := make([]StackVolume, 0)
 	for _, volume := range volumes {
-		if volume.LocalPath == "" || isInVolumesTopLevelSection(volume.LocalPath, s) {
+		if volume.LocalPath == "" || isInVolumesTopLevelSection(sanitizeName(volume.LocalPath), s) {
+			volume.LocalPath = sanitizeName(volume.LocalPath)
 			topLevelVolumes = append(topLevelVolumes, volume)
 		} else {
 			mountedVolumes = append(mountedVolumes, volume)
@@ -1058,7 +1074,7 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		v.LocalPath = sanitizeName(parts[0])
+		v.LocalPath = parts[0]
 		v.RemotePath = parts[1]
 	} else {
 		v.RemotePath = parts[0]
@@ -1101,29 +1117,6 @@ func sanitizeName(name string) string {
 	name = strings.ReplaceAll(name, " ", "-")
 	name = strings.ReplaceAll(name, "_", "-")
 	return name
-}
-
-func validateDependsOn(s *Stack) error {
-	for svcName, svc := range s.Services {
-		for dependentSvc, condition := range svc.DependsOn {
-			if svcName == dependentSvc {
-				return fmt.Errorf(" Service '%s' depends can not depend of itself.", svcName)
-			}
-			if _, ok := s.Services[dependentSvc]; !ok {
-				return fmt.Errorf(" Service '%s' depends on service '%s' which is undefined.", svcName, dependentSvc)
-			}
-			if condition.Condition == DependsOnServiceCompleted && !s.Services[dependentSvc].IsJob() {
-				return fmt.Errorf(" Service '%s' is not a job. Please change the reset policy so that it is not always in service '%s' ", dependentSvc, dependentSvc)
-			}
-		}
-	}
-
-	dependencyCycle := getDependentCyclic(s)
-	if len(dependencyCycle) > 0 {
-		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(dependencyCycle[:len(dependencyCycle)-1], ", "), dependencyCycle[len(dependencyCycle)-1])
-		return fmt.Errorf(" There was a cyclic dependendecy between %s.", svcsDependents)
-	}
-	return nil
 }
 
 func getNotSupportedFields(s *StackRaw) []string {

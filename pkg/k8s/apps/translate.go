@@ -62,6 +62,8 @@ func (tr *Translation) translate() error {
 	tr.App.SetReplicas(0)
 
 	for k, v := range tr.Dev.Metadata.Annotations {
+		tr.App.ObjectMeta().Annotations[k] = v
+		tr.App.TemplateObjectMeta().Annotations[k] = v
 		tr.DevApp.ObjectMeta().Annotations[k] = v
 		tr.DevApp.TemplateObjectMeta().Annotations[k] = v
 	}
@@ -108,6 +110,11 @@ func (tr *Translation) DevModeOff() error {
 	delete(tr.App.ObjectMeta().Labels, model.DevLabel)
 	tr.App.SetReplicas(getPreviousAppReplicas(tr.App))
 	delete(tr.App.ObjectMeta().Annotations, model.AppReplicasAnnotation)
+
+	for k := range tr.Dev.Metadata.Annotations {
+		delete(tr.App.ObjectMeta().Annotations, k)
+		delete(tr.App.TemplateObjectMeta().Annotations, k)
+	}
 
 	//TODO: this is for backward compatibility: remove when people is on CLI >= 1.14
 	delete(tr.App.ObjectMeta().Annotations, oktetoVersionAnnotation)

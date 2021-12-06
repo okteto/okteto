@@ -73,11 +73,17 @@ func executeCreateNamespace(ctx context.Context, namespace string, members *[]st
 		}
 	}
 
-	contextCommand := contextCMD.Context()
-	contextCommand.Flags().Set("token", okteto.Context().Token)
-	contextCommand.Flags().Set("namespace", oktetoNS)
-	args := []string{okteto.Context().Name}
-	if err := contextCommand.RunE(nil, args); err != nil {
+	ctxOptions := contextCMD.ContextOptions{
+		IsCtxCommand: false,
+		IsOkteto:     true,
+		Save:         true,
+		Show:         true,
+		Token:        okteto.Context().Token,
+		Namespace:    oktetoNS,
+		Context:      okteto.Context().Name,
+	}
+
+	if err := contextCMD.Run(ctx, &ctxOptions); err != nil {
 		return fmt.Errorf("failed to activate your new namespace %s: %s", oktetoNS, err)
 	}
 	if err := contextCMD.ExecuteUpdateKubeconfig(ctx); err != nil {

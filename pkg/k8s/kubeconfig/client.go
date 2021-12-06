@@ -15,7 +15,6 @@ package kubeconfig
 
 import (
 	"log"
-	"os"
 
 	"k8s.io/client-go/rest"
 
@@ -35,21 +34,15 @@ func Create() *clientcmdapi.Config {
 }
 
 //Get retrieves a kubeconfig file
-func Get(kubeconfigPath string) *clientcmdapi.Config {
-	_, err := os.Stat(kubeconfigPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		log.Fatalf("error accessing your KUBECONFIG file '%s': %v", kubeconfigPath, err)
+func Get(kubeconfigPaths []string) *clientcmdapi.Config {
+	loadingRules := clientcmd.ClientConfigLoadingRules{
+		Precedence: kubeconfigPaths,
 	}
-
-	cfg, err := clientcmd.LoadFromFile(kubeconfigPath)
+	mergedConfig, err := loadingRules.Load()
 	if err != nil {
-		log.Fatalf("error accessing your KUBECONFIG file '%s': %v", kubeconfigPath, err)
+		log.Fatalf("error accessing your KUBECONFIG file '%v': %v", kubeconfigPaths, err)
 	}
-
-	return cfg
+	return mergedConfig
 }
 
 //Write stores a kubeconfig file
@@ -58,7 +51,7 @@ func Write(cfg *clientcmdapi.Config, kubeconfigPath string) error {
 }
 
 // CurrentContext returns the name of the current context
-func CurrentContext(kubeconfigPath string) string {
+func CurrentContext(kubeconfigPath []string) string {
 	cfg := Get(kubeconfigPath)
 	if cfg == nil {
 		return ""
@@ -67,7 +60,7 @@ func CurrentContext(kubeconfigPath string) string {
 }
 
 // CurrentNamespace returns the name of the namespace in use by a given context
-func CurrentNamespace(kubeconfigPath string) string {
+func CurrentNamespace(kubeconfigPath []string) string {
 	cfg := Get(kubeconfigPath)
 	if cfg == nil {
 		return ""
