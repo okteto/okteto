@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -100,7 +101,7 @@ func destroy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*okteto.GitDeployResponse, error) {
+func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
 	spinner := utils.NewSpinner("Destroying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -110,7 +111,7 @@ func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*ok
 	exit := make(chan error, 1)
 
 	var err error
-	var resp *okteto.GitDeployResponse
+	var resp *types.GitDeployResponse
 
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
@@ -143,7 +144,7 @@ func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*ok
 	return resp, nil
 }
 
-func waitUntilDestroyed(ctx context.Context, name string, action *okteto.Action, timeout time.Duration) error {
+func waitUntilDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Waiting for the pipeline to be destroyed...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -171,7 +172,7 @@ func waitUntilDestroyed(ctx context.Context, name string, action *okteto.Action,
 	return nil
 }
 
-func waitToBeDestroyed(ctx context.Context, name string, action *okteto.Action, timeout time.Duration) error {
+func waitToBeDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
 	if action == nil {
 		return deprecatedWaitToBeDestroyed(ctx, name, timeout)
 	}

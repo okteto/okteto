@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -104,10 +105,12 @@ services:
     sync:
        - worker:/src`, file.Name()))
 
-	dev1, err := model.Read(manifest)
+	manifest1, err := model.Read(manifest)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	dev1 := manifest1.Dev["web"]
 
 	d1 := deployments.Sandbox(dev1)
 	d1.UID = types.UID("deploy1")
@@ -381,7 +384,7 @@ services:
 		t.Fatalf("Wrong d1 pod labels: '%v'", tr1.App.TemplateObjectMeta().Labels)
 
 	}
-	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "3"}
+	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "3", "key1": "value1"}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong d1 annotations: '%v'", tr1.App.ObjectMeta().Annotations)
 	}
@@ -529,7 +532,7 @@ services:
 	if !reflect.DeepEqual(tr2.App.TemplateObjectMeta().Labels, d2Orig.Spec.Template.Labels) {
 		t.Fatalf("Wrong d2 pod labels: '%v'", tr2.App.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations = map[string]string{model.AppReplicasAnnotation: "3"}
+	expectedAnnotations = map[string]string{model.AppReplicasAnnotation: "3", "key2": "value2"}
 	if !reflect.DeepEqual(tr2.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong d2 annotations: '%v'", tr2.App.ObjectMeta().Annotations)
 	}
@@ -584,7 +587,7 @@ services:
 }
 
 func Test_translateWithoutVolumes(t *testing.T) {
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 namespace: n
 image: web:latest
 sync:
@@ -592,10 +595,11 @@ sync:
 persistentVolume:
   enabled: false`)
 
-	dev, err := model.Read(manifest)
+	manifest, err := model.Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev := manifest.Dev["web"]
 
 	d := deployments.Sandbox(dev)
 	rule := dev.ToTranslationRule(dev, true)
@@ -719,7 +723,7 @@ persistentVolume:
 }
 
 func Test_translateWithDocker(t *testing.T) {
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 namespace: n
 image: web:latest
 sync:
@@ -735,10 +739,12 @@ docker:
       cpu: 2
       memory: 4Gi`)
 
-	dev, err := model.Read(manifest)
+	manifest, err := model.Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev := manifest.Dev["web"]
+
 	dev.Username = "cindy"
 	dev.RegistryURL = "registry.okteto.dev"
 
@@ -1287,7 +1293,7 @@ func TestTranslateOktetoVolumes(t *testing.T) {
 }
 
 func Test_translateMultipleEnvVars(t *testing.T) {
-	manifest := []byte(`name: web
+	manifestBytes := []byte(`name: web
 namespace: n
 image: web:latest
 sync:
@@ -1300,10 +1306,12 @@ environment:
   key3: value3
 `)
 
-	dev, err := model.Read(manifest)
+	manifest, err := model.Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev := manifest.Dev["web"]
+
 	dev.Username = "cindy"
 
 	d := deployments.Sandbox(dev)
@@ -1366,7 +1374,7 @@ func Test_translateSfsWithVolumes(t *testing.T) {
 	var runAsUser int64 = 100
 	var runAsGroup int64 = 101
 	var fsGroup int64 = 102
-	manifest := []byte(fmt.Sprintf(`name: web
+	manifestBytes := []byte(fmt.Sprintf(`name: web
 namespace: n
 container: dev
 image: web:latest
@@ -1417,10 +1425,11 @@ services:
     sync:
        - worker:/src`, file.Name()))
 
-	dev1, err := model.Read(manifest)
+	manifest, err := model.Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dev1 := manifest.Dev["web"]
 
 	sfs1 := statefulsets.Sandbox(dev1)
 	sfs1.UID = types.UID("sfs1")
@@ -1685,11 +1694,12 @@ services:
 	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Labels, sfs1Orig.Spec.Template.Labels) {
 		t.Fatalf("Wrong sfs1 pod labels: '%v'", tr1.App.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "2"}
+	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "2", "key1": "value1"}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong sfs1 annotations: '%v'", tr1.App.ObjectMeta().Annotations)
 	}
-	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Annotations, sfs1Orig.Spec.Template.Annotations) {
+	expectedTemplateAnnotations := map[string]string{"key1": "value1"}
+	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Annotations, expectedTemplateAnnotations) {
 		t.Fatalf("Wrong sfs1 pod annotations: '%v'", tr1.App.TemplateObjectMeta().Annotations)
 	}
 	marshalledSfs1, _ := yaml.Marshal(tr1.App.PodSpec())
@@ -1825,7 +1835,7 @@ services:
 	if !reflect.DeepEqual(tr2.App.TemplateObjectMeta().Labels, sfs2Orig.Spec.Template.Labels) {
 		t.Fatalf("Wrong sfs2 pod labels: '%v'", tr2.App.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations = map[string]string{model.AppReplicasAnnotation: "3"}
+	expectedAnnotations = map[string]string{model.AppReplicasAnnotation: "3", "key2": "value2"}
 	if !reflect.DeepEqual(tr2.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong sfs2 annotations: '%v'", tr2.App.ObjectMeta().Annotations)
 	}
@@ -1877,4 +1887,88 @@ services:
 	if tr2.App.Replicas() != 3 {
 		t.Fatalf("sfs2 is running %d replicas after 'okteto down'", tr2.App.Replicas())
 	}
+}
+
+func Test_translateAnnotations(t *testing.T) {
+	var tests = []struct {
+		name        string
+		annotations model.Annotations
+		tr          Translation
+	}{
+		{
+			name:        "no-annotations",
+			annotations: model.Annotations{},
+			tr: Translation{
+				App: &DeploymentApp{
+					d: &appsv1.Deployment{
+						Spec: appsv1.DeploymentSpec{
+							Replicas: pointer.Int32(1),
+						},
+					},
+				},
+				Dev: &model.Dev{
+					Metadata: &model.Metadata{},
+				},
+			},
+		},
+		{
+			name: "new-annotations",
+			annotations: model.Annotations{
+				"key1": "value1",
+				"key2": "value2",
+				"key3": "value3",
+			},
+			tr: Translation{
+				App: &DeploymentApp{
+					d: &appsv1.Deployment{
+						Spec: appsv1.DeploymentSpec{
+							Replicas: pointer.Int32(1),
+						},
+					},
+				},
+				Dev: &model.Dev{
+					Metadata: &model.Metadata{},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.tr.Dev.Metadata.Annotations = tt.annotations
+			tt.tr.MainDev = tt.tr.Dev
+
+			previousAppObjectMetaAnnotations := map[string]string{}
+			// Copy from the original annotations to the target map
+			for key, value := range tt.tr.App.ObjectMeta().Annotations {
+				previousAppObjectMetaAnnotations[key] = value
+			}
+
+			previousAppTemplateAnnotations := map[string]string{}
+			// Copy from the original annotations to the target map
+			for key, value := range tt.tr.App.TemplateObjectMeta().Annotations {
+				previousAppTemplateAnnotations[key] = value
+			}
+			tt.tr.translate()
+			for key, value := range tt.annotations {
+				if appValue, ok := tt.tr.App.ObjectMeta().Annotations[key]; ok {
+					if appValue != value {
+						t.Fatal("app didn't set annotations correctly")
+					}
+				} else {
+					t.Fatal("app didn't set annotations correctly")
+				}
+				if appValue, ok := tt.tr.DevApp.ObjectMeta().Annotations[key]; ok {
+					if appValue != value {
+						t.Fatal("devApp didn't set annotations correctly")
+					}
+				} else {
+					t.Fatal("devApp didn't set annotations correctly")
+				}
+			}
+			tt.tr.DevModeOff()
+			assert.Equal(t, previousAppObjectMetaAnnotations, tt.tr.App.ObjectMeta().Annotations)
+			assert.Equal(t, previousAppTemplateAnnotations, tt.tr.App.TemplateObjectMeta().Annotations)
+		})
+	}
+
 }

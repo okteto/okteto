@@ -131,7 +131,7 @@ func Test_initFromEnvVars(t *testing.T) {
 			want: &ContextOptions{
 				Token:    "token",
 				Context:  okteto.CloudURL,
-				isOkteto: true,
+				IsOkteto: true,
 			},
 		},
 		{
@@ -143,7 +143,7 @@ func Test_initFromEnvVars(t *testing.T) {
 			want: &ContextOptions{
 				Token:    "token",
 				Context:  okteto.CloudURL,
-				isOkteto: true,
+				IsOkteto: true,
 			},
 		},
 		{
@@ -153,7 +153,7 @@ func Test_initFromEnvVars(t *testing.T) {
 			want: &ContextOptions{
 				Token:    "token",
 				Context:  okteto.CloudURL,
-				isOkteto: true,
+				IsOkteto: true,
 			},
 		},
 		{
@@ -189,7 +189,7 @@ func Test_initFromEnvVars(t *testing.T) {
 			env:  map[string]string{"OKTETO_URL": "okteto-url"},
 			want: &ContextOptions{
 				Context:  "okteto-url",
-				isOkteto: true,
+				IsOkteto: true,
 			},
 		},
 		{
@@ -201,7 +201,7 @@ func Test_initFromEnvVars(t *testing.T) {
 			want: &ContextOptions{
 				Token:    "token",
 				Context:  "okteto-url",
-				isOkteto: true,
+				IsOkteto: true,
 			},
 		},
 		{
@@ -211,7 +211,7 @@ func Test_initFromEnvVars(t *testing.T) {
 			want: &ContextOptions{
 				Token:    "token-envvar",
 				Context:  "okteto-url",
-				isOkteto: true,
+				IsOkteto: true,
 			},
 		},
 		{

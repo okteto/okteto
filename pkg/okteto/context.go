@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -54,19 +55,20 @@ var (
 
 // OktetoContext contains the information related to an okteto context
 type OktetoContext struct {
-	Name            string               `json:"name" yaml:"name,omitempty"`
-	UserID          string               `json:"-"`
-	Username        string               `json:"username,omitempty" yaml:"username,omitempty"`
-	Token           string               `json:"token,omitempty" yaml:"token,omitempty"`
-	Namespace       string               `json:"namespace" yaml:"namespace,omitempty"`
-	Cfg             *clientcmdapi.Config `json:"-"`
-	Builder         string               `json:"builder,omitempty" yaml:"builder,omitempty"`
-	Registry        string               `json:"registry,omitempty" yaml:"registry,omitempty"`
-	Certificate     string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
-	GlobalNamespace string               `json:"-"`
-	Analytics       bool                 `json:"-"`
-	ClusterType     string               `json:"-"`
-	IsOkteto        bool                 `json:"isOkteto"`
+	Name              string               `json:"name" yaml:"name,omitempty"`
+	UserID            string               `json:"id,omitempty" yaml:"id,omitempty"`
+	Username          string               `json:"username,omitempty" yaml:"username,omitempty"`
+	Token             string               `json:"token,omitempty" yaml:"token,omitempty"`
+	Namespace         string               `json:"namespace" yaml:"namespace,omitempty"`
+	Cfg               *clientcmdapi.Config `json:"-"`
+	Builder           string               `json:"builder,omitempty" yaml:"builder,omitempty"`
+	Registry          string               `json:"registry,omitempty" yaml:"registry,omitempty"`
+	Certificate       string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+	PersonalNamespace string               `json:"personalNamespace,omitempty" yaml:"personalNamespace,omitempty"`
+	GlobalNamespace   string               `json:"-"`
+	Analytics         bool                 `json:"-"`
+	ClusterType       string               `json:"-"`
+	IsOkteto          bool                 `json:"isOkteto"`
 }
 
 // InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context
@@ -106,6 +108,7 @@ func InitContextWithDeprecatedToken() {
 		Builder:     token.Buildkit,
 		Certificate: base64.StdEncoding.EncodeToString(certificateBytes),
 		IsOkteto:    true,
+		UserID:      token.ID,
 	}
 	ctxStore.CurrentContext = token.URL
 
@@ -132,7 +135,7 @@ func UrlToKubernetesContext(uri string) string {
 }
 
 // K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
-func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string) string {
+func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string, clientProvider K8sClientProvider) string {
 	ctxStore := ContextStore()
 	//check if belongs to the okteto contexts
 	for name, oCtx := range ctxStore.Contexts {
@@ -147,7 +150,7 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string)
 	}
 
 	cfg.CurrentContext = k8sContext
-	c, _, err := getK8sClient(cfg)
+	c, _, err := clientProvider.Provide(cfg)
 	if err != nil {
 		log.Infof("error getting k8s client: %v", err)
 		return k8sContext
@@ -238,20 +241,21 @@ func HasBeenLogged(oktetoURL string) bool {
 	return ok
 }
 
-func AddOktetoContext(name string, u *User, namespace string) {
+func AddOktetoContext(name string, u *types.User, namespace, personalNamespace string) {
 	CurrentStore = ContextStore()
 	name = strings.TrimSuffix(name, "/")
 	CurrentStore.Contexts[name] = &OktetoContext{
-		Name:            name,
-		UserID:          u.ID,
-		Username:        u.ExternalID,
-		Token:           u.Token,
-		Namespace:       namespace,
-		GlobalNamespace: u.GlobalNamespace,
-		Builder:         u.Buildkit,
-		Registry:        u.Registry,
-		Certificate:     u.Certificate,
-		Analytics:       u.Analytics,
+		Name:              name,
+		UserID:            u.ID,
+		Username:          u.ExternalID,
+		Token:             u.Token,
+		Namespace:         namespace,
+		PersonalNamespace: personalNamespace,
+		GlobalNamespace:   u.GlobalNamespace,
+		Builder:           u.Buildkit,
+		Registry:          u.Registry,
+		Certificate:       u.Certificate,
+		Analytics:         u.Analytics,
 	}
 	CurrentStore.CurrentContext = name
 }
@@ -293,10 +297,10 @@ func WriteOktetoContextConfig() error {
 	return nil
 }
 
-func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *Credential, namespace, userName, oktetoURL string) {
+func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName, oktetoURL string) {
 	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
 	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings
-	if os.Getenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT") == "true" {
+	if os.Getenv(model.OktetoWithinDeployCommandContextEnvVar) == "true" {
 		return
 	}
 
@@ -340,7 +344,7 @@ func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if Context().Cfg == nil {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
-	c, config, err := getK8sClient(Context().Cfg)
+	c, config, err := getK8sClientWithApiConfig(Context().Cfg)
 	if err == nil {
 		Context().SetClusterType(config.Host)
 	}
@@ -369,8 +373,8 @@ func GetSanitizedUsername() string {
 	return reg.ReplaceAllString(strings.ToLower(octx.Username), "-")
 }
 
-func (okctx *OktetoContext) ToUser() *User {
-	u := &User{
+func (okctx *OktetoContext) ToUser() *types.User {
+	u := &types.User{
 		ID:              okctx.UserID,
 		ExternalID:      okctx.Username,
 		Token:           okctx.Token,

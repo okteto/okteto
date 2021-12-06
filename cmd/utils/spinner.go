@@ -23,6 +23,7 @@ import (
 
 	sp "github.com/briandowns/spinner"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/term"
 )
 
@@ -35,7 +36,7 @@ type Spinner struct {
 
 //NewSpinner returns a new Spinner
 func NewSpinner(suffix string) *Spinner {
-	spinnerSupport = !loadBoolean("OKTETO_DISABLE_SPINNER")
+	spinnerSupport = !loadBoolean(model.OktetoDisableSpinnerEnvVar)
 	s := sp.New(sp.CharSets[14], 100*time.Millisecond)
 	s.HideCursor = true
 	s.Suffix = fmt.Sprintf(" %s", suffix)

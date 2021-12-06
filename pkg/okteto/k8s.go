@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -17,10 +18,24 @@ import (
 var timeout time.Duration
 var tOnce sync.Once
 
+type K8sClientProvider interface {
+	Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
+}
+
+type K8sClient struct{}
+
+func NewK8sClientProvider() *K8sClient {
+	return &K8sClient{}
+}
+
+func (_ *K8sClient) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
+	return getK8sClientWithApiConfig(clientApiConfig)
+}
+
 func getKubernetesTimeout() time.Duration {
 	tOnce.Do(func() {
 		timeout = 0 * time.Second
-		t, ok := os.LookupEnv("OKTETO_KUBERNETES_TIMEOUT")
+		t, ok := os.LookupEnv(model.OktetoKubernetesTimeoutEnvVar)
 		if !ok {
 			return
 		}
@@ -38,7 +53,7 @@ func getKubernetesTimeout() time.Duration {
 	return timeout
 }
 
-func getK8sClient(clientApiConfig *clientcmdapi.Config) (*kubernetes.Clientset, *rest.Config, error) {
+func getK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config) (*kubernetes.Clientset, *rest.Config, error) {
 	clientConfig := clientcmd.NewDefaultClientConfig(*clientApiConfig, nil)
 
 	config, err := clientConfig.ClientConfig()

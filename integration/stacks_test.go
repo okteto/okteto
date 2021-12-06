@@ -73,7 +73,7 @@ func TestStacks(t *testing.T) {
 
 		log.Printf("deployed stack using %s\n", stackManifest)
 
-		endpoint := fmt.Sprintf("https://vote-%s.cloud.okteto.net", namespace)
+		endpoint := fmt.Sprintf("https://vote-%s.%s", namespace, appsSubdomain)
 		content, err := getContent(endpoint, 150, nil)
 		if err != nil {
 			t.Fatalf("failed to get stack content: %s", err)
@@ -102,28 +102,6 @@ func TestStacks(t *testing.T) {
 			log.Printf("failed to delete namespace %s: %s\n", namespace, err)
 		}
 	})
-}
-
-func cloneGitRepo(ctx context.Context, name string) error {
-	log.Printf("cloning git repo %s", name)
-	cmd := exec.Command("git", "clone", name)
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("cloning git repo %s failed: %s - %s", name, string(o), err)
-	}
-	log.Printf("clone git repo %s success", name)
-	return nil
-}
-
-func deleteGitRepo(ctx context.Context, path string) error {
-	log.Printf("delete git repo %s", path)
-	err := os.RemoveAll(path)
-	if err != nil {
-		return fmt.Errorf("delete git repo %s failed: %w", path, err)
-	}
-
-	log.Printf("deleted git repo %s", path)
-	return nil
 }
 
 func deployStack(ctx context.Context, oktetoPath, stackPath, dir string) error {
@@ -205,13 +183,13 @@ func TestCompose(t *testing.T) {
 
 	log.Printf("deployed stack using %s \n", "docker-compose.yml")
 
-	jobEndpoint := fmt.Sprintf("https://nginx-%s.cloud.okteto.net/db/initialized", namespace)
+	jobEndpoint := fmt.Sprintf("https://nginx-%s.%s/db/initialized", namespace, appsSubdomain)
 	content, err := getContent(jobEndpoint, 150, nil)
 	if err != nil {
 		t.Fatalf("failed to get stack content: %s", err)
 	}
 
-	endpoint := fmt.Sprintf("https://nginx-%s.cloud.okteto.net/db", namespace)
+	endpoint := fmt.Sprintf("https://nginx-%s.%s/db", namespace, appsSubdomain)
 	content, err = getContent(endpoint, 150, nil)
 	if err != nil {
 		t.Fatalf("failed to get stack content: %s", err)

@@ -58,7 +58,7 @@ func (up *upContext) activate() error {
 	up.cleaned = make(chan string, 1)
 	up.hardTerminate = make(chan error, 1)
 
-	app, create, err := utils.GetApp(ctx, up.Dev, up.Client)
+	app, create, err := utils.GetApp(ctx, up.Dev, up.Client, up.isRetry)
 	if err != nil {
 		return err
 	}

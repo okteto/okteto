@@ -22,13 +22,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
-	"github.com/subosito/gotenv"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -66,7 +66,8 @@ func translate(ctx context.Context, s *model.Stack, options *StackDeployOptions)
 
 func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 	for svcName, svc := range s.Services {
-		for _, envFilepath := range svc.EnvFiles {
+		for i := len(svc.EnvFiles) - 1; i >= 0; i-- {
+			envFilepath := svc.EnvFiles[i]
 			if err := translateServiceEnvFile(ctx, svc, svcName, envFilepath); err != nil {
 				return err
 			}
@@ -92,7 +93,7 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 	}
 	defer f.Close()
 
-	envMap, err := gotenv.StrictParse(f)
+	envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 	if err != nil {
 		return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
 	}
@@ -178,6 +179,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		}
 		svc.SetLastBuiltAnnotation()
 		s.Services[name] = svc
+		log.Success("Image for service '%s' successfully pushed", name)
 	}
 	return hasBuiltSomething, nil
 }
@@ -223,6 +225,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 			}
 			svc.SetLastBuiltAnnotation()
 			s.Services[name] = svc
+			log.Success("Image for service '%s' successfully pushed", name)
 		}
 	}
 	return hasAddedAnyVolumeMounts, nil
@@ -561,6 +564,9 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	annotations := translateAnnotations(svc)
 	if s.Services[svcName].Public && annotations[model.OktetoAutoIngressAnnotation] == "" {
 		annotations[model.OktetoAutoIngressAnnotation] = "true"
+		if annotations[model.OktetoPrivateSvcAnnotation] == "true" {
+			annotations[model.OktetoAutoIngressAnnotation] = "private"
+		}
 	}
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -826,6 +832,9 @@ func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
 
 func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 	result := []apiv1.ContainerPort{}
+	sort.Slice(svc.Ports, func(i, j int) bool {
+		return svc.Ports[i].ContainerPort < svc.Ports[j].ContainerPort
+	})
 	for _, p := range svc.Ports {
 		result = append(result, apiv1.ContainerPort{ContainerPort: p.ContainerPort})
 	}

@@ -218,6 +218,38 @@ func Test_translateRegistry(t *testing.T) {
 			registry:     "registry.url",
 			want:         "docker.io/image",
 		},
+		{
+			name:         "is-dev-registry-with-okteto-dev-on-registry",
+			input:        "registry.okteto.dev/cindy/app",
+			registryType: okteto.DevRegistry,
+			namespace:    "cindy",
+			registry:     "registry.okteto.dev",
+			want:         "registry.okteto.dev/cindy/app",
+		},
+		{
+			name:         "is-global-registry-with-okteto-dev-on-registry-on-Dockerfile",
+			input:        "FROM okteto.global/image",
+			registryType: okteto.GlobalRegistry,
+			namespace:    "cindy",
+			registry:     "registry.okteto.dev",
+			want:         "FROM registry.okteto.dev/cindy/image",
+		},
+		{
+			name:         "is-dev-registry-with-okteto-dev-on-registry-on-Dockerfile-expand",
+			input:        "FROM okteto.dev/app",
+			registryType: okteto.DevRegistry,
+			namespace:    "cindy",
+			registry:     "registry.okteto.dev",
+			want:         "FROM registry.okteto.dev/cindy/app",
+		},
+		{
+			name:         "full-registry-on-Dockerfile",
+			input:        "FROM registry.okteto.dev/cindy/app",
+			registryType: okteto.DevRegistry,
+			namespace:    "cindy",
+			registry:     "registry.okteto.dev",
+			want:         "FROM registry.okteto.dev/cindy/app",
+		},
 	}
 
 	for _, tt := range tests {
@@ -240,36 +272,4 @@ func Test_translateRegistry(t *testing.T) {
 		})
 	}
 
-}
-
-func Test_TransformOktetoDevToGlobalRegistry(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input string
-		want  string
-	}{
-		{
-			name:  "is-global-registry",
-			input: "okteto.global/image",
-			want:  "okteto.global/image",
-		},
-		{
-			name:  "is-dev-registry",
-			input: "okteto.dev/image",
-			want:  "okteto.global/image",
-		},
-		{
-			name:  "is-not-okteto-registry",
-			input: "docker.io/image",
-			want:  "docker.io/image",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := TransformOktetoDevToGlobalRegistry(tt.input); got != tt.want {
-				t.Errorf("registry.replaceRegistry = %v, want %v", got, tt.want)
-			}
-		})
-	}
 }

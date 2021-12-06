@@ -21,7 +21,8 @@ actionsRepos=(delete-namespace
         login
         destroy-stack
         apply
-        context)
+        context
+)
 
 for repo in "${actionsRepos[@]}"; do
         echo "$repo"
@@ -35,11 +36,10 @@ for repo in "${actionsRepos[@]}"; do
         ret=0
         git commit -m "release $VERSION" || ret=1
         if [ $ret -ne 1 ]; then
-                git push git@github.com:okteto/"$repo".git master
+                git push git@github.com:okteto/"$repo".git main
                 git --no-pager log -1
         fi
         ghr -token "$GITHUB_TOKEN" -replace "$VERSION"
-        ghr -token "$GITHUB_TOKEN" -delete "latest"
         popd
         rm -rf "$repo"
 done

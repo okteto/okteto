@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -50,7 +51,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploy a preview environment",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+				return err
+			}
 			var err error
 			repository, err = getRepository(ctx, repository)
 			if err != nil {
@@ -67,17 +70,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				name = getExpandedName(args[0])
 			}
 
-			ctxResource := &model.ContextResource{}
-			if err := ctxResource.UpdateNamespace(name); err != nil {
-				return err
-			}
-
-			ctxOptions := &contextCMD.ContextOptions{
-				Namespace: ctxResource.Namespace,
-			}
-			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
-				return err
-			}
+			okteto.Context().Namespace = name
 
 			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
@@ -87,13 +80,13 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			varList := []okteto.Variable{}
+			varList := []types.Variable{}
 			for _, v := range variables {
 				kv := strings.SplitN(v, "=", 2)
 				if len(kv) != 2 {
 					return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
 				}
-				varList = append(varList, okteto.Variable{
+				varList = append(varList, types.Variable{
 					Name:  kv[0],
 					Value: kv[1],
 				})
@@ -194,7 +187,7 @@ func getRandomName(ctx context.Context, scope string) string {
 	return name
 }
 
-func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []okteto.Variable, wait bool, timeout time.Duration) (*okteto.PreviewResponse, error) {
+func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, wait bool, timeout time.Duration) (*types.PreviewResponse, error) {
 	spinner := utils.NewSpinner("Deploying your preview environment...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -211,7 +204,7 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 	return resp, nil
 }
 
-func waitUntilRunning(ctx context.Context, name string, a *okteto.Action, timeout time.Duration) error {
+func waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Waiting for preview environment to be deployed...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -245,7 +238,7 @@ func waitUntilRunning(ctx context.Context, name string, a *okteto.Action, timeou
 
 	return nil
 }
-func waitToBeDeployed(ctx context.Context, name string, a *okteto.Action, timeout time.Duration) error {
+func waitToBeDeployed(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
 	if a == nil {
 		return deprecatedWaitToBeDeployed(ctx, name, timeout)
 	}

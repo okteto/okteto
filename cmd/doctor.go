@@ -26,11 +26,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//doctorOptions refers to all the options that can be passed to Doctor command
+type doctorOptions struct {
+	DevPath    string
+	Namespace  string
+	K8sContext string
+	Dev        string
+}
+
 // Doctor generates a zip file with all okteto-related log files
 func Doctor() *cobra.Command {
-	var devPath string
-	var namespace string
-	var k8sContext string
+	doctorOpts := &doctorOptions{}
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Generate a zip file with the okteto logs",
@@ -43,7 +49,7 @@ func Doctor() *cobra.Command {
 				return errors.ErrNotInDevContainer
 			}
 
-			dev, err := contextCMD.LoadDevWithContext(ctx, devPath, namespace, k8sContext)
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, doctorOpts.DevPath, doctorOpts.Namespace, doctorOpts.K8sContext)
 			if err != nil {
 				return err
 			}
@@ -53,7 +59,11 @@ func Doctor() *cobra.Command {
 				return err
 			}
 
-			filename, err := doctor.Run(ctx, dev, devPath, c)
+			dev, err := utils.GetDevFromManifest(manifest)
+			if err != nil {
+				return err
+			}
+			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, c)
 			if err == nil {
 				log.Information("Your doctor file is available at %s", filename)
 			}
@@ -61,8 +71,8 @@ func Doctor() *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultDevManifest, "path to the manifest file")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command was executing")
-	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the up command was executing")
+	cmd.Flags().StringVarP(&doctorOpts.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&doctorOpts.Namespace, "namespace", "n", "", "namespace where the up command was executing")
+	cmd.Flags().StringVarP(&doctorOpts.K8sContext, "context", "c", "", "context where the up command was executing")
 	return cmd
 }

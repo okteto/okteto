@@ -3,6 +3,8 @@ package analytics
 import (
 	"os"
 	"testing"
+
+	"github.com/okteto/okteto/pkg/model"
 )
 
 func Test_Get(t *testing.T) {
@@ -54,7 +56,7 @@ func Test_Get(t *testing.T) {
 				os.RemoveAll(dir)
 			}()
 
-			os.Setenv("OKTETO_FOLDER", dir)
+			os.Setenv(model.OktetoFolderEnvVar, dir)
 
 			if !tt.currentAnalytics {
 				currentAnalytics = nil

@@ -27,6 +27,7 @@ import (
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
+	oktetoError "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -41,7 +42,10 @@ func addStignoreSecrets(dev *model.Dev) error {
 		}
 		infile, err := os.Open(stignorePath)
 		if err != nil {
-			return err
+			return oktetoError.UserError{
+				E:    err,
+				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+			}
 		}
 		defer infile.Close()
 		reader := bufio.NewReader(infile)

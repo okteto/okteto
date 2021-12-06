@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/shurcooL/graphql"
 	"golang.org/x/oauth2"
 )
@@ -29,6 +30,12 @@ import (
 //Client implementation to connect to Okteto API
 type OktetoClient struct {
 	client *graphql.Client
+}
+
+type OktetoClientProvider struct{}
+
+func NewOktetoClientProvider() *OktetoClientProvider {
+	return &OktetoClientProvider{}
 }
 
 //NewClient creates a new client to connect with Okteto API
@@ -158,7 +165,7 @@ func isAPITransientErr(err error) bool {
 
 // InDevContainer returns true if running in an okteto dev container
 func InDevContainer() bool {
-	if v, ok := os.LookupEnv("OKTETO_NAME"); ok && v != "" {
+	if v, ok := os.LookupEnv(model.OktetoNameEnvVar); ok && v != "" {
 		return true
 	}
 
