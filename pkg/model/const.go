@@ -283,5 +283,5 @@ const (
 	// GithubRepositoryEnvVar defines the server to be used
 	GithubServerURLEnvVar = "GITHUB_SERVER_URL"
 
-	ComposeFile = "COMPOSE_FILE"
+	ComposeFileEnvVar = "COMPOSE_FILE"
 )
