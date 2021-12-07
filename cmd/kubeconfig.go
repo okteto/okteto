@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package namespace
+package cmd
 
 import (
 	"context"
@@ -19,38 +19,19 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
-// Namespace fetch credentials for a cluster namespace
-func Namespace(ctx context.Context) *cobra.Command {
+// Kubeconfig fetch credentials for a cluster namespace
+func Kubeconfig(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:     "namespace [name]",
-		Hidden:  true,
-		Short:   "Download k8s credentials for a namespace",
-		Aliases: []string{"ns"},
-		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#namespace"),
+		Use:    "kubeconfig",
+		Hidden: true,
+		Short:  "Download k8s credentials for the namespace",
+		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#update-kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			namespace := ""
-			if len(args) > 0 {
-				namespace = args[0]
-			}
-
-			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
-			}
-			err := contextCMD.Run(
-				ctx,
-				&contextCMD.ContextOptions{
-					Context:   okteto.Context().Name,
-					Namespace: namespace,
-					Save:      true,
-					Show:      true,
-				},
-			)
+			err := contextCMD.UpdateKubeconfigCMD().RunE(cmd, []string{})
 
 			if err != nil {
 				return err
