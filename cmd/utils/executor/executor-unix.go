@@ -18,17 +18,10 @@ package executor
 
 import (
 	"io"
-	"os"
 	"os/exec"
 
 	"github.com/creack/pty"
-	"golang.org/x/sys/unix"
 )
-
-func isSupportForTTY() bool {
-	_, err := unix.IoctlGetWinsize(int(os.Stdout.Fd()), unix.TIOCGWINSZ)
-	return err == nil
-}
 
 func (ttyExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
 	f, err := pty.Start(cmd)

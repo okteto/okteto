@@ -24,10 +24,6 @@ import (
 	"os/exec"
 )
 
-func isSupportForTTY() bool {
-	return true
-}
-
 func (ttyExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
 	return startCommand(cmd)
 }
