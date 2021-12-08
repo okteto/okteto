@@ -66,7 +66,9 @@ func Test_Get(t *testing.T) {
 
 			if tt.fileExits {
 				a := &Analytics{Enabled: tt.enabled}
-				a.save()
+				if err := a.save(); err != nil {
+					t.Fatalf("analytics file wasn't created")
+				}
 			}
 
 			if got := get().Enabled; got != tt.want {

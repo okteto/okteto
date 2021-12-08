@@ -375,7 +375,10 @@ func Test_loadSelector(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dev := &Dev{Selector: tt.selector}
 			os.Setenv("value", tt.value)
-			dev.loadSelector()
+			if err := dev.loadSelector(); err != nil {
+				t.Fatalf("couldn't load selector")
+			}
+
 			for key, value := range dev.Labels {
 				if tt.want[key] != value {
 					t.Errorf("got: '%v', expected: '%v'", dev.Labels, tt.want)
@@ -1460,9 +1463,11 @@ func createEnvFile(content map[string]string) (string, error) {
 	}
 
 	for k, v := range content {
-		file.WriteString(fmt.Sprintf("%s=%s\n", k, v))
+		_, _ = file.WriteString(fmt.Sprintf("%s=%s\n", k, v))
 	}
 
-	file.Sync()
+	if err := file.Sync(); err != nil {
+		return "", err
+	}
 	return file.Name(), nil
 }
