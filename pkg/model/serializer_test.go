@@ -1032,7 +1032,7 @@ func TestManifestUnmarshalling(t *testing.T) {
 	}{
 		{
 			name: "dev manifest with dev and deploy",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 deploy:
   - okteto stack deploy
 devs:
@@ -1044,7 +1044,6 @@ devs:
     - app:/app
 `),
 			expected: &Manifest{
-				Name: "test",
 				Deploy: &DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",
@@ -1377,7 +1376,7 @@ services:
 		},
 		{
 			name: "only dev with service unsupported field",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 sync:
   - app:/app
 services:
@@ -1388,7 +1387,7 @@ services:
 		},
 		{
 			name: "only dev with errors",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 sync:
   - app:/app
 non-found-field:
@@ -1398,14 +1397,13 @@ non-found-field:
 		},
 		{
 			name: "dev manifest with one dev",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 devs:
   test:
     sync:
     - app:/app
 `),
 			expected: &Manifest{
-				Name: "test",
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1478,7 +1476,7 @@ devs:
 		},
 		{
 			name: "dev manifest with multiple devs",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 devs:
   test-1:
     sync:
@@ -1488,7 +1486,6 @@ devs:
     - app:/app
 `),
 			expected: &Manifest{
-				Name: "test",
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1626,7 +1623,7 @@ devs:
 		},
 		{
 			name: "dev manifest with errors",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 devs:
   test-1:
     sync:
@@ -1646,13 +1643,12 @@ sync:
 		},
 		{
 			name: "dev manifest with deploy",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 deploy:
   - okteto stack deploy
 `),
 			expected: &Manifest{
-				Name: "test",
-				Dev:  map[string]*Dev{},
+				Dev: map[string]*Dev{},
 				Deploy: &DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",

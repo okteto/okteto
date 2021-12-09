@@ -17,7 +17,6 @@ import "github.com/okteto/okteto/pkg/log"
 
 //Manifest represents an okteto manifest
 type Manifest struct {
-	Name    string       `json:"name,omitempty" yaml:"name,omitempty"`
 	Icon    string       `json:"icon,omitempty" yaml:"icon,omitempty"`
 	Deploy  *DeployInfo  `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev     ManifestDevs `json:"devs,omitempty" yaml:"devs,omitempty"`
