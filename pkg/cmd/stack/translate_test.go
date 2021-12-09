@@ -1365,7 +1365,11 @@ func Test_translateServiceEnvironment(t *testing.T) {
 					},
 				},
 			},
-			expected: []apiv1.EnvVar{},
+			expected: []apiv1.EnvVar{
+				{
+					Name: "DEBUG",
+				},
+			},
 		},
 		{
 			name: "empty name",
