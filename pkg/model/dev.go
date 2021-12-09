@@ -122,6 +122,8 @@ type BuildInfo struct {
 	CacheFrom  []string    `yaml:"cache_from,omitempty"`
 	Target     string      `yaml:"target,omitempty"`
 	Args       Environment `yaml:"args,omitempty"`
+	Image      string      `yaml:"image,omitempty"`
+	Secrets    []string    `yaml:"secrets,omitempty"`
 }
 
 // Volume represents a volume in the development container
@@ -374,6 +376,8 @@ func Read(bytes []byte) (*Manifest, error) {
 		})
 	}
 
+	setBuildsManifestDefaults(manifest.Build)
+
 	return manifest, nil
 }
 
@@ -611,6 +615,20 @@ func setBuildDefaults(build *BuildInfo) {
 	}
 	if _, err := url.ParseRequestURI(build.Context); err != nil && build.Dockerfile == "" {
 		build.Dockerfile = "Dockerfile"
+	}
+}
+
+func setBuildsManifestDefaults(builds ManifestBuild) {
+	for name, b := range builds {
+		if b == nil {
+			b = &BuildInfo{}
+		}
+		if b.Context == "" {
+			b.Context = fmt.Sprintf("./%s", name)
+		}
+		if _, err := url.ParseRequestURI(b.Context); err != nil && b.Dockerfile == "" {
+			b.Dockerfile = "Dockerfile"
+		}
 	}
 }
 

@@ -1802,16 +1802,48 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 		isErrorExpected bool
 	}{
 		{
-			name: "build params at manifest",
-			buildManifest: []byte(`firstBuild: ./first
-secondBuild:
-  context: ./second
-  dockerfile: Dockerfile
-`),
+			name:          "unmarshalling-relative-path",
+			buildManifest: []byte(`service1: ./service1`),
 			expected: ManifestBuild{
-				"firstBuild":  {Context: "./first"},
-				"secondBuild": {Context: "./second", File: "Dockerfile"},
+				"service1": {
+					Context: "./service1",
+				},
 			},
+		},
+		{
+			name: "unmarshalling-all-fields",
+			buildManifest: []byte(`service2:
+  image: image-tag
+  context: ./service2
+  dockerfile: Dockerfile
+  args:
+    key1: value1
+  cache_from:
+    - cache-image
+  secrets:
+    - secret=value`),
+			expected: ManifestBuild{
+				"service2": {
+					Context:    "./service2",
+					Dockerfile: "Dockerfile",
+					Image:      "image-tag",
+					Args: []EnvVar{
+						{
+							Name:  "key1",
+							Value: "value1",
+						},
+					},
+					CacheFrom: []string{"cache-image"},
+					Secrets:   []string{"secret=value"},
+				},
+			},
+		},
+		{
+			name: "invalid-fields",
+			buildManifest: []byte(`service1:
+  file: Dockerfile`),
+			expected:        ManifestBuild{},
+			isErrorExpected: true,
 		},
 	}
 

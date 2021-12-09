@@ -16,21 +16,98 @@ func Test_GetBuildManifest(t *testing.T) {
 		expectedManifest  *ManifestBuild
 	}{
 		{
-			name: "exists-manifest",
-			manifestYAML: []byte(`build:
-  firstImage: ./first
-  secondImage:
-    context: ./second`),
-			expectedErr: false,
-			expectedManifest: &ManifestBuild{
-				"firstImage":  {Context: "./first"},
-				"secondImage": {Context: "./second"},
-			},
-		},
-		{
 			name:              "not-exists-manifest",
 			expectedErr:       true,
 			manifestNotExists: true,
+		},
+		{
+			name: "relative-path-build",
+			manifestYAML: []byte(`build:
+  service: ./service`),
+			expectedErr: false,
+			expectedManifest: &ManifestBuild{
+				"service": {
+					Name:       "",
+					Target:     "",
+					Context:    "./service",
+					Dockerfile: "Dockerfile",
+					Image:      "",
+					Args:       nil,
+					CacheFrom:  nil,
+				},
+			},
+		},
+		{
+			name: "all-defined-fields",
+			manifestYAML: []byte(`build:
+  service:
+    image: defined-tag-image
+    context: ./service
+    target: build
+    dockerfile: custom-dockerfile
+    args: 
+      KEY1: Value1
+      KEY2: Value2
+    secrets:
+      - KEY1=Value1
+      - KEY2=Value2
+    cache_from:
+      - cache-image-1
+      - cache-image-2`),
+			expectedErr: false,
+			expectedManifest: &ManifestBuild{
+				"service": {
+					Name:       "",
+					Target:     "build",
+					Context:    "./service",
+					Dockerfile: "custom-dockerfile",
+					Image:      "defined-tag-image",
+					Args: []EnvVar{
+						{
+							Name: "KEY1", Value: "Value1",
+						},
+						{
+							Name: "KEY2", Value: "Value2",
+						},
+					},
+					Secrets:   []string{"KEY1=Value1", "KEY2=Value2"},
+					CacheFrom: []string{"cache-image-1", "cache-image-2"},
+				},
+			},
+		},
+		{
+			name: "default-values",
+			manifestYAML: []byte(`build:
+  service:
+    args: 
+      KEY1: Value1
+      KEY2: Value2
+    secrets:
+      - KEY1=Value1
+      - KEY2=Value2
+    cache_from:
+      - cache-image-1
+      - cache-image-2`),
+			expectedErr: false,
+			expectedManifest: &ManifestBuild{
+				"service": {
+					Name:       "",
+					Target:     "",
+					Context:    "./service",
+					Dockerfile: "Dockerfile",
+					Image:      "",
+					Args: []EnvVar{
+						{
+							Name: "KEY1", Value: "Value1",
+						},
+						{
+							Name: "KEY2", Value: "Value2",
+						},
+					},
+					Secrets:   []string{"KEY1=Value1", "KEY2=Value2"},
+					CacheFrom: []string{"cache-image-1", "cache-image-2"},
+				},
+			},
 		},
 	}
 
@@ -54,7 +131,7 @@ func Test_GetBuildManifest(t *testing.T) {
 			if tt.expectedErr {
 				assert.NotNil(t, err)
 			} else {
-				assert.EqualValues(t, tt.expectedManifest, m)
+				assert.Equal(t, tt.expectedManifest, m)
 			}
 
 		})

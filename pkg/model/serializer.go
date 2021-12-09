@@ -37,6 +37,8 @@ type buildInfoRaw struct {
 	CacheFrom  []string    `yaml:"cache_from,omitempty"`
 	Target     string      `yaml:"target,omitempty"`
 	Args       Environment `yaml:"args,omitempty"`
+	Image      string      `yaml:"image,omitempty"`
+	Secrets    []string    `yaml:"secrets,omitempty"`
 }
 
 type syncRaw struct {
@@ -286,7 +288,12 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	var rawString string
 	err := unmarshal(&rawString)
 	if err == nil {
+		if strings.HasPrefix(rawString, "./") || strings.HasPrefix(rawString, ".") {
+			buildInfo.Context = rawString
+			return nil
+		}
 		buildInfo.Name = rawString
+		buildInfo.Image = rawString
 		return nil
 	}
 
@@ -301,6 +308,9 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	buildInfo.Dockerfile = rawBuildInfo.Dockerfile
 	buildInfo.Target = rawBuildInfo.Target
 	buildInfo.Args = rawBuildInfo.Args
+	buildInfo.Image = rawBuildInfo.Image
+	buildInfo.CacheFrom = rawBuildInfo.CacheFrom
+	buildInfo.Secrets = rawBuildInfo.Secrets
 	return nil
 }
 

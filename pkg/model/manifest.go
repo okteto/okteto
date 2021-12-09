@@ -30,7 +30,7 @@ type Manifest struct {
 }
 
 type ManifestDevs map[string]*Dev
-type ManifestBuild map[string]*BuildParams
+type ManifestBuild map[string]*BuildInfo
 
 func NewManifest() *Manifest {
 	return &Manifest{
