@@ -379,8 +379,15 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		if err != nil {
 			log.Infof("could not retrieve sha: %s", err)
 		}
-
-		os.Setenv(model.OktetoGitCommitEnvVar, sha)
+		isClean, err := utils.IsCleanDirectory(ctx, cwd)
+		if err != nil {
+			log.Infof("could not status: %s", err)
+		}
+		if isClean {
+			os.Setenv(model.OktetoGitCommitEnvVar, sha)
+		} else {
+			os.Setenv(model.OktetoGitCommitEnvVar, fmt.Sprintf("%s-local", sha))
+		}
 	}
 	if os.Getenv(model.OktetoRegistryURLEnvVar) == "" {
 		os.Setenv(model.OktetoRegistryURLEnvVar, okteto.Context().Registry)

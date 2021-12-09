@@ -214,9 +214,9 @@ require (
 )
 
 require (
-	github.com/creack/pty v1.1.17
+	github.com/creack/pty v1.1.17 // indirect
 	github.com/rancher/wrangler v0.7.3-0.20210224225730-5ed69efb6ab9 // indirect
-	golang.org/x/sys v0.0.0-20210910150752-751e447fb3d0
+	golang.org/x/sys v0.0.0-20210910150752-751e447fb3d0 // indirect
 )
 
 replace github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305

@@ -56,3 +56,22 @@ func GetGitCommit(ctx context.Context, path string) (string, error) {
 
 	return hash.String(), nil
 }
+
+func IsCleanDirectory(ctx context.Context, path string) (bool, error) {
+	repo, err := git.PlainOpen(path)
+	if err != nil {
+		return false, fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+	}
+
+	status, err := worktree.Status()
+	if err != nil {
+		return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
+	}
+
+	return status.IsClean(), nil
+}
