@@ -42,8 +42,11 @@ import (
 )
 
 var (
-	configTemplate   = template.Must(template.New("syncthingConfig").Parse(configXML))
-	isHealthyRetries = 0
+	configTemplate     = template.Must(template.New("syncthingConfig").Parse(configXML))
+	isHealthyRetries   = 0
+	cachedStatus       = map[bool]string{}
+	cachedPullErrors   = map[bool]int64{}
+	cachedFolderErrors = map[bool]FolderErrorEvent{}
 )
 
 const (
@@ -126,6 +129,7 @@ type DataStateChangedEvent struct {
 
 // FolderSummaryEvent represents folder summary in syncthing.
 type FolderSummaryEvent struct {
+	Type string                 `json:"type"`
 	Data DataFolderSummaryEvent `json:"data"`
 }
 
@@ -136,6 +140,7 @@ type DataFolderSummaryEvent struct {
 
 // FolderErrorEvent represents folder errors in syncthing.
 type FolderErrorEvent struct {
+	Type string               `json:"type"`
 	Data DataFolderErrorEvent `json:"data"`
 }
 
@@ -520,7 +525,7 @@ func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
 	}
 
 	isHealthyRetries++
-	err = s.GetFolderErrors(ctx, false)
+	err = s.GetFolderErrors(ctx, local)
 	if err != nil {
 		log.Infof("syncthing error local=%t retry %d: %s", local, isHealthyRetries, err.Error())
 	}
@@ -566,6 +571,10 @@ func (s *Syncthing) GetSyncthingStatus(ctx context.Context, folder *Folder, loca
 		return scList[0].Data.State, nil
 	}
 
+	if v, ok := cachedStatus[local]; ok {
+		return v, nil
+	}
+
 	delete(params, "events")
 	delete(params, "limit")
 
@@ -586,11 +595,13 @@ func (s *Syncthing) GetSyncthingStatus(ctx context.Context, folder *Folder, loca
 
 	for i := len(scList) - 1; i >= 0; i-- {
 		if scList[i].Type == "StateChanged" {
-			return scList[i].Data.State, nil
+			cachedStatus[local] = scList[i].Data.State
+			return cachedStatus[local], nil
 		}
 	}
 
-	return "scanning", nil
+	cachedStatus[local] = "scanning"
+	return cachedStatus[local], nil
 
 }
 
@@ -618,11 +629,41 @@ func (s *Syncthing) GetPullErrors(ctx context.Context, local bool) (int64, error
 		return 0, errors.ErrLostSyncthing
 	}
 
-	if len(fsList) == 0 {
-		return 0, nil
+	if len(fsList) != 0 {
+		return fsList[0].Data.Summary.PullErrors, nil
 	}
 
-	return fsList[0].Data.Summary.PullErrors, nil
+	if v, ok := cachedPullErrors[local]; ok {
+		return v, nil
+	}
+
+	delete(params, "events")
+	delete(params, "limit")
+
+	body, err = s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
+	if err != nil {
+		log.Infof("error getting events: %s", err.Error())
+		if strings.Contains(err.Error(), "Client.Timeout") {
+			return 0, errors.ErrBusySyncthing
+		}
+		return 0, errors.ErrLostSyncthing
+	}
+
+	err = json.Unmarshal(body, &fsList)
+	if err != nil {
+		log.Infof("error unmarshalling events: %s", err.Error())
+		return 0, errors.ErrLostSyncthing
+	}
+
+	for i := len(fsList) - 1; i >= 0; i-- {
+		if fsList[i].Type == "FolderSummary" {
+			cachedPullErrors[local] = fsList[i].Data.Summary.PullErrors
+			return cachedPullErrors[local], nil
+		}
+	}
+
+	cachedPullErrors[local] = 0
+	return cachedPullErrors[local], nil
 }
 
 // GetFolderErrors returns the last folder errors
@@ -649,10 +690,43 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, local bool) error {
 		return errors.ErrLostSyncthing
 	}
 
-	if len(folderErrorsList) == 0 {
-		return nil
+	folderErrors := FolderErrorEvent{
+		Data: DataFolderErrorEvent{},
 	}
-	folderErrors := folderErrorsList[0]
+	if len(folderErrorsList) != 0 {
+		folderErrors = folderErrorsList[0]
+	} else {
+		if v, ok := cachedFolderErrors[local]; ok {
+			folderErrors = v
+		} else {
+			delete(params, "events")
+			delete(params, "limit")
+
+			body, err = s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
+			if err != nil {
+				log.Infof("error getting events: %s", err.Error())
+				if strings.Contains(err.Error(), "Client.Timeout") {
+					return errors.ErrBusySyncthing
+				}
+				return errors.ErrLostSyncthing
+			}
+
+			err = json.Unmarshal(body, &folderErrorsList)
+			if err != nil {
+				log.Infof("error unmarshalling events: %s", err.Error())
+				return errors.ErrLostSyncthing
+			}
+
+			cachedFolderErrors[local] = folderErrors
+			for i := len(folderErrorsList) - 1; i >= 0; i-- {
+				if folderErrorsList[i].Type == "FolderErrors" {
+					cachedFolderErrors[local] = folderErrorsList[i]
+					folderErrors = cachedFolderErrors[local]
+				}
+			}
+		}
+	}
+
 	if len(folderErrors.Data.Errors) == 0 {
 		return nil
 	}
