@@ -426,17 +426,3 @@ func GetHealthcheckFailure(ctx context.Context, namespace, svcName, stackName st
 	}
 	return ""
 }
-
-//List returns the list of pods
-func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]apiv1.Pod, error) {
-	dList, err := c.CoreV1().Pods(namespace).List(
-		ctx,
-		metav1.ListOptions{
-			LabelSelector: labels,
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-	return dList.Items, nil
-}
