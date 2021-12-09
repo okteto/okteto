@@ -115,6 +115,7 @@ type Status struct {
 
 // StateChangedEvent represents state changed in syncthing.
 type StateChangedEvent struct {
+	Type string                `json:"type"`
 	Data DataStateChangedEvent `json:"data"`
 }
 
@@ -561,11 +562,36 @@ func (s *Syncthing) GetSyncthingStatus(ctx context.Context, folder *Folder, loca
 		return "", errors.ErrLostSyncthing
 	}
 
-	if len(scList) == 0 {
-		return "scanning", nil
+	if len(scList) != 0 {
+		return scList[0].Data.State, nil
 	}
 
-	return scList[0].Data.State, nil
+	delete(params, "events")
+	delete(params, "limit")
+
+	body, err = s.APICall(ctx, "rest/events", "GET", 200, params, local, nil, true, 3)
+	if err != nil {
+		log.Infof("error getting events: %s", err.Error())
+		if strings.Contains(err.Error(), "Client.Timeout") {
+			return "", errors.ErrBusySyncthing
+		}
+		return "", errors.ErrLostSyncthing
+	}
+
+	err = json.Unmarshal(body, &scList)
+	if err != nil {
+		log.Infof("error unmarshalling events: %s", err.Error())
+		return "", errors.ErrLostSyncthing
+	}
+
+	for i := len(scList) - 1; i >= 0; i-- {
+		if scList[i].Type == "StateChanged" {
+			return scList[i].Data.State, nil
+		}
+	}
+
+	return "scanning", nil
+
 }
 
 // GetPullErrors returns the syncthing current pull errors
