@@ -13,7 +13,7 @@ func Test_GetBuildManifest(t *testing.T) {
 		manifestYAML      []byte
 		manifestNotExists bool
 		expectedErr       bool
-		expectedManifest  *ManifestBuild
+		expectedManifest  ManifestBuild
 	}{
 		{
 			name:              "not-exists-manifest",
@@ -25,7 +25,7 @@ func Test_GetBuildManifest(t *testing.T) {
 			manifestYAML: []byte(`build:
   service: ./service`),
 			expectedErr: false,
-			expectedManifest: &ManifestBuild{
+			expectedManifest: ManifestBuild{
 				"service": {
 					Name:       "",
 					Target:     "",
@@ -55,7 +55,7 @@ func Test_GetBuildManifest(t *testing.T) {
       - cache-image-1
       - cache-image-2`),
 			expectedErr: false,
-			expectedManifest: &ManifestBuild{
+			expectedManifest: ManifestBuild{
 				"service": {
 					Name:       "",
 					Target:     "build",
@@ -89,7 +89,7 @@ func Test_GetBuildManifest(t *testing.T) {
       - cache-image-1
       - cache-image-2`),
 			expectedErr: false,
-			expectedManifest: &ManifestBuild{
+			expectedManifest: ManifestBuild{
 				"service": {
 					Name:       "",
 					Target:     "",
