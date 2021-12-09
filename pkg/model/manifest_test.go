@@ -45,7 +45,7 @@ func Test_GetBuildManifest(t *testing.T) {
     context: ./service
     target: build
     dockerfile: custom-dockerfile
-    args: 
+    args:
       KEY1: Value1
       KEY2: Value2
     secrets:
@@ -79,7 +79,7 @@ func Test_GetBuildManifest(t *testing.T) {
 			name: "default-values",
 			manifestYAML: []byte(`build:
   service:
-    args: 
+    args:
       KEY1: Value1
       KEY2: Value2
     secrets:
