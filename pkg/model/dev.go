@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/a8m/envsubst"
+	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
 	oktetoError "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -87,6 +88,7 @@ type Dev struct {
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
+	EnvFiles             EnvFiles              `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 
@@ -281,6 +283,10 @@ func Get(devPath string) (*Manifest, error) {
 		}
 
 		if err := dev.loadAbsPaths(devPath); err != nil {
+			return nil, err
+		}
+
+		if err := dev.expandEnvFiles(); err != nil {
 			return nil, err
 		}
 
@@ -643,6 +649,38 @@ func (dev *Dev) setTimeout() error {
 	}
 
 	dev.Timeout.Default = t
+	return nil
+}
+
+func (dev *Dev) expandEnvFiles() error {
+	for _, envFile := range dev.EnvFiles {
+		filename, err := ExpandEnv(envFile)
+		if err != nil {
+			return err
+		}
+
+		f, err := os.Open(filename)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
+		if err != nil {
+			return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
+		}
+
+		for _, e := range dev.Environment {
+			delete(envMap, e.Name)
+		}
+
+		for name, value := range envMap {
+			dev.Environment = append(
+				dev.Environment,
+				EnvVar{Name: name, Value: value},
+			)
+		}
+	}
+
 	return nil
 }
 
