@@ -111,6 +111,11 @@ func (tr *Translation) DevModeOff() error {
 	tr.App.SetReplicas(getPreviousAppReplicas(tr.App))
 	delete(tr.App.ObjectMeta().Annotations, model.AppReplicasAnnotation)
 
+	delete(tr.App.ObjectMeta().Annotations, model.OktetoStignoreAnnotation)
+	delete(tr.App.TemplateObjectMeta().Annotations, model.OktetoStignoreAnnotation)
+	delete(tr.App.ObjectMeta().Annotations, model.OktetoSyncAnnotation)
+	delete(tr.App.TemplateObjectMeta().Annotations, model.OktetoSyncAnnotation)
+
 	for k := range tr.Dev.Metadata.Annotations {
 		delete(tr.App.ObjectMeta().Annotations, k)
 		delete(tr.App.TemplateObjectMeta().Annotations, k)

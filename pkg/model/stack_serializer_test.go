@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -1574,6 +1575,11 @@ func Test_Environment(t *testing.T) {
 			environment: Environment{EnvVar{Name: "env", Value: "production"}},
 		},
 		{
+			name:        "empty envs",
+			manifest:    []byte("services:\n  app:\n    environment:\n      - env\n    image: okteto/vote:1"),
+			environment: Environment{},
+		},
+		{
 			name:        "noenvs",
 			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1"),
 			environment: Environment{},
@@ -1586,6 +1592,7 @@ func Test_Environment(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			assert.Equal(t, tt.environment, s.Services["app"].Environment)
 			if len(s.Services["app"].Environment) != len(tt.environment) {
 				t.Fatalf("Bad unmarshal of envs")
 			}
@@ -1825,6 +1832,7 @@ func Test_ExtensionUnmarshalling(t *testing.T) {
 				Command: Command{
 					Values: []string{"bash"},
 				},
+				Environment: Environment{},
 			},
 			expectedError: false,
 		},
@@ -1844,9 +1852,7 @@ func Test_ExtensionUnmarshalling(t *testing.T) {
 				t.Fatal("error not thrown")
 			}
 			if !tt.expectedError {
-				if !reflect.DeepEqual(s.Services["app"].Environment, tt.expected.Environment) {
-					t.Fatalf("Expected %v, but got %v", tt.expected, s.Services["app"])
-				}
+				assert.Equal(t, tt.expected.Environment, s.Services["app"].Environment)
 			}
 
 		})
