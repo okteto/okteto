@@ -16,6 +16,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -74,4 +75,13 @@ func IsCleanDirectory(ctx context.Context, path string) (bool, error) {
 	}
 
 	return status.IsClean(), nil
+}
+
+func GetRandomSHA(ctx context.Context, path string) string {
+	var letters = []rune("0123456789abcdef")
+	b := make([]rune, 40)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }

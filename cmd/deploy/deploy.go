@@ -386,7 +386,8 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		if isClean {
 			os.Setenv(model.OktetoGitCommitEnvVar, sha)
 		} else {
-			os.Setenv(model.OktetoGitCommitEnvVar, fmt.Sprintf("%s-local", sha))
+			sha := utils.GetRandomSHA(ctx, cwd)
+			os.Setenv(model.OktetoGitCommitEnvVar, sha)
 		}
 	}
 	if os.Getenv(model.OktetoRegistryURLEnvVar) == "" {
