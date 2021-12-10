@@ -42,7 +42,7 @@ jobs:
     environment:
       OKTETO_USER: cindylopez
     docker:
-      - image: okteto/dev:go1.17
+      - image: okteto/golang-ci:1.17.3
     steps:
       - checkout
       - restore_cache:
