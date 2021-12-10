@@ -1035,7 +1035,7 @@ func TestManifestUnmarshalling(t *testing.T) {
 			manifest: []byte(`
 deploy:
   - okteto stack deploy
-devs:
+dev:
   test-1:
     sync:
     - app:/app
@@ -1398,7 +1398,7 @@ non-found-field:
 		{
 			name: "dev manifest with one dev",
 			manifest: []byte(`
-devs:
+dev:
   test:
     sync:
     - app:/app
@@ -1477,7 +1477,7 @@ devs:
 		{
 			name: "dev manifest with multiple devs",
 			manifest: []byte(`
-devs:
+dev:
   test-1:
     sync:
     - app:/app
@@ -1624,7 +1624,7 @@ devs:
 		{
 			name: "dev manifest with errors",
 			manifest: []byte(`
-devs:
+dev:
   test-1:
     sync:
     - app:/app
@@ -1646,6 +1646,25 @@ sync:
 			manifest: []byte(`
 deploy:
   - okteto stack deploy
+`),
+			expected: &Manifest{
+				Dev: map[string]*Dev{},
+				Deploy: &DeployInfo{
+					Commands: []string{
+						"okteto stack deploy",
+					},
+				},
+			},
+			isErrorExpected: false,
+		},
+		{
+			name: "dev manifest with deploy",
+			manifest: []byte(`
+deploy:
+  - okteto stack deploy
+devs:
+  - api
+  - test
 `),
 			expected: &Manifest{
 				Dev: map[string]*Dev{},

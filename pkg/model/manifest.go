@@ -19,7 +19,7 @@ import "github.com/okteto/okteto/pkg/log"
 type Manifest struct {
 	Icon    string       `json:"icon,omitempty" yaml:"icon,omitempty"`
 	Deploy  *DeployInfo  `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev     ManifestDevs `json:"devs,omitempty" yaml:"devs,omitempty"`
+	Dev     ManifestDevs `json:"dev,omitempty" yaml:"dev,omitempty"`
 	Destroy []string     `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 
 	Type     string `yaml:"-"`
