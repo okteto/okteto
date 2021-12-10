@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -96,6 +97,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
 			}
 
+			addEnvVars(ctx, cwd)
 			if options.Name == "" {
 				options.Name = utils.InferApplicationName(cwd)
 			}
@@ -361,4 +363,38 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 	return handler, nil
 
+}
+
+func addEnvVars(ctx context.Context, cwd string) error {
+	if os.Getenv(model.OktetoGitBranchEnvVar) == "" {
+		branch, err := utils.GetBranch(ctx, cwd)
+		if err != nil {
+			log.Infof("could not retrieve branch name: %s", err)
+		}
+		os.Setenv(model.OktetoGitBranchEnvVar, branch)
+	}
+
+	if os.Getenv(model.OktetoGitCommitEnvVar) == "" {
+		sha, err := utils.GetGitCommit(ctx, cwd)
+		if err != nil {
+			log.Infof("could not retrieve sha: %s", err)
+		}
+		isClean, err := utils.IsCleanDirectory(ctx, cwd)
+		if err != nil {
+			log.Infof("could not status: %s", err)
+		}
+		if isClean {
+			os.Setenv(model.OktetoGitCommitEnvVar, sha)
+		} else {
+			sha := utils.GetRandomSHA(ctx, cwd)
+			os.Setenv(model.OktetoGitCommitEnvVar, sha)
+		}
+	}
+	if os.Getenv(model.OktetoRegistryURLEnvVar) == "" {
+		os.Setenv(model.OktetoRegistryURLEnvVar, okteto.Context().Registry)
+	}
+	if os.Getenv(model.OktetoBuildkitHostURLEnvVar) == "" {
+		os.Setenv(model.OktetoBuildkitHostURLEnvVar, okteto.Context().Builder)
+	}
+	return nil
 }
