@@ -16,6 +16,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -23,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -41,44 +43,55 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			path := "."
+			if options.Tag != "" {
+				path := "."
+				if len(args) == 1 {
+					path = args[0]
+				}
+
+				err := buildTaggedImage(options, path)
+				if err != nil {
+					return err
+				}
+				return nil
+			}
+
+			manifestPath := contextCMD.GetOktetoManifestPath()
+			if manifestPath == "" {
+				return fmt.Errorf("no okteto manifest found")
+			}
+
+			image := ""
 			if len(args) == 1 {
-				path = args[0]
+				image = args[0]
 			}
 
-			if err := utils.CheckIfDirectory(path); err != nil {
-				return fmt.Errorf("invalid build context: %s", err.Error())
-			}
-			options.Path = path
-
-			if options.File == "" {
-				options.File = filepath.Join(path, "Dockerfile")
-			}
-
-			if err := utils.CheckIfRegularFile(options.File); err != nil {
-				return fmt.Errorf("invalid Dockerfile: %s", err.Error())
-			}
-
-			if okteto.Context().Builder == "" {
-				log.Information("Building your image using your local docker daemon")
-			} else {
-				log.Information("Running your build in %s...", okteto.Context().Builder)
-			}
-
-			ctx := context.Background()
-			if err := build.Run(ctx, options); err != nil {
-				analytics.TrackBuild(okteto.Context().Builder, false)
+			buildManifest, err := model.GetBuildManifest(manifestPath)
+			if err != nil {
 				return err
 			}
 
-			if options.Tag == "" {
-				log.Success("Build succeeded")
-				log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
+			if image != "" {
+				i, ok := buildManifest[image]
+				if !ok {
+					return fmt.Errorf("image was not found at build manifest")
+				}
+
+				err := buildFromManifest(image, i)
+				if err != nil {
+					return err
+				}
+
 			} else {
-				log.Success(fmt.Sprintf("Image '%s' successfully pushed", options.Tag))
+				for name, i := range buildManifest {
+					err := buildFromManifest(name, i)
+					if err != nil {
+						return err
+					}
+				}
+
 			}
 
-			analytics.TrackBuild(okteto.Context().Builder, true)
 			return nil
 		},
 	}
@@ -92,4 +105,61 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables")
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
 	return cmd
+}
+
+func buildTaggedImage(options build.BuildOptions, path string) error {
+
+	if err := utils.CheckIfDirectory(path); err != nil {
+		return fmt.Errorf("invalid build context: %s", err.Error())
+	}
+	options.Path = path
+
+	options.File = filepath.Join(path, "Dockerfile")
+
+	if err := utils.CheckIfRegularFile(options.File); err != nil {
+		return fmt.Errorf("invalid Dockerfile: %s", err.Error())
+	}
+
+	if okteto.Context().Builder == "" {
+		log.Information("Building your image using your local docker daemon")
+	} else {
+		log.Information("Running your build in %s...", okteto.Context().Builder)
+	}
+
+	ctx := context.Background()
+	if err := build.Run(ctx, options); err != nil {
+		analytics.TrackBuild(okteto.Context().Builder, false)
+		return err
+	}
+
+	log.Success(fmt.Sprintf("Image '%s' successfully pushed", options.Tag))
+
+	analytics.TrackBuild(okteto.Context().Builder, true)
+	return nil
+}
+
+func buildFromManifest(name string, i *model.BuildInfo) error {
+	if i.Image == "" {
+		imageTag := "dev"
+		okGitCommit := os.Getenv("OKTETO_GIT_COMMIT")
+		if okGitCommit != "" {
+			imageTag = okGitCommit
+		}
+		i.Image = fmt.Sprintf("okteto.dev/%s:%s", name, imageTag)
+	}
+
+	opts := build.BuildOptions{
+		BuildArgs: model.SerializeBuildArgs(i.Args),
+		CacheFrom: i.CacheFrom,
+		Target:    i.Target,
+		File:      i.Dockerfile,
+		Path:      i.Context,
+		Tag:       i.Image,
+	}
+
+	err := buildTaggedImage(opts, i.Context)
+	if err != nil {
+		return err
+	}
+	return nil
 }
