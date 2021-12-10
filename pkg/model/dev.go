@@ -376,7 +376,9 @@ func Read(bytes []byte) (*Manifest, error) {
 		})
 	}
 
-	setBuildsManifestDefaults(manifest.Build)
+	for _, b := range manifest.Build {
+		setBuildDefaults(b)
+	}
 
 	return manifest, nil
 }
@@ -615,20 +617,6 @@ func setBuildDefaults(build *BuildInfo) {
 	}
 	if _, err := url.ParseRequestURI(build.Context); err != nil && build.Dockerfile == "" {
 		build.Dockerfile = "Dockerfile"
-	}
-}
-
-func setBuildsManifestDefaults(builds ManifestBuild) {
-	for name, b := range builds {
-		if b == nil {
-			b = &BuildInfo{}
-		}
-		if b.Context == "" {
-			b.Context = fmt.Sprintf("./%s", name)
-		}
-		if _, err := url.ParseRequestURI(b.Context); err != nil && b.Dockerfile == "" {
-			b.Dockerfile = "Dockerfile"
-		}
 	}
 }
 

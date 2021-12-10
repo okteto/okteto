@@ -93,7 +93,7 @@ func Test_GetBuildManifest(t *testing.T) {
 				"service": {
 					Name:       "",
 					Target:     "",
-					Context:    "./service",
+					Context:    ".",
 					Dockerfile: "Dockerfile",
 					Image:      "",
 					Args: []EnvVar{
