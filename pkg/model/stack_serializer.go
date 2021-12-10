@@ -426,7 +426,12 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.EnvFiles = serviceRaw.EnvFilesSneakCase
 	}
 
-	svc.Environment = serviceRaw.Environment
+	svc.Environment = Environment{}
+	for _, env := range serviceRaw.Environment {
+		if env.Value != "" {
+			svc.Environment = append(svc.Environment, env)
+		}
+	}
 
 	svc.DependsOn = make(DependsOn)
 	for name, condition := range serviceRaw.DependsOn {
