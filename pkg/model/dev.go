@@ -623,20 +623,6 @@ func setBuildDefaults(build *BuildInfo) {
 	}
 }
 
-func setBuildsManifestDefaults(builds ManifestBuild) {
-	for name, b := range builds {
-		if b == nil {
-			b = &BuildInfo{}
-		}
-		if b.Context == "" {
-			b.Context = fmt.Sprintf("./%s", name)
-		}
-		if _, err := url.ParseRequestURI(b.Context); err != nil && b.Dockerfile == "" {
-			b.Dockerfile = "Dockerfile"
-		}
-	}
-}
-
 func (dev *Dev) setRunAsUserDefaults(main *Dev) {
 	if !main.PersistentVolumeEnabled() {
 		return
