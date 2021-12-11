@@ -31,11 +31,6 @@ repos:
       - id: trailing-whitespace
         exclude: ^\.github/pull_request_template\.md$
       - id: check-json
-  # - repo: https://github.com/Lucas-C/pre-commit-hooks
-  #  rev: v1.1.10
-  #  hooks:
-  #    - id: forbid-tabs
-  #    - id: remove-tabs
   - repo: https://github.com/jumanjihouse/pre-commit-hooks
     rev: 2.1.5
     hooks:

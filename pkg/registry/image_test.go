@@ -207,8 +207,6 @@ func Test_GetDevImageTag(t *testing.T) {
 	}
 }
 
-
-
 func Test_GetResgistryAndRepo(t *testing.T) {
 	var tests = []struct {
 		name             string
