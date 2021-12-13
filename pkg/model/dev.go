@@ -377,6 +377,10 @@ func Read(bytes []byte) (*Manifest, error) {
 	}
 
 	for _, b := range manifest.Build {
+		if b.Name != "" {
+			b.Context = b.Name
+			b.Name = ""
+		}
 		setBuildDefaults(b)
 	}
 

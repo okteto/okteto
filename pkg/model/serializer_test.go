@@ -1806,7 +1806,8 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 			buildManifest: []byte(`service1: ./service1`),
 			expected: ManifestBuild{
 				"service1": {
-					Context: "./service1",
+					Name: "./service1",
+					Context: "",
 				},
 			},
 		},
