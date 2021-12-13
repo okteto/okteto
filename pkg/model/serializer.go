@@ -634,7 +634,7 @@ func (l Lifecycle) MarshalYAML() (interface{}, error) {
 func checkFileAndNotDirectory(path string) error {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("'%s' not found. Please make sure the file exists", path)
 	}
 	if fileInfo.Mode().IsRegular() {
 		return nil
