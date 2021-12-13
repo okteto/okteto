@@ -38,7 +38,6 @@ type buildInfoRaw struct {
 	Target     string      `yaml:"target,omitempty"`
 	Args       Environment `yaml:"args,omitempty"`
 	Image      string      `yaml:"image,omitempty"`
-	Secrets    []string    `yaml:"secrets,omitempty"`
 }
 
 type syncRaw struct {
@@ -305,7 +304,6 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	buildInfo.Args = rawBuildInfo.Args
 	buildInfo.Image = rawBuildInfo.Image
 	buildInfo.CacheFrom = rawBuildInfo.CacheFrom
-	buildInfo.Secrets = rawBuildInfo.Secrets
 	return nil
 }
 

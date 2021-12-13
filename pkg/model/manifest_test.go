@@ -48,9 +48,6 @@ func Test_GetBuildManifest(t *testing.T) {
     args:
       KEY1: Value1
       KEY2: Value2
-    secrets:
-      - KEY1=Value1
-      - KEY2=Value2
     cache_from:
       - cache-image-1
       - cache-image-2`),
@@ -70,7 +67,6 @@ func Test_GetBuildManifest(t *testing.T) {
 							Name: "KEY2", Value: "Value2",
 						},
 					},
-					Secrets:   []string{"KEY1=Value1", "KEY2=Value2"},
 					CacheFrom: []string{"cache-image-1", "cache-image-2"},
 				},
 			},
@@ -82,9 +78,6 @@ func Test_GetBuildManifest(t *testing.T) {
     args:
       KEY1: Value1
       KEY2: Value2
-    secrets:
-      - KEY1=Value1
-      - KEY2=Value2
     cache_from:
       - cache-image-1
       - cache-image-2`),
@@ -104,7 +97,6 @@ func Test_GetBuildManifest(t *testing.T) {
 							Name: "KEY2", Value: "Value2",
 						},
 					},
-					Secrets:   []string{"KEY1=Value1", "KEY2=Value2"},
 					CacheFrom: []string{"cache-image-1", "cache-image-2"},
 				},
 			},

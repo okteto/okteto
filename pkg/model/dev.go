@@ -123,7 +123,6 @@ type BuildInfo struct {
 	Target     string      `yaml:"target,omitempty"`
 	Args       Environment `yaml:"args,omitempty"`
 	Image      string      `yaml:"image,omitempty"`
-	Secrets    []string    `yaml:"secrets,omitempty"`
 }
 
 // Volume represents a volume in the development container

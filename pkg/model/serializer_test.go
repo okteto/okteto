@@ -1806,7 +1806,7 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 			buildManifest: []byte(`service1: ./service1`),
 			expected: ManifestBuild{
 				"service1": {
-					Name: "./service1",
+					Name:    "./service1",
 					Context: "",
 				},
 			},
@@ -1820,9 +1820,7 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
   args:
     key1: value1
   cache_from:
-    - cache-image
-  secrets:
-    - secret=value`),
+    - cache-image`),
 			expected: ManifestBuild{
 				"service2": {
 					Context:    "./service2",
@@ -1835,7 +1833,6 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 						},
 					},
 					CacheFrom: []string{"cache-image"},
-					Secrets:   []string{"secret=value"},
 				},
 			},
 		},
