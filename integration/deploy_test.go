@@ -37,7 +37,10 @@ var (
 )
 
 func TestDeployDestroy(t *testing.T) {
-
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
 	ctx := context.Background()
 	oktetoPath, err := getOktetoPath(ctx)
 	if err != nil {
@@ -63,18 +66,6 @@ func TestDeployDestroy(t *testing.T) {
 		log.Printf("cloned repo %s \n", moviesRepo)
 
 		defer deleteGitRepo(ctx, moviesFolder)
-
-		data, err := ioutil.ReadFile(filepath.Join(moviesFolder, "okteto-pipeline.yml"))
-		if err != nil {
-			log.Fatal(err)
-		}
-		content := string(data)
-		log.Printf("new content:\n %s \n", oktetoPath)
-		newContent := strings.ReplaceAll(content, "okteto ", fmt.Sprintf(`%s `, oktetoPath))
-		if err := os.WriteFile(filepath.Join(moviesFolder, "okteto-pipeline.yml"), []byte(newContent), 0600); err != nil {
-			log.Fatal(err)
-		}
-		log.Printf("new content:\n %s \n", newContent)
 
 		if err := oktetoDeploy(ctx, oktetoPath); err != nil {
 			t.Fatal(err)
