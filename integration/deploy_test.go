@@ -19,6 +19,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -57,15 +58,15 @@ func TestDeployDestroy(t *testing.T) {
 		defer deleteGitRepo(ctx, pipelineFolder)
 
 		if runtime.GOOS == "windows" {
-			cmd := exec.Command("sed")
-			cmd.Args = []string{"-ie", fmt.Sprintf(`'s/okteto /%s /'`, oktetoPath), "okteto-pipeline.yml"}
-			cmd.Dir = pipelineFolder
-			o, err := cmd.CombinedOutput()
+			data, err := ioutil.ReadFile("okteto-pipeline.yml")
 			if err != nil {
-				log.Printf("output: %s", o)
-				t.Fatal("could not replace okteto path")
+				log.Fatal(err)
 			}
-			log.Printf("output: %s", o)
+			content := string(data)
+			newContent := strings.ReplaceAll(content, "okteto ", oktetoPath)
+			if err := os.WriteFile("okteto-pipeline.yml", []byte(newContent), 0600); err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		if err := oktetoDeploy(ctx, oktetoPath); err != nil {
