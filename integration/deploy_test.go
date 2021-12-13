@@ -69,6 +69,7 @@ func TestDeployDestroy(t *testing.T) {
 			log.Fatal(err)
 		}
 		content := string(data)
+		log.Printf("new content:\n %s \n", oktetoPath)
 		newContent := strings.ReplaceAll(content, "okteto ", fmt.Sprintf(`%s `, oktetoPath))
 		if err := os.WriteFile(filepath.Join(moviesFolder, "okteto-pipeline.yml"), []byte(newContent), 0600); err != nil {
 			log.Fatal(err)
