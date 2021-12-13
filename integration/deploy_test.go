@@ -57,7 +57,8 @@ func TestDeployDestroy(t *testing.T) {
 		defer deleteGitRepo(ctx, pipelineFolder)
 
 		if runtime.GOOS == "windows" {
-			cmd := exec.Command("sed", "-ie", fmt.Sprintf(`'s/okteto /%s /'`, oktetoPath), "okteto-pipeline.yml")
+			cmd := exec.Command("sed")
+			cmd.Args = []string{"-ie", fmt.Sprintf(`'s/okteto /%s /'`, oktetoPath), "okteto-pipeline.yml"}
 			cmd.Dir = pipelineFolder
 			o, err := cmd.CombinedOutput()
 			if err != nil {
