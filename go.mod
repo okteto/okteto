@@ -24,7 +24,6 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-getter v1.5.8
 	github.com/heroku/docker-registry-client v0.0.0-20190909225348-afc9e1acc3d5
-	github.com/joho/godotenv v1.3.0
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/manifoldco/promptui v0.8.0

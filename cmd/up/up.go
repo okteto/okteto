@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joho/godotenv"
+	"github.com/compose-spec/godotenv"
 	"github.com/moby/term"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	initCMD "github.com/okteto/okteto/cmd/init"
