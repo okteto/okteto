@@ -16,8 +16,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/okteto/okteto/cmd"
@@ -50,6 +52,7 @@ import (
 
 func init() {
 	log.SetLevel("warn")
+	rand.Seed(time.Now().UnixNano())
 
 	// override client-go error handlers to downgrade the "logging before flag.Parse" error
 	errorHandlers := []func(error){

@@ -654,6 +654,15 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+type manifestRaw struct {
+	Icon    string       `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy  *DeployInfo  `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev     ManifestDevs `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy []string     `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+
+	DeprecatedDevs []string `yaml:"devs"`
+}
+
 func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	dev := NewDev()
 	err := unmarshal(&dev)
@@ -664,13 +673,18 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if !isManifestFieldNotFound(err) {
 		return err
 	}
-	type manifestType Manifest //Prevent recursion
-	manifest := manifestType(*NewManifest())
+
+	manifest := manifestRaw{
+		Dev: make(map[string]*Dev),
+	}
 	err = unmarshal(&manifest)
 	if err != nil {
 		return err
 	}
-	*d = Manifest(manifest)
+	d.Deploy = manifest.Deploy
+	d.Destroy = manifest.Destroy
+	d.Dev = manifest.Dev
+	d.Icon = manifest.Icon
 	return nil
 }
 
@@ -699,9 +713,15 @@ func (d *devRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type manifestDevsList []string
+	devsList := manifestDevsList{}
+	err := unmarshal(&devsList)
+	if err == nil {
+		return nil
+	}
 	type manifestDevs map[string]devRaw
 	devs := make(manifestDevs)
-	err := unmarshal(&devs)
+	err = unmarshal(&devs)
 	if err != nil {
 		return err
 	}
@@ -716,7 +736,7 @@ func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func isManifestFieldNotFound(err error) bool {
-	manifestFields := []string{"devs", "name", "icon", "variables", "deploy", "destroy"}
+	manifestFields := []string{"devs", "dev", "name", "icon", "variables", "deploy", "destroy"}
 	for _, field := range manifestFields {
 		if strings.Contains(err.Error(), fmt.Sprintf("field %s not found", field)) {
 			return true

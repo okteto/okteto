@@ -35,26 +35,26 @@ const (
 	tokenFile               = ".token.json"
 	contextDir              = "context"
 	contextsStoreFile       = "config.json"
-	kubeconfigFile          = "kubeconfig"
 
 	oktetoFolderName = ".okteto"
 	//Activating up started
 	Activating UpState = "activating"
 	//Starting up started the dev pod creation
-	Starting UpState = "starting"
+	Starting = "starting"
 	//Attaching up attaching volume
-	Attaching UpState = "attaching"
-	//Pulling up pulling images
-	Pulling UpState = "pulling"
-	//StartingSync up preparing syncthing
-	StartingSync UpState = "startingSync"
-	//Synchronizing up is syncthing
-	Synchronizing UpState = "synchronizing"
-	//Ready up finished
-	Ready UpState = "ready"
-	//Failed up failed
-	Failed    UpState = "failed"
-	stateFile         = "okteto.state"
+	Attaching = "attaching"
+	//Pulling  up pulling images
+	Pulling = "pulling"
+	//Start ingSync up preparing syncthing
+	StartingSync = "startingSync"
+	//Synchronize ing up is syncthing
+	Synchronizing = "synchronizing"
+	//Ready up fi nished
+	Ready = "ready"
+	//Fai led up failed
+	Failed = "failed"
+
+	stateFile string = "okteto.state"
 
 	//OktetoContextVariableName defines the kubeconfig context of okteto commands
 	OktetoContextVariableName = "OKTETO_CONTEXT"
