@@ -140,12 +140,7 @@ func buildTaggedImage(options build.BuildOptions, path string) error {
 
 func buildFromManifest(name string, i *model.BuildInfo) error {
 	if i.Image == "" {
-		imageTag := "dev"
-		okGitCommit := os.Getenv("OKTETO_GIT_COMMIT")
-		if okGitCommit != "" {
-			imageTag = okGitCommit
-		}
-		i.Image = fmt.Sprintf("okteto.dev/%s:%s", name, imageTag)
+		i.Image = setOktetoImageTag(name)
 	}
 
 	opts := build.BuildOptions{
@@ -162,4 +157,13 @@ func buildFromManifest(name string, i *model.BuildInfo) error {
 		return err
 	}
 	return nil
+}
+
+func setOktetoImageTag(name string) string {
+	imageTag := "dev"
+	okGitCommit := os.Getenv("OKTETO_GIT_COMMIT")
+	if okGitCommit != "" {
+		imageTag = okGitCommit
+	}
+	return fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, name, imageTag)
 }
