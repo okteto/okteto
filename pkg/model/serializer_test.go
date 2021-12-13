@@ -1825,8 +1825,8 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 			buildManifest: []byte(`service1: ./service1`),
 			expected: ManifestBuild{
 				"service1": {
-					Name:    "./service1",
-					Context: "",
+					Context: "./service1",
+					Name:    "",
 				},
 			},
 		},
@@ -1842,6 +1842,7 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
     - cache-image`),
 			expected: ManifestBuild{
 				"service2": {
+					Name:       "",
 					Context:    "./service2",
 					Dockerfile: "Dockerfile",
 					Image:      "image-tag",
