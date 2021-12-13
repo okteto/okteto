@@ -28,12 +28,6 @@ import (
 	"time"
 )
 
-var (
-	pipelineRepo    = "okteto/movies"
-	pipelineRepoURL = "git@github.com:okteto/movies.git"
-	pipelineFolder  = "movies"
-)
-
 func TestDeployDestroy(t *testing.T) {
 
 	ctx := context.Background()

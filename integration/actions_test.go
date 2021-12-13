@@ -86,6 +86,9 @@ services:
 
 var (
 	actionManifestTemplate = template.Must(template.New("deployment").Parse(deploymentManifestFormat))
+	pipelineRepo           = "okteto/movies"
+	pipelineRepoURL        = "git@github.com:okteto/movies.git"
+	pipelineFolder         = "movies"
 )
 
 func TestApplyPipeline(t *testing.T) {
