@@ -9,7 +9,7 @@ require (
 	github.com/briandowns/spinner v1.11.1
 	github.com/cheggaaa/pb/v3 v3.0.8
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
-	github.com/compose-spec/godotenv v1.1.0
+	github.com/compose-spec/godotenv v1.1.1
 	github.com/containerd/console v1.0.3
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/cli v20.10.8+incompatible
