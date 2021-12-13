@@ -63,17 +63,17 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&output, "output", "o", "", "output format. One of: ['json', 'markdown']")
+	cmd.Flags().StringVarP(&output, "output", "o", "", "output format. One of: ['json', 'md']")
 
 	return cmd
 }
 
 func validateOutput(output string) error {
 	switch output {
-	case "", "json", "md", "markdown":
+	case "", "json", "md":
 		return nil
 	default:
-		return fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'markdown']")
+		return fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'md']")
 	}
 }
 
@@ -94,7 +94,7 @@ func executeListPreviewEndpoints(ctx context.Context, name, output string) error
 			return err
 		}
 		fmt.Println(string(bytes))
-	case "markdown", "md":
+	case "md":
 		if len(endpointList) == 0 {
 			fmt.Printf("There are no available endpoints for preview '%s'\n", name)
 		} else {
