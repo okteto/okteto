@@ -17,6 +17,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/log"
+
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -26,6 +28,7 @@ import (
 
 // Login starts the login handshake with GitHub and okteto
 func Login() *cobra.Command {
+	log.Warning("'okteto login' will soon be deprecated in favor of 'okteto context', and will be removed in version 1.16.  Learn more about okteto context at https://okteto.com/docs/reference/cli/#context")
 	token := ""
 	cmd := &cobra.Command{
 		Hidden: true,
