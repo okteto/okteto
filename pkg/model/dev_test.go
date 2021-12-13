@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/joho/godotenv"
+	"github.com/compose-spec/godotenv"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 )

@@ -282,8 +282,8 @@ github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnht
 github.com/cncf/xds/go v0.0.0-20210312221358-fbca930ec8ed/go.mod h1:eXthEFrGJvWHgFFCl3hGmgk+/aYT6PnTQLykKQRLhEs=
 github.com/cockroachdb/datadriven v0.0.0-20190809214429-80d97fb3cbaa/go.mod h1:zn76sxSg3SzpJ0PPJaLDCu+Bu0Lg3sKTORVIj19EIF8=
 github.com/codahale/hdrhistogram v0.0.0-20160425231609-f8ad88b59a58/go.mod h1:sE/e/2PUdi/liOCUjSTXgM1o87ZssimdTWN964YiIeI=
-github.com/compose-spec/godotenv v1.1.0 h1:wzShe5P6L/Aw3wsV357eWlZdMcPaOe2V2+3+qGwMEL4=
-github.com/compose-spec/godotenv v1.1.0/go.mod h1:zF/3BOa18Z24tts5qnO/E9YURQanJTBUf7nlcCTNsyc=
+github.com/compose-spec/godotenv v1.1.1 h1:lp+WpAInnw06YN9sV/XLUOV/9z4C+6wjJdWlrdVac7o=
+github.com/compose-spec/godotenv v1.1.1/go.mod h1:zF/3BOa18Z24tts5qnO/E9YURQanJTBUf7nlcCTNsyc=
 github.com/containerd/cgroups v0.0.0-20190919134610-bf292b21730f/go.mod h1:OApqhQ4XNSNC13gXIwDjhOQxjWa/NxkwZXJ1EvqT0ko=
 github.com/containerd/cgroups v0.0.0-20200531161412-0dbf7f05ba59/go.mod h1:pA0z1pT8KYB3TCXK/ocprsh7MAkoW8bZVzPdih9snmM=
 github.com/containerd/cgroups v0.0.0-20200710171044-318312a37340 h1:9atoWyI9RtXFwf7UDbme/6M8Ud0rFrx+Q3ZWgSnsxtw=
@@ -856,7 +856,6 @@ github.com/jmespath/go-jmespath v0.3.0 h1:OS12ieG61fsCg5+qLJ+SsW9NicxNkg3b25OyT2
 github.com/jmespath/go-jmespath v0.3.0/go.mod h1:9QtRXoHjLGCJ5IBSaohpXITPlowMeeYCZ7fLUTSywik=
 github.com/jmoiron/sqlx v1.2.1-0.20190826204134-d7d95172beb5/go.mod h1:1FEQNm3xlJgrMD+FBdI9+xvCksHtbpVBBw5dYhBSsks=
 github.com/joefitzgerald/rainbow-reporter v0.1.0/go.mod h1:481CNgqmVHQZzdIbN52CupLJyoVwB10FQ/IQlF1pdL8=
-github.com/joho/godotenv v1.3.0 h1:Zjp+RcGpHhGlrMbJzXTrZZPrWj+1vfm90La1wgB6Bhc=
 github.com/joho/godotenv v1.3.0/go.mod h1:7hK45KPybAkOC6peb+G5yklZfMxEjkZhHbwpqxOKXbg=
 github.com/jonboulle/clockwork v0.1.0/go.mod h1:Ii8DK3G1RaLaWxj9trq07+26W01tbo22gdxWY5EU2bo=
 github.com/jonboulle/clockwork v0.2.2/go.mod h1:Pkfl5aHPm1nk2H9h0bjmnJD/BcgbGXUBGnn1kMkgxc8=
