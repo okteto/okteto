@@ -28,8 +28,17 @@ import (
 	"time"
 )
 
-func TestDeployDestroy(t *testing.T) {
+var (
+	moviesRepo    = "okteto/movies"
+	moviesRepoURL = "git@github.com:okteto/movies.git"
+	moviesFolder  = "movies"
+)
 
+func TestDeployDestroy(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
 	ctx := context.Background()
 	oktetoPath, err := getOktetoPath(ctx)
 	if err != nil {
@@ -48,13 +57,13 @@ func TestDeployDestroy(t *testing.T) {
 
 		log.Printf("created namespace %s \n", namespace)
 
-		if err := cloneGitRepo(ctx, pipelineRepoURL); err != nil {
+		if err := cloneGitRepo(ctx, moviesRepoURL); err != nil {
 			t.Fatal(err)
 		}
 
-		log.Printf("cloned repo %s \n", pipelineRepo)
+		log.Printf("cloned repo %s \n", moviesRepo)
 
-		defer deleteGitRepo(ctx, pipelineFolder)
+		defer deleteGitRepo(ctx, moviesFolder)
 
 		if err := oktetoDeploy(ctx, oktetoPath); err != nil {
 			t.Fatal(err)
@@ -86,7 +95,7 @@ func oktetoDeploy(ctx context.Context, oktetoManifestPath string) error {
 	log.Printf("okteto deploy %s", oktetoManifestPath)
 	cmd := exec.Command(oktetoManifestPath, "deploy")
 	cmd.Env = append(os.Environ(), "OKTETO_GIT_COMMIT=dev")
-	cmd.Dir = pipelineFolder
+	cmd.Dir = moviesFolder
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto deploy failed: %s - %s", string(o), err)
@@ -99,7 +108,7 @@ func oktetoDestroy(ctx context.Context, oktetoManifestPath string) error {
 	log.Printf("okteto destroy %s", oktetoManifestPath)
 	cmd := exec.Command(oktetoManifestPath, "destroy")
 	cmd.Env = os.Environ()
-	cmd.Dir = pipelineFolder
+	cmd.Dir = moviesFolder
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto destroy failed: %s - %s", string(o), err)
