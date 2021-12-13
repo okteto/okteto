@@ -73,6 +73,7 @@ func TestDeployDestroy(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(moviesFolder, "okteto-pipeline.yml"), []byte(newContent), 0600); err != nil {
 			log.Fatal(err)
 		}
+		log.Printf("new content:\n %s \n", newContent)
 
 		if err := oktetoDeploy(ctx, oktetoPath); err != nil {
 			t.Fatal(err)
