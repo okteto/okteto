@@ -118,6 +118,9 @@ jobs:
       - run:
           name: Upgrade kubectl
           command: choco install kubernetes-cli
+      - run:
+          name: Upgrade helm
+          command: choco install kubernetes-helm
       - attach_workspace:
           at: .\artifacts
       - run:
