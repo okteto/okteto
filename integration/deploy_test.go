@@ -59,10 +59,11 @@ func TestDeployDestroy(t *testing.T) {
 		if runtime.GOOS == "windows" {
 			cmd := exec.Command("sed", fmt.Sprintf(`"s/okteto/%s/"`, oktetoPath), "okteto-pipeline.yml")
 			cmd.Dir = pipelineFolder
-			_, err := cmd.CombinedOutput()
+			o, err := cmd.CombinedOutput()
 			if err != nil {
 				t.Fatal("could not replace okteto path")
 			}
+			log.Printf("output: %s", o)
 		}
 
 		if err := oktetoDeploy(ctx, oktetoPath); err != nil {
