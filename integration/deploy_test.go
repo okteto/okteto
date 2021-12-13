@@ -61,6 +61,7 @@ func TestDeployDestroy(t *testing.T) {
 			cmd.Dir = pipelineFolder
 			o, err := cmd.CombinedOutput()
 			if err != nil {
+				log.Printf("output: %s", o)
 				t.Fatal("could not replace okteto path")
 			}
 			log.Printf("output: %s", o)
