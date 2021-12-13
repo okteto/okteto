@@ -19,11 +19,9 @@ package integration
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -74,7 +72,7 @@ func TestDeployDestroy(t *testing.T) {
 		log.Printf("deployed \n")
 
 		endpoint := fmt.Sprintf("https://movies-%s.%s", namespace, appsSubdomain)
-		content, err = getContent(endpoint, 150, nil)
+		content, err := getContent(endpoint, 150, nil)
 		if err != nil {
 			t.Fatalf("failed to get app content: %s", err)
 		}
