@@ -23,10 +23,17 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
+)
+
+var (
+	moviesRepo    = "okteto/movies"
+	moviesRepoURL = "git@github.com:okteto/movies.git"
+	moviesFolder  = "movies"
 )
 
 func TestDeployDestroy(t *testing.T) {
@@ -49,24 +56,22 @@ func TestDeployDestroy(t *testing.T) {
 
 		log.Printf("created namespace %s \n", namespace)
 
-		if err := cloneGitRepo(ctx, pipelineRepoURL); err != nil {
+		if err := cloneGitRepo(ctx, moviesRepoURL); err != nil {
 			t.Fatal(err)
 		}
 
-		log.Printf("cloned repo %s \n", pipelineRepo)
+		log.Printf("cloned repo %s \n", moviesRepo)
 
-		defer deleteGitRepo(ctx, pipelineFolder)
+		defer deleteGitRepo(ctx, moviesFolder)
 
-		if runtime.GOOS == "windows" {
-			data, err := ioutil.ReadFile("okteto-pipeline.yml")
-			if err != nil {
-				log.Fatal(err)
-			}
-			content := string(data)
-			newContent := strings.ReplaceAll(content, "okteto ", oktetoPath)
-			if err := os.WriteFile("okteto-pipeline.yml", []byte(newContent), 0600); err != nil {
-				log.Fatal(err)
-			}
+		data, err := ioutil.ReadFile(filepath.Join(moviesFolder, "okteto-pipeline.yml"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		content := string(data)
+		newContent := strings.ReplaceAll(content, "okteto ", fmt.Sprintf("%s ", oktetoPath))
+		if err := os.WriteFile(filepath.Join(moviesFolder, "okteto-pipeline.yml"), []byte(newContent), 0600); err != nil {
+			log.Fatal(err)
 		}
 
 		if err := oktetoDeploy(ctx, oktetoPath); err != nil {
@@ -76,7 +81,7 @@ func TestDeployDestroy(t *testing.T) {
 		log.Printf("deployed \n")
 
 		endpoint := fmt.Sprintf("https://movies-%s.%s", namespace, appsSubdomain)
-		content, err := getContent(endpoint, 150, nil)
+		content, err = getContent(endpoint, 150, nil)
 		if err != nil {
 			t.Fatalf("failed to get app content: %s", err)
 		}
@@ -99,7 +104,7 @@ func oktetoDeploy(ctx context.Context, oktetoManifestPath string) error {
 	log.Printf("okteto deploy %s", oktetoManifestPath)
 	cmd := exec.Command(oktetoManifestPath, "deploy")
 	cmd.Env = append(os.Environ(), "OKTETO_GIT_COMMIT=dev")
-	cmd.Dir = pipelineFolder
+	cmd.Dir = moviesFolder
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto deploy failed: %s - %s", string(o), err)
@@ -112,7 +117,7 @@ func oktetoDestroy(ctx context.Context, oktetoManifestPath string) error {
 	log.Printf("okteto destroy %s", oktetoManifestPath)
 	cmd := exec.Command(oktetoManifestPath, "destroy")
 	cmd.Env = os.Environ()
-	cmd.Dir = pipelineFolder
+	cmd.Dir = moviesFolder
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto destroy failed: %s - %s", string(o), err)
