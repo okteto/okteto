@@ -287,12 +287,7 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	var rawString string
 	err := unmarshal(&rawString)
 	if err == nil {
-		if strings.HasPrefix(rawString, "./") || strings.HasPrefix(rawString, ".") {
-			buildInfo.Context = rawString
-			return nil
-		}
 		buildInfo.Name = rawString
-		buildInfo.Image = rawString
 		return nil
 	}
 
