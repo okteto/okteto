@@ -47,7 +47,8 @@ By default, this will log into cloud.okteto.com. If you want to log into your Ok
 to log in to a Okteto Enterprise instance running at okteto.example.com.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Warning("'okteto login' will soon be deprecated in favor of 'okteto context', and will be removed in version 1.16.  Learn more about okteto context at https://okteto.com/docs/reference/cli/#context")
+			log.Warning(`'okteto login' will soon be deprecated in favor of 'okteto context', and will be removed in version 1.16.
+    Learn more about okteto context at https://okteto.com/docs/reference/cli/#context`)
 
 			ctxOptions := contextCMD.ContextOptions{
 				IsCtxCommand: true,
