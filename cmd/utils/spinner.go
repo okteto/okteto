@@ -16,13 +16,11 @@ package utils
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
 	sp "github.com/briandowns/spinner"
-	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/term"
 )
@@ -36,7 +34,7 @@ type Spinner struct {
 
 //NewSpinner returns a new Spinner
 func NewSpinner(suffix string) *Spinner {
-	spinnerSupport = !loadBoolean(model.OktetoDisableSpinnerEnvVar)
+	spinnerSupport = !LoadBoolean(model.OktetoDisableSpinnerEnvVar)
 	s := sp.New(sp.CharSets[14], 100*time.Millisecond)
 	s.HideCursor = true
 	s.Suffix = fmt.Sprintf(" %s", suffix)
@@ -53,20 +51,6 @@ func NewSpinner(suffix string) *Spinner {
 	return &Spinner{
 		sp: s,
 	}
-}
-
-func loadBoolean(k string) bool {
-	v := os.Getenv(k)
-	if v == "" {
-		v = "false"
-	}
-
-	h, err := strconv.ParseBool(v)
-	if err != nil {
-		log.Yellow("'%s' is not a valid value for environment variable %s", v, k)
-	}
-
-	return h
 }
 
 //Start starts the spinner

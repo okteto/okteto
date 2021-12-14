@@ -294,4 +294,7 @@ const (
 
 	// GithubRepositoryEnvVar defines the server to be used
 	GithubServerURLEnvVar = "GITHUB_SERVER_URL"
+
+	// BuildkitProgressEnvVar defines the output of buildkit
+	BuildkitProgressEnvVar = "BUILDKIT_PROGRESS"
 )
