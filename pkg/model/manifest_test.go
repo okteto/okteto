@@ -106,7 +106,7 @@ func Test_GetBuildManifest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			tmpFile, err := os.CreateTemp("", "")
+			tmpFile, err := os.CreateTemp("", "test")
 			if err != nil {
 				t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
 			}
@@ -115,11 +115,12 @@ func Test_GetBuildManifest(t *testing.T) {
 			}
 			defer os.RemoveAll(tmpFile.Name())
 
+			filename := tmpFile.Name()
 			if tt.manifestNotExists {
-				os.RemoveAll(tmpFile.Name())
+				filename = "test"
 			}
 
-			m, err := GetBuildManifest(tmpFile.Name())
+			m, err := GetBuildManifest(filename)
 			if tt.expectedErr {
 				assert.NotNil(t, err)
 			} else {
