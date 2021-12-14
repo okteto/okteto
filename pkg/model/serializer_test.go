@@ -1793,3 +1793,71 @@ compose:
 		})
 	}
 }
+
+func TestManifestBuildUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name            string
+		buildManifest   []byte
+		expected        ManifestBuild
+		isErrorExpected bool
+	}{
+		{
+			name:          "unmarshalling-relative-path",
+			buildManifest: []byte(`service1: ./service1`),
+			expected: ManifestBuild{
+				"service1": {
+					Name:    "./service1",
+					Context: "",
+				},
+			},
+		},
+		{
+			name: "unmarshalling-all-fields",
+			buildManifest: []byte(`service2:
+  image: image-tag
+  context: ./service2
+  dockerfile: Dockerfile
+  args:
+    key1: value1
+  cache_from:
+    - cache-image`),
+			expected: ManifestBuild{
+				"service2": {
+					Context:    "./service2",
+					Dockerfile: "Dockerfile",
+					Image:      "image-tag",
+					Args: []EnvVar{
+						{
+							Name:  "key1",
+							Value: "value1",
+						},
+					},
+					CacheFrom: []string{"cache-image"},
+				},
+			},
+		},
+		{
+			name: "invalid-fields",
+			buildManifest: []byte(`service1:
+  file: Dockerfile`),
+			expected:        ManifestBuild{},
+			isErrorExpected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result ManifestBuild
+			err := yaml.UnmarshalStrict(tt.buildManifest, &result)
+			if err != nil && !tt.isErrorExpected {
+				t.Fatalf("Not expecting error but got %s", err)
+			} else if tt.isErrorExpected && err == nil {
+				t.Fatal("Expected error but got none")
+			}
+
+			if !assert.Equal(t, tt.expected, result) {
+				t.Fatal("Failed")
+			}
+		})
+	}
+}

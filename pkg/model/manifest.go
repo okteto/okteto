@@ -13,20 +13,24 @@
 
 package model
 
-import "github.com/okteto/okteto/pkg/log"
+import (
+	"github.com/okteto/okteto/pkg/log"
+)
 
 //Manifest represents an okteto manifest
 type Manifest struct {
-	Icon    string       `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy  *DeployInfo  `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev     ManifestDevs `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy []string     `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Icon    string        `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy  *DeployInfo   `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev     ManifestDevs  `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build   ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
 
 	Type     string `yaml:"-"`
 	Filename string `yaml:"-"`
 }
 
 type ManifestDevs map[string]*Dev
+type ManifestBuild map[string]*BuildInfo
 
 func NewManifest() *Manifest {
 	return &Manifest{
@@ -54,4 +58,14 @@ func NewDeployInfo() *DeployInfo {
 	return &DeployInfo{
 		Commands: make([]string, 0),
 	}
+}
+
+// GetBuildManifest Loads a the build manifest
+func GetBuildManifest(path string) (ManifestBuild, error) {
+	manifest, err := Get(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return manifest.Build, nil
 }
