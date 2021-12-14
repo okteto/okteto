@@ -370,8 +370,8 @@ func fileExistsAndNotDir(filename string) bool {
 	return !info.IsDir()
 }
 
-func GetOktetoManifestPath() string {
-	root := "."
+func GetOktetoManifestPath(path string) string {
+
 	// Files will be checked in the order defined in the list
 	files := []string{
 		"okteto.yml",
@@ -380,7 +380,7 @@ func GetOktetoManifestPath() string {
 		".okteto/okteto.yaml",
 	}
 	for _, name := range files {
-		path := filepath.Join(root, name)
+		path := filepath.Join(path, name)
 		if fileExistsAndNotDir(path) {
 			return path
 		}

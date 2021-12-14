@@ -43,56 +43,70 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			path := "."
+
 			if options.Tag != "" {
-				path := "."
 				if len(args) == 1 {
 					path = args[0]
 				}
-
-				err := buildTaggedImage(options, path)
+				err := buildImageWithOpts(options, path)
 				if err != nil {
 					return err
 				}
-				return nil
 			}
 
-			manifestPath := contextCMD.GetOktetoManifestPath()
-			if manifestPath == "" {
-				return fmt.Errorf("no okteto manifest found")
+			manifestPath := contextCMD.GetOktetoManifestPath(path)
+			if manifestPath != "" {
+				buildManifest, err := model.GetBuildManifest(manifestPath)
+				if err != nil {
+					return err
+				}
+				if len(buildManifest) != 0 {
+					image := ""
+					if len(args) == 1 {
+						image = args[0]
+					}
+					if image != "" {
+						b, ok := buildManifest[image]
+						if !ok {
+							return fmt.Errorf("invalid image name to build")
+						}
+
+						if options.File != "" {
+							b.Dockerfile = options.File
+						}
+						if options.Target != "" {
+							b.Target = options.Target
+						}
+						if len(options.CacheFrom) != 0 {
+							b.CacheFrom = options.CacheFrom
+						}
+
+						err := buildFromManifest(image, b)
+						if err != nil {
+							return err
+						}
+					} else {
+						for name, i := range buildManifest {
+							err := buildFromManifest(name, i)
+							if err != nil {
+								return err
+							}
+						}
+					}
+					return nil
+				}
 			}
 
-			image := ""
 			if len(args) == 1 {
-				image = args[0]
+				path = args[0]
 			}
-
-			buildManifest, err := model.GetBuildManifest(manifestPath)
+			err := buildImageWithOpts(options, path)
 			if err != nil {
 				return err
 			}
-
-			if image != "" {
-				i, ok := buildManifest[image]
-				if !ok {
-					return fmt.Errorf("image was not found at build manifest")
-				}
-
-				err := buildFromManifest(image, i)
-				if err != nil {
-					return err
-				}
-
-			} else {
-				for name, i := range buildManifest {
-					err := buildFromManifest(name, i)
-					if err != nil {
-						return err
-					}
-				}
-
-			}
-
 			return nil
+
 		},
 	}
 
@@ -107,14 +121,16 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func buildTaggedImage(options build.BuildOptions, path string) error {
+func buildImageWithOpts(options build.BuildOptions, path string) error {
 
 	if err := utils.CheckIfDirectory(path); err != nil {
 		return fmt.Errorf("invalid build context: %s", err.Error())
 	}
 	options.Path = path
 
-	options.File = filepath.Join(path, "Dockerfile")
+	if options.File == "" {
+		options.File = filepath.Join(path, "Dockerfile")
+	}
 
 	if err := utils.CheckIfRegularFile(options.File); err != nil {
 		return fmt.Errorf("invalid Dockerfile: %s", err.Error())
@@ -132,27 +148,33 @@ func buildTaggedImage(options build.BuildOptions, path string) error {
 		return err
 	}
 
-	log.Success(fmt.Sprintf("Image '%s' successfully pushed", options.Tag))
+	if options.Tag == "" {
+		log.Success("Build succeeded")
+		log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
+	} else {
+		log.Success(fmt.Sprintf("Image '%s' successfully pushed", options.Tag))
+	}
 
 	analytics.TrackBuild(okteto.Context().Builder, true)
 	return nil
 }
 
-func buildFromManifest(name string, i *model.BuildInfo) error {
-	if i.Image == "" {
-		i.Image = setOktetoImageTag(name)
+func buildFromManifest(name string, b *model.BuildInfo) error {
+	if b.Image == "" {
+		b.Image = setOktetoImageTag(name)
 	}
 
 	opts := build.BuildOptions{
-		BuildArgs: model.SerializeBuildArgs(i.Args),
-		CacheFrom: i.CacheFrom,
-		Target:    i.Target,
-		File:      i.Dockerfile,
-		Path:      i.Context,
-		Tag:       i.Image,
+		BuildArgs:  model.SerializeBuildArgs(b.Args),
+		CacheFrom:  b.CacheFrom,
+		Target:     b.Target,
+		Path:       b.Context,
+		Tag:        b.Image,
+		OutputMode: "tty",
 	}
+	opts.File = filepath.Join(b.Context, b.Dockerfile)
 
-	err := buildTaggedImage(opts, i.Context)
+	err := buildImageWithOpts(opts, b.Context)
 	if err != nil {
 		return err
 	}
