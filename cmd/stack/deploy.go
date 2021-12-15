@@ -15,15 +15,18 @@ package stack
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/compose-spec/godotenv"
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -45,6 +48,30 @@ func Deploy(ctx context.Context) *cobra.Command {
 			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPath)
 			if err != nil {
 				return err
+			}
+
+			if okteto.IsOkteto() {
+				c, err := okteto.NewOktetoClient()
+				if err != nil {
+					return err
+				}
+				hasAccess, err := utils.HasAccessToNamespace(ctx, s.Namespace, c)
+				if err != nil {
+					return err
+				}
+				if !hasAccess {
+					log.Warning("Namespace '%s' not found", s.Namespace)
+					create, err := utils.AskYesNo(fmt.Sprintf("Do you want to create the namespace '%s'? [y/n] ", s.Namespace))
+					if err != nil {
+						return err
+					}
+					if create {
+						err = namespace.ExecuteCreateNamespace(ctx, s.Namespace, nil)
+						if err != nil {
+							return err
+						}
+					}
+				}
 			}
 
 			analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)
