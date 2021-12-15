@@ -25,4 +25,6 @@ COPY --from=kubectl /opt/bitnami/kubectl/bin/kubectl /usr/local/bin/kubectl
 COPY --from=helm /usr/bin/helm /usr/local/bin/helm
 COPY --from=builder /okteto/bin/okteto /usr/local/bin/okteto
 
+ENV OKTETO_DISABLE_SPINNER=true
+
 ENV PS1="\[\e[36m\]\${OKTETO_NAMESPACE:-okteto}:\e[32m\]\${OKTETO_NAME:-dev} \[\e[m\]\W> "

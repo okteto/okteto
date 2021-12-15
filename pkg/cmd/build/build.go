@@ -21,9 +21,11 @@ import (
 
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/pkg/errors"
@@ -58,10 +60,10 @@ func Run(ctx context.Context, buildOptions BuildOptions) error {
 }
 
 func setOutputMode(outputMode string) string {
-	if buildOutput := os.Getenv("BUILDKIT_PROGRESS"); buildOutput != "" {
+	if buildOutput := os.Getenv(model.BuildkitProgressEnvVar); buildOutput != "" {
 		return buildOutput
 	}
-	if isInsideDeploy := os.Getenv("OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT"); isInsideDeploy == "true" {
+	if utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		return "plain"
 	}
 	return outputMode
@@ -152,12 +154,12 @@ func buildWithDocker(ctx context.Context, buildOptions BuildOptions) error {
 	if versions.GreaterThanOrEqualTo(cli.ClientVersion(), "1.39") {
 		err = buildWithDockerDaemonBuildkit(ctx, buildOptions, cli)
 		if err != nil {
-			return err
+			return translateDockerErr(err)
 		}
 	} else {
 		err = buildWithDockerDaemon(ctx, buildOptions, cli)
 		if err != nil {
-			return err
+			return translateDockerErr(err)
 		}
 	}
 	if buildOptions.Tag != "" {
@@ -178,4 +180,17 @@ func validateImage(imageTag string) error {
 		}
 	}
 	return nil
+}
+
+func translateDockerErr(err error) error {
+	if err == nil {
+		return nil
+	}
+	if strings.HasPrefix(err.Error(), "failed to dial gRPC: cannot connect to the Docker daemon") {
+		return okErrors.UserError{
+			E:    fmt.Errorf("cannot connect to Docker Daemon"),
+			Hint: "Please start the service and try again",
+		}
+	}
+	return err
 }

@@ -46,7 +46,8 @@ C=3
 D="4
 5 $B
 \"6\"
-'7'"`
+'7'"
+E=word -notword`
 	envOverride = "A=1"
 )
 
@@ -108,7 +109,7 @@ func Test_translateEnvVars(t *testing.T) {
 	if stack.Services["1"].Image != "image" {
 		t.Errorf("Wrong image: %s", stack.Services["1"].Image)
 	}
-	if len(stack.Services["1"].Environment) != 4 {
+	if len(stack.Services["1"].Environment) != 5 {
 		t.Errorf("Wrong environment: %v", stack.Services["1"].Environment)
 	}
 	for _, e := range stack.Services["1"].Environment {
@@ -123,6 +124,9 @@ func Test_translateEnvVars(t *testing.T) {
 		}
 		if e.Name == "D" && e.Value != "4\n5 2\n\"6\"\n'7'" {
 			t.Errorf("Wrong environment variable D: %s", e.Value)
+		}
+		if e.Name == "E" && e.Value != "word -notword" {
+			t.Errorf("Wrong environment variable E: %s", e.Value)
 		}
 	}
 }
@@ -1365,7 +1369,11 @@ func Test_translateServiceEnvironment(t *testing.T) {
 					},
 				},
 			},
-			expected: []apiv1.EnvVar{},
+			expected: []apiv1.EnvVar{
+				{
+					Name: "DEBUG",
+				},
+			},
 		},
 		{
 			name: "empty name",

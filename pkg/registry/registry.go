@@ -154,7 +154,10 @@ func GetHiddenExposePorts(image string) []model.Port {
 
 	info := ImageInfo{Config: &ConfigInfo{}}
 	decoder := json.NewDecoder(response)
-	decoder.Decode(&info)
+	if err := decoder.Decode(&info); err != nil {
+		log.Infof("error decoding registry response: %s", err.Error())
+		return exposedPorts
+	}
 
 	if info.Config.ExposedPorts != nil {
 

@@ -63,16 +63,18 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringVarP(&output, "output", "o", "", "output format. One of: ['json']")
+	cmd.Flags().StringVarP(&output, "output", "o", "", "output format. One of: ['json', 'md']")
 
 	return cmd
 }
 
 func validateOutput(output string) error {
-	if output != "" && output != "json" {
-		return fmt.Errorf("output format is not accepted. Value must be one of: ['json']")
+	switch output {
+	case "", "json", "md":
+		return nil
+	default:
+		return fmt.Errorf("output format is not accepted. Value must be one of: ['json', 'md']")
 	}
-	return nil
 }
 
 func executeListPreviewEndpoints(ctx context.Context, name, output string) error {
@@ -92,6 +94,22 @@ func executeListPreviewEndpoints(ctx context.Context, name, output string) error
 			return err
 		}
 		fmt.Println(string(bytes))
+	case "md":
+		if len(endpointList) == 0 {
+			fmt.Printf("There are no available endpoints for preview '%s'\n", name)
+		} else {
+			endpoints := make([]string, 0)
+			for _, endpoint := range endpointList {
+				endpoints = append(endpoints, endpoint.URL)
+			}
+			sort.Slice(endpoints, func(i, j int) bool {
+				return len(endpoints[i]) < len(endpoints[j])
+			})
+			fmt.Printf("Available endpoints for preview [%s](%s):\n", name, getPreviewURL(name))
+			for _, e := range endpoints {
+				fmt.Printf("\n - [%s](%s)\n", e, e)
+			}
+		}
 	default:
 		if len(endpointList) == 0 {
 			fmt.Printf("There are no available endpoints for preview '%s'\n", name)
@@ -103,7 +121,7 @@ func executeListPreviewEndpoints(ctx context.Context, name, output string) error
 			sort.Slice(endpoints, func(i, j int) bool {
 				return len(endpoints[i]) < len(endpoints[j])
 			})
-			fmt.Printf("Available endpoints for preview '%s'\n  - %s\n", name, strings.Join(endpoints, "\n  - "))
+			fmt.Printf("Available endpoints for preview '%s':\n  - %s\n", name, strings.Join(endpoints, "\n  - "))
 		}
 	}
 	return nil

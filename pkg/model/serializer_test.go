@@ -1032,10 +1032,10 @@ func TestManifestUnmarshalling(t *testing.T) {
 	}{
 		{
 			name: "dev manifest with dev and deploy",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 deploy:
   - okteto stack deploy
-devs:
+dev:
   test-1:
     sync:
     - app:/app
@@ -1044,7 +1044,6 @@ devs:
     - app:/app
 `),
 			expected: &Manifest{
-				Name: "test",
 				Deploy: &DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",
@@ -1377,7 +1376,7 @@ services:
 		},
 		{
 			name: "only dev with service unsupported field",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 sync:
   - app:/app
 services:
@@ -1388,7 +1387,7 @@ services:
 		},
 		{
 			name: "only dev with errors",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 sync:
   - app:/app
 non-found-field:
@@ -1398,14 +1397,13 @@ non-found-field:
 		},
 		{
 			name: "dev manifest with one dev",
-			manifest: []byte(`name: test
-devs:
+			manifest: []byte(`
+dev:
   test:
     sync:
     - app:/app
 `),
 			expected: &Manifest{
-				Name: "test",
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1478,8 +1476,8 @@ devs:
 		},
 		{
 			name: "dev manifest with multiple devs",
-			manifest: []byte(`name: test
-devs:
+			manifest: []byte(`
+dev:
   test-1:
     sync:
     - app:/app
@@ -1488,7 +1486,6 @@ devs:
     - app:/app
 `),
 			expected: &Manifest{
-				Name: "test",
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1626,8 +1623,8 @@ devs:
 		},
 		{
 			name: "dev manifest with errors",
-			manifest: []byte(`name: test
-devs:
+			manifest: []byte(`
+dev:
   test-1:
     sync:
     - app:/app
@@ -1646,13 +1643,31 @@ sync:
 		},
 		{
 			name: "dev manifest with deploy",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 deploy:
   - okteto stack deploy
 `),
 			expected: &Manifest{
-				Name: "test",
-				Dev:  map[string]*Dev{},
+				Dev: map[string]*Dev{},
+				Deploy: &DeployInfo{
+					Commands: []string{
+						"okteto stack deploy",
+					},
+				},
+			},
+			isErrorExpected: false,
+		},
+		{
+			name: "dev manifest with deploy",
+			manifest: []byte(`
+deploy:
+  - okteto stack deploy
+devs:
+  - api
+  - test
+`),
+			expected: &Manifest{
+				Dev: map[string]*Dev{},
 				Deploy: &DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",

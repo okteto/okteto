@@ -81,12 +81,14 @@ services:
       - 8080:80
 `
 
-	githubUrl    = "https://github.com"
-	pipelineRepo = "okteto/movies"
+	githubUrl = "https://github.com"
 )
 
 var (
 	actionManifestTemplate = template.Must(template.New("deployment").Parse(deploymentManifestFormat))
+	pipelineRepo           = "okteto/movies"
+	pipelineRepoURL        = "git@github.com:okteto/movies.git"
+	pipelineFolder         = "movies"
 )
 
 func TestApplyPipeline(t *testing.T) {

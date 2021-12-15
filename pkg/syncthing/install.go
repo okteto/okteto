@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	syncthingVersion = "1.18.2"
+	syncthingVersion = "1.18.5"
 )
 
 var (

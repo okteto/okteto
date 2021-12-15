@@ -11,7 +11,7 @@ repos:
       - id: identity
       - id: check-hooks-apply
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.4.0
+    rev: v4.0.1
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
@@ -31,30 +31,25 @@ repos:
       - id: trailing-whitespace
         exclude: ^\.github/pull_request_template\.md$
       - id: check-json
-  # - repo: https://github.com/Lucas-C/pre-commit-hooks
-  #  rev: v1.1.10
-  #  hooks:
-  #    - id: forbid-tabs
-  #    - id: remove-tabs
   - repo: https://github.com/jumanjihouse/pre-commit-hooks
     rev: 2.1.5
     hooks:
       - id: shellcheck
       # - id: shfmt
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.0.0
+    rev: v2.1.0
     hooks:
       - id: codespell
         name: Run codespell
         description: Check Spelling with codespell
         entry: codespell --ignore-words=codespell.txt
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v2.3.1
+    rev: v2.5.1
     hooks:
       - id: prettier
         exclude: ^\.vscode/tasks\.json$
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.27.1
+    rev: v0.30.0
     hooks:
       - id: markdownlint
         name: Run markdownlint
@@ -63,7 +58,7 @@ repos:
         types: [markdown]
         files: \.(md|mdown|markdown)$
   - repo: https://github.com/adrienverge/yamllint
-    rev: v1.26.1
+    rev: v1.26.3
     hooks:
       - id: yamllint
         name: Run yamllint

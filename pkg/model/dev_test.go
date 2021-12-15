@@ -20,7 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/joho/godotenv"
+	"github.com/compose-spec/godotenv"
+	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -375,7 +376,10 @@ func Test_loadSelector(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dev := &Dev{Selector: tt.selector}
 			os.Setenv("value", tt.value)
-			dev.loadSelector()
+			if err := dev.loadSelector(); err != nil {
+				t.Fatalf("couldn't load selector")
+			}
+
 			for key, value := range dev.Labels {
 				if tt.want[key] != value {
 					t.Errorf("got: '%v', expected: '%v'", dev.Labels, tt.want)
@@ -1460,9 +1464,75 @@ func createEnvFile(content map[string]string) (string, error) {
 	}
 
 	for k, v := range content {
-		file.WriteString(fmt.Sprintf("%s=%s\n", k, v))
+		_, _ = file.WriteString(fmt.Sprintf("%s=%s\n", k, v))
 	}
 
-	file.Sync()
+	if err := file.Sync(); err != nil {
+		return "", err
+	}
 	return file.Name(), nil
+}
+
+func Test_expandEnvFiles(t *testing.T) {
+	file, err := os.CreateTemp("", ".env")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(file.Name())
+
+	tests := []struct {
+		name     string
+		dev      *Dev
+		envs     []byte
+		expected Environment
+	}{
+		{
+			name: "add new envs",
+			dev: &Dev{
+				Environment: Environment{},
+				EnvFiles: EnvFiles{
+					file.Name(),
+				},
+			},
+			envs: []byte("key1=value1"),
+			expected: Environment{
+				EnvVar{
+					Name:  "key1",
+					Value: "value1",
+				},
+			},
+		},
+		{
+			name: "dont overwrite envs",
+			dev: &Dev{
+				Environment: Environment{
+					{
+						Name:  "key1",
+						Value: "value1",
+					},
+				},
+				EnvFiles: EnvFiles{
+					file.Name(),
+				},
+			},
+			envs: []byte("key1=value100"),
+			expected: Environment{
+				EnvVar{
+					Name:  "key1",
+					Value: "value1",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(fmt.Sprintf("%s is present", tt.name), func(t *testing.T) {
+			if _, err = file.Write(tt.envs); err != nil {
+				t.Fatal("Failed to write to temporary file", err)
+			}
+			if err := tt.dev.expandEnvFiles(); err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, tt.expected, tt.dev.Environment)
+		})
+	}
 }

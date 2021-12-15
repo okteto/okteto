@@ -16,6 +16,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -39,4 +40,48 @@ func GetBranch(ctx context.Context, path string) (string, error) {
 
 	name := strings.TrimPrefix(branch.String(), "refs/heads/")
 	return name, nil
+}
+
+func GetGitCommit(ctx context.Context, path string) (string, error) {
+	repo, err := git.PlainOpen(path)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	head, err := repo.Head()
+	if err != nil {
+		return "", fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+	}
+
+	hash := head.Hash()
+
+	return hash.String(), nil
+}
+
+func IsCleanDirectory(ctx context.Context, path string) (bool, error) {
+	repo, err := git.PlainOpen(path)
+	if err != nil {
+		return false, fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+	}
+
+	status, err := worktree.Status()
+	if err != nil {
+		return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
+	}
+
+	return status.IsClean(), nil
+}
+
+func GetRandomSHA(ctx context.Context, path string) string {
+	var letters = []rune("0123456789abcdef")
+	b := make([]rune, 40)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }
