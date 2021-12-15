@@ -28,8 +28,9 @@ import (
 
 // Delete deletes a namespace
 func Delete(ctx context.Context) *cobra.Command {
-	return &cobra.Command{
-		Use:   "namespace <name>",
+	isRegex := false
+	cmd := &cobra.Command{
+		Use:   "delete <name>",
 		Short: "Delete a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 

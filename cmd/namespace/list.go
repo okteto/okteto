@@ -29,8 +29,9 @@ import (
 // List all namespace in current context
 func List(ctx context.Context) *cobra.Command {
 	return &cobra.Command{
-		Use:   "namespace",
-		Short: "List namespaces managed by Okteto in your current context",
+		Use:     "list",
+		Short:   "List namespaces managed by Okteto in your current context",
+		Aliases: []string{"ls"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
@@ -60,6 +61,9 @@ func executeListNamespaces(ctx context.Context) error {
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
 	fmt.Fprintf(w, "Namespace\tStatus\n")
 	for _, space := range spaces {
+		if space.ID == okteto.Context().Namespace {
+			space.ID += " *"
+		}
 		fmt.Fprintf(w, "%s\t%v\n", space.ID, space.Status)
 	}
 

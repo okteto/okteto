@@ -18,6 +18,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -28,6 +29,19 @@ func Create(ctx context.Context) *cobra.Command {
 		Short: "Create resources",
 		Args:  utils.NoArgsAccepted(""),
 	}
-	cmd.AddCommand(namespace.Create(ctx))
+	cmd.AddCommand(deprecatedCreateNamespace(ctx))
+	return cmd
+}
+
+func deprecatedCreateNamespace(ctx context.Context) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "namespace <name>",
+		Short: "Create a namespace",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			log.Warning("'okteto create namespace' will be deprecated. Please use 'okteto namespace create' instead")
+			return cmd.RunE(namespace.Create(ctx), args)
+		},
+		Args: utils.ExactArgsAccepted(1, ""),
+	}
 	return cmd
 }

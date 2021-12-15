@@ -32,10 +32,9 @@ func Create(ctx context.Context) *cobra.Command {
 	var members *[]string
 
 	cmd := &cobra.Command{
-		Use:   "namespace <name>",
+		Use:   "create <name>",
 		Short: "Create a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
