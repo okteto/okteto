@@ -34,7 +34,7 @@ func List(ctx context.Context) *cobra.Command {
 		Aliases: []string{"ls"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 
@@ -42,19 +42,19 @@ func List(ctx context.Context) *cobra.Command {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			err := executeListNamespaces(ctx)
+			nsCmd, err := newNamespaceCommand()
+			if err != nil {
+				return err
+			}
+			err = nsCmd.executeListNamespaces(ctx)
 			return err
 		},
 		Args: utils.NoArgsAccepted(""),
 	}
 }
 
-func executeListNamespaces(ctx context.Context) error {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-	spaces, err := oktetoClient.ListNamespaces(ctx)
+func (nc *namespaceCommand) executeListNamespaces(ctx context.Context) error {
+	spaces, err := nc.okClient.Namespaces().List(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get namespaces: %s", err)
 	}

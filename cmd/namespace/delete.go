@@ -16,6 +16,7 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -34,7 +35,7 @@ func Delete(ctx context.Context) *cobra.Command {
 		Short: "Delete a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 
@@ -42,25 +43,50 @@ func Delete(ctx context.Context) *cobra.Command {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			err := executeDeleteNamespace(ctx, args[0])
+			nsCmd, err := newNamespaceCommand()
+			if err != nil {
+				return err
+			}
+			err = nsCmd.executeDeleteNamespace(ctx, args[0], isRegex)
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},
 		Args: utils.ExactArgsAccepted(1, ""),
 	}
+	cmd.Flags().BoolVarP(&isRegex, "regex", "", false, "If true will remove all namespaces that matches regex")
+
+	return cmd
 }
 
-func executeDeleteNamespace(ctx context.Context, namespace string) error {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-	if err := oktetoClient.DeleteNamespace(ctx, namespace); err != nil {
-		return fmt.Errorf("failed to delete namespace: %s", err)
+func (nc *namespaceCommand) executeDeleteNamespace(ctx context.Context, namespace string, isRegex bool) error {
+
+	nsToRemove := map[string]bool{}
+	if isRegex {
+		namespaces, err := nc.okClient.Namespaces().List(ctx)
+		if err != nil {
+			return err
+		}
+		re, err := regexp.Compile(namespace)
+		if err != nil {
+			return err
+		}
+		for _, ns := range namespaces {
+			if re.Match([]byte(ns.ID)) && okteto.Context().PersonalNamespace != ns.ID {
+				nsToRemove[ns.ID] = true
+			}
+		}
+	} else {
+		nsToRemove[namespace] = true
 	}
 
-	log.Success("Namespace '%s' deleted", namespace)
-	if okteto.Context().Namespace == namespace {
+	for ns := range nsToRemove {
+		if err := nc.okClient.Namespaces().Delete(ctx, ns); err != nil {
+			return fmt.Errorf("failed to delete namespace: %s", err)
+		}
+		log.Success("Namespace '%s' deleted", ns)
+	}
+
+	if _, ok := nsToRemove[okteto.Context().Namespace]; ok {
 		personalNamespace := okteto.Context().PersonalNamespace
 		if personalNamespace == "" {
 			personalNamespace = okteto.GetSanitizedUsername()
@@ -71,7 +97,7 @@ func executeDeleteNamespace(ctx context.Context, namespace string) error {
 			Show:      true,
 			Save:      true,
 		}
-		return contextCMD.Run(ctx, ctxOptions)
+		return nc.ctxCmd.Run(ctx, ctxOptions)
 	}
 	return nil
 }

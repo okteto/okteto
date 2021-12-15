@@ -21,8 +21,25 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
+
+type namespaceCommand struct {
+	ctxCmd   *contextCMD.ContextCommand
+	okClient types.OktetoInterface
+}
+
+func newNamespaceCommand() (*namespaceCommand, error) {
+	c, err := okteto.NewOktetoClient()
+	if err != nil {
+		return nil, err
+	}
+	return &namespaceCommand{
+		ctxCmd:   contextCMD.NewContextCommand(),
+		okClient: c,
+	}, nil
+}
 
 // Namespace fetch credentials for a cluster namespace
 func Namespace(ctx context.Context) *cobra.Command {
@@ -42,16 +59,12 @@ func Namespace(ctx context.Context) *cobra.Command {
 			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
 			}
-			err := contextCMD.Run(
-				ctx,
-				&contextCMD.ContextOptions{
-					Context:   okteto.Context().Name,
-					Namespace: namespace,
-					Save:      true,
-					Show:      true,
-				},
-			)
 
+			nsCmd, err := newNamespaceCommand()
+			if err != nil {
+				return err
+			}
+			err = nsCmd.Use(ctx, namespace)
 			if err != nil {
 				return err
 			}
@@ -60,5 +73,9 @@ func Namespace(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
+	cmd.AddCommand(Use(ctx))
+	cmd.AddCommand(List(ctx))
+	cmd.AddCommand(Create(ctx))
+	cmd.AddCommand(Delete(ctx))
 	return cmd
 }
