@@ -22,6 +22,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/cmd"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
@@ -68,6 +69,11 @@ func init() {
 	if bin := os.Getenv(model.OktetoBinEnvVar); bin != "" {
 		model.OktetoBinImageTag = bin
 		log.Infof("using %s as the bin image", bin)
+	}
+	if model.FileExists(".env") {
+		if err := godotenv.Load(); err != nil {
+			log.Errorf("error loading .env file: %s", err.Error())
+		}
 	}
 }
 
