@@ -51,7 +51,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploy a preview environment",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 			var err error

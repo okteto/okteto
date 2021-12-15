@@ -91,7 +91,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(model.OktetoWithinDeployCommandContextEnvVar, "false")
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 
