@@ -148,7 +148,9 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 
 func setSecrets(secrets []types.Secret) {
 	for _, secret := range secrets {
-		os.Setenv(secret.Name, secret.Value)
+		if os.Getenv(secret.Name) == "" {
+			os.Setenv(secret.Name, secret.Value)
+		}
 	}
 }
 
