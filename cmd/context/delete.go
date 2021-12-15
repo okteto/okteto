@@ -51,7 +51,7 @@ func Delete(ctx context.Context, okCtx string) error {
 
 	if _, ok := ctxStore.Contexts[okCtx]; ok {
 		delete(ctxStore.Contexts, okCtx)
-		if err := okteto.WriteOktetoContextConfig(); err != nil {
+		if err := okteto.NewContextConfigWriter().Write(); err != nil {
 			return err
 		}
 		log.Success("'%s' deleted successfully", okCtx)

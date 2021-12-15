@@ -48,7 +48,9 @@ This will prompt you to select one of your existing contexts or to create a new 
 
 			ctxOptions.IsCtxCommand = true
 			ctxOptions.Save = true
-			err := Run(ctx, ctxOptions)
+			ctxCmd := NewContextCommand()
+
+			err := ctxCmd.Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			return err
 		},
