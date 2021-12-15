@@ -18,7 +18,6 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/spf13/cobra"
 )
 
@@ -31,13 +30,10 @@ func Kubeconfig(ctx context.Context) *cobra.Command {
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#update-kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			err := contextCMD.UpdateKubeconfigCMD().RunE(cmd, []string{})
-
+			err := contextCMD.UpdateKubeconfigCMD().RunE(cmd, args)
 			if err != nil {
 				return err
 			}
-
-			analytics.TrackNamespace(err == nil, len(args) > 0)
 			return err
 		},
 	}

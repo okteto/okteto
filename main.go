@@ -103,6 +103,7 @@ func main() {
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
 	root.AddCommand(contextCMD.Context())
+	root.AddCommand(cmd.Kubeconfig(ctx))
 	root.AddCommand(cmd.Build(ctx))
 
 	create := cmd.Create(ctx)
