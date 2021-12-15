@@ -104,9 +104,19 @@ func main() {
 	root.AddCommand(cmd.Login())
 	root.AddCommand(contextCMD.Context())
 	root.AddCommand(cmd.Build(ctx))
-	root.AddCommand(cmd.Create(ctx))
+
+	create := cmd.Create(ctx)
+	create.Hidden = true
+	root.AddCommand(create)
+
+	list := cmd.List(ctx)
+	list.Hidden = true
 	root.AddCommand(cmd.List(ctx))
+
+	delete := cmd.Delete(ctx)
+	delete.Hidden = true
 	root.AddCommand(cmd.Delete(ctx))
+
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(pipeline.Pipeline(ctx))
 	root.AddCommand(stack.Stack(ctx))
