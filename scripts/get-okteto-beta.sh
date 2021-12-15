@@ -15,13 +15,13 @@
         }
 
         if ! cmd_exists curl; then
-           printf '\033[31m> The command "curl" is not found and is required by this installation script.\n\033[0m'
-           exit 1
+                printf '\033[31m> The command "curl" is not found and is required by this installation script.\n\033[0m'
+                exit 1
         fi
 
         if ! cmd_exists jq; then
-           printf '\033[31m> The command "jq" is not found and is required by this installation script.\n\033[0m'
-           exit 1
+                printf '\033[31m> The command "jq" is not found and is required by this installation script.\n\033[0m'
+                exit 1
         fi
 
         latestRelease=${download_url}$(curl -s ${gh_api_url} | jq --raw-output '.[0].tag_name')
