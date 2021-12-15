@@ -87,7 +87,7 @@ jobs:
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
-            ./update_homebrew_formula.sh 0.0.1 $sha $sha_arm
+            ./scripts/update_homebrew_formula.sh 0.0.1 $sha $sha_arm
       - setup_remote_docker:
           version: '19.03.8'
       - run:
@@ -175,14 +175,14 @@ jobs:
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
-            ./update_homebrew_formula.sh $CIRCLE_TAG $sha $sha_arm
+            ./scripts/update_homebrew_formula.sh $CIRCLE_TAG $sha $sha_arm
             pushd homebrew-cli
             git push git@github.com:okteto/homebrew-cli.git master
       - deploy:
           name: Auto-update-actions
           command: |
             go get -u github.com/tcnksm/ghr
-            ./update_actions.sh $CIRCLE_TAG
+            ./scripts/update_actions.sh $CIRCLE_TAG
   release-candidate:
     docker:
       - image: okteto/golang-ci:1.17.3
