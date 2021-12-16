@@ -15,7 +15,6 @@ package stack
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/compose-spec/godotenv"
@@ -51,25 +50,14 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if okteto.IsOkteto() {
-				c, err := okteto.NewOktetoClient()
+				create, err := utils.ShouldCreateNamespace(ctx, s.Namespace)
 				if err != nil {
 					return err
 				}
-				hasAccess, err := utils.HasAccessToNamespace(ctx, s.Namespace, c)
-				if err != nil {
-					return err
-				}
-				if !hasAccess {
-					log.Warning("Namespace '%s' not found", s.Namespace)
-					create, err := utils.AskYesNo(fmt.Sprintf("Do you want to create the namespace '%s'? [y/n] ", s.Namespace))
+				if create {
+					err = namespace.ExecuteCreateNamespace(ctx, s.Namespace, nil)
 					if err != nil {
 						return err
-					}
-					if create {
-						err = namespace.ExecuteCreateNamespace(ctx, s.Namespace, nil)
-						if err != nil {
-							return err
-						}
 					}
 				}
 			}
