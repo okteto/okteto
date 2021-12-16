@@ -76,8 +76,7 @@ func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
 		return false, err
 	}
 	if !hasAccess {
-		log.Warning("Namespace '%s' not found", ns)
-		create, err := AskYesNo(fmt.Sprintf("Do you want to create the namespace '%s'? [y/n] ", ns))
+		create, err := AskYesNo(fmt.Sprintf("The namespace %s doesn't exist. Do you want to create it?? [y/n] ", ns))
 		if err != nil {
 			return false, err
 		}
