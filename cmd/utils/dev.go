@@ -152,7 +152,7 @@ func GetDevFromManifest(manifest *model.Manifest) (*model.Dev, error) {
 func AskYesNo(q string) (bool, error) {
 	var answer string
 	for {
-		fmt.Print(q)
+		log.Question(q)
 		if _, err := fmt.Scanln(&answer); err != nil {
 			return false, err
 		}
