@@ -114,7 +114,7 @@ func Test_OptsFromManifest(t *testing.T) {
 			},
 			expected: BuildOptions{
 				Tag:       "okteto.dev/service:dev",
-				File:      "CustomDockerfile",
+				File:      "service/CustomDockerfile",
 				Target:    "build",
 				Path:      "service",
 				CacheFrom: []string{"cache-image"},

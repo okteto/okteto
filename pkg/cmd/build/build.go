@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/docker/docker/api/types/versions"
@@ -205,7 +206,7 @@ func OptsFromManifest(name string, b *model.BuildInfo) BuildOptions {
 		Target:    b.Target,
 		Path:      b.Context,
 		Tag:       b.Image,
-		File:      b.Dockerfile,
+		File:      filepath.Join(b.Context, b.Dockerfile),
 	}
 	if len(b.Args) != 0 {
 		opts.BuildArgs = model.SerializeBuildArgs(b.Args)
