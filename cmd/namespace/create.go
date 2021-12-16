@@ -44,7 +44,7 @@ func Create(ctx context.Context) *cobra.Command {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			err := executeCreateNamespace(ctx, args[0], members)
+			err := ExecuteCreateNamespace(ctx, args[0], members)
 			analytics.TrackCreateNamespace(err == nil)
 			return err
 		},
@@ -55,7 +55,7 @@ func Create(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func executeCreateNamespace(ctx context.Context, namespace string, members *[]string) error {
+func ExecuteCreateNamespace(ctx context.Context, namespace string, members *[]string) error {
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return err
