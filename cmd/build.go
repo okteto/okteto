@@ -88,6 +88,8 @@ func Build(ctx context.Context) *cobra.Command {
 						}
 
 						opts := build.OptsFromManifest(service, b)
+						opts.Secrets = options.Secrets
+
 						err := buildWithOptions(opts)
 						if err != nil {
 							return err
