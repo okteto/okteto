@@ -92,15 +92,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(model.OktetoWithinDeployCommandContextEnvVar, "false")
-			ctxOpts := &contextCMD.ContextOptions{
-				Namespace: options.Namespace,
-				Show:      true,
-			}
-			if err := contextCMD.Run(ctx, ctxOpts); err != nil {
-				return err
-			}
-
-			if okteto.IsOkteto() {
+			if okteto.IsOkteto() && options.Namespace != "" {
 				create, err := utils.ShouldCreateNamespace(ctx, options.Namespace)
 				if err != nil {
 					return err
@@ -111,6 +103,13 @@ func Deploy(ctx context.Context) *cobra.Command {
 						return err
 					}
 				}
+			}
+
+			ctxOpts := &contextCMD.ContextOptions{
+				Namespace: options.Namespace,
+			}
+			if err := contextCMD.Run(ctx, ctxOpts); err != nil {
+				return err
 			}
 
 			cwd, err := os.Getwd()
