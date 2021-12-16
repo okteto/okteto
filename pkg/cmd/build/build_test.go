@@ -7,6 +7,7 @@ import (
 
 	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -87,15 +88,24 @@ func Test_OptsFromManifest(t *testing.T) {
 		serviceName    string
 		buildInfo      *model.BuildInfo
 		okGitCommitEnv string
+		isOkteto       bool
 		expected       BuildOptions
 	}{
 		{
-			name:        "empty-values",
+			name:        "empty-values-is-okteto",
 			serviceName: "service",
 			buildInfo:   &model.BuildInfo{},
+			isOkteto:    true,
 			expected: BuildOptions{
 				Tag: "okteto.dev/service:dev",
 			},
+		},
+		{
+			name:        "empty-values-is-not-okteto",
+			serviceName: "service",
+			buildInfo:   &model.BuildInfo{},
+			isOkteto:    false,
+			expected:    BuildOptions{},
 		},
 		{
 			name:        "all-values-no-commit-env-no-image",
@@ -112,8 +122,33 @@ func Test_OptsFromManifest(t *testing.T) {
 					},
 				},
 			},
+			isOkteto: true,
 			expected: BuildOptions{
 				Tag:       "okteto.dev/service:dev",
+				File:      "service/CustomDockerfile",
+				Target:    "build",
+				Path:      "service",
+				CacheFrom: []string{"cache-image"},
+				BuildArgs: []string{"arg1=value1"},
+			},
+		},
+		{
+			name:        "all-values-no-commit-env-no-image-not-okteto",
+			serviceName: "service",
+			buildInfo: &model.BuildInfo{
+				Context:    "service",
+				Dockerfile: "CustomDockerfile",
+				Target:     "build",
+				CacheFrom:  []string{"cache-image"},
+				Args: model.Environment{
+					{
+						Name:  "arg1",
+						Value: "value1",
+					},
+				},
+			},
+			isOkteto: false,
+			expected: BuildOptions{
 				File:      "service/CustomDockerfile",
 				Target:    "build",
 				Path:      "service",
@@ -124,6 +159,15 @@ func Test_OptsFromManifest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			okteto.CurrentStore = &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						Namespace: "test",
+						IsOkteto:  tt.isOkteto,
+					},
+				},
+				CurrentContext: "test",
+			}
 			os.Setenv("OKTETO_GIT_COMMIT", tt.okGitCommitEnv)
 			result := OptsFromManifest(tt.serviceName, tt.buildInfo)
 			assert.Equal(t, tt.expected, result)
