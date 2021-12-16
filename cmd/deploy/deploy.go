@@ -30,6 +30,7 @@ import (
 
 	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
@@ -91,8 +92,25 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(model.OktetoWithinDeployCommandContextEnvVar, "false")
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			ctxOpts := &contextCMD.ContextOptions{
+				Namespace: options.Namespace,
+				Show:      true,
+			}
+			if err := contextCMD.Run(ctx, ctxOpts); err != nil {
 				return err
+			}
+
+			if okteto.IsOkteto() {
+				create, err := utils.ShouldCreateNamespace(ctx, options.Namespace)
+				if err != nil {
+					return err
+				}
+				if create {
+					err = namespace.ExecuteCreateNamespace(ctx, options.Namespace, nil)
+					if err != nil {
+						return err
+					}
+				}
 			}
 
 			cwd, err := os.Getwd()
@@ -209,6 +227,8 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		fmt.Sprintf("%s=true", model.OktetoDisableSpinnerEnvVar),
 		// Set BUILDKIT_PROGRESS=plain env variable, so all the commands disable docker tty builds
 		fmt.Sprintf("%s=true", model.BuildkitProgressEnvVar),
+		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
+		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, opts.Namespace),
 	)
 
 	for _, command := range opts.Manifest.Deploy.Commands {
