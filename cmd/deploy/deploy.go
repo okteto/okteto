@@ -227,7 +227,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		// Set BUILDKIT_PROGRESS=plain env variable, so all the commands disable docker tty builds
 		fmt.Sprintf("%s=true", model.BuildkitProgressEnvVar),
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
-		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, opts.Namespace),
+		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
 
 	for _, command := range opts.Manifest.Deploy.Commands {
