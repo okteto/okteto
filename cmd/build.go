@@ -33,7 +33,7 @@ func Build(ctx context.Context) *cobra.Command {
 
 	options := build.BuildOptions{}
 	cmd := &cobra.Command{
-		Use:   "build [PATH]",
+		Use:   "build [service]",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#build"),
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -42,19 +42,12 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			options.Path = "."
+			service := ""
 			if len(args) == 1 {
-				options.Path = args[0]
+				service = args[0]
 			}
 
-			if options.Tag != "" {
-				err := buildWithOptions(options)
-				if err != nil {
-					return err
-				}
-			}
-
-			manifestPath := ""
+			manifestPath := "."
 			if options.File != "" {
 				if err := utils.CheckIfRegularFile(options.File); err != nil {
 					return fmt.Errorf("invalid File: %s", err.Error())
@@ -63,17 +56,12 @@ func Build(ctx context.Context) *cobra.Command {
 			} else {
 				manifestPath = contextCMD.GetOktetoManifestPath(manifestPath)
 			}
-
 			if manifestPath != "" {
 				buildManifest, err := model.GetBuildManifest(manifestPath)
 				if err != nil {
 					return err
 				}
 				if len(buildManifest) != 0 {
-					service := ""
-					if len(args) == 1 {
-						service = args[0]
-					}
 					if service != "" {
 						b, ok := buildManifest[service]
 						if !ok {
@@ -106,7 +94,12 @@ func Build(ctx context.Context) *cobra.Command {
 					return nil
 				}
 			}
+			log.Warning("Okteto Manifest not found, looking for Dockerfile")
 
+			options.Path = "."
+			if len(args) == 1 {
+				options.Path = args[0]
+			}
 			err := buildWithOptions(options)
 			if err != nil {
 				return err
