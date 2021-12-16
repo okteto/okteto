@@ -194,3 +194,31 @@ func translateDockerErr(err error) error {
 	}
 	return err
 }
+
+func OptsFromManifest(name string, b *model.BuildInfo) BuildOptions {
+	if b.Image == "" {
+		b.Image = setOktetoImageTag(name)
+	}
+
+	opts := BuildOptions{
+		CacheFrom: b.CacheFrom,
+		Target:    b.Target,
+		Path:      b.Context,
+		Tag:       b.Image,
+		File:      b.Dockerfile,
+	}
+	if len(b.Args) != 0 {
+		opts.BuildArgs = model.SerializeBuildArgs(b.Args)
+	}
+
+	return opts
+}
+
+func setOktetoImageTag(name string) string {
+	imageTag := "dev"
+	okGitCommit := os.Getenv("OKTETO_GIT_COMMIT")
+	if okGitCommit != "" {
+		imageTag = okGitCommit
+	}
+	return fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, name, imageTag)
+}

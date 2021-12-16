@@ -16,7 +16,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -43,38 +42,44 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			path := "."
+			options.Path = "."
+			if len(args) == 1 {
+				options.Path = args[0]
+			}
 
 			if options.Tag != "" {
-				if len(args) == 1 {
-					path = args[0]
-				}
-				err := buildImageWithOpts(options, path)
+				err := buildWithOptions(options)
 				if err != nil {
 					return err
 				}
 			}
 
-			manifestPath := contextCMD.GetOktetoManifestPath(path)
+			manifestPath := ""
+			if options.File != "" {
+				if err := utils.CheckIfRegularFile(options.File); err != nil {
+					return fmt.Errorf("invalid File: %s", err.Error())
+				}
+				manifestPath = options.File
+			} else {
+				manifestPath = contextCMD.GetOktetoManifestPath(manifestPath)
+			}
+
 			if manifestPath != "" {
 				buildManifest, err := model.GetBuildManifest(manifestPath)
 				if err != nil {
 					return err
 				}
 				if len(buildManifest) != 0 {
-					image := ""
+					service := ""
 					if len(args) == 1 {
-						image = args[0]
+						service = args[0]
 					}
-					if image != "" {
-						b, ok := buildManifest[image]
+					if service != "" {
+						b, ok := buildManifest[service]
 						if !ok {
-							return fmt.Errorf("invalid image name to build")
+							return fmt.Errorf("invalid service name")
 						}
 
-						if options.File != "" {
-							b.Dockerfile = options.File
-						}
 						if options.Target != "" {
 							b.Target = options.Target
 						}
@@ -82,13 +87,15 @@ func Build(ctx context.Context) *cobra.Command {
 							b.CacheFrom = options.CacheFrom
 						}
 
-						err := buildFromManifest(image, b)
+						opts := build.OptsFromManifest(service, b)
+						err := buildWithOptions(opts)
 						if err != nil {
 							return err
 						}
 					} else {
-						for name, i := range buildManifest {
-							err := buildFromManifest(name, i)
+						for service, b := range buildManifest {
+							opts := build.OptsFromManifest(service, b)
+							err := buildWithOptions(opts)
 							if err != nil {
 								return err
 							}
@@ -98,10 +105,7 @@ func Build(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			if len(args) == 1 {
-				path = args[0]
-			}
-			err := buildImageWithOpts(options, path)
+			err := buildWithOptions(options)
 			if err != nil {
 				return err
 			}
@@ -121,18 +125,17 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func buildImageWithOpts(options build.BuildOptions, path string) error {
+func buildWithOptions(opts build.BuildOptions) error {
 
-	if err := utils.CheckIfDirectory(path); err != nil {
+	if err := utils.CheckIfDirectory(opts.Path); err != nil {
 		return fmt.Errorf("invalid build context: %s", err.Error())
 	}
-	options.Path = path
 
-	if options.File == "" {
-		options.File = filepath.Join(path, "Dockerfile")
+	if opts.File == "" {
+		opts.File = filepath.Join(opts.Path, "Dockerfile")
 	}
 
-	if err := utils.CheckIfRegularFile(options.File); err != nil {
+	if err := utils.CheckIfRegularFile(opts.File); err != nil {
 		return fmt.Errorf("invalid Dockerfile: %s", err.Error())
 	}
 
@@ -143,49 +146,18 @@ func buildImageWithOpts(options build.BuildOptions, path string) error {
 	}
 
 	ctx := context.Background()
-	if err := build.Run(ctx, options); err != nil {
+	if err := build.Run(ctx, opts); err != nil {
 		analytics.TrackBuild(okteto.Context().Builder, false)
 		return err
 	}
 
-	if options.Tag == "" {
+	if opts.Tag == "" {
 		log.Success("Build succeeded")
 		log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
 	} else {
-		log.Success(fmt.Sprintf("Image '%s' successfully pushed", options.Tag))
+		log.Success(fmt.Sprintf("Image '%s' successfully pushed", opts.Tag))
 	}
 
 	analytics.TrackBuild(okteto.Context().Builder, true)
 	return nil
-}
-
-func buildFromManifest(name string, b *model.BuildInfo) error {
-	if b.Image == "" {
-		b.Image = setOktetoImageTag(name)
-	}
-
-	opts := build.BuildOptions{
-		BuildArgs:  model.SerializeBuildArgs(b.Args),
-		CacheFrom:  b.CacheFrom,
-		Target:     b.Target,
-		Path:       b.Context,
-		Tag:        b.Image,
-		OutputMode: "tty",
-	}
-	opts.File = filepath.Join(b.Context, b.Dockerfile)
-
-	err := buildImageWithOpts(opts, b.Context)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func setOktetoImageTag(name string) string {
-	imageTag := "dev"
-	okGitCommit := os.Getenv("OKTETO_GIT_COMMIT")
-	if okGitCommit != "" {
-		imageTag = okGitCommit
-	}
-	return fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, name, imageTag)
 }
