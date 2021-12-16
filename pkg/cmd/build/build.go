@@ -197,7 +197,7 @@ func translateDockerErr(err error) error {
 }
 
 func OptsFromManifest(name string, b *model.BuildInfo) BuildOptions {
-	if b.Image == "" {
+	if okteto.Context().IsOkteto && b.Image == "" {
 		b.Image = setOktetoImageTag(name)
 	}
 
