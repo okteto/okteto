@@ -20,6 +20,7 @@ import (
 //Manifest represents an okteto manifest
 type Manifest struct {
 	Namespace string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context   string        `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon      string        `json:"icon,omitempty" yaml:"icon,omitempty"`
 	Deploy    *DeployInfo   `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev       ManifestDevs  `json:"dev,omitempty" yaml:"dev,omitempty"`

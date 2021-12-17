@@ -1031,9 +1031,10 @@ func TestManifestUnmarshalling(t *testing.T) {
 		isErrorExpected bool
 	}{
 		{
-			name: "manifest with namespace",
+			name: "manifest with namespace and context",
 			manifest: []byte(`
 namespace: test
+context: context-to-use
 deploy:
   - okteto stack deploy`),
 			expected: &Manifest{
@@ -1043,7 +1044,8 @@ deploy:
 						"okteto stack deploy",
 					},
 				},
-				Dev: map[string]*Dev{},
+				Dev:     map[string]*Dev{},
+				Context: "context-to-use",
 			},
 			isErrorExpected: false,
 		},

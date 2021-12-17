@@ -659,6 +659,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 type manifestRaw struct {
 	Namespace string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context   string        `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon      string        `json:"icon,omitempty" yaml:"icon,omitempty"`
 	Deploy    *DeployInfo   `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev       ManifestDevs  `json:"dev,omitempty" yaml:"dev,omitempty"`
@@ -692,6 +693,7 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	d.Icon = manifest.Icon
 	d.Build = manifest.Build
 	d.Namespace = manifest.Namespace
+	d.Context = manifest.Context
 	return nil
 }
 
