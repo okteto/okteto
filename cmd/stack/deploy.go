@@ -17,7 +17,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/compose-spec/godotenv"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
@@ -37,12 +36,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy [service...]",
 		Short: "Deploy a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			if model.FileExists(".env") {
-				if err := godotenv.Load(); err != nil {
-					log.Errorf("error loading .env file: %s", err.Error())
-				}
-			}
 
 			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPath)
 			if err != nil {

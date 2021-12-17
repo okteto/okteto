@@ -19,6 +19,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
@@ -128,6 +129,7 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 	}
 
 	ctxStore.CurrentContext = ctxOptions.Context
+	c.initEnvVars()
 
 	if ctxOptions.IsOkteto {
 		if err := c.initOktetoContext(ctx, ctxOptions); err != nil {
@@ -227,4 +229,12 @@ func (_ *ContextUse) initKubernetesContext(ctxOptions *ContextOptions) error {
 	okteto.Context().IsOkteto = false
 
 	return nil
+}
+
+func (*ContextUse) initEnvVars() {
+	if model.FileExists(".env") {
+		if err := godotenv.Load(); err != nil {
+			log.Infof("error loading .env file: %s", err.Error())
+		}
+	}
 }
