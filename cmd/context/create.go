@@ -32,6 +32,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ContextCommand has the dependencies to run a ctxCommand
 type ContextCommand struct {
 	K8sClientProvider    okteto.K8sClientProvider
 	LoginController      login.LoginInterface
@@ -40,6 +41,7 @@ type ContextCommand struct {
 	OktetoContextWriter okteto.ContextConfigWriterInterface
 }
 
+// NewContextCommand creates a new ContextCommand
 func NewContextCommand() *ContextCommand {
 	return &ContextCommand{
 		K8sClientProvider:    okteto.NewK8sClientProvider(),
