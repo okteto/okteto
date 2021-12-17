@@ -658,11 +658,13 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Icon    string        `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy  *DeployInfo   `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev     ManifestDevs  `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build   ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
+	Namespace string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context   string        `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon      string        `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy    *DeployInfo   `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev       ManifestDevs  `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy   []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build     ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
 }
@@ -690,6 +692,8 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	d.Dev = manifest.Dev
 	d.Icon = manifest.Icon
 	d.Build = manifest.Build
+	d.Namespace = manifest.Namespace
+	d.Context = manifest.Context
 	return nil
 }
 
@@ -741,7 +745,7 @@ func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func isManifestFieldNotFound(err error) bool {
-	manifestFields := []string{"devs", "dev", "name", "icon", "variables", "deploy", "destroy", "build"}
+	manifestFields := []string{"devs", "dev", "name", "icon", "variables", "deploy", "destroy", "build", "namespace", "context"}
 	for _, field := range manifestFields {
 		if strings.Contains(err.Error(), fmt.Sprintf("field %s not found", field)) {
 			return true
