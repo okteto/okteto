@@ -33,7 +33,7 @@ func Build(ctx context.Context) *cobra.Command {
 
 	options := build.BuildOptions{}
 	cmd := &cobra.Command{
-		Use:   "build [service]",
+		Use:   "build [PATH]",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#build"),
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
