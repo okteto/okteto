@@ -181,7 +181,10 @@ func Up() *cobra.Command {
 				log.Infof("error deleting deprecated volume: %v", err)
 			}
 
-			err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+			if err != nil {
+				err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+
+			}
 
 			return err
 		},
