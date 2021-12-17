@@ -53,13 +53,23 @@ This will prompt you to select one of your existing contexts or to create a new 
 			return err
 		},
 	}
-	cmd.AddCommand(Use())
 	cmd.AddCommand(Show())
-	cmd.AddCommand(DeleteCMD())
-	cmd.AddCommand(CreateCMD())
-	cmd.AddCommand(UpdateKubeconfigCMD())
+	cmd.AddCommand(Use())
 	cmd.AddCommand(List())
-	cmd.AddCommand(UseNamespace())
+	cmd.AddCommand(DeleteCMD())
+
+	createCmd := CreateCMD()
+	createCmd.Hidden = true
+	cmd.AddCommand(createCmd)
+
+	updateKubeconfigCmd := UpdateKubeconfigCMD()
+	updateKubeconfigCmd.Hidden = true
+	cmd.AddCommand(updateKubeconfigCmd)
+
+	useNamespaceCmd := UseNamespace()
+	useNamespaceCmd.Hidden = true
+	cmd.AddCommand(useNamespaceCmd)
+
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
 	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")
