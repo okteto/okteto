@@ -244,6 +244,20 @@ func (c ContextCommand) getUserContext(ctx context.Context) (*types.UserContext,
 	for retries <= 3 {
 		userContext, err := client.User().GetContext(ctx)
 
+		if err != nil && errors.IsForbidden(err) {
+			okteto.Context().Token = ""
+			if err := c.OktetoContextWriter.Write(); err != nil {
+				log.Infof("error updating okteto contexts: %v", err)
+				return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+			}
+			return nil, fmt.Errorf(errors.ErrNotLogged, okteto.Context().Name)
+		}
+		if err != nil {
+			log.Info(err)
+			retries++
+			continue
+		}
+
 		// If userID is not on context config file we add it and save it.
 		// this prevents from relogin to actual users
 		if okteto.Context().UserID == "" && okteto.Context().IsOkteto {
@@ -254,21 +268,6 @@ func (c ContextCommand) getUserContext(ctx context.Context) (*types.UserContext,
 			}
 		}
 
-		if err == nil {
-			return userContext, nil
-		}
-
-		if errors.IsForbidden(err) {
-			okteto.Context().Token = ""
-			if err := c.OktetoContextWriter.Write(); err != nil {
-				log.Infof("error updating okteto contexts: %v", err)
-				return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
-			}
-			return nil, fmt.Errorf(errors.ErrNotLogged, okteto.Context().Name)
-		}
-
-		log.Info(err)
-		retries++
 	}
 	return nil, errors.ErrInternalServerError
 }
