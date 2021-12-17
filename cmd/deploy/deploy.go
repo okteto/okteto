@@ -55,6 +55,8 @@ type Options struct {
 	Timeout      time.Duration
 	OutputMode   string
 	Manifest     *model.Manifest
+
+	silent bool
 }
 
 type kubeConfigHandler interface {
@@ -103,6 +105,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 						return err
 					}
 				}
+			}
+
+			if options.OutputMode == "json" {
+				options.silent = true
 			}
 
 			ctxOpts := &contextCMD.ContextOptions{
@@ -204,7 +210,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 	var err error
 	// Read manifest file with the commands to be executed
-	opts.Manifest, err = dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
+	opts.Manifest, err = dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Silent: opts.silent})
 	if err != nil {
 		log.Infof("could not find manifest file to be executed: %s", err)
 		return err

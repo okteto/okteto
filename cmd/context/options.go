@@ -30,6 +30,8 @@ type ContextOptions struct {
 	Save         bool
 	IsCtxCommand bool
 	IsOkteto     bool
+
+	Silent bool
 }
 
 func (o *ContextOptions) initFromContext() {
