@@ -246,7 +246,7 @@ func waitToBeDeployed(ctx context.Context, name string, a *types.Action, timeout
 	if err != nil {
 		return err
 	}
-	return oktetoClient.WaitForActionToFinish(ctx, a.Name, timeout)
+	return oktetoClient.WaitForActionToFinish(ctx, name, a.Name, timeout)
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0

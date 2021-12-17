@@ -180,7 +180,7 @@ func waitToBeDestroyed(ctx context.Context, name string, action *types.Action, t
 	if err != nil {
 		return err
 	}
-	return oktetoClient.WaitForActionToFinish(ctx, action.Name, timeout)
+	return oktetoClient.WaitForActionToFinish(ctx, name, action.Name, timeout)
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
