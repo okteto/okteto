@@ -267,7 +267,7 @@ func (c ContextCommand) getUserContext(ctx context.Context) (*types.UserContext,
 				return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 			}
 		}
-
+		return userContext, nil
 	}
 	return nil, errors.ErrInternalServerError
 }
