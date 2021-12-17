@@ -16,7 +16,6 @@ package namespace
 import (
 	"context"
 	"fmt"
-	"regexp"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -29,7 +28,6 @@ import (
 
 // Delete deletes a namespace
 func Delete(ctx context.Context) *cobra.Command {
-	isRegex := false
 	cmd := &cobra.Command{
 		Use:   "delete <name>",
 		Short: "Delete a namespace",
@@ -47,46 +45,23 @@ func Delete(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = nsCmd.executeDeleteNamespace(ctx, args[0], isRegex)
+			err = nsCmd.executeDeleteNamespace(ctx, args[0])
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},
 		Args: utils.ExactArgsAccepted(1, ""),
 	}
-	cmd.Flags().BoolVarP(&isRegex, "regex", "", false, "If true will remove all namespaces that matches regex")
-
 	return cmd
 }
 
-func (nc *namespaceCommand) executeDeleteNamespace(ctx context.Context, namespace string, isRegex bool) error {
+func (nc *namespaceCommand) executeDeleteNamespace(ctx context.Context, namespace string) error {
 
-	nsToRemove := map[string]bool{}
-	if isRegex {
-		namespaces, err := nc.okClient.Namespaces().List(ctx)
-		if err != nil {
-			return err
-		}
-		re, err := regexp.Compile(namespace)
-		if err != nil {
-			return err
-		}
-		for _, ns := range namespaces {
-			if re.Match([]byte(ns.ID)) && okteto.Context().PersonalNamespace != ns.ID {
-				nsToRemove[ns.ID] = true
-			}
-		}
-	} else {
-		nsToRemove[namespace] = true
+	if err := nc.okClient.Namespaces().Delete(ctx, namespace); err != nil {
+		return fmt.Errorf("failed to delete namespace: %s", err)
 	}
+	log.Success("Namespace '%s' deleted", namespace)
 
-	for ns := range nsToRemove {
-		if err := nc.okClient.Namespaces().Delete(ctx, ns); err != nil {
-			return fmt.Errorf("failed to delete namespace: %s", err)
-		}
-		log.Success("Namespace '%s' deleted", ns)
-	}
-
-	if _, ok := nsToRemove[okteto.Context().Namespace]; ok {
+	if okteto.Context().Namespace == namespace {
 		personalNamespace := okteto.Context().PersonalNamespace
 		if personalNamespace == "" {
 			personalNamespace = okteto.GetSanitizedUsername()

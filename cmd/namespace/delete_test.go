@@ -31,7 +31,6 @@ func Test_deleteNamespace(t *testing.T) {
 		name              string
 		toDeleteNs        string
 		currentNamespaces []types.Namespace
-		isRegex           bool
 		finalNs           string
 		err               bool
 	}{
@@ -65,26 +64,6 @@ func Test_deleteNamespace(t *testing.T) {
 					ID: personalNs,
 				},
 			},
-			finalNs: currentNs,
-		},
-		{
-			name:       "delete regex ns",
-			toDeleteNs: "toRemove",
-			currentNamespaces: []types.Namespace{
-				{
-					ID: "toRemove1",
-				},
-				{
-					ID: "toRemove2",
-				},
-				{
-					ID: currentNs,
-				},
-				{
-					ID: personalNs,
-				},
-			},
-			isRegex: true,
 			finalNs: currentNs,
 		},
 		{
@@ -133,7 +112,7 @@ func Test_deleteNamespace(t *testing.T) {
 				okClient: fakeOktetoClient,
 				ctxCmd:   newFakeContextCommand(fakeOktetoClient, usr),
 			}
-			err := nsCmd.executeDeleteNamespace(ctx, tt.toDeleteNs, tt.isRegex)
+			err := nsCmd.executeDeleteNamespace(ctx, tt.toDeleteNs)
 			if tt.err {
 				assert.Error(t, err)
 			} else {
@@ -144,10 +123,8 @@ func Test_deleteNamespace(t *testing.T) {
 
 			ns, err := fakeOktetoClient.Namespaces().List(ctx)
 			assert.Equal(t, nil, err)
-			if !tt.isRegex {
-				for _, n := range ns {
-					assert.NotEqual(t, n.ID, tt.toDeleteNs)
-				}
+			for _, n := range ns {
+				assert.NotEqual(t, n.ID, tt.toDeleteNs)
 			}
 		})
 	}
