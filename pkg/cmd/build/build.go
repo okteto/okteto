@@ -43,6 +43,7 @@ type BuildOptions struct {
 	Secrets    []string
 	Tag        string
 	Target     string
+	Namespace  string
 }
 
 // Run runs the build sequence

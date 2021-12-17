@@ -53,18 +53,18 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 
 			opts, err := build.BuildOptionsFromManifest(options, args, manifestPath)
-				if err != nil {
-					return err
-				}
+			if err != nil {
+				return err
+			}
 
 			if opts != nil {
 				for _, o := range opts {
 					err := buildWithOptions(o)
-							if err != nil {
-								return err
-							}
-						}
-					return nil
+					if err != nil {
+						return err
+					}
+				}
+				return nil
 			}
 			log.Warning("Okteto Manifest not found, looking for Dockerfile")
 
@@ -88,6 +88,7 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.OutputMode, "progress", "", "tty", "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables")
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "", "", "namespace against which the image will be consumed. Default is the one defined at okteto context or okteto manifest")
 	return cmd
 }
 
