@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/compose-spec/godotenv"
 	"github.com/moby/term"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	initCMD "github.com/okteto/okteto/cmd/init"
@@ -91,13 +90,6 @@ func Up() *cobra.Command {
 			}
 
 			ctx := context.Background()
-
-			if model.FileExists(".env") {
-				err := godotenv.Load()
-				if err != nil {
-					log.Errorf("error loading .env file: %s", err.Error())
-				}
-			}
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
 			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
@@ -182,7 +174,10 @@ func Up() *cobra.Command {
 				log.Infof("error deleting deprecated volume: %v", err)
 			}
 
-			err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+			if err != nil {
+				err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+
+			}
 
 			return err
 		},
