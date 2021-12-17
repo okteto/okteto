@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -41,66 +40,38 @@ func Build(ctx context.Context) *cobra.Command {
 			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
+			options.Path = "."
 
-			service := ""
-			if len(args) == 1 {
-				service = args[0]
-			}
-
-			manifestPath := "."
+			manifestPath := ""
 			if options.File != "" {
 				if err := utils.CheckIfRegularFile(options.File); err != nil {
 					return fmt.Errorf("invalid File: %s", err.Error())
 				}
 				manifestPath = options.File
 			} else {
-				manifestPath = contextCMD.GetOktetoManifestPath(manifestPath)
+				manifestPath = contextCMD.GetOktetoManifestPath(options.Path)
 			}
-			if manifestPath != "" {
-				buildManifest, err := model.GetBuildManifest(manifestPath)
+
+			opts, err := build.BuildOptionsFromManifest(options, args, manifestPath)
 				if err != nil {
 					return err
 				}
-				if len(buildManifest) != 0 {
-					if service != "" {
-						b, ok := buildManifest[service]
-						if !ok {
-							return fmt.Errorf("invalid service name")
-						}
 
-						if options.Target != "" {
-							b.Target = options.Target
-						}
-						if len(options.CacheFrom) != 0 {
-							b.CacheFrom = options.CacheFrom
-						}
-
-						opts := build.OptsFromManifest(service, b)
-						opts.Secrets = options.Secrets
-
-						err := buildWithOptions(opts)
-						if err != nil {
-							return err
-						}
-					} else {
-						for service, b := range buildManifest {
-							opts := build.OptsFromManifest(service, b)
-							err := buildWithOptions(opts)
+			if opts != nil {
+				for _, o := range opts {
+					err := buildWithOptions(o)
 							if err != nil {
 								return err
 							}
 						}
-					}
 					return nil
-				}
 			}
 			log.Warning("Okteto Manifest not found, looking for Dockerfile")
 
-			options.Path = "."
 			if len(args) == 1 {
 				options.Path = args[0]
 			}
-			err := buildWithOptions(options)
+			err = buildWithOptions(options)
 			if err != nil {
 				return err
 			}

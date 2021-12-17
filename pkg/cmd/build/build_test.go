@@ -82,7 +82,7 @@ func Test_setOktetoImageTag(t *testing.T) {
 	}
 }
 
-func Test_OptsFromManifest(t *testing.T) {
+func Test_optsFromManifest(t *testing.T) {
 	tests := []struct {
 		name           string
 		serviceName    string
@@ -169,9 +169,100 @@ func Test_OptsFromManifest(t *testing.T) {
 				CurrentContext: "test",
 			}
 			os.Setenv("OKTETO_GIT_COMMIT", tt.okGitCommitEnv)
-			result := OptsFromManifest(tt.serviceName, tt.buildInfo)
+			result := optsFromManifest(tt.serviceName, tt.buildInfo)
 			assert.Equal(t, tt.expected, result)
 			os.Unsetenv("OKTETO_GIT_COMMIT")
+		})
+	}
+}
+
+func Test_BuildOptionsFromManifest(t *testing.T) {
+	tests := []struct {
+		name           string
+		inputOptions   BuildOptions
+		args           []string
+		manifestYAML   []byte
+		expectedError  bool
+		existsManifest bool
+		expectOptsLen  int
+	}{
+		{
+			name:           "empty-manifest-path",
+			inputOptions:   BuildOptions{},
+			expectedError:  false,
+			existsManifest: false,
+			expectOptsLen:  0,
+		},
+		{
+			name:         "manifest-path-no-args",
+			inputOptions: BuildOptions{},
+			manifestYAML: []byte(`
+build:
+  service1:
+    context: service1
+  service2:
+    context: service2`),
+			expectedError:  false,
+			existsManifest: true,
+			expectOptsLen:  2,
+		},
+		{
+			name:         "manifest-path-args",
+			inputOptions: BuildOptions{},
+			args:         []string{"service2"},
+			manifestYAML: []byte(`
+build:
+  service1:
+    context: service1
+  service2:
+    context: service2`),
+			expectedError:  false,
+			existsManifest: true,
+			expectOptsLen:  1,
+		},
+		{
+			name:         "manifest-path-args-invalid",
+			inputOptions: BuildOptions{},
+			args:         []string{"service3"},
+			manifestYAML: []byte(`
+build:
+  service1:
+    context: service1
+  service2:
+    context: service2`),
+			expectedError:  true,
+			existsManifest: true,
+			expectOptsLen:  0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			file, err := os.CreateTemp("", "okteto.yml")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.Remove(file.Name())
+
+			if _, err = file.Write(tt.manifestYAML); err != nil {
+				t.Fatal("Failed to write to temporary file", err)
+			}
+
+			manifestPath := ""
+			if tt.existsManifest {
+				manifestPath = file.Name()
+			}
+
+			opts, err := BuildOptionsFromManifest(tt.inputOptions, tt.args, manifestPath)
+
+			if len(opts) != tt.expectOptsLen {
+				t.Errorf("Expected %v, got %v", tt.expectOptsLen, len(opts))
+			}
+
+			if tt.expectedError {
+				assert.NotNil(t, err)
+			} else {
+				assert.Nil(t, err)
+			}
 		})
 	}
 }
