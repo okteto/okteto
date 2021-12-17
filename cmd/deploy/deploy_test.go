@@ -27,10 +27,19 @@ import (
 
 var fakeManifest *model.Manifest = &model.Manifest{
 	Deploy: &model.DeployInfo{
-		Commands: []string{
-			"printenv",
-			"ls -la",
-			"cat /tmp/test.txt",
+		Commands: []model.DeployCommand{
+			{
+				Name:    "printenv",
+				Command: "printenv",
+			},
+			{
+				Name:    "ls -la",
+				Command: "ls -la",
+			},
+			{
+				Name:    "cat /tmp/test.txt",
+				Command: "cat /tmp/test.txt",
+			},
 		},
 	},
 }
@@ -45,7 +54,7 @@ type fakeProxy struct {
 
 type fakeExecutor struct {
 	err      error
-	executed []string
+	executed []model.DeployCommand
 }
 
 type fakeKubeConfig struct {
@@ -81,7 +90,7 @@ func (fk *fakeProxy) GetToken() string {
 	return fk.token
 }
 
-func (fe *fakeExecutor) Execute(command string, _ []string) error {
+func (fe *fakeExecutor) Execute(command model.DeployCommand, _ []string) error {
 	fe.executed = append(fe.executed, command)
 	if fe.err != nil {
 		return fe.err

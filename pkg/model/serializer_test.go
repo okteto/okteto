@@ -1045,8 +1045,11 @@ dev:
 `),
 			expected: &Manifest{
 				Deploy: &DeployInfo{
-					Commands: []string{
-						"okteto stack deploy",
+					Commands: []DeployCommand{
+						{
+							Name:    "okteto stack deploy",
+							Command: "okteto stack deploy",
+						},
 					},
 				},
 				Dev: map[string]*Dev{
@@ -1650,8 +1653,11 @@ deploy:
 			expected: &Manifest{
 				Dev: map[string]*Dev{},
 				Deploy: &DeployInfo{
-					Commands: []string{
-						"okteto stack deploy",
+					Commands: []DeployCommand{
+						{
+							Name:    "okteto stack deploy",
+							Command: "okteto stack deploy",
+						},
 					},
 				},
 			},
@@ -1669,8 +1675,11 @@ devs:
 			expected: &Manifest{
 				Dev: map[string]*Dev{},
 				Deploy: &DeployInfo{
-					Commands: []string{
-						"okteto stack deploy",
+					Commands: []DeployCommand{
+						{
+							Name:    "okteto stack deploy",
+							Command: "okteto stack deploy",
+						},
 					},
 				},
 			},
@@ -1706,8 +1715,25 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 			deployInfoManifest: []byte(`
 - okteto stack deploy`),
 			expected: &DeployInfo{
-				Commands: []string{
-					"okteto stack deploy",
+				Commands: []DeployCommand{
+					{
+						Name:    "okteto stack deploy",
+						Command: "okteto stack deploy",
+					},
+				},
+			},
+		},
+		{
+			name: "list of commands extended",
+			deployInfoManifest: []byte(`
+- name: deploy stack
+  command: okteto stack deploy`),
+			expected: &DeployInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "deploy stack",
+						Command: "okteto stack deploy",
+					},
 				},
 			},
 		},
@@ -1716,7 +1742,7 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 			deployInfoManifest: []byte(`commands:
 - okteto stack deploy`),
 			expected: &DeployInfo{
-				Commands: []string{},
+				Commands: []DeployCommand{},
 			},
 			isErrorExpected: true,
 		},
@@ -1729,7 +1755,7 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
       service: app
       port: 80`),
 			expected: &DeployInfo{
-				Commands: []string{},
+				Commands: []DeployCommand{},
 			},
 			isErrorExpected: true,
 		},
@@ -1744,7 +1770,7 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
   to:
     service: frontend`),
 			expected: &DeployInfo{
-				Commands: []string{},
+				Commands: []DeployCommand{},
 			},
 			isErrorExpected: true,
 		},
@@ -1770,7 +1796,7 @@ compose:
     service: api
     port: 8080`),
 			expected: &DeployInfo{
-				Commands: []string{},
+				Commands: []DeployCommand{},
 			},
 			isErrorExpected: true,
 		},

@@ -146,7 +146,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		// Log error message but application can still be deleted
 		log.Infof("could not find manifest file to be executed: %s", err)
 		manifest = &model.Manifest{
-			Destroy: []string{},
+			Destroy: []model.DeployCommand{},
 		}
 	}
 
@@ -219,7 +219,8 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 	for releaseName := range helmReleases {
 		log.Debugf("uninstalling helm release %s", releaseName)
 		cmd := fmt.Sprintf(helmUninstallCommand, releaseName)
-		if err := dc.executor.Execute(cmd, opts.Variables); err != nil {
+		cmdInfo := model.DeployCommand{Command: cmd, Name: cmd}
+		if err := dc.executor.Execute(cmdInfo, opts.Variables); err != nil {
 			log.Infof("could not uninstall helm release '%s': %s", releaseName, err)
 			if !opts.ForceDestroy {
 				return err

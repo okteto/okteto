@@ -19,11 +19,11 @@ import (
 
 //Manifest represents an okteto manifest
 type Manifest struct {
-	Icon    string        `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy  *DeployInfo   `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev     ManifestDevs  `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build   ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
+	Icon    string          `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy  *DeployInfo     `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev     ManifestDevs    `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy []DeployCommand `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build   ManifestBuild   `json:"build,omitempty" yaml:"build,omitempty"`
 
 	Type     string `yaml:"-"`
 	Filename string `yaml:"-"`
@@ -51,12 +51,18 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 
 //DeployInfo represents a deploy section
 type DeployInfo struct {
-	Commands []string `json:"commands,omitempty" yaml:"commands,omitempty"`
+	Commands []DeployCommand `json:"commands,omitempty" yaml:"commands,omitempty"`
+}
+
+//DeployCommand represents a command to be executed
+type DeployCommand struct {
+	Name    string `json:"name,omitempty" yaml:"name,omitempty"`
+	Command string `json:"command,omitempty" yaml:"command,omitempty"`
 }
 
 func NewDeployInfo() *DeployInfo {
 	return &DeployInfo{
-		Commands: make([]string, 0),
+		Commands: []DeployCommand{},
 	}
 }
 

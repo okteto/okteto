@@ -215,9 +215,15 @@ func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*
 	chartSubPath := getChartsSubPath(srcFolder, src)
 	if chartSubPath != "" {
 		log.Infof("Found chart")
+		command := fmt.Sprintf("helm upgrade --install %s %s", opts.Name, chartSubPath)
 		return &model.Manifest{
-			Type:     "chart",
-			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("helm upgrade --install %s %s", opts.Name, chartSubPath)}},
+			Type: "chart",
+			Deploy: &model.DeployInfo{Commands: []model.DeployCommand{
+				{
+					Name:    command,
+					Command: command,
+				},
+			}},
 			Filename: chartSubPath,
 		}, nil
 	}
@@ -225,9 +231,15 @@ func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*
 	manifestsSubPath := getManifestsSubPath(srcFolder, src)
 	if manifestsSubPath != "" {
 		log.Infof("Found kubernetes manifests")
+		command := fmt.Sprintf("kubectl apply -f %s", manifestsSubPath)
 		return &model.Manifest{
-			Type:     "kubernetes",
-			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("kubectl apply -f %s", manifestsSubPath)}},
+			Type: "kubernetes",
+			Deploy: &model.DeployInfo{Commands: []model.DeployCommand{
+				{
+					Name:    command,
+					Command: command,
+				},
+			}},
 			Filename: manifestsSubPath,
 		}, nil
 	}
@@ -235,18 +247,30 @@ func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*
 	stackSubPath := getStackSubPath(srcFolder, src)
 	if stackSubPath != "" {
 		log.Infof("Found okteto stack")
+		command := fmt.Sprintf("okteto stack deploy --build -f %s", stackSubPath)
 		return &model.Manifest{
-			Type:     "stack",
-			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("okteto stack deploy --build -f %s", stackSubPath)}},
+			Type: "stack",
+			Deploy: &model.DeployInfo{Commands: []model.DeployCommand{
+				{
+					Name:    command,
+					Command: command,
+				},
+			}},
 			Filename: stackSubPath,
 		}, nil
 	}
 
 	if oktetoSubPath != "" {
 		log.Infof("Found okteto manifest")
+		command := "okteto push --deploy"
 		return &model.Manifest{
-			Type:     "okteto",
-			Deploy:   &model.DeployInfo{Commands: []string{"okteto push --deploy"}},
+			Type: "okteto",
+			Deploy: &model.DeployInfo{Commands: []model.DeployCommand{
+				{
+					Name:    command,
+					Command: command,
+				},
+			}},
 			Filename: oktetoSubPath,
 		}, nil
 	}

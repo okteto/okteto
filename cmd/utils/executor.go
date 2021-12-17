@@ -24,10 +24,11 @@ import (
 	"time"
 
 	"github.com/manifoldco/promptui/screenbuf"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 type ManifestExecutor interface {
-	Execute(command string, env []string) error
+	Execute(command model.DeployCommand, env []string) error
 }
 
 type Executor struct {
@@ -68,9 +69,9 @@ func NewExecutor(output string) *Executor {
 }
 
 // Execute executes the specified command adding `env` to the execution environment
-func (e *Executor) Execute(command string, env []string) error {
+func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 
-	cmd := exec.Command("bash", "-c", command)
+	cmd := exec.Command("bash", "-c", cmdInfo.Command)
 	cmd.Env = append(os.Environ(), env...)
 
 	reader, err := e.displayer.startCommand(cmd)
@@ -81,7 +82,7 @@ func (e *Executor) Execute(command string, env []string) error {
 	scanner := bufio.NewScanner(reader)
 
 	sb := screenbuf.New(os.Stdout)
-	go e.displayer.display(scanner, command, sb)
+	go e.displayer.display(scanner, cmdInfo.Name, sb)
 
 	err = cmd.Wait()
 	return err
