@@ -99,7 +99,8 @@ func Up() *cobra.Command {
 				}
 			}
 
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
+			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				if !strings.Contains(err.Error(), "okteto init") {
 					return err

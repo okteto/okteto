@@ -41,6 +41,7 @@ type ManifestOptions struct {
 	Namespace  string
 	Filename   string
 	K8sContext string
+	Silent     bool
 }
 
 func getKubernetesContextList(filterOkteto bool) []string {
@@ -127,17 +128,17 @@ func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextRe
 	return nil
 }
 
-func LoadManifestWithContext(ctx context.Context, devPath, namespace, k8sContext string) (*model.Manifest, error) {
-	ctxResource, err := utils.LoadManifestContext(devPath)
+func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.Manifest, error) {
+	ctxResource, err := utils.LoadManifestContext(opts.Filename)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := ctxResource.UpdateNamespace(namespace); err != nil {
+	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
 		return nil, err
 	}
 
-	if err := ctxResource.UpdateContext(k8sContext); err != nil {
+	if err := ctxResource.UpdateContext(opts.K8sContext); err != nil {
 		return nil, err
 	}
 
@@ -145,12 +146,13 @@ func LoadManifestWithContext(ctx context.Context, devPath, namespace, k8sContext
 		Context:   ctxResource.Context,
 		Namespace: ctxResource.Namespace,
 		Show:      true,
+		Silent:    opts.Silent,
 	}
 	if err := Run(ctx, ctxOptions); err != nil {
 		return nil, err
 	}
 
-	return utils.LoadManifest(devPath)
+	return utils.LoadManifest(opts.Filename)
 }
 
 func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string) (*model.Stack, error) {
@@ -191,7 +193,8 @@ func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*
 	pipelinePath := getPipelinePath(srcFolder, opts.Filename)
 	if pipelinePath != "" {
 		log.Debugf("Found okteto manifest %s", pipelinePath)
-		manifest, err := LoadManifestWithContext(ctx, pipelinePath, opts.Namespace, opts.K8sContext)
+		opts.Filename = pipelinePath
+		manifest, err := LoadManifestWithContext(ctx, opts)
 		if err != nil {
 			log.Infof("could not load manifest: %s", err.Error())
 		}
@@ -200,7 +203,13 @@ func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*
 		manifest.Filename = pipelinePath
 		return manifest, nil
 	}
-
+	ctxOptions := &ContextOptions{
+		Show:   true,
+		Silent: opts.Silent,
+	}
+	if err := Run(ctx, ctxOptions); err != nil {
+		return nil, err
+	}
 	src := srcFolder
 	path := filepath.Join(srcFolder, opts.Filename)
 	if opts.Filename != "" && pathExistsAndDir(path) {
