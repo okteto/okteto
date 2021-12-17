@@ -63,6 +63,10 @@ func (up *upContext) activate() error {
 		return err
 	}
 
+	if v, ok := app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation]; !ok || v != model.OktetoUpCmd {
+		return fmt.Errorf("resource '%s' already exists. Please consider changing the name of autocreate", up.Dev.Name)
+	}
+
 	if up.isRetry && !apps.IsDevModeOn(app) {
 		log.Information("Development container has been deactivated")
 		return nil
