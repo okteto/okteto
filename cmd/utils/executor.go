@@ -121,15 +121,18 @@ func (jsonExecutorDisplayer) display(scanner *bufio.Scanner, command string, _ *
 		if isErrorLine(line) {
 			level = "error"
 		}
-		messageStruct := jsonMessage{
-			Level:     level,
-			Message:   line,
-			Stage:     command,
-			Timestamp: time.Now().Unix(),
-		}
-		message, _ := json.Marshal(messageStruct)
-		fmt.Println(string(message))
+		DisplayJsonMessage(level, line, command)
 	}
+}
+func DisplayJsonMessage(level, message, stage string) {
+	messageStruct := jsonMessage{
+		Level:     level,
+		Message:   message,
+		Stage:     stage,
+		Timestamp: time.Now().Unix(),
+	}
+	messageJson, _ := json.Marshal(messageStruct)
+	fmt.Println(string(messageJson))
 }
 
 func isErrorLine(text string) bool {

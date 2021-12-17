@@ -239,6 +239,10 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	for _, command := range opts.Manifest.Deploy.Commands {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			log.Infof("error executing command '%s': %s", command, err.Error())
+			if opts.silent {
+				utils.DisplayJsonMessage("error", err.Error(), command)
+				return nil
+			}
 			return fmt.Errorf("error executing command '%s': %s", command, err.Error())
 		}
 	}
