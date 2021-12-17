@@ -65,9 +65,9 @@ Then you have to move the `$OKTETO_BIN` to your `$PATH` by executing.
 mv -f $OKTETO_BIN /usr/local/bin/okteto
 ```
 
-### Installing latest okteto release candidate
+### Installing the latest okteto release candidate
 
-You can test the latest features by installing the latest release candidate. Please note that the changes in these versions do not necessarily work with the latest stable version of okteto
+You can test the latest features by installing our release candidate. Please note that the changes in these versions do not necessarily work with the latest stable version of okteto.
 
 #### Linux/Mac
 
