@@ -197,7 +197,7 @@ func translateDockerErr(err error) error {
 	return err
 }
 
-func optsFromManifest(name string, b *model.BuildInfo) BuildOptions {
+func OptsFromManifest(name string, b *model.BuildInfo) BuildOptions {
 	if okteto.Context().IsOkteto && b.Image == "" {
 		b.Image = setOktetoImageTag(name)
 	}
@@ -213,6 +213,7 @@ func optsFromManifest(name string, b *model.BuildInfo) BuildOptions {
 		opts.BuildArgs = model.SerializeBuildArgs(b.Args)
 	}
 
+	opts.OutputMode = setOutputMode("tty")
 	return opts
 }
 
@@ -223,51 +224,4 @@ func setOktetoImageTag(name string) string {
 		imageTag = okGitCommit
 	}
 	return fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, name, imageTag)
-}
-
-func BuildOptionsFromManifest(options BuildOptions, args []string, manifestPath string) ([]BuildOptions, error) {
-	if manifestPath == "" {
-		return nil, nil
-	}
-
-	buildManifest, err := model.GetBuildManifest(manifestPath)
-	if err != nil {
-		return nil, err
-	}
-	if buildManifest == nil {
-		return nil, nil
-	}
-
-	service := ""
-	if len(args) == 1 {
-		service = args[0]
-	}
-
-	var returnOpts []BuildOptions
-	if service != "" {
-		b, ok := buildManifest[service]
-		if !ok {
-			return nil, fmt.Errorf("invalid service name")
-		}
-
-		if options.Target != "" {
-			b.Target = options.Target
-		}
-		if len(options.CacheFrom) != 0 {
-			b.CacheFrom = options.CacheFrom
-		}
-
-		opts := optsFromManifest(service, b)
-		opts.Secrets = options.Secrets
-
-		returnOpts = append(returnOpts, opts)
-		return returnOpts, nil
-	}
-
-	for service, b := range buildManifest {
-		opts := optsFromManifest(service, b)
-
-		returnOpts = append(returnOpts, opts)
-	}
-	return returnOpts, nil
 }

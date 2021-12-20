@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -42,40 +43,17 @@ func Build(ctx context.Context) *cobra.Command {
 			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
-			options.Path = "."
 
-			if readFromManifest() {
-				manifestPath := ""
-				if options.File != "" {
-					if err := utils.CheckIfRegularFile(options.File); err != nil {
-						return fmt.Errorf("invalid File: %s", err.Error())
-					}
-					manifestPath = options.File
-				} else {
-					manifestPath = contextCMD.GetOktetoManifestPath(options.Path)
-				}
-
-				opts, err := build.BuildOptionsFromManifest(options, args, manifestPath)
+			m, ok := isManifestV2(options.File)
+			if m != nil && ok {
+				err := buildV2(m, options, args)
 				if err != nil {
 					return err
 				}
-
-				if opts != nil {
-					for _, o := range opts {
-						err := buildWithOptions(o)
-						if err != nil {
-							return err
-						}
-					}
-					return nil
-				}
-				log.Warning("Okteto Manifest not found, looking for Dockerfile")
+				return nil
 			}
 
-			if len(args) == 1 {
-				options.Path = args[0]
-			}
-			err := buildWithOptions(options)
+			err := buildV1(options, args)
 			if err != nil {
 				return err
 			}
@@ -96,17 +74,79 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func buildWithOptions(opts build.BuildOptions) error {
+func isManifestV2(file string) (model.ManifestBuild, bool) {
+	r, err := strconv.ParseBool(os.Getenv("OKTETO_READ_MANIFEST"))
+	if err != nil || !r {
+		return nil, false
+	}
+	mPath := contextCMD.GetOktetoManifestPath(file)
+	if mPath == "" {
+		return nil, false
+	}
 
-	if err := utils.CheckIfDirectory(opts.Path); err != nil {
+	mBuild, err := model.GetBuildManifest(mPath)
+	if err != nil || mBuild == nil {
+		return nil, false
+	}
+	return mBuild, true
+}
+
+func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) error {
+	service := ""
+	if len(args) == 1 {
+		service = args[0]
+	}
+
+	if service != "" {
+		b, ok := m[service]
+		if !ok {
+			return fmt.Errorf("invalid service name")
+		}
+
+		if options.Target != "" {
+			b.Target = options.Target
+		}
+		if len(options.CacheFrom) != 0 {
+			b.CacheFrom = options.CacheFrom
+		}
+
+		opts := build.OptsFromManifest(service, b)
+		opts.Secrets = options.Secrets
+
+		err := buildV1(opts, []string{service})
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	for service, b := range m {
+		opts := build.OptsFromManifest(service, b)
+		err := buildV1(opts, []string{service})
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+	}
+	return nil
+}
+
+func buildV1(options build.BuildOptions, args []string) error {
+	path := "."
+	if len(args) == 1 {
+		path = args[0]
+	}
+
+	if err := utils.CheckIfDirectory(path); err != nil {
 		return fmt.Errorf("invalid build context: %s", err.Error())
 	}
+	options.Path = path
 
-	if opts.File == "" {
-		opts.File = filepath.Join(opts.Path, "Dockerfile")
+	if options.File == "" {
+		options.File = filepath.Join(path, "Dockerfile")
 	}
 
-	if err := utils.CheckIfRegularFile(opts.File); err != nil {
+	if err := utils.CheckIfRegularFile(options.File); err != nil {
 		return fmt.Errorf("invalid Dockerfile: %s", err.Error())
 	}
 
@@ -117,26 +157,18 @@ func buildWithOptions(opts build.BuildOptions) error {
 	}
 
 	ctx := context.Background()
-	if err := build.Run(ctx, opts); err != nil {
+	if err := build.Run(ctx, options); err != nil {
 		analytics.TrackBuild(okteto.Context().Builder, false)
 		return err
 	}
 
-	if opts.Tag == "" {
+	if options.Tag == "" {
 		log.Success("Build succeeded")
 		log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
 	} else {
-		log.Success(fmt.Sprintf("Image '%s' successfully pushed", opts.Tag))
+		log.Success(fmt.Sprintf("Image '%s' successfully pushed", options.Tag))
 	}
 
 	analytics.TrackBuild(okteto.Context().Builder, true)
 	return nil
-}
-
-func readFromManifest() bool {
-	r, err := strconv.ParseBool(os.Getenv("OKTETO_READ_MANIFEST"))
-	if err != nil {
-		return false
-	}
-	return r
 }
