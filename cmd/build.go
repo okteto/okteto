@@ -75,7 +75,7 @@ func Build(ctx context.Context) *cobra.Command {
 }
 
 func isManifestV2(file string) (model.ManifestBuild, bool) {
-	r, err := strconv.ParseBool(os.Getenv("OKTETO_READ_MANIFEST"))
+	r, err := strconv.ParseBool(os.Getenv("OKTETO_ENABLE_MANIFEST_V2"))
 	if err != nil || !r {
 		return nil, false
 	}
