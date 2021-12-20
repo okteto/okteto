@@ -234,6 +234,9 @@ func BuildOptionsFromManifest(options BuildOptions, args []string, manifestPath 
 	if err != nil {
 		return nil, err
 	}
+	if buildManifest == nil {
+		return nil, nil
+	}
 
 	service := ""
 	if len(args) == 1 {
