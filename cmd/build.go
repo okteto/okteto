@@ -16,7 +16,9 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
+	"strconv"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -42,36 +44,38 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 			options.Path = "."
 
-			manifestPath := ""
-			if options.File != "" {
-				if err := utils.CheckIfRegularFile(options.File); err != nil {
-					return fmt.Errorf("invalid File: %s", err.Error())
-				}
-				manifestPath = options.File
-			} else {
-				manifestPath = contextCMD.GetOktetoManifestPath(options.Path)
-			}
-
-			opts, err := build.BuildOptionsFromManifest(options, args, manifestPath)
-			if err != nil {
-				return err
-			}
-
-			if opts != nil {
-				for _, o := range opts {
-					err := buildWithOptions(o)
-					if err != nil {
-						return err
+			if readFromManifest() {
+				manifestPath := ""
+				if options.File != "" {
+					if err := utils.CheckIfRegularFile(options.File); err != nil {
+						return fmt.Errorf("invalid File: %s", err.Error())
 					}
+					manifestPath = options.File
+				} else {
+					manifestPath = contextCMD.GetOktetoManifestPath(options.Path)
 				}
-				return nil
+
+				opts, err := build.BuildOptionsFromManifest(options, args, manifestPath)
+				if err != nil {
+					return err
+				}
+
+				if opts != nil {
+					for _, o := range opts {
+						err := buildWithOptions(o)
+						if err != nil {
+							return err
+						}
+					}
+					return nil
+				}
+				log.Warning("Okteto Manifest not found, looking for Dockerfile")
 			}
-			log.Warning("Okteto Manifest not found, looking for Dockerfile")
 
 			if len(args) == 1 {
 				options.Path = args[0]
 			}
-			err = buildWithOptions(options)
+			err := buildWithOptions(options)
 			if err != nil {
 				return err
 			}
@@ -127,4 +131,12 @@ func buildWithOptions(opts build.BuildOptions) error {
 
 	analytics.TrackBuild(okteto.Context().Builder, true)
 	return nil
+}
+
+func readFromManifest() bool {
+	r, err := strconv.ParseBool(os.Getenv("OKTETO_READ_MANIFEST"))
+	if err != nil {
+		return false
+	}
+	return r
 }
