@@ -174,7 +174,12 @@ func Up() *cobra.Command {
 			}
 
 			if err != nil {
-				err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+				switch err.(type) {
+				default:
+					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+				case errors.CommandError:
+					log.Infof("CommandError: %v", err)
+				}
 
 			}
 
