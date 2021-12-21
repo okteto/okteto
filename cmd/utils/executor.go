@@ -87,10 +87,7 @@ func (e *Executor) Execute(command string, env []string) error {
 }
 
 func startCommand(cmd *exec.Cmd) error {
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	return nil
+	return cmd.Start()
 }
 
 func (e *plainExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
