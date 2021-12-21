@@ -129,7 +129,7 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 		opts := build.OptsFromManifest(service, buildInfo, options)
 		opts.Secrets = options.Secrets
 
-		return buildV1(opts, []string{service})
+		return buildV1(opts, []string{opts.Path})
 	}
 
 	for service, buildInfo := range m {
@@ -138,7 +138,7 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 			continue
 		}
 		opts := build.OptsFromManifest(service, buildInfo, options)
-		err := buildV1(opts, []string{service})
+		err := buildV1(opts, []string{opts.Path})
 		if err != nil {
 			log.Error(err)
 			continue

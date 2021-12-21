@@ -207,8 +207,13 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 		Target:    b.Target,
 		Path:      b.Context,
 		Tag:       b.Image,
-		File:      filepath.Join(b.Context, b.Dockerfile),
 	}
+
+	if opts.Path == "." {
+		opts.Path = service
+	}
+	opts.File = filepath.Join(opts.Path, b.Dockerfile)
+
 	if len(b.Args) != 0 {
 		opts.BuildArgs = model.SerializeBuildArgs(b.Args)
 	}
