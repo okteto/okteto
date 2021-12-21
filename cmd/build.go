@@ -88,30 +88,26 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 	}
 
 	if service != "" {
-		b, ok := m[service]
+		buildInfo, ok := m[service]
 		if !ok {
 			return fmt.Errorf("invalid service name")
 		}
 
 		if options.Target != "" {
-			b.Target = options.Target
+			buildInfo.Target = options.Target
 		}
 		if len(options.CacheFrom) != 0 {
-			b.CacheFrom = options.CacheFrom
+			buildInfo.CacheFrom = options.CacheFrom
 		}
 
-		opts := build.OptsFromManifest(service, b)
+		opts := build.OptsFromManifest(service, buildInfo, options)
 		opts.Secrets = options.Secrets
 
-		err := buildV1(opts, []string{service})
-		if err != nil {
-			return err
-		}
-		return nil
+		return buildV1(opts, []string{service})
 	}
 
-	for service, b := range m {
-		opts := build.OptsFromManifest(service, b)
+	for service, buildInfo := range m {
+		opts := build.OptsFromManifest(service, buildInfo, options)
 		err := buildV1(opts, []string{service})
 		if err != nil {
 			log.Error(err)

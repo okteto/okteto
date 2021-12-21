@@ -197,9 +197,9 @@ func translateDockerErr(err error) error {
 	return err
 }
 
-func OptsFromManifest(name string, b *model.BuildInfo) BuildOptions {
+func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildOptions {
 	if okteto.Context().IsOkteto && b.Image == "" {
-		b.Image = fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, name, "dev")
+		b.Image = fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, service, "dev")
 	}
 
 	opts := BuildOptions{
@@ -213,6 +213,6 @@ func OptsFromManifest(name string, b *model.BuildInfo) BuildOptions {
 		opts.BuildArgs = model.SerializeBuildArgs(b.Args)
 	}
 
-	opts.OutputMode = setOutputMode("tty")
+	opts.OutputMode = setOutputMode(o.OutputMode)
 	return opts
 }
