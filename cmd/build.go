@@ -46,19 +46,9 @@ func Build(ctx context.Context) *cobra.Command {
 
 			m, ok := isManifestV2(options.File)
 			if m != nil && ok {
-				err := buildV2(m, options, args)
-				if err != nil {
-					return err
-				}
-				return nil
+				return buildV2(m, options, args)
 			}
-
-			err := buildV1(options, args)
-			if err != nil {
-				return err
-			}
-			return nil
-
+			return buildV1(options, args)
 		},
 	}
 
