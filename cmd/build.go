@@ -92,6 +92,9 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 		if !ok {
 			return fmt.Errorf("invalid service name")
 		}
+		if !okteto.Context().IsOkteto && buildInfo.Image == "" {
+			return fmt.Errorf("image is required")
+		}
 
 		if options.Target != "" {
 			buildInfo.Target = options.Target
@@ -107,6 +110,10 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 	}
 
 	for service, buildInfo := range m {
+		if !okteto.Context().IsOkteto && buildInfo.Image == "" {
+			log.Errorf("image is required")
+			continue
+		}
 		opts := build.OptsFromManifest(service, buildInfo, options)
 		err := buildV1(opts, []string{service})
 		if err != nil {
