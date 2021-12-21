@@ -71,11 +71,17 @@ func isManifestV2(file string) (model.ManifestBuild, bool) {
 	}
 	mPath := contextCMD.GetOktetoManifestPath(file)
 	if mPath == "" {
+		log.Errorf("okteto manifest not found")
 		return nil, false
 	}
 
 	mBuild, err := model.GetBuildManifest(mPath)
-	if err != nil || mBuild == nil {
+	if err != nil {
+		log.Errorf("Error retrieving build manifest, %s", err.Error())
+		return nil, false
+	}
+	if mBuild == nil {
+		log.Errorf("build manifest is empty")
 		return nil, false
 	}
 	return mBuild, true
