@@ -21,6 +21,7 @@ import (
 	"strconv"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
@@ -40,7 +41,23 @@ func Build(ctx context.Context) *cobra.Command {
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if okteto.IsOkteto() && options.Namespace != "" {
+				create, err := utils.ShouldCreateNamespace(ctx, options.Namespace)
+				if err != nil {
+					return err
+				}
+				if create {
+					err = namespace.ExecuteCreateNamespace(ctx, options.Namespace, nil)
+					if err != nil {
+						return err
+					}
+				}
+			}
+
+			ctxOpts := &contextCMD.ContextOptions{
+				Namespace: options.Namespace,
+			}
+			if err := contextCMD.Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 
