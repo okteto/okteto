@@ -199,7 +199,7 @@ func translateDockerErr(err error) error {
 
 func OptsFromManifest(name string, b *model.BuildInfo) BuildOptions {
 	if okteto.Context().IsOkteto && b.Image == "" {
-		b.Image = setOktetoImageTag(name)
+		b.Image = fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, name, "dev")
 	}
 
 	opts := BuildOptions{
@@ -215,13 +215,4 @@ func OptsFromManifest(name string, b *model.BuildInfo) BuildOptions {
 
 	opts.OutputMode = setOutputMode("tty")
 	return opts
-}
-
-func setOktetoImageTag(name string) string {
-	imageTag := "dev"
-	okGitCommit := os.Getenv("OKTETO_GIT_COMMIT")
-	if okGitCommit != "" {
-		imageTag = okGitCommit
-	}
-	return fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, name, imageTag)
 }
