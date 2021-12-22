@@ -365,6 +365,13 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 			}
 			metadata.Labels[model.DeployedByLabel] = name
 
+			if metadata.Annotations == nil {
+				metadata.Annotations = map[string]string{}
+			}
+			if utils.IsOktetoRepo() {
+				metadata.Annotations[model.OktetoSampleAnnotation] = "true"
+			}
+
 			metadataAsByte, err := json.Marshal(metadata)
 			if err != nil {
 				log.Infof("could not process resource's metadata: %s", err)
