@@ -125,11 +125,18 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 		if len(options.CacheFrom) != 0 {
 			buildInfo.CacheFrom = options.CacheFrom
 		}
+		if options.Tag != "" {
+			buildInfo.Image = options.Tag
+		}
 
 		opts := build.OptsFromManifest(service, buildInfo, options)
 		opts.Secrets = options.Secrets
 
 		return buildV1(opts, []string{opts.Path})
+	}
+
+	if options.Tag != "" || options.Target != "" || options.CacheFrom != nil || options.Secrets != nil {
+		return fmt.Errorf("invalid flag for okteto build using Manifest V2")
 	}
 
 	for service, buildInfo := range m {
