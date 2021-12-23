@@ -387,3 +387,18 @@ func GetOktetoManifestPath(file string) string {
 	}
 	return ""
 }
+
+func GetManifestV2(basePath, file string) (*model.Manifest, error) {
+	manifestPath := ""
+	if file != "" && fileExistsAndNotDir(file) {
+		manifestPath = file
+	} else {
+		src := basePath
+		manifestPath = getOktetoSubPath(basePath, src)
+	}
+
+	if manifestPath != "" {
+		return model.Get(manifestPath)
+	}
+	return nil, fmt.Errorf("okteto manifest not found")
+}

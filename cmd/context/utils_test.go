@@ -14,11 +14,13 @@
 package context
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/assert"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -116,6 +118,98 @@ func Test_addKubernetesContext(t *testing.T) {
 			if !reflect.DeepEqual(tt.wantStore, okteto.CurrentStore) {
 				t.Errorf("Test '%s' failed: %+v", tt.name, okteto.CurrentStore)
 			}
+		})
+	}
+}
+
+func Test_GetManifestV2(t *testing.T) {
+	tests := []struct {
+		name             string
+		file             string
+		manifestYAML     []byte
+		expectedErr      bool
+		expectedManifest *model.Manifest
+	}{
+		{
+			name:        "file-is-defined-option",
+			file:        "file",
+			expectedErr: false,
+			manifestYAML: []byte(`
+namespace: test-namespace
+context: manifest-context			
+build:
+  service:
+    image: defined-tag-image
+    context: ./service
+    target: build
+    dockerfile: custom-dockerfile
+    args:
+      KEY1: Value1
+      KEY2: Value2
+    cache_from:
+      - cache-image-1
+      - cache-image-2`),
+			expectedManifest: &model.Manifest{
+				Namespace: "test-namespace",
+				Context:   "manifest-context",
+				Build: model.ManifestBuild{
+					"service": {
+						Name:       "",
+						Target:     "build",
+						Context:    "./service",
+						Dockerfile: "custom-dockerfile",
+						Image:      "defined-tag-image",
+						Args: []model.EnvVar{
+							{
+								Name: "KEY1", Value: "Value1",
+							},
+							{
+								Name: "KEY2", Value: "Value2",
+							},
+						},
+						CacheFrom: []string{"cache-image-1", "cache-image-2"},
+					},
+				},
+				Icon:     "",
+				Dev:      model.ManifestDevs{},
+				Type:     "",
+				Filename: "",
+			},
+		},
+		{
+			name:        "manifest-path-not-found",
+			expectedErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			tmpFile, err := os.CreateTemp("", tt.file)
+			if err != nil {
+				t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
+			}
+			if err := os.WriteFile(tmpFile.Name(), []byte(tt.manifestYAML), 0600); err != nil {
+				t.Fatalf("failed to write manifest file: %s", err.Error())
+			}
+			defer os.RemoveAll(tmpFile.Name())
+
+			filename := tmpFile.Name()
+			if tt.file == "" {
+				filename = ""
+			}
+
+			cwd, err := os.Getwd()
+			if err != nil {
+				t.Errorf("unable to get current dir")
+			}
+			m, err := GetManifestV2(cwd, filename)
+			if tt.expectedErr {
+				assert.NotNil(t, err)
+			} else {
+				assert.EqualValues(t, tt.expectedManifest, m)
+			}
+
 		})
 	}
 }
