@@ -3,114 +3,54 @@ package cmd
 import (
 	"os"
 	"testing"
-
-	"github.com/okteto/okteto/pkg/model"
-	"github.com/stretchr/testify/assert"
 )
 
-func Test_isManifestV2(t *testing.T) {
+func Test_isManifestV2Enabled(t *testing.T) {
 	tests := []struct {
-		name         string
-		env          string
-		fileName     string
-		manifestYAML []byte
-		result       struct {
-			manifest model.ManifestBuild
-			ok       bool
-		}
+		name       string
+		envDefined bool
+		envValue   string
+		expected   bool
 	}{
 		{
-			name: "env-is-not-enabled",
-			env:  "false",
-			result: struct {
-				manifest model.ManifestBuild
-				ok       bool
-			}{
-				manifest: nil,
-				ok:       false,
-			},
+			name:       "env-not-defined",
+			envDefined: false,
+			expected:   false,
 		},
 		{
-			name: "env-is-not-valid",
-			env:  "not-valid-value",
-			result: struct {
-				manifest model.ManifestBuild
-				ok       bool
-			}{
-				manifest: nil,
-				ok:       false,
-			},
+			name:       "env-value-not-valid",
+			envDefined: true,
+			envValue:   "test",
+			expected:   false,
 		},
 		{
-			name: "env-is-enabled-file-not-found",
-			env:  "true",
-			result: struct {
-				manifest model.ManifestBuild
-				ok       bool
-			}{
-				manifest: nil,
-				ok:       false,
-			},
+			name:       "env-value-valid-true",
+			envDefined: true,
+			envValue:   "true",
+			expected:   true,
 		},
 		{
-			name:     "env-is-enabled-file-empty",
-			env:      "true",
-			fileName: "okteto.yaml",
-			result: struct {
-				manifest model.ManifestBuild
-				ok       bool
-			}{
-				manifest: nil,
-				ok:       false,
-			},
-		},
-		{
-			name:     "env-is-enabled-file-exists",
-			env:      "true",
-			fileName: "okteto.yaml",
-			manifestYAML: []byte(`
-build:
-  service:
-    context: .
-    dockerfile: Dockerfile`),
-			result: struct {
-				manifest model.ManifestBuild
-				ok       bool
-			}{
-				manifest: model.ManifestBuild{
-					"service": {
-						Context:    ".",
-						Dockerfile: "Dockerfile",
-					},
-				},
-				ok: true,
-			},
+			name:       "env-value-valid-false",
+			envDefined: true,
+			envValue:   "false",
+			expected:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			os.Setenv("OKTETO_ENABLE_MANIFEST_V2", tt.env)
-
-			filename := ""
-			if tt.fileName != "" {
-				file, err := os.CreateTemp("", "test")
+			os.Unsetenv("OKTETO_ENABLE_MANIFEST_V2")
+			if tt.envDefined {
+				err := os.Setenv("OKTETO_ENABLE_MANIFEST_V2", tt.envValue)
 				if err != nil {
-					t.Error(err)
-				}
-				defer os.RemoveAll(file.Name())
-
-				filename = file.Name()
-				if err := os.WriteFile(filename, tt.manifestYAML, 0600); err != nil {
 					t.Log(err)
 				}
 			}
 
-			rm, rok := isManifestV2(filename)
+			if result := isManifestV2Enabled(); result != tt.expected {
+				t.Errorf("test failed, expected %v, result %v", tt.expected, result)
+			}
 
-			assert.Equal(t, tt.result.manifest, rm)
-			assert.Equal(t, tt.result.ok, rok)
-			os.Unsetenv("OKTETO_ENABLE_MANIFEST_V2")
 		})
 	}
 }

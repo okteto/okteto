@@ -61,10 +61,36 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			m, ok := isManifestV2(options.File)
-			if m != nil && ok {
-				return buildV2(m, options, args)
+			if isManifestV2Enabled() && options.Tag == "" {
+				cwd, err := os.Getwd()
+				if err != nil {
+					return err
+				}
+
+				manifest, err := contextCMD.GetManifestV2(cwd, options.File)
+				if err != nil {
+					return err
+				}
+
+				if manifest.Build != nil {
+
+					if manifest.Namespace != "" {
+						ctxOpts.Namespace = manifest.Namespace
+					}
+					if manifest.Context != "" {
+						ctxOpts.Context = manifest.Context
+					}
+					if manifest.Namespace != "" || manifest.Context != "" {
+						if err := contextCMD.Run(ctx, ctxOpts); err != nil {
+							return err
+						}
+					}
+
+					return buildV2(manifest.Build, options, args)
+				}
+				log.Information("Build Manifest not found. Looking for Dockerfile to run the build")
 			}
+
 			return buildV1(options, args)
 		},
 	}
@@ -81,24 +107,12 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func isManifestV2(file string) (model.ManifestBuild, bool) {
+func isManifestV2Enabled() bool {
 	r, err := strconv.ParseBool(os.Getenv("OKTETO_ENABLE_MANIFEST_V2"))
-	if err != nil || !r {
-		return nil, false
-	}
-	mPath := contextCMD.GetOktetoManifestPath(file)
-	if mPath == "" {
-		return nil, false
-	}
-
-	mBuild, err := model.GetBuildManifest(mPath)
 	if err != nil {
-		return nil, false
+		return false
 	}
-	if mBuild == nil {
-		return nil, false
-	}
-	return mBuild, true
+	return r
 }
 
 func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) error {
