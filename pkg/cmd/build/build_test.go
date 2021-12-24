@@ -1,6 +1,7 @@
 package build
 
 import (
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -98,7 +99,7 @@ func Test_OptsFromManifest(t *testing.T) {
 			isOkteto: true,
 			expected: BuildOptions{
 				Tag:        "okteto.dev/service:dev",
-				File:       "service/CustomDockerfile",
+				File:       filepath.Join("service", "CustomDockerfile"),
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
