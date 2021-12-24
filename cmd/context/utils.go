@@ -369,3 +369,36 @@ func fileExistsAndNotDir(filename string) bool {
 	}
 	return !info.IsDir()
 }
+
+func GetOktetoManifestPath(file string) string {
+
+	// Files will be checked in the order defined in the list
+	files := []string{
+		file,
+		"okteto.yml",
+		"okteto.yaml",
+		".okteto/okteto.yml",
+		".okteto/okteto.yaml",
+	}
+	for _, name := range files {
+		if err := utils.CheckIfRegularFile(name); err == nil {
+			return name
+		}
+	}
+	return ""
+}
+
+func GetManifestV2(basePath, file string) (*model.Manifest, error) {
+	manifestPath := ""
+	if file != "" && fileExistsAndNotDir(file) {
+		manifestPath = file
+	} else {
+		src := basePath
+		manifestPath = getOktetoSubPath(basePath, src)
+	}
+
+	if manifestPath != "" {
+		return model.Get(manifestPath)
+	}
+	return nil, fmt.Errorf("okteto manifest not found")
+}
