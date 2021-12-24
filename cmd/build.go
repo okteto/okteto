@@ -61,7 +61,7 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if isManifestV2Enabled() && options.Tag == "" {
+			if isManifestV2Enabled() {
 				cwd, err := os.Getwd()
 				if err != nil {
 					return err
@@ -73,7 +73,6 @@ func Build(ctx context.Context) *cobra.Command {
 				}
 
 				if manifest.Build != nil {
-
 					if manifest.Namespace != "" {
 						ctxOpts.Namespace = manifest.Namespace
 					}
@@ -88,7 +87,7 @@ func Build(ctx context.Context) *cobra.Command {
 
 					return buildV2(manifest.Build, options, args)
 				}
-				log.Information("Build Manifest not found. Looking for Dockerfile to run the build")
+				log.Information("Build manifest not found. Looking for Dockerfile to run the build")
 			}
 
 			return buildV1(options, args)
@@ -124,10 +123,10 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 	if service != "" {
 		buildInfo, ok := m[service]
 		if !ok {
-			return fmt.Errorf("invalid service name")
+			return fmt.Errorf("invalid service name: %s", service)
 		}
 		if !okteto.Context().IsOkteto && buildInfo.Image == "" {
-			return fmt.Errorf("image is required")
+			return fmt.Errorf("image tag is required when context is not okteto")
 		}
 
 		if options.Target != "" {
@@ -147,7 +146,7 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 	}
 
 	if options.Tag != "" || options.Target != "" || options.CacheFrom != nil || options.Secrets != nil {
-		return fmt.Errorf("invalid flag for okteto build using Manifest V2")
+		return fmt.Errorf("flags are not allowed when building services from manifest")
 	}
 
 	for service, buildInfo := range m {
