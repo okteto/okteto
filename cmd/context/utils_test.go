@@ -136,7 +136,7 @@ func Test_GetManifestV2(t *testing.T) {
 			expectedErr: false,
 			manifestYAML: []byte(`
 namespace: test-namespace
-context: manifest-context			
+context: manifest-context
 build:
   service:
     image: defined-tag-image
