@@ -186,12 +186,43 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 	return s, nil
 }
 
+//LoadManifestV2WithContext initializes the okteto context taking into account command flags and manifest namespace/context fields
+func LoadManifestV2WithContext(ctx context.Context, namespace, path string) error {
+	ctxOptions := &ContextOptions{
+		Namespace: namespace,
+		Show:      true,
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	manifest, err := GetManifestV2(cwd, path)
+	if err != nil {
+		if err != errors.ErrManifestNotFound {
+			return err
+		}
+	} else {
+		ctxOptions.Context = manifest.Context
+		if ctxOptions.Namespace == "" {
+			ctxOptions.Namespace = manifest.Namespace
+		}
+	}
+
+	if err := Run(ctx, ctxOptions); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // GetManifest Loads a manifest
 func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*model.Manifest, error) {
 	pipelinePath := getPipelinePath(srcFolder, opts.Filename)
 	if pipelinePath != "" {
 		log.Debugf("Found okteto manifest %s", pipelinePath)
-		manifest, err := LoadManifestWithContext(ctx, pipelinePath, opts.Namespace, opts.K8sContext)
+		manifest, err := utils.LoadManifest(pipelinePath)
 		if err != nil {
 			log.Infof("could not load manifest: %s", err.Error())
 		}
@@ -208,10 +239,6 @@ func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*
 	}
 
 	oktetoSubPath := getOktetoSubPath(srcFolder, src)
-	devs := []string{}
-	if oktetoSubPath != "" {
-		devs = append(devs, oktetoSubPath)
-	}
 	chartSubPath := getChartsSubPath(srcFolder, src)
 	if chartSubPath != "" {
 		log.Infof("Found chart")
@@ -400,5 +427,5 @@ func GetManifestV2(basePath, file string) (*model.Manifest, error) {
 	if manifestPath != "" {
 		return model.Get(manifestPath)
 	}
-	return nil, fmt.Errorf("okteto manifest not found")
+	return nil, errors.ErrManifestNotFound
 }
