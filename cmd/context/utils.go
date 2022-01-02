@@ -200,6 +200,8 @@ func LoadManifestV2WithContext(ctx context.Context, namespace, path string) erro
 
 	manifest, err := GetManifestV2(cwd, path)
 	if err != nil {
+		//GetManifestV2 should take care of all error conditions and possible paths
+		//https://github.com/okteto/okteto/issues/2111
 		if err != errors.ErrManifestNotFound {
 			return err
 		}
