@@ -212,15 +212,11 @@ func LoadManifestV2WithContext(ctx context.Context, namespace, path string) erro
 		}
 	}
 
-	if err := Run(ctx, ctxOptions); err != nil {
-		return err
-	}
-
-	return nil
+	return Run(ctx, ctxOptions)
 }
 
 // GetManifest Loads a manifest
-func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*model.Manifest, error) {
+func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error) {
 	pipelinePath := getPipelinePath(srcFolder, opts.Filename)
 	if pipelinePath != "" {
 		log.Debugf("Found okteto manifest %s", pipelinePath)
