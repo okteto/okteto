@@ -60,7 +60,7 @@ type Options struct {
 }
 
 type destroyCommand struct {
-	getManifest func(ctx context.Context, cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+	getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 
 	executor    utils.ManifestExecutor
 	nsDestroyer destroyer
@@ -137,7 +137,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Options) error {
 	// Read manifest file with the commands to be executed
-	manifest, err := dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace})
+	manifest, err := dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace})
 	if err != nil {
 		// Log error message but application can still be deleted
 		log.Infof("could not find manifest file to be executed: %s", err)
