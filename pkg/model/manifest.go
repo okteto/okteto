@@ -27,8 +27,8 @@ type Manifest struct {
 	Destroy   []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build     ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
 
-	Type     string `yaml:"-"`
-	Filename string `yaml:"-"`
+	Type     string `json:"-" yaml:"-"`
+	Filename string `json:"-" yaml:"-"`
 }
 
 type ManifestDevs map[string]*Dev

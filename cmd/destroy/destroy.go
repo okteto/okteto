@@ -57,7 +57,6 @@ type Options struct {
 	DestroyVolumes bool
 	ForceDestroy   bool
 	OutputMode     string
-	K8sContext     string
 }
 
 type destroyCommand struct {
@@ -81,10 +80,8 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctxOptions := &contextCMD.ContextOptions{
-				Show: true,
-			}
-			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
+
+			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.ManifestPath); err != nil {
 				return err
 			}
 
@@ -133,15 +130,14 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "tty", "show plain/tty deploy output")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the application destroy even if there is an error executing the custom destroy commands defined in the manifest")
-	cmd.Flags().StringVar(&options.Namespace, "namespace", "", "application name")
-	cmd.Flags().StringVar(&options.K8sContext, "context", "", "k8s context")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the application was deployed")
 
 	return cmd
 }
 
 func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Options) error {
 	// Read manifest file with the commands to be executed
-	manifest, err := dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace, K8sContext: opts.K8sContext})
+	manifest, err := dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace})
 	if err != nil {
 		// Log error message but application can still be deleted
 		log.Infof("could not find manifest file to be executed: %s", err)
