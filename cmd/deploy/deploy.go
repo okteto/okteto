@@ -226,10 +226,8 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	select {
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
-		dc.cleanUp(ctx)
 		return errors.ErrIntSig
 	case err := <-exit:
-		dc.cleanUp(ctx)
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
 			return err
