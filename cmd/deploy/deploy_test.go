@@ -18,7 +18,9 @@ import (
 	"testing"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/rest"
 )
@@ -92,12 +94,21 @@ func (fe *fakeExecutor) CleanUp() {}
 func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
 		proxy:    p,
 		executor: e,
 		kubeconfig: &fakeKubeConfig{
 			errOnModify: assert.AnError,
 		},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -119,11 +130,20 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
-		getManifest: getManifestWithError,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+		getManifest:       getManifestWithError,
+		proxy:             p,
+		executor:          e,
+		kubeconfig:        &fakeKubeConfig{},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -147,11 +167,20 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	e := &fakeExecutor{
 		err: assert.AnError,
 	}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
-		getManifest: getFakeManifest,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+		getManifest:       getFakeManifest,
+		proxy:             p,
+		executor:          e,
+		kubeconfig:        &fakeKubeConfig{},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -179,11 +208,20 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		errOnShutdown: assert.AnError,
 	}
 	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
-		getManifest: getFakeManifest,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+		getManifest:       getFakeManifest,
+		proxy:             p,
+		executor:          e,
+		kubeconfig:        &fakeKubeConfig{},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -209,11 +247,20 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 func TestDeployWithoutErrors(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
-		getManifest: getFakeManifest,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+		getManifest:       getFakeManifest,
+		proxy:             p,
+		executor:          e,
+		kubeconfig:        &fakeKubeConfig{},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -236,10 +283,10 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, p.shutdown)
 }
 
-func getManifestWithError(_ context.Context, _ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ context.Context, _ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return fakeManifest, nil
 }

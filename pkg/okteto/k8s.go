@@ -1,10 +1,12 @@
 package okteto
 
 import (
+	"context"
 	"os"
 	"sync"
 	"time"
 
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/client-go/discovery"
@@ -20,6 +22,7 @@ var tOnce sync.Once
 
 type K8sClientProvider interface {
 	Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
+	GetIngressClient(ctx context.Context) (*ingresses.Client, error)
 }
 
 type K8sClient struct{}
@@ -28,8 +31,20 @@ func NewK8sClientProvider() *K8sClient {
 	return &K8sClient{}
 }
 
-func (_ *K8sClient) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
+func (*K8sClient) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
 	return getK8sClientWithApiConfig(clientApiConfig)
+}
+
+func (*K8sClient) GetIngressClient(ctx context.Context) (*ingresses.Client, error) {
+	c, _, err := GetK8sClient()
+	if err != nil {
+		return nil, err
+	}
+	iClient, err := ingresses.GetClient(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	return iClient, nil
 }
 
 func getKubernetesTimeout() time.Duration {

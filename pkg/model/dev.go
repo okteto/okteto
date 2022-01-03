@@ -23,10 +23,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/a8m/envsubst"
+	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
 	oktetoError "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -38,43 +38,41 @@ import (
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.3.4"
+	OktetoBinImageTag = "okteto/bin:1.3.5"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
 	// ValidKubeNameRegex is the regex to validate a kubernetes resource name
 	ValidKubeNameRegex = regexp.MustCompile(`[^a-z0-9\-]+`)
-
-	once sync.Once
 )
 
 // Dev represents a development container
 type Dev struct {
-	Name                 string                `json:"name" yaml:"name"`
-	Username             string                `json:"-" yaml:"-"`
-	RegistryURL          string                `json:"-" yaml:"-"`
-	Selector             Selector              `json:"selector,omitempty" yaml:"selector,omitempty"`
-	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Tolerations          []apiv1.Toleration    `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
-	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
-	Namespace            string                `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Container            string                `json:"container,omitempty" yaml:"container,omitempty"`
-	EmptyImage           bool                  `json:"-" yaml:"-"`
-	Image                *BuildInfo            `json:"image,omitempty" yaml:"image,omitempty"`
-	Push                 *BuildInfo            `json:"-" yaml:"push,omitempty"`
-	ImagePullPolicy      apiv1.PullPolicy      `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
-	Secrets              []Secret              `json:"secrets,omitempty" yaml:"secrets,omitempty"`
-	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
-	Probes               *Probes               `json:"probes,omitempty" yaml:"probes,omitempty"`
-	Lifecycle            *Lifecycle            `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
-	Workdir              string                `json:"workdir,omitempty" yaml:"workdir,omitempty"`
-	SecurityContext      *SecurityContext      `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
-	ServiceAccount       string                `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
-	RemotePort           int                   `json:"remote,omitempty" yaml:"remote,omitempty"`
-	SSHServerPort        int                   `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
-	ExternalVolumes      []ExternalVolume      `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
-	Sync                 Sync                  `json:"sync,omitempty" yaml:"sync,omitempty"`
-	parentSyncFolder     string                `json:"-" yaml:"-"`
+	Name                 string             `json:"name" yaml:"name"`
+	Username             string             `json:"-" yaml:"-"`
+	RegistryURL          string             `json:"-" yaml:"-"`
+	Selector             Selector           `json:"selector,omitempty" yaml:"selector,omitempty"`
+	Annotations          Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Tolerations          []apiv1.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	Context              string             `json:"context,omitempty" yaml:"context,omitempty"`
+	Namespace            string             `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Container            string             `json:"container,omitempty" yaml:"container,omitempty"`
+	EmptyImage           bool               `json:"-" yaml:"-"`
+	Image                *BuildInfo         `json:"image,omitempty" yaml:"image,omitempty"`
+	Push                 *BuildInfo         `json:"-" yaml:"push,omitempty"`
+	ImagePullPolicy      apiv1.PullPolicy   `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
+	Secrets              []Secret           `json:"secrets,omitempty" yaml:"secrets,omitempty"`
+	Command              Command            `json:"command,omitempty" yaml:"command,omitempty"`
+	Probes               *Probes            `json:"probes,omitempty" yaml:"probes,omitempty"`
+	Lifecycle            *Lifecycle         `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
+	Workdir              string             `json:"workdir,omitempty" yaml:"workdir,omitempty"`
+	SecurityContext      *SecurityContext   `json:"securityContext,omitempty" yaml:"securityContext,omitempty"`
+	ServiceAccount       string             `json:"serviceAccount,omitempty" yaml:"serviceAccount,omitempty"`
+	RemotePort           int                `json:"remote,omitempty" yaml:"remote,omitempty"`
+	SSHServerPort        int                `json:"sshServerPort,omitempty" yaml:"sshServerPort,omitempty"`
+	ExternalVolumes      []ExternalVolume   `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
+	Sync                 Sync               `json:"sync,omitempty" yaml:"sync,omitempty"`
+	parentSyncFolder     string
 	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	Interface            string                `json:"interface,omitempty" yaml:"interface,omitempty"`
@@ -90,6 +88,7 @@ type Dev struct {
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
 	Autocreate           bool                  `json:"autocreate,omitempty" yaml:"autocreate,omitempty"`
+	EnvFiles             EnvFiles              `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 
@@ -123,6 +122,7 @@ type BuildInfo struct {
 	CacheFrom  []string    `yaml:"cache_from,omitempty"`
 	Target     string      `yaml:"target,omitempty"`
 	Args       Environment `yaml:"args,omitempty"`
+	Image      string      `yaml:"image,omitempty"`
 }
 
 // Volume represents a volume in the development container
@@ -287,6 +287,10 @@ func Get(devPath string) (*Manifest, error) {
 			return nil, err
 		}
 
+		if err := dev.expandEnvFiles(); err != nil {
+			return nil, err
+		}
+
 		if err := dev.validate(); err != nil {
 			return nil, err
 		}
@@ -369,6 +373,14 @@ func Read(bytes []byte) (*Manifest, error) {
 		sort.SliceStable(d.Reverse, func(i, j int) bool {
 			return d.Reverse[i].Local < d.Reverse[j].Local
 		})
+	}
+
+	for _, b := range manifest.Build {
+		if b.Name != "" {
+			b.Context = b.Name
+			b.Name = ""
+		}
+		setBuildDefaults(b)
 	}
 
 	return manifest, nil
@@ -649,6 +661,38 @@ func (dev *Dev) setTimeout() error {
 	return nil
 }
 
+func (dev *Dev) expandEnvFiles() error {
+	for _, envFile := range dev.EnvFiles {
+		filename, err := ExpandEnv(envFile)
+		if err != nil {
+			return err
+		}
+
+		f, err := os.Open(filename)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
+		if err != nil {
+			return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
+		}
+
+		for _, e := range dev.Environment {
+			delete(envMap, e.Name)
+		}
+
+		for name, value := range envMap {
+			dev.Environment = append(
+				dev.Environment,
+				EnvVar{Name: name, Value: value},
+			)
+		}
+	}
+
+	return nil
+}
+
 func (dev *Dev) validate() error {
 	if dev.Name == "" {
 		return fmt.Errorf("Name cannot be empty")
@@ -717,24 +761,27 @@ func (dev *Dev) validateSync() error {
 	for _, folder := range dev.Sync.Folders {
 		validPath, err := os.Stat(folder.LocalPath)
 
-		if err == nil {
-			if !validPath.IsDir() {
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
 				return oktetoError.UserError{
-					E:    fmt.Errorf("File paths are not supported on sync fields"),
+					E:    fmt.Errorf("path '%s' does not exist", folder.LocalPath),
 					Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 				}
 			}
-		} else if errors.Is(err, os.ErrNotExist) {
-			return oktetoError.UserError{
-				E:    fmt.Errorf("path '%s' does not exist", folder.LocalPath),
-				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
-			}
-		} else if err != nil {
+
 			return oktetoError.UserError{
 				E:    fmt.Errorf("File paths are not supported on sync fields"),
 				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 			}
 		}
+
+		if !validPath.IsDir() {
+			return oktetoError.UserError{
+				E:    fmt.Errorf("File paths are not supported on sync fields"),
+				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+			}
+		}
+
 	}
 	return nil
 }

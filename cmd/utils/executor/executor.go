@@ -14,12 +14,8 @@
 package executor
 
 import (
-	"bufio"
-	"io"
 	"os"
 	"os/exec"
-
-	"github.com/manifoldco/promptui/screenbuf"
 )
 
 type ManifestExecutor interface {
@@ -32,15 +28,9 @@ type Executor struct {
 	displayer  executorDisplayer
 }
 
-type commandInfo struct {
-	command string
-	sb      *screenbuf.ScreenBuf
-}
-
 type executorDisplayer interface {
-	display(scanner *bufio.Scanner)
-	startCommand(cmd *exec.Cmd) (io.Reader, error)
-	addCommandInfo(cmdInfo *commandInfo)
+	display(command string)
+	startCommand(cmd *exec.Cmd) error
 	cleanUp()
 }
 
@@ -70,37 +60,20 @@ func (e *Executor) Execute(command string, env []string) error {
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Env = append(os.Environ(), env...)
 
-	reader, err := e.displayer.startCommand(cmd)
-	if err != nil {
+	if err := e.displayer.startCommand(cmd); err != nil {
 		return err
 	}
 
-	scanner := bufio.NewScanner(reader)
+	go e.displayer.display(command)
 
-	sb := screenbuf.New(os.Stdout)
-	e.displayer.addCommandInfo(&commandInfo{
-		command: command,
-		sb:      sb,
-	})
-	go e.displayer.display(scanner)
+	err := cmd.Wait()
 
-	err = cmd.Wait()
-	if e.outputMode == "tty" {
-		collapseTTY(command, err, sb)
-	}
+	e.CleanUp()
 	return err
 }
 
-func startCommand(cmd *exec.Cmd) (io.Reader, error) {
-	reader, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	return reader, nil
+func startCommand(cmd *exec.Cmd) error {
+	return cmd.Start()
 }
 
 // Execute executes the specified command adding `env` to the execution environment

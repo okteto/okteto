@@ -42,7 +42,7 @@ jobs:
     environment:
       OKTETO_USER: cindylopez
     docker:
-      - image: okteto/dev:go1.17
+      - image: okteto/golang-ci:1.17.3
     steps:
       - checkout
       - restore_cache:
@@ -56,6 +56,7 @@ jobs:
             mkdir -p $HOME/.okteto
             touch $HOME/.okteto/.noanalytics
             echo $HOME
+            sudo chown -R $(whoami) /usr/local/bin
             curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
@@ -117,6 +118,9 @@ jobs:
       - run:
           name: Upgrade kubectl
           command: choco install kubernetes-cli
+      - run:
+          name: Upgrade helm
+          command: choco install kubernetes-helm
       - attach_workspace:
           at: .\artifacts
       - run:
