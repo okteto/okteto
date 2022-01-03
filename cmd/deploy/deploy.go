@@ -56,7 +56,11 @@ type Options struct {
 	OutputMode   string
 	Manifest     *model.Manifest
 
-	silent bool
+	show bool
+}
+
+type endpoints struct {
+	Endpoints []string
 }
 
 type kubeConfigHandler interface {
@@ -107,8 +111,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			if options.OutputMode == "json" {
-				options.silent = true
+			if options.OutputMode != "json" {
+				options.show = true
 			}
 
 			ctxOpts := &contextCMD.ContextOptions{
@@ -210,7 +214,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 	var err error
 	// Read manifest file with the commands to be executed
-	opts.Manifest, err = dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Silent: opts.silent})
+	opts.Manifest, err = dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Show: opts.show})
 	if err != nil {
 		log.Infof("could not find manifest file to be executed: %s", err)
 		return err
@@ -239,7 +243,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	for _, command := range opts.Manifest.Deploy.Commands {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			log.Infof("error executing command '%s': %s", command, err.Error())
-			if opts.silent {
+			if opts.OutputMode == "json" {
 				utils.DisplayJsonMessage("error", err.Error(), command)
 				return nil
 			}
@@ -422,7 +426,13 @@ func (dc *deployCommand) showEndpoints(ctx context.Context, opts *Options) error
 		sort.Slice(eps, func(i, j int) bool {
 			return len(eps[i]) < len(eps[j])
 		})
-		log.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
+		switch opts.OutputMode {
+		case "json":
+			utils.DisplayJsonMessage("info", fmt.Sprintf("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - ")), "")
+		default:
+			log.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
+		}
+
 	}
 	return nil
 }

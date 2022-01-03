@@ -120,7 +120,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 
 	os.Setenv(model.OktetoNamespaceEnvVar, okteto.Context().Namespace)
 
-	if ctxOptions.Show && !ctxOptions.Silent {
+	if ctxOptions.Show {
 		log.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))
 	}
 

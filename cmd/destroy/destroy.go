@@ -58,6 +58,8 @@ type Options struct {
 	ForceDestroy   bool
 	OutputMode     string
 	K8sContext     string
+
+	show bool
 }
 
 type destroyCommand struct {
@@ -81,8 +83,12 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if options.OutputMode != "json" {
+				options.show = true
+			}
+
 			ctxOptions := &contextCMD.ContextOptions{
-				Show: true,
+				Show: options.show,
 			}
 			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
 				return err
@@ -141,7 +147,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Options) error {
 	// Read manifest file with the commands to be executed
-	manifest, err := dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace, K8sContext: opts.K8sContext})
+	manifest, err := dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace, K8sContext: opts.K8sContext, Show: opts.show})
 	if err != nil {
 		// Log error message but application can still be deleted
 		log.Infof("could not find manifest file to be executed: %s", err)

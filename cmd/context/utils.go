@@ -41,7 +41,7 @@ type ManifestOptions struct {
 	Namespace  string
 	Filename   string
 	K8sContext string
-	Silent     bool
+	Show       bool
 }
 
 func getKubernetesContextList(filterOkteto bool) []string {
@@ -145,8 +145,7 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 	ctxOptions := &ContextOptions{
 		Context:   ctxResource.Context,
 		Namespace: ctxResource.Namespace,
-		Show:      true,
-		Silent:    opts.Silent,
+		Show:      opts.Show,
 	}
 	if err := Run(ctx, ctxOptions); err != nil {
 		return nil, err
@@ -197,6 +196,7 @@ func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*
 		manifest, err := LoadManifestWithContext(ctx, opts)
 		if err != nil {
 			log.Infof("could not load manifest: %s", err.Error())
+			return nil, err
 		}
 
 		manifest.Type = "pipeline"
@@ -204,8 +204,7 @@ func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*
 		return manifest, nil
 	}
 	ctxOptions := &ContextOptions{
-		Show:   true,
-		Silent: opts.Silent,
+		Show: opts.Show,
 	}
 	if err := Run(ctx, ctxOptions); err != nil {
 		return nil, err
