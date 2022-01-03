@@ -82,9 +82,9 @@ func Test_createNamespace(t *testing.T) {
 				okClient: fakeOktetoClient,
 				ctxCmd:   newFakeContextCommand(fakeOktetoClient, usr),
 			}
-			err := nsCmd.executeCreateNamespace(ctx, &createOptions{
-				members:   tt.members,
-				namespace: tt.newNs,
+			err := nsCmd.CreateNamespace(ctx, &CreateOptions{
+				Members:   tt.members,
+				Namespace: tt.newNs,
 			})
 			assert.Equal(t, nil, err)
 			assert.Equal(t, tt.newNs, okteto.Context().Namespace)

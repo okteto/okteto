@@ -17,13 +17,14 @@ import (
 	"context"
 	"time"
 
-	"github.com/compose-spec/godotenv"
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -36,15 +37,23 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploy a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if model.FileExists(".env") {
-				if err := godotenv.Load(); err != nil {
-					log.Errorf("error loading .env file: %s", err.Error())
-				}
-			}
-
 			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPath)
 			if err != nil {
 				return err
+			}
+
+			if okteto.IsOkteto() {
+				create, err := utils.ShouldCreateNamespace(ctx, s.Namespace)
+				if err != nil {
+					return err
+				}
+				if create {
+					nsCmd, err := namespace.NewNamespaceCommand()
+					if err != nil {
+						return err
+					}
+					nsCmd.CreateNamespace(ctx, &namespace.CreateOptions{Namespace: s.Namespace})
+				}
 			}
 
 			analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)

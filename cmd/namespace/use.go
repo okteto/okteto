@@ -47,7 +47,7 @@ func Use(ctx context.Context) *cobra.Command {
 			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
 			}
-			nsCmd, err := newNamespaceCommand()
+			nsCmd, err := NewNamespaceCommand()
 			if err != nil {
 				return err
 			}
@@ -91,11 +91,11 @@ func (nc *namespaceCommand) getNamespaceFromSelector(ctx context.Context) (strin
 	}
 	if ns == newNamespaceOption {
 		ns = askForOktetoNamespace()
-		createOptions := &createOptions{
-			namespace: ns,
+		createOptions := &CreateOptions{
+			Namespace: ns,
 			show:      false,
 		}
-		if err := nc.executeCreateNamespace(ctx, createOptions); err != nil {
+		if err := nc.CreateNamespace(ctx, createOptions); err != nil {
 			return "", err
 		}
 	}

@@ -27,15 +27,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type createOptions struct {
-	members   *[]string
-	namespace string
+//CreateOptions represents the options that namespace create has
+type CreateOptions struct {
+	Members   *[]string
+	Namespace string
 	show      bool
 }
 
 // Create creates a namespace
 func Create(ctx context.Context) *cobra.Command {
-	options := &createOptions{
+	options := &CreateOptions{
 		show: true,
 	}
 
@@ -47,37 +48,37 @@ func Create(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			options.namespace = args[0]
+			options.Namespace = args[0]
 			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := newNamespaceCommand()
+			nsCmd, err := NewNamespaceCommand()
 			if err != nil {
 				return err
 			}
-			err = nsCmd.executeCreateNamespace(ctx, options)
+			err = nsCmd.CreateNamespace(ctx, options)
 			analytics.TrackCreateNamespace(err == nil)
 			return err
 		},
 		Args: utils.ExactArgsAccepted(1, ""),
 	}
 
-	options.members = cmd.Flags().StringArrayP("members", "m", []string{}, "members of the namespace, it can the username or email")
+	options.Members = cmd.Flags().StringArrayP("members", "m", []string{}, "members of the namespace, it can the username or email")
 	return cmd
 }
 
-func (nc *namespaceCommand) executeCreateNamespace(ctx context.Context, opts *createOptions) error {
-	oktetoNS, err := nc.okClient.Namespaces().Create(ctx, opts.namespace)
+func (nc *namespaceCommand) CreateNamespace(ctx context.Context, opts *CreateOptions) error {
+	oktetoNS, err := nc.okClient.Namespaces().Create(ctx, opts.Namespace)
 	if err != nil {
 		return err
 	}
 
 	log.Success("Namespace '%s' created", oktetoNS)
 
-	if opts.members != nil && len(*opts.members) > 0 {
-		if err := nc.okClient.Namespaces().AddMembers(ctx, opts.namespace, *opts.members); err != nil {
-			return fmt.Errorf("failed to invite %s to the namespace: %s", strings.Join(*opts.members, ", "), err)
+	if opts.Members != nil && len(*opts.Members) > 0 {
+		if err := nc.okClient.Namespaces().AddMembers(ctx, opts.Namespace, *opts.Members); err != nil {
+			return fmt.Errorf("failed to invite %s to the namespace: %s", strings.Join(*opts.Members, ", "), err)
 		}
 	}
 

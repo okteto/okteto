@@ -140,6 +140,8 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 
 func setSecrets(secrets []types.Secret) {
 	for _, secret := range secrets {
-		os.Setenv(secret.Name, secret.Value)
+		if _, exists := os.LookupEnv(secret.Name); !exists {
+			os.Setenv(secret.Name, secret.Value)
+		}
 	}
 }

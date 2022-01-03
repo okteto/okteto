@@ -37,6 +37,7 @@ type buildInfoRaw struct {
 	CacheFrom  []string    `yaml:"cache_from,omitempty"`
 	Target     string      `yaml:"target,omitempty"`
 	Args       Environment `yaml:"args,omitempty"`
+	Image      string      `yaml:"image,omitempty"`
 }
 
 type syncRaw struct {
@@ -301,6 +302,8 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	buildInfo.Dockerfile = rawBuildInfo.Dockerfile
 	buildInfo.Target = rawBuildInfo.Target
 	buildInfo.Args = rawBuildInfo.Args
+	buildInfo.Image = rawBuildInfo.Image
+	buildInfo.CacheFrom = rawBuildInfo.CacheFrom
 	return nil
 }
 
@@ -655,10 +658,13 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Icon    string       `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy  *DeployInfo  `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev     ManifestDevs `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy []string     `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Namespace string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context   string        `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon      string        `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy    *DeployInfo   `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev       ManifestDevs  `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy   []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build     ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
 }
@@ -685,6 +691,9 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	d.Destroy = manifest.Destroy
 	d.Dev = manifest.Dev
 	d.Icon = manifest.Icon
+	d.Build = manifest.Build
+	d.Namespace = manifest.Namespace
+	d.Context = manifest.Context
 	return nil
 }
 
@@ -736,7 +745,7 @@ func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func isManifestFieldNotFound(err error) bool {
-	manifestFields := []string{"devs", "dev", "name", "icon", "variables", "deploy", "destroy"}
+	manifestFields := []string{"devs", "dev", "name", "icon", "variables", "deploy", "destroy", "build", "namespace", "context"}
 	for _, field := range manifestFields {
 		if strings.Contains(err.Error(), fmt.Sprintf("field %s not found", field)) {
 			return true

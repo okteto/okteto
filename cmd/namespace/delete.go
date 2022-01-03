@@ -41,7 +41,7 @@ func Delete(ctx context.Context) *cobra.Command {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := newNamespaceCommand()
+			nsCmd, err := NewNamespaceCommand()
 			if err != nil {
 				return err
 			}

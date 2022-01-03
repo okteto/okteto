@@ -40,6 +40,7 @@ type Stack struct {
 	Name      string                 `yaml:"name"`
 	Volumes   map[string]*VolumeSpec `yaml:"volumes,omitempty"`
 	Namespace string                 `yaml:"namespace,omitempty"`
+	Context   string                 `yaml:"context,omitempty"`
 	Services  map[string]*Service    `yaml:"services,omitempty"`
 	Endpoints EndpointSpec           `yaml:"endpoints,omitempty"`
 }

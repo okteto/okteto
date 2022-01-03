@@ -122,6 +122,7 @@ type BuildInfo struct {
 	CacheFrom  []string    `yaml:"cache_from,omitempty"`
 	Target     string      `yaml:"target,omitempty"`
 	Args       Environment `yaml:"args,omitempty"`
+	Image      string      `yaml:"image,omitempty"`
 }
 
 // Volume represents a volume in the development container
@@ -372,6 +373,14 @@ func Read(bytes []byte) (*Manifest, error) {
 		sort.SliceStable(d.Reverse, func(i, j int) bool {
 			return d.Reverse[i].Local < d.Reverse[j].Local
 		})
+	}
+
+	for _, b := range manifest.Build {
+		if b.Name != "" {
+			b.Context = b.Name
+			b.Name = ""
+		}
+		setBuildDefaults(b)
 	}
 
 	return manifest, nil
