@@ -88,9 +88,7 @@ func (e *jsonExecutorDisplayer) display(command string) {
 	}()
 }
 
-func (*jsonExecutorDisplayer) cleanUp() {
-
-}
+func (*jsonExecutorDisplayer) cleanUp(err error) {}
 
 func isErrorLine(text string) bool {
 	return strings.HasPrefix(text, " x ")

@@ -94,8 +94,10 @@ func (e *ttyExecutorDisplayer) display(command string) {
 	}()
 }
 
-func (e *ttyExecutorDisplayer) cleanUp() {
-	collapseTTY(e.command, e.err, e.screenbuf)
+func (e *ttyExecutorDisplayer) cleanUp(err error) {
+	if err != nil {
+		collapseTTY(e.command, e.err, e.screenbuf)
+	}
 	e.screenbuf.Reset()
 	e.screenbuf.Flush()
 	e.showCursor()
@@ -103,6 +105,9 @@ func (e *ttyExecutorDisplayer) cleanUp() {
 
 func collapseTTY(command string, err error, sb *screenbuf.ScreenBuf) {
 	if sb == nil {
+		return
+	}
+	if command != "" {
 		return
 	}
 	var message []byte

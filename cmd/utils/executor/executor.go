@@ -20,7 +20,6 @@ import (
 
 type ManifestExecutor interface {
 	Execute(command string, env []string) error
-	CleanUp()
 }
 
 type Executor struct {
@@ -31,7 +30,7 @@ type Executor struct {
 type executorDisplayer interface {
 	display(command string)
 	startCommand(cmd *exec.Cmd) error
-	cleanUp()
+	cleanUp(err error)
 }
 
 // NewExecutor returns a new executor
@@ -68,15 +67,10 @@ func (e *Executor) Execute(command string, env []string) error {
 
 	err := cmd.Wait()
 
-	e.CleanUp()
+	e.displayer.cleanUp(err)
 	return err
 }
 
 func startCommand(cmd *exec.Cmd) error {
 	return cmd.Start()
-}
-
-// Execute executes the specified command adding `env` to the execution environment
-func (e *Executor) CleanUp() {
-	e.displayer.cleanUp()
 }

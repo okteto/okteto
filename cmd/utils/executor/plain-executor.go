@@ -42,7 +42,7 @@ func (e *plainExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
 	return nil
 }
 
-func (*plainExecutorDisplayer) cleanUp() {}
+func (*plainExecutorDisplayer) cleanUp(err error) {}
 
 func (e *plainExecutorDisplayer) display(_ string) {
 	for e.scanner.Scan() {
