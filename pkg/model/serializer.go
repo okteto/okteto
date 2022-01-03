@@ -713,6 +713,23 @@ func (d *DeployCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+func (d *DeployInfo) MarshalYAML() (interface{}, error) {
+	isCommandList := true
+	for _, cmd := range d.Commands {
+		if cmd.Command != cmd.Name {
+			isCommandList = false
+		}
+	}
+	if isCommandList {
+		result := []string{}
+		for _, cmd := range d.Commands {
+			result = append(result, cmd.Command)
+		}
+		return result, nil
+	}
+	return d, nil
+}
+
 func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var commands []DeployCommand
 	err := unmarshal(&commands)
