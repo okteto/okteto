@@ -17,7 +17,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os/exec"
 	"strings"
 	"time"
@@ -31,38 +30,64 @@ type jsonMessage struct {
 }
 
 type jsonExecutorDisplayer struct {
-	cmdInfo *commandInfo
+	stdoutScanner *bufio.Scanner
+	stderrScanner *bufio.Scanner
 }
 
 func newJsonExecutorDisplayer() *jsonExecutorDisplayer {
 	return &jsonExecutorDisplayer{}
 }
 
-func (*jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
+func (e *jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
+	stdoutReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	e.stdoutScanner = bufio.NewScanner(stdoutReader)
+
+	stderrReader, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	e.stderrScanner = bufio.NewScanner(stderrReader)
 	return startCommand(cmd)
 }
 
-func (e *jsonExecutorDisplayer) addCommandInfo(cmdInfo *commandInfo) {
-	e.cmdInfo = cmdInfo
+func (e *jsonExecutorDisplayer) display(command string) {
+	go func() {
+		for e.stdoutScanner.Scan() {
+			line := e.stdoutScanner.Text()
+			level := "info"
+			if isErrorLine(line) {
+				level = "error"
+			}
+			messageStruct := jsonMessage{
+				Level:     level,
+				Message:   line,
+				Stage:     command,
+				Timestamp: time.Now().Unix(),
+			}
+			message, _ := json.Marshal(messageStruct)
+			fmt.Println(string(message))
+		}
+	}()
+
+	go func() {
+		for e.stderrScanner.Scan() {
+			line := e.stderrScanner.Text()
+			level := "error"
+			messageStruct := jsonMessage{
+				Level:     level,
+				Message:   line,
+				Stage:     command,
+				Timestamp: time.Now().Unix(),
+			}
+			message, _ := json.Marshal(messageStruct)
+			fmt.Println(string(message))
+		}
+	}()
 }
 
-func (e *jsonExecutorDisplayer) display(scanner *bufio.Scanner) {
-	for scanner.Scan() {
-		line := scanner.Text()
-		level := "info"
-		if isErrorLine(line) {
-			level = "error"
-		}
-		messageStruct := jsonMessage{
-			Level:     level,
-			Message:   line,
-			Stage:     e.cmdInfo.command,
-			Timestamp: time.Now().Unix(),
-		}
-		message, _ := json.Marshal(messageStruct)
-		fmt.Println(string(message))
-	}
-}
 func (*jsonExecutorDisplayer) cleanUp() {
 
 }

@@ -16,6 +16,7 @@ package executor
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -28,7 +29,13 @@ import (
 )
 
 type ttyExecutorDisplayer struct {
-	cmdInfo       *commandInfo
+	stdoutScanner *bufio.Scanner
+	stderrScanner *bufio.Scanner
+	screenbuf     *screenbuf.ScreenBuf
+
+	command string
+	err     error
+
 	numberOfLines int
 }
 
@@ -38,37 +45,59 @@ func newTTYExecutorDisplayer() *ttyExecutorDisplayer {
 	}
 }
 
-func (e *ttyExecutorDisplayer) addCommandInfo(cmdInfo *commandInfo) {
-	e.cmdInfo = cmdInfo
-}
-
-func (e *ttyExecutorDisplayer) display(scanner *bufio.Scanner) {
+func (e *ttyExecutorDisplayer) display(command string) {
 	queue := []string{}
 	e.hideCursor()
-	commandLine := renderCommand(e.cmdInfo.command)
-	e.cmdInfo.sb.Write(commandLine)
-	e.cmdInfo.sb.Flush()
-	for scanner.Scan() {
-		e.cmdInfo.sb.Write(commandLine)
-		line := scanner.Text()
-		if len(queue) == e.numberOfLines {
-			queue = queue[1:]
+	commandLine := renderCommand(command)
+
+	e.screenbuf.Write(commandLine)
+	e.screenbuf.Flush()
+
+	go func() {
+		for e.stdoutScanner.Scan() {
+			e.screenbuf.Write(commandLine)
+			line := e.stdoutScanner.Text()
+			if len(queue) == e.numberOfLines {
+				queue = queue[1:]
+			}
+			queue = append(queue, line)
+			lines := renderLines(queue)
+			for _, line := range lines {
+				e.screenbuf.Write([]byte(line))
+			}
+			e.screenbuf.Flush()
 		}
-		queue = append(queue, line)
-		lines := renderLines(queue)
-		for _, line := range lines {
-			e.cmdInfo.sb.Write([]byte(line))
+		if e.stdoutScanner.Err() != nil {
+			log.Infof("Error reading command output: %s", e.stdoutScanner.Err().Error())
 		}
-		e.cmdInfo.sb.Flush()
-	}
-	if scanner.Err() != nil {
-		log.Infof("Error reading command output: %s", scanner.Err().Error())
-	}
+
+	}()
+
+	go func() {
+		for e.stderrScanner.Scan() {
+			e.screenbuf.Write(commandLine)
+			line := e.stderrScanner.Text()
+			e.err = errors.New(line)
+			if len(queue) == e.numberOfLines {
+				queue = queue[1:]
+			}
+			queue = append(queue, line)
+			lines := renderLines(queue)
+			for _, line := range lines {
+				e.screenbuf.Write([]byte(line))
+			}
+			e.screenbuf.Flush()
+		}
+		if e.stderrScanner.Err() != nil {
+			log.Infof("Error reading command output: %s", e.stderrScanner.Err().Error())
+		}
+	}()
 }
 
 func (e *ttyExecutorDisplayer) cleanUp() {
-	e.cmdInfo.sb.Reset()
-	e.cmdInfo.sb.Flush()
+	collapseTTY(e.command, e.err, e.screenbuf)
+	e.screenbuf.Reset()
+	e.screenbuf.Flush()
 	e.showCursor()
 }
 

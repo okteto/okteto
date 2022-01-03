@@ -25,5 +25,18 @@ import (
 )
 
 func (ttyExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
+	e.screenbuf = screenbuf.New(os.Stdout)
+
+	stdoutReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	e.stdoutScanner = bufio.NewScanner(stdoutReader)
+
+	stderrReader, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	e.stderrScanner = bufio.NewScanner(stderrReader)
 	return startCommand(cmd)
 }

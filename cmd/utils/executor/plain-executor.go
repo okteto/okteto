@@ -16,31 +16,37 @@ package executor
 import (
 	"bufio"
 	"fmt"
-	"io"
 	"os/exec"
 )
 
 type plainExecutorDisplayer struct {
-	cmdInfo *commandInfo
+	scanner *bufio.Scanner
 }
 
 func newPlainExecutorDisplayer() *plainExecutorDisplayer {
 	return &plainExecutorDisplayer{}
 }
 
-func (plainExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
-	return startCommand(cmd)
+func (e *plainExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
+
+	reader, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	cmd.Stderr = cmd.Stdout
+
+	if err := startCommand(cmd); err != nil {
+		return err
+	}
+	e.scanner = bufio.NewScanner(reader)
+	return nil
 }
 
 func (*plainExecutorDisplayer) cleanUp() {}
 
-func (e *plainExecutorDisplayer) addCommandInfo(cmdInfo *commandInfo) {
-	e.cmdInfo = cmdInfo
-}
-
-func (*plainExecutorDisplayer) display(scanner *bufio.Scanner) {
-	for scanner.Scan() {
-		line := scanner.Text()
+func (e *plainExecutorDisplayer) display(_ string) {
+	for e.scanner.Scan() {
+		line := e.scanner.Text()
 		fmt.Println(line)
 	}
 }

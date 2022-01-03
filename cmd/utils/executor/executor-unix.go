@@ -17,16 +17,28 @@
 package executor
 
 import (
-	"io"
+	"bufio"
+	"os"
 	"os/exec"
 
 	"github.com/creack/pty"
+	"github.com/manifoldco/promptui/screenbuf"
 )
 
-func (ttyExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
+func (e *ttyExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
+	e.screenbuf = screenbuf.New(os.Stdout)
+
+	stderrReader, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	e.stderrScanner = bufio.NewScanner(stderrReader)
+
 	f, err := pty.Start(cmd)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return f, nil
+
+	e.stdoutScanner = bufio.NewScanner(f)
+	return nil
 }
