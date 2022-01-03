@@ -64,7 +64,10 @@ func (up *upContext) activate() error {
 	}
 
 	if v, ok := app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation]; !ok || v != model.OktetoUpCmd {
-		return fmt.Errorf("resource '%s' already exists. Please consider changing the name of autocreate", up.Dev.Name)
+		return errors.UserError{
+			E:    fmt.Errorf("resource %s doesn't exist", up.Dev.Name),
+			Hint: "use a different name in your okteto.yaml, or remove the autocreate property",
+		}
 	}
 
 	if up.isRetry && !apps.IsDevModeOn(app) {
