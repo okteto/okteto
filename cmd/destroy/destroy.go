@@ -17,10 +17,12 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/log"
@@ -151,50 +153,72 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		}
 	}
 
-	var commandErr error
-	for _, command := range manifest.Destroy {
-		if err := dc.executor.Execute(command, opts.Variables); err != nil {
-			log.Infof("error executing command '%s': %s", command, err.Error())
-			if !opts.ForceDestroy {
-				return err
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+		var commandErr error
+		for _, command := range manifest.Destroy {
+			if err := dc.executor.Execute(command, opts.Variables); err != nil {
+				log.Infof("error executing command '%s': %s", command, err.Error())
+				if !opts.ForceDestroy {
+					exit <- fmt.Errorf("error executing command '%s': %s", command, err.Error())
+					return
+				}
+
+				// Store the error to return if the force destroy option is set
+				commandErr = err
 			}
-
-			// Store the error to return if the force destroy option is set
-			commandErr = err
 		}
-	}
 
-	deployedByLs, err := labels.NewRequirement(
-		model.DeployedByLabel,
-		selection.Equals,
-		[]string{opts.Name},
-	)
-	if err != nil {
-		return err
-	}
-	deployedBySelector := labels.NewSelector().Add(*deployedByLs).String()
-	deleteOpts := namespaces.DeleteAllOptions{
-		LabelSelector:  deployedBySelector,
-		IncludeVolumes: opts.DestroyVolumes,
-	}
+		deployedByLs, err := labels.NewRequirement(
+			model.DeployedByLabel,
+			selection.Equals,
+			[]string{opts.Name},
+		)
+		if err != nil {
+			exit <- err
+			return
+		}
+		deployedBySelector := labels.NewSelector().Add(*deployedByLs).String()
+		deleteOpts := namespaces.DeleteAllOptions{
+			LabelSelector:  deployedBySelector,
+			IncludeVolumes: opts.DestroyVolumes,
+		}
 
-	if err := dc.nsDestroyer.DestroySFSVolumes(ctx, opts.Namespace, deleteOpts); err != nil {
-		return err
-	}
+		if err := dc.nsDestroyer.DestroySFSVolumes(ctx, opts.Namespace, deleteOpts); err != nil {
+			exit <- err
+			return
+		}
 
-	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
-		if !opts.ForceDestroy {
+		if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
+			if !opts.ForceDestroy {
+				exit <- err
+				return
+			}
+		}
+
+		log.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
+		if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
+			log.Infof("could not delete all the resources: %s", err)
+			exit <- err
+			return
+		}
+		exit <- commandErr
+	}()
+
+	select {
+	case <-stop:
+		log.Infof("CTRL+C received, starting shutdown sequence")
+		return errors.ErrIntSig
+	case err := <-exit:
+		if err != nil {
+			log.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
-
-	log.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
-	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
-		log.Infof("could not delete all the resources: %s", err)
-		return err
-	}
-
-	return commandErr
+	return nil
 }
 
 func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts *Options, labelSelector string) error {
