@@ -24,7 +24,7 @@ import (
 	"os/exec"
 )
 
-func (e *ttyExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
+func (e *ttyExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
 	e.screenbuf = screenbuf.New(os.Stdout)
 
 	stdoutReader, err := cmd.StdoutPipe()
