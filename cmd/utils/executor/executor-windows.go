@@ -15,13 +15,15 @@
 // limitations under the License.
 
 // This file is needed because we can't check if a windows terminal supports tty
-// This w
 
 package executor
 
 import (
-	"io"
+	"bufio"
+	"os"
 	"os/exec"
+
+	"github.com/manifoldco/promptui/screenbuf"
 )
 
 func (e *ttyExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
