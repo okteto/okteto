@@ -109,15 +109,15 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 	}
 
 	if !ctxOptions.IsOkteto {
-		isNewUrl := isNewUrl(ctxOptions.Context)
-		if !isValidCluster(ctxOptions.Context) && !isNewUrl {
-			return errors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
-				Hint: "Please run 'okteto context' to select one context"}
-		}
-		if isNewUrl {
+
+		if isUrl(ctxOptions.Context) {
 			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 			ctxOptions.IsOkteto = true
 		} else {
+			if !isValidCluster(ctxOptions.Context) {
+				return errors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
+					Hint: "Please run 'okteto context' to select one context"}
+			}
 			transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, c.k8sClientProvider)
 			if transformedCtx != ctxOptions.Context {
 				ctxOptions.Context = transformedCtx
@@ -245,7 +245,7 @@ func (*ContextUse) initEnvVars() {
 	}
 }
 
-func isNewUrl(u string) bool {
+func isUrl(u string) bool {
 	parsedUrl, err := url.Parse(u)
 	if err != nil {
 		log.Infof("could not parse %s", u)
