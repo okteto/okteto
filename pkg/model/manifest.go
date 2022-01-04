@@ -27,8 +27,8 @@ type Manifest struct {
 	Destroy   []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build     ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
 
-	Type     string `yaml:"-"`
-	Filename string `yaml:"-"`
+	Type     string `json:"-" yaml:"-"`
+	Filename string `json:"-" yaml:"-"`
 }
 
 type ManifestDevs map[string]*Dev
@@ -60,14 +60,4 @@ func NewDeployInfo() *DeployInfo {
 	return &DeployInfo{
 		Commands: make([]string, 0),
 	}
-}
-
-// GetBuildManifest Loads a the build manifest
-func GetBuildManifest(path string) (ManifestBuild, error) {
-	manifest, err := Get(path)
-	if err != nil {
-		return nil, err
-	}
-
-	return manifest.Build, nil
 }
