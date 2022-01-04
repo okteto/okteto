@@ -31,6 +31,9 @@ const (
 	// InteractiveDevLabel indicates the interactive dev pod
 	InteractiveDevLabel = "interactive.dev.okteto.com"
 
+	// OktetoSampleAnnotation indicates that the repo is a okteto sample
+	OktetoSampleAnnotation = "dev.okteto.com/sample"
+
 	// DetachedDevLabel indicates the detached dev pods
 	DetachedDevLabel = "detached.dev.okteto.com"
 
@@ -181,6 +184,18 @@ const (
 	// HelmSecretType indicates the type for secrets created by Helm
 	HelmSecretType = "helm.sh/release.v1"
 
+	// OktetoGitBranchEnvVar is the name of the Git branch currently being deployed.
+	OktetoGitBranchEnvVar = "OKTETO_GIT_BRANCH"
+
+	// OktetoGitCommitEnvVar is the SHA1 hash of the last commit of the branch.
+	OktetoGitCommitEnvVar = "OKTETO_GIT_COMMIT"
+
+	// OktetoRegistryURLEnvVar is the url of the Okteto Registry
+	OktetoRegistryURLEnvVar = "OKTETO_REGISTRY_URL"
+
+	// OktetoBuildkitHostURLEnvVar is the url of the Okteto Buildkit instance
+	OktetoBuildkitHostURLEnvVar = "BUILDKIT_HOST"
+
 	// OktetoBinEnvVar defines the okteto binary that should be used
 	OktetoBinEnvVar = "OKTETO_BIN"
 
@@ -282,4 +297,7 @@ const (
 
 	// GithubRepositoryEnvVar defines the server to be used
 	GithubServerURLEnvVar = "GITHUB_SERVER_URL"
+
+	// BuildkitProgressEnvVar defines the output of buildkit
+	BuildkitProgressEnvVar = "BUILDKIT_PROGRESS"
 )

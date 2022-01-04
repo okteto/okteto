@@ -15,7 +15,12 @@ package utils
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"strconv"
 
+	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -44,5 +49,41 @@ func HasAccessToNamespace(ctx context.Context, namespace string, oktetoClient ty
 		}
 	}
 
+	return false, nil
+}
+
+func LoadBoolean(k string) bool {
+	v := os.Getenv(k)
+	if v == "" {
+		v = "false"
+	}
+
+	h, err := strconv.ParseBool(v)
+	if err != nil {
+		log.Yellow("'%s' is not a valid value for environment variable %s", v, k)
+	}
+
+	return h
+}
+
+func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
+	c, err := okteto.NewOktetoClient()
+	if err != nil {
+		return false, err
+	}
+	hasAccess, err := HasAccessToNamespace(ctx, ns, c)
+	if err != nil {
+		return false, err
+	}
+	if !hasAccess {
+		create, err := AskYesNo(fmt.Sprintf("The namespace %s doesn't exist. Do you want to create it? [y/n] ", ns))
+		if err != nil {
+			return false, err
+		}
+		if !create {
+			return false, fmt.Errorf("cannot deploy on a namespace that doesn't exist. Please create %s and try again", ns)
+		}
+		return true, nil
+	}
 	return false, nil
 }

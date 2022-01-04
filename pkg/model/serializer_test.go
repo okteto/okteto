@@ -1031,11 +1031,30 @@ func TestManifestUnmarshalling(t *testing.T) {
 		isErrorExpected bool
 	}{
 		{
+			name: "manifest with namespace and context",
+			manifest: []byte(`
+namespace: test
+context: context-to-use
+deploy:
+  - okteto stack deploy`),
+			expected: &Manifest{
+				Namespace: "test",
+				Deploy: &DeployInfo{
+					Commands: []string{
+						"okteto stack deploy",
+					},
+				},
+				Dev:     map[string]*Dev{},
+				Context: "context-to-use",
+			},
+			isErrorExpected: false,
+		},
+		{
 			name: "dev manifest with dev and deploy",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 deploy:
   - okteto stack deploy
-devs:
+dev:
   test-1:
     sync:
     - app:/app
@@ -1044,7 +1063,6 @@ devs:
     - app:/app
 `),
 			expected: &Manifest{
-				Name: "test",
 				Deploy: &DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",
@@ -1379,7 +1397,7 @@ services:
 		},
 		{
 			name: "only dev with service unsupported field",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 sync:
   - app:/app
 services:
@@ -1390,7 +1408,7 @@ services:
 		},
 		{
 			name: "only dev with errors",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 sync:
   - app:/app
 non-found-field:
@@ -1400,15 +1418,13 @@ non-found-field:
 		},
 		{
 			name: "dev manifest with one dev",
-			manifest: []byte(`name: test
-devs:
+			manifest: []byte(`
+dev:
   test:
     sync:
     - app:/app
 `),
 			expected: &Manifest{
-				Name:   "test",
-				Deploy: &DeployInfo{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1481,8 +1497,8 @@ devs:
 		},
 		{
 			name: "dev manifest with multiple devs",
-			manifest: []byte(`name: test
-devs:
+			manifest: []byte(`
+dev:
   test-1:
     sync:
     - app:/app
@@ -1491,8 +1507,6 @@ devs:
     - app:/app
 `),
 			expected: &Manifest{
-				Deploy: &DeployInfo{},
-				Name:   "test",
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1630,8 +1644,8 @@ devs:
 		},
 		{
 			name: "dev manifest with errors",
-			manifest: []byte(`name: test
-devs:
+			manifest: []byte(`
+dev:
   test-1:
     sync:
     - app:/app
@@ -1650,13 +1664,31 @@ sync:
 		},
 		{
 			name: "dev manifest with deploy",
-			manifest: []byte(`name: test
+			manifest: []byte(`
 deploy:
   - okteto stack deploy
 `),
 			expected: &Manifest{
-				Name: "test",
-				Dev:  map[string]*Dev{},
+				Dev: map[string]*Dev{},
+				Deploy: &DeployInfo{
+					Commands: []string{
+						"okteto stack deploy",
+					},
+				},
+			},
+			isErrorExpected: false,
+		},
+		{
+			name: "dev manifest with deploy",
+			manifest: []byte(`
+deploy:
+  - okteto stack deploy
+devs:
+  - api
+  - test
+`),
+			expected: &Manifest{
+				Dev: map[string]*Dev{},
 				Deploy: &DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",
@@ -1770,6 +1802,74 @@ compose:
 			result := NewDeployInfo()
 
 			err := yaml.UnmarshalStrict(tt.deployInfoManifest, &result)
+			if err != nil && !tt.isErrorExpected {
+				t.Fatalf("Not expecting error but got %s", err)
+			} else if tt.isErrorExpected && err == nil {
+				t.Fatal("Expected error but got none")
+			}
+
+			if !assert.Equal(t, tt.expected, result) {
+				t.Fatal("Failed")
+			}
+		})
+	}
+}
+
+func TestManifestBuildUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name            string
+		buildManifest   []byte
+		expected        ManifestBuild
+		isErrorExpected bool
+	}{
+		{
+			name:          "unmarshalling-relative-path",
+			buildManifest: []byte(`service1: ./service1`),
+			expected: ManifestBuild{
+				"service1": {
+					Name:    "./service1",
+					Context: "",
+				},
+			},
+		},
+		{
+			name: "unmarshalling-all-fields",
+			buildManifest: []byte(`service2:
+  image: image-tag
+  context: ./service2
+  dockerfile: Dockerfile
+  args:
+    key1: value1
+  cache_from:
+    - cache-image`),
+			expected: ManifestBuild{
+				"service2": {
+					Context:    "./service2",
+					Dockerfile: "Dockerfile",
+					Image:      "image-tag",
+					Args: []EnvVar{
+						{
+							Name:  "key1",
+							Value: "value1",
+						},
+					},
+					CacheFrom: []string{"cache-image"},
+				},
+			},
+		},
+		{
+			name: "invalid-fields",
+			buildManifest: []byte(`service1:
+  file: Dockerfile`),
+			expected:        ManifestBuild{},
+			isErrorExpected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result ManifestBuild
+			err := yaml.UnmarshalStrict(tt.buildManifest, &result)
 			if err != nil && !tt.isErrorExpected {
 				t.Fatalf("Not expecting error but got %s", err)
 			} else if tt.isErrorExpected && err == nil {

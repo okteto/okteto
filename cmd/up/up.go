@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/moby/term"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
@@ -86,13 +85,6 @@ func Up() *cobra.Command {
 			checkLocalWatchesConfiguration()
 
 			ctx := context.Background()
-
-			if model.FileExists(".env") {
-				err := godotenv.Load()
-				if err != nil {
-					log.Errorf("error loading .env file: %s", err.Error())
-				}
-			}
 
 			manifest, err := contextCMD.LoadManifestWithContext(ctx, upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
 			if err != nil {
@@ -181,6 +173,16 @@ func Up() *cobra.Command {
 
 			if err := up.Client.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
 				log.Infof("error deleting deprecated volume: %v", err)
+			}
+
+			if err != nil {
+				switch err.(type) {
+				default:
+					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+				case errors.CommandError:
+					log.Infof("CommandError: %v", err)
+				}
+
 			}
 
 			return err

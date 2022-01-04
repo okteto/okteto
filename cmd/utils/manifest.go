@@ -14,26 +14,11 @@
 package utils
 
 import (
-	"bufio"
-	"fmt"
-	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
-
-type ManifestExecutor interface {
-	Execute(command string, env []string) error
-}
-
-type Executor struct{}
-
-// NewExecutor returns a new executor
-func NewExecutor() *Executor {
-	return &Executor{}
-}
 
 // InferApplicationName infers the application name from the folder received as parameter
 func InferApplicationName(cwd string) string {
@@ -45,35 +30,4 @@ func InferApplicationName(cwd string) string {
 
 	log.Info("inferring name from git repository URL")
 	return model.TranslateURLToName(repo)
-}
-
-// Execute executes the specified command adding `env` to the execution environment
-func (*Executor) Execute(command string, env []string) error {
-	fmt.Printf("Running '%s'...\n", command)
-
-	cmd := exec.Command("bash", "-c", command)
-	cmd.Env = append(os.Environ(), env...)
-
-	r, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-
-	cmd.Stderr = cmd.Stdout
-	done := make(chan struct{})
-	scanner := bufio.NewScanner(r)
-
-	go func() {
-		for scanner.Scan() {
-			line := scanner.Text()
-			fmt.Println(line)
-		}
-		done <- struct{}{}
-	}()
-
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	return cmd.Wait()
 }
