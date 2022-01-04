@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/compose-spec/godotenv"
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
@@ -756,20 +755,11 @@ func translateLabelSelector(svcName string, s *model.Stack) map[string]string {
 }
 
 func translateAnnotations(svc *model.Service) map[string]string {
-
-	result := getAnnotations()
+	result := map[string]string{}
 	for k, v := range svc.Annotations {
 		result[k] = v
 	}
 	return result
-}
-
-func getAnnotations() map[string]string {
-	annotations := map[string]string{}
-	if utils.IsOktetoRepo() {
-		annotations[model.OktetoSampleAnnotation] = "true"
-	}
-	return annotations
 }
 
 func translateServiceType(svc model.Service) apiv1.ServiceType {

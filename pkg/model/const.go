@@ -31,9 +31,6 @@ const (
 	// InteractiveDevLabel indicates the interactive dev pod
 	InteractiveDevLabel = "interactive.dev.okteto.com"
 
-	// OktetoSampleAnnotation indicates that the repo is a okteto sample
-	OktetoSampleAnnotation = "dev.okteto.com/sample"
-
 	// DetachedDevLabel indicates the detached dev pods
 	DetachedDevLabel = "detached.dev.okteto.com"
 

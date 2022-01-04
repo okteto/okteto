@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/docker/docker/api/types/versions"
@@ -43,7 +42,6 @@ type BuildOptions struct {
 	Secrets    []string
 	Tag        string
 	Target     string
-	Namespace  string
 }
 
 // Run runs the build sequence
@@ -195,25 +193,4 @@ func translateDockerErr(err error) error {
 		}
 	}
 	return err
-}
-
-func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildOptions {
-	if okteto.Context().IsOkteto && b.Image == "" {
-		b.Image = fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, service, "dev")
-	}
-
-	opts := BuildOptions{
-		CacheFrom: b.CacheFrom,
-		Target:    b.Target,
-		Path:      b.Context,
-		Tag:       b.Image,
-		File:      filepath.Join(b.Context, b.Dockerfile),
-	}
-
-	if len(b.Args) != 0 {
-		opts.BuildArgs = model.SerializeBuildArgs(b.Args)
-	}
-
-	opts.OutputMode = setOutputMode(o.OutputMode)
-	return opts
 }

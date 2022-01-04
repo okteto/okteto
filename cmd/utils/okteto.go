@@ -76,12 +76,12 @@ func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
 		return false, err
 	}
 	if !hasAccess {
-		create, err := AskYesNo(fmt.Sprintf("The namespace %s doesn't exist. Do you want to create it? [y/n] ", ns))
+		create, err := AskYesNo(fmt.Sprintf("The namespace %s doesn't exist. Do you want to create it?? [y/n] ", ns))
 		if err != nil {
 			return false, err
 		}
 		if !create {
-			return false, fmt.Errorf("cannot deploy on a namespace that doesn't exist. Please create %s and try again", ns)
+			return false, fmt.Errorf("cannot deploy on a namespace that does not exist. Please create %s and try again", ns)
 		}
 		return true, nil
 	}

@@ -17,10 +17,13 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/manifoldco/promptui/screenbuf"
 )
 
 type ManifestExecutor interface {
@@ -33,17 +36,12 @@ type Executor struct {
 }
 
 type executorDisplayer interface {
-	display(command string)
-	startCommand(cmd *exec.Cmd) error
+	display(scanner *bufio.Scanner, command string, sb *screenbuf.ScreenBuf)
+	startCommand(cmd *exec.Cmd) (io.Reader, error)
 }
 
-type plainExecutorDisplayer struct {
-	scanner *bufio.Scanner
-}
-type jsonExecutorDisplayer struct {
-	stdoutScanner *bufio.Scanner
-	stderrScanner *bufio.Scanner
-}
+type plainExecutorDisplayer struct{}
+type jsonExecutorDisplayer struct{}
 
 type jsonMessage struct {
 	Level     string `json:"level"`
@@ -57,11 +55,11 @@ func NewExecutor(output string) *Executor {
 	var displayer executorDisplayer
 	switch output {
 	case "plain":
-		displayer = &plainExecutorDisplayer{}
+		displayer = plainExecutorDisplayer{}
 	case "json":
-		displayer = &jsonExecutorDisplayer{}
+		displayer = jsonExecutorDisplayer{}
 	default:
-		displayer = &plainExecutorDisplayer{}
+		displayer = plainExecutorDisplayer{}
 	}
 	return &Executor{
 		outputMode: output,
@@ -75,77 +73,56 @@ func (e *Executor) Execute(command string, env []string) error {
 	cmd := exec.Command("bash", "-c", command)
 	cmd.Env = append(os.Environ(), env...)
 
-	if err := e.displayer.startCommand(cmd); err != nil {
-		return err
-	}
-
-	go e.displayer.display(command)
-
-	err := cmd.Wait()
-
-	return err
-}
-
-func startCommand(cmd *exec.Cmd) error {
-	return cmd.Start()
-}
-
-func (e *plainExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
-
-	reader, err := cmd.StdoutPipe()
+	reader, err := e.displayer.startCommand(cmd)
 	if err != nil {
 		return err
 	}
-	cmd.Stderr = cmd.Stdout
 
-	if err := startCommand(cmd); err != nil {
-		return err
-	}
-	e.scanner = bufio.NewScanner(reader)
-	return nil
+	scanner := bufio.NewScanner(reader)
+
+	sb := screenbuf.New(os.Stdout)
+	go e.displayer.display(scanner, command, sb)
+
+	err = cmd.Wait()
+	return err
 }
 
-func (e *plainExecutorDisplayer) display(_ string) {
-	for e.scanner.Scan() {
-		line := e.scanner.Text()
+func startCommand(cmd *exec.Cmd) (io.Reader, error) {
+	reader, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+	return reader, nil
+}
+
+func (plainExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
+	return startCommand(cmd)
+}
+
+func (plainExecutorDisplayer) display(scanner *bufio.Scanner, _ string, _ *screenbuf.ScreenBuf) {
+	for scanner.Scan() {
+		line := scanner.Text()
 		fmt.Println(line)
 	}
 }
 
-func (e *jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
-	stdoutReader, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	e.stdoutScanner = bufio.NewScanner(stdoutReader)
-
-	stderrReader, err := cmd.StderrPipe()
-	if err != nil {
-		return err
-	}
-	e.stderrScanner = bufio.NewScanner(stderrReader)
+func (jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
 	return startCommand(cmd)
 }
 
-func (e *jsonExecutorDisplayer) display(command string) {
-	go func() {
-		for e.stdoutScanner.Scan() {
-			line := e.stdoutScanner.Text()
-			level := "info"
-			if isErrorLine(line) {
-				level = "error"
-			}
-			DisplayJsonMessage(level, line, command)
+func (jsonExecutorDisplayer) display(scanner *bufio.Scanner, command string, _ *screenbuf.ScreenBuf) {
+	for scanner.Scan() {
+		line := scanner.Text()
+		level := "info"
+		if isErrorLine(line) {
+			level = "error"
 		}
-	}()
-
-	go func() {
-		for e.stderrScanner.Scan() {
-			line := e.stderrScanner.Text()
-			level := "error"
-			DisplayJsonMessage(level, line, command)
-		}
-	}()
+		DisplayJsonMessage(level, line, command)
+	}
 }
 func DisplayJsonMessage(level, message, stage string) {
 	messageStruct := jsonMessage{

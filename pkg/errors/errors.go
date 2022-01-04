@@ -87,9 +87,6 @@ var (
 	// ErrLostSyncthing is raised when we lose connectivity with syncthing
 	ErrLostSyncthing = fmt.Errorf("synchronization service is disconnected")
 
-	// ErrManifestNotFound is raised if the okteto manifest is not found
-	ErrManifestNotFound = fmt.Errorf("okteto manifest not found")
-
 	// ErrNotInDevMode is raised when the deployment is not in dev mode
 	ErrNotInDevMode = fmt.Errorf("deployment is not in development mode anymore")
 

@@ -86,11 +86,11 @@ func (fe *fakeExecutor) Execute(command string, _ []string) error {
 	return nil
 }
 
-func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ context.Context, _ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ context.Context, _ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
 
@@ -127,7 +127,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
-		getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+		getManifest func(ctx context.Context, cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 		want        int
 	}{
 		{
@@ -168,7 +168,7 @@ func TestDestroyWithError(t *testing.T) {
 	cwd := "/okteto/src"
 	tests := []struct {
 		name        string
-		getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+		getManifest func(ctx context.Context, cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 		secrets     []v1.Secret
 		want        []string
 	}{
@@ -280,7 +280,7 @@ func TestDestroyWithoutError(t *testing.T) {
 	cwd := "/okteto/src"
 	tests := []struct {
 		name        string
-		getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+		getManifest func(ctx context.Context, cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 		secrets     []v1.Secret
 		want        []string
 	}{

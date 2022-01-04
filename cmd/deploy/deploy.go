@@ -50,6 +50,7 @@ type Options struct {
 	ManifestPath string
 	Name         string
 	Namespace    string
+	K8sContext   string
 	Variables    []string
 	Timeout      time.Duration
 	OutputMode   string
@@ -75,7 +76,7 @@ type proxyInterface interface {
 }
 
 type deployCommand struct {
-	getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+	getManifest func(ctx context.Context, cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 
 	proxy              proxyInterface
 	kubeconfig         kubeConfigHandler
@@ -97,25 +98,28 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(model.OktetoWithinDeployCommandContextEnvVar, "false")
-
-			if options.OutputMode != "json" {
-				options.show = true
-			}
-			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.ManifestPath, options.show); err != nil {
-				return err
-			}
-
-			if okteto.IsOkteto() {
-				create, err := utils.ShouldCreateNamespace(ctx, okteto.Context().Namespace)
+			if okteto.IsOkteto() && options.Namespace != "" {
+				create, err := utils.ShouldCreateNamespace(ctx, options.Namespace)
 				if err != nil {
 					return err
 				}
 				if create {
-					err = namespace.ExecuteCreateNamespace(ctx, okteto.Context().Namespace, nil)
+					err = namespace.ExecuteCreateNamespace(ctx, options.Namespace, nil)
 					if err != nil {
 						return err
 					}
 				}
+			}
+
+			if options.OutputMode != "json" {
+				options.show = true
+			}
+
+			ctxOpts := &contextCMD.ContextOptions{
+				Namespace: options.Namespace,
+			}
+			if err := contextCMD.Run(ctx, ctxOpts); err != nil {
+				return err
 			}
 
 			cwd, err := os.Getwd()
@@ -191,8 +195,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
-	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the okteto manifest file")
-	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the application is deployed")
+	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVar(&options.Namespace, "namespace", "", "application name")
+	cmd.Flags().StringVar(&options.K8sContext, "context", "", "k8s context")
 
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "plain", "show plain/json deploy output")
@@ -209,13 +214,11 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 	var err error
 	// Read manifest file with the commands to be executed
-	opts.Manifest, err = dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Show: opts.show})
+	opts.Manifest, err = dc.getManifest(ctx, cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Show: opts.show})
 	if err != nil {
 		log.Infof("could not find manifest file to be executed: %s", err)
 		return err
 	}
-	opts.Manifest.Context = okteto.Context().Name
-	opts.Manifest.Namespace = okteto.Context().Namespace
 
 	log.Debugf("starting server on %d", dc.proxy.GetPort())
 	dc.proxy.Start()
@@ -375,13 +378,6 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 				metadata.Labels = map[string]string{}
 			}
 			metadata.Labels[model.DeployedByLabel] = name
-
-			if metadata.Annotations == nil {
-				metadata.Annotations = map[string]string{}
-			}
-			if utils.IsOktetoRepo() {
-				metadata.Annotations[model.OktetoSampleAnnotation] = "true"
-			}
 
 			metadataAsByte, err := json.Marshal(metadata)
 			if err != nil {

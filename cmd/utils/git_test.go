@@ -23,7 +23,6 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/stretchr/testify/assert"
 )
 
 func Test_getBranch(t *testing.T) {
@@ -104,51 +103,5 @@ func Test_getBranch(t *testing.T) {
 	if _, err := GetBranch(context.TODO(), dir); err == nil {
 
 		t.Fatal("didn't fail when getting a non branch")
-	}
-}
-
-func Test_isOktetoRepoFromURL(t *testing.T) {
-	var tests = []struct {
-		name     string
-		url      string
-		expected bool
-	}{
-		{
-			name:     "ssh from okteto",
-			url:      "git@github.com:okteto/movies.git",
-			expected: true,
-		},
-		{
-			name:     "ssh from okteto",
-			url:      "git@github.com:test/test.git",
-			expected: false,
-		},
-		{
-			name:     "https from okteto",
-			url:      "https://github.com/okteto/test.git",
-			expected: true,
-		},
-		{
-			name:     "https from okteto",
-			url:      "https://github.com/test/test.git",
-			expected: false,
-		},
-		{
-			name:     "ssh from okteto",
-			url:      "ssh://git@github.com/okteto/test",
-			expected: true,
-		},
-		{
-			name:     "https from okteto",
-			url:      "ssh://git@github.com/test/test",
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			isOktetoSample := isOktetoRepoFromURL(tt.url)
-			assert.Equal(t, tt.expected, isOktetoSample)
-		})
 	}
 }
