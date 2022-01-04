@@ -187,13 +187,41 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 	return s, nil
 }
 
+//LoadManifestV2WithContext initializes the okteto context taking into account command flags and manifest namespace/context fields
+func LoadManifestV2WithContext(ctx context.Context, namespace, path string, show bool) error {
+	ctxOptions := &ContextOptions{
+		Namespace: namespace,
+		Show:      show,
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	manifest, err := GetManifestV2(cwd, path)
+	if err != nil {
+		//GetManifestV2 should take care of all error conditions and possible paths
+		//https://github.com/okteto/okteto/issues/2111
+		if err != errors.ErrManifestNotFound {
+			return err
+		}
+	} else {
+		ctxOptions.Context = manifest.Context
+		if ctxOptions.Namespace == "" {
+			ctxOptions.Namespace = manifest.Namespace
+		}
+	}
+
+	return Run(ctx, ctxOptions)
+}
+
 // GetManifest Loads a manifest
-func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*model.Manifest, error) {
+func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error) {
 	pipelinePath := getPipelinePath(srcFolder, opts.Filename)
 	if pipelinePath != "" {
 		log.Debugf("Found okteto manifest %s", pipelinePath)
-		opts.Filename = pipelinePath
-		manifest, err := LoadManifestWithContext(ctx, opts)
+		manifest, err := utils.LoadManifest(pipelinePath)
 		if err != nil {
 			log.Infof("could not load manifest: %s", err.Error())
 			return nil, err
@@ -203,12 +231,7 @@ func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*
 		manifest.Filename = pipelinePath
 		return manifest, nil
 	}
-	ctxOptions := &ContextOptions{
-		Show: opts.Show,
-	}
-	if err := Run(ctx, ctxOptions); err != nil {
-		return nil, err
-	}
+
 	src := srcFolder
 	path := filepath.Join(srcFolder, opts.Filename)
 	if opts.Filename != "" && pathExistsAndDir(path) {
@@ -216,10 +239,6 @@ func GetManifest(ctx context.Context, srcFolder string, opts ManifestOptions) (*
 	}
 
 	oktetoSubPath := getOktetoSubPath(srcFolder, src)
-	devs := []string{}
-	if oktetoSubPath != "" {
-		devs = append(devs, oktetoSubPath)
-	}
 	chartSubPath := getChartsSubPath(srcFolder, src)
 	if chartSubPath != "" {
 		log.Infof("Found chart")
@@ -376,4 +395,37 @@ func fileExistsAndNotDir(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func GetOktetoManifestPath(file string) string {
+
+	// Files will be checked in the order defined in the list
+	files := []string{
+		file,
+		"okteto.yml",
+		"okteto.yaml",
+		".okteto/okteto.yml",
+		".okteto/okteto.yaml",
+	}
+	for _, name := range files {
+		if err := utils.CheckIfRegularFile(name); err == nil {
+			return name
+		}
+	}
+	return ""
+}
+
+func GetManifestV2(basePath, file string) (*model.Manifest, error) {
+	manifestPath := ""
+	if file != "" && fileExistsAndNotDir(file) {
+		manifestPath = file
+	} else {
+		src := basePath
+		manifestPath = getOktetoSubPath(basePath, src)
+	}
+
+	if manifestPath != "" {
+		return model.Get(manifestPath)
+	}
+	return nil, errors.ErrManifestNotFound
 }
