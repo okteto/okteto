@@ -68,6 +68,14 @@ func LoadManifest(devPath string) (*model.Manifest, error) {
 		return nil, err
 	}
 
+	if manifest.Name == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		manifest.Name = InferApplicationName(cwd)
+	}
+
 	for _, dev := range manifest.Dev {
 		if err := loadManifestRc(dev); err != nil {
 			return nil, err

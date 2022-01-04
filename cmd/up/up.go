@@ -259,7 +259,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 	c := &deploy.DeployCommand{
 		GetManifest:        contextCMD.GetManifest,
 		Kubeconfig:         kubeconfig,
-		Executor:           utils.NewExecutor(),
+		Executor:           utils.NewExecutor("tty"),
 		Proxy:              proxy,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
 	}
