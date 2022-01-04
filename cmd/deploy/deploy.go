@@ -190,6 +190,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "plain", "show plain/json deploy output")
 	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the app")
+	cmd.Flags().MarkHidden("build")
 
 	return cmd
 }
