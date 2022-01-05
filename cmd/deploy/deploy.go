@@ -37,6 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -229,6 +230,21 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 				if err := build.Run(ctx, opts); err != nil {
 					buildErrs = append(buildErrs, err.Error())
 					continue
+				}
+
+				if okteto.IsOkteto() && registry.IsOktetoRegistry(opts.Tag) {
+					opts.Tag = registry.ExpandOktetoDevRegistry(opts.Tag)
+					opts.Tag = registry.ExpandOktetoGlobalRegistry(opts.Tag)
+
+					digest, err := registry.GetImageTagWithDigest(opts.Tag)
+					if err != nil {
+						err = registry.GetErrorMessage(err, opts.Tag)
+						buildErrs = append(buildErrs, err.Error())
+						continue
+					}
+					log.Debugf("got digest from registry: %s", digest)
+					// image := fmt.Sprintf("%s/%s", okteto.Context().Registry, digest)
+
 				}
 			}
 			if len(buildErrs) != 0 {
