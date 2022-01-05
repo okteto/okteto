@@ -16,6 +16,7 @@ package context
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -108,15 +109,20 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 	}
 
 	if !ctxOptions.IsOkteto {
-		if !isValidCluster(ctxOptions.Context) {
-			return errors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
-				Hint: "Please run 'okteto context' to select one context"}
-		}
 
-		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, c.k8sClientProvider)
-		if transformedCtx != ctxOptions.Context {
-			ctxOptions.Context = transformedCtx
+		if isUrl(ctxOptions.Context) {
+			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 			ctxOptions.IsOkteto = true
+		} else {
+			if !isValidCluster(ctxOptions.Context) {
+				return errors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
+					Hint: "Please run 'okteto context' to select one context"}
+			}
+			transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, c.k8sClientProvider)
+			if transformedCtx != ctxOptions.Context {
+				ctxOptions.Context = transformedCtx
+				ctxOptions.IsOkteto = true
+			}
 		}
 	}
 
@@ -237,4 +243,13 @@ func (*ContextUse) initEnvVars() {
 			log.Infof("error loading .env file: %s", err.Error())
 		}
 	}
+}
+
+func isUrl(u string) bool {
+	parsedUrl, err := url.Parse(u)
+	if err != nil {
+		log.Infof("could not parse %s", u)
+		return false
+	}
+	return parsedUrl.Scheme != "" && parsedUrl.Host != ""
 }
