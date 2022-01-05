@@ -18,33 +18,34 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 )
 
-type fakeNamespaceClient struct {
+//FakeNamespaceClient mocks the namespace interface
+type FakeNamespaceClient struct {
 	namespaces []types.Namespace
 	err        error
 }
 
-func NewFakeNamespaceClient(ns []types.Namespace, err error) *fakeNamespaceClient {
-	return &fakeNamespaceClient{namespaces: ns, err: err}
+func NewFakeNamespaceClient(ns []types.Namespace, err error) *FakeNamespaceClient {
+	return &FakeNamespaceClient{namespaces: ns, err: err}
 }
 
 // CreateNamespace creates a namespace
-func (c *fakeNamespaceClient) Create(ctx context.Context, namespace string) (string, error) {
+func (c *FakeNamespaceClient) Create(_ context.Context, namespace string) (string, error) {
 	c.namespaces = append(c.namespaces, types.Namespace{ID: namespace})
 	return namespace, c.err
 }
 
 // List list namespaces
-func (c *fakeNamespaceClient) List(ctx context.Context) ([]types.Namespace, error) {
+func (c *FakeNamespaceClient) List(_ context.Context) ([]types.Namespace, error) {
 	return c.namespaces, c.err
 }
 
 // AddNamespaceMembers adds members to a namespace
-func (c *fakeNamespaceClient) AddMembers(ctx context.Context, namespace string, members []string) error {
+func (c *FakeNamespaceClient) AddMembers(_ context.Context, namespace string, members []string) error {
 	return c.err
 }
 
 // DeleteNamespace deletes a namespace
-func (c *fakeNamespaceClient) Delete(ctx context.Context, namespace string) error {
+func (c *FakeNamespaceClient) Delete(_ context.Context, namespace string) error {
 	toRemove := -1
 	for idx, ns := range c.namespaces {
 		if ns.ID == namespace {

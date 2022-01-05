@@ -29,7 +29,7 @@ func List(ctx context.Context) *cobra.Command {
 		Short: "List resources",
 		Args:  utils.NoArgsAccepted(""),
 	}
-	cmd.AddCommand(namespace.List(ctx))
+	cmd.AddCommand(deprecatedListNamespace(ctx))
 	return cmd
 }
 

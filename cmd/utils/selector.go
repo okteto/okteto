@@ -20,7 +20,6 @@ import (
 	"io"
 	"os"
 	"runtime"
-	"sort"
 	"strings"
 	"text/template"
 
@@ -38,12 +37,6 @@ const (
 	hideCursor = esc + "?25l"
 	showCursor = esc + "?25h"
 	clearLine  = esc + "2K"
-)
-
-var (
-	cloudOption           = fmt.Sprintf("%s (Okteto Cloud)", okteto.CloudURL)
-	newOEOption           = "Create new context"
-	oktetoContextsDivider = "Okteto contexts:"
 )
 
 type OktetoSelector struct {
@@ -76,40 +69,6 @@ type SelectorItem struct {
 	Namespace string
 	Builder   string
 	Registry  string
-}
-
-func getOktetoClusters(skipCloud bool) []SelectorItem {
-	orderedOktetoClusters := make([]SelectorItem, 0)
-	ctxStore := okteto.ContextStore()
-	for ctxName, okCtx := range ctxStore.Contexts {
-		if !okCtx.IsOkteto {
-			continue
-		}
-		if skipCloud && ctxName == okteto.CloudURL {
-			continue
-		}
-		orderedOktetoClusters = append(
-			orderedOktetoClusters,
-			SelectorItem{
-				Name:      ctxName,
-				Label:     ctxName,
-				Enable:    true,
-				IsOkteto:  true,
-				Namespace: okCtx.Namespace,
-				Builder:   okCtx.Builder,
-				Registry:  okCtx.Registry,
-			})
-	}
-	sort.Slice(orderedOktetoClusters, func(i, j int) bool {
-		if orderedOktetoClusters[i].Name == okteto.CloudURL {
-			return true
-		}
-		if orderedOktetoClusters[j].Name == okteto.CloudURL {
-			return false
-		}
-		return strings.Compare(orderedOktetoClusters[i].Name, orderedOktetoClusters[j].Name) < 0
-	})
-	return orderedOktetoClusters
 }
 
 func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label string) (string, bool, error) {
@@ -505,9 +464,6 @@ func getSelectedTemplate() string {
 
 func getActiveTemplate(options []SelectorItem) string {
 	whitespaces := ""
-	if options[0].Label == oktetoContextsDivider {
-		whitespaces = strings.Repeat(" ", 2)
-	}
 	result := fmt.Sprintf("%s%s {{ .Label }}", whitespaces, promptui.IconSelect)
 	result = changeColorForWindows(result)
 	return result
@@ -515,9 +471,6 @@ func getActiveTemplate(options []SelectorItem) string {
 
 func getInactiveTemplate(options []SelectorItem) string {
 	whitespaces := strings.Repeat(" ", 2)
-	if options[0].Label == oktetoContextsDivider {
-		whitespaces = strings.Repeat(" ", 4)
-	}
 	result := fmt.Sprintf("{{if .Enable}}%s{{ .Label }}{{else}}%s{{ .Label }}{{end}}", whitespaces, whitespaces)
 	result = changeColorForWindows(result)
 	return result

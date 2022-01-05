@@ -156,6 +156,9 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 	}
 	if ctxOptions.IsOkteto && ctxOptions.Save {
 		okClient, err := c.OktetoClientProvider.Provide()
+		if err != nil {
+			return err
+		}
 		hasAccess, err := utils.HasAccessToNamespace(ctx, ctxOptions.Namespace, okClient)
 		if err != nil {
 			return err

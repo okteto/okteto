@@ -14,15 +14,13 @@
 package cmd
 
 import (
-	"context"
-
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/spf13/cobra"
 )
 
 // Kubeconfig fetch credentials for a cluster namespace
-func Kubeconfig(ctx context.Context) *cobra.Command {
+func Kubeconfig() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "kubeconfig",
 		Hidden: true,

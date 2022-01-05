@@ -23,9 +23,8 @@ import (
 )
 
 var (
-	cloudOption           = fmt.Sprintf("%s (Okteto Cloud)", okteto.CloudURL)
-	newOEOption           = "Create new context"
-	oktetoContextsDivider = "Okteto contexts:"
+	cloudOption = fmt.Sprintf("%s (Okteto Cloud)", okteto.CloudURL)
+	newOEOption = "Create new context"
 )
 
 func getContextsSelection(ctxOptions *ContextOptions) []utils.SelectorItem {

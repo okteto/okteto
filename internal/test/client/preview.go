@@ -28,6 +28,6 @@ func NewFakePreviewClient(previews []types.Preview, err error) *FakePreviewsClie
 }
 
 // List list namespaces
-func (c *FakePreviewsClient) List(ctx context.Context) ([]types.Preview, error) {
+func (c *FakePreviewsClient) List(_ context.Context) ([]types.Preview, error) {
 	return c.preview, c.err
 }
