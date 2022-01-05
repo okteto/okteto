@@ -63,9 +63,9 @@ func (up *upContext) activate() error {
 		return err
 	}
 
-	if v, ok := app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation]; !ok || v != model.OktetoUpCmd {
+	if v, ok := app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation]; up.Dev.Autocreate && (!ok || v != model.OktetoUpCmd) {
 		return errors.UserError{
-			E:    fmt.Errorf("resource %s doesn't exist", up.Dev.Name),
+			E:    fmt.Errorf("resource %s already exist", up.Dev.Name),
 			Hint: "use a different name in your okteto.yaml, or remove the autocreate property",
 		}
 	}
