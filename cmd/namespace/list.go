@@ -53,7 +53,7 @@ func List(ctx context.Context) *cobra.Command {
 	}
 }
 
-func (nc *namespaceCommand) executeListNamespaces(ctx context.Context) error {
+func (nc *NamespaceCommand) executeListNamespaces(ctx context.Context) error {
 	spaces, err := nc.okClient.Namespaces().List(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get namespaces: %s", err)

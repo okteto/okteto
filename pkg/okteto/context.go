@@ -274,13 +274,14 @@ type ContextConfigWriterInterface interface {
 	Write() error
 }
 
-type contextConfigWriter struct{}
+//ContextConfigWriter writes the information about the context config into stdout
+type ContextConfigWriter struct{}
 
-func NewContextConfigWriter() *contextConfigWriter {
-	return &contextConfigWriter{}
+func NewContextConfigWriter() *ContextConfigWriter {
+	return &ContextConfigWriter{}
 }
 
-func (*contextConfigWriter) Write() error {
+func (*ContextConfigWriter) Write() error {
 	marshalled, err := json.MarshalIndent(ContextStore(), "", "\t")
 	if err != nil {
 		log.Infof("failed to marshal context: %s", err)

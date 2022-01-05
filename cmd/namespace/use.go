@@ -59,7 +59,7 @@ func Use(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (nc *namespaceCommand) Use(ctx context.Context, namespace string) error {
+func (nc *NamespaceCommand) Use(ctx context.Context, namespace string) error {
 	var err error
 	if namespace == "" {
 		namespace, err = nc.getNamespaceFromSelector(ctx)
@@ -80,7 +80,7 @@ func (nc *namespaceCommand) Use(ctx context.Context, namespace string) error {
 
 }
 
-func (nc *namespaceCommand) getNamespaceFromSelector(ctx context.Context) (string, error) {
+func (nc *NamespaceCommand) getNamespaceFromSelector(ctx context.Context) (string, error) {
 	namespaces, err := getNamespacesSelection(ctx)
 	if err != nil {
 		return "", err

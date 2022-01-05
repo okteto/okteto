@@ -54,7 +54,7 @@ func Delete(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (nc *namespaceCommand) executeDeleteNamespace(ctx context.Context, namespace string) error {
+func (nc *NamespaceCommand) executeDeleteNamespace(ctx context.Context, namespace string) error {
 
 	if err := nc.okClient.Namespaces().Delete(ctx, namespace); err != nil {
 		return fmt.Errorf("failed to delete namespace: %s", err)

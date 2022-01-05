@@ -17,16 +17,17 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 )
 
-type fakePreviewsClient struct {
+//FakePreviewsClient mocks the previews interface
+type FakePreviewsClient struct {
 	preview []types.Preview
 	err     error
 }
 
-func NewFakePreviewClient(previews []types.Preview, err error) *fakePreviewsClient {
-	return &fakePreviewsClient{preview: previews, err: err}
+func NewFakePreviewClient(previews []types.Preview, err error) *FakePreviewsClient {
+	return &FakePreviewsClient{preview: previews, err: err}
 }
 
 // List list namespaces
-func (c *fakePreviewsClient) List(ctx context.Context) ([]types.Preview, error) {
+func (c *FakePreviewsClient) List(ctx context.Context) ([]types.Preview, error) {
 	return c.preview, c.err
 }

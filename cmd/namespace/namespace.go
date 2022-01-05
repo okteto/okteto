@@ -25,18 +25,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type namespaceCommand struct {
+//NamespaceCommand has all the namespaces subcommands
+type NamespaceCommand struct {
 	ctxCmd   *contextCMD.ContextCommand
 	okClient types.OktetoInterface
 }
 
 //NewNamespaceCommand creates a namespace command to
-func NewNamespaceCommand() (*namespaceCommand, error) {
+func NewNamespaceCommand() (*NamespaceCommand, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, err
 	}
-	return &namespaceCommand{
+	return &NamespaceCommand{
 		ctxCmd:   contextCMD.NewContextCommand(),
 		okClient: c,
 	}, nil

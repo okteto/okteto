@@ -53,7 +53,6 @@ type OktetoSelector struct {
 
 	Templates *promptui.SelectTemplates
 	Keys      *promptui.SelectKeys
-	list      *list.List
 
 	OktetoTemplates *OktetoTemplates
 }
@@ -150,7 +149,7 @@ func isValidOption(options []SelectorItem, optionSelected string) bool {
 	return false
 }
 
-func (s OktetoSelector) Run(ctx context.Context) (string, bool, error) {
+func (s *OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 	startPosition, err := s.getInitialPosition(ctx)
 	if err != nil {
 		return "", false, err
@@ -162,7 +161,6 @@ func (s OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 	if err != nil {
 		return "", false, err
 	}
-	s.list = l
 
 	s.prepareTemplates()
 
@@ -192,40 +190,39 @@ func (s OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 	}
 
 	sb := screenbuf.New(rl)
-	s.list.SetCursor(startPosition)
+	l.SetCursor(startPosition)
 
 	c.SetListener(func(line []rune, pos int, key rune) ([]rune, int, bool) {
 		switch {
 		case key == promptui.KeyEnter:
 			return nil, 0, true
 		case key == s.Keys.Next.Code:
-			nextItemIndex := s.list.Index() + 1
+			nextItemIndex := l.Index() + 1
 			if s.Size > nextItemIndex && !s.Items[nextItemIndex].Enable {
-				s.list.Next()
+				l.Next()
 			}
-			s.list.Next()
+			l.Next()
 		case key == s.Keys.Prev.Code:
-			currentIdx := s.list.Index()
+			currentIdx := l.Index()
 			prevItemIndex := currentIdx - 1
 			foundNewActive := false
 			for prevItemIndex > -1 {
-				s.list.Prev()
+				l.Prev()
 				if !s.Items[prevItemIndex].Enable {
 					prevItemIndex -= 1
 					continue
-				} else {
-					foundNewActive = true
-					break
 				}
+				foundNewActive = true
+				break
 			}
 			if !foundNewActive {
-				s.list.SetCursor(currentIdx)
+				l.SetCursor(currentIdx)
 			}
 
 		case key == s.Keys.PageUp.Code:
-			s.list.PageUp()
+			l.PageUp()
 		case key == s.Keys.PageDown.Code:
-			s.list.PageDown()
+			l.PageDown()
 		}
 
 		s.renderLabel(sb)
@@ -233,7 +230,7 @@ func (s OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 		help := s.renderHelp()
 		sb.Write(help)
 
-		items, idx := s.list.Items()
+		items, idx := l.Items()
 		last := len(items) - 1
 
 		for i, item := range items {
@@ -241,13 +238,13 @@ func (s OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 
 			switch i {
 			case 0:
-				if s.list.CanPageUp() {
+				if l.CanPageUp() {
 					page = "↑"
 				} else {
 					page = string(' ')
 				}
 			case last:
-				if s.list.CanPageDown() {
+				if l.CanPageDown() {
 					page = "↓"
 				}
 			}
@@ -292,7 +289,7 @@ func (s OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 			break
 		}
 
-		_, idx := s.list.Items()
+		_, idx := l.Items()
 		if idx != list.NotFound {
 			break
 		}
@@ -311,7 +308,7 @@ func (s OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 		return "", false, err
 	}
 
-	items, idx := s.list.Items()
+	items, idx := l.Items()
 	item := items[idx]
 
 	sb.Reset()
@@ -321,7 +318,7 @@ func (s OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 	rl.Write([]byte(showCursor))
 	rl.Close()
 
-	return s.Items[s.list.Index()].Name, s.Items[s.list.Index()].IsOkteto, err
+	return s.Items[l.Index()].Name, s.Items[l.Index()].IsOkteto, err
 }
 
 func (s *OktetoSelector) prepareTemplates() error {
@@ -488,7 +485,7 @@ type stdout struct{}
 
 // Write implements an io.WriterCloser over os.Stderr, but it skips the terminal
 // bell character.
-func (s *stdout) Write(b []byte) (int, error) {
+func (*stdout) Write(b []byte) (int, error) {
 	if len(b) == 1 && b[0] == readline.CharBell {
 		return 0, nil
 	}
@@ -496,7 +493,7 @@ func (s *stdout) Write(b []byte) (int, error) {
 }
 
 // Close implements an io.WriterCloser over os.Stderr.
-func (s *stdout) Close() error {
+func (*stdout) Close() error {
 	return os.Stderr.Close()
 }
 

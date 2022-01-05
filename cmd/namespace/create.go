@@ -68,7 +68,7 @@ func Create(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (nc *namespaceCommand) CreateNamespace(ctx context.Context, opts *CreateOptions) error {
+func (nc *NamespaceCommand) CreateNamespace(ctx context.Context, opts *CreateOptions) error {
 	oktetoNS, err := nc.okClient.Namespaces().Create(ctx, opts.Namespace)
 	if err != nil {
 		return err

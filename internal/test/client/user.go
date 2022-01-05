@@ -17,15 +17,16 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 )
 
-type fakeUserClient struct {
+//FakeUserClient is used to mock the userClient interface
+type FakeUserClient struct {
 	userCtx *types.UserContext
 	err     error
 }
 
-func NewFakeUsersClient(user *types.User, err error) *fakeUserClient {
-	return &fakeUserClient{userCtx: &types.UserContext{User: *user}, err: err}
+func NewFakeUsersClient(user *types.User, err error) *FakeUserClient {
+	return &FakeUserClient{userCtx: &types.UserContext{User: *user}, err: err}
 }
 
-func (c *fakeUserClient) GetContext(ctx context.Context) (*types.UserContext, error) {
+func (c *FakeUserClient) GetContext(ctx context.Context) (*types.UserContext, error) {
 	return c.userCtx, c.err
 }
