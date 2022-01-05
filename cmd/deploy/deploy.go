@@ -222,7 +222,6 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 				buildOptions := build.BuildOptions{}
 				opts := build.OptsFromManifest(service, buildInfo, buildOptions)
 
-				ctx := context.Background()
 				if err := build.Run(ctx, opts); err != nil {
 					buildErrs = append(buildErrs, err.Error())
 					continue
@@ -239,6 +238,10 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		if err != nil {
 			log.Infof("could not find manifest file to be executed: %s", err)
 			return err
+		}
+
+		if opts.Manifest.Deploy == nil {
+			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
 		}
 	}
 	opts.Manifest.Context = okteto.Context().Name
