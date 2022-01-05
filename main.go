@@ -106,17 +106,17 @@ func main() {
 	root.AddCommand(cmd.Kubeconfig())
 	root.AddCommand(cmd.Build(ctx))
 
-	create := cmd.Create(ctx)
-	create.Hidden = true
-	root.AddCommand(create)
+	createCmd := cmd.Create(ctx)
+	createCmd.Hidden = true
+	root.AddCommand(createCmd)
 
-	list := cmd.List(ctx)
-	list.Hidden = true
-	root.AddCommand(cmd.List(ctx))
+	listCmd := cmd.List(ctx)
+	listCmd.Hidden = true
+	root.AddCommand(listCmd)
 
-	delete := cmd.Delete(ctx)
-	delete.Hidden = true
-	root.AddCommand(cmd.Delete(ctx))
+	deleteCmd := cmd.Delete(ctx)
+	deleteCmd.Hidden = true
+	root.AddCommand(deleteCmd)
 
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(pipeline.Pipeline(ctx))

@@ -39,6 +39,7 @@ const (
 	clearLine  = esc + "2K"
 )
 
+// OktetoSelector represents the selector
 type OktetoSelector struct {
 	Label string
 	Items []SelectorItem
@@ -47,10 +48,11 @@ type OktetoSelector struct {
 	Templates *promptui.SelectTemplates
 	Keys      *promptui.SelectKeys
 
-	OktetoTemplates *OktetoTemplates
+	OktetoTemplates *oktetoTemplates
 }
 
-type OktetoTemplates struct {
+//oktetoTemplates stores the templates to render the text
+type oktetoTemplates struct {
 	FuncMap   template.FuncMap
 	label     *template.Template
 	active    *template.Template
@@ -61,6 +63,7 @@ type OktetoTemplates struct {
 	extraInfo *template.Template
 }
 
+//SelectorItem represents a selectable item on a selector
 type SelectorItem struct {
 	Name      string
 	Label     string
@@ -71,10 +74,11 @@ type SelectorItem struct {
 	Registry  string
 }
 
+//AskForOptionsOkteto given some options ask the user to select one
 func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label string) (string, bool, error) {
 	selectedTemplate := getSelectedTemplate()
-	activeTemplate := getActiveTemplate(options)
-	inactiveTemplate := getInactiveTemplate(options)
+	activeTemplate := getActiveTemplate()
+	inactiveTemplate := getInactiveTemplate()
 
 	prompt := OktetoSelector{
 		Label: label,
@@ -108,6 +112,7 @@ func isValidOption(options []SelectorItem, optionSelected string) bool {
 	return false
 }
 
+//Run runs the selector prompt
 func (s *OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 	startPosition, err := s.getInitialPosition(ctx)
 	if err != nil {
@@ -168,7 +173,7 @@ func (s *OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 			for prevItemIndex > -1 {
 				l.Prev()
 				if !s.Items[prevItemIndex].Enable {
-					prevItemIndex -= 1
+					prevItemIndex--
 					continue
 				}
 				foundNewActive = true
@@ -283,7 +288,7 @@ func (s *OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 func (s *OktetoSelector) prepareTemplates() error {
 	tpls := s.OktetoTemplates
 	if tpls == nil {
-		tpls = &OktetoTemplates{}
+		tpls = &oktetoTemplates{}
 	}
 
 	tpls.FuncMap = s.Templates.FuncMap
@@ -380,7 +385,7 @@ func (s OktetoSelector) getInitialPosition(ctx context.Context) (int, error) {
 		if strings.Contains(item.Name, oCtx) {
 			return idx, nil
 		}
-		idx += 1
+		idx++
 	}
 	return -1, nil
 }
@@ -462,14 +467,14 @@ func getSelectedTemplate() string {
 	return result
 }
 
-func getActiveTemplate(options []SelectorItem) string {
+func getActiveTemplate() string {
 	whitespaces := ""
 	result := fmt.Sprintf("%s%s {{ .Label }}", whitespaces, promptui.IconSelect)
 	result = changeColorForWindows(result)
 	return result
 }
 
-func getInactiveTemplate(options []SelectorItem) string {
+func getInactiveTemplate() string {
 	whitespaces := strings.Repeat(" ", 2)
 	result := fmt.Sprintf("{{if .Enable}}%s{{ .Label }}{{else}}%s{{ .Label }}{{end}}", whitespaces, whitespaces)
 	result = changeColorForWindows(result)

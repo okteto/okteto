@@ -40,7 +40,7 @@ func (c *FakeNamespaceClient) List(_ context.Context) ([]types.Namespace, error)
 }
 
 // AddNamespaceMembers adds members to a namespace
-func (c *FakeNamespaceClient) AddMembers(_ context.Context, namespace string, members []string) error {
+func (c *FakeNamespaceClient) AddMembers(_ context.Context, _ string, _ []string) error {
 	return c.err
 }
 

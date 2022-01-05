@@ -67,8 +67,11 @@ func Test_createContext(t *testing.T) {
 			user: &types.User{
 				Token: "test",
 			},
-			kubeconfigCtx: test.KubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
-			expectedErr:   false,
+			kubeconfigCtx: test.KubeconfigFields{
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: ""},
+			expectedErr: false,
 		},
 		{
 			name: "change namespace forbidden",
@@ -87,8 +90,12 @@ func Test_createContext(t *testing.T) {
 			user: &types.User{
 				Token: "test",
 			},
-			kubeconfigCtx: test.KubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
-			expectedErr:   true,
+			kubeconfigCtx: test.KubeconfigFields{
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: "",
+			},
+			expectedErr: true,
 		},
 		{
 			name: "transform k8s to url and create okteto context -> namespace with label",
@@ -193,8 +200,12 @@ func Test_createContext(t *testing.T) {
 				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
-			kubeconfigCtx: test.KubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
-			expectedErr:   false,
+			kubeconfigCtx: test.KubeconfigFields{
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: "",
+			},
+			expectedErr: false,
 		},
 		{
 			name: "change to available okteto context",
@@ -213,8 +224,13 @@ func Test_createContext(t *testing.T) {
 				IsOkteto: true,
 				Context:  "cloud.okteto.com",
 			},
-			kubeconfigCtx: test.KubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
-			expectedErr:   false,
+			kubeconfigCtx: test.KubeconfigFields{
+
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: "",
+			},
+			expectedErr: false,
 		},
 		{
 			name: "change to available okteto context",
@@ -233,8 +249,12 @@ func Test_createContext(t *testing.T) {
 				IsOkteto: true,
 				Context:  "https://cloud.okteto.com",
 			},
-			kubeconfigCtx: test.KubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
-			expectedErr:   false,
+			kubeconfigCtx: test.KubeconfigFields{
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: "",
+			},
+			expectedErr: false,
 		},
 		{
 			name: "empty ctx create url",
@@ -249,8 +269,12 @@ func Test_createContext(t *testing.T) {
 			user: &types.User{
 				Token: "test",
 			},
-			kubeconfigCtx: test.KubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
-			expectedErr:   false,
+			kubeconfigCtx: test.KubeconfigFields{
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: "",
+			},
+			expectedErr: false,
 		},
 	}
 
