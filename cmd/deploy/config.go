@@ -23,17 +23,21 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-type kubeConfig struct{}
+//KubeConfig refers to a KubeConfig object
+type KubeConfig struct{}
 
-func NewKubeConfig() *kubeConfig {
-	return &kubeConfig{}
+//NewKubeConfig creates a new kubeconfig
+func NewKubeConfig() *KubeConfig {
+	return &KubeConfig{}
 }
 
-func (k *kubeConfig) Read() (*rest.Config, error) {
+//Read reads a kubeconfig from an apiConfig
+func (k *KubeConfig) Read() (*rest.Config, error) {
 	return clientcmd.BuildConfigFromKubeconfigGetter("", k.getCMDAPIConfig)
 }
 
-func (k *kubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) error {
+//Modify modifies the kubeconfig object to inject the proxy
+func (k *KubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) error {
 	clientCfg, err := k.getCMDAPIConfig()
 	if err != nil {
 		return err
@@ -62,7 +66,7 @@ func (k *kubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) e
 	return nil
 }
 
-func (*kubeConfig) getCMDAPIConfig() (*clientcmdapi.Config, error) {
+func (*KubeConfig) getCMDAPIConfig() (*clientcmdapi.Config, error) {
 	if okteto.Context().Cfg == nil {
 		return nil, fmt.Errorf("okteto context not initialized")
 	}

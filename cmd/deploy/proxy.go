@@ -33,12 +33,14 @@ type proxyConfig struct {
 	token string
 }
 
-type proxy struct {
+//Proxy refers to a proxy configuration
+type Proxy struct {
 	s           *http.Server
 	proxyConfig proxyConfig
 }
 
-func NewProxy(name string, kubeconfig *kubeConfig) (*proxy, error) {
+//NewProxy creates a new proxy
+func NewProxy(name string, kubeconfig *KubeConfig) (*Proxy, error) {
 	// Look for a free local port to start the proxy
 	port, err := model.GetAvailablePort("localhost")
 	if err != nil {
@@ -83,7 +85,7 @@ func NewProxy(name string, kubeconfig *kubeConfig) (*proxy, error) {
 			MaxVersion: tls.VersionTLS13,
 		},
 	}
-	return &proxy{
+	return &Proxy{
 		proxyConfig: proxyConfig{
 			port:  port,
 			token: sessionToken,
@@ -93,7 +95,7 @@ func NewProxy(name string, kubeconfig *kubeConfig) (*proxy, error) {
 }
 
 // Start starts the proxy server
-func (p *proxy) Start() {
+func (p *Proxy) Start() {
 	go func() {
 		sigint := make(chan os.Signal, 1)
 		signal.Notify(sigint, syscall.SIGTERM, syscall.SIGINT)
@@ -115,7 +117,7 @@ func (p *proxy) Start() {
 }
 
 // Shutdown stops the proxy server
-func (p *proxy) Shutdown(ctx context.Context) error {
+func (p *Proxy) Shutdown(ctx context.Context) error {
 	if p.s == nil {
 		return nil
 	}
@@ -124,11 +126,11 @@ func (p *proxy) Shutdown(ctx context.Context) error {
 }
 
 // GetPort retrieves the port configured for the proxy
-func (p *proxy) GetPort() int {
+func (p *Proxy) GetPort() int {
 	return p.proxyConfig.port
 }
 
 // GetToken Retrieves the token configured for the proxy
-func (p *proxy) GetToken() string {
+func (p *Proxy) GetToken() string {
 	return p.proxyConfig.token
 }
