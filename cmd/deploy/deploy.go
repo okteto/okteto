@@ -243,15 +243,20 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 						continue
 					}
 					log.Debugf("got digest from registry: %s", digest)
-					// image := fmt.Sprintf("%s/%s", okteto.Context().Registry, digest)
-
+					setManifestEnvVars(service, okteto.Context().Registry, digest)
 				}
 			}
 			if len(buildErrs) != 0 {
 				return fmt.Errorf("build failed for the services defined at manifest: %v", buildErrs)
 			}
-
 		}
+
+		var parsedCommands []string
+		for _, command := range opts.Manifest.Deploy.Commands {
+			parsedCommands = append(parsedCommands, expandManifestEnvVars(command))
+		}
+		opts.Manifest.Deploy.Commands = parsedCommands
+
 	} else {
 		// Read manifest file with the commands to be executed
 		opts.Manifest, err = dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
@@ -288,6 +293,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	)
 
 	for _, command := range opts.Manifest.Deploy.Commands {
+		log.Debugf("COMMAND %s", command)
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			log.Infof("error executing command '%s': %s", command, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command, err.Error())
@@ -301,6 +307,21 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	}
 
 	return nil
+}
+
+func setManifestEnvVars(service, registry, digest string) {
+	digestRepoAndTag := strings.SplitN(digest, "@", 2)
+
+	os.Setenv(fmt.Sprintf("build.%s.registry", service), okteto.Context().Registry)
+	os.Setenv(fmt.Sprintf("build.%s.repository", service), digestRepoAndTag[0])
+	os.Setenv(fmt.Sprintf("build.%s.tag", service), digestRepoAndTag[1])
+	os.Setenv(fmt.Sprintf("build.%s.image", service), fmt.Sprintf("%s/%s@%s", okteto.Context().Registry, digestRepoAndTag[0], digestRepoAndTag[1]))
+
+	log.Debug("manifest env vars set")
+}
+
+func expandManifestEnvVars(manifest string) string {
+	return os.ExpandEnv(manifest)
 }
 
 func (dc *deployCommand) cleanUp(ctx context.Context) {
