@@ -16,6 +16,7 @@ package registry
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -25,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/opencontainers/go-digest"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -38,6 +40,40 @@ type ImageInfo struct {
 
 type ConfigInfo struct {
 	ExposedPorts *map[string]*interface{} `json:"ExposedPorts"`
+}
+
+// GetDigest returns the pull digest for the image at the registry
+func GetDigest(registry, repository, tag string) (digest.Digest, error) {
+	u, err := url.Parse(okteto.Context().Registry)
+	if err != nil {
+		return "", fmt.Errorf("error parsing registry url: %s", err.Error())
+	}
+
+	c, err := NewRegistryClient(u.String(), okteto.Context().UserID, okteto.Context().Token)
+	if err != nil {
+		return "", fmt.Errorf("error creating registry client: %s", err.Error())
+	}
+
+	urlManifest, err := url.Parse(fmt.Sprintf("https://%s/v2/%s/manifests/%s", registry, repository, tag))
+	if err != nil {
+		return "", fmt.Errorf("error parsing registry url: %s", err.Error())
+	}
+
+	req, err := http.NewRequest("HEAD", urlManifest.String(), nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	resp, err := c.Client.Do(req)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return "", err
+	}
+
+	return digest.Parse(resp.Header.Get("Docker-Content-Digest"))
+
 }
 
 // GetImageTagWithDigest returns the image tag digest
