@@ -233,17 +233,21 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 				}
 
 				if okteto.IsOkteto() && registry.IsOktetoRegistry(opts.Tag) {
-					opts.Tag = registry.ExpandOktetoDevRegistry(opts.Tag)
-					opts.Tag = registry.ExpandOktetoGlobalRegistry(opts.Tag)
 
-					digest, err := registry.GetImageTagWithDigest(opts.Tag)
+					opts.Tag = registry.ExpandOktetoDevRegistry(opts.Tag)
+
+					splittedRegistryImageTag := strings.SplitN(opts.Tag, "/", 3)
+					splittedImageTag := strings.SplitN(splittedRegistryImageTag[2], ":", 2)
+					repository := fmt.Sprintf("%s/%s", splittedRegistryImageTag[1], splittedImageTag[0])
+
+					digest, err := registry.GetDigest(okteto.Context().Registry, repository, splittedImageTag[1])
 					if err != nil {
 						err = registry.GetErrorMessage(err, opts.Tag)
 						buildErrs = append(buildErrs, err.Error())
 						continue
 					}
-					log.Debugf("got digest from registry: %s", digest)
-					setManifestEnvVars(service, okteto.Context().Registry, digest)
+					log.Debugf("got digest from registry: %s", digest.String())
+					setManifestEnvVars(service, okteto.Context().Registry, repository, digest.String())
 				}
 			}
 			if len(buildErrs) != 0 {
@@ -309,13 +313,11 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	return nil
 }
 
-func setManifestEnvVars(service, registry, digest string) {
-	digestRepoAndTag := strings.SplitN(digest, "@", 2)
-
+func setManifestEnvVars(service, registry, repository, digest string) {
 	os.Setenv(fmt.Sprintf("build.%s.registry", service), okteto.Context().Registry)
-	os.Setenv(fmt.Sprintf("build.%s.repository", service), digestRepoAndTag[0])
-	os.Setenv(fmt.Sprintf("build.%s.tag", service), digestRepoAndTag[1])
-	os.Setenv(fmt.Sprintf("build.%s.image", service), fmt.Sprintf("%s/%s@%s", okteto.Context().Registry, digestRepoAndTag[0], digestRepoAndTag[1]))
+	os.Setenv(fmt.Sprintf("build.%s.repository", service), repository)
+	os.Setenv(fmt.Sprintf("build.%s.tag", service), digest)
+	os.Setenv(fmt.Sprintf("build.%s.image", service), fmt.Sprintf("%s/%s@%s", okteto.Context().Registry, repository, digest))
 
 	log.Debug("manifest env vars set")
 }
