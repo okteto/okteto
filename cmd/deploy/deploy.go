@@ -232,16 +232,15 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 					continue
 				}
 
-				if okteto.IsOkteto() && registry.IsOktetoRegistry(opts.Tag) {
-					repoNameAndDigest, err := registry.GetImageTagWithDigest(opts.Tag)
-					if err != nil {
-						err = registry.GetErrorMessage(err, opts.Tag)
-						buildErrs = append(buildErrs, err.Error())
-						continue
-					}
-					log.Debugf("got digest from registry: %s", repoNameAndDigest)
-					setManifestEnvVars(service, okteto.Context().Registry, repoNameAndDigest)
+				repoNameAndDigest, err := registry.GetImageTagWithDigest(opts.Tag)
+				if err != nil {
+					err = registry.GetErrorMessage(err, opts.Tag)
+					buildErrs = append(buildErrs, err.Error())
+					continue
 				}
+				log.Debugf("got digest from registry: %s", repoNameAndDigest)
+
+				setManifestEnvVars(service, okteto.Context().Registry, repoNameAndDigest)
 			}
 			if len(buildErrs) != 0 {
 				return fmt.Errorf("build failed for the services defined at manifest: %v", buildErrs)
