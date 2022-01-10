@@ -233,21 +233,14 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 				}
 
 				if okteto.IsOkteto() && registry.IsOktetoRegistry(opts.Tag) {
-
-					opts.Tag = registry.ExpandOktetoDevRegistry(opts.Tag)
-
-					splittedRegistryImageTag := strings.SplitN(opts.Tag, "/", 3)
-					splittedImageTag := strings.SplitN(splittedRegistryImageTag[2], ":", 2)
-					repository := fmt.Sprintf("%s/%s", splittedRegistryImageTag[1], splittedImageTag[0])
-
-					digest, err := registry.GetDigest(okteto.Context().Registry, repository, splittedImageTag[1])
+					repoNameAndDigest, err := registry.GetImageTagWithDigest(opts.Tag)
 					if err != nil {
 						err = registry.GetErrorMessage(err, opts.Tag)
 						buildErrs = append(buildErrs, err.Error())
 						continue
 					}
-					log.Debugf("got digest from registry: %s", digest.String())
-					setManifestEnvVars(service, okteto.Context().Registry, repository, digest.String())
+					log.Debugf("got digest from registry: %s", repoNameAndDigest)
+					setManifestEnvVars(service, okteto.Context().Registry, repoNameAndDigest)
 				}
 			}
 			if len(buildErrs) != 0 {
@@ -313,13 +306,18 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	return nil
 }
 
-func setManifestEnvVars(service, registry, repository, digest string) {
+func setManifestEnvVars(service, registry, repoNameAndDigest string) {
 	os.Setenv(fmt.Sprintf("build.%s.registry", service), okteto.Context().Registry)
-	os.Setenv(fmt.Sprintf("build.%s.repository", service), repository)
-	os.Setenv(fmt.Sprintf("build.%s.tag", service), digest)
-	os.Setenv(fmt.Sprintf("build.%s.image", service), fmt.Sprintf("%s/%s@%s", okteto.Context().Registry, repository, digest))
+	os.Setenv(fmt.Sprintf("build.%s.image", service), fmt.Sprintf("%s/%s", okteto.Context().Registry, repoNameAndDigest))
 
-	log.Debug("manifest env vars set")
+	splitRepoAndDigest := strings.SplitN(repoNameAndDigest, "@", 2)
+	if len(splitRepoAndDigest) == 2 {
+		os.Setenv(fmt.Sprintf("build.%s.repository", service), splitRepoAndDigest[0])
+		os.Setenv(fmt.Sprintf("build.%s.tag", service), splitRepoAndDigest[1])
+		log.Debug("manifest env vars set")
+	} else {
+		log.Debug("repository and digest not set as env variable")
+	}
 }
 
 func expandManifestEnvVars(manifest string) string {

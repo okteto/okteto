@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/heroku/docker-registry-client/registry"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -42,19 +43,9 @@ type ConfigInfo struct {
 	ExposedPorts *map[string]*interface{} `json:"ExposedPorts"`
 }
 
-// GetDigest returns the pull digest for the image at the registry
-func GetDigest(registry, repository, tag string) (digest.Digest, error) {
-	u, err := url.Parse(okteto.Context().Registry)
-	if err != nil {
-		return "", fmt.Errorf("error parsing registry url: %s", err.Error())
-	}
-
-	c, err := NewRegistryClient(u.String(), okteto.Context().UserID, okteto.Context().Token)
-	if err != nil {
-		return "", fmt.Errorf("error creating registry client: %s", err.Error())
-	}
-
-	urlManifest, err := url.Parse(fmt.Sprintf("https://%s/v2/%s/manifests/%s", registry, repository, tag))
+// manifestDigest returns the pull digest for the image at the registry
+func manifestDigest(c *registry.Registry, repository, tag string) (digest.Digest, error) {
+	urlManifest, err := url.Parse(fmt.Sprintf("https://%s/v2/%s/manifests/%s", okteto.Context().Registry, repository, tag))
 	if err != nil {
 		return "", fmt.Errorf("error parsing registry url: %s", err.Error())
 	}
@@ -73,7 +64,6 @@ func GetDigest(registry, repository, tag string) (digest.Digest, error) {
 	}
 
 	return digest.Parse(resp.Header.Get("Docker-Content-Digest"))
-
 }
 
 // GetImageTagWithDigest returns the image tag digest
@@ -106,7 +96,7 @@ func GetImageTagWithDigest(imageTag string) (string, error) {
 		return imageTag, nil
 	}
 	repoName := repoURL[index+1:]
-	digest, err := c.ManifestDigest(repoName, tag)
+	digest, err := manifestDigest(c, repoName, tag)
 	if err != nil {
 		if strings.Contains(err.Error(), "status=404") {
 			return "", errors.ErrNotFound
