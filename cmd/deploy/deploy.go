@@ -219,6 +219,10 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 			var buildErrs []string
 
 			for service, buildInfo := range opts.Manifest.Build {
+				if okteto.Context().IsOkteto && buildInfo.Image == "" {
+					buildInfo.Image = fmt.Sprintf("%s/%s-%s:%s", okteto.DevRegistry, opts.Name, service, "okteto")
+				}
+
 				buildOptions := build.BuildOptions{}
 				opts := build.OptsFromManifest(service, buildInfo, buildOptions)
 
