@@ -289,7 +289,6 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	)
 
 	for _, command := range opts.Manifest.Deploy.Commands {
-		log.Debugf("COMMAND %s", command)
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			log.Infof("error executing command '%s': %s", command, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command, err.Error())
@@ -307,14 +306,15 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 func setManifestEnvVars(service, registry, repoNameAndDigest string) {
 	os.Setenv(fmt.Sprintf("build.%s.registry", service), okteto.Context().Registry)
-	os.Setenv(fmt.Sprintf("build.%s.image", service), fmt.Sprintf("%s/%s", okteto.Context().Registry, repoNameAndDigest))
 
 	splitRepoAndDigest := strings.SplitN(repoNameAndDigest, "@", 2)
 	if len(splitRepoAndDigest) == 2 {
+		os.Setenv(fmt.Sprintf("build.%s.image", service), fmt.Sprintf("%s/%s", okteto.Context().Registry, repoNameAndDigest))
 		os.Setenv(fmt.Sprintf("build.%s.repository", service), splitRepoAndDigest[0])
 		os.Setenv(fmt.Sprintf("build.%s.tag", service), splitRepoAndDigest[1])
 		log.Debug("manifest env vars set")
 	} else {
+		os.Setenv(fmt.Sprintf("build.%s.image", service), repoNameAndDigest)
 		log.Debug("repository and digest not set as env variable")
 	}
 }
