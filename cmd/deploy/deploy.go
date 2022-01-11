@@ -305,11 +305,11 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 }
 
 func setManifestEnvVars(service, registry, repoNameAndDigest string) {
-	os.Setenv(fmt.Sprintf("build.%s.registry", service), okteto.Context().Registry)
+	os.Setenv(fmt.Sprintf("build.%s.registry", service), registry)
 
 	splitRepoAndDigest := strings.SplitN(repoNameAndDigest, "@", 2)
 	if len(splitRepoAndDigest) == 2 {
-		os.Setenv(fmt.Sprintf("build.%s.image", service), fmt.Sprintf("%s/%s", okteto.Context().Registry, repoNameAndDigest))
+		os.Setenv(fmt.Sprintf("build.%s.image", service), fmt.Sprintf("%s/%s", registry, repoNameAndDigest))
 		os.Setenv(fmt.Sprintf("build.%s.repository", service), splitRepoAndDigest[0])
 		os.Setenv(fmt.Sprintf("build.%s.tag", service), splitRepoAndDigest[1])
 		log.Debug("manifest env vars set")
