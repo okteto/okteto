@@ -32,6 +32,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -54,6 +55,7 @@ type Options struct {
 	Timeout      time.Duration
 	OutputMode   string
 	Manifest     *model.Manifest
+	Build        bool
 }
 
 type kubeConfigHandler interface {
@@ -187,6 +189,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "plain", "show plain/json deploy output")
+	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the app")
+	cmd.Flags().MarkHidden("build")
 
 	return cmd
 }
@@ -197,13 +201,52 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		log.Infof("could not create temporal kubeconfig %s", err)
 		return err
 	}
-
 	var err error
-	// Read manifest file with the commands to be executed
-	opts.Manifest, err = dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
-	if err != nil {
-		log.Infof("could not find manifest file to be executed: %s", err)
-		return err
+	if opts.Build && contextCMD.IsManifestV2Enabled() {
+		opts.Manifest, err = contextCMD.GetManifestV2(cwd, opts.ManifestPath)
+		if err != nil {
+			return err
+		}
+		log.Debug("found okteto manifest")
+
+		if opts.Manifest.Deploy == nil {
+			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
+		}
+
+		if opts.Manifest.Build != nil {
+			log.Debug("running build from manifest definition")
+
+			var buildErrs []string
+
+			for service, buildInfo := range opts.Manifest.Build {
+				if okteto.Context().IsOkteto && buildInfo.Image == "" {
+					buildInfo.Image = fmt.Sprintf("%s/%s-%s:%s", okteto.DevRegistry, opts.Name, service, "okteto")
+				}
+
+				buildOptions := build.BuildOptions{}
+				opts := build.OptsFromManifest(service, buildInfo, buildOptions)
+
+				if err := build.Run(ctx, opts); err != nil {
+					buildErrs = append(buildErrs, err.Error())
+					continue
+				}
+			}
+			if len(buildErrs) != 0 {
+				return fmt.Errorf("build failed for the services defined at manifest: %v", buildErrs)
+			}
+
+		}
+	} else {
+		// Read manifest file with the commands to be executed
+		opts.Manifest, err = dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
+		if err != nil {
+			log.Infof("could not find manifest file to be executed: %s", err)
+			return err
+		}
+
+		if opts.Manifest.Deploy == nil {
+			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
+		}
 	}
 	opts.Manifest.Context = okteto.Context().Name
 	opts.Manifest.Namespace = okteto.Context().Namespace
