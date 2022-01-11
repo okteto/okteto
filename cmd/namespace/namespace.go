@@ -45,6 +45,7 @@ func NewNamespaceCommand() (*NamespaceCommand, error) {
 
 // Namespace fetch credentials for a cluster namespace
 func Namespace(ctx context.Context) *cobra.Command {
+	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "namespace [name]",
 		Short:   "Configure the current namespace of the okteto context",
@@ -56,7 +57,9 @@ func Namespace(ctx context.Context) *cobra.Command {
 			if len(args) > 0 {
 				namespace = args[0]
 			}
-
+			if options.personal {
+				namespace = okteto.Context().PersonalNamespace
+			}
 			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
 			}
@@ -74,6 +77,8 @@ func Namespace(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
+	cmd.Flags().BoolVarP(&options.personal, "personal", "", false, "Load personal account")
+
 	cmd.AddCommand(Use(ctx))
 	cmd.AddCommand(List(ctx))
 	cmd.AddCommand(Create(ctx))
