@@ -83,7 +83,6 @@ func GetImageTagWithDigest(imageTag string) (string, error) {
 		return imageTag, nil
 	}
 
-	var err error
 	expandedTag := imageTag
 	expandedTag = ExpandOktetoDevRegistry(expandedTag)
 	expandedTag = ExpandOktetoGlobalRegistry(expandedTag)
