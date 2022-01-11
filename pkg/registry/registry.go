@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/heroku/docker-registry-client/registry"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -43,8 +42,20 @@ type ConfigInfo struct {
 	ExposedPorts *map[string]*interface{} `json:"ExposedPorts"`
 }
 
-// manifestDigest returns the pull digest for the image at the registry
-func manifestDigest(c *registry.Registry, repository, tag string) (digest.Digest, error) {
+// headManifestDigest returns the pull digest for the image at the registry
+func headManifestDigest(repository, tag string) (digest.Digest, error) {
+	u, err := url.Parse(okteto.Context().Registry)
+	if err != nil {
+		log.Infof("error parsing registry url: %s", err.Error())
+		return "", nil
+	}
+	u.Scheme = "https"
+	c, err := NewRegistryClient(u.String(), okteto.Context().UserID, okteto.Context().Token)
+	if err != nil {
+		log.Infof("error creating registry client: %s", err.Error())
+		return "", nil
+	}
+
 	urlManifest, err := url.Parse(fmt.Sprintf("https://%s/v2/%s/manifests/%s", okteto.Context().Registry, repository, tag))
 	if err != nil {
 		return "", fmt.Errorf("error parsing registry url: %s", err.Error())
@@ -76,18 +87,6 @@ func GetImageTagWithDigest(imageTag string) (string, error) {
 	expandedTag := imageTag
 	expandedTag = ExpandOktetoDevRegistry(expandedTag)
 	expandedTag = ExpandOktetoGlobalRegistry(expandedTag)
-	username := okteto.Context().UserID
-	u, err := url.Parse(okteto.Context().Registry)
-	if err != nil {
-		log.Infof("error parsing registry url: %s", err.Error())
-		return imageTag, nil
-	}
-	u.Scheme = "https"
-	c, err := NewRegistryClient(u.String(), username, okteto.Context().Token)
-	if err != nil {
-		log.Infof("error creating registry client: %s", err.Error())
-		return imageTag, nil
-	}
 
 	repoURL, tag := GetRepoNameAndTag(expandedTag)
 	index := strings.IndexRune(repoURL, '/')
@@ -96,7 +95,7 @@ func GetImageTagWithDigest(imageTag string) (string, error) {
 		return imageTag, nil
 	}
 	repoName := repoURL[index+1:]
-	digest, err := manifestDigest(c, repoName, tag)
+	digest, err := headManifestDigest(repoName, tag)
 	if err != nil {
 		if strings.Contains(err.Error(), "status=404") {
 			return "", errors.ErrNotFound
