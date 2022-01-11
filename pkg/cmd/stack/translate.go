@@ -70,6 +70,9 @@ func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 		for i := len(svc.EnvFiles) - 1; i >= 0; i-- {
 			envFilepath := svc.EnvFiles[i]
 			if err := translateServiceEnvFile(ctx, svc, svcName, envFilepath); err != nil {
+				if envFilepath == ".env" {
+					continue
+				}
 				return err
 			}
 		}
