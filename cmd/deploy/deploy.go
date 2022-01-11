@@ -232,15 +232,25 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 					continue
 				}
 
-				repoNameAndDigest, err := registry.GetImageTagWithDigest(opts.Tag)
+				repoAndDigest, err := registry.GetImageTagWithDigest(opts.Tag)
 				if err != nil {
 					err = registry.GetErrorMessage(err, opts.Tag)
 					buildErrs = append(buildErrs, err.Error())
 					continue
 				}
-				log.Debugf("got digest from registry: %s", repoNameAndDigest)
+				log.Debugf("got digest from registry: %s", repoAndDigest)
 
-				setManifestEnvVars(service, okteto.Context().Registry, repoNameAndDigest)
+				var tag, repository, image string
+				indx := strings.IndexRune(repoAndDigest, '@')
+				if indx != -1 {
+					repository = repoAndDigest[:indx+1]
+					tag = repoAndDigest[indx+1:]
+					image = fmt.Sprintf("%s/%s", okteto.Context().Registry, repoAndDigest)
+				} else {
+					image = opts.Tag
+				}
+
+				setManifestEnvVars(service, okteto.Context().Registry, repository, image, tag)
 			}
 			if len(buildErrs) != 0 {
 				return fmt.Errorf("build failed for the services defined at manifest: %v", buildErrs)
@@ -304,19 +314,13 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	return nil
 }
 
-func setManifestEnvVars(service, registry, repoNameAndDigest string) {
+func setManifestEnvVars(service, registry, repository, image, tag string) {
 	os.Setenv(fmt.Sprintf("build.%s.registry", service), registry)
+	os.Setenv(fmt.Sprintf("build.%s.repository", service), repository)
+	os.Setenv(fmt.Sprintf("build.%s.image", service), image)
+	os.Setenv(fmt.Sprintf("build.%s.tag", service), tag)
 
-	splitRepoAndDigest := strings.SplitN(repoNameAndDigest, "@", 2)
-	if len(splitRepoAndDigest) == 2 {
-		os.Setenv(fmt.Sprintf("build.%s.image", service), fmt.Sprintf("%s/%s", registry, repoNameAndDigest))
-		os.Setenv(fmt.Sprintf("build.%s.repository", service), splitRepoAndDigest[0])
-		os.Setenv(fmt.Sprintf("build.%s.tag", service), splitRepoAndDigest[1])
-		log.Debug("manifest env vars set")
-	} else {
-		os.Setenv(fmt.Sprintf("build.%s.image", service), repoNameAndDigest)
-		log.Debug("repository and digest not set as env variable")
-	}
+	log.Debug("manifest env vars set")
 }
 
 func expandManifestEnvVars(manifest string) string {
