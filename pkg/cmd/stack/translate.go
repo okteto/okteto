@@ -18,6 +18,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -70,7 +71,8 @@ func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 		for i := len(svc.EnvFiles) - 1; i >= 0; i-- {
 			envFilepath := svc.EnvFiles[i]
 			if err := translateServiceEnvFile(ctx, svc, svcName, envFilepath); err != nil {
-				if envFilepath == ".env" {
+				if filepath.Base(envFilepath) == ".env" {
+					log.Warning("Skipping '.env' file from %s service", svcName)
 					continue
 				}
 				return err
