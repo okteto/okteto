@@ -30,18 +30,27 @@ const (
 	newNamespaceOption = "Create new namespace"
 )
 
-// Namespace fetch credentials for a cluster namespace
+//UseOptions are the options for the use command
+type UseOptions struct {
+	personal bool
+}
+
+// Use sets the namespace of current context
 func Use(ctx context.Context) *cobra.Command {
+	options := &UseOptions{}
 	cmd := &cobra.Command{
 		Use:     "use [namespace]",
-		Hidden:  true,
-		Short:   "Change current okteto namespace",
+		Short:   "Configure the current namespace of the okteto context",
 		Aliases: []string{"ns"},
 		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#namespace"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			namespace := ""
 			if len(args) > 0 {
 				namespace = args[0]
+			}
+
+			if options.personal {
+				namespace = okteto.Context().PersonalNamespace
 			}
 
 			if !okteto.IsOkteto() {
@@ -56,6 +65,8 @@ func Use(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
+	cmd.Flags().BoolVarP(&options.personal, "personal", "", false, "Load personal account")
+
 	return cmd
 }
 

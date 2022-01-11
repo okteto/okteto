@@ -47,8 +47,7 @@ func NewNamespaceCommand() (*NamespaceCommand, error) {
 func Namespace(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "namespace [name]",
-		Hidden:  true,
-		Short:   "Download k8s credentials for a namespace",
+		Short:   "Configure the current namespace of the okteto context",
 		Aliases: []string{"ns"},
 		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#namespace"),
 		RunE: func(cmd *cobra.Command, args []string) error {
