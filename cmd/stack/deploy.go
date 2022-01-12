@@ -29,13 +29,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func splitComposeFileEnv(value string) []string {
-	if runtime.GOOS == "windows" {
-		return strings.Split(value, ";")
-	}
-	return strings.Split(value, ":")
-}
-
 // Deploy deploys a stack
 func Deploy(ctx context.Context) *cobra.Command {
 	options := &stack.StackDeployOptions{}
@@ -52,11 +45,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			composeEnv, present := os.LookupEnv(model.ComposeFile)
-
-			if len(options.StackPath) == 0 && present {
-				options.StackPath = splitComposeFileEnv(composeEnv)
-			}
+			options.StackPath = loadComposePaths(options.StackPath)
 
 			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPath)
 			if err != nil {
@@ -96,4 +85,19 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (10 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringVarP(&options.Progress, "progress", "", "tty", "show plain/tty build output (default \"tty\")")
 	return cmd
+}
+
+func splitComposeFileEnv(value string) []string {
+	if runtime.GOOS == "windows" {
+		return strings.Split(value, ";")
+	}
+	return strings.Split(value, ":")
+}
+
+func loadComposePaths(paths []string) []string {
+	composeEnv, present := os.LookupEnv(model.ComposeFileEnvVar)
+	if len(paths) == 0 && present {
+		paths = splitComposeFileEnv(composeEnv)
+	}
+	return paths
 }
