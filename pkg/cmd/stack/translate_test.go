@@ -169,6 +169,12 @@ func Test_translateDeployment(t *testing.T) {
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
+				VolumeMounts: []model.StackVolume{
+					{
+						LocalPath:  "/usr",
+						RemotePath: "/app",
+					},
+				},
 				Image:           "image",
 				Replicas:        3,
 				StopGracePeriod: 20,
@@ -254,6 +260,14 @@ func Test_translateDeployment(t *testing.T) {
 	if !reflect.DeepEqual(c.Resources, apiv1.ResourceRequirements{}) {
 		t.Errorf("Wrong container.resources: '%v'", c.Resources)
 	}
+
+	volumeMounts := []apiv1.VolumeMount{
+		{
+			Name:      "volume-mount-0",
+			MountPath: "/app",
+		},
+	}
+	assert.Equal(t, volumeMounts, c.VolumeMounts)
 }
 
 func Test_translateStatefulSet(t *testing.T) {
@@ -288,7 +302,7 @@ func Test_translateStatefulSet(t *testing.T) {
 				CapAdd:  []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 
-				Volumes: []model.StackVolume{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
+				Volumes: []model.StackVolume{{RemotePath: "/volume1"}, {LocalPath: "usr", RemotePath: "/volume2"}},
 				Resources: &model.StackResources{
 					Limits: model.ServiceResources{
 						CPU:    model.Quantity{Value: resource.MustParse("100m")},
@@ -309,14 +323,14 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong statefulset name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                    "value1",
-		"label2":                    "value2",
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
+		"label1":                      "value1",
+		"label2":                      "value2",
+		model.StackNameLabel:          "stackName",
+		model.StackServiceNameLabel:   "svcName",
+		"stack.okteto.com/volume-usr": "true",
 	}
-	if !reflect.DeepEqual(result.Labels, labels) {
-		t.Errorf("Wrong statefulset labels: '%s'", result.Labels)
-	}
+	assert.Equal(t, labels, result.Labels)
+
 	annotations := map[string]string{
 		"annotation1": "value1",
 		"annotation2": "value2",
@@ -334,9 +348,7 @@ func Test_translateStatefulSet(t *testing.T) {
 	if !reflect.DeepEqual(result.Spec.Selector.MatchLabels, selector) {
 		t.Errorf("Wrong spec.selector: '%s'", result.Spec.Selector.MatchLabels)
 	}
-	if !reflect.DeepEqual(result.Spec.Template.Labels, labels) {
-		t.Errorf("Wrong spec.template.labels: '%s'", result.Spec.Template.Labels)
-	}
+	assert.Equal(t, labels, result.Spec.Template.Labels)
 	if !reflect.DeepEqual(result.Spec.Template.Annotations, annotations) {
 		t.Errorf("Wrong spec.template.annotations: '%s'", result.Spec.Template.Annotations)
 	}
@@ -346,17 +358,19 @@ func Test_translateStatefulSet(t *testing.T) {
 	initContainer := apiv1.Container{
 		Name:    fmt.Sprintf("init-%s", "svcName"),
 		Image:   "busybox",
-		Command: []string{"sh", "-c", "chmod 777 /data"},
+		Command: []string{"sh", "-c", "chmod 777 /data && chmod 777 /volumes/*"},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				MountPath: "/data",
 				Name:      pvcName,
 			},
+			{
+				MountPath: "/volumes/usr",
+				Name:      "usr",
+			},
 		},
 	}
-	if !reflect.DeepEqual(result.Spec.Template.Spec.InitContainers[0], initContainer) {
-		t.Errorf("Wrong statefulset init container: '%v' but expected '%v'", result.Spec.Template.Spec.InitContainers[0], initContainer)
-	}
+	assert.Equal(t, initContainer, result.Spec.Template.Spec.InitContainers[0])
 	initVolumeContainer := apiv1.Container{
 		Name:            fmt.Sprintf("init-volume-%s", "svcName"),
 		Image:           "image",
@@ -370,14 +384,13 @@ func Test_translateStatefulSet(t *testing.T) {
 			},
 			{
 				MountPath: "/init-volume-1",
-				Name:      pvcName,
-				SubPath:   "data-1",
+				Name:      "usr",
+				SubPath:   "usr",
 			},
 		},
 	}
-	if !reflect.DeepEqual(result.Spec.Template.Spec.InitContainers[1], initVolumeContainer) {
-		t.Errorf("Wrong statefulset init container: '%v' but expected '%v'", result.Spec.Template.Spec.InitContainers[1], initVolumeContainer)
-	}
+	assert.Equal(t, initVolumeContainer, result.Spec.Template.Spec.InitContainers[1])
+
 	c := result.Spec.Template.Spec.Containers[0]
 	if c.Name != "svcName" {
 		t.Errorf("Wrong statefulset container.name: '%s'", c.Name)
@@ -425,13 +438,11 @@ func Test_translateStatefulSet(t *testing.T) {
 		},
 		{
 			MountPath: "/volume2",
-			Name:      pvcName,
-			SubPath:   "data-1",
+			Name:      "usr",
+			SubPath:   "usr",
 		},
 	}
-	if !reflect.DeepEqual(c.VolumeMounts, volumeMounts) {
-		t.Errorf("Wrong container.volume_mounts: '%v'", c.VolumeMounts)
-	}
+	assert.Equal(t, volumeMounts, c.VolumeMounts)
 
 	vct := result.Spec.VolumeClaimTemplates[0]
 	if vct.Name != pvcName {
@@ -455,6 +466,7 @@ func Test_translateStatefulSet(t *testing.T) {
 	if !reflect.DeepEqual(vct.Spec, volumeClaimTemplateSpec) {
 		t.Errorf("Wrong statefulset volume claim template: '%v'", vct.Spec)
 	}
+
 }
 
 func Test_translateJobWithoutVolumes(t *testing.T) {
