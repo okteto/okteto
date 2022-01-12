@@ -31,8 +31,8 @@ type NamespaceCommand struct {
 	okClient types.OktetoInterface
 }
 
-//NewNamespaceCommand creates a namespace command to
-func NewNamespaceCommand() (*NamespaceCommand, error) {
+//NewCommand creates a namespace command to
+func NewCommand() (*NamespaceCommand, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewNamespaceCommand()
+			nsCmd, err := NewCommand()
 			if err != nil {
 				return err
 			}

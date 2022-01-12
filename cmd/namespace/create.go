@@ -53,11 +53,11 @@ func Create(ctx context.Context) *cobra.Command {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewNamespaceCommand()
+			nsCmd, err := NewCommand()
 			if err != nil {
 				return err
 			}
-			err = nsCmd.CreateNamespace(ctx, options)
+			err = nsCmd.Create(ctx, options)
 			analytics.TrackCreateNamespace(err == nil)
 			return err
 		},
@@ -68,7 +68,7 @@ func Create(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (nc *NamespaceCommand) CreateNamespace(ctx context.Context, opts *CreateOptions) error {
+func (nc *NamespaceCommand) Create(ctx context.Context, opts *CreateOptions) error {
 	oktetoNS, err := nc.okClient.Namespaces().Create(ctx, opts.Namespace)
 	if err != nil {
 		return err

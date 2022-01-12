@@ -42,7 +42,7 @@ func List(ctx context.Context) *cobra.Command {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			nsCmd, err := NewNamespaceCommand()
+			nsCmd, err := NewCommand()
 			if err != nil {
 				return err
 			}

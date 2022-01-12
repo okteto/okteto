@@ -48,11 +48,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 					return err
 				}
 				if create {
-					nsCmd, err := namespace.NewNamespaceCommand()
+					nsCmd, err := namespace.NewCommand()
 					if err != nil {
 						return err
 					}
-					nsCmd.CreateNamespace(ctx, &namespace.CreateOptions{Namespace: s.Namespace})
+					nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: s.Namespace})
 				}
 			}
 
