@@ -72,5 +72,5 @@ You can test the latest features by installing our release candidate. Please not
 #### Linux/Mac
 
 ```console
-curl https://get.beta.okteto.com -sSfL | sh
+curl https://beta.okteto.com -sSfL | sh
 ```
