@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
@@ -66,7 +65,7 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if isManifestV2Enabled() {
+			if contextCMD.IsManifestV2Enabled() {
 				cwd, err := os.Getwd()
 				if err != nil {
 					return err
@@ -109,14 +108,6 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "", "", "namespace against which the image will be consumed. Default is the one defined at okteto context or okteto manifest")
 	return cmd
-}
-
-func isManifestV2Enabled() bool {
-	r, err := strconv.ParseBool(os.Getenv("OKTETO_ENABLE_MANIFEST_V2"))
-	if err != nil {
-		return false
-	}
-	return r
 }
 
 func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) error {

@@ -19,6 +19,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -428,4 +429,12 @@ func GetManifestV2(basePath, file string) (*model.Manifest, error) {
 		return model.Get(manifestPath)
 	}
 	return nil, errors.ErrManifestNotFound
+}
+
+func IsManifestV2Enabled() bool {
+	r, err := strconv.ParseBool(os.Getenv("OKTETO_ENABLE_MANIFEST_V2"))
+	if err != nil {
+		return false
+	}
+	return r
 }

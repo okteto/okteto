@@ -18,6 +18,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -70,6 +71,10 @@ func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 		for i := len(svc.EnvFiles) - 1; i >= 0; i-- {
 			envFilepath := svc.EnvFiles[i]
 			if err := translateServiceEnvFile(ctx, svc, svcName, envFilepath); err != nil {
+				if filepath.Base(envFilepath) == ".env" {
+					log.Warning("Skipping '.env' file from %s service", svcName)
+					continue
+				}
 				return err
 			}
 		}
@@ -190,10 +195,6 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 	for name, svc := range s.Services {
 		notSkippableVolumeMounts := getAccessibleVolumeMounts(s, name)
 		if len(notSkippableVolumeMounts) != 0 {
-			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
-				hasAddedAnyVolumeMounts = true
-				log.Information("Running your build in %s...", okteto.Context().Builder)
-			}
 			fromImage := svc.Image
 			if okteto.IsOkteto() {
 				fromImage = registry.ExpandOktetoDevRegistry(svc.Image)
@@ -207,6 +208,17 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 			svc.Build = svcBuild
 			if okteto.IsOkteto() && !registry.IsOktetoRegistry(svc.Image) {
 				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto-with-volume-mounts", s.Name, name)
+			}
+			if !options.ForceBuild {
+				if _, err := registry.GetImageTagWithDigest(svc.Image); err != errors.ErrNotFound {
+					s.Services[name] = svc
+					continue
+				}
+				log.Infof("image '%s' not found, building it", svc.Image)
+			}
+			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
+				hasAddedAnyVolumeMounts = true
+				log.Information("Running your build in %s...", okteto.Context().Builder)
 			}
 			log.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)

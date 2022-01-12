@@ -58,7 +58,7 @@ func CreateCMD() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
 		Use:   "create [cluster-url]",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#create"),
+		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#create"),
 		Short: "Add a context",
 		Long: `Add a context
 
