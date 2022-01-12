@@ -217,6 +217,5 @@ replace github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402
 
 replace github.com/moby/buildkit => github.com/okteto/buildkit v0.8.3-okteto1
 
-// fix for buildkit client error after installing github.com/google/go-containerregistry
-// PR https://github.com/okteto/okteto/pull/2128
+// https://github.com/okteto/okteto/issues/2129
 replace google.golang.org/grpc => google.golang.org/grpc v1.40.0
