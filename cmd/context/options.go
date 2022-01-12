@@ -21,15 +21,16 @@ import (
 )
 
 type ContextOptions struct {
-	Token        string
-	Context      string
-	Namespace    string
-	Builder      string
-	OnlyOkteto   bool
-	Show         bool
-	Save         bool
-	IsCtxCommand bool
-	IsOkteto     bool
+	Token            string
+	Context          string
+	Namespace        string
+	Builder          string
+	OnlyOkteto       bool
+	Show             bool
+	Save             bool
+	IsCtxCommand     bool
+	IsOkteto         bool
+	raiseNotCtxError bool
 }
 
 func (o *ContextOptions) initFromContext() {
