@@ -49,7 +49,7 @@ var (
 	ErrNotLogged = "your token is invalid. Please run 'okteto context use %s' and try again"
 
 	// ErrCtxNotSet is raised when we don't have ctx set
-	ErrCtxNotSet = fmt.Errorf("your context is not set. Please run 'okteto context use' and and select your context")
+	ErrCtxNotSet = fmt.Errorf("your context is not set. Please run 'okteto context' and select your context")
 
 	// ErrNotOktetoCluster is raised when we a command is only available on an okteto cluster
 	ErrNotOktetoCluster = fmt.Errorf("user is not logged in okteto cluster. Please run 'okteto context use' and select your context")
