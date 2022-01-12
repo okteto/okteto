@@ -16,8 +16,6 @@ package registry
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -26,7 +24,6 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/opencontainers/go-digest"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -42,66 +39,28 @@ type ConfigInfo struct {
 	ExposedPorts *map[string]*interface{} `json:"ExposedPorts"`
 }
 
-// headManifestDigest returns the pull digest for the image at the registry
-func headManifestDigest(repository, tag string) (digest.Digest, error) {
-	u, err := url.Parse(okteto.Context().Registry)
-	if err != nil {
-		log.Infof("error parsing registry url: %s", err.Error())
-		return "", nil
-	}
-	u.Scheme = "https"
-	c, err := NewRegistryClient(u.String(), okteto.Context().UserID, okteto.Context().Token)
-	if err != nil {
-		log.Infof("error creating registry client: %s", err.Error())
-		return "", nil
-	}
-
-	urlManifest, err := url.Parse(fmt.Sprintf("https://%s/v2/%s/manifests/%s", okteto.Context().Registry, repository, tag))
-	if err != nil {
-		return "", fmt.Errorf("error parsing registry url: %s", err.Error())
-	}
-
-	req, err := http.NewRequest("HEAD", urlManifest.String(), nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
-	resp, err := c.Client.Do(req)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-	if err != nil {
-		return "", err
-	}
-
-	return digest.Parse(resp.Header.Get("Docker-Content-Digest"))
-}
-
 // GetImageTagWithDigest returns the image tag digest
 func GetImageTagWithDigest(imageTag string) (string, error) {
-	if !okteto.IsOkteto() {
-		return imageTag, nil
+	reference := imageTag
+
+	if okteto.IsOkteto() {
+		reference = ExpandOktetoDevRegistry(reference)
+		reference = ExpandOktetoGlobalRegistry(reference)
 	}
 
-	expandedTag := imageTag
-	expandedTag = ExpandOktetoDevRegistry(expandedTag)
-	expandedTag = ExpandOktetoGlobalRegistry(expandedTag)
+	registry, image := GetRegistryAndRepo(reference)
+	repository, _ := GetRepoNameAndTag(image)
 
-	repoURL, tag := GetRepoNameAndTag(expandedTag)
-	index := strings.IndexRune(repoURL, '/')
-	if index == -1 {
-		log.Infof("malformed registry url: %s", repoURL)
-		return imageTag, nil
-	}
-	repoName := repoURL[index+1:]
-	digest, err := headManifestDigest(repoName, tag)
+	digest, err := digestForReference(reference)
 	if err != nil {
 		if strings.Contains(err.Error(), "status=404") {
 			return "", errors.ErrNotFound
 		}
 		return "", fmt.Errorf("error getting image tag digest: %s", err.Error())
 	}
-	return fmt.Sprintf("%s@%s", repoName, digest.String()), nil
+	imageTag = fmt.Sprintf("%s/%s@%s", registry, repository, digest)
+	log.Debugf("image with digest: %s", imageTag)
+	return imageTag, nil
 }
 
 // ExpandOktetoGlobalRegistry translates okteto.global
