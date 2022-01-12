@@ -14,7 +14,6 @@
 package registry
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -102,49 +101,13 @@ func GetHiddenExposePorts(image string) []model.Port {
 
 	image = ExpandOktetoDevRegistry(image)
 	image = ExpandOktetoGlobalRegistry(image)
-	username := okteto.Context().UserID
-	token := okteto.Context().Token
 
-	registry := getRegistryURL(image)
-	if registry == DockerRegistry {
-		username = ""
-		token = ""
-	}
-
-	c, err := NewRegistryClient(registry, username, token)
+	config, err := configForReference(image)
 	if err != nil {
-		log.Infof("error creating registry client: %s", err.Error())
 		return exposedPorts
 	}
-
-	_, repo := GetRegistryAndRepo(image)
-	repoName, tag := GetRepoNameAndTag(repo)
-	if !strings.Contains(repoName, "/") {
-		repoName = fmt.Sprintf("library/%s", repoName)
-	}
-
-	digest, err := c.ManifestV2(repoName, tag)
-	if err != nil {
-		log.Infof("error getting digest of %s/%s: %s", repoName, tag, err.Error())
-		return exposedPorts
-	}
-
-	response, err := c.DownloadBlob(repoName, digest.Config.Digest)
-	if err != nil {
-		log.Infof("error getting digest of %s/%s: %s", repoName, tag, err.Error())
-		return exposedPorts
-	}
-
-	info := ImageInfo{Config: &ConfigInfo{}}
-	decoder := json.NewDecoder(response)
-	if err := decoder.Decode(&info); err != nil {
-		log.Infof("error decoding registry response: %s", err.Error())
-		return exposedPorts
-	}
-
-	if info.Config.ExposedPorts != nil {
-
-		for port := range *info.Config.ExposedPorts {
+	if config.ExposedPorts != nil {
+		for port := range config.ExposedPorts {
 			if strings.Contains(port, "/") {
 				port = port[:strings.Index(port, "/")]
 				portInt, err := strconv.Atoi(port)
