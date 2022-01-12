@@ -232,25 +232,25 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 					continue
 				}
 
-				repoAndDigest, err := registry.GetImageTagWithDigest(opts.Tag)
+				imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
 				if err != nil {
 					err = registry.GetErrorMessage(err, opts.Tag)
 					buildErrs = append(buildErrs, err.Error())
 					continue
 				}
-				log.Debugf("got digest from registry: %s", repoAndDigest)
+				log.Debugf("got digest from registry: %s", imageWithDigest)
 
-				var tag, repository, image string
-				indx := strings.IndexRune(repoAndDigest, '@')
+				var tag string
+				indx := strings.IndexRune(imageWithDigest, '@')
 				if indx != -1 {
-					repository = repoAndDigest[:indx+1]
-					tag = repoAndDigest[indx+1:]
-					image = fmt.Sprintf("%s/%s", okteto.Context().Registry, repoAndDigest)
+					log.Debugf("digest not found at image %s", imageWithDigest)
+					tag = ""
 				} else {
-					image = opts.Tag
+					tag = imageWithDigest[indx+1:]
 				}
+				registry, repository := registry.GetRegistryAndRepo(imageWithDigest)
 
-				setManifestEnvVars(service, okteto.Context().Registry, repository, image, tag)
+				setManifestEnvVars(service, registry, repository, imageWithDigest, tag)
 			}
 			if len(buildErrs) != 0 {
 				return fmt.Errorf("build failed for the services defined at manifest: %v", buildErrs)
