@@ -37,6 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -230,12 +231,38 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 					buildErrs = append(buildErrs, err.Error())
 					continue
 				}
+
+				repoAndDigest, err := registry.GetImageTagWithDigest(opts.Tag)
+				if err != nil {
+					err = registry.GetErrorMessage(err, opts.Tag)
+					buildErrs = append(buildErrs, err.Error())
+					continue
+				}
+				log.Debugf("got digest from registry: %s", repoAndDigest)
+
+				var tag, repository, image string
+				indx := strings.IndexRune(repoAndDigest, '@')
+				if indx != -1 {
+					repository = repoAndDigest[:indx+1]
+					tag = repoAndDigest[indx+1:]
+					image = fmt.Sprintf("%s/%s", okteto.Context().Registry, repoAndDigest)
+				} else {
+					image = opts.Tag
+				}
+
+				setManifestEnvVars(service, okteto.Context().Registry, repository, image, tag)
 			}
 			if len(buildErrs) != 0 {
 				return fmt.Errorf("build failed for the services defined at manifest: %v", buildErrs)
 			}
-
 		}
+
+		var parsedCommands []string
+		for _, command := range opts.Manifest.Deploy.Commands {
+			parsedCommands = append(parsedCommands, expandManifestEnvVars(command))
+		}
+		opts.Manifest.Deploy.Commands = parsedCommands
+
 	} else {
 		// Read manifest file with the commands to be executed
 		opts.Manifest, err = dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
@@ -285,6 +312,19 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	}
 
 	return nil
+}
+
+func setManifestEnvVars(service, registry, repository, image, tag string) {
+	os.Setenv(fmt.Sprintf("build.%s.registry", service), registry)
+	os.Setenv(fmt.Sprintf("build.%s.repository", service), repository)
+	os.Setenv(fmt.Sprintf("build.%s.image", service), image)
+	os.Setenv(fmt.Sprintf("build.%s.tag", service), tag)
+
+	log.Debug("manifest env vars set")
+}
+
+func expandManifestEnvVars(manifest string) string {
+	return os.ExpandEnv(manifest)
 }
 
 func (dc *deployCommand) cleanUp(ctx context.Context) {

@@ -15,6 +15,8 @@ package deploy
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"testing"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -288,4 +290,69 @@ func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manife
 
 func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return fakeManifest, nil
+}
+
+func Test_setManifestEnvVars(t *testing.T) {
+	tests := []struct {
+		name       string
+		service    string
+		registry   string
+		repository string
+		image      string
+		tag        string
+	}{
+		{
+			name:       "setting-variables",
+			service:    "serviceName",
+			registry:   "registryUrl",
+			repository: "repository",
+			image:      "image",
+			tag:        "tag",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			registryEnv := fmt.Sprintf("build.%s.registry", tt.service)
+			imageEnv := fmt.Sprintf("build.%s.image", tt.service)
+			repositoryEnv := fmt.Sprintf("build.%s.repository", tt.service)
+			tagEnv := fmt.Sprintf("build.%s.tag", tt.service)
+
+			envs := []string{registryEnv, imageEnv, repositoryEnv, tagEnv}
+			for _, e := range envs {
+				if v := os.Getenv(e); v != "" {
+					t.Errorf("env variable is already set [%v]", e)
+				}
+			}
+			setManifestEnvVars(tt.service, tt.registry, tt.repository, tt.image, tt.tag)
+
+			registryEnvValue := os.Getenv(registryEnv)
+			imageEnvValue := os.Getenv(imageEnv)
+			repositoryEnvValue := os.Getenv(repositoryEnv)
+			tagEnvValue := os.Getenv(tagEnv)
+
+			for _, e := range envs {
+				if err := os.Unsetenv(e); err != nil {
+					t.Errorf("error unsetting var %s", err.Error())
+				}
+			}
+
+			if registryEnvValue != tt.registry {
+				t.Errorf("registry - expected %s , got %s", tt.registry, registryEnvValue)
+			}
+			if imageEnvValue != tt.image {
+				t.Errorf("image - expected %s , got %s", tt.image, imageEnvValue)
+
+			}
+			if repositoryEnvValue != tt.repository {
+				t.Errorf("repository - expected %s , got %s", tt.repository, repositoryEnvValue)
+
+			}
+			if tagEnvValue != tt.tag {
+				t.Errorf("tag - expected %s , got %s", tt.tag, tagEnvValue)
+
+			}
+
+		})
+	}
 }
