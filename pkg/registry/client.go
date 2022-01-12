@@ -14,38 +14,13 @@
 package registry
 
 import (
-	"net/http"
-	"strings"
-
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/heroku/docker-registry-client/registry"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
-
-// NewRegistryClient creates a new Registry with the given URL and credentials, then Ping()s it
-// before returning it to verify that the registry is available.
-func NewRegistryClient(registryURL, username, password string) (*registry.Registry, error) {
-	transport := http.DefaultTransport
-	return newFromTransport(registryURL, username, password, transport)
-}
-
-func newFromTransport(registryURL, username, password string, transport http.RoundTripper) (*registry.Registry, error) {
-	url := strings.TrimSuffix(registryURL, "/")
-	transport = registry.WrapTransport(transport, url, username, password)
-	registry := &registry.Registry{
-		URL: url,
-		Client: &http.Client{
-			Transport: transport,
-		},
-		Logf: log.Infof,
-	}
-
-	return registry, nil
-}
 
 type OktetoRegistryAuthenticator struct {
 	username string
