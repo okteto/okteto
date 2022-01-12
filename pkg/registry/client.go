@@ -17,8 +17,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 // NewRegistryClient creates a new Registry with the given URL and credentials, then Ping()s it
@@ -40,4 +44,53 @@ func newFromTransport(registryURL, username, password string, transport http.Rou
 	}
 
 	return registry, nil
+}
+
+type OktetoRegistryAuthenticator struct {
+	username string
+	password string
+}
+
+func (a *OktetoRegistryAuthenticator) Authorization() (*authn.AuthConfig, error) {
+	return &authn.AuthConfig{
+		Username: a.username,
+		Password: a.password,
+	}, nil
+}
+
+func newBasicAuthRegistry(username, password string) *OktetoRegistryAuthenticator {
+	return &OktetoRegistryAuthenticator{
+		username: username,
+		password: password,
+	}
+}
+
+func digestForReference(reference string) (string, error) {
+	ref, err := name.ParseReference(reference)
+	if err != nil {
+		return "", err
+	}
+
+	registry, _ := GetRegistryAndRepo(reference)
+	log.Debugf("calling registry %s", registry)
+	if IsOktetoRegistry(registry) {
+		username := okteto.Context().UserID
+		password := okteto.Context().Token
+
+		authenticator := newBasicAuthRegistry(username, password)
+		img, err := remote.Get(ref, remote.WithAuth(authenticator))
+		if err != nil {
+			return "", err
+		}
+
+		return img.Digest.String(), nil
+	}
+
+	img, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	if err != nil {
+		panic(err)
+	}
+
+	return img.Digest.String(), nil
+
 }
