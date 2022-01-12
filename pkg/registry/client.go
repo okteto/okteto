@@ -65,6 +65,18 @@ func newBasicAuthRegistry(username, password string) *OktetoRegistryAuthenticato
 	}
 }
 
+func clientOptions(registry string) remote.Option {
+	if IsOktetoRegistry(registry) {
+		username := okteto.Context().UserID
+		password := okteto.Context().Token
+
+		authenticator := newBasicAuthRegistry(username, password)
+		return remote.WithAuth(authenticator)
+	} else {
+		return remote.WithAuthFromKeychain(authn.DefaultKeychain)
+	}
+}
+
 func digestForReference(reference string) (string, error) {
 	ref, err := name.ParseReference(reference)
 	if err != nil {
@@ -73,24 +85,13 @@ func digestForReference(reference string) (string, error) {
 
 	registry, _ := GetRegistryAndRepo(reference)
 	log.Debugf("calling registry %s", registry)
-	if IsOktetoRegistry(registry) {
-		username := okteto.Context().UserID
-		password := okteto.Context().Token
 
-		authenticator := newBasicAuthRegistry(username, password)
-		img, err := remote.Get(ref, remote.WithAuth(authenticator))
-		if err != nil {
-			return "", err
-		}
+	options := clientOptions(registry)
 
-		return img.Digest.String(), nil
-	}
-
-	img, err := remote.Get(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	img, err := remote.Get(ref, options)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	return img.Digest.String(), nil
-
 }
