@@ -19,6 +19,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/okteto/okteto/pkg/log"
@@ -94,4 +95,30 @@ func digestForReference(reference string) (string, error) {
 	}
 
 	return img.Digest.String(), nil
+}
+
+func configForReference(reference string) (v1.Config, error) {
+	ref, err := name.ParseReference(reference)
+	if err != nil {
+		return v1.Config{}, err
+	}
+
+	registry, _ := GetRegistryAndRepo(reference)
+	log.Debugf("calling registry %s", registry)
+
+	options := clientOptions(registry)
+
+	img, err := remote.Image(ref, options)
+	if err != nil {
+		log.Debugf("error getting image from remote")
+		return v1.Config{}, err
+	}
+
+	configFile, err := img.ConfigFile()
+	if err != nil {
+		log.Debugf("error getting image config from remote")
+		return v1.Config{}, err
+	}
+
+	return configFile.Config, nil
 }
