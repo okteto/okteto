@@ -523,7 +523,10 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		s.RemotePath = parts[1]
+		s.RemotePath, err = ExpandEnv(parts[1])
+		if err != nil {
+			return err
+		}
 		return nil
 	} else if len(parts) == 3 {
 		windowsPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
@@ -531,7 +534,10 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		s.RemotePath = parts[2]
+		s.RemotePath, err = ExpandEnv(parts[2])
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
