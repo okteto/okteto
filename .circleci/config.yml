@@ -88,7 +88,7 @@ jobs:
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
-            ./update_homebrew_formula.sh 0.0.1 $sha $sha_arm
+            ./scripts/update_homebrew_formula.sh 0.0.1 $sha $sha_arm
       - setup_remote_docker:
           version: '19.03.8'
       - run:
@@ -179,14 +179,36 @@ jobs:
           command: |
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
-            ./update_homebrew_formula.sh $CIRCLE_TAG $sha $sha_arm
+            ./scripts/update_homebrew_formula.sh $CIRCLE_TAG $sha $sha_arm
             pushd homebrew-cli
             git push git@github.com:okteto/homebrew-cli.git master
       - deploy:
           name: Auto-update-actions
           command: |
             go get -u github.com/tcnksm/ghr
-            ./update_actions.sh $CIRCLE_TAG
+            ./scripts/update_actions.sh $CIRCLE_TAG
+  release-candidate:
+    docker:
+      - image: okteto/golang-ci:1.17.3
+    steps:
+      - checkout
+      - attach_workspace:
+          at: ./artifacts
+      - run: *init-gcloud
+      - setup_remote_docker:
+          version: '19.03.8'
+      - run:
+          name: Publish Docker container
+          command: |
+            export DOCKER_BUILDKIT=1
+            echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
+            docker build -t okteto/okteto:${CIRCLE_TAG} --build-arg VERSION_STRING=$CIRCLE_TAG .
+            docker push okteto/okteto:${CIRCLE_TAG}
+      - run:
+          name: Publish Release on GitHub
+          command: |
+            go get -u github.com/tcnksm/ghr
+            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace $CIRCLE_TAG -prerelease ./artifacts/bin/
   release-master:
     docker:
       - image: okteto/golang-ci:1.17.3
@@ -249,6 +271,15 @@ workflows:
           filters:
             tags:
               only: /^\d+\.\d+\.\d+$/
+            branches:
+              ignore: /.*/
+      - release-candidate:
+          context: GKE
+          requires:
+            - build
+          filters:
+            tags:
+              only: ^\d+\.\d+\.\d+-rc\.\d+$
             branches:
               ignore: /.*/
       - windows-unit:
