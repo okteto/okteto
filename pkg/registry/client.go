@@ -22,35 +22,18 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-type OktetoRegistryAuthenticator struct {
-	username string
-	password string
-}
-
-func (a *OktetoRegistryAuthenticator) Authorization() (*authn.AuthConfig, error) {
-	return &authn.AuthConfig{
-		Username: a.username,
-		Password: a.password,
-	}, nil
-}
-
-func newBasicAuthRegistry(username, password string) *OktetoRegistryAuthenticator {
-	return &OktetoRegistryAuthenticator{
-		username: username,
-		password: password,
-	}
-}
-
 func clientOptions(registry string) remote.Option {
 	if IsOktetoRegistry(registry) {
 		username := okteto.Context().UserID
 		password := okteto.Context().Token
 
-		authenticator := newBasicAuthRegistry(username, password)
+		authenticator := &authn.Basic{
+			Username: username,
+			Password: password,
+		}
 		return remote.WithAuth(authenticator)
-	} else {
-		return remote.WithAuthFromKeychain(authn.DefaultKeychain)
 	}
+	return remote.WithAuthFromKeychain(authn.DefaultKeychain)
 }
 
 func digestForReference(reference string) (string, error) {
