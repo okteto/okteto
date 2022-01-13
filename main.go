@@ -106,18 +106,6 @@ func main() {
 	root.AddCommand(cmd.Kubeconfig())
 	root.AddCommand(cmd.Build(ctx))
 
-	createCmd := cmd.Create(ctx)
-	createCmd.Hidden = true
-	root.AddCommand(createCmd)
-
-	listCmd := cmd.List(ctx)
-	listCmd.Hidden = true
-	root.AddCommand(listCmd)
-
-	deleteCmd := cmd.Delete(ctx)
-	deleteCmd.Hidden = true
-	root.AddCommand(deleteCmd)
-
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(pipeline.Pipeline(ctx))
 	root.AddCommand(stack.Stack(ctx))
@@ -134,6 +122,12 @@ func main() {
 	root.AddCommand(deploy.Deploy(ctx))
 	root.AddCommand(destroy.Destroy(ctx))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
+
+	//deprecated
+	root.AddCommand(cmd.Create(ctx))
+	root.AddCommand(cmd.List(ctx))
+	root.AddCommand(cmd.Delete(ctx))
+
 	err := root.Execute()
 
 	if err != nil {

@@ -57,9 +57,10 @@ func NewContextCommand() *ContextCommand {
 func CreateCMD() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
-		Use:   "create [cluster-url]",
-		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#create"),
-		Short: "Add a context",
+		Hidden: true,
+		Use:    "create [cluster-url]",
+		Args:   utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#create"),
+		Short:  "Add a context",
 		Long: `Add a context
 
 A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
@@ -78,6 +79,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	$ okteto context create https://cloud.okteto.com --token ${OKTETO_TOKEN}
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			log.Warning("'okteto context create' is deprecated in favor of 'okteto context use', and will be removed in version 1.16")
 			ctx := context.Background()
 
 			ctxOptions.Context = args[0]

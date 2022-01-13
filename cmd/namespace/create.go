@@ -31,15 +31,14 @@ import (
 type CreateOptions struct {
 	Members   *[]string
 	Namespace string
-	show      bool
+	Show      bool
 }
 
 // Create creates a namespace
 func Create(ctx context.Context) *cobra.Command {
 	options := &CreateOptions{
-		show: true,
+		Show: true,
 	}
-
 	cmd := &cobra.Command{
 		Use:   "create <name>",
 		Short: "Create a namespace",
@@ -83,10 +82,10 @@ func (nc *NamespaceCommand) Create(ctx context.Context, opts *CreateOptions) err
 	}
 
 	ctxOptions := &contextCMD.ContextOptions{
-		IsCtxCommand: false,
+		IsCtxCommand: opts.Show,
 		IsOkteto:     true,
 		Save:         true,
-		Show:         opts.show,
+		Show:         false,
 		Token:        okteto.Context().Token,
 		Namespace:    oktetoNS,
 		Context:      okteto.Context().Name,

@@ -27,9 +27,10 @@ import (
 // UpdateKubeconfig all contexts managed by okteto
 func UpdateKubeconfigCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update-kubeconfig",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#update-kubeconfig"),
-		Short: "Download kubectl credentials for the current context",
+		Hidden: true,
+		Use:    "update-kubeconfig",
+		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#update-kubeconfig"),
+		Short:  "Download kubectl credentials for the okteto context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
@@ -56,6 +57,6 @@ func ExecuteUpdateKubeconfig(ctx context.Context) error {
 	if okteto.Context().IsOkteto {
 		k8sContext = okteto.UrlToKubernetesContext(k8sContext)
 	}
-	log.Information("Updated kubernetes context '%s/%s' in '%s'", k8sContext, okteto.Context().Namespace, config.GetKubeconfigPath())
+	log.Success("Updated kubernetes context '%s/%s' in '%s'", k8sContext, okteto.Context().Namespace, config.GetKubeconfigPath())
 	return nil
 }

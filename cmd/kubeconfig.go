@@ -22,10 +22,9 @@ import (
 // Kubeconfig fetch credentials for a cluster namespace
 func Kubeconfig() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:    "kubeconfig",
-		Hidden: true,
-		Short:  "Download k8s credentials for the namespace",
-		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#update-kubeconfig"),
+		Use:   "kubeconfig",
+		Short: "Download kubectl credentials for the okteto context",
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			err := contextCMD.UpdateKubeconfigCMD().RunE(cmd, args)
