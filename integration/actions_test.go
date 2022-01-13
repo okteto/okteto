@@ -99,9 +99,17 @@ func TestApplyPipeline(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
+	}
+
+	if err := updateKubeConfig(oktetoPath); err != nil {
+		t.Fatal("Could not update kubeconfig: %s", err.Error())
 	}
 
 	if err := executeApply(ctx, namespace); err != nil {
@@ -281,9 +289,17 @@ func TestPushAction(t *testing.T) {
 
 	ctx := context.Background()
 	namespace := getTestNamespace()
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
+	}
+
+	if err := updateKubeConfig(oktetoPath); err != nil {
+		t.Fatal("Could not update kubeconfig: %s", err.Error())
 	}
 
 	if err := executeApply(ctx, namespace); err != nil {

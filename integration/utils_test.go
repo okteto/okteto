@@ -130,3 +130,14 @@ func writeDeployment(template *template.Template, name, path string) error {
 	defer dFile.Close()
 	return nil
 }
+
+func updateKubeConfig(oktetoPath string) error {
+	args := []string{"kubeconfig"}
+	cmd := exec.Command(oktetoPath, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
+	}
+	return nil
+}
