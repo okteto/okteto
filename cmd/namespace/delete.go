@@ -45,7 +45,7 @@ func Delete(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = nsCmd.executeDeleteNamespace(ctx, args[0])
+			err = nsCmd.ExecuteDeleteNamespace(ctx, args[0])
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},
@@ -54,7 +54,7 @@ func Delete(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (nc *NamespaceCommand) executeDeleteNamespace(ctx context.Context, namespace string) error {
+func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespace string) error {
 
 	if err := nc.okClient.Namespaces().Delete(ctx, namespace); err != nil {
 		return fmt.Errorf("failed to delete namespace: %s", err)
