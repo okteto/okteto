@@ -38,7 +38,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	r "github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -229,7 +229,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 				// if Build flag is disabled, we check if the image is already at the registry and build it prior to deploy
 				if !opts.Build {
-					_, err := r.GetImageTagWithDigest(manifestOptions.Tag)
+					_, err := registry.GetImageTagWithDigest(manifestOptions.Tag)
 					if err != nil {
 						if err == errors.ErrNotFound {
 							log.Debugf("image not found, building image %s", manifestOptions.Tag)
@@ -252,19 +252,19 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 				}
 
 				// check that the image is at the registry correctly pushed
-				imageWithDigest, err := r.GetImageTagWithDigest(manifestOptions.Tag)
+				imageWithDigest, err := registry.GetImageTagWithDigest(manifestOptions.Tag)
 				if err != nil {
-					err = r.GetErrorMessage(err, manifestOptions.Tag)
+					err = registry.GetErrorMessage(err, manifestOptions.Tag)
 					buildErrs = append(buildErrs, err.Error())
 					continue
 				}
 				log.Debugf("got digest from registry: %s", imageWithDigest)
 
-				registry, image := r.GetRegistryAndRepo(imageWithDigest)
-				repository, tag := r.GetRepoNameAndTag(image)
+				reg, image := registry.GetRegistryAndRepo(imageWithDigest)
+				repository, tag := registry.GetRepoNameAndTag(image)
 
-				log.Debugf("envs registry=%s repository=%s image=%s tag=%s", registry, repository, imageWithDigest, tag)
-				setManifestEnvVars(service, registry, repository, imageWithDigest, tag)
+				log.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repository, imageWithDigest, tag)
+				setManifestEnvVars(service, reg, repository, imageWithDigest, tag)
 			}
 			if len(buildErrs) != 0 {
 				return fmt.Errorf("build failed for the services defined at manifest: %v", buildErrs)
