@@ -44,7 +44,8 @@ func GetImageTagWithDigest(imageTag string) (string, error) {
 
 	digest, err := digestForReference(reference)
 	if err != nil {
-		if strings.Contains(err.Error(), "status=404") {
+		log.Debugf("error: %s", err.Error())
+		if strings.Contains(err.Error(), "MANIFEST_UNKNOWN") {
 			return "", errors.ErrNotFound
 		}
 		return "", fmt.Errorf("error getting image tag digest: %s", err.Error())
