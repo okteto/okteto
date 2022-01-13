@@ -34,10 +34,11 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
+	r "github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -203,7 +204,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		return err
 	}
 	var err error
-	if opts.Build && contextCMD.IsManifestV2Enabled() {
+	if contextCMD.IsManifestV2Enabled() {
 		opts.Manifest, err = contextCMD.GetManifestV2(cwd, opts.ManifestPath)
 		if err != nil {
 			return err
@@ -215,7 +216,6 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		}
 
 		if opts.Manifest.Build != nil {
-			log.Debug("running build from manifest definition")
 
 			var buildErrs []string
 
@@ -224,32 +224,46 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 					buildInfo.Image = fmt.Sprintf("%s/%s-%s:%s", okteto.DevRegistry, opts.Name, service, "okteto")
 				}
 
-				buildOptions := build.BuildOptions{}
-				opts := build.OptsFromManifest(service, buildInfo, buildOptions)
+				buildOptions := build.BuildOptions{OutputMode: opts.OutputMode}
+				manifestOptions := build.OptsFromManifest(service, buildInfo, buildOptions)
 
-				if err := build.Run(ctx, opts); err != nil {
-					buildErrs = append(buildErrs, err.Error())
-					continue
+				// if Build flag is disabled, we check if the image is already at the registry and build it prior to deploy
+				if !opts.Build {
+					_, err := r.GetImageTagWithDigest(manifestOptions.Tag)
+					if err != nil {
+						if err == errors.ErrNotFound {
+							log.Debugf("image not found, building image %s", manifestOptions.Tag)
+							if err := build.Run(ctx, manifestOptions); err != nil {
+								buildErrs = append(buildErrs, err.Error())
+								continue
+							}
+						}
+
+					} else {
+						log.Debug("image found, skipping build")
+					}
+				} else {
+					// if Build flag is enabled, we re-build the image regardless if it is already or not
+					log.Debug("force build from manifest definition")
+					if err := build.Run(ctx, manifestOptions); err != nil {
+						buildErrs = append(buildErrs, err.Error())
+						continue
+					}
 				}
 
-				imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
+				// check that the image is at the registry correctly pushed
+				imageWithDigest, err := r.GetImageTagWithDigest(manifestOptions.Tag)
 				if err != nil {
-					err = registry.GetErrorMessage(err, opts.Tag)
+					err = r.GetErrorMessage(err, manifestOptions.Tag)
 					buildErrs = append(buildErrs, err.Error())
 					continue
 				}
 				log.Debugf("got digest from registry: %s", imageWithDigest)
 
-				var tag string
-				indx := strings.IndexRune(imageWithDigest, '@')
-				if indx != -1 {
-					log.Debugf("digest not found at image %s", imageWithDigest)
-					tag = ""
-				} else {
-					tag = imageWithDigest[indx+1:]
-				}
-				registry, repository := registry.GetRegistryAndRepo(imageWithDigest)
+				registry, image := r.GetRegistryAndRepo(imageWithDigest)
+				repository, tag := r.GetRepoNameAndTag(image)
 
+				log.Debugf("envs registry=%s repository=%s image=%s tag=%s", registry, repository, imageWithDigest, tag)
 				setManifestEnvVars(service, registry, repository, imageWithDigest, tag)
 			}
 			if len(buildErrs) != 0 {
