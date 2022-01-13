@@ -39,7 +39,7 @@ func deprecatedDeleteNamespace(ctx context.Context) *cobra.Command {
 		Use:   "namespace <name>",
 		Short: "Delete a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Warning("'okteto delete namespace' will be deprecated. Please use 'okteto namespace delete' instead")
+			log.Warning("'okteto delete namespace' is deprecated in favor of 'okteto namespace delete', and will be removed in version 1.16")
 			return cmd.RunE(namespace.Delete(ctx), args)
 		},
 		Args: utils.ExactArgsAccepted(1, ""),

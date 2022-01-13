@@ -39,7 +39,7 @@ func deprecatedListNamespace(ctx context.Context) *cobra.Command {
 		Use:   "namespace <name>",
 		Short: "List namespaces",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Warning("'okteto list namespace' will be deprecated. Please use 'okteto namespace list' instead")
+			log.Warning("'okteto list namespace' is deprecated in favor of 'okteto namespace list', and will be removed in version 1.16")
 			return cmd.RunE(namespace.List(ctx), args)
 		},
 		Args: utils.NoArgsAccepted(""),

@@ -59,7 +59,7 @@ func CreateCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "create [cluster-url]",
-		Args:   utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#create"),
+		Args:   utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#use"),
 		Short:  "Add a context",
 		Long: `Add a context
 
@@ -79,6 +79,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	$ okteto context create https://cloud.okteto.com --token ${OKTETO_TOKEN}
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			log.Warning("'okteto context create' is deprecated in favor of 'okteto context use', and will be removed in version 1.16")
 			ctx := context.Background()
 
 			ctxOptions.Context = args[0]

@@ -32,6 +32,7 @@ func UpdateKubeconfigCMD() *cobra.Command {
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#kubeconfig"),
 		Short:  "Download kubectl credentials for the okteto context",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			log.Warning("'okteto context update-kubeconfig' is deprecated in favor of 'okteto kubeconfig', and will be removed in version 1.16")
 			ctx := context.Background()
 
 			if err := NewContextCommand().UseContext(ctx, &ContextOptions{}); err != nil {
