@@ -106,7 +106,7 @@ func (nc *NamespaceCommand) getNamespaceFromSelector(ctx context.Context) (strin
 		ns = askForOktetoNamespace()
 		createOptions := &CreateOptions{
 			Namespace: ns,
-			show:      false,
+			Show:      false,
 		}
 		if err := nc.Create(ctx, createOptions); err != nil {
 			return "", err

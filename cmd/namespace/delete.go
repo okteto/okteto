@@ -67,10 +67,10 @@ func (nc *NamespaceCommand) executeDeleteNamespace(ctx context.Context, namespac
 			personalNamespace = okteto.GetSanitizedUsername()
 		}
 		ctxOptions := &contextCMD.ContextOptions{
-			Namespace: personalNamespace,
-			Context:   okteto.Context().Name,
-			Show:      true,
-			Save:      true,
+			Namespace:    personalNamespace,
+			Context:      okteto.Context().Name,
+			Save:         true,
+			IsCtxCommand: true,
 		}
 		return nc.ctxCmd.Run(ctx, ctxOptions)
 	}

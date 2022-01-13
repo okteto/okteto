@@ -29,13 +29,12 @@ func UpdateKubeconfigCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "update-kubeconfig",
-		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#kubeconfig"),
+		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#update-kubeconfig"),
 		Short:  "Download kubectl credentials for the okteto context",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Warning("'okteto context update-kubeconfig' is deprecated in favor of 'okteto kubeconfig', and will be removed in version 1.16")
 			ctx := context.Background()
 
-			if err := NewContextCommand().UseContext(ctx, &ContextOptions{}); err != nil {
+			if err := NewContextCommand().Run(ctx, &ContextOptions{}); err != nil {
 				return err
 			}
 
@@ -58,6 +57,6 @@ func ExecuteUpdateKubeconfig(ctx context.Context) error {
 	if okteto.Context().IsOkteto {
 		k8sContext = okteto.UrlToKubernetesContext(k8sContext)
 	}
-	log.Information("Updated kubernetes context '%s/%s' in '%s'", k8sContext, okteto.Context().Namespace, config.GetKubeconfigPath())
+	log.Success("Updated kubernetes context '%s/%s' in '%s'", k8sContext, okteto.Context().Namespace, config.GetKubeconfigPath())
 	return nil
 }
