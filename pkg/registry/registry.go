@@ -27,16 +27,8 @@ import (
 )
 
 const (
-	DockerRegistry = "https://registry.hub.docker.com"
+	dockerRegistry = "https://registry.hub.docker.com"
 )
-
-type ImageInfo struct {
-	Config *ConfigInfo `json:"config"`
-}
-
-type ConfigInfo struct {
-	ExposedPorts *map[string]*interface{} `json:"ExposedPorts"`
-}
 
 // GetImageTagWithDigest returns the image tag digest
 func GetImageTagWithDigest(imageTag string) (string, error) {
@@ -76,7 +68,7 @@ func ExpandOktetoDevRegistry(tag string) string {
 	return replaceRegistry(tag, okteto.DevRegistry, okteto.Context().Namespace)
 }
 
-// SplitRegistryAndImage returns image tag and the registry to push the image
+// GetRegistryAndRepo returns image tag and the registry to push the image
 func GetRegistryAndRepo(tag string) (string, string) {
 	var imageTag string
 	registryTag := "docker.io"
@@ -96,6 +88,7 @@ func GetRegistryAndRepo(tag string) (string, string) {
 	return registryTag, imageTag
 }
 
+// GetHiddenExposePorts returns the ports exposed at the image
 func GetHiddenExposePorts(image string) []model.Port {
 	exposedPorts := make([]model.Port, 0)
 
@@ -124,23 +117,26 @@ func GetHiddenExposePorts(image string) []model.Port {
 func getRegistryURL(image string) string {
 	registry, _ := GetRegistryAndRepo(image)
 	if registry == "docker.io" {
-		return DockerRegistry
-	} else {
-		if !strings.HasPrefix(registry, "https://") {
-			registry = fmt.Sprintf("https://%s", registry)
-		}
-		return registry
+		return dockerRegistry
 	}
+	if !strings.HasPrefix(registry, "https://") {
+		registry = fmt.Sprintf("https://%s", registry)
+	}
+	return registry
+
 }
 
+// IsGlobalRegistry returns if an image tag is pointing to the global okteto registry
 func IsGlobalRegistry(tag string) bool {
 	return strings.HasPrefix(tag, okteto.GlobalRegistry)
 }
 
+// IsDevRegistry returns if an image tag is pointing to the dev okteto registry
 func IsDevRegistry(tag string) bool {
 	return strings.HasPrefix(tag, okteto.DevRegistry)
 }
 
+// IsOktetoRegistry returns if an image tag is pointing to the okteto registry
 func IsOktetoRegistry(tag string) bool {
 	return IsDevRegistry(tag) || IsGlobalRegistry(tag)
 }
