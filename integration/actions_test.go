@@ -109,7 +109,7 @@ func TestApplyPipeline(t *testing.T) {
 	}
 
 	if err := updateKubeConfig(oktetoPath); err != nil {
-		t.Fatal("Could not update kubeconfig: %s", err.Error())
+		t.Fatalf("Could not update kubeconfig: %s", err.Error())
 	}
 
 	if err := executeApply(ctx, namespace); err != nil {
@@ -299,7 +299,7 @@ func TestPushAction(t *testing.T) {
 	}
 
 	if err := updateKubeConfig(oktetoPath); err != nil {
-		t.Fatal("Could not update kubeconfig: %s", err.Error())
+		t.Fatalf("Could not update kubeconfig: %s", err.Error())
 	}
 
 	if err := executeApply(ctx, namespace); err != nil {
