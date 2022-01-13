@@ -57,9 +57,10 @@ func NewContextCommand() *ContextCommand {
 func CreateCMD() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
-		Use:   "create [cluster-url]",
-		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#create"),
-		Short: "Add a context",
+		Hidden: true,
+		Use:    "create [cluster-url]",
+		Args:   utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#create"),
+		Short:  "Add a context",
 		Long: `Add a context
 
 A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.

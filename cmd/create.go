@@ -25,9 +25,10 @@ import (
 // Create creates resources
 func Create(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create resources",
-		Args:  utils.NoArgsAccepted(""),
+		Hidden: true,
+		Use:    "create",
+		Short:  "Create resources",
+		Args:   utils.NoArgsAccepted(""),
 	}
 	cmd.AddCommand(deprecatedCreateNamespace(ctx))
 	return cmd

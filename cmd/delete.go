@@ -25,9 +25,10 @@ import (
 // Delete creates resources
 func Delete(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "delete",
-		Short: "Delete resources",
-		Args:  utils.NoArgsAccepted(""),
+		Hidden: true,
+		Use:    "delete",
+		Short:  "Delete resources",
+		Args:   utils.NoArgsAccepted(""),
 	}
 	cmd.AddCommand(deprecatedDeleteNamespace(ctx))
 	return cmd

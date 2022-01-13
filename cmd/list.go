@@ -25,9 +25,10 @@ import (
 // List lists resources
 func List(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "list",
-		Short: "List resources",
-		Args:  utils.NoArgsAccepted(""),
+		Hidden: true,
+		Use:    "list",
+		Short:  "List resources",
+		Args:   utils.NoArgsAccepted(""),
 	}
 	cmd.AddCommand(deprecatedListNamespace(ctx))
 	return cmd

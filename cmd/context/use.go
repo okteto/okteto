@@ -120,7 +120,7 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 	}
 
 	if ctxOptions.IsCtxCommand {
-		log.Information("Run 'okteto context update-kubeconfig' to update your kubectl credentials")
+		log.Information("Run 'okteto kubeconfig' to set your kubectl credentials")
 	}
 	return nil
 }

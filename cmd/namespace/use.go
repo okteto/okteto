@@ -49,13 +49,14 @@ func Use(ctx context.Context) *cobra.Command {
 				namespace = args[0]
 			}
 
+			if !okteto.IsOkteto() {
+				return errors.ErrContextIsNotOktetoCluster
+			}
+
 			if options.personal {
 				namespace = okteto.Context().PersonalNamespace
 			}
 
-			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
-			}
 			nsCmd, err := NewCommand()
 			if err != nil {
 				return err
@@ -82,10 +83,11 @@ func (nc *NamespaceCommand) Use(ctx context.Context, namespace string) error {
 	return nc.ctxCmd.Run(
 		ctx,
 		&contextCMD.ContextOptions{
-			Context:   okteto.Context().Name,
-			Namespace: namespace,
-			Save:      true,
-			Show:      true,
+			Context:      okteto.Context().Name,
+			Namespace:    namespace,
+			Save:         true,
+			Show:         false,
+			IsCtxCommand: true,
 		},
 	)
 
