@@ -52,7 +52,7 @@ build:
 
 .PHONY: build-integration
 build-integration:
-	go test github.com/okteto/okteto/integration -tags "common integration actions" -c -o ${BINDIR}/okteto-integration.test 
+	go test github.com/okteto/okteto/integration -tags "common integration actions" -c -o ${BINDIR}/okteto-integration.test
 
 .PHONY: dep
 dep:
