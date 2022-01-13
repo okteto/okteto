@@ -280,7 +280,7 @@ workflows:
             - build
           filters:
             tags:
-              only: ^\d+\.\d+\.\d+-rc\.\d+$
+              only: /^\d+\.\d+\.\d+-rc\.\d+$/
             branches:
               ignore: /.*/
       - windows-unit:
