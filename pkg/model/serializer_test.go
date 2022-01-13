@@ -981,6 +981,7 @@ rescanInterval: 10`),
 }
 
 func TestSyncFoldersUnmashalling(t *testing.T) {
+	os.Setenv("REMOTE_PATH", "/usr/src/app")
 	tests := []struct {
 		name     string
 		data     []byte
@@ -989,6 +990,11 @@ func TestSyncFoldersUnmashalling(t *testing.T) {
 		{
 			name:     "same dir",
 			data:     []byte(`.:/usr/src/app`),
+			expected: SyncFolder{LocalPath: ".", RemotePath: "/usr/src/app"},
+		},
+		{
+			name:     "same dir",
+			data:     []byte(`.:${REMOTE_PATH}`),
 			expected: SyncFolder{LocalPath: ".", RemotePath: "/usr/src/app"},
 		},
 		{
