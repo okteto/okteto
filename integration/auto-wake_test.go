@@ -110,7 +110,7 @@ func TestAutoWake(t *testing.T) {
 		t.Fatalf("failed to get content")
 	}
 
-	if err := client.SleepNamespace(ctx, namespace); err != nil {
+	if err := client.Namespaces().SleepNamespace(ctx, namespace); err != nil {
 		t.Fatal(err)
 	}
 
@@ -131,7 +131,7 @@ func TestAutoWake(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := client.SleepNamespace(ctx, namespace); err != nil {
+	if err := client.Namespaces().SleepNamespace(ctx, namespace); err != nil {
 		t.Fatal(err)
 	}
 

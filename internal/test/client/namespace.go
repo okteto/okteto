@@ -60,3 +60,8 @@ func (c *FakeNamespaceClient) Delete(_ context.Context, namespace string) error 
 	}
 	return fmt.Errorf("not found")
 }
+
+// SleepNamespace deletes a namespace
+func (c *FakeNamespaceClient) SleepNamespace(_ context.Context, namespace string) error {
+	return nil
+}
