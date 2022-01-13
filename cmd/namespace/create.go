@@ -27,67 +27,73 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//CreateOptions represents the options that namespace create has
+type CreateOptions struct {
+	Members   *[]string
+	Namespace string
+	show      bool
+}
+
 // Create creates a namespace
 func Create(ctx context.Context) *cobra.Command {
-	var members *[]string
+	options := &CreateOptions{
+		show: true,
+	}
 
 	cmd := &cobra.Command{
-		Use:   "namespace <name>",
+		Use:   "create <name>",
 		Short: "Create a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 
+			options.Namespace = args[0]
 			if !okteto.IsOkteto() {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			err := ExecuteCreateNamespace(ctx, args[0], members)
+			nsCmd, err := NewCommand()
+			if err != nil {
+				return err
+			}
+			err = nsCmd.Create(ctx, options)
 			analytics.TrackCreateNamespace(err == nil)
 			return err
 		},
 		Args: utils.ExactArgsAccepted(1, ""),
 	}
 
-	members = cmd.Flags().StringArrayP("members", "m", []string{}, "members of the namespace, it can the username or email")
+	options.Members = cmd.Flags().StringArrayP("members", "m", []string{}, "members of the namespace, it can the username or email")
 	return cmd
 }
 
-func ExecuteCreateNamespace(ctx context.Context, namespace string, members *[]string) error {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-	oktetoNS, err := oktetoClient.CreateNamespace(ctx, namespace)
+func (nc *NamespaceCommand) Create(ctx context.Context, opts *CreateOptions) error {
+	oktetoNS, err := nc.okClient.Namespaces().Create(ctx, opts.Namespace)
 	if err != nil {
 		return err
 	}
 
 	log.Success("Namespace '%s' created", oktetoNS)
 
-	if members != nil && len(*members) > 0 {
-		if err := oktetoClient.AddNamespaceMembers(ctx, namespace, *members); err != nil {
-			return fmt.Errorf("failed to invite %s to the namespace: %s", strings.Join(*members, ", "), err)
+	if opts.Members != nil && len(*opts.Members) > 0 {
+		if err := nc.okClient.Namespaces().AddMembers(ctx, opts.Namespace, *opts.Members); err != nil {
+			return fmt.Errorf("failed to invite %s to the namespace: %s", strings.Join(*opts.Members, ", "), err)
 		}
 	}
 
-	ctxOptions := contextCMD.ContextOptions{
+	ctxOptions := &contextCMD.ContextOptions{
 		IsCtxCommand: false,
 		IsOkteto:     true,
 		Save:         true,
-		Show:         true,
+		Show:         opts.show,
 		Token:        okteto.Context().Token,
 		Namespace:    oktetoNS,
 		Context:      okteto.Context().Name,
 	}
 
-	if err := contextCMD.Run(ctx, &ctxOptions); err != nil {
+	if err := nc.ctxCmd.Run(ctx, ctxOptions); err != nil {
 		return fmt.Errorf("failed to activate your new namespace %s: %s", oktetoNS, err)
-	}
-	if err := contextCMD.ExecuteUpdateKubeconfig(ctx); err != nil {
-		return err
 	}
 
 	return nil

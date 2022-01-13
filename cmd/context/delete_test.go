@@ -18,6 +18,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -59,7 +60,7 @@ func Test_deleteContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			file, err := createKubeconfig(kubeconfigFields{})
+			file, err := test.CreateKubeconfig(test.KubeconfigFields{})
 			if err != nil {
 				t.Fatal(err)
 			}

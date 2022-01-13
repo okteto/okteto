@@ -15,16 +15,27 @@ package types
 
 import "context"
 
+type OktetoInterface interface {
+	User() UserInterface
+	Namespaces() NamespaceInterface
+	Previews() PreviewInterface
+}
+
 type UserInterface interface {
-	GetUserContext(ctx context.Context) (*UserContext, error)
+	GetContext(ctx context.Context) (*UserContext, error)
 }
 
 type NamespaceInterface interface {
-	ListNamespaces(ctx context.Context) ([]Namespace, error)
-	ListPreviews(ctx context.Context) ([]Preview, error)
+	Create(ctx context.Context, namespace string) (string, error)
+	List(ctx context.Context) ([]Namespace, error)
+	Delete(ctx context.Context, namespace string) error
+	AddMembers(ctx context.Context, namespace string, members []string) error
 }
 
-type OktetoUserClientProvider interface {
-	NewOktetoUserClient() (UserInterface, error)
-	NewOktetoNamespaceClient() (NamespaceInterface, error)
+type PreviewInterface interface {
+	List(ctx context.Context) ([]Preview, error)
+}
+
+type OktetoClientProvider interface {
+	Provide() (OktetoInterface, error)
 }

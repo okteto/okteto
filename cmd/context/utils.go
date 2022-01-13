@@ -147,7 +147,8 @@ func LoadManifestWithContext(ctx context.Context, devPath, namespace, k8sContext
 		Namespace: ctxResource.Namespace,
 		Show:      true,
 	}
-	if err := Run(ctx, ctxOptions); err != nil {
+
+	if err := NewContextCommand().Run(ctx, ctxOptions); err != nil {
 		return nil, err
 	}
 
@@ -172,7 +173,8 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 		Namespace: ctxResource.Namespace,
 		Show:      true,
 	}
-	if err := Run(ctx, ctxOptions); err != nil {
+
+	if err := NewContextCommand().Run(ctx, ctxOptions); err != nil {
 		return nil, err
 	}
 
@@ -213,7 +215,7 @@ func LoadManifestV2WithContext(ctx context.Context, namespace, path string) erro
 		}
 	}
 
-	return Run(ctx, ctxOptions)
+	return NewContextCommand().Run(ctx, ctxOptions)
 }
 
 // GetManifest Loads a manifest

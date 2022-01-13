@@ -103,10 +103,21 @@ func main() {
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
 	root.AddCommand(contextCMD.Context())
+	root.AddCommand(cmd.Kubeconfig())
 	root.AddCommand(cmd.Build(ctx))
-	root.AddCommand(cmd.Create(ctx))
-	root.AddCommand(cmd.List(ctx))
-	root.AddCommand(cmd.Delete(ctx))
+
+	createCmd := cmd.Create(ctx)
+	createCmd.Hidden = true
+	root.AddCommand(createCmd)
+
+	listCmd := cmd.List(ctx)
+	listCmd.Hidden = true
+	root.AddCommand(listCmd)
+
+	deleteCmd := cmd.Delete(ctx)
+	deleteCmd.Hidden = true
+	root.AddCommand(deleteCmd)
+
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(pipeline.Pipeline(ctx))
 	root.AddCommand(stack.Stack(ctx))

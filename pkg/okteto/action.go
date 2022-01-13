@@ -13,7 +13,7 @@ import (
 // GetAction gets a installer job given its name
 func (c *OktetoClient) GetAction(ctx context.Context, name string) (*types.Action, error) {
 	namespace := Context().Namespace
-	var query struct {
+	var queryStruct struct {
 		Action struct {
 			Id     graphql.String
 			Name   graphql.String
@@ -25,14 +25,14 @@ func (c *OktetoClient) GetAction(ctx context.Context, name string) (*types.Actio
 		"space": graphql.String(namespace),
 	}
 
-	err := c.Query(ctx, &query, variables)
+	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
 		return nil, err
 	}
 	action := &types.Action{
-		ID:     string(query.Action.Id),
-		Name:   string(query.Action.Name),
-		Status: string(query.Action.Status),
+		ID:     string(queryStruct.Action.Id),
+		Name:   string(queryStruct.Action.Name),
+		Status: string(queryStruct.Action.Status),
 	}
 
 	return action, nil

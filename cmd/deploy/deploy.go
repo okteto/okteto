@@ -105,10 +105,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 					return err
 				}
 				if create {
-					err = namespace.ExecuteCreateNamespace(ctx, okteto.Context().Namespace, nil)
+					nsCmd, err := namespace.NewCommand()
 					if err != nil {
 						return err
 					}
+					nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.Context().Namespace})
 				}
 			}
 

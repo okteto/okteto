@@ -40,23 +40,28 @@ func Build(ctx context.Context) *cobra.Command {
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+				return err
+			}
 			if okteto.IsOkteto() && options.Namespace != "" {
 				create, err := utils.ShouldCreateNamespace(ctx, options.Namespace)
 				if err != nil {
 					return err
 				}
 				if create {
-					err = namespace.ExecuteCreateNamespace(ctx, options.Namespace, nil)
+					nsCmd, err := namespace.NewCommand()
 					if err != nil {
 						return err
 					}
+					nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: options.Namespace})
 				}
 			}
 
 			ctxOpts := &contextCMD.ContextOptions{
 				Namespace: options.Namespace,
 			}
-			if err := contextCMD.Run(ctx, ctxOpts); err != nil {
+
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 
@@ -79,7 +84,7 @@ func Build(ctx context.Context) *cobra.Command {
 						ctxOpts.Context = manifest.Context
 					}
 					if manifest.Namespace != "" || manifest.Context != "" {
-						if err := contextCMD.Run(ctx, ctxOpts); err != nil {
+						if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
 							return err
 						}
 					}

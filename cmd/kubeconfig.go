@@ -14,34 +14,26 @@
 package cmd
 
 import (
-	"context"
-
-	"github.com/okteto/okteto/cmd/namespace"
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
 
-// Create creates resources
-func Create(ctx context.Context) *cobra.Command {
+// Kubeconfig fetch credentials for a cluster namespace
+func Kubeconfig() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "create",
-		Short: "Create resources",
-		Args:  utils.NoArgsAccepted(""),
-	}
-	cmd.AddCommand(deprecatedCreateNamespace(ctx))
-	return cmd
-}
-
-func deprecatedCreateNamespace(ctx context.Context) *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "namespace <name>",
-		Short: "Create a namespace",
+		Use:    "kubeconfig",
+		Hidden: true,
+		Short:  "Download k8s credentials for the namespace",
+		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#update-kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Warning("'okteto create namespace' will be deprecated. Please use 'okteto namespace create' instead")
-			return cmd.RunE(namespace.Create(ctx), args)
+
+			err := contextCMD.UpdateKubeconfigCMD().RunE(cmd, args)
+			if err != nil {
+				return err
+			}
+			return err
 		},
-		Args: utils.ExactArgsAccepted(1, ""),
 	}
 	return cmd
 }

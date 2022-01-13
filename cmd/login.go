@@ -63,7 +63,7 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 			}
 
 			ctx := context.Background()
-			err := contextCMD.Run(ctx, &ctxOptions)
+			err := contextCMD.NewContextCommand().Run(ctx, &ctxOptions)
 			if err != nil {
 				analytics.TrackLogin(false)
 			} else {
