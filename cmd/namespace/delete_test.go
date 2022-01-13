@@ -112,7 +112,7 @@ func Test_deleteNamespace(t *testing.T) {
 				okClient: fakeOktetoClient,
 				ctxCmd:   newFakeContextCommand(fakeOktetoClient, usr),
 			}
-			err := nsCmd.executeDeleteNamespace(ctx, tt.toDeleteNs)
+			err := nsCmd.ExecuteDeleteNamespace(ctx, tt.toDeleteNs)
 			if tt.err {
 				assert.Error(t, err)
 			} else {
