@@ -206,10 +206,10 @@ jobs:
             docker build -t okteto/okteto:${CIRCLE_TAG} --build-arg VERSION_STRING=$CIRCLE_TAG .
             docker push okteto/okteto:${CIRCLE_TAG}
       - run:
-          name: Publish Release on GitHub
+          name: Publish Prerelease on GitHub
           command: |
             go get -u github.com/tcnksm/ghr
-            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace $CIRCLE_TAG -prerelease ./artifacts/bin/
+            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -prerelease -replace $CIRCLE_TAG ./artifacts/bin/
   release-master:
     docker:
       - image: okteto/golang-ci:1.17.3
