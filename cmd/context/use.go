@@ -15,14 +15,11 @@ package context
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/login"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
@@ -66,7 +63,8 @@ Or a Kubernetes context:
 
 			ctxOptions.IsCtxCommand = true
 			ctxOptions.Save = true
-			err := Run(ctx, ctxOptions)
+
+			err := NewContextCommand().Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
 				return err
@@ -84,7 +82,7 @@ Or a Kubernetes context:
 	return cmd
 }
 
-func Run(ctx context.Context, ctxOptions *ContextOptions) error {
+func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	ctxStore := okteto.ContextStore()
 	ctxOptions.initFromContext()
 	ctxOptions.initFromEnvVars()
@@ -94,8 +92,11 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	}
 
 	if ctxOptions.Context == "" {
-		if !ctxOptions.IsCtxCommand {
+		if !ctxOptions.IsCtxCommand && !ctxOptions.raiseNotCtxError {
 			log.Information("Okteto context is not initialized")
+		}
+		if ctxOptions.raiseNotCtxError {
+			return errors.ErrCtxNotSet
 		}
 		log.Infof("authenticating with interactive context")
 		oktetoContext, err := getContext(ctx, ctxOptions)
@@ -108,13 +109,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 		ctxOptions.Save = true
 	}
 
-	ctxController := ContextUse{
-		k8sClientProvider:    okteto.NewK8sClientProvider(),
-		loginController:      login.NewLoginController(),
-		oktetoClientProvider: okteto.NewOktetoClientProvider(),
-	}
-
-	if err := ctxController.UseContext(ctx, ctxOptions); err != nil {
+	if err := c.UseContext(ctx, ctxOptions); err != nil {
 		return err
 	}
 
@@ -132,7 +127,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 
 func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
-	oktetoContext, isOkteto, err := AskForOptions(ctx, ctxs, "A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:")
+	oktetoContext, isOkteto, err := utils.AskForOptionsOkteto(ctx, ctxs, "A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:")
 	if err != nil {
 		return "", err
 	}
@@ -148,45 +143,8 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 
 func setSecrets(secrets []types.Secret) {
 	for _, secret := range secrets {
-		os.Setenv(secret.Name, secret.Value)
-	}
-}
-
-func (c ContextUse) getUserContext(ctx context.Context) (*types.UserContext, error) {
-	client, err := c.oktetoClientProvider.NewOktetoUserClient()
-	if err != nil {
-		return nil, err
-	}
-
-	retries := 0
-	for retries <= 3 {
-		userContext, err := client.GetUserContext(ctx)
-
-		// If userID is not on context config file we add it and save it.
-		// this prevents from relogin to actual users
-		if okteto.Context().UserID == "" && okteto.Context().IsOkteto {
-			okteto.Context().UserID = userContext.User.ID
-			if err := okteto.WriteOktetoContextConfig(); err != nil {
-				log.Infof("error updating okteto contexts: %v", err)
-				return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
-			}
+		if _, exists := os.LookupEnv(secret.Name); !exists {
+			os.Setenv(secret.Name, secret.Value)
 		}
-
-		if err == nil {
-			return userContext, nil
-		}
-
-		if errors.IsForbidden(err) {
-			okteto.Context().Token = ""
-			if err := okteto.WriteOktetoContextConfig(); err != nil {
-				log.Infof("error updating okteto contexts: %v", err)
-				return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
-			}
-			return nil, fmt.Errorf(errors.ErrNotLogged, okteto.Context().Name)
-		}
-
-		log.Info(err)
-		retries++
 	}
-	return nil, errors.ErrInternalServerError
 }

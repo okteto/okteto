@@ -35,7 +35,8 @@ func UseNamespace() *cobra.Command {
 			ctxOptions.Context = okteto.Context().Name
 			ctxOptions.Show = true
 			ctxOptions.Save = true
-			err := Run(ctx, ctxOptions)
+
+			err := NewContextCommand().Run(ctx, ctxOptions)
 			analytics.TrackContextUseNamespace(err == nil)
 			if err != nil {
 				return err

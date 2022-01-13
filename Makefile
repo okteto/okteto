@@ -50,6 +50,10 @@ integration-actions:
 build:
 	 $(BUILDCOMMAND) -o ${BINDIR}/okteto
 
+.PHONY: build-integration
+build-integration:
+	  $(BUILDCOMMAND) -tags "common integration actions" github.com/okteto/okteto/integration
+
 .PHONY: dep
 dep:
 	go mod tidy

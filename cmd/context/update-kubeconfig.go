@@ -33,7 +33,7 @@ func UpdateKubeconfigCMD() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			if err := Run(ctx, &ContextOptions{}); err != nil {
+			if err := NewContextCommand().Run(ctx, &ContextOptions{}); err != nil {
 				return err
 			}
 

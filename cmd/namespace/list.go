@@ -29,11 +29,12 @@ import (
 // List all namespace in current context
 func List(ctx context.Context) *cobra.Command {
 	return &cobra.Command{
-		Use:   "namespace",
-		Short: "List namespaces managed by Okteto in your current context",
+		Use:     "list",
+		Short:   "List namespaces managed by Okteto in your current context",
+		Aliases: []string{"ls"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 
@@ -41,25 +42,28 @@ func List(ctx context.Context) *cobra.Command {
 				return errors.ErrContextIsNotOktetoCluster
 			}
 
-			err := executeListNamespaces(ctx)
+			nsCmd, err := NewCommand()
+			if err != nil {
+				return err
+			}
+			err = nsCmd.executeListNamespaces(ctx)
 			return err
 		},
 		Args: utils.NoArgsAccepted(""),
 	}
 }
 
-func executeListNamespaces(ctx context.Context) error {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-	spaces, err := oktetoClient.ListNamespaces(ctx)
+func (nc *NamespaceCommand) executeListNamespaces(ctx context.Context) error {
+	spaces, err := nc.okClient.Namespaces().List(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get namespaces: %s", err)
 	}
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
 	fmt.Fprintf(w, "Namespace\tStatus\n")
 	for _, space := range spaces {
+		if space.ID == okteto.Context().Namespace {
+			space.ID += " *"
+		}
 		fmt.Fprintf(w, "%s\t%v\n", space.ID, space.Status)
 	}
 

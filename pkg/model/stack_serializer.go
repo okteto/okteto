@@ -34,6 +34,7 @@ type StackRaw struct {
 	Version   string                     `yaml:"version,omitempty"`
 	Name      string                     `yaml:"name"`
 	Namespace string                     `yaml:"namespace,omitempty"`
+	Context   string                     `yaml:"context,omitempty"`
 	Services  map[string]*ServiceRaw     `yaml:"services,omitempty"`
 	Endpoints EndpointSpec               `yaml:"endpoints,omitempty"`
 	Volumes   map[string]*VolumeTopLevel `yaml:"volumes,omitempty"`
@@ -242,6 +243,7 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.Name = stackRaw.Name
 
 	s.Namespace = stackRaw.Namespace
+	s.Context = stackRaw.Context
 
 	s.Endpoints = stackRaw.Endpoints
 
@@ -426,7 +428,12 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.EnvFiles = serviceRaw.EnvFilesSneakCase
 	}
 
-	svc.Environment = serviceRaw.Environment
+	svc.Environment = Environment{}
+	for _, env := range serviceRaw.Environment {
+		if env.Value != "" {
+			svc.Environment = append(svc.Environment, env)
+		}
+	}
 
 	svc.DependsOn = make(DependsOn)
 	for name, condition := range serviceRaw.DependsOn {

@@ -13,21 +13,26 @@
 
 package model
 
-import "github.com/okteto/okteto/pkg/log"
+import (
+	"github.com/okteto/okteto/pkg/log"
+)
 
 //Manifest represents an okteto manifest
 type Manifest struct {
-	Name    string       `json:"name,omitempty" yaml:"name,omitempty"`
-	Icon    string       `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy  *DeployInfo  `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev     ManifestDevs `json:"devs,omitempty" yaml:"devs,omitempty"`
-	Destroy []string     `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Namespace string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context   string        `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon      string        `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy    *DeployInfo   `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev       ManifestDevs  `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy   []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build     ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
 
-	Type     string `yaml:"-"`
-	Filename string `yaml:"-"`
+	Type     string `json:"-" yaml:"-"`
+	Filename string `json:"-" yaml:"-"`
 }
 
 type ManifestDevs map[string]*Dev
+type ManifestBuild map[string]*BuildInfo
 
 func NewManifest() *Manifest {
 	return &Manifest{

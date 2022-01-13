@@ -13,7 +13,7 @@ import (
 // GetAction gets a installer job given its name
 func (c *OktetoClient) GetAction(ctx context.Context, name string) (*types.Action, error) {
 	namespace := Context().Namespace
-	var query struct {
+	var queryStruct struct {
 		Action struct {
 			Id     graphql.String
 			Name   graphql.String
@@ -25,39 +25,42 @@ func (c *OktetoClient) GetAction(ctx context.Context, name string) (*types.Actio
 		"space": graphql.String(namespace),
 	}
 
-	err := c.Query(ctx, &query, variables)
+	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
 		return nil, err
 	}
 	action := &types.Action{
-		ID:     string(query.Action.Id),
-		Name:   string(query.Action.Name),
-		Status: string(query.Action.Status),
+		ID:     string(queryStruct.Action.Id),
+		Name:   string(queryStruct.Action.Name),
+		Status: string(queryStruct.Action.Status),
 	}
 
 	return action, nil
 }
 
-func (c *OktetoClient) WaitForActionToFinish(ctx context.Context, name string, timeout time.Duration) error {
+func (c *OktetoClient) WaitForActionToFinish(ctx context.Context, pipelineName, actionName string, timeout time.Duration) error {
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("action '%s' didn't finish after %s", name, timeout.String())
+			log.Infof("action '%s' didn't finish after %s", actionName, timeout.String())
+			return fmt.Errorf("pipeline '%s' didn't finish after %s", pipelineName, timeout.String())
 		case <-t.C:
-			a, err := c.GetAction(ctx, name)
+			a, err := c.GetAction(ctx, actionName)
 			if err != nil {
-				return fmt.Errorf("failed to get action '%s': %s", name, err)
+				log.Infof("action '%s' failed", actionName)
+				return fmt.Errorf("pipeline '%s' failed", pipelineName)
 			}
 
-			log.Infof("action '%s' is '%s'", name, a.Status)
+			log.Infof("action '%s' is '%s'", actionName, a.Status)
 			switch a.Status {
 			case "progressing", "queued":
 				continue
 			case "error":
-				return fmt.Errorf("action '%s' failed", name)
+				log.Infof("action '%s' failed", actionName)
+				return fmt.Errorf("pipeline '%s' failed", pipelineName)
 			default:
 				return nil
 			}

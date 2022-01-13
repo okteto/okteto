@@ -18,6 +18,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -28,6 +29,19 @@ func Delete(ctx context.Context) *cobra.Command {
 		Short: "Delete resources",
 		Args:  utils.NoArgsAccepted(""),
 	}
-	cmd.AddCommand(namespace.Delete(ctx))
+	cmd.AddCommand(deprecatedDeleteNamespace(ctx))
+	return cmd
+}
+
+func deprecatedDeleteNamespace(ctx context.Context) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "namespace <name>",
+		Short: "Delete a namespace",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			log.Warning("'okteto delete namespace' will be deprecated. Please use 'okteto namespace delete' instead")
+			return cmd.RunE(namespace.Delete(ctx), args)
+		},
+		Args: utils.ExactArgsAccepted(1, ""),
+	}
 	return cmd
 }

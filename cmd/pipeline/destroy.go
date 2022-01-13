@@ -51,7 +51,7 @@ func destroy(ctx context.Context) *cobra.Command {
 			ctxOptions := &contextCMD.ContextOptions{
 				Namespace: ctxResource.Namespace,
 			}
-			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 
@@ -180,7 +180,7 @@ func waitToBeDestroyed(ctx context.Context, name string, action *types.Action, t
 	if err != nil {
 		return err
 	}
-	return oktetoClient.WaitForActionToFinish(ctx, action.Name, timeout)
+	return oktetoClient.WaitForActionToFinish(ctx, name, action.Name, timeout)
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0

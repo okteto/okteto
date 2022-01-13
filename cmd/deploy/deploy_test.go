@@ -15,10 +15,14 @@ package deploy
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"testing"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/rest"
 )
@@ -91,12 +95,21 @@ func (fe *fakeExecutor) Execute(command string, _ []string) error {
 func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
 		proxy:    p,
 		executor: e,
 		kubeconfig: &fakeKubeConfig{
 			errOnModify: assert.AnError,
 		},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -118,11 +131,20 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
-		getManifest: getManifestWithError,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+		getManifest:       getManifestWithError,
+		proxy:             p,
+		executor:          e,
+		kubeconfig:        &fakeKubeConfig{},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -146,11 +168,20 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	e := &fakeExecutor{
 		err: assert.AnError,
 	}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
-		getManifest: getFakeManifest,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+		getManifest:       getFakeManifest,
+		proxy:             p,
+		executor:          e,
+		kubeconfig:        &fakeKubeConfig{},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -178,11 +209,20 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		errOnShutdown: assert.AnError,
 	}
 	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
-		getManifest: getFakeManifest,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+		getManifest:       getFakeManifest,
+		proxy:             p,
+		executor:          e,
+		kubeconfig:        &fakeKubeConfig{},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -208,11 +248,20 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 func TestDeployWithoutErrors(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	c := &deployCommand{
-		getManifest: getFakeManifest,
-		proxy:       p,
-		executor:    e,
-		kubeconfig:  &fakeKubeConfig{},
+		getManifest:       getFakeManifest,
+		proxy:             p,
+		executor:          e,
+		kubeconfig:        &fakeKubeConfig{},
+		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	cwd := "/tmp"
@@ -235,10 +284,75 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, p.shutdown)
 }
 
-func getManifestWithError(_ context.Context, _ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ context.Context, _ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return fakeManifest, nil
+}
+
+func Test_setManifestEnvVars(t *testing.T) {
+	tests := []struct {
+		name       string
+		service    string
+		registry   string
+		repository string
+		image      string
+		tag        string
+	}{
+		{
+			name:       "setting-variables",
+			service:    "serviceName",
+			registry:   "registryUrl",
+			repository: "repository",
+			image:      "image",
+			tag:        "tag",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			registryEnv := fmt.Sprintf("build.%s.registry", tt.service)
+			imageEnv := fmt.Sprintf("build.%s.image", tt.service)
+			repositoryEnv := fmt.Sprintf("build.%s.repository", tt.service)
+			tagEnv := fmt.Sprintf("build.%s.tag", tt.service)
+
+			envs := []string{registryEnv, imageEnv, repositoryEnv, tagEnv}
+			for _, e := range envs {
+				if v := os.Getenv(e); v != "" {
+					t.Errorf("env variable is already set [%v]", e)
+				}
+			}
+			setManifestEnvVars(tt.service, tt.registry, tt.repository, tt.image, tt.tag)
+
+			registryEnvValue := os.Getenv(registryEnv)
+			imageEnvValue := os.Getenv(imageEnv)
+			repositoryEnvValue := os.Getenv(repositoryEnv)
+			tagEnvValue := os.Getenv(tagEnv)
+
+			for _, e := range envs {
+				if err := os.Unsetenv(e); err != nil {
+					t.Errorf("error unsetting var %s", err.Error())
+				}
+			}
+
+			if registryEnvValue != tt.registry {
+				t.Errorf("registry - expected %s , got %s", tt.registry, registryEnvValue)
+			}
+			if imageEnvValue != tt.image {
+				t.Errorf("image - expected %s , got %s", tt.image, imageEnvValue)
+
+			}
+			if repositoryEnvValue != tt.repository {
+				t.Errorf("repository - expected %s , got %s", tt.repository, repositoryEnvValue)
+
+			}
+			if tagEnvValue != tt.tag {
+				t.Errorf("tag - expected %s , got %s", tt.tag, tagEnvValue)
+
+			}
+
+		})
+	}
 }

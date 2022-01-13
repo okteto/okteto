@@ -18,6 +18,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -29,12 +30,12 @@ func Test_updateKubeconfig(t *testing.T) {
 
 	var tests = []struct {
 		name          string
-		kubeconfigCtx kubeconfigFields
+		kubeconfigCtx test.KubeconfigFields
 		context       *okteto.OktetoContextStore
 	}{
 		{
 			name: "change current ctx",
-			kubeconfigCtx: kubeconfigFields{
+			kubeconfigCtx: test.KubeconfigFields{
 				Name:           []string{"test", "to-change"},
 				Namespace:      []string{"test", "test"},
 				CurrentContext: "test",
@@ -58,7 +59,7 @@ func Test_updateKubeconfig(t *testing.T) {
 		},
 		{
 			name: "change current namespace",
-			kubeconfigCtx: kubeconfigFields{
+			kubeconfigCtx: test.KubeconfigFields{
 				Name:           []string{"to-change"},
 				Namespace:      []string{"to-change"},
 				CurrentContext: "to-change",
@@ -82,7 +83,7 @@ func Test_updateKubeconfig(t *testing.T) {
 		},
 		{
 			name:          "create if it does not exists",
-			kubeconfigCtx: kubeconfigFields{},
+			kubeconfigCtx: test.KubeconfigFields{},
 			context: &okteto.OktetoContextStore{
 				CurrentContext: "to-change",
 				Contexts: map[string]*okteto.OktetoContext{
@@ -105,7 +106,7 @@ func Test_updateKubeconfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			okteto.CurrentStore = tt.context
-			file, err := createKubeconfig(tt.kubeconfigCtx)
+			file, err := test.CreateKubeconfig(tt.kubeconfigCtx)
 			if err != nil {
 				t.Fatal(err)
 			}

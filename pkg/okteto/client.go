@@ -16,6 +16,7 @@ package okteto
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -23,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 	"golang.org/x/oauth2"
 )
@@ -30,12 +32,24 @@ import (
 //Client implementation to connect to Okteto API
 type OktetoClient struct {
 	client *graphql.Client
+
+	namespace types.NamespaceInterface
+	user      types.UserInterface
+	preview   types.PreviewInterface
 }
 
 type OktetoClientProvider struct{}
 
 func NewOktetoClientProvider() *OktetoClientProvider {
 	return &OktetoClientProvider{}
+}
+
+func (*OktetoClientProvider) Provide() (types.OktetoInterface, error) {
+	c, err := NewOktetoClient()
+	if err != nil {
+		return nil, err
+	}
+	return c, err
 }
 
 //NewClient creates a new client to connect with Okteto API
@@ -55,10 +69,7 @@ func NewOktetoClient() (*OktetoClient, error) {
 	)
 	httpClient := oauth2.NewClient(context.Background(), src)
 
-	client := &OktetoClient{
-		client: graphql.NewClient(u, httpClient),
-	}
-	return client, nil
+	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
 //NewClient creates a new client to connect with Okteto API
@@ -74,10 +85,7 @@ func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 	)
 	httpClient := oauth2.NewClient(context.Background(), src)
 
-	client := &OktetoClient{
-		client: graphql.NewClient(u, httpClient),
-	}
-	return client, nil
+	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
 //NewClient creates a new client to connect with Okteto API
@@ -88,10 +96,18 @@ func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
 	}
 
 	httpClient := oauth2.NewClient(context.Background(), nil)
-	client := &OktetoClient{
-		client: graphql.NewClient(u, httpClient),
+
+	return newOktetoClientFromGraphqlClient(u, httpClient)
+}
+
+func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*OktetoClient, error) {
+	c := &OktetoClient{
+		client: graphql.NewClient(url, httpClient),
 	}
-	return client, nil
+	c.namespace = newNamespaceClient(c.client)
+	c.preview = newPreviewClient(c.client)
+	c.user = newUserClient(c.client)
+	return c, nil
 }
 
 func parseOktetoURL(u string) (string, error) {
@@ -172,21 +188,36 @@ func InDevContainer() bool {
 	return false
 }
 
-func (c *OktetoClient) Query(ctx context.Context, query interface{}, variables map[string]interface{}) error {
-	err := c.client.Query(ctx, query, variables)
+func query(ctx context.Context, query interface{}, variables map[string]interface{}, client *graphql.Client) error {
+	err := client.Query(ctx, query, variables)
 	if err != nil {
 		if isAPITransientErr(err) {
-			err = c.client.Query(ctx, query, variables)
+			err = client.Query(ctx, query, variables)
 		}
 		return translateAPIErr(err)
 	}
 	return nil
 }
 
-func (c *OktetoClient) Mutate(ctx context.Context, mutation interface{}, variables map[string]interface{}) error {
-	err := c.client.Mutate(ctx, mutation, variables)
+func mutate(ctx context.Context, mutation interface{}, variables map[string]interface{}, client *graphql.Client) error {
+	err := client.Mutate(ctx, mutation, variables)
 	if err != nil {
 		return translateAPIErr(err)
 	}
 	return nil
+}
+
+// Namespace retrieves the NamespaceClient
+func (c *OktetoClient) Namespaces() types.NamespaceInterface {
+	return c.namespace
+}
+
+// Namespace retrieves the NamespaceClient
+func (c *OktetoClient) Previews() types.PreviewInterface {
+	return c.preview
+}
+
+// User retrieves the UserClient
+func (c *OktetoClient) User() types.UserInterface {
+	return c.user
 }

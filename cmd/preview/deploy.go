@@ -51,7 +51,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploy a preview environment",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 			var err error
@@ -246,7 +246,7 @@ func waitToBeDeployed(ctx context.Context, name string, a *types.Action, timeout
 	if err != nil {
 		return err
 	}
-	return oktetoClient.WaitForActionToFinish(ctx, a.Name, timeout)
+	return oktetoClient.WaitForActionToFinish(ctx, name, a.Name, timeout)
 }
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0

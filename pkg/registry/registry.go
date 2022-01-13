@@ -16,6 +16,7 @@ package registry
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -25,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/opencontainers/go-digest"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -40,28 +42,50 @@ type ConfigInfo struct {
 	ExposedPorts *map[string]*interface{} `json:"ExposedPorts"`
 }
 
+// headManifestDigest returns the pull digest for the image at the registry
+func headManifestDigest(repository, tag string) (digest.Digest, error) {
+	u, err := url.Parse(okteto.Context().Registry)
+	if err != nil {
+		log.Infof("error parsing registry url: %s", err.Error())
+		return "", nil
+	}
+	u.Scheme = "https"
+	c, err := NewRegistryClient(u.String(), okteto.Context().UserID, okteto.Context().Token)
+	if err != nil {
+		log.Infof("error creating registry client: %s", err.Error())
+		return "", nil
+	}
+
+	urlManifest, err := url.Parse(fmt.Sprintf("https://%s/v2/%s/manifests/%s", okteto.Context().Registry, repository, tag))
+	if err != nil {
+		return "", fmt.Errorf("error parsing registry url: %s", err.Error())
+	}
+
+	req, err := http.NewRequest("HEAD", urlManifest.String(), nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	resp, err := c.Client.Do(req)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return "", err
+	}
+
+	return digest.Parse(resp.Header.Get("Docker-Content-Digest"))
+}
+
 // GetImageTagWithDigest returns the image tag digest
 func GetImageTagWithDigest(imageTag string) (string, error) {
 	if !okteto.IsOkteto() {
 		return imageTag, nil
 	}
 
-	var err error
 	expandedTag := imageTag
 	expandedTag = ExpandOktetoDevRegistry(expandedTag)
 	expandedTag = ExpandOktetoGlobalRegistry(expandedTag)
-	username := okteto.Context().UserID
-	u, err := url.Parse(okteto.Context().Registry)
-	if err != nil {
-		log.Infof("error parsing registry url: %s", err.Error())
-		return imageTag, nil
-	}
-	u.Scheme = "https"
-	c, err := NewRegistryClient(u.String(), username, okteto.Context().Token)
-	if err != nil {
-		log.Infof("error creating registry client: %s", err.Error())
-		return imageTag, nil
-	}
 
 	repoURL, tag := GetRepoNameAndTag(expandedTag)
 	index := strings.IndexRune(repoURL, '/')
@@ -70,7 +94,7 @@ func GetImageTagWithDigest(imageTag string) (string, error) {
 		return imageTag, nil
 	}
 	repoName := repoURL[index+1:]
-	digest, err := c.ManifestDigest(repoName, tag)
+	digest, err := headManifestDigest(repoName, tag)
 	if err != nil {
 		if strings.Contains(err.Error(), "status=404") {
 			return "", errors.ErrNotFound
@@ -154,7 +178,10 @@ func GetHiddenExposePorts(image string) []model.Port {
 
 	info := ImageInfo{Config: &ConfigInfo{}}
 	decoder := json.NewDecoder(response)
-	decoder.Decode(&info)
+	if err := decoder.Decode(&info); err != nil {
+		log.Infof("error decoding registry response: %s", err.Error())
+		return exposedPorts
+	}
 
 	if info.Config.ExposedPorts != nil {
 
