@@ -36,23 +36,23 @@ lint:
 
 .PHONY: test
 test:
-	 go test -p 4 -coverprofile=coverage.txt -covermode=atomic ./...
+	go test -p 4 -coverprofile=coverage.txt -covermode=atomic ./...
 
 .PHONY: integration
 integration:
-	 go test github.com/okteto/okteto/integration -tags="common integration actions" --count=1 -v -timeout 45m
+	go test github.com/okteto/okteto/integration -tags="common integration actions" --count=1 -v -timeout 45m
 
 .PHONY: integration-actions
 integration-actions:
-	 go test github.com/okteto/okteto/integration -tags="common actions" --count=1 -v -timeout 15m
+	go test github.com/okteto/okteto/integration -tags="common actions" --count=1 -v -timeout 15m
 
 .PHONY: build
 build:
-	 $(BUILDCOMMAND) -o ${BINDIR}/okteto
+	$(BUILDCOMMAND) -o ${BINDIR}/okteto
 
 .PHONY: build-integration
 build-integration:
-	  $(BUILDCOMMAND) -tags "common integration actions" github.com/okteto/okteto/integration
+	go test github.com/okteto/okteto/integration -tags "common integration actions" -c -o ${BINDIR}/okteto-integration.test
 
 .PHONY: dep
 dep:
