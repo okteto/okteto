@@ -1359,9 +1359,6 @@ func getServiceNotSupportedFields(svcName string, svcInfo *ServiceRaw) []string 
 	if svcInfo.Ulimits != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].ulimits", svcName))
 	}
-	if svcInfo.User != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].user", svcName))
-	}
 	if svcInfo.UsernsMode != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].userns_mode", svcName))
 	}
