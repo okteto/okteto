@@ -23,7 +23,6 @@ import (
 	"github.com/kballard/go-shellquote"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/utils/pointer"
 )
 
 const (
@@ -703,24 +702,24 @@ func (sc *StackSecurityContext) UnmarshalYAML(unmarshal func(interface{}) error)
 		if strings.Contains(rawSecurityContext, ":") {
 			parts := strings.Split(rawSecurityContext, ":")
 			if len(parts) != 2 {
-				return fmt.Errorf("SecurityContext is malformed. Only 'dddd:dddd' is supported")
+				return fmt.Errorf("SecurityContext '%s' is malformed. Only 'dddd:dddd' is supported", rawSecurityContext)
 			}
-			runAsUser, err := strconv.Atoi(parts[0])
+			runAsUser, err := strconv.ParseInt(parts[0], 10, 64)
 			if err != nil {
-				return fmt.Errorf("Can not convert '%s' to a user", rawSecurityContext)
+				return fmt.Errorf("Can not obtain UID from '%s'", parts[0])
 			}
-			runAsGroup, err := strconv.Atoi(parts[1])
+			runAsGroup, err := strconv.ParseInt(parts[1], 10, 64)
 			if err != nil {
-				return fmt.Errorf("Can not convert '%s' to a user", rawSecurityContext)
+				return fmt.Errorf("Can not obtain GID from '%s'", parts[1])
 			}
-			sc.RunAsUser = pointer.Int64(int64(runAsUser))
-			sc.RunAsGroup = pointer.Int64(int64(runAsGroup))
+			sc.RunAsUser = &runAsUser
+			sc.RunAsGroup = &runAsGroup
 		} else {
-			runAsUser, err := strconv.Atoi(rawSecurityContext)
+			runAsUser, err := strconv.ParseInt(rawSecurityContext, 10, 64)
 			if err != nil {
-				return fmt.Errorf("Can not convert '%s' to a user", rawSecurityContext)
+				return fmt.Errorf("Can not obtain UID from '%s'", rawSecurityContext)
 			}
-			sc.RunAsUser = pointer.Int64(int64(runAsUser))
+			sc.RunAsUser = &runAsUser
 		}
 		return nil
 	}
