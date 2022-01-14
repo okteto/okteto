@@ -1,10 +1,3 @@
----
-title: Install Okteto CLI
-description: Follow these steps to install the Okteto CLI, a client-side tool that works in any Kubernetes cluster
-sidebar_label: Installation
-id: installation
----
-
 Okteto provides a local development experience for Kubernetes applications. You code locally in your favorite IDE and Okteto synchronizes it automatically to your cluster. The Okteto CLI is open source, and the code is available at [GitHub](https://github.com/okteto/okteto). It is a client-side only tool that works in any Kubernetes cluster.
 
 Install the Okteto CLI following these steps:
