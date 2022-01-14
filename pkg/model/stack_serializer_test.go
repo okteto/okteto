@@ -1859,7 +1859,7 @@ func Test_ExtensionUnmarshalling(t *testing.T) {
 	}
 }
 
-func Test_UnmarshalStackSecurityContext(t *testing.T) {
+func Test_UnmarshalStackUser(t *testing.T) {
 	tests := []struct {
 		name          string
 		manifest      []byte

@@ -66,7 +66,7 @@ type Service struct {
 	Workdir         string                `yaml:"workdir,omitempty"`
 	BackOffLimit    int32                 `yaml:"max_attempts,omitempty"`
 	Healtcheck      *HealthCheck          `yaml:"healthcheck,omitempty"`
-	SecurityContext *StackSecurityContext `yaml:"security_context,omitempty"`
+	User            *StackSecurityContext `yaml:"user,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas,omitempty"`
