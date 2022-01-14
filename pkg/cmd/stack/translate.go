@@ -822,7 +822,7 @@ func getVolumeClaimName(v *model.StackVolume) string {
 }
 
 func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
-	if len(svc.CapAdd) == 0 && len(svc.CapDrop) == 0 {
+	if len(svc.CapAdd) == 0 && len(svc.CapDrop) == 0 && svc.SecurityContext == nil {
 		return nil
 	}
 	result := &apiv1.SecurityContext{Capabilities: &apiv1.Capabilities{}}
@@ -831,6 +831,10 @@ func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
 	}
 	if len(svc.CapDrop) > 0 {
 		result.Capabilities.Drop = svc.CapDrop
+	}
+	if svc.SecurityContext != nil {
+		result.RunAsUser = svc.SecurityContext.RunAsUser
+		result.RunAsGroup = svc.SecurityContext.RunAsGroup
 	}
 	return result
 }

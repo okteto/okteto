@@ -1858,3 +1858,51 @@ func Test_ExtensionUnmarshalling(t *testing.T) {
 		})
 	}
 }
+
+func Test_UnmarshalStackSecurityContext(t *testing.T) {
+	tests := []struct {
+		name          string
+		manifest      []byte
+		errorExpected bool
+		expected      *StackSecurityContext
+	}{
+		{
+			name:     "expanded form",
+			manifest: []byte("runAsUser: 1000\nrunAsGroup: 2000"),
+			expected: &StackSecurityContext{RunAsUser: pointer.Int64(1000), RunAsGroup: pointer.Int64(2000)},
+		},
+		{
+			name:     "runAsUserOnly",
+			manifest: []byte("1000"),
+			expected: &StackSecurityContext{RunAsUser: pointer.Int64(1000)},
+		},
+		{
+			name:     "runAsUser and runAsGroup",
+			manifest: []byte("1000:2000"),
+			expected: &StackSecurityContext{RunAsUser: pointer.Int64(1000), RunAsGroup: pointer.Int64(2000)},
+		},
+		{
+			name:          "not a number",
+			manifest:      []byte("test"),
+			errorExpected: true,
+			expected:      nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result *StackSecurityContext
+			if err := yaml.Unmarshal([]byte(tt.manifest), &result); err != nil {
+				if !tt.errorExpected {
+					t.Fatalf("unexpected error unmarshaling %s: %s", tt.name, err.Error())
+				}
+				return
+			}
+			if tt.errorExpected {
+				t.Fatalf("expected error unmarshaling %s not thrown", tt.name)
+			}
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("didn't unmarshal correctly healthcheck test. Actual %v, Expected %v", result, tt.expected)
+			}
+		})
+	}
+}

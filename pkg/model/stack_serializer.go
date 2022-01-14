@@ -23,6 +23,7 @@ import (
 	"github.com/kballard/go-shellquote"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -84,9 +85,10 @@ type ServiceRaw struct {
 	Workdir                  string             `yaml:"workdir,omitempty"`
 	DependsOn                DependsOn          `yaml:"depends_on,omitempty"`
 
-	Public    bool            `yaml:"public,omitempty"`
-	Replicas  *int32          `yaml:"replicas"`
-	Resources *StackResources `yaml:"resources,omitempty"`
+	Public          bool                  `yaml:"public,omitempty"`
+	Replicas        *int32                `yaml:"replicas"`
+	Resources       *StackResources       `yaml:"resources,omitempty"`
+	SecurityContext *StackSecurityContext `yaml:"security_context,omitempty"`
 
 	BlkioConfig       *WarningType `yaml:"blkio_config,omitempty"`
 	CpuPercent        *WarningType `yaml:"cpu_percent,omitempty"`
@@ -469,6 +471,8 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.Workdir = serviceRaw.WorkingDirSneakCase
 	}
 
+	svc.SecurityContext = serviceRaw.SecurityContext
+
 	svc.RestartPolicy, err = getRestartPolicy(svcName, serviceRaw.Deploy, serviceRaw.Restart)
 	if err != nil {
 		return nil, err
@@ -689,6 +693,46 @@ func (warning *WarningType) UnmarshalYAML(unmarshal func(interface{}) error) err
 	if a != nil {
 		warning.used = true
 	}
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (sc *StackSecurityContext) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawSecurityContext string
+	err := unmarshal(&rawSecurityContext)
+	if err == nil {
+		if strings.Contains(rawSecurityContext, ":") {
+			parts := strings.Split(rawSecurityContext, ":")
+			if len(parts) != 2 {
+				return fmt.Errorf("SecurityContext is malformed. Only 'dddd:dddd' is supported")
+			}
+			runAsUser, err := strconv.Atoi(parts[0])
+			if err != nil {
+				return fmt.Errorf("Can not convert '%s' to a user", rawSecurityContext)
+			}
+			runAsGroup, err := strconv.Atoi(parts[1])
+			if err != nil {
+				return fmt.Errorf("Can not convert '%s' to a user", rawSecurityContext)
+			}
+			sc.RunAsUser = pointer.Int64(int64(runAsUser))
+			sc.RunAsGroup = pointer.Int64(int64(runAsGroup))
+		} else {
+			runAsUser, err := strconv.Atoi(rawSecurityContext)
+			if err != nil {
+				return fmt.Errorf("Can not convert '%s' to a user", rawSecurityContext)
+			}
+			sc.RunAsUser = pointer.Int64(int64(runAsUser))
+		}
+		return nil
+	}
+	type stackSecurityContext StackSecurityContext // prevent recursion
+	var expandedSecurityContext stackSecurityContext
+	err = unmarshal(&expandedSecurityContext)
+	if err != nil {
+		return err
+	}
+	sc.RunAsUser = expandedSecurityContext.RunAsUser
+	sc.RunAsGroup = expandedSecurityContext.RunAsGroup
 	return nil
 }
 
