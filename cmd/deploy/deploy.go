@@ -229,18 +229,9 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 				// if Build flag is disabled, we check if the image is already at the registry and build it prior to deploy
 				if !opts.Build {
-					_, err := registry.GetImageTagWithDigest(manifestOptions.Tag)
-					if err != nil {
-						if err == errors.ErrNotFound {
-							log.Debugf("image not found, building image %s", manifestOptions.Tag)
-							if err := build.Run(ctx, manifestOptions); err != nil {
-								buildErrs = append(buildErrs, err.Error())
-								continue
-							}
-						}
-
-					} else {
-						log.Debug("image found, skipping build")
+					if err := buildIfImageNotFound(ctx, manifestOptions); err != nil {
+						buildErrs = append(buildErrs, err.Error())
+						continue
 					}
 				} else {
 					// if Build flag is enabled, we re-build the image regardless if it is already or not
@@ -254,17 +245,10 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 				// check that the image is at the registry correctly pushed
 				imageWithDigest, err := registry.GetImageTagWithDigest(manifestOptions.Tag)
 				if err != nil {
-					err = registry.GetErrorMessage(err, manifestOptions.Tag)
 					buildErrs = append(buildErrs, err.Error())
-					continue
 				}
 				log.Debugf("got digest from registry: %s", imageWithDigest)
-
-				reg, image := registry.GetRegistryAndRepo(imageWithDigest)
-				repository, tag := registry.GetRepoNameAndTag(image)
-
-				log.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repository, imageWithDigest, tag)
-				setManifestEnvVars(service, reg, repository, imageWithDigest, tag)
+				setManifestEnvVars(service, imageWithDigest)
 			}
 			if len(buildErrs) != 0 {
 				return fmt.Errorf("build failed for the services defined at manifest: %v", buildErrs)
@@ -328,10 +312,15 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	return nil
 }
 
-func setManifestEnvVars(service, registry, repository, image, tag string) {
-	os.Setenv(fmt.Sprintf("build.%s.registry", service), registry)
+func setManifestEnvVars(service, reference string) {
+	reg, image := registry.GetRegistryAndRepo(reference)
+	repository, tag := registry.GetRepoNameAndTag(image)
+
+	log.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repository, reference, tag)
+
+	os.Setenv(fmt.Sprintf("build.%s.registry", service), reg)
 	os.Setenv(fmt.Sprintf("build.%s.repository", service), repository)
-	os.Setenv(fmt.Sprintf("build.%s.image", service), image)
+	os.Setenv(fmt.Sprintf("build.%s.image", service), reference)
 	os.Setenv(fmt.Sprintf("build.%s.tag", service), tag)
 
 	log.Debug("manifest env vars set")
@@ -339,6 +328,21 @@ func setManifestEnvVars(service, registry, repository, image, tag string) {
 
 func expandManifestEnvVars(manifest string) string {
 	return os.ExpandEnv(manifest)
+}
+
+func buildIfImageNotFound(ctx context.Context, options build.BuildOptions) error {
+	_, err := registry.GetImageTagWithDigest(options.Tag)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			log.Debugf("image not found, building image %s", options.Tag)
+			if err := build.Run(ctx, options); err != nil {
+				return err
+			}
+		}
+		return fmt.Errorf("error calling registry: %s", err.Error())
+	}
+	log.Debug("image found, skipping build")
+	return nil
 }
 
 func (dc *deployCommand) cleanUp(ctx context.Context) {
