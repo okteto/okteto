@@ -23,7 +23,7 @@ import (
 )
 
 func clientOptions(registry string) remote.Option {
-	if IsOktetoRegistry(registry) {
+	if okteto.Context().IsOkteto && okteto.Context().Registry != "" {
 		username := okteto.Context().UserID
 		password := okteto.Context().Token
 
