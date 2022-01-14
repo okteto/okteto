@@ -20,6 +20,7 @@ import (
 	okErrors "github.com/okteto/okteto/pkg/errors"
 )
 
+// GetErrorMessage returns the parsed error message
 func GetErrorMessage(err error, tag string) error {
 	if err == nil {
 		return nil
@@ -82,6 +83,7 @@ func IsNotLoggedIntoRegistry(err error) bool {
 	return strings.Contains(err.Error(), "failed to authorize: failed to fetch anonymous token")
 }
 
+// IsBuildkitServiceUnavailable returns true when an error is because buildkit is unavailable
 func IsBuildkitServiceUnavailable(err error) bool {
 	return strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "500 Internal Server Error")
 }

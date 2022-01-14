@@ -34,6 +34,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -204,7 +205,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		return err
 	}
 	var err error
-	if opts.Build && contextCMD.IsManifestV2Enabled() {
+	if contextCMD.IsManifestV2Enabled() {
 		opts.Manifest, err = contextCMD.GetManifestV2(cwd, opts.ManifestPath)
 		if err != nil {
 			return err
@@ -216,7 +217,6 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		}
 
 		if opts.Manifest.Build != nil {
-			log.Debug("running build from manifest definition")
 
 			var buildErrs []string
 
@@ -225,33 +225,31 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 					buildInfo.Image = fmt.Sprintf("%s/%s-%s:%s", okteto.DevRegistry, opts.Name, service, "okteto")
 				}
 
-				buildOptions := build.BuildOptions{}
-				opts := build.OptsFromManifest(service, buildInfo, buildOptions)
+				buildOptions := build.BuildOptions{OutputMode: opts.OutputMode}
+				manifestOptions := build.OptsFromManifest(service, buildInfo, buildOptions)
 
-				if err := build.Run(ctx, opts); err != nil {
-					buildErrs = append(buildErrs, err.Error())
-					continue
-				}
-
-				repoAndDigest, err := registry.GetImageTagWithDigest(opts.Tag)
-				if err != nil {
-					err = registry.GetErrorMessage(err, opts.Tag)
-					buildErrs = append(buildErrs, err.Error())
-					continue
-				}
-				log.Debugf("got digest from registry: %s", repoAndDigest)
-
-				var tag, repository, image string
-				indx := strings.IndexRune(repoAndDigest, '@')
-				if indx != -1 {
-					repository = repoAndDigest[:indx+1]
-					tag = repoAndDigest[indx+1:]
-					image = fmt.Sprintf("%s/%s", okteto.Context().Registry, repoAndDigest)
+				// if Build flag is disabled, we check if the image is already at the registry and build it prior to deploy
+				if !opts.Build {
+					if err := buildIfImageNotFound(ctx, manifestOptions); err != nil {
+						buildErrs = append(buildErrs, err.Error())
+						continue
+					}
 				} else {
-					image = opts.Tag
+					// if Build flag is enabled, we re-build the image regardless if it is already or not
+					log.Debug("force build from manifest definition")
+					if err := build.Run(ctx, manifestOptions); err != nil {
+						buildErrs = append(buildErrs, err.Error())
+						continue
+					}
 				}
 
-				setManifestEnvVars(service, okteto.Context().Registry, repository, image, tag)
+				// check that the image is at the registry correctly pushed
+				imageWithDigest, err := registry.GetImageTagWithDigest(manifestOptions.Tag)
+				if err != nil {
+					buildErrs = append(buildErrs, err.Error())
+				}
+				log.Debugf("got digest from registry: %s", imageWithDigest)
+				setManifestEnvVars(service, imageWithDigest)
 			}
 			if len(buildErrs) != 0 {
 				return fmt.Errorf("build failed for the services defined at manifest: %v", buildErrs)
@@ -315,10 +313,15 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	return nil
 }
 
-func setManifestEnvVars(service, registry, repository, image, tag string) {
-	os.Setenv(fmt.Sprintf("build.%s.registry", service), registry)
+func setManifestEnvVars(service, reference string) {
+	reg, image := registry.GetRegistryAndRepo(reference)
+	repository, tag := registry.GetRepoNameAndTag(image)
+
+	log.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repository, reference, tag)
+
+	os.Setenv(fmt.Sprintf("build.%s.registry", service), reg)
 	os.Setenv(fmt.Sprintf("build.%s.repository", service), repository)
-	os.Setenv(fmt.Sprintf("build.%s.image", service), image)
+	os.Setenv(fmt.Sprintf("build.%s.image", service), reference)
 	os.Setenv(fmt.Sprintf("build.%s.tag", service), tag)
 
 	log.Debug("manifest env vars set")
@@ -326,6 +329,21 @@ func setManifestEnvVars(service, registry, repository, image, tag string) {
 
 func expandManifestEnvVars(manifest string) string {
 	return os.ExpandEnv(manifest)
+}
+
+func buildIfImageNotFound(ctx context.Context, options build.BuildOptions) error {
+	_, err := registry.GetImageTagWithDigest(options.Tag)
+	if err != nil {
+		if err == errors.ErrNotFound {
+			log.Debugf("image not found, building image %s", options.Tag)
+			if err := build.Run(ctx, options); err != nil {
+				return err
+			}
+		}
+		return fmt.Errorf("error calling registry: %s", err.Error())
+	}
+	log.Debug("image found, skipping build")
+	return nil
 }
 
 func (dc *deployCommand) cleanUp(ctx context.Context) {

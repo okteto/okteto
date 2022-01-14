@@ -14,30 +14,69 @@
 package registry
 
 import (
-	"net/http"
-	"strings"
-
-	"github.com/heroku/docker-registry-client/registry"
+	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
-// NewRegistryClient creates a new Registry with the given URL and credentials, then Ping()s it
-// before returning it to verify that the registry is available.
-func NewRegistryClient(registryURL, username, password string) (*registry.Registry, error) {
-	transport := http.DefaultTransport
-	return newFromTransport(registryURL, username, password, transport)
+func clientOptions(registry string) remote.Option {
+	if IsOktetoRegistry(registry) {
+		username := okteto.Context().UserID
+		password := okteto.Context().Token
+
+		authenticator := &authn.Basic{
+			Username: username,
+			Password: password,
+		}
+		return remote.WithAuth(authenticator)
+	}
+	return remote.WithAuthFromKeychain(authn.DefaultKeychain)
 }
 
-func newFromTransport(registryURL, username, password string, transport http.RoundTripper) (*registry.Registry, error) {
-	url := strings.TrimSuffix(registryURL, "/")
-	transport = registry.WrapTransport(transport, url, username, password)
-	registry := &registry.Registry{
-		URL: url,
-		Client: &http.Client{
-			Transport: transport,
-		},
-		Logf: log.Infof,
+func digestForReference(reference string) (string, error) {
+	ref, err := name.ParseReference(reference)
+	if err != nil {
+		return "", err
 	}
 
-	return registry, nil
+	registry, _ := GetRegistryAndRepo(reference)
+	log.Debugf("calling registry %s", registry)
+
+	options := clientOptions(registry)
+
+	img, err := remote.Get(ref, options)
+	if err != nil {
+		return "", err
+	}
+
+	return img.Digest.String(), nil
+}
+
+func configForReference(reference string) (v1.Config, error) {
+	ref, err := name.ParseReference(reference)
+	if err != nil {
+		return v1.Config{}, err
+	}
+
+	registry, _ := GetRegistryAndRepo(reference)
+	log.Debugf("calling registry %s", registry)
+
+	options := clientOptions(registry)
+
+	img, err := remote.Image(ref, options)
+	if err != nil {
+		log.Debugf("error getting image from remote")
+		return v1.Config{}, err
+	}
+
+	configFile, err := img.ConfigFile()
+	if err != nil {
+		log.Debugf("error getting image config from remote")
+		return v1.Config{}, err
+	}
+
+	return configFile.Config, nil
 }

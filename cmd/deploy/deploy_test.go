@@ -294,20 +294,31 @@ func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, e
 
 func Test_setManifestEnvVars(t *testing.T) {
 	tests := []struct {
-		name       string
-		service    string
-		registry   string
-		repository string
-		image      string
-		tag        string
+		name          string
+		service       string
+		reference     string
+		expRegistry   string
+		expRepository string
+		expImage      string
+		expTag        string
 	}{
 		{
-			name:       "setting-variables",
-			service:    "serviceName",
-			registry:   "registryUrl",
-			repository: "repository",
-			image:      "image",
-			tag:        "tag",
+			name:          "setting-variables",
+			service:       "frontend",
+			reference:     "registry.url/namespace/frontend@sha256",
+			expRegistry:   "registry.url",
+			expRepository: "namespace/frontend",
+			expImage:      "registry.url/namespace/frontend@sha256",
+			expTag:        "sha256",
+		},
+		{
+			name:          "setting-variables-no-tag",
+			service:       "frontend",
+			reference:     "registry.url/namespace/frontend",
+			expRegistry:   "registry.url",
+			expRepository: "namespace/frontend",
+			expImage:      "registry.url/namespace/frontend",
+			expTag:        "latest",
 		},
 	}
 
@@ -320,36 +331,36 @@ func Test_setManifestEnvVars(t *testing.T) {
 
 			envs := []string{registryEnv, imageEnv, repositoryEnv, tagEnv}
 			for _, e := range envs {
+				if err := os.Unsetenv(e); err != nil {
+					t.Errorf("error unsetting var %s", err.Error())
+				}
+			}
+			for _, e := range envs {
 				if v := os.Getenv(e); v != "" {
 					t.Errorf("env variable is already set [%v]", e)
 				}
 			}
-			setManifestEnvVars(tt.service, tt.registry, tt.repository, tt.image, tt.tag)
+
+			setManifestEnvVars(tt.service, tt.reference)
 
 			registryEnvValue := os.Getenv(registryEnv)
 			imageEnvValue := os.Getenv(imageEnv)
 			repositoryEnvValue := os.Getenv(repositoryEnv)
 			tagEnvValue := os.Getenv(tagEnv)
 
-			for _, e := range envs {
-				if err := os.Unsetenv(e); err != nil {
-					t.Errorf("error unsetting var %s", err.Error())
-				}
+			if registryEnvValue != tt.expRegistry {
+				t.Errorf("registry - expected %s , got %s", tt.expRegistry, registryEnvValue)
 			}
-
-			if registryEnvValue != tt.registry {
-				t.Errorf("registry - expected %s , got %s", tt.registry, registryEnvValue)
-			}
-			if imageEnvValue != tt.image {
-				t.Errorf("image - expected %s , got %s", tt.image, imageEnvValue)
+			if imageEnvValue != tt.expImage {
+				t.Errorf("image - expected %s , got %s", tt.expImage, imageEnvValue)
 
 			}
-			if repositoryEnvValue != tt.repository {
-				t.Errorf("repository - expected %s , got %s", tt.repository, repositoryEnvValue)
+			if repositoryEnvValue != tt.expRepository {
+				t.Errorf("repository - expected %s , got %s", tt.expRepository, repositoryEnvValue)
 
 			}
-			if tagEnvValue != tt.tag {
-				t.Errorf("tag - expected %s , got %s", tt.tag, tagEnvValue)
+			if tagEnvValue != tt.expTag {
+				t.Errorf("tag - expected %s , got %s", tt.expTag, tagEnvValue)
 
 			}
 
