@@ -23,7 +23,8 @@ import (
 )
 
 func clientOptions(registry string) remote.Option {
-	if okteto.Context().IsOkteto && okteto.Context().Registry != "" {
+	okRegistry := okteto.Context().Registry
+	if okRegistry == registry {
 		username := okteto.Context().UserID
 		password := okteto.Context().Token
 
@@ -42,7 +43,7 @@ func digestForReference(reference string) (string, error) {
 		return "", err
 	}
 
-	registry, _ := GetRegistryAndRepo(reference)
+	registry := ref.Context().RegistryStr()
 	log.Debugf("calling registry %s", registry)
 
 	options := clientOptions(registry)
