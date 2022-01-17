@@ -20,21 +20,22 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"k8s.io/client-go/kubernetes"
 )
 
 // Run runs the "okteto down" sequence
-func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait bool, c kubernetes.Interface) error {
+func Run(dev *dev.Dev, app apps.App, trMap map[string]*apps.Translation, wait bool, c kubernetes.Interface) error {
 	ctx := context.Background()
 	if len(trMap) == 0 {
 		log.Info("no translations available in the deployment")
 	}
 
 	for _, tr := range trMap {
-		if app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
+		if app.ObjectMeta().Annotations[constants.OktetoAutoCreateAnnotation] == constants.OktetoUpCmd {
 			if err := app.Destroy(ctx, c); err != nil {
 				return err
 			}
@@ -73,7 +74,7 @@ func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait 
 	return nil
 }
 
-func stopSyncthing(dev *model.Dev) {
+func stopSyncthing(dev *dev.Dev) {
 	sy, err := syncthing.New(dev)
 	if err != nil {
 		log.Infof("failed to create syncthing instance")

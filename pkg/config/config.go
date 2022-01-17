@@ -22,7 +22,9 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/files"
 	"gopkg.in/yaml.v2"
 )
 
@@ -45,13 +47,13 @@ const (
 	Attaching = "attaching"
 	//Pulling  up pulling images
 	Pulling = "pulling"
-	//Start ingSync up preparing syncthing
+	//StartingSync up preparing syncthing
 	StartingSync = "startingSync"
-	//Synchronize ing up is syncthing
+	//Synchronizing up is syncthing
 	Synchronizing = "synchronizing"
 	//Ready up fi nished
 	Ready = "ready"
-	//Fai led up failed
+	//Failed up failed
 	Failed = "failed"
 
 	stateFile string = "okteto.state"
@@ -75,8 +77,8 @@ func GetBinaryFullPath() string {
 
 // GetOktetoHome returns the path of the okteto folder
 func GetOktetoHome() string {
-	if v, ok := os.LookupEnv(model.OktetoFolderEnvVar); ok {
-		if !model.FileExists(v) {
+	if v, ok := os.LookupEnv(constants.OktetoFolderEnvVar); ok {
+		if !files.FileExists(v) {
 			log.Fatalf("OKTETO_FOLDER doesn't exist: %s", v)
 		}
 
@@ -118,7 +120,7 @@ func GetAppHome(namespace, name string) string {
 }
 
 // UpdateStateFile updates the state file of a given dev environment
-func UpdateStateFile(dev *model.Dev, state UpState) error {
+func UpdateStateFile(dev *dev.Dev, state UpState) error {
 	if dev.Namespace == "" {
 		return fmt.Errorf("can't update state file, namespace is empty")
 	}
@@ -136,7 +138,7 @@ func UpdateStateFile(dev *model.Dev, state UpState) error {
 }
 
 // DeleteStateFile deletes the state file of a given dev environment
-func DeleteStateFile(dev *model.Dev) error {
+func DeleteStateFile(dev *dev.Dev) error {
 	if dev.Namespace == "" {
 		return fmt.Errorf("can't delete state file, namespace is empty")
 	}
@@ -150,7 +152,7 @@ func DeleteStateFile(dev *model.Dev) error {
 }
 
 // GetState returns the state of a given dev environment
-func GetState(dev *model.Dev) (UpState, error) {
+func GetState(dev *dev.Dev) (UpState, error) {
 	var result UpState
 	if dev.Namespace == "" {
 		return Failed, fmt.Errorf("can't update state file, namespace is empty")
@@ -179,8 +181,8 @@ func GetState(dev *model.Dev) (UpState, error) {
 
 // GetUserHomeDir returns the OS home dir
 func GetUserHomeDir() string {
-	if v, ok := os.LookupEnv(model.OktetoHomeEnvVar); ok {
-		if !model.FileExists(v) {
+	if v, ok := os.LookupEnv(constants.OktetoHomeEnvVar); ok {
+		if !files.FileExists(v) {
 			log.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
 		}
 
@@ -196,21 +198,21 @@ func GetUserHomeDir() string {
 		return home
 	}
 
-	return os.Getenv(model.HomeEnvVar)
+	return os.Getenv(constants.HomeEnvVar)
 
 }
 
 func homedirWindows() (string, error) {
-	if home := os.Getenv(model.HomeEnvVar); home != "" {
+	if home := os.Getenv(constants.HomeEnvVar); home != "" {
 		return home, nil
 	}
 
-	if home := os.Getenv(model.UserProfileEnvVar); home != "" {
+	if home := os.Getenv(constants.UserProfileEnvVar); home != "" {
 		return home, nil
 	}
 
-	drive := os.Getenv(model.HomeDriveEnvVar)
-	path := os.Getenv(model.HomePathEnvVar)
+	drive := os.Getenv(constants.HomeDriveEnvVar)
+	path := os.Getenv(constants.HomePathEnvVar)
 	home := drive + path
 	if drive == "" || path == "" {
 		return "", fmt.Errorf("HOME, HOMEDRIVE, HOMEPATH, or USERPROFILE are empty. Use $OKTETO_HOME to set your home directory")
@@ -223,7 +225,7 @@ func homedirWindows() (string, error) {
 func GetKubeconfigPath() []string {
 	home := GetUserHomeDir()
 	kubeconfig := []string{filepath.Join(home, ".kube", "config")}
-	kubeconfigEnv := os.Getenv(model.KubeConfigEnvVar)
+	kubeconfigEnv := os.Getenv(constants.KubeConfigEnvVar)
 	if len(kubeconfigEnv) > 0 {
 		kubeconfig = splitKubeConfigEnv(kubeconfigEnv)
 	}
@@ -237,22 +239,27 @@ func splitKubeConfigEnv(value string) []string {
 	return strings.Split(value, ":")
 }
 
+//GetTokenPathDeprecated returns the deprecated token path
 func GetTokenPathDeprecated() string {
 	return filepath.Join(GetOktetoHome(), tokenFile)
 }
 
+//GetDeprecatedAnalyticsPath returns the deprecated analytics path
 func GetDeprecatedAnalyticsPath() string {
 	return filepath.Join(GetOktetoHome(), deprecatedAnalyticsFile)
 }
 
+//GetAnalyticsPath returns the analytics path
 func GetAnalyticsPath() string {
 	return filepath.Join(GetOktetoHome(), analyticsFile)
 }
 
+//GetOktetoContextFolder returns the okteto ctx path
 func GetOktetoContextFolder() string {
 	return filepath.Join(GetOktetoHome(), contextDir)
 }
 
+//GetOktetoContextsStorePath returns the okteto ctx file
 func GetOktetoContextsStorePath() string {
 	return filepath.Join(GetOktetoContextFolder(), contextsStoreFile)
 }

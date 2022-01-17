@@ -24,7 +24,8 @@ import (
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/build"
+	"github.com/okteto/okteto/pkg/model/stack"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/pkg/errors"
 )
@@ -139,8 +140,8 @@ func translateOktetoRegistryImage(input string) string {
 }
 
 // CreateDockerfileWithVolumeMounts creates the Dockerfile with volume mounts and returns the BuildInfo
-func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume) (*model.BuildInfo, error) {
-	build := &model.BuildInfo{}
+func CreateDockerfileWithVolumeMounts(image string, volumes []stack.StackVolume) (*build.Build, error) {
+	build := &build.Build{}
 
 	ctx, err := filepath.Abs(".")
 	if err != nil {

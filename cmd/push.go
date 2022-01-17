@@ -29,7 +29,10 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	ctxModel "github.com/okteto/okteto/pkg/model/context"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/environment"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
@@ -54,13 +57,13 @@ func Push(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "push",
 		Short: "Build, push and redeploy source code to the target app",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#push"),
+		Args:  utils.NoArgsAccepted(constants.PushDocsURL),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)
 			if err != nil {
 				if errors.IsNotExist(err) && len(pushOpts.AppName) > 0 {
-					ctxResource = &model.ContextResource{}
+					ctxResource = &ctxModel.ContextResource{}
 				} else {
 					return err
 				}
@@ -107,7 +110,7 @@ func Push(ctx context.Context) *cobra.Command {
 			if pushOpts.AutoDeploy {
 				log.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
     Set the 'autocreate' field in your okteto manifest to get the same behavior.
-    More information is available here: https://okteto.com/docs/reference/cli#up`)
+    More information is available here: %s`, constants.UpDocsURL)
 			}
 
 			if !dev.Autocreate {
@@ -138,7 +141,7 @@ func Push(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, pushOpts *pushOptions, c *kubernetes.Clientset) error {
+func runPush(ctx context.Context, dev *dev.Dev, oktetoRegistryURL string, pushOpts *pushOptions, c *kubernetes.Clientset) error {
 	exists := true
 	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 
@@ -150,9 +153,9 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 		if !dev.Autocreate {
 			return errors.UserError{
 				E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
-				Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
+				Hint: fmt.Sprintf(`Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone deployment
-    More information is available here: https://okteto.com/docs/reference/cli#up`,
+    More information is available here: %s`, constants.UpDocsURL),
 			}
 		}
 
@@ -162,7 +165,7 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 
 		app = apps.NewDeploymentApp(deployments.Sandbox(dev))
 
-		app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
+		app.ObjectMeta().Annotations[constants.OktetoAutoCreateAnnotation] = constants.OktetoPushCmd
 		exists = false
 
 		if pushOpts.ImageTag == "" {
@@ -198,8 +201,8 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 
 	for _, tr := range trMap {
 		if len(dev.Services) == 0 {
-			if tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd || tr.App.PodSpec().Containers[0].Name == "dev" {
-				tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoPushCmd
+			if tr.App.ObjectMeta().Annotations[constants.OktetoAutoCreateAnnotation] == constants.OktetoUpCmd || tr.App.PodSpec().Containers[0].Name == "dev" {
+				tr.App.ObjectMeta().Annotations[constants.OktetoAutoCreateAnnotation] = constants.OktetoPushCmd
 			}
 		}
 		if apps.IsDevModeOn(tr.App) {
@@ -211,7 +214,7 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 	}
 
 	go func() {
-		if app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoPushCmd {
+		if app.ObjectMeta().Annotations[constants.OktetoAutoCreateAnnotation] == constants.OktetoPushCmd {
 			if err := services.CreateDev(ctx, dev, c); err != nil {
 				exit <- err
 				return
@@ -262,7 +265,7 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 
 }
 
-func buildImage(ctx context.Context, dev *model.Dev, imageFromApp, oktetoRegistryURL string, pushOpts *pushOptions) (string, error) {
+func buildImage(ctx context.Context, dev *dev.Dev, imageFromApp, oktetoRegistryURL string, pushOpts *pushOptions) (string, error) {
 	log.Information("Running your build in %s...", okteto.Context().Builder)
 
 	if pushOpts.ImageTag == "" {
@@ -271,7 +274,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageFromApp, oktetoRegistr
 	buildTag := registry.GetDevImageTag(dev, pushOpts.ImageTag, imageFromApp, oktetoRegistryURL)
 	log.Infof("pushing with image tag %s", buildTag)
 
-	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
+	buildArgs := environment.SerializeBuildArgs(dev.Push.Args)
 	buildOptions := build.BuildOptions{
 		Path:       dev.Push.Context,
 		File:       dev.Push.Dockerfile,
@@ -295,7 +298,7 @@ func getImageFromApp(trMap map[string]*apps.Translation) (string, error) {
 		if tr.App == nil {
 			continue
 		}
-		if tr.App.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] != "" && len(trMap) > 1 {
+		if tr.App.ObjectMeta().Annotations[constants.OktetoAutoCreateAnnotation] != "" && len(trMap) > 1 {
 			continue
 		}
 		for _, rule := range tr.Rules {

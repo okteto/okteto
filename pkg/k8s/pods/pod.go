@@ -27,7 +27,8 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/events"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -107,7 +108,7 @@ func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, c kubernetes
 	return nil, errors.ErrNotFound
 }
 
-//GetPodByReplicaSet returns a pod of a given replicaset
+//GetPodByStatefulSet returns a pod of a given replicaset
 func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*apiv1.Pod, error) {
 	podList, err := c.CoreV1().Pods(sfs.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -148,8 +149,8 @@ func GetUserByPod(ctx context.Context, p *apiv1.Pod, container string, config *r
 	return userID, nil
 }
 
-//HasPackageJson returns if the container has node_modules
-func HasPackageJson(ctx context.Context, p *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) bool {
+//HasPackageJSON returns if the container has node_modules
+func HasPackageJSON(ctx context.Context, p *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) bool {
 	cmd := []string{"sh", "-c", "[ -f 'package.json' ] && echo 'package.json exists'"}
 	out, err := execCommandInPod(ctx, p, container, cmd, config, c)
 	if err != nil {
@@ -287,11 +288,11 @@ func ContainerLogs(ctx context.Context, containerName, podName, namespace string
 }
 
 // Restart restarts the pods of a deployment
-func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn string) error {
+func Restart(ctx context.Context, dev *dev.Dev, c *kubernetes.Clientset, sn string) error {
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(
 		ctx,
 		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name),
+			LabelSelector: fmt.Sprintf("%s=%s", constants.DetachedDevLabel, dev.Name),
 		},
 	)
 	if err != nil {
@@ -319,7 +320,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 	if !found {
 		return fmt.Errorf("no pods running in development mode")
 	}
-	return waitUntilRunning(ctx, dev.Namespace, fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name), c)
+	return waitUntilRunning(ctx, dev.Namespace, fmt.Sprintf("%s=%s", constants.DetachedDevLabel, dev.Name), c)
 }
 
 func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubernetes.Clientset) error {
@@ -403,8 +404,9 @@ func isRunning(p *apiv1.Pod) bool {
 	return false
 }
 
+//GetHealthcheckFailure gets the error in the healthcheck
 func GetHealthcheckFailure(ctx context.Context, namespace, svcName, stackName string, c kubernetes.Interface) string {
-	selector := fmt.Sprintf("%s=%s,%s=%s", model.StackNameLabel, stackName, model.StackServiceNameLabel, svcName)
+	selector := fmt.Sprintf("%s=%s,%s=%s", constants.StackNameLabel, stackName, constants.StackServiceNameLabel, svcName)
 	pods, err := c.CoreV1().Pods(namespace).List(
 		ctx,
 		metav1.ListOptions{

@@ -28,7 +28,8 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/files"
 	"github.com/okteto/okteto/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,6 +40,7 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
+//OktetoContextStore stores all the okteto contexts
 type OktetoContextStore struct {
 	Contexts       map[string]*OktetoContext `json:"contexts"`
 	CurrentContext string                    `json:"current-context"`
@@ -50,6 +52,7 @@ const (
 )
 
 var (
+	//CurrentStore is the current okteto context
 	CurrentStore *OktetoContextStore
 )
 
@@ -74,7 +77,7 @@ type OktetoContext struct {
 // InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context
 // this function is to make "okteto context" transparent to current Okteto Enterprise users, but it can be removed when people upgrade
 func InitContextWithDeprecatedToken() {
-	if !model.FileExists(config.GetTokenPathDeprecated()) {
+	if !files.FileExists(config.GetTokenPathDeprecated()) {
 		return
 	}
 
@@ -129,13 +132,14 @@ func ContextExists() bool {
 	return true
 }
 
+//UrlToKubernetesContext translates an url into a kubernetes context
 func UrlToKubernetesContext(uri string) string {
 	u, _ := url.Parse(uri)
 	return strings.ReplaceAll(u.Host, ".", "_")
 }
 
-// K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
-func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string, clientProvider K8sClientProvider) string {
+// K8sContextToOktetoURL translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
+func K8sContextToOktetoURL(ctx context.Context, k8sContext, k8sNamespace string, clientProvider K8sClientProvider) string {
 	ctxStore := ContextStore()
 	//check if belongs to the okteto contexts
 	for name, oCtx := range ctxStore.Contexts {
@@ -170,22 +174,25 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string,
 		log.Debugf("error accessing current namespace: %v", err)
 		return k8sContext
 	}
-	if _, ok := n.Labels[model.DevLabel]; ok {
-		return n.Annotations[model.OktetoURLAnnotation]
+	if _, ok := n.Labels[constants.DevLabel]; ok {
+		return n.Annotations[constants.OktetoURLAnnotation]
 	}
 
 	return k8sContext
 }
 
+//IsContextInitialized checks if there is any current context store
 func IsContextInitialized() bool {
 	ctxStore := ContextStore()
 	return ctxStore.CurrentContext != ""
 }
 
+//IsOkteto checks if the current context is an okteto context
 func IsOkteto() bool {
 	return Context().IsOkteto
 }
 
+//ContextStore returns the okteto context store
 func ContextStore() *OktetoContextStore {
 	if CurrentStore != nil {
 		return CurrentStore
@@ -220,6 +227,7 @@ func ContextStore() *OktetoContextStore {
 	return CurrentStore
 }
 
+//Context returns the current context
 func Context() *OktetoContext {
 	c := ContextStore()
 	if c.CurrentContext == "" {
@@ -235,12 +243,14 @@ func Context() *OktetoContext {
 	return octx
 }
 
+//HasBeenLogged returns if has been logged to an okteto ctx
 func HasBeenLogged(oktetoURL string) bool {
 	octxStore := ContextStore()
 	_, ok := octxStore.Contexts[oktetoURL]
 	return ok
 }
 
+//AddOktetoContext adds an okteto ctx
 func AddOktetoContext(name string, u *types.User, namespace, personalNamespace string) {
 	CurrentStore = ContextStore()
 	name = strings.TrimSuffix(name, "/")
@@ -260,6 +270,7 @@ func AddOktetoContext(name string, u *types.User, namespace, personalNamespace s
 	CurrentStore.CurrentContext = name
 }
 
+//AddKubernetesContext add a k8s ctx
 func AddKubernetesContext(name, namespace, buildkitURL string) {
 	CurrentStore = ContextStore()
 	CurrentStore.Contexts[name] = &OktetoContext{
@@ -308,10 +319,11 @@ func (*ContextConfigWriter) Write() error {
 	return nil
 }
 
+//AddOktetoCredentialsToCfg adds the k8s credentials to cfg
 func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName, oktetoURL string) {
 	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
 	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings
-	if os.Getenv(model.OktetoWithinDeployCommandContextEnvVar) == "true" {
+	if os.Getenv(constants.OktetoWithinDeployCommandContextEnvVar) == "true" {
 		return
 	}
 
@@ -342,7 +354,7 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	if context.Extensions == nil {
 		context.Extensions = map[string]runtime.Object{}
 	}
-	context.Extensions[model.OktetoExtension] = nil
+	context.Extensions[constants.OktetoExtension] = nil
 	context.Cluster = clusterName
 	context.AuthInfo = userName
 	context.Namespace = namespace
@@ -351,11 +363,12 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	cfg.CurrentContext = clusterName
 }
 
+//GetK8sClient returns the k8s client
 func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
 	if Context().Cfg == nil {
 		return nil, nil, fmt.Errorf("okteto context not initialized")
 	}
-	c, config, err := getK8sClientWithApiConfig(Context().Cfg)
+	c, config, err := getK8sClientWithAPIConfig(Context().Cfg)
 	if err == nil {
 		Context().SetClusterType(config.Host)
 	}
@@ -384,6 +397,7 @@ func GetSanitizedUsername() string {
 	return reg.ReplaceAllString(strings.ToLower(octx.Username), "-")
 }
 
+//ToUser translates a okteto ctx to user
 func (okctx *OktetoContext) ToUser() *types.User {
 	u := &types.User{
 		ID:              okctx.UserID,
@@ -398,6 +412,7 @@ func (okctx *OktetoContext) ToUser() *types.User {
 	return u
 }
 
+//IsOktetoCloud checks if the ctx is cloud or staging
 func IsOktetoCloud() bool {
 	octx := Context()
 	switch octx.Name {
@@ -408,6 +423,7 @@ func IsOktetoCloud() bool {
 	}
 }
 
+//RemoveSchema removes the scheme part of an url
 func RemoveSchema(uri string) string {
 	u, err := url.Parse(uri)
 	if err != nil {
@@ -416,17 +432,19 @@ func RemoveSchema(uri string) string {
 	return strings.TrimPrefix(u.String(), fmt.Sprintf("%s://", u.Scheme))
 }
 
+//AddSchema adds https to a url
 func AddSchema(oCtx string) string {
-	parsedUrl, err := url.Parse(oCtx)
+	parsedURL, err := url.Parse(oCtx)
 	if err == nil {
-		if parsedUrl.Scheme == "" {
-			parsedUrl.Scheme = "https"
+		if parsedURL.Scheme == "" {
+			parsedURL.Scheme = "https"
 		}
-		return parsedUrl.String()
+		return parsedURL.String()
 	}
 	return oCtx
 }
 
+//SetClusterType sets if the cluster is local or remote
 func (okctx *OktetoContext) SetClusterType(clusterHost string) {
 	if isLocalHostname(clusterHost) {
 		okctx.ClusterType = localClusterType

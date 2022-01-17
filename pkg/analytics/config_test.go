@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 )
 
 func Test_Get(t *testing.T) {
@@ -56,7 +56,7 @@ func Test_Get(t *testing.T) {
 				os.RemoveAll(dir)
 			}()
 
-			os.Setenv(model.OktetoFolderEnvVar, dir)
+			os.Setenv(constants.OktetoFolderEnvVar, dir)
 
 			if !tt.currentAnalytics {
 				currentAnalytics = nil

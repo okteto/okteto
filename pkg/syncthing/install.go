@@ -25,7 +25,8 @@ import (
 	"github.com/Masterminds/semver/v3"
 	getter "github.com/hashicorp/go-getter"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/files"
 )
 
 const (
@@ -89,13 +90,13 @@ func Install(p getter.ProgressTracker) error {
 		return fmt.Errorf("failed to set permissions to %s: %s", b, err)
 	}
 
-	if model.FileExists(i) {
+	if files.FileExists(i) {
 		if err := os.Remove(i); err != nil {
 			log.Infof("failed to delete %s, will try to overwrite: %s", i, err)
 		}
 	}
 
-	if err := model.CopyFile(b, i); err != nil {
+	if err := files.CopyFile(b, i); err != nil {
 		return fmt.Errorf("failed to write %s: %s", i, err)
 	}
 
@@ -125,7 +126,7 @@ func ShouldUpgrade() bool {
 }
 
 func GetMinimumVersion() *semver.Version {
-	v := os.Getenv(model.SyncthingVersionEnvVar)
+	v := os.Getenv(constants.SyncthingVersionEnvVar)
 	if v == "" {
 		v = syncthingVersion
 	}

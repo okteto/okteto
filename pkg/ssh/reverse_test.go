@@ -17,25 +17,25 @@ import (
 	"context"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/dev"
 )
 
 func TestReverseManager_Add(t *testing.T) {
 	tests := []struct {
 		name     string
-		add      model.Reverse
+		add      dev.Reverse
 		reverses map[int]*reverse
 		wantErr  bool
 	}{
 		{
 			name:     "single",
-			add:      model.Reverse{Local: 8080, Remote: 8081},
+			add:      dev.Reverse{Local: 8080, Remote: 8081},
 			reverses: map[int]*reverse{},
 			wantErr:  false,
 		},
 		{
 			name:     "existing",
-			add:      model.Reverse{Local: 8080, Remote: 8081},
+			add:      dev.Reverse{Local: 8080, Remote: 8081},
 			reverses: map[int]*reverse{8080: {forward{localAddress: ":8080", remoteAddress: ":8081"}}},
 			wantErr:  true,
 		},

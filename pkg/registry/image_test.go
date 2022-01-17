@@ -16,7 +16,8 @@ package registry
 import (
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -150,7 +151,7 @@ func Test_GetImageTag(t *testing.T) {
 func Test_GetDevImageTag(t *testing.T) {
 	var tests = []struct {
 		name                string
-		dev                 *model.Dev
+		dev                 *dev.Dev
 		imageTag            string
 		imageFromDeployment string
 		oktetoRegistryURL   string
@@ -158,7 +159,7 @@ func Test_GetDevImageTag(t *testing.T) {
 	}{
 		{
 			name:                "imageTag-not-in-okteto",
-			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
+			dev:                 &dev.Dev{Name: "dev", Namespace: "ns"},
 			imageTag:            "imageTag",
 			imageFromDeployment: "",
 			oktetoRegistryURL:   "",
@@ -166,7 +167,7 @@ func Test_GetDevImageTag(t *testing.T) {
 		},
 		{
 			name:                "imageTag-in-okteto",
-			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
+			dev:                 &dev.Dev{Name: "dev", Namespace: "ns"},
 			imageTag:            "imageTag",
 			imageFromDeployment: "",
 			oktetoRegistryURL:   okteto.CloudRegistryURL,
@@ -174,15 +175,15 @@ func Test_GetDevImageTag(t *testing.T) {
 		},
 		{
 			name:                "default-image-tag",
-			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:            model.DefaultImage,
+			dev:                 &dev.Dev{Name: "dev", Namespace: "ns"},
+			imageTag:            constants.DefaultImage,
 			imageFromDeployment: "",
 			oktetoRegistryURL:   okteto.CloudRegistryURL,
 			expected:            "registry.cloud.okteto.net/ns/dev:okteto",
 		},
 		{
 			name:                "okteto",
-			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
+			dev:                 &dev.Dev{Name: "dev", Namespace: "ns"},
 			imageTag:            "",
 			imageFromDeployment: "",
 			oktetoRegistryURL:   okteto.CloudRegistryURL,
@@ -190,7 +191,7 @@ func Test_GetDevImageTag(t *testing.T) {
 		},
 		{
 			name:                "not-in-okteto",
-			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
+			dev:                 &dev.Dev{Name: "dev", Namespace: "ns"},
 			imageTag:            "",
 			imageFromDeployment: "okteto/test:2",
 			oktetoRegistryURL:   "",

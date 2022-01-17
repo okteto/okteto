@@ -20,7 +20,9 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/context"
+	"github.com/okteto/okteto/pkg/model/files"
+	"github.com/okteto/okteto/pkg/model/stack"
 )
 
 var (
@@ -41,15 +43,15 @@ var (
 )
 
 //LoadStackContext loads the namespace and context of an okteto stack manifest
-func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
-	ctxResource := &model.ContextResource{}
+func LoadStackContext(stackPaths []string) (*context.ContextResource, error) {
+	ctxResource := &context.ContextResource{}
 	found := false
 	var err error
 	if len(stackPaths) == 0 {
 		for _, possibleStackManifest := range possibleStackManifests {
 			manifestPath := filepath.Join(possibleStackManifest...)
-			if model.FileExists(manifestPath) {
-				ctxResource, err = model.GetContextResource(manifestPath)
+			if files.FileExists(manifestPath) {
+				ctxResource, err = context.GetContextResource(manifestPath)
 				if err != nil {
 					return nil, err
 				}
@@ -65,10 +67,10 @@ func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
 		}
 	}
 	for _, stackPath := range stackPaths {
-		if !model.FileExists(stackPath) {
+		if !files.FileExists(stackPath) {
 			return nil, fmt.Errorf("'%s' does not exist", stackPath)
 		}
-		thisCtxResource, err := model.GetContextResource(stackPath)
+		thisCtxResource, err := context.GetContextResource(stackPath)
 		if err != nil {
 			return nil, err
 		}
@@ -83,8 +85,8 @@ func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
 }
 
 // LoadStack loads an okteto stack manifest checking "yml" and "yaml"
-func LoadStack(name string, stackPaths []string) (*model.Stack, error) {
-	var resultStack *model.Stack
+func LoadStack(name string, stackPaths []string) (*stack.Stack, error) {
+	var resultStack *stack.Stack
 
 	if len(stackPaths) == 0 {
 		stack, err := inferStack(name)
@@ -95,7 +97,7 @@ func LoadStack(name string, stackPaths []string) (*model.Stack, error) {
 
 	} else {
 		for _, stackPath := range stackPaths {
-			if model.FileExists(stackPath) {
+			if files.FileExists(stackPath) {
 				stack, err := getStack(name, stackPath)
 				if err != nil {
 					return nil, err
@@ -129,16 +131,16 @@ func isDeprecatedExtension(stackPath string) bool {
 	return false
 }
 
-func getOverrideFile(stackPath string) (*model.Stack, error) {
+func getOverrideFile(stackPath string) (*stack.Stack, error) {
 	extension := filepath.Ext(stackPath)
 	fileName := strings.TrimSuffix(stackPath, extension)
 	overridePath := fmt.Sprintf("%s.override%s", fileName, extension)
 	var isCompose bool
-	if model.FileExists(stackPath) {
+	if files.FileExists(stackPath) {
 		if isPathAComposeFile(stackPath) {
 			isCompose = true
 		}
-		stack, err := model.GetStack("", overridePath, isCompose)
+		stack, err := stack.GetStack("", overridePath, isCompose)
 		if err != nil {
 			return nil, err
 		}
@@ -146,10 +148,10 @@ func getOverrideFile(stackPath string) (*model.Stack, error) {
 	}
 	return nil, fmt.Errorf("override file not found")
 }
-func inferStack(name string) (*model.Stack, error) {
+func inferStack(name string) (*stack.Stack, error) {
 	for _, possibleStackManifest := range possibleStackManifests {
 		manifestPath := filepath.Join(possibleStackManifest...)
-		if model.FileExists(manifestPath) {
+		if files.FileExists(manifestPath) {
 			stack, err := getStack(name, manifestPath)
 			if err != nil {
 				return nil, err
@@ -159,12 +161,12 @@ func inferStack(name string) (*model.Stack, error) {
 		}
 	}
 	return nil, errors.UserError{
-		E:    fmt.Errorf("could not detect any stack file to deploy."),
+		E:    fmt.Errorf("could not detect any stack file to deploy"),
 		Hint: "Try setting the flag '--file' pointing to your stack file",
 	}
 }
 
-func getStack(name, manifestPath string) (*model.Stack, error) {
+func getStack(name, manifestPath string) (*stack.Stack, error) {
 	var isCompose bool
 	if isDeprecatedExtension(manifestPath) {
 		deprecatedFile := filepath.Base(manifestPath)
@@ -173,7 +175,7 @@ func getStack(name, manifestPath string) (*model.Stack, error) {
 	if isPathAComposeFile(manifestPath) {
 		isCompose = true
 	}
-	stack, err := model.GetStack(name, manifestPath, isCompose)
+	stack, err := stack.GetStack(name, manifestPath, isCompose)
 	if err != nil {
 		return nil, err
 	}

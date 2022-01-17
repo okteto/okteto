@@ -17,14 +17,16 @@ import (
 	"os"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/build"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/environment"
 	"gopkg.in/yaml.v2"
 )
 
 func Test_generateManifestFile(t *testing.T) {
 	var tests = []struct {
 		name string
-		dev  *model.Dev
+		dev  *dev.Dev
 	}{
 		{
 			name: "empty",
@@ -32,27 +34,27 @@ func Test_generateManifestFile(t *testing.T) {
 		},
 		{
 			name: "basic",
-			dev: &model.Dev{
+			dev: &dev.Dev{
 				Name:    "dev",
-				Image:   &model.BuildInfo{Name: "okteto/dev"},
-				Command: model.Command{Values: []string{"bash"}},
+				Image:   &build.Build{Name: "okteto/dev"},
+				Command: dev.Command{Values: []string{"bash"}},
 			},
 		},
 		{
 			name: "with-services",
-			dev: &model.Dev{
+			dev: &dev.Dev{
 				Name:    "dev",
-				Image:   &model.BuildInfo{Name: "okteto/dev"},
-				Command: model.Command{Values: []string{"bash"}},
-				Services: []*model.Dev{{
+				Image:   &build.Build{Name: "okteto/dev"},
+				Command: dev.Command{Values: []string{"bash"}},
+				Services: []*dev.Dev{{
 					Name:    "svc",
-					Image:   &model.BuildInfo{Name: "okteto/svc"},
-					Command: model.Command{Values: []string{"bash"}},
+					Image:   &build.Build{Name: "okteto/svc"},
+					Command: dev.Command{Values: []string{"bash"}},
 				}, {
 					Name:        "svc2",
 					Image:       nil,
-					Command:     model.Command{Values: []string{"bash"}},
-					Environment: []model.EnvVar{{Name: "foo", Value: "bar"}},
+					Command:     dev.Command{Values: []string{"bash"}},
+					Environment: []environment.EnvVar{{Name: "foo", Value: "bar"}},
 				}},
 			},
 		},

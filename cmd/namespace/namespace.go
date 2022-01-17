@@ -20,6 +20,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -50,7 +51,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 		Use:     "namespace [name]",
 		Short:   "Configure the current namespace of the okteto context",
 		Aliases: []string{"ns"},
-		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#namespace"),
+		Args:    utils.MaximumNArgsAccepted(1, constants.NamespaceDocsURL),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			namespace := ""

@@ -22,12 +22,14 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
-func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (App, error) {
+//Get returns a running app or a sandbox app
+func Get(ctx context.Context, dev *dev.Dev, namespace string, c kubernetes.Interface) (App, error) {
 	d, err := deployments.GetByDev(ctx, dev, namespace, c)
 
 	if err == nil {
@@ -50,16 +52,16 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 
 //IsDevModeOn returns if a statefulset is in devmode
 func IsDevModeOn(app App) bool {
-	return app.ObjectMeta().Labels[model.DevLabel] == "true"
+	return app.ObjectMeta().Labels[constants.DevLabel] == "true"
 }
 
 //SetLastBuiltAnnotation sets the app timestamp
 func SetLastBuiltAnnotation(app App) {
-	app.ObjectMeta().Annotations[model.LastBuiltAnnotation] = time.Now().UTC().Format(model.TimeFormat)
+	app.ObjectMeta().Annotations[constants.LastBuiltAnnotation] = time.Now().UTC().Format(constants.TimeFormat)
 }
 
 // GetRunningPodInLoop returns the dev pod for an app and loops until it success
-func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kubernetes.Interface) (*apiv1.Pod, error) {
+func GetRunningPodInLoop(ctx context.Context, dev *dev.Dev, app App, c kubernetes.Interface) (*apiv1.Pod, error) {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	start := time.Now()
 	to := start.Add(dev.Timeout.Resources)
@@ -101,16 +103,16 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 }
 
 //GetTranslations fills all the deployments pointed by a development container
-func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
+func GetTranslations(ctx context.Context, d *dev.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
 	mainTr := &Translation{
-		MainDev: dev,
-		Dev:     dev,
+		MainDev: d,
+		Dev:     d,
 		App:     app,
-		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, reset)},
+		Rules:   []*dev.TranslationRule{d.ToTranslationRule(d, reset)},
 	}
 	result := map[string]*Translation{app.ObjectMeta().Name: mainTr}
 
-	if err := loadServiceTranslations(ctx, dev, reset, result, c); err != nil {
+	if err := loadServiceTranslations(ctx, d, reset, result, c); err != nil {
 		return nil, err
 	}
 
@@ -130,14 +132,14 @@ func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c
 	return result, nil
 }
 
-func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, result map[string]*Translation, c kubernetes.Interface) error {
-	for _, s := range dev.Services {
-		app, err := Get(ctx, s, dev.Namespace, c)
+func loadServiceTranslations(ctx context.Context, d *dev.Dev, reset bool, result map[string]*Translation, c kubernetes.Interface) error {
+	for _, s := range d.Services {
+		app, err := Get(ctx, s, d.Namespace, c)
 		if err != nil {
 			return err
 		}
 
-		rule := s.ToTranslationRule(dev, reset)
+		rule := s.ToTranslationRule(d, reset)
 
 		if _, ok := result[app.ObjectMeta().Name]; ok {
 			result[app.ObjectMeta().Name].Rules = append(result[app.ObjectMeta().Name].Rules, rule)
@@ -145,10 +147,10 @@ func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, re
 		}
 
 		result[app.ObjectMeta().Name] = &Translation{
-			MainDev: dev,
+			MainDev: d,
 			Dev:     s,
 			App:     app,
-			Rules:   []*model.TranslationRule{rule},
+			Rules:   []*dev.TranslationRule{rule},
 		}
 	}
 

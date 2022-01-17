@@ -23,7 +23,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
+	contextModel "github.com/okteto/okteto/pkg/model/context"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -40,7 +40,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 
 			previewName := args[0]
 
-			ctxResource := &model.ContextResource{}
+			ctxResource := &contextModel.ContextResource{}
 			if err := ctxResource.UpdateNamespace(previewName); err != nil {
 				return err
 			}

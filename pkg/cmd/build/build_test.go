@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	okErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/build"
+	"github.com/okteto/okteto/pkg/model/environment"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 )
@@ -56,7 +57,7 @@ func Test_OptsFromManifest(t *testing.T) {
 	tests := []struct {
 		name           string
 		serviceName    string
-		buildInfo      *model.BuildInfo
+		buildInfo      *build.Build
 		okGitCommitEnv string
 		isOkteto       bool
 		initialOpts    BuildOptions
@@ -65,7 +66,7 @@ func Test_OptsFromManifest(t *testing.T) {
 		{
 			name:        "empty-values-is-okteto",
 			serviceName: "service",
-			buildInfo:   &model.BuildInfo{},
+			buildInfo:   &build.Build{},
 			isOkteto:    true,
 			expected: BuildOptions{
 				Tag: "okteto.dev/service:dev",
@@ -74,19 +75,19 @@ func Test_OptsFromManifest(t *testing.T) {
 		{
 			name:        "empty-values-is-not-okteto",
 			serviceName: "service",
-			buildInfo:   &model.BuildInfo{},
+			buildInfo:   &build.Build{},
 			isOkteto:    false,
 			expected:    BuildOptions{},
 		},
 		{
 			name:        "all-values-no-image",
 			serviceName: "service",
-			buildInfo: &model.BuildInfo{
+			buildInfo: &build.Build{
 				Context:    "service",
 				Dockerfile: "CustomDockerfile",
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
-				Args: model.Environment{
+				Args: environment.Environment{
 					{
 						Name:  "arg1",
 						Value: "value1",

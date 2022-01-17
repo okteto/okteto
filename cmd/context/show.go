@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -29,7 +30,7 @@ func Show() *cobra.Command {
 	var output string
 	cmd := &cobra.Command{
 		Use:   "show",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#show"),
+		Args:  utils.NoArgsAccepted(constants.ShowCtxDocsURL),
 		Short: "Print the current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()

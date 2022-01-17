@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/dev"
 )
 
 type reverse struct {
@@ -29,7 +29,7 @@ type reverse struct {
 }
 
 // AddReverse adds a reverse forward
-func (fm *ForwardManager) AddReverse(f model.Reverse) error {
+func (fm *ForwardManager) AddReverse(f dev.Reverse) error {
 
 	if err := fm.canAdd(f.Local, false); err != nil {
 		return err

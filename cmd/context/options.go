@@ -16,10 +16,11 @@ package context
 import (
 	"os"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
+// ContextOptions represents all the options a context can have
 type ContextOptions struct {
 	Token            string
 	Context          string
@@ -56,16 +57,16 @@ func (o *ContextOptions) initFromContext() {
 
 func (o *ContextOptions) initFromEnvVars() {
 	if o.Token == "" {
-		o.Token = os.Getenv(model.OktetoTokenEnvVar)
+		o.Token = os.Getenv(constants.OktetoTokenEnvVar)
 	}
 
-	if o.Context == "" && os.Getenv(model.OktetoURLEnvVar) != "" {
-		o.Context = os.Getenv(model.OktetoURLEnvVar)
+	if o.Context == "" && os.Getenv(constants.OktetoURLEnvVar) != "" {
+		o.Context = os.Getenv(constants.OktetoURLEnvVar)
 		o.IsOkteto = true
 	}
 
-	if o.Context == "" && os.Getenv(model.OktetoContextEnvVar) != "" {
-		o.Context = os.Getenv(model.OktetoContextEnvVar)
+	if o.Context == "" && os.Getenv(constants.OktetoContextEnvVar) != "" {
+		o.Context = os.Getenv(constants.OktetoContextEnvVar)
 	}
 
 	if o.Token != "" {
@@ -75,7 +76,7 @@ func (o *ContextOptions) initFromEnvVars() {
 		}
 	}
 
-	if o.Namespace == "" && os.Getenv(model.OktetoNamespaceEnvVar) != "" {
-		o.Namespace = os.Getenv(model.OktetoNamespaceEnvVar)
+	if o.Namespace == "" && os.Getenv(constants.OktetoNamespaceEnvVar) != "" {
+		o.Namespace = os.Getenv(constants.OktetoNamespaceEnvVar)
 	}
 }

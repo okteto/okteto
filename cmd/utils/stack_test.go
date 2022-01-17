@@ -20,7 +20,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/environment"
+	"github.com/okteto/okteto/pkg/model/metadata"
+	"github.com/okteto/okteto/pkg/model/stack"
 )
 
 const (
@@ -57,25 +59,25 @@ func Test_multipleStack(t *testing.T) {
 	}
 	paths = append(paths, path)
 
-	stack, err := LoadStack("", paths)
+	s, err := LoadStack("", paths)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var svcResult = &model.Service{
-		Environment: model.Environment{
-			model.EnvVar{
+	var svcResult = &stack.Service{
+		Environment: environment.Environment{
+			environment.EnvVar{
 				Name:  "a",
 				Value: "b",
 			},
 		},
-		Labels: model.Labels{
+		Labels: metadata.Labels{
 			"a": "b",
 		},
 		Image: "test",
 	}
 
-	svc := stack.Services["app"]
+	svc := s.Services["app"]
 
 	if !reflect.DeepEqual(svc.Environment, svcResult.Environment) {
 		t.Fatalf("Expected %v but got %v", svcResult.Environment, svc.Environment)
@@ -106,25 +108,25 @@ func Test_overrideFileStack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stack, err := LoadStack("", paths)
+	s, err := LoadStack("", paths)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	var svcResult = &model.Service{
-		Environment: model.Environment{
-			model.EnvVar{
+	var svcResult = &stack.Service{
+		Environment: environment.Environment{
+			environment.EnvVar{
 				Name:  "a",
 				Value: "b",
 			},
 		},
-		Annotations: model.Annotations{
+		Annotations: metadata.Annotations{
 			"a": "b",
 		},
 		Image: "test",
 	}
 
-	svc := stack.Services["app"]
+	svc := s.Services["app"]
 
 	if !reflect.DeepEqual(svc.Environment, svcResult.Environment) {
 		t.Fatalf("Expected %v but got %v", svcResult.Environment, svc.Environment)

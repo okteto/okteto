@@ -20,13 +20,14 @@ import (
 
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	"k8s.io/client-go/kubernetes"
 )
 
-func waitForDevPodsTermination(ctx context.Context, c kubernetes.Interface, d *model.Dev, t int) {
-	interactive := map[string]string{model.InteractiveDevLabel: d.Name}
-	detached := map[string]string{model.DetachedDevLabel: d.Name}
+func waitForDevPodsTermination(ctx context.Context, c kubernetes.Interface, d *dev.Dev, t int) {
+	interactive := map[string]string{constants.InteractiveDevLabel: d.Name}
+	detached := map[string]string{constants.DetachedDevLabel: d.Name}
 
 	wg := &sync.WaitGroup{}
 

@@ -19,7 +19,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -93,7 +93,7 @@ func Test_loadPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			os.Setenv(model.ComposeFileEnvVar, tt.composeEnvVar)
+			os.Setenv(constants.ComposeFileEnvVar, tt.composeEnvVar)
 			result := loadComposePaths(tt.stackPath)
 			assert.Equal(t, tt.expected, result)
 		})

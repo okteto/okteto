@@ -18,7 +18,7 @@ import (
 	"strconv"
 
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -27,7 +27,7 @@ type stateBeforeSleeping struct {
 }
 
 func getPreviousAppReplicas(app App) int32 {
-	previousState := app.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]
+	previousState := app.ObjectMeta().Annotations[constants.StateBeforeSleepingAnnontation]
 	if previousState != "" {
 		var state stateBeforeSleeping
 		if err := json.Unmarshal([]byte(previousState), &state); err != nil {
@@ -37,7 +37,7 @@ func getPreviousAppReplicas(app App) int32 {
 		return int32(state.Replicas)
 	}
 
-	if rString, ok := app.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
+	if rString, ok := app.ObjectMeta().Annotations[constants.AppReplicasAnnotation]; ok {
 		rInt, err := strconv.ParseInt(rString, 10, 32)
 		if err != nil {
 			log.Infof("error parsing app replicas: %v", err)
@@ -49,6 +49,7 @@ func getPreviousAppReplicas(app App) int32 {
 	return app.Replicas()
 }
 
+//GetDevContainer returns the container from the podSpec
 func GetDevContainer(spec *apiv1.PodSpec, containerName string) *apiv1.Container {
 	if containerName == "" {
 		return &spec.Containers[0]

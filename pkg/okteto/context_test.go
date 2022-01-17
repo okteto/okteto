@@ -27,7 +27,7 @@ func Test_UrlToKubernetesContext(t *testing.T) {
 	}
 }
 
-func Test_K8sContextToOktetoUrl(t *testing.T) {
+func Test_K8sContextToOktetoURL(t *testing.T) {
 	var tests = []struct {
 		name string
 		in   string
@@ -46,7 +46,7 @@ func Test_K8sContextToOktetoUrl(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeK8sProvider := test.NewFakeK8sProvider([]runtime.Object{})
-			if result := K8sContextToOktetoUrl(ctx, tt.in, "namespace", fakeK8sProvider); result != tt.want {
+			if result := K8sContextToOktetoURL(ctx, tt.in, "namespace", fakeK8sProvider); result != tt.want {
 				t.Errorf("Test '%s' failed: %s", tt.name, result)
 			}
 		})

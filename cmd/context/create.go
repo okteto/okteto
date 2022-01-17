@@ -28,7 +28,8 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/files"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -59,7 +60,7 @@ func CreateCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "create [cluster-url]",
-		Args:   utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#create"),
+		Args:   utils.ExactArgsAccepted(1, constants.CreateCtxDocsURL),
 		Short:  "Add a context",
 		Long: `Add a context
 
@@ -120,7 +121,7 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 
 	if !ctxOptions.IsOkteto {
 
-		if isUrl(ctxOptions.Context) {
+		if isURL(ctxOptions.Context) {
 			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 			ctxOptions.IsOkteto = true
 		} else {
@@ -128,7 +129,7 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 				return errors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
 					Hint: "Please run 'okteto context' to select one context"}
 			}
-			transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, c.K8sClientProvider)
+			transformedCtx := okteto.K8sContextToOktetoURL(ctx, ctxOptions.Context, ctxOptions.Namespace, c.K8sClientProvider)
 			if transformedCtx != ctxOptions.Context {
 				ctxOptions.Context = transformedCtx
 				ctxOptions.IsOkteto = true
@@ -213,7 +214,7 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 
 	setSecrets(userContext.Secrets)
 
-	os.Setenv(model.OktetoUserNameEnvVar, okteto.Context().Username)
+	os.Setenv(constants.OktetoUserNameEnvVar, okteto.Context().Username)
 
 	return nil
 }
@@ -286,18 +287,18 @@ func (c ContextCommand) getUserContext(ctx context.Context) (*types.UserContext,
 }
 
 func (*ContextCommand) initEnvVars() {
-	if model.FileExists(".env") {
+	if files.FileExists(".env") {
 		if err := godotenv.Load(); err != nil {
 			log.Infof("error loading .env file: %s", err.Error())
 		}
 	}
 }
 
-func isUrl(u string) bool {
-	parsedUrl, err := url.Parse(u)
+func isURL(u string) bool {
+	parsedURL, err := url.Parse(u)
 	if err != nil {
 		log.Infof("could not parse %s", u)
 		return false
 	}
-	return parsedUrl.Scheme != "" && parsedUrl.Host != ""
+	return parsedURL.Scheme != "" && parsedURL.Host != ""
 }

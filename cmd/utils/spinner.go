@@ -21,7 +21,7 @@ import (
 	"unicode"
 
 	sp "github.com/briandowns/spinner"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"golang.org/x/term"
 )
 
@@ -34,7 +34,7 @@ type Spinner struct {
 
 //NewSpinner returns a new Spinner
 func NewSpinner(suffix string) *Spinner {
-	spinnerSupport = !LoadBoolean(model.OktetoDisableSpinnerEnvVar)
+	spinnerSupport = !LoadBoolean(constants.OktetoDisableSpinnerEnvVar)
 	s := sp.New(sp.CharSets[14], 100*time.Millisecond)
 	s.HideCursor = true
 	s.Suffix = fmt.Sprintf(" %s", suffix)

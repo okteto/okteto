@@ -379,7 +379,7 @@ func (s OktetoSelector) getInitialPosition(ctx context.Context) (int, error) {
 		return -1, nil
 	}
 
-	oCtx = okteto.K8sContextToOktetoUrl(ctx, oCtx, ctxStore.Contexts[oCtx].Namespace, okteto.NewK8sClientProvider())
+	oCtx = okteto.K8sContextToOktetoURL(ctx, oCtx, ctxStore.Contexts[oCtx].Namespace, okteto.NewK8sClientProvider())
 	idx := 0
 	for _, item := range s.Items {
 		if strings.Contains(item.Name, oCtx) {

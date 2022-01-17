@@ -20,7 +20,8 @@ import (
 	"github.com/moby/term"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/port"
 	"github.com/okteto/okteto/pkg/syncthing"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -31,7 +32,7 @@ import (
 type upContext struct {
 	Cancel            context.CancelFunc
 	ShutdownCompleted chan bool
-	Dev               *model.Dev
+	Dev               *dev.Dev
 	Translations      map[string]*apps.Translation
 	isRetry           bool
 	Client            *kubernetes.Clientset
@@ -56,9 +57,9 @@ type upContext struct {
 
 // Forwarder is an interface for the port-forwarding features
 type forwarder interface {
-	Add(model.Forward) error
-	AddReverse(model.Reverse) error
+	Add(port.Forward) error
+	AddReverse(dev.Reverse) error
 	Start(string, string) error
 	Stop()
-	TransformLabelsToServiceName(model.Forward) (model.Forward, error)
+	TransformLabelsToServiceName(port.Forward) (port.Forward, error)
 }

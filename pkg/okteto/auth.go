@@ -42,7 +42,7 @@ type Token struct {
 
 // Auth authenticates in okteto with an OAuth code
 func Auth(ctx context.Context, code, url string) (*types.User, error) {
-	oktetoClient, err := NewOktetoClientFromUrl(url)
+	oktetoClient, err := NewOktetoClientFromURL(url)
 	if err != nil {
 		return nil, err
 	}

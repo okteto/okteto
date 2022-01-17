@@ -32,7 +32,8 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/port"
 	"golang.org/x/crypto/bcrypt"
 	yaml "gopkg.in/yaml.v2"
 
@@ -179,24 +180,24 @@ type DownloadProgressData struct {
 }
 
 // New constructs a new Syncthing.
-func New(dev *model.Dev) (*Syncthing, error) {
+func New(d *dev.Dev) (*Syncthing, error) {
 	fullPath := getInstallPath()
-	remotePort, err := model.GetAvailablePort(dev.Interface)
+	remotePort, err := port.GetAvailablePort(d.Interface)
 	if err != nil {
 		return nil, err
 	}
 
-	remoteGUIPort, err := model.GetAvailablePort(dev.Interface)
+	remoteGUIPort, err := port.GetAvailablePort(d.Interface)
 	if err != nil {
 		return nil, err
 	}
 
-	guiPort, err := model.GetAvailablePort(dev.Interface)
+	guiPort, err := port.GetAvailablePort(d.Interface)
 	if err != nil {
 		return nil, err
 	}
 
-	listenPort, err := model.GetAvailablePort(dev.Interface)
+	listenPort, err := port.GetAvailablePort(d.Interface)
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +210,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 	}
 
 	compression := "metadata"
-	if dev.Sync.Compression {
+	if d.Sync.Compression {
 		compression = "always"
 	}
 	s := &Syncthing{
@@ -219,28 +220,28 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		binPath:          fullPath,
 		Client:           NewAPIClient(),
 		FileWatcherDelay: DefaultFileWatcherDelay,
-		GUIAddress:       fmt.Sprintf("%s:%d", dev.Interface, guiPort),
-		Home:             config.GetAppHome(dev.Namespace, dev.Name),
-		LogPath:          GetLogFile(dev.Namespace, dev.Name),
-		ListenAddress:    fmt.Sprintf("%s:%d", dev.Interface, listenPort),
-		RemoteAddress:    fmt.Sprintf("tcp://%s:%d", dev.Interface, remotePort),
+		GUIAddress:       fmt.Sprintf("%s:%d", d.Interface, guiPort),
+		Home:             config.GetAppHome(d.Namespace, d.Name),
+		LogPath:          GetLogFile(d.Namespace, d.Name),
+		ListenAddress:    fmt.Sprintf("%s:%d", d.Interface, listenPort),
+		RemoteAddress:    fmt.Sprintf("tcp://%s:%d", d.Interface, remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
-		RemoteGUIAddress: fmt.Sprintf("%s:%d", dev.Interface, remoteGUIPort),
+		RemoteGUIAddress: fmt.Sprintf("%s:%d", d.Interface, remoteGUIPort),
 		LocalGUIPort:     guiPort,
 		LocalPort:        listenPort,
 		RemoteGUIPort:    remoteGUIPort,
 		RemotePort:       remotePort,
 		Type:             "sendonly",
 		IgnoreDelete:     true,
-		Verbose:          dev.Sync.Verbose,
+		Verbose:          d.Sync.Verbose,
 		Folders:          []*Folder{},
-		RescanInterval:   strconv.Itoa(dev.Sync.RescanInterval),
+		RescanInterval:   strconv.Itoa(d.Sync.RescanInterval),
 		Compression:      compression,
-		timeout:          time.Duration(dev.Timeout.Default),
+		timeout:          time.Duration(d.Timeout.Default),
 	}
 	index := 1
-	for _, sync := range dev.Sync.Folders {
-		result, err := dev.IsSubPathFolder(sync.LocalPath)
+	for _, sync := range d.Sync.Folders {
+		result, err := d.IsSubPathFolder(sync.LocalPath)
 		if err != nil {
 			return nil, err
 		}
@@ -873,7 +874,7 @@ func (s *Syncthing) SoftTerminate() error {
 }
 
 // SaveConfig saves the syncthing object in the dev home folder
-func (s *Syncthing) SaveConfig(dev *model.Dev) error {
+func (s *Syncthing) SaveConfig(dev *dev.Dev) error {
 	marshalled, err := yaml.Marshal(s)
 	if err != nil {
 		return err
@@ -888,7 +889,7 @@ func (s *Syncthing) SaveConfig(dev *model.Dev) error {
 }
 
 // Load loads the syncthing object from the dev home folder
-func Load(dev *model.Dev) (*Syncthing, error) {
+func Load(dev *dev.Dev) (*Syncthing, error) {
 	syncthingInfoFile := getInfoFile(dev.Namespace, dev.Name)
 	b, err := os.ReadFile(syncthingInfoFile)
 	if err != nil {
@@ -906,7 +907,7 @@ func Load(dev *model.Dev) (*Syncthing, error) {
 }
 
 // RemoveFolder deletes all the files created by the syncthing instance
-func RemoveFolder(dev *model.Dev) error {
+func RemoveFolder(dev *dev.Dev) error {
 	s, err := New(dev)
 	if err != nil {
 		return fmt.Errorf("failed to create syncthing instance")

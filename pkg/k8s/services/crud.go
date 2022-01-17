@@ -20,14 +20,14 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/dev"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 // CreateDev deploys a default k8s service for a development container
-func CreateDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+func CreateDev(ctx context.Context, dev *dev.Dev, c *kubernetes.Clientset) error {
 	s := translate(dev)
 	return Deploy(ctx, s, c)
 }
@@ -81,7 +81,7 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 }
 
 // DestroyDev destroys the default service for a development container
-func DestroyDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+func DestroyDev(ctx context.Context, dev *dev.Dev, c kubernetes.Interface) error {
 	return Destroy(ctx, dev.Name, dev.Namespace, c)
 }
 
@@ -133,15 +133,16 @@ func GetServiceNameByLabel(ctx context.Context, namespace string, c kubernetes.I
 	}
 	foundServices := serviceList.Items
 	if len(foundServices) == 0 {
-		return "", fmt.Errorf("Could not find any service with the following labels: '%s'.", labels)
+		return "", fmt.Errorf("could not find any service with the following labels: '%s'", labels)
 	} else if len(foundServices) == 1 {
 		serviceInfo := foundServices[0].ObjectMeta
 		return serviceInfo.Name, nil
 	}
 	servicesNames := GetServicesNamesFromList(serviceList)
-	return "", fmt.Errorf("Services [%s] have the following labels: '%s'.\nPlease specify the one you want to forward by name or use more specific labels.", servicesNames, labels)
+	return "", fmt.Errorf("services [%s] have the following labels: '%s'.\nPlease specify the one you want to forward by name or use more specific labels", servicesNames, labels)
 }
 
+//GetServicesNamesFromList returns a list of services into a string separated by comma
 func GetServicesNamesFromList(serviceList *apiv1.ServiceList) string {
 	names := make([]string, 0)
 

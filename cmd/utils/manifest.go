@@ -17,17 +17,17 @@ import (
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/files"
 )
 
 // InferApplicationName infers the application name from the folder received as parameter
 func InferApplicationName(cwd string) string {
-	repo, err := model.GetRepositoryURL(cwd)
+	repo, err := files.GetRepositoryURL(cwd)
 	if err != nil {
 		log.Info("inferring name from folder")
 		return filepath.Base(cwd)
 	}
 
 	log.Info("inferring name from git repository URL")
-	return model.TranslateURLToName(repo)
+	return files.TranslateURLToName(repo)
 }

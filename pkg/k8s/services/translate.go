@@ -14,7 +14,9 @@
 package services
 
 import (
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/metadata"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -24,8 +26,8 @@ const (
 	oktetoAutoIngressAnnotation = "dev.okteto.com/auto-ingress"
 )
 
-func translate(dev *model.Dev) *apiv1.Service {
-	annotations := model.Annotations{}
+func translate(dev *dev.Dev) *apiv1.Service {
+	annotations := metadata.Annotations{}
 	if len(dev.Services) == 0 {
 		annotations[oktetoAutoIngressAnnotation] = "true"
 	}
@@ -37,7 +39,7 @@ func translate(dev *model.Dev) *apiv1.Service {
 			Name:      dev.Name,
 			Namespace: dev.Namespace,
 			Labels: map[string]string{
-				model.DevLabel: "true",
+				constants.DevLabel: "true",
 			},
 			Annotations: annotations,
 		},

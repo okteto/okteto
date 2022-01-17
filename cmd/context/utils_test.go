@@ -18,7 +18,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	ctxModel "github.com/okteto/okteto/pkg/model/context"
+	"github.com/okteto/okteto/pkg/model/environment"
+	"github.com/okteto/okteto/pkg/model/manifest"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -28,14 +30,14 @@ func Test_addKubernetesContext(t *testing.T) {
 	var tests = []struct {
 		name         string
 		cfg          *clientcmdapi.Config
-		ctxResource  *model.ContextResource
+		ctxResource  *ctxModel.ContextResource
 		currentStore *okteto.OktetoContextStore
 		wantStore    *okteto.OktetoContextStore
 		wantError    bool
 	}{
 		{
 			name:        "nil-cfg",
-			ctxResource: &model.ContextResource{Context: "context"},
+			ctxResource: &ctxModel.ContextResource{Context: "context"},
 			wantError:   true,
 		},
 		{
@@ -43,7 +45,7 @@ func Test_addKubernetesContext(t *testing.T) {
 			cfg: &clientcmdapi.Config{
 				Contexts: map[string]*clientcmdapi.Context{},
 			},
-			ctxResource: &model.ContextResource{Context: "context"},
+			ctxResource: &ctxModel.ContextResource{Context: "context"},
 			wantError:   true,
 		},
 		{
@@ -51,7 +53,7 @@ func Test_addKubernetesContext(t *testing.T) {
 			cfg: &clientcmdapi.Config{
 				Contexts: map[string]*clientcmdapi.Context{"context": {Namespace: "n-cfg"}},
 			},
-			ctxResource: &model.ContextResource{Context: "context", Namespace: "n-ctx"},
+			ctxResource: &ctxModel.ContextResource{Context: "context", Namespace: "n-ctx"},
 			currentStore: &okteto.OktetoContextStore{
 				CurrentContext: "",
 				Contexts:       map[string]*okteto.OktetoContext{},
@@ -69,7 +71,7 @@ func Test_addKubernetesContext(t *testing.T) {
 			cfg: &clientcmdapi.Config{
 				Contexts: map[string]*clientcmdapi.Context{"context": {Namespace: "n-cfg"}},
 			},
-			ctxResource: &model.ContextResource{Context: "context"},
+			ctxResource: &ctxModel.ContextResource{Context: "context"},
 			currentStore: &okteto.OktetoContextStore{
 				CurrentContext: "",
 				Contexts:       map[string]*okteto.OktetoContext{},
@@ -87,7 +89,7 @@ func Test_addKubernetesContext(t *testing.T) {
 			cfg: &clientcmdapi.Config{
 				Contexts: map[string]*clientcmdapi.Context{"context": {}},
 			},
-			ctxResource: &model.ContextResource{Context: "context"},
+			ctxResource: &ctxModel.ContextResource{Context: "context"},
 			currentStore: &okteto.OktetoContextStore{
 				CurrentContext: "",
 				Contexts:       map[string]*okteto.OktetoContext{},
@@ -128,8 +130,12 @@ func Test_GetManifestV2(t *testing.T) {
 		file             string
 		manifestYAML     []byte
 		expectedErr      bool
-		expectedManifest *model.Manifest
+		expectedManifest *manifest.Manifest
 	}{
+		{
+			name:        "manifest-path-not-found",
+			expectedErr: true,
+		},
 		{
 			name:        "file-is-defined-option",
 			file:        "file",
@@ -149,17 +155,17 @@ build:
     cache_from:
       - cache-image-1
       - cache-image-2`),
-			expectedManifest: &model.Manifest{
+			expectedManifest: &manifest.Manifest{
 				Namespace: "test-namespace",
 				Context:   "manifest-context",
-				Build: model.ManifestBuild{
+				Build: manifest.Build{
 					"service": {
 						Name:       "",
 						Target:     "build",
 						Context:    "./service",
 						Dockerfile: "custom-dockerfile",
 						Image:      "defined-tag-image",
-						Args: []model.EnvVar{
+						Args: []environment.EnvVar{
 							{
 								Name: "KEY1", Value: "Value1",
 							},
@@ -171,14 +177,10 @@ build:
 					},
 				},
 				Icon:     "",
-				Dev:      model.ManifestDevs{},
+				Devs:     manifest.Devs{},
 				Type:     "",
 				Filename: "",
 			},
-		},
-		{
-			name:        "manifest-path-not-found",
-			expectedErr: true,
 		},
 	}
 
@@ -199,14 +201,11 @@ build:
 				filename = ""
 			}
 
-			cwd, err := os.Getwd()
-			if err != nil {
-				t.Errorf("unable to get current dir")
-			}
-			m, err := GetManifestV2(cwd, filename)
+			m, err := manifest.GetManifestV2(filename)
 			if tt.expectedErr {
 				assert.NotNil(t, err)
 			} else {
+				m.Filename = ""
 				assert.EqualValues(t, tt.expectedManifest, m)
 			}
 

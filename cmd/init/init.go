@@ -28,7 +28,10 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	contextResource "github.com/okteto/okteto/pkg/model/context"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/files"
 	"github.com/okteto/okteto/pkg/okteto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -50,12 +53,12 @@ func Init() *cobra.Command {
 	var overwrite bool
 	cmd := &cobra.Command{
 		Use:   "init",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
+		Args:  utils.NoArgsAccepted(constants.InitDocsURL),
 		Short: "Automatically generate your okteto manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			ctxResource := &model.ContextResource{}
+			ctxResource := &contextResource.ContextResource{}
 			if err := ctxResource.UpdateNamespace(namespace); err != nil {
 				return err
 			}
@@ -72,7 +75,7 @@ func Init() *cobra.Command {
 				return err
 			}
 
-			l := os.Getenv(model.OktetoLanguageEnvVar)
+			l := os.Getenv(constants.OktetoLanguageEnvVar)
 			workDir, err := os.Getwd()
 			if err != nil {
 				return err
@@ -104,7 +107,7 @@ func Init() *cobra.Command {
 func Run(devPath, language, workDir string, overwrite bool) error {
 	fmt.Println("This command walks you through creating an okteto manifest.")
 	fmt.Println("It only covers the most common items, and tries to guess sensible defaults.")
-	fmt.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
+	fmt.Printf("See %s for the official documentation about the okteto manifest.\n", constants.ManifestDocsURL)
 	ctx := context.Background()
 	devPath, err := validateDevPath(devPath, overwrite)
 	if err != nil {
@@ -121,7 +124,7 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 		return err
 	}
 
-	dev, err := linguist.GetDevDefaults(language, workDir)
+	d, err := linguist.GetDevDefaults(language, workDir)
 	if err != nil {
 		return err
 	}
@@ -132,10 +135,10 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 			return err
 		}
 		if app == nil {
-			dev.Autocreate = true
-			linguist.SetForwardDefaults(dev, language)
+			d.Autocreate = true
+			linguist.SetForwardDefaults(d, language)
 		} else {
-			dev.Container = container
+			d.Container = container
 			if container == "" {
 				container = app.PodSpec().Containers[0].Name
 			}
@@ -143,33 +146,33 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 			suffix := fmt.Sprintf("Analyzing %s '%s'...", app.Kind(), app.ObjectMeta().Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
-			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language)
+			err = initCMD.SetDevDefaultsFromApp(ctx, d, app, container, language)
 			spinner.Stop()
 			if err == nil {
 				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", app.Kind(), app.ObjectMeta().Name))
 			} else {
 				log.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", app.Kind(), app.ObjectMeta().Name, err))
-				linguist.SetForwardDefaults(dev, language)
+				linguist.SetForwardDefaults(d, language)
 			}
 		}
 
 		if !supportsPersistentVolumes(ctx) {
 			log.Yellow("Default storage class not found in your cluster. Persistent volumes not enabled in your okteto manifest")
-			dev.Volumes = nil
-			dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
+			d.Volumes = nil
+			d.PersistentVolumeInfo = &dev.PersistentVolumeInfo{
 				Enabled: false,
 			}
 		}
 	} else {
-		linguist.SetForwardDefaults(dev, language)
-		dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
+		linguist.SetForwardDefaults(d, language)
+		d.PersistentVolumeInfo = &dev.PersistentVolumeInfo{
 			Enabled: true,
 		}
 	}
 
-	dev.Namespace = ""
-	dev.Context = ""
-	if err := dev.Save(devPath); err != nil {
+	d.Namespace = ""
+	d.Context = ""
+	if err := d.Save(devPath); err != nil {
 		return err
 	}
 
@@ -179,7 +182,7 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 	}
 	stignore := filepath.Join(devDir, stignoreFile)
 
-	if !model.FileExists(stignore) {
+	if !files.FileExists(stignore) {
 		c := linguist.GetSTIgnore(language)
 		if err := os.WriteFile(stignore, c, 0600); err != nil {
 			log.Infof("failed to write stignore file: %s", err)
@@ -237,7 +240,7 @@ func supportsPersistentVolumes(ctx context.Context) bool {
 	}
 
 	for i := range stClassList.Items {
-		if stClassList.Items[i].Annotations[model.DefaultStorageClassAnnotation] == "true" {
+		if stClassList.Items[i].Annotations[constants.DefaultStorageClassAnnotation] == "true" {
 			log.Infof("found default storage class '%s'", stClassList.Items[i].Name)
 			return true
 		}
@@ -249,7 +252,7 @@ func supportsPersistentVolumes(ctx context.Context) bool {
 
 func validateDevPath(devPath string, overwrite bool) (string, error) {
 	if !overwrite {
-		if model.FileExists(devPath) {
+		if files.FileExists(devPath) {
 			return "", fmt.Errorf("%s already exists. Run this command again with the '-o' flag to overwrite it", devPath)
 		}
 	}
@@ -299,19 +302,19 @@ func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, er
 	}
 	options := []string{}
 	for i := range dList {
-		if dList[i].Labels[model.DevLabel] != "" {
+		if dList[i].Labels[constants.DevLabel] != "" {
 			continue
 		}
-		if dList[i].Labels[model.DevCloneLabel] != "" {
+		if dList[i].Labels[constants.DevCloneLabel] != "" {
 			continue
 		}
 		options = append(options, dList[i].Name)
 	}
 	for i := range sfsList {
-		if sfsList[i].Labels[model.DevLabel] != "" {
+		if sfsList[i].Labels[constants.DevLabel] != "" {
 			continue
 		}
-		if sfsList[i].Labels[model.DevCloneLabel] != "" {
+		if sfsList[i].Labels[constants.DevCloneLabel] != "" {
 			continue
 		}
 		options = append(options, sfsList[i].Name)

@@ -18,6 +18,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +28,7 @@ func Context() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "context",
 		Aliases: []string{"ctx"},
-		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#context"),
+		Args:    utils.NoArgsAccepted(constants.ContextDocsURL),
 		Short:   "Set the default context",
 		Long: `Set the default context
 

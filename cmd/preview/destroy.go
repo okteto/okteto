@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	contextModel "github.com/okteto/okteto/pkg/model/context"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +38,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name = getExpandedName(args[0])
 
-			ctxResource := &model.ContextResource{}
+			ctxResource := &contextModel.ContextResource{}
 			if err := ctxResource.UpdateNamespace(name); err != nil {
 				return err
 			}

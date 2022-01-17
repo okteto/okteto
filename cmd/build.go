@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
@@ -25,7 +26,8 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/manifest"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +38,7 @@ func Build(ctx context.Context) *cobra.Command {
 	options := build.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [PATH]",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#build"),
+		Args:  utils.MaximumNArgsAccepted(1, constants.BuildDocsURL),
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
@@ -66,12 +68,7 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 
 			if contextCMD.IsManifestV2Enabled() {
-				cwd, err := os.Getwd()
-				if err != nil {
-					return err
-				}
-
-				manifest, err := contextCMD.GetManifestV2(cwd, options.File)
+				manifest, err := manifest.GetManifestV2(options.File)
 				if err != nil {
 					return err
 				}
@@ -109,8 +106,15 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "", "", "namespace against which the image will be consumed. Default is the one defined at okteto context or okteto manifest")
 	return cmd
 }
+func isManifestV2Enabled() bool {
+	r, err := strconv.ParseBool(os.Getenv("OKTETO_ENABLE_MANIFEST_V2"))
+	if err != nil {
+		return false
+	}
+	return r
+}
 
-func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) error {
+func buildV2(m manifest.Build, options build.BuildOptions, args []string) error {
 	service := ""
 	if len(args) == 1 {
 		service = args[0]

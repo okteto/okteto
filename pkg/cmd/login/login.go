@@ -24,23 +24,28 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/port"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/skratchdot/open-golang/open"
 )
 
+//LoginInterface represents the interface of login
 type LoginInterface interface {
 	AuthenticateToOktetoCluster(context.Context, string, string) (*types.User, error)
 }
 
+//LoginController controls the okteto login
 type LoginController struct {
 }
 
+//NewLoginController creates a login controller
 func NewLoginController() *LoginController {
 	return &LoginController{}
 }
 
+//AuthenticateToOktetoCluster authenticates a user into an okteto cluster
 func (l LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*types.User, error) {
 	if token == "" {
 		log.Infof("authenticating with browser code")
@@ -72,7 +77,7 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 		if strings.Contains(err.Error(), "executable file not found in $PATH") {
 			return nil, errors.UserError{
 				E:    fmt.Errorf("no browser could be found"),
-				Hint: "Use the '--token' flag to run this command in server mode. More information can be found here: https://okteto.com/docs/reference/cli/#login",
+				Hint: fmt.Sprintf("Use the '--token' flag to run this command in server mode. More information can be found here: %s", constants.LoginDocsURL),
 			}
 		}
 		log.Errorf("Something went wrong opening your browser: %s\n", err)
@@ -92,7 +97,7 @@ func StartWithBrowser(ctx context.Context, u string) (*Handler, error) {
 		return nil, fmt.Errorf("couldn't generate a random token, please try again")
 	}
 
-	port, err := model.GetAvailablePort(model.Localhost)
+	port, err := port.GetAvailablePort(constants.Localhost)
 
 	if err != nil {
 		log.Infof("couldn't access the network: %s", err)

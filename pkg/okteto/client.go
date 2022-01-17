@@ -23,13 +23,13 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 	"golang.org/x/oauth2"
 )
 
-//Client implementation to connect to Okteto API
+//OktetoClient implementation to connect to Okteto API
 type OktetoClient struct {
 	client *graphql.Client
 
@@ -38,8 +38,10 @@ type OktetoClient struct {
 	preview   types.PreviewInterface
 }
 
+//OktetoClientProvider is the okteto client provider
 type OktetoClientProvider struct{}
 
+//NewOktetoClientProvider creates a new okteto client provider
 func NewOktetoClientProvider() *OktetoClientProvider {
 	return &OktetoClientProvider{}
 }
@@ -52,7 +54,7 @@ func (*OktetoClientProvider) Provide() (types.OktetoInterface, error) {
 	return c, err
 }
 
-//NewClient creates a new client to connect with Okteto API
+//NewOktetoClient creates a new client to connect with Okteto API
 func NewOktetoClient() (*OktetoClient, error) {
 	token := Context().Token
 	if token == "" {
@@ -72,7 +74,7 @@ func NewOktetoClient() (*OktetoClient, error) {
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
-//NewClient creates a new client to connect with Okteto API
+//NewOktetoClientFromUrlAndToken creates a new client to connect with Okteto API
 func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 	u, err := parseOktetoURL(url)
 	if err != nil {
@@ -88,8 +90,8 @@ func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
-//NewClient creates a new client to connect with Okteto API
-func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
+//NewOktetoClientFromURL creates a new client to connect with Okteto API
+func NewOktetoClientFromURL(url string) (*OktetoClient, error) {
 	u, err := parseOktetoURL(url)
 	if err != nil {
 		return nil, err
@@ -181,7 +183,7 @@ func isAPITransientErr(err error) bool {
 
 // InDevContainer returns true if running in an okteto dev container
 func InDevContainer() bool {
-	if v, ok := os.LookupEnv(model.OktetoNameEnvVar); ok && v != "" {
+	if v, ok := os.LookupEnv(constants.OktetoNameEnvVar); ok && v != "" {
 		return true
 	}
 

@@ -20,7 +20,8 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	"github.com/okteto/okteto/pkg/syncthing"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,7 +54,7 @@ func Get(ctx context.Context, name, namespace string, c *kubernetes.Clientset) (
 }
 
 // Create creates the syncthing config secret
-func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) error {
+func Create(ctx context.Context, dev *dev.Dev, c *kubernetes.Clientset, s *syncthing.Syncthing) error {
 	secretName := GetSecretName(dev)
 
 	sct, err := Get(ctx, secretName, dev.Namespace, c)
@@ -69,7 +70,7 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syn
 		ObjectMeta: metav1.ObjectMeta{
 			Name: secretName,
 			Labels: map[string]string{
-				model.DevLabel: "true",
+				constants.DevLabel: "true",
 			},
 		},
 		Type: v1.SecretTypeOpaque,
@@ -113,7 +114,7 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syn
 }
 
 // Destroy deletes the syncthing config secret
-func Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
+func Destroy(ctx context.Context, dev *dev.Dev, c kubernetes.Interface) error {
 	secretName := GetSecretName(dev)
 	err := c.CoreV1().Secrets(dev.Namespace).Delete(ctx, secretName, metav1.DeleteOptions{})
 	if err != nil {
@@ -126,7 +127,7 @@ func Destroy(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error 
 }
 
 // GetSecretName returns the okteto secret name for a given development container
-func GetSecretName(dev *model.Dev) string {
+func GetSecretName(dev *dev.Dev) string {
 	return fmt.Sprintf(oktetoSecretTemplate, dev.Name)
 }
 

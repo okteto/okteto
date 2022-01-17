@@ -21,7 +21,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/stack"
 	"github.com/okteto/okteto/pkg/okteto"
 	v1 "k8s.io/api/core/v1"
 )
@@ -90,8 +90,8 @@ func GetRegistryAndRepo(tag string) (string, string) {
 }
 
 // GetHiddenExposePorts returns the ports exposed at the image
-func GetHiddenExposePorts(image string) []model.Port {
-	exposedPorts := make([]model.Port, 0)
+func GetHiddenExposePorts(image string) []stack.Port {
+	exposedPorts := make([]stack.Port, 0)
 
 	image = ExpandOktetoDevRegistry(image)
 	image = ExpandOktetoGlobalRegistry(image)
@@ -108,7 +108,7 @@ func GetHiddenExposePorts(image string) []model.Port {
 				if err != nil {
 					continue
 				}
-				exposedPorts = append(exposedPorts, model.Port{ContainerPort: int32(portInt), Protocol: v1.ProtocolTCP})
+				exposedPorts = append(exposedPorts, stack.Port{ContainerPort: int32(portInt), Protocol: v1.ProtocolTCP})
 			}
 		}
 	}

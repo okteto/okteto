@@ -30,7 +30,8 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
@@ -63,7 +64,7 @@ func (up *upContext) activate() error {
 		return err
 	}
 
-	if v, ok := app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation]; up.Dev.Autocreate && (!ok || v != model.OktetoUpCmd) {
+	if v, ok := app.ObjectMeta().Annotations[constants.OktetoAutoCreateAnnotation]; up.Dev.Autocreate && (!ok || v != constants.OktetoUpCmd) {
 		return errors.UserError{
 			E:    fmt.Errorf("resource %s already exist", up.Dev.Name),
 			Hint: "use a different name in your okteto.yaml, or remove the autocreate property",
@@ -156,24 +157,24 @@ func (up *upContext) activate() error {
 				if utils.GetWarningState(folder, ".remotewatcher") == "" {
 					log.Yellow("The value of /proc/sys/fs/inotify/max_user_watches in your cluster nodes is too low.")
 					log.Yellow("This can affect file synchronization performance.")
-					log.Yellow("Visit https://okteto.com/docs/reference/known-issues/ for more information.")
+					log.Yellow("Visit %s for more information.", constants.KnownIssuesDocsURL)
 					if err := utils.SetWarningState(folder, ".remotewatcher", "true"); err != nil {
 						log.Infof("failed to set warning remotewatcher state: %s", err.Error())
 					}
 				}
 			}
 
-			if version != model.OktetoBinImageTag {
-				log.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, model.OktetoBinImageTag)
-				log.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
-				log.Infof("Using init image %s instead of default init image (%s)", up.Dev.InitContainer.Image, model.OktetoBinImageTag)
+			if version != constants.OktetoBinImageTag {
+				log.Yellow("The Okteto CLI version %s uses the init container image %s.", config.VersionString, constants.OktetoBinImageTag)
+				log.Yellow("Please consider upgrading your init container image %s with the content of %s", up.Dev.InitContainer.Image, constants.OktetoBinImageTag)
+				log.Infof("Using init image %s instead of default init image (%s)", up.Dev.InitContainer.Image, constants.OktetoBinImageTag)
 			}
 
 		}
 		divertURL := ""
 		if up.Dev.Divert != nil {
 			username := okteto.GetSanitizedUsername()
-			name := model.DivertName(up.Dev.Divert.Ingress, username)
+			name := dev.DivertName(up.Dev.Divert.Ingress, username)
 			i, err := ingressesv1.Get(ctx, name, up.Dev.Namespace, up.Client)
 			if err != nil {
 				log.Errorf("error getting diverted ingress %s: %s", name, err.Error())
@@ -269,7 +270,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 
 	var devApp apps.App
 	for _, tr := range trMap {
-		delete(tr.DevApp.ObjectMeta().Annotations, model.DeploymentRevisionAnnotation)
+		delete(tr.DevApp.ObjectMeta().Annotations, constants.DeploymentRevisionAnnotation)
 		if err := tr.DevApp.Deploy(ctx, up.Client); err != nil {
 			return err
 		}
@@ -337,7 +338,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 	for {
 		if time.Now().After(to) && insufficientResourcesErr != nil {
 			return errors.UserError{E: fmt.Errorf("insufficient resources"),
-				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest/#timeout-time-optional"}
+				Hint: fmt.Sprintf("Increase cluster resources or timeout of resources. More information is available here: %s", constants.TimeoutDocsURL)}
 		}
 		select {
 		case event := <-watcherEvents.ResultChan():
@@ -384,7 +385,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				spinner.Update("Pulling images...")
 				spinner.Start()
 			case "Killing":
-				if app.Kind() == model.StatefulSet {
+				if app.Kind() == constants.StatefulSet {
 					killing = true
 					continue
 				}

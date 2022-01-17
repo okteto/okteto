@@ -19,7 +19,8 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/build"
+	"github.com/okteto/okteto/pkg/model/dev"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -28,7 +29,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 		name       string
 		deployment string
 		expectErr  bool
-		dev        *model.Dev
+		dev        *dev.Dev
 	}{
 		{
 			name:       "default",
@@ -44,13 +45,13 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 			name:       "load-dev",
 			deployment: "test-deployment",
 			expectErr:  false,
-			dev: &model.Dev{
+			dev: &dev.Dev{
 				Name: "loaded",
-				Image: &model.BuildInfo{
+				Image: &build.Build{
 					Name: "okteto/test:1.0",
 				},
-				Sync: model.Sync{
-					Folders: []model.SyncFolder{
+				Sync: dev.Sync{
+					Folders: []dev.SyncFolder{
 						{
 							LocalPath:  ".",
 							RemotePath: "/path",
@@ -90,7 +91,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 				t.Fatalf("unexpected error: %s", err)
 			}
 
-			if def.Dev[tt.deployment].Name != tt.deployment {
+			if def.Devs[tt.deployment].Name != tt.deployment {
 				t.Errorf("expected default name, got %s", tt.deployment)
 			}
 
@@ -114,12 +115,12 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 				t.Fatalf("unexpected error when loading existing manifest: %s", err.Error())
 			}
 
-			if tt.dev.Image.Name != loaded.Dev["loaded"].Image.Name {
-				t.Fatalf("expected %s got %s", tt.dev.Image.Name, loaded.Dev["foo"].Image.Name)
+			if tt.dev.Image.Name != loaded.Devs["loaded"].Image.Name {
+				t.Fatalf("expected %s got %s", tt.dev.Image.Name, loaded.Devs["foo"].Image.Name)
 			}
 
-			if tt.dev.Name != loaded.Dev["loaded"].Name {
-				t.Fatalf("expected %s got %s", tt.dev.Name, loaded.Dev["foo"].Name)
+			if tt.dev.Name != loaded.Devs["loaded"].Name {
+				t.Fatalf("expected %s got %s", tt.dev.Name, loaded.Devs["foo"].Name)
 			}
 
 		})
@@ -130,8 +131,8 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 		t.Fatal("default dev was not returned")
 	}
 
-	if def.Dev[name].Name != name {
-		t.Errorf("expected %s, got %s", name, def.Dev[name].Name)
+	if def.Devs[name].Name != name {
+		t.Errorf("expected %s, got %s", name, def.Devs[name].Name)
 	}
 
 	_, err = LoadManifestOrDefault("/tmp/bad-path", "")

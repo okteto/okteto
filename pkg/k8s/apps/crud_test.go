@@ -18,7 +18,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/build"
+	"github.com/okteto/okteto/pkg/model/dev"
 	"github.com/okteto/okteto/pkg/okteto"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -66,13 +67,13 @@ func TestGetStatefulset(t *testing.T) {
 
 	clientset := fake.NewSimpleClientset(sfs)
 
-	dev := &model.Dev{
+	dev := &dev.Dev{
 		Name:      "test",
 		Namespace: "test",
-		Image: &model.BuildInfo{
+		Image: &build.Build{
 			Name: "image",
 		},
-		PersistentVolumeInfo: &model.PersistentVolumeInfo{
+		PersistentVolumeInfo: &dev.PersistentVolumeInfo{
 			Enabled: true,
 		},
 	}
@@ -111,13 +112,13 @@ func TestGetDeployment(t *testing.T) {
 
 	clientset := fake.NewSimpleClientset(d)
 
-	dev := &model.Dev{
+	dev := &dev.Dev{
 		Name:      "test",
 		Namespace: "test",
-		Image: &model.BuildInfo{
+		Image: &build.Build{
 			Name: "image",
 		},
-		PersistentVolumeInfo: &model.PersistentVolumeInfo{
+		PersistentVolumeInfo: &dev.PersistentVolumeInfo{
 			Enabled: true,
 		},
 	}
@@ -134,7 +135,7 @@ func TestValidateMountPaths(t *testing.T) {
 	tests := []struct {
 		name          string
 		spec          *v1.PodSpec
-		dev           *model.Dev
+		dev           *dev.Dev
 		expectedError bool
 	}{
 		{
@@ -150,16 +151,16 @@ func TestValidateMountPaths(t *testing.T) {
 					},
 				},
 			},
-			dev: &model.Dev{
+			dev: &dev.Dev{
 				Name: "test",
-				Sync: model.Sync{
-					Folders: []model.SyncFolder{
+				Sync: dev.Sync{
+					Folders: []dev.SyncFolder{
 						{
 							RemotePath: "/data2",
 						},
 					},
 				},
-				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+				PersistentVolumeInfo: &dev.PersistentVolumeInfo{
 					Enabled: true,
 				},
 			},
@@ -178,16 +179,16 @@ func TestValidateMountPaths(t *testing.T) {
 					},
 				},
 			},
-			dev: &model.Dev{
+			dev: &dev.Dev{
 				Name: "test",
-				Sync: model.Sync{
-					Folders: []model.SyncFolder{
+				Sync: dev.Sync{
+					Folders: []dev.SyncFolder{
 						{
 							RemotePath: "/data",
 						},
 					},
 				},
-				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+				PersistentVolumeInfo: &dev.PersistentVolumeInfo{
 					Enabled: true,
 				},
 			},
@@ -206,16 +207,16 @@ func TestValidateMountPaths(t *testing.T) {
 					},
 				},
 			},
-			dev: &model.Dev{
+			dev: &dev.Dev{
 				Name: "test",
-				Sync: model.Sync{
-					Folders: []model.SyncFolder{
+				Sync: dev.Sync{
+					Folders: []dev.SyncFolder{
 						{
 							RemotePath: "/data",
 						},
 					},
 				},
-				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+				PersistentVolumeInfo: &dev.PersistentVolumeInfo{
 					Enabled: false,
 				},
 			},
@@ -235,16 +236,16 @@ func TestValidateMountPaths(t *testing.T) {
 					},
 				},
 			},
-			dev: &model.Dev{
+			dev: &dev.Dev{
 				Name: "test",
-				Sync: model.Sync{
-					Folders: []model.SyncFolder{
+				Sync: dev.Sync{
+					Folders: []dev.SyncFolder{
 						{
 							RemotePath: "/data",
 						},
 					},
 				},
-				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+				PersistentVolumeInfo: &dev.PersistentVolumeInfo{
 					Enabled: true,
 				},
 			},

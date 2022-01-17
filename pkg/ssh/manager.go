@@ -22,7 +22,8 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	k8sforward "github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/port"
 )
 
 // ForwardManager handles the lifecycle of all the forwards
@@ -65,12 +66,12 @@ func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 		return nil
 	}
 
-	if !model.IsPortAvailable(fm.localInterface, localPort) {
+	if !port.IsPortAvailable(fm.localInterface, localPort) {
 		if localPort <= 1024 {
 			os := runtime.GOOS
 			switch os {
 			case "darwin":
-				if fm.localInterface == model.Localhost {
+				if fm.localInterface == constants.Localhost {
 					return fmt.Errorf("local port %d is privileged. Define 'interface: 0.0.0.0' in your okteto manifest and try again", localPort)
 				}
 			case "linux":
@@ -84,7 +85,7 @@ func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 }
 
 // Add initializes a remote forward
-func (fm *ForwardManager) Add(f model.Forward) error {
+func (fm *ForwardManager) Add(f port.Forward) error {
 
 	if err := fm.canAdd(f.Local, true); err != nil {
 		return err
@@ -179,7 +180,8 @@ func (fm *ForwardManager) Stop() {
 	log.Info("stopped SSH forward manager")
 }
 
-func (fm *ForwardManager) TransformLabelsToServiceName(f model.Forward) (model.Forward, error) {
+//TransformLabelsToServiceName transform lalbel into the service name
+func (fm *ForwardManager) TransformLabelsToServiceName(f port.Forward) (port.Forward, error) {
 	serviceName, err := fm.pf.GetServiceNameByLabel(fm.namespace, f.Labels)
 	if err != nil {
 		return f, err

@@ -18,15 +18,15 @@ import (
 	"fmt"
 	"testing"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/manifest"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var fakeManifest *model.Manifest = &model.Manifest{
+var fakeManifest *manifest.Manifest = &manifest.Manifest{
 	Destroy: []string{
 		"printenv",
 		"ls -la",
@@ -86,11 +86,11 @@ func (fe *fakeExecutor) Execute(command string, _ []string) error {
 	return nil
 }
 
-func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ string) (*manifest.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ string) (*manifest.Manifest, error) {
 	return fakeManifest, nil
 }
 
@@ -127,7 +127,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
-		getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+		getManifest func(cwd string) (*manifest.Manifest, error)
 		want        int
 	}{
 		{
@@ -168,7 +168,7 @@ func TestDestroyWithError(t *testing.T) {
 	cwd := "/okteto/src"
 	tests := []struct {
 		name        string
-		getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+		getManifest func(cwd string) (*manifest.Manifest, error)
 		secrets     []v1.Secret
 		want        []string
 	}{
@@ -220,7 +220,7 @@ func TestDestroyWithError(t *testing.T) {
 							nameLabel:  "helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 			},
 			want: []string{
@@ -239,7 +239,7 @@ func TestDestroyWithError(t *testing.T) {
 							nameLabel:  "helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 			},
 			want: append(fakeManifest.Destroy, fmt.Sprintf(helmUninstallCommand, "helm-app")),
@@ -280,7 +280,7 @@ func TestDestroyWithoutError(t *testing.T) {
 	cwd := "/okteto/src"
 	tests := []struct {
 		name        string
-		getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+		getManifest func(cwd string) (*manifest.Manifest, error)
 		secrets     []v1.Secret
 		want        []string
 	}{
@@ -332,7 +332,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 			},
 			want: []string{
@@ -351,7 +351,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -361,7 +361,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "another-helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -371,7 +371,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "last-helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 			},
 			want: []string{
@@ -392,7 +392,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 			},
 			want: append(fakeManifest.Destroy, fmt.Sprintf(helmUninstallCommand, "helm-app")),
@@ -409,7 +409,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -419,7 +419,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "another-helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -429,7 +429,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "last-helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 			},
 			want: append(

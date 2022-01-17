@@ -21,7 +21,8 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/stack"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,22 +37,22 @@ func Test_destroyDeployments(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "ns",
-			Labels:    map[string]string{model.StackNameLabel: "stack-test"},
+			Labels:    map[string]string{constants.StackNameLabel: "stack-test"},
 		},
 	}
 
 	client := fake.NewSimpleClientset(dep)
 	var tests = []struct {
 		name                string
-		stack               *model.Stack
+		stack               *stack.Stack
 		expectedDeployments int
 	}{
 		{
 			name: "not destroy anything",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"test": {
 						Image:         "test_image",
 						RestartPolicy: corev1.RestartPolicyAlways,
@@ -62,10 +63,10 @@ func Test_destroyDeployments(t *testing.T) {
 		},
 		{
 			name: "destroy dep not in stack",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"test-2": {
 						Image:         "test_image",
 						RestartPolicy: corev1.RestartPolicyAlways,
@@ -76,10 +77,10 @@ func Test_destroyDeployments(t *testing.T) {
 		},
 		{
 			name: "destroy dep which is not deployment anymore",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"test": {
 						Image:         "test_image",
 						RestartPolicy: corev1.RestartPolicyNever,
@@ -115,26 +116,26 @@ func Test_destroyStatefulsets(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "ns",
-			Labels:    map[string]string{model.StackNameLabel: "stack-test"},
+			Labels:    map[string]string{constants.StackNameLabel: "stack-test"},
 		},
 	}
 
 	client := fake.NewSimpleClientset(sfs)
 	var tests = []struct {
 		name                string
-		stack               *model.Stack
+		stack               *stack.Stack
 		expectedDeployments int
 	}{
 		{
 			name: "not destroy anything",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"test": {
 						Image:         "test_image",
 						RestartPolicy: corev1.RestartPolicyAlways,
-						Volumes: []model.StackVolume{
+						Volumes: []stack.StackVolume{
 							{
 								LocalPath:  "/",
 								RemotePath: "/",
@@ -147,14 +148,14 @@ func Test_destroyStatefulsets(t *testing.T) {
 		},
 		{
 			name: "destroy dep not in stack",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"test-2": {
 						Image:         "test_image",
 						RestartPolicy: corev1.RestartPolicyAlways,
-						Volumes: []model.StackVolume{
+						Volumes: []stack.StackVolume{
 							{
 								LocalPath:  "/",
 								RemotePath: "/",
@@ -167,10 +168,10 @@ func Test_destroyStatefulsets(t *testing.T) {
 		},
 		{
 			name: "destroy dep which is not deployment anymore",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"test": {
 						Image:         "test_image",
 						RestartPolicy: corev1.RestartPolicyNever,
@@ -206,22 +207,22 @@ func Test_destroyJobs(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "ns",
-			Labels:    map[string]string{model.StackNameLabel: "stack-test"},
+			Labels:    map[string]string{constants.StackNameLabel: "stack-test"},
 		},
 	}
 
 	client := fake.NewSimpleClientset(job)
 	var tests = []struct {
 		name                string
-		stack               *model.Stack
+		stack               *stack.Stack
 		expectedDeployments int
 	}{
 		{
 			name: "not destroy anything",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"test": {
 						Image:         "test_image",
 						RestartPolicy: corev1.RestartPolicyNever,
@@ -232,10 +233,10 @@ func Test_destroyJobs(t *testing.T) {
 		},
 		{
 			name: "destroy dep not in stack",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"test-2": {
 						Image:         "test_image",
 						RestartPolicy: corev1.RestartPolicyNever,
@@ -246,10 +247,10 @@ func Test_destroyJobs(t *testing.T) {
 		},
 		{
 			name: "destroy dep which is not deployment anymore",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"test": {
 						Image:         "test_image",
 						RestartPolicy: corev1.RestartPolicyAlways,

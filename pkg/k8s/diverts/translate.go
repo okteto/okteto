@@ -18,7 +18,8 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,13 +69,13 @@ func serviceModFromAnnotationValue(val string) (divertServiceModification, error
 func translateService(username string, app apps.App, s *apiv1.Service) (*apiv1.Service, error) {
 	result := s.DeepCopy()
 	result.UID = ""
-	result.Name = model.DivertName(s.Name, username)
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if s.Labels != nil && s.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = s.Labels[model.DeployedByLabel]
+	result.Name = dev.DivertName(s.Name, username)
+	result.Labels = map[string]string{constants.OktetoDivertLabel: username}
+	if s.Labels != nil && s.Labels[constants.DeployedByLabel] != "" {
+		result.Labels[constants.DeployedByLabel] = s.Labels[constants.DeployedByLabel]
 	}
 	if s.Annotations != nil {
-		modification := s.Annotations[model.OktetoDivertServiceModificationAnnotation]
+		modification := s.Annotations[constants.OktetoDivertServiceModificationAnnotation]
 		if modification != "" {
 			mod, err := serviceModFromAnnotationValue(modification)
 			if err != nil {
@@ -87,11 +88,11 @@ func translateService(username string, app apps.App, s *apiv1.Service) (*apiv1.S
 			}
 		}
 	}
-	delete(result.Annotations, model.OktetoAutoIngressAnnotation)
-	delete(result.Annotations, model.OktetoDivertServiceModificationAnnotation)
+	delete(result.Annotations, constants.OktetoAutoIngressAnnotation)
+	delete(result.Annotations, constants.OktetoDivertServiceModificationAnnotation)
 	result.Spec.Selector = map[string]string{
-		model.OktetoDivertLabel:   username,
-		model.InteractiveDevLabel: app.ObjectMeta().Name,
+		constants.OktetoDivertLabel:   username,
+		constants.InteractiveDevLabel: app.ObjectMeta().Name,
 	}
 	result.ResourceVersion = ""
 	result.Spec.ClusterIP = ""
@@ -102,23 +103,23 @@ func translateService(username string, app apps.App, s *apiv1.Service) (*apiv1.S
 func translateIngress(username string, i *networkingv1.Ingress) *networkingv1.Ingress {
 	result := i.DeepCopy()
 	result.UID = ""
-	result.Name = model.DivertName(i.Name, username)
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if i.Labels != nil && i.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = i.Labels[model.DeployedByLabel]
+	result.Name = dev.DivertName(i.Name, username)
+	result.Labels = map[string]string{constants.OktetoDivertLabel: username}
+	if i.Labels != nil && i.Labels[constants.DeployedByLabel] != "" {
+		result.Labels[constants.DeployedByLabel] = i.Labels[constants.DeployedByLabel]
 	}
-	if host := result.Annotations[model.OktetoIngressAutoGenerateHost]; host != "" {
+	if host := result.Annotations[constants.OktetoIngressAutoGenerateHost]; host != "" {
 		if host != "true" {
-			result.Annotations[model.OktetoIngressAutoGenerateHost] = fmt.Sprintf("%s-%s", username, host)
+			result.Annotations[constants.OktetoIngressAutoGenerateHost] = fmt.Sprintf("%s-%s", username, host)
 		}
 	} else {
-		result.Annotations[model.OktetoIngressAutoGenerateHost] = "true"
+		result.Annotations[constants.OktetoIngressAutoGenerateHost] = "true"
 	}
 	result.ResourceVersion = ""
 	return result
 }
 
-func translateDivertCRD(username string, dev *model.Dev, s *apiv1.Service, i *networkingv1.Ingress) *Divert {
+func translateDivertCRD(username string, dev *dev.Dev, s *apiv1.Service, i *networkingv1.Ingress) *Divert {
 	result := &Divert{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Divert",
@@ -150,8 +151,8 @@ func translateDivertCRD(username string, dev *model.Dev, s *apiv1.Service, i *ne
 			},
 		},
 	}
-	if s.Labels != nil && s.Labels[model.DeployedByLabel] != "" {
-		result.Labels = map[string]string{model.DeployedByLabel: s.Labels[model.DeployedByLabel]}
+	if s.Labels != nil && s.Labels[constants.DeployedByLabel] != "" {
+		result.Labels = map[string]string{constants.DeployedByLabel: s.Labels[constants.DeployedByLabel]}
 	}
 	return result
 }

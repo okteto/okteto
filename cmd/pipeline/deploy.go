@@ -25,7 +25,9 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	contextResource "github.com/okteto/okteto/pkg/model/context"
+	"github.com/okteto/okteto/pkg/model/files"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -46,10 +48,10 @@ func deploy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy an okteto pipeline",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#deploy"),
+		Args:  utils.NoArgsAccepted(constants.DeployDocsURL),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			ctxResource := &model.ContextResource{}
+			ctxResource := &contextResource.ContextResource{}
 			if err := ctxResource.UpdateNamespace(namespace); err != nil {
 				return err
 			}
@@ -73,7 +75,7 @@ func deploy(ctx context.Context) *cobra.Command {
 			if repository == "" {
 				log.Info("inferring git repository URL")
 
-				repository, err = model.GetRepositoryURL(cwd)
+				repository, err = files.GetRepositoryURL(cwd)
 				if err != nil {
 					return err
 				}
@@ -203,7 +205,7 @@ func deployPipeline(ctx context.Context, name, repository, branch, file string, 
 }
 
 func getPipelineName(repository string) string {
-	return model.TranslateURLToName(repository)
+	return files.TranslateURLToName(repository)
 }
 
 func waitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {

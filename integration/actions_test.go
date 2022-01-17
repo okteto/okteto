@@ -30,7 +30,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -216,7 +216,7 @@ func TestContextAction(t *testing.T) {
 		t.Skip("this test is not required for windows e2e tests")
 		return
 	}
-	if os.Getenv(model.OktetoSkipContextTestEnvVar) != "" {
+	if os.Getenv(constants.OktetoSkipContextTestEnvVar) != "" {
 		t.Skip("this test is not required because of 'OKTETO_SKIP_CONTEXT_TEST' env var")
 		return
 	}
@@ -451,9 +451,9 @@ func executeDeployPipelineAction(ctx context.Context, namespace string) error {
 	}
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer deleteGitRepo(ctx, actionFolder)
-	os.Setenv(model.GithubRepositoryEnvVar, pipelineRepo)
-	os.Setenv(model.GithubRefEnvVar, "master")
-	os.Setenv(model.GithubServerURLEnvVar, githubUrl)
+	os.Setenv(constants.GithubRepositoryEnvVar, pipelineRepo)
+	os.Setenv(constants.GithubRefEnvVar, "master")
+	os.Setenv(constants.GithubServerURLEnvVar, githubUrl)
 
 	log.Printf("deploying pipeline %s", namespace)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
@@ -637,7 +637,7 @@ func executeDestroyStackAction(ctx context.Context, namespace, filePath string) 
 }
 
 func executeLoginAction(ctx context.Context) error {
-	token := os.Getenv(model.OktetoTokenEnvVar)
+	token := os.Getenv(constants.OktetoTokenEnvVar)
 	if token == "" {
 		token = okteto.Context().Token
 	}
@@ -651,7 +651,7 @@ func executeLoginAction(ctx context.Context) error {
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer deleteGitRepo(ctx, actionFolder)
 
-	oktetoURL := os.Getenv(model.OktetoURLEnvVar)
+	oktetoURL := os.Getenv(constants.OktetoURLEnvVar)
 	if oktetoURL == "" {
 		oktetoURL = okteto.CloudURL
 	}
@@ -669,7 +669,7 @@ func executeLoginAction(ctx context.Context) error {
 }
 
 func executeContextAction(ctx context.Context) error {
-	token := os.Getenv(model.OktetoTokenEnvVar)
+	token := os.Getenv(constants.OktetoTokenEnvVar)
 	if token == "" {
 		token = okteto.Context().Token
 	}
@@ -683,7 +683,7 @@ func executeContextAction(ctx context.Context) error {
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer deleteGitRepo(ctx, actionFolder)
 
-	oktetoURL := os.Getenv(model.OktetoURLEnvVar)
+	oktetoURL := os.Getenv(constants.OktetoURLEnvVar)
 	if oktetoURL == "" {
 		oktetoURL = okteto.CloudURL
 	}

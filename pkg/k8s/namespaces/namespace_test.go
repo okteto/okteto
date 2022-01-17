@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -32,7 +32,7 @@ func TestDestroySFSVolumesIfNeeded(t *testing.T) {
 						Name:      "sfs-1",
 						Namespace: ns,
 						Labels: map[string]string{
-							model.DeployedByLabel: appName,
+							constants.DeployedByLabel: appName,
 						},
 					},
 				},
@@ -61,7 +61,7 @@ func TestDestroySFSVolumesIfNeeded(t *testing.T) {
 						Name:      "sfs-1",
 						Namespace: ns,
 						Labels: map[string]string{
-							model.DeployedByLabel: appName,
+							constants.DeployedByLabel: appName,
 						},
 					},
 					Spec: appsv1.StatefulSetSpec{
@@ -92,7 +92,7 @@ func TestDestroySFSVolumesIfNeeded(t *testing.T) {
 						Name:      "sfs-1",
 						Namespace: ns,
 						Labels: map[string]string{
-							model.DeployedByLabel: appName,
+							constants.DeployedByLabel: appName,
 						},
 					},
 					Spec: appsv1.StatefulSetSpec{
@@ -130,7 +130,7 @@ func TestDestroySFSVolumesIfNeeded(t *testing.T) {
 						Name:      "sfs-1",
 						Namespace: ns,
 						Labels: map[string]string{
-							model.DeployedByLabel: appName,
+							constants.DeployedByLabel: appName,
 						},
 					},
 					Spec: appsv1.StatefulSetSpec{
@@ -148,7 +148,7 @@ func TestDestroySFSVolumesIfNeeded(t *testing.T) {
 						Name:      "pvc-sfs-1-aadfwt312ad",
 						Namespace: ns,
 						Labels: map[string]string{
-							model.DeployedByLabel: appName,
+							constants.DeployedByLabel: appName,
 						},
 					},
 				},
@@ -159,7 +159,7 @@ func TestDestroySFSVolumesIfNeeded(t *testing.T) {
 						Name:      "pvc-sfs-1-aadfwt312ad",
 						Namespace: ns,
 						Labels: map[string]string{
-							model.DeployedByLabel: appName,
+							constants.DeployedByLabel: appName,
 						},
 					},
 				},
@@ -174,7 +174,7 @@ func TestDestroySFSVolumesIfNeeded(t *testing.T) {
 						Name:      "sfs-1",
 						Namespace: ns,
 						Labels: map[string]string{
-							model.DeployedByLabel: appName,
+							constants.DeployedByLabel: appName,
 						},
 					},
 					Spec: appsv1.StatefulSetSpec{
@@ -240,7 +240,7 @@ func TestDestroySFSVolumesIfNeeded(t *testing.T) {
 
 			opts := DeleteAllOptions{
 				IncludeVolumes: tt.includeVolumes,
-				LabelSelector:  fmt.Sprintf("%s=%s", model.DeployedByLabel, appName),
+				LabelSelector:  fmt.Sprintf("%s=%s", constants.DeployedByLabel, appName),
 			}
 
 			n := &Namespaces{

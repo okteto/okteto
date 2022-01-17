@@ -8,7 +8,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -20,21 +20,26 @@ import (
 var timeout time.Duration
 var tOnce sync.Once
 
+//K8sClientProvider provides k8sclient
 type K8sClientProvider interface {
-	Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
+	Provide(clientAPIConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
 	GetIngressClient(ctx context.Context) (*ingresses.Client, error)
 }
 
+//K8sClient is a k8sClient
 type K8sClient struct{}
 
+//NewK8sClientProvider creates a default k8sClientProvider
 func NewK8sClientProvider() *K8sClient {
 	return &K8sClient{}
 }
 
-func (*K8sClient) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
-	return getK8sClientWithApiConfig(clientApiConfig)
+//Provide provides a kubernetes interface
+func (*K8sClient) Provide(clientAPIConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
+	return getK8sClientWithAPIConfig(clientAPIConfig)
 }
 
+//GetIngressClient returns the ingress client
 func (*K8sClient) GetIngressClient(ctx context.Context) (*ingresses.Client, error) {
 	c, _, err := GetK8sClient()
 	if err != nil {
@@ -50,7 +55,7 @@ func (*K8sClient) GetIngressClient(ctx context.Context) (*ingresses.Client, erro
 func getKubernetesTimeout() time.Duration {
 	tOnce.Do(func() {
 		timeout = 0 * time.Second
-		t, ok := os.LookupEnv(model.OktetoKubernetesTimeoutEnvVar)
+		t, ok := os.LookupEnv(constants.OktetoKubernetesTimeoutEnvVar)
 		if !ok {
 			return
 		}
@@ -68,8 +73,8 @@ func getKubernetesTimeout() time.Duration {
 	return timeout
 }
 
-func getK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config) (*kubernetes.Clientset, *rest.Config, error) {
-	clientConfig := clientcmd.NewDefaultClientConfig(*clientApiConfig, nil)
+func getK8sClientWithAPIConfig(clientAPIConfig *clientcmdapi.Config) (*kubernetes.Clientset, *rest.Config, error) {
+	clientConfig := clientcmd.NewDefaultClientConfig(*clientAPIConfig, nil)
 
 	config, err := clientConfig.ClientConfig()
 	if err != nil {

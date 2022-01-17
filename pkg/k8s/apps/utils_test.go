@@ -16,7 +16,8 @@ package apps
 import (
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/metadata"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -47,8 +48,8 @@ func Test_getPreviousAppReplicas(t *testing.T) {
 			app: NewDeploymentApp(
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: model.Annotations{
-							model.StateBeforeSleepingAnnontation: "{\"Replicas\":3}",
+						Annotations: metadata.Annotations{
+							constants.StateBeforeSleepingAnnontation: "{\"Replicas\":3}",
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -63,8 +64,8 @@ func Test_getPreviousAppReplicas(t *testing.T) {
 			app: NewDeploymentApp(
 				&appsv1.Deployment{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: model.Annotations{
-							model.StateBeforeSleepingAnnontation: "wrong",
+						Annotations: metadata.Annotations{
+							constants.StateBeforeSleepingAnnontation: "wrong",
 						},
 					},
 					Spec: appsv1.DeploymentSpec{
@@ -93,8 +94,8 @@ func Test_getPreviousAppReplicas(t *testing.T) {
 			app: NewStatefulSetApp(
 				&appsv1.StatefulSet{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: model.Annotations{
-							model.StateBeforeSleepingAnnontation: "{\"Replicas\":3}",
+						Annotations: metadata.Annotations{
+							constants.StateBeforeSleepingAnnontation: "{\"Replicas\":3}",
 						},
 					},
 					Spec: appsv1.StatefulSetSpec{
@@ -109,8 +110,8 @@ func Test_getPreviousAppReplicas(t *testing.T) {
 			app: NewStatefulSetApp(
 				&appsv1.StatefulSet{
 					ObjectMeta: metav1.ObjectMeta{
-						Annotations: model.Annotations{
-							model.StateBeforeSleepingAnnontation: "wrong",
+						Annotations: metadata.Annotations{
+							constants.StateBeforeSleepingAnnontation: "wrong",
 						},
 					},
 					Spec: appsv1.StatefulSetSpec{

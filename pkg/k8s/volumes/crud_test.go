@@ -17,7 +17,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/dev"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -32,7 +32,7 @@ func Test_checkPVCValues(t *testing.T) {
 	var tests = []struct {
 		name      string
 		pvc       *apiv1.PersistentVolumeClaim
-		dev       *model.Dev
+		dev       *dev.Dev
 		wantError bool
 	}{
 		{
@@ -47,8 +47,8 @@ func Test_checkPVCValues(t *testing.T) {
 					},
 				},
 			},
-			dev: &model.Dev{
-				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+			dev: &dev.Dev{
+				PersistentVolumeInfo: &dev.PersistentVolumeInfo{
 					Size:         "30Gi",
 					StorageClass: "class",
 				},
@@ -67,8 +67,8 @@ func Test_checkPVCValues(t *testing.T) {
 					},
 				},
 			},
-			dev: &model.Dev{
-				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+			dev: &dev.Dev{
+				PersistentVolumeInfo: &dev.PersistentVolumeInfo{
 					Size: "20Gi",
 				},
 			},
@@ -86,8 +86,8 @@ func Test_checkPVCValues(t *testing.T) {
 					},
 				},
 			},
-			dev: &model.Dev{
-				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+			dev: &dev.Dev{
+				PersistentVolumeInfo: &dev.PersistentVolumeInfo{
 					Size:         "20Gi",
 					StorageClass: "class",
 				},
@@ -105,8 +105,8 @@ func Test_checkPVCValues(t *testing.T) {
 					},
 				},
 			},
-			dev: &model.Dev{
-				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+			dev: &dev.Dev{
+				PersistentVolumeInfo: &dev.PersistentVolumeInfo{
 					Size:         "20Gi",
 					StorageClass: "class",
 				},
@@ -126,8 +126,8 @@ func Test_checkPVCValues(t *testing.T) {
 					},
 				},
 			},
-			dev: &model.Dev{
-				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+			dev: &dev.Dev{
+				PersistentVolumeInfo: &dev.PersistentVolumeInfo{
 					Size:         "10Gi",
 					StorageClass: "class",
 				},
@@ -146,8 +146,8 @@ func Test_checkPVCValues(t *testing.T) {
 					},
 				},
 			},
-			dev: &model.Dev{
-				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+			dev: &dev.Dev{
+				PersistentVolumeInfo: &dev.PersistentVolumeInfo{
 					Size:         "20Gi",
 					StorageClass: "wrong-class",
 				},

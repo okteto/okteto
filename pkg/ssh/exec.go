@@ -26,7 +26,7 @@ import (
 	dockerterm "github.com/moby/term"
 	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 	"golang.org/x/term"
@@ -119,7 +119,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		}
 	}
 
-	sockEnvVar, ok := os.LookupEnv(model.SshAuthSockEnvVar)
+	sockEnvVar, ok := os.LookupEnv(constants.SSHAuthSockEnvVar)
 	if !ok {
 		log.Info("SSH_AUTH_SOCK is not set, not forwarding socket")
 	} else {
@@ -170,7 +170,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	}
 	if strings.Contains(err.Error(), "exit code 137") || strings.Contains(err.Error(), "exit status 137") {
 		log.Yellow(`Insufficient memory. Please update your resources on your okteto manifest.
-More information is available here: https://okteto.com/docs/reference/manifest/#resources-object-optional`)
+More information is available here: %s`, constants.ManifestResourcesDocsURL)
 	}
 
 	log.Infof("command failed: %s", err)

@@ -19,7 +19,8 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/port"
 )
 
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
@@ -52,45 +53,45 @@ func Test_waitUntilExitOrInterrupt(t *testing.T) {
 func Test_printDisplayContext(t *testing.T) {
 	var tests = []struct {
 		name string
-		dev  *model.Dev
+		dev  *dev.Dev
 	}{
 		{
 			name: "basic",
-			dev: &model.Dev{
+			dev: &dev.Dev{
 				Name:      "dev",
 				Namespace: "namespace",
 			},
 		},
 		{
 			name: "single-forward",
-			dev: &model.Dev{
+			dev: &dev.Dev{
 				Name:      "dev",
 				Namespace: "namespace",
-				Forward:   []model.Forward{{Local: 1000, Remote: 1000}},
+				Forward:   []port.Forward{{Local: 1000, Remote: 1000}},
 			},
 		},
 		{
 			name: "multiple-forward",
-			dev: &model.Dev{
+			dev: &dev.Dev{
 				Name:      "dev",
 				Namespace: "namespace",
-				Forward:   []model.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+				Forward:   []port.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
 			},
 		},
 		{
 			name: "single-reverse",
-			dev: &model.Dev{
+			dev: &dev.Dev{
 				Name:      "dev",
 				Namespace: "namespace",
-				Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}},
+				Reverse:   []dev.Reverse{{Local: 1000, Remote: 1000}},
 			},
 		},
 		{
 			name: "multiple-reverse",
-			dev: &model.Dev{
+			dev: &dev.Dev{
 				Name:      "dev",
 				Namespace: "namespace",
-				Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+				Reverse:   []dev.Reverse{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
 			},
 		},
 	}

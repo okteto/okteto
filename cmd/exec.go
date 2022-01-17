@@ -28,7 +28,8 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
 
@@ -82,7 +83,7 @@ func Exec() *cobra.Command {
 
 			return err
 		},
-		Args: utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#exec"),
+		Args: utils.MinimumNArgsAccepted(1, constants.ExecDocsURL),
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
@@ -92,7 +93,7 @@ func Exec() *cobra.Command {
 	return cmd
 }
 
-func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
+func executeExec(ctx context.Context, d *dev.Dev, args []string) error {
 
 	wrapped := []string{"sh", "-c"}
 	wrapped = append(wrapped, args...)
@@ -102,10 +103,10 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return err
 	}
 
-	devName := dev.Name
+	devName := d.Name
 	var devApp apps.App
-	if !dev.Autocreate {
-		app, err := apps.Get(ctx, dev, dev.Namespace, c)
+	if !d.Autocreate {
+		app, err := apps.Get(ctx, d, d.Namespace, c)
 		if err != nil {
 			return err
 		}
@@ -126,14 +127,14 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 			<-ticker.C
 		}
 		waitForStates := []config.UpState{config.Ready}
-		if err := status.Wait(ctx, dev, waitForStates); err != nil {
+		if err := status.Wait(ctx, d, waitForStates); err != nil {
 			return err
 		}
 
 		devApp = app.DevClone()
 	} else {
-		dev.Name = model.DevCloneName(dev.Name)
-		devApp, err = apps.Get(ctx, dev, dev.Namespace, c)
+		d.Name = dev.DevCloneName(d.Name)
+		devApp, err = apps.Get(ctx, d, d.Namespace, c)
 		if err != nil {
 			return err
 		}
@@ -147,11 +148,11 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		return err
 	}
 
-	if dev.Container == "" {
-		dev.Container = pod.Spec.Containers[0].Name
+	if d.Container == "" {
+		d.Container = pod.Spec.Containers[0].Name
 	}
 
-	if dev.RemoteModeEnabled() {
+	if d.RemoteModeEnabled() {
 		p, err := ssh.GetPort(devName)
 		if err != nil {
 			log.Infof("failed to get the SSH port for %s: %s", devName, err)
@@ -161,13 +162,13 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 			}
 		}
 
-		dev.RemotePort = p
-		log.Infof("executing remote command over SSH port %d", dev.RemotePort)
+		d.RemotePort = p
+		log.Infof("executing remote command over SSH port %d", d.RemotePort)
 
-		dev.LoadRemote(ssh.GetPublicKey())
+		d.LoadRemote(ssh.GetPublicKey())
 
-		return ssh.Exec(ctx, dev.Interface, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
+		return ssh.Exec(ctx, d.Interface, d.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 	}
 
-	return exec.Exec(ctx, c, cfg, dev.Namespace, pod.Name, dev.Container, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
+	return exec.Exec(ctx, c, cfg, d.Namespace, pod.Name, d.Container, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 }

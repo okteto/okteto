@@ -22,7 +22,9 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/metadata"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,21 +32,21 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-//GSandbox returns a base deployment for a dev
-func Sandbox(dev *model.Dev) *appsv1.Deployment {
+//Sandbox returns a base deployment for a dev
+func Sandbox(dev *dev.Dev) *appsv1.Deployment {
 	image := dev.Image.Name
 	if image == "" {
-		image = model.DefaultImage
+		image = constants.DefaultImage
 	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
 			Namespace: dev.Namespace,
-			Labels: model.Labels{
-				model.DevLabel: "true",
+			Labels: metadata.Labels{
+				constants.DevLabel: "true",
 			},
-			Annotations: model.Annotations{
-				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
+			Annotations: metadata.Annotations{
+				constants.OktetoAutoCreateAnnotation: constants.OktetoUpCmd,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -100,7 +102,7 @@ func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*
 }
 
 //GetByDev returns a deployment object given a dev struct (by name or by label)
-func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
+func GetByDev(ctx context.Context, dev *dev.Dev, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
 	if len(dev.Selector) == 0 {
 		return Get(ctx, dev.Name, namespace, c)
 	}
@@ -119,7 +121,7 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 	}
 	validDeployments := []*appsv1.Deployment{}
 	for i, d := range dList.Items {
-		if d.Labels[model.DevCloneLabel] == "" {
+		if d.Labels[constants.DevCloneLabel] == "" {
 			validDeployments = append(validDeployments, &dList.Items[i])
 		}
 	}
@@ -130,7 +132,7 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 }
 
 //CheckConditionErrors checks errors in conditions
-func CheckConditionErrors(deployment *appsv1.Deployment, dev *model.Dev) error {
+func CheckConditionErrors(deployment *appsv1.Deployment, dev *dev.Dev) error {
 	for _, c := range deployment.Status.Conditions {
 		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
 			if strings.Contains(c.Message, "exceeded quota") {
@@ -158,16 +160,16 @@ func isResourcesRelatedError(errorMessage string) bool {
 	return false
 }
 
-func getResourceLimitError(errorMessage string, dev *model.Dev) error {
+func getResourceLimitError(errorMessage string, dev *dev.Dev) error {
 	var errorToReturn string
 	if strings.Contains(errorMessage, "maximum cpu usage") {
 		cpuMaximumRegex, _ := regexp.Compile(`cpu usage per Pod is (\d*\w*)`)
-		maximumCpuPerPod := cpuMaximumRegex.FindStringSubmatch(errorMessage)[1]
-		var manifestCpu string
-		if limitCpu, ok := dev.Resources.Limits[apiv1.ResourceCPU]; ok {
-			manifestCpu = limitCpu.String()
+		maximumCPUPerPod := cpuMaximumRegex.FindStringSubmatch(errorMessage)[1]
+		var manifestCPU string
+		if limitCPU, ok := dev.Resources.Limits[apiv1.ResourceCPU]; ok {
+			manifestCPU = limitCPU.String()
 		}
-		errorToReturn += fmt.Sprintf("The value of resources.limits.cpu in your okteto manifest (%s) exceeds the maximum CPU limit per pod (%s). ", manifestCpu, maximumCpuPerPod)
+		errorToReturn += fmt.Sprintf("The value of resources.limits.cpu in your okteto manifest (%s) exceeds the maximum CPU limit per pod (%s). ", manifestCPU, maximumCPUPerPod)
 	}
 	if strings.Contains(errorMessage, "maximum memory usage") {
 		memoryMaximumRegex, _ := regexp.Compile(`memory usage per Pod is (\d*\w*)`)
@@ -198,7 +200,7 @@ func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (
 
 //IsDevModeOn returns if a deployment is in devmode
 func IsDevModeOn(d *appsv1.Deployment) bool {
-	return labels.Get(d.GetObjectMeta(), model.DevLabel) != ""
+	return labels.Get(d.GetObjectMeta(), constants.DevLabel) != ""
 }
 
 //Destroy destroys a k8s deployment
@@ -216,6 +218,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 	return nil
 }
 
+//IsRunning returns true if its running, flase otherwise
 func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Interface) bool {
 	d, err := c.AppsV1().Deployments(namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil {
@@ -224,26 +227,27 @@ func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Inte
 	return d.Status.ReadyReplicas > 0
 }
 
+//TranslateDivert translates a deployment into a diverted deployment
 func TranslateDivert(username string, d *appsv1.Deployment) *appsv1.Deployment {
-	name := model.DivertName(d.Name, username)
+	name := dev.DivertName(d.Name, username)
 	result := d.DeepCopy()
 	result.UID = ""
 	result.Name = name
 	if result.Annotations == nil {
 		result.Annotations = map[string]string{}
 	}
-	result.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoUpCmd
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if d.Labels != nil && d.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = d.Labels[model.DeployedByLabel]
+	result.Annotations[constants.OktetoAutoCreateAnnotation] = constants.OktetoUpCmd
+	result.Labels = map[string]string{constants.OktetoDivertLabel: username}
+	if d.Labels != nil && d.Labels[constants.DeployedByLabel] != "" {
+		result.Labels[constants.DeployedByLabel] = d.Labels[constants.DeployedByLabel]
 	}
 	result.Spec.Selector = &metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			model.OktetoDivertLabel: username,
+			constants.OktetoDivertLabel: username,
 		},
 	}
 	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel: username,
+		constants.OktetoDivertLabel: username,
 	}
 	result.ResourceVersion = ""
 	return result

@@ -17,24 +17,25 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	apiv1 "k8s.io/api/core/v1"
 )
 
-func ValidateMountPaths(spec *apiv1.PodSpec, dev *model.Dev) error {
-	if dev.PersistentVolumeInfo == nil || !dev.PersistentVolumeInfo.Enabled {
+func ValidateMountPaths(spec *apiv1.PodSpec, d *dev.Dev) error {
+	if d.PersistentVolumeInfo == nil || !d.PersistentVolumeInfo.Enabled {
 		return nil
 	}
-	devContainer := GetDevContainer(spec, dev.Container)
+	devContainer := GetDevContainer(spec, d.Container)
 	for _, vm := range devContainer.VolumeMounts {
-		if dev.GetVolumeName() == vm.Name {
+		if d.GetVolumeName() == vm.Name {
 			continue
 		}
-		for _, syncVolume := range dev.Sync.Folders {
+		for _, syncVolume := range d.Sync.Folders {
 			if vm.MountPath == syncVolume.RemotePath {
 				return errors.UserError{
-					E:    fmt.Errorf("'%s' is already defined as volume in %s", vm.MountPath, dev.Name),
-					Hint: `Disable the okteto persistent volume (https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional) and try again`}
+					E:    fmt.Errorf("'%s' is already defined as volume in %s", vm.MountPath, d.Name),
+					Hint: fmt.Sprintf(`Disable the okteto persistent volume (%s) and try again`, constants.ManifestPVDocsURL)}
 			}
 		}
 	}

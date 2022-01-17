@@ -23,7 +23,8 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/manifest"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
@@ -60,7 +61,7 @@ type Options struct {
 }
 
 type destroyCommand struct {
-	getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+	getManifest func(cwd string) (*manifest.Manifest, error)
 
 	executor    utils.ManifestExecutor
 	nsDestroyer destroyer
@@ -77,7 +78,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Use:    "destroy",
 		Short:  `Destroy everything created by "okteto deploy" command`,
 		Long:   `Destroy everything created by "okteto deploy" command. You can also include a "destroy" section in your Okteto manifest with a list of commands to be executed when the application is destroyed`,
-		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
+		Args:   utils.NoArgsAccepted(constants.DestroyDocsURL),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
@@ -115,7 +116,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 
 			c := &destroyCommand{
-				getManifest: contextCMD.GetManifest,
+				getManifest: manifest.GetManifestV2,
 
 				executor:    utils.NewExecutor(options.OutputMode),
 				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
@@ -137,17 +138,18 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Options) error {
 	// Read manifest file with the commands to be executed
-	manifest, err := dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace})
+	m, err := dc.getManifest(cwd)
 	if err != nil {
 		// Log error message but application can still be deleted
 		log.Infof("could not find manifest file to be executed: %s", err)
-		manifest = &model.Manifest{
+		m = &manifest.Manifest{
 			Destroy: []string{},
 		}
 	}
+	m.SetName(opts.Name)
 
 	var commandErr error
-	for _, command := range manifest.Destroy {
+	for _, command := range m.Destroy {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			log.Infof("error executing command '%s': %s", command, err.Error())
 			if !opts.ForceDestroy {
@@ -160,7 +162,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	}
 
 	deployedByLs, err := labels.NewRequirement(
-		model.DeployedByLabel,
+		constants.DeployedByLabel,
 		selection.Equals,
 		[]string{opts.Name},
 	)
@@ -201,7 +203,7 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 	log.Debugf("checking if application installed something with helm")
 	helmReleases := map[string]bool{}
 	for _, s := range sList {
-		if s.Type == model.HelmSecretType && s.Labels[ownerLabel] == helmOwner {
+		if s.Type == constants.HelmSecretType && s.Labels[ownerLabel] == helmOwner {
 			helmReleaseName, ok := s.Labels[nameLabel]
 			if !ok {
 				continue

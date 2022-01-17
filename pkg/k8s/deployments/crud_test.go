@@ -19,7 +19,8 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -38,7 +39,7 @@ func TestGet(t *testing.T) {
 		},
 	}
 
-	dev := &model.Dev{Name: "fake"}
+	dev := &dev.Dev{Name: "fake"}
 
 	clientset := fake.NewSimpleClientset(deployment)
 	d, err := GetByDev(ctx, dev, deployment.GetNamespace(), clientset)
@@ -59,7 +60,7 @@ func TestCheckConditionErrors(t *testing.T) {
 	tests := []struct {
 		name        string
 		deployment  *appsv1.Deployment
-		dev         *model.Dev
+		dev         *dev.Dev
 		expectedErr error
 	}{
 		{
@@ -80,9 +81,9 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			&model.Dev{
-				Resources: model.ResourceRequirements{
-					Limits: model.ResourceList{
+			&dev.Dev{
+				Resources: dev.ResourceRequirements{
+					Limits: dev.ResourceList{
 						apiv1.ResourceCPU:    resource.MustParse("2"),
 						apiv1.ResourceMemory: resource.MustParse("5Gi"),
 					},
@@ -108,9 +109,9 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			&model.Dev{
-				Resources: model.ResourceRequirements{
-					Limits: model.ResourceList{
+			&dev.Dev{
+				Resources: dev.ResourceRequirements{
+					Limits: dev.ResourceList{
 						apiv1.ResourceCPU:    resource.MustParse("2"),
 						apiv1.ResourceMemory: resource.MustParse("5Gi"),
 					},
@@ -136,9 +137,9 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			&model.Dev{
-				Resources: model.ResourceRequirements{
-					Limits: model.ResourceList{
+			&dev.Dev{
+				Resources: dev.ResourceRequirements{
+					Limits: dev.ResourceList{
 						apiv1.ResourceCPU:    resource.MustParse("2"),
 						apiv1.ResourceMemory: resource.MustParse("5Gi"),
 					},
@@ -164,9 +165,9 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			&model.Dev{
-				Resources: model.ResourceRequirements{
-					Limits: model.ResourceList{
+			&dev.Dev{
+				Resources: dev.ResourceRequirements{
+					Limits: dev.ResourceList{
 						apiv1.ResourceCPU:    resource.MustParse("2"),
 						apiv1.ResourceMemory: resource.MustParse("5Gi"),
 					},
@@ -200,7 +201,7 @@ func Test_translateDivertDeployment(t *testing.T) {
 			Name:            "name",
 			Namespace:       "namespace",
 			Annotations:     map[string]string{"annotation1": "value1"},
-			Labels:          map[string]string{"label1": "value1", model.DeployedByLabel: "cindy"},
+			Labels:          map[string]string{"label1": "value1", constants.DeployedByLabel: "cindy"},
 			ResourceVersion: "version",
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -224,24 +225,24 @@ func Test_translateDivertDeployment(t *testing.T) {
 			Name:      "name-cindy",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                    "value1",
-				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
+				"annotation1":                        "value1",
+				constants.OktetoAutoCreateAnnotation: constants.OktetoUpCmd,
 			},
 			Labels: map[string]string{
-				model.DeployedByLabel:   "cindy",
-				model.OktetoDivertLabel: "cindy",
+				constants.DeployedByLabel:   "cindy",
+				constants.OktetoDivertLabel: "cindy",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					model.OktetoDivertLabel: "cindy",
+					constants.OktetoDivertLabel: "cindy",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						model.OktetoDivertLabel: "cindy",
+						constants.OktetoDivertLabel: "cindy",
 					},
 				},
 			},

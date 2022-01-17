@@ -21,11 +21,13 @@ import (
 
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/stack"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-func ListEndpoints(ctx context.Context, stack *model.Stack, output string) error {
+//ListEndpoints lists all the stack endpoints
+func ListEndpoints(ctx context.Context, stack *stack.Stack, output string) error {
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
@@ -35,7 +37,7 @@ func ListEndpoints(ctx context.Context, stack *model.Stack, output string) error
 		return err
 	}
 
-	endpointList, err := iClient.GetEndpointsBySelector(ctx, stack.Namespace, fmt.Sprintf("%s=%s", model.StackNameLabel, stack.Name))
+	endpointList, err := iClient.GetEndpointsBySelector(ctx, stack.Namespace, fmt.Sprintf("%s=%s", constants.StackNameLabel, stack.Name))
 	if err != nil {
 		return err
 	}

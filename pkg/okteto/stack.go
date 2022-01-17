@@ -17,12 +17,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/stack"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
 
-func (c *OktetoClient) ListStackEndpoints(ctx context.Context, stack *model.Stack) ([]types.Endpoint, error) {
+//ListStackEndpoints list the endpoints from a stack
+func (c *OktetoClient) ListStackEndpoints(ctx context.Context, stack *stack.Stack) ([]types.Endpoint, error) {
 	var query struct {
 		Space struct {
 			Stacks []struct {
@@ -54,18 +55,18 @@ func (c *OktetoClient) ListStackEndpoints(ctx context.Context, stack *model.Stac
 		return nil, translateAPIErr(err)
 	}
 
-	var stackId string
+	var stackID string
 	for _, queriedStack := range query.Space.Stacks {
 		if stack.Name == string(queriedStack.Name) {
-			stackId = string(queriedStack.Id)
+			stackID = string(queriedStack.Id)
 		}
 	}
-	if stackId == "" {
+	if stackID == "" {
 		return nil, fmt.Errorf("stack '%s' not found", stack.Name)
 	}
 
 	for _, d := range query.Space.Deployments {
-		if string(d.DeployedBy) != stackId {
+		if string(d.DeployedBy) != stackID {
 			continue
 		}
 		for _, endpoint := range d.Endpoints {
@@ -76,7 +77,7 @@ func (c *OktetoClient) ListStackEndpoints(ctx context.Context, stack *model.Stac
 	}
 
 	for _, sfs := range query.Space.Statefulsets {
-		if string(sfs.DeployedBy) != stackId {
+		if string(sfs.DeployedBy) != stackID {
 			continue
 		}
 		for _, endpoint := range sfs.Endpoints {

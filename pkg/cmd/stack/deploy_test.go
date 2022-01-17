@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/stack"
 	"github.com/okteto/okteto/pkg/okteto"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -48,16 +48,16 @@ func Test_deploySvc(t *testing.T) {
 	client := fake.NewSimpleClientset()
 	var tests = []struct {
 		name    string
-		stack   *model.Stack
+		stack   *stack.Stack
 		svcName string
 	}{
 		{
 			name:    "deploy deployment",
 			svcName: "test",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"test": {
 						Image:         "test_image",
 						RestartPolicy: corev1.RestartPolicyAlways,
@@ -68,14 +68,14 @@ func Test_deploySvc(t *testing.T) {
 		{
 			name:    "deploy sfs",
 			svcName: "test",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"test": {
 						Image:         "test_image",
 						RestartPolicy: corev1.RestartPolicyAlways,
-						Volumes: []model.StackVolume{
+						Volumes: []stack.StackVolume{
 							{
 								LocalPath:  "a",
 								RemotePath: "b",
@@ -83,7 +83,7 @@ func Test_deploySvc(t *testing.T) {
 						},
 					},
 				},
-				Volumes: map[string]*model.VolumeSpec{
+				Volumes: map[string]*stack.VolumeSpec{
 					"a": {},
 				},
 			},
@@ -91,10 +91,10 @@ func Test_deploySvc(t *testing.T) {
 		{
 			name:    "deploy job",
 			svcName: "test",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "ns",
 				Name:      "stack-test",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"test": {
 						Image:         "test_image",
 						RestartPolicy: corev1.RestartPolicyNever,
@@ -117,10 +117,10 @@ func Test_deploySvc(t *testing.T) {
 
 func Test_deployDeployment(t *testing.T) {
 	ctx := context.Background()
-	stack := &model.Stack{
+	stack := &stack.Stack{
 		Namespace: "ns",
 		Name:      "stack-test",
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"test": {
 				Image:         "test_image",
 				RestartPolicy: corev1.RestartPolicyAlways,
@@ -142,14 +142,14 @@ func Test_deployDeployment(t *testing.T) {
 
 func Test_deployVolumes(t *testing.T) {
 	ctx := context.Background()
-	stack := &model.Stack{
+	stack := &stack.Stack{
 		Namespace: "ns",
 		Name:      "stack-test",
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"test": {
 				Image:         "test_image",
 				RestartPolicy: corev1.RestartPolicyAlways,
-				Volumes: []model.StackVolume{
+				Volumes: []stack.StackVolume{
 					{
 						LocalPath:  "a",
 						RemotePath: "b",
@@ -157,7 +157,7 @@ func Test_deployVolumes(t *testing.T) {
 				},
 			},
 		},
-		Volumes: map[string]*model.VolumeSpec{
+		Volumes: map[string]*stack.VolumeSpec{
 			"a": {},
 		},
 	}
@@ -176,14 +176,14 @@ func Test_deployVolumes(t *testing.T) {
 
 func Test_deploySfs(t *testing.T) {
 	ctx := context.Background()
-	stack := &model.Stack{
+	stack := &stack.Stack{
 		Namespace: "ns",
 		Name:      "stack-test",
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"test": {
 				Image:         "test_image",
 				RestartPolicy: corev1.RestartPolicyAlways,
-				Volumes: []model.StackVolume{
+				Volumes: []stack.StackVolume{
 					{
 						LocalPath:  "a",
 						RemotePath: "b",
@@ -191,7 +191,7 @@ func Test_deploySfs(t *testing.T) {
 				},
 			},
 		},
-		Volumes: map[string]*model.VolumeSpec{
+		Volumes: map[string]*stack.VolumeSpec{
 			"a": {},
 		},
 	}
@@ -210,10 +210,10 @@ func Test_deploySfs(t *testing.T) {
 
 func Test_deployJob(t *testing.T) {
 	ctx := context.Background()
-	stack := &model.Stack{
+	stack := &stack.Stack{
 		Namespace: "ns",
 		Name:      "stack-test",
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"test": {
 				Image:         "test_image",
 				RestartPolicy: corev1.RestartPolicyNever,
@@ -236,17 +236,17 @@ func Test_deployJob(t *testing.T) {
 func Test_ValidateDeploySomeServices(t *testing.T) {
 	var tests = []struct {
 		name             string
-		stack            *model.Stack
+		stack            *stack.Stack
 		svcsToBeDeployed []string
 		expectedErr      bool
 	}{
 		{
 			name: "not defined svc",
-			stack: &model.Stack{
-				Services: map[string]*model.Service{
+			stack: &stack.Stack{
+				Services: map[string]*stack.Service{
 					"db": {},
-					"api": {DependsOn: model.DependsOn{
-						"db": model.DependsOnConditionSpec{},
+					"api": {DependsOn: stack.DependsOn{
+						"db": stack.DependsOnConditionSpec{},
 					}},
 				},
 			},
@@ -255,11 +255,11 @@ func Test_ValidateDeploySomeServices(t *testing.T) {
 		},
 		{
 			name: "ok",
-			stack: &model.Stack{
-				Services: map[string]*model.Service{
+			stack: &stack.Stack{
+				Services: map[string]*stack.Service{
 					"db": {},
-					"api": {DependsOn: model.DependsOn{
-						"db": model.DependsOnConditionSpec{},
+					"api": {DependsOn: stack.DependsOn{
+						"db": stack.DependsOnConditionSpec{},
 					}},
 				},
 			},
@@ -327,20 +327,20 @@ func Test_AddSomeServices(t *testing.T) {
 
 	var tests = []struct {
 		name                     string
-		stack                    *model.Stack
+		stack                    *stack.Stack
 		svcsToBeDeployed         []string
 		expectedSvcsToBeDeployed []string
 	}{
 		{
 			name: "dependent service is job and not running",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "default",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"job-not-running": {
 						RestartPolicy: corev1.RestartPolicyNever,
 					},
-					"app": {DependsOn: model.DependsOn{
-						"job-not-running": model.DependsOnConditionSpec{},
+					"app": {DependsOn: stack.DependsOn{
+						"job-not-running": stack.DependsOnConditionSpec{},
 					}},
 				},
 			},
@@ -349,11 +349,11 @@ func Test_AddSomeServices(t *testing.T) {
 		},
 		{
 			name: "dependent service is sfs and not running",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "default",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"sfs-not-running": {
-						Volumes: []model.StackVolume{
+						Volumes: []stack.StackVolume{
 							{
 								LocalPath:  "/",
 								RemotePath: "/",
@@ -361,8 +361,8 @@ func Test_AddSomeServices(t *testing.T) {
 						},
 						RestartPolicy: corev1.RestartPolicyAlways,
 					},
-					"app": {DependsOn: model.DependsOn{
-						"sfs-not-running": model.DependsOnConditionSpec{},
+					"app": {DependsOn: stack.DependsOn{
+						"sfs-not-running": stack.DependsOnConditionSpec{},
 					}},
 				},
 			},
@@ -371,14 +371,14 @@ func Test_AddSomeServices(t *testing.T) {
 		},
 		{
 			name: "dependent service is deployment and not running",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "default",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"dep-not-running": {
 						RestartPolicy: corev1.RestartPolicyAlways,
 					},
-					"app": {DependsOn: model.DependsOn{
-						"dep-not-running": model.DependsOnConditionSpec{},
+					"app": {DependsOn: stack.DependsOn{
+						"dep-not-running": stack.DependsOnConditionSpec{},
 					}},
 				},
 			},
@@ -387,14 +387,14 @@ func Test_AddSomeServices(t *testing.T) {
 		},
 		{
 			name: "dependent service is job and running",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "default",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"job-active": {
 						RestartPolicy: corev1.RestartPolicyNever,
 					},
-					"app": {DependsOn: model.DependsOn{
-						"job-active": model.DependsOnConditionSpec{},
+					"app": {DependsOn: stack.DependsOn{
+						"job-active": stack.DependsOnConditionSpec{},
 					}},
 				},
 			},
@@ -403,14 +403,14 @@ func Test_AddSomeServices(t *testing.T) {
 		},
 		{
 			name: "dependent service is job finished with errors",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "default",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"job-failed": {
 						RestartPolicy: corev1.RestartPolicyNever,
 					},
-					"app": {DependsOn: model.DependsOn{
-						"job-failed": model.DependsOnConditionSpec{},
+					"app": {DependsOn: stack.DependsOn{
+						"job-failed": stack.DependsOnConditionSpec{},
 					}},
 				},
 			},
@@ -419,14 +419,14 @@ func Test_AddSomeServices(t *testing.T) {
 		},
 		{
 			name: "dependent service is job finished successful",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "default",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"job-succeeded": {
 						RestartPolicy: corev1.RestartPolicyNever,
 					},
-					"app": {DependsOn: model.DependsOn{
-						"job-succeeded": model.DependsOnConditionSpec{},
+					"app": {DependsOn: stack.DependsOn{
+						"job-succeeded": stack.DependsOnConditionSpec{},
 					}},
 				},
 			},
@@ -435,11 +435,11 @@ func Test_AddSomeServices(t *testing.T) {
 		},
 		{
 			name: "dependent service is sfs and running",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "default",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"sfs": {
-						Volumes: []model.StackVolume{
+						Volumes: []stack.StackVolume{
 							{
 								LocalPath:  "/",
 								RemotePath: "/",
@@ -447,8 +447,8 @@ func Test_AddSomeServices(t *testing.T) {
 						},
 						RestartPolicy: corev1.RestartPolicyAlways,
 					},
-					"app": {DependsOn: model.DependsOn{
-						"sfs": model.DependsOnConditionSpec{},
+					"app": {DependsOn: stack.DependsOn{
+						"sfs": stack.DependsOnConditionSpec{},
 					}},
 				},
 			},
@@ -457,14 +457,14 @@ func Test_AddSomeServices(t *testing.T) {
 		},
 		{
 			name: "dependent service is deployment and running",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Namespace: "default",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"dep": {
 						RestartPolicy: corev1.RestartPolicyAlways,
 					},
-					"app": {DependsOn: model.DependsOn{
-						"dep": model.DependsOnConditionSpec{},
+					"app": {DependsOn: stack.DependsOn{
+						"dep": stack.DependsOnConditionSpec{},
 					}},
 				},
 			},
@@ -473,11 +473,11 @@ func Test_AddSomeServices(t *testing.T) {
 		},
 		{
 			name: "dependent service is already on to be deployed",
-			stack: &model.Stack{
-				Services: map[string]*model.Service{
+			stack: &stack.Stack{
+				Services: map[string]*stack.Service{
 					"db": {},
-					"api": {DependsOn: model.DependsOn{
-						"db": model.DependsOnConditionSpec{},
+					"api": {DependsOn: stack.DependsOn{
+						"db": stack.DependsOnConditionSpec{},
 					}},
 				},
 			},

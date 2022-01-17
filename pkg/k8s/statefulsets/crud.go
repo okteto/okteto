@@ -24,24 +24,26 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/metadata"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 //Sandbox returns a default statefulset for a given dev
-func Sandbox(dev *model.Dev) *appsv1.StatefulSet {
+func Sandbox(dev *dev.Dev) *appsv1.StatefulSet {
 	image := dev.Image.Name
 	if image == "" {
-		image = model.DefaultImage
+		image = constants.DefaultImage
 	}
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        dev.Name,
 			Namespace:   dev.Namespace,
-			Labels:      model.Labels{},
-			Annotations: model.Annotations{},
+			Labels:      metadata.Labels{},
+			Annotations: metadata.Annotations{},
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: pointer.Int32Ptr(1),
@@ -111,7 +113,7 @@ func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*
 }
 
 //GetByDev returns a statefulset object given a dev struct (by name or by labels)
-func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
+func GetByDev(ctx context.Context, dev *dev.Dev, namespace string, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
 	if len(dev.Selector) == 0 {
 		return Get(ctx, dev.Name, namespace, c)
 	}
@@ -130,7 +132,7 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 	}
 	validStatefulsets := []*appsv1.StatefulSet{}
 	for i, sfs := range sfsList.Items {
-		if sfs.Labels[model.DevCloneLabel] == "" {
+		if sfs.Labels[constants.DevCloneLabel] == "" {
 			validStatefulsets = append(validStatefulsets, &sfsList.Items[i])
 		}
 	}
@@ -152,6 +154,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 	return nil
 }
 
+//IsRunning checks if the sfs is running
 func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Interface) bool {
 	sfs, err := c.AppsV1().StatefulSets(namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil {
@@ -166,12 +169,12 @@ func IsDevModeOn(s *appsv1.StatefulSet) bool {
 	if labels == nil {
 		return false
 	}
-	_, ok := labels[model.DevLabel]
+	_, ok := labels[constants.DevLabel]
 	return ok
 }
 
 //CheckConditionErrors checks errors in conditions
-func CheckConditionErrors(sfs *appsv1.StatefulSet, dev *model.Dev) error {
+func CheckConditionErrors(sfs *appsv1.StatefulSet, dev *dev.Dev) error {
 	for _, c := range sfs.Status.Conditions {
 		if c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
 			if strings.Contains(c.Message, "exceeded quota") {
@@ -199,16 +202,16 @@ func isResourcesRelatedError(errorMessage string) bool {
 	return false
 }
 
-func getResourceLimitError(errorMessage string, dev *model.Dev) error {
+func getResourceLimitError(errorMessage string, dev *dev.Dev) error {
 	var errorToReturn string
 	if strings.Contains(errorMessage, "maximum cpu usage") {
 		cpuMaximumRegex, _ := regexp.Compile(`cpu usage per Pod is (\d*\w*)`)
-		maximumCpuPerPod := cpuMaximumRegex.FindStringSubmatch(errorMessage)[1]
-		var manifestCpu string
-		if limitCpu, ok := dev.Resources.Limits[apiv1.ResourceCPU]; ok {
-			manifestCpu = limitCpu.String()
+		maximumCPUPerPod := cpuMaximumRegex.FindStringSubmatch(errorMessage)[1]
+		var manifestCPU string
+		if limitCPU, ok := dev.Resources.Limits[apiv1.ResourceCPU]; ok {
+			manifestCPU = limitCPU.String()
 		}
-		errorToReturn += fmt.Sprintf("The value of resources.limits.cpu in your okteto manifest (%s) exceeds the maximum CPU limit per pod (%s). ", manifestCpu, maximumCpuPerPod)
+		errorToReturn += fmt.Sprintf("The value of resources.limits.cpu in your okteto manifest (%s) exceeds the maximum CPU limit per pod (%s). ", manifestCPU, maximumCPUPerPod)
 	}
 	if strings.Contains(errorMessage, "maximum memory usage") {
 		memoryMaximumRegex, _ := regexp.Compile(`memory usage per Pod is (\d*\w*)`)
@@ -222,22 +225,23 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 	return fmt.Errorf(strings.TrimSpace(errorToReturn))
 }
 
+//TranslateDivert translates the sfs into a diverted sfs
 func TranslateDivert(username string, sfs *appsv1.StatefulSet) *appsv1.StatefulSet {
-	name := model.DivertName(sfs.Name, username)
+	name := dev.DivertName(sfs.Name, username)
 	result := sfs.DeepCopy()
 	result.UID = ""
 	result.Name = name
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if sfs.Labels != nil && sfs.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = sfs.Labels[model.DeployedByLabel]
+	result.Labels = map[string]string{constants.OktetoDivertLabel: username}
+	if sfs.Labels != nil && sfs.Labels[constants.DeployedByLabel] != "" {
+		result.Labels[constants.DeployedByLabel] = sfs.Labels[constants.DeployedByLabel]
 	}
 	result.Spec.Selector = &metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			model.OktetoDivertLabel: username,
+			constants.OktetoDivertLabel: username,
 		},
 	}
 	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel: username,
+		constants.OktetoDivertLabel: username,
 	}
 
 	result.ResourceVersion = ""

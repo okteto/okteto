@@ -23,7 +23,9 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/metadata"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -47,7 +49,7 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 }
 
 // CreateForDev deploys the volume claim for a given development container
-func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, devPath string) error {
+func CreateForDev(ctx context.Context, dev *dev.Dev, c *kubernetes.Clientset, devPath string) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	pvc := translate(dev)
 	k8Volume, err := vClient.Get(ctx, pvc.Name, metav1.GetOptions{})
@@ -77,6 +79,7 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, 
 	return nil
 }
 
+//Create creates a pv in k8s
 func Create(ctx context.Context, pvc *apiv1.PersistentVolumeClaim, c kubernetes.Interface) error {
 	_, err := c.CoreV1().PersistentVolumeClaims(pvc.Namespace).Create(ctx, pvc, metav1.CreateOptions{})
 	if err != nil {
@@ -85,6 +88,7 @@ func Create(ctx context.Context, pvc *apiv1.PersistentVolumeClaim, c kubernetes.
 	return nil
 }
 
+//Update updates a pvc
 func Update(ctx context.Context, pvc *apiv1.PersistentVolumeClaim, c kubernetes.Interface) error {
 	_, err := c.CoreV1().PersistentVolumeClaims(pvc.Namespace).Update(ctx, pvc, metav1.UpdateOptions{})
 	if err != nil {
@@ -93,13 +97,13 @@ func Update(ctx context.Context, pvc *apiv1.PersistentVolumeClaim, c kubernetes.
 	return nil
 }
 
-func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath string) error {
+func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *dev.Dev, devPath string) error {
 	currentSize, ok := pvc.Spec.Resources.Requests["storage"]
 	if !ok {
 		return fmt.Errorf("current okteto volume size is wrong. Run '%s' and try again", utils.GetDownCommand(devPath))
 	}
 	if currentSize.Cmp(resource.MustParse(dev.PersistentVolumeSize())) > 0 {
-		if currentSize.Cmp(resource.MustParse("10Gi")) != 0 || dev.PersistentVolumeSize() != model.OktetoDefaultPVSize {
+		if currentSize.Cmp(resource.MustParse("10Gi")) != 0 || dev.PersistentVolumeSize() != constants.OktetoDefaultPVSize {
 			return fmt.Errorf(
 				"okteto volume size '%s' cannot be less than previous value '%s'. Run '%s' and try again",
 				dev.PersistentVolumeSize(),
@@ -111,17 +115,17 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 	if currentSize.Cmp(resource.MustParse(dev.PersistentVolumeSize())) < 0 {
 		restartUUID := uuid.New().String()
 		if dev.Metadata == nil {
-			dev.Metadata = &model.Metadata{}
+			dev.Metadata = &metadata.Metadata{}
 		}
 		if dev.Metadata.Annotations == nil {
 			dev.Metadata.Annotations = map[string]string{}
 		}
-		dev.Metadata.Annotations[model.OktetoRestartAnnotation] = restartUUID
+		dev.Metadata.Annotations[constants.OktetoRestartAnnotation] = restartUUID
 		for _, s := range dev.Services {
 			if s.Annotations == nil {
 				s.Annotations = map[string]string{}
 			}
-			s.Annotations[model.OktetoRestartAnnotation] = restartUUID
+			s.Annotations[constants.OktetoRestartAnnotation] = restartUUID
 		}
 	}
 
@@ -146,7 +150,7 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 }
 
 // DestroyDev destroys the persistent volume claim for a given development container
-func DestroyDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) error {
+func DestroyDev(ctx context.Context, dev *dev.Dev, c *kubernetes.Clientset) error {
 	return Destroy(ctx, dev.GetVolumeName(), dev.Namespace, c, dev.Timeout.Default)
 }
 

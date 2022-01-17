@@ -27,7 +27,8 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/environment"
+	"github.com/okteto/okteto/pkg/model/files"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -150,7 +151,7 @@ func getRepository(ctx context.Context, repository string) (string, error) {
 	if repository == "" {
 		log.Info("inferring git repository URL")
 
-		r, err := model.GetRepositoryURL(cwd)
+		r, err := files.GetRepositoryURL(cwd)
 
 		if err != nil {
 			return "", err
@@ -187,7 +188,7 @@ func getRandomName(ctx context.Context, scope string) string {
 	return name
 }
 
-func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, wait bool, timeout time.Duration) (*types.PreviewResponse, error) {
+func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceURL, filename string, variables []types.Variable, wait bool, timeout time.Duration) (*types.PreviewResponse, error) {
 	spinner := utils.NewSpinner("Deploying your preview environment...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -196,7 +197,7 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 	if err != nil {
 		return nil, err
 	}
-	resp, err := oktetoClient.DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
+	resp, err := oktetoClient.DeployPreview(ctx, name, scope, repository, branch, sourceURL, filename, variables)
 
 	if err != nil {
 		return nil, err
@@ -329,7 +330,7 @@ func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.
 }
 
 func getExpandedName(name string) string {
-	expandedName, err := model.ExpandEnv(name)
+	expandedName, err := environment.ExpandEnv(name)
 	if err != nil {
 		return name
 	}

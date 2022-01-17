@@ -28,7 +28,12 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/build"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/environment"
+	"github.com/okteto/okteto/pkg/model/files"
+	"github.com/okteto/okteto/pkg/model/port"
+	"github.com/okteto/okteto/pkg/model/secrets"
 	"github.com/okteto/okteto/pkg/syncthing"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -43,7 +48,7 @@ type PodInfo struct {
 }
 
 //Run runs the "okteto status" sequence
-func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clientset) (string, error) {
+func Run(ctx context.Context, dev *dev.Dev, devPath string, c *kubernetes.Clientset) (string, error) {
 	z := archiver.Zip{
 		CompressionLevel:       flate.DefaultCompression,
 		MkdirAll:               true,
@@ -84,27 +89,27 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 
 	now := time.Now()
 	archiveName := fmt.Sprintf("okteto-doctor-%s.zip", now.Format("20060102150405"))
-	files := []string{summaryFilename}
-	files = append(files, stignoreFilenames...)
+	f := []string{summaryFilename}
+	f = append(f, stignoreFilenames...)
 
 	appLogsPath := filepath.Join(config.GetAppHome(dev.Namespace, dev.Name), "okteto.log")
-	if model.FileExists(appLogsPath) {
-		files = append(files, appLogsPath)
+	if files.FileExists(appLogsPath) {
+		f = append(f, appLogsPath)
 	}
 
-	if model.FileExists(syncthing.GetLogFile(dev.Namespace, dev.Name)) {
-		files = append(files, syncthing.GetLogFile(dev.Namespace, dev.Name))
+	if files.FileExists(syncthing.GetLogFile(dev.Namespace, dev.Name)) {
+		f = append(f, syncthing.GetLogFile(dev.Namespace, dev.Name))
 	}
 	if podPath != "" {
-		files = append(files, podPath)
+		f = append(f, podPath)
 	}
 	if manifestPath != "" {
-		files = append(files, manifestPath)
+		f = append(f, manifestPath)
 	}
 	if remoteLogsPath != "" {
-		files = append(files, remoteLogsPath)
+		f = append(f, remoteLogsPath)
 	}
-	if err := z.Archive(files, archiveName); err != nil {
+	if err := z.Archive(f, archiveName); err != nil {
 		log.Infof("error while archiving: %s", err)
 		return "", fmt.Errorf("couldn't create archive '%s', please try again: %s", archiveName, err)
 	}
@@ -127,7 +132,7 @@ func generateSummaryFile() (string, error) {
 	return summaryPath, nil
 }
 
-func generateStignoreFiles(dev *model.Dev) []string {
+func generateStignoreFiles(dev *dev.Dev) []string {
 	result := []string{}
 	for i := range dev.Sync.Folders {
 		absBasename, err := filepath.Abs(dev.Sync.Folders[i].LocalPath)
@@ -160,17 +165,17 @@ func generateManifestFile(devPath string) (string, error) {
 		return "", err
 	}
 
-	dev := &model.Dev{
-		Image:       &model.BuildInfo{},
-		Push:        &model.BuildInfo{},
-		Environment: make([]model.EnvVar, 0),
-		Secrets:     make([]model.Secret, 0),
-		Forward:     make([]model.Forward, 0),
-		Volumes:     make([]model.Volume, 0),
-		Sync: model.Sync{
-			Folders: make([]model.SyncFolder, 0),
+	dev := &dev.Dev{
+		Image:       &build.Build{},
+		Push:        &build.Build{},
+		Environment: make([]environment.EnvVar, 0),
+		Secrets:     make([]secrets.Secret, 0),
+		Forward:     make([]port.Forward, 0),
+		Volumes:     make([]dev.Volume, 0),
+		Sync: dev.Sync{
+			Folders: make([]dev.SyncFolder, 0),
 		},
-		Services: make([]*model.Dev, 0),
+		Services: make([]*dev.Dev, 0),
 	}
 
 	if err := yaml.Unmarshal(b, dev); err != nil {
@@ -210,7 +215,7 @@ func generateManifestFile(devPath string) (string, error) {
 	return manifestFilename, nil
 }
 
-func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
+func generatePodFile(ctx context.Context, dev *dev.Dev, c *kubernetes.Clientset) (string, error) {
 	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		return "", err
@@ -267,7 +272,7 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	return podFilename, nil
 }
 
-func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) (string, error) {
+func generateRemoteSyncthingLogsFile(ctx context.Context, dev *dev.Dev, c *kubernetes.Clientset) (string, error) {
 	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		return "", err

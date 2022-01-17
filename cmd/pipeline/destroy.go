@@ -24,7 +24,9 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	contextResource "github.com/okteto/okteto/pkg/model/context"
+	"github.com/okteto/okteto/pkg/model/files"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -40,10 +42,10 @@ func destroy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy",
 		Short: "Destroy an okteto pipeline",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
+		Args:  utils.NoArgsAccepted(constants.DestroyDocsURL),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			ctxResource := &model.ContextResource{}
+			ctxResource := &contextResource.ContextResource{}
 			if err := ctxResource.UpdateNamespace(namespace); err != nil {
 				return err
 			}
@@ -64,7 +66,7 @@ func destroy(ctx context.Context) *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("failed to get the current working directory: %w", err)
 				}
-				repo, err := model.GetRepositoryURL(cwd)
+				repo, err := files.GetRepositoryURL(cwd)
 				if err != nil {
 					return err
 				}

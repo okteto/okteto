@@ -23,7 +23,8 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,19 +33,23 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+//DeploymentApp represents an app deployed on a deployment
 type DeploymentApp struct {
 	kind string
 	d    *appsv1.Deployment
 }
 
+//NewDeploymentApp creates a new app from a deployment
 func NewDeploymentApp(d *appsv1.Deployment) *DeploymentApp {
-	return &DeploymentApp{kind: model.Deployment, d: d}
+	return &DeploymentApp{kind: constants.Deployment, d: d}
 }
 
+//Kind returns the kind of k8s object
 func (i *DeploymentApp) Kind() string {
 	return i.kind
 }
 
+//ObjectMeta returns the object meta
 func (i *DeploymentApp) ObjectMeta() metav1.ObjectMeta {
 	if i.d.ObjectMeta.Annotations == nil {
 		i.d.ObjectMeta.Annotations = map[string]string{}
@@ -55,14 +60,17 @@ func (i *DeploymentApp) ObjectMeta() metav1.ObjectMeta {
 	return i.d.ObjectMeta
 }
 
+//Replicas returns the replicas
 func (i *DeploymentApp) Replicas() int32 {
 	return *i.d.Spec.Replicas
 }
 
+//SetReplicas sets the replicas into deployment
 func (i *DeploymentApp) SetReplicas(n int32) {
 	i.d.Spec.Replicas = pointer.Int32Ptr(n)
 }
 
+//TemplateObjectMeta returns the pod spec template object meta
 func (i *DeploymentApp) TemplateObjectMeta() metav1.ObjectMeta {
 	if i.d.Spec.Template.ObjectMeta.Annotations == nil {
 		i.d.Spec.Template.ObjectMeta.Annotations = map[string]string{}
@@ -73,24 +81,26 @@ func (i *DeploymentApp) TemplateObjectMeta() metav1.ObjectMeta {
 	return i.d.Spec.Template.ObjectMeta
 }
 
+//PodSpec returns the podspec
 func (i *DeploymentApp) PodSpec() *apiv1.PodSpec {
 	return &i.d.Spec.Template.Spec
 }
 
+//DevClone clone the app
 func (i *DeploymentApp) DevClone() App {
 	clone := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        model.DevCloneName(i.d.Name),
+			Name:        dev.DevCloneName(i.d.Name),
 			Namespace:   i.d.Namespace,
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
 		},
 		Spec: *i.d.Spec.DeepCopy(),
 	}
-	if i.d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
-		clone.Labels[model.DevLabel] = "true"
+	if i.d.Annotations[constants.OktetoAutoCreateAnnotation] == constants.OktetoUpCmd {
+		clone.Labels[constants.DevLabel] = "true"
 	} else {
-		clone.Labels[model.DevCloneLabel] = string(i.d.UID)
+		clone.Labels[constants.DevCloneLabel] = string(i.d.UID)
 	}
 	for k, v := range i.d.Labels {
 		clone.Labels[k] = v
@@ -98,17 +108,19 @@ func (i *DeploymentApp) DevClone() App {
 	for k, v := range i.d.Annotations {
 		clone.Annotations[k] = v
 	}
-	delete(clone.Annotations, model.OktetoAutoCreateAnnotation)
+	delete(clone.Annotations, constants.OktetoAutoCreateAnnotation)
 	clone.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RecreateDeploymentStrategyType,
 	}
 	return NewDeploymentApp(clone)
 }
 
-func (i *DeploymentApp) CheckConditionErrors(dev *model.Dev) error {
+//CheckConditionErrors returns the error on condition
+func (i *DeploymentApp) CheckConditionErrors(dev *dev.Dev) error {
 	return deployments.CheckConditionErrors(i.d, dev)
 }
 
+//GetRunningPod returns the running pod
 func (i *DeploymentApp) GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error) {
 	rs, err := replicasets.GetReplicaSetByDeployment(ctx, i.d, c)
 	if err != nil {
@@ -117,8 +129,9 @@ func (i *DeploymentApp) GetRunningPod(ctx context.Context, c kubernetes.Interfac
 	return pods.GetPodByReplicaSet(ctx, rs, c)
 }
 
+//RestoreOriginal restores the original deployment
 func (i *DeploymentApp) RestoreOriginal() error {
-	manifest := i.d.Annotations[model.DeploymentAnnotation]
+	manifest := i.d.Annotations[constants.DeploymentAnnotation]
 	if manifest == "" {
 		return nil
 	}
@@ -131,6 +144,7 @@ func (i *DeploymentApp) RestoreOriginal() error {
 	return nil
 }
 
+//Refresh refresh the deployment on the app
 func (i *DeploymentApp) Refresh(ctx context.Context, c kubernetes.Interface) error {
 	d, err := deployments.Get(ctx, i.d.Name, i.d.Namespace, c)
 	if err == nil {
@@ -139,6 +153,7 @@ func (i *DeploymentApp) Refresh(ctx context.Context, c kubernetes.Interface) err
 	return err
 }
 
+//Watch watchs a deployment
 func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernetes.Interface) {
 	optsWatch := metav1.ListOptions{
 		Watch:         true,
@@ -174,7 +189,7 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 					log.Debugf("Failed to parse deployment event: %s", e)
 					continue
 				}
-				if d.Annotations[model.DeploymentRevisionAnnotation] != "" && d.Annotations[model.DeploymentRevisionAnnotation] != i.d.Annotations[model.DeploymentRevisionAnnotation] {
+				if d.Annotations[constants.DeploymentRevisionAnnotation] != "" && d.Annotations[constants.DeploymentRevisionAnnotation] != i.d.Annotations[constants.DeploymentRevisionAnnotation] {
 					result <- errors.ErrApplyToApp
 					return
 				}
@@ -186,8 +201,9 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 	}
 }
 
+//Deploy deploys the app
 func (i *DeploymentApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
-	if string(i.d.UID) == "" && i.d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
+	if string(i.d.UID) == "" && i.d.Annotations[constants.OktetoAutoCreateAnnotation] == constants.OktetoUpCmd {
 		return nil
 	}
 
@@ -198,10 +214,12 @@ func (i *DeploymentApp) Deploy(ctx context.Context, c kubernetes.Interface) erro
 	return err
 }
 
+//Destroy destroys the app
 func (i *DeploymentApp) Destroy(ctx context.Context, c kubernetes.Interface) error {
 	return deployments.Destroy(ctx, i.d.Name, i.d.Namespace, c)
 }
 
+//Divert diverts the app
 func (i *DeploymentApp) Divert(username string) App {
 	return &DeploymentApp{d: deployments.TranslateDivert(username, i.d)}
 }

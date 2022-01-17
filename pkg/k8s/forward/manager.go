@@ -26,7 +26,8 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/port"
 
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/client-go/kubernetes"
@@ -39,7 +40,7 @@ import (
 type PortForwardManager struct {
 	stopped        bool
 	iface          string
-	ports          map[int]model.Forward
+	ports          map[int]port.Forward
 	services       map[string]struct{}
 	activeDev      *active
 	activeServices map[string]*active
@@ -83,7 +84,7 @@ func NewPortForwardManager(ctx context.Context, iface string, restConfig *rest.C
 	return &PortForwardManager{
 		ctx:        ctx,
 		iface:      iface,
-		ports:      make(map[int]model.Forward),
+		ports:      make(map[int]port.Forward),
 		services:   make(map[string]struct{}),
 		restConfig: restConfig,
 		client:     c,
@@ -92,12 +93,12 @@ func NewPortForwardManager(ctx context.Context, iface string, restConfig *rest.C
 }
 
 // Add initializes a port forward
-func (p *PortForwardManager) Add(f model.Forward) error {
+func (p *PortForwardManager) Add(f port.Forward) error {
 	if _, ok := p.ports[f.Local]; ok {
 		return fmt.Errorf("port %d is listed multiple times, please check your configuration", f.Local)
 	}
 
-	if !model.IsPortAvailable(p.iface, f.Local) {
+	if !port.IsPortAvailable(p.iface, f.Local) {
 		if f.Local <= 1024 {
 			os := runtime.GOOS
 			switch os {
@@ -119,7 +120,7 @@ func (p *PortForwardManager) Add(f model.Forward) error {
 }
 
 // AddReverse is not implemented
-func (p *PortForwardManager) AddReverse(_ model.Reverse) error {
+func (p *PortForwardManager) AddReverse(_ dev.Reverse) error {
 	return fmt.Errorf("not implemented")
 }
 
@@ -170,7 +171,8 @@ func (p *PortForwardManager) Stop() {
 	log.Infof("stopped k8s forwarder")
 }
 
-func (fm *PortForwardManager) TransformLabelsToServiceName(f model.Forward) (model.Forward, error) {
+//TransformLabelsToServiceName transforms the labels into a service name
+func (fm *PortForwardManager) TransformLabelsToServiceName(f port.Forward) (port.Forward, error) {
 	serviceName, err := fm.GetServiceNameByLabel(fm.namespace, f.Labels)
 	if err != nil {
 		return f, err
@@ -237,7 +239,7 @@ func (p *PortForwardManager) buildForwarderToService(ctx context.Context, namesp
 	return p.buildForwarder(pod.GetNamespace(), pod.GetName(), ports)
 }
 
-func getServicePorts(service string, forwards map[int]model.Forward) []string {
+func getServicePorts(service string, forwards map[int]port.Forward) []string {
 	ports := []string{}
 	for _, f := range forwards {
 		if f.Service && f.ServiceName == service {
@@ -295,6 +297,7 @@ func (p *PortForwardManager) forwardService(ctx context.Context, namespace, serv
 	}
 }
 
+//GetServiceNameByLabel returns the service name by a label
 func (p *PortForwardManager) GetServiceNameByLabel(namespace string, labelsMap map[string]string) (string, error) {
 	labelsString := labels.TransformLabelsToSelector(labelsMap)
 	serviceName, err := services.GetServiceNameByLabel(p.ctx, namespace, p.client, labelsString)

@@ -23,12 +23,13 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/files"
 	"k8s.io/utils/pointer"
 )
 
 var isOktetoSample *bool
 
+//GetBranch returns git branch from a path
 func GetBranch(ctx context.Context, path string) (string, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
@@ -49,6 +50,7 @@ func GetBranch(ctx context.Context, path string) (string, error) {
 	return name, nil
 }
 
+//GetGitCommit returns git commit from a path
 func GetGitCommit(ctx context.Context, path string) (string, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
@@ -65,6 +67,7 @@ func GetGitCommit(ctx context.Context, path string) (string, error) {
 	return hash.String(), nil
 }
 
+//IsCleanDirectory returns true if it has no changes between the path and origin
 func IsCleanDirectory(ctx context.Context, path string) (bool, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
@@ -84,6 +87,7 @@ func IsCleanDirectory(ctx context.Context, path string) (bool, error) {
 	return status.IsClean(), nil
 }
 
+//GetRandomSHA returns random sha
 func GetRandomSHA(ctx context.Context, path string) string {
 	var letters = []rune("0123456789abcdef")
 	b := make([]rune, 40)
@@ -93,6 +97,7 @@ func GetRandomSHA(ctx context.Context, path string) string {
 	return string(b)
 }
 
+//IsOktetoRepo returns if its an okteto sample
 func IsOktetoRepo() bool {
 	if isOktetoSample == nil {
 		path, err := os.Getwd()
@@ -101,19 +106,19 @@ func IsOktetoRepo() bool {
 			isOktetoSample = pointer.BoolPtr(false)
 			return false
 		}
-		repoUrl, err := model.GetRepositoryURL(path)
+		repoURL, err := files.GetRepositoryURL(path)
 		if err != nil {
 			log.Infof("failed to get repository url in IsOktetoRepo: %v", err)
 			isOktetoSample = pointer.BoolPtr(false)
 			return false
 		}
-		isOktetoSample = pointer.BoolPtr(isOktetoRepoFromURL(repoUrl))
+		isOktetoSample = pointer.BoolPtr(isOktetoRepoFromURL(repoURL))
 	}
 	return *isOktetoSample
 }
 
-func isOktetoRepoFromURL(repoUrl string) bool {
-	endpoint, err := transport.NewEndpoint(repoUrl)
+func isOktetoRepoFromURL(repoURL string) bool {
+	endpoint, err := transport.NewEndpoint(repoURL)
 	if err != nil {
 		log.Infof("failed to get endpoint in isOktetoRepoFromURL: %v", err)
 		return false

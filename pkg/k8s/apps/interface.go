@@ -16,12 +16,13 @@ package apps
 import (
 	"context"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/dev"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
+//App represents an app
 type App interface {
 	Kind() string
 	ObjectMeta() metav1.ObjectMeta
@@ -32,7 +33,7 @@ type App interface {
 
 	DevClone() App
 
-	CheckConditionErrors(dev *model.Dev) error
+	CheckConditionErrors(dev *dev.Dev) error
 	GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error)
 
 	//TODO: remove after people move to CLI >= 1.14

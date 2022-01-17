@@ -30,14 +30,17 @@ import (
 	oktetoError "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/linguist"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/files"
+	"github.com/okteto/okteto/pkg/model/secrets"
 )
 
-func addStignoreSecrets(dev *model.Dev) error {
+func addStignoreSecrets(dev *dev.Dev) error {
 	output := ""
 	for i, folder := range dev.Sync.Folders {
 		stignorePath := filepath.Join(folder.LocalPath, ".stignore")
-		if !model.FileExists(stignorePath) {
+		if !files.FileExists(stignorePath) {
 			continue
 		}
 		infile, err := os.Open(stignorePath)
@@ -90,31 +93,31 @@ func addStignoreSecrets(dev *model.Dev) error {
 
 		dev.Secrets = append(
 			dev.Secrets,
-			model.Secret{
+			secrets.Secret{
 				LocalPath:  transformedStignorePath,
 				RemotePath: path.Join(folder.RemotePath, ".stignore"),
 				Mode:       0644,
 			},
 		)
 	}
-	dev.Metadata.Annotations[model.OktetoStignoreAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
+	dev.Metadata.Annotations[constants.OktetoStignoreAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
 	return nil
 }
 
-func addSyncFieldHash(dev *model.Dev) error {
+func addSyncFieldHash(dev *dev.Dev) error {
 	output, err := json.Marshal(dev.Sync)
 	if err != nil {
 		return err
 	}
-	dev.Metadata.Annotations[model.OktetoSyncAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
+	dev.Metadata.Annotations[constants.OktetoSyncAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
 	return nil
 }
 
-func checkStignoreConfiguration(dev *model.Dev) error {
+func checkStignoreConfiguration(dev *dev.Dev) error {
 	for _, folder := range dev.Sync.Folders {
 		stignorePath := filepath.Join(folder.LocalPath, ".stignore")
 		gitPath := filepath.Join(folder.LocalPath, ".git")
-		if !model.FileExists(stignorePath) {
+		if !files.FileExists(stignorePath) {
 			if err := askIfCreateStignoreDefaults(folder.LocalPath, stignorePath); err != nil {
 				return err
 			}
@@ -122,7 +125,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 		}
 
 		log.Infof("'.stignore' exists in folder '%s'", folder.LocalPath)
-		if !model.FileExists(gitPath) {
+		if !files.FileExists(gitPath) {
 			continue
 		}
 

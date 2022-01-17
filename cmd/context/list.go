@@ -20,16 +20,17 @@ import (
 	"text/tabwriter"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
-// Lists all contexts managed by okteto
+// List all contexts managed by okteto
 func List() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
-		Args:    utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#list"),
+		Args:    utils.NoArgsAccepted(constants.ListCtxDocsURL),
 		Short:   "List available contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()

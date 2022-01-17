@@ -29,7 +29,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	"github.com/okteto/okteto/pkg/okteto"
 	appsv1 "k8s.io/api/apps/v1"
 )
@@ -174,7 +175,7 @@ func checkIfSleeping(ctx context.Context, name, namespace string, timeout int) e
 			continue
 		}
 
-		if _, ok := d.Annotations[model.StateBeforeSleepingAnnontation]; !ok {
+		if _, ok := d.Annotations[constants.StateBeforeSleepingAnnontation]; !ok {
 			log.Printf("error deployment: not sleeping")
 			continue
 		}
@@ -183,7 +184,7 @@ func checkIfSleeping(ctx context.Context, name, namespace string, timeout int) e
 			log.Printf("error getting sfs: %s", err.Error())
 			continue
 		}
-		if _, ok := sfs.Annotations[model.StateBeforeSleepingAnnontation]; !ok {
+		if _, ok := sfs.Annotations[constants.StateBeforeSleepingAnnontation]; !ok {
 			log.Printf("error deployment: not sleeping")
 			continue
 		}
@@ -199,7 +200,7 @@ func checkIfAwake(ctx context.Context, name, namespace string, isDevMode bool, t
 		var d *appsv1.Deployment
 		var err error
 		if isDevMode {
-			d, err = getDeployment(ctx, namespace, model.DevCloneName(name))
+			d, err = getDeployment(ctx, namespace, dev.DevCloneName(name))
 		} else {
 			d, err = getDeployment(ctx, namespace, name)
 		}

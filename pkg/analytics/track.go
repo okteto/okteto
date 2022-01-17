@@ -25,7 +25,7 @@ import (
 	"github.com/dukex/mixpanel"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -137,7 +137,7 @@ func TrackSyncError() {
 	track(syncErrorEvent, false, nil)
 }
 
-// TrackSyncError sends a tracking event to mixpanel when the init sync fails
+// TrackDurationInitialSync sends a tracking event to mixpanel when the init sync fails
 func TrackDurationInitialSync(durationInitialSync time.Duration) {
 	props := map[string]interface{}{
 		"duration": durationInitialSync,
@@ -272,6 +272,7 @@ func TrackContextUseNamespace(success bool) {
 	track(contextUseNamespaceEvent, success, nil)
 }
 
+// TrackStackWarnings sends a tracking event to mixpanel when the user has stack warnings
 func TrackStackWarnings(warnings []string) {
 	re := regexp.MustCompile(`\[(.*?)\]`)
 	for _, warning := range warnings {
@@ -313,7 +314,7 @@ func track(event string, success bool, props map[string]interface{}) {
 		mpOS = "Linux"
 	}
 
-	origin, ok := os.LookupEnv(model.OktetoOriginEnvVar)
+	origin, ok := os.LookupEnv(constants.OktetoOriginEnvVar)
 	if !ok {
 		origin = "cli"
 	}
@@ -333,7 +334,7 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["success"] = success
 	props["contextType"] = getContextType(okteto.Context().Name)
 	props["context"] = okteto.Context().Name
-	if termType := os.Getenv(model.TermEnvVar); termType == "" {
+	if termType := os.Getenv(constants.TermEnvVar); termType == "" {
 		props["term-type"] = "other"
 	} else {
 		props["term-type"] = termType

@@ -26,7 +26,9 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	okErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/build"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/environment"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/pkg/errors"
@@ -62,10 +64,10 @@ func Run(ctx context.Context, buildOptions BuildOptions) error {
 }
 
 func setOutputMode(outputMode string) string {
-	if buildOutput := os.Getenv(model.BuildkitProgressEnvVar); buildOutput != "" {
+	if buildOutput := os.Getenv(constants.BuildkitProgressEnvVar); buildOutput != "" {
 		return buildOutput
 	}
-	if utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+	if utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 		return "plain"
 	}
 	return outputMode
@@ -177,7 +179,7 @@ func validateImage(imageTag string) error {
 			prefix = okteto.GlobalRegistry
 		}
 		return okErrors.UserError{
-			E:    fmt.Errorf("Can not use '%s' as the image tag.", imageTag),
+			E:    fmt.Errorf("can not use '%s' as the image tag", imageTag),
 			Hint: fmt.Sprintf("The syntax for using okteto registry is: '%s/image_name'", prefix),
 		}
 	}
@@ -197,7 +199,8 @@ func translateDockerErr(err error) error {
 	return err
 }
 
-func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildOptions {
+//OptsFromManifest gets build options from a manifest
+func OptsFromManifest(service string, b *build.Build, o BuildOptions) BuildOptions {
 	if okteto.Context().IsOkteto && b.Image == "" {
 		b.Image = fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, service, "dev")
 	}
@@ -211,7 +214,7 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 	}
 
 	if len(b.Args) != 0 {
-		opts.BuildArgs = model.SerializeBuildArgs(b.Args)
+		opts.BuildArgs = environment.SerializeBuildArgs(b.Args)
 	}
 
 	opts.OutputMode = setOutputMode(o.OutputMode)

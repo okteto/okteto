@@ -22,7 +22,8 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,19 +32,23 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+//StatefulSetApp represents a sfs app
 type StatefulSetApp struct {
 	kind string
 	sfs  *appsv1.StatefulSet
 }
 
+//NewStatefulSetApp creates an app from a sfs
 func NewStatefulSetApp(sfs *appsv1.StatefulSet) *StatefulSetApp {
-	return &StatefulSetApp{kind: model.StatefulSet, sfs: sfs}
+	return &StatefulSetApp{kind: constants.StatefulSet, sfs: sfs}
 }
 
+//Kind returns the kind of k8s object
 func (i *StatefulSetApp) Kind() string {
 	return i.kind
 }
 
+//ObjectMeta returns the object meta
 func (i *StatefulSetApp) ObjectMeta() metav1.ObjectMeta {
 	if i.sfs.ObjectMeta.Annotations == nil {
 		i.sfs.ObjectMeta.Annotations = map[string]string{}
@@ -54,14 +59,17 @@ func (i *StatefulSetApp) ObjectMeta() metav1.ObjectMeta {
 	return i.sfs.ObjectMeta
 }
 
+//Replicas returns the replicas
 func (i *StatefulSetApp) Replicas() int32 {
 	return *i.sfs.Spec.Replicas
 }
 
+//SetReplicas sets the replicas into sfs
 func (i *StatefulSetApp) SetReplicas(n int32) {
 	i.sfs.Spec.Replicas = pointer.Int32Ptr(n)
 }
 
+//TemplateObjectMeta returns the pod spec template object meta
 func (i *StatefulSetApp) TemplateObjectMeta() metav1.ObjectMeta {
 	if i.sfs.Spec.Template.ObjectMeta.Annotations == nil {
 		i.sfs.Spec.Template.ObjectMeta.Annotations = map[string]string{}
@@ -72,21 +80,23 @@ func (i *StatefulSetApp) TemplateObjectMeta() metav1.ObjectMeta {
 	return i.sfs.Spec.Template.ObjectMeta
 }
 
+//PodSpec returns the podspec
 func (i *StatefulSetApp) PodSpec() *apiv1.PodSpec {
 	return &i.sfs.Spec.Template.Spec
 }
 
+//DevClone clone the app
 func (i *StatefulSetApp) DevClone() App {
 	clone := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        model.DevCloneName(i.sfs.Name),
+			Name:        dev.DevCloneName(i.sfs.Name),
 			Namespace:   i.sfs.Namespace,
 			Labels:      map[string]string{},
 			Annotations: map[string]string{},
 		},
 		Spec: *i.sfs.Spec.DeepCopy(),
 	}
-	clone.Labels[model.DevCloneLabel] = string(i.sfs.UID)
+	clone.Labels[constants.DevCloneLabel] = string(i.sfs.UID)
 	for k, v := range i.sfs.Labels {
 		clone.Labels[k] = v
 	}
@@ -96,10 +106,12 @@ func (i *StatefulSetApp) DevClone() App {
 	return NewStatefulSetApp(clone)
 }
 
-func (i *StatefulSetApp) CheckConditionErrors(dev *model.Dev) error {
+//CheckConditionErrors returns the error on condition
+func (i *StatefulSetApp) CheckConditionErrors(dev *dev.Dev) error {
 	return statefulsets.CheckConditionErrors(i.sfs, dev)
 }
 
+//GetRunningPod returns the running pod
 func (i *StatefulSetApp) GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error) {
 	if i.sfs.Generation != i.sfs.Status.ObservedGeneration {
 		return nil, errors.ErrNotFound
@@ -107,8 +119,9 @@ func (i *StatefulSetApp) GetRunningPod(ctx context.Context, c kubernetes.Interfa
 	return pods.GetPodByStatefulSet(ctx, i.sfs, c)
 }
 
+//RestoreOriginal restores the original sfs
 func (i *StatefulSetApp) RestoreOriginal() error {
-	manifest := i.sfs.Annotations[model.StatefulsetAnnotation]
+	manifest := i.sfs.Annotations[constants.StatefulsetAnnotation]
 	if manifest == "" {
 		return nil
 	}
@@ -121,6 +134,7 @@ func (i *StatefulSetApp) RestoreOriginal() error {
 	return nil
 }
 
+//Refresh refresh the sfs on the app
 func (i *StatefulSetApp) Refresh(ctx context.Context, c kubernetes.Interface) error {
 	sfs, err := statefulsets.Get(ctx, i.sfs.Name, i.sfs.Namespace, c)
 	if err == nil {
@@ -129,6 +143,7 @@ func (i *StatefulSetApp) Refresh(ctx context.Context, c kubernetes.Interface) er
 	return err
 }
 
+//Watch watchs a sfs
 func (i *StatefulSetApp) Watch(ctx context.Context, result chan error, c kubernetes.Interface) {
 	optsWatch := metav1.ListOptions{
 		Watch:         true,
@@ -176,6 +191,7 @@ func (i *StatefulSetApp) Watch(ctx context.Context, result chan error, c kuberne
 	}
 }
 
+//Deploy deploys the app
 func (i *StatefulSetApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
 	sfs, err := statefulsets.Deploy(ctx, i.sfs, c)
 	if err == nil {
@@ -184,10 +200,12 @@ func (i *StatefulSetApp) Deploy(ctx context.Context, c kubernetes.Interface) err
 	return err
 }
 
+//Destroy destroys the app
 func (i *StatefulSetApp) Destroy(ctx context.Context, c kubernetes.Interface) error {
 	return statefulsets.Destroy(ctx, i.sfs.Name, i.sfs.Namespace, c)
 }
 
+//Divert diverts the app
 func (i *StatefulSetApp) Divert(username string) App {
 	return &StatefulSetApp{sfs: statefulsets.TranslateDivert(username, i.sfs)}
 }

@@ -19,16 +19,15 @@ import (
 	"os"
 	"testing"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/internal/test"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/manifest"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/rest"
 )
 
-var fakeManifest *model.Manifest = &model.Manifest{
-	Deploy: &model.DeployInfo{
+var fakeManifest *manifest.Manifest = &manifest.Manifest{
+	Deploy: &manifest.Deploy{
 		Commands: []string{
 			"printenv",
 			"ls -la",
@@ -284,11 +283,11 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, p.shutdown)
 }
 
-func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ string) (*manifest.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ string) (*manifest.Manifest, error) {
 	return fakeManifest, nil
 }
 

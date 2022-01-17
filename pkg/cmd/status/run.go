@@ -24,7 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/dev"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
@@ -75,7 +75,7 @@ func computeProgress(local, remote float64) float64 {
 }
 
 // Wait waits for the okteto up sequence to finish
-func Wait(ctx context.Context, dev *model.Dev, okStatusList []config.UpState) error {
+func Wait(ctx context.Context, dev *dev.Dev, okStatusList []config.UpState) error {
 	spinner := utils.NewSpinner("Activating your development container...")
 	spinner.Start()
 	defer spinner.Stop()

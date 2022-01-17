@@ -22,7 +22,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/dev"
+	"github.com/okteto/okteto/pkg/model/environment"
+	"github.com/okteto/okteto/pkg/model/metadata"
+	"github.com/okteto/okteto/pkg/model/stack"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -53,9 +57,9 @@ E=word -notword`
 
 func Test_translate(t *testing.T) {
 	ctx := context.Background()
-	stack := &model.Stack{
+	stack := &stack.Stack{
 		Name: "name",
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"1": {
 				Image:    "image",
 				EnvFiles: []string{"/non-existing"},
@@ -89,13 +93,13 @@ func Test_translateEnvVars(t *testing.T) {
 	os.Setenv("B", "2")
 	os.Setenv("ENV_PATH", tmpFile.Name())
 	os.Setenv("ENV_PATH2", tmpFile2.Name())
-	stack := &model.Stack{
+	stack := &stack.Stack{
 		Name: "name",
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"1": {
 				Image:    "image",
 				EnvFiles: []string{"${ENV_PATH}", "${ENV_PATH2}"},
-				Environment: []model.EnvVar{
+				Environment: []environment.EnvVar{
 					{
 						Name:  "C",
 						Value: "original",
@@ -132,10 +136,10 @@ func Test_translateEnvVars(t *testing.T) {
 }
 
 func Test_translateConfigMap(t *testing.T) {
-	s := &model.Stack{
+	s := &stack.Stack{
 		Manifest: []byte("manifest"),
 		Name:     "stackName",
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"svcName": {
 				Image: "image",
 			},
@@ -145,7 +149,7 @@ func Test_translateConfigMap(t *testing.T) {
 	if result.Name != "okteto-stackName" {
 		t.Errorf("Wrong configmap name: '%s'", result.Name)
 	}
-	if result.Labels[model.StackLabel] != "true" {
+	if result.Labels[constants.StackLabel] != "true" {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
 	}
 	if result.Data[NameField] != "stackName" {
@@ -157,19 +161,19 @@ func Test_translateConfigMap(t *testing.T) {
 }
 
 func Test_translateDeployment(t *testing.T) {
-	s := &model.Stack{
+	s := &stack.Stack{
 		Name: "stackName",
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"svcName": {
-				Labels: model.Labels{
+				Labels: metadata.Labels{
 					"label1": "value1",
 					"label2": "value2",
 				},
-				Annotations: model.Annotations{
+				Annotations: metadata.Annotations{
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
-				VolumeMounts: []model.StackVolume{
+				VolumeMounts: []stack.StackVolume{
 					{
 						LocalPath:  "/usr",
 						RemotePath: "/app",
@@ -178,9 +182,9 @@ func Test_translateDeployment(t *testing.T) {
 				Image:           "image",
 				Replicas:        3,
 				StopGracePeriod: 20,
-				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
-				Command:         model.Command{Values: []string{"args1", "args2"}},
-				Environment: []model.EnvVar{
+				Entrypoint:      dev.Entrypoint{Values: []string{"command1", "command2"}},
+				Command:         dev.Command{Values: []string{"args1", "args2"}},
+				Environment: []environment.EnvVar{
 					{
 						Name:  "env1",
 						Value: "value1",
@@ -190,7 +194,7 @@ func Test_translateDeployment(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports: []model.Port{{ContainerPort: 80}, {ContainerPort: 90}},
+				Ports: []stack.Port{{ContainerPort: 80}, {ContainerPort: 90}},
 			},
 		},
 	}
@@ -199,10 +203,10 @@ func Test_translateDeployment(t *testing.T) {
 		t.Errorf("Wrong deployment name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                    "value1",
-		"label2":                    "value2",
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
+		"label1":                        "value1",
+		"label2":                        "value2",
+		constants.StackNameLabel:        "stackName",
+		constants.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong deployment labels: '%s'", result.Labels)
@@ -218,8 +222,8 @@ func Test_translateDeployment(t *testing.T) {
 		t.Errorf("Wrong deployment spec.replicas: '%d'", *result.Spec.Replicas)
 	}
 	selector := map[string]string{
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
+		constants.StackNameLabel:        "stackName",
+		constants.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Spec.Selector.MatchLabels, selector) {
 		t.Errorf("Wrong spec.selector: '%s'", result.Spec.Selector.MatchLabels)
@@ -271,24 +275,24 @@ func Test_translateDeployment(t *testing.T) {
 }
 
 func Test_translateStatefulSet(t *testing.T) {
-	s := &model.Stack{
+	s := &stack.Stack{
 		Name: "stackName",
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"svcName": {
-				Labels: model.Labels{
+				Labels: metadata.Labels{
 					"label1": "value1",
 					"label2": "value2",
 				},
-				Annotations: model.Annotations{
+				Annotations: metadata.Annotations{
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
 				Image:           "image",
 				Replicas:        3,
 				StopGracePeriod: 20,
-				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
-				Command:         model.Command{Values: []string{"args1", "args2"}},
-				Environment: []model.EnvVar{
+				Entrypoint:      dev.Entrypoint{Values: []string{"command1", "command2"}},
+				Command:         dev.Command{Values: []string{"args1", "args2"}},
+				Environment: []environment.EnvVar{
 					{
 						Name:  "env1",
 						Value: "value1",
@@ -298,19 +302,19 @@ func Test_translateStatefulSet(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports:   []model.Port{{ContainerPort: 80}, {ContainerPort: 90}},
+				Ports:   []stack.Port{{ContainerPort: 80}, {ContainerPort: 90}},
 				CapAdd:  []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop: []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 
-				Volumes: []model.StackVolume{{RemotePath: "/volume1"}, {LocalPath: "usr", RemotePath: "/volume2"}},
-				Resources: &model.StackResources{
-					Limits: model.ServiceResources{
-						CPU:    model.Quantity{Value: resource.MustParse("100m")},
-						Memory: model.Quantity{Value: resource.MustParse("1Gi")},
+				Volumes: []stack.StackVolume{{RemotePath: "/volume1"}, {LocalPath: "usr", RemotePath: "/volume2"}},
+				Resources: &stack.StackResources{
+					Limits: stack.ServiceResources{
+						CPU:    stack.Quantity{Value: resource.MustParse("100m")},
+						Memory: stack.Quantity{Value: resource.MustParse("1Gi")},
 					},
-					Requests: model.ServiceResources{
-						Storage: model.StorageResource{
-							Size:  model.Quantity{Value: resource.MustParse("20Gi")},
+					Requests: stack.ServiceResources{
+						Storage: stack.StorageResource{
+							Size:  stack.Quantity{Value: resource.MustParse("20Gi")},
 							Class: "class-name",
 						},
 					},
@@ -323,11 +327,11 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong statefulset name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                      "value1",
-		"label2":                      "value2",
-		model.StackNameLabel:          "stackName",
-		model.StackServiceNameLabel:   "svcName",
-		"stack.okteto.com/volume-usr": "true",
+		"label1":                        "value1",
+		"label2":                        "value2",
+		constants.StackNameLabel:        "stackName",
+		constants.StackServiceNameLabel: "svcName",
+		"stack.okteto.com/volume-usr":   "true",
 	}
 	assert.Equal(t, labels, result.Labels)
 
@@ -342,8 +346,8 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong statefulset spec.replicas: '%d'", *result.Spec.Replicas)
 	}
 	selector := map[string]string{
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
+		constants.StackNameLabel:        "stackName",
+		constants.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Spec.Selector.MatchLabels, selector) {
 		t.Errorf("Wrong spec.selector: '%s'", result.Spec.Selector.MatchLabels)
@@ -470,24 +474,24 @@ func Test_translateStatefulSet(t *testing.T) {
 }
 
 func Test_translateJobWithoutVolumes(t *testing.T) {
-	s := &model.Stack{
+	s := &stack.Stack{
 		Name: "stackName",
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"svcName": {
-				Labels: model.Labels{
+				Labels: metadata.Labels{
 					"label1": "value1",
 					"label2": "value2",
 				},
-				Annotations: model.Annotations{
+				Annotations: metadata.Annotations{
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
 				Image:           "image",
 				StopGracePeriod: 20,
 				Replicas:        3,
-				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
-				Command:         model.Command{Values: []string{"args1", "args2"}},
-				Environment: []model.EnvVar{
+				Entrypoint:      dev.Entrypoint{Values: []string{"command1", "command2"}},
+				Command:         dev.Command{Values: []string{"args1", "args2"}},
+				Environment: []environment.EnvVar{
 					{
 						Name:  "env1",
 						Value: "value1",
@@ -497,19 +501,19 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports:         []model.Port{{ContainerPort: 80}, {ContainerPort: 90}},
+				Ports:         []stack.Port{{ContainerPort: 80}, {ContainerPort: 90}},
 				CapAdd:        []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop:       []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 				RestartPolicy: apiv1.RestartPolicyNever,
 				BackOffLimit:  5,
-				Resources: &model.StackResources{
-					Limits: model.ServiceResources{
-						CPU:    model.Quantity{Value: resource.MustParse("100m")},
-						Memory: model.Quantity{Value: resource.MustParse("1Gi")},
+				Resources: &stack.StackResources{
+					Limits: stack.ServiceResources{
+						CPU:    stack.Quantity{Value: resource.MustParse("100m")},
+						Memory: stack.Quantity{Value: resource.MustParse("1Gi")},
 					},
-					Requests: model.ServiceResources{
-						Storage: model.StorageResource{
-							Size:  model.Quantity{Value: resource.MustParse("20Gi")},
+					Requests: stack.ServiceResources{
+						Storage: stack.StorageResource{
+							Size:  stack.Quantity{Value: resource.MustParse("20Gi")},
 							Class: "class-name",
 						},
 					},
@@ -522,10 +526,10 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 		t.Errorf("Wrong job name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                    "value1",
-		"label2":                    "value2",
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
+		"label1":                        "value1",
+		"label2":                        "value2",
+		constants.StackNameLabel:        "stackName",
+		constants.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong job labels: '%s'", result.Labels)
@@ -603,24 +607,24 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 }
 
 func Test_translateJobWithVolumes(t *testing.T) {
-	s := &model.Stack{
+	s := &stack.Stack{
 		Name: "stackName",
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"svcName": {
-				Labels: model.Labels{
+				Labels: metadata.Labels{
 					"label1": "value1",
 					"label2": "value2",
 				},
-				Annotations: model.Annotations{
+				Annotations: metadata.Annotations{
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
 				Image:           "image",
 				StopGracePeriod: 20,
 				Replicas:        3,
-				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
-				Command:         model.Command{Values: []string{"args1", "args2"}},
-				Environment: []model.EnvVar{
+				Entrypoint:      dev.Entrypoint{Values: []string{"command1", "command2"}},
+				Command:         dev.Command{Values: []string{"args1", "args2"}},
+				Environment: []environment.EnvVar{
 					{
 						Name:  "env1",
 						Value: "value1",
@@ -630,20 +634,20 @@ func Test_translateJobWithVolumes(t *testing.T) {
 						Value: "value2",
 					},
 				},
-				Ports:         []model.Port{{ContainerPort: 80}, {ContainerPort: 90}},
+				Ports:         []stack.Port{{ContainerPort: 80}, {ContainerPort: 90}},
 				CapAdd:        []apiv1.Capability{apiv1.Capability("CAP_ADD")},
 				CapDrop:       []apiv1.Capability{apiv1.Capability("CAP_DROP")},
 				RestartPolicy: apiv1.RestartPolicyNever,
 				BackOffLimit:  5,
-				Volumes:       []model.StackVolume{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
-				Resources: &model.StackResources{
-					Limits: model.ServiceResources{
-						CPU:    model.Quantity{Value: resource.MustParse("100m")},
-						Memory: model.Quantity{Value: resource.MustParse("1Gi")},
+				Volumes:       []stack.StackVolume{{RemotePath: "/volume1"}, {RemotePath: "/volume2"}},
+				Resources: &stack.StackResources{
+					Limits: stack.ServiceResources{
+						CPU:    stack.Quantity{Value: resource.MustParse("100m")},
+						Memory: stack.Quantity{Value: resource.MustParse("1Gi")},
 					},
-					Requests: model.ServiceResources{
-						Storage: model.StorageResource{
-							Size:  model.Quantity{Value: resource.MustParse("20Gi")},
+					Requests: stack.ServiceResources{
+						Storage: stack.StorageResource{
+							Size:  stack.Quantity{Value: resource.MustParse("20Gi")},
 							Class: "class-name",
 						},
 					},
@@ -656,10 +660,10 @@ func Test_translateJobWithVolumes(t *testing.T) {
 		t.Errorf("Wrong job name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                    "value1",
-		"label2":                    "value2",
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
+		"label1":                        "value1",
+		"label2":                        "value2",
+		constants.StackNameLabel:        "stackName",
+		constants.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong job labels: '%s'", result.Labels)
@@ -784,24 +788,24 @@ func Test_translateService(t *testing.T) {
 
 	var tests = []struct {
 		name     string
-		stack    *model.Stack
+		stack    *stack.Stack
 		expected *apiv1.Service
 	}{
 		{
 			name: "translate svc no public endpoints",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Name: "stackName",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"svcName": {
-						Labels: model.Labels{
+						Labels: metadata.Labels{
 							"label1": "value1",
 							"label2": "value2",
 						},
-						Annotations: model.Annotations{
+						Annotations: metadata.Annotations{
 							"annotation1": "value1",
 							"annotation2": "value2",
 						},
-						Ports: []model.Port{
+						Ports: []stack.Port{
 							{
 								HostPort:      82,
 								ContainerPort: 80,
@@ -819,10 +823,10 @@ func Test_translateService(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "svcName",
 					Labels: map[string]string{
-						"label1":                    "value1",
-						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						"label1":                        "value1",
+						"label2":                        "value2",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
 						"annotation1": "value1",
@@ -832,8 +836,8 @@ func Test_translateService(t *testing.T) {
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeClusterIP,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{
 						{
@@ -860,22 +864,22 @@ func Test_translateService(t *testing.T) {
 		},
 		{
 			name: "translate svc public endpoints",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Name: "stackName",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"svcName": {
-						Labels: model.Labels{
+						Labels: metadata.Labels{
 							"label1": "value1",
 							"label2": "value2",
 						},
 
 						Public: true,
-						Annotations: model.Annotations{
-							"annotation1":                     "value1",
-							"annotation2":                     "value2",
-							model.OktetoAutoIngressAnnotation: "true",
+						Annotations: metadata.Annotations{
+							"annotation1":                         "value1",
+							"annotation2":                         "value2",
+							constants.OktetoAutoIngressAnnotation: "true",
 						},
-						Ports: []model.Port{
+						Ports: []stack.Port{
 							{
 								HostPort:      82,
 								ContainerPort: 80,
@@ -893,22 +897,22 @@ func Test_translateService(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "svcName",
 					Labels: map[string]string{
-						"label1":                    "value1",
-						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						"label1":                        "value1",
+						"label2":                        "value2",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
-						"annotation1":                     "value1",
-						"annotation2":                     "value2",
-						model.OktetoAutoIngressAnnotation: "true",
+						"annotation1":                         "value1",
+						"annotation2":                         "value2",
+						constants.OktetoAutoIngressAnnotation: "true",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeLoadBalancer,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{
 						{
@@ -935,21 +939,21 @@ func Test_translateService(t *testing.T) {
 		},
 		{
 			name: "translate svc private endpoints",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Name: "stackName",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"svcName": {
-						Labels: model.Labels{
+						Labels: metadata.Labels{
 							"label1": "value1",
 							"label2": "value2",
 						},
-						Annotations: model.Annotations{
-							"annotation1":                     "value1",
-							"annotation2":                     "value2",
-							model.OktetoAutoIngressAnnotation: "private",
+						Annotations: metadata.Annotations{
+							"annotation1":                         "value1",
+							"annotation2":                         "value2",
+							constants.OktetoAutoIngressAnnotation: "private",
 						},
 						Public: true,
-						Ports: []model.Port{
+						Ports: []stack.Port{
 							{
 								HostPort:      82,
 								ContainerPort: 80,
@@ -966,22 +970,22 @@ func Test_translateService(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "svcName",
 					Labels: map[string]string{
-						"label1":                    "value1",
-						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						"label1":                        "value1",
+						"label2":                        "value2",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
-						"annotation1":                     "value1",
-						"annotation2":                     "value2",
-						model.OktetoAutoIngressAnnotation: "private",
+						"annotation1":                         "value1",
+						"annotation2":                         "value2",
+						constants.OktetoAutoIngressAnnotation: "private",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeLoadBalancer,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{
 						{
@@ -1008,21 +1012,21 @@ func Test_translateService(t *testing.T) {
 		},
 		{
 			name: "translate svc private endpoints by private annotation",
-			stack: &model.Stack{
+			stack: &stack.Stack{
 				Name: "stackName",
-				Services: map[string]*model.Service{
+				Services: map[string]*stack.Service{
 					"svcName": {
-						Labels: model.Labels{
+						Labels: metadata.Labels{
 							"label1": "value1",
 							"label2": "value2",
 						},
-						Annotations: model.Annotations{
-							"annotation1":                    "value1",
-							"annotation2":                    "value2",
-							model.OktetoPrivateSvcAnnotation: "true",
+						Annotations: metadata.Annotations{
+							"annotation1":                        "value1",
+							"annotation2":                        "value2",
+							constants.OktetoPrivateSvcAnnotation: "true",
 						},
 						Public: true,
-						Ports: []model.Port{
+						Ports: []stack.Port{
 							{
 								HostPort:      82,
 								ContainerPort: 80,
@@ -1039,23 +1043,23 @@ func Test_translateService(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "svcName",
 					Labels: map[string]string{
-						"label1":                    "value1",
-						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						"label1":                        "value1",
+						"label2":                        "value2",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
-						"annotation1":                     "value1",
-						"annotation2":                     "value2",
-						model.OktetoAutoIngressAnnotation: "private",
-						model.OktetoPrivateSvcAnnotation:  "true",
+						"annotation1":                         "value1",
+						"annotation2":                         "value2",
+						constants.OktetoAutoIngressAnnotation: "private",
+						constants.OktetoPrivateSvcAnnotation:  "true",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeLoadBalancer,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{
 						{
@@ -1092,20 +1096,20 @@ func Test_translateService(t *testing.T) {
 }
 
 func Test_translateEndpointsV1(t *testing.T) {
-	s := &model.Stack{
+	s := &stack.Stack{
 		Name: "stackName",
-		Endpoints: map[string]model.Endpoint{
+		Endpoints: map[string]stack.Endpoint{
 			"endpoint1": {
-				Labels:      model.Labels{"label1": "value1"},
-				Annotations: model.Annotations{"annotation1": "value1"},
-				Rules: []model.EndpointRule{
+				Labels:      metadata.Labels{"label1": "value1"},
+				Annotations: metadata.Annotations{"annotation1": "value1"},
+				Rules: []stack.EndpointRule{
 					{Path: "/",
 						Service: "svcName",
 						Port:    80},
 				},
 			},
 		},
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"svcName": {
 				Image: "image",
 			},
@@ -1117,8 +1121,8 @@ func Test_translateEndpointsV1(t *testing.T) {
 	}
 
 	annotations := map[string]string{
-		model.OktetoIngressAutoGenerateHost: "true",
-		"annotation1":                       "value1",
+		constants.OktetoIngressAutoGenerateHost: "true",
+		"annotation1":                           "value1",
 	}
 
 	if !reflect.DeepEqual(result.Annotations, annotations) {
@@ -1146,9 +1150,9 @@ func Test_translateEndpointsV1(t *testing.T) {
 	}
 
 	labels := map[string]string{
-		model.StackNameLabel:         "stackName",
-		model.StackEndpointNameLabel: "endpoint1",
-		"label1":                     "value1",
+		constants.StackNameLabel:         "stackName",
+		constants.StackEndpointNameLabel: "endpoint1",
+		"label1":                         "value1",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
@@ -1156,20 +1160,20 @@ func Test_translateEndpointsV1(t *testing.T) {
 }
 
 func Test_translateEndpointsV1Beta1(t *testing.T) {
-	s := &model.Stack{
+	s := &stack.Stack{
 		Name: "stackName",
-		Endpoints: map[string]model.Endpoint{
+		Endpoints: map[string]stack.Endpoint{
 			"endpoint1": {
-				Labels:      model.Labels{"label1": "value1"},
-				Annotations: model.Annotations{"annotation1": "value1"},
-				Rules: []model.EndpointRule{
+				Labels:      metadata.Labels{"label1": "value1"},
+				Annotations: metadata.Annotations{"annotation1": "value1"},
+				Rules: []stack.EndpointRule{
 					{Path: "/",
 						Service: "svcName",
 						Port:    80},
 				},
 			},
 		},
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"svcName": {
 				Image: "image",
 			},
@@ -1181,8 +1185,8 @@ func Test_translateEndpointsV1Beta1(t *testing.T) {
 	}
 
 	annotations := map[string]string{
-		model.OktetoIngressAutoGenerateHost: "true",
-		"annotation1":                       "value1",
+		constants.OktetoIngressAutoGenerateHost: "true",
+		"annotation1":                           "value1",
 	}
 
 	if !reflect.DeepEqual(result.Annotations, annotations) {
@@ -1203,9 +1207,9 @@ func Test_translateEndpointsV1Beta1(t *testing.T) {
 	}
 
 	labels := map[string]string{
-		model.StackNameLabel:         "stackName",
-		model.StackEndpointNameLabel: "endpoint1",
-		"label1":                     "value1",
+		constants.StackNameLabel:         "stackName",
+		constants.StackEndpointNameLabel: "endpoint1",
+		"label1":                         "value1",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
@@ -1215,12 +1219,12 @@ func Test_translateEndpointsV1Beta1(t *testing.T) {
 func Test_getAccessibleVolumeMounts(t *testing.T) {
 	existingPath := "./existing-folder"
 	missingPath := "./missing-folder"
-	s := &model.Stack{
+	s := &stack.Stack{
 		Name: "stackName",
-		Services: map[string]*model.Service{
+		Services: map[string]*stack.Service{
 			"svcName": {
 				Image: "image",
-				VolumeMounts: []model.StackVolume{
+				VolumeMounts: []stack.StackVolume{
 					{LocalPath: existingPath, RemotePath: "/data/logs"},
 					{LocalPath: missingPath, RemotePath: "/data/logs"},
 				},
@@ -1248,21 +1252,21 @@ func Test_getAccessibleVolumeMounts(t *testing.T) {
 func Test_translateSvcProbe(t *testing.T) {
 	tests := []struct {
 		name     string
-		svc      *model.Service
+		svc      *stack.Service
 		expected *apiv1.Probe
 	}{
 		{
 			name: "nil healthcheck",
-			svc: &model.Service{
+			svc: &stack.Service{
 				Healtcheck: nil,
 			},
 			expected: nil,
 		},
 		{
 			name: "healthcheck http",
-			svc: &model.Service{
-				Healtcheck: &model.HealthCheck{
-					HTTP: &model.HTTPHealtcheck{
+			svc: &stack.Service{
+				Healtcheck: &stack.HealthCheck{
+					HTTP: &stack.HTTPHealtcheck{
 						Path: "/",
 						Port: 8080,
 					},
@@ -1280,9 +1284,9 @@ func Test_translateSvcProbe(t *testing.T) {
 
 		{
 			name: "healthcheck http with other fields",
-			svc: &model.Service{
-				Healtcheck: &model.HealthCheck{
-					HTTP: &model.HTTPHealtcheck{
+			svc: &stack.Service{
+				Healtcheck: &stack.HealthCheck{
+					HTTP: &stack.HTTPHealtcheck{
 						Path: "/",
 						Port: 8080,
 					},
@@ -1307,9 +1311,9 @@ func Test_translateSvcProbe(t *testing.T) {
 		},
 		{
 			name: "healthcheck exec",
-			svc: &model.Service{
-				Healtcheck: &model.HealthCheck{
-					Test: model.HealtcheckTest{
+			svc: &stack.Service{
+				Healtcheck: &stack.HealthCheck{
+					Test: stack.HealtcheckTest{
 						"curl", "db-service:8080/readiness",
 					},
 				},
@@ -1324,9 +1328,9 @@ func Test_translateSvcProbe(t *testing.T) {
 		},
 		{
 			name: "healthcheck exec with others fields",
-			svc: &model.Service{
-				Healtcheck: &model.HealthCheck{
-					Test: model.HealtcheckTest{
+			svc: &stack.Service{
+				Healtcheck: &stack.HealthCheck{
+					Test: stack.HealtcheckTest{
 						"curl", "db-service:8080/readiness",
 					},
 					StartPeriod: 30 * time.Second,
@@ -1362,21 +1366,21 @@ func Test_translateSvcProbe(t *testing.T) {
 func Test_translateServiceEnvironment(t *testing.T) {
 	tests := []struct {
 		name     string
-		svc      *model.Service
+		svc      *stack.Service
 		expected []apiv1.EnvVar
 	}{
 		{
 			name: "none",
-			svc: &model.Service{
-				Environment: model.Environment{},
+			svc: &stack.Service{
+				Environment: environment.Environment{},
 			},
 			expected: []apiv1.EnvVar{},
 		},
 		{
 			name: "empty value",
-			svc: &model.Service{
-				Environment: model.Environment{
-					model.EnvVar{
+			svc: &stack.Service{
+				Environment: environment.Environment{
+					environment.EnvVar{
 						Name: "DEBUG",
 					},
 				},
@@ -1389,9 +1393,9 @@ func Test_translateServiceEnvironment(t *testing.T) {
 		},
 		{
 			name: "empty name",
-			svc: &model.Service{
-				Environment: model.Environment{
-					model.EnvVar{
+			svc: &stack.Service{
+				Environment: environment.Environment{
+					environment.EnvVar{
 						Value: "DEBUG",
 					},
 				},
@@ -1400,9 +1404,9 @@ func Test_translateServiceEnvironment(t *testing.T) {
 		},
 		{
 			name: "ok env var",
-			svc: &model.Service{
-				Environment: model.Environment{
-					model.EnvVar{
+			svc: &stack.Service{
+				Environment: environment.Environment{
+					environment.EnvVar{
 						Name:  "DEBUG",
 						Value: "true",
 					},
@@ -1430,20 +1434,20 @@ func Test_translateServiceEnvironment(t *testing.T) {
 func Test_translateAffinity(t *testing.T) {
 	tests := []struct {
 		name     string
-		svc      *model.Service
+		svc      *stack.Service
 		affinity *apiv1.Affinity
 	}{
 		{
 			name: "none",
-			svc: &model.Service{
-				Environment: model.Environment{},
+			svc: &stack.Service{
+				Environment: environment.Environment{},
 			},
 			affinity: nil,
 		},
 		{
 			name: "only volume mounts",
-			svc: &model.Service{
-				VolumeMounts: []model.StackVolume{
+			svc: &stack.Service{
+				VolumeMounts: []stack.StackVolume{
 					{
 						LocalPath:  "",
 						RemotePath: "/var",
@@ -1454,8 +1458,8 @@ func Test_translateAffinity(t *testing.T) {
 		},
 		{
 			name: "one volume",
-			svc: &model.Service{
-				Volumes: []model.StackVolume{
+			svc: &stack.Service{
+				Volumes: []stack.StackVolume{
 					{
 						LocalPath:  "test",
 						RemotePath: "/var",
@@ -1470,7 +1474,7 @@ func Test_translateAffinity(t *testing.T) {
 							LabelSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{
 									{
-										Key:      fmt.Sprintf("%s-test", model.StackVolumeNameLabel),
+										Key:      fmt.Sprintf("%s-test", constants.StackVolumeNameLabel),
 										Operator: metav1.LabelSelectorOpExists,
 									},
 								},
@@ -1482,8 +1486,8 @@ func Test_translateAffinity(t *testing.T) {
 		},
 		{
 			name: "multiple volumes",
-			svc: &model.Service{
-				Volumes: []model.StackVolume{
+			svc: &stack.Service{
+				Volumes: []stack.StackVolume{
 					{
 						LocalPath:  "test-1",
 						RemotePath: "/var",
@@ -1506,7 +1510,7 @@ func Test_translateAffinity(t *testing.T) {
 							LabelSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{
 									{
-										Key:      fmt.Sprintf("%s-test-1", model.StackVolumeNameLabel),
+										Key:      fmt.Sprintf("%s-test-1", constants.StackVolumeNameLabel),
 										Operator: metav1.LabelSelectorOpExists,
 									},
 								},
@@ -1517,7 +1521,7 @@ func Test_translateAffinity(t *testing.T) {
 							LabelSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{
 									{
-										Key:      fmt.Sprintf("%s-test-2", model.StackVolumeNameLabel),
+										Key:      fmt.Sprintf("%s-test-2", constants.StackVolumeNameLabel),
 										Operator: metav1.LabelSelectorOpExists,
 									},
 								},
@@ -1528,7 +1532,7 @@ func Test_translateAffinity(t *testing.T) {
 							LabelSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{
 									{
-										Key:      fmt.Sprintf("%s-test-3", model.StackVolumeNameLabel),
+										Key:      fmt.Sprintf("%s-test-3", constants.StackVolumeNameLabel),
 										Operator: metav1.LabelSelectorOpExists,
 									},
 								},
@@ -1562,15 +1566,15 @@ func Test_translateInitContainers(t *testing.T) {
 	}
 	tests := []struct {
 		name          string
-		stack         *model.Stack
+		stack         *stack.Stack
 		initContainer []apiv1.Container
 	}{
 		{
 			name: "deployment (only volume mounts)",
-			stack: &model.Stack{
-				Services: map[string]*model.Service{
+			stack: &stack.Stack{
+				Services: map[string]*stack.Service{
 					svcName: {
-						VolumeMounts: []model.StackVolume{
+						VolumeMounts: []stack.StackVolume{
 							{
 								LocalPath:  tmpFile.Name(),
 								RemotePath: "/this/is/a/file",
@@ -1599,10 +1603,10 @@ func Test_translateInitContainers(t *testing.T) {
 		},
 		{
 			name: "statefulset (only volumes)",
-			stack: &model.Stack{
-				Services: map[string]*model.Service{
+			stack: &stack.Stack{
+				Services: map[string]*stack.Service{
 					svcName: {
-						Volumes: []model.StackVolume{
+						Volumes: []stack.StackVolume{
 							{
 								LocalPath:  "volume",
 								RemotePath: "/this/is/a/",
@@ -1640,16 +1644,16 @@ func Test_translateInitContainers(t *testing.T) {
 		},
 		{
 			name: "statefulset (volumes and volume mounts)",
-			stack: &model.Stack{
-				Services: map[string]*model.Service{
+			stack: &stack.Stack{
+				Services: map[string]*stack.Service{
 					svcName: {
-						Volumes: []model.StackVolume{
+						Volumes: []stack.StackVolume{
 							{
 								LocalPath:  "volume",
 								RemotePath: "/this/is/a/",
 							},
 						},
-						VolumeMounts: []model.StackVolume{
+						VolumeMounts: []stack.StackVolume{
 							{
 								LocalPath:  tmpFile.Name(),
 								RemotePath: "/this/is/a/file",
@@ -1723,13 +1727,13 @@ func Test_translateVolumes(t *testing.T) {
 	sizeLimit := resource.MustParse("1Gi")
 	tests := []struct {
 		name         string
-		svc          *model.Service
+		svc          *stack.Service
 		volumeMounts []apiv1.Volume
 	}{
 		{
 			name: "deployment (only volume mounts)",
-			svc: &model.Service{
-				VolumeMounts: []model.StackVolume{
+			svc: &stack.Service{
+				VolumeMounts: []stack.StackVolume{
 					{
 						LocalPath:  tmpFile.Name(),
 						RemotePath: "/this/is/a/file",
@@ -1753,8 +1757,8 @@ func Test_translateVolumes(t *testing.T) {
 		},
 		{
 			name: "statefulset (only volumes)",
-			svc: &model.Service{
-				Volumes: []model.StackVolume{
+			svc: &stack.Service{
+				Volumes: []stack.StackVolume{
 					{
 						LocalPath:  "volume",
 						RemotePath: "/this/is/a/",
@@ -1774,14 +1778,14 @@ func Test_translateVolumes(t *testing.T) {
 		},
 		{
 			name: "statefulset (volumes and volume mounts)",
-			svc: &model.Service{
-				Volumes: []model.StackVolume{
+			svc: &stack.Service{
+				Volumes: []stack.StackVolume{
 					{
 						LocalPath:  "volume",
 						RemotePath: "/this/is/a/",
 					},
 				},
-				VolumeMounts: []model.StackVolume{
+				VolumeMounts: []stack.StackVolume{
 					{
 						LocalPath:  tmpFile.Name(),
 						RemotePath: "/this/is/a/file",
@@ -1833,13 +1837,13 @@ func Test_translateVolumesMounts(t *testing.T) {
 	}
 	tests := []struct {
 		name         string
-		svc          *model.Service
+		svc          *stack.Service
 		volumeMounts []apiv1.VolumeMount
 	}{
 		{
 			name: "deployment (only volume mounts)",
-			svc: &model.Service{
-				VolumeMounts: []model.StackVolume{
+			svc: &stack.Service{
+				VolumeMounts: []stack.StackVolume{
 					{
 						LocalPath:  tmpFile.Name(),
 						RemotePath: "/this/is/a/file",
@@ -1859,8 +1863,8 @@ func Test_translateVolumesMounts(t *testing.T) {
 		},
 		{
 			name: "statefulset (only volumes)",
-			svc: &model.Service{
-				Volumes: []model.StackVolume{
+			svc: &stack.Service{
+				Volumes: []stack.StackVolume{
 					{
 						LocalPath:  "volume",
 						RemotePath: "/this/is/a/",
@@ -1877,14 +1881,14 @@ func Test_translateVolumesMounts(t *testing.T) {
 		},
 		{
 			name: "statefulset (volumes and volume mounts)",
-			svc: &model.Service{
-				Volumes: []model.StackVolume{
+			svc: &stack.Service{
+				Volumes: []stack.StackVolume{
 					{
 						LocalPath:  "volume",
 						RemotePath: "/this/is/a/",
 					},
 				},
-				VolumeMounts: []model.StackVolume{
+				VolumeMounts: []stack.StackVolume{
 					{
 						LocalPath:  tmpFile.Name(),
 						RemotePath: "/this/is/a/file",

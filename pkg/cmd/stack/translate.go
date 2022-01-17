@@ -28,7 +28,10 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
+	"github.com/okteto/okteto/pkg/model/environment"
+	"github.com/okteto/okteto/pkg/model/metadata"
+	"github.com/okteto/okteto/pkg/model/stack"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	appsv1 "k8s.io/api/apps/v1"
@@ -58,7 +61,7 @@ const (
 	pvcName = "pvc"
 )
 
-func translate(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
+func translate(ctx context.Context, s *stack.Stack, options *StackDeployOptions) error {
 	if err := translateStackEnvVars(ctx, s); err != nil {
 		return err
 	}
@@ -66,7 +69,7 @@ func translate(ctx context.Context, s *model.Stack, options *StackDeployOptions)
 	return translateBuildImages(ctx, s, options)
 }
 
-func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
+func translateStackEnvVars(ctx context.Context, s *stack.Stack) error {
 	for svcName, svc := range s.Services {
 		for i := len(svc.EnvFiles) - 1; i >= 0; i-- {
 			envFilepath := svc.EnvFiles[i]
@@ -86,9 +89,9 @@ func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 	return nil
 }
 
-func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, filename string) error {
+func translateServiceEnvFile(ctx context.Context, svc *stack.Service, svcName, filename string) error {
 	var err error
-	filename, err = model.ExpandEnv(filename)
+	filename, err = environment.ExpandEnv(filename)
 	if err != nil {
 		return err
 	}
@@ -111,14 +114,14 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 	for name, value := range envMap {
 		svc.Environment = append(
 			svc.Environment,
-			model.EnvVar{Name: name, Value: value},
+			environment.EnvVar{Name: name, Value: value},
 		)
 	}
 
 	return nil
 }
 
-func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
+func translateBuildImages(ctx context.Context, s *stack.Stack, options *StackDeployOptions) error {
 	hasBuiltSomething, err := buildServices(ctx, s, options)
 	if err != nil {
 		return err
@@ -138,7 +141,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 	return nil
 }
 
-func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOptions) (bool, error) {
+func buildServices(ctx context.Context, s *stack.Stack, options *StackDeployOptions) (bool, error) {
 	hasBuiltSomething := false
 
 	for _, name := range options.ServicesToDeploy {
@@ -169,7 +172,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 
 		}
 		log.Information("Building image for service '%s'...", name)
-		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
+		buildArgs := environment.SerializeBuildArgs(svc.Build.Args)
 		buildOptions := build.BuildOptions{
 			Path:       svc.Build.Context,
 			File:       svc.Build.Dockerfile,
@@ -190,7 +193,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 	return hasBuiltSomething, nil
 }
 
-func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *StackDeployOptions, hasBuiltSomething bool) (bool, error) {
+func addVolumeMountsToBuiltImage(ctx context.Context, s *stack.Stack, options *StackDeployOptions, hasBuiltSomething bool) (bool, error) {
 	hasAddedAnyVolumeMounts := false
 	for name, svc := range s.Services {
 		notSkippableVolumeMounts := getAccessibleVolumeMounts(s, name)
@@ -221,7 +224,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				log.Information("Running your build in %s...", okteto.Context().Builder)
 			}
 			log.Information("Building image for service '%s' to include host volumes...", name)
-			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
+			buildArgs := environment.SerializeBuildArgs(svc.Build.Args)
 
 			buildOptions := build.BuildOptions{
 				Path:       svc.Build.Context,
@@ -244,25 +247,25 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 	return hasAddedAnyVolumeMounts, nil
 }
 
-func getAccessibleVolumeMounts(stack *model.Stack, svcName string) []model.StackVolume {
-	accessibleVolumeMounts := make([]model.StackVolume, 0)
-	for _, volume := range stack.Services[svcName].VolumeMounts {
+func getAccessibleVolumeMounts(s *stack.Stack, svcName string) []stack.StackVolume {
+	accessibleVolumeMounts := make([]stack.StackVolume, 0)
+	for _, volume := range s.Services[svcName].VolumeMounts {
 		if _, err := os.Stat(volume.LocalPath); !os.IsNotExist(err) {
 			accessibleVolumeMounts = append(accessibleVolumeMounts, volume)
 		} else {
 			warning := fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. Could not find '%s'.", svcName, volume.LocalPath, volume.RemotePath, volume.LocalPath)
-			stack.Warnings.VolumeMountWarnings = append(stack.Warnings.VolumeMountWarnings, warning)
+			s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, warning)
 		}
 	}
 	return accessibleVolumeMounts
 }
 
-func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
+func translateConfigMap(s *stack.Stack) *apiv1.ConfigMap {
 	return &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: model.GetStackConfigMapName(s.Name),
+			Name: stack.GetStackConfigMapName(s.Name),
 			Labels: map[string]string{
-				model.StackLabel: "true",
+				constants.StackLabel: "true",
 			},
 		},
 		Data: map[string]string{
@@ -273,7 +276,7 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 	}
 }
 
-func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
+func translateDeployment(svcName string, s *stack.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
 
 	healthcheckProbe := getSvcProbe(svc)
@@ -323,7 +326,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	}
 }
 
-func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.PersistentVolumeClaim {
+func translatePersistentVolumeClaim(volumeName string, s *stack.Stack) apiv1.PersistentVolumeClaim {
 	volumeSpec := s.Volumes[volumeName]
 	labels := translateVolumeLabels(volumeName, s)
 	pvc := apiv1.PersistentVolumeClaim{
@@ -346,7 +349,7 @@ func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.Per
 	return pvc
 }
 
-func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
+func translateStatefulSet(svcName string, s *stack.Stack) *appsv1.StatefulSet {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
@@ -398,7 +401,7 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 	}
 }
 
-func translateJob(svcName string, s *model.Stack) *batchv1.Job {
+func translateJob(svcName string, s *stack.Stack) *batchv1.Job {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
@@ -447,7 +450,7 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 	}
 }
 
-func getInitContainers(svcName string, s *model.Stack) []apiv1.Container {
+func getInitContainers(svcName string, s *stack.Stack) []apiv1.Container {
 	svc := s.Services[svcName]
 	initContainers := []apiv1.Container{}
 	if len(svc.Volumes) > 0 {
@@ -469,7 +472,7 @@ func getInitContainers(svcName string, s *model.Stack) []apiv1.Container {
 	return initContainers
 }
 
-func getInitializeVolumeMountsContainer(svcName string, svc *model.Service) *apiv1.Container {
+func getInitializeVolumeMountsContainer(svcName string, svc *stack.Service) *apiv1.Container {
 	initContainerCommand, initContainerVolumeMounts := getVolumeMountsCommandAndVolumeMounts(*svc)
 	if len(initContainerVolumeMounts) == 0 {
 		return nil
@@ -483,7 +486,7 @@ func getInitializeVolumeMountsContainer(svcName string, svc *model.Service) *api
 	return initContainer
 }
 
-func getVolumeMountsCommandAndVolumeMounts(svc model.Service) ([]string, []apiv1.VolumeMount) {
+func getVolumeMountsCommandAndVolumeMounts(svc stack.Service) ([]string, []apiv1.VolumeMount) {
 	volumeMounts := []apiv1.VolumeMount{}
 
 	var command string
@@ -502,7 +505,8 @@ func getVolumeMountsCommandAndVolumeMounts(svc model.Service) ([]string, []apiv1
 	}
 	return []string{"sh", "-c", command}, volumeMounts
 }
-func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Container {
+
+func getAddPermissionsInitContainer(svcName string, svc *stack.Service) apiv1.Container {
 	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
 	initContainer := apiv1.Container{
 		Name:         fmt.Sprintf("init-%s", svcName),
@@ -513,7 +517,7 @@ func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Co
 	return initContainer
 }
 
-func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *apiv1.Container {
+func getInitializeVolumeContentContainer(svcName string, svc *stack.Service) *apiv1.Container {
 	c := &apiv1.Container{
 		Name:            fmt.Sprintf("init-volume-%s", svcName),
 		Image:           svc.Image,
@@ -542,7 +546,7 @@ func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *ap
 	}
 	return nil
 }
-func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv1.VolumeMount) {
+func getInitContainerCommandAndVolumeMounts(svc stack.Service) ([]string, []apiv1.VolumeMount) {
 	volumeMounts := make([]apiv1.VolumeMount, 0)
 
 	var command string
@@ -572,7 +576,7 @@ func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv
 	return []string{"sh", "-c", command}, volumeMounts
 }
 
-func translateVolumeClaimTemplates(svcName string, s *model.Stack) []apiv1.PersistentVolumeClaim {
+func translateVolumeClaimTemplates(svcName string, s *stack.Stack) []apiv1.PersistentVolumeClaim {
 	svc := s.Services[svcName]
 	for _, volume := range svc.Volumes {
 		if volume.LocalPath == "" {
@@ -599,7 +603,7 @@ func translateVolumeClaimTemplates(svcName string, s *model.Stack) []apiv1.Persi
 	return nil
 }
 
-func translateVolumes(svcName string, svc *model.Service) []apiv1.Volume {
+func translateVolumes(svcName string, svc *stack.Service) []apiv1.Volume {
 	volumes := make([]apiv1.Volume, 0)
 	for _, volume := range svc.Volumes {
 		name := getVolumeClaimName(&volume)
@@ -630,13 +634,13 @@ func translateVolumes(svcName string, svc *model.Service) []apiv1.Volume {
 	return volumes
 }
 
-func translateService(svcName string, s *model.Stack) *apiv1.Service {
+func translateService(svcName string, s *stack.Stack) *apiv1.Service {
 	svc := s.Services[svcName]
 	annotations := translateAnnotations(svc)
-	if s.Services[svcName].Public && annotations[model.OktetoAutoIngressAnnotation] == "" {
-		annotations[model.OktetoAutoIngressAnnotation] = "true"
-		if annotations[model.OktetoPrivateSvcAnnotation] == "true" {
-			annotations[model.OktetoAutoIngressAnnotation] = "private"
+	if s.Services[svcName].Public && annotations[constants.OktetoAutoIngressAnnotation] == "" {
+		annotations[constants.OktetoAutoIngressAnnotation] = "true"
+		if annotations[constants.OktetoPrivateSvcAnnotation] == "true" {
+			annotations[constants.OktetoAutoIngressAnnotation] = "private"
 		}
 	}
 	return &apiv1.Service{
@@ -654,7 +658,7 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	}
 }
 
-func translateIngressV1(ingressName string, s *model.Stack) *networkingv1.Ingress {
+func translateIngressV1(ingressName string, s *stack.Stack) *networkingv1.Ingress {
 	endpoints := s.Endpoints[ingressName]
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -677,7 +681,7 @@ func translateIngressV1(ingressName string, s *model.Stack) *networkingv1.Ingres
 	}
 }
 
-func translateIngressV1Beta1(ingressName string, s *model.Stack) *networkingv1beta1.Ingress {
+func translateIngressV1Beta1(ingressName string, s *stack.Stack) *networkingv1beta1.Ingress {
 	endpoints := s.Endpoints[ingressName]
 	return &networkingv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -700,7 +704,7 @@ func translateIngressV1Beta1(ingressName string, s *model.Stack) *networkingv1be
 	}
 }
 
-func translateEndpointsV1(endpoints model.Endpoint) []networkingv1.HTTPIngressPath {
+func translateEndpointsV1(endpoints stack.Endpoint) []networkingv1.HTTPIngressPath {
 	paths := make([]networkingv1.HTTPIngressPath, 0)
 	pathType := networkingv1.PathTypeImplementationSpecific
 	for _, rule := range endpoints.Rules {
@@ -721,7 +725,7 @@ func translateEndpointsV1(endpoints model.Endpoint) []networkingv1.HTTPIngressPa
 	return paths
 }
 
-func translateEndpointsV1Beta1(endpoints model.Endpoint) []networkingv1beta1.HTTPIngressPath {
+func translateEndpointsV1Beta1(endpoints stack.Endpoint) []networkingv1beta1.HTTPIngressPath {
 	paths := make([]networkingv1beta1.HTTPIngressPath, 0)
 	for _, rule := range endpoints.Rules {
 		path := networkingv1beta1.HTTPIngressPath{
@@ -736,20 +740,20 @@ func translateEndpointsV1Beta1(endpoints model.Endpoint) []networkingv1beta1.HTT
 	return paths
 }
 
-func translateIngressAnnotations(endpointName string, s *model.Stack) map[string]string {
+func translateIngressAnnotations(endpointName string, s *stack.Stack) map[string]string {
 	endpoint := s.Endpoints[endpointName]
-	annotations := model.Annotations{model.OktetoIngressAutoGenerateHost: "true"}
+	annotations := metadata.Annotations{constants.OktetoIngressAutoGenerateHost: "true"}
 	for k := range endpoint.Annotations {
 		annotations[k] = endpoint.Annotations[k]
 	}
 	return annotations
 }
 
-func translateIngressLabels(endpointName string, s *model.Stack) map[string]string {
+func translateIngressLabels(endpointName string, s *stack.Stack) map[string]string {
 	endpoint := s.Endpoints[endpointName]
 	labels := map[string]string{
-		model.StackNameLabel:         s.Name,
-		model.StackEndpointNameLabel: endpointName,
+		constants.StackNameLabel:         s.Name,
+		constants.StackEndpointNameLabel: endpointName,
 	}
 	for k := range endpoint.Labels {
 		labels[k] = endpoint.Labels[k]
@@ -757,11 +761,11 @@ func translateIngressLabels(endpointName string, s *model.Stack) map[string]stri
 	return labels
 }
 
-func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string {
+func translateVolumeLabels(volumeName string, s *stack.Stack) map[string]string {
 	volume := s.Volumes[volumeName]
 	labels := map[string]string{
-		model.StackNameLabel:       s.Name,
-		model.StackVolumeNameLabel: volumeName,
+		constants.StackNameLabel:       s.Name,
+		constants.StackVolumeNameLabel: volumeName,
 	}
 	for k := range volume.Labels {
 		labels[k] = volume.Labels[k]
@@ -769,7 +773,7 @@ func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string 
 	return labels
 }
 
-func translateAffinity(svc *model.Service) *apiv1.Affinity {
+func translateAffinity(svc *stack.Service) *apiv1.Affinity {
 	requirements := make([]apiv1.PodAffinityTerm, 0)
 	for _, volume := range svc.Volumes {
 		if volume.LocalPath == "" {
@@ -780,7 +784,7 @@ func translateAffinity(svc *model.Service) *apiv1.Affinity {
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      fmt.Sprintf("%s-%s", model.StackVolumeNameLabel, volume.LocalPath),
+						Key:      fmt.Sprintf("%s-%s", constants.StackVolumeNameLabel, volume.LocalPath),
 						Operator: metav1.LabelSelectorOpExists,
 					},
 				},
@@ -799,11 +803,11 @@ func translateAffinity(svc *model.Service) *apiv1.Affinity {
 	return nil
 }
 
-func translateLabels(svcName string, s *model.Stack) map[string]string {
+func translateLabels(svcName string, s *stack.Stack) map[string]string {
 	svc := s.Services[svcName]
 	labels := map[string]string{
-		model.StackNameLabel:        s.Name,
-		model.StackServiceNameLabel: svcName,
+		constants.StackNameLabel:        s.Name,
+		constants.StackServiceNameLabel: svcName,
 	}
 	for k := range svc.Labels {
 		labels[k] = svc.Labels[k]
@@ -811,21 +815,21 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 
 	for _, volume := range svc.Volumes {
 		if volume.LocalPath != "" {
-			labels[fmt.Sprintf("%s-%s", model.StackVolumeNameLabel, volume.LocalPath)] = "true"
+			labels[fmt.Sprintf("%s-%s", constants.StackVolumeNameLabel, volume.LocalPath)] = "true"
 		}
 	}
 	return labels
 }
 
-func translateLabelSelector(svcName string, s *model.Stack) map[string]string {
+func translateLabelSelector(svcName string, s *stack.Stack) map[string]string {
 	labels := map[string]string{
-		model.StackNameLabel:        s.Name,
-		model.StackServiceNameLabel: svcName,
+		constants.StackNameLabel:        s.Name,
+		constants.StackServiceNameLabel: svcName,
 	}
 	return labels
 }
 
-func translateAnnotations(svc *model.Service) map[string]string {
+func translateAnnotations(svc *stack.Service) map[string]string {
 
 	result := getAnnotations()
 	for k, v := range svc.Annotations {
@@ -837,19 +841,19 @@ func translateAnnotations(svc *model.Service) map[string]string {
 func getAnnotations() map[string]string {
 	annotations := map[string]string{}
 	if utils.IsOktetoRepo() {
-		annotations[model.OktetoSampleAnnotation] = "true"
+		annotations[constants.OktetoSampleAnnotation] = "true"
 	}
 	return annotations
 }
 
-func translateServiceType(svc model.Service) apiv1.ServiceType {
+func translateServiceType(svc stack.Service) apiv1.ServiceType {
 	if svc.Public {
 		return apiv1.ServiceTypeLoadBalancer
 	}
 	return apiv1.ServiceTypeClusterIP
 }
 
-func translateVolumeMounts(svcName string, svc *model.Service) []apiv1.VolumeMount {
+func translateVolumeMounts(svcName string, svc *stack.Service) []apiv1.VolumeMount {
 	result := []apiv1.VolumeMount{}
 	for i, v := range svc.Volumes {
 		name := getVolumeClaimName(&v)
@@ -882,7 +886,7 @@ func translateVolumeMounts(svcName string, svc *model.Service) []apiv1.VolumeMou
 	return result
 }
 
-func getVolumeClaimName(v *model.StackVolume) string {
+func getVolumeClaimName(v *stack.StackVolume) string {
 	var name string
 	if v.LocalPath != "" {
 		name = v.LocalPath
@@ -892,7 +896,7 @@ func getVolumeClaimName(v *model.StackVolume) string {
 	return name
 }
 
-func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
+func translateSecurityContext(svc *stack.Service) *apiv1.SecurityContext {
 	if len(svc.CapAdd) == 0 && len(svc.CapDrop) == 0 && svc.User == nil {
 		return nil
 	}
@@ -917,7 +921,7 @@ func translateStorageClass(className string) *string {
 	return nil
 }
 
-func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
+func translateServiceEnvironment(svc *stack.Service) []apiv1.EnvVar {
 	result := []apiv1.EnvVar{}
 	for _, e := range svc.Environment {
 		if e.Name != "" {
@@ -927,7 +931,7 @@ func translateServiceEnvironment(svc *model.Service) []apiv1.EnvVar {
 	return result
 }
 
-func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
+func translateContainerPorts(svc *stack.Service) []apiv1.ContainerPort {
 	result := []apiv1.ContainerPort{}
 	sort.Slice(svc.Ports, func(i, j int) bool {
 		return svc.Ports[i].ContainerPort < svc.Ports[j].ContainerPort
@@ -938,7 +942,7 @@ func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 	return result
 }
 
-func translateServicePorts(svc model.Service) []apiv1.ServicePort {
+func translateServicePorts(svc stack.Service) []apiv1.ServicePort {
 	result := []apiv1.ServicePort{}
 	for _, p := range svc.Ports {
 		if !isServicePortAdded(p.ContainerPort, result) {
@@ -976,7 +980,7 @@ func isServicePortAdded(newPort int32, existentPorts []apiv1.ServicePort) bool {
 	return false
 }
 
-func translateResources(svc *model.Service) apiv1.ResourceRequirements {
+func translateResources(svc *stack.Service) apiv1.ResourceRequirements {
 	result := apiv1.ResourceRequirements{}
 	if svc.Resources != nil {
 		if svc.Resources.Limits.CPU.Value.Cmp(resource.MustParse("0")) > 0 {
@@ -1005,7 +1009,7 @@ func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 	return result
 }
 
-func getSvcProbe(svc *model.Service) *apiv1.Probe {
+func getSvcProbe(svc *stack.Service) *apiv1.Probe {
 	if svc.Healtcheck != nil {
 		var handler apiv1.Handler
 		if len(svc.Healtcheck.Test) != 0 {

@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 )
 
 func TestGetFiles(t *testing.T) {
@@ -29,10 +29,10 @@ func TestGetFiles(t *testing.T) {
 	}
 	defer func() {
 		os.RemoveAll(dir)
-		os.Unsetenv(model.OktetoFolderEnvVar)
+		os.Unsetenv(constants.OktetoFolderEnvVar)
 	}()
 
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+	os.Setenv(constants.OktetoFolderEnvVar, dir)
 	log := GetLogFile("test", "application")
 	expected := filepath.Join(dir, "test", "application", "syncthing.log")
 
