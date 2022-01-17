@@ -195,7 +195,7 @@ func copyDockerIgnore(originalPath, translatedPath string) error {
 				return err
 			}
 		} else {
-			log.Info("could not detect any .dockerignore on %s", originalDir)
+			log.Infof("could not detect any .dockerignore on %s", originalDir)
 		}
 	}
 	return nil
@@ -204,7 +204,7 @@ func copyDockerIgnore(originalPath, translatedPath string) error {
 func copyFile(orig, dest string) error {
 	input, err := ioutil.ReadFile(orig)
 	if err != nil {
-		log.Info("could not read %s dockerfile", orig)
+		log.Infof("could not read %s dockerfile", orig)
 		return err
 	}
 
