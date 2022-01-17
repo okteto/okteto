@@ -68,6 +68,8 @@ func IsTransientError(err error) bool {
 		return true
 	case strings.Contains(err.Error(), "Canceled desc") && strings.Contains(err.Error(), "the client connection is closing"):
 		return true
+	case strings.Contains(err.Error(), "Canceled desc") && strings.Contains(err.Error(), "context canceled"):
+		return true
 	default:
 		return false
 	}
@@ -85,5 +87,5 @@ func IsNotLoggedIntoRegistry(err error) bool {
 
 // IsBuildkitServiceUnavailable returns true when an error is because buildkit is unavailable
 func IsBuildkitServiceUnavailable(err error) bool {
-	return strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "500 Internal Server Error")
+	return strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "500 Internal Server Error") || strings.Contains(err.Error(), "context canceled")
 }
