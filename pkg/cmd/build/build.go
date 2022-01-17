@@ -125,19 +125,21 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
 		return err
 	}
 
-	if _, err := registry.GetImageTagWithDigest(buildOptions.Tag); err != nil {
-		log.Yellow(`Failed to push '%s' metadata to the registry:
-  %s,
-  Retrying ...`, buildOptions.Tag, err.Error())
-		success := true
-		err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
-		if err != nil {
-			success = false
-			log.Infof("Failed to build image: %s", err.Error())
+	if buildOptions.Tag != "" {
+		if _, err := registry.GetImageTagWithDigest(buildOptions.Tag); err != nil {
+			log.Yellow(`Failed to push '%s' metadata to the registry:
+	  %s,
+	  Retrying ...`, buildOptions.Tag, err.Error())
+			success := true
+			err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
+			if err != nil {
+				success = false
+				log.Infof("Failed to build image: %s", err.Error())
+			}
+			err = registry.GetErrorMessage(err, buildOptions.Tag)
+			analytics.TrackBuildPullError(okteto.Context().Builder, success)
+			return err
 		}
-		err = registry.GetErrorMessage(err, buildOptions.Tag)
-		analytics.TrackBuildPullError(okteto.Context().Builder, success)
-		return err
 	}
 
 	err = registry.GetErrorMessage(err, buildOptions.Tag)
