@@ -82,7 +82,8 @@ func IsLoggedIntoRegistryButDontHavePermissions(err error) bool {
 
 // IsNotLoggedIntoRegistry returns true when the error is because the user is not logged into the registry
 func IsNotLoggedIntoRegistry(err error) bool {
-	return strings.Contains(err.Error(), "failed to authorize: failed to fetch anonymous token")
+	return strings.Contains(err.Error(), "failed to authorize: failed to fetch anonymous token") ||
+		strings.Contains(err.Error(), "UNAUTHORIZED: authentication required")
 }
 
 // IsBuildkitServiceUnavailable returns true when an error is because buildkit is unavailable
