@@ -339,6 +339,8 @@ func buildIfImageNotFound(ctx context.Context, options build.BuildOptions) error
 			if err := build.Run(ctx, options); err != nil {
 				return err
 			}
+			log.Debugf("success building image before deploy %s", options.Tag)
+			return nil
 		}
 		return fmt.Errorf("error calling registry: %s", err.Error())
 	}
