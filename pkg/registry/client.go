@@ -22,7 +22,10 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-func clientOptions(registry string) remote.Option {
+func clientOptions(ref name.Reference) remote.Option {
+	registry := ref.Context().RegistryStr()
+	log.Debugf("calling registry %s", registry)
+
 	okRegistry := okteto.Context().Registry
 	if okRegistry == registry {
 		username := okteto.Context().UserID
@@ -43,10 +46,7 @@ func digestForReference(reference string) (string, error) {
 		return "", err
 	}
 
-	registry := ref.Context().RegistryStr()
-	log.Debugf("calling registry %s", registry)
-
-	options := clientOptions(registry)
+	options := clientOptions(ref)
 
 	img, err := remote.Get(ref, options)
 	if err != nil {
@@ -62,10 +62,7 @@ func configForReference(reference string) (v1.Config, error) {
 		return v1.Config{}, err
 	}
 
-	registry, _ := GetRegistryAndRepo(reference)
-	log.Debugf("calling registry %s", registry)
-
-	options := clientOptions(registry)
+	options := clientOptions(ref)
 
 	img, err := remote.Image(ref, options)
 	if err != nil {
