@@ -103,13 +103,8 @@ func TestBuildCommand(t *testing.T) {
 }
 
 func oktetoBuild(ctx context.Context, oktetoPath, oktetoManifestPath string) error {
-	log.Printf("okteto build %s", oktetoManifestPath)
-
-	// enable feature for using the manifest at build
-	os.Setenv("OKTETO_ENABLE_MANIFEST_V2", "true")
-
-	cmd := exec.Command(oktetoPath, "build", "-f", oktetoManifestPath, "-l", "debug")
-	cmd.Env = os.Environ()
+	cmd := exec.Command(oktetoPath, "build", "-f", oktetoManifestPath)
+	cmd.Env = append(os.Environ(), "OKTETO_ENABLE_MANIFEST_V2=true")
 	cmd.Dir = buildGitFolder
 	o, err := cmd.CombinedOutput()
 	if err != nil {
