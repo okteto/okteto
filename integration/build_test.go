@@ -52,7 +52,7 @@ func TestBuildCommand(t *testing.T) {
 	namespace := fmt.Sprintf("%s-%s", testRef, user)
 
 	t.Run(testName, func(t *testing.T) {
-		log.Printf("running test %s", testName)
+		t.Logf("setup test %s", testName)
 
 		// setup namespace for test
 		startNamespace := getCurrentNamespace()
@@ -61,14 +61,12 @@ func TestBuildCommand(t *testing.T) {
 		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 			t.Fatal(err)
 		}
-		log.Printf("created namespace %s \n", namespace)
 		defer deleteNamespace(ctx, oktetoPath, namespace)
 
 		// clone repo
 		if err := cloneGitRepo(ctx, buildGitRepo); err != nil {
 			t.Fatal(err)
 		}
-		log.Printf("cloned repo %s \n", buildGitRepo)
 		defer deleteGitRepo(ctx, buildGitFolder)
 
 		cwd, err := os.Getwd()
@@ -80,7 +78,6 @@ func TestBuildCommand(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		log.Printf("created tempdir: %s", dir)
 		defer os.RemoveAll(dir)
 
 		manifestPath := filepath.Join(dir, "okteto.yml")
@@ -88,14 +85,14 @@ func TestBuildCommand(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		t.Logf("running okteto build command...")
 		if err := oktetoBuild(ctx, oktetoPath, manifestPath); err != nil {
 			t.Fatal(err)
 		}
 
-		log.Println("checking at registry if the image has been built...")
+		t.Logf("checking at registry if the image has been built...")
 		expectedImageTag := fmt.Sprintf("%s/%s/%s:dev", okteto.Context().Registry, namespace, buildGitFolder)
 		if _, err := registry.GetImageTagWithDigest(expectedImageTag); err != nil {
-			log.Println("error getting the image digest")
 			t.Fatal(err)
 		}
 
