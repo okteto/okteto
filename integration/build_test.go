@@ -26,7 +26,6 @@ import (
 	"runtime"
 	"strings"
 	"testing"
-	"text/template"
 	"time"
 
 	"github.com/okteto/okteto/pkg/okteto"
@@ -54,7 +53,6 @@ func TestBuildCommand(t *testing.T) {
 	t.Run(testName, func(t *testing.T) {
 		t.Logf("setup test %s", testName)
 
-		// setup namespace for test
 		startNamespace := getCurrentNamespace()
 		defer changeToNamespace(ctx, oktetoPath, startNamespace)
 
@@ -63,7 +61,6 @@ func TestBuildCommand(t *testing.T) {
 		}
 		defer deleteNamespace(ctx, oktetoPath, namespace)
 
-		// clone repo
 		if err := cloneGitRepo(ctx, buildGitRepo); err != nil {
 			t.Fatal(err)
 		}
@@ -85,7 +82,7 @@ func TestBuildCommand(t *testing.T) {
   react-getting-started:
     context: .
 `
-		if err := writeManifestV2(manifestPath, manifestContent, nil); err != nil {
+		if err := writeManifestV2(manifestPath, manifestContent); err != nil {
 			t.Fatal(err)
 		}
 
@@ -115,19 +112,14 @@ func oktetoBuild(ctx context.Context, oktetoPath, oktetoManifestPath string) err
 	return nil
 }
 
-type manifestV2TemplateVars struct {
-	Name string
-}
-
-func writeManifestV2(path, content string, vars *manifestV2TemplateVars) error {
+func writeManifestV2(path, content string) error {
 	oFile, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer oFile.Close()
 
-	template := template.Must(template.New("manifest_v2").Parse(content))
-	if err := template.Execute(oFile, vars); err != nil {
+	if err := os.WriteFile(oFile.Name(), []byte(content), 0600); err != nil {
 		return err
 	}
 
