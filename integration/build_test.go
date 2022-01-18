@@ -81,7 +81,11 @@ func TestBuildCommand(t *testing.T) {
 		defer os.RemoveAll(dir)
 
 		manifestPath := filepath.Join(dir, "okteto.yml")
-		if err := writeManifestV2(manifestPath, testRef); err != nil {
+		manifestContent := `build:
+  react-getting-started:
+    context: .
+`
+		if err := writeManifestV2(manifestPath, manifestContent, nil); err != nil {
 			t.Fatal(err)
 		}
 
@@ -111,29 +115,19 @@ func oktetoBuild(ctx context.Context, oktetoPath, oktetoManifestPath string) err
 	return nil
 }
 
-var (
-	v2ManifestTemplate = template.Must(template.New("manifest_v2").Parse(v2ManifestFormat))
-)
-
-const (
-	v2ManifestFormat = `build:
-  react-getting-started:
-    context: .
-`
-)
-
-type templateVars struct {
+type manifestV2TemplateVars struct {
 	Name string
 }
 
-func writeManifestV2(path, name string) error {
+func writeManifestV2(path, content string, vars *manifestV2TemplateVars) error {
 	oFile, err := os.Create(path)
 	if err != nil {
 		return err
 	}
 	defer oFile.Close()
 
-	if err := v2ManifestTemplate.Execute(oFile, templateVars{Name: name}); err != nil {
+	template := template.Must(template.New("manifest_v2").Parse(content))
+	if err := template.Execute(oFile, vars); err != nil {
 		return err
 	}
 
