@@ -19,7 +19,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -49,45 +48,18 @@ func TestDeployFromManifest(t *testing.T) {
 		chartFilename    = "Chart.yaml"
 		templateFilename = "k8s.yaml"
 		releaseName      = "hello-world"
-	)
-
-	expectedImage := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, repoDir)
-	t.Logf("expected image tag to be built and deployed: %s", expectedImage)
-
-	startNamespace := getCurrentNamespace()
-
-	if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := cloneGitRepo(ctx, gitRepo); err != nil {
-		t.Fatal(err)
-	}
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	manifestPath := filepath.Join(cwd, repoDir)
-	manifestContent := `build:
+		manifestContent  = `build:
   app:
     context: .
 deploy:
   - helm upgrade --install hello-world chart --set app.image=${build.app.image}`
-
-	if err := writeFile(manifestPath, manifestFilename, manifestContent); err != nil {
-		t.Fatal(err)
-	}
-
-	chartContent := `apiVersion: v2
+		chartContent = `apiVersion: v2
 name: hello-world
 description: A React application in Kubernetes
 type: application
 version: 0.1.0
 appVersion: 1.0.0`
-
-	templateContent := `apiVersion: apps/v1
+		templateContent = `apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hello-world
@@ -119,6 +91,30 @@ spec:
       port: 8080
   selector:
     app: hello-world`
+	)
+
+	var (
+		expectedImage   = fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, repoDir)
+		originNamespace = getCurrentNamespace()
+	)
+
+	if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := cloneGitRepo(ctx, gitRepo); err != nil {
+		t.Fatal(err)
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	manifestPath := filepath.Join(cwd, repoDir)
+	if err := writeFile(manifestPath, manifestFilename, manifestContent); err != nil {
+		t.Fatal(err)
+	}
 
 	pathToChartDir := filepath.Join(cwd, repoDir, chartDir)
 	if err := os.Mkdir(pathToChartDir, 0777); err != nil {
@@ -137,7 +133,7 @@ spec:
 	}
 
 	t.Cleanup(func() {
-		changeToNamespace(ctx, oktetoPath, startNamespace)
+		changeToNamespace(ctx, oktetoPath, originNamespace)
 		deleteNamespace(ctx, oktetoPath, testNamespace)
 		deleteGitRepo(ctx, repoDir)
 	})
@@ -323,8 +319,4 @@ func expectAppToBeRunning(releaseName, namespace string) error {
 		return fmt.Errorf("expected app content")
 	}
 	return nil
-}
-
-func writeFile(path, filename, content string) error {
-	return ioutil.WriteFile(filepath.Join(path, filename), []byte(content), 0777)
 }
