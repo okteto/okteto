@@ -102,9 +102,9 @@ func Init() *cobra.Command {
 
 // Run runs the sequence to generate okteto.yml
 func Run(devPath, language, workDir string, overwrite bool) error {
-	fmt.Println("This command walks you through creating an okteto manifest.")
-	fmt.Println("It only covers the most common items, and tries to guess sensible defaults.")
-	fmt.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
+	log.Println("This command walks you through creating an okteto manifest.")
+	log.Println("It only covers the most common items, and tries to guess sensible defaults.")
+	log.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
 	ctx := context.Background()
 	devPath, err := validateDevPath(devPath, overwrite)
 	if err != nil {

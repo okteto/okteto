@@ -52,10 +52,7 @@ type Options struct {
 	Namespace    string
 	Variables    []string
 	Timeout      time.Duration
-	OutputMode   string
 	Manifest     *model.Manifest
-
-	show bool
 }
 
 type endpoints struct {
@@ -98,10 +95,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(model.OktetoWithinDeployCommandContextEnvVar, "false")
 
-			if options.OutputMode != "json" {
-				options.show = true
-			}
-			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.ManifestPath, options.show); err != nil {
+			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.ManifestPath); err != nil {
 				return err
 			}
 
@@ -178,7 +172,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				getManifest: contextCMD.GetManifest,
 
 				kubeconfig: kubeconfig,
-				executor:   utils.NewExecutor(options.OutputMode),
+				executor:   utils.NewExecutor(log.GetOutputFormat()),
 				proxy: newProxy(proxyConfig{
 					port:  port,
 					token: sessionToken,
@@ -195,7 +189,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the application is deployed")
 
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
-	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "plain", "show plain/json deploy output")
 
 	return cmd
 }
@@ -209,7 +202,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 	var err error
 	// Read manifest file with the commands to be executed
-	opts.Manifest, err = dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Show: opts.show})
+	opts.Manifest, err = dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
 	if err != nil {
 		log.Infof("could not find manifest file to be executed: %s", err)
 		return err
@@ -238,15 +231,13 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	)
 
 	for _, command := range opts.Manifest.Deploy.Commands {
+		log.SetStage(command)
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			log.Infof("error executing command '%s': %s", command, err.Error())
-			if opts.OutputMode == "json" {
-				utils.DisplayJsonMessage("error", err.Error(), command)
-				return nil
-			}
 			return fmt.Errorf("error executing command '%s': %s", command, err.Error())
 		}
 	}
+	log.SetStage("")
 
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		if err := dc.showEndpoints(ctx, opts); err != nil {
@@ -430,9 +421,9 @@ func (dc *deployCommand) showEndpoints(ctx context.Context, opts *Options) error
 		sort.Slice(eps, func(i, j int) bool {
 			return len(eps[i]) < len(eps[j])
 		})
-		switch opts.OutputMode {
+		switch log.GetOutputFormat() {
 		case "json":
-			utils.DisplayJsonMessage("info", fmt.Sprintf("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - ")), "")
+			log.Println(fmt.Sprintf("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - ")))
 		default:
 			log.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
 		}

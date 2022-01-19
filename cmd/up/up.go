@@ -91,7 +91,7 @@ func Up() *cobra.Command {
 
 			ctx := context.Background()
 
-			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext, Show: true}
+			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
 			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				if !strings.Contains(err.Error(), "okteto init") {
@@ -117,7 +117,7 @@ func Up() *cobra.Command {
 			}
 
 			if syncthing.ShouldUpgrade() {
-				fmt.Println("Installing dependencies...")
+				log.Println("Installing dependencies...")
 				if err := downloadSyncthing(); err != nil {
 					log.Infof("failed to upgrade syncthing: %s", err)
 
@@ -126,7 +126,7 @@ func Up() *cobra.Command {
 					}
 
 					log.Yellow("couldn't upgrade syncthing, will try again later")
-					fmt.Println()
+					log.Println()
 				} else {
 					log.Success("Dependencies successfully installed")
 				}
@@ -282,7 +282,7 @@ func (up *upContext) start() error {
 	case <-stop:
 		log.Infof("CTRL+C received, starting shutdown sequence")
 		up.shutdown()
-		fmt.Println()
+		log.Println()
 	case err := <-up.Exit:
 		if err != nil {
 			log.Infof("exit signal received due to error: %s", err)
@@ -343,7 +343,7 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 	for {
 		select {
 		case err := <-up.CommandResult:
-			fmt.Println()
+			log.Println()
 			if err != nil {
 				log.Infof("command failed: %s", err)
 				if errors.IsTransient(err) {
@@ -548,5 +548,5 @@ func printDisplayContext(dev *model.Dev, divertURL string) {
 	if divertURL != "" {
 		log.Println(fmt.Sprintf("    %s       %s", log.BlueString("URL:"), divertURL))
 	}
-	fmt.Println()
+	log.Println()
 }

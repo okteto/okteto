@@ -67,7 +67,7 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 	}
 
 	authorizationURL := h.AuthorizationURL()
-	fmt.Println("Authentication will continue in your default browser")
+	log.Println("Authentication will continue in your default browser")
 	if err := open.Start(authorizationURL); err != nil {
 		if strings.Contains(err.Error(), "executable file not found in $PATH") {
 			return nil, errors.UserError{
@@ -78,8 +78,8 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 		log.Errorf("Something went wrong opening your browser: %s\n", err)
 	}
 
-	fmt.Printf("You can also open a browser and navigate to the following address:\n")
-	fmt.Println(authorizationURL)
+	log.Printf("You can also open a browser and navigate to the following address:\n")
+	log.Println(authorizationURL)
 
 	return EndWithBrowser(ctx, h)
 }

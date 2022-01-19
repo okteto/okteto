@@ -211,7 +211,7 @@ func buildWithDockerDaemon(ctx context.Context, buildOptions BuildOptions, cli *
 		}
 		return err
 	}
-	fmt.Print(imageID)
+	log.Print(imageID)
 	return nil
 
 }

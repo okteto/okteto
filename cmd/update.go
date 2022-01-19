@@ -39,6 +39,7 @@ func Update() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("could not retrieve version")
 			}
+
 			if isUpdateAvailable(currentVersion) {
 				displayUpdateSteps()
 			} else {
@@ -75,20 +76,20 @@ func isUpdateAvailable(currentVersion *semver.Version) bool {
 }
 
 func displayUpdateSteps() {
-	fmt.Println("You can update okteto with the following:")
+	log.Println("You can update okteto with the following:")
 	switch {
 	case runtime.GOOS == "darwin" || runtime.GOOS == "linux":
-		fmt.Print(`
+		log.Print(`
 # Using installation script:
 curl https://get.okteto.com -sSfL | sh`)
 		if runtime.GOOS == "darwin" {
-			fmt.Print(`
+			log.Print(`
 
 # Using brew:
 brew upgrade okteto`)
 		}
 	case runtime.GOOS == "windows":
-		fmt.Print(`# Using manual installation:
+		log.Print(`# Using manual installation:
 1.- Download https://downloads.okteto.com/cli/okteto.exe
 2.- Add downloaded file to your $PATH
 

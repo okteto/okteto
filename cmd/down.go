@@ -51,7 +51,7 @@ func Down() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext, Show: true}
+			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
 			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				return err

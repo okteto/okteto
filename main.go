@@ -75,6 +75,7 @@ func main() {
 	ctx := context.Background()
 	log.Init(logrus.WarnLevel)
 	var logLevel string
+	var outputMode string
 
 	if err := analytics.Init(); err != nil {
 		log.Infof("error initializing okteto analytics: %s", err)
@@ -90,6 +91,7 @@ func main() {
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			ccmd.SilenceUsage = true
 			log.SetLevel(logLevel)
+			log.SetOutputFormat(outputMode)
 			log.Infof("started %s", strings.Join(os.Args, " "))
 
 		},
@@ -99,6 +101,8 @@ func main() {
 	}
 
 	root.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "warn", "amount of information outputted (debug, info, warn, error)")
+	root.PersistentFlags().StringVarP(&outputMode, "output", "o", "tty", "output format (tty, plain, json)")
+
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())

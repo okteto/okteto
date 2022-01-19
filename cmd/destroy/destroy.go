@@ -56,10 +56,7 @@ type Options struct {
 	Namespace      string
 	DestroyVolumes bool
 	ForceDestroy   bool
-	OutputMode     string
 	K8sContext     string
-
-	show bool
 }
 
 type destroyCommand struct {
@@ -84,10 +81,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if options.OutputMode != "json" {
-				options.show = true
-			}
-			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.ManifestPath, options.show); err != nil {
+			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.ManifestPath); err != nil {
 				return err
 			}
 
@@ -123,7 +117,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			c := &destroyCommand{
 				getManifest: contextCMD.GetManifest,
 
-				executor:    utils.NewExecutor(options.OutputMode),
+				executor:    utils.NewExecutor(log.GetOutputFormat()),
 				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:     secrets.NewSecrets(k8sClient),
 			}
@@ -133,7 +127,6 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
-	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "tty", "show plain/tty deploy output")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the application destroy even if there is an error executing the custom destroy commands defined in the manifest")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the application was deployed")
@@ -143,7 +136,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Options) error {
 	// Read manifest file with the commands to be executed
-	manifest, err := dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace, K8sContext: opts.K8sContext, Show: opts.show})
+	manifest, err := dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace, K8sContext: opts.K8sContext})
 	if err != nil {
 		// Log error message but application can still be deleted
 		log.Infof("could not find manifest file to be executed: %s", err)

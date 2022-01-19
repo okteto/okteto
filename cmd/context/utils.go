@@ -41,7 +41,6 @@ type ManifestOptions struct {
 	Namespace  string
 	Filename   string
 	K8sContext string
-	Show       bool
 }
 
 func getKubernetesContextList(filterOkteto bool) []string {
@@ -82,24 +81,27 @@ func isCreateNewContextOption(option string) bool {
 	return option == newOEOption
 }
 
-func askForOktetoURL() string {
+func askForOktetoURL() (string, error) {
 	clusterURL := okteto.CloudURL
 	ctxStore := okteto.ContextStore()
 	if oCtx, ok := ctxStore.Contexts[ctxStore.CurrentContext]; ok && oCtx.IsOkteto {
 		clusterURL = ctxStore.CurrentContext
 	}
 
-	log.Question("Enter your Okteto URL [%s]: ", clusterURL)
+	err := log.Question("Enter your Okteto URL [%s]: ", clusterURL)
+	if err != nil {
+		return "", err
+	}
 	fmt.Scanln(&clusterURL)
 
 	url, err := url.Parse(clusterURL)
 	if err != nil {
-		return ""
+		return "", nil
 	}
 	if url.Scheme == "" {
 		url.Scheme = "https"
 	}
-	return strings.TrimSuffix(url.String(), "/")
+	return strings.TrimSuffix(url.String(), "/"), nil
 }
 
 func isValidCluster(cluster string) bool {
@@ -145,7 +147,7 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 	ctxOptions := &ContextOptions{
 		Context:   ctxResource.Context,
 		Namespace: ctxResource.Namespace,
-		Show:      opts.Show,
+		Show:      true,
 	}
 	if err := Run(ctx, ctxOptions); err != nil {
 		return nil, err
@@ -188,10 +190,10 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 }
 
 //LoadManifestV2WithContext initializes the okteto context taking into account command flags and manifest namespace/context fields
-func LoadManifestV2WithContext(ctx context.Context, namespace, path string, show bool) error {
+func LoadManifestV2WithContext(ctx context.Context, namespace, path string) error {
 	ctxOptions := &ContextOptions{
 		Namespace: namespace,
-		Show:      show,
+		Show:      true,
 	}
 
 	cwd, err := os.Getwd()

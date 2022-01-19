@@ -48,7 +48,7 @@ func Exec() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext, Show: true}
+			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
 			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				return err

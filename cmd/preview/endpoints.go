@@ -23,6 +23,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -93,10 +94,10 @@ func executeListPreviewEndpoints(ctx context.Context, name, output string) error
 		if err != nil {
 			return err
 		}
-		fmt.Println(string(bytes))
+		log.Println(string(bytes))
 	case "md":
 		if len(endpointList) == 0 {
-			fmt.Printf("There are no available endpoints for preview '%s'\n", name)
+			log.Printf("There are no available endpoints for preview '%s'\n", name)
 		} else {
 			endpoints := make([]string, 0)
 			for _, endpoint := range endpointList {
@@ -105,14 +106,14 @@ func executeListPreviewEndpoints(ctx context.Context, name, output string) error
 			sort.Slice(endpoints, func(i, j int) bool {
 				return len(endpoints[i]) < len(endpoints[j])
 			})
-			fmt.Printf("Available endpoints for preview [%s](%s):\n", name, getPreviewURL(name))
+			log.Printf("Available endpoints for preview [%s](%s):\n", name, getPreviewURL(name))
 			for _, e := range endpoints {
-				fmt.Printf("\n - [%s](%s)\n", e, e)
+				log.Printf("\n - [%s](%s)\n", e, e)
 			}
 		}
 	default:
 		if len(endpointList) == 0 {
-			fmt.Printf("There are no available endpoints for preview '%s'\n", name)
+			log.Printf("There are no available endpoints for preview '%s'\n", name)
 		} else {
 			endpoints := make([]string, 0)
 			for _, endpoint := range endpointList {
@@ -121,7 +122,7 @@ func executeListPreviewEndpoints(ctx context.Context, name, output string) error
 			sort.Slice(endpoints, func(i, j int) bool {
 				return len(endpoints[i]) < len(endpoints[j])
 			})
-			fmt.Printf("Available endpoints for preview '%s':\n  - %s\n", name, strings.Join(endpoints, "\n  - "))
+			log.Printf("Available endpoints for preview '%s':\n  - %s\n", name, strings.Join(endpoints, "\n  - "))
 		}
 	}
 	return nil
