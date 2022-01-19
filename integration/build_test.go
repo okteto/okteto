@@ -39,11 +39,11 @@ func TestBuildCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	const (
-		gitRepo          = "git@github.com:okteto/react-getting-started.git"
-		repoDir          = "react-getting-started"
+		gitRepo          = "git@github.com:okteto/go-getting-started.git"
+		repoDir          = "go-getting-started"
 		manifestFilename = "okteto.yml"
 		manifestContent  = `build:
-  react-getting-started:
+  app:
     context: .`
 	)
 
@@ -51,7 +51,7 @@ func TestBuildCommand(t *testing.T) {
 		testID           = strings.ToLower(fmt.Sprintf("TestBuildCommand-%s-%d", runtime.GOOS, time.Now().Unix()))
 		testNamespace    = fmt.Sprintf("%s-%s", testID, user)
 		originNamespace  = getCurrentNamespace()
-		expectedImageTag = fmt.Sprintf("%s/%s/%s:dev", okteto.Context().Registry, testNamespace, repoDir)
+		expectedImageTag = fmt.Sprintf("%s/%s/%s:dev", okteto.Context().Registry, testNamespace, "app")
 	)
 
 	if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
@@ -76,7 +76,7 @@ func TestBuildCommand(t *testing.T) {
 	t.Cleanup(func() {
 		changeToNamespace(ctx, oktetoPath, originNamespace)
 		deleteNamespace(ctx, oktetoPath, testNamespace)
-		deleteGitRepo(ctx, gitRepo)
+		deleteGitRepo(ctx, repoDir)
 
 	})
 
@@ -86,7 +86,8 @@ func TestBuildCommand(t *testing.T) {
 			t.Fatal("image is already at registry")
 		}
 
-		if err := runOktetoBuild(ctx, oktetoPath, pathToManifestFile, repoDir); err != nil {
+		_, err := runOktetoBuild(ctx, oktetoPath, pathToManifestFile, repoDir)
+		if err != nil {
 			t.Fatal(err)
 		}
 
@@ -97,13 +98,13 @@ func TestBuildCommand(t *testing.T) {
 	})
 }
 
-func runOktetoBuild(ctx context.Context, oktetoPath, pathToManifestFile, repoDir string) error {
-	cmd := exec.Command(oktetoPath, "build", "-f", pathToManifestFile)
+func runOktetoBuild(ctx context.Context, oktetoPath, pathToManifestFile, repoDir string) (string, error) {
+	cmd := exec.Command(oktetoPath, "build", "-f", pathToManifestFile, "-l", "debug")
 	cmd.Env = append(os.Environ(), "OKTETO_ENABLE_MANIFEST_V2=true")
 	cmd.Dir = repoDir
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto build failed: %s - %s", string(o), err)
+		return "", fmt.Errorf("okteto build failed: %s - %s", string(o), err)
 	}
-	return nil
+	return string(o), nil
 }
