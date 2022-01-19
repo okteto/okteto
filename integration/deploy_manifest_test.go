@@ -98,10 +98,6 @@ spec:
 		originNamespace = getCurrentNamespace()
 	)
 
-	if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := cloneGitRepo(ctx, gitRepo); err != nil {
 		t.Fatal(err)
 	}
@@ -129,6 +125,10 @@ spec:
 		t.Fatal(err)
 	}
 	if err := writeFile(pathToTemplateDir, templateFilename, templateContent); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
 		t.Fatal(err)
 	}
 
@@ -238,7 +238,7 @@ func runOktetoDeploy(oktetoPath, repoDir string) (string, error) {
 	cmd.Dir = repoDir
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("running command: \nerror: %s \noutput: %s", err.Error(), string(o))
+		return "", fmt.Errorf("okteto deploy failed: \nerror: %s \noutput: %s", err.Error(), string(o))
 	}
 	return string(o), nil
 }
@@ -249,7 +249,7 @@ func runOktetoDeployForceBuild(oktetoPath, repoDir string) (string, error) {
 	cmd.Dir = repoDir
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return string(o), fmt.Errorf("running command: \nerror: %s \noutput: %s", err.Error(), string(o))
+		return "", fmt.Errorf("okteto deploy --build failed: \nerror: %s \noutput: %s", err.Error(), string(o))
 	}
 	return string(o), nil
 }

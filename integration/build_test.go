@@ -54,10 +54,6 @@ func TestBuildCommand(t *testing.T) {
 		expectedImageTag = fmt.Sprintf("%s/%s/%s:dev", okteto.Context().Registry, testNamespace, "app")
 	)
 
-	if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := cloneGitRepo(ctx, gitRepo); err != nil {
 		t.Fatal(err)
 	}
@@ -72,6 +68,10 @@ func TestBuildCommand(t *testing.T) {
 		t.Fatal(err)
 	}
 	pathToManifestFile := filepath.Join(pathToManifestDir, manifestFilename)
+
+	if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
+		t.Fatal(err)
+	}
 
 	t.Cleanup(func() {
 		changeToNamespace(ctx, oktetoPath, originNamespace)
@@ -88,7 +88,7 @@ func TestBuildCommand(t *testing.T) {
 
 		_, err := runOktetoBuild(ctx, oktetoPath, pathToManifestFile, repoDir)
 		if err != nil {
-			t.Fatal(err)
+			t.Fatalf(err.Error())
 		}
 
 		if _, err := registry.GetImageTagWithDigest(expectedImageTag); err != nil {
@@ -104,7 +104,7 @@ func runOktetoBuild(ctx context.Context, oktetoPath, pathToManifestFile, repoDir
 	cmd.Dir = repoDir
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("okteto build failed: %s - %s", string(o), err)
+		return "", fmt.Errorf("okteto build failed: \nerror: %s \noutput: %s", err.Error(), string(o))
 	}
 	return string(o), nil
 }
