@@ -37,8 +37,6 @@ func TestDeployFromManifest(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	testID := strings.ToLower(fmt.Sprintf("DeployFromManifest-%s-%d", runtime.GOOS, time.Now().Unix()))
-	testNamespace := fmt.Sprintf("%s-%s", testID, user)
 
 	const (
 		gitRepo          = "git@github.com:okteto/go-getting-started.git"
@@ -94,6 +92,8 @@ spec:
 	)
 
 	var (
+		testID          = strings.ToLower(fmt.Sprintf("DeployFromManifest-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
 		expectedImage   = fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, repoDir)
 		originNamespace = getCurrentNamespace()
 	)
