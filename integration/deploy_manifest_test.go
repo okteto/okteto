@@ -216,7 +216,7 @@ spec:
 
 	})
 
-	t.Run("okteto deploy --build should force the build an image wont change if no code changes", func(t *testing.T) {
+	t.Run("okteto deploy --build should force the build an image does not change if no code changes", func(t *testing.T) {
 
 		imageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
 		if err != nil {
