@@ -18,12 +18,15 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
+
+var initWriter sync.Once
 
 var (
 	redString = color.New(color.FgHiRed).SprintfFunc()
@@ -132,46 +135,91 @@ func IsDebug() bool {
 
 // Debug writes a debug-level log
 func Debug(args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Debug(args...)
 }
 
 // Debugf writes a debug-level log with a format
 func Debugf(format string, args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Debugf(format, args...)
 }
 
 // Info writes a info-level log
 func Info(args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Info(args...)
 }
 
 // Infof writes a info-level log with a format
 func Infof(format string, args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Infof(format, args...)
 }
 
 // Error writes a error-level log
 func Error(args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Error(args...)
 }
 
 // Errorf writes a error-level log with a format
 func Errorf(format string, args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Errorf(format, args...)
 }
 
 // Fatalf writes a error-level log with a format
 func Fatalf(format string, args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Fatalf(format, args...)
 }
 
 // Yellow writes a line in yellow
 func Yellow(format string, args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Yellow(format, args...)
 }
 
 // Green writes a line in green
 func Green(format string, args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Green(format, args...)
 }
 
@@ -187,50 +235,100 @@ func BlueBackgroundString(format string, args ...interface{}) string {
 
 // Success prints a message with the success symbol first, and the text in green
 func Success(format string, args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Success(format, args...)
 }
 
 // Information prints a message with the information symbol first, and the text in blue
 func Information(format string, args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Information(format, args...)
 }
 
 // Question prints a message with the question symbol first, and the text in magenta
 func Question(format string, args ...interface{}) error {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	return log.writer.Question(format, args...)
 }
 
 // Warning prints a message with the warning symbol first, and the text in yellow
 func Warning(format string, args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Warning(format, args...)
 }
 
 // Hint prints a message with the text in blue
 func Hint(format string, args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Hint(format, args...)
 }
 
 // Fail prints a message with the error symbol first, and the text in red
 func Fail(format string, args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Fail(format, args...)
 }
 
 // Println writes a line with colors
 func Println(args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Println(args...)
 }
 
 // Print writes a line with colors
 func Print(args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Print(args...)
 }
 
 // Printf writes a line with format
 func Printf(format string, args ...interface{}) {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	log.writer.Printf(format, args...)
 }
 
 //IsInteractive checks if the writer is interactive
 func IsInteractive() bool {
+	initWriter.Do(func() {
+		if log.writer == nil {
+			Init(logrus.WarnLevel)
+		}
+	})
 	return log.writer.IsInteractive()
 }
