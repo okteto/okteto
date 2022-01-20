@@ -194,7 +194,9 @@ func query(ctx context.Context, query interface{}, variables map[string]interfac
 		if isAPITransientErr(err) {
 			err = client.Query(ctx, query, variables)
 		}
-		return translateAPIErr(err)
+		if err != nil {
+			return translateAPIErr(err)
+		}
 	}
 	return nil
 }
