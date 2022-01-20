@@ -143,7 +143,7 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
+	cfg, _ := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
 	assert.Nil(t, cfg)
 }
 
@@ -194,7 +194,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
 			}
-			cfg, err := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
+			cfg, _ := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
 			assert.Nil(t, cfg)
 		})
 	}
@@ -315,7 +315,7 @@ func TestDestroyWithError(t *testing.T) {
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
 			}
-			cfg, err := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
+			cfg, _ := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
 			assert.Nil(t, cfg)
 		})
 	}
@@ -517,7 +517,7 @@ func TestDestroyWithoutError(t *testing.T) {
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
 			}
-			cfg, err := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
+			cfg, _ := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
 			assert.Nil(t, cfg)
 		})
 	}
@@ -557,7 +557,7 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
+	cfg, _ := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
 	assert.Nil(t, cfg)
 }
 
@@ -595,6 +595,6 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
+	cfg, _ := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
 	assert.Nil(t, cfg)
 }
