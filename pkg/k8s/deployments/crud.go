@@ -19,7 +19,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -115,7 +115,7 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 		return nil, err
 	}
 	if len(dList.Items) == 0 {
-		return nil, errors.ErrNotFound
+		return nil, oktetoErrors.ErrNotFound
 	}
 	validDeployments := []*appsv1.Deployment{}
 	for i, d := range dList.Items {
@@ -134,14 +134,14 @@ func CheckConditionErrors(deployment *appsv1.Deployment, dev *model.Dev) error {
 	for _, c := range deployment.Status.Conditions {
 		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
 			if strings.Contains(c.Message, "exceeded quota") {
-				oktetoLog.Infof("%s: %s", errors.ErrQuota, c.Message)
+				oktetoLog.Infof("%s: %s", oktetoErrors.ErrQuota, c.Message)
 				if strings.Contains(c.Message, "requested: pods=") {
 					return fmt.Errorf("quota exceeded, you have reached the maximum number of pods per namespace")
 				}
 				if strings.Contains(c.Message, "requested: requests.storage=") {
 					return fmt.Errorf("quota exceeded, you have reached the maximum storage per namespace")
 				}
-				return errors.ErrQuota
+				return oktetoErrors.ErrQuota
 			} else if isResourcesRelatedError(c.Message) {
 				return getResourceLimitError(c.Message, dev)
 			}
@@ -189,7 +189,7 @@ func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (
 		return result, nil
 	}
 
-	if !errors.IsNotFound(err) {
+	if !oktetoErrors.IsNotFound(err) {
 		return nil, err
 	}
 
@@ -207,7 +207,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 	dClient := c.AppsV1().Deployments(namespace)
 	err := dClient.Delete(ctx, name, metav1.DeleteOptions{GracePeriodSeconds: pointer.Int64Ptr(0)})
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if oktetoErrors.IsNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("error deleting kubernetes deployment: %s", err)

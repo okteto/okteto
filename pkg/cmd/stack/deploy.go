@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/forward"
@@ -169,7 +169,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		return errors.ErrIntSig
+		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
@@ -377,7 +377,7 @@ func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.St
 func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) error {
 	d := translateDeployment(svcName, s)
 	old, err := c.AppsV1().Deployments(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return fmt.Errorf("error getting deployment of service '%s': %s", svcName, err.Error())
 	}
 	isNewDeployment := old == nil || old.Name == ""
@@ -406,7 +406,7 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) error {
 	sfs := translateStatefulSet(svcName, s)
 	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return fmt.Errorf("error getting statefulset of service '%s': %s", svcName, err.Error())
 	}
 	if old == nil || old.Name == "" {
@@ -441,7 +441,7 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) error {
 	job := translateJob(svcName, s)
 	old, err := c.BatchV1().Jobs(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return fmt.Errorf("error getting job of service '%s': %s", svcName, err.Error())
 	}
 	isNewJob := old == nil || old.Name == ""
@@ -470,7 +470,7 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 	pvc := translatePersistentVolumeClaim(volumeName, s)
 
 	old, err := c.CoreV1().PersistentVolumeClaims(s.Namespace).Get(ctx, pvc.Name, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return fmt.Errorf("error getting volume '%s': %s", pvc.Name, err.Error())
 	}
 	if old == nil || old.Name == "" {
@@ -513,7 +513,7 @@ func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *i
 	}
 	old, err := c.Get(ctx, ingressName, s.Namespace)
 	if err != nil {
-		if !errors.IsNotFound(err) {
+		if !oktetoErrors.IsNotFound(err) {
 			return fmt.Errorf("error getting ingress '%s': %s", ingressName, err.Error())
 		}
 		return c.Create(ctx, iModel)

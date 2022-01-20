@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -73,7 +73,7 @@ func GetImageTagWithDigest(imageTag string) (string, error) {
 	digest, err := c.ManifestDigest(repoName, tag)
 	if err != nil {
 		if strings.Contains(err.Error(), "status=404") {
-			return "", errors.ErrNotFound
+			return "", oktetoErrors.ErrNotFound
 		}
 		return "", fmt.Errorf("error getting image tag digest: %s", err.Error())
 	}

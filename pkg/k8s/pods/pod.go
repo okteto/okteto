@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/events"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -48,7 +48,7 @@ func GetBySelector(ctx context.Context, namespace string, selector map[string]st
 	}
 
 	if len(ps) == 0 {
-		return nil, errors.ErrNotFound
+		return nil, oktetoErrors.ErrNotFound
 	}
 
 	r := ps[0]
@@ -104,7 +104,7 @@ func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, c kubernetes
 			}
 		}
 	}
-	return nil, errors.ErrNotFound
+	return nil, oktetoErrors.ErrNotFound
 }
 
 //GetPodByReplicaSet returns a pod of a given replicaset
@@ -131,7 +131,7 @@ func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, c kuberne
 			}
 		}
 	}
-	return nil, errors.ErrNotFound
+	return nil, oktetoErrors.ErrNotFound
 }
 
 //GetUserByPod returns the current user of a running pod
@@ -215,7 +215,7 @@ func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interf
 			GracePeriodSeconds: pointer.Int64Ptr(0),
 		},
 	)
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return err
 	}
 	return nil

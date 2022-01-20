@@ -29,7 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -66,7 +66,7 @@ func Up() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
-				return errors.ErrNotInDevContainer
+				return oktetoErrors.ErrNotInDevContainer
 			}
 
 			u := utils.UpgradeAvailable()
@@ -178,7 +178,7 @@ func Up() *cobra.Command {
 				switch err.(type) {
 				default:
 					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
-				case errors.CommandError:
+				case oktetoErrors.CommandError:
 					oktetoLog.Infof("CommandError: %v", err)
 				}
 
@@ -319,13 +319,13 @@ func (up *upContext) activateLoop() {
 		if err != nil {
 			oktetoLog.Infof("activate failed with: %s", err)
 
-			if err == errors.ErrLostSyncthing {
+			if err == oktetoErrors.ErrLostSyncthing {
 				isTransientError = false
 				iter = 0
 				continue
 			}
 
-			if errors.IsTransient(err) {
+			if oktetoErrors.IsTransient(err) {
 				isTransientError = true
 				continue
 			}
@@ -346,11 +346,11 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 			oktetoLog.Println()
 			if err != nil {
 				oktetoLog.Infof("command failed: %s", err)
-				if errors.IsTransient(err) {
+				if oktetoErrors.IsTransient(err) {
 					return err
 				}
-				return errors.CommandError{
-					E:      errors.ErrCommandFailed,
+				return oktetoErrors.CommandError{
+					E:      oktetoErrors.ErrCommandFailed,
 					Reason: err,
 				}
 			}
@@ -359,7 +359,7 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 			return nil
 
 		case err := <-up.Disconnect:
-			if err == errors.ErrInsufficientSpace {
+			if err == oktetoErrors.ErrInsufficientSpace {
 				return up.getInsufficientSpaceError(err)
 			}
 			return err
@@ -381,7 +381,7 @@ func (up *upContext) applyToApps(ctx context.Context) chan error {
 
 func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
-		return errors.UserError{
+		return oktetoErrors.UserError{
 			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
 			Hint: "Try creating a Dockerfile or specify 'context' and 'dockerfile' fields.",
 		}
@@ -463,14 +463,14 @@ func (up *upContext) getInteractive() bool {
 func (up *upContext) getInsufficientSpaceError(err error) error {
 	if up.Dev.PersistentVolumeEnabled() {
 
-		return errors.UserError{
+		return oktetoErrors.UserError{
 			E: err,
 			Hint: fmt.Sprintf(`Okteto volume is full.
     Increase your persistent volume size, run '%s' and try 'okteto up' again.
     More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.DevPath)),
 		}
 	}
-	return errors.UserError{
+	return oktetoErrors.UserError{
 		E: err,
 		Hint: `The synchronization service is running out of space.
     Enable persistent volumes in your okteto manifest and try again.

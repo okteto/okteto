@@ -17,7 +17,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
@@ -35,7 +35,7 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnect chan error) {
 			oktetoLog.Infof("syncthing ping error %d", retries)
 			if retries >= 3 {
 				oktetoLog.Infof("syncthing ping error, sending disconnect signal")
-				disconnect <- errors.ErrLostSyncthing
+				disconnect <- oktetoErrors.ErrLostSyncthing
 				return
 			}
 			retries++
@@ -53,7 +53,7 @@ func (s *Syncthing) MonitorStatus(ctx context.Context, disconnect chan error) {
 		case <-ticker.C:
 			err := s.checkLocalAndRemoteStatus(ctx)
 			switch err {
-			case nil, errors.ErrBusySyncthing, errors.ErrLostSyncthing:
+			case nil, oktetoErrors.ErrBusySyncthing, oktetoErrors.ErrLostSyncthing:
 				continue
 			default:
 				oktetoLog.Infof("syncthing monitor error, sending disconnect signal: %s", err)

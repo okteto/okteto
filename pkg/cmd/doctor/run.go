@@ -24,7 +24,7 @@ import (
 
 	"github.com/mholt/archiver"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -70,7 +70,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	podPath, err := generatePodFile(ctx, dev, c)
 	if err != nil {
 		oktetoLog.Infof("failed to get information about the remote dev container: %s", err)
-		oktetoLog.Warning(errors.ErrNotInDevMode.Error())
+		oktetoLog.Warning(oktetoErrors.ErrNotInDevMode.Error())
 	} else {
 		defer os.RemoveAll(podPath)
 	}
@@ -225,7 +225,7 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	}
 
 	if pod == nil {
-		return "", errors.ErrNotFound
+		return "", oktetoErrors.ErrNotFound
 	}
 
 	tempdir, err := os.MkdirTemp("", "")

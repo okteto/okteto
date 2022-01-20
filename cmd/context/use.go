@@ -23,7 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -90,7 +90,7 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	ctxOptions.initFromEnvVars()
 
 	if ctxOptions.Token == "" && kubeconfig.InCluster() && !isValidCluster(ctxOptions.Context) {
-		return errors.ErrTokenFlagNeeded
+		return oktetoErrors.ErrTokenFlagNeeded
 	}
 
 	if ctxOptions.Context == "" {
@@ -173,7 +173,7 @@ func (c ContextUse) getUserContext(ctx context.Context) (*types.UserContext, err
 			okteto.Context().UserID = userContext.User.ID
 			if err := okteto.WriteOktetoContextConfig(); err != nil {
 				oktetoLog.Infof("error updating okteto contexts: %v", err)
-				return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+				return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 			}
 		}
 
@@ -181,17 +181,17 @@ func (c ContextUse) getUserContext(ctx context.Context) (*types.UserContext, err
 			return userContext, nil
 		}
 
-		if errors.IsForbidden(err) {
+		if oktetoErrors.IsForbidden(err) {
 			okteto.Context().Token = ""
 			if err := okteto.WriteOktetoContextConfig(); err != nil {
 				oktetoLog.Infof("error updating okteto contexts: %v", err)
-				return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+				return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 			}
-			return nil, fmt.Errorf(errors.ErrNotLogged, okteto.Context().Name)
+			return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name)
 		}
 
 		oktetoLog.Info(err)
 		retries++
 	}
-	return nil, errors.ErrInternalServerError
+	return nil, oktetoErrors.ErrInternalServerError
 }

@@ -30,7 +30,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/bcrypt"
@@ -382,9 +382,9 @@ func (s *Syncthing) Overwrite(ctx context.Context) error {
 		if err != nil {
 			oktetoLog.Infof("error posting 'rest/db/override' syncthing API: %s", err)
 			if strings.Contains(err.Error(), "Client.Timeout") {
-				return errors.ErrBusySyncthing
+				return oktetoErrors.ErrBusySyncthing
 			}
-			return errors.ErrLostSyncthing
+			return oktetoErrors.ErrLostSyncthing
 		}
 		folder.Overwritten = true
 	}
@@ -412,14 +412,14 @@ func (s *Syncthing) WaitForConnected(ctx context.Context) error {
 		if err != nil {
 			oktetoLog.Infof("error getting connections: %s", err.Error())
 			if strings.Contains(err.Error(), "Client.Timeout") {
-				return errors.ErrBusySyncthing
+				return oktetoErrors.ErrBusySyncthing
 			}
-			return errors.ErrLostSyncthing
+			return oktetoErrors.ErrLostSyncthing
 		}
 		err = json.Unmarshal(body, connections)
 		if err != nil {
 			oktetoLog.Infof("error unmarshalling connections: %s", err.Error())
-			return errors.ErrLostSyncthing
+			return oktetoErrors.ErrLostSyncthing
 		}
 
 		if connection, ok := connections.Connections[DefaultRemoteDeviceID]; ok {
@@ -430,7 +430,7 @@ func (s *Syncthing) WaitForConnected(ctx context.Context) error {
 
 		if time.Now().After(to) && retries > 10 {
 			oktetoLog.Infof("remote syncthing connection not completed after %s, please try again", s.timeout.String())
-			return errors.ErrLostSyncthing
+			return oktetoErrors.ErrLostSyncthing
 		}
 
 		select {
@@ -461,7 +461,7 @@ func (s *Syncthing) waitForFolderScanning(ctx context.Context, folder *Folder, l
 
 	for retries := 0; ; retries++ {
 		status, err := s.GetSyncthingStatus(ctx, folder, local)
-		if err != nil && err != errors.ErrBusySyncthing {
+		if err != nil && err != oktetoErrors.ErrBusySyncthing {
 			return err
 		}
 
@@ -498,14 +498,14 @@ func (s *Syncthing) GetCompletion(ctx context.Context, local bool, device string
 	if err != nil {
 		oktetoLog.Infof("error calling 'rest/db/completion' local=%t syncthing API: %s", local, err)
 		if strings.Contains(err.Error(), "Client.Timeout") {
-			return nil, errors.ErrBusySyncthing
+			return nil, oktetoErrors.ErrBusySyncthing
 		}
-		return nil, errors.ErrLostSyncthing
+		return nil, oktetoErrors.ErrLostSyncthing
 	}
 	err = json.Unmarshal(body, completion)
 	if err != nil {
 		oktetoLog.Infof("error unmarshalling 'rest/db/completion' local=%t syncthing API: %s", local, err)
-		return nil, errors.ErrLostSyncthing
+		return nil, oktetoErrors.ErrLostSyncthing
 	}
 	return completion, nil
 }
@@ -514,7 +514,7 @@ func (s *Syncthing) GetCompletion(ctx context.Context, local bool, device string
 func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
 	pullErrors, err := s.GetPullErrors(ctx, local)
 	if err != nil {
-		if err == errors.ErrBusySyncthing {
+		if err == oktetoErrors.ErrBusySyncthing {
 			return nil
 		}
 		return err
@@ -529,15 +529,15 @@ func (s *Syncthing) IsHealthy(ctx context.Context, local bool, max int) error {
 	if err != nil {
 		oktetoLog.Infof("syncthing error local=%t retry %d: %s", local, isHealthyRetries, err.Error())
 	}
-	if err == errors.ErrInsufficientSpace {
+	if err == oktetoErrors.ErrInsufficientSpace {
 		return err
 	}
 
 	if isHealthyRetries <= max {
 		return nil
 	}
-	if err == nil || err == errors.ErrBusySyncthing {
-		return errors.ErrUnknownSyncError
+	if err == nil || err == oktetoErrors.ErrBusySyncthing {
+		return oktetoErrors.ErrUnknownSyncError
 	}
 	return err
 }
@@ -556,15 +556,15 @@ func (s *Syncthing) GetSyncthingStatus(ctx context.Context, folder *Folder, loca
 	if err != nil {
 		oktetoLog.Infof("error getting events: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
-			return "", errors.ErrBusySyncthing
+			return "", oktetoErrors.ErrBusySyncthing
 		}
-		return "", errors.ErrLostSyncthing
+		return "", oktetoErrors.ErrLostSyncthing
 	}
 
 	err = json.Unmarshal(body, &scList)
 	if err != nil {
 		oktetoLog.Infof("error unmarshalling events: %s", err.Error())
-		return "", errors.ErrLostSyncthing
+		return "", oktetoErrors.ErrLostSyncthing
 	}
 
 	if len(scList) != 0 {
@@ -582,15 +582,15 @@ func (s *Syncthing) GetSyncthingStatus(ctx context.Context, folder *Folder, loca
 	if err != nil {
 		oktetoLog.Infof("error getting events: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
-			return "", errors.ErrBusySyncthing
+			return "", oktetoErrors.ErrBusySyncthing
 		}
-		return "", errors.ErrLostSyncthing
+		return "", oktetoErrors.ErrLostSyncthing
 	}
 
 	err = json.Unmarshal(body, &scList)
 	if err != nil {
 		oktetoLog.Infof("error unmarshalling events: %s", err.Error())
-		return "", errors.ErrLostSyncthing
+		return "", oktetoErrors.ErrLostSyncthing
 	}
 
 	for i := len(scList) - 1; i >= 0; i-- {
@@ -618,15 +618,15 @@ func (s *Syncthing) GetPullErrors(ctx context.Context, local bool) (int64, error
 	if err != nil {
 		oktetoLog.Infof("error getting events: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
-			return 0, errors.ErrBusySyncthing
+			return 0, oktetoErrors.ErrBusySyncthing
 		}
-		return 0, errors.ErrLostSyncthing
+		return 0, oktetoErrors.ErrLostSyncthing
 	}
 
 	err = json.Unmarshal(body, &fsList)
 	if err != nil {
 		oktetoLog.Infof("error unmarshalling events: %s", err.Error())
-		return 0, errors.ErrLostSyncthing
+		return 0, oktetoErrors.ErrLostSyncthing
 	}
 
 	if len(fsList) != 0 {
@@ -644,15 +644,15 @@ func (s *Syncthing) GetPullErrors(ctx context.Context, local bool) (int64, error
 	if err != nil {
 		oktetoLog.Infof("error getting events: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
-			return 0, errors.ErrBusySyncthing
+			return 0, oktetoErrors.ErrBusySyncthing
 		}
-		return 0, errors.ErrLostSyncthing
+		return 0, oktetoErrors.ErrLostSyncthing
 	}
 
 	err = json.Unmarshal(body, &fsList)
 	if err != nil {
 		oktetoLog.Infof("error unmarshalling events: %s", err.Error())
-		return 0, errors.ErrLostSyncthing
+		return 0, oktetoErrors.ErrLostSyncthing
 	}
 
 	for i := len(fsList) - 1; i >= 0; i-- {
@@ -679,15 +679,15 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, local bool) error {
 	if err != nil {
 		oktetoLog.Infof("error getting events: %s", err.Error())
 		if strings.Contains(err.Error(), "Client.Timeout") {
-			return errors.ErrBusySyncthing
+			return oktetoErrors.ErrBusySyncthing
 		}
-		return errors.ErrLostSyncthing
+		return oktetoErrors.ErrLostSyncthing
 	}
 
 	err = json.Unmarshal(body, &folderErrorsList)
 	if err != nil {
 		oktetoLog.Infof("error unmarshalling events: %s", err.Error())
-		return errors.ErrLostSyncthing
+		return oktetoErrors.ErrLostSyncthing
 	}
 
 	folderErrors := FolderErrorEvent{
@@ -706,15 +706,15 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, local bool) error {
 			if err != nil {
 				oktetoLog.Infof("error getting events: %s", err.Error())
 				if strings.Contains(err.Error(), "Client.Timeout") {
-					return errors.ErrBusySyncthing
+					return oktetoErrors.ErrBusySyncthing
 				}
-				return errors.ErrLostSyncthing
+				return oktetoErrors.ErrLostSyncthing
 			}
 
 			err = json.Unmarshal(body, &folderErrorsList)
 			if err != nil {
 				oktetoLog.Infof("error unmarshalling events: %s", err.Error())
-				return errors.ErrLostSyncthing
+				return oktetoErrors.ErrLostSyncthing
 			}
 
 			cachedFolderErrors[local] = folderErrors
@@ -735,7 +735,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, local bool) error {
 
 	if strings.Contains(errMsg, "insufficient space") {
 		oktetoLog.Infof("syncthing insufficient space local=%t: %s", local, errMsg)
-		return errors.ErrInsufficientSpace
+		return oktetoErrors.ErrInsufficientSpace
 	}
 
 	oktetoLog.Infof("syncthing pull error local=%t: %s", local, errMsg)

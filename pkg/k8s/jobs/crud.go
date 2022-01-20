@@ -17,7 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,7 +60,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 	deletePropagation := metav1.DeletePropagationBackground
 	err := c.BatchV1().Jobs(namespace).Delete(ctx, name, metav1.DeleteOptions{PropagationPolicy: &deletePropagation})
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if oktetoErrors.IsNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("error deleting kubernetes job: %s", err)

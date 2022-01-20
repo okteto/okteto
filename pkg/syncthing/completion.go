@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
@@ -63,12 +63,12 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 			}
 
 			if err := s.Overwrite(ctx); err != nil {
-				if err != errors.ErrBusySyncthing {
+				if err != oktetoErrors.ErrBusySyncthing {
 					return err
 				}
 			}
 			if err := wfc.computeProgress(ctx); err != nil {
-				if err == errors.ErrBusySyncthing {
+				if err == oktetoErrors.ErrBusySyncthing {
 					reporter <- wfc.progress
 					continue
 				}
@@ -79,7 +79,7 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, repor
 
 			if wfc.needsDatabaseReset() {
 				analytics.TrackResetDatabase(true)
-				return errors.ErrNeedsResetSyncError
+				return oktetoErrors.ErrNeedsResetSyncError
 			}
 
 			if wfc.isCompleted() {

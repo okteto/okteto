@@ -25,7 +25,7 @@ import (
 	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -148,7 +148,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !options.ForceBuild {
-			if _, err := registry.GetImageTagWithDigest(svc.Image); err != errors.ErrNotFound {
+			if _, err := registry.GetImageTagWithDigest(svc.Image); err != oktetoErrors.ErrNotFound {
 				s.Services[name] = svc
 				continue
 			}

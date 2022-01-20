@@ -34,7 +34,7 @@ import (
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -137,7 +137,7 @@ func main() {
 			message = string(tmp)
 		}
 		oktetoLog.Fail(message)
-		if uErr, ok := err.(errors.UserError); ok {
+		if uErr, ok := err.(oktetoErrors.UserError); ok {
 			if len(uErr.Hint) > 0 {
 				oktetoLog.Hint("    %s", uErr.Hint)
 			}

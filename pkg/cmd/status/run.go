@@ -22,7 +22,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -111,7 +111,7 @@ func Wait(ctx context.Context, dev *model.Dev, okStatusList []config.UpState) er
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		return errors.ErrIntSig
+		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)

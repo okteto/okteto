@@ -25,7 +25,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -195,7 +195,7 @@ func ContextStore() *OktetoContextStore {
 		b, err := os.ReadFile(config.GetOktetoContextsStorePath())
 		if err != nil {
 			oktetoLog.Errorf("error reading okteto contexts: %v", err)
-			oktetoLog.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+			oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 		}
 
 		dec := json.NewDecoder(bytes.NewReader(b))
@@ -204,7 +204,7 @@ func ContextStore() *OktetoContextStore {
 		ctxStore := &OktetoContextStore{}
 		if err := dec.Decode(&ctxStore); err != nil {
 			oktetoLog.Errorf("error decoding okteto contexts: %v", err)
-			oktetoLog.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+			oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 		}
 		CurrentStore = ctxStore
 
@@ -224,12 +224,12 @@ func Context() *OktetoContext {
 	c := ContextStore()
 	if c.CurrentContext == "" {
 		oktetoLog.Info("ContextStore().CurrentContext is empty")
-		oktetoLog.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 	}
 	octx, ok := c.Contexts[c.CurrentContext]
 	if !ok {
 		oktetoLog.Info("ContextStore().CurrentContext not in ContextStore().Contexts")
-		oktetoLog.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 	}
 
 	return octx

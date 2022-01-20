@@ -20,7 +20,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"gopkg.in/yaml.v2"
@@ -164,7 +164,7 @@ func GetState(dev *model.Dev) (UpState, error) {
 	stateBytes, err := os.ReadFile(statePath)
 	if err != nil {
 		oktetoLog.Infof("error reading state file: %s", err.Error())
-		return Failed, errors.UserError{
+		return Failed, oktetoErrors.UserError{
 			E:    fmt.Errorf("development mode is not enabled on your deployment"),
 			Hint: "Run 'okteto up' to enable it and try again",
 		}

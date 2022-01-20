@@ -24,7 +24,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	okErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -176,7 +176,7 @@ func validateImage(imageTag string) error {
 		if registry.IsGlobalRegistry(imageTag) {
 			prefix = okteto.GlobalRegistry
 		}
-		return okErrors.UserError{
+		return oktetoErrors.UserError{
 			E:    fmt.Errorf("Can not use '%s' as the image tag.", imageTag),
 			Hint: fmt.Sprintf("The syntax for using okteto registry is: '%s/image_name'", prefix),
 		}
@@ -189,7 +189,7 @@ func translateDockerErr(err error) error {
 		return nil
 	}
 	if strings.HasPrefix(err.Error(), "failed to dial gRPC: cannot connect to the Docker daemon") {
-		return okErrors.UserError{
+		return oktetoErrors.UserError{
 			E:    fmt.Errorf("cannot connect to Docker Daemon"),
 			Hint: "Please start the service and try again",
 		}

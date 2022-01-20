@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
@@ -58,7 +58,7 @@ func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
 			}
 		}
 		if !found {
-			return nil, errors.UserError{
+			return nil, oktetoErrors.UserError{
 				E:    fmt.Errorf("could not detect any stack file to deploy"),
 				Hint: "Try setting the flag '--file' pointing to your stack file",
 			}
@@ -158,7 +158,7 @@ func inferStack(name string) (*model.Stack, error) {
 			return stack, nil
 		}
 	}
-	return nil, errors.UserError{
+	return nil, oktetoErrors.UserError{
 		E:    fmt.Errorf("could not detect any stack file to deploy."),
 		Hint: "Try setting the flag '--file' pointing to your stack file",
 	}

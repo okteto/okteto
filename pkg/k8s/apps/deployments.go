@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
@@ -166,7 +166,7 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 			}
 			switch e.Type {
 			case watch.Deleted:
-				result <- errors.ErrDeleteToApp
+				result <- oktetoErrors.ErrDeleteToApp
 				return
 			case watch.Modified:
 				d, ok := e.Object.(*appsv1.Deployment)
@@ -175,7 +175,7 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 					continue
 				}
 				if d.Annotations[model.DeploymentRevisionAnnotation] != "" && d.Annotations[model.DeploymentRevisionAnnotation] != i.d.Annotations[model.DeploymentRevisionAnnotation] {
-					result <- errors.ErrApplyToApp
+					result <- oktetoErrors.ErrApplyToApp
 					return
 				}
 			}

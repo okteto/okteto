@@ -28,7 +28,7 @@ import (
 	"github.com/a8m/envsubst"
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
-	oktetoError "github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -763,20 +763,20 @@ func (dev *Dev) validateSync() error {
 
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				return oktetoError.UserError{
+				return oktetoErrors.UserError{
 					E:    fmt.Errorf("path '%s' does not exist", folder.LocalPath),
 					Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 				}
 			}
 
-			return oktetoError.UserError{
+			return oktetoErrors.UserError{
 				E:    fmt.Errorf("File paths are not supported on sync fields"),
 				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 			}
 		}
 
 		if !validPath.IsDir() {
-			return oktetoError.UserError{
+			return oktetoErrors.UserError{
 				E:    fmt.Errorf("File paths are not supported on sync fields"),
 				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 			}

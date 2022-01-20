@@ -23,7 +23,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -115,10 +115,10 @@ func isValidCluster(cluster string) bool {
 
 func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextResource) error {
 	if cfg == nil {
-		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
+		return fmt.Errorf(oktetoErrors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
 	}
 	if _, ok := cfg.Contexts[ctxResource.Context]; !ok {
-		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
+		return fmt.Errorf(oktetoErrors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
 	}
 	if ctxResource.Namespace == "" {
 		ctxResource.Namespace = cfg.Contexts[ctxResource.Context].Namespace
@@ -205,7 +205,7 @@ func LoadManifestV2WithContext(ctx context.Context, namespace, path string) erro
 	if err != nil {
 		//GetManifestV2 should take care of all error conditions and possible paths
 		//https://github.com/okteto/okteto/issues/2111
-		if err != errors.ErrManifestNotFound {
+		if err != oktetoErrors.ErrManifestNotFound {
 			return err
 		}
 	} else {
@@ -429,5 +429,5 @@ func GetManifestV2(basePath, file string) (*model.Manifest, error) {
 	if manifestPath != "" {
 		return model.Get(manifestPath)
 	}
-	return nil, errors.ErrManifestNotFound
+	return nil, oktetoErrors.ErrManifestNotFound
 }

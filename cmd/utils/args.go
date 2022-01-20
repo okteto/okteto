@@ -16,7 +16,7 @@ package utils
 import (
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +28,7 @@ func NoArgsAccepted(url string) cobra.PositionalArgs {
 			hint = fmt.Sprintf("Visit %s for more information.", url)
 		}
 		if len(args) > 0 {
-			return errors.UserError{
+			return oktetoErrors.UserError{
 				E:    fmt.Errorf("arguments are not supported for command %q.", cmd.CommandPath()),
 				Hint: hint,
 			}
@@ -45,7 +45,7 @@ func MaximumNArgsAccepted(n int, url string) cobra.PositionalArgs {
 			hint = fmt.Sprintf("Visit %s for more information.", url)
 		}
 		if len(args) > n {
-			return errors.UserError{
+			return oktetoErrors.UserError{
 				E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), n, len(args)),
 				Hint: hint,
 			}
@@ -62,7 +62,7 @@ func MinimumNArgsAccepted(n int, url string) cobra.PositionalArgs {
 			hint = fmt.Sprintf("Visit %s for more information.", url)
 		}
 		if len(args) < n {
-			return errors.UserError{
+			return oktetoErrors.UserError{
 				E:    fmt.Errorf("%q requires at least %d arg(s), but only received %d", cmd.CommandPath(), n, len(args)),
 				Hint: hint,
 			}
@@ -79,7 +79,7 @@ func ExactArgsAccepted(n int, url string) cobra.PositionalArgs {
 			hint = fmt.Sprintf("Visit %s for more information.", url)
 		}
 		if len(args) != n {
-			return errors.UserError{
+			return oktetoErrors.UserError{
 				E:    fmt.Errorf("%q accepts %d arg(s), but received %d", cmd.CommandPath(), n, len(args)),
 				Hint: hint,
 			}

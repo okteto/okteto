@@ -24,7 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -62,7 +62,7 @@ func Exec() *cobra.Command {
 			t := time.NewTicker(1 * time.Second)
 			iter := 0
 			err = executeExec(ctx, dev, args)
-			for errors.IsTransient(err) {
+			for oktetoErrors.IsTransient(err) {
 				if iter == 0 {
 					oktetoLog.Yellow("Connection lost to your development container, reconnecting...")
 				}
@@ -74,8 +74,8 @@ func Exec() *cobra.Command {
 
 			analytics.TrackExec(err == nil)
 
-			if errors.IsNotFound(err) {
-				return errors.UserError{
+			if oktetoErrors.IsNotFound(err) {
+				return oktetoErrors.UserError{
 					E:    fmt.Errorf("development container not found in namespace '%s'", dev.Namespace),
 					Hint: "Run 'okteto up' to create your development container or use 'okteto context' to change your current context",
 				}
@@ -119,7 +119,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 			}
 			retries++
 			if retries >= 10 {
-				return errors.UserError{
+				return oktetoErrors.UserError{
 					E:    fmt.Errorf("development mode is not enabled"),
 					Hint: "Run 'okteto up' to enable it and try again",
 				}
@@ -156,7 +156,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		p, err := ssh.GetPort(devName)
 		if err != nil {
 			oktetoLog.Infof("failed to get the SSH port for %s: %s", devName, err)
-			return errors.UserError{
+			return oktetoErrors.UserError{
 				E:    fmt.Errorf("development mode is not enabled on your deployment"),
 				Hint: "Run 'okteto up' to enable it and try again",
 			}

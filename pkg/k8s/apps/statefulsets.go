@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -102,7 +102,7 @@ func (i *StatefulSetApp) CheckConditionErrors(dev *model.Dev) error {
 
 func (i *StatefulSetApp) GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error) {
 	if i.sfs.Generation != i.sfs.Status.ObservedGeneration {
-		return nil, errors.ErrNotFound
+		return nil, oktetoErrors.ErrNotFound
 	}
 	return pods.GetPodByStatefulSet(ctx, i.sfs, c)
 }
@@ -156,7 +156,7 @@ func (i *StatefulSetApp) Watch(ctx context.Context, result chan error, c kuberne
 			}
 			switch e.Type {
 			case watch.Deleted:
-				result <- errors.ErrDeleteToApp
+				result <- oktetoErrors.ErrDeleteToApp
 				return
 			case watch.Modified:
 				sfs, ok := e.Object.(*appsv1.StatefulSet)
@@ -165,7 +165,7 @@ func (i *StatefulSetApp) Watch(ctx context.Context, result chan error, c kuberne
 					continue
 				}
 				if sfs.Generation != i.sfs.Generation {
-					result <- errors.ErrApplyToApp
+					result <- oktetoErrors.ErrApplyToApp
 					return
 				}
 			}

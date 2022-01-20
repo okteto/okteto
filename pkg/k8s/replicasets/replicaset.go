@@ -17,7 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,5 +40,5 @@ func GetReplicaSetByDeployment(ctx context.Context, d *appsv1.Deployment, c kube
 			}
 		}
 	}
-	return nil, errors.ErrNotFound
+	return nil, oktetoErrors.ErrNotFound
 }

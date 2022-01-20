@@ -29,7 +29,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/manifoldco/promptui/list"
 	"github.com/manifoldco/promptui/screenbuf"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -161,7 +161,7 @@ func getK8sClusters(k8sClusters []string) []SelectorItem {
 
 func AskForOptions(ctx context.Context, options []SelectorItem, label string) (string, bool, error) {
 	if !oktetoLog.IsInteractive() {
-		return "", false, errors.UserError{
+		return "", false, oktetoErrors.UserError{
 			E:    fmt.Errorf("can not run interactive selector"),
 			Hint: "Please try running the command with a different output format",
 		}

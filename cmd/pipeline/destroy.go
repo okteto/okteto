@@ -22,7 +22,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -56,7 +56,7 @@ func destroy(ctx context.Context) *cobra.Command {
 			}
 
 			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			if name == "" {
@@ -121,7 +121,7 @@ func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*ty
 	go func() {
 		resp, err = oktetoClient.DestroyPipeline(ctx, name, destroyVolumes)
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if oktetoErrors.IsNotFound(err) {
 				oktetoLog.Infof("pipeline '%s' not found", name)
 				exit <- nil
 				return
@@ -161,7 +161,7 @@ func waitUntilDestroyed(ctx context.Context, name string, action *types.Action, 
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		return errors.ErrIntSig
+		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
@@ -200,7 +200,7 @@ func deprecatedWaitToBeDestroyed(ctx context.Context, name string, timeout time.
 		case <-t.C:
 			p, err := oktetoClient.GetPipelineByName(ctx, name)
 			if err != nil {
-				if errors.IsNotFound(err) || errors.IsNotExist(err) {
+				if oktetoErrors.IsNotFound(err) || oktetoErrors.IsNotExist(err) {
 					return nil
 				}
 				return fmt.Errorf("failed to get pipeline '%s': %s", name, err)

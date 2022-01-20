@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
@@ -112,7 +112,7 @@ func (f *forward) String() string {
 func (f *forward) transfer(from io.Writer, to io.Reader, quit chan struct{}) {
 	_, err := io.Copy(from, to)
 	if err != nil {
-		if !errors.IsClosedNetwork(err) {
+		if !oktetoErrors.IsClosedNetwork(err) {
 			oktetoLog.Infof("%s -> data transfer failed: %v", f.String(), err)
 		}
 	}

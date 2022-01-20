@@ -24,7 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -109,7 +109,7 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 
 	if !ctxOptions.IsOkteto {
 		if !isValidCluster(ctxOptions.Context) {
-			return errors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
+			return oktetoErrors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
 				Hint: "Please run 'okteto context' to select one context"}
 		}
 
@@ -150,7 +150,7 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 			return err
 		}
 		if !hasAccess {
-			return errors.UserError{E: fmt.Errorf("namespace '%s' not found on context '%s'", ctxOptions.Namespace, ctxOptions.Context),
+			return oktetoErrors.UserError{E: fmt.Errorf("namespace '%s' not found on context '%s'", ctxOptions.Namespace, ctxOptions.Context),
 				Hint: "Please verify that the namespace exists and that you have access to it.",
 			}
 		}
@@ -205,11 +205,11 @@ func (c *ContextUse) initOktetoContext(ctx context.Context, ctxOptions *ContextO
 func (_ *ContextUse) initKubernetesContext(ctxOptions *ContextOptions) error {
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
 	if cfg == nil {
-		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())
+		return fmt.Errorf(oktetoErrors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())
 	}
 	kubeCtx, ok := cfg.Contexts[ctxOptions.Context]
 	if !ok {
-		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())
+		return fmt.Errorf(oktetoErrors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())
 	}
 	cfg.CurrentContext = ctxOptions.Context
 	if ctxOptions.Namespace != "" {

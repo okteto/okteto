@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
@@ -161,7 +161,7 @@ func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientse
 	for i := 0; ; i++ {
 		err := vClient.Delete(ctx, name, metav1.DeleteOptions{})
 		if err != nil {
-			if errors.IsNotFound(err) {
+			if oktetoErrors.IsNotFound(err) {
 				oktetoLog.Infof("volume '%s' successfully destroyed", name)
 				return nil
 			}
@@ -199,7 +199,7 @@ func DestroyWithoutTimeout(ctx context.Context, name, namespace string, c kubern
 
 	err := vClient.Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		if !errors.IsNotFound(err) {
+		if !oktetoErrors.IsNotFound(err) {
 			return fmt.Errorf("error deleting kubernetes volume: %s", err)
 		}
 	}

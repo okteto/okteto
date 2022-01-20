@@ -17,7 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -81,7 +81,7 @@ func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, co
 func getRunningPod(ctx context.Context, app apps.App, container string, c kubernetes.Interface) (*apiv1.Pod, error) {
 	pod, err := app.GetRunningPod(ctx, c)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if oktetoErrors.IsNotFound(err) {
 			return nil, fmt.Errorf("%s '%s': no pod is running", app.Kind(), app.ObjectMeta().Name)
 		}
 		return nil, err

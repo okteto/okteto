@@ -24,7 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -45,7 +45,7 @@ func Status() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if okteto.InDevContainer() {
-				return errors.ErrNotInDevContainer
+				return oktetoErrors.ErrNotInDevContainer
 			}
 
 			ctx := context.Background()
@@ -69,7 +69,7 @@ func Status() *cobra.Command {
 			sy, err := syncthing.Load(dev)
 			if err != nil {
 				oktetoLog.Infof("error accessing the syncthing info file: %s", err)
-				return errors.ErrNotInDevMode
+				return oktetoErrors.ErrNotInDevMode
 			}
 			if showInfo {
 				oktetoLog.Information("Local syncthing url: http://%s", sy.GUIAddress)
@@ -130,7 +130,7 @@ func runWithWatch(ctx context.Context, sy *syncthing.Syncthing) error {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		return errors.ErrIntSig
+		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)

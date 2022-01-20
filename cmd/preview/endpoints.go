@@ -22,7 +22,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -54,7 +54,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			}
 
 			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			if err := validateOutput(output); err != nil {

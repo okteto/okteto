@@ -19,7 +19,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	k8sforward "github.com/okteto/okteto/pkg/k8s/forward"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -134,7 +134,7 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 		}
 		oktetoLog.Infof("error starting SSH connection pool on %s: %s", fm.sshAddr, err.Error())
 		if time.Now().After(to) && retries > 10 {
-			return errors.ErrSSHConnectError
+			return oktetoErrors.ErrSSHConnectError
 		}
 
 		if fm.pf != nil {

@@ -24,7 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/down"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -59,7 +59,7 @@ func Push(ctx context.Context) *cobra.Command {
 
 			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)
 			if err != nil {
-				if errors.IsNotExist(err) && len(pushOpts.AppName) > 0 {
+				if oktetoErrors.IsNotExist(err) && len(pushOpts.AppName) > 0 {
 					ctxResource = &model.ContextResource{}
 				} else {
 					return err
@@ -143,12 +143,12 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 
 	if err != nil {
-		if !errors.IsNotFound(err) {
+		if !oktetoErrors.IsNotFound(err) {
 			return err
 		}
 
 		if !dev.Autocreate {
-			return errors.UserError{
+			return oktetoErrors.UserError{
 				E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
 				Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone deployment
@@ -251,7 +251,7 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		return errors.ErrIntSig
+		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)

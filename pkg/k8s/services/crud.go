@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
@@ -35,7 +35,7 @@ func CreateDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset) err
 // Deploy creates/updates a k8s service
 func Deploy(ctx context.Context, s *apiv1.Service, c kubernetes.Interface) error {
 	old, err := Get(ctx, s.Name, s.Namespace, c)
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return fmt.Errorf("error getting kubernetes service: %s", err)
 	}
 
@@ -90,7 +90,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 	oktetoLog.Infof("deleting service '%s'", name)
 	err := c.CoreV1().Services(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if oktetoErrors.IsNotFound(err) {
 			oktetoLog.Infof("service '%s' was already deleted.", name)
 			return nil
 		}

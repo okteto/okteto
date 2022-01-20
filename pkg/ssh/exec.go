@@ -24,7 +24,7 @@ import (
 
 	"github.com/alessio/shellescape"
 	dockerterm "github.com/moby/term"
-	okErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/ssh"
@@ -62,7 +62,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		<-ctx.Done()
 		if connection != nil {
 			if err := connection.Close(); err != nil {
-				if !okErrors.IsClosedNetwork(err) {
+				if !oktetoErrors.IsClosedNetwork(err) {
 					oktetoLog.Infof("failed to close ssh client for exec: %s", err)
 				}
 			}

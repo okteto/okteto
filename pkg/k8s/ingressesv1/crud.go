@@ -17,7 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"k8s.io/client-go/kubernetes"
 
@@ -28,7 +28,7 @@ import (
 
 func Deploy(ctx context.Context, i *networkingv1.Ingress, c kubernetes.Interface) error {
 	old, err := Get(ctx, i.Name, i.Namespace, c)
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return fmt.Errorf("error getting kubernetes ingress: %s", err)
 	}
 
@@ -76,7 +76,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 	oktetoLog.Infof("deleting ingress '%s'", name)
 	err := c.NetworkingV1().Ingresses(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if oktetoErrors.IsNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("error deleting kubernetes ingress: %s", err)

@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -70,7 +70,7 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 	oktetoLog.Println("Authentication will continue in your default browser")
 	if err := open.Start(authorizationURL); err != nil {
 		if strings.Contains(err.Error(), "executable file not found in $PATH") {
-			return nil, errors.UserError{
+			return nil, oktetoErrors.UserError{
 				E:    fmt.Errorf("no browser could be found"),
 				Hint: "Use the '--token' flag to run this command in server mode. More information can be found here: https://okteto.com/docs/reference/cli/#login",
 			}

@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -76,7 +76,7 @@ func (up *upContext) activate() error {
 		return err
 	}
 
-	if _, err := registry.GetImageTagWithDigest(up.Dev.Image.Name); err == errors.ErrNotFound {
+	if _, err := registry.GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
 		oktetoLog.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
 		up.Options.Build = true
 	}
@@ -94,13 +94,13 @@ func (up *upContext) activate() error {
 	}
 
 	if err := up.devMode(ctx, app, create); err != nil {
-		if errors.IsTransient(err) {
+		if oktetoErrors.IsTransient(err) {
 			return err
 		}
 		if strings.Contains(err.Error(), "Privileged containers are not allowed") && up.Dev.Docker.Enabled {
 			return fmt.Errorf("docker support requires privileged containers. Privileged containers are not allowed in your current cluster")
 		}
-		if _, ok := err.(errors.UserError); ok {
+		if _, ok := err.(oktetoErrors.UserError); ok {
 			return err
 		}
 		return fmt.Errorf("couldn't activate your development container\n    %s", err.Error())
@@ -113,9 +113,9 @@ func (up *upContext) activate() error {
 	up.isRetry = true
 
 	if err := up.forwards(ctx); err != nil {
-		if err == errors.ErrSSHConnectError {
+		if err == oktetoErrors.ErrSSHConnectError {
 			err := up.checkOktetoStartError(ctx, "Failed to connect to your development container")
-			if err == errors.ErrLostSyncthing {
+			if err == oktetoErrors.ErrLostSyncthing {
 				if err := pods.Destroy(ctx, up.Pod.Name, up.Dev.Namespace, up.Client); err != nil {
 					return fmt.Errorf("error recreating development container: %s", err.Error())
 				}
@@ -128,7 +128,7 @@ func (up *upContext) activate() error {
 
 	if err := up.sync(ctx); err != nil {
 		if up.shouldRetry(ctx, err) {
-			return errors.ErrLostSyncthing
+			return oktetoErrors.ErrLostSyncthing
 		}
 		return err
 	}
@@ -195,7 +195,7 @@ func (up *upContext) activate() error {
 				return err
 			}
 		}
-		return errors.ErrLostSyncthing
+		return oktetoErrors.ErrLostSyncthing
 	}
 
 	return prevError
@@ -205,11 +205,11 @@ func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
 	switch err {
 	case nil:
 		return false
-	case errors.ErrLostSyncthing:
+	case oktetoErrors.ErrLostSyncthing:
 		return true
-	case errors.ErrCommandFailed:
+	case oktetoErrors.ErrCommandFailed:
 		return !up.Sy.Ping(ctx, false)
-	case errors.ErrApplyToApp:
+	case oktetoErrors.ErrApplyToApp:
 		return true
 	}
 
@@ -329,7 +329,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 	var insufficientResourcesErr error
 	for {
 		if time.Now().After(to) && insufficientResourcesErr != nil {
-			return errors.UserError{E: fmt.Errorf("insufficient resources"),
+			return oktetoErrors.UserError{E: fmt.Errorf("insufficient resources"),
 				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest/#timeout-time-optional"}
 		}
 		select {
@@ -381,7 +381,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 					killing = true
 					continue
 				}
-				return errors.ErrDevPodDeleted
+				return oktetoErrors.ErrDevPodDeleted
 			case "Started":
 				if e.Message == "Started container okteto-init-data" {
 					spinner.Update("Initializing persistent volume content...")
@@ -416,7 +416,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				return nil
 			}
 			if pod.DeletionTimestamp != nil {
-				return errors.ErrDevPodDeleted
+				return oktetoErrors.ErrDevPodDeleted
 			}
 		case <-ctx.Done():
 			oktetoLog.Debug("call to waitUntilDevelopmentContainerIsRunning cancelled")

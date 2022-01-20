@@ -24,7 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
@@ -107,7 +107,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 
 		app, _, err := utils.GetApp(ctx, dev, c, false)
 		if err != nil {
-			if !errors.IsNotFound(err) {
+			if !oktetoErrors.IsNotFound(err) {
 				exit <- err
 				return
 			}
@@ -165,7 +165,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		return errors.ErrIntSig
+		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)

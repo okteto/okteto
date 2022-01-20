@@ -21,7 +21,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -41,7 +41,7 @@ func Create(ctx context.Context) *cobra.Command {
 			}
 
 			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			err := ExecuteCreateNamespace(ctx, args[0], members)
