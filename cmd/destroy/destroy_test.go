@@ -16,6 +16,7 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -96,6 +97,20 @@ func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manife
 
 func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
 	return fakeManifest, nil
+}
+
+func TestMain(m *testing.M) {
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Name:      "test",
+				Namespace: "namespace",
+				UserID:    "user-id",
+			},
+		},
+	}
+	os.Exit(m.Run())
 }
 
 func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
