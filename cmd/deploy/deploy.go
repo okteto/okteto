@@ -55,10 +55,6 @@ type Options struct {
 	Manifest     *model.Manifest
 }
 
-type endpoints struct {
-	Endpoints []string
-}
-
 type kubeConfigHandler interface {
 	Read() (*rest.Config, error)
 	Modify(port int, sessionToken, destKubeconfigFile string) error
@@ -423,7 +419,7 @@ func (dc *deployCommand) showEndpoints(ctx context.Context, opts *Options) error
 		})
 		switch oktetoLog.GetOutputFormat() {
 		case "json":
-			oktetoLog.Println(fmt.Sprintf("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - ")))
+			oktetoLog.Printf("Endpoints available: %s\n", eps)
 		default:
 			oktetoLog.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
 		}
