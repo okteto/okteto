@@ -21,10 +21,13 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/pkg/cmd/app"
+	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 var fakeManifest *model.Manifest = &model.Manifest{
@@ -202,6 +205,16 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	assert.True(t, p.started)
 	// Proxy shutdown
 	assert.True(t, p.shutdown)
+
+	//check if configmap has been created
+	fakeClient, _, err := c.k8sClientProvider.Provide(api.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+	cfg, err := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
+	assert.Nil(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, app.ErrorStatus, cfg.Data["status"])
 }
 
 func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
@@ -243,6 +256,16 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	assert.True(t, p.started)
 	// Proxy wasn't shutdown
 	assert.False(t, p.shutdown)
+
+	//check if configmap has been created
+	fakeClient, _, err := c.k8sClientProvider.Provide(api.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+	cfg, err := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
+	assert.Nil(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, app.DeployedStatus, cfg.Data["status"])
 }
 
 func TestDeployWithoutErrors(t *testing.T) {
@@ -282,6 +305,16 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, p.started)
 	// Proxy was shutdown
 	assert.True(t, p.shutdown)
+
+	//check if configmap has been created
+	fakeClient, _, err := c.k8sClientProvider.Provide(api.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+	cfg, err := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
+	assert.Nil(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, app.DeployedStatus, cfg.Data["status"])
 }
 
 func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {

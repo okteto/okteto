@@ -32,9 +32,12 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/cmd/app"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/configmaps"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -280,6 +283,18 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	log.Debugf("starting server on %d", dc.proxy.GetPort())
 	dc.proxy.Start()
 
+	output := fmt.Sprintf("Deploying app '%s'...", opts.Name)
+	cfg := app.TranslateConfigMap(opts.Name, app.ProgressingStatus, output)
+
+	k8sCfg := kubeconfig.Get(config.GetKubeconfigPath())
+	c, _, err := dc.k8sClientProvider.Provide(k8sCfg)
+	if err != nil {
+		return err
+	}
+	if err := configmaps.Deploy(ctx, cfg, opts.Manifest.Namespace, c); err != nil {
+		return err
+	}
+
 	defer dc.cleanUp(ctx)
 
 	opts.Variables = append(
@@ -297,11 +312,19 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
 
-	for _, command := range opts.Manifest.Deploy.Commands {
-		if err := dc.executor.Execute(command, opts.Variables); err != nil {
-			log.Infof("error executing command '%s': %s", command, err.Error())
-			return fmt.Errorf("error executing command '%s': %s", command, err.Error())
-		}
+	err = dc.deploy(opts)
+	if err != nil {
+		output = fmt.Sprintf("%s\nApp '%s' deployment failed: %s", output, opts.Name, err.Error())
+		cfg = app.SetStatus(cfg, app.ErrorStatus, output)
+	} else {
+		output = fmt.Sprintf("%s\nApp '%s' successfully deployed", output, opts.Name)
+		cfg = app.SetStatus(cfg, app.DeployedStatus, output)
+	}
+	if err := configmaps.Deploy(ctx, cfg, opts.Manifest.Namespace, c); err != nil {
+		return err
+	}
+	if err != nil {
+		return err
 	}
 
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
@@ -310,6 +333,16 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		}
 	}
 
+	return nil
+}
+
+func (dc *deployCommand) deploy(opts *Options) error {
+	for _, command := range opts.Manifest.Deploy.Commands {
+		if err := dc.executor.Execute(command, opts.Variables); err != nil {
+			log.Infof("error executing command '%s': %s", command, err.Error())
+			return fmt.Errorf("error executing command '%s': %s", command, err.Error())
+		}
+	}
 	return nil
 }
 

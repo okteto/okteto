@@ -76,6 +76,9 @@ const (
 	// DeployedByLabel indicates the service account that deployed an object
 	DeployedByLabel = "dev.okteto.com/deployed-by"
 
+	// GitDeployLabel indicates the object is an app
+	GitDeployLabel = "dev.okteto.com/git-deploy"
+
 	// StackLabel indicates the object is a stack
 	StackLabel = "stack.okteto.com"
 

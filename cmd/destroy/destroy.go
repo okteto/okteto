@@ -20,6 +20,10 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/cmd/app"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/configmaps"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/log"
@@ -62,9 +66,10 @@ type Options struct {
 type destroyCommand struct {
 	getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 
-	executor    utils.ManifestExecutor
-	nsDestroyer destroyer
-	secrets     secretHandler
+	executor          utils.ManifestExecutor
+	nsDestroyer       destroyer
+	secrets           secretHandler
+	k8sClientProvider okteto.K8sClientProvider
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -117,9 +122,10 @@ func Destroy(ctx context.Context) *cobra.Command {
 			c := &destroyCommand{
 				getManifest: contextCMD.GetManifest,
 
-				executor:    utils.NewExecutor(options.OutputMode),
-				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
-				secrets:     secrets.NewSecrets(k8sClient),
+				executor:          utils.NewExecutor(options.OutputMode),
+				nsDestroyer:       namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
+				secrets:           secrets.NewSecrets(k8sClient),
+				k8sClientProvider: okteto.NewK8sClientProvider(),
 			}
 			return c.runDestroy(ctx, cwd, options)
 		},
@@ -146,11 +152,28 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		}
 	}
 
+	k8sCfg := kubeconfig.Get(config.GetKubeconfigPath())
+	c, _, err := dc.k8sClientProvider.Provide(k8sCfg)
+	if err != nil {
+		return err
+	}
+
+	output := fmt.Sprintf("Destroying app '%s'...", opts.Name)
+	cfg := app.TranslateConfigMap(opts.Name, app.DestroyingStatus, output)
+	if err := configmaps.Deploy(ctx, cfg, opts.Namespace, c); err != nil {
+		return err
+	}
+
 	var commandErr error
 	for _, command := range manifest.Destroy {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			log.Infof("error executing command '%s': %s", command, err.Error())
 			if !opts.ForceDestroy {
+				output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", output, opts.Name, err.Error())
+				cfg = app.SetStatus(cfg, app.ErrorStatus, output)
+				if err := configmaps.Deploy(ctx, cfg, opts.Namespace, c); err != nil {
+					return err
+				}
 				return err
 			}
 
@@ -165,6 +188,11 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		[]string{opts.Name},
 	)
 	if err != nil {
+		output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", output, opts.Name, err.Error())
+		cfg = app.SetStatus(cfg, app.ErrorStatus, output)
+		if err := configmaps.Deploy(ctx, cfg, opts.Namespace, c); err != nil {
+			return err
+		}
 		return err
 	}
 	deployedBySelector := labels.NewSelector().Add(*deployedByLs).String()
@@ -174,11 +202,21 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	}
 
 	if err := dc.nsDestroyer.DestroySFSVolumes(ctx, opts.Namespace, deleteOpts); err != nil {
+		output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", output, opts.Name, err.Error())
+		cfg = app.SetStatus(cfg, app.ErrorStatus, output)
+		if err := configmaps.Deploy(ctx, cfg, opts.Namespace, c); err != nil {
+			return err
+		}
 		return err
 	}
 
 	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
 		if !opts.ForceDestroy {
+			output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", output, opts.Name, err.Error())
+			cfg = app.SetStatus(cfg, app.ErrorStatus, output)
+			if err := configmaps.Deploy(ctx, cfg, opts.Namespace, c); err != nil {
+				return err
+			}
 			return err
 		}
 	}
@@ -186,9 +224,17 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	log.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
 	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
 		log.Infof("could not delete all the resources: %s", err)
+		output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", output, opts.Name, err.Error())
+		cfg = app.SetStatus(cfg, app.ErrorStatus, output)
+		if err := configmaps.Deploy(ctx, cfg, opts.Namespace, c); err != nil {
+			return err
+		}
 		return err
 	}
 
+	if err := configmaps.Destroy(ctx, cfg.Name, opts.Namespace, c); err != nil {
+		return err
+	}
 	return commandErr
 }
 
