@@ -548,12 +548,11 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		if err != nil {
 			oktetoLog.Infof("could not status: %s", err)
 		}
-		if isClean {
-			os.Setenv(model.OktetoGitCommitEnvVar, sha)
-		} else {
-			sha := utils.GetRandomSHA(ctx, cwd)
-			os.Setenv(model.OktetoGitCommitEnvVar, sha)
+		if !isClean {
+			sha = utils.GetRandomSHA(ctx, cwd)
 		}
+		value := fmt.Sprintf("dev%s", sha)
+		os.Setenv(model.OktetoGitCommitEnvVar, value)
 	}
 	if os.Getenv(model.OktetoRegistryURLEnvVar) == "" {
 		os.Setenv(model.OktetoRegistryURLEnvVar, okteto.Context().Registry)

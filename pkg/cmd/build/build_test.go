@@ -1,6 +1,7 @@
 package build
 
 import (
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -72,6 +73,26 @@ func Test_OptsFromManifest(t *testing.T) {
 			},
 		},
 		{
+			name:           "empty-values-is-okteto-local",
+			serviceName:    "service",
+			buildInfo:      &model.BuildInfo{Name: "movies"},
+			okGitCommitEnv: "dev1235466",
+			isOkteto:       true,
+			expected: BuildOptions{
+				Tag: "okteto.dev/movies-service:okteto",
+			},
+		},
+		{
+			name:           "empty-values-is-okteto-pipeline",
+			serviceName:    "service",
+			buildInfo:      &model.BuildInfo{Name: "movies"},
+			okGitCommitEnv: "1235466",
+			isOkteto:       true,
+			expected: BuildOptions{
+				Tag: "okteto.dev/movies-service:1235466",
+			},
+		},
+		{
 			name:        "empty-values-is-not-okteto",
 			serviceName: "service",
 			buildInfo:   &model.BuildInfo{Name: "movies"},
@@ -111,6 +132,7 @@ func Test_OptsFromManifest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			os.Unsetenv(model.OktetoGitCommitEnvVar)
 			okteto.CurrentStore = &okteto.OktetoContextStore{
 				Contexts: map[string]*okteto.OktetoContext{
 					"test": {
@@ -120,6 +142,7 @@ func Test_OptsFromManifest(t *testing.T) {
 				},
 				CurrentContext: "test",
 			}
+			os.Setenv(model.OktetoGitCommitEnvVar, tt.okGitCommitEnv)
 			result := OptsFromManifest(tt.serviceName, tt.buildInfo, tt.initialOpts)
 			assert.Equal(t, tt.expected, result)
 		})
