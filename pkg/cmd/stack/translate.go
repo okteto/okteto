@@ -18,6 +18,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -70,6 +71,10 @@ func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 		for i := len(svc.EnvFiles) - 1; i >= 0; i-- {
 			envFilepath := svc.EnvFiles[i]
 			if err := translateServiceEnvFile(ctx, svc, svcName, envFilepath); err != nil {
+				if filepath.Base(envFilepath) == ".env" {
+					oktetoLog.Warning("Skipping '.env' file from %s service", svcName)
+					continue
+				}
 				return err
 			}
 		}
@@ -190,10 +195,6 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 	for name, svc := range s.Services {
 		notSkippableVolumeMounts := getAccessibleVolumeMounts(s, name)
 		if len(notSkippableVolumeMounts) != 0 {
-			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
-				hasAddedAnyVolumeMounts = true
-				oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
-			}
 			fromImage := svc.Image
 			if okteto.IsOkteto() {
 				fromImage = registry.ExpandOktetoDevRegistry(svc.Image)
@@ -207,6 +208,17 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 			svc.Build = svcBuild
 			if okteto.IsOkteto() && !registry.IsOktetoRegistry(svc.Image) {
 				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto-with-volume-mounts", s.Name, name)
+			}
+			if !options.ForceBuild {
+				if _, err := registry.GetImageTagWithDigest(svc.Image); err != oktetoErrors.ErrNotFound {
+					s.Services[name] = svc
+					continue
+				}
+				oktetoLog.Infof("image '%s' not found, building it", svc.Image)
+			}
+			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
+				hasAddedAnyVolumeMounts = true
+				oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
 			}
 			oktetoLog.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
@@ -265,7 +277,6 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
 
 	healthcheckProbe := getSvcProbe(svc)
-
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -288,6 +299,8 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
+					Volumes:                       translateVolumes(svcName, svc),
+					InitContainers:                getInitContainers(svcName, s),
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -298,6 +311,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 							Ports:           translateContainerPorts(svc),
 							SecurityContext: translateSecurityContext(svc),
 							Resources:       translateResources(svc),
+							VolumeMounts:    translateVolumeMounts(svcName, svc),
 							WorkingDir:      svc.Workdir,
 							ReadinessProbe:  healthcheckProbe,
 							LivenessProbe:   healthcheckProbe,
@@ -308,6 +322,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 		},
 	}
 }
+
 func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.PersistentVolumeClaim {
 	volumeSpec := s.Volumes[volumeName]
 	labels := translateVolumeLabels(volumeName, s)
@@ -438,15 +453,55 @@ func getInitContainers(svcName string, s *model.Stack) []apiv1.Container {
 	if len(svc.Volumes) > 0 {
 		addPermissionsContainer := getAddPermissionsInitContainer(svcName, svc)
 		initContainers = append(initContainers, addPermissionsContainer)
+		initializationContainer := getInitializeVolumeContentContainer(svcName, svc)
+		if initializationContainer != nil {
+			initContainers = append(initContainers, *initializationContainer)
+		}
 	}
-	initializationContainer := getInitializeVolumeContentContainer(svcName, svc)
-	if initializationContainer != nil {
-		initContainers = append(initContainers, *initializationContainer)
+
+	if len(svc.VolumeMounts) > 0 {
+		initializeVolumeMount := getInitializeVolumeMountsContainer(svcName, svc)
+		if initializeVolumeMount != nil {
+			initContainers = append(initContainers, *initializeVolumeMount)
+		}
 	}
 
 	return initContainers
 }
 
+func getInitializeVolumeMountsContainer(svcName string, svc *model.Service) *apiv1.Container {
+	initContainerCommand, initContainerVolumeMounts := getVolumeMountsCommandAndVolumeMounts(*svc)
+	if len(initContainerVolumeMounts) == 0 {
+		return nil
+	}
+	initContainer := &apiv1.Container{
+		Name:         fmt.Sprintf("init-%s", svcName),
+		Image:        "busybox",
+		Command:      initContainerCommand,
+		VolumeMounts: initContainerVolumeMounts,
+	}
+	return initContainer
+}
+
+func getVolumeMountsCommandAndVolumeMounts(svc model.Service) ([]string, []apiv1.VolumeMount) {
+	volumeMounts := []apiv1.VolumeMount{}
+
+	var command string
+	for idx, volume := range svc.VolumeMounts {
+		if fs, err := os.Stat(volume.LocalPath); err == nil && !fs.IsDir() {
+			continue
+		}
+		volumeName := fmt.Sprintf("volume-mount-%d", idx)
+		volumeMounts = append(volumeMounts, apiv1.VolumeMount{Name: volumeName, MountPath: volume.RemotePath})
+		newCommand := fmt.Sprintf("mkdir -p %s && chmod 777 %s", volume.RemotePath, volume.RemotePath)
+
+		if len(command) > 0 {
+			newCommand = fmt.Sprintf(" && %s", newCommand)
+		}
+		command += newCommand
+	}
+	return []string{"sh", "-c", command}, volumeMounts
+}
 func getAddPermissionsInitContainer(svcName string, svc *model.Service) apiv1.Container {
 	initContainerCommand, initContainerVolumeMounts := getInitContainerCommandAndVolumeMounts(*svc)
 	initContainer := apiv1.Container{
@@ -553,6 +608,21 @@ func translateVolumes(svcName string, svc *model.Service) []apiv1.Volume {
 			VolumeSource: apiv1.VolumeSource{
 				PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
 					ClaimName: volume.LocalPath,
+				},
+			},
+		})
+	}
+	for idx, v := range svc.VolumeMounts {
+		if fs, err := os.Stat(v.LocalPath); err == nil && !fs.IsDir() {
+			continue
+		}
+		name := fmt.Sprintf("volume-mount-%d", idx)
+		maxSize := resource.MustParse("1Gi")
+		volumes = append(volumes, apiv1.Volume{
+			Name: name,
+			VolumeSource: apiv1.VolumeSource{
+				EmptyDir: &apiv1.EmptyDirVolumeSource{
+					SizeLimit: &maxSize,
 				},
 			},
 		})
@@ -796,6 +866,19 @@ func translateVolumeMounts(svcName string, svc *model.Service) []apiv1.VolumeMou
 			},
 		)
 	}
+	for idx, v := range svc.VolumeMounts {
+		if fs, err := os.Stat(v.LocalPath); err == nil && !fs.IsDir() {
+			continue
+		}
+		name := fmt.Sprintf("volume-mount-%d", idx)
+		result = append(
+			result,
+			apiv1.VolumeMount{
+				MountPath: v.RemotePath,
+				Name:      name,
+			},
+		)
+	}
 	return result
 }
 
@@ -810,7 +893,7 @@ func getVolumeClaimName(v *model.StackVolume) string {
 }
 
 func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
-	if len(svc.CapAdd) == 0 && len(svc.CapDrop) == 0 {
+	if len(svc.CapAdd) == 0 && len(svc.CapDrop) == 0 && svc.User == nil {
 		return nil
 	}
 	result := &apiv1.SecurityContext{Capabilities: &apiv1.Capabilities{}}
@@ -819,6 +902,10 @@ func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
 	}
 	if len(svc.CapDrop) > 0 {
 		result.Capabilities.Drop = svc.CapDrop
+	}
+	if svc.User != nil {
+		result.RunAsUser = svc.User.RunAsUser
+		result.RunAsGroup = svc.User.RunAsGroup
 	}
 	return result
 }

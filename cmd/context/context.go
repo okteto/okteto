@@ -48,18 +48,23 @@ This will prompt you to select one of your existing contexts or to create a new 
 
 			ctxOptions.IsCtxCommand = true
 			ctxOptions.Save = true
-			err := Run(ctx, ctxOptions)
+			ctxCmd := NewContextCommand()
+
+			err := ctxCmd.Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			return err
 		},
 	}
-	cmd.AddCommand(Use())
 	cmd.AddCommand(Show())
+	cmd.AddCommand(Use())
+	cmd.AddCommand(List())
 	cmd.AddCommand(DeleteCMD())
+
+	//deprecated
 	cmd.AddCommand(CreateCMD())
 	cmd.AddCommand(UpdateKubeconfigCMD())
-	cmd.AddCommand(List())
 	cmd.AddCommand(UseNamespace())
+
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
 	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")

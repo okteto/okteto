@@ -21,26 +21,30 @@ import (
 	"github.com/shurcooL/graphql"
 )
 
-func (c OktetoClientProvider) NewOktetoUserClient() (types.UserInterface, error) {
-	return NewOktetoClient()
+type userClient struct {
+	client *graphql.Client
+}
+
+func newUserClient(client *graphql.Client) *userClient {
+	return &userClient{client: client}
 }
 
 //GetSecrets returns the secrets from Okteto API
 func (c *OktetoClient) GetSecrets(ctx context.Context) ([]types.Secret, error) {
-	var query struct {
+	var queryStruct struct {
 		Secrets []struct {
 			Name  graphql.String
 			Value graphql.String
 		} `graphql:"getGitDeploySecrets"`
 	}
 
-	err := c.Query(ctx, &query, nil)
+	err := query(ctx, &queryStruct, nil, c.client)
 	if err != nil {
 		return nil, err
 	}
 
 	secrets := make([]types.Secret, 0)
-	for _, secret := range query.Secrets {
+	for _, secret := range queryStruct.Secrets {
 		if !strings.Contains(string(secret.Name), ".") {
 			secrets = append(secrets, types.Secret{
 				Name:  string(secret.Name),
@@ -52,8 +56,8 @@ func (c *OktetoClient) GetSecrets(ctx context.Context) ([]types.Secret, error) {
 }
 
 //GetSecrets returns the secrets from Okteto API
-func (c *OktetoClient) GetUserContext(ctx context.Context) (*types.UserContext, error) {
-	var query struct {
+func (c *userClient) GetContext(ctx context.Context) (*types.UserContext, error) {
+	var queryStruct struct {
 		User struct {
 			Id              graphql.String
 			Name            graphql.String
@@ -82,7 +86,7 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*types.UserContext, 
 	variables := map[string]interface{}{
 		"cred": graphql.String(""),
 	}
-	err := c.Query(ctx, &query, variables)
+	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
 		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
 			return c.deprecatedGetUserContext(ctx)
@@ -94,7 +98,7 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*types.UserContext, 
 	}
 
 	secrets := make([]types.Secret, 0)
-	for _, secret := range query.Secrets {
+	for _, secret := range queryStruct.Secrets {
 		if !strings.Contains(string(secret.Name), ".") {
 			secrets = append(secrets, types.Secret{
 				Name:  string(secret.Name),
@@ -103,37 +107,37 @@ func (c *OktetoClient) GetUserContext(ctx context.Context) (*types.UserContext, 
 		}
 	}
 
-	globalNamespace := getGlobalNamespace(string(query.User.GlobalNamespace))
-	analytics := bool(query.User.Analytics)
+	globalNamespace := getGlobalNamespace(string(queryStruct.User.GlobalNamespace))
+	analytics := bool(queryStruct.User.Analytics)
 
 	result := &types.UserContext{
 		User: types.User{
-			ID:              string(query.User.Id),
-			Name:            string(query.User.Name),
-			Namespace:       string(query.User.Namespace),
-			Email:           string(query.User.Email),
-			ExternalID:      string(query.User.ExternalID),
-			Token:           string(query.User.Token),
-			New:             bool(query.User.New),
-			Registry:        string(query.User.Registry),
-			Buildkit:        string(query.User.Buildkit),
-			Certificate:     string(query.User.Certificate),
+			ID:              string(queryStruct.User.Id),
+			Name:            string(queryStruct.User.Name),
+			Namespace:       string(queryStruct.User.Namespace),
+			Email:           string(queryStruct.User.Email),
+			ExternalID:      string(queryStruct.User.ExternalID),
+			Token:           string(queryStruct.User.Token),
+			New:             bool(queryStruct.User.New),
+			Registry:        string(queryStruct.User.Registry),
+			Buildkit:        string(queryStruct.User.Buildkit),
+			Certificate:     string(queryStruct.User.Certificate),
 			GlobalNamespace: globalNamespace,
 			Analytics:       analytics,
 		},
 		Secrets: secrets,
 		Credentials: types.Credential{
-			Server:      string(query.Cred.Server),
-			Certificate: string(query.Cred.Certificate),
-			Token:       string(query.Cred.Token),
-			Namespace:   string(query.Cred.Namespace),
+			Server:      string(queryStruct.Cred.Server),
+			Certificate: string(queryStruct.Cred.Certificate),
+			Token:       string(queryStruct.Cred.Token),
+			Namespace:   string(queryStruct.Cred.Namespace),
 		},
 	}
 	return result, nil
 }
 
-func (c *OktetoClient) deprecatedGetUserContext(ctx context.Context) (*types.UserContext, error) {
-	var query struct {
+func (c *userClient) deprecatedGetUserContext(ctx context.Context) (*types.UserContext, error) {
+	var queryStruct struct {
 		User struct {
 			Id          graphql.String
 			Name        graphql.String
@@ -160,13 +164,13 @@ func (c *OktetoClient) deprecatedGetUserContext(ctx context.Context) (*types.Use
 	variables := map[string]interface{}{
 		"cred": graphql.String(""),
 	}
-	err := c.Query(ctx, &query, variables)
+	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
 		return nil, err
 	}
 
 	secrets := make([]types.Secret, 0)
-	for _, secret := range query.Secrets {
+	for _, secret := range queryStruct.Secrets {
 		if !strings.Contains(string(secret.Name), ".") {
 			secrets = append(secrets, types.Secret{
 				Name:  string(secret.Name),
@@ -176,25 +180,25 @@ func (c *OktetoClient) deprecatedGetUserContext(ctx context.Context) (*types.Use
 	}
 	result := &types.UserContext{
 		User: types.User{
-			ID:              string(query.User.Id),
-			Name:            string(query.User.Name),
-			Namespace:       string(query.User.Namespace),
-			Email:           string(query.User.Email),
-			ExternalID:      string(query.User.ExternalID),
-			Token:           string(query.User.Token),
-			New:             bool(query.User.New),
-			Registry:        string(query.User.Registry),
-			Buildkit:        string(query.User.Buildkit),
-			Certificate:     string(query.User.Certificate),
+			ID:              string(queryStruct.User.Id),
+			Name:            string(queryStruct.User.Name),
+			Namespace:       string(queryStruct.User.Namespace),
+			Email:           string(queryStruct.User.Email),
+			ExternalID:      string(queryStruct.User.ExternalID),
+			Token:           string(queryStruct.User.Token),
+			New:             bool(queryStruct.User.New),
+			Registry:        string(queryStruct.User.Registry),
+			Buildkit:        string(queryStruct.User.Buildkit),
+			Certificate:     string(queryStruct.User.Certificate),
 			GlobalNamespace: DefaultGlobalNamespace,
 			Analytics:       true,
 		},
 		Secrets: secrets,
 		Credentials: types.Credential{
-			Server:      string(query.Cred.Server),
-			Certificate: string(query.Cred.Certificate),
-			Token:       string(query.Cred.Token),
-			Namespace:   string(query.Cred.Namespace),
+			Server:      string(queryStruct.Cred.Server),
+			Certificate: string(queryStruct.Cred.Certificate),
+			Token:       string(queryStruct.Cred.Token),
+			Namespace:   string(queryStruct.Cred.Namespace),
 		},
 	}
 	return result, nil

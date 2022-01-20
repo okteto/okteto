@@ -16,6 +16,7 @@ package context
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -33,19 +34,33 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type ContextUse struct {
-	k8sClientProvider    okteto.K8sClientProvider
-	loginController      login.LoginInterface
-	oktetoClientProvider types.OktetoUserClientProvider
+// ContextCommand has the dependencies to run a ctxCommand
+type ContextCommand struct {
+	K8sClientProvider    okteto.K8sClientProvider
+	LoginController      login.LoginInterface
+	OktetoClientProvider types.OktetoClientProvider
+
+	OktetoContextWriter okteto.ContextConfigWriterInterface
+}
+
+// NewContextCommand creates a new ContextCommand
+func NewContextCommand() *ContextCommand {
+	return &ContextCommand{
+		K8sClientProvider:    okteto.NewK8sClientProvider(),
+		LoginController:      login.NewLoginController(),
+		OktetoClientProvider: okteto.NewOktetoClientProvider(),
+		OktetoContextWriter:  okteto.NewContextConfigWriter(),
+	}
 }
 
 // Create adds a new cluster to okteto context
 func CreateCMD() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
-		Use:   "create [cluster-url]",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#create"),
-		Short: "Add a context",
+		Hidden: true,
+		Use:    "create [cluster-url]",
+		Args:   utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#create"),
+		Short:  "Add a context",
 		Long: `Add a context
 
 A context is a group of cluster access parameters. Each context contains a Kubernetes cluster, a user, and a namespace.
@@ -64,6 +79,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	$ okteto context create https://cloud.okteto.com --token ${OKTETO_TOKEN}
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			oktetoLog.Warning("'okteto context create' is deprecated in favor of 'okteto context use', and will be removed in version 1.16")
 			ctx := context.Background()
 
 			ctxOptions.Context = args[0]
@@ -73,13 +89,8 @@ If you need to automate authentication or if you don't want to use browser-based
 			ctxOptions.IsCtxCommand = true
 			ctxOptions.Show = false
 			ctxOptions.Save = true
-			ctxController := ContextUse{
-				k8sClientProvider:    okteto.NewK8sClientProvider(),
-				loginController:      login.NewLoginController(),
-				oktetoClientProvider: okteto.NewOktetoClientProvider(),
-			}
 
-			err := ctxController.UseContext(ctx, ctxOptions)
+			err := NewContextCommand().UseContext(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			return err
 		},
@@ -90,7 +101,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	return cmd
 }
 
-func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
+func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOptions) error {
 	created := false
 
 	ctxStore := okteto.ContextStore()
@@ -108,15 +119,20 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 	}
 
 	if !ctxOptions.IsOkteto {
-		if !isValidCluster(ctxOptions.Context) {
-			return oktetoErrors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
-				Hint: "Please run 'okteto context' to select one context"}
-		}
 
-		transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, c.k8sClientProvider)
-		if transformedCtx != ctxOptions.Context {
-			ctxOptions.Context = transformedCtx
+		if isUrl(ctxOptions.Context) {
+			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
 			ctxOptions.IsOkteto = true
+		} else {
+			if !isValidCluster(ctxOptions.Context) {
+				return oktetoErrors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
+					Hint: "Please run 'okteto context' to select one context"}
+			}
+			transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, c.K8sClientProvider)
+			if transformedCtx != ctxOptions.Context {
+				ctxOptions.Context = transformedCtx
+				ctxOptions.IsOkteto = true
+			}
 		}
 	}
 
@@ -141,11 +157,11 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 		}
 	}
 	if ctxOptions.IsOkteto && ctxOptions.Save {
-		client, err := c.oktetoClientProvider.NewOktetoNamespaceClient()
+		okClient, err := c.OktetoClientProvider.Provide()
 		if err != nil {
 			return err
 		}
-		hasAccess, err := utils.HasAccessToNamespace(ctx, ctxOptions.Namespace, client)
+		hasAccess, err := utils.HasAccessToNamespace(ctx, ctxOptions.Namespace, okClient)
 		if err != nil {
 			return err
 		}
@@ -156,7 +172,7 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 		}
 	}
 	if ctxOptions.Save {
-		if err := okteto.WriteOktetoContextConfig(); err != nil {
+		if err := c.OktetoContextWriter.Write(); err != nil {
 			return err
 		}
 	}
@@ -171,8 +187,8 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 	return nil
 }
 
-func (c *ContextUse) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
-	user, err := c.loginController.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
+func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
+	user, err := c.LoginController.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
 	if err != nil {
 		return err
 	}
@@ -202,7 +218,7 @@ func (c *ContextUse) initOktetoContext(ctx context.Context, ctxOptions *ContextO
 	return nil
 }
 
-func (_ *ContextUse) initKubernetesContext(ctxOptions *ContextOptions) error {
+func (*ContextCommand) initKubernetesContext(ctxOptions *ContextOptions) error {
 	cfg := kubeconfig.Get(config.GetKubeconfigPath())
 	if cfg == nil {
 		return fmt.Errorf(oktetoErrors.ErrKubernetesContextNotFound, ctxOptions.Context, config.GetKubeconfigPath())
@@ -231,10 +247,57 @@ func (_ *ContextUse) initKubernetesContext(ctxOptions *ContextOptions) error {
 	return nil
 }
 
-func (*ContextUse) initEnvVars() {
+func (c ContextCommand) getUserContext(ctx context.Context) (*types.UserContext, error) {
+	client, err := c.OktetoClientProvider.Provide()
+	if err != nil {
+		return nil, err
+	}
+
+	retries := 0
+	for retries <= 3 {
+		userContext, err := client.User().GetContext(ctx)
+
+		if err != nil && oktetoErrors.IsForbidden(err) {
+			okteto.Context().Token = ""
+			if err := c.OktetoContextWriter.Write(); err != nil {
+				oktetoLog.Infof("error updating okteto contexts: %v", err)
+				return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+			}
+			return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name)
+		}
+		if err != nil {
+			oktetoLog.Info(err)
+			retries++
+			continue
+		}
+
+		// If userID is not on context config file we add it and save it.
+		// this prevents from relogin to actual users
+		if okteto.Context().UserID == "" && okteto.Context().IsOkteto {
+			okteto.Context().UserID = userContext.User.ID
+			if err := c.OktetoContextWriter.Write(); err != nil {
+				oktetoLog.Infof("error updating okteto contexts: %v", err)
+				return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+			}
+		}
+		return userContext, nil
+	}
+	return nil, oktetoErrors.ErrInternalServerError
+}
+
+func (*ContextCommand) initEnvVars() {
 	if model.FileExists(".env") {
 		if err := godotenv.Load(); err != nil {
 			oktetoLog.Infof("error loading .env file: %s", err.Error())
 		}
 	}
+}
+
+func isUrl(u string) bool {
+	parsedUrl, err := url.Parse(u)
+	if err != nil {
+		oktetoLog.Infof("could not parse %s", u)
+		return false
+	}
+	return parsedUrl.Scheme != "" && parsedUrl.Host != ""
 }

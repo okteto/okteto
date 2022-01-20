@@ -79,7 +79,7 @@ func (c *OktetoClient) authUser(ctx context.Context, code string) (*types.User, 
 		"source": graphql.String("cli"),
 	}
 
-	err := c.Mutate(ctx, &mutation, queryVariables)
+	err := mutate(ctx, &mutation, queryVariables, c.client)
 	if err != nil {
 		if strings.Contains(err.Error(), "Cannot query field \"globalNamespace\" on type \"me\"") {
 			return c.deprecatedAuthUser(ctx, code)
@@ -132,7 +132,7 @@ func (c *OktetoClient) deprecatedAuthUser(ctx context.Context, code string) (*ty
 		"source": graphql.String("cli"),
 	}
 
-	err := c.Mutate(ctx, &mutation, queryVariables)
+	err := mutate(ctx, &mutation, queryVariables, c.client)
 	if err != nil {
 		return nil, err
 	}

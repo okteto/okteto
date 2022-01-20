@@ -93,7 +93,6 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
 		}
 	}
 
-	isOktetoRegistry := registry.IsOktetoRegistry(buildOptions.Tag)
 	if okteto.IsOkteto() {
 		buildOptions.Tag = registry.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = registry.ExpandOktetoGlobalRegistry(buildOptions.Tag)
@@ -126,11 +125,11 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
 		return err
 	}
 
-	if isOktetoRegistry {
+	if buildOptions.Tag != "" {
 		if _, err := registry.GetImageTagWithDigest(buildOptions.Tag); err != nil {
 			oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
-  %s,
-  Retrying ...`, buildOptions.Tag, err.Error())
+	  %s,
+	  Retrying ...`, buildOptions.Tag, err.Error())
 			success := true
 			err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
 			if err != nil {
@@ -142,6 +141,7 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
 			return err
 		}
 	}
+
 	err = registry.GetErrorMessage(err, buildOptions.Tag)
 	return err
 }

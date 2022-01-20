@@ -112,7 +112,7 @@ func InitContextWithDeprecatedToken() {
 	}
 	ctxStore.CurrentContext = token.URL
 
-	if err := WriteOktetoContextConfig(); err != nil {
+	if err := NewContextConfigWriter().Write(); err != nil {
 		oktetoLog.Infof("error writing okteto context: %v", err)
 	}
 }
@@ -270,7 +270,18 @@ func AddKubernetesContext(name, namespace, buildkitURL string) {
 	CurrentStore.CurrentContext = name
 }
 
-func WriteOktetoContextConfig() error {
+type ContextConfigWriterInterface interface {
+	Write() error
+}
+
+//ContextConfigWriter writes the information about the context config into stdout
+type ContextConfigWriter struct{}
+
+func NewContextConfigWriter() *ContextConfigWriter {
+	return &ContextConfigWriter{}
+}
+
+func (*ContextConfigWriter) Write() error {
 	marshalled, err := json.MarshalIndent(ContextStore(), "", "\t")
 	if err != nil {
 		oktetoLog.Infof("failed to marshal context: %s", err)

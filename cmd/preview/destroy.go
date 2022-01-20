@@ -46,7 +46,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			ctxOptions := &contextCMD.ContextOptions{
 				Namespace: ctxResource.Namespace,
 			}
-			if err := contextCMD.Run(ctx, ctxOptions); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
 				return err
 			}
 

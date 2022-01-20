@@ -210,7 +210,7 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 		Namespace: namespace,
 		Show:      true,
 	}
-	if err := contextCMD.Run(ctx, ctxOptions); err != nil {
+	if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
 		return nil, err
 	}
 

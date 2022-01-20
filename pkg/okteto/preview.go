@@ -23,6 +23,14 @@ import (
 	"github.com/shurcooL/graphql"
 )
 
+type previewClient struct {
+	client *graphql.Client
+}
+
+func newPreviewClient(client *graphql.Client) *previewClient {
+	return &previewClient{client: client}
+}
+
 //PreviewEnv represents an Okteto preview environment
 type PreviewEnv struct {
 	ID       string `json:"id" yaml:"id"`
@@ -76,7 +84,7 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 			"variables":  variablesVariable,
 			"filename":   graphql.String(filename),
 		}
-		err := c.Mutate(ctx, &mutation, queryVariables)
+		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"Preview\"") {
 				return c.deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
@@ -113,7 +121,7 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 			"sourceURL":  graphql.String(sourceUrl),
 			"filename":   graphql.String(filename),
 		}
-		err := c.Mutate(ctx, &mutation, queryVariables)
+		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"job\" on type \"Preview\"") {
 				return c.deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
@@ -160,7 +168,7 @@ func (c *OktetoClient) deprecatedDeployPreview(ctx context.Context, name, scope,
 			"variables":  variablesVariable,
 			"filename":   graphql.String(filename),
 		}
-		err := c.Mutate(ctx, &mutation, variables)
+		err := mutate(ctx, &mutation, variables, c.client)
 		if err != nil {
 			return nil, translatePreviewAPIErr(err, name)
 		}
@@ -180,7 +188,7 @@ func (c *OktetoClient) deprecatedDeployPreview(ctx context.Context, name, scope,
 			"sourceURL":  graphql.String(sourceUrl),
 			"filename":   graphql.String(filename),
 		}
-		err := c.Mutate(ctx, &mutation, variables)
+		err := mutate(ctx, &mutation, variables, c.client)
 		if err != nil {
 			return nil, translatePreviewAPIErr(err, name)
 		}
@@ -201,7 +209,7 @@ func (c *OktetoClient) DestroyPreview(ctx context.Context, name string) error {
 		"id": graphql.String(name),
 	}
 
-	err := c.Mutate(ctx, &mutation, variables)
+	err := mutate(ctx, &mutation, variables, c.client)
 	if oktetoErrors.IsNotFound(err) {
 		return nil
 	}
@@ -209,8 +217,8 @@ func (c *OktetoClient) DestroyPreview(ctx context.Context, name string) error {
 }
 
 // ListPreviews list preview environments
-func (c *OktetoClient) ListPreviews(ctx context.Context) ([]types.Preview, error) {
-	var query struct {
+func (c *previewClient) List(ctx context.Context) ([]types.Preview, error) {
+	var queryStruct struct {
 		PreviewEnvs []struct {
 			Id       graphql.String
 			Sleeping graphql.Boolean
@@ -218,13 +226,13 @@ func (c *OktetoClient) ListPreviews(ctx context.Context) ([]types.Preview, error
 		} `graphql:"previews"`
 	}
 
-	err := c.Query(ctx, &query, nil)
+	err := query(ctx, &queryStruct, nil, c.client)
 	if err != nil {
 		return nil, err
 	}
 
 	result := make([]types.Preview, 0)
-	for _, previewEnv := range query.PreviewEnvs {
+	for _, previewEnv := range queryStruct.PreviewEnvs {
 		result = append(result, types.Preview{
 			ID:       string(previewEnv.Id),
 			Sleeping: bool(previewEnv.Sleeping),
@@ -236,7 +244,7 @@ func (c *OktetoClient) ListPreviews(ctx context.Context) ([]types.Preview, error
 }
 
 func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName string) ([]types.Endpoint, error) {
-	var query struct {
+	var queryStruct struct {
 		Preview struct {
 			Deployments []struct {
 				Endpoints []struct {
@@ -256,12 +264,12 @@ func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName st
 	}
 	endpoints := make([]types.Endpoint, 0)
 
-	err := c.Query(ctx, &query, variables)
+	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, d := range query.Preview.Deployments {
+	for _, d := range queryStruct.Preview.Deployments {
 		for _, endpoint := range d.Endpoints {
 			endpoints = append(endpoints, types.Endpoint{
 				URL: string(endpoint.Url),
@@ -269,7 +277,7 @@ func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName st
 		}
 	}
 
-	for _, sfs := range query.Preview.Statefulsets {
+	for _, sfs := range queryStruct.Preview.Statefulsets {
 		for _, endpoint := range sfs.Endpoints {
 			endpoints = append(endpoints, types.Endpoint{
 				URL: string(endpoint.Url),
@@ -281,7 +289,7 @@ func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName st
 
 // GetPreviewEnvByName gets a preview environment given its name
 func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*types.GitDeploy, error) {
-	var query struct {
+	var queryStruct struct {
 		Preview struct {
 			GitDeploys []struct {
 				Id     graphql.String
@@ -294,12 +302,12 @@ func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*t
 	variables := map[string]interface{}{
 		"id": graphql.String(Context().Namespace),
 	}
-	err := c.Query(ctx, &query, variables)
+	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, gitDeploy := range query.Preview.GitDeploys {
+	for _, gitDeploy := range queryStruct.Preview.GitDeploys {
 		if string(gitDeploy.Name) == name {
 			pipeline := &types.GitDeploy{
 				ID:     string(gitDeploy.Id),
@@ -314,7 +322,7 @@ func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*t
 }
 
 func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previewName string) (map[string]string, error) {
-	var query struct {
+	var queryStruct struct {
 		Preview struct {
 			Deployments []struct {
 				Name   graphql.String
@@ -330,18 +338,18 @@ func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previe
 		"id": graphql.String(previewName),
 	}
 
-	err := c.Query(ctx, &query, variables)
+	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
 		return nil, err
 	}
 
 	status := make(map[string]string)
 
-	for _, d := range query.Preview.Deployments {
+	for _, d := range queryStruct.Preview.Deployments {
 		status[string(d.Name)] = string(d.Status)
 	}
 
-	for _, sfs := range query.Preview.Statefulsets {
+	for _, sfs := range queryStruct.Preview.Statefulsets {
 		status[string(sfs.Name)] = string(sfs.Status)
 	}
 	return status, nil

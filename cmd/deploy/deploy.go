@@ -32,10 +32,13 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -53,6 +56,7 @@ type Options struct {
 	Variables    []string
 	Timeout      time.Duration
 	Manifest     *model.Manifest
+	Build        bool
 }
 
 type kubeConfigHandler interface {
@@ -101,10 +105,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 					return err
 				}
 				if create {
-					err = namespace.ExecuteCreateNamespace(ctx, okteto.Context().Namespace, nil)
+					nsCmd, err := namespace.NewCommand()
 					if err != nil {
 						return err
 					}
+					nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.Context().Namespace})
 				}
 			}
 
@@ -185,6 +190,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the application is deployed")
 
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
+	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the app")
+	cmd.Flags().MarkHidden("build")
 
 	return cmd
 }
@@ -195,13 +202,75 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
 		return err
 	}
-
 	var err error
-	// Read manifest file with the commands to be executed
-	opts.Manifest, err = dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
-	if err != nil {
-		oktetoLog.Infof("could not find manifest file to be executed: %s", err)
-		return err
+	if contextCMD.IsManifestV2Enabled() {
+		opts.Manifest, err = contextCMD.GetManifestV2(cwd, opts.ManifestPath)
+		if err != nil {
+			return err
+		}
+		oktetoLog.Debug("found okteto manifest")
+
+		if opts.Manifest.Deploy == nil {
+			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
+		}
+
+		if opts.Manifest.Build != nil {
+
+			var buildErrs []string
+
+			for service, buildInfo := range opts.Manifest.Build {
+				if okteto.Context().IsOkteto && buildInfo.Image == "" {
+					buildInfo.Image = fmt.Sprintf("%s/%s-%s:%s", okteto.DevRegistry, opts.Name, service, "okteto")
+				}
+
+				buildOptions := build.BuildOptions{OutputMode: oktetoLog.GetOutputFormat()}
+				manifestOptions := build.OptsFromManifest(service, buildInfo, buildOptions)
+
+				// if Build flag is disabled, we check if the image is already at the registry and build it prior to deploy
+				if !opts.Build {
+					if err := buildIfImageNotFound(ctx, manifestOptions); err != nil {
+						buildErrs = append(buildErrs, err.Error())
+						continue
+					}
+				} else {
+					// if Build flag is enabled, we re-build the image regardless if it is already or not
+					oktetoLog.Debug("force build from manifest definition")
+					if err := build.Run(ctx, manifestOptions); err != nil {
+						buildErrs = append(buildErrs, err.Error())
+						continue
+					}
+				}
+
+				// check that the image is at the registry correctly pushed
+				imageWithDigest, err := registry.GetImageTagWithDigest(manifestOptions.Tag)
+				if err != nil {
+					buildErrs = append(buildErrs, err.Error())
+				}
+				oktetoLog.Debugf("got digest from registry: %s", imageWithDigest)
+				setManifestEnvVars(service, imageWithDigest)
+			}
+			if len(buildErrs) != 0 {
+				return fmt.Errorf("build failed for the services defined at manifest: %v", buildErrs)
+			}
+		}
+
+		var parsedCommands []string
+		for _, command := range opts.Manifest.Deploy.Commands {
+			parsedCommands = append(parsedCommands, expandManifestEnvVars(command))
+		}
+		opts.Manifest.Deploy.Commands = parsedCommands
+
+	} else {
+		// Read manifest file with the commands to be executed
+		opts.Manifest, err = dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
+		if err != nil {
+			oktetoLog.Infof("could not find manifest file to be executed: %s", err)
+			return err
+		}
+
+		if opts.Manifest.Deploy == nil {
+			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
+		}
 	}
 	opts.Manifest.Context = okteto.Context().Name
 	opts.Manifest.Namespace = okteto.Context().Namespace
@@ -241,6 +310,41 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		}
 	}
 
+	return nil
+}
+
+func setManifestEnvVars(service, reference string) {
+	reg, image := registry.GetRegistryAndRepo(reference)
+	repository, tag := registry.GetRepoNameAndTag(image)
+
+	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repository, reference, tag)
+
+	os.Setenv(fmt.Sprintf("build.%s.registry", service), reg)
+	os.Setenv(fmt.Sprintf("build.%s.repository", service), repository)
+	os.Setenv(fmt.Sprintf("build.%s.image", service), reference)
+	os.Setenv(fmt.Sprintf("build.%s.tag", service), tag)
+
+	oktetoLog.Debug("manifest env vars set")
+}
+
+func expandManifestEnvVars(manifest string) string {
+	return os.ExpandEnv(manifest)
+}
+
+func buildIfImageNotFound(ctx context.Context, options build.BuildOptions) error {
+	_, err := registry.GetImageTagWithDigest(options.Tag)
+	if err != nil {
+		if err == oktetoErrors.ErrNotFound {
+			oktetoLog.Debugf("image not found, building image %s", options.Tag)
+			if err := build.Run(ctx, options); err != nil {
+				return err
+			}
+			oktetoLog.Debugf("success building image before deploy %s", options.Tag)
+			return nil
+		}
+		return fmt.Errorf("error calling registry: %s", err.Error())
+	}
+	oktetoLog.Debug("image found, skipping build")
 	return nil
 }
 

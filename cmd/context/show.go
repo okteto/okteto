@@ -34,7 +34,8 @@ func Show() *cobra.Command {
 		Short: "Print the current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if err := Run(ctx, &ContextOptions{}); err != nil {
+
+			if err := NewContextCommand().Run(ctx, &ContextOptions{raiseNotCtxError: true}); err != nil {
 				return err
 			}
 			ctxStore := okteto.ContextStore()

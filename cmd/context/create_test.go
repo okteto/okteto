@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -28,6 +29,15 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObjects []runtime.Object) *ContextCommand {
+	return &ContextCommand{
+		K8sClientProvider:    test.NewFakeK8sProvider(fakeObjects),
+		LoginController:      test.NewFakeLoginController(user, nil),
+		OktetoClientProvider: client.NewFakeOktetoClientProvider(c),
+		OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
+	}
+}
+
 func Test_createContext(t *testing.T) {
 	ctx := context.Background()
 
@@ -35,7 +45,7 @@ func Test_createContext(t *testing.T) {
 		name          string
 		ctxStore      *okteto.OktetoContextStore
 		ctxOptions    *ContextOptions
-		kubeconfigCtx kubeconfigFields
+		kubeconfigCtx test.KubeconfigFields
 		expectedErr   bool
 		user          *types.User
 		fakeObjects   []runtime.Object
@@ -57,8 +67,11 @@ func Test_createContext(t *testing.T) {
 			user: &types.User{
 				Token: "test",
 			},
-			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
-			expectedErr:   false,
+			kubeconfigCtx: test.KubeconfigFields{
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: ""},
+			expectedErr: false,
 		},
 		{
 			name: "change namespace forbidden",
@@ -77,8 +90,12 @@ func Test_createContext(t *testing.T) {
 			user: &types.User{
 				Token: "test",
 			},
-			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
-			expectedErr:   true,
+			kubeconfigCtx: test.KubeconfigFields{
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: "",
+			},
+			expectedErr: true,
 		},
 		{
 			name: "transform k8s to url and create okteto context -> namespace with label",
@@ -89,7 +106,7 @@ func Test_createContext(t *testing.T) {
 				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
-			kubeconfigCtx: kubeconfigFields{
+			kubeconfigCtx: test.KubeconfigFields{
 				Name:      []string{"cloud_okteto_com"},
 				Namespace: []string{"test"},
 			},
@@ -123,7 +140,7 @@ func Test_createContext(t *testing.T) {
 			user: &types.User{
 				Token: "test",
 			},
-			kubeconfigCtx: kubeconfigFields{
+			kubeconfigCtx: test.KubeconfigFields{
 				Name:      []string{"cloud_okteto_com"},
 				Namespace: []string{"test"},
 			},
@@ -141,7 +158,7 @@ func Test_createContext(t *testing.T) {
 			user: &types.User{
 				Token: "test",
 			},
-			kubeconfigCtx: kubeconfigFields{
+			kubeconfigCtx: test.KubeconfigFields{
 				Name:      []string{"cloud_okteto_com"},
 				Namespace: []string{"test"},
 			},
@@ -160,7 +177,7 @@ func Test_createContext(t *testing.T) {
 			user: &types.User{
 				Token: "test",
 			},
-			kubeconfigCtx: kubeconfigFields{
+			kubeconfigCtx: test.KubeconfigFields{
 				Name:      []string{"cloud_okteto_com"},
 				Namespace: []string{""},
 			},
@@ -183,8 +200,12 @@ func Test_createContext(t *testing.T) {
 				IsOkteto: false,
 				Context:  "cloud_okteto_com",
 			},
-			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
-			expectedErr:   false,
+			kubeconfigCtx: test.KubeconfigFields{
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: "",
+			},
+			expectedErr: false,
 		},
 		{
 			name: "change to available okteto context",
@@ -203,8 +224,13 @@ func Test_createContext(t *testing.T) {
 				IsOkteto: true,
 				Context:  "cloud.okteto.com",
 			},
-			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
-			expectedErr:   false,
+			kubeconfigCtx: test.KubeconfigFields{
+
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: "",
+			},
+			expectedErr: false,
 		},
 		{
 			name: "change to available okteto context",
@@ -223,8 +249,12 @@ func Test_createContext(t *testing.T) {
 				IsOkteto: true,
 				Context:  "https://cloud.okteto.com",
 			},
-			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
-			expectedErr:   false,
+			kubeconfigCtx: test.KubeconfigFields{
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: "",
+			},
+			expectedErr: false,
 		},
 		{
 			name: "empty ctx create url",
@@ -239,23 +269,30 @@ func Test_createContext(t *testing.T) {
 			user: &types.User{
 				Token: "test",
 			},
-			kubeconfigCtx: kubeconfigFields{[]string{"cloud_okteto_com"}, []string{"test"}, ""},
-			expectedErr:   false,
+			kubeconfigCtx: test.KubeconfigFields{
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: "",
+			},
+			expectedErr: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			file, err := createKubeconfig(tt.kubeconfigCtx)
+			file, err := test.CreateKubeconfig(tt.kubeconfigCtx)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer os.Remove(file)
-			ctxController := ContextUse{
-				k8sClientProvider:    test.NewFakeK8sProvider(tt.fakeObjects),
-				loginController:      test.NewFakeLoginController(tt.user, nil),
-				oktetoClientProvider: test.NewFakeOktetoClientProvider(&types.UserContext{User: *tt.user}, []types.Namespace{{ID: "test"}}, nil),
+
+			fakeOktetoClient := &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
+				Users:     client.NewFakeUsersClient(tt.user, nil),
+				Preview:   client.NewFakePreviewClient(nil, nil),
 			}
+
+			ctxController := newFakeContextCommand(fakeOktetoClient, tt.user, tt.fakeObjects)
 			okteto.CurrentStore = tt.ctxStore
 
 			if err := ctxController.UseContext(ctx, tt.ctxOptions); err != nil && !tt.expectedErr {

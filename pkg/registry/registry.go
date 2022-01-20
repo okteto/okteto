@@ -14,9 +14,7 @@
 package registry
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -29,55 +27,32 @@ import (
 )
 
 const (
-	DockerRegistry = "https://registry.hub.docker.com"
+	dockerRegistry = "https://registry.hub.docker.com"
 )
-
-type ImageInfo struct {
-	Config *ConfigInfo `json:"config"`
-}
-
-type ConfigInfo struct {
-	ExposedPorts *map[string]*interface{} `json:"ExposedPorts"`
-}
 
 // GetImageTagWithDigest returns the image tag digest
 func GetImageTagWithDigest(imageTag string) (string, error) {
-	if !okteto.IsOkteto() {
-		return imageTag, nil
+	reference := imageTag
+
+	if okteto.IsOkteto() {
+		reference = ExpandOktetoDevRegistry(reference)
+		reference = ExpandOktetoGlobalRegistry(reference)
 	}
 
-	var err error
-	expandedTag := imageTag
-	expandedTag = ExpandOktetoDevRegistry(expandedTag)
-	expandedTag = ExpandOktetoGlobalRegistry(expandedTag)
-	username := okteto.Context().UserID
-	u, err := url.Parse(okteto.Context().Registry)
-	if err != nil {
-		oktetoLog.Infof("error parsing registry url: %s", err.Error())
-		return imageTag, nil
-	}
-	u.Scheme = "https"
-	c, err := NewRegistryClient(u.String(), username, okteto.Context().Token)
-	if err != nil {
-		oktetoLog.Infof("error creating registry client: %s", err.Error())
-		return imageTag, nil
-	}
+	registry, image := GetRegistryAndRepo(reference)
+	repository, _ := GetRepoNameAndTag(image)
 
-	repoURL, tag := GetRepoNameAndTag(expandedTag)
-	index := strings.IndexRune(repoURL, '/')
-	if index == -1 {
-		oktetoLog.Infof("malformed registry url: %s", repoURL)
-		return imageTag, nil
-	}
-	repoName := repoURL[index+1:]
-	digest, err := c.ManifestDigest(repoName, tag)
+	digest, err := digestForReference(reference)
 	if err != nil {
-		if strings.Contains(err.Error(), "status=404") {
+		oktetoLog.Debugf("error: %s", err.Error())
+		if strings.Contains(err.Error(), "MANIFEST_UNKNOWN") {
 			return "", oktetoErrors.ErrNotFound
 		}
 		return "", fmt.Errorf("error getting image tag digest: %s", err.Error())
 	}
-	return fmt.Sprintf("%s@%s", repoName, digest.String()), nil
+	imageTag = fmt.Sprintf("%s/%s@%s", registry, repository, digest)
+	oktetoLog.Debugf("image with digest: %s", imageTag)
+	return imageTag, nil
 }
 
 // ExpandOktetoGlobalRegistry translates okteto.global
@@ -94,7 +69,7 @@ func ExpandOktetoDevRegistry(tag string) string {
 	return replaceRegistry(tag, okteto.DevRegistry, okteto.Context().Namespace)
 }
 
-// SplitRegistryAndImage returns image tag and the registry to push the image
+// GetRegistryAndRepo returns image tag and the registry to push the image
 func GetRegistryAndRepo(tag string) (string, string) {
 	var imageTag string
 	registryTag := "docker.io"
@@ -114,54 +89,19 @@ func GetRegistryAndRepo(tag string) (string, string) {
 	return registryTag, imageTag
 }
 
+// GetHiddenExposePorts returns the ports exposed at the image
 func GetHiddenExposePorts(image string) []model.Port {
 	exposedPorts := make([]model.Port, 0)
 
 	image = ExpandOktetoDevRegistry(image)
 	image = ExpandOktetoGlobalRegistry(image)
-	username := okteto.Context().UserID
-	token := okteto.Context().Token
 
-	registry := getRegistryURL(image)
-	if registry == DockerRegistry {
-		username = ""
-		token = ""
-	}
-
-	c, err := NewRegistryClient(registry, username, token)
+	config, err := configForReference(image)
 	if err != nil {
-		oktetoLog.Infof("error creating registry client: %s", err.Error())
 		return exposedPorts
 	}
-
-	_, repo := GetRegistryAndRepo(image)
-	repoName, tag := GetRepoNameAndTag(repo)
-	if !strings.Contains(repoName, "/") {
-		repoName = fmt.Sprintf("library/%s", repoName)
-	}
-
-	digest, err := c.ManifestV2(repoName, tag)
-	if err != nil {
-		oktetoLog.Infof("error getting digest of %s/%s: %s", repoName, tag, err.Error())
-		return exposedPorts
-	}
-
-	response, err := c.DownloadBlob(repoName, digest.Config.Digest)
-	if err != nil {
-		oktetoLog.Infof("error getting digest of %s/%s: %s", repoName, tag, err.Error())
-		return exposedPorts
-	}
-
-	info := ImageInfo{Config: &ConfigInfo{}}
-	decoder := json.NewDecoder(response)
-	if err := decoder.Decode(&info); err != nil {
-		oktetoLog.Infof("error decoding registry response: %s", err.Error())
-		return exposedPorts
-	}
-
-	if info.Config.ExposedPorts != nil {
-
-		for port := range *info.Config.ExposedPorts {
+	if config.ExposedPorts != nil {
+		for port := range config.ExposedPorts {
 			if strings.Contains(port, "/") {
 				port = port[:strings.Index(port, "/")]
 				portInt, err := strconv.Atoi(port)
@@ -178,23 +118,26 @@ func GetHiddenExposePorts(image string) []model.Port {
 func getRegistryURL(image string) string {
 	registry, _ := GetRegistryAndRepo(image)
 	if registry == "docker.io" {
-		return DockerRegistry
-	} else {
-		if !strings.HasPrefix(registry, "https://") {
-			registry = fmt.Sprintf("https://%s", registry)
-		}
-		return registry
+		return dockerRegistry
 	}
+	if !strings.HasPrefix(registry, "https://") {
+		registry = fmt.Sprintf("https://%s", registry)
+	}
+	return registry
+
 }
 
+// IsGlobalRegistry returns if an image tag is pointing to the global okteto registry
 func IsGlobalRegistry(tag string) bool {
 	return strings.HasPrefix(tag, okteto.GlobalRegistry)
 }
 
+// IsDevRegistry returns if an image tag is pointing to the dev okteto registry
 func IsDevRegistry(tag string) bool {
 	return strings.HasPrefix(tag, okteto.DevRegistry)
 }
 
+// IsOktetoRegistry returns if an image tag is pointing to the okteto registry
 func IsOktetoRegistry(tag string) bool {
 	return IsDevRegistry(tag) || IsGlobalRegistry(tag)
 }

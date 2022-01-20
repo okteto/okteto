@@ -15,6 +15,9 @@ package stack
 
 import (
 	"context"
+	"os"
+	"runtime"
+	"strings"
 	"time"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -37,6 +40,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploy a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
+			options.StackPath = loadComposePaths(options.StackPath)
 			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPath)
 			if err != nil {
 				return err
@@ -48,10 +52,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 					return err
 				}
 				if create {
-					err = namespace.ExecuteCreateNamespace(ctx, s.Namespace, nil)
+					nsCmd, err := namespace.NewCommand()
 					if err != nil {
 						return err
 					}
+					nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: s.Namespace})
 				}
 			}
 
@@ -91,4 +96,19 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (10 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringVarP(&options.Progress, "progress", "", "tty", "show plain/tty build output (default \"tty\")")
 	return cmd
+}
+
+func splitComposeFileEnv(value string) []string {
+	if runtime.GOOS == "windows" {
+		return strings.Split(value, ";")
+	}
+	return strings.Split(value, ":")
+}
+
+func loadComposePaths(paths []string) []string {
+	composeEnv, present := os.LookupEnv(model.ComposeFileEnvVar)
+	if len(paths) == 0 && present {
+		paths = splitComposeFileEnv(composeEnv)
+	}
+	return paths
 }
