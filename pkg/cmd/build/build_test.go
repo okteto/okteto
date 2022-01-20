@@ -65,16 +65,16 @@ func Test_OptsFromManifest(t *testing.T) {
 		{
 			name:        "empty-values-is-okteto",
 			serviceName: "service",
-			buildInfo:   &model.BuildInfo{},
+			buildInfo:   &model.BuildInfo{Name: "movies"},
 			isOkteto:    true,
 			expected: BuildOptions{
-				Tag: "okteto.dev/service:dev",
+				Tag: "okteto.dev/movies-service:okteto",
 			},
 		},
 		{
 			name:        "empty-values-is-not-okteto",
 			serviceName: "service",
-			buildInfo:   &model.BuildInfo{},
+			buildInfo:   &model.BuildInfo{Name: "movies"},
 			isOkteto:    false,
 			expected:    BuildOptions{},
 		},
@@ -82,6 +82,7 @@ func Test_OptsFromManifest(t *testing.T) {
 			name:        "all-values-no-image",
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
+				Name:       "movies",
 				Context:    "service",
 				Dockerfile: "CustomDockerfile",
 				Target:     "build",
@@ -98,7 +99,7 @@ func Test_OptsFromManifest(t *testing.T) {
 			},
 			isOkteto: true,
 			expected: BuildOptions{
-				Tag:        "okteto.dev/service:dev",
+				Tag:        "okteto.dev/movies-service:okteto",
 				File:       filepath.Join("service", "CustomDockerfile"),
 				Target:     "build",
 				Path:       "service",

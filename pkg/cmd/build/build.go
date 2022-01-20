@@ -197,9 +197,10 @@ func translateDockerErr(err error) error {
 	return err
 }
 
+// OptsFromManifest returns the parsed options for the build from the manifest
 func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildOptions {
 	if okteto.Context().IsOkteto && b.Image == "" {
-		b.Image = fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, service, "dev")
+		b.Image = fmt.Sprintf("%s/%s-%s:%s", okteto.DevRegistry, b.Name, service, "okteto")
 	}
 
 	opts := BuildOptions{

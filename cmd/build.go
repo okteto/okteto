@@ -110,47 +110,61 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
+func removeUnusedServicesFromManifest(service string, manifest *model.ManifestBuild) {
+	for key := range *manifest {
+		if key != service {
+			delete(*manifest, key)
+		}
+	}
+}
+
 func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) error {
 	service := ""
 	if len(args) == 1 {
 		service = args[0]
 	}
 
+	// settings for single build
 	if service != "" {
-		buildInfo, ok := m[service]
+		_, ok := m[service]
 		if !ok {
 			return fmt.Errorf("invalid service name: %s", service)
 		}
-		if !okteto.Context().IsOkteto && buildInfo.Image == "" {
-			return fmt.Errorf("image tag is required when context is not okteto")
-		}
+
+		removeUnusedServicesFromManifest(service, &m)
 
 		if options.Target != "" {
-			buildInfo.Target = options.Target
+			m[service].Target = options.Target
 		}
 		if len(options.CacheFrom) != 0 {
-			buildInfo.CacheFrom = options.CacheFrom
+			m[service].CacheFrom = options.CacheFrom
 		}
 		if options.Tag != "" {
-			buildInfo.Image = options.Tag
+			m[service].Image = options.Tag
 		}
 
-		opts := build.OptsFromManifest(service, buildInfo, options)
-		opts.Secrets = options.Secrets
-
-		return buildV1(opts, []string{opts.Path})
+	} else {
+		if options.Tag != "" || options.Target != "" || options.CacheFrom != nil || options.Secrets != nil {
+			return fmt.Errorf("flags are not allowed when building services from manifest")
+		}
 	}
 
-	if options.Tag != "" || options.Target != "" || options.CacheFrom != nil || options.Secrets != nil {
-		return fmt.Errorf("flags are not allowed when building services from manifest")
-	}
-
-	for service, buildInfo := range m {
-		if !okteto.Context().IsOkteto && buildInfo.Image == "" {
+	for srv, manifestOptions := range m {
+		if !okteto.Context().IsOkteto && manifestOptions.Image == "" {
 			oktetoLog.Errorf("image is required")
 			continue
 		}
-		opts := build.OptsFromManifest(service, buildInfo, options)
+		if cwd, err := os.Getwd(); err == nil && manifestOptions.Name == "" {
+			manifestOptions.Name = utils.InferApplicationName(cwd)
+		}
+
+		opts := build.OptsFromManifest(srv, manifestOptions, options)
+
+		// when single build, transfer the secrets from the flag to the options
+		if srv == service {
+			opts.Secrets = options.Secrets
+		}
+
 		err := buildV1(opts, []string{opts.Path})
 		if err != nil {
 			oktetoLog.Error(err)
