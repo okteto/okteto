@@ -18,6 +18,7 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -46,18 +47,24 @@ func TestDeployFromManifest(t *testing.T) {
 		chartFilename    = "Chart.yaml"
 		templateFilename = "k8s.yaml"
 		releaseName      = "hello-world"
-		manifestContent  = `build:
+
+		manifestContent = `
+build:
   app:
     context: .
 deploy:
   - helm upgrade --install hello-world chart --set app.image=${build.app.image}`
-		chartContent = `apiVersion: v2
+
+		chartContent = `
+apiVersion: v2
 name: hello-world
 description: A React application in Kubernetes
 type: application
 version: 0.1.0
 appVersion: 1.0.0`
-		templateContent = `apiVersion: apps/v1
+
+		templateContent = `
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hello-world
@@ -142,29 +149,29 @@ spec:
 
 		output, err := runOktetoDeploy(oktetoPath, repoDir)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 		imageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 		sha := strings.SplitN(imageWithDigest, "@", 2)[1]
 
 		if err := expectBuiltImageNotFound(output); err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 		if err := expectHelmInstallation(output, releaseName, testNamespace); err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 		if err := expectEnvSetting(output, testNamespace, repoDir, sha); err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 		if err := expectAppToBeRunning(releaseName, testNamespace); err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 	})
@@ -173,29 +180,29 @@ spec:
 
 		imageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
 		if err != nil {
-			t.Fatalf("image is not at registry: %s", err.Error())
+			t.Fatalf("image is not at registry: %v", err)
 		}
 		sha := strings.SplitN(imageWithDigest, "@", 2)[1]
 
 		output, err := runOktetoDeploy(oktetoPath, repoDir)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 		if err := expectImageFoundSkippingBuild(output); err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 		if err := expectHelmUpgrade(output, releaseName, testNamespace, "2"); err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 		if err := expectEnvSetting(output, testNamespace, repoDir, sha); err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 		if err := expectAppToBeRunning(releaseName, testNamespace); err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 	})
@@ -204,29 +211,29 @@ spec:
 
 		imageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
 		if err != nil {
-			t.Fatalf("image is not at registry: %s", err.Error())
+			t.Fatalf("image is not at registry: %v", err)
 		}
 		sha := strings.SplitN(imageWithDigest, "@", 2)[1]
 
 		output, err := runOktetoDeployForceBuild(oktetoPath, repoDir)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 		if err := expectForceBuild(output); err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 		if err := expectHelmUpgrade(output, releaseName, testNamespace, "3"); err != nil {
-			t.Fatalf("expected helm upgrade")
+			t.Fatal(err)
 		}
 
 		if err := expectEnvSetting(output, testNamespace, repoDir, sha); err != nil {
-			t.Fatalf("expected to environment variables to be set")
+			t.Fatal(err)
 		}
 
 		if err := expectAppToBeRunning(releaseName, testNamespace); err != nil {
-			t.Fatalf("expected the app to be running with exact content")
+			t.Fatal(err)
 		}
 
 	})
@@ -256,21 +263,21 @@ func runOktetoDeployForceBuild(oktetoPath, repoDir string) (string, error) {
 
 func expectBuiltImageNotFound(output string) error {
 	if ok := strings.Contains(output, "image not found, building image"); !ok {
-		return fmt.Errorf("expected image not found, building image")
+		return errors.New("expected image not found, building image")
 	}
 	return nil
 }
 
 func expectImageFoundSkippingBuild(output string) error {
 	if ok := strings.Contains(output, "image found, skipping build"); !ok {
-		return fmt.Errorf("expected image found, skipping build")
+		return errors.New("expected image found, skipping build")
 	}
 	return nil
 }
 
 func expectForceBuild(output string) error {
 	if ok := strings.Contains(output, "force build from manifest definition"); !ok {
-		return fmt.Errorf("expected force build from manifest definition")
+		return errors.New("expected force build from manifest definition")
 	}
 	return nil
 }
@@ -293,7 +300,7 @@ func expectHelmInstallation(output, releaseName, namespace string) error {
 		strings.Contains(output, fmt.Sprintf("NAMESPACE: %s", namespace)) &&
 		strings.Contains(output, "STATUS: deployed") &&
 		strings.Contains(output, "REVISION: 1"); !ok {
-		return fmt.Errorf("expected helm chart to be installed")
+		return errors.New("expected helm chart to be installed")
 	}
 	return nil
 }
@@ -316,7 +323,7 @@ func expectAppToBeRunning(releaseName, namespace string) error {
 		return err
 	}
 	if ok := strings.Contains(content, "Hello world!"); !ok {
-		return fmt.Errorf("expected app content")
+		return errors.New("expected app content")
 	}
 	return nil
 }

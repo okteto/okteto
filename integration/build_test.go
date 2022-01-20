@@ -42,7 +42,8 @@ func TestBuildCommand(t *testing.T) {
 		gitRepo          = "git@github.com:okteto/go-getting-started.git"
 		repoDir          = "go-getting-started"
 		manifestFilename = "okteto.yml"
-		manifestContent  = `build:
+		manifestContent  = `
+build:
   app:
     context: .`
 	)
@@ -88,11 +89,11 @@ func TestBuildCommand(t *testing.T) {
 
 		_, err := runOktetoBuild(ctx, oktetoPath, pathToManifestFile, repoDir)
 		if err != nil {
-			t.Fatalf(err.Error())
+			t.Fatal(err)
 		}
 
 		if _, err := registry.GetImageTagWithDigest(expectedImageTag); err != nil {
-			t.Fatalf("image not pushed to registry: %s", err.Error())
+			t.Fatalf("image not pushed to registry: %v", err)
 		}
 
 	})
