@@ -19,7 +19,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,12 +31,6 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 )
 
-const (
-	buildGitRepo   = "git@github.com:okteto/react-getting-started.git"
-	buildGitFolder = "react-getting-started"
-	buildManifest  = "okteto.yml"
-)
-
 func TestBuildCommand(t *testing.T) {
 
 	ctx := context.Background()
@@ -45,83 +38,74 @@ func TestBuildCommand(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	const (
+		gitRepo          = "git@github.com:okteto/go-getting-started.git"
+		repoDir          = "go-getting-started"
+		manifestFilename = "okteto.yml"
+		manifestContent  = `
+build:
+  app:
+    context: .`
+	)
 
-	testName := fmt.Sprintf("TestBuildCommand-%s", runtime.GOOS)
-	testRef := strings.ToLower(fmt.Sprintf("%s-%d", testName, time.Now().Unix()))
-	namespace := fmt.Sprintf("%s-%s", testRef, user)
+	var (
+		testID           = strings.ToLower(fmt.Sprintf("TestBuildCommand-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testNamespace    = fmt.Sprintf("%s-%s", testID, user)
+		originNamespace  = getCurrentNamespace()
+		expectedImageTag = fmt.Sprintf("%s/%s/%s:dev", okteto.Context().Registry, testNamespace, "app")
+	)
 
-	t.Run(testName, func(t *testing.T) {
-		t.Logf("setup test %s", testName)
+	if err := cloneGitRepo(ctx, gitRepo); err != nil {
+		t.Fatal(err)
+	}
 
-		startNamespace := getCurrentNamespace()
-		defer changeToNamespace(ctx, oktetoPath, startNamespace)
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-		if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
-			t.Fatal(err)
+	pathToManifestDir := filepath.Join(cwd, repoDir)
+	if err := writeFile(pathToManifestDir, manifestFilename, manifestContent); err != nil {
+		t.Fatal(err)
+	}
+	pathToManifestFile := filepath.Join(pathToManifestDir, manifestFilename)
+
+	if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Cleanup(func() {
+		changeToNamespace(ctx, oktetoPath, originNamespace)
+		deleteNamespace(ctx, oktetoPath, testNamespace)
+		deleteGitRepo(ctx, repoDir)
+
+	})
+
+	t.Run("okteto build should build and push the image to registry", func(t *testing.T) {
+
+		if _, err := registry.GetImageTagWithDigest(expectedImageTag); err == nil {
+			t.Fatal("image is already at registry")
 		}
-		defer deleteNamespace(ctx, oktetoPath, namespace)
 
-		if err := cloneGitRepo(ctx, buildGitRepo); err != nil {
-			t.Fatal(err)
-		}
-		defer deleteGitRepo(ctx, buildGitFolder)
-
-		cwd, err := os.Getwd()
+		_, err := runOktetoBuild(ctx, oktetoPath, pathToManifestFile, repoDir)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		dir, err := os.MkdirTemp(cwd, testName)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer os.RemoveAll(dir)
-
-		manifestPath := filepath.Join(dir, "okteto.yml")
-		manifestContent := `build:
-  react-getting-started:
-    context: .
-`
-		if err := writeManifestV2(manifestPath, manifestContent); err != nil {
-			t.Fatal(err)
-		}
-
-		t.Logf("running okteto build command...")
-		if err := oktetoBuild(ctx, oktetoPath, manifestPath); err != nil {
-			t.Fatal(err)
-		}
-
-		t.Logf("checking at registry if the image has been built...")
-		expectedImageTag := fmt.Sprintf("%s/%s/%s:dev", okteto.Context().Registry, namespace, buildGitFolder)
 		if _, err := registry.GetImageTagWithDigest(expectedImageTag); err != nil {
-			t.Fatal(err)
+			t.Fatalf("image not pushed to registry: %v", err)
 		}
 
 	})
 }
 
-func oktetoBuild(ctx context.Context, oktetoPath, oktetoManifestPath string) error {
-	cmd := exec.Command(oktetoPath, "build", "-f", oktetoManifestPath)
+func runOktetoBuild(ctx context.Context, oktetoPath, pathToManifestFile, repoDir string) (string, error) {
+	cmd := exec.Command(oktetoPath, "build", "-f", pathToManifestFile, "-l", "debug")
 	cmd.Env = append(os.Environ(), "OKTETO_ENABLE_MANIFEST_V2=true")
-	cmd.Dir = buildGitFolder
+	cmd.Dir = repoDir
 	o, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("okteto build failed: %s - %s", string(o), err)
+		return "", fmt.Errorf("okteto build failed: \nerror: %s \noutput: %s", err.Error(), string(o))
 	}
-	log.Printf("okteto build %s success", oktetoManifestPath)
-	return nil
-}
-
-func writeManifestV2(path, content string) error {
-	oFile, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer oFile.Close()
-
-	if err := os.WriteFile(oFile.Name(), []byte(content), 0600); err != nil {
-		return err
-	}
-
-	return nil
+	return string(o), nil
 }

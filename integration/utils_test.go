@@ -19,6 +19,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -141,4 +142,8 @@ func updateKubeConfig(oktetoPath string) error {
 		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
 	}
 	return nil
+}
+
+func writeFile(path, filename, content string) error {
+	return ioutil.WriteFile(filepath.Join(path, filename), []byte(content), 0777)
 }
