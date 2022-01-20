@@ -25,7 +25,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	okErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -72,7 +72,7 @@ func setOutputMode(outputMode string) string {
 }
 
 func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
-	log.Infof("building your image on %s", okteto.Context().Builder)
+	oktetoLog.Infof("building your image on %s", okteto.Context().Builder)
 	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {
 		return err
@@ -109,17 +109,17 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
 
 	err = solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
 	if err != nil {
-		log.Infof("Failed to build image: %s", err.Error())
+		oktetoLog.Infof("Failed to build image: %s", err.Error())
 	}
 	if registry.IsTransientError(err) {
-		log.Yellow(`Failed to push '%s' to the registry:
+		oktetoLog.Yellow(`Failed to push '%s' to the registry:
   %s,
   Retrying ...`, buildOptions.Tag, err.Error())
 		success := true
 		err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
 		if err != nil {
 			success = false
-			log.Infof("Failed to build image: %s", err.Error())
+			oktetoLog.Infof("Failed to build image: %s", err.Error())
 		}
 		err = registry.GetErrorMessage(err, buildOptions.Tag)
 		analytics.TrackBuildTransientError(okteto.Context().Builder, success)
@@ -128,14 +128,14 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
 
 	if isOktetoRegistry {
 		if _, err := registry.GetImageTagWithDigest(buildOptions.Tag); err != nil {
-			log.Yellow(`Failed to push '%s' metadata to the registry:
+			oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
   %s,
   Retrying ...`, buildOptions.Tag, err.Error())
 			success := true
 			err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
 			if err != nil {
 				success = false
-				log.Infof("Failed to build image: %s", err.Error())
+				oktetoLog.Infof("Failed to build image: %s", err.Error())
 			}
 			err = registry.GetErrorMessage(err, buildOptions.Tag)
 			analytics.TrackBuildPullError(okteto.Context().Builder, success)

@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 func (dev *Dev) translateDeprecatedVolumeFields() error {
@@ -75,7 +75,7 @@ func (dev *Dev) IsSubPathFolder(path string) (bool, error) {
 	for _, sync := range dev.Sync.Folders {
 		rel, err := filepath.Rel(sync.LocalPath, path)
 		if err != nil {
-			log.Infof("error making rel '%s' and '%s'", sync.LocalPath, path)
+			oktetoLog.Infof("error making rel '%s' and '%s'", sync.LocalPath, path)
 			return false, err
 		}
 		if strings.HasPrefix(rel, "..") {
@@ -132,7 +132,7 @@ func (dev *Dev) getSourceSubPath(path string) string {
 	path = path[len(filepath.VolumeName(path)):]
 	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(path))
 	if err != nil {
-		log.Fatalf("error on getSourceSubPath of '%s': %s", path, err.Error())
+		oktetoLog.Fatalf("error on getSourceSubPath of '%s': %s", path, err.Error())
 	}
 	return filepath.ToSlash(filepath.Join(SourceCodeSubPath, filepath.ToSlash(rel)))
 }

@@ -25,7 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
@@ -68,14 +68,14 @@ func Status() *cobra.Command {
 
 			sy, err := syncthing.Load(dev)
 			if err != nil {
-				log.Infof("error accessing the syncthing info file: %s", err)
+				oktetoLog.Infof("error accessing the syncthing info file: %s", err)
 				return errors.ErrNotInDevMode
 			}
 			if showInfo {
-				log.Information("Local syncthing url: http://%s", sy.GUIAddress)
-				log.Information("Remote syncthing url: http://%s", sy.RemoteGUIAddress)
-				log.Information("Syncthing username: okteto")
-				log.Information("Syncthing password: %s", sy.GUIPassword)
+				oktetoLog.Information("Local syncthing url: http://%s", sy.GUIAddress)
+				oktetoLog.Information("Remote syncthing url: http://%s", sy.RemoteGUIAddress)
+				oktetoLog.Information("Syncthing username: okteto")
+				oktetoLog.Information("Syncthing password: %s", sy.GUIPassword)
 			}
 
 			if watch {
@@ -114,7 +114,7 @@ func runWithWatch(ctx context.Context, sy *syncthing.Syncthing) error {
 			message := ""
 			progress, err := status.Run(ctx, sy)
 			if err != nil {
-				log.Infof("error accessing status: %s", err)
+				oktetoLog.Infof("error accessing status: %s", err)
 				continue
 			}
 			if progress == 100 {
@@ -128,12 +128,12 @@ func runWithWatch(ctx context.Context, sy *syncthing.Syncthing) error {
 
 	select {
 	case <-stop:
-		log.Infof("CTRL+C received, starting shutdown sequence")
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
 		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
-			log.Infof("exit signal received due to error: %s", err)
+			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
@@ -146,9 +146,9 @@ func runWithoutWatch(ctx context.Context, sy *syncthing.Syncthing) error {
 		return err
 	}
 	if progress == 100 {
-		log.Success("Synchronization status: %.2f%%", progress)
+		oktetoLog.Success("Synchronization status: %.2f%%", progress)
 	} else {
-		log.Yellow("Synchronization status: %.2f%%", progress)
+		oktetoLog.Yellow("Synchronization status: %.2f%%", progress)
 	}
 	return nil
 }

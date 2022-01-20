@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 // Monitor will send a message to disconnected if remote syncthing is disconnected for more than 10 seconds.
@@ -32,9 +32,9 @@ func (s *Syncthing) Monitor(ctx context.Context, disconnect chan error) {
 				retries = 0
 				continue
 			}
-			log.Infof("syncthing ping error %d", retries)
+			oktetoLog.Infof("syncthing ping error %d", retries)
 			if retries >= 3 {
-				log.Infof("syncthing ping error, sending disconnect signal")
+				oktetoLog.Infof("syncthing ping error, sending disconnect signal")
 				disconnect <- errors.ErrLostSyncthing
 				return
 			}
@@ -56,7 +56,7 @@ func (s *Syncthing) MonitorStatus(ctx context.Context, disconnect chan error) {
 			case nil, errors.ErrBusySyncthing, errors.ErrLostSyncthing:
 				continue
 			default:
-				log.Infof("syncthing monitor error, sending disconnect signal: %s", err)
+				oktetoLog.Infof("syncthing monitor error, sending disconnect signal: %s", err)
 				disconnect <- err
 				return
 			}

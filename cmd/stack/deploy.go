@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -70,7 +70,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			err = stack.Deploy(ctx, s, options)
 			analytics.TrackDeployStack(err == nil, s.IsCompose)
 			if err == nil {
-				log.Success("Stack '%s' successfully deployed", s.Name)
+				oktetoLog.Success("Stack '%s' successfully deployed", s.Name)
 			}
 
 			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {

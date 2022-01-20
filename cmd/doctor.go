@@ -21,7 +21,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/doctor"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -42,7 +42,7 @@ func Doctor() *cobra.Command {
 		Short: "Generate a zip file with the okteto logs",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#doctor"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Info("starting doctor command")
+			oktetoLog.Info("starting doctor command")
 			ctx := context.Background()
 
 			if okteto.InDevContainer() {
@@ -65,7 +65,7 @@ func Doctor() *cobra.Command {
 			}
 			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, c)
 			if err == nil {
-				log.Information("Your doctor file is available at %s", filename)
+				oktetoLog.Information("Your doctor file is available at %s", filename)
 			}
 			analytics.TrackDoctor(err == nil)
 			return err

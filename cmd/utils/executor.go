@@ -18,7 +18,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 type ManifestExecutor interface {
@@ -99,7 +99,7 @@ func (e *plainExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
 func (e *plainExecutorDisplayer) display(_ string) {
 	for e.scanner.Scan() {
 		line := e.scanner.Text()
-		log.Println(line)
+		oktetoLog.Println(line)
 	}
 }
 
@@ -123,14 +123,14 @@ func (e *jsonExecutorDisplayer) display(command string) {
 		for e.stdoutScanner.Scan() {
 			line := e.stdoutScanner.Text()
 
-			log.Println(line)
+			oktetoLog.Println(line)
 		}
 	}()
 
 	go func() {
 		for e.stderrScanner.Scan() {
 			line := e.stderrScanner.Text()
-			log.Fail(line)
+			oktetoLog.Fail(line)
 
 		}
 	}()

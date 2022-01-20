@@ -19,7 +19,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 )
@@ -60,7 +60,7 @@ func LoadBoolean(k string) bool {
 
 	h, err := strconv.ParseBool(v)
 	if err != nil {
-		log.Yellow("'%s' is not a valid value for environment variable %s", v, k)
+		oktetoLog.Yellow("'%s' is not a valid value for environment variable %s", v, k)
 	}
 
 	return h

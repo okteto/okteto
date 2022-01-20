@@ -29,7 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -130,11 +130,11 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		}
 
 		if err := c.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
-			log.Infof("error deleting deprecated volume: %v", err)
+			oktetoLog.Infof("error deleting deprecated volume: %v", err)
 		}
 
 		spinner.Stop()
-		log.Success("Development container deactivated")
+		oktetoLog.Success("Development container deactivated")
 
 		if !rm {
 			exit <- nil
@@ -149,11 +149,11 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			return
 		}
 		spinner.Stop()
-		log.Success("Persistent volume removed")
+		oktetoLog.Success("Persistent volume removed")
 
 		if os.Getenv(model.OktetoSkipCleanupEnvVar) == "" {
 			if err := syncthing.RemoveFolder(dev); err != nil {
-				log.Infof("failed to delete existing syncthing folder")
+				oktetoLog.Infof("failed to delete existing syncthing folder")
 			}
 		}
 
@@ -163,12 +163,12 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 
 	select {
 	case <-stop:
-		log.Infof("CTRL+C received, starting shutdown sequence")
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
 		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
-			log.Infof("exit signal received due to error: %s", err)
+			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}

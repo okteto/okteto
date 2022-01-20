@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -63,7 +63,7 @@ func start(ctx context.Context, serverAddr string, config *ssh.ClientConfig, kee
 		return nil, fmt.Errorf("ssh connection ping failed: %w", err)
 	}
 
-	log.Infof("ssh ping to %s was successful", serverAddr)
+	oktetoLog.Infof("ssh ping to %s was successful", serverAddr)
 
 	return client, nil
 }
@@ -77,7 +77,7 @@ func (p *pool) keepAlive(ctx context.Context) {
 			err := ctx.Err()
 			if err != nil {
 				if err != context.Canceled {
-					log.Infof("ssh pool keep alive completed with error: %s", err)
+					oktetoLog.Infof("ssh pool keep alive completed with error: %s", err)
 				}
 			}
 
@@ -88,7 +88,7 @@ func (p *pool) keepAlive(ctx context.Context) {
 			}
 
 			if _, _, err := p.client.SendRequest("dev.okteto.com/keepalive", true, nil); err != nil {
-				log.Infof("failed to send SSH keepalive: %s", err)
+				oktetoLog.Infof("failed to send SSH keepalive: %s", err)
 			}
 		}
 	}
@@ -146,7 +146,7 @@ func (p *pool) stop() {
 	p.stopped = true
 	if err := p.client.Close(); err != nil {
 		if !errors.IsClosedNetwork(err) {
-			log.Infof("failed to close SSH pool: %s", err)
+			oktetoLog.Infof("failed to close SSH pool: %s", err)
 		}
 	}
 }

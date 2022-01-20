@@ -21,7 +21,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -90,11 +90,11 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 		select {
 		case <-ticker.C:
 			if retries%5 == 0 {
-				log.Info("development container is not ready yet, will retry")
+				oktetoLog.Info("development container is not ready yet, will retry")
 			}
 			continue
 		case <-ctx.Done():
-			log.Debug("call to apps.GetRunningPodInLoop cancelled")
+			oktetoLog.Debug("call to apps.GetRunningPodInLoop cancelled")
 			return nil, ctx.Err()
 		}
 	}

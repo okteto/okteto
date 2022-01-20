@@ -21,7 +21,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/labels"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -134,7 +134,7 @@ func CheckConditionErrors(deployment *appsv1.Deployment, dev *model.Dev) error {
 	for _, c := range deployment.Status.Conditions {
 		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
 			if strings.Contains(c.Message, "exceeded quota") {
-				log.Infof("%s: %s", errors.ErrQuota, c.Message)
+				oktetoLog.Infof("%s: %s", errors.ErrQuota, c.Message)
 				if strings.Contains(c.Message, "requested: pods=") {
 					return fmt.Errorf("quota exceeded, you have reached the maximum number of pods per namespace")
 				}
@@ -203,7 +203,7 @@ func IsDevModeOn(d *appsv1.Deployment) bool {
 
 //Destroy destroys a k8s deployment
 func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
-	log.Infof("deleting deployment '%s'", name)
+	oktetoLog.Infof("deleting deployment '%s'", name)
 	dClient := c.AppsV1().Deployments(namespace)
 	err := dClient.Delete(ctx, name, metav1.DeleteOptions{GracePeriodSeconds: pointer.Int64Ptr(0)})
 	if err != nil {
@@ -212,7 +212,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 		}
 		return fmt.Errorf("error deleting kubernetes deployment: %s", err)
 	}
-	log.Infof("deployment '%s' deleted", name)
+	oktetoLog.Infof("deployment '%s' deleted", name)
 	return nil
 }
 

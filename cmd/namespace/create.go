@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -65,7 +65,7 @@ func ExecuteCreateNamespace(ctx context.Context, namespace string, members *[]st
 		return err
 	}
 
-	log.Success("Namespace '%s' created", oktetoNS)
+	oktetoLog.Success("Namespace '%s' created", oktetoNS)
 
 	if members != nil && len(*members) > 0 {
 		if err := oktetoClient.AddNamespaceMembers(ctx, namespace, *members); err != nil {

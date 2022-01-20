@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/shurcooL/graphql"
 	"golang.org/x/oauth2"
@@ -130,7 +130,7 @@ func translateAPIErr(err error) error {
 		return fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")
 
 	default:
-		log.Infof("Unrecognized API error: %s", err)
+		oktetoLog.Infof("Unrecognized API error: %s", err)
 		return fmt.Errorf(e)
 	}
 

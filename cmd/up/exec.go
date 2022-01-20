@@ -26,7 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/pods"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/ssh"
 )
 
@@ -51,14 +51,14 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 	)
 
 	if err != nil {
-		log.Infof("failed to clean session: %s", err)
+		oktetoLog.Infof("failed to clean session: %s", err)
 	}
 
 	up.cleaned <- out.String()
 }
 
 func (up *upContext) runCommand(ctx context.Context, cmd []string) error {
-	log.Infof("starting remote command")
+	oktetoLog.Infof("starting remote command")
 	if err := config.UpdateStateFile(up.Dev, config.Ready); err != nil {
 		return err
 	}

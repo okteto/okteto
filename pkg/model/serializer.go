@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -254,14 +254,14 @@ func (sync *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	err := unmarshal(&rawFolders)
 	if err == nil {
 		sync.Compression = true
-		sync.Verbose = log.IsDebug()
+		sync.Verbose = oktetoLog.IsDebug()
 		sync.RescanInterval = DefaultSyncthingRescanInterval
 		sync.Folders = rawFolders
 		return nil
 	}
 
 	var rawSync syncRaw
-	rawSync.Verbose = log.IsDebug()
+	rawSync.Verbose = oktetoLog.IsDebug()
 	err = unmarshal(&rawSync)
 	if err != nil {
 		return err
@@ -492,7 +492,7 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		log.Yellow("The syntax '%s' is deprecated in the 'volumes' field. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
+		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
 		v.LocalPath, err = ExpandEnv(parts[0])
 		if err != nil {
 			return err

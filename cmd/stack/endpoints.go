@@ -20,7 +20,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -51,7 +51,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			}
 
 			if err := stack.ListEndpoints(ctx, s, output); err != nil {
-				log.Success("Stack '%s' successfully deployed", s.Name)
+				oktetoLog.Success("Stack '%s' successfully deployed", s.Name)
 			}
 			return nil
 		},

@@ -23,7 +23,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -148,7 +148,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 		}
 		return fmt.Errorf("error deleting kubernetes job: %s", err)
 	}
-	log.Infof("statefulset '%s' deleted", name)
+	oktetoLog.Infof("statefulset '%s' deleted", name)
 	return nil
 }
 
@@ -175,7 +175,7 @@ func CheckConditionErrors(sfs *appsv1.StatefulSet, dev *model.Dev) error {
 	for _, c := range sfs.Status.Conditions {
 		if c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
 			if strings.Contains(c.Message, "exceeded quota") {
-				log.Infof("%s: %s", errors.ErrQuota, c.Message)
+				oktetoLog.Infof("%s: %s", errors.ErrQuota, c.Message)
 				if strings.Contains(c.Message, "requested: pods=") {
 					return fmt.Errorf("quota exceeded, you have reached the maximum number of pods per namespace")
 				}

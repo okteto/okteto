@@ -21,7 +21,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -72,6 +72,6 @@ func executeDestroyPreview(ctx context.Context, name string) error {
 		return fmt.Errorf("failed to destroy preview environment: %s", err)
 	}
 
-	log.Success("Preview environment destroyed")
+	oktetoLog.Success("Preview environment destroyed")
 	return nil
 }

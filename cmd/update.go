@@ -20,7 +20,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +43,7 @@ func Update() *cobra.Command {
 			if isUpdateAvailable(currentVersion) {
 				displayUpdateSteps()
 			} else {
-				log.Success("The latest okteto version is already installed")
+				oktetoLog.Success("The latest okteto version is already installed")
 			}
 
 			return nil
@@ -55,19 +55,19 @@ func Update() *cobra.Command {
 func isUpdateAvailable(currentVersion *semver.Version) bool {
 	v, err := utils.GetLatestVersionFromGithub()
 	if err != nil {
-		log.Infof("failed to get latest version from github: %s", err)
+		oktetoLog.Infof("failed to get latest version from github: %s", err)
 		return false
 	}
 
 	if len(v) > 0 {
 		latest, err := semver.NewVersion(v)
 		if err != nil {
-			log.Infof("failed to parse latest version '%s': %s", v, err)
+			oktetoLog.Infof("failed to parse latest version '%s': %s", v, err)
 			return false
 		}
 
 		if latest.GreaterThan(currentVersion) {
-			log.Infof("new version available: %s -> %s", currentVersion.String(), latest)
+			oktetoLog.Infof("new version available: %s -> %s", currentVersion.String(), latest)
 			return true
 		}
 	}
@@ -76,20 +76,20 @@ func isUpdateAvailable(currentVersion *semver.Version) bool {
 }
 
 func displayUpdateSteps() {
-	log.Println("You can update okteto with the following:")
+	oktetoLog.Println("You can update okteto with the following:")
 	switch {
 	case runtime.GOOS == "darwin" || runtime.GOOS == "linux":
-		log.Print(`
+		oktetoLog.Print(`
 # Using installation script:
 curl https://get.okteto.com -sSfL | sh`)
 		if runtime.GOOS == "darwin" {
-			log.Print(`
+			oktetoLog.Print(`
 
 # Using brew:
 brew upgrade okteto`)
 		}
 	case runtime.GOOS == "windows":
-		log.Print(`# Using manual installation:
+		oktetoLog.Print(`# Using manual installation:
 1.- Download https://downloads.okteto.com/cli/okteto.exe
 2.- Add downloaded file to your $PATH
 

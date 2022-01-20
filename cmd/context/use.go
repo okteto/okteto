@@ -25,7 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -95,9 +95,9 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 
 	if ctxOptions.Context == "" {
 		if !ctxOptions.IsCtxCommand {
-			log.Information("Okteto context is not initialized")
+			oktetoLog.Information("Okteto context is not initialized")
 		}
-		log.Infof("authenticating with interactive context")
+		oktetoLog.Infof("authenticating with interactive context")
 		oktetoContext, err := getContext(ctx, ctxOptions)
 		if err != nil {
 			return err
@@ -121,11 +121,11 @@ func Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	os.Setenv(model.OktetoNamespaceEnvVar, okteto.Context().Namespace)
 
 	if ctxOptions.Show {
-		log.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))
+		oktetoLog.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))
 	}
 
 	if ctxOptions.IsCtxCommand {
-		log.Information("Run 'okteto context update-kubeconfig' to update your kubectl credentials")
+		oktetoLog.Information("Run 'okteto context update-kubeconfig' to update your kubectl credentials")
 	}
 	return nil
 }
@@ -172,7 +172,7 @@ func (c ContextUse) getUserContext(ctx context.Context) (*types.UserContext, err
 		if okteto.Context().UserID == "" && okteto.Context().IsOkteto {
 			okteto.Context().UserID = userContext.User.ID
 			if err := okteto.WriteOktetoContextConfig(); err != nil {
-				log.Infof("error updating okteto contexts: %v", err)
+				oktetoLog.Infof("error updating okteto contexts: %v", err)
 				return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 			}
 		}
@@ -184,13 +184,13 @@ func (c ContextUse) getUserContext(ctx context.Context) (*types.UserContext, err
 		if errors.IsForbidden(err) {
 			okteto.Context().Token = ""
 			if err := okteto.WriteOktetoContextConfig(); err != nil {
-				log.Infof("error updating okteto contexts: %v", err)
+				oktetoLog.Infof("error updating okteto contexts: %v", err)
 				return nil, fmt.Errorf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
 			}
 			return nil, fmt.Errorf(errors.ErrNotLogged, okteto.Context().Name)
 		}
 
-		log.Info(err)
+		oktetoLog.Info(err)
 		retries++
 	}
 	return nil, errors.ErrInternalServerError

@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -168,7 +168,7 @@ func getStack(name, manifestPath string) (*model.Stack, error) {
 	var isCompose bool
 	if isDeprecatedExtension(manifestPath) {
 		deprecatedFile := filepath.Base(manifestPath)
-		log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", deprecatedFile)
+		oktetoLog.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", deprecatedFile)
 	}
 	if isPathAComposeFile(manifestPath) {
 		isCompose = true
@@ -179,7 +179,7 @@ func getStack(name, manifestPath string) (*model.Stack, error) {
 	}
 	overrideStack, err := getOverrideFile(manifestPath)
 	if err == nil {
-		log.Info("override file detected. Merging it")
+		oktetoLog.Info("override file detected. Merging it")
 		stack = stack.Merge(overrideStack)
 	}
 	return stack, nil

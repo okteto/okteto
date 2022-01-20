@@ -26,7 +26,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -127,7 +127,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 	}
 
 	if !hasBuiltSomething && !hasAddedAnyVolumeMounts && options.ForceBuild {
-		log.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
+		oktetoLog.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
 	}
 
 	return nil
@@ -152,18 +152,18 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 				s.Services[name] = svc
 				continue
 			}
-			log.Infof("image '%s' not found, building it", svc.Image)
+			oktetoLog.Infof("image '%s' not found, building it", svc.Image)
 		}
 		if !hasBuiltSomething {
 			hasBuiltSomething = true
 			if okteto.Context().Builder != "" {
-				log.Information("Running your build in %s...", okteto.Context().Builder)
+				oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
 			} else {
-				log.Information("Running your build in docker")
+				oktetoLog.Information("Running your build in docker")
 			}
 
 		}
-		log.Information("Building image for service '%s'...", name)
+		oktetoLog.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
 		buildOptions := build.BuildOptions{
 			Path:       svc.Build.Context,
@@ -180,7 +180,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		}
 		svc.SetLastBuiltAnnotation()
 		s.Services[name] = svc
-		log.Success("Image for service '%s' successfully pushed", name)
+		oktetoLog.Success("Image for service '%s' successfully pushed", name)
 	}
 	return hasBuiltSomething, nil
 }
@@ -192,7 +192,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 		if len(notSkippableVolumeMounts) != 0 {
 			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
 				hasAddedAnyVolumeMounts = true
-				log.Information("Running your build in %s...", okteto.Context().Builder)
+				oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
 			}
 			fromImage := svc.Image
 			if okteto.IsOkteto() {
@@ -208,7 +208,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 			if okteto.IsOkteto() && !registry.IsOktetoRegistry(svc.Image) {
 				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto-with-volume-mounts", s.Name, name)
 			}
-			log.Information("Building image for service '%s' to include host volumes...", name)
+			oktetoLog.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
 
 			buildOptions := build.BuildOptions{
@@ -226,7 +226,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 			}
 			svc.SetLastBuiltAnnotation()
 			s.Services[name] = svc
-			log.Success("Image for service '%s' successfully pushed", name)
+			oktetoLog.Success("Image for service '%s' successfully pushed", name)
 		}
 	}
 	return hasAddedAnyVolumeMounts, nil

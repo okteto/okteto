@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	v1 "k8s.io/api/core/v1"
@@ -53,20 +53,20 @@ func GetImageTagWithDigest(imageTag string) (string, error) {
 	username := okteto.Context().UserID
 	u, err := url.Parse(okteto.Context().Registry)
 	if err != nil {
-		log.Infof("error parsing registry url: %s", err.Error())
+		oktetoLog.Infof("error parsing registry url: %s", err.Error())
 		return imageTag, nil
 	}
 	u.Scheme = "https"
 	c, err := NewRegistryClient(u.String(), username, okteto.Context().Token)
 	if err != nil {
-		log.Infof("error creating registry client: %s", err.Error())
+		oktetoLog.Infof("error creating registry client: %s", err.Error())
 		return imageTag, nil
 	}
 
 	repoURL, tag := GetRepoNameAndTag(expandedTag)
 	index := strings.IndexRune(repoURL, '/')
 	if index == -1 {
-		log.Infof("malformed registry url: %s", repoURL)
+		oktetoLog.Infof("malformed registry url: %s", repoURL)
 		return imageTag, nil
 	}
 	repoName := repoURL[index+1:]
@@ -130,7 +130,7 @@ func GetHiddenExposePorts(image string) []model.Port {
 
 	c, err := NewRegistryClient(registry, username, token)
 	if err != nil {
-		log.Infof("error creating registry client: %s", err.Error())
+		oktetoLog.Infof("error creating registry client: %s", err.Error())
 		return exposedPorts
 	}
 
@@ -142,20 +142,20 @@ func GetHiddenExposePorts(image string) []model.Port {
 
 	digest, err := c.ManifestV2(repoName, tag)
 	if err != nil {
-		log.Infof("error getting digest of %s/%s: %s", repoName, tag, err.Error())
+		oktetoLog.Infof("error getting digest of %s/%s: %s", repoName, tag, err.Error())
 		return exposedPorts
 	}
 
 	response, err := c.DownloadBlob(repoName, digest.Config.Digest)
 	if err != nil {
-		log.Infof("error getting digest of %s/%s: %s", repoName, tag, err.Error())
+		oktetoLog.Infof("error getting digest of %s/%s: %s", repoName, tag, err.Error())
 		return exposedPorts
 	}
 
 	info := ImageInfo{Config: &ConfigInfo{}}
 	decoder := json.NewDecoder(response)
 	if err := decoder.Decode(&info); err != nil {
-		log.Infof("error decoding registry response: %s", err.Error())
+		oktetoLog.Infof("error decoding registry response: %s", err.Error())
 		return exposedPorts
 	}
 

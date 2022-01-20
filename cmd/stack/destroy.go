@@ -20,7 +20,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
 )
@@ -49,7 +49,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			err = stack.Destroy(ctx, s, rm, to)
 			analytics.TrackDestroyStack(err == nil)
 			if err == nil {
-				log.Success("Stack '%s' successfully destroyed", s.Name)
+				oktetoLog.Success("Stack '%s' successfully destroyed", s.Name)
 			}
 			return err
 		},

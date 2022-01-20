@@ -26,7 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -161,11 +161,11 @@ func (c *ContextUse) UseContext(ctx context.Context, ctxOptions *ContextOptions)
 		}
 	}
 	if created && ctxOptions.IsOkteto {
-		log.Success("Context '%s' created", okteto.RemoveSchema(ctxOptions.Context))
+		oktetoLog.Success("Context '%s' created", okteto.RemoveSchema(ctxOptions.Context))
 	}
 
 	if ctxOptions.IsCtxCommand {
-		log.Success("Using context %s @ %s", okteto.Context().Namespace, okteto.RemoveSchema(ctxStore.CurrentContext))
+		oktetoLog.Success("Using context %s @ %s", okteto.Context().Namespace, okteto.RemoveSchema(ctxStore.CurrentContext))
 	}
 
 	return nil
@@ -234,7 +234,7 @@ func (_ *ContextUse) initKubernetesContext(ctxOptions *ContextOptions) error {
 func (*ContextUse) initEnvVars() {
 	if model.FileExists(".env") {
 		if err := godotenv.Load(); err != nil {
-			log.Infof("error loading .env file: %s", err.Error())
+			oktetoLog.Infof("error loading .env file: %s", err.Error())
 		}
 	}
 }

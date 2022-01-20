@@ -17,7 +17,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 //GetWarningState returns the value associated to a given warning
@@ -25,7 +25,7 @@ func GetWarningState(path, name string) string {
 	filePath := filepath.Join(path, name)
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
-		log.Infof("failed to read warning file '%s': %s", filePath, err)
+		oktetoLog.Infof("failed to read warning file '%s': %s", filePath, err)
 		return ""
 	}
 

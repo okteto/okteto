@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"k8s.io/client-go/kubernetes"
 
 	networkingv1 "k8s.io/api/networking/v1"
@@ -33,14 +33,14 @@ func Deploy(ctx context.Context, i *networkingv1.Ingress, c kubernetes.Interface
 	}
 
 	if old == nil || old.Name == "" {
-		log.Infof("creating ingress '%s'", i.Name)
+		oktetoLog.Infof("creating ingress '%s'", i.Name)
 		_, err = c.NetworkingV1().Ingresses(i.Namespace).Create(ctx, i, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error creating kubernetes ingress: %s", err)
 		}
-		log.Infof("created ingress '%s'", i.Name)
+		oktetoLog.Infof("created ingress '%s'", i.Name)
 	} else {
-		log.Infof("updating ingress '%s'", i.Name)
+		oktetoLog.Infof("updating ingress '%s'", i.Name)
 		old.Annotations = i.Annotations
 		old.Labels = i.Labels
 		old.Spec = i.Spec
@@ -48,7 +48,7 @@ func Deploy(ctx context.Context, i *networkingv1.Ingress, c kubernetes.Interface
 		if err != nil {
 			return fmt.Errorf("error updating kubernetes ingress: %s", err)
 		}
-		log.Infof("updated ingress '%s'.", i.Name)
+		oktetoLog.Infof("updated ingress '%s'.", i.Name)
 	}
 	return nil
 }
@@ -73,7 +73,7 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 
 // Destroy destroys a k8s deployment
 func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
-	log.Infof("deleting ingress '%s'", name)
+	oktetoLog.Infof("deleting ingress '%s'", name)
 	err := c.NetworkingV1().Ingresses(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -81,6 +81,6 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 		}
 		return fmt.Errorf("error deleting kubernetes ingress: %s", err)
 	}
-	log.Infof("Ingress '%s' deleted", name)
+	oktetoLog.Infof("Ingress '%s' deleted", name)
 	return nil
 }

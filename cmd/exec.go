@@ -27,7 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/exec"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
@@ -64,7 +64,7 @@ func Exec() *cobra.Command {
 			err = executeExec(ctx, dev, args)
 			for errors.IsTransient(err) {
 				if iter == 0 {
-					log.Yellow("Connection lost to your development container, reconnecting...")
+					oktetoLog.Yellow("Connection lost to your development container, reconnecting...")
 				}
 				iter++
 				iter = iter % 10
@@ -155,7 +155,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	if dev.RemoteModeEnabled() {
 		p, err := ssh.GetPort(devName)
 		if err != nil {
-			log.Infof("failed to get the SSH port for %s: %s", devName, err)
+			oktetoLog.Infof("failed to get the SSH port for %s: %s", devName, err)
 			return errors.UserError{
 				E:    fmt.Errorf("development mode is not enabled on your deployment"),
 				Hint: "Run 'okteto up' to enable it and try again",
@@ -163,7 +163,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		}
 
 		dev.RemotePort = p
-		log.Infof("executing remote command over SSH port %d", dev.RemotePort)
+		oktetoLog.Infof("executing remote command over SSH port %d", dev.RemotePort)
 
 		dev.LoadRemote(ssh.GetPublicKey())
 

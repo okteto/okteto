@@ -21,7 +21,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -58,7 +58,7 @@ func executeDeleteNamespace(ctx context.Context, namespace string) error {
 		return fmt.Errorf("failed to delete namespace: %s", err)
 	}
 
-	log.Success("Namespace '%s' deleted", namespace)
+	oktetoLog.Success("Namespace '%s' deleted", namespace)
 	if okteto.Context().Namespace == namespace {
 		personalNamespace := okteto.Context().PersonalNamespace
 		if personalNamespace == "" {

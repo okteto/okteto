@@ -25,7 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -88,7 +88,7 @@ func askForOktetoURL() (string, error) {
 		clusterURL = ctxStore.CurrentContext
 	}
 
-	err := log.Question("Enter your Okteto URL [%s]: ", clusterURL)
+	err := oktetoLog.Question("Enter your Okteto URL [%s]: ", clusterURL)
 	if err != nil {
 		return "", err
 	}
@@ -222,10 +222,10 @@ func LoadManifestV2WithContext(ctx context.Context, namespace, path string) erro
 func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error) {
 	pipelinePath := getPipelinePath(srcFolder, opts.Filename)
 	if pipelinePath != "" {
-		log.Debugf("Found okteto manifest %s", pipelinePath)
+		oktetoLog.Debugf("Found okteto manifest %s", pipelinePath)
 		manifest, err := utils.LoadManifest(pipelinePath)
 		if err != nil {
-			log.Infof("could not load manifest: %s", err.Error())
+			oktetoLog.Infof("could not load manifest: %s", err.Error())
 			return nil, err
 		}
 
@@ -243,7 +243,7 @@ func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error
 	oktetoSubPath := getOktetoSubPath(srcFolder, src)
 	chartSubPath := getChartsSubPath(srcFolder, src)
 	if chartSubPath != "" {
-		log.Infof("Found chart")
+		oktetoLog.Infof("Found chart")
 		return &model.Manifest{
 			Type:     "chart",
 			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("helm upgrade --install %s %s", opts.Name, chartSubPath)}},
@@ -253,7 +253,7 @@ func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error
 
 	manifestsSubPath := getManifestsSubPath(srcFolder, src)
 	if manifestsSubPath != "" {
-		log.Infof("Found kubernetes manifests")
+		oktetoLog.Infof("Found kubernetes manifests")
 		return &model.Manifest{
 			Type:     "kubernetes",
 			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("kubectl apply -f %s", manifestsSubPath)}},
@@ -263,7 +263,7 @@ func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error
 
 	stackSubPath := getStackSubPath(srcFolder, src)
 	if stackSubPath != "" {
-		log.Infof("Found okteto stack")
+		oktetoLog.Infof("Found okteto stack")
 		return &model.Manifest{
 			Type:     "stack",
 			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("okteto stack deploy --build -f %s", stackSubPath)}},
@@ -272,7 +272,7 @@ func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error
 	}
 
 	if oktetoSubPath != "" {
-		log.Infof("Found okteto manifest")
+		oktetoLog.Infof("Found okteto manifest")
 		return &model.Manifest{
 			Type:     "okteto",
 			Deploy:   &model.DeployInfo{Commands: []string{"okteto push --deploy"}},

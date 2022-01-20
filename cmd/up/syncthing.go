@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
@@ -34,11 +34,11 @@ func (up *upContext) initializeSyncthing() error {
 	sy.ResetDatabase = up.resetSyncthing
 	up.Sy = sy
 
-	log.Infof("local syncthing initialized: gui -> %d, sync -> %d", up.Sy.LocalGUIPort, up.Sy.LocalPort)
-	log.Infof("remote syncthing initialized: gui -> %d, sync -> %d", up.Sy.RemoteGUIPort, up.Sy.RemotePort)
+	oktetoLog.Infof("local syncthing initialized: gui -> %d, sync -> %d", up.Sy.LocalGUIPort, up.Sy.LocalPort)
+	oktetoLog.Infof("remote syncthing initialized: gui -> %d, sync -> %d", up.Sy.RemoteGUIPort, up.Sy.RemotePort)
 
 	if err := up.Sy.SaveConfig(up.Dev); err != nil {
-		log.Infof("error saving syncthing object: %s", err)
+		oktetoLog.Infof("error saving syncthing object: %s", err)
 	}
 
 	up.hardTerminate <- up.Sy.HardTerminate()
@@ -60,7 +60,7 @@ func (up *upContext) sync(ctx context.Context) error {
 		return err
 	}
 
-	log.Success("Files synchronized")
+	oktetoLog.Success("Files synchronized")
 
 	elapsed := time.Since(start)
 	analytics.TrackDurationInitialSync(elapsed)
@@ -69,7 +69,7 @@ func (up *upContext) sync(ctx context.Context) error {
 		minutes := elapsed / time.Minute
 		elapsed -= minutes * time.Minute
 		seconds := elapsed / time.Second
-		log.Warning(`File synchronization took %dm %ds
+		oktetoLog.Warning(`File synchronization took %dm %ds
     Consider to update your '.stignore' to optimize the file synchronization
     More information is available here: https://okteto.com/docs/reference/file-synchronization/`, minutes, seconds)
 	}
@@ -82,7 +82,7 @@ func (up *upContext) sync(ctx context.Context) error {
 
 	go up.Sy.Monitor(ctx, up.Disconnect)
 	go up.Sy.MonitorStatus(ctx, up.Disconnect)
-	log.Infof("restarting syncthing to update sync mode to sendreceive")
+	oktetoLog.Infof("restarting syncthing to update sync mode to sendreceive")
 	return up.Sy.Restart(ctx)
 }
 
@@ -104,7 +104,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 	}
 
 	if err := up.Sy.WaitForPing(ctx, false); err != nil {
-		log.Infof("failed to ping syncthing: %s", err.Error())
+		oktetoLog.Infof("failed to ping syncthing: %s", err.Error())
 		if errors.IsTransient(err) {
 			return err
 		}

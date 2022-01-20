@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	"github.com/heroku/docker-registry-client/registry"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 // NewRegistryClient creates a new Registry with the given URL and credentials, then Ping()s it
@@ -36,7 +36,7 @@ func newFromTransport(registryURL, username, password string, transport http.Rou
 		Client: &http.Client{
 			Transport: transport,
 		},
-		Logf: log.Infof,
+		Logf: oktetoLog.Infof,
 	}
 
 	return registry, nil

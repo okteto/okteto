@@ -34,7 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -127,7 +127,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 				return
 			}
 			spinner.Stop()
-			log.Success("Created volume '%s'", name)
+			oktetoLog.Success("Created volume '%s'", name)
 			spinner.Start()
 		}
 
@@ -147,7 +147,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 				return
 			}
 			spinner.Stop()
-			log.Success("Created endpoint '%s'", name)
+			oktetoLog.Success("Created endpoint '%s'", name)
 			spinner.Start()
 		}
 
@@ -167,12 +167,12 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 
 	select {
 	case <-stop:
-		log.Infof("CTRL+C received, starting shutdown sequence")
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
 		return errors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
-			log.Infof("exit signal received due to error: %s", err)
+			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
@@ -238,7 +238,7 @@ func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client k
 		}
 	}
 	spinner.Stop()
-	log.Success("Deployed service '%s'", svcName)
+	oktetoLog.Success("Deployed service '%s'", svcName)
 	spinner.Start()
 	return nil
 }
@@ -571,24 +571,24 @@ func DisplayWarnings(s *model.Stack) {
 func DisplayNotSupportedFieldsWarnings(warnings []string) {
 	if len(warnings) > 0 {
 		if len(warnings) == 1 {
-			log.Warning("'%s' field is not currently supported and will be ignored.", warnings[0])
+			oktetoLog.Warning("'%s' field is not currently supported and will be ignored.", warnings[0])
 		} else {
 			notSupportedFields := strings.Join(model.GroupWarningsBySvc(warnings), "\n  - ")
-			log.Warning("The following fields are not currently supported and will be ignored: \n  - %s", notSupportedFields)
+			oktetoLog.Warning("The following fields are not currently supported and will be ignored: \n  - %s", notSupportedFields)
 		}
-		log.Yellow("Help us to decide which fields to implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
+		oktetoLog.Yellow("Help us to decide which fields to implement next by filing an issue in https://github.com/okteto/okteto/issues/new")
 	}
 }
 
 func DisplayVolumeMountWarnings(warnings []string) {
 	for _, warning := range warnings {
-		log.Warning(warning)
+		oktetoLog.Warning(warning)
 	}
 }
 
 func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	for previousName, newName := range previousToNewNameMap {
-		log.Warning("Service '%s' has been sanitized into '%s'. This may affect discovery service.", previousName, newName)
+		oktetoLog.Warning("Service '%s' has been sanitized into '%s'. This may affect discovery service.", previousName, newName)
 	}
 }
 
@@ -643,7 +643,7 @@ func addDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, optio
 		}
 	}
 	if len(added) > 0 {
-		log.Warning("The following services need to be deployed because the services passed as arguments depend on them: [%s]", strings.Join(added, ", "))
+		oktetoLog.Warning("The following services need to be deployed because the services passed as arguments depend on them: [%s]", strings.Join(added, ", "))
 	}
 }
 

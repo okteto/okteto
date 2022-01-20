@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/kubernetes"
@@ -119,7 +119,7 @@ func (iClient *Client) List(ctx context.Context, namespace, labels string) ([]me
 
 //Destroy destroys a k8s deployment
 func (iClient *Client) Destroy(ctx context.Context, name, namespace string) error {
-	log.Infof("deleting ingress '%s'", name)
+	oktetoLog.Infof("deleting ingress '%s'", name)
 	if iClient.isV1 {
 		err := iClient.c.NetworkingV1().Ingresses(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 		if err != nil && !errors.IsNotFound(err) {

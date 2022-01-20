@@ -30,7 +30,7 @@ import (
 	"github.com/manifoldco/promptui/list"
 	"github.com/manifoldco/promptui/screenbuf"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -160,7 +160,7 @@ func getK8sClusters(k8sClusters []string) []SelectorItem {
 }
 
 func AskForOptions(ctx context.Context, options []SelectorItem, label string) (string, bool, error) {
-	if !log.IsInteractive() {
+	if !oktetoLog.IsInteractive() {
 		return "", false, errors.UserError{
 			E:    fmt.Errorf("can not run interactive selector"),
 			Hint: "Please try running the command with a different output format",
@@ -183,10 +183,10 @@ func AskForOptions(ctx context.Context, options []SelectorItem, label string) (s
 		},
 	}
 
-	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
+	prompt.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
 	optionSelected, isOkteto, err := prompt.Run(ctx)
 	if err != nil || !isValidOption(options, optionSelected) {
-		log.Infof("invalid init option: %s", err)
+		oktetoLog.Infof("invalid init option: %s", err)
 		return "", false, fmt.Errorf("invalid option")
 	}
 

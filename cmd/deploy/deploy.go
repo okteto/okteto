@@ -33,7 +33,7 @@ import (
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -125,15 +125,15 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// Look for a free local port to start the proxy
 			port, err := model.GetAvailablePort("localhost")
 			if err != nil {
-				log.Infof("could not find a free port to start proxy server: %s", err)
+				oktetoLog.Infof("could not find a free port to start proxy server: %s", err)
 				return err
 			}
-			log.Debugf("found available port %d", port)
+			oktetoLog.Debugf("found available port %d", port)
 
 			// TODO for now, using self-signed certificates
 			cert, err := tls.X509KeyPair(cert, key)
 			if err != nil {
-				log.Infof("could not read certificate: %s", err)
+				oktetoLog.Infof("could not read certificate: %s", err)
 				return err
 			}
 
@@ -143,13 +143,13 @@ func Deploy(ctx context.Context) *cobra.Command {
 			kubeconfig := newKubeConfig()
 			clusterConfig, err := kubeconfig.Read()
 			if err != nil {
-				log.Infof("could not read kubeconfig file: %s", err)
+				oktetoLog.Infof("could not read kubeconfig file: %s", err)
 				return err
 			}
 
 			handler, err := getProxyHandler(options.Name, sessionToken, clusterConfig)
 			if err != nil {
-				log.Infof("could not configure local proxy: %s", err)
+				oktetoLog.Infof("could not configure local proxy: %s", err)
 				return err
 			}
 
@@ -172,7 +172,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				getManifest: contextCMD.GetManifest,
 
 				kubeconfig: kubeconfig,
-				executor:   utils.NewExecutor(log.GetOutputFormat()),
+				executor:   utils.NewExecutor(oktetoLog.GetOutputFormat()),
 				proxy: newProxy(proxyConfig{
 					port:  port,
 					token: sessionToken,
@@ -194,9 +194,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 }
 
 func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Options) error {
-	log.Debugf("creating temporal kubeconfig file '%s'", dc.tempKubeconfigFile)
+	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.tempKubeconfigFile)
 	if err := dc.kubeconfig.Modify(dc.proxy.GetPort(), dc.proxy.GetToken(), dc.tempKubeconfigFile); err != nil {
-		log.Infof("could not create temporal kubeconfig %s", err)
+		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
 		return err
 	}
 
@@ -204,13 +204,13 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	// Read manifest file with the commands to be executed
 	opts.Manifest, err = dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
 	if err != nil {
-		log.Infof("could not find manifest file to be executed: %s", err)
+		oktetoLog.Infof("could not find manifest file to be executed: %s", err)
 		return err
 	}
 	opts.Manifest.Context = okteto.Context().Name
 	opts.Manifest.Namespace = okteto.Context().Namespace
 
-	log.Debugf("starting server on %d", dc.proxy.GetPort())
+	oktetoLog.Debugf("starting server on %d", dc.proxy.GetPort())
 	dc.proxy.Start()
 
 	defer dc.cleanUp(ctx)
@@ -231,17 +231,17 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	)
 
 	for _, command := range opts.Manifest.Deploy.Commands {
-		log.SetStage(command)
+		oktetoLog.SetStage(command)
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
-			log.Infof("error executing command '%s': %s", command, err.Error())
+			oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command, err.Error())
 		}
 	}
-	log.SetStage("")
+	oktetoLog.SetStage("")
 
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		if err := dc.showEndpoints(ctx, opts); err != nil {
-			log.Infof("could not retrieve endpoints: %s", err)
+			oktetoLog.Infof("could not retrieve endpoints: %s", err)
 		}
 	}
 
@@ -249,14 +249,14 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 }
 
 func (dc *deployCommand) cleanUp(ctx context.Context) {
-	log.Debugf("removing temporal kubeconfig file '%s'", dc.tempKubeconfigFile)
+	oktetoLog.Debugf("removing temporal kubeconfig file '%s'", dc.tempKubeconfigFile)
 	if err := os.Remove(dc.tempKubeconfigFile); err != nil {
-		log.Infof("could not remove temporal kubeconfig file: %s", err)
+		oktetoLog.Infof("could not remove temporal kubeconfig file: %s", err)
 	}
 
-	log.Debugf("stopping local server...")
+	oktetoLog.Debugf("stopping local server...")
 	if err := dc.proxy.Shutdown(ctx); err != nil {
-		log.Infof("could not stop local server: %s", err)
+		oktetoLog.Infof("could not stop local server: %s", err)
 	}
 }
 
@@ -280,7 +280,7 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 	// By default we don't disable HTTP/2
 	trans, err := newProtocolTransport(clusterConfig, false)
 	if err != nil {
-		log.Infof("could not get http transport from config: %s", err)
+		oktetoLog.Infof("could not get http transport from config: %s", err)
 		return nil, err
 	}
 
@@ -293,7 +293,7 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 	proxy := httputil.NewSingleHostReverseProxy(destinationURL)
 	proxy.Transport = trans
 
-	log.Debugf("forwarding host: %s", clusterConfig.Host)
+	oktetoLog.Debugf("forwarding host: %s", clusterConfig.Host)
 
 	handler.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
 		requestToken := r.Header.Get("Authorization")
@@ -314,11 +314,11 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 		reverseProxy := proxy
 		if isSPDY(r) {
-			log.Debugf("detected SPDY request, disabling HTTP/2 for request %s %s", r.Method, r.URL.String())
+			oktetoLog.Debugf("detected SPDY request, disabling HTTP/2 for request %s %s", r.Method, r.URL.String())
 			// In case of a SPDY request, we create a new proxy with HTTP/2 disabled
 			t, err := newProtocolTransport(clusterConfig, true)
 			if err != nil {
-				log.Infof("could not disabled HTTP/2: %s", err)
+				oktetoLog.Infof("could not disabled HTTP/2: %s", err)
 				rw.WriteHeader(500)
 				return
 			}
@@ -330,7 +330,7 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 		if r.Method == "PUT" || r.Method == "POST" {
 			b, err := io.ReadAll(r.Body)
 			if err != nil {
-				log.Infof("could not read the request body: %s", err)
+				oktetoLog.Infof("could not read the request body: %s", err)
 				rw.WriteHeader(500)
 				return
 			}
@@ -343,21 +343,21 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 			var body map[string]json.RawMessage
 			if err := json.Unmarshal(b, &body); err != nil {
-				log.Infof("could not unmarshal request: %s", err)
+				oktetoLog.Infof("could not unmarshal request: %s", err)
 				rw.WriteHeader(500)
 				return
 			}
 
 			m, ok := body["metadata"]
 			if !ok {
-				log.Info("request body doesn't have metadata field")
+				oktetoLog.Info("request body doesn't have metadata field")
 				rw.WriteHeader(500)
 				return
 			}
 
 			var metadata metav1.ObjectMeta
 			if err := json.Unmarshal(m, &metadata); err != nil {
-				log.Infof("could not process resource's metadata: %s", err)
+				oktetoLog.Infof("could not process resource's metadata: %s", err)
 				rw.WriteHeader(500)
 				return
 			}
@@ -376,7 +376,7 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 			metadataAsByte, err := json.Marshal(metadata)
 			if err != nil {
-				log.Infof("could not process resource's metadata: %s", err)
+				oktetoLog.Infof("could not process resource's metadata: %s", err)
 				rw.WriteHeader(500)
 				return
 			}
@@ -385,7 +385,7 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 			b, err = json.Marshal(body)
 			if err != nil {
-				log.Infof("could not marshal modified body: %s", err)
+				oktetoLog.Infof("could not marshal modified body: %s", err)
 				rw.WriteHeader(500)
 				return
 			}
@@ -421,11 +421,11 @@ func (dc *deployCommand) showEndpoints(ctx context.Context, opts *Options) error
 		sort.Slice(eps, func(i, j int) bool {
 			return len(eps[i]) < len(eps[j])
 		})
-		switch log.GetOutputFormat() {
+		switch oktetoLog.GetOutputFormat() {
 		case "json":
-			log.Println(fmt.Sprintf("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - ")))
+			oktetoLog.Println(fmt.Sprintf("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - ")))
 		default:
-			log.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
+			oktetoLog.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
 		}
 
 	}
@@ -436,7 +436,7 @@ func addEnvVars(ctx context.Context, cwd string) error {
 	if os.Getenv(model.OktetoGitBranchEnvVar) == "" {
 		branch, err := utils.GetBranch(ctx, cwd)
 		if err != nil {
-			log.Infof("could not retrieve branch name: %s", err)
+			oktetoLog.Infof("could not retrieve branch name: %s", err)
 		}
 		os.Setenv(model.OktetoGitBranchEnvVar, branch)
 	}
@@ -444,11 +444,11 @@ func addEnvVars(ctx context.Context, cwd string) error {
 	if os.Getenv(model.OktetoGitCommitEnvVar) == "" {
 		sha, err := utils.GetGitCommit(ctx, cwd)
 		if err != nil {
-			log.Infof("could not retrieve sha: %s", err)
+			oktetoLog.Infof("could not retrieve sha: %s", err)
 		}
 		isClean, err := utils.IsCleanDirectory(ctx, cwd)
 		if err != nil {
-			log.Infof("could not status: %s", err)
+			oktetoLog.Infof("could not status: %s", err)
 		}
 		if isClean {
 			os.Setenv(model.OktetoGitCommitEnvVar, sha)

@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 // GetAvailablePort returns a random port that's available
@@ -42,7 +42,7 @@ func IsPortAvailable(iface string, port int) bool {
 	address := fmt.Sprintf("%s:%d", iface, port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Infof("port %s is taken: %s", address, err)
+		oktetoLog.Infof("port %s is taken: %s", address, err)
 		return false
 	}
 

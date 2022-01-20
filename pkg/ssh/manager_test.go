@@ -24,6 +24,7 @@ import (
 
 	"github.com/gliderlabs/ssh"
 	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -33,7 +34,7 @@ type testHTTPHandler struct {
 type testSSHHandler struct{}
 
 func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println(fmt.Sprintf("message %s", t.message))
+	oktetoLog.Println(fmt.Sprintf("message %s", t.message))
 	_, _ = w.Write([]byte(t.message))
 }
 

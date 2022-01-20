@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
 	"github.com/okteto/okteto/pkg/k8s/services"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	apiv1 "k8s.io/api/core/v1"
@@ -117,14 +117,14 @@ func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *ne
 	}
 
 	if old.Name == "" {
-		log.Infof("creating  divert CRD '%s'", divertCRD.Name)
+		oktetoLog.Infof("creating  divert CRD '%s'", divertCRD.Name)
 		_, err = dClient.Diverts(divertCRD.Namespace).Create(ctx, divertCRD)
 		if err != nil {
 			return fmt.Errorf("error creating divert CRD '%s': %s", divertCRD.Name, err)
 		}
-		log.Infof("created divert CRD '%s'", divertCRD.Name)
+		oktetoLog.Infof("created divert CRD '%s'", divertCRD.Name)
 	} else {
-		log.Infof("updating divert CRD '%s'", divertCRD.Name)
+		oktetoLog.Infof("updating divert CRD '%s'", divertCRD.Name)
 		old.TypeMeta = divertCRD.TypeMeta
 		old.Annotations = divertCRD.Annotations
 		old.Labels = divertCRD.Labels
@@ -134,7 +134,7 @@ func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *ne
 		if err != nil {
 			return fmt.Errorf("error updating divert CRD '%s': %s", divertCRD.Name, err)
 		}
-		log.Infof("updated divert CRD '%s'.", divertCRD.Name)
+		oktetoLog.Infof("updated divert CRD '%s'.", divertCRD.Name)
 	}
 
 	return nil

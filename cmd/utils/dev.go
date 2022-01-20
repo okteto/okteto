@@ -27,7 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
@@ -152,7 +152,7 @@ func GetDevFromManifest(manifest *model.Manifest) (*model.Dev, error) {
 func AskYesNo(q string) (bool, error) {
 	var answer string
 	for {
-		log.Question(q)
+		oktetoLog.Question(q)
 		if _, err := fmt.Scanln(&answer); err != nil {
 			return false, err
 		}
@@ -161,7 +161,7 @@ func AskYesNo(q string) (bool, error) {
 			break
 		}
 
-		log.Fail("input must be 'y' or 'n'")
+		oktetoLog.Fail("input must be 'y' or 'n'")
 	}
 
 	return answer == "y", nil
@@ -189,11 +189,11 @@ func AskForOptions(options []string, label string) (string, error) {
 			FuncMap:  promptui.FuncMap,
 		},
 	}
-	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
+	prompt.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
 
 	i, _, err := prompt.Run()
 	if err != nil {
-		log.Infof("invalid init option: %s", err)
+		oktetoLog.Infof("invalid init option: %s", err)
 		return "", fmt.Errorf("invalid option")
 	}
 
@@ -242,7 +242,7 @@ func ParseURL(u string) (string, error) {
 func CheckIfDirectory(path string) error {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		log.Infof("error on CheckIfDirectory: %s", err.Error())
+		oktetoLog.Infof("error on CheckIfDirectory: %s", err.Error())
 		return fmt.Errorf("'%s' does not exist", path)
 	}
 	if fileInfo.IsDir() {
@@ -255,7 +255,7 @@ func CheckIfDirectory(path string) error {
 func CheckIfRegularFile(path string) error {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		log.Infof("error on CheckIfRegularFile: %s", err.Error())
+		oktetoLog.Infof("error on CheckIfRegularFile: %s", err.Error())
 		return fmt.Errorf("'%s' does not exist", path)
 	}
 	if !fileInfo.IsDir() {
@@ -311,7 +311,7 @@ func doesAutocreateAppExist(ctx context.Context, dev *model.Dev, c kubernetes.In
 	autocreateDev.Name = model.DevCloneName(dev.Name)
 	_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
 	if err != nil && !errors.IsNotFound(err) {
-		log.Infof("getApp autocreate k8s error, retrying...")
+		oktetoLog.Infof("getApp autocreate k8s error, retrying...")
 		_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
 		return err == nil
 	}
