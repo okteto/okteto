@@ -176,7 +176,9 @@ func (w *JSONWriter) Hint(format string, args ...interface{}) {
 func (w *JSONWriter) Fail(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	msg := fmt.Sprintf("%s %s", errorSymbol, fmt.Sprintf(format, args...))
-	fmt.Fprintln(w.out.Out, convertToJSON("error", log.stage, msg))
+	if msg != "" {
+		fmt.Fprintln(w.out.Out, convertToJSON("error", log.stage, msg))
+	}
 }
 
 // Println writes a line with colors
@@ -192,7 +194,9 @@ func (w *JSONWriter) Fprintf(format string, a ...interface{}) {
 // Fprintln prints a line with format
 func (w *JSONWriter) Fprintln(args ...interface{}) {
 	msg := fmt.Sprint(args...)
-	fmt.Fprintln(w.out.Out, convertToJSON("info", log.stage, msg))
+	if msg != "" {
+		fmt.Fprintln(w.out.Out, convertToJSON("info", log.stage, msg))
+	}
 }
 
 // Print writes a line with colors
