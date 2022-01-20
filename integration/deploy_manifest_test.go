@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -152,6 +153,10 @@ spec:
 			t.Fatal(err)
 		}
 
+		if err := waitForDeployment(ctx, testNamespace, releaseName, 1, 120); err != nil {
+			t.Fatal(err)
+		}
+
 		imageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
 		if err != nil {
 			t.Fatal(err)
@@ -170,7 +175,7 @@ spec:
 			t.Fatal(err)
 		}
 
-		if err := expectAppToBeRunning(releaseName, testNamespace); err != nil {
+		if err := expectAppToBeRunning(releaseName, testNamespace, "Hello world!"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -189,6 +194,10 @@ spec:
 			t.Fatal(err)
 		}
 
+		if err := waitForDeployment(ctx, testNamespace, releaseName, 1, 120); err != nil {
+			t.Fatal(err)
+		}
+
 		if err := expectImageFoundSkippingBuild(output); err != nil {
 			t.Fatal(err)
 		}
@@ -201,23 +210,37 @@ spec:
 			t.Fatal(err)
 		}
 
-		if err := expectAppToBeRunning(releaseName, testNamespace); err != nil {
+		if err := expectAppToBeRunning(releaseName, testNamespace, "Hello world!"); err != nil {
 			t.Fatal(err)
 		}
 
 	})
 
-	t.Run("okteto deploy --build should force the build even if exist", func(t *testing.T) {
+	t.Run("okteto deploy --build should force the build an image wont change if no code changes", func(t *testing.T) {
 
 		imageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
 		if err != nil {
 			t.Fatalf("image is not at registry: %v", err)
 		}
-		sha := strings.SplitN(imageWithDigest, "@", 2)[1]
+		originalSHA := strings.SplitN(imageWithDigest, "@", 2)[1]
 
 		output, err := runOktetoDeployForceBuild(oktetoPath, repoDir)
 		if err != nil {
 			t.Fatal(err)
+		}
+
+		if err := waitForDeployment(ctx, testNamespace, releaseName, 1, 120); err != nil {
+			t.Fatal(err)
+		}
+
+		newImageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
+		if err != nil {
+			t.Fatalf("image is not at registry: %v", err)
+		}
+		newSHA := strings.SplitN(newImageWithDigest, "@", 2)[1]
+
+		if originalSHA != newSHA {
+			t.Fatal("image has been updated")
 		}
 
 		if err := expectForceBuild(output); err != nil {
@@ -228,11 +251,65 @@ spec:
 			t.Fatal(err)
 		}
 
-		if err := expectEnvSetting(output, testNamespace, repoDir, sha); err != nil {
+		if err := expectEnvSetting(output, testNamespace, repoDir, originalSHA); err != nil {
 			t.Fatal(err)
 		}
 
-		if err := expectAppToBeRunning(releaseName, testNamespace); err != nil {
+		if err := expectAppToBeRunning(releaseName, testNamespace, "Hello world!"); err != nil {
+			t.Fatal(err)
+		}
+
+	})
+
+	t.Run("okteto deploy --build should force the build an image change if code changes", func(t *testing.T) {
+		imageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
+		if err != nil {
+			t.Fatalf("image is not at registry: %v", err)
+		}
+		originalSHA := strings.SplitN(imageWithDigest, "@", 2)[1]
+
+		mainFile := filepath.Join(cwd, repoDir, "main.go")
+		mainFileContent, err := ioutil.ReadFile(mainFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		updatedMainFileContent := strings.Replace(string(mainFileContent), "Hello", "Bye", 1)
+		if err := writeFile(filepath.Join(cwd, repoDir), "main.go", updatedMainFileContent); err != nil {
+			t.Fatal(err)
+		}
+
+		output, err := runOktetoDeployForceBuild(oktetoPath, repoDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := waitForDeployment(ctx, testNamespace, releaseName, 2, 120); err != nil {
+			t.Fatal(err)
+		}
+
+		newImageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
+		if err != nil {
+			t.Fatalf("image is not at registry: %v", err)
+		}
+		newSHA := strings.SplitN(newImageWithDigest, "@", 2)[1]
+
+		if originalSHA == newSHA {
+			t.Fatal("image has not been updated")
+		}
+
+		if err := expectForceBuild(output); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := expectHelmUpgrade(output, releaseName, testNamespace, "4"); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := expectEnvSetting(output, testNamespace, repoDir, newSHA); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := expectAppToBeRunning(releaseName, testNamespace, "Bye world!"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -316,14 +393,14 @@ func expectHelmUpgrade(output, releaseName, namespace, revision string) error {
 	return nil
 }
 
-func expectAppToBeRunning(releaseName, namespace string) error {
+func expectAppToBeRunning(releaseName, namespace, contentString string) error {
 	endpoint := fmt.Sprintf("https://%s-%s.%s", releaseName, namespace, appsSubdomain)
 	content, err := getContent(endpoint, 150, nil)
 	if err != nil {
 		return err
 	}
-	if ok := strings.Contains(content, "Hello world!"); !ok {
-		return errors.New("expected app content")
+	if ok := strings.Contains(content, contentString); !ok {
+		return fmt.Errorf("expected app content to be %s", contentString)
 	}
 	return nil
 }
