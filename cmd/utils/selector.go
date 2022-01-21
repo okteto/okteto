@@ -65,13 +65,13 @@ type oktetoTemplates struct {
 
 //SelectorItem represents a selectable item on a selector
 type SelectorItem struct {
-	Name      string
-	Label     string
-	Enable    bool
-	IsOkteto  bool
-	Namespace string
-	Builder   string
-	Registry  string
+	Name      string `json:"name"`
+	Label     string `json:"label"`
+	Enable    bool   `json:"-"`
+	IsOkteto  bool   `json:"isOkteto"`
+	Namespace string `json:"namespace"`
+	Builder   string `json:"builder"`
+	Registry  string `json:"registry"`
 }
 
 //AskForOptionsOkteto given some options ask the user to select one

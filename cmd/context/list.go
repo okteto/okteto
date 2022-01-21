@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 )
 
 // Lists all contexts managed by okteto
@@ -43,7 +44,7 @@ func List() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&outputFormat, "output", "o", "plain", "Output format. One of: json|plain.")
+	cmd.Flags().StringVarP(&outputFormat, "output", "o", "plain", "Output format. One of: json|yaml|plain.")
 	return cmd
 }
 
@@ -58,6 +59,8 @@ func executeListContext(ctx context.Context, outputFormat string) error {
 	switch outputFormat {
 	case "json":
 		return jsonOutput(contexts)
+	case "yaml":
+		return yamlOutput(contexts)
 	case "plain":
 		plainOutput(contexts)
 		return nil
@@ -85,17 +88,17 @@ func plainOutput(contexts []utils.SelectorItem) {
 }
 
 func jsonOutput(contexts []utils.SelectorItem) error {
-	var items = []okteto.OktetoContext{}
-	ctxStore := okteto.ContextStore()
-	for _, ctxSelector := range contexts {
-		if okCtx, ok := ctxStore.Contexts[ctxSelector.Name]; ok && okCtx.Builder != "" {
-			ctxSelector.Builder = okCtx.Builder
-		}
-
-		items = append(items, okteto.OktetoContext{Name: ctxSelector.Name, Namespace: ctxSelector.Namespace, Builder: ctxSelector.Builder, Registry: ctxSelector.Builder})
+	b, err := json.MarshalIndent(contexts, "", "  ")
+	if err != nil {
+		return err
 	}
 
-	b, err := json.MarshalIndent(items, "", "  ")
+	fmt.Print(string(b))
+	return nil
+}
+
+func yamlOutput(contexts []utils.SelectorItem) error {
+	b, err := yaml.Marshal(contexts)
 	if err != nil {
 		return err
 	}
