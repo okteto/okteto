@@ -221,7 +221,7 @@ func displayStatus(out *os.File, eg *errgroup.Group, response types.ImageBuildRe
 	displayStatus := func(out *os.File, displayCh chan *buildkitClient.SolveStatus) {
 		var c console.Console
 		// TODO: Handle tty output in non-tty environment.
-		if cons, err := console.ConsoleFromFile(out); err == nil && (buildOutputMode == "auto" || buildOutputMode == "tty") {
+		if cons, err := console.ConsoleFromFile(out); err == nil && (buildOutputMode == "auto" || buildOutputMode == oktetoLog.TTYFormat) {
 			c = cons
 		}
 		// not using shared context to not disrupt display but let it finish reporting errors

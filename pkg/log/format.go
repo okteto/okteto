@@ -44,26 +44,29 @@ type OktetoWriter interface {
 }
 
 const (
-	ttyFormat   string = "tty"
-	plainFormat string = "plain"
-	jsonFormat  string = "json"
+	//TTYFormat represents a tty logger
+	TTYFormat string = "tty"
+	//PlainFormat represents a plain logger
+	PlainFormat string = "plain"
+	//JSONFormat represents a json logger
+	JSONFormat string = "json"
 )
 
 func (l *logger) getWriter(format string) OktetoWriter {
 	switch format {
-	case ttyFormat:
-		l.outputMode = ttyFormat
+	case TTYFormat:
+		l.outputMode = TTYFormat
 		return newTTYWriter(l.out, l.file)
-	case plainFormat:
-		l.outputMode = plainFormat
+	case PlainFormat:
+		l.outputMode = PlainFormat
 		return newPlainWriter(l.out, l.file)
-	case jsonFormat:
-		l.outputMode = jsonFormat
+	case JSONFormat:
+		l.outputMode = JSONFormat
 		l.out.SetFormatter(&JSONLogFormat{})
 		return newJSONWriter(l.out, l.file)
 	default:
 		Debugf("could not load %s. Callback to 'tty'", format)
-		l.outputMode = ttyFormat
+		l.outputMode = TTYFormat
 		return newTTYWriter(l.out, l.file)
 	}
 

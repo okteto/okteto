@@ -35,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -522,7 +523,7 @@ func (dc *deployCommand) showEndpoints(ctx context.Context, opts *Options) error
 			return len(eps[i]) < len(eps[j])
 		})
 		switch oktetoLog.GetOutputFormat() {
-		case "json":
+		case log.TTYFormat:
 			oktetoLog.Printf("Endpoints available: %s\n", eps)
 		default:
 			oktetoLog.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))

@@ -132,7 +132,7 @@ func Push(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&pushOpts.K8sContext, "context", "c", "", "context where the push command is executed")
 	cmd.Flags().StringVarP(&pushOpts.ImageTag, "tag", "t", "", "image tag to build, push and redeploy")
 	cmd.Flags().BoolVarP(&pushOpts.AutoDeploy, "deploy", "d", false, "create deployment when the app doesn't exist in a namespace")
-	cmd.Flags().StringVarP(&pushOpts.Progress, "progress", "", "tty", "show plain/tty build output")
+	cmd.Flags().StringVarP(&pushOpts.Progress, "progress", "", oktetoLog.TTYFormat, "show plain/tty build output")
 	cmd.Flags().StringVar(&pushOpts.AppName, "name", "", "name of the app to push to")
 	cmd.Flags().BoolVarP(&pushOpts.NoCache, "no-cache", "", false, "do not use cache when building the image")
 	return cmd

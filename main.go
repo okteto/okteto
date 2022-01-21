@@ -101,7 +101,7 @@ func main() {
 	}
 
 	root.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "warn", "amount of information outputted (debug, info, warn, error)")
-	root.PersistentFlags().StringVarP(&outputMode, "output", "o", "tty", "output format (tty, plain, json)")
+	root.PersistentFlags().StringVarP(&outputMode, "output", "o", oktetoLog.TTYFormat, "output format (tty, plain, json)")
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())

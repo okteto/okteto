@@ -73,7 +73,7 @@ func init() {
 func Init(level logrus.Level) {
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
-	log.writer = log.getWriter("tty")
+	log.writer = log.getWriter(TTYFormat)
 }
 
 //ConfigureFileLogger configures the file to write

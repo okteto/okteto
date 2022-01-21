@@ -414,7 +414,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		Target:     up.Dev.Image.Target,
 		CacheFrom:  up.Dev.Image.CacheFrom,
 		BuildArgs:  buildArgs,
-		OutputMode: "tty",
+		OutputMode: oktetoLog.TTYFormat,
 	}
 	if err := buildCMD.Run(ctx, buildOptions); err != nil {
 		return err
