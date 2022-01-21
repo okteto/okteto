@@ -30,7 +30,7 @@ func UpdateKubeconfigCMD() *cobra.Command {
 		Hidden: true,
 		Use:    "update-kubeconfig",
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#update-kubeconfig"),
-		Short:  "Download kubectl credentials for the okteto context",
+		Short:  "Download credentials for the Kubernetes cluster selected via 'okteto context'",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
