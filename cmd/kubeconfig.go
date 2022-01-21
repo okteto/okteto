@@ -23,7 +23,7 @@ import (
 func Kubeconfig() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "kubeconfig",
-		Short: "Download kubectl credentials for the okteto context",
+		Short: "Download credentials for the Kubernetes cluster selected via 'okteto context'",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
