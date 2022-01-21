@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
@@ -27,6 +28,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
 )
 
@@ -160,6 +162,20 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 
 		opts := build.OptsFromManifest(srv, manifestOptions, options)
 
+		// check if image is at registry and skip
+		if build.ShouldOptimizeBuild(opts.Tag) {
+			log.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
+			globalReference := strings.Replace(opts.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
+			if _, err := registry.GetImageTagWithDigest(globalReference); err == nil {
+				log.Information("skipping build: image already exists at global registry -  %s", globalReference)
+				return nil
+			}
+			// check if image already is at the registry
+			if _, err := registry.GetImageTagWithDigest(opts.Tag); err == nil {
+				log.Information("skipping build: image already exists at registry - %s", opts.Tag)
+				return nil
+			}
+		}
 		// when single build, transfer the secrets from the flag to the options
 		if srv == service {
 			opts.Secrets = options.Secrets

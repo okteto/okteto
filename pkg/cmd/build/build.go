@@ -227,3 +227,12 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 	opts.OutputMode = setOutputMode(o.OutputMode)
 	return opts
 }
+
+// ShouldOptimizeBuild returns if optimization should be aplied
+func ShouldOptimizeBuild(image string) bool {
+	envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
+	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, "dev")
+	return registry.IsOktetoRegistry(image) &&
+		envGitCommit != "" &&
+		!isLocalEnvGitCommit
+}
