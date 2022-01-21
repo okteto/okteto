@@ -24,9 +24,9 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -82,24 +82,27 @@ func isCreateNewContextOption(option string) bool {
 	return option == newOEOption
 }
 
-func askForOktetoURL() string {
+func askForOktetoURL() (string, error) {
 	clusterURL := okteto.CloudURL
 	ctxStore := okteto.ContextStore()
 	if oCtx, ok := ctxStore.Contexts[ctxStore.CurrentContext]; ok && oCtx.IsOkteto {
 		clusterURL = ctxStore.CurrentContext
 	}
 
-	log.Question("Enter your Okteto URL [%s]: ", clusterURL)
+	err := oktetoLog.Question("Enter your Okteto URL [%s]: ", clusterURL)
+	if err != nil {
+		return "", err
+	}
 	fmt.Scanln(&clusterURL)
 
 	url, err := url.Parse(clusterURL)
 	if err != nil {
-		return ""
+		return "", nil
 	}
 	if url.Scheme == "" {
 		url.Scheme = "https"
 	}
-	return strings.TrimSuffix(url.String(), "/")
+	return strings.TrimSuffix(url.String(), "/"), nil
 }
 
 func isValidCluster(cluster string) bool {
@@ -113,10 +116,10 @@ func isValidCluster(cluster string) bool {
 
 func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextResource) error {
 	if cfg == nil {
-		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
+		return fmt.Errorf(oktetoErrors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
 	}
 	if _, ok := cfg.Contexts[ctxResource.Context]; !ok {
-		return fmt.Errorf(errors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
+		return fmt.Errorf(oktetoErrors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
 	}
 	if ctxResource.Namespace == "" {
 		ctxResource.Namespace = cfg.Contexts[ctxResource.Context].Namespace
@@ -128,17 +131,17 @@ func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextRe
 	return nil
 }
 
-func LoadManifestWithContext(ctx context.Context, devPath, namespace, k8sContext string) (*model.Manifest, error) {
-	ctxResource, err := utils.LoadManifestContext(devPath)
+func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.Manifest, error) {
+	ctxResource, err := utils.LoadManifestContext(opts.Filename)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := ctxResource.UpdateNamespace(namespace); err != nil {
+	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
 		return nil, err
 	}
 
-	if err := ctxResource.UpdateContext(k8sContext); err != nil {
+	if err := ctxResource.UpdateContext(opts.K8sContext); err != nil {
 		return nil, err
 	}
 
@@ -152,7 +155,7 @@ func LoadManifestWithContext(ctx context.Context, devPath, namespace, k8sContext
 		return nil, err
 	}
 
-	return utils.LoadManifest(devPath)
+	return utils.LoadManifest(opts.Filename)
 }
 
 func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string) (*model.Stack, error) {
@@ -205,7 +208,7 @@ func LoadManifestV2WithContext(ctx context.Context, namespace, path string) erro
 	if err != nil {
 		//GetManifestV2 should take care of all error conditions and possible paths
 		//https://github.com/okteto/okteto/issues/2111
-		if err != errors.ErrManifestNotFound {
+		if err != oktetoErrors.ErrManifestNotFound {
 			return err
 		}
 	} else {
@@ -222,10 +225,11 @@ func LoadManifestV2WithContext(ctx context.Context, namespace, path string) erro
 func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error) {
 	pipelinePath := getPipelinePath(srcFolder, opts.Filename)
 	if pipelinePath != "" {
-		log.Debugf("Found okteto manifest %s", pipelinePath)
+		oktetoLog.Debugf("Found okteto manifest %s", pipelinePath)
 		manifest, err := utils.LoadManifest(pipelinePath)
 		if err != nil {
-			log.Infof("could not load manifest: %s", err.Error())
+			oktetoLog.Infof("could not load manifest: %s", err.Error())
+			return nil, err
 		}
 
 		manifest.Type = "pipeline"
@@ -242,7 +246,7 @@ func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error
 	oktetoSubPath := getOktetoSubPath(srcFolder, src)
 	chartSubPath := getChartsSubPath(srcFolder, src)
 	if chartSubPath != "" {
-		log.Infof("Found chart")
+		oktetoLog.Infof("Found chart")
 		return &model.Manifest{
 			Type:     "chart",
 			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("helm upgrade --install %s %s", opts.Name, chartSubPath)}},
@@ -252,7 +256,7 @@ func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error
 
 	manifestsSubPath := getManifestsSubPath(srcFolder, src)
 	if manifestsSubPath != "" {
-		log.Infof("Found kubernetes manifests")
+		oktetoLog.Infof("Found kubernetes manifests")
 		return &model.Manifest{
 			Type:     "kubernetes",
 			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("kubectl apply -f %s", manifestsSubPath)}},
@@ -262,7 +266,7 @@ func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error
 
 	stackSubPath := getStackSubPath(srcFolder, src)
 	if stackSubPath != "" {
-		log.Infof("Found okteto stack")
+		oktetoLog.Infof("Found okteto stack")
 		return &model.Manifest{
 			Type:     "stack",
 			Deploy:   &model.DeployInfo{Commands: []string{fmt.Sprintf("okteto stack deploy --build -f %s", stackSubPath)}},
@@ -271,7 +275,7 @@ func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error
 	}
 
 	if oktetoSubPath != "" {
-		log.Infof("Found okteto manifest")
+		oktetoLog.Infof("Found okteto manifest")
 		return &model.Manifest{
 			Type:     "okteto",
 			Deploy:   &model.DeployInfo{Commands: []string{"okteto push --deploy"}},
@@ -428,7 +432,7 @@ func GetManifestV2(basePath, file string) (*model.Manifest, error) {
 	if manifestPath != "" {
 		return model.Get(manifestPath)
 	}
-	return nil, errors.ErrManifestNotFound
+	return nil, oktetoErrors.ErrManifestNotFound
 }
 
 func IsManifestV2Enabled() bool {

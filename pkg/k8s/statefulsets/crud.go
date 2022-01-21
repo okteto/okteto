@@ -22,8 +22,8 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -84,7 +84,7 @@ func Deploy(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface
 		return result, nil
 	}
 
-	if !errors.IsNotFound(err) {
+	if !oktetoErrors.IsNotFound(err) {
 		return nil, err
 	}
 
@@ -126,7 +126,7 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 		return nil, err
 	}
 	if len(sfsList.Items) == 0 {
-		return nil, errors.ErrNotFound
+		return nil, oktetoErrors.ErrNotFound
 	}
 	validStatefulsets := []*appsv1.StatefulSet{}
 	for i, sfs := range sfsList.Items {
@@ -143,12 +143,12 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 //Destroy removes a statefulset object given its name and namespace
 func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	if err := c.AppsV1().StatefulSets(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
-		if errors.IsNotFound(err) {
+		if oktetoErrors.IsNotFound(err) {
 			return nil
 		}
 		return fmt.Errorf("error deleting kubernetes job: %s", err)
 	}
-	log.Infof("statefulset '%s' deleted", name)
+	oktetoLog.Infof("statefulset '%s' deleted", name)
 	return nil
 }
 
@@ -175,14 +175,14 @@ func CheckConditionErrors(sfs *appsv1.StatefulSet, dev *model.Dev) error {
 	for _, c := range sfs.Status.Conditions {
 		if c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
 			if strings.Contains(c.Message, "exceeded quota") {
-				log.Infof("%s: %s", errors.ErrQuota, c.Message)
+				oktetoLog.Infof("%s: %s", oktetoErrors.ErrQuota, c.Message)
 				if strings.Contains(c.Message, "requested: pods=") {
 					return fmt.Errorf("quota exceeded, you have reached the maximum number of pods per namespace")
 				}
 				if strings.Contains(c.Message, "requested: requests.storage=") {
 					return fmt.Errorf("quota exceeded, you have reached the maximum storage per namespace")
 				}
-				return errors.ErrQuota
+				return oktetoErrors.ErrQuota
 			} else if isResourcesRelatedError(c.Message) {
 				return getResourceLimitError(c.Message, dev)
 			}

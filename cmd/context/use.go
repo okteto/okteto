@@ -20,9 +20,9 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -88,17 +88,17 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 	ctxOptions.initFromEnvVars()
 
 	if ctxOptions.Token == "" && kubeconfig.InCluster() && !isValidCluster(ctxOptions.Context) {
-		return errors.ErrTokenFlagNeeded
+		return oktetoErrors.ErrTokenFlagNeeded
 	}
 
 	if ctxOptions.Context == "" {
 		if !ctxOptions.IsCtxCommand && !ctxOptions.raiseNotCtxError {
-			log.Information("Okteto context is not initialized")
+			oktetoLog.Information("Okteto context is not initialized")
 		}
 		if ctxOptions.raiseNotCtxError {
-			return errors.ErrCtxNotSet
+			return oktetoErrors.ErrCtxNotSet
 		}
-		log.Infof("authenticating with interactive context")
+		oktetoLog.Infof("authenticating with interactive context")
 		oktetoContext, err := getContext(ctx, ctxOptions)
 		if err != nil {
 			return err
@@ -116,11 +116,11 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 	os.Setenv(model.OktetoNamespaceEnvVar, okteto.Context().Namespace)
 
 	if ctxOptions.Show {
-		log.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))
+		oktetoLog.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))
 	}
 
 	if ctxOptions.IsCtxCommand {
-		log.Information("Run 'okteto kubeconfig' to set your kubectl credentials")
+		oktetoLog.Information("Run 'okteto kubeconfig' to set your kubectl credentials")
 	}
 	return nil
 }
@@ -134,7 +134,10 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 	ctxOptions.IsOkteto = isOkteto
 
 	if isCreateNewContextOption(oktetoContext) {
-		oktetoContext = askForOktetoURL()
+		oktetoContext, err = askForOktetoURL()
+		if err != nil {
+			return "", err
+		}
 		ctxOptions.IsOkteto = true
 	}
 

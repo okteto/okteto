@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"strings"
 
-	okErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 )
 
 // GetErrorMessage returns the parsed error message
@@ -28,22 +28,22 @@ func GetErrorMessage(err error, tag string) error {
 	imageRegistry, imageTag := GetRegistryAndRepo(tag)
 	switch {
 	case IsLoggedIntoRegistryButDontHavePermissions(err):
-		err = okErrors.UserError{
+		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", tag, imageTag),
 			Hint: fmt.Sprintf("Please log in into the registry '%s' with a user with push permissions to '%s' or use another image.", imageRegistry, imageTag),
 		}
 	case IsNotLoggedIntoRegistry(err):
-		err = okErrors.UserError{
+		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", tag, imageTag),
 			Hint: fmt.Sprintf("Log in into the registry '%s' and verify that you have permissions to push the image '%s'.", imageRegistry, imageTag),
 		}
 	case IsBuildkitServiceUnavailable(err):
-		err = okErrors.UserError{
+		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("buildkit service is not available at the moment"),
 			Hint: "Please try again later.",
 		}
 	default:
-		err = okErrors.UserError{
+		err = oktetoErrors.UserError{
 			E: fmt.Errorf("error building image '%s': %s", tag, err.Error()),
 		}
 	}

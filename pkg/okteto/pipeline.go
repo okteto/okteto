@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 	giturls "github.com/whilp/git-urls"
@@ -287,7 +287,7 @@ func (c *OktetoClient) GetPipelineByName(ctx context.Context, name string) (*typ
 			}, nil
 		}
 	}
-	return nil, errors.ErrNotFound
+	return nil, oktetoErrors.ErrNotFound
 }
 
 // GetPipelineByRepository gets a pipeline given its repo url
@@ -321,7 +321,7 @@ func (c *OktetoClient) GetPipelineByRepository(ctx context.Context, repository s
 			return pipeline, nil
 		}
 	}
-	return nil, errors.ErrNotFound
+	return nil, oktetoErrors.ErrNotFound
 }
 
 func areSameRepository(repoA, repoB string) bool {
@@ -342,7 +342,7 @@ func areSameRepository(repoA, repoB string) bool {
 
 // DestroyPipeline destroys a pipeline
 func (c *OktetoClient) DestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
-	log.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
+	oktetoLog.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
 	gitDeployResponse := &types.GitDeployResponse{}
 	if destroyVolumes {
 		var mutation struct {
@@ -425,12 +425,12 @@ func (c *OktetoClient) DestroyPipeline(ctx context.Context, name string, destroy
 		}
 	}
 
-	log.Infof("destroy pipeline: %+v", gitDeployResponse.GitDeploy.Status)
+	oktetoLog.Infof("destroy pipeline: %+v", gitDeployResponse.GitDeploy.Status)
 	return gitDeployResponse, nil
 }
 
 func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
-	log.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
+	oktetoLog.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
 	gitDeployResponse := &types.GitDeployResponse{}
 	if destroyVolumes {
 		var mutation struct {
@@ -478,7 +478,7 @@ func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name strin
 		}
 	}
 
-	log.Infof("destroy pipeline: %+v", gitDeployResponse.GitDeploy.Status)
+	oktetoLog.Infof("destroy pipeline: %+v", gitDeployResponse.GitDeploy.Status)
 	return gitDeployResponse, nil
 }
 

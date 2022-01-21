@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	enry "github.com/src-d/enry/v2"
 )
 
@@ -64,7 +64,7 @@ func ProcessDirectory(root string) (string, error) {
 
 		relativePath, err := filepath.Rel(root, path)
 		if err != nil {
-			log.Infof("failed to calculate relative path: %s", err)
+			oktetoLog.Infof("failed to calculate relative path: %s", err)
 			return nil
 		}
 
@@ -94,7 +94,7 @@ func ProcessDirectory(root string) (string, error) {
 			if language, ok = enry.GetLanguageByFilename(path); !ok {
 				content, err := readFile(path, readFileLimit)
 				if err != nil {
-					log.Infof("failed to read %s: %s", path, err)
+					oktetoLog.Infof("failed to read %s: %s", path, err)
 					return nil
 				}
 
@@ -141,7 +141,7 @@ func refineJavaChoice(root string) string {
 		return Gradle
 	}
 
-	log.Infof("didn't found %s : %s", p, err)
+	oktetoLog.Infof("didn't found %s : %s", p, err)
 	return Maven
 }
 
@@ -200,7 +200,7 @@ func sortLanguagesByUsage(fSummary map[string][]string) []string {
 		_, _ = buff.WriteString(fmt.Sprintf("%.2f%%\t%s\n", percent, fType))
 	}
 
-	log.Infof("Language guesses: \r\n %s", buff.String())
+	oktetoLog.Infof("Language guesses: \r\n %s", buff.String())
 
 	return keys
 }

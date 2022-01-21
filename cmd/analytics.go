@@ -16,7 +16,7 @@ package cmd
 import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +44,7 @@ func disableAnalytics() error {
 		return err
 	}
 
-	log.Success("Analytics have been disabled")
+	oktetoLog.Success("Analytics have been disabled")
 	return nil
 }
 
@@ -53,6 +53,6 @@ func enableAnalytics() error {
 		return err
 	}
 
-	log.Success("Analytics have been enabled")
+	oktetoLog.Success("Analytics have been enabled")
 	return nil
 }

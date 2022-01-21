@@ -24,7 +24,7 @@ import (
 
 	"github.com/dukex/mixpanel"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -256,7 +256,7 @@ func TrackLogin(success bool) {
 // TrackSignup sends a tracking event to mixpanel when the user signs up
 func TrackSignup(success bool, userID string) {
 	if err := mixpanelClient.Alias(get().MachineID, userID); err != nil {
-		log.Errorf("failed to alias %s to %s", get().MachineID, userID)
+		oktetoLog.Errorf("failed to alias %s to %s", get().MachineID, userID)
 	}
 
 	track(signupEvent, success, nil)
@@ -341,6 +341,6 @@ func track(event string, success bool, props map[string]interface{}) {
 
 	e := &mixpanel.Event{Properties: props}
 	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {
-		log.Infof("Failed to send analytics: %s", err)
+		oktetoLog.Infof("Failed to send analytics: %s", err)
 	}
 }

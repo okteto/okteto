@@ -25,9 +25,9 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,7 +81,7 @@ func InitContextWithDeprecatedToken() {
 	defer os.RemoveAll(config.GetTokenPathDeprecated())
 	token, err := getTokenFromOktetoHome()
 	if err != nil {
-		log.Infof("error accessing deprecated okteto token '%s': %v", config.GetTokenPathDeprecated(), err)
+		oktetoLog.Infof("error accessing deprecated okteto token '%s': %v", config.GetTokenPathDeprecated(), err)
 		return
 	}
 
@@ -97,7 +97,7 @@ func InitContextWithDeprecatedToken() {
 
 	certificateBytes, err := os.ReadFile(config.GetCertificatePath())
 	if err != nil {
-		log.Infof("error reading okteto certificate: %v", err)
+		oktetoLog.Infof("error reading okteto certificate: %v", err)
 		return
 	}
 
@@ -113,7 +113,7 @@ func InitContextWithDeprecatedToken() {
 	ctxStore.CurrentContext = token.URL
 
 	if err := NewContextConfigWriter().Write(); err != nil {
-		log.Infof("error writing okteto context: %v", err)
+		oktetoLog.Infof("error writing okteto context: %v", err)
 	}
 }
 
@@ -124,7 +124,7 @@ func ContextExists() bool {
 		if os.IsNotExist(err) {
 			return false
 		}
-		log.Fatalf("error accessing okteto context store '%s': %s", oktetoContextFolder, err)
+		oktetoLog.Fatalf("error accessing okteto context store '%s': %s", oktetoContextFolder, err)
 	}
 	return true
 }
@@ -152,7 +152,7 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string,
 	cfg.CurrentContext = k8sContext
 	c, _, err := clientProvider.Provide(cfg)
 	if err != nil {
-		log.Infof("error getting k8s client: %v", err)
+		oktetoLog.Infof("error getting k8s client: %v", err)
 		return k8sContext
 	}
 
@@ -167,7 +167,7 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string,
 
 	n, err := c.CoreV1().Namespaces().Get(ctx, k8sNamespace, metav1.GetOptions{})
 	if err != nil {
-		log.Debugf("error accessing current namespace: %v", err)
+		oktetoLog.Debugf("error accessing current namespace: %v", err)
 		return k8sContext
 	}
 	if _, ok := n.Labels[model.DevLabel]; ok {
@@ -194,8 +194,8 @@ func ContextStore() *OktetoContextStore {
 	if ContextExists() {
 		b, err := os.ReadFile(config.GetOktetoContextsStorePath())
 		if err != nil {
-			log.Errorf("error reading okteto contexts: %v", err)
-			log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+			oktetoLog.Errorf("error reading okteto contexts: %v", err)
+			oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 		}
 
 		dec := json.NewDecoder(bytes.NewReader(b))
@@ -203,8 +203,8 @@ func ContextStore() *OktetoContextStore {
 
 		ctxStore := &OktetoContextStore{}
 		if err := dec.Decode(&ctxStore); err != nil {
-			log.Errorf("error decoding okteto contexts: %v", err)
-			log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+			oktetoLog.Errorf("error decoding okteto contexts: %v", err)
+			oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 		}
 		CurrentStore = ctxStore
 
@@ -223,13 +223,13 @@ func ContextStore() *OktetoContextStore {
 func Context() *OktetoContext {
 	c := ContextStore()
 	if c.CurrentContext == "" {
-		log.Info("ContextStore().CurrentContext is empty")
-		log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+		oktetoLog.Info("ContextStore().CurrentContext is empty")
+		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 	}
 	octx, ok := c.Contexts[c.CurrentContext]
 	if !ok {
-		log.Info("ContextStore().CurrentContext not in ContextStore().Contexts")
-		log.Fatalf(errors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
+		oktetoLog.Info("ContextStore().CurrentContext not in ContextStore().Contexts")
+		oktetoLog.Fatalf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextFolder())
 	}
 
 	return octx
@@ -284,13 +284,13 @@ func NewContextConfigWriter() *ContextConfigWriter {
 func (*ContextConfigWriter) Write() error {
 	marshalled, err := json.MarshalIndent(ContextStore(), "", "\t")
 	if err != nil {
-		log.Infof("failed to marshal context: %s", err)
+		oktetoLog.Infof("failed to marshal context: %s", err)
 		return fmt.Errorf("failed to generate your context")
 	}
 
 	contextFolder := config.GetOktetoContextFolder()
 	if err := os.MkdirAll(contextFolder, 0700); err != nil {
-		log.Fatalf("failed to create %s: %s", contextFolder, err)
+		oktetoLog.Fatalf("failed to create %s: %s", contextFolder, err)
 	}
 
 	contextConfigPath := config.GetOktetoContextsStorePath()

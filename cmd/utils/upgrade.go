@@ -21,7 +21,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-github/github"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 func UpgradeAvailable() string {
@@ -32,14 +32,14 @@ func UpgradeAvailable() string {
 
 	v, err := GetLatestVersionFromGithub()
 	if err != nil {
-		log.Infof("failed to get latest version from github: %s", err)
+		oktetoLog.Infof("failed to get latest version from github: %s", err)
 		return ""
 	}
 
 	if len(v) > 0 {
 		latest, err := semver.NewVersion(v)
 		if err != nil {
-			log.Infof("failed to parse latest version '%s': %s", v, err)
+			oktetoLog.Infof("failed to parse latest version '%s': %s", v, err)
 			return ""
 		}
 

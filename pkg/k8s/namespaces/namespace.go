@@ -21,7 +21,7 @@ import (
 	"github.com/ibuildthecloud/finalizers/pkg/world"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -106,7 +106,7 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 		}
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		if !opts.IncludeVolumes && gvk.Kind == volumeKind {
-			log.Debugf("skipping deletion of pvc '%s'", m.GetName())
+			oktetoLog.Debugf("skipping deletion of pvc '%s'", m.GetName())
 			return nil
 		}
 		mapping, err := rm.RESTMapping(schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind}, gvk.Version)
@@ -127,11 +127,11 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 			Delete(ctx, m.GetName(), deleteOpts)
 
 		if err != nil {
-			log.Debugf("error deleting '%s' '%s': %s", gvk.Kind, m.GetName(), err)
+			oktetoLog.Debugf("error deleting '%s' '%s': %s", gvk.Kind, m.GetName(), err)
 			return err
 		}
 
-		log.Debugf("successfully deleted '%s' '%s'", gvk.Kind, m.GetName())
+		oktetoLog.Debugf("successfully deleted '%s' '%s'", gvk.Kind, m.GetName())
 		return nil
 	}))
 }

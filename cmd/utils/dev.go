@@ -24,10 +24,10 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
@@ -110,7 +110,7 @@ func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 		return dev, nil
 	}
 
-	if errors.IsNotExist(err) && len(name) > 0 {
+	if oktetoErrors.IsNotExist(err) && len(name) > 0 {
 		manifest, err := model.Read(nil)
 		if err != nil {
 			return nil, err
@@ -152,7 +152,7 @@ func GetDevFromManifest(manifest *model.Manifest) (*model.Dev, error) {
 func AskYesNo(q string) (bool, error) {
 	var answer string
 	for {
-		log.Question(q)
+		oktetoLog.Question(q)
 		if _, err := fmt.Scanln(&answer); err != nil {
 			return false, err
 		}
@@ -161,7 +161,7 @@ func AskYesNo(q string) (bool, error) {
 			break
 		}
 
-		log.Fail("input must be 'y' or 'n'")
+		oktetoLog.Fail("input must be 'y' or 'n'")
 	}
 
 	return answer == "y", nil
@@ -189,11 +189,11 @@ func AskForOptions(options []string, label string) (string, error) {
 			FuncMap:  promptui.FuncMap,
 		},
 	}
-	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
+	prompt.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
 
 	i, _, err := prompt.Run()
 	if err != nil {
-		log.Infof("invalid init option: %s", err)
+		oktetoLog.Infof("invalid init option: %s", err)
 		return "", fmt.Errorf("invalid option")
 	}
 
@@ -216,7 +216,7 @@ func AskIfDeploy(name, namespace string) error {
 		return fmt.Errorf("couldn't read your response")
 	}
 	if !deploy {
-		return errors.UserError{
+		return oktetoErrors.UserError{
 			E:    fmt.Errorf("deployment %s doesn't exist in namespace %s", name, namespace),
 			Hint: "Deploy your application first or use 'okteto namespace' to select a different namespace and try again",
 		}
@@ -242,7 +242,7 @@ func ParseURL(u string) (string, error) {
 func CheckIfDirectory(path string) error {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		log.Infof("error on CheckIfDirectory: %s", err.Error())
+		oktetoLog.Infof("error on CheckIfDirectory: %s", err.Error())
 		return fmt.Errorf("'%s' does not exist", path)
 	}
 	if fileInfo.IsDir() {
@@ -255,7 +255,7 @@ func CheckIfDirectory(path string) error {
 func CheckIfRegularFile(path string) error {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
-		log.Infof("error on CheckIfRegularFile: %s", err.Error())
+		oktetoLog.Infof("error on CheckIfRegularFile: %s", err.Error())
 		return fmt.Errorf("'%s' does not exist", path)
 	}
 	if !fileInfo.IsDir() {
@@ -275,7 +275,7 @@ func GetDownCommand(devPath string) string {
 func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry bool) (apps.App, bool, error) {
 	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
-		if !errors.IsNotFound(err) {
+		if !oktetoErrors.IsNotFound(err) {
 			return nil, false, err
 		}
 		if dev.Autocreate {
@@ -285,14 +285,14 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 			return apps.NewDeploymentApp(deployments.Sandbox(dev)), true, nil
 		}
 		if len(dev.Selector) > 0 {
-			if err == errors.ErrNotFound {
-				err = errors.UserError{
+			if err == oktetoErrors.ErrNotFound {
+				err = oktetoErrors.UserError{
 					E:    fmt.Errorf("didn't find an application in namespace %s that matches the labels in your Okteto manifest", dev.Namespace),
 					Hint: "Update the labels or point your context to a different namespace and try again"}
 			}
 			return nil, false, err
 		}
-		return nil, false, errors.UserError{
+		return nil, false, oktetoErrors.UserError{
 			E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
 			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
@@ -310,8 +310,8 @@ func doesAutocreateAppExist(ctx context.Context, dev *model.Dev, c kubernetes.In
 	autocreateDev := *dev
 	autocreateDev.Name = model.DevCloneName(dev.Name)
 	_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
-	if err != nil && !errors.IsNotFound(err) {
-		log.Infof("getApp autocreate k8s error, retrying...")
+	if err != nil && !oktetoErrors.IsNotFound(err) {
+		oktetoLog.Infof("getApp autocreate k8s error, retrying...")
 		_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
 		return err == nil
 	}

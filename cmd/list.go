@@ -18,7 +18,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +39,7 @@ func deprecatedListNamespace(ctx context.Context) *cobra.Command {
 		Use:   "namespace <name>",
 		Short: "List namespaces",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Warning("'okteto list namespace' is deprecated in favor of 'okteto namespace list', and will be removed in version 1.16")
+			oktetoLog.Warning("'okteto list namespace' is deprecated in favor of 'okteto namespace list', and will be removed in version 1.16")
 			return cmd.RunE(namespace.List(ctx), args)
 		},
 		Args: utils.NoArgsAccepted(""),

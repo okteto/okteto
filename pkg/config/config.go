@@ -20,8 +20,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"gopkg.in/yaml.v2"
 )
@@ -77,7 +77,7 @@ func GetBinaryFullPath() string {
 func GetOktetoHome() string {
 	if v, ok := os.LookupEnv(model.OktetoFolderEnvVar); ok {
 		if !model.FileExists(v) {
-			log.Fatalf("OKTETO_FOLDER doesn't exist: %s", v)
+			oktetoLog.Fatalf("OKTETO_FOLDER doesn't exist: %s", v)
 		}
 
 		return v
@@ -87,7 +87,7 @@ func GetOktetoHome() string {
 	d := filepath.Join(home, oktetoFolderName)
 
 	if err := os.MkdirAll(d, 0700); err != nil {
-		log.Fatalf("failed to create %s: %s", d, err)
+		oktetoLog.Fatalf("failed to create %s: %s", d, err)
 	}
 
 	return d
@@ -99,7 +99,7 @@ func GetNamespaceHome(namespace string) string {
 	d := filepath.Join(okHome, namespace)
 
 	if err := os.MkdirAll(d, 0700); err != nil {
-		log.Fatalf("failed to create %s: %s", d, err)
+		oktetoLog.Fatalf("failed to create %s: %s", d, err)
 	}
 
 	return d
@@ -111,7 +111,7 @@ func GetAppHome(namespace, name string) string {
 	d := filepath.Join(okHome, namespace, name)
 
 	if err := os.MkdirAll(d, 0700); err != nil {
-		log.Fatalf("failed to create %s: %s", d, err)
+		oktetoLog.Fatalf("failed to create %s: %s", d, err)
 	}
 
 	return d
@@ -163,8 +163,8 @@ func GetState(dev *model.Dev) (UpState, error) {
 	statePath := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
 	stateBytes, err := os.ReadFile(statePath)
 	if err != nil {
-		log.Infof("error reading state file: %s", err.Error())
-		return Failed, errors.UserError{
+		oktetoLog.Infof("error reading state file: %s", err.Error())
+		return Failed, oktetoErrors.UserError{
 			E:    fmt.Errorf("development mode is not enabled on your deployment"),
 			Hint: "Run 'okteto up' to enable it and try again",
 		}
@@ -181,7 +181,7 @@ func GetState(dev *model.Dev) (UpState, error) {
 func GetUserHomeDir() string {
 	if v, ok := os.LookupEnv(model.OktetoHomeEnvVar); ok {
 		if !model.FileExists(v) {
-			log.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
+			oktetoLog.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
 		}
 
 		return v
@@ -190,7 +190,7 @@ func GetUserHomeDir() string {
 	if runtime.GOOS == "windows" {
 		home, err := homedirWindows()
 		if err != nil {
-			log.Fatalf("couldn't determine your home directory: %s", err)
+			oktetoLog.Fatalf("couldn't determine your home directory: %s", err)
 		}
 
 		return home

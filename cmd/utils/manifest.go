@@ -16,7 +16,7 @@ package utils
 import (
 	"path/filepath"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -24,10 +24,10 @@ import (
 func InferApplicationName(cwd string) string {
 	repo, err := model.GetRepositoryURL(cwd)
 	if err != nil {
-		log.Info("inferring name from folder")
+		oktetoLog.Info("inferring name from folder")
 		return filepath.Base(cwd)
 	}
 
-	log.Info("inferring name from git repository URL")
+	oktetoLog.Info("inferring name from git repository URL")
 	return model.TranslateURLToName(repo)
 }

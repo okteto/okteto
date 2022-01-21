@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -43,7 +43,7 @@ func ListEndpoints(ctx context.Context, stack *model.Stack, output string) error
 		sort.Slice(endpointList, func(i, j int) bool {
 			return len(endpointList[i]) < len(endpointList[j])
 		})
-		log.Information("Endpoints available:\n  - %s\n", strings.Join(endpointList, "\n  - "))
+		oktetoLog.Information("Endpoints available:\n  - %s\n", strings.Join(endpointList, "\n  - "))
 	}
 	return nil
 }

@@ -16,7 +16,7 @@ package apps
 import (
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -32,7 +32,7 @@ func ValidateMountPaths(spec *apiv1.PodSpec, dev *model.Dev) error {
 		}
 		for _, syncVolume := range dev.Sync.Folders {
 			if vm.MountPath == syncVolume.RemotePath {
-				return errors.UserError{
+				return oktetoErrors.UserError{
 					E:    fmt.Errorf("'%s' is already defined as volume in %s", vm.MountPath, dev.Name),
 					Hint: `Disable the okteto persistent volume (https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional) and try again`}
 			}

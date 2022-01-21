@@ -21,8 +21,8 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -49,7 +49,7 @@ func Create(ctx context.Context) *cobra.Command {
 
 			options.Namespace = args[0]
 			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			nsCmd, err := NewCommand()
@@ -73,7 +73,7 @@ func (nc *NamespaceCommand) Create(ctx context.Context, opts *CreateOptions) err
 		return err
 	}
 
-	log.Success("Namespace '%s' created", oktetoNS)
+	oktetoLog.Success("Namespace '%s' created", oktetoNS)
 
 	if opts.Members != nil && len(*opts.Members) > 0 {
 		if err := nc.okClient.Namespaces().AddMembers(ctx, opts.Namespace, *opts.Members); err != nil {

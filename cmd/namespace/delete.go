@@ -20,8 +20,8 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -38,7 +38,7 @@ func Delete(ctx context.Context) *cobra.Command {
 			}
 
 			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			nsCmd, err := NewCommand()
@@ -59,8 +59,8 @@ func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespac
 	if err := nc.okClient.Namespaces().Delete(ctx, namespace); err != nil {
 		return fmt.Errorf("failed to delete namespace: %s", err)
 	}
-	log.Success("Namespace '%s' deleted", namespace)
 
+	oktetoLog.Success("Namespace '%s' deleted", namespace)
 	if okteto.Context().Namespace == namespace {
 		personalNamespace := okteto.Context().PersonalNamespace
 		if personalNamespace == "" {

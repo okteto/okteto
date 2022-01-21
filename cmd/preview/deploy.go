@@ -25,8 +25,8 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -73,7 +73,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			okteto.Context().Namespace = name
 
 			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			if err := validatePreviewType(scope); err != nil {
@@ -93,11 +93,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if filename != "" {
-				log.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag'")
+				oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag'")
 				if file == "" {
 					file = filename
 				} else {
-					log.Warning("flags 'filename' and 'file' can not be used at the same time. 'file' flag will take precedence")
+					oktetoLog.Warning("flags 'filename' and 'file' can not be used at the same time. 'file' flag will take precedence")
 				}
 			}
 
@@ -107,16 +107,16 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			log.Information("Preview URL: %s", getPreviewURL(name))
+			oktetoLog.Information("Preview URL: %s", getPreviewURL(name))
 			if !wait {
-				log.Success("Preview environment '%s' scheduled for deployment", name)
+				oktetoLog.Success("Preview environment '%s' scheduled for deployment", name)
 				return nil
 			}
 
 			if err := waitUntilRunning(ctx, name, resp.Action, timeout); err != nil {
 				return err
 			}
-			log.Success("Preview environment '%s' successfully deployed", name)
+			oktetoLog.Success("Preview environment '%s' successfully deployed", name)
 			return nil
 		},
 	}
@@ -148,7 +148,7 @@ func getRepository(ctx context.Context, repository string) (string, error) {
 	}
 
 	if repository == "" {
-		log.Info("inferring git repository URL")
+		oktetoLog.Info("inferring git repository URL")
 
 		r, err := model.GetRepositoryURL(cwd)
 
@@ -167,7 +167,7 @@ func getBranch(ctx context.Context, branch string) (string, error) {
 		return "", fmt.Errorf("failed to get the current working directory: %w", err)
 	}
 	if branch == "" {
-		log.Info("inferring git repository branch")
+		oktetoLog.Info("inferring git repository branch")
 		b, err := utils.GetBranch(ctx, cwd)
 
 		if err != nil {
@@ -226,12 +226,12 @@ func waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout
 
 	select {
 	case <-stop:
-		log.Infof("CTRL+C received, starting shutdown sequence")
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		return errors.ErrIntSig
+		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
-			log.Infof("exit signal received due to error: %s", err)
+			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
@@ -266,7 +266,7 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name string, timeout time.D
 
 			p, err := oktetoClient.GetPreviewEnvByName(ctx, name)
 			if err != nil {
-				if errors.IsNotFound(err) || errors.IsNotExist(err) {
+				if oktetoErrors.IsNotFound(err) || oktetoErrors.IsNotExist(err) {
 					return nil
 				}
 
@@ -282,7 +282,7 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name string, timeout time.D
 					return fmt.Errorf("preview environment '%s' failed", name)
 				}
 			default:
-				log.Infof("preview environment '%s' is '%s'", name, p.Status)
+				oktetoLog.Infof("preview environment '%s' is '%s'", name, p.Status)
 			}
 		}
 	}

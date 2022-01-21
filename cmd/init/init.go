@@ -27,7 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/linguist"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -82,12 +82,12 @@ func Init() *cobra.Command {
 				return err
 			}
 
-			log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
+			oktetoLog.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
 
 			if devPath == utils.DefaultManifest {
-				log.Information("Run 'okteto up' to activate your development container")
+				oktetoLog.Information("Run 'okteto up' to activate your development container")
 			} else {
-				log.Information("Run 'okteto up -f %s' to activate your development container", devPath)
+				oktetoLog.Information("Run 'okteto up -f %s' to activate your development container", devPath)
 			}
 			return nil
 		},
@@ -102,9 +102,9 @@ func Init() *cobra.Command {
 
 // Run runs the sequence to generate okteto.yml
 func Run(devPath, language, workDir string, overwrite bool) error {
-	fmt.Println("This command walks you through creating an okteto manifest.")
-	fmt.Println("It only covers the most common items, and tries to guess sensible defaults.")
-	fmt.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
+	oktetoLog.Println("This command walks you through creating an okteto manifest.")
+	oktetoLog.Println("It only covers the most common items, and tries to guess sensible defaults.")
+	oktetoLog.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
 	ctx := context.Background()
 	devPath, err := validateDevPath(devPath, overwrite)
 	if err != nil {
@@ -146,15 +146,15 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language)
 			spinner.Stop()
 			if err == nil {
-				log.Success(fmt.Sprintf("%s '%s' successfully analyzed", app.Kind(), app.ObjectMeta().Name))
+				oktetoLog.Success(fmt.Sprintf("%s '%s' successfully analyzed", app.Kind(), app.ObjectMeta().Name))
 			} else {
-				log.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", app.Kind(), app.ObjectMeta().Name, err))
+				oktetoLog.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", app.Kind(), app.ObjectMeta().Name, err))
 				linguist.SetForwardDefaults(dev, language)
 			}
 		}
 
 		if !supportsPersistentVolumes(ctx) {
-			log.Yellow("Default storage class not found in your cluster. Persistent volumes not enabled in your okteto manifest")
+			oktetoLog.Yellow("Default storage class not found in your cluster. Persistent volumes not enabled in your okteto manifest")
 			dev.Volumes = nil
 			dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
 				Enabled: false,
@@ -182,7 +182,7 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 	if !model.FileExists(stignore) {
 		c := linguist.GetSTIgnore(language)
 		if err := os.WriteFile(stignore, c, 0600); err != nil {
-			log.Infof("failed to write stignore file: %s", err)
+			oktetoLog.Infof("failed to write stignore file: %s", err)
 		}
 	}
 
@@ -193,7 +193,7 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 func getRunningApp(ctx context.Context) (apps.App, string, error) {
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
-		log.Yellow("Failed to load your kubeconfig: %s", err)
+		oktetoLog.Yellow("Failed to load your kubeconfig: %s", err)
 		return nil, "", nil
 	}
 
@@ -226,24 +226,24 @@ func supportsPersistentVolumes(ctx context.Context) bool {
 	}
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
-		log.Infof("couldn't get kubernetes local client: %s", err.Error())
+		oktetoLog.Infof("couldn't get kubernetes local client: %s", err.Error())
 		return false
 	}
 
 	stClassList, err := c.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
 	if err != nil {
-		log.Infof("error getting storage classes: %s", err.Error())
+		oktetoLog.Infof("error getting storage classes: %s", err.Error())
 		return false
 	}
 
 	for i := range stClassList.Items {
 		if stClassList.Items[i].Annotations[model.DefaultStorageClassAnnotation] == "true" {
-			log.Infof("found default storage class '%s'", stClassList.Items[i].Name)
+			oktetoLog.Infof("found default storage class '%s'", stClassList.Items[i].Name)
 			return true
 		}
 	}
 
-	log.Infof("default storage class not found")
+	oktetoLog.Infof("default storage class not found")
 	return false
 }
 
@@ -264,10 +264,10 @@ func GetLanguage(language, workDir string) (string, error) {
 	}
 	l, err := linguist.ProcessDirectory(workDir)
 	if err != nil {
-		log.Infof("failed to process directory: %s", err)
+		oktetoLog.Infof("failed to process directory: %s", err)
 		l = linguist.Unrecognized
 	}
-	log.Infof("language '%s' inferred for your current directory", l)
+	oktetoLog.Infof("language '%s' inferred for your current directory", l)
 	if l == linguist.Unrecognized {
 		l, err = askForLanguage()
 		if err != nil {
@@ -289,12 +289,12 @@ func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, er
 	namespace := okteto.Context().Namespace
 	dList, err := deployments.List(ctx, namespace, "", c)
 	if err != nil {
-		log.Yellow("Failed to list deployments: %s", err)
+		oktetoLog.Yellow("Failed to list deployments: %s", err)
 		return nil, nil
 	}
 	sfsList, err := statefulsets.List(ctx, namespace, "", c)
 	if err != nil {
-		log.Yellow("Failed to list statefulsets: %s", err)
+		oktetoLog.Yellow("Failed to list statefulsets: %s", err)
 		return nil, nil
 	}
 	options := []string{}

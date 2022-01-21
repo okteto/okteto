@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/gliderlabs/ssh"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -33,7 +33,7 @@ type testHTTPHandler struct {
 type testSSHHandler struct{}
 
 func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Println(fmt.Sprintf("message %s", t.message))
+	oktetoLog.Println(fmt.Sprintf("message %s", t.message))
 	_, _ = w.Write([]byte(t.message))
 }
 
@@ -46,11 +46,11 @@ func (t *testSSHHandler) listenAndServe(address string) {
 			"session":      ssh.DefaultSessionHandler,
 		},
 		LocalPortForwardingCallback: ssh.LocalPortForwardingCallback(func(ctx ssh.Context, dhost string, dport uint32) bool {
-			log.Println("Accepted forward", dhost, dport)
+			oktetoLog.Println("Accepted forward", dhost, dport)
 			return true
 		}),
 		ReversePortForwardingCallback: ssh.ReversePortForwardingCallback(func(ctx ssh.Context, host string, port uint32) bool {
-			log.Println("attempt to bind", host, port, "granted")
+			oktetoLog.Println("attempt to bind", host, port, "granted")
 			return true
 		}),
 		RequestHandlers: map[string]ssh.RequestHandler{
@@ -60,7 +60,7 @@ func (t *testSSHHandler) listenAndServe(address string) {
 	}
 
 	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf(err.Error())
+		oktetoLog.Fatalf(err.Error())
 	}
 }
 
@@ -88,7 +88,7 @@ func TestForward(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Info("forwards connected")
+	oktetoLog.Info("forwards connected")
 
 	if err := callForwards(fm); err != nil {
 		t.Error(err)
@@ -307,7 +307,7 @@ func (fm *ForwardManager) waitForwardsDisconnected() error {
 		disconnected := true
 		for _, f := range fm.forwards {
 			if f.connected() {
-				log.Infof("%s is still connected", f)
+				oktetoLog.Infof("%s is still connected", f)
 				disconnected = false
 			}
 		}

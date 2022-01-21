@@ -24,10 +24,10 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/exec"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
@@ -48,7 +48,8 @@ func Exec() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, devPath, namespace, k8sContext)
+			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				return err
 			}
@@ -61,9 +62,9 @@ func Exec() *cobra.Command {
 			t := time.NewTicker(1 * time.Second)
 			iter := 0
 			err = executeExec(ctx, dev, args)
-			for errors.IsTransient(err) {
+			for oktetoErrors.IsTransient(err) {
 				if iter == 0 {
-					log.Yellow("Connection lost to your development container, reconnecting...")
+					oktetoLog.Yellow("Connection lost to your development container, reconnecting...")
 				}
 				iter++
 				iter = iter % 10
@@ -73,8 +74,8 @@ func Exec() *cobra.Command {
 
 			analytics.TrackExec(err == nil)
 
-			if errors.IsNotFound(err) {
-				return errors.UserError{
+			if oktetoErrors.IsNotFound(err) {
+				return oktetoErrors.UserError{
 					E:    fmt.Errorf("development container not found in namespace '%s'", dev.Namespace),
 					Hint: "Run 'okteto up' to create your development container or use 'okteto context' to change your current context",
 				}
@@ -118,7 +119,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 			}
 			retries++
 			if retries >= 10 {
-				return errors.UserError{
+				return oktetoErrors.UserError{
 					E:    fmt.Errorf("development mode is not enabled"),
 					Hint: "Run 'okteto up' to enable it and try again",
 				}
@@ -154,15 +155,15 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	if dev.RemoteModeEnabled() {
 		p, err := ssh.GetPort(devName)
 		if err != nil {
-			log.Infof("failed to get the SSH port for %s: %s", devName, err)
-			return errors.UserError{
+			oktetoLog.Infof("failed to get the SSH port for %s: %s", devName, err)
+			return oktetoErrors.UserError{
 				E:    fmt.Errorf("development mode is not enabled on your deployment"),
 				Hint: "Run 'okteto up' to enable it and try again",
 			}
 		}
 
 		dev.RemotePort = p
-		log.Infof("executing remote command over SSH port %d", dev.RemotePort)
+		oktetoLog.Infof("executing remote command over SSH port %d", dev.RemotePort)
 
 		dev.LoadRemote(ssh.GetPublicKey())
 

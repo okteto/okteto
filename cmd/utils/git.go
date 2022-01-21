@@ -22,7 +22,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/transport"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/utils/pointer"
 )
@@ -97,13 +97,13 @@ func IsOktetoRepo() bool {
 	if isOktetoSample == nil {
 		path, err := os.Getwd()
 		if err != nil {
-			log.Infof("failed to get the current working directory in IsOktetoRepo: %v", err)
+			oktetoLog.Infof("failed to get the current working directory in IsOktetoRepo: %v", err)
 			isOktetoSample = pointer.BoolPtr(false)
 			return false
 		}
 		repoUrl, err := model.GetRepositoryURL(path)
 		if err != nil {
-			log.Infof("failed to get repository url in IsOktetoRepo: %v", err)
+			oktetoLog.Infof("failed to get repository url in IsOktetoRepo: %v", err)
 			isOktetoSample = pointer.BoolPtr(false)
 			return false
 		}
@@ -115,7 +115,7 @@ func IsOktetoRepo() bool {
 func isOktetoRepoFromURL(repoUrl string) bool {
 	endpoint, err := transport.NewEndpoint(repoUrl)
 	if err != nil {
-		log.Infof("failed to get endpoint in isOktetoRepoFromURL: %v", err)
+		oktetoLog.Infof("failed to get endpoint in isOktetoRepoFromURL: %v", err)
 		return false
 	}
 	endpoint.Path = strings.TrimPrefix(endpoint.Path, "/")

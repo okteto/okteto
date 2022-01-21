@@ -15,12 +15,10 @@ package utils
 
 import (
 	"bufio"
-	"encoding/json"
-	"fmt"
 	"os"
 	"os/exec"
-	"strings"
-	"time"
+
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 type ManifestExecutor interface {
@@ -43,13 +41,6 @@ type plainExecutorDisplayer struct {
 type jsonExecutorDisplayer struct {
 	stdoutScanner *bufio.Scanner
 	stderrScanner *bufio.Scanner
-}
-
-type jsonMessage struct {
-	Level     string `json:"level"`
-	Stage     string `json:"stage"`
-	Message   string `json:"message"`
-	Timestamp int64  `json:"timestamp"`
 }
 
 // NewExecutor returns a new executor
@@ -108,7 +99,7 @@ func (e *plainExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
 func (e *plainExecutorDisplayer) display(_ string) {
 	for e.scanner.Scan() {
 		line := e.scanner.Text()
-		fmt.Println(line)
+		oktetoLog.Println(line)
 	}
 }
 
@@ -131,38 +122,16 @@ func (e *jsonExecutorDisplayer) display(command string) {
 	go func() {
 		for e.stdoutScanner.Scan() {
 			line := e.stdoutScanner.Text()
-			level := "info"
-			if isErrorLine(line) {
-				level = "error"
-			}
-			messageStruct := jsonMessage{
-				Level:     level,
-				Message:   line,
-				Stage:     command,
-				Timestamp: time.Now().Unix(),
-			}
-			message, _ := json.Marshal(messageStruct)
-			fmt.Println(string(message))
+
+			oktetoLog.Println(line)
 		}
 	}()
 
 	go func() {
 		for e.stderrScanner.Scan() {
 			line := e.stderrScanner.Text()
-			level := "error"
-			messageStruct := jsonMessage{
-				Level:     level,
-				Message:   line,
-				Stage:     command,
-				Timestamp: time.Now().Unix(),
-			}
-			message, _ := json.Marshal(messageStruct)
-			fmt.Println(string(message))
+			oktetoLog.Fail(line)
+
 		}
 	}()
-
-}
-
-func isErrorLine(text string) bool {
-	return strings.HasPrefix(text, " x ")
 }

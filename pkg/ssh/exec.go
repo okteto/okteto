@@ -24,8 +24,8 @@ import (
 
 	"github.com/alessio/shellescape"
 	dockerterm "github.com/moby/term"
-	okErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
@@ -62,12 +62,12 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		<-ctx.Done()
 		if connection != nil {
 			if err := connection.Close(); err != nil {
-				if !okErrors.IsClosedNetwork(err) {
-					log.Infof("failed to close ssh client for exec: %s", err)
+				if !oktetoErrors.IsClosedNetwork(err) {
+					oktetoLog.Infof("failed to close ssh client for exec: %s", err)
 				}
 			}
 		}
-		log.Infof("ssh client for exec closed")
+		oktetoLog.Infof("ssh client for exec closed")
 	}()
 
 	session, err := connection.NewSession()
@@ -91,15 +91,15 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		var ok bool
 		if termFD, ok = isTerminal(inR); ok {
 			width, height, err = term.GetSize(int(os.Stdout.Fd()))
-			log.Infof("terminal width %d height %d", width, height)
+			oktetoLog.Infof("terminal width %d height %d", width, height)
 			if err != nil {
-				log.Infof("request for terminal size failed: %s", err)
+				oktetoLog.Infof("request for terminal size failed: %s", err)
 			}
 		}
 
 		state, err := term.MakeRaw(termFD)
 		if err != nil {
-			log.Infof("request for raw terminal failed: %s", err)
+			oktetoLog.Infof("request for raw terminal failed: %s", err)
 		}
 
 		defer func() {
@@ -108,10 +108,10 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 			}
 
 			if err := term.Restore(termFD, state); err != nil {
-				log.Infof("failed to restore terminal: %s", err)
+				oktetoLog.Infof("failed to restore terminal: %s", err)
 			}
 
-			log.Infof("terminal restored")
+			oktetoLog.Infof("terminal restored")
 		}()
 
 		if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
@@ -121,13 +121,13 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 
 	sockEnvVar, ok := os.LookupEnv(model.SshAuthSockEnvVar)
 	if !ok {
-		log.Info("SSH_AUTH_SOCK is not set, not forwarding socket")
+		oktetoLog.Info("SSH_AUTH_SOCK is not set, not forwarding socket")
 	} else {
 		if err := agent.ForwardToRemote(connection, sockEnvVar); err != nil {
-			log.Infof("failed to existing SSH_AUTH_SOCK('%s'): %s", sockEnvVar, err)
+			oktetoLog.Infof("failed to existing SSH_AUTH_SOCK('%s'): %s", sockEnvVar, err)
 		}
 		if err := agent.RequestAgentForwarding(session); err != nil {
-			log.Infof("failed to forward ssh agent to remote: %s", err)
+			oktetoLog.Infof("failed to forward ssh agent to remote: %s", err)
 		}
 	}
 
@@ -144,7 +144,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 
 	go func() {
 		if _, err := io.Copy(outW, stdout); err != nil {
-			log.Infof("error while writing to stdOut: %s", err)
+			oktetoLog.Infof("error while writing to stdOut: %s", err)
 		}
 	}()
 
@@ -155,12 +155,12 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 
 	go func() {
 		if _, err := io.Copy(errW, stderr); err != nil {
-			log.Infof("error while writing to stdOut: %s", err)
+			oktetoLog.Infof("error while writing to stdOut: %s", err)
 		}
 	}()
 
 	cmd := shellescape.QuoteCommand(command)
-	log.Infof("executing command over ssh: '%s'", cmd)
+	oktetoLog.Infof("executing command over ssh: '%s'", cmd)
 	err = session.Run(cmd)
 	if err == nil {
 		return nil
@@ -169,11 +169,11 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		return nil
 	}
 	if strings.Contains(err.Error(), "exit code 137") || strings.Contains(err.Error(), "exit status 137") {
-		log.Yellow(`Insufficient memory. Please update your resources on your okteto manifest.
+		oktetoLog.Yellow(`Insufficient memory. Please update your resources on your okteto manifest.
 More information is available here: https://okteto.com/docs/reference/manifest/#resources-object-optional`)
 	}
 
-	log.Infof("command failed: %s", err)
+	oktetoLog.Infof("command failed: %s", err)
 
 	return err
 }

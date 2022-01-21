@@ -21,8 +21,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
@@ -56,7 +56,7 @@ func (*OktetoClientProvider) Provide() (types.OktetoInterface, error) {
 func NewOktetoClient() (*OktetoClient, error) {
 	token := Context().Token
 	if token == "" {
-		return nil, fmt.Errorf(errors.ErrNotLogged, Context().Name)
+		return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, Context().Name)
 	}
 	u, err := parseOktetoURL(Context().Name)
 	if err != nil {
@@ -133,7 +133,7 @@ func translateAPIErr(err error) error {
 	e := strings.TrimPrefix(err.Error(), "graphql: ")
 	switch e {
 	case "not-authorized":
-		return fmt.Errorf(errors.ErrNotLogged, Context().Name)
+		return fmt.Errorf(oktetoErrors.ErrNotLogged, Context().Name)
 	case "namespace-quota-exceeded":
 		return fmt.Errorf("you have exceeded your namespace quota. Contact us at hello@okteto.com to learn more")
 	case "namespace-quota-exceeded-onpremises":
@@ -146,7 +146,7 @@ func translateAPIErr(err error) error {
 		return fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")
 
 	default:
-		log.Infof("Unrecognized API error: %s", err)
+		oktetoLog.Infof("Unrecognized API error: %s", err)
 		return fmt.Errorf(e)
 	}
 

@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
@@ -33,7 +33,7 @@ func downloadSyncthing() error {
 		}
 
 		if i < 2 {
-			log.Infof("failed to download syncthing, retrying: %s", err)
+			oktetoLog.Infof("failed to download syncthing, retrying: %s", err)
 			<-t.C
 		}
 	}
@@ -52,7 +52,7 @@ func sshKeys() error {
 		}
 
 		spinner.Stop()
-		log.Success("Client certificates generated")
+		oktetoLog.Success("Client certificates generated")
 	}
 
 	return nil

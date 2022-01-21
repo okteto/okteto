@@ -24,7 +24,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -91,7 +91,7 @@ func Build(ctx context.Context) *cobra.Command {
 
 					return buildV2(manifest.Build, options, args)
 				}
-				log.Information("Build manifest not found. Looking for Dockerfile to run the build")
+				oktetoLog.Information("Build manifest not found. Looking for Dockerfile to run the build")
 			}
 
 			return buildV1(options, args)
@@ -103,7 +103,7 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.Target, "target", "", "", "set the target build stage to build")
 	cmd.Flags().BoolVarP(&options.NoCache, "no-cache", "", false, "do not use cache when building the image")
 	cmd.Flags().StringArrayVar(&options.CacheFrom, "cache-from", nil, "cache source images")
-	cmd.Flags().StringVarP(&options.OutputMode, "progress", "", "tty", "show plain/tty build output")
+	cmd.Flags().StringVarP(&options.OutputMode, "progress", "", oktetoLog.TTYFormat, "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables")
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "", "", "namespace against which the image will be consumed. Default is the one defined at okteto context or okteto manifest")
@@ -147,13 +147,13 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 
 	for service, buildInfo := range m {
 		if !okteto.Context().IsOkteto && buildInfo.Image == "" {
-			log.Errorf("image is required")
+			oktetoLog.Errorf("image is required")
 			continue
 		}
 		opts := build.OptsFromManifest(service, buildInfo, options)
 		err := buildV1(opts, []string{opts.Path})
 		if err != nil {
-			log.Error(err)
+			oktetoLog.Error(err)
 			continue
 		}
 	}
@@ -180,9 +180,9 @@ func buildV1(options build.BuildOptions, args []string) error {
 	}
 
 	if okteto.Context().Builder == "" {
-		log.Information("Building your image using your local docker daemon")
+		oktetoLog.Information("Building your image using your local docker daemon")
 	} else {
-		log.Information("Running your build in %s...", okteto.Context().Builder)
+		oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
 	}
 
 	ctx := context.Background()
@@ -192,10 +192,10 @@ func buildV1(options build.BuildOptions, args []string) error {
 	}
 
 	if options.Tag == "" {
-		log.Success("Build succeeded")
-		log.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
+		oktetoLog.Success("Build succeeded")
+		oktetoLog.Information("Your image won't be pushed. To push your image specify the flag '-t'.")
 	} else {
-		log.Success(fmt.Sprintf("Image '%s' successfully pushed", options.Tag))
+		oktetoLog.Success(fmt.Sprintf("Image '%s' successfully pushed", options.Tag))
 	}
 
 	analytics.TrackBuild(okteto.Context().Builder, true)

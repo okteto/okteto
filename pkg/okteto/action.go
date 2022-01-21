@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
@@ -45,21 +45,21 @@ func (c *OktetoClient) WaitForActionToFinish(ctx context.Context, pipelineName, 
 	for {
 		select {
 		case <-to.C:
-			log.Infof("action '%s' didn't finish after %s", actionName, timeout.String())
+			oktetoLog.Infof("action '%s' didn't finish after %s", actionName, timeout.String())
 			return fmt.Errorf("pipeline '%s' didn't finish after %s", pipelineName, timeout.String())
 		case <-t.C:
 			a, err := c.GetAction(ctx, actionName)
 			if err != nil {
-				log.Infof("action '%s' failed", actionName)
+				oktetoLog.Infof("action '%s' failed", actionName)
 				return fmt.Errorf("pipeline '%s' failed", pipelineName)
 			}
 
-			log.Infof("action '%s' is '%s'", actionName, a.Status)
+			oktetoLog.Infof("action '%s' is '%s'", actionName, a.Status)
 			switch a.Status {
 			case "progressing", "queued":
 				continue
 			case "error":
-				log.Infof("action '%s' failed", actionName)
+				oktetoLog.Infof("action '%s' failed", actionName)
 				return fmt.Errorf("pipeline '%s' failed", pipelineName)
 			default:
 				return nil

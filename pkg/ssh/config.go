@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 type (
@@ -224,7 +224,7 @@ func (config *sshConfig) writeTo(w io.Writer) error {
 func (config *sshConfig) writeToFilepath(p string) error {
 	sshDir := filepath.Dir(p)
 	if err := os.MkdirAll(sshDir, 0700); err != nil {
-		log.Infof("failed to create SSH directory %s: %s", sshDir, err)
+		oktetoLog.Infof("failed to create SSH directory %s: %s", sshDir, err)
 	}
 
 	stat, err := os.Stat(p)

@@ -34,8 +34,8 @@ import (
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/sirupsen/logrus"
@@ -51,7 +51,7 @@ import (
 )
 
 func init() {
-	log.SetLevel("warn")
+	oktetoLog.SetLevel("warn")
 	rand.Seed(time.Now().UnixNano())
 
 	// override client-go error handlers to downgrade the "logging before flag.Parse" error
@@ -59,7 +59,7 @@ func init() {
 		func(e error) {
 
 			// Error when there's no service on the other side: an error occurred forwarding 8080 -> 8080: error forwarding port 8080 to pod df05e7e1c85d6b256df779c0b2deb417eb53a299c8581fc0945264301d8fa4b3, uid : exit status 1: 2020/03/16 02:11:09 socat[42490] E connect(5, AF=2 127.0.0.1:8080, 16): Connection refused\n
-			log.Debugf("port-forward: %s", e)
+			oktetoLog.Debugf("port-forward: %s", e)
 		},
 	}
 
@@ -67,17 +67,18 @@ func init() {
 
 	if bin := os.Getenv(model.OktetoBinEnvVar); bin != "" {
 		model.OktetoBinImageTag = bin
-		log.Infof("using %s as the bin image", bin)
+		oktetoLog.Infof("using %s as the bin image", bin)
 	}
 }
 
 func main() {
 	ctx := context.Background()
-	log.Init(logrus.WarnLevel)
+	oktetoLog.Init(logrus.WarnLevel)
 	var logLevel string
+	var outputMode string
 
 	if err := analytics.Init(); err != nil {
-		log.Infof("error initializing okteto analytics: %s", err)
+		oktetoLog.Infof("error initializing okteto analytics: %s", err)
 	}
 
 	okteto.InitContextWithDeprecatedToken()
@@ -89,16 +90,19 @@ func main() {
 		SilenceErrors: true,
 		PersistentPreRun: func(ccmd *cobra.Command, args []string) {
 			ccmd.SilenceUsage = true
-			log.SetLevel(logLevel)
-			log.Infof("started %s", strings.Join(os.Args, " "))
+			oktetoLog.SetLevel(logLevel)
+			oktetoLog.SetOutputFormat(outputMode)
+			oktetoLog.Infof("started %s", strings.Join(os.Args, " "))
 
 		},
 		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
-			log.Infof("finished %s", strings.Join(os.Args, " "))
+			oktetoLog.Infof("finished %s", strings.Join(os.Args, " "))
 		},
 	}
 
 	root.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "warn", "amount of information outputted (debug, info, warn, error)")
+	root.PersistentFlags().StringVarP(&outputMode, "output", "o", oktetoLog.TTYFormat, "output format (tty, plain, json)")
+
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
 	root.AddCommand(cmd.Login())
@@ -137,10 +141,10 @@ func main() {
 			tmp[0] = unicode.ToUpper(tmp[0])
 			message = string(tmp)
 		}
-		log.Fail(message)
-		if uErr, ok := err.(errors.UserError); ok {
+		oktetoLog.Fail(message)
+		if uErr, ok := err.(oktetoErrors.UserError); ok {
 			if len(uErr.Hint) > 0 {
-				log.Hint("    %s", uErr.Hint)
+				oktetoLog.Hint("    %s", uErr.Hint)
 			}
 		}
 		os.Exit(1)
