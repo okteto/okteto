@@ -247,6 +247,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 				} else if err != nil {
 					return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
 				} else {
+					log.Debug("image found, skipping build")
 					if err := setManifestEnvVars(service, imageWithDigest); err != nil {
 						return err
 					}
