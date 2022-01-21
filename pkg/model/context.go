@@ -3,7 +3,7 @@ package model
 import (
 	"os"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -33,7 +33,7 @@ func GetContextResource(filePath string) (*ContextResource, error) {
 func (c *ContextResource) UpdateContext(okCtx string) error {
 	if c.Context != "" {
 		if okCtx != "" && okCtx != c.Context {
-			return errors.ErrContextNotMatching
+			return oktetoErrors.ErrContextNotMatching
 		}
 		return nil
 	}
@@ -45,7 +45,7 @@ func (c *ContextResource) UpdateContext(okCtx string) error {
 func (c *ContextResource) UpdateNamespace(okNs string) error {
 	if c.Namespace != "" {
 		if okNs != "" && c.Namespace != okNs {
-			return errors.ErrNamespaceNotMatching
+			return oktetoErrors.ErrNamespaceNotMatching
 		}
 		return nil
 	}

@@ -19,7 +19,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
@@ -156,14 +156,14 @@ func (c *namespaceClient) Delete(ctx context.Context, namespace string) error {
 
 func validateNamespace(namespace, object string) error {
 	if len(namespace) > MAX_ALLOWED_CHARS {
-		return errors.UserError{
+		return oktetoErrors.UserError{
 			E:    fmt.Errorf("invalid %s name", object),
 			Hint: fmt.Sprintf("%s name must be shorter than 63 characters.", object),
 		}
 	}
 	nameValidationRegex := regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
 	if !nameValidationRegex.MatchString(namespace) {
-		return errors.UserError{
+		return oktetoErrors.UserError{
 			E:    fmt.Errorf("invalid %s name", object),
 			Hint: fmt.Sprintf("%s name must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character", object),
 		}

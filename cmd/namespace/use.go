@@ -21,7 +21,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -151,7 +151,7 @@ func getNamespacesSelection(ctx context.Context) ([]utils.SelectorItem, error) {
 
 func askForOktetoNamespace() string {
 	var namespace string
-	log.Question("Enter the namespace you want to use: ")
+	oktetoLog.Question("Enter the namespace you want to use: ")
 	fmt.Scanln(&namespace)
 	return namespace
 }

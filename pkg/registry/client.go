@@ -18,13 +18,13 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
 func clientOptions(ref name.Reference) remote.Option {
 	registry := ref.Context().RegistryStr()
-	log.Debugf("calling registry %s", registry)
+	oktetoLog.Debugf("calling registry %s", registry)
 
 	okRegistry := okteto.Context().Registry
 	if okRegistry == registry {
@@ -66,13 +66,13 @@ func configForReference(reference string) (v1.Config, error) {
 
 	img, err := remote.Image(ref, options)
 	if err != nil {
-		log.Debugf("error getting image from remote")
+		oktetoLog.Debugf("error getting image from remote")
 		return v1.Config{}, err
 	}
 
 	configFile, err := img.ConfigFile()
 	if err != nil {
-		log.Debugf("error getting image config from remote")
+		oktetoLog.Debugf("error getting image config from remote")
 		return v1.Config{}, err
 	}
 

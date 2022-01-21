@@ -20,7 +20,7 @@ import (
 	"strconv"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 // createPIDFile creates a PID file to track Up state and existence
@@ -41,6 +41,6 @@ func createPIDFile(ns, dpName string) error {
 func cleanPIDFile(ns, dpName string) {
 	filePath := filepath.Join(config.GetAppHome(ns, dpName), "okteto.pid")
 	if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
-		log.Infof("unable to delete PID file at %s", filePath)
+		oktetoLog.Infof("unable to delete PID file at %s", filePath)
 	}
 }

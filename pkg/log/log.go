@@ -14,7 +14,6 @@
 package log
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -35,20 +34,28 @@ var (
 
 	blueString = color.New(color.FgHiBlue).SprintfFunc()
 
-	errorSymbol = color.New(color.BgHiRed, color.FgBlack).Sprint(" x ")
+	errorSymbol        = " x "
+	coloredErrorSymbol = color.New(color.BgHiRed, color.FgBlack).Sprint(errorSymbol)
 
-	successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" ✓ ")
+	successSymbol        = " ✓ "
+	coloredSuccessSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(successSymbol)
 
-	informationSymbol = color.New(color.BgHiBlue, color.FgBlack).Sprint(" i ")
+	informationSymbol        = " i "
+	coloredInformationSymbol = color.New(color.BgHiBlue, color.FgBlack).Sprint(informationSymbol)
 
-	warningSymbol = color.New(color.BgHiYellow, color.FgBlack).Sprint(" ! ")
+	warningSymbol        = " ! "
+	coloredWarningSymbol = color.New(color.BgHiYellow, color.FgBlack).Sprint(warningSymbol)
 
-	questionSymbol = color.New(color.BgHiMagenta, color.FgBlack).Sprint(" ? ")
+	questionSymbol        = " ? "
+	coloredQuestionSymbol = color.New(color.BgHiMagenta, color.FgBlack).Sprint(questionSymbol)
 )
 
 type logger struct {
-	out  *logrus.Logger
-	file *logrus.Entry
+	out        *logrus.Logger
+	file       *logrus.Entry
+	writer     OktetoWriter
+	stage      string
+	outputMode string
 }
 
 var log = &logger{
@@ -59,14 +66,17 @@ func init() {
 	if runtime.GOOS == "windows" {
 		successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" + ")
 	}
+	Init(logrus.WarnLevel)
 }
 
 // Init configures the logger for the package to use.
 func Init(level logrus.Level) {
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
+	log.writer = log.getWriter(TTYFormat)
 }
 
+//ConfigureFileLogger configures the file to write
 func ConfigureFileLogger(dir, version string) {
 	fileLogger := logrus.New()
 	fileLogger.SetFormatter(&logrus.TextFormatter{
@@ -101,6 +111,21 @@ func SetLevel(level string) {
 	}
 }
 
+//GetOutputFormat returns the output format of the command
+func GetOutputFormat() string {
+	return log.outputMode
+}
+
+// SetOutputFormat sets the output format
+func SetOutputFormat(format string) {
+	log.writer = log.getWriter(format)
+}
+
+// SetStage sets the stage of the logger
+func SetStage(stage string) {
+	log.stage = stage
+}
+
 // IsDebug checks if the level of the main logger is DEBUG or TRACE
 func IsDebug() bool {
 	return log.out.GetLevel() >= logrus.DebugLevel
@@ -108,71 +133,47 @@ func IsDebug() bool {
 
 // Debug writes a debug-level log
 func Debug(args ...interface{}) {
-	log.out.Debug(args...)
-	if log.file != nil {
-		log.file.Debug(args...)
-	}
+	log.writer.Debug(args...)
 }
 
 // Debugf writes a debug-level log with a format
 func Debugf(format string, args ...interface{}) {
-	log.out.Debugf(format, args...)
-	if log.file != nil {
-		log.file.Debugf(format, args...)
-	}
+	log.writer.Debugf(format, args...)
 }
 
 // Info writes a info-level log
 func Info(args ...interface{}) {
-	log.out.Info(args...)
-	if log.file != nil {
-		log.file.Info(args...)
-	}
+	log.writer.Info(args...)
 }
 
 // Infof writes a info-level log with a format
 func Infof(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
-	if log.file != nil {
-		log.file.Infof(format, args...)
-	}
+	log.writer.Infof(format, args...)
 }
 
 // Error writes a error-level log
 func Error(args ...interface{}) {
-	log.out.Error(args...)
-	if log.file != nil {
-		log.file.Error(args...)
-	}
+	log.writer.Error(args...)
 }
 
 // Errorf writes a error-level log with a format
 func Errorf(format string, args ...interface{}) {
-	log.out.Errorf(format, args...)
-	if log.file != nil {
-		log.file.Errorf(format, args...)
-	}
+	log.writer.Errorf(format, args...)
 }
 
 // Fatalf writes a error-level log with a format
 func Fatalf(format string, args ...interface{}) {
-	if log.file != nil {
-		log.file.Errorf(format, args...)
-	}
-
-	log.out.Fatalf(format, args...)
+	log.writer.Fatalf(format, args...)
 }
 
 // Yellow writes a line in yellow
 func Yellow(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
-	fmt.Fprintln(color.Output, yellowString(format, args...))
+	log.writer.Yellow(format, args...)
 }
 
 // Green writes a line in green
 func Green(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
-	fmt.Fprintln(color.Output, greenString(format, args...))
+	log.writer.Green(format, args...)
 }
 
 // BlueString returns a string in blue
@@ -187,42 +188,50 @@ func BlueBackgroundString(format string, args ...interface{}) string {
 
 // Success prints a message with the success symbol first, and the text in green
 func Success(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
-	fmt.Fprintf(color.Output, "%s %s\n", successSymbol, greenString(format, args...))
+	log.writer.Success(format, args...)
 }
 
 // Information prints a message with the information symbol first, and the text in blue
 func Information(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
-	fmt.Fprintf(color.Output, "%s %s\n", informationSymbol, blueString(format, args...))
+	log.writer.Information(format, args...)
 }
 
 // Question prints a message with the question symbol first, and the text in magenta
-func Question(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
-	fmt.Fprintf(color.Output, "%s %s", questionSymbol, color.MagentaString(format, args...))
+func Question(format string, args ...interface{}) error {
+	return log.writer.Question(format, args...)
 }
 
 // Warning prints a message with the warning symbol first, and the text in yellow
 func Warning(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
-	fmt.Fprintf(color.Output, "%s %s\n", warningSymbol, yellowString(format, args...))
+	log.writer.Warning(format, args...)
 }
 
 // Hint prints a message with the text in blue
 func Hint(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
-	fmt.Fprintf(color.Output, "%s\n", blueString(format, args...))
+	log.writer.Hint(format, args...)
 }
 
 // Fail prints a message with the error symbol first, and the text in red
 func Fail(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
-	fmt.Fprintf(color.Output, "%s %s\n", errorSymbol, redString(format, args...))
+	log.writer.Fail(format, args...)
 }
 
 // Println writes a line with colors
 func Println(args ...interface{}) {
-	log.out.Info(args...)
-	fmt.Fprintln(color.Output, args...)
+	log.writer.Println(args...)
+}
+
+// Print writes a line with colors
+func Print(args ...interface{}) {
+	log.writer.Print(args...)
+}
+
+// Printf writes a line with format
+func Printf(format string, args ...interface{}) {
+	log.writer.Printf(format, args...)
+}
+
+//IsInteractive checks if the writer is interactive
+func IsInteractive() bool {
+	return log.writer.IsInteractive()
 }

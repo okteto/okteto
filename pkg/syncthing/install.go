@@ -24,7 +24,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	getter "github.com/hashicorp/go-getter"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -46,7 +46,7 @@ var (
 
 // Install installs syncthing locally
 func Install(p getter.ProgressTracker) error {
-	log.Infof("installing syncthing for %s/%s", runtime.GOOS, runtime.GOARCH)
+	oktetoLog.Infof("installing syncthing for %s/%s", runtime.GOOS, runtime.GOARCH)
 
 	minimum := GetMinimumVersion()
 	downloadURL, err := GetDownloadURL(runtime.GOOS, runtime.GOARCH, minimum.String())
@@ -91,7 +91,7 @@ func Install(p getter.ProgressTracker) error {
 
 	if model.FileExists(i) {
 		if err := os.Remove(i); err != nil {
-			log.Infof("failed to delete %s, will try to overwrite: %s", i, err)
+			oktetoLog.Infof("failed to delete %s, will try to overwrite: %s", i, err)
 		}
 	}
 
@@ -99,7 +99,7 @@ func Install(p getter.ProgressTracker) error {
 		return fmt.Errorf("failed to write %s: %s", i, err)
 	}
 
-	log.Infof("downloaded syncthing %s to %s", syncthingVersion, i)
+	oktetoLog.Infof("downloaded syncthing %s to %s", syncthingVersion, i)
 	return nil
 }
 
@@ -137,13 +137,13 @@ func getInstalledVersion() *semver.Version {
 	cmd := exec.Command(getInstallPath(), "--version")
 	output, err := cmd.Output()
 	if err != nil {
-		log.Errorf("failed to get the current syncthing version `%s`: %s", output, err)
+		oktetoLog.Errorf("failed to get the current syncthing version `%s`: %s", output, err)
 		return nil
 	}
 
 	s, err := parseVersionFromOutput(output)
 	if err != nil {
-		log.Errorf("failed to parse the current syncthing version `%s`: %s", output, err)
+		oktetoLog.Errorf("failed to parse the current syncthing version `%s`: %s", output, err)
 		return nil
 	}
 
@@ -158,7 +158,7 @@ func parseVersionFromOutput(output []byte) (*semver.Version, error) {
 	case 3:
 		v = fmt.Sprintf("%s%s", found[1], found[2])
 	case 2:
-		v = fmt.Sprintf("%s", found[1])
+		v = fmt.Sprint(found[1])
 	default:
 		return nil, fmt.Errorf("failed to extract the version from `%s`", output)
 	}

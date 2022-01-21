@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 type addAPIKeyTransport struct {
@@ -61,12 +61,12 @@ func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, p
 			retries++
 
 			if strings.Contains(err.Error(), "connection refused") {
-				log.Infof("syncthing is not ready, retrying local=%t", local)
+				oktetoLog.Infof("syncthing is not ready, retrying local=%t", local)
 			} else {
-				log.Infof("retrying syncthing call[%s] local=%t: %s", url, local, err.Error())
+				oktetoLog.Infof("retrying syncthing call[%s] local=%t: %s", url, local, err.Error())
 			}
 		case <-ctx.Done():
-			log.Infof("call to syncthing.APICall %s canceled", url)
+			oktetoLog.Infof("call to syncthing.APICall %s canceled", url)
 			return nil, ctx.Err()
 		}
 	}

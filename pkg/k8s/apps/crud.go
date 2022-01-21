@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -34,13 +34,13 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 		return &DeploymentApp{d: d}, nil
 	}
 
-	if !errors.IsNotFound(err) {
+	if !oktetoErrors.IsNotFound(err) {
 		return nil, err
 	}
 
 	sfs, err := statefulsets.GetByDev(ctx, dev, namespace, c)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if oktetoErrors.IsNotFound(err) {
 			return nil, fmt.Errorf("the application '%s' referred by your okteto manifest doesn't exist", dev.Name)
 		}
 		return nil, err
@@ -79,22 +79,22 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 			return pod, nil
 		}
 
-		if !errors.IsNotFound(err) {
+		if !oktetoErrors.IsNotFound(err) {
 			return nil, err
 		}
 
 		if time.Now().After(to) && retries > 10 {
-			return nil, errors.ErrKubernetesLongTimeToCreateDevContainer
+			return nil, oktetoErrors.ErrKubernetesLongTimeToCreateDevContainer
 		}
 
 		select {
 		case <-ticker.C:
 			if retries%5 == 0 {
-				log.Info("development container is not ready yet, will retry")
+				oktetoLog.Info("development container is not ready yet, will retry")
 			}
 			continue
 		case <-ctx.Done():
-			log.Debug("call to apps.GetRunningPodInLoop cancelled")
+			oktetoLog.Debug("call to apps.GetRunningPodInLoop cancelled")
 			return nil, ctx.Err()
 		}
 	}

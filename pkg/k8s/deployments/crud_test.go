@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -88,7 +88,7 @@ func TestCheckConditionErrors(t *testing.T) {
 					},
 				},
 			},
-			errors.ErrQuota,
+			oktetoErrors.ErrQuota,
 		},
 		{
 			"Memory per pod exceeded",

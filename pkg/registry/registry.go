@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	v1 "k8s.io/api/core/v1"
@@ -44,14 +44,14 @@ func GetImageTagWithDigest(imageTag string) (string, error) {
 
 	digest, err := digestForReference(reference)
 	if err != nil {
-		log.Debugf("error: %s", err.Error())
+		oktetoLog.Debugf("error: %s", err.Error())
 		if strings.Contains(err.Error(), "MANIFEST_UNKNOWN") {
-			return "", errors.ErrNotFound
+			return "", oktetoErrors.ErrNotFound
 		}
 		return "", fmt.Errorf("error getting image tag digest: %s", err.Error())
 	}
 	imageTag = fmt.Sprintf("%s/%s@%s", registry, repository, digest)
-	log.Debugf("image with digest: %s", imageTag)
+	oktetoLog.Debugf("image with digest: %s", imageTag)
 	return imageTag, nil
 }
 

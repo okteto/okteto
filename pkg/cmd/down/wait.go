@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/pods"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/client-go/kubernetes"
 )
@@ -48,13 +48,13 @@ func _waitForDevPodsTermination(ctx context.Context, c kubernetes.Interface, nam
 	for i := 0; i < t; i++ {
 		ps, err := pods.ListBySelector(ctx, namespace, selector, c)
 		if err != nil {
-			log.Infof("failed to get dev pods with selector %s, exiting: %s", selector, err)
+			oktetoLog.Infof("failed to get dev pods with selector %s, exiting: %s", selector, err)
 			return
 		}
 
 		exit := true
 		for i := range ps {
-			log.Infof("waiting for %s/%s to terminate", ps[i].GetNamespace(), ps[i].GetName())
+			oktetoLog.Infof("waiting for %s/%s to terminate", ps[i].GetNamespace(), ps[i].GetName())
 			if pods.Exists(ctx, ps[i].GetName(), ps[i].GetNamespace(), c) {
 				exit = false
 			}

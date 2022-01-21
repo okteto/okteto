@@ -23,8 +23,8 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -62,7 +62,7 @@ func deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			cwd, err := os.Getwd()
@@ -71,7 +71,7 @@ func deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if repository == "" {
-				log.Info("inferring git repository URL")
+				oktetoLog.Info("inferring git repository URL")
 
 				repository, err = model.GetRepositoryURL(cwd)
 				if err != nil {
@@ -84,7 +84,7 @@ func deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if branch == "" {
-				log.Info("inferring git repository branch")
+				oktetoLog.Info("inferring git repository branch")
 				b, err := utils.GetBranch(ctx, cwd)
 
 				if err != nil {
@@ -101,21 +101,21 @@ func deploy(ctx context.Context) *cobra.Command {
 				}
 				pipeline, err := oktetoClient.GetPipelineByRepository(ctx, repository)
 				if err == nil {
-					log.Information("Pipeline URL: %s", getPipelineURL(pipeline.GitDeploy))
-					log.Success("Pipeline '%s' was already deployed", name)
+					oktetoLog.Information("Pipeline URL: %s", getPipelineURL(pipeline.GitDeploy))
+					oktetoLog.Success("Pipeline '%s' was already deployed", name)
 					return nil
 				}
-				if !errors.IsNotFound(err) {
+				if !oktetoErrors.IsNotFound(err) {
 					return err
 				}
 			}
 
 			if filename != "" {
-				log.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag")
+				oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag")
 				if file == "" {
 					file = filename
 				} else {
-					log.Warning("flags 'filename' and 'file' can not be used at the same time. 'file' flag will take precedence")
+					oktetoLog.Warning("flags 'filename' and 'file' can not be used at the same time. 'file' flag will take precedence")
 				}
 			}
 
@@ -123,17 +123,17 @@ func deploy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			log.Information("Pipeline URL: %s", getPipelineURL(resp.GitDeploy))
+			oktetoLog.Information("Pipeline URL: %s", getPipelineURL(resp.GitDeploy))
 
 			if !wait {
-				log.Success("Pipeline '%s' scheduled for deployment", name)
+				oktetoLog.Success("Pipeline '%s' scheduled for deployment", name)
 				return nil
 			}
 
 			if err := waitUntilRunning(ctx, name, resp.Action, timeout); err != nil {
 				return err
 			}
-			log.Success("Pipeline '%s' successfully deployed", name)
+			oktetoLog.Success("Pipeline '%s' successfully deployed", name)
 			return nil
 		},
 	}
@@ -182,7 +182,7 @@ func deployPipeline(ctx context.Context, name, repository, branch, file string, 
 			})
 		}
 		namespace := okteto.Context().Namespace
-		log.Infof("deploy pipeline %s defined on file='%s' repository=%s branch=%s on namespace=%s", name, file, repository, branch, namespace)
+		oktetoLog.Infof("deploy pipeline %s defined on file='%s' repository=%s branch=%s on namespace=%s", name, file, repository, branch, namespace)
 
 		resp, err = oktetoClient.DeployPipeline(ctx, name, repository, branch, file, varList)
 		exit <- err
@@ -190,12 +190,12 @@ func deployPipeline(ctx context.Context, name, repository, branch, file string, 
 
 	select {
 	case <-stop:
-		log.Infof("CTRL+C received, starting shutdown sequence")
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		return nil, errors.ErrIntSig
+		return nil, oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
-			log.Infof("exit signal received due to error: %s", err)
+			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return nil, err
 		}
 	}
@@ -228,11 +228,11 @@ func waitUntilRunning(ctx context.Context, name string, action *types.Action, ti
 
 	select {
 	case <-stop:
-		log.Infof("CTRL+C received, starting shutdown sequence")
-		return errors.ErrIntSig
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
-			log.Infof("exit signal received due to error: %s", err)
+			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
@@ -269,7 +269,7 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name string, timeout time.D
 		case <-t.C:
 			p, err := oktetoClient.GetPipelineByName(ctx, name)
 			if err != nil {
-				if errors.IsNotFound(err) || errors.IsNotExist(err) {
+				if oktetoErrors.IsNotFound(err) || oktetoErrors.IsNotExist(err) {
 					return nil
 				}
 
@@ -285,7 +285,7 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name string, timeout time.D
 					return fmt.Errorf("pipeline '%s' failed", name)
 				}
 			default:
-				log.Infof("pipeline '%s' is '%s'", name, p.Status)
+				oktetoLog.Infof("pipeline '%s' is '%s'", name, p.Status)
 			}
 		}
 	}

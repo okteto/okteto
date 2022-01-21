@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
@@ -210,7 +210,7 @@ func (c *OktetoClient) DestroyPreview(ctx context.Context, name string) error {
 	}
 
 	err := mutate(ctx, &mutation, variables, c.client)
-	if errors.IsNotFound(err) {
+	if oktetoErrors.IsNotFound(err) {
 		return nil
 	}
 	return err
@@ -318,7 +318,7 @@ func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*t
 		}
 	}
 
-	return nil, errors.ErrNotFound
+	return nil, oktetoErrors.ErrNotFound
 }
 
 func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previewName string) (map[string]string, error) {
@@ -360,7 +360,7 @@ func translatePreviewAPIErr(err error, name string) error {
 		return fmt.Errorf("preview '%s' already exists with a different scope. Please use a different name", name)
 	}
 	if strings.Contains(err.Error(), "operation-not-permitted") {
-		return errors.UserError{E: fmt.Errorf("you are not authorized to create a global preview env"),
+		return oktetoErrors.UserError{E: fmt.Errorf("you are not authorized to create a global preview env"),
 			Hint: "Please log in with an administrator account or use a personal preview environment"}
 	}
 	return err

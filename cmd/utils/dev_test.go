@@ -18,7 +18,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -79,7 +79,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 					t.Fatal("expected error when loading")
 				}
 
-				if !errors.IsNotExist(err) {
+				if !oktetoErrors.IsNotExist(err) {
 					t.Fatalf("expected not found got: %s", err)
 				}
 

@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/pkg/errors"
@@ -172,7 +172,7 @@ func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume)
 func copyDockerIgnore(originalPath, translatedPath string) error {
 	originalPath, err := filepath.Abs(originalPath)
 	if err != nil {
-		log.Infof("could not load original dockerfile path")
+		oktetoLog.Infof("could not load original dockerfile path")
 		return err
 	}
 	originalDir := filepath.Dir(originalPath)
@@ -195,7 +195,7 @@ func copyDockerIgnore(originalPath, translatedPath string) error {
 				return err
 			}
 		} else {
-			log.Infof("could not detect any .dockerignore on %s", originalDir)
+			oktetoLog.Infof("could not detect any .dockerignore on %s", originalDir)
 		}
 	}
 	return nil
@@ -204,13 +204,13 @@ func copyDockerIgnore(originalPath, translatedPath string) error {
 func copyFile(orig, dest string) error {
 	input, err := ioutil.ReadFile(orig)
 	if err != nil {
-		log.Infof("could not read %s dockerfile", orig)
+		oktetoLog.Infof("could not read %s dockerfile", orig)
 		return err
 	}
 
 	err = ioutil.WriteFile(dest, input, 0644)
 	if err != nil {
-		log.Infof("error creating %s: %s", dest, err)
+		oktetoLog.Infof("error creating %s: %s", dest, err)
 		return err
 	}
 	return nil

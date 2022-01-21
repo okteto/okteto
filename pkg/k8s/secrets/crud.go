@@ -19,7 +19,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 	v1 "k8s.io/api/core/v1"
@@ -101,13 +101,13 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syn
 			return fmt.Errorf("error creating kubernetes sync secret: %s", err)
 		}
 
-		log.Infof("created okteto secret '%s'", secretName)
+		oktetoLog.Infof("created okteto secret '%s'", secretName)
 	} else {
 		_, err := c.CoreV1().Secrets(dev.Namespace).Update(ctx, data, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("error updating kubernetes okteto secret: %s", err)
 		}
-		log.Infof("updated okteto secret '%s'", secretName)
+		oktetoLog.Infof("updated okteto secret '%s'", secretName)
 	}
 	return nil
 }

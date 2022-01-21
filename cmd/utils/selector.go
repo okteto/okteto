@@ -28,7 +28,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/manifoldco/promptui/list"
 	"github.com/manifoldco/promptui/screenbuf"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -93,10 +93,10 @@ func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label stri
 		},
 	}
 
-	prompt.Templates.FuncMap["oktetoblue"] = log.BlueString
+	prompt.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
 	optionSelected, isOkteto, err := prompt.Run(ctx)
 	if err != nil || !isValidOption(options, optionSelected) {
-		log.Infof("invalid init option: %s", err)
+		oktetoLog.Infof("invalid init option: %s", err)
 		return "", false, fmt.Errorf("invalid option")
 	}
 

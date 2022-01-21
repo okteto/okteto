@@ -21,6 +21,7 @@ import (
 	"unicode"
 
 	sp "github.com/briandowns/spinner"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/term"
 )
@@ -34,7 +35,7 @@ type Spinner struct {
 
 //NewSpinner returns a new Spinner
 func NewSpinner(suffix string) *Spinner {
-	spinnerSupport = !LoadBoolean(model.OktetoDisableSpinnerEnvVar)
+	spinnerSupport = !LoadBoolean(model.OktetoDisableSpinnerEnvVar) && oktetoLog.IsInteractive()
 	s := sp.New(sp.CharSets[14], 100*time.Millisecond)
 	s.HideCursor = true
 	s.Suffix = fmt.Sprintf(" %s", suffix)
@@ -61,7 +62,7 @@ func (p *Spinner) Start() {
 		}
 		p.sp.Start()
 	} else {
-		fmt.Println(strings.TrimSpace(p.sp.Suffix))
+		oktetoLog.Println(strings.TrimSpace(p.sp.Suffix))
 	}
 }
 
@@ -80,7 +81,7 @@ func (p *Spinner) Update(text string) {
 	p.sp.Suffix = fmt.Sprintf(" %s", ucFirst(text))
 	p.sp.FinalMSG = fmt.Sprintf(" %s", ucFirst(text))
 	if !spinnerSupport {
-		fmt.Println(strings.TrimSpace(p.sp.Suffix))
+		oktetoLog.Println(strings.TrimSpace(p.sp.Suffix))
 	}
 }
 

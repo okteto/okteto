@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -37,15 +37,15 @@ func Test_waitUntilExitOrInterrupt(t *testing.T) {
 	if err == nil {
 		t.Errorf("didn't report proper error")
 	}
-	if _, ok := err.(errors.CommandError); !ok {
+	if _, ok := err.(oktetoErrors.CommandError); !ok {
 		t.Errorf("didn't translate the error: %s", err)
 	}
 
 	up.Disconnect = make(chan error, 1)
-	up.Disconnect <- errors.ErrLostSyncthing
+	up.Disconnect <- oktetoErrors.ErrLostSyncthing
 	err = up.waitUntilExitOrInterruptOrApply(ctx)
-	if err != errors.ErrLostSyncthing {
-		t.Errorf("exited with error %s instead of %s", err, errors.ErrLostSyncthing)
+	if err != oktetoErrors.ErrLostSyncthing {
+		t.Errorf("exited with error %s instead of %s", err, oktetoErrors.ErrLostSyncthing)
 	}
 }
 

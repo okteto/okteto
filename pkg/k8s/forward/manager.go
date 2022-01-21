@@ -25,7 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 
 	"k8s.io/apimachinery/pkg/util/httpstream"
@@ -135,7 +135,7 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 	go func() {
 		err := devPF.ForwardPorts()
 		if err != nil {
-			log.Infof("k8s forwarding to dev pod finished with errors: %s", err)
+			oktetoLog.Infof("k8s forwarding to dev pod finished with errors: %s", err)
 			p.activeDev.closeReady()
 			p.activeDev.err = err
 		}
@@ -152,7 +152,7 @@ func (p *PortForwardManager) Start(devPod, namespace string) error {
 		return err
 	}
 
-	log.Infof("all k8s port-forwards are connected")
+	oktetoLog.Infof("all k8s port-forwards are connected")
 	return nil
 }
 
@@ -167,7 +167,7 @@ func (p *PortForwardManager) Stop() {
 
 	p.activeServices = nil
 	p.activeDev = nil
-	log.Infof("stopped k8s forwarder")
+	oktetoLog.Infof("stopped k8s forwarder")
 }
 
 func (fm *PortForwardManager) TransformLabelsToServiceName(f model.Forward) (model.Forward, error) {
@@ -276,19 +276,19 @@ func (p *PortForwardManager) forwardService(ctx context.Context, namespace, serv
 			return
 		}
 
-		log.Infof("k8s forwarding ports for service/%s", service)
+		oktetoLog.Infof("k8s forwarding ports for service/%s", service)
 		a, pf, err := p.buildForwarderToService(ctx, namespace, service)
 		if err != nil {
-			log.Infof("failed to k8s forward ports to service/%s: %s", service, err)
+			oktetoLog.Infof("failed to k8s forward ports to service/%s: %s", service, err)
 			<-t.C
 			continue
 		}
 
 		if err := pf.ForwardPorts(); err != nil {
-			log.Infof("k8s forwarding to service/%s finished with errors: %s", service, err)
+			oktetoLog.Infof("k8s forwarding to service/%s finished with errors: %s", service, err)
 			a.stop()
 		} else {
-			log.Infof("k8s forwarding to service/%s finished", service)
+			oktetoLog.Infof("k8s forwarding to service/%s finished", service)
 		}
 
 		<-t.C

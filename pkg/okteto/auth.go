@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
@@ -49,7 +49,7 @@ func Auth(ctx context.Context, code, url string) (*types.User, error) {
 
 	user, err := oktetoClient.authUser(ctx, code)
 	if err != nil {
-		log.Infof("authentication error: %s", err)
+		oktetoLog.Infof("authentication error: %s", err)
 		return nil, fmt.Errorf("authentication error, please try again")
 	}
 

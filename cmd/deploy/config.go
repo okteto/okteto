@@ -16,7 +16,7 @@ package deploy
 import (
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -53,7 +53,7 @@ func (k *kubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) e
 
 	// Save on disk the config changes
 	if err := clientcmd.WriteToFile(*clientCfg, destKubeconfigFile); err != nil {
-		log.Errorf("could not modify the k8s config: %s", err)
+		oktetoLog.Errorf("could not modify the k8s config: %s", err)
 		return err
 	}
 	return nil

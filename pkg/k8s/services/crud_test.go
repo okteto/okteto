@@ -17,7 +17,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -52,7 +52,7 @@ func TestGet(t *testing.T) {
 		t.Fatal("expected error")
 	}
 
-	if !errors.IsNotFound(err) {
+	if !oktetoErrors.IsNotFound(err) {
 		t.Fatalf("expected not found error got: %s", err)
 	}
 }

@@ -14,7 +14,7 @@
 package model
 
 import (
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 //Manifest represents an okteto manifest
@@ -44,7 +44,7 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 	manifest := NewManifest()
 	name, err := ExpandEnv(dev.Name)
 	if err != nil {
-		log.Infof("could not expand dev name '%s'", dev.Name)
+		oktetoLog.Infof("could not expand dev name '%s'", dev.Name)
 		name = dev.Name
 	}
 	manifest.Dev[name] = dev

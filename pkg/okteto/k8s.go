@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -57,11 +57,11 @@ func getKubernetesTimeout() time.Duration {
 
 		parsed, err := time.ParseDuration(t)
 		if err != nil {
-			log.Infof("'%s' is not a valid duration, ignoring", t)
+			oktetoLog.Infof("'%s' is not a valid duration, ignoring", t)
 			return
 		}
 
-		log.Infof("OKTETO_KUBERNETES_TIMEOUT applied: '%s'", parsed.String())
+		oktetoLog.Infof("OKTETO_KUBERNETES_TIMEOUT applied: '%s'", parsed.String())
 		timeout = parsed
 	})
 
