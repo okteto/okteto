@@ -112,7 +112,7 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func removeUnusedServicesFromManifest(service string, manifest *model.ManifestBuild) {
+func keepOnlySelectedServices(service string, manifest *model.ManifestBuild) {
 	for key := range *manifest {
 		if key != service {
 			delete(*manifest, key)
@@ -133,7 +133,7 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 			return fmt.Errorf("invalid service name: %s", service)
 		}
 
-		removeUnusedServicesFromManifest(service, &m)
+		keepOnlySelectedServices(service, &m)
 
 		if options.Target != "" {
 			m[service].Target = options.Target
