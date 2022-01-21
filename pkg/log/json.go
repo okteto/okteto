@@ -24,9 +24,8 @@ import (
 
 //JSONWriter writes into a JSON terminal
 type JSONWriter struct {
-	out   *logrus.Logger
-	file  *logrus.Entry
-	stage string
+	out  *logrus.Logger
+	file *logrus.Entry
 }
 
 type jsonMessage struct {
@@ -43,8 +42,6 @@ type JSONLogFormat struct {
 	Message   string `json:"message"`
 	Timestamp int64  `json:"timestamp"`
 }
-
-const oktetoInfoLevel = logrus.FatalLevel - 1
 
 //Format formats the message
 func (f *JSONLogFormat) Format(entry *logrus.Entry) ([]byte, error) {
@@ -83,7 +80,7 @@ func (w *JSONWriter) Debug(args ...interface{}) {
 }
 
 // Debugf writes a debug-level log with a format
-func (w *JSONWriter) Debugf(format string, args ...interface{}) {
+func (*JSONWriter) Debugf(format string, args ...interface{}) {
 	log.out.Debugf(format, args...)
 	if log.file != nil {
 		log.file.Debugf(format, args...)
@@ -91,7 +88,7 @@ func (w *JSONWriter) Debugf(format string, args ...interface{}) {
 }
 
 // Info writes a info-level log
-func (w *JSONWriter) Info(args ...interface{}) {
+func (*JSONWriter) Info(args ...interface{}) {
 	log.out.Info(args...)
 	if log.file != nil {
 		log.file.Info(args...)
@@ -99,7 +96,7 @@ func (w *JSONWriter) Info(args ...interface{}) {
 }
 
 // Infof writes a info-level log with a format
-func (w *JSONWriter) Infof(format string, args ...interface{}) {
+func (*JSONWriter) Infof(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	if log.file != nil {
 		log.file.Infof(format, args...)
@@ -107,7 +104,7 @@ func (w *JSONWriter) Infof(format string, args ...interface{}) {
 }
 
 // Error writes a error-level log
-func (w *JSONWriter) Error(args ...interface{}) {
+func (*JSONWriter) Error(args ...interface{}) {
 	log.out.Error(args...)
 	if log.file != nil {
 		log.file.Error(args...)
@@ -115,7 +112,7 @@ func (w *JSONWriter) Error(args ...interface{}) {
 }
 
 // Errorf writes a error-level log with a format
-func (w *JSONWriter) Errorf(format string, args ...interface{}) {
+func (*JSONWriter) Errorf(format string, args ...interface{}) {
 	log.out.Errorf(format, args...)
 	if log.file != nil {
 		log.file.Errorf(format, args...)
@@ -123,7 +120,7 @@ func (w *JSONWriter) Errorf(format string, args ...interface{}) {
 }
 
 // Fatalf writes a error-level log with a format
-func (w *JSONWriter) Fatalf(format string, args ...interface{}) {
+func (*JSONWriter) Fatalf(format string, args ...interface{}) {
 	if log.file != nil {
 		log.file.Errorf(format, args...)
 	}
@@ -156,7 +153,7 @@ func (w *JSONWriter) Information(format string, args ...interface{}) {
 }
 
 // Question prints a message with the question symbol first, and the text in magenta
-func (w *JSONWriter) Question(format string, args ...interface{}) error {
+func (*JSONWriter) Question(format string, args ...interface{}) error {
 	return fmt.Errorf("can't ask questions on json mode")
 }
 
@@ -169,7 +166,7 @@ func (w *JSONWriter) Warning(format string, args ...interface{}) {
 // Hint prints a message with the text in blue
 func (w *JSONWriter) Hint(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintln(fmt.Sprintf("%s", fmt.Sprintf(format, args...)))
+	w.Fprintln(fmt.Sprintf(format, args...))
 }
 
 // Fail prints a message with the error symbol first, and the text in red
@@ -216,7 +213,7 @@ func (w *JSONWriter) Printf(format string, a ...interface{}) {
 }
 
 //IsInteractive checks if the writer is interactive
-func (w *JSONWriter) IsInteractive() bool {
+func (*JSONWriter) IsInteractive() bool {
 	return false
 }
 

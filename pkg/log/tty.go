@@ -43,7 +43,7 @@ func (w *TTYWriter) Debug(args ...interface{}) {
 }
 
 // Debugf writes a debug-level log with a format
-func (w *TTYWriter) Debugf(format string, args ...interface{}) {
+func (*TTYWriter) Debugf(format string, args ...interface{}) {
 	log.out.Debugf(format, args...)
 	if log.file != nil {
 		log.file.Debugf(format, args...)
@@ -51,7 +51,7 @@ func (w *TTYWriter) Debugf(format string, args ...interface{}) {
 }
 
 // Info writes a info-level log
-func (w *TTYWriter) Info(args ...interface{}) {
+func (*TTYWriter) Info(args ...interface{}) {
 	log.out.Info(args...)
 	if log.file != nil {
 		log.file.Info(args...)
@@ -59,7 +59,7 @@ func (w *TTYWriter) Info(args ...interface{}) {
 }
 
 // Infof writes a info-level log with a format
-func (w *TTYWriter) Infof(format string, args ...interface{}) {
+func (*TTYWriter) Infof(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	if log.file != nil {
 		log.file.Infof(format, args...)
@@ -67,7 +67,7 @@ func (w *TTYWriter) Infof(format string, args ...interface{}) {
 }
 
 // Error writes a error-level log
-func (w *TTYWriter) Error(args ...interface{}) {
+func (*TTYWriter) Error(args ...interface{}) {
 	log.out.Error(args...)
 	if log.file != nil {
 		log.file.Error(args...)
@@ -75,7 +75,7 @@ func (w *TTYWriter) Error(args ...interface{}) {
 }
 
 // Errorf writes a error-level log with a format
-func (w *TTYWriter) Errorf(format string, args ...interface{}) {
+func (*TTYWriter) Errorf(format string, args ...interface{}) {
 	log.out.Errorf(format, args...)
 	if log.file != nil {
 		log.file.Errorf(format, args...)
@@ -83,7 +83,7 @@ func (w *TTYWriter) Errorf(format string, args ...interface{}) {
 }
 
 // Fatalf writes a error-level log with a format
-func (w *TTYWriter) Fatalf(format string, args ...interface{}) {
+func (*TTYWriter) Fatalf(format string, args ...interface{}) {
 	if log.file != nil {
 		log.file.Errorf(format, args...)
 	}
@@ -167,6 +167,6 @@ func (w *TTYWriter) Printf(format string, a ...interface{}) {
 }
 
 //IsInteractive checks if the writer is interactive
-func (w *TTYWriter) IsInteractive() bool {
+func (*TTYWriter) IsInteractive() bool {
 	return true
 }

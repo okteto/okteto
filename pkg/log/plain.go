@@ -42,7 +42,7 @@ func (w *PlainWriter) Debug(args ...interface{}) {
 }
 
 // Debugf writes a debug-level log with a format
-func (w *PlainWriter) Debugf(format string, args ...interface{}) {
+func (*PlainWriter) Debugf(format string, args ...interface{}) {
 	log.out.Debugf(format, args...)
 	if log.file != nil {
 		log.file.Debugf(format, args...)
@@ -50,7 +50,7 @@ func (w *PlainWriter) Debugf(format string, args ...interface{}) {
 }
 
 // Info writes a info-level log
-func (w *PlainWriter) Info(args ...interface{}) {
+func (*PlainWriter) Info(args ...interface{}) {
 	log.out.Info(args...)
 	if log.file != nil {
 		log.file.Info(args...)
@@ -58,7 +58,7 @@ func (w *PlainWriter) Info(args ...interface{}) {
 }
 
 // Infof writes a info-level log with a format
-func (w *PlainWriter) Infof(format string, args ...interface{}) {
+func (*PlainWriter) Infof(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	if log.file != nil {
 		log.file.Infof(format, args...)
@@ -66,7 +66,7 @@ func (w *PlainWriter) Infof(format string, args ...interface{}) {
 }
 
 // Error writes a error-level log
-func (w *PlainWriter) Error(args ...interface{}) {
+func (*PlainWriter) Error(args ...interface{}) {
 	log.out.Error(args...)
 	if log.file != nil {
 		log.file.Error(args...)
@@ -74,7 +74,7 @@ func (w *PlainWriter) Error(args ...interface{}) {
 }
 
 // Errorf writes a error-level log with a format
-func (w *PlainWriter) Errorf(format string, args ...interface{}) {
+func (*PlainWriter) Errorf(format string, args ...interface{}) {
 	log.out.Errorf(format, args...)
 	if log.file != nil {
 		log.file.Errorf(format, args...)
@@ -82,7 +82,7 @@ func (w *PlainWriter) Errorf(format string, args ...interface{}) {
 }
 
 // Fatalf writes a error-level log with a format
-func (w *PlainWriter) Fatalf(format string, args ...interface{}) {
+func (*PlainWriter) Fatalf(format string, args ...interface{}) {
 	if log.file != nil {
 		log.file.Errorf(format, args...)
 	}
@@ -166,6 +166,6 @@ func (w *PlainWriter) Printf(format string, a ...interface{}) {
 }
 
 //IsInteractive checks if the writer is interactive
-func (w *PlainWriter) IsInteractive() bool {
+func (*PlainWriter) IsInteractive() bool {
 	return false
 }

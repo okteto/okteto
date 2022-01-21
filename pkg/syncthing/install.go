@@ -158,7 +158,7 @@ func parseVersionFromOutput(output []byte) (*semver.Version, error) {
 	case 3:
 		v = fmt.Sprintf("%s%s", found[1], found[2])
 	case 2:
-		v = fmt.Sprintf("%s", found[1])
+		v = fmt.Sprint(found[1])
 	default:
 		return nil, fmt.Errorf("failed to extract the version from `%s`", output)
 	}
