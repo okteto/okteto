@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"text/tabwriter"
@@ -26,6 +27,7 @@ import (
 
 // Lists all contexts managed by okteto
 func List() *cobra.Command {
+	var outputFormat = "plain"
 	cmd := &cobra.Command{
 		Use:     "list",
 		Aliases: []string{"ls"},
@@ -33,7 +35,7 @@ func List() *cobra.Command {
 		Short:   "List available contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if err := executeListContext(ctx); err != nil {
+			if err := executeListContext(ctx, outputFormat); err != nil {
 				return err
 			}
 
@@ -41,10 +43,11 @@ func List() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVarP(&outputFormat, "output", "o", "plain", "Output format. One of: json|plain.")
 	return cmd
 }
 
-func executeListContext(ctx context.Context) error {
+func executeListContext(ctx context.Context, outputFormat string) error {
 	contexts := getOktetoClusters(false)
 	contexts = append(contexts, getK8sClusters(getKubernetesContextList(true))...)
 
@@ -52,6 +55,18 @@ func executeListContext(ctx context.Context) error {
 		return fmt.Errorf("no contexts are available. Run 'okteto context' to configure your first okteto context")
 	}
 
+	switch outputFormat {
+	case "json":
+		return jsonOutput(contexts)
+	case "plain":
+		plainOutput(contexts)
+		return nil
+	default:
+		return fmt.Errorf("unknown format")
+	}
+}
+
+func plainOutput(contexts []utils.SelectorItem) {
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
 	fmt.Fprintf(w, "Name\tNamespace\tBuilder\tRegistry\n")
 	ctxStore := okteto.ContextStore()
@@ -67,5 +82,24 @@ func executeListContext(ctx context.Context) error {
 	}
 
 	w.Flush()
+}
+
+func jsonOutput(contexts []utils.SelectorItem) error {
+	var items = []okteto.OktetoContext{}
+	ctxStore := okteto.ContextStore()
+	for _, ctxSelector := range contexts {
+		if okCtx, ok := ctxStore.Contexts[ctxSelector.Name]; ok && okCtx.Builder != "" {
+			ctxSelector.Builder = okCtx.Builder
+		}
+
+		items = append(items, okteto.OktetoContext{Name: ctxSelector.Name, Namespace: ctxSelector.Namespace, Builder: ctxSelector.Builder, Registry: ctxSelector.Builder})
+	}
+
+	b, err := json.MarshalIndent(items, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	fmt.Print(string(b))
 	return nil
 }
