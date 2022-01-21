@@ -345,10 +345,7 @@ func runBuildAndSetEnvs(ctx context.Context, service string, options build.Build
 	if err != nil {
 		return fmt.Errorf("error checking image at registry %s: %v", options.Tag, err)
 	}
-	if err := setManifestEnvVars(service, imageWithDigest); err != nil {
-		return err
-	}
-	return nil
+	return setManifestEnvVars(service, imageWithDigest)
 }
 
 func setManifestEnvVars(service, reference string) error {

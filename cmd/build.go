@@ -145,10 +145,8 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 			m[service].Image = options.Tag
 		}
 
-	} else {
-		if options.Tag != "" || options.Target != "" || options.CacheFrom != nil || options.Secrets != nil {
-			return fmt.Errorf("flags are not allowed when building services from manifest")
-		}
+	} else if options.Tag != "" || options.Target != "" || options.CacheFrom != nil || options.Secrets != nil {
+		return fmt.Errorf("flags are not allowed when building services from manifest")
 	}
 
 	for srv, manifestOptions := range m {

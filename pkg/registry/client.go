@@ -80,7 +80,7 @@ func configForReference(reference string) (v1.Config, error) {
 }
 
 // GetReferecenceEnvs returns the values to setup the image environment variables
-func GetReferecenceEnvs(reference string) (reg string, repo string, tag string, image string) {
+func GetReferecenceEnvs(reference string) (reg, repo, tag, image string) {
 	ref, err := name.ParseReference(reference)
 	if err != nil {
 		log.Debugf("error parsing reference: %s - %v", reference, err)
