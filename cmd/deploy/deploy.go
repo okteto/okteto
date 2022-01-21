@@ -236,6 +236,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 					if err := checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
 						return err
 					}
+					continue
 				}
 
 				if imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag); err == okErrors.ErrNotFound {
