@@ -228,7 +228,7 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 	return opts
 }
 
-// ShouldOptimizeBuild returns if optimization should be aplied
+// ShouldOptimizeBuild returns if optimization should be applied
 func ShouldOptimizeBuild(image string) bool {
 	envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
 	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, "dev")
