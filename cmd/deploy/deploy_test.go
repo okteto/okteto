@@ -305,11 +305,11 @@ func Test_setManifestEnvVars(t *testing.T) {
 		{
 			name:          "setting-variables",
 			service:       "frontend",
-			reference:     "registry.url/namespace/frontend@sha256",
+			reference:     "registry.url/namespace/frontend@sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
 			expRegistry:   "registry.url",
 			expRepository: "namespace/frontend",
-			expImage:      "registry.url/namespace/frontend@sha256",
-			expTag:        "sha256",
+			expImage:      "registry.url/namespace/frontend@sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
+			expTag:        "sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
 		},
 		{
 			name:          "setting-variables-no-tag",
