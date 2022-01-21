@@ -14,17 +14,27 @@
 package app
 
 import (
+	"bufio"
+	"bytes"
+	"context"
 	"encoding/base64"
+	"math"
+	"strings"
 
+	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
-	nameField   = "name"
-	statusField = "status"
-	outputField = "output"
+	nameField     = "name"
+	statusField   = "status"
+	outputField   = "output"
+	repoField     = "repository"
+	branchField   = "branch"
+	filenameField = "filename"
 
 	// ProgressingStatus indicates that an app is being deployed
 	ProgressingStatus = "progressing"
@@ -34,10 +44,31 @@ const (
 	ErrorStatus = "error"
 	// DestroyingStatus indicates that an app is being destroyed
 	DestroyingStatus = "destroying"
+
+	// maxLogOutput is the maximum size that we allow to allocate for logs.
+	// Specifically 800kb. The limit on configmaps is 1Mb but we want to leave some
+	// room for the other data stored in there.
+	// Note that the is the limit after encoding the logs to base64 which is how
+	// the logs are stored in the configmap.
+	maxLogOutput = 800 << (10 * 1)
 )
 
+// maxLogOutputRaw is the maximum size we allow to allocate for logs before
+// being encoded to base64
+// See: https://stackoverflow.com/a/4715480/1100238
+var maxLogOutputRaw = int(math.Floor(float64(maxLogOutput)*3) / 4)
+
+//CfgData represents the data to be include in a configmap
+type CfgData struct {
+	Status     string
+	Output     string
+	Repository string
+	Branch     string
+	Filename   string
+}
+
 // TranslateConfigMap translates the app into a configMap
-func TranslateConfigMap(name, status, output string) *apiv1.ConfigMap {
+func TranslateConfigMap(name string, data *CfgData) *apiv1.ConfigMap {
 	return &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -46,9 +77,12 @@ func TranslateConfigMap(name, status, output string) *apiv1.ConfigMap {
 			},
 		},
 		Data: map[string]string{
-			nameField:   name,
-			statusField: status,
-			outputField: base64.StdEncoding.EncodeToString([]byte(output)),
+			nameField:     name,
+			statusField:   data.Status,
+			outputField:   base64.StdEncoding.EncodeToString([]byte(data.Output)),
+			repoField:     data.Repository,
+			branchField:   data.Branch,
+			filenameField: data.Filename,
 		},
 	}
 }
@@ -58,4 +92,50 @@ func SetStatus(cfg *apiv1.ConfigMap, status, output string) *apiv1.ConfigMap {
 	cfg.Data[statusField] = status
 	cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
 	return cfg
+}
+
+// SetStatus sets the status and output of a config map
+func SetOutput(cfg *apiv1.ConfigMap, output string) *apiv1.ConfigMap {
+	cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
+	return cfg
+}
+
+// UpdateOutput updates the configmap output with the logs
+func UpdateOutput(ctx context.Context, name, namespace string, output *bytes.Buffer, c kubernetes.Interface) error {
+	cmap, err := configmaps.Get(ctx, name, namespace, c)
+	if err != nil {
+		return err
+	}
+
+	// If the output is larger than the currentMaxLimit for the logs trim it.
+	// We can't really truncate the buffer since we would end up with an invalid json
+	// line for the last line, so we pick lines from the end while the line fits
+	var data []byte
+	if output.Len() > maxLogOutputRaw {
+		scanner := bufio.NewScanner(output)
+		linesInReverse := []string{}
+		for scanner.Scan() {
+			linesInReverse = append([]string{scanner.Text()}, linesInReverse...)
+		}
+		var cappedOutput string
+		var head string
+		for _, l := range linesInReverse {
+			head = l + "\n"
+			if len(cappedOutput)+len(head) > maxLogOutputRaw {
+				break
+			}
+			cappedOutput = head + cappedOutput
+		}
+		cappedOutput = strings.TrimPrefix(cappedOutput, head)
+		// cappedOutput = `{"truncated": true}` + "\n" + cappedOutput
+		data = []byte(cappedOutput)
+	} else {
+		data = output.Bytes()
+	}
+
+	SetOutput(cmap, string(data))
+	if err := configmaps.Deploy(ctx, cmap, namespace, c); err != nil {
+		return err
+	}
+	return nil
 }

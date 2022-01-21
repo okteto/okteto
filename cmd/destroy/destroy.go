@@ -157,9 +157,14 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		return err
 	}
 
-	output := fmt.Sprintf("Destroying app '%s'...", opts.Name)
-	cfg := app.TranslateConfigMap(opts.Name, app.DestroyingStatus, output)
-	if err := configmaps.Deploy(ctx, cfg, opts.Namespace, c); err != nil {
+	namespace := opts.Namespace
+	if namespace == "" {
+		namespace = okteto.Context().Namespace
+	}
+
+	data := &app.CfgData{Output: fmt.Sprintf("Destroying app '%s'...", opts.Name), Status: app.DestroyingStatus}
+	cfg := app.TranslateConfigMap(opts.Name, data)
+	if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
 		return err
 	}
 
@@ -168,9 +173,12 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
 			if !opts.ForceDestroy {
-				output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", output, opts.Name, err.Error())
-				cfg = app.SetStatus(cfg, app.ErrorStatus, output)
-				if err := configmaps.Deploy(ctx, cfg, opts.Namespace, c); err != nil {
+				data.Output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", data.Output, opts.Name, err.Error())
+				cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
+				if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
+					return err
+				}
+				if err := app.UpdateOutput(ctx, opts.Name, namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
 					return err
 				}
 				return err
@@ -187,9 +195,12 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		[]string{opts.Name},
 	)
 	if err != nil {
-		output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", output, opts.Name, err.Error())
-		cfg = app.SetStatus(cfg, app.ErrorStatus, output)
-		if err := configmaps.Deploy(ctx, cfg, opts.Namespace, c); err != nil {
+		data.Output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", data.Output, opts.Name, err.Error())
+		cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
+		if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
+			return err
+		}
+		if err := app.UpdateOutput(ctx, opts.Name, namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
 			return err
 		}
 		return err
@@ -201,9 +212,12 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	}
 
 	if err := dc.nsDestroyer.DestroySFSVolumes(ctx, opts.Namespace, deleteOpts); err != nil {
-		output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", output, opts.Name, err.Error())
-		cfg = app.SetStatus(cfg, app.ErrorStatus, output)
-		if err := configmaps.Deploy(ctx, cfg, opts.Namespace, c); err != nil {
+		data.Output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", data.Output, opts.Name, err.Error())
+		cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
+		if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
+			return err
+		}
+		if err := app.UpdateOutput(ctx, opts.Name, namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
 			return err
 		}
 		return err
@@ -211,9 +225,12 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 
 	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
 		if !opts.ForceDestroy {
-			output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", output, opts.Name, err.Error())
-			cfg = app.SetStatus(cfg, app.ErrorStatus, output)
-			if err := configmaps.Deploy(ctx, cfg, opts.Namespace, c); err != nil {
+			data.Output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", data.Output, opts.Name, err.Error())
+			cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
+			if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
+				return err
+			}
+			if err := app.UpdateOutput(ctx, opts.Name, namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
 				return err
 			}
 			return err
@@ -223,9 +240,12 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	oktetoLog.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
 	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
 		oktetoLog.Infof("could not delete all the resources: %s", err)
-		output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", output, opts.Name, err.Error())
-		cfg = app.SetStatus(cfg, app.ErrorStatus, output)
-		if err := configmaps.Deploy(ctx, cfg, opts.Namespace, c); err != nil {
+		data.Output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", data.Output, opts.Name, err.Error())
+		cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
+		if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
+			return err
+		}
+		if err := app.UpdateOutput(ctx, opts.Name, namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
 			return err
 		}
 		return err

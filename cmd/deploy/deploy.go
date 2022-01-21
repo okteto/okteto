@@ -281,8 +281,15 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	oktetoLog.Debugf("starting server on %d", dc.proxy.GetPort())
 	dc.proxy.Start()
 
-	output := fmt.Sprintf("Deploying app '%s'...", opts.Name)
-	cfg := app.TranslateConfigMap(opts.Name, app.ProgressingStatus, output)
+	data := &app.CfgData{
+		Repository: os.Getenv(model.GithubRepositoryEnvVar),
+		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
+		Filename:   opts.Manifest.Filename,
+		Output:     fmt.Sprintf("Deploying app '%s'...", opts.Name),
+		Status:     app.ProgressingStatus,
+	}
+
+	cfg := app.TranslateConfigMap(opts.Name, data)
 
 	k8sCfg := kubeconfig.Get(config.GetKubeconfigPath())
 	c, _, err := dc.k8sClientProvider.Provide(k8sCfg)
@@ -312,19 +319,21 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 	err = dc.deploy(opts)
 	if err != nil {
-		output = fmt.Sprintf("%s\nApp '%s' deployment failed: %s", output, opts.Name, err.Error())
-		cfg = app.SetStatus(cfg, app.ErrorStatus, output)
+		data.Output = fmt.Sprintf("%s\nApp '%s' deployment failed: %s", data.Output, opts.Name, err.Error())
+		cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
 	} else {
-		output = fmt.Sprintf("%s\nApp '%s' successfully deployed", output, opts.Name)
-		cfg = app.SetStatus(cfg, app.DeployedStatus, output)
+		data.Output = fmt.Sprintf("%s\nApp '%s' successfully deployed", data.Output, opts.Name)
+		cfg = app.SetStatus(cfg, app.DeployedStatus, data.Output)
 	}
 	if err := configmaps.Deploy(ctx, cfg, opts.Manifest.Namespace, c); err != nil {
+		return err
+	}
+	if err := app.UpdateOutput(ctx, opts.Name, opts.Manifest.Namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
 		return err
 	}
 	if err != nil {
 		return err
 	}
-	oktetoLog.SetStage("")
 
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		if err := dc.showEndpoints(ctx, opts); err != nil {
@@ -343,6 +352,7 @@ func (dc *deployCommand) deploy(opts *Options) error {
 			return fmt.Errorf("error executing command '%s': %s", command, err.Error())
 		}
 	}
+	oktetoLog.SetStage("")
 	return nil
 }
 

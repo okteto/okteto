@@ -54,7 +54,11 @@ func Test_translateConfigMap(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := TranslateConfigMap(tt.appName, tt.status, tt.output)
+			data := &CfgData{
+				Status: tt.status,
+				Output: tt.output,
+			}
+			cfg := TranslateConfigMap(tt.appName, data)
 			assert.Equal(t, tt.appName, cfg.Name)
 			assert.Equal(t, cfg.Data[statusField], tt.status)
 		})

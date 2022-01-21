@@ -14,6 +14,7 @@
 package log
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -56,6 +57,7 @@ type logger struct {
 	writer     OktetoWriter
 	stage      string
 	outputMode string
+	buf        *bytes.Buffer
 }
 
 var log = &logger{
@@ -74,6 +76,7 @@ func Init(level logrus.Level) {
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
 	log.writer = log.getWriter(TTYFormat)
+	log.buf = &bytes.Buffer{}
 }
 
 //ConfigureFileLogger configures the file to write
@@ -234,4 +237,9 @@ func Printf(format string, args ...interface{}) {
 //IsInteractive checks if the writer is interactive
 func IsInteractive() bool {
 	return log.writer.IsInteractive()
+}
+
+//GetOutputBuffer returns the buffer of the running command
+func GetOutputBuffer() *bytes.Buffer {
+	return log.buf
 }

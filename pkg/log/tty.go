@@ -148,16 +148,25 @@ func (w *TTYWriter) Println(args ...interface{}) {
 
 // Fprintf prints a line with format
 func (w *TTYWriter) Fprintf(format string, a ...interface{}) {
-	fmt.Fprintf(w.out.Out, format, a...)
+	msg := fmt.Sprintf(format, a...)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
+	fmt.Fprint(w.out.Out, msg)
 }
 
 // Fprintln prints a line with format
 func (w *TTYWriter) Fprintln(args ...interface{}) {
-	fmt.Fprintln(w.out.Out, args...)
+	msg := fmt.Sprint(args...)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
+	fmt.Fprintln(w.out.Out, msg)
 }
 
 // Print writes a line with colors
 func (w *TTYWriter) Print(args ...interface{}) {
+	msg := fmt.Sprint(args...)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
 	fmt.Fprint(w.out.Out, args...)
 }
 
