@@ -233,10 +233,11 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 
 				if build.ShouldOptimizeBuild(opts.Tag) {
 					oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
-					if err := checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
+					if skipBuild, err := checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
 						return err
+					} else if skipBuild {
+						continue
 					}
-					continue
 				}
 
 				if imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag); err == okErrors.ErrNotFound {
@@ -248,7 +249,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 				} else if err != nil {
 					return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
 				} else {
-					log.Debug("image found, skipping build")
+					oktetoLog.Debug("image found, skipping build")
 					if err := setManifestEnvVars(service, imageWithDigest); err != nil {
 						return err
 					}
@@ -315,20 +316,23 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 	return nil
 }
 
-func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) error {
+func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (bool, error) {
 	globalReference := strings.Replace(options.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 
 	imageWithDigest, err := registry.GetImageTagWithDigest(globalReference)
-	if err != nil {
+	if err == okErrors.ErrNotFound {
 		oktetoLog.Debug("image not found at global registry, not running optimization for deployment")
-		return nil
+		return false, nil
+	}
+	if err != nil {
+		return false, err
 	}
 
 	if err := setManifestEnvVars(service, imageWithDigest); err != nil {
-		return err
+		return false, err
 	}
-	oktetoLog.Debug("image found at global registry, skipping build and deploying this reference")
-	return nil
+	oktetoLog.Debug("image found at global registry, running optimization for deployment")
+	return true, nil
 
 }
 
