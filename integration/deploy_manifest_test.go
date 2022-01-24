@@ -31,6 +31,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	v1 "k8s.io/api/apps/v1"
 )
 
 func TestDeployFromManifest(t *testing.T) {
@@ -153,15 +154,20 @@ spec:
 			t.Fatal(err)
 		}
 
-		if err := waitForDeployment(ctx, testNamespace, releaseName, 1, 120); err != nil {
-			t.Fatal(err)
-		}
-
 		imageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
 		if err != nil {
 			t.Fatal(err)
 		}
 		sha := strings.SplitN(imageWithDigest, "@", 2)[1]
+
+		d, err := getDeployment(ctx, testNamespace, releaseName)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := expectDeployment(ctx, d, []string{imageWithDigest}, 1); err != nil {
+			t.Fatal(err)
+		}
 
 		if err := expectBuiltImageNotFound(output); err != nil {
 			t.Fatal(err)
@@ -172,10 +178,6 @@ spec:
 		}
 
 		if err := expectEnvSetting(output, testNamespace, repoDir, sha); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := expectAppToBeRunning(releaseName, testNamespace, "Hello world!"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -194,7 +196,12 @@ spec:
 			t.Fatal(err)
 		}
 
-		if err := waitForDeployment(ctx, testNamespace, releaseName, 1, 120); err != nil {
+		d, err := getDeployment(ctx, testNamespace, releaseName)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := expectDeployment(ctx, d, []string{imageWithDigest}, 1); err != nil {
 			t.Fatal(err)
 		}
 
@@ -207,10 +214,6 @@ spec:
 		}
 
 		if err := expectEnvSetting(output, testNamespace, repoDir, sha); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := expectAppToBeRunning(releaseName, testNamespace, "Hello world!"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -229,18 +232,13 @@ spec:
 			t.Fatal(err)
 		}
 
-		if err := waitForDeployment(ctx, testNamespace, releaseName, 1, 120); err != nil {
+		d, err := getDeployment(ctx, testNamespace, releaseName)
+		if err != nil {
 			t.Fatal(err)
 		}
 
-		newImageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
-		if err != nil {
-			t.Fatalf("image is not at registry: %v", err)
-		}
-		newSHA := strings.SplitN(newImageWithDigest, "@", 2)[1]
-
-		if originalSHA != newSHA {
-			t.Fatal("image has been updated")
+		if err := expectDeployment(ctx, d, []string{imageWithDigest}, 1); err != nil {
+			t.Fatal(err)
 		}
 
 		if err := expectForceBuild(output); err != nil {
@@ -252,10 +250,6 @@ spec:
 		}
 
 		if err := expectEnvSetting(output, testNamespace, repoDir, originalSHA); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := expectAppToBeRunning(releaseName, testNamespace, "Hello world!"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -283,10 +277,6 @@ spec:
 			t.Fatal(err)
 		}
 
-		if err := waitForDeployment(ctx, testNamespace, releaseName, 2, 120); err != nil {
-			t.Fatal(err)
-		}
-
 		newImageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
 		if err != nil {
 			t.Fatalf("image is not at registry: %v", err)
@@ -295,6 +285,15 @@ spec:
 
 		if originalSHA == newSHA {
 			t.Fatal("image has not been updated")
+		}
+
+		d, err := getDeployment(ctx, testNamespace, releaseName)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := expectDeployment(ctx, d, []string{newImageWithDigest}, 2); err != nil {
+			t.Fatal(err)
 		}
 
 		if err := expectForceBuild(output); err != nil {
@@ -306,10 +305,6 @@ spec:
 		}
 
 		if err := expectEnvSetting(output, testNamespace, repoDir, newSHA); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := expectAppToBeRunning(releaseName, testNamespace, "Bye world!"); err != nil {
 			t.Fatal(err)
 		}
 
@@ -403,4 +398,32 @@ func expectAppToBeRunning(releaseName, namespace, contentString string) error {
 		return fmt.Errorf("expected app content to be %s", contentString)
 	}
 	return nil
+}
+
+func expectDeployment(ctx context.Context, d *v1.Deployment, images []string, revision int64) error {
+	dRev := d.ObjectMeta.Generation
+	if dRev != revision {
+		return fmt.Errorf("expected revision %d, got %d", revision, dRev)
+	}
+
+	containers := d.Spec.Template.Spec.Containers
+	gotContainers := len(containers)
+	expContainers := len(images)
+	if len(containers) != len(images) {
+		return fmt.Errorf("expected number of containers %d, got %d", expContainers, gotContainers)
+	}
+
+	found := 0
+	for _, i := range images {
+		for _, c := range containers {
+			if c.Image == i {
+				found++
+			}
+		}
+	}
+	if found != len(images) {
+		return fmt.Errorf("expected images to match container images, found %d", found)
+	}
+	return nil
+
 }
