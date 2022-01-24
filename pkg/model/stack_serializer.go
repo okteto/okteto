@@ -53,36 +53,37 @@ type StackRaw struct {
 
 //Service represents an okteto stack service
 type ServiceRaw struct {
-	Deploy                   *DeployInfoRaw     `yaml:"deploy,omitempty"`
-	Build                    *BuildInfo         `yaml:"build,omitempty"`
-	CapAddSneakCase          []apiv1.Capability `yaml:"cap_add,omitempty"`
-	CapAdd                   []apiv1.Capability `yaml:"capAdd,omitempty"`
-	CapDropSneakCase         []apiv1.Capability `yaml:"cap_drop,omitempty"`
-	CapDrop                  []apiv1.Capability `yaml:"capDrop,omitempty"`
-	Command                  CommandStack       `yaml:"command,omitempty"`
-	CpuCount                 Quantity           `yaml:"cpu_count,omitempty"`
-	Cpus                     Quantity           `yaml:"cpus,omitempty"`
-	Entrypoint               CommandStack       `yaml:"entrypoint,omitempty"`
-	Args                     ArgsStack          `yaml:"args,omitempty"`
-	EnvFilesSneakCase        EnvFiles           `yaml:"env_file,omitempty"`
-	EnvFiles                 EnvFiles           `yaml:"envFile,omitempty"`
-	Environment              Environment        `yaml:"environment,omitempty"`
-	Expose                   []PortRaw          `yaml:"expose,omitempty"`
-	Healthcheck              *HealthCheck       `yaml:"healthcheck,omitempty"`
-	Image                    string             `yaml:"image,omitempty"`
-	Labels                   Labels             `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations              Annotations        `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	MemLimit                 Quantity           `yaml:"mem_limit,omitempty"`
-	MemReservation           Quantity           `yaml:"mem_reservation,omitempty"`
-	Ports                    []PortRaw          `yaml:"ports,omitempty"`
-	Restart                  string             `yaml:"restart,omitempty"`
-	Scale                    *int32             `yaml:"scale"`
-	StopGracePeriodSneakCase *RawMessage        `yaml:"stop_grace_period,omitempty"`
-	StopGracePeriod          *RawMessage        `yaml:"stopGracePeriod,omitempty"`
-	Volumes                  []StackVolume      `yaml:"volumes,omitempty"`
-	WorkingDirSneakCase      string             `yaml:"working_dir,omitempty"`
-	Workdir                  string             `yaml:"workdir,omitempty"`
-	DependsOn                DependsOn          `yaml:"depends_on,omitempty"`
+	Deploy                   *DeployInfoRaw        `yaml:"deploy,omitempty"`
+	Build                    *BuildInfo            `yaml:"build,omitempty"`
+	CapAddSneakCase          []apiv1.Capability    `yaml:"cap_add,omitempty"`
+	CapAdd                   []apiv1.Capability    `yaml:"capAdd,omitempty"`
+	CapDropSneakCase         []apiv1.Capability    `yaml:"cap_drop,omitempty"`
+	CapDrop                  []apiv1.Capability    `yaml:"capDrop,omitempty"`
+	Command                  CommandStack          `yaml:"command,omitempty"`
+	CpuCount                 Quantity              `yaml:"cpu_count,omitempty"`
+	Cpus                     Quantity              `yaml:"cpus,omitempty"`
+	Entrypoint               CommandStack          `yaml:"entrypoint,omitempty"`
+	Args                     ArgsStack             `yaml:"args,omitempty"`
+	EnvFilesSneakCase        EnvFiles              `yaml:"env_file,omitempty"`
+	EnvFiles                 EnvFiles              `yaml:"envFile,omitempty"`
+	Environment              Environment           `yaml:"environment,omitempty"`
+	Expose                   []PortRaw             `yaml:"expose,omitempty"`
+	Healthcheck              *HealthCheck          `yaml:"healthcheck,omitempty"`
+	Image                    string                `yaml:"image,omitempty"`
+	Labels                   Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations              Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	MemLimit                 Quantity              `yaml:"mem_limit,omitempty"`
+	MemReservation           Quantity              `yaml:"mem_reservation,omitempty"`
+	Ports                    []PortRaw             `yaml:"ports,omitempty"`
+	Restart                  string                `yaml:"restart,omitempty"`
+	Scale                    *int32                `yaml:"scale"`
+	StopGracePeriodSneakCase *RawMessage           `yaml:"stop_grace_period,omitempty"`
+	StopGracePeriod          *RawMessage           `yaml:"stopGracePeriod,omitempty"`
+	User                     *StackSecurityContext `yaml:"user,omitempty"`
+	Volumes                  []StackVolume         `yaml:"volumes,omitempty"`
+	WorkingDirSneakCase      string                `yaml:"working_dir,omitempty"`
+	Workdir                  string                `yaml:"workdir,omitempty"`
+	DependsOn                DependsOn             `yaml:"depends_on,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  *int32          `yaml:"replicas"`
@@ -141,7 +142,6 @@ type ServiceRaw struct {
 	Tmpfs             *WarningType `yaml:"tmpfs,omitempty"`
 	Tty               *WarningType `yaml:"tty,omitempty"`
 	Ulimits           *WarningType `yaml:"ulimits,omitempty"`
-	User              *WarningType `yaml:"user,omitempty"`
 	UsernsMode        *WarningType `yaml:"userns_mode,omitempty"`
 	VolumesFrom       *WarningType `yaml:"volumes_from,omitempty"`
 
@@ -469,6 +469,8 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		svc.Workdir = serviceRaw.WorkingDirSneakCase
 	}
 
+	svc.User = serviceRaw.User
+
 	svc.RestartPolicy, err = getRestartPolicy(svcName, serviceRaw.Deploy, serviceRaw.Restart)
 	if err != nil {
 		return nil, err
@@ -689,6 +691,46 @@ func (warning *WarningType) UnmarshalYAML(unmarshal func(interface{}) error) err
 	if a != nil {
 		warning.used = true
 	}
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (sc *StackSecurityContext) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawSecurityContext string
+	err := unmarshal(&rawSecurityContext)
+	if err == nil {
+		if strings.Contains(rawSecurityContext, ":") {
+			parts := strings.Split(rawSecurityContext, ":")
+			if len(parts) != 2 {
+				return fmt.Errorf("SecurityContext '%s' is malformed. Only 'dddd:dddd' is supported", rawSecurityContext)
+			}
+			runAsUser, err := strconv.ParseInt(parts[0], 10, 64)
+			if err != nil {
+				return fmt.Errorf("Can not obtain UID from '%s'", parts[0])
+			}
+			runAsGroup, err := strconv.ParseInt(parts[1], 10, 64)
+			if err != nil {
+				return fmt.Errorf("Can not obtain GID from '%s'", parts[1])
+			}
+			sc.RunAsUser = &runAsUser
+			sc.RunAsGroup = &runAsGroup
+		} else {
+			runAsUser, err := strconv.ParseInt(rawSecurityContext, 10, 64)
+			if err != nil {
+				return fmt.Errorf("Can not obtain UID from '%s'", rawSecurityContext)
+			}
+			sc.RunAsUser = &runAsUser
+		}
+		return nil
+	}
+	type stackSecurityContext StackSecurityContext // prevent recursion
+	var expandedSecurityContext stackSecurityContext
+	err = unmarshal(&expandedSecurityContext)
+	if err != nil {
+		return err
+	}
+	sc.RunAsUser = expandedSecurityContext.RunAsUser
+	sc.RunAsGroup = expandedSecurityContext.RunAsGroup
 	return nil
 }
 
@@ -1315,9 +1357,6 @@ func getServiceNotSupportedFields(svcName string, svcInfo *ServiceRaw) []string 
 	}
 	if svcInfo.Ulimits != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].ulimits", svcName))
-	}
-	if svcInfo.User != nil {
-		notSupported = append(notSupported, fmt.Sprintf("services[%s].user", svcName))
 	}
 	if svcInfo.UsernsMode != nil {
 		notSupported = append(notSupported, fmt.Sprintf("services[%s].userns_mode", svcName))

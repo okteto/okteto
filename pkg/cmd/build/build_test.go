@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	okErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +25,7 @@ func Test_validateImage(t *testing.T) {
 		{
 			name:  "okteto-dev-not-valid",
 			image: "okteto.dev/image/hello",
-			want:  okErrors.UserError{},
+			want:  oktetoErrors.UserError{},
 		},
 		{
 			name:  "okteto-global-valid",
@@ -35,7 +35,7 @@ func Test_validateImage(t *testing.T) {
 		{
 			name:  "okteto-global-not-valid",
 			image: "okteto.global/image/hello",
-			want:  okErrors.UserError{},
+			want:  oktetoErrors.UserError{},
 		},
 		{
 			name:  "not-okteto-image",

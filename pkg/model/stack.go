@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -55,17 +55,18 @@ type Service struct {
 	EnvFiles   EnvFiles           `yaml:"env_file,omitempty"`
 	DependsOn  DependsOn          `yaml:"depends_on,omitempty"`
 
-	Environment     Environment         `yaml:"environment,omitempty"`
-	Image           string              `yaml:"image,omitempty"`
-	Labels          Labels              `json:"labels,omitempty" yaml:"labels,omitempty"`
-	Annotations     Annotations         `json:"annotations,omitempty" yaml:"annotations,omitempty"`
-	Ports           []Port              `yaml:"ports,omitempty"`
-	RestartPolicy   apiv1.RestartPolicy `yaml:"restart,omitempty"`
-	StopGracePeriod int64               `yaml:"stop_grace_period,omitempty"`
-	Volumes         []StackVolume       `yaml:"volumes,omitempty"`
-	Workdir         string              `yaml:"workdir,omitempty"`
-	BackOffLimit    int32               `yaml:"max_attempts,omitempty"`
-	Healtcheck      *HealthCheck        `yaml:"healthcheck,omitempty"`
+	Environment     Environment           `yaml:"environment,omitempty"`
+	Image           string                `yaml:"image,omitempty"`
+	Labels          Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
+	Annotations     Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	Ports           []Port                `yaml:"ports,omitempty"`
+	RestartPolicy   apiv1.RestartPolicy   `yaml:"restart,omitempty"`
+	StopGracePeriod int64                 `yaml:"stop_grace_period,omitempty"`
+	Volumes         []StackVolume         `yaml:"volumes,omitempty"`
+	Workdir         string                `yaml:"workdir,omitempty"`
+	BackOffLimit    int32                 `yaml:"max_attempts,omitempty"`
+	Healtcheck      *HealthCheck          `yaml:"healthcheck,omitempty"`
+	User            *StackSecurityContext `yaml:"user,omitempty"`
 
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas,omitempty"`
@@ -74,6 +75,11 @@ type Service struct {
 	VolumeMounts []StackVolume `yaml:"-"`
 }
 
+// StackSecurityContext defines which user and group use
+type StackSecurityContext struct {
+	RunAsUser  *int64 `json:"runAsUser,omitempty" yaml:"runAsUser,omitempty"`
+	RunAsGroup *int64 `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
+}
 type StackVolume struct {
 	LocalPath  string
 	RemotePath string
@@ -424,7 +430,7 @@ func (svc *Service) SetLastBuiltAnnotation() {
 func IsAlreadyAdded(p Port, ports []Port) bool {
 	for _, port := range ports {
 		if port.ContainerPort == p.ContainerPort {
-			log.Infof("Port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
+			oktetoLog.Infof("Port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
 			return true
 		}
 	}
@@ -434,11 +440,11 @@ func IsAlreadyAdded(p Port, ports []Port) bool {
 func IsAlreadyAddedExpose(p Port, ports []Port) bool {
 	for _, port := range ports {
 		if p.HostPort == 0 && (port.ContainerPort == p.ContainerPort || port.HostPort == p.ContainerPort) {
-			log.Infof("Expose port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
+			oktetoLog.Infof("Expose port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
 			return true
 
 		} else if p.HostPort != 0 && (port.ContainerPort == p.ContainerPort || port.ContainerPort == p.HostPort || port.HostPort == p.HostPort || port.HostPort == p.ContainerPort) {
-			log.Infof("Expose port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
+			oktetoLog.Infof("Expose port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
 			return true
 		}
 	}

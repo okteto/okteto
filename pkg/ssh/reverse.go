@@ -20,7 +20,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -48,7 +48,7 @@ func (fm *ForwardManager) AddReverse(f model.Reverse) error {
 func (r *reverse) start(ctx context.Context) {
 	remoteListener, err := r.pool.getListener(r.remoteAddress)
 	if err != nil {
-		log.Infof("%s -> failed to listen on remote address: %v", r.String(), err)
+		oktetoLog.Infof("%s -> failed to listen on remote address: %v", r.String(), err)
 		return
 	}
 
@@ -57,10 +57,10 @@ func (r *reverse) start(ctx context.Context) {
 		<-ctx.Done()
 		r.setDisconnected()
 		if err := remoteListener.Close(); err != nil {
-			log.Infof("%s -> failed to close: %s", r.String(), err)
+			oktetoLog.Infof("%s -> failed to close: %s", r.String(), err)
 		}
 
-		log.Infof("%s -> done", r.String())
+		oktetoLog.Infof("%s -> done", r.String())
 	}()
 
 	tick := time.NewTicker(500 * time.Millisecond)
@@ -72,7 +72,7 @@ func (r *reverse) start(ctx context.Context) {
 				return
 			}
 
-			log.Infof("%s -> failed to accept connection: %v", r.String(), err)
+			oktetoLog.Infof("%s -> failed to accept connection: %v", r.String(), err)
 			<-tick.C
 			continue
 		}
@@ -88,7 +88,7 @@ func (r *reverse) handle(ctx context.Context, remote net.Conn) {
 	quit := make(chan struct{}, 1)
 	local, err := getConn(ctx, r.localAddress, 3)
 	if err != nil {
-		log.Infof("%s -> failed to listen on local address: %v", r.String(), err)
+		oktetoLog.Infof("%s -> failed to listen on local address: %v", r.String(), err)
 		return
 	}
 
@@ -107,7 +107,7 @@ func (r *reverse) String() string {
 func (r *reverse) transfer(from io.Writer, to io.Reader, quit chan struct{}) {
 	_, err := io.Copy(from, to)
 	if err != nil {
-		log.Infof("%s -> data transfer failed: %v", r.String(), err)
+		oktetoLog.Infof("%s -> data transfer failed: %v", r.String(), err)
 	}
 
 	quit <- struct{}{}

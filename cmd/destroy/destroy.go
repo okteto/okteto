@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -56,7 +56,7 @@ type Options struct {
 	Namespace      string
 	DestroyVolumes bool
 	ForceDestroy   bool
-	OutputMode     string
+	K8sContext     string
 }
 
 type destroyCommand struct {
@@ -117,7 +117,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			c := &destroyCommand{
 				getManifest: contextCMD.GetManifest,
 
-				executor:    utils.NewExecutor(options.OutputMode),
+				executor:    utils.NewExecutor(oktetoLog.GetOutputFormat()),
 				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:     secrets.NewSecrets(k8sClient),
 			}
@@ -127,7 +127,6 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
-	cmd.Flags().StringVarP(&options.OutputMode, "output", "o", "tty", "show plain/tty deploy output")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the application destroy even if there is an error executing the custom destroy commands defined in the manifest")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the application was deployed")
@@ -137,10 +136,10 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Options) error {
 	// Read manifest file with the commands to be executed
-	manifest, err := dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace})
+	manifest, err := dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace, K8sContext: opts.K8sContext})
 	if err != nil {
 		// Log error message but application can still be deleted
-		log.Infof("could not find manifest file to be executed: %s", err)
+		oktetoLog.Infof("could not find manifest file to be executed: %s", err)
 		manifest = &model.Manifest{
 			Destroy: []string{},
 		}
@@ -149,7 +148,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	var commandErr error
 	for _, command := range manifest.Destroy {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
-			log.Infof("error executing command '%s': %s", command, err.Error())
+			oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
 			if !opts.ForceDestroy {
 				return err
 			}
@@ -183,9 +182,9 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		}
 	}
 
-	log.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
+	oktetoLog.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
 	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
-		log.Infof("could not delete all the resources: %s", err)
+		oktetoLog.Infof("could not delete all the resources: %s", err)
 		return err
 	}
 
@@ -198,7 +197,7 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 		return err
 	}
 
-	log.Debugf("checking if application installed something with helm")
+	oktetoLog.Debugf("checking if application installed something with helm")
 	helmReleases := map[string]bool{}
 	for _, s := range sList {
 		if s.Type == model.HelmSecretType && s.Labels[ownerLabel] == helmOwner {
@@ -213,10 +212,10 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 
 	// If the application to be destroyed was deployed with helm, we try to uninstall it to avoid to leave orphan release resources
 	for releaseName := range helmReleases {
-		log.Debugf("uninstalling helm release %s", releaseName)
+		oktetoLog.Debugf("uninstalling helm release %s", releaseName)
 		cmd := fmt.Sprintf(helmUninstallCommand, releaseName)
 		if err := dc.executor.Execute(cmd, opts.Variables); err != nil {
-			log.Infof("could not uninstall helm release '%s': %s", releaseName, err)
+			oktetoLog.Infof("could not uninstall helm release '%s': %s", releaseName, err)
 			if !opts.ForceDestroy {
 				return err
 			}

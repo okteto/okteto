@@ -19,30 +19,23 @@ import (
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
-
-type kubeconfigFields struct {
-	Name           []string
-	Namespace      []string
-	CurrentContext string
-}
 
 func Test_initFromDeprecatedToken(t *testing.T) {
 
 	var tests = []struct {
 		name          string
 		tokenUrl      string
-		kubeconfigCtx kubeconfigFields
+		kubeconfigCtx test.KubeconfigFields
 	}{
 		{
 			name:     "token-create-kubeconfig",
 			tokenUrl: "https://cloud.okteto.com",
-			kubeconfigCtx: kubeconfigFields{
+			kubeconfigCtx: test.KubeconfigFields{
 				Name:           []string{"test"},
 				Namespace:      []string{"test"},
 				CurrentContext: "cloud_okteto_com",
@@ -51,7 +44,7 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 		{
 			name:     "token-token-but-not-in-kubeconfig",
 			tokenUrl: "https://cloud.okteto.com",
-			kubeconfigCtx: kubeconfigFields{
+			kubeconfigCtx: test.KubeconfigFields{
 				Name:           []string{"cloud_okteto_com"},
 				Namespace:      []string{"test"},
 				CurrentContext: "test",
@@ -67,7 +60,7 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 			}
 			defer os.Remove(tokenPath)
 
-			kubepath, err := createKubeconfig(tt.kubeconfigCtx)
+			kubepath, err := test.CreateKubeconfig(tt.kubeconfigCtx)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -111,26 +104,4 @@ func createDeprecatedToken(url string) (string, error) {
 	}
 
 	return config.GetTokenPathDeprecated(), nil
-}
-
-func createKubeconfig(kubeconfigFields kubeconfigFields) (string, error) {
-	dir, err := os.CreateTemp("", "")
-	if err != nil {
-		return "", err
-	}
-
-	os.Setenv(model.KubeConfigEnvVar, dir.Name())
-
-	contexts := make(map[string]*clientcmdapi.Context)
-	for idx := range kubeconfigFields.Name {
-		contexts[kubeconfigFields.Name[idx]] = &clientcmdapi.Context{Namespace: kubeconfigFields.Namespace[idx]}
-	}
-	cfg := &clientcmdapi.Config{
-		Contexts:       contexts,
-		CurrentContext: kubeconfigFields.CurrentContext,
-	}
-	if err := kubeconfig.Write(cfg, dir.Name()); err != nil {
-		return "", err
-	}
-	return dir.Name(), nil
 }

@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/ssh"
 )
@@ -38,18 +38,18 @@ const (
 func KeyExists() bool {
 	public, private := getKeyPaths()
 	if !model.FileExists(public) {
-		log.Infof("%s doesn't exist", public)
+		oktetoLog.Infof("%s doesn't exist", public)
 		return false
 	}
 
-	log.Infof("%s already present", public)
+	oktetoLog.Infof("%s already present", public)
 
 	if !model.FileExists(private) {
-		log.Infof("%s doesn't exist", private)
+		oktetoLog.Infof("%s doesn't exist", private)
 		return false
 	}
 
-	log.Infof("%s already present", private)
+	oktetoLog.Infof("%s already present", private)
 	return true
 }
 
@@ -80,7 +80,7 @@ func generateKeys(public, private string, bitSize int) error {
 		return fmt.Errorf("failed to write private SSH key: %s", err)
 	}
 
-	log.Infof("created ssh keypair at  %s and %s", public, private)
+	oktetoLog.Infof("created ssh keypair at  %s and %s", public, private)
 	return nil
 }
 

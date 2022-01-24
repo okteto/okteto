@@ -17,12 +17,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/linguist"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	apiv1 "k8s.io/api/core/v1"
@@ -81,7 +81,7 @@ func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, co
 func getRunningPod(ctx context.Context, app apps.App, container string, c kubernetes.Interface) (*apiv1.Pod, error) {
 	pod, err := app.GetRunningPod(ctx, c)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if oktetoErrors.IsNotFound(err) {
 			return nil, fmt.Errorf("%s '%s': no pod is running", app.Kind(), app.ObjectMeta().Name)
 		}
 		return nil, err
@@ -101,7 +101,7 @@ func getRunningPod(ctx context.Context, app apps.App, container string, c kubern
 func getSecurityContextFromPod(ctx context.Context, pod *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) *model.SecurityContext {
 	userID, err := pods.GetUserByPod(ctx, pod, container, config, c)
 	if err != nil {
-		log.Infof("error getting user of the deployment: %s", err)
+		oktetoLog.Infof("error getting user of the deployment: %s", err)
 		return nil
 	}
 	if userID == 0 {
@@ -113,7 +113,7 @@ func getSecurityContextFromPod(ctx context.Context, pod *apiv1.Pod, container st
 func getWorkdirFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) string {
 	workdir, err := pods.GetWorkdirByPod(ctx, pod, container, config, c)
 	if err != nil {
-		log.Infof("error getting workdir of the deployment: %s", err)
+		oktetoLog.Infof("error getting workdir of the deployment: %s", err)
 		if dev.Workdir == "/" {
 			return defaultWorkdirPath
 		}

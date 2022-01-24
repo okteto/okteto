@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -33,7 +34,8 @@ func Show() *cobra.Command {
 		Short: "Print the current context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if err := Run(ctx, &ContextOptions{}); err != nil {
+
+			if err := NewContextCommand().Run(ctx, &ContextOptions{raiseNotCtxError: true}); err != nil {
 				return err
 			}
 			ctxStore := okteto.ContextStore()
@@ -48,13 +50,13 @@ func Show() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				fmt.Println(string(bytes))
+				oktetoLog.Println(string(bytes))
 			case "yaml":
 				bytes, err := yaml.Marshal(current)
 				if err != nil {
 					return err
 				}
-				fmt.Println(string(bytes))
+				oktetoLog.Println(string(bytes))
 			}
 			return nil
 		},

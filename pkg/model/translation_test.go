@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -391,8 +391,8 @@ docker:
 }
 
 func TestDevToTranslationDebugEnabled(t *testing.T) {
-	log.SetLevel("debug")
-	defer log.SetLevel("info")
+	oktetoLog.SetLevel("debug")
+	defer oktetoLog.SetLevel("info")
 	manifestBytes := []byte(`name: web
 image: dev-image
 namespace: n

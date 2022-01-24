@@ -21,8 +21,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 type forward struct {
@@ -54,7 +54,7 @@ func (f *forward) setDisconnected() {
 func (f *forward) start(ctx context.Context) {
 	localListener, err := net.Listen("tcp", f.localAddress)
 	if err != nil {
-		log.Infof("%s -> failed to listen: %s", f.String(), err)
+		oktetoLog.Infof("%s -> failed to listen: %s", f.String(), err)
 		return
 	}
 
@@ -62,9 +62,9 @@ func (f *forward) start(ctx context.Context) {
 		<-ctx.Done()
 		f.setDisconnected()
 		if err := localListener.Close(); err != nil {
-			log.Infof("%s -> failed to close: %s", f.String(), err)
+			oktetoLog.Infof("%s -> failed to close: %s", f.String(), err)
 		}
-		log.Infof("%s -> done", f.String())
+		oktetoLog.Infof("%s -> done", f.String())
 	}()
 
 	f.setConnected()
@@ -77,7 +77,7 @@ func (f *forward) start(ctx context.Context) {
 				return
 			}
 
-			log.Infof("%s -> failed to accept connection: %v", f.String(), err)
+			oktetoLog.Infof("%s -> failed to accept connection: %v", f.String(), err)
 			<-tick.C
 			continue
 		}
@@ -91,7 +91,7 @@ func (f *forward) handle(local net.Conn) {
 
 	remote, err := f.pool.get(f.remoteAddress)
 	if err != nil {
-		log.Infof("%s -> failed to dial remote connection: %s", f.String(), err)
+		oktetoLog.Infof("%s -> failed to dial remote connection: %s", f.String(), err)
 		return
 	}
 
@@ -112,8 +112,8 @@ func (f *forward) String() string {
 func (f *forward) transfer(from io.Writer, to io.Reader, quit chan struct{}) {
 	_, err := io.Copy(from, to)
 	if err != nil {
-		if !errors.IsClosedNetwork(err) {
-			log.Infof("%s -> data transfer failed: %v", f.String(), err)
+		if !oktetoErrors.IsClosedNetwork(err) {
+			oktetoLog.Infof("%s -> data transfer failed: %v", f.String(), err)
 		}
 	}
 

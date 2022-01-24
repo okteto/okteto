@@ -23,7 +23,7 @@ import (
 
 // GetCredentials returns the space config credentials
 func (c *OktetoClient) GetCredentials(ctx context.Context) (*types.Credential, error) {
-	var query struct {
+	var queryStruct struct {
 		Space struct {
 			Server      graphql.String
 			Certificate graphql.String
@@ -35,16 +35,16 @@ func (c *OktetoClient) GetCredentials(ctx context.Context) (*types.Credential, e
 	variables := map[string]interface{}{
 		"cred": graphql.String(""),
 	}
-	err := c.Query(ctx, &query, variables)
+	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
 		return nil, err
 	}
 
 	cred := &types.Credential{
-		Server:      string(query.Space.Server),
-		Certificate: string(query.Space.Certificate),
-		Token:       string(query.Space.Token),
-		Namespace:   string(query.Space.Namespace),
+		Server:      string(queryStruct.Space.Server),
+		Certificate: string(queryStruct.Space.Certificate),
+		Token:       string(queryStruct.Space.Token),
+		Namespace:   string(queryStruct.Space.Namespace),
 	}
 
 	if cred.Server == "" {

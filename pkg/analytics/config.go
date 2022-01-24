@@ -20,7 +20,7 @@ import (
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -75,7 +75,7 @@ func fileExists() bool {
 		if os.IsNotExist(err) {
 			return false
 		}
-		log.Fatalf("error accessing okteto config folder '%s': %s", config.GetOktetoHome(), err)
+		oktetoLog.Fatalf("error accessing okteto config folder '%s': %s", config.GetOktetoHome(), err)
 	}
 	return true
 }
@@ -98,13 +98,13 @@ func get() *Analytics {
 
 	b, err := os.ReadFile(config.GetAnalyticsPath())
 	if err != nil {
-		log.Debugf("error reading analytics file: %s", err)
+		oktetoLog.Debugf("error reading analytics file: %s", err)
 		return &Analytics{Enabled: false, MachineID: ""}
 	}
 
 	result := &Analytics{}
 	if err := json.Unmarshal(b, result); err != nil {
-		log.Debugf("error unmarshaling analytics: %s", err)
+		oktetoLog.Debugf("error unmarshaling analytics: %s", err)
 		return &Analytics{Enabled: false, MachineID: ""}
 	}
 
@@ -125,7 +125,7 @@ func (a *Analytics) save() error {
 
 	oktetoHome := config.GetOktetoHome()
 	if err := os.MkdirAll(oktetoHome, 0700); err != nil {
-		log.Fatalf("failed to create %s: %s", oktetoHome, err)
+		oktetoLog.Fatalf("failed to create %s: %s", oktetoHome, err)
 	}
 
 	analyticsPath := config.GetAnalyticsPath()
@@ -169,7 +169,7 @@ func getTrackID() string {
 func generateMachineID() string {
 	mid, err := machineid.ProtectedID("okteto")
 	if err != nil {
-		log.Infof("failed to generate a machine id: %v", err)
+		oktetoLog.Infof("failed to generate a machine id: %v", err)
 		mid = "na"
 	}
 

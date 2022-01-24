@@ -30,10 +30,10 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -67,17 +67,17 @@ func Up() *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
-				return errors.ErrNotInDevContainer
+				return oktetoErrors.ErrNotInDevContainer
 			}
 
 			u := utils.UpgradeAvailable()
 			if len(u) > 0 {
 				warningFolder := filepath.Join(config.GetOktetoHome(), ".warnings")
 				if utils.GetWarningState(warningFolder, "version") != u {
-					log.Yellow("Okteto %s is available. To upgrade:", u)
-					log.Yellow("    %s", utils.GetUpgradeCommand())
+					oktetoLog.Yellow("Okteto %s is available. To upgrade:", u)
+					oktetoLog.Yellow("    %s", utils.GetUpgradeCommand())
 					if err := utils.SetWarningState(warningFolder, "version", u); err != nil {
-						log.Infof("failed to set warning version state: %s", err.Error())
+						oktetoLog.Infof("failed to set warning version state: %s", err.Error())
 					}
 				}
 			}
@@ -86,7 +86,8 @@ func Up() *cobra.Command {
 
 			ctx := context.Background()
 
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, upOptions.DevPath, upOptions.Namespace, upOptions.K8sContext)
+			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				if !strings.Contains(err.Error(), "okteto init") {
 					return err
@@ -111,25 +112,25 @@ func Up() *cobra.Command {
 			}
 
 			if syncthing.ShouldUpgrade() {
-				fmt.Println("Installing dependencies...")
+				oktetoLog.Println("Installing dependencies...")
 				if err := downloadSyncthing(); err != nil {
-					log.Infof("failed to upgrade syncthing: %s", err)
+					oktetoLog.Infof("failed to upgrade syncthing: %s", err)
 
 					if !syncthing.IsInstalled() {
 						return fmt.Errorf("couldn't download syncthing, please try again")
 					}
 
-					log.Yellow("couldn't upgrade syncthing, will try again later")
-					fmt.Println()
+					oktetoLog.Yellow("couldn't upgrade syncthing, will try again later")
+					oktetoLog.Println()
 				} else {
-					log.Success("Dependencies successfully installed")
+					oktetoLog.Success("Dependencies successfully installed")
 				}
 			}
 
-			log.ConfigureFileLogger(config.GetAppHome(dev.Namespace, dev.Name), config.VersionString)
+			oktetoLog.ConfigureFileLogger(config.GetAppHome(dev.Namespace, dev.Name), config.VersionString)
 
 			if err := checkStignoreConfiguration(dev); err != nil {
-				log.Infof("failed to check '.stignore' configuration: %s", err.Error())
+				oktetoLog.Infof("failed to check '.stignore' configuration: %s", err.Error())
 			}
 
 			if err := addStignoreSecrets(dev); err != nil {
@@ -157,10 +158,10 @@ func Up() *cobra.Command {
 				var err error
 				up.stateTerm, err = term.SaveState(up.inFd)
 				if err != nil {
-					log.Infof("failed to save the state of the terminal: %s", err.Error())
+					oktetoLog.Infof("failed to save the state of the terminal: %s", err.Error())
 					return fmt.Errorf("failed to save the state of the terminal")
 				}
-				log.Infof("Terminal: %v", up.stateTerm)
+				oktetoLog.Infof("Terminal: %v", up.stateTerm)
 			}
 
 			if upOptions.Deploy {
@@ -172,15 +173,15 @@ func Up() *cobra.Command {
 			err = up.start()
 
 			if err := up.Client.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
-				log.Infof("error deleting deprecated volume: %v", err)
+				oktetoLog.Infof("error deleting deprecated volume: %v", err)
 			}
 
 			if err != nil {
 				switch err.(type) {
 				default:
 					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
-				case errors.CommandError:
-					log.Infof("CommandError: %v", err)
+				case oktetoErrors.CommandError:
+					oktetoLog.Infof("CommandError: %v", err)
 				}
 
 			}
@@ -210,7 +211,7 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 		Namespace: namespace,
 		Show:      true,
 	}
-	if err := contextCMD.Run(ctx, ctxOptions); err != nil {
+	if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
 		return nil, err
 	}
 
@@ -218,7 +219,7 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 		return nil, err
 	}
 
-	log.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
+	oktetoLog.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
 	return utils.LoadManifest(devPath)
 }
 
@@ -286,7 +287,7 @@ func (up *upContext) start() error {
 	}
 
 	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
-		log.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
+		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
 		return fmt.Errorf("couldn't create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)
 	}
 
@@ -301,12 +302,12 @@ func (up *upContext) start() error {
 
 	select {
 	case <-stop:
-		log.Infof("CTRL+C received, starting shutdown sequence")
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		up.shutdown()
-		fmt.Println()
+		oktetoLog.Println()
 	case err := <-up.Exit:
 		if err != nil {
-			log.Infof("exit signal received due to error: %s", err)
+			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
@@ -324,10 +325,10 @@ func (up *upContext) activateLoop() {
 
 	for {
 		if up.isRetry || isTransientError {
-			log.Infof("waiting for shutdown sequence to finish")
+			oktetoLog.Infof("waiting for shutdown sequence to finish")
 			<-up.ShutdownCompleted
 			if iter == 0 {
-				log.Yellow("Connection lost to your development container, reconnecting...")
+				oktetoLog.Yellow("Connection lost to your development container, reconnecting...")
 			}
 			iter++
 			iter = iter % 10
@@ -338,15 +339,15 @@ func (up *upContext) activateLoop() {
 
 		err := up.activate()
 		if err != nil {
-			log.Infof("activate failed with: %s", err)
+			oktetoLog.Infof("activate failed with: %s", err)
 
-			if err == errors.ErrLostSyncthing {
+			if err == oktetoErrors.ErrLostSyncthing {
 				isTransientError = false
 				iter = 0
 				continue
 			}
 
-			if errors.IsTransient(err) {
+			if oktetoErrors.IsTransient(err) {
 				isTransientError = true
 				continue
 			}
@@ -364,29 +365,29 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 	for {
 		select {
 		case err := <-up.CommandResult:
-			fmt.Println()
+			oktetoLog.Println()
 			if err != nil {
-				log.Infof("command failed: %s", err)
-				if errors.IsTransient(err) {
+				oktetoLog.Infof("command failed: %s", err)
+				if oktetoErrors.IsTransient(err) {
 					return err
 				}
-				return errors.CommandError{
-					E:      errors.ErrCommandFailed,
+				return oktetoErrors.CommandError{
+					E:      oktetoErrors.ErrCommandFailed,
 					Reason: err,
 				}
 			}
 
-			log.Info("command completed")
+			oktetoLog.Info("command completed")
 			return nil
 
 		case err := <-up.Disconnect:
-			if err == errors.ErrInsufficientSpace {
+			if err == oktetoErrors.ErrInsufficientSpace {
 				return up.getInsufficientSpaceError(err)
 			}
 			return err
 
 		case err := <-up.applyToApps(ctx):
-			log.Infof("exiting by applyToAppsChan: %v", err)
+			oktetoLog.Infof("exiting by applyToAppsChan: %v", err)
 			return err
 		}
 	}
@@ -402,7 +403,7 @@ func (up *upContext) applyToApps(ctx context.Context) chan error {
 
 func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
-		return errors.UserError{
+		return oktetoErrors.UserError{
 			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
 			Hint: "Try creating a Dockerfile or specify 'context' and 'dockerfile' fields.",
 		}
@@ -421,10 +422,10 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		up.Dev.Image.Name = devContainer.Image
 	}
 
-	log.Information("Running your build in %s...", okteto.Context().Builder)
+	oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
 
 	imageTag := registry.GetImageTag(up.Dev.Image.Name, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
-	log.Infof("building dev image tag %s", imageTag)
+	oktetoLog.Infof("building dev image tag %s", imageTag)
 
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
 
@@ -435,7 +436,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		Target:     up.Dev.Image.Target,
 		CacheFrom:  up.Dev.Image.CacheFrom,
 		BuildArgs:  buildArgs,
-		OutputMode: "tty",
+		OutputMode: oktetoLog.TTYFormat,
 	}
 	if err := buildCMD.Run(ctx, buildOptions); err != nil {
 		return err
@@ -484,14 +485,14 @@ func (up *upContext) getInteractive() bool {
 func (up *upContext) getInsufficientSpaceError(err error) error {
 	if up.Dev.PersistentVolumeEnabled() {
 
-		return errors.UserError{
+		return oktetoErrors.UserError{
 			E: err,
 			Hint: fmt.Sprintf(`Okteto volume is full.
     Increase your persistent volume size, run '%s' and try 'okteto up' again.
     More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.DevPath)),
 		}
 	}
-	return errors.UserError{
+	return oktetoErrors.UserError{
 		E: err,
 		Hint: `The synchronization service is running out of space.
     Enable persistent volumes in your okteto manifest and try again.
@@ -504,70 +505,70 @@ func (up *upContext) getInsufficientSpaceError(err error) error {
 func (up *upContext) shutdown() {
 	if up.isTerm {
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
-			log.Infof("failed to restore terminal: %s", err.Error())
+			oktetoLog.Infof("failed to restore terminal: %s", err.Error())
 		}
 		if up.spinner != nil {
 			up.spinner.Stop()
 		}
 	}
 
-	log.Infof("starting shutdown sequence")
+	oktetoLog.Infof("starting shutdown sequence")
 	if !up.success {
 		analytics.TrackUpError(true)
 	}
 
 	if up.Cancel != nil {
 		up.Cancel()
-		log.Info("sent cancellation signal")
+		oktetoLog.Info("sent cancellation signal")
 	}
 
 	if up.Sy != nil {
-		log.Infof("stopping syncthing")
+		oktetoLog.Infof("stopping syncthing")
 		if err := up.Sy.SoftTerminate(); err != nil {
-			log.Infof("failed to stop syncthing during shutdown: %s", err.Error())
+			oktetoLog.Infof("failed to stop syncthing during shutdown: %s", err.Error())
 		}
 	}
 
-	log.Infof("stopping forwarders")
+	oktetoLog.Infof("stopping forwarders")
 	if up.Forwarder != nil {
 		up.Forwarder.Stop()
 	}
 
-	log.Info("completed shutdown sequence")
+	oktetoLog.Info("completed shutdown sequence")
 	up.ShutdownCompleted <- true
 
 }
 
 func printDisplayContext(dev *model.Dev, divertURL string) {
-	log.Println(fmt.Sprintf("    %s   %s", log.BlueString("Context:"), okteto.RemoveSchema(dev.Context)))
-	log.Println(fmt.Sprintf("    %s %s", log.BlueString("Namespace:"), dev.Namespace))
-	log.Println(fmt.Sprintf("    %s      %s", log.BlueString("Name:"), dev.Name))
+	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(dev.Context)))
+	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), dev.Namespace))
+	oktetoLog.Println(fmt.Sprintf("    %s      %s", oktetoLog.BlueString("Name:"), dev.Name))
 
 	if len(dev.Forward) > 0 {
 		if dev.Forward[0].Service {
-			log.Println(fmt.Sprintf("    %s   %d -> %s:%d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].ServiceName, dev.Forward[0].Remote))
+			oktetoLog.Println(fmt.Sprintf("    %s   %d -> %s:%d", oktetoLog.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].ServiceName, dev.Forward[0].Remote))
 		} else {
-			log.Println(fmt.Sprintf("    %s   %d -> %d", log.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
+			oktetoLog.Println(fmt.Sprintf("    %s   %d -> %d", oktetoLog.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
 		}
 
 		for i := 1; i < len(dev.Forward); i++ {
 			if dev.Forward[i].Service {
-				log.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
+				oktetoLog.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
 				continue
 			}
-			log.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
+			oktetoLog.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
 		}
 	}
 
 	if len(dev.Reverse) > 0 {
-		log.Println(fmt.Sprintf("    %s   %d <- %d", log.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
+		oktetoLog.Println(fmt.Sprintf("    %s   %d <- %d", oktetoLog.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
 		for i := 1; i < len(dev.Reverse); i++ {
-			log.Println(fmt.Sprintf("               %d <- %d", dev.Reverse[i].Local, dev.Reverse[i].Remote))
+			oktetoLog.Println(fmt.Sprintf("               %d <- %d", dev.Reverse[i].Local, dev.Reverse[i].Remote))
 		}
 	}
 
 	if divertURL != "" {
-		log.Println(fmt.Sprintf("    %s       %s", log.BlueString("URL:"), divertURL))
+		oktetoLog.Println(fmt.Sprintf("    %s       %s", oktetoLog.BlueString("URL:"), divertURL))
 	}
-	fmt.Println()
+	oktetoLog.Println()
 }

@@ -28,8 +28,8 @@ import (
 	"github.com/a8m/envsubst"
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
-	oktetoError "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -533,7 +533,7 @@ func (dev *Dev) SetDefaults() error {
 	}
 
 	if dev.Healthchecks {
-		log.Yellow("The use of 'healthchecks' field is deprecated and will be removed in a future release. Please use the field 'probes' instead.")
+		oktetoLog.Yellow("The use of 'healthchecks' field is deprecated and will be removed in a future release. Please use the field 'probes' instead.")
 		if dev.Probes == nil {
 			dev.Probes = &Probes{Liveness: true, Readiness: true, Startup: true}
 		}
@@ -750,7 +750,7 @@ func (dev *Dev) validate() error {
 	}
 
 	if dev.Docker.Enabled && !dev.PersistentVolumeEnabled() {
-		log.Information("https://okteto.com/docs/reference/manifest/#docker-object-optional")
+		oktetoLog.Information("https://okteto.com/docs/reference/manifest/#docker-object-optional")
 		return fmt.Errorf("Docker support requires persistent volume to be enabled")
 	}
 
@@ -763,20 +763,20 @@ func (dev *Dev) validateSync() error {
 
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				return oktetoError.UserError{
+				return oktetoErrors.UserError{
 					E:    fmt.Errorf("path '%s' does not exist", folder.LocalPath),
 					Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 				}
 			}
 
-			return oktetoError.UserError{
+			return oktetoErrors.UserError{
 				E:    fmt.Errorf("File paths are not supported on sync fields"),
 				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 			}
 		}
 
 		if !validPath.IsDir() {
-			return oktetoError.UserError{
+			return oktetoErrors.UserError{
 				E:    fmt.Errorf("File paths are not supported on sync fields"),
 				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 			}
@@ -843,12 +843,12 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 	if dev.RemotePort == 0 {
 		p, err := GetAvailablePort(dev.Interface)
 		if err != nil {
-			log.Infof("failed to get random port for SSH connection: %s", err)
+			oktetoLog.Infof("failed to get random port for SSH connection: %s", err)
 			p = oktetoDefaultSSHServerPort
 		}
 
 		dev.RemotePort = p
-		log.Infof("remote port not set, using %d", dev.RemotePort)
+		oktetoLog.Infof("remote port not set, using %d", dev.RemotePort)
 	}
 
 	p := Secret{
@@ -857,7 +857,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 		Mode:       0644,
 	}
 
-	log.Infof("enabled remote mode")
+	oktetoLog.Infof("enabled remote mode")
 
 	for i := range dev.Secrets {
 		if dev.Secrets[i].LocalPath == p.LocalPath {
@@ -877,19 +877,19 @@ func (dev *Dev) LoadForcePull() {
 		s.ImagePullPolicy = apiv1.PullAlways
 		s.Metadata.Annotations[OktetoRestartAnnotation] = restartUUID
 	}
-	log.Infof("enabled force pull")
+	oktetoLog.Infof("enabled force pull")
 }
 
 //Save saves the okteto manifest in a given path
 func (dev *Dev) Save(path string) error {
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
-		log.Infof("failed to marshall development container: %s", err)
+		oktetoLog.Infof("failed to marshall development container: %s", err)
 		return fmt.Errorf("Failed to generate your manifest")
 	}
 
 	if err := os.WriteFile(path, marshalled, 0600); err != nil {
-		log.Infof("failed to write okteto manifest at %s: %s", path, err)
+		oktetoLog.Infof("failed to write okteto manifest at %s: %s", path, err)
 		return fmt.Errorf("Failed to write your manifest")
 	}
 
@@ -1190,28 +1190,28 @@ func GetTimeout() (time.Duration, error) {
 
 func (dev *Dev) translateDeprecatedMetadataFields() error {
 	if len(dev.Labels) > 0 {
-		log.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
+		oktetoLog.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
 		for k, v := range dev.Labels {
 			dev.Selector[k] = v
 		}
 	}
 
 	if len(dev.Annotations) > 0 {
-		log.Warning("The field 'annotations' is deprecated. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
+		oktetoLog.Warning("The field 'annotations' is deprecated. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
 		for k, v := range dev.Annotations {
 			dev.Metadata.Annotations[k] = v
 		}
 	}
 	for _, s := range dev.Services {
 		if len(s.Labels) > 0 {
-			log.Warning("The field '%s.labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
+			oktetoLog.Warning("The field '%s.labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
 			for k, v := range s.Labels {
 				s.Selector[k] = v
 			}
 		}
 
 		if len(s.Annotations) > 0 {
-			log.Warning("The field 'annotations' is deprecated. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
+			oktetoLog.Warning("The field 'annotations' is deprecated. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
 			for k, v := range s.Annotations {
 				s.Metadata.Annotations[k] = v
 			}

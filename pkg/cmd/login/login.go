@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -43,7 +43,7 @@ func NewLoginController() *LoginController {
 
 func (l LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*types.User, error) {
 	if token == "" {
-		log.Infof("authenticating with browser code")
+		oktetoLog.Infof("authenticating with browser code")
 		user, err := WithBrowser(ctx, oktetoURL)
 		if err != nil {
 			return nil, err
@@ -51,7 +51,7 @@ func (l LoginController) AuthenticateToOktetoCluster(ctx context.Context, okteto
 		if user.New {
 			analytics.TrackSignup(true, user.ID)
 		}
-		log.Infof("authenticated user %s", user.ID)
+		oktetoLog.Infof("authenticated user %s", user.ID)
 
 		return user, nil
 	}
@@ -62,24 +62,24 @@ func (l LoginController) AuthenticateToOktetoCluster(ctx context.Context, okteto
 func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 	h, err := StartWithBrowser(ctx, oktetoURL)
 	if err != nil {
-		log.Infof("couldn't start the login process: %s", err)
+		oktetoLog.Infof("couldn't start the login process: %s", err)
 		return nil, fmt.Errorf("couldn't start the login process, please try again")
 	}
 
 	authorizationURL := h.AuthorizationURL()
-	fmt.Println("Authentication will continue in your default browser")
+	oktetoLog.Println("Authentication will continue in your default browser")
 	if err := open.Start(authorizationURL); err != nil {
 		if strings.Contains(err.Error(), "executable file not found in $PATH") {
-			return nil, errors.UserError{
+			return nil, oktetoErrors.UserError{
 				E:    fmt.Errorf("no browser could be found"),
 				Hint: "Use the '--token' flag to run this command in server mode. More information can be found here: https://okteto.com/docs/reference/cli/#login",
 			}
 		}
-		log.Errorf("Something went wrong opening your browser: %s\n", err)
+		oktetoLog.Errorf("Something went wrong opening your browser: %s\n", err)
 	}
 
-	fmt.Printf("You can also open a browser and navigate to the following address:\n")
-	fmt.Println(authorizationURL)
+	oktetoLog.Printf("You can also open a browser and navigate to the following address:\n")
+	oktetoLog.Println(authorizationURL)
 
 	return EndWithBrowser(ctx, h)
 }
@@ -88,14 +88,14 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 func StartWithBrowser(ctx context.Context, u string) (*Handler, error) {
 	state, err := randToken()
 	if err != nil {
-		log.Infof("couldn't generate random token: %s", err)
+		oktetoLog.Infof("couldn't generate random token: %s", err)
 		return nil, fmt.Errorf("couldn't generate a random token, please try again")
 	}
 
 	port, err := model.GetAvailablePort(model.Localhost)
 
 	if err != nil {
-		log.Infof("couldn't access the network: %s", err)
+		oktetoLog.Infof("couldn't access the network: %s", err)
 		return nil, fmt.Errorf("couldn't access the network")
 	}
 

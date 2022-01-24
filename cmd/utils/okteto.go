@@ -19,15 +19,15 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 )
 
 // HasAccessToNamespace checks if the user has access to a namespace/preview
-func HasAccessToNamespace(ctx context.Context, namespace string, oktetoClient types.NamespaceInterface) (bool, error) {
+func HasAccessToNamespace(ctx context.Context, namespace string, oktetoClient types.OktetoInterface) (bool, error) {
 
-	nList, err := oktetoClient.ListNamespaces(ctx)
+	nList, err := oktetoClient.Namespaces().List(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -38,7 +38,7 @@ func HasAccessToNamespace(ctx context.Context, namespace string, oktetoClient ty
 		}
 	}
 
-	previewList, err := oktetoClient.ListPreviews(ctx)
+	previewList, err := oktetoClient.Previews().List(ctx)
 	if err != nil {
 		return false, err
 	}
@@ -60,7 +60,7 @@ func LoadBoolean(k string) bool {
 
 	h, err := strconv.ParseBool(v)
 	if err != nil {
-		log.Yellow("'%s' is not a valid value for environment variable %s", v, k)
+		oktetoLog.Yellow("'%s' is not a valid value for environment variable %s", v, k)
 	}
 
 	return h

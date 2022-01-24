@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -44,30 +44,30 @@ func NewProxy(name string, kubeconfig *KubeConfig) (*Proxy, error) {
 	// Look for a free local port to start the proxy
 	port, err := model.GetAvailablePort("localhost")
 	if err != nil {
-		log.Errorf("could not find a free port to start proxy server: %s", err)
+		oktetoLog.Errorf("could not find a free port to start proxy server: %s", err)
 		return nil, err
 	}
-	log.Debugf("found available port %d", port)
+	oktetoLog.Debugf("found available port %d", port)
 
 	// Generate a token for the requests done to the proxy
 	sessionToken := uuid.NewString()
 
 	clusterConfig, err := kubeconfig.Read()
 	if err != nil {
-		log.Errorf("could not read kubeconfig file: %s", err)
+		oktetoLog.Errorf("could not read kubeconfig file: %s", err)
 		return nil, err
 	}
 
 	handler, err := getProxyHandler(name, sessionToken, clusterConfig)
 	if err != nil {
-		log.Errorf("could not configure local proxy: %s", err)
+		oktetoLog.Errorf("could not configure local proxy: %s", err)
 		return nil, err
 	}
 
 	// TODO for now, using self-signed certificates
 	cert, err := tls.X509KeyPair(cert, key)
 	if err != nil {
-		log.Errorf("could not read certificate: %s", err)
+		oktetoLog.Errorf("could not read certificate: %s", err)
 		return nil, err
 	}
 
@@ -104,14 +104,14 @@ func (p *Proxy) Start() {
 			return
 		}
 
-		log.Debugf("os.Interrupt - closing...")
+		oktetoLog.Debugf("os.Interrupt - closing...")
 		p.s.Close()
 	}()
 
 	go func(s *http.Server) {
 		// Path to cert and key files are empty because cert is provisioned on the tls config struct
 		if err := s.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-			log.Infof("could not start proxy server: %s", err)
+			oktetoLog.Infof("could not start proxy server: %s", err)
 		}
 	}(p.s)
 }

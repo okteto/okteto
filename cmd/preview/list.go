@@ -20,7 +20,7 @@ import (
 	"text/tabwriter"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -32,12 +32,12 @@ func List(ctx context.Context) *cobra.Command {
 		Short: "List all preview environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 
 			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
 			err := executeListPreviews(ctx)
@@ -54,7 +54,7 @@ func executeListPreviews(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	previewList, err := oktetoClient.ListPreviews(ctx)
+	previewList, err := oktetoClient.Previews().List(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get preview environments: %s", err)
 	}

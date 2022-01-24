@@ -184,13 +184,13 @@ func TestCompose(t *testing.T) {
 	log.Printf("deployed stack using %s \n", "docker-compose.yml")
 
 	jobEndpoint := fmt.Sprintf("https://nginx-%s.%s/db/initialized", namespace, appsSubdomain)
-	content, err := getContent(jobEndpoint, 150, nil)
+	content, err := getContent(jobEndpoint, 200, nil)
 	if err != nil {
 		t.Fatalf("failed to get stack content: %s", err)
 	}
 
 	endpoint := fmt.Sprintf("https://nginx-%s.%s/db", namespace, appsSubdomain)
-	content, err = getContent(endpoint, 150, nil)
+	content, err = getContent(endpoint, 200, nil)
 	if err != nil {
 		t.Fatalf("failed to get stack content: %s", err)
 	}

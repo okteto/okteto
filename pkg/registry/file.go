@@ -16,15 +16,21 @@ package registry
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/pkg/errors"
+)
+
+const (
+	defaultDockerIgnore = ".dockerignore"
 )
 
 // GetDockerfile returns the dockerfile with the cache and registry translations
@@ -78,6 +84,10 @@ func getTranslatedDockerFile(filename string) (string, error) {
 		return "", err
 	}
 
+	if err := copyDockerIgnore(filename, tmpFile.Name()); err != nil {
+		return "", err
+	}
+
 	return tmpFile.Name(), nil
 }
 
@@ -128,6 +138,7 @@ func translateOktetoRegistryImage(input string) string {
 
 }
 
+// CreateDockerfileWithVolumeMounts creates the Dockerfile with volume mounts and returns the BuildInfo
 func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume) (*model.BuildInfo, error) {
 	build := &model.BuildInfo{}
 
@@ -156,4 +167,51 @@ func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume)
 
 	build.Dockerfile = tmpFile.Name()
 	return build, nil
+}
+
+func copyDockerIgnore(originalPath, translatedPath string) error {
+	originalPath, err := filepath.Abs(originalPath)
+	if err != nil {
+		oktetoLog.Infof("could not load original dockerfile path")
+		return err
+	}
+	originalDir := filepath.Dir(originalPath)
+	originalName := filepath.Base(originalPath)
+	originalDockerIgnore := filepath.Join(originalDir, fmt.Sprintf("%s%s", originalName, defaultDockerIgnore))
+
+	translatedDir := filepath.Dir(translatedPath)
+	translatedName := filepath.Base(translatedPath)
+	newPath := filepath.Join(translatedDir, fmt.Sprintf("%s%s", translatedName, defaultDockerIgnore))
+	if fs, err := os.Stat(originalDockerIgnore); err == nil && !fs.IsDir() {
+		err := copyFile(originalDockerIgnore, newPath)
+		if err != nil {
+			return err
+		}
+	} else {
+		originalDockerIgnore := filepath.Join(originalDir, defaultDockerIgnore)
+		if fs, err := os.Stat(originalDockerIgnore); err == nil && !fs.IsDir() {
+			err := copyFile(originalDockerIgnore, newPath)
+			if err != nil {
+				return err
+			}
+		} else {
+			oktetoLog.Infof("could not detect any .dockerignore on %s", originalDir)
+		}
+	}
+	return nil
+}
+
+func copyFile(orig, dest string) error {
+	input, err := ioutil.ReadFile(orig)
+	if err != nil {
+		oktetoLog.Infof("could not read %s dockerfile", orig)
+		return err
+	}
+
+	err = ioutil.WriteFile(dest, input, 0644)
+	if err != nil {
+		oktetoLog.Infof("error creating %s: %s", dest, err)
+		return err
+	}
+	return nil
 }

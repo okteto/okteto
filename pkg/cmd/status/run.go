@@ -22,8 +22,8 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
@@ -32,12 +32,12 @@ import (
 func Run(ctx context.Context, sy *syncthing.Syncthing) (float64, error) {
 	progressLocal, err := getCompletionProgress(ctx, sy, true)
 	if err != nil {
-		log.Infof("error accessing local syncthing status: %s", err)
+		oktetoLog.Infof("error accessing local syncthing status: %s", err)
 		return 0, err
 	}
 	progressRemote, err := getCompletionProgress(ctx, sy, false)
 	if err != nil {
-		log.Infof("error accessing remote syncthing status: %s", err)
+		oktetoLog.Infof("error accessing remote syncthing status: %s", err)
 		return 0, err
 	}
 
@@ -109,12 +109,12 @@ func Wait(ctx context.Context, dev *model.Dev, okStatusList []config.UpState) er
 
 	select {
 	case <-stop:
-		log.Infof("CTRL+C received, starting shutdown sequence")
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		return errors.ErrIntSig
+		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
-			log.Infof("exit signal received due to error: %s", err)
+			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}
