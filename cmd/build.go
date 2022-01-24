@@ -162,17 +162,19 @@ func buildV2(manifest model.ManifestBuild, options build.BuildOptions, args []st
 		opts := build.OptsFromManifest(srv, manifestOptions, options)
 
 		// check if image is at registry and skip
-		if build.ShouldOptimizeBuild(opts.Tag) {
+		if build.ShouldOptimizeBuild(opts.Tag) && !options.BuildToGlobal {
 			oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
 			globalReference := strings.Replace(opts.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 			if _, err := registry.GetImageTagWithDigest(globalReference); err == nil {
 				oktetoLog.Information("skipping build: image already exists at global registry -  %s", globalReference)
 				return nil
 			}
-			// check if image already is at the registry
-			if _, err := registry.GetImageTagWithDigest(opts.Tag); err == nil {
-				oktetoLog.Information("skipping build: image already exists at registry - %s", opts.Tag)
-				return nil
+			if registry.IsDevRegistry(opts.Tag) {
+				// check if image already is at the registry
+				if _, err := registry.GetImageTagWithDigest(opts.Tag); err == nil {
+					oktetoLog.Information("skipping build: image already exists at registry - %s", opts.Tag)
+					return nil
+				}
 			}
 		}
 		// when single build, transfer the secrets from the flag to the options

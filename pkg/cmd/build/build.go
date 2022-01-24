@@ -214,7 +214,13 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 			tag = fmt.Sprintf("%x", sha256.Sum256([]byte(params)))
 		}
 
-		b.Image = fmt.Sprintf("%s/%s-%s:%s", okteto.DevRegistry, b.Name, service, tag)
+		// if flag --global, point to global registry
+		targetRegistry := okteto.DevRegistry
+		if o.BuildToGlobal {
+			targetRegistry = okteto.GlobalRegistry
+		}
+
+		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, b.Name, service, tag)
 	}
 
 	opts := BuildOptions{
