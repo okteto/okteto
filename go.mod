@@ -28,7 +28,7 @@ require (
 	github.com/manifoldco/promptui v0.8.0
 	github.com/mholt/archiver v3.1.1+incompatible
 	github.com/mitchellh/go-ps v1.0.0
-	github.com/moby/buildkit v0.8.2
+	github.com/moby/buildkit v0.9.2
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6
 	github.com/pkg/errors v0.9.1
 	github.com/shirou/gopsutil v3.21.7+incompatible
@@ -111,7 +111,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/golang/snappy v0.0.3 // indirect
+	github.com/golang/snappy v0.0.4-0.20210608040537-544b4180ac70 // indirect
 	github.com/google/btree v1.0.1 // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
@@ -122,14 +122,12 @@ require (
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0 // indirect
-	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-safetemp v1.0.0 // indirect
 	github.com/hashicorp/go-version v1.2.0 // indirect
 	github.com/ibuildthecloud/finalizers v0.0.0-20210510032343-4b7d792e82ce
 	github.com/imdario/mergo v0.3.12 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/jaguilar/vt100 v0.0.0-20150826170717-2703a27b14ea // indirect
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/jmespath/go-jmespath v0.3.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
@@ -148,7 +146,7 @@ require (
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
 	github.com/moby/spdystream v0.2.0 // indirect
-	github.com/moby/sys/mount v0.1.1 // indirect
+	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/moby/sys/mountinfo v0.4.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -174,7 +172,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tklauser/go-sysconf v0.3.9 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
-	github.com/tonistiigi/fsutil v0.0.0-20201103201449-0834f99b7b85 // indirect
+	github.com/tonistiigi/fsutil v0.0.0-20210609172227-d72af97c0eaf // indirect
 	github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect
 	github.com/ulikunitz/xz v0.5.8 // indirect
@@ -208,14 +206,27 @@ require (
 require github.com/google/go-containerregistry v0.8.0
 
 require (
+	github.com/Sirupsen/logrus v0.0.0-00010101000000-000000000000 // indirect
 	github.com/creack/pty v1.1.17 // indirect
+	github.com/docker/libnetwork v0.5.6 // indirect
+	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/rancher/wrangler v0.7.3-0.20210224225730-5ed69efb6ab9 // indirect
+	github.com/tonistiigi/vt100 v0.0.0-20210615222946-8066bb97264f // indirect
+	go.opentelemetry.io/contrib v0.21.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.21.0 // indirect
+	go.opentelemetry.io/otel v1.0.0-RC1 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.0.0-RC1 // indirect
+	go.opentelemetry.io/otel/sdk v1.0.0-RC1 // indirect
+	go.opentelemetry.io/otel/trace v1.0.0-RC1 // indirect
+	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 )
 
-replace github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
-
-replace github.com/moby/buildkit => github.com/okteto/buildkit v0.8.3-okteto1
+replace (
+	github.com/Sirupsen/logrus => github.com/sirupsen/logrus v1.8.0
+	github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
+	github.com/moby/buildkit => github.com/okteto/buildkit v0.9.2-okteto2
+)
 
 // https://github.com/okteto/okteto/issues/2129
 replace google.golang.org/grpc => google.golang.org/grpc v1.40.0
