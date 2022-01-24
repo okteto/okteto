@@ -83,7 +83,7 @@ func configForReference(reference string) (v1.Config, error) {
 func GetReferecenceEnvs(reference string) (reg, repo, tag, image string) {
 	ref, err := name.ParseReference(reference)
 	if err != nil {
-		log.Debugf("error parsing reference: %s - %v", reference, err)
+		oktetoLog.Debugf("error parsing reference: %s - %v", reference, err)
 		return "", "", "", reference
 	}
 
