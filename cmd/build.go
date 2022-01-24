@@ -162,15 +162,15 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 
 		// check if image is at registry and skip
 		if build.ShouldOptimizeBuild(opts.Tag) {
-			log.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
+			oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
 			globalReference := strings.Replace(opts.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 			if _, err := registry.GetImageTagWithDigest(globalReference); err == nil {
-				log.Information("skipping build: image already exists at global registry -  %s", globalReference)
+				oktetoLog.Information("skipping build: image already exists at global registry -  %s", globalReference)
 				return nil
 			}
 			// check if image already is at the registry
 			if _, err := registry.GetImageTagWithDigest(opts.Tag); err == nil {
-				log.Information("skipping build: image already exists at registry - %s", opts.Tag)
+				oktetoLog.Information("skipping build: image already exists at registry - %s", opts.Tag)
 				return nil
 			}
 		}
