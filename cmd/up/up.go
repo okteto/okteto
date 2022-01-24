@@ -168,6 +168,7 @@ func Up() *cobra.Command {
 				if err := up.deployApp(ctx); err != nil {
 					return err
 				}
+				up.Dev.Autocreate = false
 			}
 
 			err = up.start()
@@ -236,10 +237,6 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 		dev.LoadRemote(ssh.GetPublicKey())
 	}
 
-	if !dev.Autocreate {
-		dev.Autocreate = upOptions.Deploy
-	}
-
 	if upOptions.ForcePull {
 		dev.LoadForcePull()
 	}
@@ -263,6 +260,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		Executor:           utils.NewExecutor("tty"),
 		Proxy:              proxy,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
+		K8sClientProvider:  okteto.NewK8sClientProvider(),
 	}
 
 	return c.RunDeploy(ctx, "", &deploy.Options{

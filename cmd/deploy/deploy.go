@@ -78,7 +78,7 @@ type DeployCommand struct {
 	Kubeconfig         kubeConfigHandler
 	Executor           utils.ManifestExecutor
 	TempKubeconfigFile string
-	k8sClientProvider  okteto.K8sClientProvider
+	K8sClientProvider  okteto.K8sClientProvider
 }
 
 //Deploy deploys the okteto manifest
@@ -138,7 +138,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Executor:           utils.NewExecutor(oktetoLog.GetOutputFormat()),
 				Proxy:              proxy,
 				TempKubeconfigFile: GetTempKubeConfigFile(options.Name),
-				k8sClientProvider:  okteto.NewK8sClientProvider(),
+				K8sClientProvider:  okteto.NewK8sClientProvider(),
 			}
 			return c.RunDeploy(ctx, cwd, options)
 		},
@@ -474,7 +474,7 @@ func (dc *DeployCommand) showEndpoints(ctx context.Context, opts *Options) error
 	spinner.Start()
 	defer spinner.Stop()
 	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
-	iClient, err := dc.k8sClientProvider.GetIngressClient(ctx)
+	iClient, err := dc.K8sClientProvider.GetIngressClient(ctx)
 	if err != nil {
 		return err
 	}
