@@ -37,6 +37,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -65,7 +66,7 @@ func init() {
 
 	utilRuntime.ErrorHandlers = errorHandlers
 
-	if bin := os.Getenv(model.OktetoBinEnvVar); bin != "" {
+	if bin := os.Getenv(constants.OktetoBinEnvVar); bin != "" {
 		model.OktetoBinImageTag = bin
 		oktetoLog.Infof("using %s as the bin image", bin)
 	}
