@@ -120,7 +120,7 @@ func keepOnlySelectedServices(service string, manifest *model.ManifestBuild) {
 	}
 }
 
-func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) error {
+func buildV2(manifest model.ManifestBuild, options build.BuildOptions, args []string) error {
 	service := ""
 	if len(args) == 1 {
 		service = args[0]
@@ -128,28 +128,28 @@ func buildV2(m model.ManifestBuild, options build.BuildOptions, args []string) e
 
 	// settings for single build
 	if service != "" {
-		_, ok := m[service]
+		_, ok := manifest[service]
 		if !ok {
 			return fmt.Errorf("invalid service name: %s", service)
 		}
 
-		keepOnlySelectedServices(service, &m)
+		keepOnlySelectedServices(service, &manifest)
 
 		if options.Target != "" {
-			m[service].Target = options.Target
+			manifest[service].Target = options.Target
 		}
 		if len(options.CacheFrom) != 0 {
-			m[service].CacheFrom = options.CacheFrom
+			manifest[service].CacheFrom = options.CacheFrom
 		}
 		if options.Tag != "" {
-			m[service].Image = options.Tag
+			manifest[service].Image = options.Tag
 		}
 
 	} else if options.Tag != "" || options.Target != "" || options.CacheFrom != nil || options.Secrets != nil {
 		return fmt.Errorf("flags are not allowed when building services from manifest")
 	}
 
-	for srv, manifestOptions := range m {
+	for srv, manifestOptions := range manifest {
 		if !okteto.Context().IsOkteto && manifestOptions.Image == "" {
 			oktetoLog.Errorf("image is required")
 			continue
