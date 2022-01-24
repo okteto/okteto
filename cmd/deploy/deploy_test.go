@@ -109,7 +109,7 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 		Kubeconfig: &fakeKubeConfig{
 			errOnModify: assert.AnError,
 		},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+		K8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -143,7 +143,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 		Proxy:             p,
 		Executor:          e,
 		Kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+		K8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -179,7 +179,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		Proxy:             p,
 		Executor:          e,
 		Kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+		K8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -219,7 +219,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		Proxy:             p,
 		Executor:          e,
 		Kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+		K8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 
@@ -258,7 +258,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		Proxy:             p,
 		Executor:          e,
 		Kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+		K8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
 	opts := &Options{
