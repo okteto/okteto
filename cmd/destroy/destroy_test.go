@@ -144,7 +144,7 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 		t.Fatal("could not create fake k8s client")
 	}
 	cfg, _ := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
-	assert.Nil(t, cfg)
+	assert.NotNil(t, cfg)
 }
 
 func TestDestroyWithErrorListingSecrets(t *testing.T) {
@@ -195,7 +195,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 				t.Fatal("could not create fake k8s client")
 			}
 			cfg, _ := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
-			assert.Nil(t, cfg)
+			assert.NotNil(t, cfg)
 		})
 	}
 }
@@ -316,7 +316,7 @@ func TestDestroyWithError(t *testing.T) {
 				t.Fatal("could not create fake k8s client")
 			}
 			cfg, _ := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
-			assert.Nil(t, cfg)
+			assert.NotNil(t, cfg)
 		})
 	}
 }
@@ -558,7 +558,7 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 		t.Fatal("could not create fake k8s client")
 	}
 	cfg, _ := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
-	assert.Nil(t, cfg)
+	assert.NotNil(t, cfg)
 }
 
 func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {

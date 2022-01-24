@@ -251,7 +251,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		return err
 	}
 
-	if err := configmaps.Destroy(ctx, cfg.Name, opts.Namespace, c); err != nil {
+	if err := configmaps.Destroy(ctx, cfg.Name, namespace, c); err != nil {
 		return err
 	}
 	return commandErr
