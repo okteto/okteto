@@ -266,8 +266,8 @@ func (up *upContext) deployApp(ctx context.Context) error {
 	}
 
 	return c.RunDeploy(ctx, "", &deploy.Options{
-		Name:     up.Manifest.Name,
-		Manifest: up.Manifest,
+		Name:         up.Manifest.Name,
+		ManifestPath: up.Manifest.Filename,
 	})
 }
 
