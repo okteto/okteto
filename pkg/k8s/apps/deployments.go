@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +39,7 @@ type DeploymentApp struct {
 }
 
 func NewDeploymentApp(d *appsv1.Deployment) *DeploymentApp {
-	return &DeploymentApp{kind: model.Deployment, d: d}
+	return &DeploymentApp{kind: constants.Deployment, d: d}
 }
 
 func (i *DeploymentApp) Kind() string {
@@ -87,10 +88,10 @@ func (i *DeploymentApp) DevClone() App {
 		},
 		Spec: *i.d.Spec.DeepCopy(),
 	}
-	if i.d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
-		clone.Labels[model.DevLabel] = "true"
+	if i.d.Annotations[constants.OktetoAutoCreateAnnotation] == constants.OktetoUpCmd {
+		clone.Labels[constants.DevLabel] = "true"
 	} else {
-		clone.Labels[model.DevCloneLabel] = string(i.d.UID)
+		clone.Labels[constants.DevCloneLabel] = string(i.d.UID)
 	}
 	for k, v := range i.d.Labels {
 		clone.Labels[k] = v
@@ -98,7 +99,7 @@ func (i *DeploymentApp) DevClone() App {
 	for k, v := range i.d.Annotations {
 		clone.Annotations[k] = v
 	}
-	delete(clone.Annotations, model.OktetoAutoCreateAnnotation)
+	delete(clone.Annotations, constants.OktetoAutoCreateAnnotation)
 	clone.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RecreateDeploymentStrategyType,
 	}
@@ -118,7 +119,7 @@ func (i *DeploymentApp) GetRunningPod(ctx context.Context, c kubernetes.Interfac
 }
 
 func (i *DeploymentApp) RestoreOriginal() error {
-	manifest := i.d.Annotations[model.DeploymentAnnotation]
+	manifest := i.d.Annotations[constants.DeploymentAnnotation]
 	if manifest == "" {
 		return nil
 	}
@@ -174,7 +175,7 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 					oktetoLog.Debugf("Failed to parse deployment event: %s", e)
 					continue
 				}
-				if d.Annotations[model.DeploymentRevisionAnnotation] != "" && d.Annotations[model.DeploymentRevisionAnnotation] != i.d.Annotations[model.DeploymentRevisionAnnotation] {
+				if d.Annotations[constants.DeploymentRevisionAnnotation] != "" && d.Annotations[constants.DeploymentRevisionAnnotation] != i.d.Annotations[constants.DeploymentRevisionAnnotation] {
 					result <- oktetoErrors.ErrApplyToApp
 					return
 				}
@@ -187,7 +188,7 @@ func (i *DeploymentApp) Watch(ctx context.Context, result chan error, c kubernet
 }
 
 func (i *DeploymentApp) Deploy(ctx context.Context, c kubernetes.Interface) error {
-	if string(i.d.UID) == "" && i.d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
+	if string(i.d.UID) == "" && i.d.Annotations[constants.OktetoAutoCreateAnnotation] == constants.OktetoUpCmd {
 		return nil
 	}
 

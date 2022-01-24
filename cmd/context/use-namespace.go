@@ -19,6 +19,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -29,7 +30,7 @@ func UseNamespace() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "use-namespace [name]",
-		Args:   utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#namespace"),
+		Args:   utils.ExactArgsAccepted(1, constants.NamespaceDocsURL),
 		Short:  "Set the namespace of the okteto context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning("'okteto context use-namespace' is deprecated in favor of 'okteto namespace', and will be removed in version 1.16")

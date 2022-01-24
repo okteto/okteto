@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -59,13 +60,13 @@ func Test_waitForDevPodsTermination(t *testing.T) {
 			pod := &v1.Pod{}
 			pod.SetName("dev-123")
 			pod.SetNamespace("ns")
-			pod.Labels = map[string]string{model.InteractiveDevLabel: "dev"}
+			pod.Labels = map[string]string{constants.InteractiveDevLabel: "dev"}
 			pod.ObjectMeta.SetDeletionTimestamp(&metav1.Time{})
 
 			dPod := &v1.Pod{}
 			dPod.SetName("service-123")
 			dPod.SetNamespace("ns")
-			dPod.Labels = map[string]string{model.DetachedDevLabel: "service"}
+			dPod.Labels = map[string]string{constants.DetachedDevLabel: "service"}
 			dPod.ObjectMeta.SetDeletionTimestamp(&metav1.Time{})
 
 			client := fake.NewSimpleClientset(pod, dPod)

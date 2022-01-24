@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +35,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
 		Short: "Destroy a stack",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#destroy-1"),
+		Args:  utils.MaximumNArgsAccepted(1, constants.DestroyStackCtxDocsURL),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath)
 			if err != nil {

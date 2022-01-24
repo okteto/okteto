@@ -26,6 +26,7 @@ import (
 	getter "github.com/hashicorp/go-getter"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 )
 
 const (
@@ -125,7 +126,7 @@ func ShouldUpgrade() bool {
 }
 
 func GetMinimumVersion() *semver.Version {
-	v := os.Getenv(model.SyncthingVersionEnvVar)
+	v := os.Getenv(constants.SyncthingVersionEnvVar)
 	if v == "" {
 		v = syncthingVersion
 	}

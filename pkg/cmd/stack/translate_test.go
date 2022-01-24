@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -145,7 +146,7 @@ func Test_translateConfigMap(t *testing.T) {
 	if result.Name != "okteto-stackName" {
 		t.Errorf("Wrong configmap name: '%s'", result.Name)
 	}
-	if result.Labels[model.StackLabel] != "true" {
+	if result.Labels[constants.StackLabel] != "true" {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
 	}
 	if result.Data[NameField] != "stackName" {
@@ -199,10 +200,10 @@ func Test_translateDeployment(t *testing.T) {
 		t.Errorf("Wrong deployment name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                    "value1",
-		"label2":                    "value2",
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
+		"label1":                        "value1",
+		"label2":                        "value2",
+		constants.StackNameLabel:        "stackName",
+		constants.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong deployment labels: '%s'", result.Labels)
@@ -218,8 +219,8 @@ func Test_translateDeployment(t *testing.T) {
 		t.Errorf("Wrong deployment spec.replicas: '%d'", *result.Spec.Replicas)
 	}
 	selector := map[string]string{
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
+		constants.StackNameLabel:        "stackName",
+		constants.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Spec.Selector.MatchLabels, selector) {
 		t.Errorf("Wrong spec.selector: '%s'", result.Spec.Selector.MatchLabels)
@@ -323,11 +324,11 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong statefulset name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                      "value1",
-		"label2":                      "value2",
-		model.StackNameLabel:          "stackName",
-		model.StackServiceNameLabel:   "svcName",
-		"stack.okteto.com/volume-usr": "true",
+		"label1":                        "value1",
+		"label2":                        "value2",
+		constants.StackNameLabel:        "stackName",
+		constants.StackServiceNameLabel: "svcName",
+		"stack.okteto.com/volume-usr":   "true",
 	}
 	assert.Equal(t, labels, result.Labels)
 
@@ -342,8 +343,8 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong statefulset spec.replicas: '%d'", *result.Spec.Replicas)
 	}
 	selector := map[string]string{
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
+		constants.StackNameLabel:        "stackName",
+		constants.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Spec.Selector.MatchLabels, selector) {
 		t.Errorf("Wrong spec.selector: '%s'", result.Spec.Selector.MatchLabels)
@@ -522,10 +523,10 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 		t.Errorf("Wrong job name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                    "value1",
-		"label2":                    "value2",
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
+		"label1":                        "value1",
+		"label2":                        "value2",
+		constants.StackNameLabel:        "stackName",
+		constants.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong job labels: '%s'", result.Labels)
@@ -656,10 +657,10 @@ func Test_translateJobWithVolumes(t *testing.T) {
 		t.Errorf("Wrong job name: '%s'", result.Name)
 	}
 	labels := map[string]string{
-		"label1":                    "value1",
-		"label2":                    "value2",
-		model.StackNameLabel:        "stackName",
-		model.StackServiceNameLabel: "svcName",
+		"label1":                        "value1",
+		"label2":                        "value2",
+		constants.StackNameLabel:        "stackName",
+		constants.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong job labels: '%s'", result.Labels)
@@ -819,10 +820,10 @@ func Test_translateService(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "svcName",
 					Labels: map[string]string{
-						"label1":                    "value1",
-						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						"label1":                        "value1",
+						"label2":                        "value2",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
 						"annotation1": "value1",
@@ -832,8 +833,8 @@ func Test_translateService(t *testing.T) {
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeClusterIP,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{
 						{
@@ -871,9 +872,9 @@ func Test_translateService(t *testing.T) {
 
 						Public: true,
 						Annotations: model.Annotations{
-							"annotation1":                     "value1",
-							"annotation2":                     "value2",
-							model.OktetoAutoIngressAnnotation: "true",
+							"annotation1":                         "value1",
+							"annotation2":                         "value2",
+							constants.OktetoAutoIngressAnnotation: "true",
 						},
 						Ports: []model.Port{
 							{
@@ -893,22 +894,22 @@ func Test_translateService(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "svcName",
 					Labels: map[string]string{
-						"label1":                    "value1",
-						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						"label1":                        "value1",
+						"label2":                        "value2",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
-						"annotation1":                     "value1",
-						"annotation2":                     "value2",
-						model.OktetoAutoIngressAnnotation: "true",
+						"annotation1":                         "value1",
+						"annotation2":                         "value2",
+						constants.OktetoAutoIngressAnnotation: "true",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeLoadBalancer,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{
 						{
@@ -944,9 +945,9 @@ func Test_translateService(t *testing.T) {
 							"label2": "value2",
 						},
 						Annotations: model.Annotations{
-							"annotation1":                     "value1",
-							"annotation2":                     "value2",
-							model.OktetoAutoIngressAnnotation: "private",
+							"annotation1":                         "value1",
+							"annotation2":                         "value2",
+							constants.OktetoAutoIngressAnnotation: "private",
 						},
 						Public: true,
 						Ports: []model.Port{
@@ -966,22 +967,22 @@ func Test_translateService(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "svcName",
 					Labels: map[string]string{
-						"label1":                    "value1",
-						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						"label1":                        "value1",
+						"label2":                        "value2",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
-						"annotation1":                     "value1",
-						"annotation2":                     "value2",
-						model.OktetoAutoIngressAnnotation: "private",
+						"annotation1":                         "value1",
+						"annotation2":                         "value2",
+						constants.OktetoAutoIngressAnnotation: "private",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeLoadBalancer,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{
 						{
@@ -1017,9 +1018,9 @@ func Test_translateService(t *testing.T) {
 							"label2": "value2",
 						},
 						Annotations: model.Annotations{
-							"annotation1":                    "value1",
-							"annotation2":                    "value2",
-							model.OktetoPrivateSvcAnnotation: "true",
+							"annotation1":                        "value1",
+							"annotation2":                        "value2",
+							constants.OktetoPrivateSvcAnnotation: "true",
 						},
 						Public: true,
 						Ports: []model.Port{
@@ -1039,23 +1040,23 @@ func Test_translateService(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "svcName",
 					Labels: map[string]string{
-						"label1":                    "value1",
-						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						"label1":                        "value1",
+						"label2":                        "value2",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
-						"annotation1":                     "value1",
-						"annotation2":                     "value2",
-						model.OktetoAutoIngressAnnotation: "private",
-						model.OktetoPrivateSvcAnnotation:  "true",
+						"annotation1":                         "value1",
+						"annotation2":                         "value2",
+						constants.OktetoAutoIngressAnnotation: "private",
+						constants.OktetoPrivateSvcAnnotation:  "true",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeLoadBalancer,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
-						model.StackServiceNameLabel: "svcName",
+						constants.StackNameLabel:        "stackName",
+						constants.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{
 						{
@@ -1117,8 +1118,8 @@ func Test_translateEndpointsV1(t *testing.T) {
 	}
 
 	annotations := map[string]string{
-		model.OktetoIngressAutoGenerateHost: "true",
-		"annotation1":                       "value1",
+		constants.OktetoIngressAutoGenerateHost: "true",
+		"annotation1":                           "value1",
 	}
 
 	if !reflect.DeepEqual(result.Annotations, annotations) {
@@ -1146,9 +1147,9 @@ func Test_translateEndpointsV1(t *testing.T) {
 	}
 
 	labels := map[string]string{
-		model.StackNameLabel:         "stackName",
-		model.StackEndpointNameLabel: "endpoint1",
-		"label1":                     "value1",
+		constants.StackNameLabel:         "stackName",
+		constants.StackEndpointNameLabel: "endpoint1",
+		"label1":                         "value1",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
@@ -1181,8 +1182,8 @@ func Test_translateEndpointsV1Beta1(t *testing.T) {
 	}
 
 	annotations := map[string]string{
-		model.OktetoIngressAutoGenerateHost: "true",
-		"annotation1":                       "value1",
+		constants.OktetoIngressAutoGenerateHost: "true",
+		"annotation1":                           "value1",
 	}
 
 	if !reflect.DeepEqual(result.Annotations, annotations) {
@@ -1203,9 +1204,9 @@ func Test_translateEndpointsV1Beta1(t *testing.T) {
 	}
 
 	labels := map[string]string{
-		model.StackNameLabel:         "stackName",
-		model.StackEndpointNameLabel: "endpoint1",
-		"label1":                     "value1",
+		constants.StackNameLabel:         "stackName",
+		constants.StackEndpointNameLabel: "endpoint1",
+		"label1":                         "value1",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
@@ -1470,7 +1471,7 @@ func Test_translateAffinity(t *testing.T) {
 							LabelSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{
 									{
-										Key:      fmt.Sprintf("%s-test", model.StackVolumeNameLabel),
+										Key:      fmt.Sprintf("%s-test", constants.StackVolumeNameLabel),
 										Operator: metav1.LabelSelectorOpExists,
 									},
 								},
@@ -1506,7 +1507,7 @@ func Test_translateAffinity(t *testing.T) {
 							LabelSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{
 									{
-										Key:      fmt.Sprintf("%s-test-1", model.StackVolumeNameLabel),
+										Key:      fmt.Sprintf("%s-test-1", constants.StackVolumeNameLabel),
 										Operator: metav1.LabelSelectorOpExists,
 									},
 								},
@@ -1517,7 +1518,7 @@ func Test_translateAffinity(t *testing.T) {
 							LabelSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{
 									{
-										Key:      fmt.Sprintf("%s-test-2", model.StackVolumeNameLabel),
+										Key:      fmt.Sprintf("%s-test-2", constants.StackVolumeNameLabel),
 										Operator: metav1.LabelSelectorOpExists,
 									},
 								},
@@ -1528,7 +1529,7 @@ func Test_translateAffinity(t *testing.T) {
 							LabelSelector: &metav1.LabelSelector{
 								MatchExpressions: []metav1.LabelSelectorRequirement{
 									{
-										Key:      fmt.Sprintf("%s-test-3", model.StackVolumeNameLabel),
+										Key:      fmt.Sprintf("%s-test-3", constants.StackVolumeNameLabel),
 										Operator: metav1.LabelSelectorOpExists,
 									},
 								},

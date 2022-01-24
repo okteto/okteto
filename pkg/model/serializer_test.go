@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
@@ -942,7 +943,7 @@ func TestSyncUnmashalling(t *testing.T) {
 				},
 				Compression:    true,
 				Verbose:        false,
-				RescanInterval: DefaultSyncthingRescanInterval,
+				RescanInterval: constants.DefaultSyncthingRescanInterval,
 			},
 		},
 		{
@@ -1097,7 +1098,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: Localhost,
+						Interface: constants.Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1162,7 +1163,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: Localhost,
+						Interface: constants.Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1239,7 +1240,7 @@ sync:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: Localhost,
+						Interface: constants.Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1317,7 +1318,7 @@ services:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: Localhost,
+						Interface: constants.Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1452,7 +1453,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: Localhost,
+						Interface: constants.Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1534,7 +1535,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: Localhost,
+						Interface: constants.Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1599,7 +1600,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: Localhost,
+						Interface: constants.Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},

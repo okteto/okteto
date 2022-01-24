@@ -25,7 +25,7 @@ import (
 	"github.com/dukex/mixpanel"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -313,7 +313,7 @@ func track(event string, success bool, props map[string]interface{}) {
 		mpOS = "Linux"
 	}
 
-	origin, ok := os.LookupEnv(model.OktetoOriginEnvVar)
+	origin, ok := os.LookupEnv(constants.OktetoOriginEnvVar)
 	if !ok {
 		origin = "cli"
 	}
@@ -333,7 +333,7 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["success"] = success
 	props["contextType"] = getContextType(okteto.Context().Name)
 	props["context"] = okteto.Context().Name
-	if termType := os.Getenv(model.TermEnvVar); termType == "" {
+	if termType := os.Getenv(constants.TermEnvVar); termType == "" {
 		props["term-type"] = "other"
 	} else {
 		props["term-type"] = termType

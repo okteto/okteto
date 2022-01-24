@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -50,7 +51,7 @@ func Init() *cobra.Command {
 	var overwrite bool
 	cmd := &cobra.Command{
 		Use:   "init",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
+		Args:  utils.NoArgsAccepted(constants.InitDocsURL),
 		Short: "Automatically generate your okteto manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
@@ -72,7 +73,7 @@ func Init() *cobra.Command {
 				return err
 			}
 
-			l := os.Getenv(model.OktetoLanguageEnvVar)
+			l := os.Getenv(constants.OktetoLanguageEnvVar)
 			workDir, err := os.Getwd()
 			if err != nil {
 				return err
@@ -104,7 +105,7 @@ func Init() *cobra.Command {
 func Run(devPath, language, workDir string, overwrite bool) error {
 	oktetoLog.Println("This command walks you through creating an okteto manifest.")
 	oktetoLog.Println("It only covers the most common items, and tries to guess sensible defaults.")
-	oktetoLog.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
+	oktetoLog.Printf("See %s for the official documentation about the okteto manifest.", constants.ManifestDocsURL)
 	ctx := context.Background()
 	devPath, err := validateDevPath(devPath, overwrite)
 	if err != nil {
@@ -237,7 +238,7 @@ func supportsPersistentVolumes(ctx context.Context) bool {
 	}
 
 	for i := range stClassList.Items {
-		if stClassList.Items[i].Annotations[model.DefaultStorageClassAnnotation] == "true" {
+		if stClassList.Items[i].Annotations[constants.DefaultStorageClassAnnotation] == "true" {
 			oktetoLog.Infof("found default storage class '%s'", stClassList.Items[i].Name)
 			return true
 		}
@@ -299,19 +300,19 @@ func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, er
 	}
 	options := []string{}
 	for i := range dList {
-		if dList[i].Labels[model.DevLabel] != "" {
+		if dList[i].Labels[constants.DevLabel] != "" {
 			continue
 		}
-		if dList[i].Labels[model.DevCloneLabel] != "" {
+		if dList[i].Labels[constants.DevCloneLabel] != "" {
 			continue
 		}
 		options = append(options, dList[i].Name)
 	}
 	for i := range sfsList {
-		if sfsList[i].Labels[model.DevLabel] != "" {
+		if sfsList[i].Labels[constants.DevLabel] != "" {
 			continue
 		}
-		if sfsList[i].Labels[model.DevCloneLabel] != "" {
+		if sfsList[i].Labels[constants.DevCloneLabel] != "" {
 			continue
 		}
 		options = append(options, sfsList[i].Name)

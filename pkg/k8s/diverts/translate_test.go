@@ -17,7 +17,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -39,10 +39,10 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 			Name:      "name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                     "value1",
-				model.OktetoAutoIngressAnnotation: "true",
+				"annotation1":                         "value1",
+				constants.OktetoAutoIngressAnnotation: "true",
 			},
-			Labels:          map[string]string{"label1": "value1", model.DeployedByLabel: "cindy"},
+			Labels:          map[string]string{"label1": "value1", constants.DeployedByLabel: "cindy"},
 			ResourceVersion: "version",
 		},
 		Spec: apiv1.ServiceSpec{
@@ -71,14 +71,14 @@ func Test_translateServiceNotDiverted(t *testing.T) {
 				"annotation1": "value1",
 			},
 			Labels: map[string]string{
-				model.DeployedByLabel:   "cindy",
-				model.OktetoDivertLabel: "cindy",
+				constants.DeployedByLabel:   "cindy",
+				constants.OktetoDivertLabel: "cindy",
 			},
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
-				model.OktetoDivertLabel:   "cindy",
-				model.InteractiveDevLabel: "name-cindy",
+				constants.OktetoDivertLabel:   "cindy",
+				constants.InteractiveDevLabel: "name-cindy",
 			},
 			Ports: []apiv1.ServicePort{
 				{
@@ -107,9 +107,9 @@ func Test_translateServiceDiverted(t *testing.T) {
 			Name:      "name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                                   "value1",
-				model.OktetoAutoIngressAnnotation:               "true",
-				model.OktetoDivertServiceModificationAnnotation: "{\"proxy_port\":1026,\"original_port\":8080,\"original_target_port\":8080}",
+				"annotation1":                                       "value1",
+				constants.OktetoAutoIngressAnnotation:               "true",
+				constants.OktetoDivertServiceModificationAnnotation: "{\"proxy_port\":1026,\"original_port\":8080,\"original_target_port\":8080}",
 			},
 			Labels:          map[string]string{"label1": "value1"},
 			ResourceVersion: "version",
@@ -135,12 +135,12 @@ func Test_translateServiceDiverted(t *testing.T) {
 			Annotations: map[string]string{
 				"annotation1": "value1",
 			},
-			Labels: map[string]string{model.OktetoDivertLabel: "cindy"},
+			Labels: map[string]string{constants.OktetoDivertLabel: "cindy"},
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: map[string]string{
-				model.OktetoDivertLabel:   "cindy",
-				model.InteractiveDevLabel: "name-cindy",
+				constants.OktetoDivertLabel:   "cindy",
+				constants.InteractiveDevLabel: "name-cindy",
 			},
 			Ports: []apiv1.ServicePort{
 				{
@@ -166,7 +166,7 @@ func Test_translateServiceDiverted(t *testing.T) {
 
 	t.Run("StringServiceModValues", func(t *testing.T) {
 		stringMod := "{\"proxy_port\":\"1026\",\"original_port\":\"8080\",\"original_target_port\":\"8080\"}"
-		original.ObjectMeta.Annotations[model.OktetoDivertServiceModificationAnnotation] = stringMod
+		original.ObjectMeta.Annotations[constants.OktetoDivertServiceModificationAnnotation] = stringMod
 
 		app := apps.NewDeploymentApp(d)
 		translated, err := translateService("cindy", app, original)
@@ -188,10 +188,10 @@ func Test_translateIngressGenerateHostTrue(t *testing.T) {
 			Name:      "name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                       "value1",
-				model.OktetoIngressAutoGenerateHost: "true",
+				"annotation1":                           "value1",
+				constants.OktetoIngressAutoGenerateHost: "true",
 			},
-			Labels:          map[string]string{"label1": "value1", model.DeployedByLabel: "cindy"},
+			Labels:          map[string]string{"label1": "value1", constants.DeployedByLabel: "cindy"},
 			ResourceVersion: "version",
 		},
 	}
@@ -201,12 +201,12 @@ func Test_translateIngressGenerateHostTrue(t *testing.T) {
 			Name:      "name-cindy",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                       "value1",
-				model.OktetoIngressAutoGenerateHost: "true",
+				"annotation1":                           "value1",
+				constants.OktetoIngressAutoGenerateHost: "true",
 			},
 			Labels: map[string]string{
-				model.DeployedByLabel:   "cindy",
-				model.OktetoDivertLabel: "cindy",
+				constants.DeployedByLabel:   "cindy",
+				constants.OktetoDivertLabel: "cindy",
 			},
 		},
 	}
@@ -224,8 +224,8 @@ func Test_translateIngressCustomGenerateHost(t *testing.T) {
 			Name:      "name",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                       "value1",
-				model.OktetoIngressAutoGenerateHost: "custom",
+				"annotation1":                           "value1",
+				constants.OktetoIngressAutoGenerateHost: "custom",
 			},
 			Labels:          map[string]string{"label1": "value1"},
 			ResourceVersion: "version",
@@ -237,10 +237,10 @@ func Test_translateIngressCustomGenerateHost(t *testing.T) {
 			Name:      "name-cindy",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                       "value1",
-				model.OktetoIngressAutoGenerateHost: "cindy-custom",
+				"annotation1":                           "value1",
+				constants.OktetoIngressAutoGenerateHost: "cindy-custom",
 			},
-			Labels: map[string]string{model.OktetoDivertLabel: "cindy"},
+			Labels: map[string]string{constants.OktetoDivertLabel: "cindy"},
 		},
 	}
 	marshalled, _ := yaml.Marshal(translated.ObjectMeta)

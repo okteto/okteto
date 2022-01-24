@@ -24,6 +24,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -99,7 +100,7 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 		return fmt.Errorf("current okteto volume size is wrong. Run '%s' and try again", utils.GetDownCommand(devPath))
 	}
 	if currentSize.Cmp(resource.MustParse(dev.PersistentVolumeSize())) > 0 {
-		if currentSize.Cmp(resource.MustParse("10Gi")) != 0 || dev.PersistentVolumeSize() != model.OktetoDefaultPVSize {
+		if currentSize.Cmp(resource.MustParse("10Gi")) != 0 || dev.PersistentVolumeSize() != constants.OktetoDefaultPVSize {
 			return fmt.Errorf(
 				"okteto volume size '%s' cannot be less than previous value '%s'. Run '%s' and try again",
 				dev.PersistentVolumeSize(),
@@ -116,12 +117,12 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 		if dev.Metadata.Annotations == nil {
 			dev.Metadata.Annotations = map[string]string{}
 		}
-		dev.Metadata.Annotations[model.OktetoRestartAnnotation] = restartUUID
+		dev.Metadata.Annotations[constants.OktetoRestartAnnotation] = restartUUID
 		for _, s := range dev.Services {
 			if s.Annotations == nil {
 				s.Annotations = map[string]string{}
 			}
-			s.Annotations[model.OktetoRestartAnnotation] = restartUUID
+			s.Annotations[constants.OktetoRestartAnnotation] = restartUUID
 		}
 	}
 

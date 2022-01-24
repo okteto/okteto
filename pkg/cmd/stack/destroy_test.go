@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,7 +37,7 @@ func Test_destroyDeployments(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "ns",
-			Labels:    map[string]string{model.StackNameLabel: "stack-test"},
+			Labels:    map[string]string{constants.StackNameLabel: "stack-test"},
 		},
 	}
 
@@ -115,7 +116,7 @@ func Test_destroyStatefulsets(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "ns",
-			Labels:    map[string]string{model.StackNameLabel: "stack-test"},
+			Labels:    map[string]string{constants.StackNameLabel: "stack-test"},
 		},
 	}
 
@@ -206,7 +207,7 @@ func Test_destroyJobs(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "ns",
-			Labels:    map[string]string{model.StackNameLabel: "stack-test"},
+			Labels:    map[string]string{constants.StackNameLabel: "stack-test"},
 		},
 	}
 

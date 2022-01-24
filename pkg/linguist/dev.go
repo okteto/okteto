@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -270,7 +271,7 @@ func init() {
 	}
 
 	languageDefaults[Unrecognized] = languageDefault{
-		image:   model.DefaultImage,
+		image:   constants.DefaultImage,
 		path:    "/usr/src/app",
 		command: []string{"bash"},
 		forward: []model.Forward{},
@@ -313,7 +314,7 @@ func GetDevDefaults(language, workdir string) (*model.Dev, error) {
 		Environment: vals.environment,
 		Volumes:     vals.volumes,
 		Sync: model.Sync{
-			RescanInterval: model.DefaultSyncthingRescanInterval,
+			RescanInterval: constants.DefaultSyncthingRescanInterval,
 			Folders: []model.SyncFolder{
 				{
 					LocalPath:  ".",

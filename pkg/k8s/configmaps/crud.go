@@ -18,7 +18,7 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -58,7 +58,7 @@ func Deploy(ctx context.Context, cf *apiv1.ConfigMap, namespace string, c *kuber
 		}
 		return err
 	}
-	if old.Labels[model.OktetoInstallerRunningLabel] == "true" {
+	if old.Labels[constants.OktetoInstallerRunningLabel] == "true" {
 		return nil
 	}
 	return update(ctx, cf, namespace, c)

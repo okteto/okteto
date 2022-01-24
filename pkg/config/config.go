@@ -23,6 +23,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"gopkg.in/yaml.v2"
 )
 
@@ -75,7 +76,7 @@ func GetBinaryFullPath() string {
 
 // GetOktetoHome returns the path of the okteto folder
 func GetOktetoHome() string {
-	if v, ok := os.LookupEnv(model.OktetoFolderEnvVar); ok {
+	if v, ok := os.LookupEnv(constants.OktetoFolderEnvVar); ok {
 		if !model.FileExists(v) {
 			oktetoLog.Fatalf("OKTETO_FOLDER doesn't exist: %s", v)
 		}
@@ -179,7 +180,7 @@ func GetState(dev *model.Dev) (UpState, error) {
 
 // GetUserHomeDir returns the OS home dir
 func GetUserHomeDir() string {
-	if v, ok := os.LookupEnv(model.OktetoHomeEnvVar); ok {
+	if v, ok := os.LookupEnv(constants.OktetoHomeEnvVar); ok {
 		if !model.FileExists(v) {
 			oktetoLog.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
 		}
@@ -196,21 +197,21 @@ func GetUserHomeDir() string {
 		return home
 	}
 
-	return os.Getenv(model.HomeEnvVar)
+	return os.Getenv(constants.HomeEnvVar)
 
 }
 
 func homedirWindows() (string, error) {
-	if home := os.Getenv(model.HomeEnvVar); home != "" {
+	if home := os.Getenv(constants.HomeEnvVar); home != "" {
 		return home, nil
 	}
 
-	if home := os.Getenv(model.UserProfileEnvVar); home != "" {
+	if home := os.Getenv(constants.UserProfileEnvVar); home != "" {
 		return home, nil
 	}
 
-	drive := os.Getenv(model.HomeDriveEnvVar)
-	path := os.Getenv(model.HomePathEnvVar)
+	drive := os.Getenv(constants.HomeDriveEnvVar)
+	path := os.Getenv(constants.HomePathEnvVar)
 	home := drive + path
 	if drive == "" || path == "" {
 		return "", fmt.Errorf("HOME, HOMEDRIVE, HOMEPATH, or USERPROFILE are empty. Use $OKTETO_HOME to set your home directory")
@@ -223,7 +224,7 @@ func homedirWindows() (string, error) {
 func GetKubeconfigPath() []string {
 	home := GetUserHomeDir()
 	kubeconfig := []string{filepath.Join(home, ".kube", "config")}
-	kubeconfigEnv := os.Getenv(model.KubeConfigEnvVar)
+	kubeconfigEnv := os.Getenv(constants.KubeConfigEnvVar)
 	if len(kubeconfigEnv) > 0 {
 		kubeconfig = splitKubeConfigEnv(kubeconfigEnv)
 	}

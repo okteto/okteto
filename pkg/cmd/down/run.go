@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/services"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"k8s.io/client-go/kubernetes"
@@ -34,7 +35,7 @@ func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait 
 	}
 
 	for _, tr := range trMap {
-		if app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
+		if app.ObjectMeta().Annotations[constants.OktetoAutoCreateAnnotation] == constants.OktetoUpCmd {
 			if err := app.Destroy(ctx, c); err != nil {
 				return err
 			}

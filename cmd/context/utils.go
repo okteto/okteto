@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -58,7 +59,7 @@ func getKubernetesContextList(filterOkteto bool) []string {
 		return contextList
 	}
 	for name := range cfg.Contexts {
-		if _, ok := cfg.Contexts[name].Extensions[model.OktetoExtension]; ok && filterOkteto {
+		if _, ok := cfg.Contexts[name].Extensions[constants.OktetoExtension]; ok && filterOkteto {
 			continue
 		}
 		contextList = append(contextList, name)
@@ -283,7 +284,7 @@ func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error
 		}, nil
 	}
 
-	return nil, fmt.Errorf("file okteto manifest not found. See https://okteto.com/docs/cloud/okteto-pipeline for details on how to configure your git repository with okteto")
+	return nil, fmt.Errorf("file okteto manifest not found. See %s for details on how to configure your git repository with okteto", constants.ConfigurePipelineDocsURL)
 }
 
 func getPipelinePath(src, filename string) string {

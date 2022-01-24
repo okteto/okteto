@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -114,8 +115,8 @@ services:
 
 	d1 := deployments.Sandbox(dev1)
 	d1.UID = types.UID("deploy1")
-	delete(d1.Annotations, model.OktetoAutoCreateAnnotation)
-	d1.Annotations[model.StateBeforeSleepingAnnontation] = "{\"Replicas\":3}"
+	delete(d1.Annotations, constants.OktetoAutoCreateAnnotation)
+	d1.Annotations[constants.StateBeforeSleepingAnnontation] = "{\"Replicas\":3}"
 	d1.Spec.Replicas = pointer.Int32Ptr(2)
 	d1.Spec.Strategy = appsv1.DeploymentStrategy{
 		Type: appsv1.RollingUpdateDeploymentStrategyType,
@@ -253,25 +254,25 @@ services:
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/init-volume/1",
-						SubPath:   path.Join(model.DataSubPath, "go/pkg"),
+						SubPath:   path.Join(constants.DataSubPath, "go/pkg"),
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/init-volume/2",
-						SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
+						SubPath:   path.Join(constants.DataSubPath, "root/.cache/go-build"),
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/init-volume/3",
-						SubPath:   model.SourceCodeSubPath,
+						SubPath:   constants.SourceCodeSubPath,
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/init-volume/4",
-						SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+						SubPath:   path.Join(constants.SourceCodeSubPath, "sub"),
 					},
 				},
 			},
@@ -311,37 +312,37 @@ services:
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/var/syncthing",
-						SubPath:   model.SyncthingSubPath,
+						SubPath:   constants.SyncthingSubPath,
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
-						MountPath: model.RemoteMountPath,
-						SubPath:   model.RemoteSubPath,
+						MountPath: constants.RemoteMountPath,
+						SubPath:   constants.RemoteSubPath,
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/go/pkg/",
-						SubPath:   path.Join(model.DataSubPath, "go/pkg"),
+						SubPath:   path.Join(constants.DataSubPath, "go/pkg"),
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/root/.cache/go-build",
-						SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
+						SubPath:   path.Join(constants.DataSubPath, "root/.cache/go-build"),
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/app",
-						SubPath:   model.SourceCodeSubPath,
+						SubPath:   constants.SourceCodeSubPath,
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/path",
-						SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+						SubPath:   path.Join(constants.SourceCodeSubPath, "sub"),
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
@@ -375,7 +376,7 @@ services:
 	if tr1.App.Replicas() != 0 {
 		t.Fatalf("d1 is running %d replicas", tr1.App.Replicas())
 	}
-	expectedLabels := map[string]string{model.DevLabel: "true"}
+	expectedLabels := map[string]string{constants.DevLabel: "true"}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong d1 labels: '%v'", tr1.App.ObjectMeta().Labels)
 	}
@@ -384,7 +385,7 @@ services:
 		t.Fatalf("Wrong d1 pod labels: '%v'", tr1.App.TemplateObjectMeta().Labels)
 
 	}
-	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "3", "key1": "value1"}
+	expectedAnnotations := map[string]string{constants.AppReplicasAnnotation: "3", "key1": "value1"}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong d1 annotations: '%v'", tr1.App.ObjectMeta().Annotations)
 	}
@@ -405,7 +406,7 @@ services:
 	if tr1.DevApp.Replicas() != 1 {
 		t.Fatalf("dev d1 is running %d replicas", tr1.DevApp.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevCloneLabel: "deploy1", "app": "web"}
+	expectedLabels = map[string]string{constants.DevCloneLabel: "deploy1", "app": "web"}
 	for k, v := range expectedLabels {
 		if devValue, ok := tr1.DevApp.ObjectMeta().Labels[k]; ok && devValue != v {
 			t.Fatalf("Wrong dev d1 labels: '%v'", tr1.DevApp.ObjectMeta().Labels)
@@ -414,7 +415,7 @@ services:
 		}
 	}
 
-	expectedPodLabels := map[string]string{"app": "web", model.InteractiveDevLabel: dev1.Name}
+	expectedPodLabels := map[string]string{"app": "web", constants.InteractiveDevLabel: dev1.Name}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
 	}
@@ -434,12 +435,12 @@ services:
 
 	tr1.DevModeOff()
 
-	if _, ok := tr1.App.ObjectMeta().Labels[model.DevLabel]; ok {
-		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	if _, ok := tr1.App.ObjectMeta().Labels[constants.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
 	}
 
-	if _, ok := tr1.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
-		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
+	if _, ok := tr1.App.ObjectMeta().Annotations[constants.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", constants.AppReplicasAnnotation)
 	}
 
 	if tr1.App.Replicas() != 3 {
@@ -449,7 +450,7 @@ services:
 	dev2 := dev1.Services[0]
 	d2 := deployments.Sandbox(dev2)
 	d2.UID = types.UID("deploy2")
-	delete(d2.Annotations, model.OktetoAutoCreateAnnotation)
+	delete(d2.Annotations, constants.OktetoAutoCreateAnnotation)
 	d2.Spec.Replicas = pointer.Int32Ptr(3)
 	d2.Namespace = dev1.Namespace
 
@@ -471,7 +472,7 @@ services:
 					{
 						LabelSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
-								model.InteractiveDevLabel: "web",
+								constants.InteractiveDevLabel: "web",
 							},
 						},
 						TopologyKey: "kubernetes.io/hostname",
@@ -511,7 +512,7 @@ services:
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/src",
-						SubPath:   path.Join(model.SourceCodeSubPath, "worker"),
+						SubPath:   path.Join(constants.SourceCodeSubPath, "worker"),
 					},
 				},
 				LivenessProbe:  nil,
@@ -525,14 +526,14 @@ services:
 	if tr2.App.Replicas() != 0 {
 		t.Fatalf("d2 is running %d replicas", tr2.App.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevLabel: "true"}
+	expectedLabels = map[string]string{constants.DevLabel: "true"}
 	if !reflect.DeepEqual(tr2.App.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong d2 labels: '%v'", tr2.App.ObjectMeta().Labels)
 	}
 	if !reflect.DeepEqual(tr2.App.TemplateObjectMeta().Labels, d2Orig.Spec.Template.Labels) {
 		t.Fatalf("Wrong d2 pod labels: '%v'", tr2.App.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations = map[string]string{model.AppReplicasAnnotation: "3", "key2": "value2"}
+	expectedAnnotations = map[string]string{constants.AppReplicasAnnotation: "3", "key2": "value2"}
 	if !reflect.DeepEqual(tr2.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong d2 annotations: '%v'", tr2.App.ObjectMeta().Annotations)
 	}
@@ -549,11 +550,11 @@ services:
 	if tr2.DevApp.Replicas() != 3 {
 		t.Fatalf("dev d2 is running %d replicas", tr2.DevApp.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevCloneLabel: "deploy2"}
+	expectedLabels = map[string]string{constants.DevCloneLabel: "deploy2"}
 	if !reflect.DeepEqual(tr2.DevApp.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong dev d2 labels: '%v'", tr2.DevApp.ObjectMeta().Labels)
 	}
-	expectedPodLabels = map[string]string{"app": "worker", model.DetachedDevLabel: dev2.Name}
+	expectedPodLabels = map[string]string{"app": "worker", constants.DetachedDevLabel: dev2.Name}
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
 	}
@@ -573,12 +574,12 @@ services:
 
 	tr2.DevModeOff()
 
-	if _, ok := tr2.App.ObjectMeta().Labels[model.DevLabel]; ok {
-		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	if _, ok := tr2.App.ObjectMeta().Labels[constants.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
 	}
 
-	if _, ok := tr2.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
-		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
+	if _, ok := tr2.App.ObjectMeta().Annotations[constants.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", constants.AppReplicasAnnotation)
 	}
 
 	if tr2.App.Replicas() != 3 {
@@ -690,13 +691,13 @@ persistentVolume:
 						Name:      dev.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/var/syncthing",
-						SubPath:   model.SyncthingSubPath,
+						SubPath:   constants.SyncthingSubPath,
 					},
 					{
 						Name:      dev.GetVolumeName(),
 						ReadOnly:  false,
-						MountPath: model.RemoteMountPath,
-						SubPath:   model.RemoteSubPath,
+						MountPath: constants.RemoteMountPath,
+						SubPath:   constants.RemoteSubPath,
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
@@ -837,7 +838,7 @@ docker:
 						Name:      dev.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/init-volume/1",
-						SubPath:   model.SourceCodeSubPath,
+						SubPath:   constants.SourceCodeSubPath,
 					},
 				},
 			},
@@ -868,7 +869,7 @@ docker:
 					},
 					{
 						Name:  "DOCKER_HOST",
-						Value: model.DefaultDockerHost,
+						Value: constants.DefaultDockerHost,
 					},
 					{
 						Name:  "DOCKER_CERT_PATH",
@@ -887,26 +888,26 @@ docker:
 					{
 						Name:      dev.GetVolumeName(),
 						ReadOnly:  false,
-						MountPath: model.DefaultDockerCertDir,
-						SubPath:   model.DefaultDockerCertDirSubPath,
+						MountPath: constants.DefaultDockerCertDir,
+						SubPath:   constants.DefaultDockerCertDirSubPath,
 					},
 					{
 						Name:      dev.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/var/syncthing",
-						SubPath:   model.SyncthingSubPath,
+						SubPath:   constants.SyncthingSubPath,
 					},
 					{
 						Name:      dev.GetVolumeName(),
 						ReadOnly:  false,
-						MountPath: model.RemoteMountPath,
-						SubPath:   model.RemoteSubPath,
+						MountPath: constants.RemoteMountPath,
+						SubPath:   constants.RemoteSubPath,
 					},
 					{
 						Name:      dev.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/app",
-						SubPath:   model.SourceCodeSubPath,
+						SubPath:   constants.SourceCodeSubPath,
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
@@ -928,7 +929,7 @@ docker:
 				Env: []apiv1.EnvVar{
 					{
 						Name:  "DOCKER_TLS_CERTDIR",
-						Value: model.DefaultDockerCertDir,
+						Value: constants.DefaultDockerCertDir,
 					},
 				},
 				SecurityContext: &apiv1.SecurityContext{
@@ -938,19 +939,19 @@ docker:
 					{
 						Name:      dev.GetVolumeName(),
 						ReadOnly:  false,
-						MountPath: model.DefaultDockerCertDir,
-						SubPath:   model.DefaultDockerCertDirSubPath,
+						MountPath: constants.DefaultDockerCertDir,
+						SubPath:   constants.DefaultDockerCertDirSubPath,
 					},
 					{
 						Name:      dev.GetVolumeName(),
-						MountPath: model.DefaultDockerCacheDir,
-						SubPath:   model.DefaultDockerCacheDirSubPath,
+						MountPath: constants.DefaultDockerCacheDir,
+						SubPath:   constants.DefaultDockerCacheDirSubPath,
 					},
 					{
 						Name:      dev.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/app",
-						SubPath:   model.SourceCodeSubPath,
+						SubPath:   constants.SourceCodeSubPath,
 					},
 				},
 				LivenessProbe:  nil,
@@ -1245,8 +1246,8 @@ func TestTranslateOktetoVolumes(t *testing.T) {
 				Volumes: []model.VolumeMount{
 					{
 						Name:      "okteto",
-						SubPath:   model.SyncthingSubPath,
-						MountPath: model.OktetoSyncthingMountPath,
+						SubPath:   constants.SyncthingSubPath,
+						MountPath: constants.OktetoSyncthingMountPath,
 					},
 				},
 			},
@@ -1433,7 +1434,7 @@ services:
 
 	sfs1 := statefulsets.Sandbox(dev1)
 	sfs1.UID = types.UID("sfs1")
-	delete(sfs1.Annotations, model.OktetoAutoCreateAnnotation)
+	delete(sfs1.Annotations, constants.OktetoAutoCreateAnnotation)
 	sfs1.Spec.Replicas = pointer.Int32Ptr(2)
 
 	rule1 := dev1.ToTranslationRule(dev1, false)
@@ -1570,25 +1571,25 @@ services:
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/init-volume/1",
-						SubPath:   path.Join(model.DataSubPath, "go/pkg"),
+						SubPath:   path.Join(constants.DataSubPath, "go/pkg"),
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/init-volume/2",
-						SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
+						SubPath:   path.Join(constants.DataSubPath, "root/.cache/go-build"),
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/init-volume/3",
-						SubPath:   model.SourceCodeSubPath,
+						SubPath:   constants.SourceCodeSubPath,
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/init-volume/4",
-						SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+						SubPath:   path.Join(constants.SourceCodeSubPath, "sub"),
 					},
 				},
 			},
@@ -1628,37 +1629,37 @@ services:
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/var/syncthing",
-						SubPath:   model.SyncthingSubPath,
+						SubPath:   constants.SyncthingSubPath,
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
-						MountPath: model.RemoteMountPath,
-						SubPath:   model.RemoteSubPath,
+						MountPath: constants.RemoteMountPath,
+						SubPath:   constants.RemoteSubPath,
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/go/pkg/",
-						SubPath:   path.Join(model.DataSubPath, "go/pkg"),
+						SubPath:   path.Join(constants.DataSubPath, "go/pkg"),
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/root/.cache/go-build",
-						SubPath:   path.Join(model.DataSubPath, "root/.cache/go-build"),
+						SubPath:   path.Join(constants.DataSubPath, "root/.cache/go-build"),
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/app",
-						SubPath:   model.SourceCodeSubPath,
+						SubPath:   constants.SourceCodeSubPath,
 					},
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/path",
-						SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+						SubPath:   path.Join(constants.SourceCodeSubPath, "sub"),
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
@@ -1687,14 +1688,14 @@ services:
 	if tr1.App.Replicas() != 0 {
 		t.Fatalf("sfs1 is running %d replicas", tr1.App.Replicas())
 	}
-	expectedLabels := map[string]string{model.DevLabel: "true"}
+	expectedLabels := map[string]string{constants.DevLabel: "true"}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong sfs1 labels: '%v'", tr1.App.ObjectMeta().Labels)
 	}
 	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Labels, sfs1Orig.Spec.Template.Labels) {
 		t.Fatalf("Wrong sfs1 pod labels: '%v'", tr1.App.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "2", "key1": "value1"}
+	expectedAnnotations := map[string]string{constants.AppReplicasAnnotation: "2", "key1": "value1"}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong sfs1 annotations: '%v'", tr1.App.ObjectMeta().Annotations)
 	}
@@ -1712,11 +1713,11 @@ services:
 	if tr1.DevApp.Replicas() != 1 {
 		t.Fatalf("dev sfs1 is running %d replicas", tr1.DevApp.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevCloneLabel: "sfs1"}
+	expectedLabels = map[string]string{constants.DevCloneLabel: "sfs1"}
 	if !reflect.DeepEqual(tr1.DevApp.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong dev sfs1 labels: '%v'", tr1.DevApp.ObjectMeta().Labels)
 	}
-	expectedPodLabels := map[string]string{"app": "web", model.InteractiveDevLabel: dev1.Name}
+	expectedPodLabels := map[string]string{"app": "web", constants.InteractiveDevLabel: dev1.Name}
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev sfs1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
 	}
@@ -1736,12 +1737,12 @@ services:
 
 	tr1.DevModeOff()
 
-	if _, ok := tr1.App.ObjectMeta().Labels[model.DevLabel]; ok {
-		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	if _, ok := tr1.App.ObjectMeta().Labels[constants.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
 	}
 
-	if _, ok := tr1.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
-		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
+	if _, ok := tr1.App.ObjectMeta().Annotations[constants.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", constants.AppReplicasAnnotation)
 	}
 
 	if tr1.App.Replicas() != 2 {
@@ -1752,7 +1753,7 @@ services:
 	sfs2 := statefulsets.Sandbox(dev2)
 	sfs2.Spec.Replicas = pointer.Int32Ptr(3)
 	sfs2.UID = types.UID("sfs2")
-	delete(sfs2.Annotations, model.OktetoAutoCreateAnnotation)
+	delete(sfs2.Annotations, constants.OktetoAutoCreateAnnotation)
 	sfs2.Namespace = dev1.Namespace
 
 	trMap := make(map[string]*Translation)
@@ -1774,7 +1775,7 @@ services:
 					{
 						LabelSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{
-								model.InteractiveDevLabel: "web",
+								constants.InteractiveDevLabel: "web",
 							},
 						},
 						TopologyKey: "kubernetes.io/hostname",
@@ -1814,7 +1815,7 @@ services:
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/src",
-						SubPath:   path.Join(model.SourceCodeSubPath, "worker"),
+						SubPath:   path.Join(constants.SourceCodeSubPath, "worker"),
 					},
 				},
 				LivenessProbe:  nil,
@@ -1828,14 +1829,14 @@ services:
 	if tr2.App.Replicas() != 0 {
 		t.Fatalf("sfs2 is running %d replicas", tr2.App.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevLabel: "true"}
+	expectedLabels = map[string]string{constants.DevLabel: "true"}
 	if !reflect.DeepEqual(tr2.App.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong sfs2 labels: '%v'", tr2.App.ObjectMeta().Labels)
 	}
 	if !reflect.DeepEqual(tr2.App.TemplateObjectMeta().Labels, sfs2Orig.Spec.Template.Labels) {
 		t.Fatalf("Wrong sfs2 pod labels: '%v'", tr2.App.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations = map[string]string{model.AppReplicasAnnotation: "3", "key2": "value2"}
+	expectedAnnotations = map[string]string{constants.AppReplicasAnnotation: "3", "key2": "value2"}
 	if !reflect.DeepEqual(tr2.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong sfs2 annotations: '%v'", tr2.App.ObjectMeta().Annotations)
 	}
@@ -1852,11 +1853,11 @@ services:
 	if tr2.DevApp.Replicas() != 3 {
 		t.Fatalf("dev sfs2 is running %d replicas", tr2.DevApp.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevCloneLabel: "sfs2"}
+	expectedLabels = map[string]string{constants.DevCloneLabel: "sfs2"}
 	if !reflect.DeepEqual(tr2.DevApp.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong dev sfs2 labels: '%v'", tr2.DevApp.ObjectMeta().Labels)
 	}
-	expectedPodLabels = map[string]string{"app": "worker", model.DetachedDevLabel: dev2.Name}
+	expectedPodLabels = map[string]string{"app": "worker", constants.DetachedDevLabel: dev2.Name}
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev sfs2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
 	}
@@ -1876,12 +1877,12 @@ services:
 
 	tr2.DevModeOff()
 
-	if _, ok := tr2.App.ObjectMeta().Labels[model.DevLabel]; ok {
-		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	if _, ok := tr2.App.ObjectMeta().Labels[constants.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
 	}
 
-	if _, ok := tr2.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
-		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
+	if _, ok := tr2.App.ObjectMeta().Annotations[constants.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", constants.AppReplicasAnnotation)
 	}
 
 	if tr2.App.Replicas() != 3 {

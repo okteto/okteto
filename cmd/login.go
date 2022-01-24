@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -31,7 +32,7 @@ func Login() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "login [url]",
-		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#login"),
+		Args:   utils.MaximumNArgsAccepted(1, constants.LoginDocsURL),
 		Short:  "Log into Okteto",
 		Long: `Log into Okteto
 
@@ -48,7 +49,7 @@ to log in to a Okteto Enterprise instance running at okteto.example.com.
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning(`'okteto login' is deprecated in favor of 'okteto context', and will be removed in version 1.16.
-    Learn more about okteto context at https://okteto.com/docs/reference/cli/#context`)
+    Learn more about okteto context at %s`, constants.ContextDocsURL)
 
 			ctxOptions := contextCMD.ContextOptions{
 				IsCtxCommand: true,

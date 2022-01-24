@@ -29,6 +29,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	appsv1 "k8s.io/api/apps/v1"
@@ -262,7 +263,7 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: model.GetStackConfigMapName(s.Name),
 			Labels: map[string]string{
-				model.StackLabel: "true",
+				constants.StackLabel: "true",
 			},
 		},
 		Data: map[string]string{
@@ -633,10 +634,10 @@ func translateVolumes(svcName string, svc *model.Service) []apiv1.Volume {
 func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	svc := s.Services[svcName]
 	annotations := translateAnnotations(svc)
-	if s.Services[svcName].Public && annotations[model.OktetoAutoIngressAnnotation] == "" {
-		annotations[model.OktetoAutoIngressAnnotation] = "true"
-		if annotations[model.OktetoPrivateSvcAnnotation] == "true" {
-			annotations[model.OktetoAutoIngressAnnotation] = "private"
+	if s.Services[svcName].Public && annotations[constants.OktetoAutoIngressAnnotation] == "" {
+		annotations[constants.OktetoAutoIngressAnnotation] = "true"
+		if annotations[constants.OktetoPrivateSvcAnnotation] == "true" {
+			annotations[constants.OktetoAutoIngressAnnotation] = "private"
 		}
 	}
 	return &apiv1.Service{
@@ -738,7 +739,7 @@ func translateEndpointsV1Beta1(endpoints model.Endpoint) []networkingv1beta1.HTT
 
 func translateIngressAnnotations(endpointName string, s *model.Stack) map[string]string {
 	endpoint := s.Endpoints[endpointName]
-	annotations := model.Annotations{model.OktetoIngressAutoGenerateHost: "true"}
+	annotations := model.Annotations{constants.OktetoIngressAutoGenerateHost: "true"}
 	for k := range endpoint.Annotations {
 		annotations[k] = endpoint.Annotations[k]
 	}
@@ -748,8 +749,8 @@ func translateIngressAnnotations(endpointName string, s *model.Stack) map[string
 func translateIngressLabels(endpointName string, s *model.Stack) map[string]string {
 	endpoint := s.Endpoints[endpointName]
 	labels := map[string]string{
-		model.StackNameLabel:         s.Name,
-		model.StackEndpointNameLabel: endpointName,
+		constants.StackNameLabel:         s.Name,
+		constants.StackEndpointNameLabel: endpointName,
 	}
 	for k := range endpoint.Labels {
 		labels[k] = endpoint.Labels[k]
@@ -760,8 +761,8 @@ func translateIngressLabels(endpointName string, s *model.Stack) map[string]stri
 func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string {
 	volume := s.Volumes[volumeName]
 	labels := map[string]string{
-		model.StackNameLabel:       s.Name,
-		model.StackVolumeNameLabel: volumeName,
+		constants.StackNameLabel:       s.Name,
+		constants.StackVolumeNameLabel: volumeName,
 	}
 	for k := range volume.Labels {
 		labels[k] = volume.Labels[k]
@@ -780,7 +781,7 @@ func translateAffinity(svc *model.Service) *apiv1.Affinity {
 			LabelSelector: &metav1.LabelSelector{
 				MatchExpressions: []metav1.LabelSelectorRequirement{
 					{
-						Key:      fmt.Sprintf("%s-%s", model.StackVolumeNameLabel, volume.LocalPath),
+						Key:      fmt.Sprintf("%s-%s", constants.StackVolumeNameLabel, volume.LocalPath),
 						Operator: metav1.LabelSelectorOpExists,
 					},
 				},
@@ -802,8 +803,8 @@ func translateAffinity(svc *model.Service) *apiv1.Affinity {
 func translateLabels(svcName string, s *model.Stack) map[string]string {
 	svc := s.Services[svcName]
 	labels := map[string]string{
-		model.StackNameLabel:        s.Name,
-		model.StackServiceNameLabel: svcName,
+		constants.StackNameLabel:        s.Name,
+		constants.StackServiceNameLabel: svcName,
 	}
 	for k := range svc.Labels {
 		labels[k] = svc.Labels[k]
@@ -811,7 +812,7 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 
 	for _, volume := range svc.Volumes {
 		if volume.LocalPath != "" {
-			labels[fmt.Sprintf("%s-%s", model.StackVolumeNameLabel, volume.LocalPath)] = "true"
+			labels[fmt.Sprintf("%s-%s", constants.StackVolumeNameLabel, volume.LocalPath)] = "true"
 		}
 	}
 	return labels
@@ -819,8 +820,8 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 
 func translateLabelSelector(svcName string, s *model.Stack) map[string]string {
 	labels := map[string]string{
-		model.StackNameLabel:        s.Name,
-		model.StackServiceNameLabel: svcName,
+		constants.StackNameLabel:        s.Name,
+		constants.StackServiceNameLabel: svcName,
 	}
 	return labels
 }
@@ -837,7 +838,7 @@ func translateAnnotations(svc *model.Service) map[string]string {
 func getAnnotations() map[string]string {
 	annotations := map[string]string{}
 	if utils.IsOktetoRepo() {
-		annotations[model.OktetoSampleAnnotation] = "true"
+		annotations[constants.OktetoSampleAnnotation] = "true"
 	}
 	return annotations
 }

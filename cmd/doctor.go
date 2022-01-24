@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/doctor"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -40,7 +41,7 @@ func Doctor() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "doctor",
 		Short: "Generate a zip file with the okteto logs",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#doctor"),
+		Args:  utils.NoArgsAccepted(constants.DoctorDocsURL),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Info("starting doctor command")
 			ctx := context.Background()

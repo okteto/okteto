@@ -16,6 +16,7 @@ package cmd
 import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +25,7 @@ func Kubeconfig() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "kubeconfig",
 		Short: "Download credentials for the Kubernetes cluster selected via 'okteto context'",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#kubeconfig"),
+		Args:  utils.NoArgsAccepted(constants.UpdateKubeConfigDocsURL),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			err := contextCMD.UpdateKubeconfigCMD().RunE(cmd, args)

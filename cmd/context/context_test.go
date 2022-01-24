@@ -21,7 +21,7 @@ import (
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -78,7 +78,7 @@ func createDeprecatedToken(url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+	os.Setenv(constants.OktetoFolderEnvVar, dir)
 	token := &okteto.Token{
 		URL:       url,
 		Buildkit:  "buildkit",

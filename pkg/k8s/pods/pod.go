@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -291,7 +292,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 	pods, err := c.CoreV1().Pods(dev.Namespace).List(
 		ctx,
 		metav1.ListOptions{
-			LabelSelector: fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name),
+			LabelSelector: fmt.Sprintf("%s=%s", constants.DetachedDevLabel, dev.Name),
 		},
 	)
 	if err != nil {
@@ -319,7 +320,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 	if !found {
 		return fmt.Errorf("no pods running in development mode")
 	}
-	return waitUntilRunning(ctx, dev.Namespace, fmt.Sprintf("%s=%s", model.DetachedDevLabel, dev.Name), c)
+	return waitUntilRunning(ctx, dev.Namespace, fmt.Sprintf("%s=%s", constants.DetachedDevLabel, dev.Name), c)
 }
 
 func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubernetes.Clientset) error {
@@ -404,7 +405,7 @@ func isRunning(p *apiv1.Pod) bool {
 }
 
 func GetHealthcheckFailure(ctx context.Context, namespace, svcName, stackName string, c kubernetes.Interface) string {
-	selector := fmt.Sprintf("%s=%s,%s=%s", model.StackNameLabel, stackName, model.StackServiceNameLabel, svcName)
+	selector := fmt.Sprintf("%s=%s,%s=%s", constants.StackNameLabel, stackName, constants.StackServiceNameLabel, svcName)
 	pods, err := c.CoreV1().Pods(namespace).List(
 		ctx,
 		metav1.ListOptions{

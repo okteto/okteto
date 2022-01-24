@@ -25,6 +25,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -34,7 +35,7 @@ import (
 func Sandbox(dev *model.Dev) *appsv1.StatefulSet {
 	image := dev.Image.Name
 	if image == "" {
-		image = model.DefaultImage
+		image = constants.DefaultImage
 	}
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -130,7 +131,7 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 	}
 	validStatefulsets := []*appsv1.StatefulSet{}
 	for i, sfs := range sfsList.Items {
-		if sfs.Labels[model.DevCloneLabel] == "" {
+		if sfs.Labels[constants.DevCloneLabel] == "" {
 			validStatefulsets = append(validStatefulsets, &sfsList.Items[i])
 		}
 	}
@@ -166,7 +167,7 @@ func IsDevModeOn(s *appsv1.StatefulSet) bool {
 	if labels == nil {
 		return false
 	}
-	_, ok := labels[model.DevLabel]
+	_, ok := labels[constants.DevLabel]
 	return ok
 }
 
@@ -227,17 +228,17 @@ func TranslateDivert(username string, sfs *appsv1.StatefulSet) *appsv1.StatefulS
 	result := sfs.DeepCopy()
 	result.UID = ""
 	result.Name = name
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if sfs.Labels != nil && sfs.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = sfs.Labels[model.DeployedByLabel]
+	result.Labels = map[string]string{constants.OktetoDivertLabel: username}
+	if sfs.Labels != nil && sfs.Labels[constants.DeployedByLabel] != "" {
+		result.Labels[constants.DeployedByLabel] = sfs.Labels[constants.DeployedByLabel]
 	}
 	result.Spec.Selector = &metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			model.OktetoDivertLabel: username,
+			constants.OktetoDivertLabel: username,
 		},
 	}
 	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel: username,
+		constants.OktetoDivertLabel: username,
 	}
 
 	result.ResourceVersion = ""

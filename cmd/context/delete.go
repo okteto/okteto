@@ -20,6 +20,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -28,7 +29,7 @@ import (
 func DeleteCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
-		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#delete"),
+		Args:  utils.ExactArgsAccepted(1, constants.DeleteCtxDocsURL),
 		Short: "Delete a context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()

@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/ssh"
 
@@ -83,7 +84,7 @@ func Exec() *cobra.Command {
 
 			return err
 		},
-		Args: utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#exec"),
+		Args: utils.MinimumNArgsAccepted(1, constants.ExecDocsURL),
 	}
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")

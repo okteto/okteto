@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 )
 
 // GetRepoNameAndTag returns the image repo and the tag separated
@@ -57,7 +58,7 @@ func GetImageTag(image, service, namespace, oktetoRegistryURL string) string {
 
 // GetDevImageTag returns the image tag to build and push
 func GetDevImageTag(dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string) string {
-	if imageTag != "" && imageTag != model.DefaultImage {
+	if imageTag != "" && imageTag != constants.DefaultImage {
 		return imageTag
 	}
 	return GetImageTag(imageFromDeployment, dev.Name, dev.Namespace, oktetoRegistryURL)

@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -175,7 +176,7 @@ func Test_GetDevImageTag(t *testing.T) {
 		{
 			name:                "default-image-tag",
 			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:            model.DefaultImage,
+			imageTag:            constants.DefaultImage,
 			imageFromDeployment: "",
 			oktetoRegistryURL:   okteto.CloudRegistryURL,
 			expected:            "registry.cloud.okteto.net/ns/dev:okteto",

@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
@@ -77,7 +78,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Use:    "destroy",
 		Short:  `Destroy everything created by "okteto deploy" command`,
 		Long:   `Destroy everything created by "okteto deploy" command. You can also include a "destroy" section in your Okteto manifest with a list of commands to be executed when the application is destroyed`,
-		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
+		Args:   utils.NoArgsAccepted(constants.DestroyDocsURL),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
@@ -159,7 +160,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	}
 
 	deployedByLs, err := labels.NewRequirement(
-		model.DeployedByLabel,
+		constants.DeployedByLabel,
 		selection.Equals,
 		[]string{opts.Name},
 	)
@@ -200,7 +201,7 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 	oktetoLog.Debugf("checking if application installed something with helm")
 	helmReleases := map[string]bool{}
 	for _, s := range sList {
-		if s.Type == model.HelmSecretType && s.Labels[ownerLabel] == helmOwner {
+		if s.Type == constants.HelmSecretType && s.Labels[ownerLabel] == helmOwner {
 			helmReleaseName, ok := s.Labels[nameLabel]
 			if !ok {
 				continue

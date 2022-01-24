@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -110,23 +111,23 @@ services:
 		Volumes: []VolumeMount{
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: OktetoSyncthingMountPath,
-				SubPath:   SyncthingSubPath,
+				MountPath: constants.OktetoSyncthingMountPath,
+				SubPath:   constants.SyncthingSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: RemoteMountPath,
-				SubPath:   RemoteSubPath,
+				MountPath: constants.RemoteMountPath,
+				SubPath:   constants.RemoteSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
 				MountPath: "/app",
-				SubPath:   SourceCodeSubPath,
+				SubPath:   constants.SourceCodeSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
 				MountPath: "/path",
-				SubPath:   path.Join(SourceCodeSubPath, "sub"),
+				SubPath:   path.Join(constants.SourceCodeSubPath, "sub"),
 			},
 		},
 		InitContainer: InitContainer{Image: OktetoBinImageTag},
@@ -183,7 +184,7 @@ services:
 			{
 				Name:      dev.GetVolumeName(),
 				MountPath: "/src",
-				SubPath:   path.Join(SourceCodeSubPath, "worker"),
+				SubPath:   path.Join(constants.SourceCodeSubPath, "worker"),
 			},
 		},
 		Secrets: make([]Secret, 0),
@@ -248,18 +249,18 @@ initContainer:
 		Volumes: []VolumeMount{
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: OktetoSyncthingMountPath,
-				SubPath:   SyncthingSubPath,
+				MountPath: constants.OktetoSyncthingMountPath,
+				SubPath:   constants.SyncthingSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: RemoteMountPath,
-				SubPath:   RemoteSubPath,
+				MountPath: constants.RemoteMountPath,
+				SubPath:   constants.RemoteSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
 				MountPath: "/app",
-				SubPath:   SourceCodeSubPath,
+				SubPath:   constants.SourceCodeSubPath,
 			},
 		},
 		InitContainer: InitContainer{
@@ -332,7 +333,7 @@ docker:
 			},
 			{
 				Name:  "DOCKER_HOST",
-				Value: DefaultDockerHost,
+				Value: constants.DefaultDockerHost,
 			},
 			{
 				Name:  "DOCKER_CERT_PATH",
@@ -352,34 +353,34 @@ docker:
 		Volumes: []VolumeMount{
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: DefaultDockerCertDir,
-				SubPath:   DefaultDockerCertDirSubPath,
+				MountPath: constants.DefaultDockerCertDir,
+				SubPath:   constants.DefaultDockerCertDirSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: DefaultDockerCacheDir,
-				SubPath:   DefaultDockerCacheDirSubPath,
+				MountPath: constants.DefaultDockerCacheDir,
+				SubPath:   constants.DefaultDockerCacheDirSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: OktetoSyncthingMountPath,
-				SubPath:   SyncthingSubPath,
+				MountPath: constants.OktetoSyncthingMountPath,
+				SubPath:   constants.SyncthingSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: RemoteMountPath,
-				SubPath:   RemoteSubPath,
+				MountPath: constants.RemoteMountPath,
+				SubPath:   constants.RemoteSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
 				MountPath: "/app",
-				SubPath:   SourceCodeSubPath,
+				SubPath:   constants.SourceCodeSubPath,
 			},
 		},
 		InitContainer: InitContainer{Image: OktetoBinImageTag},
 		Docker: DinDContainer{
 			Enabled: true,
-			Image:   DefaultDinDImage,
+			Image:   constants.DefaultDinDImage,
 		},
 	}
 
@@ -435,18 +436,18 @@ sync:
 		Volumes: []VolumeMount{
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: OktetoSyncthingMountPath,
-				SubPath:   SyncthingSubPath,
+				MountPath: constants.OktetoSyncthingMountPath,
+				SubPath:   constants.SyncthingSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
-				MountPath: RemoteMountPath,
-				SubPath:   RemoteSubPath,
+				MountPath: constants.RemoteMountPath,
+				SubPath:   constants.RemoteSubPath,
 			},
 			{
 				Name:      dev.GetVolumeName(),
 				MountPath: "/app",
-				SubPath:   SourceCodeSubPath,
+				SubPath:   constants.SourceCodeSubPath,
 			},
 		},
 		InitContainer: InitContainer{Image: OktetoBinImageTag},
@@ -469,7 +470,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			name: "default",
 			manifest: &Dev{
 				Image:         &BuildInfo{},
-				SSHServerPort: oktetoDefaultSSHServerPort,
+				SSHServerPort: constants.OktetoDefaultSSHServerPort,
 			},
 			expected: Environment{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
@@ -485,7 +486,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			expected: Environment{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
-				{Name: oktetoSSHServerPortVariable, Value: "22220"},
+				{Name: constants.OktetoSSHServerPortVariableEnvVar, Value: "22220"},
 			},
 		},
 	}

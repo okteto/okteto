@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -175,7 +176,7 @@ func setNameAndLabelsFromApp(dev *model.Dev, app apps.App) {
 }
 
 func setAnnotationsFromApp(dev *model.Dev, app apps.App) {
-	if v := app.ObjectMeta().Annotations[model.FluxAnnotation]; v != "" {
+	if v := app.ObjectMeta().Annotations[constants.FluxAnnotation]; v != "" {
 		dev.Metadata.Annotations = map[string]string{"fluxcd.io/ignore": "true"}
 	}
 }

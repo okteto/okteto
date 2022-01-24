@@ -20,6 +20,7 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -200,7 +201,7 @@ func Test_translateDivertDeployment(t *testing.T) {
 			Name:            "name",
 			Namespace:       "namespace",
 			Annotations:     map[string]string{"annotation1": "value1"},
-			Labels:          map[string]string{"label1": "value1", model.DeployedByLabel: "cindy"},
+			Labels:          map[string]string{"label1": "value1", constants.DeployedByLabel: "cindy"},
 			ResourceVersion: "version",
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -224,24 +225,24 @@ func Test_translateDivertDeployment(t *testing.T) {
 			Name:      "name-cindy",
 			Namespace: "namespace",
 			Annotations: map[string]string{
-				"annotation1":                    "value1",
-				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
+				"annotation1":                        "value1",
+				constants.OktetoAutoCreateAnnotation: constants.OktetoUpCmd,
 			},
 			Labels: map[string]string{
-				model.DeployedByLabel:   "cindy",
-				model.OktetoDivertLabel: "cindy",
+				constants.DeployedByLabel:   "cindy",
+				constants.OktetoDivertLabel: "cindy",
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					model.OktetoDivertLabel: "cindy",
+					constants.OktetoDivertLabel: "cindy",
 				},
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						model.OktetoDivertLabel: "cindy",
+						constants.OktetoDivertLabel: "cindy",
 					},
 				},
 			},

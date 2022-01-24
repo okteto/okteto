@@ -20,6 +20,7 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/constants"
 )
 
 func (dev *Dev) translateDeprecatedVolumeFields() error {
@@ -45,7 +46,7 @@ func (dev *Dev) translateDeprecatedWorkdir(main *Dev) error {
 		return nil
 	}
 	if main != nil {
-		return fmt.Errorf("'workdir' is not supported to define your synchronized folders in 'services'. Use the field 'sync' instead (%s)", syncFieldDocsURL)
+		return fmt.Errorf("'workdir' is not supported to define your synchronized folders in 'services'. Use the field 'sync' instead (%s)", constants.SyncFieldDocsURL)
 	}
 	dev.Sync.Folders = append(
 		dev.Sync.Folders,
@@ -125,7 +126,7 @@ func (dev *Dev) computeParentSyncFolder() {
 }
 
 func getDataSubPath(path string) string {
-	return filepath.ToSlash(filepath.Join(DataSubPath, path))
+	return filepath.ToSlash(filepath.Join(constants.DataSubPath, path))
 }
 
 func (dev *Dev) getSourceSubPath(path string) string {
@@ -134,7 +135,7 @@ func (dev *Dev) getSourceSubPath(path string) string {
 	if err != nil {
 		oktetoLog.Fatalf("error on getSourceSubPath of '%s': %s", path, err.Error())
 	}
-	return filepath.ToSlash(filepath.Join(SourceCodeSubPath, filepath.ToSlash(rel)))
+	return filepath.ToSlash(filepath.Join(constants.SourceCodeSubPath, filepath.ToSlash(rel)))
 }
 
 // PersistentVolumeEnabled returns true if persistent volumes are enabled for dev
@@ -148,10 +149,10 @@ func (dev *Dev) PersistentVolumeEnabled() bool {
 // PersistentVolumeSize returns the persistent volume size
 func (dev *Dev) PersistentVolumeSize() string {
 	if dev.PersistentVolumeInfo == nil {
-		return OktetoDefaultPVSize
+		return constants.OktetoDefaultPVSize
 	}
 	if dev.PersistentVolumeInfo.Size == "" {
-		return OktetoDefaultPVSize
+		return constants.OktetoDefaultPVSize
 	}
 	return dev.PersistentVolumeInfo.Size
 }
@@ -166,7 +167,7 @@ func (dev *Dev) PersistentVolumeStorageClass() string {
 
 func (dev *Dev) AreDefaultPersistentVolumeValues() bool {
 	if dev.PersistentVolumeInfo != nil {
-		if dev.PersistentVolumeSize() == OktetoDefaultPVSize && dev.PersistentVolumeStorageClass() == "" && dev.PersistentVolumeEnabled() {
+		if dev.PersistentVolumeSize() == constants.OktetoDefaultPVSize && dev.PersistentVolumeStorageClass() == "" && dev.PersistentVolumeEnabled() {
 			return true
 		}
 	}
@@ -266,7 +267,7 @@ func (dev *Dev) validateServiceSyncFolders(main *Dev) error {
 
 func (dev *Dev) validateVolumes(main *Dev) error {
 	if len(dev.Sync.Folders) == 0 {
-		return fmt.Errorf("the 'sync' field is mandatory. More info at %s", syncFieldDocsURL)
+		return fmt.Errorf("the 'sync' field is mandatory. More info at %s", constants.SyncFieldDocsURL)
 	}
 
 	if err := dev.validateRemotePaths(); err != nil {

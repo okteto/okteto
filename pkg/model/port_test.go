@@ -17,10 +17,12 @@ import (
 	"fmt"
 	"net"
 	"testing"
+
+	"github.com/okteto/okteto/pkg/model/constants"
 )
 
 func TestGetAvailablePort(t *testing.T) {
-	p, err := GetAvailablePort(Localhost)
+	p, err := GetAvailablePort(constants.Localhost)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,23 +33,23 @@ func TestGetAvailablePort(t *testing.T) {
 }
 
 func TestIsPortAvailable(t *testing.T) {
-	p, err := GetAvailablePort(Localhost)
+	p, err := GetAvailablePort(constants.Localhost)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if !IsPortAvailable(Localhost, p) {
+	if !IsPortAvailable(constants.Localhost, p) {
 		t.Fatalf("port %d wasn't available", p)
 	}
 
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", Localhost, p))
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", constants.Localhost, p))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	defer l.Close()
 
-	if IsPortAvailable(Localhost, p) {
+	if IsPortAvailable(constants.Localhost, p) {
 		t.Fatalf("port %d was available", p)
 	}
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -36,7 +37,7 @@ func Build(ctx context.Context) *cobra.Command {
 	options := build.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [PATH]",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#build"),
+		Args:  utils.MaximumNArgsAccepted(1, constants.BuildDocsURL),
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 

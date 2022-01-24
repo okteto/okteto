@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/syncthing"
 )
 
@@ -71,7 +72,7 @@ func (up *upContext) sync(ctx context.Context) error {
 		seconds := elapsed / time.Second
 		oktetoLog.Warning(`File synchronization took %dm %ds
     Consider to update your '.stignore' to optimize the file synchronization
-    More information is available here: https://okteto.com/docs/reference/file-synchronization/`, minutes, seconds)
+    More information is available here: %s`, minutes, seconds, constants.FileSyncDocsURL)
 	}
 
 	up.Sy.Type = "sendreceive"

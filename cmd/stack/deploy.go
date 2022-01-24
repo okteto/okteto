@@ -26,7 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -78,7 +78,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				oktetoLog.Success("Stack '%s' successfully deployed", s.Name)
 			}
 
-			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+			if !utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 				if err := stack.ListEndpoints(ctx, s, ""); err != nil {
 					return err
 				}
@@ -106,7 +106,7 @@ func splitComposeFileEnv(value string) []string {
 }
 
 func loadComposePaths(paths []string) []string {
-	composeEnv, present := os.LookupEnv(model.ComposeFileEnvVar)
+	composeEnv, present := os.LookupEnv(constants.ComposeFileEnvVar)
 	if len(paths) == 0 && present {
 		paths = splitComposeFileEnv(composeEnv)
 	}

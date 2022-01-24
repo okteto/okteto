@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,17 +35,17 @@ import (
 func Sandbox(dev *model.Dev) *appsv1.Deployment {
 	image := dev.Image.Name
 	if image == "" {
-		image = model.DefaultImage
+		image = constants.DefaultImage
 	}
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dev.Name,
 			Namespace: dev.Namespace,
 			Labels: model.Labels{
-				model.DevLabel: "true",
+				constants.DevLabel: "true",
 			},
 			Annotations: model.Annotations{
-				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
+				constants.OktetoAutoCreateAnnotation: constants.OktetoUpCmd,
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -119,7 +120,7 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 	}
 	validDeployments := []*appsv1.Deployment{}
 	for i, d := range dList.Items {
-		if d.Labels[model.DevCloneLabel] == "" {
+		if d.Labels[constants.DevCloneLabel] == "" {
 			validDeployments = append(validDeployments, &dList.Items[i])
 		}
 	}
@@ -198,7 +199,7 @@ func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (
 
 //IsDevModeOn returns if a deployment is in devmode
 func IsDevModeOn(d *appsv1.Deployment) bool {
-	return labels.Get(d.GetObjectMeta(), model.DevLabel) != ""
+	return labels.Get(d.GetObjectMeta(), constants.DevLabel) != ""
 }
 
 //Destroy destroys a k8s deployment
@@ -232,18 +233,18 @@ func TranslateDivert(username string, d *appsv1.Deployment) *appsv1.Deployment {
 	if result.Annotations == nil {
 		result.Annotations = map[string]string{}
 	}
-	result.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoUpCmd
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if d.Labels != nil && d.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = d.Labels[model.DeployedByLabel]
+	result.Annotations[constants.OktetoAutoCreateAnnotation] = constants.OktetoUpCmd
+	result.Labels = map[string]string{constants.OktetoDivertLabel: username}
+	if d.Labels != nil && d.Labels[constants.DeployedByLabel] != "" {
+		result.Labels[constants.DeployedByLabel] = d.Labels[constants.DeployedByLabel]
 	}
 	result.Spec.Selector = &metav1.LabelSelector{
 		MatchLabels: map[string]string{
-			model.OktetoDivertLabel: username,
+			constants.OktetoDivertLabel: username,
 		},
 	}
 	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel: username,
+		constants.OktetoDivertLabel: username,
 	}
 	result.ResourceVersion = ""
 	return result

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
+	"github.com/okteto/okteto/pkg/model/constants"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )
@@ -1494,11 +1495,11 @@ func validateExtensions(stack StackRaw) error {
 		}
 	}
 	if len(nonValidFields) == 1 {
-		return fmt.Errorf("Invalid stack manifest: Field '%s' is not supported.\n    More information is available here: https://okteto.com/docs/reference/stacks/", nonValidFields[0])
+		return fmt.Errorf("Invalid stack manifest: Field '%s' is not supported.\n    More information is available here: %s", nonValidFields[0], constants.StackManifestDocsURL)
 	} else if len(nonValidFields) > 1 {
 		return fmt.Errorf(`Invalid stack manifest: The following fields are not supported.
     - %s
-    More information is available here: https://okteto.com/docs/reference/stacks/`, strings.Join(nonValidFields, "\n    - "))
+    More information is available here: %s`, strings.Join(nonValidFields, "\n    - "), constants.StackManifestDocsURL)
 	}
 	return nil
 }

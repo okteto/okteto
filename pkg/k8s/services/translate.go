@@ -15,6 +15,7 @@ package services
 
 import (
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -37,7 +38,7 @@ func translate(dev *model.Dev) *apiv1.Service {
 			Name:      dev.Name,
 			Namespace: dev.Namespace,
 			Labels: map[string]string{
-				model.DevLabel: "true",
+				constants.DevLabel: "true",
 			},
 			Annotations: annotations,
 		},

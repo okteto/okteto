@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
 )
@@ -294,9 +295,9 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 		}
 		return nil, false, oktetoErrors.UserError{
 			E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
-			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
+			Hint: fmt.Sprintf(`Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
-    More information is available here: https://okteto.com/docs/reference/cli/#up`,
+    More information is available here: %s`, constants.UpDocsURL),
 		}
 	}
 	if dev.Divert != nil {

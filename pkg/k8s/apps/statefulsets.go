@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +38,7 @@ type StatefulSetApp struct {
 }
 
 func NewStatefulSetApp(sfs *appsv1.StatefulSet) *StatefulSetApp {
-	return &StatefulSetApp{kind: model.StatefulSet, sfs: sfs}
+	return &StatefulSetApp{kind: constants.StatefulSet, sfs: sfs}
 }
 
 func (i *StatefulSetApp) Kind() string {
@@ -86,7 +87,7 @@ func (i *StatefulSetApp) DevClone() App {
 		},
 		Spec: *i.sfs.Spec.DeepCopy(),
 	}
-	clone.Labels[model.DevCloneLabel] = string(i.sfs.UID)
+	clone.Labels[constants.DevCloneLabel] = string(i.sfs.UID)
 	for k, v := range i.sfs.Labels {
 		clone.Labels[k] = v
 	}
@@ -108,7 +109,7 @@ func (i *StatefulSetApp) GetRunningPod(ctx context.Context, c kubernetes.Interfa
 }
 
 func (i *StatefulSetApp) RestoreOriginal() error {
-	manifest := i.sfs.Annotations[model.StatefulsetAnnotation]
+	manifest := i.sfs.Annotations[constants.StatefulsetAnnotation]
 	if manifest == "" {
 		return nil
 	}

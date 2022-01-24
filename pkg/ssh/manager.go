@@ -23,6 +23,7 @@ import (
 	k8sforward "github.com/okteto/okteto/pkg/k8s/forward"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 )
 
 // ForwardManager handles the lifecycle of all the forwards
@@ -70,7 +71,7 @@ func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 			os := runtime.GOOS
 			switch os {
 			case "darwin":
-				if fm.localInterface == model.Localhost {
+				if fm.localInterface == constants.Localhost {
 					return fmt.Errorf("local port %d is privileged. Define 'interface: 0.0.0.0' in your okteto manifest and try again", localPort)
 				}
 			case "linux":

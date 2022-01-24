@@ -21,6 +21,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -220,7 +221,7 @@ func TestDestroyWithError(t *testing.T) {
 							nameLabel:  "helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 			},
 			want: []string{
@@ -239,7 +240,7 @@ func TestDestroyWithError(t *testing.T) {
 							nameLabel:  "helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 			},
 			want: append(fakeManifest.Destroy, fmt.Sprintf(helmUninstallCommand, "helm-app")),
@@ -332,7 +333,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 			},
 			want: []string{
@@ -351,7 +352,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -361,7 +362,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "another-helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -371,7 +372,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "last-helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 			},
 			want: []string{
@@ -392,7 +393,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 			},
 			want: append(fakeManifest.Destroy, fmt.Sprintf(helmUninstallCommand, "helm-app")),
@@ -409,7 +410,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -419,7 +420,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "another-helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -429,7 +430,7 @@ func TestDestroyWithoutError(t *testing.T) {
 							nameLabel:  "last-helm-app",
 						},
 					},
-					Type: model.HelmSecretType,
+					Type: constants.HelmSecretType,
 				},
 			},
 			want: append(

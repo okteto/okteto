@@ -14,6 +14,7 @@
 package model
 
 import (
+	"github.com/okteto/okteto/pkg/model/constants"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -59,5 +60,5 @@ type VolumeMount struct {
 
 // IsSyncthing returns the volume mount is for syncthing
 func (v *VolumeMount) IsSyncthing() bool {
-	return v.SubPath == SyncthingSubPath && v.MountPath == OktetoSyncthingMountPath
+	return v.SubPath == constants.SyncthingSubPath && v.MountPath == constants.OktetoSyncthingMountPath
 }

@@ -20,7 +20,7 @@ import (
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -118,10 +118,10 @@ func Test_createContext(t *testing.T) {
 					ObjectMeta: v1.ObjectMeta{
 						Name: "test",
 						Labels: map[string]string{
-							model.DevLabel: "true",
+							constants.DevLabel: "true",
 						},
 						Annotations: map[string]string{
-							model.OktetoURLAnnotation: "https://cloud.okteto.com",
+							constants.OktetoURLAnnotation: "https://cloud.okteto.com",
 						},
 					},
 				},

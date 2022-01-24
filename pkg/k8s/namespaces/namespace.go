@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -162,7 +162,7 @@ func (n *Namespaces) DestroySFSVolumes(ctx context.Context, ns string, opts Dele
 	// We only need to delete all the volumes without deployed-by label. The ones with the label will be deleted by
 	// DestroyWithLabel function
 	deployedByNotExist, err := labels.NewRequirement(
-		model.DeployedByLabel,
+		constants.DeployedByLabel,
 		selection.DoesNotExist,
 		nil,
 	)

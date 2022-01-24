@@ -34,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
@@ -63,7 +64,7 @@ func Up() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "up",
 		Short: "Activate your development container",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#up"),
+		Args:  utils.NoArgsAccepted(constants.UpDocsURL),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
@@ -86,7 +87,7 @@ func Up() *cobra.Command {
 			if upOptions.AutoDeploy {
 				oktetoLog.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
     Set the 'autocreate' field in your okteto manifest to get the same behavior.
-    More information is available here: https://okteto.com/docs/reference/cli/#up`)
+    More information is available here: %s`, constants.UpDocsURL)
 			}
 
 			ctx := context.Background()
@@ -146,7 +147,7 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			if _, ok := os.LookupEnv(model.OktetoAutoDeployEnvVar); ok {
+			if _, ok := os.LookupEnv(constants.OktetoAutoDeployEnvVar); ok {
 				upOptions.AutoDeploy = true
 			}
 
@@ -170,7 +171,7 @@ func Up() *cobra.Command {
 
 			err = up.start()
 
-			if err := up.Client.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
+			if err := up.Client.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(constants.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
 				oktetoLog.Infof("error deleting deprecated volume: %v", err)
 			}
 
@@ -467,14 +468,14 @@ func (up *upContext) getInsufficientSpaceError(err error) error {
 			E: err,
 			Hint: fmt.Sprintf(`Okteto volume is full.
     Increase your persistent volume size, run '%s' and try 'okteto up' again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.DevPath)),
+    More information about configuring your persistent volume at %s`, utils.GetDownCommand(up.Options.DevPath), constants.ManifestPVDocsURL),
 		}
 	}
 	return oktetoErrors.UserError{
 		E: err,
-		Hint: `The synchronization service is running out of space.
+		Hint: fmt.Sprintf(`The synchronization service is running out of space.
     Enable persistent volumes in your okteto manifest and try again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`,
+    More information about configuring your persistent volume at %s`, constants.ManifestPVDocsURL),
 	}
 
 }

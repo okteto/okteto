@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -34,7 +34,7 @@ func GetReplicaSetByDeployment(ctx context.Context, d *appsv1.Deployment, c kube
 	for i := range rsList.Items {
 		for _, or := range rsList.Items[i].OwnerReferences {
 			if or.UID == d.UID {
-				if v, ok := rsList.Items[i].Annotations[model.DeploymentRevisionAnnotation]; ok && v == d.Annotations[model.DeploymentRevisionAnnotation] {
+				if v, ok := rsList.Items[i].Annotations[constants.DeploymentRevisionAnnotation]; ok && v == d.Annotations[constants.DeploymentRevisionAnnotation] {
 					return &rsList.Items[i], nil
 				}
 			}

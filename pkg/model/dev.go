@@ -30,6 +30,7 @@ import (
 	"github.com/google/uuid"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/constants"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -545,25 +546,25 @@ func (dev *Dev) SetDefaults() error {
 		dev.Lifecycle = &Lifecycle{}
 	}
 	if dev.Interface == "" {
-		dev.Interface = Localhost
+		dev.Interface = constants.Localhost
 	}
 	if dev.SSHServerPort == 0 {
-		dev.SSHServerPort = oktetoDefaultSSHServerPort
+		dev.SSHServerPort = constants.OktetoDefaultSSHServerPort
 	}
 	dev.setRunAsUserDefaults(dev)
 
-	if os.Getenv(OktetoRescanIntervalEnvVar) != "" {
-		rescanInterval, err := strconv.Atoi(os.Getenv(OktetoRescanIntervalEnvVar))
+	if os.Getenv(constants.OktetoRescanIntervalEnvVar) != "" {
+		rescanInterval, err := strconv.Atoi(os.Getenv(constants.OktetoRescanIntervalEnvVar))
 		if err != nil {
 			return fmt.Errorf("cannot parse 'OKTETO_RESCAN_INTERVAL' into an integer: %s", err.Error())
 		}
 		dev.Sync.RescanInterval = rescanInterval
 	} else if dev.Sync.RescanInterval == 0 {
-		dev.Sync.RescanInterval = DefaultSyncthingRescanInterval
+		dev.Sync.RescanInterval = constants.DefaultSyncthingRescanInterval
 	}
 
 	if dev.Docker.Enabled && dev.Docker.Image == "" {
-		dev.Docker.Image = DefaultDinDImage
+		dev.Docker.Image = constants.DefaultDinDImage
 	}
 
 	for _, s := range dev.Services {
@@ -599,7 +600,7 @@ func (dev *Dev) SetDefaults() error {
 		s.Secrets = make([]Secret, 0)
 		s.Services = make([]*Dev, 0)
 		s.Sync.Compression = false
-		s.Sync.RescanInterval = DefaultSyncthingRescanInterval
+		s.Sync.RescanInterval = constants.DefaultSyncthingRescanInterval
 		if s.Probes == nil {
 			s.Probes = &Probes{}
 		}
@@ -750,7 +751,7 @@ func (dev *Dev) validate() error {
 	}
 
 	if dev.Docker.Enabled && !dev.PersistentVolumeEnabled() {
-		oktetoLog.Information("https://okteto.com/docs/reference/manifest/#docker-object-optional")
+		oktetoLog.Information(constants.ManifestDockerDocsURL)
 		return fmt.Errorf("Docker support requires persistent volume to be enabled")
 	}
 
@@ -844,7 +845,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 		p, err := GetAvailablePort(dev.Interface)
 		if err != nil {
 			oktetoLog.Infof("failed to get random port for SSH connection: %s", err)
-			p = oktetoDefaultSSHServerPort
+			p = constants.OktetoDefaultSSHServerPort
 		}
 
 		dev.RemotePort = p
@@ -853,7 +854,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 
 	p := Secret{
 		LocalPath:  pubKeyPath,
-		RemotePath: authorizedKeysPath,
+		RemotePath: constants.AuthorizedKeysPath,
 		Mode:       0644,
 	}
 
@@ -872,10 +873,10 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 func (dev *Dev) LoadForcePull() {
 	restartUUID := uuid.New().String()
 	dev.ImagePullPolicy = apiv1.PullAlways
-	dev.Metadata.Annotations[OktetoRestartAnnotation] = restartUUID
+	dev.Metadata.Annotations[constants.OktetoRestartAnnotation] = restartUUID
 	for _, s := range dev.Services {
 		s.ImagePullPolicy = apiv1.PullAlways
-		s.Metadata.Annotations[OktetoRestartAnnotation] = restartUUID
+		s.Metadata.Annotations[constants.OktetoRestartAnnotation] = restartUUID
 	}
 	oktetoLog.Infof("enabled force pull")
 }
@@ -913,12 +914,12 @@ func (dev *Dev) SetLastBuiltAnnotation() {
 	if dev.Metadata.Annotations == nil {
 		dev.Metadata.Annotations = Annotations{}
 	}
-	dev.Metadata.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
+	dev.Metadata.Annotations[constants.LastBuiltAnnotation] = time.Now().UTC().Format(constants.TimeFormat)
 }
 
 //GetVolumeName returns the okteto volume name for a given development container
 func (dev *Dev) GetVolumeName() string {
-	return fmt.Sprintf(OktetoVolumeNameTemplate, dev.Name)
+	return fmt.Sprintf(constants.OktetoVolumeNameTemplate, dev.Name)
 }
 
 // LabelsSelector returns the labels of a Deployment as a k8s selector
@@ -999,7 +1000,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				},
 				EnvVar{
 					Name:  "DOCKER_HOST",
-					Value: DefaultDockerHost,
+					Value: constants.DefaultDockerHost,
 				},
 				EnvVar{
 					Name:  "DOCKER_CERT_PATH",
@@ -1014,24 +1015,24 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				rule.Volumes,
 				VolumeMount{
 					Name:      main.GetVolumeName(),
-					MountPath: DefaultDockerCertDir,
-					SubPath:   DefaultDockerCertDirSubPath,
+					MountPath: constants.DefaultDockerCertDir,
+					SubPath:   constants.DefaultDockerCertDirSubPath,
 				},
 				VolumeMount{
 					Name:      main.GetVolumeName(),
-					MountPath: DefaultDockerCacheDir,
-					SubPath:   DefaultDockerCacheDirSubPath,
+					MountPath: constants.DefaultDockerCacheDir,
+					SubPath:   constants.DefaultDockerCacheDirSubPath,
 				},
 			)
 		}
 
 		// We want to minimize environment mutations, so only reconfigure the SSH
 		// server port if a non-default is specified.
-		if dev.SSHServerPort != oktetoDefaultSSHServerPort {
+		if dev.SSHServerPort != constants.OktetoDefaultSSHServerPort {
 			rule.Environment = append(
 				rule.Environment,
 				EnvVar{
-					Name:  oktetoSSHServerPortVariable,
+					Name:  constants.OktetoSSHServerPortVariableEnvVar,
 					Value: strconv.Itoa(dev.SSHServerPort),
 				},
 			)
@@ -1040,8 +1041,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			rule.Volumes,
 			VolumeMount{
 				Name:      main.GetVolumeName(),
-				MountPath: OktetoSyncthingMountPath,
-				SubPath:   SyncthingSubPath,
+				MountPath: constants.OktetoSyncthingMountPath,
+				SubPath:   constants.SyncthingSubPath,
 			},
 		)
 		if main.RemoteModeEnabled() {
@@ -1049,8 +1050,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				rule.Volumes,
 				VolumeMount{
 					Name:      main.GetVolumeName(),
-					MountPath: RemoteMountPath,
-					SubPath:   RemoteSubPath,
+					MountPath: constants.RemoteMountPath,
+					SubPath:   constants.RemoteSubPath,
 				},
 			)
 		}
@@ -1146,7 +1147,7 @@ func (dev *Dev) RemoteModeEnabled() bool {
 		return true
 	}
 
-	if v, ok := os.LookupEnv(OktetoExecuteSSHEnvVar); ok && v == "false" {
+	if v, ok := os.LookupEnv(constants.OktetoExecuteSSHEnvVar); ok && v == "false" {
 		return false
 	}
 	return true
@@ -1175,7 +1176,7 @@ func ExpandEnv(value string) (string, error) {
 func GetTimeout() (time.Duration, error) {
 	defaultTimeout := (60 * time.Second)
 
-	t := os.Getenv(OktetoTimeoutEnvVar)
+	t := os.Getenv(constants.OktetoTimeoutEnvVar)
 	if t == "" {
 		return defaultTimeout, nil
 	}
@@ -1190,28 +1191,28 @@ func GetTimeout() (time.Duration, error) {
 
 func (dev *Dev) translateDeprecatedMetadataFields() error {
 	if len(dev.Labels) > 0 {
-		oktetoLog.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
+		oktetoLog.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (%s)", constants.ManifestSelectorDocsURL)
 		for k, v := range dev.Labels {
 			dev.Selector[k] = v
 		}
 	}
 
 	if len(dev.Annotations) > 0 {
-		oktetoLog.Warning("The field 'annotations' is deprecated. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
+		oktetoLog.Warning("The field 'annotations' is deprecated. Use the field 'metadata.annotations' instead (%s)", constants.ManifestMetadataDocsURL)
 		for k, v := range dev.Annotations {
 			dev.Metadata.Annotations[k] = v
 		}
 	}
 	for _, s := range dev.Services {
 		if len(s.Labels) > 0 {
-			oktetoLog.Warning("The field '%s.labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
+			oktetoLog.Warning("The field '%s.labels' is deprecated. Use the field 'selector' instead (%s)", s.Name, constants.ManifestSelectorDocsURL)
 			for k, v := range s.Labels {
 				s.Selector[k] = v
 			}
 		}
 
 		if len(s.Annotations) > 0 {
-			oktetoLog.Warning("The field 'annotations' is deprecated. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
+			oktetoLog.Warning("The field 'annotations' is deprecated. Use the field '%s.metadata.annotations' instead (%s)", s.Name, constants.ManifestMetadataDocsURL)
 			for k, v := range s.Annotations {
 				s.Metadata.Annotations[k] = v
 			}

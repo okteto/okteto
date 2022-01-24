@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
@@ -47,7 +48,7 @@ func Down() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "down",
 		Short: "Deactivate your development container",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#down"),
+		Args:  utils.NoArgsAccepted(constants.DownDocsURL),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
@@ -129,7 +130,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			return
 		}
 
-		if err := c.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
+		if err := c.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(constants.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
 			oktetoLog.Infof("error deleting deprecated volume: %v", err)
 		}
 
@@ -151,7 +152,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		spinner.Stop()
 		oktetoLog.Success("Persistent volume removed")
 
-		if os.Getenv(model.OktetoSkipCleanupEnvVar) == "" {
+		if os.Getenv(constants.OktetoSkipCleanupEnvVar) == "" {
 			if err := syncthing.RemoveFolder(dev); err != nil {
 				oktetoLog.Infof("failed to delete existing syncthing folder")
 			}

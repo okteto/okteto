@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -59,7 +60,7 @@ func CreateCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "create [cluster-url]",
-		Args:   utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#create"),
+		Args:   utils.ExactArgsAccepted(1, constants.CreateCtxDocsURL),
 		Short:  "Add a context",
 		Long: `Add a context
 
@@ -213,7 +214,7 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 
 	setSecrets(userContext.Secrets)
 
-	os.Setenv(model.OktetoUserNameEnvVar, okteto.Context().Username)
+	os.Setenv(constants.OktetoUserNameEnvVar, okteto.Context().Username)
 
 	return nil
 }

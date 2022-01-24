@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -50,12 +51,12 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 
 //IsDevModeOn returns if a statefulset is in devmode
 func IsDevModeOn(app App) bool {
-	return app.ObjectMeta().Labels[model.DevLabel] == "true"
+	return app.ObjectMeta().Labels[constants.DevLabel] == "true"
 }
 
 //SetLastBuiltAnnotation sets the app timestamp
 func SetLastBuiltAnnotation(app App) {
-	app.ObjectMeta().Annotations[model.LastBuiltAnnotation] = time.Now().UTC().Format(model.TimeFormat)
+	app.ObjectMeta().Annotations[constants.LastBuiltAnnotation] = time.Now().UTC().Format(constants.TimeFormat)
 }
 
 // GetRunningPodInLoop returns the dev pod for an app and loops until it success

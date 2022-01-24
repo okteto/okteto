@@ -27,6 +27,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/pkg/errors"
@@ -62,10 +63,10 @@ func Run(ctx context.Context, buildOptions BuildOptions) error {
 }
 
 func setOutputMode(outputMode string) string {
-	if buildOutput := os.Getenv(model.BuildkitProgressEnvVar); buildOutput != "" {
+	if buildOutput := os.Getenv(constants.BuildkitProgressEnvVar); buildOutput != "" {
 		return buildOutput
 	}
-	if utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+	if utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 		return "plain"
 	}
 	return outputMode

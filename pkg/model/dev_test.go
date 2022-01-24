@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/compose-spec/godotenv"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -694,7 +695,7 @@ func Test_LoadForcePull(t *testing.T) {
 		t.Errorf("wrong image pull policy for main container: %s", dev.ImagePullPolicy)
 	}
 
-	if dev.Metadata.Annotations[OktetoRestartAnnotation] == "" {
+	if dev.Metadata.Annotations[constants.OktetoRestartAnnotation] == "" {
 		t.Errorf("restart annotation not set for main container")
 	}
 
@@ -703,7 +704,7 @@ func Test_LoadForcePull(t *testing.T) {
 		t.Errorf("wrong image pull policy for services: %s", dev.ImagePullPolicy)
 	}
 
-	if dev.Metadata.Annotations[OktetoRestartAnnotation] == "" {
+	if dev.Metadata.Annotations[constants.OktetoRestartAnnotation] == "" {
 		t.Errorf("restart annotation not set for services")
 	}
 }
@@ -1101,13 +1102,13 @@ func TestGetTimeout(t *testing.T) {
 		{name: "bad env var", wantErr: true, env: "bad value"},
 	}
 
-	original := os.Getenv(OktetoTimeoutEnvVar)
-	defer os.Setenv(OktetoTimeoutEnvVar, original)
+	original := os.Getenv(constants.OktetoTimeoutEnvVar)
+	defer os.Setenv(constants.OktetoTimeoutEnvVar, original)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.env != "" {
-				os.Setenv(OktetoTimeoutEnvVar, tt.env)
+				os.Setenv(constants.OktetoTimeoutEnvVar, tt.env)
 			}
 			got, err := GetTimeout()
 			if (err != nil) != tt.wantErr {

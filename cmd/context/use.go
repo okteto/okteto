@@ -23,7 +23,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -34,7 +34,7 @@ func Use() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
 		Use:   "use [<url>|Kubernetes context]",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#use"),
+		Args:  utils.MaximumNArgsAccepted(1, constants.UseCtxDocsURL),
 		Short: "Set the default context",
 		Long: `Set the default context
 
@@ -113,7 +113,7 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 		return err
 	}
 
-	os.Setenv(model.OktetoNamespaceEnvVar, okteto.Context().Namespace)
+	os.Setenv(constants.OktetoNamespaceEnvVar, okteto.Context().Namespace)
 
 	if ctxOptions.Show {
 		oktetoLog.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/constants"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -348,7 +349,7 @@ func (s *Stack) Validate() error {
 
 		for _, v := range svc.VolumeMounts {
 			if strings.HasPrefix(v.LocalPath, "/") {
-				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/#up", name, v.LocalPath, v.RemotePath))
+				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: %s", name, v.LocalPath, v.RemotePath, constants.UpDocsURL))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))
@@ -401,7 +402,7 @@ func validateDependsOn(s *Stack) error {
 
 //GetLabelSelector returns the label selector for the stack name
 func (s *Stack) GetLabelSelector() string {
-	return fmt.Sprintf("%s=%s", StackNameLabel, s.Name)
+	return fmt.Sprintf("%s=%s", constants.StackNameLabel, s.Name)
 }
 
 //GetLabelSelector returns the label selector for the stack name
@@ -423,7 +424,7 @@ func (svc *Service) SetLastBuiltAnnotation() {
 	if svc.Annotations == nil {
 		svc.Annotations = Annotations{}
 	}
-	svc.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
+	svc.Annotations[constants.LastBuiltAnnotation] = time.Now().UTC().Format(constants.TimeFormat)
 }
 
 //isAlreadyAdded checks if a port is already on port list

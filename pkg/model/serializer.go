@@ -24,6 +24,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/constants"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -255,7 +256,7 @@ func (sync *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err == nil {
 		sync.Compression = true
 		sync.Verbose = oktetoLog.IsDebug()
-		sync.RescanInterval = DefaultSyncthingRescanInterval
+		sync.RescanInterval = constants.DefaultSyncthingRescanInterval
 		sync.Folders = rawFolders
 		return nil
 	}
@@ -276,7 +277,7 @@ func (sync *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (sync Sync) MarshalYAML() (interface{}, error) {
-	if !sync.Compression && sync.RescanInterval == DefaultSyncthingRescanInterval {
+	if !sync.Compression && sync.RescanInterval == constants.DefaultSyncthingRescanInterval {
 		return sync.Folders, nil
 	}
 	return syncRaw(sync), nil
@@ -492,7 +493,7 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
+		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field. Use the field 'sync' instead (%s)", raw, constants.SyncFieldDocsURL)
 		v.LocalPath, err = ExpandEnv(parts[0])
 		if err != nil {
 			return err

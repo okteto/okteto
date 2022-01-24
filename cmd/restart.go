@@ -24,6 +24,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -40,7 +41,7 @@ func Restart() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "restart",
 		Short: "Restart the deployments listed in the services field of the okteto manifest",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#restart"),
+		Args:  utils.NoArgsAccepted(constants.RestartDocsURL),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 

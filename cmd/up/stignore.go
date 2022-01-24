@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 )
 
 func addStignoreSecrets(dev *model.Dev) error {
@@ -97,7 +98,7 @@ func addStignoreSecrets(dev *model.Dev) error {
 			},
 		)
 	}
-	dev.Metadata.Annotations[model.OktetoStignoreAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
+	dev.Metadata.Annotations[constants.OktetoStignoreAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
 	return nil
 }
 
@@ -106,7 +107,7 @@ func addSyncFieldHash(dev *model.Dev) error {
 	if err != nil {
 		return err
 	}
-	dev.Metadata.Annotations[model.OktetoSyncAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
+	dev.Metadata.Annotations[constants.OktetoSyncAnnotation] = fmt.Sprintf("%x", md5.Sum([]byte(output)))
 	return nil
 }
 
