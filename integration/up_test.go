@@ -42,7 +42,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	appsv1 "k8s.io/api/apps/v1"
@@ -294,7 +294,7 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations[model.DeploymentRevisionAnnotation])
+	log.Printf("deployment: %s, revision: %s", originalDeployment.Name, originalDeployment.Annotations[constants.DeploymentRevisionAnnotation])
 
 	var wg sync.WaitGroup
 	upErrorChannel := make(chan error, 1)
@@ -374,7 +374,7 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[model.DeploymentRevisionAnnotation])
+	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[constants.DeploymentRevisionAnnotation])
 
 	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true, false); err != nil {
 		t.Fatal(err)
@@ -729,7 +729,7 @@ func TestUpAutocreate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[model.DeploymentRevisionAnnotation])
+	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[constants.DeploymentRevisionAnnotation])
 
 	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true, true); err != nil {
 		t.Fatal(err)
