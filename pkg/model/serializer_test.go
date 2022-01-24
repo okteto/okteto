@@ -1711,7 +1711,9 @@ devs:
 			} else if tt.isErrorExpected && err == nil {
 				t.Fatal("Expected error but got none")
 			}
-
+			if manifest != nil {
+				manifest.Manifest = nil
+			}
 			if !assert.Equal(t, tt.expected, manifest) {
 				t.Fatal("Failed")
 			}

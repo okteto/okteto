@@ -207,6 +207,7 @@ build:
 			if tt.expectedErr {
 				assert.NotNil(t, err)
 			} else {
+				m.Manifest = nil
 				assert.EqualValues(t, tt.expectedManifest, m)
 			}
 
