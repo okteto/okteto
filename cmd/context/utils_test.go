@@ -199,14 +199,11 @@ build:
 				filename = ""
 			}
 
-			cwd, err := os.Getwd()
-			if err != nil {
-				t.Errorf("unable to get current dir")
-			}
-			m, err := GetManifestV2(cwd, filename)
+			m, err := model.GetManifestV2(filename)
 			if tt.expectedErr {
 				assert.NotNil(t, err)
 			} else {
+				m.Filename = ""
 				assert.EqualValues(t, tt.expectedManifest, m)
 			}
 

@@ -77,7 +77,7 @@ services:
       limits:
         memory: "128Mi"
         cpu: "500m"
-    workdir: /app`)
+`)
 	manifest, err := Read(manifestBytes)
 	if err != nil {
 		t.Fatal(err)
@@ -1214,7 +1214,6 @@ services:
     container: core
     image: $SERVICE_IMAGE
     command: ["uwsgi"]
-    workdir: /app
     environment:
     - MY_VAR=$MY_VAR`)
 

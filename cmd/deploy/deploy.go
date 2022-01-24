@@ -72,7 +72,7 @@ type proxyInterface interface {
 }
 
 type deployCommand struct {
-	getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+	getManifest func(path string) (*model.Manifest, error)
 
 	proxy              proxyInterface
 	kubeconfig         kubeConfigHandler
@@ -170,7 +170,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			c := &deployCommand{
-				getManifest: contextCMD.GetManifest,
+				getManifest: model.GetManifestV2,
 
 				kubeconfig: kubeconfig,
 				executor:   utils.NewExecutor(oktetoLog.GetOutputFormat()),
@@ -203,16 +203,23 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		return err
 	}
 	var err error
-	if contextCMD.IsManifestV2Enabled() {
-		opts.Manifest, err = contextCMD.GetManifestV2(cwd, opts.ManifestPath)
-		if err != nil {
-			return err
-		}
-		oktetoLog.Debug("found okteto manifest")
+	opts.Manifest, err = dc.getManifest(opts.ManifestPath)
+	if err != nil {
+		return err
+	}
+	oktetoLog.Debug("found okteto manifest")
+	if opts.Manifest.Deploy == nil {
+		return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
+	}
+	if opts.Manifest.Context == "" {
+		opts.Manifest.Context = okteto.Context().Name
+	}
+	if opts.Manifest.Namespace == okteto.Context().Namespace {
+		opts.Manifest.Namespace = okteto.Context().Namespace
+	}
+	opts.Manifest.SetName(opts.Name)
 
-		if opts.Manifest.Deploy == nil {
-			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
-		}
+	if contextCMD.IsManifestV2Enabled() {
 
 		if opts.Manifest.Build != nil {
 
@@ -260,20 +267,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		}
 		opts.Manifest.Deploy.Commands = parsedCommands
 
-	} else {
-		// Read manifest file with the commands to be executed
-		opts.Manifest, err = dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath})
-		if err != nil {
-			oktetoLog.Infof("could not find manifest file to be executed: %s", err)
-			return err
-		}
-
-		if opts.Manifest.Deploy == nil {
-			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
-		}
 	}
-	opts.Manifest.Context = okteto.Context().Name
-	opts.Manifest.Namespace = okteto.Context().Namespace
 
 	oktetoLog.Debugf("starting server on %d", dc.proxy.GetPort())
 	dc.proxy.Start()

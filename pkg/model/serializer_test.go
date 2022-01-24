@@ -1045,6 +1045,7 @@ deploy:
   - okteto stack deploy`),
 			expected: &Manifest{
 				Namespace: "test",
+				Build:     map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",
@@ -1069,6 +1070,7 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",
@@ -1216,6 +1218,7 @@ dev:
 sync:
   - app:/app`),
 			expected: &Manifest{
+				Build: map[string]*BuildInfo{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1294,6 +1297,7 @@ sync:
 services:
   - name: svc`),
 			expected: &Manifest{
+				Build: map[string]*BuildInfo{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1379,6 +1383,7 @@ services:
 									Labels:      Labels{},
 									Annotations: Annotations{},
 								},
+								Volumes: []Volume{},
 							},
 						},
 						InitContainer: InitContainer{
@@ -1429,6 +1434,7 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				Build: map[string]*BuildInfo{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1511,6 +1517,7 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				Build: map[string]*BuildInfo{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1673,7 +1680,8 @@ deploy:
   - okteto stack deploy
 `),
 			expected: &Manifest{
-				Dev: map[string]*Dev{},
+				Dev:   map[string]*Dev{},
+				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",
@@ -1692,7 +1700,8 @@ devs:
   - test
 `),
 			expected: &Manifest{
-				Dev: map[string]*Dev{},
+				Dev:   map[string]*Dev{},
+				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []string{
 						"okteto stack deploy",
@@ -1713,6 +1722,7 @@ devs:
 			}
 
 			if !assert.Equal(t, tt.expected, manifest) {
+
 				t.Fatal("Failed")
 			}
 		})

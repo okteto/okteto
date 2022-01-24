@@ -283,7 +283,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 				svc.Build.Context = svc.Build.Name
 				svc.Build.Name = ""
 			}
-			setBuildDefaults(svc.Build)
+			svc.Build.setBuildDefaults()
 		}
 		if svc.Resources.Requests.Storage.Size.Value.Cmp(resource.MustParse("0")) == 0 {
 			svc.Resources.Requests.Storage.Size.Value = resource.MustParse("1Gi")

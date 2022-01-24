@@ -687,7 +687,8 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	manifest := manifestRaw{
-		Dev: make(map[string]*Dev),
+		Dev:   map[string]*Dev{},
+		Build: map[string]*BuildInfo{},
 	}
 	err = unmarshal(&manifest)
 	if err != nil {

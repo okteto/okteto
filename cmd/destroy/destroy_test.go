@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"testing"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
@@ -86,11 +85,11 @@ func (fe *fakeExecutor) Execute(command string, _ []string) error {
 	return nil
 }
 
-func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ string) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ string) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
 
@@ -127,7 +126,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 	}
 	tests := []struct {
 		name        string
-		getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+		getManifest func(path string) (*model.Manifest, error)
 		want        int
 	}{
 		{
@@ -168,7 +167,7 @@ func TestDestroyWithError(t *testing.T) {
 	cwd := "/okteto/src"
 	tests := []struct {
 		name        string
-		getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+		getManifest func(path string) (*model.Manifest, error)
 		secrets     []v1.Secret
 		want        []string
 	}{
@@ -280,7 +279,7 @@ func TestDestroyWithoutError(t *testing.T) {
 	cwd := "/okteto/src"
 	tests := []struct {
 		name        string
-		getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+		getManifest func(path string) (*model.Manifest, error)
 		secrets     []v1.Secret
 		want        []string
 	}{

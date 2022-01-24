@@ -16,7 +16,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -66,12 +65,8 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 
 			if contextCMD.IsManifestV2Enabled() {
-				cwd, err := os.Getwd()
-				if err != nil {
-					return err
-				}
 
-				manifest, err := contextCMD.GetManifestV2(cwd, options.File)
+				manifest, err := model.GetManifestV2(options.File)
 				if err != nil {
 					return err
 				}
