@@ -35,6 +35,7 @@ const (
 	repoField     = "repository"
 	branchField   = "branch"
 	filenameField = "filename"
+	yamlField     = "yaml"
 
 	// ProgressingStatus indicates that an app is being deployed
 	ProgressingStatus = "progressing"
@@ -65,6 +66,7 @@ type CfgData struct {
 	Repository string
 	Branch     string
 	Filename   string
+	Manifest   []byte
 }
 
 // TranslateConfigMap translates the app into a configMap
@@ -83,6 +85,7 @@ func TranslateConfigMap(name string, data *CfgData) *apiv1.ConfigMap {
 			repoField:     data.Repository,
 			branchField:   data.Branch,
 			filenameField: data.Filename,
+			yamlField:     base64.StdEncoding.EncodeToString(data.Manifest),
 		},
 	}
 }
@@ -94,7 +97,7 @@ func SetStatus(cfg *apiv1.ConfigMap, status, output string) *apiv1.ConfigMap {
 	return cfg
 }
 
-// SetStatus sets the status and output of a config map
+// SetOutput sets the output of a config map
 func SetOutput(cfg *apiv1.ConfigMap, output string) *apiv1.ConfigMap {
 	cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
 	return cfg

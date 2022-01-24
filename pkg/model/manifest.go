@@ -29,6 +29,7 @@ type Manifest struct {
 
 	Type     string `json:"-" yaml:"-"`
 	Filename string `json:"-" yaml:"-"`
+	Manifest []byte `yaml:"-"`
 }
 
 type ManifestDevs map[string]*Dev

@@ -322,6 +322,7 @@ func NewDev() *Dev {
 // Read reads an okteto manifests
 func Read(bytes []byte) (*Manifest, error) {
 	manifest := NewManifest()
+	manifest.Manifest = bytes
 	if bytes != nil {
 		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
 			if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
