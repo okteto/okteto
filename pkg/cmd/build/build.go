@@ -35,16 +35,17 @@ import (
 
 //BuildOptions define the options available for build
 type BuildOptions struct {
-	BuildArgs  []string
-	CacheFrom  []string
-	File       string
-	NoCache    bool
-	OutputMode string
-	Path       string
-	Secrets    []string
-	Tag        string
-	Target     string
-	Namespace  string
+	BuildArgs     []string
+	CacheFrom     []string
+	File          string
+	NoCache       bool
+	OutputMode    string
+	Path          string
+	Secrets       []string
+	Tag           string
+	Target        string
+	Namespace     string
+	BuildToGlobal bool
 }
 
 // Run runs the build sequence
