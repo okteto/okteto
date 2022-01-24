@@ -20,6 +20,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -103,7 +104,14 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 	destroyer := &fakeDestroyer{
 		errOnVolumes: assert.AnError,
 	}
-
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	cmd := &destroyCommand{
 		getManifest: getFakeManifest,
 		nsDestroyer: destroyer,
@@ -123,6 +131,14 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 	cwd := "/okteto/src"
 	secretHandler := fakeSecretHandler{
 		err: assert.AnError,
+	}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
 	}
 	tests := []struct {
 		name        string
@@ -165,6 +181,14 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 func TestDestroyWithError(t *testing.T) {
 	ctx := context.Background()
 	cwd := "/okteto/src"
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	tests := []struct {
 		name        string
 		getManifest func(path string) (*model.Manifest, error)
@@ -277,6 +301,14 @@ func TestDestroyWithError(t *testing.T) {
 func TestDestroyWithoutError(t *testing.T) {
 	ctx := context.Background()
 	cwd := "/okteto/src"
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	tests := []struct {
 		name        string
 		getManifest func(path string) (*model.Manifest, error)
@@ -470,6 +502,14 @@ func TestDestroyWithoutError(t *testing.T) {
 func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 	ctx := context.Background()
 	cwd := "/okteto/src"
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	executor := &fakeExecutor{
 		err: assert.AnError,
 	}
@@ -499,6 +539,14 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	ctx := context.Background()
 	cwd := "/okteto/src"
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	executor := &fakeExecutor{
 		err: assert.AnError,
 	}
