@@ -1228,7 +1228,7 @@ func Test_getAccessibleVolumeMounts(t *testing.T) {
 			},
 		},
 	}
-	err := os.Mkdir(existingPath, 0755)
+	err := os.Mkdir(existingPath, 0750)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1712,7 +1712,6 @@ func Test_translateInitContainers(t *testing.T) {
 }
 
 func Test_translateVolumes(t *testing.T) {
-	svcName := "test"
 	tmpFile, err := os.CreateTemp("", "test.conf")
 	if err != nil {
 		t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
@@ -1816,14 +1815,13 @@ func Test_translateVolumes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := translateVolumes(svcName, tt.svc)
+			result := translateVolumes(tt.svc)
 			assert.Equal(t, tt.volumeMounts, result)
 		})
 	}
 }
 
 func Test_translateVolumesMounts(t *testing.T) {
-	svcName := "test"
 	tmpFile, err := os.CreateTemp("", "test.conf")
 	if err != nil {
 		t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
@@ -1912,7 +1910,7 @@ func Test_translateVolumesMounts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := translateVolumeMounts(svcName, tt.svc)
+			result := translateVolumeMounts(tt.svc)
 			assert.Equal(t, tt.volumeMounts, result)
 		})
 	}
