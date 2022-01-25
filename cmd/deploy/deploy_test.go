@@ -111,14 +111,14 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
+
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.runDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -146,14 +146,13 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.runDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -183,14 +182,14 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
+
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.runDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -224,14 +223,14 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
+
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.runDeploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -263,14 +262,14 @@ func TestDeployWithoutErrors(t *testing.T) {
 		k8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
+
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.runDeploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed

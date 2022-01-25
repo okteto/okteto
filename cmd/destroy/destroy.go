@@ -121,7 +121,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:     secrets.NewSecrets(k8sClient),
 			}
-			return c.runDestroy(ctx, cwd, options)
+			return c.runDestroy(ctx, options)
 		},
 	}
 
@@ -134,7 +134,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Options) error {
+func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	// Read manifest file with the commands to be executed
 	manifest, err := dc.getManifest(opts.ManifestPath)
 	if err != nil {

@@ -100,7 +100,6 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 	opts := &Options{
 		Name: "test-app",
 	}
-	cwd := "/okteto/src"
 	destroyer := &fakeDestroyer{
 		errOnVolumes: assert.AnError,
 	}
@@ -118,7 +117,7 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 		executor:    executor,
 	}
 
-	err := cmd.runDestroy(ctx, cwd, opts)
+	err := cmd.runDestroy(ctx, opts)
 
 	assert.Error(t, err)
 	assert.Equal(t, 3, len(executor.executed))
@@ -128,7 +127,6 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 
 func TestDestroyWithErrorListingSecrets(t *testing.T) {
 	ctx := context.Background()
-	cwd := "/okteto/src"
 	secretHandler := fakeSecretHandler{
 		err: assert.AnError,
 	}
@@ -170,7 +168,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 				executor:    executor,
 			}
 
-			err := cmd.runDestroy(ctx, cwd, opts)
+			err := cmd.runDestroy(ctx, opts)
 
 			assert.Error(t, err)
 			assert.Equal(t, tt.want, len(executor.executed))
@@ -180,7 +178,6 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 
 func TestDestroyWithError(t *testing.T) {
 	ctx := context.Background()
-	cwd := "/okteto/src"
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		Contexts: map[string]*okteto.OktetoContext{
 			"test": {
@@ -288,7 +285,7 @@ func TestDestroyWithError(t *testing.T) {
 				nsDestroyer: destroyer,
 			}
 
-			err := cmd.runDestroy(ctx, cwd, opts)
+			err := cmd.runDestroy(ctx, opts)
 
 			assert.Error(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
@@ -300,7 +297,6 @@ func TestDestroyWithError(t *testing.T) {
 
 func TestDestroyWithoutError(t *testing.T) {
 	ctx := context.Background()
-	cwd := "/okteto/src"
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		Contexts: map[string]*okteto.OktetoContext{
 			"test": {
@@ -489,7 +485,7 @@ func TestDestroyWithoutError(t *testing.T) {
 				nsDestroyer: destroyer,
 			}
 
-			err := cmd.runDestroy(ctx, cwd, opts)
+			err := cmd.runDestroy(ctx, opts)
 
 			assert.NoError(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
@@ -501,7 +497,6 @@ func TestDestroyWithoutError(t *testing.T) {
 
 func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 	ctx := context.Background()
-	cwd := "/okteto/src"
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		Contexts: map[string]*okteto.OktetoContext{
 			"test": {
@@ -528,7 +523,7 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 		nsDestroyer: destroyer,
 	}
 
-	err := cmd.runDestroy(ctx, cwd, opts)
+	err := cmd.runDestroy(ctx, opts)
 
 	assert.Error(t, err)
 	assert.Equal(t, 1, len(executor.executed))
@@ -538,7 +533,6 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 
 func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	ctx := context.Background()
-	cwd := "/okteto/src"
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		Contexts: map[string]*okteto.OktetoContext{
 			"test": {
@@ -565,7 +559,7 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 		nsDestroyer: destroyer,
 	}
 
-	err := cmd.runDestroy(ctx, cwd, opts)
+	err := cmd.runDestroy(ctx, opts)
 
 	assert.Error(t, err)
 	assert.ElementsMatch(t, fakeManifest.Destroy, executor.executed)

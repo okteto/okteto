@@ -26,18 +26,18 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-//Type represents the type of manifest
-type Type string
+//Archetype represents the type of manifest
+type Archetype string
 
 var (
 	//StackType represents a stack manifest type
-	StackType Type = "stack"
+	StackType Archetype = "stack"
 	//OktetoType represents a okteto manifest type
-	OktetoType Type = "okteto"
+	OktetoType Archetype = "okteto"
 	//KubernetesType represents a k8s manifest type
-	KubernetesType Type = "kubernetes"
+	KubernetesType Archetype = "kubernetes"
 	//ChartType represents a k8s manifest type
-	ChartType Type = "chart"
+	ChartType Archetype = "chart"
 )
 
 var (
@@ -100,8 +100,8 @@ type Manifest struct {
 	Destroy   []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build     ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
 
-	Type     Type   `json:"-" yaml:"-"`
-	Filename string `json:"-" yaml:"-"`
+	Type     Archetype `json:"-" yaml:"-"`
+	Filename string    `json:"-" yaml:"-"`
 }
 
 //ManifestDevs defines all the dev section

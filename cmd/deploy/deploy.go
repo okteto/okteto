@@ -181,7 +181,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				tempKubeconfigFile: fmt.Sprintf(tempKubeConfigTemplate, config.GetUserHomeDir(), options.Name),
 				k8sClientProvider:  okteto.NewK8sClientProvider(),
 			}
-			return c.runDeploy(ctx, cwd, options)
+			return c.runDeploy(ctx, options)
 		},
 	}
 
@@ -196,7 +196,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Options) error {
+func (dc *deployCommand) runDeploy(ctx context.Context, opts *Options) error {
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.tempKubeconfigFile)
 	if err := dc.kubeconfig.Modify(dc.proxy.GetPort(), dc.proxy.GetToken(), dc.tempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
