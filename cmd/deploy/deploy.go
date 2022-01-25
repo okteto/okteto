@@ -55,11 +55,13 @@ type Options struct {
 	Name         string
 	Namespace    string
 	Variables    []string
-	Timeout      time.Duration
 	Manifest     *model.Manifest
 	Build        bool
-	Repository   string
-	Branch       string
+
+	Repository string
+	Branch     string
+	Wait       bool
+	Timeout    time.Duration
 }
 
 type kubeConfigHandler interface {
@@ -101,10 +103,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 					Repository: options.Repository,
 					Name:       options.Name,
 					Namespace:  options.Namespace,
-					Wait:       true,
+					Wait:       options.Wait,
 					File:       options.ManifestPath,
 					Variables:  options.Variables,
-					Timeout:    (5 * time.Minute),
+					Timeout:    options.Timeout,
 				}
 				return pipeline.ExecuteDeployPipeline(ctx, remoteOpts)
 			}
@@ -205,12 +207,14 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the okteto manifest file")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the application is deployed")
-	cmd.Flags().StringVarP(&options.Repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
-	cmd.Flags().StringVarP(&options.Branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
-
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the app")
 	cmd.Flags().MarkHidden("build")
+
+	cmd.Flags().StringVarP(&options.Repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
+	cmd.Flags().StringVarP(&options.Branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
+	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 
 	return cmd
 }
