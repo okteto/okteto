@@ -288,6 +288,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		Output:     fmt.Sprintf("Deploying app '%s'...", opts.Name),
 		Status:     app.ProgressingStatus,
 		Manifest:   opts.Manifest.Manifest,
+		Icon:       opts.Manifest.Icon,
 	}
 
 	cfg := app.TranslateConfigMap(opts.Name, data)

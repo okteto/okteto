@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"math"
 	"strings"
 
@@ -36,6 +37,7 @@ const (
 	branchField   = "branch"
 	filenameField = "filename"
 	yamlField     = "yaml"
+	iconField     = "icon"
 
 	// ProgressingStatus indicates that an app is being deployed
 	ProgressingStatus = "progressing"
@@ -61,19 +63,21 @@ var maxLogOutputRaw = int(math.Floor(float64(maxLogOutput)*3) / 4)
 
 //CfgData represents the data to be include in a configmap
 type CfgData struct {
+	Name       string
 	Status     string
 	Output     string
 	Repository string
 	Branch     string
 	Filename   string
 	Manifest   []byte
+	Icon       string
 }
 
 // TranslateConfigMap translates the app into a configMap
 func TranslateConfigMap(name string, data *CfgData) *apiv1.ConfigMap {
 	return &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name: translateConfigName(name),
 			Labels: map[string]string{
 				model.GitDeployLabel: "true",
 			},
@@ -86,6 +90,7 @@ func TranslateConfigMap(name string, data *CfgData) *apiv1.ConfigMap {
 			branchField:   data.Branch,
 			filenameField: data.Filename,
 			yamlField:     base64.StdEncoding.EncodeToString(data.Manifest),
+			iconField:     data.Icon,
 		},
 	}
 }
@@ -139,4 +144,8 @@ func UpdateOutput(ctx context.Context, name, namespace string, output *bytes.Buf
 	SetOutput(cmap, string(data))
 
 	return configmaps.Deploy(ctx, cmap, namespace, c)
+}
+
+func translateConfigName(name string) string {
+	return fmt.Sprintf("okteto-git-%s", name)
 }
