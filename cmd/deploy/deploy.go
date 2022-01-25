@@ -254,11 +254,9 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 			}
 		}
 
-		var parsedCommands []string
-		for _, command := range opts.Manifest.Deploy.Commands {
-			parsedCommands = append(parsedCommands, expandManifestEnvVars(command))
+		for _, cmdInfo := range opts.Manifest.Deploy.Commands {
+			cmdInfo.Command = expandManifestEnvVars(cmdInfo.Command)
 		}
-		opts.Manifest.Deploy.Commands = parsedCommands
 
 	} else {
 		// Read manifest file with the commands to be executed
@@ -295,11 +293,11 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
 
-	for _, command := range opts.Manifest.Deploy.Commands {
-		oktetoLog.SetStage(command)
-		if err := dc.executor.Execute(command, opts.Variables); err != nil {
-			oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
-			return fmt.Errorf("error executing command '%s': %s", command, err.Error())
+	for _, cmdInfo := range opts.Manifest.Deploy.Commands {
+		oktetoLog.SetStage(cmdInfo.Name)
+		if err := dc.executor.Execute(cmdInfo, opts.Variables); err != nil {
+			oktetoLog.Infof("error executing command '%s': %s", cmdInfo.Name, err.Error())
+			return fmt.Errorf("error executing command '%s': %s", cmdInfo.Name, err.Error())
 		}
 	}
 	oktetoLog.SetStage("")

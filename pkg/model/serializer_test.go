@@ -1046,8 +1046,11 @@ deploy:
 			expected: &Manifest{
 				Namespace: "test",
 				Deploy: &DeployInfo{
-					Commands: []string{
-						"okteto stack deploy",
+					Commands: []DeployCommand{
+						{
+							Name:    "okteto stack deploy",
+							Command: "okteto stack deploy",
+						},
 					},
 				},
 				Dev:     map[string]*Dev{},
