@@ -330,7 +330,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	if err := configmaps.Deploy(ctx, cfg, opts.Manifest.Namespace, c); err != nil {
 		return err
 	}
-	if err := app.UpdateOutput(ctx, opts.Name, opts.Manifest.Namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
+	if err := app.UpdateOutput(ctx, cfg.Name, opts.Manifest.Namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
 		return err
 	}
 	if err != nil {

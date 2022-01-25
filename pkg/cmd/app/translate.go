@@ -77,7 +77,7 @@ type CfgData struct {
 func TranslateConfigMap(name string, data *CfgData) *apiv1.ConfigMap {
 	return &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: translateConfigName(name),
+			Name: TranslateAppName(name),
 			Labels: map[string]string{
 				model.GitDeployLabel: "true",
 			},
@@ -146,6 +146,7 @@ func UpdateOutput(ctx context.Context, name, namespace string, output *bytes.Buf
 	return configmaps.Deploy(ctx, cmap, namespace, c)
 }
 
-func translateConfigName(name string) string {
+//TranslateAppName translate the name into the pipeline name
+func TranslateAppName(name string) string {
 	return fmt.Sprintf("okteto-git-%s", name)
 }

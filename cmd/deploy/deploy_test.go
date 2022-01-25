@@ -211,7 +211,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, app.TranslateAppName(opts.Name), okteto.Context().Namespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 	assert.Equal(t, app.ErrorStatus, cfg.Data["status"])
@@ -262,7 +262,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, app.TranslateAppName(opts.Name), okteto.Context().Namespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 	assert.Equal(t, app.DeployedStatus, cfg.Data["status"])
@@ -311,7 +311,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, opts.Name, okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, app.TranslateAppName(opts.Name), okteto.Context().Namespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 	assert.Equal(t, app.DeployedStatus, cfg.Data["status"])

@@ -59,7 +59,6 @@ func Test_translateConfigMap(t *testing.T) {
 				Output: tt.output,
 			}
 			cfg := TranslateConfigMap(tt.appName, data)
-			assert.Equal(t, tt.appName, cfg.Name)
 			assert.Equal(t, cfg.Data[statusField], tt.status)
 		})
 	}
