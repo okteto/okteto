@@ -33,7 +33,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -159,7 +158,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 func (dc *DeployCommand) RunDeploy(ctx context.Context, cwd string, opts *Options) error {
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
 	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
-		log.Infof("could not create temporal kubeconfig %s", err)
+		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
 		return err
 	}
 	var err error
