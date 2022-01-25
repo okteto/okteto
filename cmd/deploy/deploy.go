@@ -34,7 +34,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
-	okErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -240,7 +240,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 					}
 				}
 
-				if imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag); err == okErrors.ErrNotFound {
+				if imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag); err == oktetoErrors.ErrNotFound {
 					oktetoLog.Debugf("image not found, building image %s", opts.Tag)
 					if err := runBuildAndSetEnvs(ctx, service, opts); err != nil {
 						return err
@@ -320,7 +320,7 @@ func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (b
 	globalReference := strings.Replace(options.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 
 	imageWithDigest, err := registry.GetImageTagWithDigest(globalReference)
-	if err == okErrors.ErrNotFound {
+	if err == oktetoErrors.ErrNotFound {
 		oktetoLog.Debug("image not found at global registry, not running optimization for deployment")
 		return false, nil
 	}
