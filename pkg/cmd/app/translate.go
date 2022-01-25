@@ -135,7 +135,6 @@ func UpdateOutput(ctx context.Context, name, namespace string, output *bytes.Buf
 			cappedOutput = head + cappedOutput
 		}
 		cappedOutput = strings.TrimPrefix(cappedOutput, head)
-		// cappedOutput = `{"truncated": true}` + "\n" + cappedOutput
 		data = []byte(cappedOutput)
 	} else {
 		data = output.Bytes()
