@@ -31,6 +31,7 @@ import (
 	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
+	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
@@ -57,6 +58,8 @@ type Options struct {
 	Timeout      time.Duration
 	Manifest     *model.Manifest
 	Build        bool
+	Repository   string
+	Branch       string
 }
 
 type kubeConfigHandler interface {
@@ -91,6 +94,20 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
 		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			if shouldExecuteRemotely(options) {
+				remoteOpts := &pipeline.DeployOptions{
+					Branch:     options.Branch,
+					Repository: options.Repository,
+					Name:       options.Name,
+					Namespace:  options.Namespace,
+					Wait:       true,
+					File:       options.ManifestPath,
+					Variables:  options.Variables,
+					Timeout:    (5 * time.Minute),
+				}
+				return pipeline.ExecuteDeployPipeline(ctx, remoteOpts)
+			}
 			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(model.OktetoWithinDeployCommandContextEnvVar, "false")
@@ -188,6 +205,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the okteto manifest file")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the application is deployed")
+	cmd.Flags().StringVarP(&options.Repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
+	cmd.Flags().StringVarP(&options.Branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
 
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the app")
@@ -564,4 +583,8 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		os.Setenv(model.OktetoBuildkitHostURLEnvVar, okteto.Context().Builder)
 	}
 	return nil
+}
+
+func shouldExecuteRemotely(options *Options) bool {
+	return options.Branch != "" || options.Repository != ""
 }
