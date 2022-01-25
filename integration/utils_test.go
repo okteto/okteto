@@ -19,11 +19,13 @@ package integration
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"text/template"
 
@@ -129,4 +131,19 @@ func writeDeployment(template *template.Template, name, path string) error {
 	}
 	defer dFile.Close()
 	return nil
+}
+
+func updateKubeConfig(oktetoPath string) error {
+	args := []string{"kubeconfig"}
+	cmd := exec.Command(oktetoPath, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
+	}
+	return nil
+}
+
+func writeFile(path, filename, content string) error {
+	return ioutil.WriteFile(filepath.Join(path, filename), []byte(content), 0777)
 }

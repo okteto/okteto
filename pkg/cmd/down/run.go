@@ -19,7 +19,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -30,7 +30,7 @@ import (
 func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait bool, c kubernetes.Interface) error {
 	ctx := context.Background()
 	if len(trMap) == 0 {
-		log.Info("no translations available in the deployment")
+		oktetoLog.Info("no translations available in the deployment")
 	}
 
 	for _, tr := range trMap {
@@ -62,7 +62,7 @@ func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait 
 	stopSyncthing(dev)
 
 	if err := ssh.RemoveEntry(dev.Name); err != nil {
-		log.Infof("failed to remove ssh entry: %s", err)
+		oktetoLog.Infof("failed to remove ssh entry: %s", err)
 	}
 
 	if !wait {
@@ -76,11 +76,11 @@ func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait 
 func stopSyncthing(dev *model.Dev) {
 	sy, err := syncthing.New(dev)
 	if err != nil {
-		log.Infof("failed to create syncthing instance")
+		oktetoLog.Infof("failed to create syncthing instance")
 		return
 	}
 
 	if err := sy.HardTerminate(); err != nil {
-		log.Infof("failed to hard terminate existing syncthing")
+		oktetoLog.Infof("failed to hard terminate existing syncthing")
 	}
 }

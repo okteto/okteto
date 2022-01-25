@@ -31,6 +31,9 @@ const (
 	// InteractiveDevLabel indicates the interactive dev pod
 	InteractiveDevLabel = "interactive.dev.okteto.com"
 
+	// OktetoSampleAnnotation indicates that the repo is a okteto sample
+	OktetoSampleAnnotation = "dev.okteto.com/sample"
+
 	// DetachedDevLabel indicates the detached dev pods
 	DetachedDevLabel = "detached.dev.okteto.com"
 
@@ -294,6 +297,9 @@ const (
 
 	// GithubRepositoryEnvVar defines the server to be used
 	GithubServerURLEnvVar = "GITHUB_SERVER_URL"
+
+	// ComposeFileEnvVar defines the compose files to use
+	ComposeFileEnvVar = "COMPOSE_FILE"
 
 	// BuildkitProgressEnvVar defines the output of buildkit
 	BuildkitProgressEnvVar = "BUILDKIT_PROGRESS"

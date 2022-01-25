@@ -17,7 +17,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,7 +67,7 @@ func Deploy(ctx context.Context, cf *apiv1.ConfigMap, namespace string, c *kuber
 // Destroy deletes a configmap in a space
 func Destroy(ctx context.Context, name, namespace string, c *kubernetes.Clientset) error {
 	err := c.CoreV1().ConfigMaps(namespace).Delete(ctx, name, metav1.DeleteOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return err
 	}
 	return nil

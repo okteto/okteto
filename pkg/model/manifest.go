@@ -14,16 +14,18 @@
 package model
 
 import (
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 //Manifest represents an okteto manifest
 type Manifest struct {
-	Icon    string          `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy  *DeployInfo     `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev     ManifestDevs    `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy []DeployCommand `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build   ManifestBuild   `json:"build,omitempty" yaml:"build,omitempty"`
+	Namespace string          `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context   string          `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon      string          `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy    *DeployInfo     `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev       ManifestDevs    `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy   []DeployCommand `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build     ManifestBuild   `json:"build,omitempty" yaml:"build,omitempty"`
 
 	Type     string `yaml:"-"`
 	Filename string `yaml:"-"`
@@ -42,7 +44,7 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 	manifest := NewManifest()
 	name, err := ExpandEnv(dev.Name)
 	if err != nil {
-		log.Infof("could not expand dev name '%s'", dev.Name)
+		oktetoLog.Infof("could not expand dev name '%s'", dev.Name)
 		name = dev.Name
 	}
 	manifest.Dev[name] = dev
@@ -64,14 +66,4 @@ func NewDeployInfo() *DeployInfo {
 	return &DeployInfo{
 		Commands: []DeployCommand{},
 	}
-}
-
-// GetBuildManifest Loads a the build manifest
-func GetBuildManifest(path string) (ManifestBuild, error) {
-	manifest, err := Get(path)
-	if err != nil {
-		return nil, err
-	}
-
-	return manifest.Build, nil
 }

@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -79,7 +79,10 @@ func Test_createContext(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fakeClient := test.NewFakeNamespaceClient(tt.namespaces, tt.previews, tt.err)
+
+			fakeClient := client.NewFakeOktetoClient()
+			fakeClient.Namespace = client.NewFakeNamespaceClient(tt.namespaces, tt.err)
+			fakeClient.Preview = client.NewFakePreviewClient(tt.previews, tt.err)
 			hasAccess, err := HasAccessToNamespace(ctx, "test", fakeClient)
 
 			assert.Equal(t, tt.expectedErr, err != nil)

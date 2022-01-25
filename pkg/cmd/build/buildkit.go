@@ -29,7 +29,7 @@ import (
 	"github.com/moby/buildkit/session/auth/authprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
@@ -148,7 +148,7 @@ func getBuildkitClient(ctx context.Context) (*client.Client, error) {
 
 		c, err := getClientForOktetoCluster(ctx)
 		if err != nil {
-			log.Infof("failed to create okteto build client: %s", err)
+			oktetoLog.Infof("failed to create okteto build client: %s", err)
 			return nil, fmt.Errorf("failed to create the builder client: %v", err)
 		}
 
@@ -195,7 +195,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 
 	eg.Go(func() error {
 		var c console.Console
-		if progress == "tty" {
+		if progress == oktetoLog.TTYFormat {
 			if cn, err := console.ConsoleFromFile(os.Stderr); err == nil {
 				c = cn
 			}

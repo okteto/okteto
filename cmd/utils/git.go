@@ -17,10 +17,17 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/transport"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
+	"k8s.io/utils/pointer"
 )
+
+var isOktetoSample *bool
 
 func GetBranch(ctx context.Context, path string) (string, error) {
 	repo, err := git.PlainOpen(path)
@@ -84,4 +91,33 @@ func GetRandomSHA(ctx context.Context, path string) string {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(b)
+}
+
+func IsOktetoRepo() bool {
+	if isOktetoSample == nil {
+		path, err := os.Getwd()
+		if err != nil {
+			oktetoLog.Infof("failed to get the current working directory in IsOktetoRepo: %v", err)
+			isOktetoSample = pointer.BoolPtr(false)
+			return false
+		}
+		repoUrl, err := model.GetRepositoryURL(path)
+		if err != nil {
+			oktetoLog.Infof("failed to get repository url in IsOktetoRepo: %v", err)
+			isOktetoSample = pointer.BoolPtr(false)
+			return false
+		}
+		isOktetoSample = pointer.BoolPtr(isOktetoRepoFromURL(repoUrl))
+	}
+	return *isOktetoSample
+}
+
+func isOktetoRepoFromURL(repoUrl string) bool {
+	endpoint, err := transport.NewEndpoint(repoUrl)
+	if err != nil {
+		oktetoLog.Infof("failed to get endpoint in isOktetoRepoFromURL: %v", err)
+		return false
+	}
+	endpoint.Path = strings.TrimPrefix(endpoint.Path, "/")
+	return strings.HasPrefix(endpoint.Path, "okteto/")
 }

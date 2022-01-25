@@ -19,9 +19,9 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	k8sforward "github.com/okteto/okteto/pkg/k8s/forward"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -104,7 +104,7 @@ func (fm *ForwardManager) Add(f model.Forward) error {
 
 // Start starts a port-forward to the remote port and then starts forwards and reverse forwards as goroutines
 func (fm *ForwardManager) Start(devPod, namespace string) error {
-	log.Info("starting SSH forward manager")
+	oktetoLog.Info("starting SSH forward manager")
 
 	ticker := time.NewTicker(200 * time.Millisecond)
 	to := time.Now().Add(10 * time.Second)
@@ -112,13 +112,13 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 
 	for {
 		retries++
-		log.Infof("SSH forward manager retry %d", retries)
+		oktetoLog.Infof("SSH forward manager retry %d", retries)
 		if fm.pf != nil {
 			if err := fm.pf.Start(devPod, namespace); err != nil {
 				return fmt.Errorf("failed to start SSH port-forward: %w", err)
 			}
 
-			log.Info("k8s port forward to dev pod connected")
+			oktetoLog.Info("k8s port forward to dev pod connected")
 		}
 
 		c, err := getSSHClientConfig()
@@ -126,15 +126,15 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 			return fmt.Errorf("failed to get SSH configuration: %s", err)
 		}
 
-		log.Infof("starting SSH connection pool on %s", fm.sshAddr)
+		oktetoLog.Infof("starting SSH connection pool on %s", fm.sshAddr)
 		pool, err := startPool(fm.ctx, fm.sshAddr, c)
 		if err == nil {
 			fm.pool = pool
 			break
 		}
-		log.Infof("error starting SSH connection pool on %s: %s", fm.sshAddr, err.Error())
+		oktetoLog.Infof("error starting SSH connection pool on %s: %s", fm.sshAddr, err.Error())
 		if time.Now().After(to) && retries > 10 {
-			return errors.ErrSSHConnectError
+			return oktetoErrors.ErrSSHConnectError
 		}
 
 		if fm.pf != nil {
@@ -145,7 +145,7 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 		case <-ticker.C:
 			continue
 		case <-fm.ctx.Done():
-			log.Infof("ForwardManager.Start cancelled")
+			oktetoLog.Infof("ForwardManager.Start cancelled")
 			return fmt.Errorf("ForwardManager.Start cancelled")
 		}
 
@@ -176,7 +176,7 @@ func (fm *ForwardManager) Stop() {
 		fm.pf.Stop()
 	}
 
-	log.Info("stopped SSH forward manager")
+	oktetoLog.Info("stopped SSH forward manager")
 }
 
 func (fm *ForwardManager) TransformLabelsToServiceName(f model.Forward) (model.Forward, error) {

@@ -48,20 +48,20 @@ import (
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/moby/buildkit/util/progress/progresswriter"
 	"github.com/moby/term"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 )
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build_buildkit.go#L48
 func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions BuildOptions, cli *client.Client) error {
-	log.Infof("building your image with docker client v%s", cli.ClientVersion())
+	oktetoLog.Infof("building your image with docker client v%s", cli.ClientVersion())
 	s, err := session.NewSession(context.Background(), buildOptions.Path, "")
 	if err != nil {
 		return errors.Wrap(err, "failed to create session")
 	}
 	if s == nil {
-		log.Infof("buildkit not supported by daemon. Building with docker daemon")
+		oktetoLog.Infof("buildkit not supported by daemon. Building with docker daemon")
 		return buildWithDockerDaemon(ctx, buildOptions, cli)
 	}
 
@@ -163,7 +163,7 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions BuildOption
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209
 func buildWithDockerDaemon(ctx context.Context, buildOptions BuildOptions, cli *client.Client) error {
-	log.Infof("building your image with docker client v%s", cli.ClientVersion())
+	oktetoLog.Infof("building your image with docker client v%s", cli.ClientVersion())
 
 	dockerBuildContext, err := getBuildContext(buildOptions.Path, buildOptions.File)
 	if err != nil {
@@ -193,7 +193,7 @@ func buildWithDockerDaemon(ctx context.Context, buildOptions BuildOptions, cli *
 	aux := func(msg jsonmessage.JSONMessage) {
 		var result types.BuildResult
 		if err := json.Unmarshal(*msg.Aux, &result); err != nil {
-			log.Infof(fmt.Sprintf("Failed to parse aux message: %s", err))
+			oktetoLog.Infof(fmt.Sprintf("Failed to parse aux message: %s", err))
 		} else {
 			imageID = result.ID
 		}
@@ -211,7 +211,7 @@ func buildWithDockerDaemon(ctx context.Context, buildOptions BuildOptions, cli *
 		}
 		return err
 	}
-	fmt.Print(imageID)
+	oktetoLog.Print(imageID)
 	return nil
 
 }
@@ -221,7 +221,7 @@ func displayStatus(out *os.File, eg *errgroup.Group, response types.ImageBuildRe
 	displayStatus := func(out *os.File, displayCh chan *buildkitClient.SolveStatus) {
 		var c console.Console
 		// TODO: Handle tty output in non-tty environment.
-		if cons, err := console.ConsoleFromFile(out); err == nil && (buildOutputMode == "auto" || buildOutputMode == "tty") {
+		if cons, err := console.ConsoleFromFile(out); err == nil && (buildOutputMode == "auto" || buildOutputMode == oktetoLog.TTYFormat) {
 			c = cons
 		}
 		// not using shared context to not disrupt display but let it finish reporting errors
@@ -246,7 +246,7 @@ func displayStatus(out *os.File, eg *errgroup.Group, response types.ImageBuildRe
 		if msg.ID == "moby.image.id" {
 			var result types.BuildResult
 			if err := json.Unmarshal(*msg.Aux, &result); err != nil {
-				log.Errorf("failed to parse aux message: %v", err)
+				oktetoLog.Errorf("failed to parse aux message: %v", err)
 			}
 			return
 		}

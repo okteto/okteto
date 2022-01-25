@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
 	"github.com/okteto/okteto/pkg/k8s/services"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	apiv1 "k8s.io/api/core/v1"
@@ -33,7 +33,7 @@ import (
 
 func Create(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	if !okteto.IsOkteto() {
-		return errors.ErrDivertNotSupported
+		return oktetoErrors.ErrDivertNotSupported
 	}
 
 	username := okteto.GetSanitizedUsername()
@@ -71,7 +71,7 @@ func divertApp(ctx context.Context, dev *model.Dev, username string, c kubernete
 func divertService(ctx context.Context, dev *model.Dev, app apps.App, username string, c kubernetes.Interface) (*apiv1.Service, error) {
 	s, err := services.Get(ctx, dev.Divert.Service, dev.Namespace, c)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if oktetoErrors.IsNotFound(err) {
 			return nil, fmt.Errorf("the divert service '%s' doesn't exist", dev.Divert.Service)
 		}
 		return nil, fmt.Errorf("error getting divert service '%s': %s", dev.Divert.Service, err.Error())
@@ -90,7 +90,7 @@ func divertService(ctx context.Context, dev *model.Dev, app apps.App, username s
 func divertIngress(ctx context.Context, dev *model.Dev, username string, c kubernetes.Interface) (*networkingv1.Ingress, error) {
 	i, err := ingressesv1.Get(ctx, dev.Divert.Ingress, dev.Namespace, c)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if oktetoErrors.IsNotFound(err) {
 			return nil, fmt.Errorf("the divert ingress '%s' doesn't exist", dev.Divert.Ingress)
 		}
 		return nil, fmt.Errorf("error getting divert ingress '%s': %s", dev.Divert.Ingress, err.Error())
@@ -112,19 +112,19 @@ func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *ne
 	divertCRD := translateDivertCRD(username, dev, s, i)
 
 	old, err := dClient.Diverts(divertCRD.Namespace).Get(ctx, divertCRD.Name, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return fmt.Errorf("error getting divert CRD '%s'': %s", divertCRD.Name, err)
 	}
 
 	if old.Name == "" {
-		log.Infof("creating  divert CRD '%s'", divertCRD.Name)
+		oktetoLog.Infof("creating  divert CRD '%s'", divertCRD.Name)
 		_, err = dClient.Diverts(divertCRD.Namespace).Create(ctx, divertCRD)
 		if err != nil {
 			return fmt.Errorf("error creating divert CRD '%s': %s", divertCRD.Name, err)
 		}
-		log.Infof("created divert CRD '%s'", divertCRD.Name)
+		oktetoLog.Infof("created divert CRD '%s'", divertCRD.Name)
 	} else {
-		log.Infof("updating divert CRD '%s'", divertCRD.Name)
+		oktetoLog.Infof("updating divert CRD '%s'", divertCRD.Name)
 		old.TypeMeta = divertCRD.TypeMeta
 		old.Annotations = divertCRD.Annotations
 		old.Labels = divertCRD.Labels
@@ -134,7 +134,7 @@ func createDivertCRD(ctx context.Context, dev *model.Dev, username string, i *ne
 		if err != nil {
 			return fmt.Errorf("error updating divert CRD '%s': %s", divertCRD.Name, err)
 		}
-		log.Infof("updated divert CRD '%s'.", divertCRD.Name)
+		oktetoLog.Infof("updated divert CRD '%s'.", divertCRD.Name)
 	}
 
 	return nil
@@ -150,9 +150,9 @@ func Delete(ctx context.Context, dev *model.Dev, c kubernetes.Interface) error {
 	divertCRDName := model.DivertName(dev.Divert.Service, username)
 	if err := dClient.Diverts(dev.Namespace).Delete(ctx, divertCRDName, metav1.DeleteOptions{}); err != nil {
 		if strings.Contains(err.Error(), "the server could not find the requested resource") {
-			return errors.ErrDivertNotSupported
+			return oktetoErrors.ErrDivertNotSupported
 		}
-		if !errors.IsNotFound(err) {
+		if !oktetoErrors.IsNotFound(err) {
 			return fmt.Errorf("error deleting divert CRD '%s': %s", divertCRDName, err.Error())
 		}
 	}

@@ -19,7 +19,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -51,10 +51,10 @@ func Delete(ctx context.Context, okCtx string) error {
 
 	if _, ok := ctxStore.Contexts[okCtx]; ok {
 		delete(ctxStore.Contexts, okCtx)
-		if err := okteto.WriteOktetoContextConfig(); err != nil {
+		if err := okteto.NewContextConfigWriter().Write(); err != nil {
 			return err
 		}
-		log.Success("'%s' deleted successfully", okCtx)
+		oktetoLog.Success("'%s' deleted successfully", okCtx)
 	} else {
 		validOptions := make([]string, 0)
 		for k, v := range ctxStore.Contexts {

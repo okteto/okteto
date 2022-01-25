@@ -18,14 +18,16 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/compose-spec/godotenv"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -69,6 +71,10 @@ func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 		for i := len(svc.EnvFiles) - 1; i >= 0; i-- {
 			envFilepath := svc.EnvFiles[i]
 			if err := translateServiceEnvFile(ctx, svc, svcName, envFilepath); err != nil {
+				if filepath.Base(envFilepath) == ".env" {
+					oktetoLog.Warning("Skipping '.env' file from %s service", svcName)
+					continue
+				}
 				return err
 			}
 		}
@@ -126,7 +132,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 	}
 
 	if !hasBuiltSomething && !hasAddedAnyVolumeMounts && options.ForceBuild {
-		log.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
+		oktetoLog.Warning("Ignoring '--build' argument. There are not 'build' primitives in your stack")
 	}
 
 	return nil
@@ -147,22 +153,22 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
 		}
 		if !options.ForceBuild {
-			if _, err := registry.GetImageTagWithDigest(svc.Image); err != errors.ErrNotFound {
+			if _, err := registry.GetImageTagWithDigest(svc.Image); err != oktetoErrors.ErrNotFound {
 				s.Services[name] = svc
 				continue
 			}
-			log.Infof("image '%s' not found, building it", svc.Image)
+			oktetoLog.Infof("image '%s' not found, building it", svc.Image)
 		}
 		if !hasBuiltSomething {
 			hasBuiltSomething = true
 			if okteto.Context().Builder != "" {
-				log.Information("Running your build in %s...", okteto.Context().Builder)
+				oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
 			} else {
-				log.Information("Running your build in docker")
+				oktetoLog.Information("Running your build in docker")
 			}
 
 		}
-		log.Information("Building image for service '%s'...", name)
+		oktetoLog.Information("Building image for service '%s'...", name)
 		buildArgs := model.SerializeBuildArgs(svc.Build.Args)
 		buildOptions := build.BuildOptions{
 			Path:       svc.Build.Context,
@@ -179,7 +185,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		}
 		svc.SetLastBuiltAnnotation()
 		s.Services[name] = svc
-		log.Success("Image for service '%s' successfully pushed", name)
+		oktetoLog.Success("Image for service '%s' successfully pushed", name)
 	}
 	return hasBuiltSomething, nil
 }
@@ -189,10 +195,6 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 	for name, svc := range s.Services {
 		notSkippableVolumeMounts := getAccessibleVolumeMounts(s, name)
 		if len(notSkippableVolumeMounts) != 0 {
-			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
-				hasAddedAnyVolumeMounts = true
-				log.Information("Running your build in %s...", okteto.Context().Builder)
-			}
 			fromImage := svc.Image
 			if okteto.IsOkteto() {
 				fromImage = registry.ExpandOktetoDevRegistry(svc.Image)
@@ -207,7 +209,18 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 			if okteto.IsOkteto() && !registry.IsOktetoRegistry(svc.Image) {
 				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto-with-volume-mounts", s.Name, name)
 			}
-			log.Information("Building image for service '%s' to include host volumes...", name)
+			if !options.ForceBuild {
+				if _, err := registry.GetImageTagWithDigest(svc.Image); err != oktetoErrors.ErrNotFound {
+					s.Services[name] = svc
+					continue
+				}
+				oktetoLog.Infof("image '%s' not found, building it", svc.Image)
+			}
+			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
+				hasAddedAnyVolumeMounts = true
+				oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
+			}
+			oktetoLog.Information("Building image for service '%s' to include host volumes...", name)
 			buildArgs := model.SerializeBuildArgs(svc.Build.Args)
 
 			buildOptions := build.BuildOptions{
@@ -225,7 +238,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 			}
 			svc.SetLastBuiltAnnotation()
 			s.Services[name] = svc
-			log.Success("Image for service '%s' successfully pushed", name)
+			oktetoLog.Success("Image for service '%s' successfully pushed", name)
 		}
 	}
 	return hasAddedAnyVolumeMounts, nil
@@ -264,7 +277,6 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
 
 	healthcheckProbe := getSvcProbe(svc)
-
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -307,6 +319,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 		},
 	}
 }
+
 func translatePersistentVolumeClaim(volumeName string, s *model.Stack) apiv1.PersistentVolumeClaim {
 	volumeSpec := s.Volumes[volumeName]
 	labels := translateVolumeLabels(volumeName, s)
@@ -437,6 +450,7 @@ func getInitContainers(svcName string, s *model.Stack) []apiv1.Container {
 	if len(svc.Volumes) > 0 {
 		addPermissionsContainer := getAddPermissionsInitContainer(svcName, svc)
 		initContainers = append(initContainers, addPermissionsContainer)
+
 	}
 	initializationContainer := getInitializeVolumeContentContainer(svcName, svc)
 	if initializationContainer != nil {
@@ -486,6 +500,7 @@ func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *ap
 	}
 	return nil
 }
+
 func getInitContainerCommandAndVolumeMounts(svc model.Service) ([]string, []apiv1.VolumeMount) {
 	volumeMounts := make([]apiv1.VolumeMount, 0)
 
@@ -556,6 +571,7 @@ func translateVolumes(svcName string, svc *model.Service) []apiv1.Volume {
 			},
 		})
 	}
+
 	return volumes
 }
 
@@ -755,11 +771,20 @@ func translateLabelSelector(svcName string, s *model.Stack) map[string]string {
 }
 
 func translateAnnotations(svc *model.Service) map[string]string {
-	result := map[string]string{}
+
+	result := getAnnotations()
 	for k, v := range svc.Annotations {
 		result[k] = v
 	}
 	return result
+}
+
+func getAnnotations() map[string]string {
+	annotations := map[string]string{}
+	if utils.IsOktetoRepo() {
+		annotations[model.OktetoSampleAnnotation] = "true"
+	}
+	return annotations
 }
 
 func translateServiceType(svc model.Service) apiv1.ServiceType {
@@ -786,6 +811,7 @@ func translateVolumeMounts(svcName string, svc *model.Service) []apiv1.VolumeMou
 			},
 		)
 	}
+
 	return result
 }
 
@@ -800,7 +826,7 @@ func getVolumeClaimName(v *model.StackVolume) string {
 }
 
 func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
-	if len(svc.CapAdd) == 0 && len(svc.CapDrop) == 0 {
+	if len(svc.CapAdd) == 0 && len(svc.CapDrop) == 0 && svc.User == nil {
 		return nil
 	}
 	result := &apiv1.SecurityContext{Capabilities: &apiv1.Capabilities{}}
@@ -809,6 +835,10 @@ func translateSecurityContext(svc *model.Service) *apiv1.SecurityContext {
 	}
 	if len(svc.CapDrop) > 0 {
 		result.Capabilities.Drop = svc.CapDrop
+	}
+	if svc.User != nil {
+		result.RunAsUser = svc.User.RunAsUser
+		result.RunAsGroup = svc.User.RunAsGroup
 	}
 	return result
 }

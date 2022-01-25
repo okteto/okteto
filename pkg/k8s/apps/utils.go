@@ -17,7 +17,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -31,7 +31,7 @@ func getPreviousAppReplicas(app App) int32 {
 	if previousState != "" {
 		var state stateBeforeSleeping
 		if err := json.Unmarshal([]byte(previousState), &state); err != nil {
-			log.Infof("error getting previous state of '%s': %s", app.ObjectMeta().Name, err.Error())
+			oktetoLog.Infof("error getting previous state of '%s': %s", app.ObjectMeta().Name, err.Error())
 			return 1
 		}
 		return int32(state.Replicas)
@@ -40,7 +40,7 @@ func getPreviousAppReplicas(app App) int32 {
 	if rString, ok := app.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
 		rInt, err := strconv.ParseInt(rString, 10, 32)
 		if err != nil {
-			log.Infof("error parsing app replicas: %v", err)
+			oktetoLog.Infof("error parsing app replicas: %v", err)
 			return 1
 		}
 		return int32(rInt)

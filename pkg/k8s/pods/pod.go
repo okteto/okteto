@@ -23,10 +23,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/events"
 	"github.com/okteto/okteto/pkg/k8s/exec"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -48,7 +48,7 @@ func GetBySelector(ctx context.Context, namespace string, selector map[string]st
 	}
 
 	if len(ps) == 0 {
-		return nil, errors.ErrNotFound
+		return nil, oktetoErrors.ErrNotFound
 	}
 
 	r := ps[0]
@@ -104,7 +104,7 @@ func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, c kubernetes
 			}
 		}
 	}
-	return nil, errors.ErrNotFound
+	return nil, oktetoErrors.ErrNotFound
 }
 
 //GetPodByReplicaSet returns a pod of a given replicaset
@@ -131,7 +131,7 @@ func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, c kuberne
 			}
 		}
 	}
-	return nil, errors.ErrNotFound
+	return nil, oktetoErrors.ErrNotFound
 }
 
 //GetUserByPod returns the current user of a running pod
@@ -190,7 +190,7 @@ func execCommandInPod(ctx context.Context, p *apiv1.Pod, container string, cmd [
 	)
 
 	if err != nil {
-		log.Infof("failed to execute command: %s - %s", err, out.String())
+		oktetoLog.Infof("failed to execute command: %s - %s", err, out.String())
 		return "", err
 	}
 	result := strings.TrimSuffix(out.String(), "\n")
@@ -215,7 +215,7 @@ func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interf
 			GracePeriodSeconds: pointer.Int64Ptr(0),
 		},
 	)
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return err
 	}
 	return nil
@@ -225,7 +225,7 @@ func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interf
 func GetPodUserID(ctx context.Context, podName, containerName, namespace string, c *kubernetes.Clientset) int64 {
 	podLogs, err := ContainerLogs(ctx, containerName, podName, namespace, false, c)
 	if err != nil {
-		log.Infof("failed to access development container logs: %s", err)
+		oktetoLog.Infof("failed to access development container logs: %s", err)
 		return -1
 	}
 	return parseUserID(podLogs)
@@ -234,29 +234,29 @@ func GetPodUserID(ctx context.Context, podName, containerName, namespace string,
 func parseUserID(output string) int64 {
 	lines := strings.Split(output, "\n")
 	if len(lines) == 0 {
-		log.Info("development container logs not generated. USER cannot be inferred")
+		oktetoLog.Info("development container logs not generated. USER cannot be inferred")
 		return -1
 	}
 
 	if lines[0] == "" {
-		log.Info("development container logs are empty. USER cannot be inferred")
+		oktetoLog.Info("development container logs are empty. USER cannot be inferred")
 		return -1
 	}
 
 	if !strings.HasPrefix(lines[0], "USER:") {
-		log.Infof("USER is not the first log line: %s", lines[0])
+		oktetoLog.Infof("USER is not the first log line: %s", lines[0])
 		return -1
 	}
 
 	parts := strings.Split(lines[0], ":")
 	if len(parts) != 2 {
-		log.Infof("failed to parse USER entry: %s", lines[0])
+		oktetoLog.Infof("failed to parse USER entry: %s", lines[0])
 		return -1
 	}
 
 	result, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
-		log.Infof("failed to parse USER entry: %s", lines[0])
+		oktetoLog.Infof("failed to parse USER entry: %s", lines[0])
 		return -1
 	}
 
@@ -295,7 +295,7 @@ func Restart(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, sn st
 		},
 	)
 	if err != nil {
-		log.Infof("error listing pods to restart: %s", err)
+		oktetoLog.Infof("error listing pods to restart: %s", err)
 		return fmt.Errorf("failed to retrieve development container information")
 	}
 
@@ -328,7 +328,7 @@ func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubern
 
 	for i := 0; i < 60; i++ {
 		if i%5 == 0 {
-			log.Infof("checking if pods are ready")
+			oktetoLog.Infof("checking if pods are ready")
 		}
 
 		pods, err := c.CoreV1().Pods(namespace).List(
@@ -339,7 +339,7 @@ func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubern
 		)
 
 		if err != nil {
-			log.Infof("error listing pods to check status after restart: %s", err)
+			oktetoLog.Infof("error listing pods to check status after restart: %s", err)
 			return fmt.Errorf("failed to retrieve development container information")
 		}
 
@@ -354,21 +354,21 @@ func waitUntilRunning(ctx context.Context, namespace, selector string, c *kubern
 			case apiv1.PodRunning:
 				if isRunning(&pods.Items[i]) {
 					if _, ok := notready[pods.Items[i].GetName()]; ok {
-						log.Infof("pod/%s is ready", pods.Items[i].GetName())
+						oktetoLog.Infof("pod/%s is ready", pods.Items[i].GetName())
 						delete(notready, pods.Items[i].GetName())
 					}
 				} else {
 					allRunning = false
 					notready[pods.Items[i].GetName()] = true
 					if i%5 == 0 {
-						log.Infof("pod/%s is not ready", pods.Items[i].GetName())
+						oktetoLog.Infof("pod/%s is not ready", pods.Items[i].GetName())
 					}
 				}
 			}
 		}
 
 		if allRunning {
-			log.Infof("pods are ready")
+			oktetoLog.Infof("pods are ready")
 			return nil
 		}
 

@@ -18,8 +18,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 func (dev *Dev) translateDeprecatedVolumeFields() error {
@@ -75,7 +75,7 @@ func (dev *Dev) IsSubPathFolder(path string) (bool, error) {
 	for _, sync := range dev.Sync.Folders {
 		rel, err := filepath.Rel(sync.LocalPath, path)
 		if err != nil {
-			log.Infof("error making rel '%s' and '%s'", sync.LocalPath, path)
+			oktetoLog.Infof("error making rel '%s' and '%s'", sync.LocalPath, path)
 			return false, err
 		}
 		if strings.HasPrefix(rel, "..") {
@@ -89,7 +89,7 @@ func (dev *Dev) IsSubPathFolder(path string) (bool, error) {
 	if found {
 		return false, nil
 	}
-	return false, errors.ErrNotFound
+	return false, oktetoErrors.ErrNotFound
 }
 
 func (dev *Dev) computeParentSyncFolder() {
@@ -132,7 +132,7 @@ func (dev *Dev) getSourceSubPath(path string) string {
 	path = path[len(filepath.VolumeName(path)):]
 	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(path))
 	if err != nil {
-		log.Fatalf("error on getSourceSubPath of '%s': %s", path, err.Error())
+		oktetoLog.Fatalf("error on getSourceSubPath of '%s': %s", path, err.Error())
 	}
 	return filepath.ToSlash(filepath.Join(SourceCodeSubPath, filepath.ToSlash(rel)))
 }
@@ -255,7 +255,7 @@ func (dev *Dev) validateServiceSyncFolders(main *Dev) error {
 	for _, sync := range dev.Sync.Folders {
 		_, err := main.IsSubPathFolder(sync.LocalPath)
 		if err != nil {
-			if err == errors.ErrNotFound {
+			if err == oktetoErrors.ErrNotFound {
 				return fmt.Errorf("LocalPath '%s' in 'services' not defined in the field 'sync' of the main development container", sync.LocalPath)
 			}
 			return err

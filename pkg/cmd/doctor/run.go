@@ -24,10 +24,10 @@ import (
 
 	"github.com/mholt/archiver"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
 	yaml "gopkg.in/yaml.v2"
@@ -63,21 +63,21 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 
 	manifestPath, err := generateManifestFile(devPath)
 	if err != nil {
-		log.Infof("failed to get information for okteto manifest: %s", err)
+		oktetoLog.Infof("failed to get information for okteto manifest: %s", err)
 	}
 	defer os.RemoveAll(manifestPath)
 
 	podPath, err := generatePodFile(ctx, dev, c)
 	if err != nil {
-		log.Infof("failed to get information about the remote dev container: %s", err)
-		log.Warning(errors.ErrNotInDevMode.Error())
+		oktetoLog.Infof("failed to get information about the remote dev container: %s", err)
+		oktetoLog.Warning(oktetoErrors.ErrNotInDevMode.Error())
 	} else {
 		defer os.RemoveAll(podPath)
 	}
 
 	remoteLogsPath, err := generateRemoteSyncthingLogsFile(ctx, dev, c)
 	if err != nil {
-		log.Infof("error getting remote syncthing logs: %s", err)
+		oktetoLog.Infof("error getting remote syncthing logs: %s", err)
 	} else {
 		defer os.RemoveAll(remoteLogsPath)
 	}
@@ -105,7 +105,7 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 		files = append(files, remoteLogsPath)
 	}
 	if err := z.Archive(files, archiveName); err != nil {
-		log.Infof("error while archiving: %s", err)
+		oktetoLog.Infof("error while archiving: %s", err)
 		return "", fmt.Errorf("couldn't create archive '%s', please try again: %s", archiveName, err)
 	}
 
@@ -132,7 +132,7 @@ func generateStignoreFiles(dev *model.Dev) []string {
 	for i := range dev.Sync.Folders {
 		absBasename, err := filepath.Abs(dev.Sync.Folders[i].LocalPath)
 		if err != nil {
-			log.Infof("error getting absolute path of localPath %s: %s", dev.Sync.Folders[i].LocalPath, err.Error())
+			oktetoLog.Infof("error getting absolute path of localPath %s: %s", dev.Sync.Folders[i].LocalPath, err.Error())
 			continue
 		}
 		stignoreFile := filepath.Join(absBasename, ".stignore")
@@ -225,7 +225,7 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	}
 
 	if pod == nil {
-		return "", errors.ErrNotFound
+		return "", oktetoErrors.ErrNotFound
 	}
 
 	tempdir, err := os.MkdirTemp("", "")

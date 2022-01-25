@@ -19,43 +19,57 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
 
+//NamespaceCommand has all the namespaces subcommands
+type NamespaceCommand struct {
+	ctxCmd   *contextCMD.ContextCommand
+	okClient types.OktetoInterface
+}
+
+//NewCommand creates a namespace command to
+func NewCommand() (*NamespaceCommand, error) {
+	c, err := okteto.NewOktetoClient()
+	if err != nil {
+		return nil, err
+	}
+	return &NamespaceCommand{
+		ctxCmd:   contextCMD.NewContextCommand(),
+		okClient: c,
+	}, nil
+}
+
 // Namespace fetch credentials for a cluster namespace
 func Namespace(ctx context.Context) *cobra.Command {
+	options := &UseOptions{}
 	cmd := &cobra.Command{
-		Use:    "namespace [name]",
-		Hidden: true,
-		Short:  "Download k8s credentials for a namespace",
-		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#namespace"),
+		Use:     "namespace [name]",
+		Short:   "Configure the current namespace of the okteto context",
+		Aliases: []string{"ns"},
+		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#namespace"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			namespace := ""
 			if len(args) > 0 {
 				namespace = args[0]
 			}
-
-			if !okteto.IsOkteto() {
-				return errors.ErrContextIsNotOktetoCluster
+			if options.personal {
+				namespace = okteto.Context().PersonalNamespace
 			}
-			err := contextCMD.Run(
-				ctx,
-				&contextCMD.ContextOptions{
-					Context:   okteto.Context().Name,
-					Namespace: namespace,
-					Save:      true,
-					Show:      true,
-				},
-			)
+			if !okteto.IsOkteto() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
+			}
 
+			nsCmd, err := NewCommand()
 			if err != nil {
 				return err
 			}
-
-			if err := contextCMD.ExecuteUpdateKubeconfig(ctx); err != nil {
+			err = nsCmd.Use(ctx, namespace)
+			if err != nil {
 				return err
 			}
 
@@ -63,5 +77,11 @@ func Namespace(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
+	cmd.Flags().BoolVarP(&options.personal, "personal", "", false, "Load personal account")
+
+	cmd.AddCommand(Use(ctx))
+	cmd.AddCommand(List(ctx))
+	cmd.AddCommand(Create(ctx))
+	cmd.AddCommand(Delete(ctx))
 	return cmd
 }

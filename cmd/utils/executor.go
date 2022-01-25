@@ -15,15 +15,10 @@ package utils
 
 import (
 	"bufio"
-	"encoding/json"
-	"fmt"
-	"io"
 	"os"
 	"os/exec"
-	"strings"
-	"time"
 
-	"github.com/manifoldco/promptui/screenbuf"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -37,18 +32,16 @@ type Executor struct {
 }
 
 type executorDisplayer interface {
-	display(scanner *bufio.Scanner, command string, sb *screenbuf.ScreenBuf)
-	startCommand(cmd *exec.Cmd) (io.Reader, error)
+	display(command string)
+	startCommand(cmd *exec.Cmd) error
 }
 
-type plainExecutorDisplayer struct{}
-type jsonExecutorDisplayer struct{}
-
-type jsonMessage struct {
-	Level     string `json:"level"`
-	Stage     string `json:"stage"`
-	Message   string `json:"message"`
-	Timestamp int64  `json:"timestamp"`
+type plainExecutorDisplayer struct {
+	scanner *bufio.Scanner
+}
+type jsonExecutorDisplayer struct {
+	stdoutScanner *bufio.Scanner
+	stderrScanner *bufio.Scanner
 }
 
 // NewExecutor returns a new executor
@@ -56,11 +49,11 @@ func NewExecutor(output string) *Executor {
 	var displayer executorDisplayer
 	switch output {
 	case "plain":
-		displayer = plainExecutorDisplayer{}
+		displayer = &plainExecutorDisplayer{}
 	case "json":
-		displayer = jsonExecutorDisplayer{}
+		displayer = &jsonExecutorDisplayer{}
 	default:
-		displayer = plainExecutorDisplayer{}
+		displayer = &plainExecutorDisplayer{}
 	}
 	return &Executor{
 		outputMode: output,
@@ -74,65 +67,72 @@ func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 	cmd := exec.Command("bash", "-c", cmdInfo.Command)
 	cmd.Env = append(os.Environ(), env...)
 
-	reader, err := e.displayer.startCommand(cmd)
-	if err != nil {
+	if err := e.displayer.startCommand(cmd); err != nil {
 		return err
 	}
 
-	scanner := bufio.NewScanner(reader)
+	go e.displayer.display(cmdInfo.Command)
 
-	sb := screenbuf.New(os.Stdout)
-	go e.displayer.display(scanner, cmdInfo.Name, sb)
+	err := cmd.Wait()
 
-	err = cmd.Wait()
 	return err
 }
 
-func startCommand(cmd *exec.Cmd) (io.Reader, error) {
+func startCommand(cmd *exec.Cmd) error {
+	return cmd.Start()
+}
+
+func (e *plainExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
+
 	reader, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, err
+		return err
 	}
+	cmd.Stderr = cmd.Stdout
 
-	if err := cmd.Start(); err != nil {
-		return nil, err
+	if err := startCommand(cmd); err != nil {
+		return err
 	}
-	return reader, nil
+	e.scanner = bufio.NewScanner(reader)
+	return nil
 }
 
-func (plainExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
+func (e *plainExecutorDisplayer) display(_ string) {
+	for e.scanner.Scan() {
+		line := e.scanner.Text()
+		oktetoLog.Println(line)
+	}
+}
+
+func (e *jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
+	stdoutReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	e.stdoutScanner = bufio.NewScanner(stdoutReader)
+
+	stderrReader, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	e.stderrScanner = bufio.NewScanner(stderrReader)
 	return startCommand(cmd)
 }
 
-func (plainExecutorDisplayer) display(scanner *bufio.Scanner, _ string, _ *screenbuf.ScreenBuf) {
-	for scanner.Scan() {
-		line := scanner.Text()
-		fmt.Println(line)
-	}
-}
+func (e *jsonExecutorDisplayer) display(command string) {
+	go func() {
+		for e.stdoutScanner.Scan() {
+			line := e.stdoutScanner.Text()
 
-func (jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) (io.Reader, error) {
-	return startCommand(cmd)
-}
-
-func (jsonExecutorDisplayer) display(scanner *bufio.Scanner, command string, _ *screenbuf.ScreenBuf) {
-	for scanner.Scan() {
-		line := scanner.Text()
-		level := "info"
-		if isErrorLine(line) {
-			level = "error"
+			oktetoLog.Println(line)
 		}
-		messageStruct := jsonMessage{
-			Level:     level,
-			Message:   line,
-			Stage:     command,
-			Timestamp: time.Now().Unix(),
-		}
-		message, _ := json.Marshal(messageStruct)
-		fmt.Println(string(message))
-	}
-}
+	}()
 
-func isErrorLine(text string) bool {
-	return strings.HasPrefix(text, " x ")
+	go func() {
+		for e.stderrScanner.Scan() {
+			line := e.stderrScanner.Text()
+			oktetoLog.Fail(line)
+
+		}
+	}()
 }

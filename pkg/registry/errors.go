@@ -17,9 +17,10 @@ import (
 	"fmt"
 	"strings"
 
-	okErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 )
 
+// GetErrorMessage returns the parsed error message
 func GetErrorMessage(err error, tag string) error {
 	if err == nil {
 		return nil
@@ -27,22 +28,22 @@ func GetErrorMessage(err error, tag string) error {
 	imageRegistry, imageTag := GetRegistryAndRepo(tag)
 	switch {
 	case IsLoggedIntoRegistryButDontHavePermissions(err):
-		err = okErrors.UserError{
+		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", tag, imageTag),
 			Hint: fmt.Sprintf("Please log in into the registry '%s' with a user with push permissions to '%s' or use another image.", imageRegistry, imageTag),
 		}
 	case IsNotLoggedIntoRegistry(err):
-		err = okErrors.UserError{
+		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", tag, imageTag),
 			Hint: fmt.Sprintf("Log in into the registry '%s' and verify that you have permissions to push the image '%s'.", imageRegistry, imageTag),
 		}
 	case IsBuildkitServiceUnavailable(err):
-		err = okErrors.UserError{
+		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("buildkit service is not available at the moment"),
 			Hint: "Please try again later.",
 		}
 	default:
-		err = okErrors.UserError{
+		err = oktetoErrors.UserError{
 			E: fmt.Errorf("error building image '%s': %s", tag, err.Error()),
 		}
 	}
@@ -67,6 +68,8 @@ func IsTransientError(err error) bool {
 		return true
 	case strings.Contains(err.Error(), "Canceled desc") && strings.Contains(err.Error(), "the client connection is closing"):
 		return true
+	case strings.Contains(err.Error(), "Canceled desc") && strings.Contains(err.Error(), "context canceled"):
+		return true
 	default:
 		return false
 	}
@@ -79,9 +82,11 @@ func IsLoggedIntoRegistryButDontHavePermissions(err error) bool {
 
 // IsNotLoggedIntoRegistry returns true when the error is because the user is not logged into the registry
 func IsNotLoggedIntoRegistry(err error) bool {
-	return strings.Contains(err.Error(), "failed to authorize: failed to fetch anonymous token")
+	return strings.Contains(err.Error(), "failed to authorize: failed to fetch anonymous token") ||
+		strings.Contains(err.Error(), "UNAUTHORIZED: authentication required")
 }
 
+// IsBuildkitServiceUnavailable returns true when an error is because buildkit is unavailable
 func IsBuildkitServiceUnavailable(err error) bool {
-	return strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "500 Internal Server Error")
+	return strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "500 Internal Server Error") || strings.Contains(err.Error(), "context canceled")
 }

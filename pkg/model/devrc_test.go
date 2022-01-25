@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -116,10 +116,10 @@ resources:
 		},
 	}
 
-	defer log.SetLevel("info")
+	defer oktetoLog.SetLevel("info")
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			log.SetLevel(tt.logLevel)
+			oktetoLog.SetLevel(tt.logLevel)
 			dev, err := ReadRC(tt.manifest)
 			if err != nil {
 				t.Fatalf("Parse readrc has failed: %s", err.Error())

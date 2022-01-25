@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -254,14 +254,14 @@ func (sync *Sync) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	err := unmarshal(&rawFolders)
 	if err == nil {
 		sync.Compression = true
-		sync.Verbose = log.IsDebug()
+		sync.Verbose = oktetoLog.IsDebug()
 		sync.RescanInterval = DefaultSyncthingRescanInterval
 		sync.Folders = rawFolders
 		return nil
 	}
 
 	var rawSync syncRaw
-	rawSync.Verbose = log.IsDebug()
+	rawSync.Verbose = oktetoLog.IsDebug()
 	err = unmarshal(&rawSync)
 	if err != nil {
 		return err
@@ -492,7 +492,7 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		log.Yellow("The syntax '%s' is deprecated in the 'volumes' field. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
+		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
 		v.LocalPath, err = ExpandEnv(parts[0])
 		if err != nil {
 			return err
@@ -523,7 +523,10 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		s.RemotePath = parts[1]
+		s.RemotePath, err = ExpandEnv(parts[1])
+		if err != nil {
+			return err
+		}
 		return nil
 	} else if len(parts) == 3 {
 		windowsPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
@@ -531,7 +534,10 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
-		s.RemotePath = parts[2]
+		s.RemotePath, err = ExpandEnv(parts[2])
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -658,11 +664,13 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Icon    string          `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy  *DeployInfo     `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev     ManifestDevs    `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy []DeployCommand `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build   ManifestBuild   `json:"build,omitempty" yaml:"build,omitempty"`
+	Namespace string          `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context   string          `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon      string          `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy    *DeployInfo     `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev       ManifestDevs    `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy   []DeployCommand `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build     ManifestBuild   `json:"build,omitempty" yaml:"build,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
 }
@@ -690,6 +698,8 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	d.Dev = manifest.Dev
 	d.Icon = manifest.Icon
 	d.Build = manifest.Build
+	d.Namespace = manifest.Namespace
+	d.Context = manifest.Context
 	return nil
 }
 
@@ -778,7 +788,7 @@ func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func isManifestFieldNotFound(err error) bool {
-	manifestFields := []string{"devs", "dev", "name", "icon", "variables", "deploy", "destroy", "build"}
+	manifestFields := []string{"devs", "dev", "name", "icon", "variables", "deploy", "destroy", "build", "namespace", "context"}
 	for _, field := range manifestFields {
 		if strings.Contains(err.Error(), fmt.Sprintf("field %s not found", field)) {
 			return true

@@ -18,10 +18,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -102,7 +102,7 @@ func (i *StatefulSetApp) CheckConditionErrors(dev *model.Dev) error {
 
 func (i *StatefulSetApp) GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error) {
 	if i.sfs.Generation != i.sfs.Status.ObservedGeneration {
-		return nil, errors.ErrNotFound
+		return nil, oktetoErrors.ErrNotFound
 	}
 	return pods.GetPodByStatefulSet(ctx, i.sfs, c)
 }
@@ -112,7 +112,7 @@ func (i *StatefulSetApp) RestoreOriginal() error {
 	if manifest == "" {
 		return nil
 	}
-	log.Info("depreccated devmodeoff behavior")
+	oktetoLog.Info("depreccated devmodeoff behavior")
 	sfsOrig := &appsv1.StatefulSet{}
 	if err := json.Unmarshal([]byte(manifest), sfsOrig); err != nil {
 		return fmt.Errorf("malformed manifest: %v", err)
@@ -144,9 +144,9 @@ func (i *StatefulSetApp) Watch(ctx context.Context, result chan error, c kuberne
 	for {
 		select {
 		case e := <-watcher.ResultChan():
-			log.Debugf("Received statefulset '%s' event: %s", i.sfs.Name, e)
+			oktetoLog.Debugf("Received statefulset '%s' event: %s", i.sfs.Name, e)
 			if e.Object == nil {
-				log.Debugf("Recreating statefulset '%s' watcher", i.sfs.Name)
+				oktetoLog.Debugf("Recreating statefulset '%s' watcher", i.sfs.Name)
 				watcher, err = c.AppsV1().StatefulSets(i.sfs.Namespace).Watch(ctx, optsWatch)
 				if err != nil {
 					result <- err
@@ -156,21 +156,21 @@ func (i *StatefulSetApp) Watch(ctx context.Context, result chan error, c kuberne
 			}
 			switch e.Type {
 			case watch.Deleted:
-				result <- errors.ErrDeleteToApp
+				result <- oktetoErrors.ErrDeleteToApp
 				return
 			case watch.Modified:
 				sfs, ok := e.Object.(*appsv1.StatefulSet)
 				if !ok {
-					log.Debugf("Failed to parse statefulset event: %s", e)
+					oktetoLog.Debugf("Failed to parse statefulset event: %s", e)
 					continue
 				}
 				if sfs.Generation != i.sfs.Generation {
-					result <- errors.ErrApplyToApp
+					result <- oktetoErrors.ErrApplyToApp
 					return
 				}
 			}
 		case err := <-ctx.Done():
-			log.Debugf("call to up.applyToApp cancelled: %v", err)
+			oktetoLog.Debugf("call to up.applyToApp cancelled: %v", err)
 			return
 		}
 	}

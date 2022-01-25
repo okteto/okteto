@@ -20,7 +20,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 type proxyConfig struct {
@@ -50,14 +50,14 @@ func (p *proxy) Start() {
 			return
 		}
 
-		log.Debugf("os.Interrupt - closing...")
+		oktetoLog.Debugf("os.Interrupt - closing...")
 		p.s.Close()
 	}()
 
 	go func(s *http.Server) {
 		// Path to cert and key files are empty because cert is provisioned on the tls config struct
 		if err := s.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
-			log.Infof("could not start proxy server: %s", err)
+			oktetoLog.Infof("could not start proxy server: %s", err)
 		}
 	}(p.s)
 }

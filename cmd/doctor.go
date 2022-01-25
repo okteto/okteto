@@ -20,8 +20,8 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/doctor"
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -42,14 +42,14 @@ func Doctor() *cobra.Command {
 		Short: "Generate a zip file with the okteto logs",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#doctor"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Info("starting doctor command")
+			oktetoLog.Info("starting doctor command")
 			ctx := context.Background()
 
 			if okteto.InDevContainer() {
-				return errors.ErrNotInDevContainer
+				return oktetoErrors.ErrNotInDevContainer
 			}
 
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, doctorOpts.DevPath, doctorOpts.Namespace, doctorOpts.K8sContext)
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, contextCMD.ManifestOptions{Filename: doctorOpts.DevPath, Namespace: doctorOpts.Namespace, K8sContext: doctorOpts.K8sContext})
 			if err != nil {
 				return err
 			}
@@ -65,7 +65,7 @@ func Doctor() *cobra.Command {
 			}
 			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, c)
 			if err == nil {
-				log.Information("Your doctor file is available at %s", filename)
+				oktetoLog.Information("Your doctor file is available at %s", filename)
 			}
 			analytics.TrackDoctor(err == nil)
 			return err

@@ -27,9 +27,9 @@ import (
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	oktetoError "github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/linguist"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -42,7 +42,7 @@ func addStignoreSecrets(dev *model.Dev) error {
 		}
 		infile, err := os.Open(stignorePath)
 		if err != nil {
-			return oktetoError.UserError{
+			return oktetoErrors.UserError{
 				E:    err,
 				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
 			}
@@ -121,7 +121,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 			continue
 		}
 
-		log.Infof("'.stignore' exists in folder '%s'", folder.LocalPath)
+		oktetoLog.Infof("'.stignore' exists in folder '%s'", folder.LocalPath)
 		if !model.FileExists(gitPath) {
 			continue
 		}
@@ -134,7 +134,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 }
 
 func askIfCreateStignoreDefaults(folder, stignorePath string) error {
-	log.Information("'.stignore' does not exist in folder '%s'. Okteto requires a '.stignore' file to ignore file patterns that help optimize the synchronization service.", folder)
+	oktetoLog.Information("'.stignore' does not exist in folder '%s'. Okteto requires a '.stignore' file to ignore file patterns that help optimize the synchronization service.", folder)
 	stignoreDefaults, err := utils.AskYesNo("    Do you want to infer defaults for the '.stignore' file? (otherwise, it will be left blank) [y/n] ")
 	if err != nil {
 		return fmt.Errorf("failed to add '.stignore' to '%s': %s", folder, err.Error())
@@ -169,12 +169,12 @@ func askIfUpdatingStignore(folder, stignorePath string) error {
 		return nil
 	}
 
-	log.Information("The synchronization service performance is degraded if the '.git' folder is synchronized.")
+	oktetoLog.Information("The synchronization service performance is degraded if the '.git' folder is synchronized.")
 	ignoreGit, err := utils.AskYesNo("    Do you want to ignore the '.git' folder in your '.stignore' file? [y/n] ")
 	if err != nil {
 		return fmt.Errorf("failed to ask for adding '.git' to '%s': %s", stignorePath, err.Error())
 	}
-	log.Infof("adding '.git' to '%s'", stignorePath)
+	oktetoLog.Infof("adding '.git' to '%s'", stignorePath)
 	if ignoreGit {
 		stignoreContent = fmt.Sprintf(".git\n%s", stignoreContent)
 	} else {

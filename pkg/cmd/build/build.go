@@ -17,14 +17,15 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	okErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -42,6 +43,7 @@ type BuildOptions struct {
 	Secrets    []string
 	Tag        string
 	Target     string
+	Namespace  string
 }
 
 // Run runs the build sequence
@@ -70,7 +72,7 @@ func setOutputMode(outputMode string) string {
 }
 
 func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
-	log.Infof("building your image on %s", okteto.Context().Builder)
+	oktetoLog.Infof("building your image on %s", okteto.Context().Builder)
 	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {
 		return err
@@ -91,7 +93,6 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
 		}
 	}
 
-	isOktetoRegistry := registry.IsOktetoRegistry(buildOptions.Tag)
 	if okteto.IsOkteto() {
 		buildOptions.Tag = registry.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = registry.ExpandOktetoGlobalRegistry(buildOptions.Tag)
@@ -107,39 +108,40 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
 
 	err = solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
 	if err != nil {
-		log.Infof("Failed to build image: %s", err.Error())
+		oktetoLog.Infof("Failed to build image: %s", err.Error())
 	}
 	if registry.IsTransientError(err) {
-		log.Yellow(`Failed to push '%s' to the registry:
+		oktetoLog.Yellow(`Failed to push '%s' to the registry:
   %s,
   Retrying ...`, buildOptions.Tag, err.Error())
 		success := true
 		err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
 		if err != nil {
 			success = false
-			log.Infof("Failed to build image: %s", err.Error())
+			oktetoLog.Infof("Failed to build image: %s", err.Error())
 		}
 		err = registry.GetErrorMessage(err, buildOptions.Tag)
 		analytics.TrackBuildTransientError(okteto.Context().Builder, success)
 		return err
 	}
 
-	if isOktetoRegistry {
+	if buildOptions.Tag != "" {
 		if _, err := registry.GetImageTagWithDigest(buildOptions.Tag); err != nil {
-			log.Yellow(`Failed to push '%s' metadata to the registry:
-  %s,
-  Retrying ...`, buildOptions.Tag, err.Error())
+			oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
+	  %s,
+	  Retrying ...`, buildOptions.Tag, err.Error())
 			success := true
 			err := solveBuild(ctx, buildkitClient, opt, buildOptions.OutputMode)
 			if err != nil {
 				success = false
-				log.Infof("Failed to build image: %s", err.Error())
+				oktetoLog.Infof("Failed to build image: %s", err.Error())
 			}
 			err = registry.GetErrorMessage(err, buildOptions.Tag)
 			analytics.TrackBuildPullError(okteto.Context().Builder, success)
 			return err
 		}
 	}
+
 	err = registry.GetErrorMessage(err, buildOptions.Tag)
 	return err
 }
@@ -174,7 +176,7 @@ func validateImage(imageTag string) error {
 		if registry.IsGlobalRegistry(imageTag) {
 			prefix = okteto.GlobalRegistry
 		}
-		return okErrors.UserError{
+		return oktetoErrors.UserError{
 			E:    fmt.Errorf("Can not use '%s' as the image tag.", imageTag),
 			Hint: fmt.Sprintf("The syntax for using okteto registry is: '%s/image_name'", prefix),
 		}
@@ -187,10 +189,31 @@ func translateDockerErr(err error) error {
 		return nil
 	}
 	if strings.HasPrefix(err.Error(), "failed to dial gRPC: cannot connect to the Docker daemon") {
-		return okErrors.UserError{
+		return oktetoErrors.UserError{
 			E:    fmt.Errorf("cannot connect to Docker Daemon"),
 			Hint: "Please start the service and try again",
 		}
 	}
 	return err
+}
+
+func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildOptions {
+	if okteto.Context().IsOkteto && b.Image == "" {
+		b.Image = fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, service, "dev")
+	}
+
+	opts := BuildOptions{
+		CacheFrom: b.CacheFrom,
+		Target:    b.Target,
+		Path:      b.Context,
+		Tag:       b.Image,
+		File:      filepath.Join(b.Context, b.Dockerfile),
+	}
+
+	if len(b.Args) != 0 {
+		opts.BuildArgs = model.SerializeBuildArgs(b.Args)
+	}
+
+	opts.OutputMode = setOutputMode(o.OutputMode)
+	return opts
 }

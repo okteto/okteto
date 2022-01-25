@@ -18,8 +18,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -58,7 +58,7 @@ func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
 			}
 		}
 		if !found {
-			return nil, errors.UserError{
+			return nil, oktetoErrors.UserError{
 				E:    fmt.Errorf("could not detect any stack file to deploy"),
 				Hint: "Try setting the flag '--file' pointing to your stack file",
 			}
@@ -158,7 +158,7 @@ func inferStack(name string) (*model.Stack, error) {
 			return stack, nil
 		}
 	}
-	return nil, errors.UserError{
+	return nil, oktetoErrors.UserError{
 		E:    fmt.Errorf("could not detect any stack file to deploy."),
 		Hint: "Try setting the flag '--file' pointing to your stack file",
 	}
@@ -168,7 +168,7 @@ func getStack(name, manifestPath string) (*model.Stack, error) {
 	var isCompose bool
 	if isDeprecatedExtension(manifestPath) {
 		deprecatedFile := filepath.Base(manifestPath)
-		log.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", deprecatedFile)
+		oktetoLog.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", deprecatedFile)
 	}
 	if isPathAComposeFile(manifestPath) {
 		isCompose = true
@@ -179,7 +179,7 @@ func getStack(name, manifestPath string) (*model.Stack, error) {
 	}
 	overrideStack, err := getOverrideFile(manifestPath)
 	if err == nil {
-		log.Info("override file detected. Merging it")
+		oktetoLog.Info("override file detected. Merging it")
 		stack = stack.Merge(overrideStack)
 	}
 	return stack, nil

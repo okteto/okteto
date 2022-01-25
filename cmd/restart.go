@@ -21,9 +21,9 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/errors"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/pods"
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -44,7 +44,8 @@ func Restart() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, devPath, namespace, k8sContext)
+			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
+			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				return err
 			}
@@ -55,7 +56,7 @@ func Restart() *cobra.Command {
 			}
 
 			if len(dev.Services) == 0 {
-				return errors.ErrNoServicesinOktetoManifest
+				return oktetoErrors.ErrNoServicesinOktetoManifest
 			}
 
 			serviceName := ""
@@ -66,7 +67,7 @@ func Restart() *cobra.Command {
 				return fmt.Errorf("failed to restart your deployments: %s", err)
 			}
 
-			log.Success("Deployments restarted")
+			oktetoLog.Success("Deployments restarted")
 
 			return nil
 		},
@@ -80,7 +81,7 @@ func Restart() *cobra.Command {
 }
 
 func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
-	log.Infof("restarting services")
+	oktetoLog.Infof("restarting services")
 	client, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
@@ -99,12 +100,12 @@ func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 
 	select {
 	case <-stop:
-		log.Infof("CTRL+C received, starting shutdown sequence")
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		spinner.Stop()
-		return errors.ErrIntSig
+		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
-			log.Infof("exit signal received due to error: %s", err)
+			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	}

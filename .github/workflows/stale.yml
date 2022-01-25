@@ -27,3 +27,5 @@ jobs:
           days-before-issue-stale: 60
           days-before-pr-stale: 15
           days-before-close: 7
+          exempt-issue-labels: 'keep'
+          exempt-pr-labels: 'keep'

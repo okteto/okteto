@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -78,7 +78,7 @@ func ReadRC(bytes []byte) (*DevRC, error) {
 
 func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 	if len(devRc.Annotations) > 0 {
-		log.Warning("The field 'annotations' is deprecated. Use the field 'metadata.Annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
+		oktetoLog.Warning("The field 'annotations' is deprecated. Use the field 'metadata.Annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
 		for annotationKey, annotationValue := range devRc.Annotations {
 			dev.Metadata.Annotations[annotationKey] = annotationValue
 		}
@@ -88,7 +88,7 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 		dev.Context = devRc.Context
 	}
 	if len(devRc.Command.Values) != 0 {
-		log.Warning("Start command has been replaced with okteto developer file command")
+		oktetoLog.Warning("Start command has been replaced with okteto developer file command")
 		dev.Command.Values = devRc.Command.Values
 	}
 
@@ -142,7 +142,7 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 	}
 
 	if len(devRc.Labels) > 0 {
-		log.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
+		oktetoLog.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
 		for labelKey, labelValue := range devRc.Labels {
 			dev.Selector[labelKey] = labelValue
 		}
