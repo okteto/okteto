@@ -273,8 +273,5 @@ func setErrorStatus(ctx context.Context, cfg *v1.ConfigMap, data *app.CfgData, n
 	if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
 		return err
 	}
-	if err := app.UpdateOutput(ctx, cfg.Name, namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
-		return err
-	}
-	return nil
+	return app.UpdateOutput(ctx, cfg.Name, namespace, oktetoLog.GetOutputBuffer(), c)
 }
