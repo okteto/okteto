@@ -33,6 +33,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -162,7 +163,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		namespace = okteto.Context().Namespace
 	}
 
-	data := &app.CfgData{Output: fmt.Sprintf("Destroying app '%s'...", opts.Name), Status: app.DestroyingStatus}
+	data := &app.CfgData{Name: opts.Name, Output: fmt.Sprintf("Destroying app '%s'...", opts.Name), Status: app.DestroyingStatus}
 	cfg := app.TranslateConfigMap(opts.Name, data)
 	if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
 		return err
@@ -173,12 +174,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
 			if !opts.ForceDestroy {
-				data.Output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", data.Output, opts.Name, err.Error())
-				cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
-				if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
-					return err
-				}
-				if err := app.UpdateOutput(ctx, opts.Name, namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
+				if err := setErrorStatus(ctx, cfg, data, namespace, err, c); err != nil {
 					return err
 				}
 				return err
@@ -195,12 +191,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		[]string{opts.Name},
 	)
 	if err != nil {
-		data.Output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", data.Output, opts.Name, err.Error())
-		cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
-		if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
-			return err
-		}
-		if err := app.UpdateOutput(ctx, opts.Name, namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
+		if err := setErrorStatus(ctx, cfg, data, namespace, err, c); err != nil {
 			return err
 		}
 		return err
@@ -212,12 +203,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	}
 
 	if err := dc.nsDestroyer.DestroySFSVolumes(ctx, opts.Namespace, deleteOpts); err != nil {
-		data.Output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", data.Output, opts.Name, err.Error())
-		cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
-		if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
-			return err
-		}
-		if err := app.UpdateOutput(ctx, opts.Name, namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
+		if err := setErrorStatus(ctx, cfg, data, namespace, err, c); err != nil {
 			return err
 		}
 		return err
@@ -225,12 +211,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 
 	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
 		if !opts.ForceDestroy {
-			data.Output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", data.Output, opts.Name, err.Error())
-			cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
-			if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
-				return err
-			}
-			if err := app.UpdateOutput(ctx, opts.Name, namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
+			if err := setErrorStatus(ctx, cfg, data, namespace, err, c); err != nil {
 				return err
 			}
 			return err
@@ -240,12 +221,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	oktetoLog.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
 	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
 		oktetoLog.Infof("could not delete all the resources: %s", err)
-		data.Output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", data.Output, opts.Name, err.Error())
-		cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
-		if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
-			return err
-		}
-		if err := app.UpdateOutput(ctx, opts.Name, namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
+		if err := setErrorStatus(ctx, cfg, data, namespace, err, c); err != nil {
 			return err
 		}
 		return err
@@ -288,5 +264,17 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 		}
 	}
 
+	return nil
+}
+
+func setErrorStatus(ctx context.Context, cfg *v1.ConfigMap, data *app.CfgData, namespace string, err error, c kubernetes.Interface) error {
+	data.Output = fmt.Sprintf("%s\nApp '%s' destruction failed: %s", data.Output, data.Name, err.Error())
+	cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
+	if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
+		return err
+	}
+	if err := app.UpdateOutput(ctx, cfg.Name, namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
+		return err
+	}
 	return nil
 }
