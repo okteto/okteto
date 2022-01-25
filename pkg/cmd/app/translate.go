@@ -137,8 +137,6 @@ func UpdateOutput(ctx context.Context, name, namespace string, output *bytes.Buf
 	}
 
 	SetOutput(cmap, string(data))
-	if err := configmaps.Deploy(ctx, cmap, namespace, c); err != nil {
-		return err
-	}
-	return nil
+
+	return configmaps.Deploy(ctx, cmap, namespace, c)
 }
