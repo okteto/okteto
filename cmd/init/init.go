@@ -48,12 +48,14 @@ func Init() *cobra.Command {
 	var k8sContext string
 	var devPath string
 	var overwrite bool
+	var outputMode string
 	cmd := &cobra.Command{
 		Use:   "init",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
 		Short: "Automatically generate your okteto manifest file",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
+			oktetoLog.SetOutputFormat(outputMode)
 
 			ctxResource := &model.ContextResource{}
 			if err := ctxResource.UpdateNamespace(namespace); err != nil {
@@ -96,7 +98,10 @@ func Init() *cobra.Command {
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace target for generating the okteto manifest")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context target for generating the okteto manifest")
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
-	cmd.Flags().BoolVarP(&overwrite, "overwrite", "", false, "overwrite existing manifest file")
+	cmd.Flags().BoolVarP(&overwrite, "overwrite", "o", false, "overwrite existing manifest file")
+
+	//Replace output -o flag by overwrite
+	cmd.Flags().StringVarP(&outputMode, "output", "", "tty", "output format (tty, plain, json)")
 	return cmd
 }
 
