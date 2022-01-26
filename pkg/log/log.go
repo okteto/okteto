@@ -246,5 +246,6 @@ func GetOutputBuffer() *bytes.Buffer {
 
 //LogIntoBuffer logs into the buffer but does not print anything
 func LogIntoBuffer(format string, args ...interface{}) {
+	log.writer.Infof(format, args)
 	log.writer.LogIntoBuffer(format, args...)
 }
