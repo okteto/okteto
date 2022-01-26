@@ -200,10 +200,10 @@ func translateDockerErr(err error) error {
 // OptsFromManifest returns the parsed options for the build from the manifest
 func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildOptions {
 	if okteto.Context().IsOkteto && b.Image == "" {
-		tag := "okteto"
+		tag := model.OktetoDefaultImageTag
 
 		envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
-		isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, "dev")
+		isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
 
 		if envGitCommit != "" && !isLocalEnvGitCommit {
 			tag = envGitCommit
@@ -231,7 +231,7 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 // ShouldOptimizeBuild returns if optimization should be applied
 func ShouldOptimizeBuild(image string) bool {
 	envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
-	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, "dev")
+	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
 	return registry.IsOktetoRegistry(image) &&
 		envGitCommit != "" &&
 		!isLocalEnvGitCommit

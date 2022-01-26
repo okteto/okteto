@@ -571,7 +571,7 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		if !isClean {
 			sha = utils.GetRandomSHA(ctx, cwd)
 		}
-		value := fmt.Sprintf("dev%s", sha)
+		value := fmt.Sprintf("%s%s", model.OktetoGitCommitPrefix, sha)
 		os.Setenv(model.OktetoGitCommitEnvVar, value)
 	}
 	if os.Getenv(model.OktetoRegistryURLEnvVar) == "" {
