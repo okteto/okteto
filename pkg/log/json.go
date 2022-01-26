@@ -238,3 +238,11 @@ func convertToJSON(level, stage, message string) string {
 	messageJSON, _ := json.Marshal(messageStruct)
 	return string(messageJSON[:])
 }
+
+//LogIntoBuffer logs into the buffer but does not print anything
+func (*JSONWriter) LogIntoBuffer(format string, a ...interface{}) {
+	msg := fmt.Sprintf(format, a...)
+	msg = convertToJSON("info", log.stage, msg)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
+}

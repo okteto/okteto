@@ -178,3 +178,10 @@ func (w *PlainWriter) Printf(format string, a ...interface{}) {
 func (*PlainWriter) IsInteractive() bool {
 	return false
 }
+
+//LogIntoBuffer logs into the buffer but does not print anything
+func (*PlainWriter) LogIntoBuffer(format string, a ...interface{}) {
+	msg := fmt.Sprintf(format, a...)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
+}

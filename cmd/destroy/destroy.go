@@ -163,9 +163,9 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		namespace = okteto.Context().Namespace
 	}
 
-	oktetoLog.Info("Destroying...")
+	oktetoLog.LogIntoBuffer("Destroying...")
 	data := &app.CfgData{Name: opts.Name, Status: app.DestroyingStatus}
-	cfg := app.TranslateConfigMap(opts.Name, data)
+	cfg := app.TranslateConfigMap(ctx, opts.Name, namespace, data, c)
 	if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
 		return err
 	}
@@ -269,10 +269,10 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 }
 
 func setErrorStatus(ctx context.Context, cfg *v1.ConfigMap, data *app.CfgData, namespace string, err error, c kubernetes.Interface) error {
-	oktetoLog.Infof("Destruction failed: %s", err.Error())
+	oktetoLog.LogIntoBuffer("Destruction failed: %s", err.Error())
 	cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
 	if err := configmaps.Deploy(ctx, cfg, namespace, c); err != nil {
 		return err
 	}
-	return app.UpdateOutput(ctx, cfg.Name, namespace, oktetoLog.GetOutputBuffer(), c)
+	return app.UpdateOutput(ctx, cfg, oktetoLog.GetOutputBuffer(), c)
 }

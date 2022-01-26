@@ -22,6 +22,7 @@ import (
 	"math"
 	"strings"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -75,38 +76,24 @@ type CfgData struct {
 }
 
 // TranslateConfigMap translates the app into a configMap
-func TranslateConfigMap(name string, data *CfgData) *apiv1.ConfigMap {
-	cfmap := &apiv1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: TranslateAppName(name),
-			Labels: map[string]string{
-				model.GitDeployLabel: "true",
-			},
-		},
-		Data: map[string]string{
-			nameField:     name,
-			statusField:   data.Status,
-			repoField:     data.Repository,
-			branchField:   data.Branch,
-			filenameField: data.Filename,
-			yamlField:     base64.StdEncoding.EncodeToString(data.Manifest),
-			iconField:     data.Icon,
-		},
+func TranslateConfigMap(ctx context.Context, name, namespace string, data *CfgData, c kubernetes.Interface) *apiv1.ConfigMap {
+	cmap, err := configmaps.Get(ctx, TranslateAppName(name), namespace, c)
+	if err != nil {
+		if oktetoErrors.IsNotFound(err) {
+			return translatedConfigMapSandBox(name, namespace, data)
+		}
 	}
-	if data.Repository != "" {
-		cfmap.Data[repoField] = data.Repository
-	}
-
-	if data.Branch != "" {
-		cfmap.Data[branchField] = data.Branch
-	}
+	cmap.ObjectMeta.Labels[model.GitDeployLabel] = "true"
+	cmap.Data[nameField] = name
+	cmap.Data[statusField] = data.Status
+	cmap.Data[filenameField] = data.Filename
+	cmap.Data[yamlField] = base64.StdEncoding.EncodeToString(data.Manifest)
+	cmap.Data[iconField] = data.Icon
 
 	output := oktetoLog.GetOutputBuffer()
-
 	outputData := translateOutput(output)
-
-	cfmap = SetOutput(cfmap, string(outputData))
-	return cfmap
+	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
+	return cmap
 }
 
 // SetStatus sets the status and output of a config map
@@ -123,17 +110,10 @@ func SetOutput(cfg *apiv1.ConfigMap, output string) *apiv1.ConfigMap {
 }
 
 // UpdateOutput updates the configmap output with the logs
-func UpdateOutput(ctx context.Context, name, namespace string, output *bytes.Buffer, c kubernetes.Interface) error {
-	cmap, err := configmaps.Get(ctx, name, namespace, c)
-	if err != nil {
-		return err
-	}
-
+func UpdateOutput(ctx context.Context, cmap *apiv1.ConfigMap, output *bytes.Buffer, c kubernetes.Interface) error {
 	data := translateOutput(output)
-
 	SetOutput(cmap, string(data))
-
-	return configmaps.Deploy(ctx, cmap, namespace, c)
+	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 }
 
 //TranslateAppName translate the name into the pipeline name
@@ -167,4 +147,36 @@ func translateOutput(output *bytes.Buffer) []byte {
 		data = output.Bytes()
 	}
 	return data
+}
+
+func translatedConfigMapSandBox(name, namespace string, data *CfgData) *apiv1.ConfigMap {
+	cmap := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: TranslateAppName(name),
+			Labels: map[string]string{
+				model.GitDeployLabel: "true",
+			},
+		},
+		Data: map[string]string{
+			nameField:     name,
+			statusField:   data.Status,
+			repoField:     data.Repository,
+			branchField:   data.Branch,
+			filenameField: data.Filename,
+			yamlField:     base64.StdEncoding.EncodeToString(data.Manifest),
+			iconField:     data.Icon,
+		},
+	}
+	if data.Repository != "" {
+		cmap.Data[repoField] = data.Repository
+	}
+
+	if data.Branch != "" {
+		cmap.Data[branchField] = data.Branch
+	}
+
+	output := oktetoLog.GetOutputBuffer()
+	outputData := translateOutput(output)
+	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
+	return cmap
 }

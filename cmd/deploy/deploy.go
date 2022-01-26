@@ -281,7 +281,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	oktetoLog.Debugf("starting server on %d", dc.proxy.GetPort())
 	dc.proxy.Start()
 
-	oktetoLog.Infof("Deploying app '%s'...", opts.Name)
+	oktetoLog.LogIntoBuffer("Deploying app '%s'...", opts.Name)
 	data := &app.CfgData{
 		Repository: os.Getenv(model.GithubRepositoryEnvVar),
 		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
@@ -291,13 +291,13 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		Icon:       opts.Manifest.Icon,
 	}
 
-	cfg := app.TranslateConfigMap(opts.Name, data)
-
 	k8sCfg := kubeconfig.Get(config.GetKubeconfigPath())
 	c, _, err := dc.k8sClientProvider.Provide(k8sCfg)
 	if err != nil {
 		return err
 	}
+	cfg := app.TranslateConfigMap(ctx, opts.Name, opts.Manifest.Namespace, data, c)
+
 	if err := configmaps.Deploy(ctx, cfg, opts.Manifest.Namespace, c); err != nil {
 		return err
 	}
@@ -321,16 +321,16 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 	err = dc.deploy(opts)
 	if err != nil {
-		oktetoLog.Infof("Deployment failed: %s", err.Error())
+		oktetoLog.LogIntoBuffer("Deployment failed: %s", err.Error())
 		cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
 	} else {
-		oktetoLog.Infof("App '%s' successfully deployed", opts.Name)
+		oktetoLog.LogIntoBuffer("App '%s' successfully deployed", opts.Name)
 		cfg = app.SetStatus(cfg, app.DeployedStatus, data.Output)
 	}
 	if err := configmaps.Deploy(ctx, cfg, opts.Manifest.Namespace, c); err != nil {
 		return err
 	}
-	if err := app.UpdateOutput(ctx, cfg.Name, opts.Manifest.Namespace, oktetoLog.GetOutputBuffer(), c); err != nil {
+	if err := app.UpdateOutput(ctx, cfg, oktetoLog.GetOutputBuffer(), c); err != nil {
 		return err
 	}
 	if err != nil {

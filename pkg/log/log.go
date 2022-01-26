@@ -243,3 +243,8 @@ func IsInteractive() bool {
 func GetOutputBuffer() *bytes.Buffer {
 	return log.buf
 }
+
+//LogIntoBuffer logs into the buffer but does not print anything
+func LogIntoBuffer(format string, args ...interface{}) {
+	log.writer.LogIntoBuffer(format, args...)
+}

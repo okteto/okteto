@@ -179,3 +179,10 @@ func (w *TTYWriter) Printf(format string, a ...interface{}) {
 func (*TTYWriter) IsInteractive() bool {
 	return true
 }
+
+//LogIntoBuffer logs into the buffer but does not print anything
+func (*TTYWriter) LogIntoBuffer(format string, a ...interface{}) {
+	msg := fmt.Sprintf(format, a...)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
+}
