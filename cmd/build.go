@@ -112,10 +112,10 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func keepOnlySelectedServices(service string, manifest *model.ManifestBuild) {
-	for key := range *manifest {
+func keepOnlySelectedServices(service string, manifest model.ManifestBuild) {
+	for key := range manifest {
 		if key != service {
-			delete(*manifest, key)
+			delete(manifest, key)
 		}
 	}
 }
@@ -133,7 +133,7 @@ func buildV2(manifest model.ManifestBuild, options build.BuildOptions, args []st
 			return fmt.Errorf("invalid service name: %s", service)
 		}
 
-		keepOnlySelectedServices(service, &manifest)
+		keepOnlySelectedServices(service, manifest)
 
 		if options.Target != "" {
 			manifest[service].Target = options.Target
@@ -146,12 +146,12 @@ func buildV2(manifest model.ManifestBuild, options build.BuildOptions, args []st
 		}
 
 	} else if options.Tag != "" || options.Target != "" || options.CacheFrom != nil || options.Secrets != nil {
-		return fmt.Errorf("flags are not allowed when building services from manifest")
+		return fmt.Errorf("flags only allowed when building a single image with `okteto build [NAME]`")
 	}
 
 	for srv, manifestOptions := range manifest {
 		if !okteto.Context().IsOkteto && manifestOptions.Image == "" {
-			oktetoLog.Errorf("image is required")
+			oktetoLog.Errorf("image is required for service %s", srv)
 			continue
 		}
 		if cwd, err := os.Getwd(); err == nil && manifestOptions.Name == "" {
