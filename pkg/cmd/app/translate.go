@@ -75,7 +75,7 @@ type CfgData struct {
 
 // TranslateConfigMap translates the app into a configMap
 func TranslateConfigMap(name string, data *CfgData) *apiv1.ConfigMap {
-	return &apiv1.ConfigMap{
+	cfmap := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: TranslateAppName(name),
 			Labels: map[string]string{
@@ -93,6 +93,14 @@ func TranslateConfigMap(name string, data *CfgData) *apiv1.ConfigMap {
 			iconField:     data.Icon,
 		},
 	}
+	if data.Repository != "" {
+		cfmap.Data[repoField] = data.Repository
+	}
+
+	if data.Branch != "" {
+		cfmap.Data[branchField] = data.Branch
+	}
+	return cfmap
 }
 
 // SetStatus sets the status and output of a config map
