@@ -14,41 +14,48 @@
 package app
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func Test_translateConfigMap(t *testing.T) {
+	ctx := context.Background()
+	namespace := "test"
+	cmap := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      TranslateAppName("test"),
+			Namespace: namespace,
+			Labels:    map[string]string{},
+		},
+		Data: map[string]string{
+			statusField: DeployedStatus,
+		},
+	}
+	fakeClient := fake.NewSimpleClientset(cmap)
 	var tests = []struct {
 		name    string
 		status  string
 		appName string
-		output  string
 	}{
 		{
-			name:    "create errorStatus",
-			status:  ErrorStatus,
-			appName: "test",
-			output:  "test",
-		},
-		{
-			name:    "create progressing",
-			status:  ProgressingStatus,
-			appName: "test",
-			output:  "test",
-		},
-		{
-			name:    "create destroying",
-			status:  DestroyingStatus,
-			appName: "test",
-			output:  "test",
-		},
-		{
-			name:    "create deployed",
+			name:    "existing cmap",
 			status:  DeployedStatus,
 			appName: "test",
-			output:  "test",
+		},
+		{
+			name:    "existing cmap overwrite status",
+			status:  ErrorStatus,
+			appName: "test",
+		},
+		{
+			name:    "not found cmap",
+			status:  ProgressingStatus,
+			appName: "not-test",
 		},
 	}
 
@@ -56,9 +63,8 @@ func Test_translateConfigMap(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data := &CfgData{
 				Status: tt.status,
-				Output: tt.output,
 			}
-			cfg := TranslateConfigMap(tt.appName, data)
+			cfg := TranslateConfigMap(ctx, tt.appName, namespace, data, fakeClient)
 			assert.Equal(t, cfg.Data[statusField], tt.status)
 		})
 	}
