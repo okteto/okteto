@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,7 +86,6 @@ func TranslateConfigMap(name string, data *CfgData) *apiv1.ConfigMap {
 		Data: map[string]string{
 			nameField:     name,
 			statusField:   data.Status,
-			outputField:   base64.StdEncoding.EncodeToString([]byte(data.Output)),
 			repoField:     data.Repository,
 			branchField:   data.Branch,
 			filenameField: data.Filename,
@@ -100,6 +100,12 @@ func TranslateConfigMap(name string, data *CfgData) *apiv1.ConfigMap {
 	if data.Branch != "" {
 		cfmap.Data[branchField] = data.Branch
 	}
+
+	output := oktetoLog.GetOutputBuffer()
+
+	outputData := translateOutput(output)
+
+	cfmap = SetOutput(cfmap, string(outputData))
 	return cfmap
 }
 
@@ -123,6 +129,19 @@ func UpdateOutput(ctx context.Context, name, namespace string, output *bytes.Buf
 		return err
 	}
 
+	data := translateOutput(output)
+
+	SetOutput(cmap, string(data))
+
+	return configmaps.Deploy(ctx, cmap, namespace, c)
+}
+
+//TranslateAppName translate the name into the pipeline name
+func TranslateAppName(name string) string {
+	return fmt.Sprintf("okteto-git-%s", name)
+}
+
+func translateOutput(output *bytes.Buffer) []byte {
 	// If the output is larger than the currentMaxLimit for the logs trim it.
 	// We can't really truncate the buffer since we would end up with an invalid json
 	// line for the last line, so we pick lines from the end while the line fits
@@ -147,13 +166,5 @@ func UpdateOutput(ctx context.Context, name, namespace string, output *bytes.Buf
 	} else {
 		data = output.Bytes()
 	}
-
-	SetOutput(cmap, string(data))
-
-	return configmaps.Deploy(ctx, cmap, namespace, c)
-}
-
-//TranslateAppName translate the name into the pipeline name
-func TranslateAppName(name string) string {
-	return fmt.Sprintf("okteto-git-%s", name)
+	return data
 }

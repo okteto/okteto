@@ -281,11 +281,11 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	oktetoLog.Debugf("starting server on %d", dc.proxy.GetPort())
 	dc.proxy.Start()
 
+	oktetoLog.Infof("Deploying app '%s'...", opts.Name)
 	data := &app.CfgData{
 		Repository: os.Getenv(model.GithubRepositoryEnvVar),
 		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
 		Filename:   opts.Manifest.Filename,
-		Output:     fmt.Sprintf("Deploying app '%s'...", opts.Name),
 		Status:     app.ProgressingStatus,
 		Manifest:   opts.Manifest.Manifest,
 		Icon:       opts.Manifest.Icon,
@@ -321,10 +321,10 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 
 	err = dc.deploy(opts)
 	if err != nil {
-		data.Output = fmt.Sprintf("%s\nApp '%s' deployment failed: %s", data.Output, opts.Name, err.Error())
+		oktetoLog.Infof("Deployment failed: %s", err.Error())
 		cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
 	} else {
-		data.Output = fmt.Sprintf("%s\nApp '%s' successfully deployed", data.Output, opts.Name)
+		oktetoLog.Infof("App '%s' successfully deployed", opts.Name)
 		cfg = app.SetStatus(cfg, app.DeployedStatus, data.Output)
 	}
 	if err := configmaps.Deploy(ctx, cfg, opts.Manifest.Namespace, c); err != nil {
