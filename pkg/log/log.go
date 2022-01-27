@@ -181,6 +181,11 @@ func BlueString(format string, args ...interface{}) string {
 	return blueString(format, args...)
 }
 
+// RedString returns a string in blue
+func RedString(format string, args ...interface{}) string {
+	return redString(format, args...)
+}
+
 // BlueBackgroundString returns a string in a blue background
 func BlueBackgroundString(format string, args ...interface{}) string {
 	return blueString(format, args...)

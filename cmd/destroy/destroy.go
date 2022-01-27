@@ -15,11 +15,15 @@ package destroy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/cmd/utils/executor"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -62,7 +66,7 @@ type Options struct {
 type destroyCommand struct {
 	getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
 
-	executor    utils.ManifestExecutor
+	executor    executor.ManifestExecutor
 	nsDestroyer destroyer
 	secrets     secretHandler
 }
@@ -117,7 +121,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			c := &destroyCommand{
 				getManifest: contextCMD.GetManifest,
 
-				executor:    utils.NewExecutor(oktetoLog.GetOutputFormat()),
+				executor:    executor.NewExecutor(oktetoLog.GetOutputFormat()),
 				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:     secrets.NewSecrets(k8sClient),
 			}
@@ -146,18 +150,35 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	}
 
 	var commandErr error
-	for _, command := range manifest.Destroy {
-		if err := dc.executor.Execute(command, opts.Variables); err != nil {
-			oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
-			if !opts.ForceDestroy {
-				return err
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+
+	go func() {
+		for _, command := range manifest.Destroy {
+			if err := dc.executor.Execute(command, opts.Variables); err != nil {
+				oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
+				if !opts.ForceDestroy {
+					exit <- err
+				}
+
+				// Store the error to return if the force destroy option is set
+				commandErr = err
 			}
-
-			// Store the error to return if the force destroy option is set
-			commandErr = err
 		}
-	}
+		exit <- nil
+	}()
+	select {
+	case <-stop:
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+		dc.executor.CleanUp(errors.New("Interrupt signal received"))
+		return oktetoErrors.ErrIntSig
+	case err := <-exit:
+		if err != nil {
+			oktetoLog.Infof("exit signal received due to error: %s", err)
+		}
 
+	}
 	deployedByLs, err := labels.NewRequirement(
 		model.DeployedByLabel,
 		selection.Equals,
