@@ -57,6 +57,7 @@ type Options struct {
 	Variables    []string
 	Manifest     *model.Manifest
 	Build        bool
+	Dependencies bool
 
 	Repository string
 	Branch     string
@@ -169,6 +170,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the app")
 	cmd.Flags().MarkHidden("build")
+	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
+	cmd.Flags().MarkHidden("dependencies")
 
 	cmd.Flags().StringVarP(&options.Repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
 	cmd.Flags().StringVarP(&options.Branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
