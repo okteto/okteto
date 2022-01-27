@@ -303,4 +303,10 @@ const (
 
 	// BuildkitProgressEnvVar defines the output of buildkit
 	BuildkitProgressEnvVar = "BUILDKIT_PROGRESS"
+
+	// OktetoGitCommitPrefix prefix added to OKTETO_GIT_COMMIT when inferred by cli
+	OktetoGitCommitPrefix = "dev"
+
+	// OktetoDefaultImageTag default tag assigned to image to build
+	OktetoDefaultImageTag = "okteto"
 )

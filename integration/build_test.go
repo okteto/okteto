@@ -52,7 +52,7 @@ build:
 		testID           = strings.ToLower(fmt.Sprintf("TestBuildCommand-%s-%d", runtime.GOOS, time.Now().Unix()))
 		testNamespace    = fmt.Sprintf("%s-%s", testID, user)
 		originNamespace  = getCurrentNamespace()
-		expectedImageTag = fmt.Sprintf("%s/%s/%s:dev", okteto.Context().Registry, testNamespace, "app")
+		expectedImageTag = fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, repoDir)
 	)
 
 	if err := cloneGitRepo(ctx, gitRepo); err != nil {
@@ -87,13 +87,13 @@ build:
 			t.Fatal("image is already at registry")
 		}
 
-		_, err := runOktetoBuild(ctx, oktetoPath, pathToManifestFile, repoDir)
+		output, err := runOktetoBuild(ctx, oktetoPath, pathToManifestFile, repoDir)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		if _, err := registry.GetImageTagWithDigest(expectedImageTag); err != nil {
-			t.Fatalf("image not pushed to registry: %v", err)
+			t.Fatalf("image not pushed to registry: %v \nbuild output: %s", err, output)
 		}
 
 	})

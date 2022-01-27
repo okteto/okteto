@@ -78,3 +78,14 @@ func configForReference(reference string) (v1.Config, error) {
 
 	return configFile.Config, nil
 }
+
+// GetReferecenceEnvs returns the values to setup the image environment variables
+func GetReferecenceEnvs(reference string) (reg, repo, tag, image string) {
+	ref, err := name.ParseReference(reference)
+	if err != nil {
+		oktetoLog.Debugf("error parsing reference: %s - %v", reference, err)
+		return "", "", "", reference
+	}
+
+	return ref.Context().RegistryStr(), ref.Context().RepositoryStr(), ref.Identifier(), ref.Name()
+}

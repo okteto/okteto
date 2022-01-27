@@ -142,6 +142,7 @@ func IsOktetoRegistry(tag string) bool {
 	return IsDevRegistry(tag) || IsGlobalRegistry(tag)
 }
 
+// replaceRegistry replaces the short registry url with the okteto registry url
 func replaceRegistry(input, registryType, namespace string) string {
 	// Check if the registryType is the start of the sentence or has a whitespace before it
 	var re = regexp.MustCompile(fmt.Sprintf(`(^|\s)(%s)`, registryType))
