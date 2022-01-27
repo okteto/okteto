@@ -171,7 +171,7 @@ jobs:
           name: Publish Release on GitHub
           command: |
             go get -u github.com/tcnksm/ghr
-            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace $CIRCLE_TAG  ./artifacts/bin/
+            ghr -u ${CIRCLE_PROJECT_USERNAME} -n "Okteto CLI ${CIRCLE_TAG}" -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace $CIRCLE_TAG  ./artifacts/bin/
       - add_ssh_keys:
           fingerprints:
             - f7:81:9f:b4:31:3a:4d:46:ce:cf:54:a2:70:46:5a:df
@@ -209,7 +209,7 @@ jobs:
           name: Publish Prerelease on GitHub
           command: |
             go get -u github.com/tcnksm/ghr
-            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -prerelease -replace $CIRCLE_TAG ./artifacts/bin/
+            ghr -u ${CIRCLE_PROJECT_USERNAME} -n "Okteto CLI ${CIRCLE_TAG}" -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -prerelease -replace $CIRCLE_TAG ./artifacts/bin/
   release-master:
     docker:
       - image: okteto/golang-ci:1.17.3
