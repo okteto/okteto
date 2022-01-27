@@ -160,6 +160,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 				oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
 				if !opts.ForceDestroy {
 					exit <- err
+					return
 				}
 
 				// Store the error to return if the force destroy option is set
@@ -167,6 +168,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 			}
 		}
 		exit <- nil
+		return
 	}()
 	select {
 	case <-stop:
@@ -176,6 +178,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	case err := <-exit:
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
+			return err
 		}
 
 	}

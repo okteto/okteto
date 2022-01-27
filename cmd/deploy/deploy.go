@@ -308,9 +308,11 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 			if err := dc.executor.Execute(command, opts.Variables); err != nil {
 				oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
 				exit <- fmt.Errorf("error executing command '%s': %s", command, err.Error())
+				return
 			}
 		}
 		exit <- nil
+		return
 	}()
 
 	select {
