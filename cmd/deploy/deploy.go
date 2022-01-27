@@ -251,6 +251,12 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 			}
 		}
+
+		if deployOptions.Dependencies {
+			for _, dep := range deployOptions.Manifest.Dependencies {
+				deployOptions.Manifest.Deploy.Commands = append(deployOptions.Manifest.Deploy.Commands, dep.TransformToPipelineCommand())
+			}
+		}
 	}
 
 	deployOptions.Manifest, err = deployOptions.Manifest.ExpandEnvVars()
