@@ -69,7 +69,8 @@ func Test_OptsFromManifest(t *testing.T) {
 			buildInfo:   &model.BuildInfo{Name: "movies"},
 			isOkteto:    true,
 			expected: BuildOptions{
-				Tag: "okteto.dev/movies-service:okteto",
+				Tag:       "okteto.dev/movies-service:okteto",
+				BuildArgs: []string{},
 			},
 		},
 		{
@@ -79,7 +80,8 @@ func Test_OptsFromManifest(t *testing.T) {
 			okGitCommitEnv: "dev1235466",
 			isOkteto:       true,
 			expected: BuildOptions{
-				Tag: "okteto.dev/movies-service:okteto",
+				Tag:       "okteto.dev/movies-service:okteto",
+				BuildArgs: []string{},
 			},
 		},
 		{
@@ -89,7 +91,26 @@ func Test_OptsFromManifest(t *testing.T) {
 			okGitCommitEnv: "1235466",
 			isOkteto:       true,
 			expected: BuildOptions{
-				Tag: "okteto.dev/movies-service:1235466",
+				Tag:       "okteto.dev/movies-service:114921fe985b5f874c8d312b0a098959da6d119209c9d1e42a89c4309569692d",
+				BuildArgs: []string{},
+			},
+		},
+		{
+			name:        "empty-values-is-okteto-pipeline-withArgs",
+			serviceName: "service",
+			buildInfo: &model.BuildInfo{
+				Name: "movies",
+				Args: model.Environment{
+					{
+						Name:  "arg1",
+						Value: "value1",
+					},
+				}},
+			okGitCommitEnv: "1235466",
+			isOkteto:       true,
+			expected: BuildOptions{
+				Tag:       "okteto.dev/movies-service:c0776074a88fa37835b1dfa67365b6a6b08b11c4cf49a9d42524ea9797959e58",
+				BuildArgs: []string{"arg1=value1"},
 			},
 		},
 		{
@@ -97,7 +118,9 @@ func Test_OptsFromManifest(t *testing.T) {
 			serviceName: "service",
 			buildInfo:   &model.BuildInfo{Name: "movies"},
 			isOkteto:    false,
-			expected:    BuildOptions{},
+			expected: BuildOptions{
+				BuildArgs: []string{},
+			},
 		},
 		{
 			name:        "all-values-no-image",

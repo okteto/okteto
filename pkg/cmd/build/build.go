@@ -15,6 +15,7 @@ package build
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -199,6 +200,8 @@ func translateDockerErr(err error) error {
 
 // OptsFromManifest returns the parsed options for the build from the manifest
 func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildOptions {
+	args := model.SerializeBuildArgs(b.Args)
+
 	if okteto.Context().IsOkteto && b.Image == "" {
 		tag := model.OktetoDefaultImageTag
 
@@ -206,7 +209,8 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 		isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
 
 		if envGitCommit != "" && !isLocalEnvGitCommit {
-			tag = envGitCommit
+			params := strings.Join(args, "") + envGitCommit
+			tag = fmt.Sprintf("%x", sha256.Sum256([]byte(params)))
 		}
 
 		b.Image = fmt.Sprintf("%s/%s-%s:%s", okteto.DevRegistry, b.Name, service, tag)
@@ -218,10 +222,7 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 		Path:      b.Context,
 		Tag:       b.Image,
 		File:      filepath.Join(b.Context, b.Dockerfile),
-	}
-
-	if len(b.Args) != 0 {
-		opts.BuildArgs = model.SerializeBuildArgs(b.Args)
+		BuildArgs: args,
 	}
 
 	opts.OutputMode = setOutputMode(o.OutputMode)
