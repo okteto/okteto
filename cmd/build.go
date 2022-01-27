@@ -109,6 +109,7 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables")
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "", "", "namespace against which the image will be consumed. Default is the one defined at okteto context or okteto manifest")
+	cmd.Flags().BoolVarP(&options.BuildToGlobal, "global", "", false, "push the image to the global registry")
 	return cmd
 }
 
@@ -161,17 +162,19 @@ func buildV2(manifest model.ManifestBuild, options build.BuildOptions, args []st
 		opts := build.OptsFromManifest(srv, manifestOptions, options)
 
 		// check if image is at registry and skip
-		if build.ShouldOptimizeBuild(opts.Tag) {
+		if build.ShouldOptimizeBuild(opts.Tag) && !options.BuildToGlobal {
 			oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
 			globalReference := strings.Replace(opts.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 			if _, err := registry.GetImageTagWithDigest(globalReference); err == nil {
 				oktetoLog.Information("skipping build: image already exists at global registry -  %s", globalReference)
 				return nil
 			}
-			// check if image already is at the registry
-			if _, err := registry.GetImageTagWithDigest(opts.Tag); err == nil {
-				oktetoLog.Information("skipping build: image already exists at registry - %s", opts.Tag)
-				return nil
+			if registry.IsDevRegistry(opts.Tag) {
+				// check if image already is at the registry
+				if _, err := registry.GetImageTagWithDigest(opts.Tag); err == nil {
+					oktetoLog.Information("skipping build: image already exists at registry - %s", opts.Tag)
+					return nil
+				}
 			}
 		}
 		// when single build, transfer the secrets from the flag to the options

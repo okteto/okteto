@@ -35,16 +35,17 @@ import (
 
 //BuildOptions define the options available for build
 type BuildOptions struct {
-	BuildArgs  []string
-	CacheFrom  []string
-	File       string
-	NoCache    bool
-	OutputMode string
-	Path       string
-	Secrets    []string
-	Tag        string
-	Target     string
-	Namespace  string
+	BuildArgs     []string
+	CacheFrom     []string
+	File          string
+	NoCache       bool
+	OutputMode    string
+	Path          string
+	Secrets       []string
+	Tag           string
+	Target        string
+	Namespace     string
+	BuildToGlobal bool
 }
 
 // Run runs the build sequence
@@ -213,7 +214,13 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 			tag = fmt.Sprintf("%x", sha256.Sum256([]byte(params)))
 		}
 
-		b.Image = fmt.Sprintf("%s/%s-%s:%s", okteto.DevRegistry, b.Name, service, tag)
+		// if flag --global, point to global registry
+		targetRegistry := okteto.DevRegistry
+		if o.BuildToGlobal {
+			targetRegistry = okteto.GlobalRegistry
+		}
+
+		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, b.Name, service, tag)
 	}
 
 	opts := BuildOptions{
