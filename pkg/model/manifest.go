@@ -387,22 +387,22 @@ func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 }
 
 // ExpandEnvVars expands env vars to be set on the manifest
-func (m *Manifest) ExpandEnvVars() error {
+func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 	bytes := m.CompleteManifest
 	if len(bytes) == 0 {
 		var err error
 		bytes, err = yaml.Marshal(m)
 		if err != nil {
-			return err
+			return m, err
 		}
 	}
 	manifestExpandedBytes, err := ExpandEnv(string(bytes))
 	if err != nil {
-		return err
+		return m, err
 	}
-	m, err = Read([]byte(manifestExpandedBytes))
+	result, err := Read([]byte(manifestExpandedBytes))
 	if err != nil {
-		return err
+		return m, err
 	}
-	return nil
+	return result, nil
 }

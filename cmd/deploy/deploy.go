@@ -263,7 +263,8 @@ func (dc *deployCommand) runDeploy(ctx context.Context, opts *Options) error {
 		}
 	}
 
-	if err := opts.Manifest.ExpandEnvVars(); err != nil {
+	opts.Manifest, err = opts.Manifest.ExpandEnvVars()
+	if err != nil {
 		return err
 	}
 
@@ -295,7 +296,6 @@ func (dc *deployCommand) runDeploy(ctx context.Context, opts *Options) error {
 		}
 	}
 	oktetoLog.SetStage("")
-
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		if err := dc.showEndpoints(ctx, opts); err != nil {
 			oktetoLog.Infof("could not retrieve endpoints: %s", err)
