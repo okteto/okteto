@@ -1037,6 +1037,17 @@ func TestManifestUnmarshalling(t *testing.T) {
 		isErrorExpected bool
 	}{
 		{
+			name: "only dev with service unsupported field",
+			manifest: []byte(`
+sync:
+  - app:/app
+services:
+  - name: svc
+    autocreate: true`),
+			expected:        nil,
+			isErrorExpected: true,
+		},
+		{
 			name: "manifest with namespace and context",
 			manifest: []byte(`
 namespace: test
@@ -1404,17 +1415,7 @@ services:
 			},
 			isErrorExpected: false,
 		},
-		{
-			name: "only dev with service unsupported field",
-			manifest: []byte(`
-sync:
-  - app:/app
-services:
-  - name: svc
-    autocreate: true`),
-			expected:        nil,
-			isErrorExpected: true,
-		},
+
 		{
 			name: "only dev with errors",
 			manifest: []byte(`
@@ -1719,6 +1720,10 @@ devs:
 				t.Fatalf("Not expecting error but got %s", err)
 			} else if tt.isErrorExpected && err == nil {
 				t.Fatal("Expected error but got none")
+			}
+
+			if err != nil {
+				manifest.CompleteManifest = nil
 			}
 
 			if !assert.Equal(t, tt.expected, manifest) {
