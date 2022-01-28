@@ -710,9 +710,15 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err == nil {
 		d.Commands = commands
 		return nil
-	} else {
+	}
+	type deployInfoRaw DeployInfo
+	var deploy deployInfoRaw
+	err = unmarshal(&deploy)
+	if err != nil {
 		return err
 	}
+	*d = DeployInfo(deploy)
+	return nil
 }
 
 type devRaw Dev

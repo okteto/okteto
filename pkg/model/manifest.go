@@ -395,11 +395,13 @@ func (m *Manifest) ExpandEnvVars() error {
 		if err != nil {
 			return err
 		}
+		fmt.Print(string(bytes))
 	}
 	manifestExpandedBytes, err := ExpandEnv(string(bytes))
 	if err != nil {
 		return err
 	}
+	fmt.Print(string(manifestExpandedBytes))
 	m, err = Read([]byte(manifestExpandedBytes))
 	if err != nil {
 		return err
