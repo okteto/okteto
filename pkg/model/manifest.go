@@ -102,8 +102,9 @@ type Manifest struct {
 	Destroy   []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build     ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
 
-	Type     Archetype `json:"-" yaml:"-"`
-	Filename string    `json:"-" yaml:"-"`
+	Type             Archetype `json:"-" yaml:"-"`
+	Filename         string    `json:"-" yaml:"-"`
+	CompleteManifest []byte    `json:"-" yaml:"-"`
 }
 
 //ManifestDevs defines all the dev section
@@ -375,24 +376,33 @@ func Read(bytes []byte) (*Manifest, error) {
 		}
 		b.setBuildDefaults()
 	}
-
+	manifest.CompleteManifest = bytes
 	return manifest, nil
-}
-
-//SetName sets manifest name
-func (m *Manifest) SetName(name string) {
-	if err := os.Setenv("OKTETO_APP_NAME", name); err != nil {
-		oktetoLog.Infof("invalid app name: %s", err)
-	}
-	if m.Type == ChartType {
-		for _, c := range m.Deploy.Commands {
-			ExpandEnv(c)
-		}
-	}
 }
 
 func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 	if len(m.Dev) == 0 && len(other.Dev) != 0 {
 		m.Dev = other.Dev
 	}
+}
+
+// ExpandEnvVars expands env vars to be set on the manifest
+func (m *Manifest) ExpandEnvVars() error {
+	bytes := m.CompleteManifest
+	if len(bytes) == 0 {
+		var err error
+		bytes, err = yaml.Marshal(m)
+		if err != nil {
+			return err
+		}
+	}
+	manifestExpandedBytes, err := ExpandEnv(string(bytes))
+	if err != nil {
+		return err
+	}
+	m, err = Read([]byte(manifestExpandedBytes))
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -217,7 +217,8 @@ func (dc *deployCommand) runDeploy(ctx context.Context, opts *Options) error {
 	if opts.Manifest.Namespace == okteto.Context().Namespace {
 		opts.Manifest.Namespace = okteto.Context().Namespace
 	}
-	opts.Manifest.SetName(opts.Name)
+
+	os.Setenv(model.OktetoAppNameEnvVar, opts.Name)
 
 	if contextCMD.IsManifestV2Enabled() {
 
@@ -260,13 +261,10 @@ func (dc *deployCommand) runDeploy(ctx context.Context, opts *Options) error {
 				return fmt.Errorf("build failed for the services defined at manifest: %v", buildErrs)
 			}
 		}
+	}
 
-		var parsedCommands []string
-		for _, command := range opts.Manifest.Deploy.Commands {
-			parsedCommands = append(parsedCommands, expandManifestEnvVars(command))
-		}
-		opts.Manifest.Deploy.Commands = parsedCommands
-
+	if err := opts.Manifest.ExpandEnvVars(); err != nil {
+		return err
 	}
 
 	oktetoLog.Debugf("starting server on %d", dc.proxy.GetPort())
