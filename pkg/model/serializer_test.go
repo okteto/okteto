@@ -1722,7 +1722,7 @@ devs:
 				t.Fatal("Expected error but got none")
 			}
 
-			if err != nil {
+			if err == nil && manifest != nil {
 				manifest.CompleteManifest = nil
 			}
 
