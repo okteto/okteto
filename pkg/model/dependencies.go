@@ -1,7 +1,6 @@
 package model
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -39,9 +38,6 @@ func (dependency *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) e
 		return err
 	}
 
-	if rawDependency.Repository == "" {
-		return errors.New("repository is mandatory")
-	}
 	dependency.Repository = rawDependency.Repository
 	dependency.ManifestPath = rawDependency.ManifestPath
 	dependency.Branch = rawDependency.Branch
@@ -51,18 +47,24 @@ func (dependency *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) e
 }
 
 // TransformToPipelineCommand returns the command to deploy the pipeline
-func (dependency *Dependency) TransformToPipelineCommand() DeployCommand {
+func (dependency *Dependency) TransformToPipelineCommand(name string) DeployCommand {
 	comm := []string{"okteto pipeline deploy"}
 
-	repo := fmt.Sprintf("-r %s", dependency.Repository)
-	comm = append(comm, repo)
+	pipelineName := fmt.Sprintf("-p %s", name)
+	comm = append(comm, pipelineName)
 
-	var branch, file, variables string
+	var repo, branch, file, variables string
 
-	if dependency.Branch != "" {
-		branch = fmt.Sprintf("-b %s", dependency.Branch)
-		comm = append(comm, branch)
+	if dependency.Repository != "" {
+		repo = fmt.Sprintf("-r %s", dependency.Repository)
+		comm = append(comm, repo)
 	}
+
+	if dependency.Branch == "" {
+		dependency.Branch = "main"
+	}
+	branch = fmt.Sprintf("-b %s", dependency.Branch)
+	comm = append(comm, branch)
 
 	if dependency.ManifestPath != "" {
 		file = fmt.Sprintf("-f %s", dependency.ManifestPath)
