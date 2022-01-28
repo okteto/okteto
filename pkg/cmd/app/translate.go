@@ -80,11 +80,13 @@ type CfgData struct {
 func TranslateConfigMap(ctx context.Context, data *CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
 	cmap, err := configmaps.Get(ctx, TranslateAppName(data.Name), data.Namespace, c)
 	if err != nil {
-		if oktetoErrors.IsNotFound(err) {
-			return translatedConfigMapSandBox(data), nil
+		if !oktetoErrors.IsNotFound(err) {
+			return nil, err
 		}
+		cmap = translatedConfigMapSandBox(data)
+	} else {
+		updateCmap(cmap, data)
 	}
-	updateCmap(cmap, data)
 	if err := configmaps.Deploy(ctx, cmap, cmap.Namespace, c); err != nil {
 		return nil, err
 	}
@@ -143,7 +145,8 @@ func translateOutput(output *bytes.Buffer) []byte {
 func translatedConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 	cmap := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: TranslateAppName(data.Name),
+			Namespace: data.Namespace,
+			Name:      TranslateAppName(data.Name),
 			Labels: map[string]string{
 				model.GitDeployLabel: "true",
 			},
