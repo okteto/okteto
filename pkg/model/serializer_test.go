@@ -1756,9 +1756,10 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 			deployInfoManifest: []byte(`commands:
 - okteto stack deploy`),
 			expected: &DeployInfo{
-				Commands: []string{},
+				Commands: []string{
+					"okteto stack deploy",
+				},
 			},
-			isErrorExpected: true,
 		},
 		{
 			name: "compose with endpoints",
