@@ -62,9 +62,13 @@ func Test_translateConfigMap(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := &CfgData{
-				Status: tt.status,
+				Name:      tt.appName,
+				Namespace: namespace,
+				Status:    tt.status,
 			}
-			cfg := TranslateConfigMap(ctx, tt.appName, namespace, data, fakeClient)
+			cfg, err := TranslateConfigMap(ctx, data, fakeClient)
+
+			assert.Nil(t, err)
 			assert.Equal(t, cfg.Data[statusField], tt.status)
 		})
 	}

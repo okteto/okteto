@@ -36,7 +36,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -281,8 +280,10 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	oktetoLog.Debugf("starting server on %d", dc.proxy.GetPort())
 	dc.proxy.Start()
 
-	oktetoLog.LogIntoBuffer("Deploying app '%s'...", opts.Name)
+	oktetoLog.LogIntoBuffer("Deploying '%s'...", opts.Name)
 	data := &app.CfgData{
+		Name:       opts.Name,
+		Namespace:  opts.Manifest.Namespace,
 		Repository: os.Getenv(model.GithubRepositoryEnvVar),
 		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
 		Filename:   opts.Manifest.Filename,
@@ -296,9 +297,8 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	if err != nil {
 		return err
 	}
-	cfg := app.TranslateConfigMap(ctx, opts.Name, opts.Manifest.Namespace, data, c)
-
-	if err := configmaps.Deploy(ctx, cfg, opts.Manifest.Namespace, c); err != nil {
+	cfg, err := app.TranslateConfigMap(ctx, data, c)
+	if err != nil {
 		return err
 	}
 
@@ -322,15 +322,13 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	err = dc.deploy(opts)
 	if err != nil {
 		oktetoLog.LogIntoBuffer("Deployment failed: %s", err.Error())
-		cfg = app.SetStatus(cfg, app.ErrorStatus, data.Output)
+		data.Status = app.ErrorStatus
 	} else {
-		oktetoLog.LogIntoBuffer("App '%s' successfully deployed", opts.Name)
-		cfg = app.SetStatus(cfg, app.DeployedStatus, data.Output)
+		oktetoLog.LogIntoBuffer("'%s' successfully deployed", opts.Name)
+		data.Status = app.DeployedStatus
 	}
-	if err := configmaps.Deploy(ctx, cfg, opts.Manifest.Namespace, c); err != nil {
-		return err
-	}
-	if err := app.UpdateOutput(ctx, cfg, oktetoLog.GetOutputBuffer(), c); err != nil {
+
+	if err := app.UpdateConfigMap(ctx, cfg, data, c); err != nil {
 		return err
 	}
 	if err != nil {
@@ -566,13 +564,7 @@ func (dc *deployCommand) showEndpoints(ctx context.Context, opts *Options) error
 		sort.Slice(eps, func(i, j int) bool {
 			return len(eps[i]) < len(eps[j])
 		})
-		switch oktetoLog.GetOutputFormat() {
-		case oktetoLog.TTYFormat:
-			oktetoLog.Printf("Endpoints available: %s\n", eps)
-		default:
-			oktetoLog.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
-		}
-
+		oktetoLog.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
 	}
 	return nil
 }
