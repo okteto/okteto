@@ -168,7 +168,6 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 			}
 		}
 		exit <- nil
-		return
 	}()
 	select {
 	case <-stop:

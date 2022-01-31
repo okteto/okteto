@@ -126,10 +126,7 @@ func (e *ttyExecutor) displayStdout() {
 
 func checkIfIsBuildingLine(line string) bool {
 	if strings.Contains(line, "Building") {
-		if strings.Contains(line, "FINISHED") {
-			return false
-		}
-		return true
+		return strings.Contains(line, "FINISHED")
 	}
 	return false
 }
@@ -171,7 +168,7 @@ func (e *ttyExecutor) cleanUp(err error) {
 		e.screenbuf.Write(message)
 		e.screenbuf.Flush()
 	} else {
-		message = renderFailCommand(e.command, err, e.linesToDisplay)
+		message = renderFailCommand(e.command, err)
 		e.screenbuf.Reset()
 		e.screenbuf.Clear()
 		e.screenbuf.Flush()
@@ -210,7 +207,7 @@ func renderSuccessCommand(command string) []byte {
 	return render(tpl, command)
 }
 
-func renderFailCommand(command string, err error, queue []string) []byte {
+func renderFailCommand(command string, err error) []byte {
 	message := fmt.Sprintf("%s: %s", command, err.Error())
 	commandTemplate := `{{ " x " | bgRed | black }} {{ . | oktetored }}`
 	funcMap := promptui.FuncMap
@@ -236,7 +233,7 @@ func renderLines(queue []string) [][]byte {
 		line = fmt.Sprintf("  %s", strings.TrimSpace(line))
 		if width > 4 && len(line)+2 > width {
 			result = append(result, render(tpl, fmt.Sprintf("%s...", line[:width-5])))
-		} else if len(line) == 0 {
+		} else if line == "" {
 			result = append(result, []byte(""))
 		} else {
 			result = append(result, render(tpl, line))
@@ -255,13 +252,13 @@ func render(tpl *template.Template, data interface{}) []byte {
 	return buf.Bytes()
 }
 
-func (e *ttyExecutor) hideCursor() {
+func (*ttyExecutor) hideCursor() {
 	if runtime.GOOS != "windows" {
 		fmt.Print("\033[?25l")
 	}
 }
 
-func (e *ttyExecutor) showCursor() {
+func (*ttyExecutor) showCursor() {
 	if runtime.GOOS != "windows" {
 		fmt.Print("\033[?25h")
 	}

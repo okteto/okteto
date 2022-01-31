@@ -61,6 +61,9 @@ func Run(ctx context.Context, buildOptions BuildOptions) error {
 }
 
 func setOutputMode(outputMode string) string {
+	if outputMode != "" {
+		return outputMode
+	}
 	switch os.Getenv(model.BuildkitProgressEnvVar) {
 	case oktetoLog.PlainFormat:
 		return oktetoLog.PlainFormat

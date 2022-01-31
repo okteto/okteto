@@ -310,7 +310,6 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 			}
 		}
 		exit <- nil
-		return
 	}()
 
 	select {

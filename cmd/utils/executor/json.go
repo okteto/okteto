@@ -59,4 +59,4 @@ func (e *jsonExecutor) display(command string) {
 		}
 	}()
 }
-func (*jsonExecutor) cleanUp(err error) {}
+func (*jsonExecutor) cleanUp(_ error) {}

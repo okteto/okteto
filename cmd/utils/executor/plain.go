@@ -49,4 +49,4 @@ func (e *plainExecutor) display(_ string) {
 	}
 }
 
-func (*plainExecutor) cleanUp(err error) {}
+func (*plainExecutor) cleanUp(_ error) {}
