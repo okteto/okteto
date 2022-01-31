@@ -318,6 +318,9 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+		sp := utils.NewSpinner("Shutting down...")
+		sp.Start()
+		defer sp.Stop()
 		dc.executor.CleanUp(errors.New("Interrupt signal received"))
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
