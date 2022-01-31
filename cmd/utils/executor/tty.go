@@ -43,9 +43,16 @@ type ttyExecutor struct {
 
 	quit chan bool
 	wg   sync.WaitGroup
+
+	isBuilding            bool
+	buildingpreviousLines int
 }
 
-var spinnerChars = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+var (
+	spinnerChars = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
+	cursorUp     = "\x1b[1A"
+	resetLine    = "\x1b[0G"
+)
 
 func newTTYExecutor() *ttyExecutor {
 	return &ttyExecutor{
@@ -94,15 +101,37 @@ func (e *ttyExecutor) displayStdout() {
 	e.wg.Add(1)
 	for e.stdoutScanner.Scan() {
 		line := strings.TrimSpace(e.stdoutScanner.Text())
-		if len(e.linesToDisplay) == e.numberOfLines {
-			e.linesToDisplay = e.linesToDisplay[1:]
+		if isTopDisplay(line) {
+			prevState := e.isBuilding
+			e.isBuilding = checkIfIsBuildingLine(line)
+			if e.isBuilding && e.isBuilding != prevState {
+				e.buildingpreviousLines = len(e.linesToDisplay)
+			}
+			sanitizedLine := strings.ReplaceAll(line, cursorUp, "")
+			sanitizedLine = strings.ReplaceAll(sanitizedLine, resetLine, "")
+			e.linesToDisplay = append(e.linesToDisplay[:e.buildingpreviousLines-1], sanitizedLine)
+
+		} else {
+			if len(e.linesToDisplay) == e.numberOfLines {
+				e.linesToDisplay = e.linesToDisplay[1:]
+			}
+			e.linesToDisplay = append(e.linesToDisplay, line)
 		}
-		e.linesToDisplay = append(e.linesToDisplay, line)
 	}
 	if e.stdoutScanner.Err() != nil {
 		oktetoLog.Infof("Error reading command output: %s", e.stdoutScanner.Err().Error())
 	}
 	e.wg.Done()
+}
+
+func checkIfIsBuildingLine(line string) bool {
+	if strings.Contains(line, "Building") {
+		if strings.Contains(line, "FINISHED") {
+			return false
+		}
+		return true
+	}
+	return false
 }
 
 func (e *ttyExecutor) displayStderr() {
@@ -119,6 +148,10 @@ func (e *ttyExecutor) displayStderr() {
 		oktetoLog.Infof("Error reading command output: %s", e.stderrScanner.Err().Error())
 	}
 	e.wg.Done()
+}
+
+func isTopDisplay(line string) bool {
+	return strings.Contains(line, fmt.Sprintf("%s%s", cursorUp, resetLine))
 }
 
 func (e *ttyExecutor) cleanUp(err error) {
@@ -200,7 +233,7 @@ func renderLines(queue []string) [][]byte {
 	result := [][]byte{}
 	for _, line := range queue {
 		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
-		line = strings.TrimSpace(line)
+		line = fmt.Sprintf("  %s", strings.TrimSpace(line))
 		if width > 4 && len(line)+2 > width {
 			result = append(result, render(tpl, fmt.Sprintf("%s...", line[:width-5])))
 		} else if len(line) == 0 {

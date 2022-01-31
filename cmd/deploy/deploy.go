@@ -292,8 +292,6 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		fmt.Sprintf("%s=true", model.OktetoWithinDeployCommandContextEnvVar),
 		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
 		fmt.Sprintf("%s=true", model.OktetoDisableSpinnerEnvVar),
-		// Set BUILDKIT_PROGRESS=plain env variable, so all the commands disable docker tty builds
-		fmt.Sprintf("%s=true", model.BuildkitProgressEnvVar),
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
