@@ -548,15 +548,8 @@ func (dc *deployCommand) showEndpoints(ctx context.Context, opts *Options) error
 		sort.Slice(eps, func(i, j int) bool {
 			return len(eps[i]) < len(eps[j])
 		})
-		switch oktetoLog.GetOutputFormat() {
-		case oktetoLog.TTYFormat:
-			oktetoLog.Printf("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
-		case oktetoLog.PlainFormat:
-			oktetoLog.Printf("Endpoints available: %s\n", eps)
-		default:
-			oktetoLog.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
-		}
-
+		oktetoLog.Information("Endpoints available:")
+		oktetoLog.Printf("  - %s\n", strings.Join(eps, "\n  - "))
 	}
 	return nil
 }
