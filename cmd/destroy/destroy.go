@@ -177,7 +177,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
 			if !opts.ForceDestroy {
-				if err := setErrorStatus(ctx, cfg, data, namespace, err, c); err != nil {
+				if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
 					return err
 				}
 				return err
@@ -194,7 +194,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 		[]string{opts.Name},
 	)
 	if err != nil {
-		if err := setErrorStatus(ctx, cfg, data, namespace, err, c); err != nil {
+		if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
 			return err
 		}
 		return err
@@ -206,7 +206,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	}
 
 	if err := dc.nsDestroyer.DestroySFSVolumes(ctx, opts.Namespace, deleteOpts); err != nil {
-		if err := setErrorStatus(ctx, cfg, data, namespace, err, c); err != nil {
+		if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
 			return err
 		}
 		return err
@@ -214,7 +214,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 
 	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
 		if !opts.ForceDestroy {
-			if err := setErrorStatus(ctx, cfg, data, namespace, err, c); err != nil {
+			if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
 				return err
 			}
 			return err
@@ -224,7 +224,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Opti
 	oktetoLog.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
 	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
 		oktetoLog.Infof("could not delete all the resources: %s", err)
-		if err := setErrorStatus(ctx, cfg, data, namespace, err, c); err != nil {
+		if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
 			return err
 		}
 		return err
@@ -270,10 +270,7 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 	return nil
 }
 
-func setErrorStatus(ctx context.Context, cfg *v1.ConfigMap, data *app.CfgData, namespace string, err error, c kubernetes.Interface) error {
+func setErrorStatus(ctx context.Context, cfg *v1.ConfigMap, data *app.CfgData, err error, c kubernetes.Interface) error {
 	oktetoLog.LogIntoBuffer("Destruction failed: %s", err.Error())
-	if err := app.UpdateConfigMap(ctx, cfg, data, c); err != nil {
-		return err
-	}
-	return nil
+	return app.UpdateConfigMap(ctx, cfg, data, c)
 }
