@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
@@ -68,7 +69,8 @@ func Test_OptsFromManifest(t *testing.T) {
 			buildInfo:   &model.BuildInfo{},
 			isOkteto:    true,
 			expected: BuildOptions{
-				Tag: "okteto.dev/service:dev",
+				Tag:        "okteto.dev/service:dev",
+				OutputMode: oktetoLog.TTYFormat,
 			},
 		},
 		{
@@ -76,7 +78,9 @@ func Test_OptsFromManifest(t *testing.T) {
 			serviceName: "service",
 			buildInfo:   &model.BuildInfo{},
 			isOkteto:    false,
-			expected:    BuildOptions{},
+			expected: BuildOptions{
+				OutputMode: oktetoLog.TTYFormat,
+			},
 		},
 		{
 			name:        "all-values-no-image",
