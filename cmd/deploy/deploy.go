@@ -319,10 +319,6 @@ func setManifestEnvVars(service, reference string) {
 	oktetoLog.Debug("manifest env vars set")
 }
 
-func expandManifestEnvVars(manifest string) string {
-	return os.ExpandEnv(manifest)
-}
-
 func buildIfImageNotFound(ctx context.Context, options build.BuildOptions) error {
 	_, err := registry.GetImageTagWithDigest(options.Tag)
 	if err != nil {
