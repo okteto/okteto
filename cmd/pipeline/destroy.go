@@ -91,7 +91,7 @@ func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 		opts.Name = getPipelineName(repo)
 	}
 
-	resp, err := destroyPipeline(ctx, opts.Name, opts.DestroyVolumes)
+	resp, err := DestroyPipeline(ctx, opts.Name, opts.DestroyVolumes)
 	if err != nil {
 		return err
 	}
@@ -111,7 +111,8 @@ func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 	return nil
 }
 
-func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
+// DestroyPipeline destroys the pipeline
+func DestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
 	spinner := utils.NewSpinner("Destroying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
