@@ -148,6 +148,7 @@ func setSecrets(secrets []types.Secret) {
 	for _, secret := range secrets {
 		if _, exists := os.LookupEnv(secret.Name); !exists {
 			os.Setenv(secret.Name, secret.Value)
+			oktetoLog.AddBanned(secret.Value)
 		}
 	}
 }

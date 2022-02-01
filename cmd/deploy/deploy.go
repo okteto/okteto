@@ -284,6 +284,12 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 
 	defer dc.cleanUp(ctx)
 
+	for _, variable := range deployOptions.Variables {
+		value := strings.SplitN(variable, "=", 2)[1]
+		if strings.TrimSpace(value) != "" {
+			oktetoLog.AddBanned(value)
+		}
+	}
 	deployOptions.Variables = append(
 		deployOptions.Variables,
 		// Set KUBECONFIG environment variable as environment for the commands to be executed
@@ -298,6 +304,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
+	oktetoLog.StartRedact()
 
 	for _, command := range deployOptions.Manifest.Deploy.Commands {
 		if err := dc.executor.Execute(command, deployOptions.Variables); err != nil {
@@ -306,6 +313,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 		}
 	}
 	oktetoLog.SetStage("")
+	oktetoLog.StopRedact()
 
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		if err := dc.showEndpoints(ctx, deployOptions); err != nil {
