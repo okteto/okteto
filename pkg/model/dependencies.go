@@ -1,10 +1,5 @@
 package model
 
-import (
-	"fmt"
-	"strings"
-)
-
 type dependenciesRaw struct {
 	Repository   string      `json:"repository,omitempty" yaml:"repository,omitempty"`
 	ManifestPath string      `json:"manifest,omitempty" yaml:"manifest,omitempty"`
@@ -44,38 +39,4 @@ func (dependency *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) e
 	dependency.Variables = rawDependency.Variables
 
 	return nil
-}
-
-// TransformToPipelineCommand returns the command to deploy the pipeline
-func (dependency *Dependency) TransformToPipelineCommand(name string) DeployCommand {
-	comm := []string{"okteto pipeline deploy"}
-
-	pipelineName := fmt.Sprintf("-p %s", name)
-	comm = append(comm, pipelineName)
-
-	var repo, branch, file, variables string
-
-	if dependency.Repository != "" {
-		repo = fmt.Sprintf("-r %s", dependency.Repository)
-		comm = append(comm, repo)
-	}
-
-	if dependency.Branch == "" {
-		dependency.Branch = "main"
-	}
-	branch = fmt.Sprintf("-b %s", dependency.Branch)
-	comm = append(comm, branch)
-
-	if dependency.ManifestPath != "" {
-		file = fmt.Sprintf("-f %s", dependency.ManifestPath)
-		comm = append(comm, file)
-	}
-
-	if len(dependency.Variables) > 0 {
-		vars := SerializeBuildArgs(dependency.Variables)
-		variables = fmt.Sprintf("-v %s", strings.Join(vars, ","))
-		comm = append(comm, variables)
-	}
-
-	return DeployCommand{Name: strings.Join(comm, " "), Command: strings.Join(comm, " ")}
 }
