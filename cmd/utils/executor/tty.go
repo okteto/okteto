@@ -16,12 +16,12 @@ package executor
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"runtime"
 	"strings"
-	"sync"
 	"text/template"
 	"time"
 
@@ -41,8 +41,7 @@ type ttyExecutor struct {
 	linesToDisplay []string
 	numberOfLines  int
 
-	quit chan bool
-	wg   sync.WaitGroup
+	commandContext context.Context
 
 	isBuilding            bool
 	buildingpreviousLines int
@@ -58,7 +57,6 @@ func newTTYExecutor() *ttyExecutor {
 	return &ttyExecutor{
 		numberOfLines:  25,
 		linesToDisplay: []string{},
-		quit:           make(chan bool),
 	}
 }
 
@@ -66,7 +64,7 @@ func (e *ttyExecutor) display(command string) {
 	e.command = command
 
 	e.hideCursor()
-	e.wg = sync.WaitGroup{}
+	e.commandContext = context.Background()
 	go e.displayCommand()
 	go e.displayStdout()
 	go e.displayStderr()
@@ -74,15 +72,11 @@ func (e *ttyExecutor) display(command string) {
 }
 
 func (e *ttyExecutor) displayCommand() {
-	e.wg.Add(1)
+	t := time.NewTicker(50 * time.Millisecond)
 	for {
 		for i := 0; i < len(spinnerChars); i++ {
 			select {
-			case <-e.quit:
-				e.wg.Done()
-				return
-			default:
-
+			case <-t.C:
 				commandLine := renderCommand(spinnerChars[i], e.command)
 				e.screenbuf.Write(commandLine)
 				lines := renderLines(e.linesToDisplay)
@@ -90,7 +84,8 @@ func (e *ttyExecutor) displayCommand() {
 					e.screenbuf.Write([]byte(line))
 				}
 				e.screenbuf.Flush()
-				time.Sleep(50 * time.Millisecond)
+			case <-e.commandContext.Done():
+				return
 			}
 
 		}
@@ -98,53 +93,63 @@ func (e *ttyExecutor) displayCommand() {
 }
 
 func (e *ttyExecutor) displayStdout() {
-	e.wg.Add(1)
 	for e.stdoutScanner.Scan() {
-		line := strings.TrimSpace(e.stdoutScanner.Text())
-		if isTopDisplay(line) {
-			prevState := e.isBuilding
-			e.isBuilding = checkIfIsBuildingLine(line)
-			if e.isBuilding && e.isBuilding != prevState {
-				e.buildingpreviousLines = len(e.linesToDisplay)
-			}
-			sanitizedLine := strings.ReplaceAll(line, cursorUp, "")
-			sanitizedLine = strings.ReplaceAll(sanitizedLine, resetLine, "")
-			e.linesToDisplay = append(e.linesToDisplay[:e.buildingpreviousLines-1], sanitizedLine)
+		select {
+		case <-e.commandContext.Done():
+			break
+		default:
+			line := strings.TrimSpace(e.stdoutScanner.Text())
+			if isTopDisplay(line) {
+				prevState := e.isBuilding
+				e.isBuilding = checkIfIsBuildingLine(line)
+				if e.isBuilding && e.isBuilding != prevState {
+					e.buildingpreviousLines = len(e.linesToDisplay)
+				}
+				sanitizedLine := strings.ReplaceAll(line, cursorUp, "")
+				sanitizedLine = strings.ReplaceAll(sanitizedLine, resetLine, "")
+				e.linesToDisplay = append(e.linesToDisplay[:e.buildingpreviousLines-1], sanitizedLine)
 
-		} else {
-			if len(e.linesToDisplay) == e.numberOfLines {
-				e.linesToDisplay = e.linesToDisplay[1:]
+			} else {
+				if len(e.linesToDisplay) == e.numberOfLines {
+					e.linesToDisplay = e.linesToDisplay[1:]
+				}
+				e.linesToDisplay = append(e.linesToDisplay, line)
 			}
-			e.linesToDisplay = append(e.linesToDisplay, line)
+			continue
 		}
+		break
 	}
 	if e.stdoutScanner.Err() != nil {
 		oktetoLog.Infof("Error reading command output: %s", e.stdoutScanner.Err().Error())
 	}
-	e.wg.Done()
 }
 
 func checkIfIsBuildingLine(line string) bool {
 	if strings.Contains(line, "Building") {
-		return strings.Contains(line, "FINISHED")
+		return !strings.Contains(line, "FINISHED")
 	}
 	return false
 }
 
 func (e *ttyExecutor) displayStderr() {
-	e.wg.Add(1)
 	for e.stderrScanner.Scan() {
-		line := strings.TrimSpace(e.stderrScanner.Text())
-		e.err = errors.New(line)
-		if len(e.linesToDisplay) == e.numberOfLines {
-			e.linesToDisplay = e.linesToDisplay[1:]
+		select {
+		case <-e.commandContext.Done():
+			break
+		default:
+			line := strings.TrimSpace(e.stderrScanner.Text())
+			e.err = errors.New(line)
+			if len(e.linesToDisplay) == e.numberOfLines {
+				e.linesToDisplay = e.linesToDisplay[1:]
+			}
+			e.linesToDisplay = append(e.linesToDisplay, line)
+			continue
 		}
-		e.linesToDisplay = append(e.linesToDisplay, line)
+		break
 	}
 	if e.stderrScanner.Err() != nil {
 		oktetoLog.Infof("Error reading command output: %s", e.stderrScanner.Err().Error())
 	}
-	e.wg.Done()
 }
 
 func isTopDisplay(line string) bool {
@@ -179,10 +184,10 @@ func (e *ttyExecutor) cleanUp(err error) {
 		}
 		e.screenbuf.Flush()
 	}
-	e.quit <- true
-	e.wg.Wait()
+	e.commandContext.Done()
 	e.reset()
 	e.showCursor()
+
 }
 
 func renderCommand(spinnerChar, command string) []byte {
@@ -230,7 +235,7 @@ func renderLines(queue []string) [][]byte {
 	result := [][]byte{}
 	for _, line := range queue {
 		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
-		line = fmt.Sprintf("  %s", strings.TrimSpace(line))
+		line = fmt.Sprintf("   %s", strings.TrimSpace(line))
 		if width > 4 && len(line)+2 > width {
 			result = append(result, render(tpl, fmt.Sprintf("%s...", line[:width-5])))
 		} else if line == "" {
@@ -272,5 +277,4 @@ func (e *ttyExecutor) reset() {
 	e.linesToDisplay = []string{}
 	e.screenbuf = nil
 
-	e.quit = make(chan bool)
 }
