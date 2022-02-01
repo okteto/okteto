@@ -192,6 +192,15 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		manifest.Namespace = okteto.Context().Namespace
 	}
 	os.Setenv(model.OktetoNameEnvVar, opts.Name)
+	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
+
+		if len(manifest.Dependencies) > 0 {
+			for depName := range manifest.Dependencies {
+				manifest.Destroy = append(manifest.Destroy, model.DeployCommand{Name: fmt.Sprintf("okteto pipeline destroy -p %s", depName), Command: fmt.Sprintf("okteto pipeline destroy -p %s", depName)})
+			}
+
+		}
+	}
 
 	var commandErr error
 	for _, command := range manifest.Destroy {
