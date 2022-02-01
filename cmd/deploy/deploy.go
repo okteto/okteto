@@ -254,13 +254,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 		if deployOptions.Dependencies && okteto.IsOkteto() {
 			for depName, dep := range deployOptions.Manifest.Dependencies {
-				if dep.Repository != "" || dep.ManifestPath != "" {
-					depCommand := dep.TransformToPipelineCommand(depName)
-					oktetoLog.Debugf("adding dependency to deploy commands %s", depCommand)
-					deployOptions.Manifest.Deploy.Commands = append(deployOptions.Manifest.Deploy.Commands, depCommand)
-				} else {
-					return fmt.Errorf("error at manifest: for dependency %s you should define either a repository or a relative manifest path", depName)
+				resp, err := pipeline.DeployPipeline(ctx, depName, dep.Repository, dep.Branch, dep.ManifestPath, model.SerializeBuildArgs(dep.Variables))
+				if err != nil {
+					return err
 				}
+				oktetoLog.Information("Pipeline URL: %s", pipeline.GetPipelineURL(resp.GitDeploy))
 			}
 		}
 	}

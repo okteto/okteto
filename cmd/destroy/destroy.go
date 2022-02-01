@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -196,7 +197,9 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 
 		if len(manifest.Dependencies) > 0 {
 			for depName := range manifest.Dependencies {
-				manifest.Destroy = append(manifest.Destroy, model.DeployCommand{Name: fmt.Sprintf("okteto pipeline destroy -p %s", depName), Command: fmt.Sprintf("okteto pipeline destroy -p %s", depName)})
+				if _, err := pipeline.DestroyPipeline(ctx, depName, opts.DestroyVolumes); err != nil {
+					return err
+				}
 			}
 
 		}
