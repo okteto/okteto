@@ -207,6 +207,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
 	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
+		if deployOptions.Dependencies && !okteto.IsOkteto() {
+			return fmt.Errorf("deploy of dependencies is only availbale for Okteto instances")
+		}
 
 		if deployOptions.Manifest.Build != nil {
 
@@ -252,13 +255,15 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			}
 		}
 
-		if deployOptions.Dependencies && okteto.IsOkteto() {
-			for depName, dep := range deployOptions.Manifest.Dependencies {
-				resp, err := pipeline.DeployPipeline(ctx, depName, dep.Repository, dep.Branch, dep.ManifestPath, model.SerializeBuildArgs(dep.Variables))
-				if err != nil {
+		for depName, dep := range deployOptions.Manifest.Dependencies {
+			if deployOptions.Dependencies {
+				if err := deployDependency(ctx, depName, dep); err != nil {
 					return err
 				}
-				oktetoLog.Information("Pipeline URL: %s", pipeline.GetPipelineURL(resp.GitDeploy))
+				continue
+			}
+			if err := checkAndDeployDependency(ctx, depName, dep); err != nil {
+				return err
 			}
 		}
 	}
@@ -401,6 +406,42 @@ func setManifestEnvVars(service, reference string) error {
 
 	oktetoLog.Debug("manifest env vars set")
 	return nil
+}
+
+func deployDependency(ctx context.Context, name string, dependency *model.Dependency) error {
+
+	resp, err := pipeline.DeployPipeline(ctx, name, dependency.Repository, dependency.Branch, dependency.ManifestPath, model.SerializeBuildArgs(dependency.Variables))
+	if err != nil {
+		return err
+	}
+	oktetoLog.Information("Pipeline URL: %s", pipeline.GetPipelineURL(resp.GitDeploy))
+
+	if !dependency.Wait {
+		oktetoLog.Success("Pipeline '%s' scheduled for deployment", name)
+		return nil
+	}
+
+	timeout := (5 * time.Minute)
+	if err := pipeline.WaitUntilRunning(ctx, name, resp.Action, timeout); err != nil {
+		return err
+	}
+	oktetoLog.Success("Pipeline '%s' successfully deployed", name)
+	return nil
+}
+
+func checkAndDeployDependency(ctx context.Context, name string, dependency *model.Dependency) error {
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	if _, err := oktetoClient.GetPipelineByRepository(ctx, dependency.Repository); err == nil {
+		oktetoLog.Success("Pipeline '%s' was already deployed", dependency.Repository)
+		return nil
+	} else if !oktetoErrors.IsNotFound(err) {
+		return err
+	}
+
+	return deployDependency(ctx, name, dependency)
 }
 
 func (dc *DeployCommand) cleanUp(ctx context.Context) {

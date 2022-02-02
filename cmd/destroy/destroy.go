@@ -193,6 +193,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		manifest.Namespace = okteto.Context().Namespace
 	}
 	os.Setenv(model.OktetoNameEnvVar, opts.Name)
+
 	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
 
 		if len(manifest.Dependencies) > 0 {
