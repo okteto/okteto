@@ -5,6 +5,7 @@ type dependenciesRaw struct {
 	ManifestPath string      `json:"manifest,omitempty" yaml:"manifest,omitempty"`
 	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
 	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
+	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
 }
 
 // ManifestDependencies represents the map of dependencies at a manifest
@@ -16,6 +17,7 @@ type Dependency struct {
 	ManifestPath string      `json:"manifest,omitempty" yaml:"manifest,omitempty"`
 	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
 	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
+	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -37,6 +39,7 @@ func (dependency *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) e
 	dependency.ManifestPath = rawDependency.ManifestPath
 	dependency.Branch = rawDependency.Branch
 	dependency.Variables = rawDependency.Variables
+	dependency.Wait = rawDependency.Wait
 
 	return nil
 }
