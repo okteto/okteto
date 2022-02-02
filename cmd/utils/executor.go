@@ -32,7 +32,7 @@ type Executor struct {
 }
 
 type executorDisplayer interface {
-	display(stop chan bool, command string)
+	display(command string)
 	startCommand(cmd *exec.Cmd) error
 }
 
@@ -71,11 +71,9 @@ func (e *Executor) Execute(command string, env []string) error {
 		return err
 	}
 
-	displayFinished := make(chan bool)
-	go e.displayer.display(displayFinished, command)
+	e.displayer.display(command)
 
 	err := cmd.Wait()
-	<-displayFinished
 	return err
 }
 
@@ -98,12 +96,11 @@ func (e *plainExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
 	return nil
 }
 
-func (e *plainExecutorDisplayer) display(stop chan bool, _ string) {
+func (e *plainExecutorDisplayer) display(_ string) {
 	for e.scanner.Scan() {
 		line := e.scanner.Text()
 		oktetoLog.Println(line)
 	}
-	stop <- true
 }
 
 func (e *jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
@@ -121,7 +118,7 @@ func (e *jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
 	return startCommand(cmd)
 }
 
-func (e *jsonExecutorDisplayer) display(stop chan bool, command string) {
+func (e *jsonExecutorDisplayer) display(command string) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {
@@ -141,5 +138,4 @@ func (e *jsonExecutorDisplayer) display(stop chan bool, command string) {
 		wg.Done()
 	}()
 	wg.Wait()
-	stop <- true
 }
