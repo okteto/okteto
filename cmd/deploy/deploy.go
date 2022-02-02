@@ -287,7 +287,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 	for _, variable := range deployOptions.Variables {
 		value := strings.SplitN(variable, "=", 2)[1]
 		if strings.TrimSpace(value) != "" {
-			oktetoLog.AddBanned(value)
+			oktetoLog.AddMaskedWord(value)
 		}
 	}
 	deployOptions.Variables = append(
@@ -304,7 +304,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
-	oktetoLog.StartRedact()
+	oktetoLog.EnableMasking()
 
 	for _, command := range deployOptions.Manifest.Deploy.Commands {
 		if err := dc.executor.Execute(command, deployOptions.Variables); err != nil {
@@ -313,7 +313,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 		}
 	}
 	oktetoLog.SetStage("")
-	oktetoLog.StopRedact()
+	oktetoLog.DisableMasking()
 
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		if err := dc.showEndpoints(ctx, deployOptions); err != nil {

@@ -58,10 +58,11 @@ type logger struct {
 	file   *logrus.Entry
 	writer OktetoWriter
 
-	stage        string
-	outputMode   string
-	bannedWords  []string
-	isRedactMode bool
+	stage       string
+	outputMode  string
+	maskedWords []string
+	isMasked    bool
+	replacer    *strings.Replacer
 }
 
 var log = &logger{
@@ -80,7 +81,7 @@ func Init(level logrus.Level) {
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
 	log.writer = log.getWriter(TTYFormat)
-	log.bannedWords = []string{}
+	log.maskedWords = []string{}
 }
 
 //ConfigureFileLogger configures the file to write
@@ -221,36 +222,28 @@ func Hint(format string, args ...interface{}) {
 // Fail prints a message with the error symbol first, and the text in red
 func Fail(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
-	if log.isRedactMode {
-		msg = redactMessage(msg)
-	}
+	msg = redactMessage(msg)
 	log.writer.Fail(msg)
 }
 
 // Println writes a line with colors
 func Println(args ...interface{}) {
 	msg := fmt.Sprint(args...)
-	if log.isRedactMode {
-		msg = redactMessage(msg)
-	}
+	msg = redactMessage(msg)
 	log.writer.Println(msg)
 }
 
 // Print writes a line with colors
 func Print(args ...interface{}) {
 	msg := fmt.Sprint(args...)
-	if log.isRedactMode {
-		msg = redactMessage(msg)
-	}
+	msg = redactMessage(msg)
 	log.writer.Print(msg)
 }
 
 // Printf writes a line with format
 func Printf(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
-	if log.isRedactMode {
-		msg = redactMessage(msg)
-	}
+	msg = redactMessage(msg)
 	log.writer.Print(msg)
 }
 
@@ -259,29 +252,35 @@ func IsInteractive() bool {
 	return log.writer.IsInteractive()
 }
 
-//AddBanned adds a new
-func AddBanned(word string) {
-	log.bannedWords = append(log.bannedWords, word)
+// AddMaskedWord adds a new
+func AddMaskedWord(word string) {
+	if strings.TrimSpace(word) != "" {
+		log.maskedWords = append(log.maskedWords, word)
+	}
 }
 
-//StartRedact starts redacting all variables
-func StartRedact() {
-	log.isRedactMode = true
-	sort.Slice(log.bannedWords, func(i, j int) bool {
-		return len(log.bannedWords[i]) > len(log.bannedWords[j])
+// EnableMasking starts redacting all variables
+func EnableMasking() {
+	log.isMasked = true
+	sort.Slice(log.maskedWords, func(i, j int) bool {
+		return len(log.maskedWords[i]) > len(log.maskedWords[j])
 	})
+	oldnew := []string{}
+	for _, maskWord := range log.maskedWords {
+		oldnew = append(oldnew, maskWord)
+		oldnew = append(oldnew, "***")
+	}
+	log.replacer = strings.NewReplacer(oldnew...)
 }
 
-//StopRedact will show secrets and vars
-func StopRedact() {
-	log.isRedactMode = false
+// DisableMasking will stop showing secrets and vars
+func DisableMasking() {
+	log.isMasked = false
 }
 
 func redactMessage(message string) string {
-	s := message
-	for _, str := range log.bannedWords {
-		s = strings.ReplaceAll(s, str, "***")
+	if log.isMasked {
+		return log.replacer.Replace(message)
 	}
-
-	return s
+	return message
 }

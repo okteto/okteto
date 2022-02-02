@@ -23,40 +23,50 @@ func Test_GetContextResource(t *testing.T) {
 	var tests = []struct {
 		name     string
 		message  string
-		banned   []string
+		masked   []string
 		expected string
 	}{
 		{
 			name:     "no banned words",
 			message:  "hello this is a test",
-			banned:   []string{},
+			masked:   []string{},
 			expected: "hello this is a test",
 		},
 		{
 			name:     "one banned words to replace",
 			message:  "hello this is a test",
-			banned:   []string{"this"},
+			masked:   []string{"this"},
 			expected: "hello *** is a test",
 		},
 		{
 			name:     "one banned words to replace in-word",
 			message:  "hello this is a test",
-			banned:   []string{"is"},
+			masked:   []string{"is"},
 			expected: "hello th*** *** a test",
 		},
 		{
 			name:     "overlapping banned words to replace",
 			message:  "hello this is a test",
-			banned:   []string{"this", "is"},
+			masked:   []string{"this", "is"},
 			expected: "hello *** *** a test",
+		},
+		{
+			name:     "multiline to replace",
+			message:  "A\nB\nC",
+			masked:   []string{"A\nB\nC"},
+			expected: "***",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			log.bannedWords = tt.banned
+			log.maskedWords = tt.masked
+			EnableMasking()
 			result := redactMessage(tt.message)
 			assert.Equal(t, tt.expected, result)
+			DisableMasking()
+			result = redactMessage(tt.message)
+			assert.Equal(t, tt.message, result)
 		})
 	}
 }
