@@ -17,6 +17,7 @@ import (
 	"bufio"
 	"os"
 	"os/exec"
+	"sync"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
@@ -31,7 +32,7 @@ type Executor struct {
 }
 
 type executorDisplayer interface {
-	display(command string)
+	display(stop chan bool, command string)
 	startCommand(cmd *exec.Cmd) error
 }
 
@@ -70,10 +71,11 @@ func (e *Executor) Execute(command string, env []string) error {
 		return err
 	}
 
-	go e.displayer.display(command)
+	displayFinished := make(chan bool)
+	go e.displayer.display(displayFinished, command)
 
 	err := cmd.Wait()
-
+	<-displayFinished
 	return err
 }
 
@@ -96,11 +98,12 @@ func (e *plainExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
 	return nil
 }
 
-func (e *plainExecutorDisplayer) display(_ string) {
+func (e *plainExecutorDisplayer) display(stop chan bool, _ string) {
 	for e.scanner.Scan() {
 		line := e.scanner.Text()
 		oktetoLog.Println(line)
 	}
+	stop <- true
 }
 
 func (e *jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
@@ -118,20 +121,25 @@ func (e *jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
 	return startCommand(cmd)
 }
 
-func (e *jsonExecutorDisplayer) display(command string) {
+func (e *jsonExecutorDisplayer) display(stop chan bool, command string) {
+	var wg sync.WaitGroup
+	wg.Add(2)
 	go func() {
 		for e.stdoutScanner.Scan() {
 			line := e.stdoutScanner.Text()
 
 			oktetoLog.Println(line)
 		}
+		wg.Done()
 	}()
 
 	go func() {
 		for e.stderrScanner.Scan() {
 			line := e.stderrScanner.Text()
 			oktetoLog.Fail(line)
-
 		}
+		wg.Done()
 	}()
+	wg.Wait()
+	stop <- true
 }
