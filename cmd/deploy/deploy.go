@@ -262,7 +262,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 				}
 				continue
 			}
-			if err := checkAndDeployDependency(ctx, depName, dep); err != nil {
+			if err := checkByNameAndDeployDependency(ctx, depName, dep); err != nil {
 				return err
 			}
 		}
@@ -429,13 +429,13 @@ func deployDependency(ctx context.Context, name string, dependency *model.Depend
 	return nil
 }
 
-func checkAndDeployDependency(ctx context.Context, name string, dependency *model.Dependency) error {
+func checkByNameAndDeployDependency(ctx context.Context, name string, dependency *model.Dependency) error {
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return err
 	}
-	if _, err := oktetoClient.GetPipelineByRepository(ctx, dependency.Repository); err == nil {
-		oktetoLog.Success("Pipeline '%s' was already deployed", dependency.Repository)
+	if _, err := oktetoClient.GetPipelineByName(ctx, name); err == nil {
+		oktetoLog.Success("Pipeline '%s' was already deployed", name)
 		return nil
 	} else if !oktetoErrors.IsNotFound(err) {
 		return err
