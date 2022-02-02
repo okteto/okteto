@@ -67,7 +67,7 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if contextCMD.IsManifestV2Enabled() {
+			if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
 				cwd, err := os.Getwd()
 				if err != nil {
 					return err
