@@ -17,6 +17,7 @@ import (
 	"bufio"
 	"os"
 	"os/exec"
+	"sync"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
@@ -70,10 +71,9 @@ func (e *Executor) Execute(command string, env []string) error {
 		return err
 	}
 
-	go e.displayer.display(command)
+	e.displayer.display(command)
 
 	err := cmd.Wait()
-
 	return err
 }
 
@@ -119,19 +119,23 @@ func (e *jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
 }
 
 func (e *jsonExecutorDisplayer) display(command string) {
+	var wg sync.WaitGroup
+	wg.Add(2)
 	go func() {
 		for e.stdoutScanner.Scan() {
 			line := e.stdoutScanner.Text()
 
 			oktetoLog.Println(line)
 		}
+		wg.Done()
 	}()
 
 	go func() {
 		for e.stderrScanner.Scan() {
 			line := e.stderrScanner.Text()
 			oktetoLog.Fail(line)
-
 		}
+		wg.Done()
 	}()
+	wg.Wait()
 }
