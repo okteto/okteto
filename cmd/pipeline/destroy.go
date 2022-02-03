@@ -1,4 +1,4 @@
-// Copyright 2021 The Okteto Authors
+// Copyright 2022 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -30,75 +30,85 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// DestroyOptions options to destroy pipeline command
+type DestroyOptions struct {
+	Name           string
+	Namespace      string
+	Wait           bool
+	DestroyVolumes bool
+	Timeout        time.Duration
+}
+
 func destroy(ctx context.Context) *cobra.Command {
-	var name string
-	var namespace string
-	var wait bool
-	var destroyVolumes bool
-	var timeout time.Duration
+	opts := &DestroyOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "destroy",
 		Short: "Destroy an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			return ExecuteDestroyPipeline(ctx, opts)
 
-			ctxResource := &model.ContextResource{}
-			if err := ctxResource.UpdateNamespace(namespace); err != nil {
-				return err
-			}
-
-			ctxOptions := &contextCMD.ContextOptions{
-				Namespace: ctxResource.Namespace,
-			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
-				return err
-			}
-
-			if !okteto.IsOkteto() {
-				return oktetoErrors.ErrContextIsNotOktetoCluster
-			}
-
-			if name == "" {
-				cwd, err := os.Getwd()
-				if err != nil {
-					return fmt.Errorf("failed to get the current working directory: %w", err)
-				}
-				repo, err := model.GetRepositoryURL(cwd)
-				if err != nil {
-					return err
-				}
-
-				name = getPipelineName(repo)
-			}
-
-			resp, err := destroyPipeline(ctx, name, destroyVolumes)
-			if err != nil {
-				return err
-			}
-
-			if !wait {
-				oktetoLog.Success("Pipeline '%s' scheduled for destruction", name)
-				return nil
-			}
-
-			if err := waitUntilDestroyed(ctx, name, resp.Action, timeout); err != nil {
-				oktetoLog.Information("Pipeline URL: %s", getPipelineURL(resp.GitDeploy))
-				return err
-			}
-
-			oktetoLog.Success("Pipeline '%s' successfully destroyed", name)
-
-			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the up command is executed (defaults to the current namespace)")
-	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
-	cmd.Flags().BoolVarP(&destroyVolumes, "volumes", "v", false, "destroy persistent volumes created by the pipeline (defaults to false)")
-	cmd.Flags().DurationVarP(&timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
+	cmd.Flags().StringVarP(&opts.Name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
+	cmd.Flags().StringVarP(&opts.Namespace, "namespace", "n", "", "namespace where the up command is executed (defaults to the current namespace)")
+	cmd.Flags().BoolVarP(&opts.Wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
+	cmd.Flags().BoolVarP(&opts.DestroyVolumes, "volumes", "v", false, "destroy persistent volumes created by the pipeline (defaults to false)")
+	cmd.Flags().DurationVarP(&opts.Timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	return cmd
+}
+
+//ExecuteDestroyPipeline executes destroy pipeline given a set of options
+func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
+	ctxResource := &model.ContextResource{}
+	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
+		return err
+	}
+
+	ctxOptions := &contextCMD.ContextOptions{
+		Namespace: ctxResource.Namespace,
+	}
+	if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+		return err
+	}
+
+	if !okteto.IsOkteto() {
+		return oktetoErrors.ErrContextIsNotOktetoCluster
+	}
+
+	if opts.Name == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get the current working directory: %w", err)
+		}
+		repo, err := model.GetRepositoryURL(cwd)
+		if err != nil {
+			return err
+		}
+
+		opts.Name = getPipelineName(repo)
+	}
+
+	resp, err := destroyPipeline(ctx, opts.Name, opts.DestroyVolumes)
+	if err != nil {
+		return err
+	}
+
+	if !opts.Wait {
+		oktetoLog.Success("Pipeline '%s' scheduled for destruction", opts.Name)
+		return nil
+	}
+
+	if err := waitUntilDestroyed(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
+		oktetoLog.Information("Pipeline URL: %s", getPipelineURL(resp.GitDeploy))
+		return err
+	}
+
+	oktetoLog.Success("Pipeline '%s' successfully destroyed", opts.Name)
+
+	return nil
 }
 
 func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {

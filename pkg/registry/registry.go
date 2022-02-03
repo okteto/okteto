@@ -1,4 +1,4 @@
-// Copyright 2021 The Okteto Authors
+// Copyright 2022 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -142,6 +142,7 @@ func IsOktetoRegistry(tag string) bool {
 	return IsDevRegistry(tag) || IsGlobalRegistry(tag)
 }
 
+// replaceRegistry replaces the short registry url with the okteto registry url
 func replaceRegistry(input, registryType, namespace string) string {
 	// Check if the registryType is the start of the sentence or has a whitespace before it
 	var re = regexp.MustCompile(fmt.Sprintf(`(^|\s)(%s)`, registryType))

@@ -1,4 +1,4 @@
-// Copyright 2021 The Okteto Authors
+// Copyright 2022 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,6 +15,7 @@ package build
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -34,16 +35,17 @@ import (
 
 //BuildOptions define the options available for build
 type BuildOptions struct {
-	BuildArgs  []string
-	CacheFrom  []string
-	File       string
-	NoCache    bool
-	OutputMode string
-	Path       string
-	Secrets    []string
-	Tag        string
-	Target     string
-	Namespace  string
+	BuildArgs     []string
+	CacheFrom     []string
+	File          string
+	NoCache       bool
+	OutputMode    string
+	Path          string
+	Secrets       []string
+	Tag           string
+	Target        string
+	Namespace     string
+	BuildToGlobal bool
 }
 
 // Run runs the build sequence
@@ -197,9 +199,28 @@ func translateDockerErr(err error) error {
 	return err
 }
 
+// OptsFromManifest returns the parsed options for the build from the manifest
 func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildOptions {
+	args := model.SerializeBuildArgs(b.Args)
+
 	if okteto.Context().IsOkteto && b.Image == "" {
-		b.Image = fmt.Sprintf("%s/%s:%s", okteto.DevRegistry, service, "dev")
+		tag := model.OktetoDefaultImageTag
+
+		envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
+		isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
+
+		if envGitCommit != "" && !isLocalEnvGitCommit {
+			params := strings.Join(args, "") + envGitCommit
+			tag = fmt.Sprintf("%x", sha256.Sum256([]byte(params)))
+		}
+
+		// if flag --global, point to global registry
+		targetRegistry := okteto.DevRegistry
+		if o.BuildToGlobal {
+			targetRegistry = okteto.GlobalRegistry
+		}
+
+		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, b.Name, service, tag)
 	}
 
 	opts := BuildOptions{
@@ -208,12 +229,18 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 		Path:      b.Context,
 		Tag:       b.Image,
 		File:      filepath.Join(b.Context, b.Dockerfile),
-	}
-
-	if len(b.Args) != 0 {
-		opts.BuildArgs = model.SerializeBuildArgs(b.Args)
+		BuildArgs: args,
 	}
 
 	opts.OutputMode = setOutputMode(o.OutputMode)
 	return opts
+}
+
+// ShouldOptimizeBuild returns if optimization should be applied
+func ShouldOptimizeBuild(image string) bool {
+	envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
+	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
+	return registry.IsOktetoRegistry(image) &&
+		envGitCommit != "" &&
+		!isLocalEnvGitCommit
 }
