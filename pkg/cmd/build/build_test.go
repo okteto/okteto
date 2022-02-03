@@ -82,8 +82,9 @@ func Test_OptsFromManifest(t *testing.T) {
 			okGitCommitEnv: "dev1235466",
 			isOkteto:       true,
 			expected: BuildOptions{
-				Tag:       "okteto.dev/movies-service:okteto",
-				BuildArgs: []string{},
+				Tag:        "okteto.dev/movies-service:okteto",
+				OutputMode: oktetoLog.TTYFormat,
+				BuildArgs:  []string{},
 			},
 		},
 		{
@@ -93,8 +94,9 @@ func Test_OptsFromManifest(t *testing.T) {
 			okGitCommitEnv: "1235466",
 			isOkteto:       true,
 			expected: BuildOptions{
-				Tag:       "okteto.dev/movies-service:114921fe985b5f874c8d312b0a098959da6d119209c9d1e42a89c4309569692d",
-				BuildArgs: []string{},
+				OutputMode: oktetoLog.TTYFormat,
+				Tag:        "okteto.dev/movies-service:114921fe985b5f874c8d312b0a098959da6d119209c9d1e42a89c4309569692d",
+				BuildArgs:  []string{},
 			},
 		},
 		{
@@ -111,8 +113,9 @@ func Test_OptsFromManifest(t *testing.T) {
 			okGitCommitEnv: "1235466",
 			isOkteto:       true,
 			expected: BuildOptions{
-				Tag:       "okteto.dev/movies-service:c0776074a88fa37835b1dfa67365b6a6b08b11c4cf49a9d42524ea9797959e58",
-				BuildArgs: []string{"arg1=value1"},
+				OutputMode: oktetoLog.TTYFormat,
+				Tag:        "okteto.dev/movies-service:c0776074a88fa37835b1dfa67365b6a6b08b11c4cf49a9d42524ea9797959e58",
+				BuildArgs:  []string{"arg1=value1"},
 			},
 		},
 		{
@@ -146,13 +149,13 @@ func Test_OptsFromManifest(t *testing.T) {
 			},
 			isOkteto: true,
 			expected: BuildOptions{
+				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
 				File:       filepath.Join("service", "CustomDockerfile"),
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
 				BuildArgs:  []string{"arg1=value1"},
-				OutputMode: "tty",
 			},
 		},
 	}
