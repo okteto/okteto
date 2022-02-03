@@ -15,6 +15,7 @@ package executor
 
 import (
 	"bufio"
+	"context"
 	"os/exec"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -23,6 +24,9 @@ import (
 type jsonExecutor struct {
 	stdoutScanner *bufio.Scanner
 	stderrScanner *bufio.Scanner
+
+	commandContext context.Context
+	cancel         context.CancelFunc
 }
 
 func newJSONExecutor() *jsonExecutor {
@@ -45,18 +49,36 @@ func (e *jsonExecutor) startCommand(cmd *exec.Cmd) error {
 }
 
 func (e *jsonExecutor) display(command string) {
+	e.commandContext, e.cancel = context.WithCancel(context.Background())
 	go func() {
 		for e.stdoutScanner.Scan() {
-			line := e.stdoutScanner.Text()
-			oktetoLog.Println(line)
+			select {
+			case <-e.commandContext.Done():
+				break
+			default:
+				line := e.stdoutScanner.Text()
+				oktetoLog.Println(line)
+				continue
+			}
+			break
 		}
 	}()
 
 	go func() {
 		for e.stderrScanner.Scan() {
-			line := e.stderrScanner.Text()
-			oktetoLog.Fail(line)
+			select {
+			case <-e.commandContext.Done():
+				break
+			default:
+				line := e.stderrScanner.Text()
+				oktetoLog.Fail(line)
+				continue
+			}
+			break
 		}
 	}()
 }
-func (*jsonExecutor) cleanUp(_ error) {}
+func (e *jsonExecutor) cleanUp(_ error) {
+	e.cancel()
+	<-e.commandContext.Done()
+}

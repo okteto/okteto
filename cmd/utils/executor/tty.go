@@ -42,6 +42,7 @@ type ttyExecutor struct {
 	numberOfLines  int
 
 	commandContext context.Context
+	cancel         context.CancelFunc
 
 	isBuilding            bool
 	buildingpreviousLines int
@@ -64,11 +65,11 @@ func (e *ttyExecutor) display(command string) {
 	e.command = command
 
 	e.hideCursor()
-	e.commandContext = context.Background()
+
+	e.commandContext, e.cancel = context.WithCancel(context.Background())
 	go e.displayCommand()
 	go e.displayStdout()
 	go e.displayStderr()
-
 }
 
 func (e *ttyExecutor) displayCommand() {
@@ -184,7 +185,8 @@ func (e *ttyExecutor) cleanUp(err error) {
 		}
 		e.screenbuf.Flush()
 	}
-	e.commandContext.Done()
+	e.cancel()
+	<-e.commandContext.Done()
 	e.reset()
 	e.showCursor()
 
