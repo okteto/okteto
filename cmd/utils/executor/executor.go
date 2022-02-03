@@ -66,7 +66,7 @@ func (e *Executor) Execute(command string, env []string) error {
 		return err
 	}
 
-	go e.displayer.display(command)
+	e.displayer.display(command)
 
 	err := cmd.Wait()
 

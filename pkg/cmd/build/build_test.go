@@ -1,6 +1,7 @@
 package build
 
 import (
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -66,26 +67,69 @@ func Test_OptsFromManifest(t *testing.T) {
 		{
 			name:        "empty-values-is-okteto",
 			serviceName: "service",
-			buildInfo:   &model.BuildInfo{},
+			buildInfo:   &model.BuildInfo{Name: "movies"},
 			isOkteto:    true,
 			expected: BuildOptions{
-				Tag:        "okteto.dev/service:dev",
 				OutputMode: oktetoLog.TTYFormat,
+				Tag:        "okteto.dev/movies-service:okteto",
+				BuildArgs:  []string{},
+			},
+		},
+		{
+			name:           "empty-values-is-okteto-local",
+			serviceName:    "service",
+			buildInfo:      &model.BuildInfo{Name: "movies"},
+			okGitCommitEnv: "dev1235466",
+			isOkteto:       true,
+			expected: BuildOptions{
+				Tag:       "okteto.dev/movies-service:okteto",
+				BuildArgs: []string{},
+			},
+		},
+		{
+			name:           "empty-values-is-okteto-pipeline",
+			serviceName:    "service",
+			buildInfo:      &model.BuildInfo{Name: "movies"},
+			okGitCommitEnv: "1235466",
+			isOkteto:       true,
+			expected: BuildOptions{
+				Tag:       "okteto.dev/movies-service:114921fe985b5f874c8d312b0a098959da6d119209c9d1e42a89c4309569692d",
+				BuildArgs: []string{},
+			},
+		},
+		{
+			name:        "empty-values-is-okteto-pipeline-withArgs",
+			serviceName: "service",
+			buildInfo: &model.BuildInfo{
+				Name: "movies",
+				Args: model.Environment{
+					{
+						Name:  "arg1",
+						Value: "value1",
+					},
+				}},
+			okGitCommitEnv: "1235466",
+			isOkteto:       true,
+			expected: BuildOptions{
+				Tag:       "okteto.dev/movies-service:c0776074a88fa37835b1dfa67365b6a6b08b11c4cf49a9d42524ea9797959e58",
+				BuildArgs: []string{"arg1=value1"},
 			},
 		},
 		{
 			name:        "empty-values-is-not-okteto",
 			serviceName: "service",
-			buildInfo:   &model.BuildInfo{},
+			buildInfo:   &model.BuildInfo{Name: "movies"},
 			isOkteto:    false,
 			expected: BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
+				BuildArgs:  []string{},
 			},
 		},
 		{
 			name:        "all-values-no-image",
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
+				Name:       "movies",
 				Context:    "service",
 				Dockerfile: "CustomDockerfile",
 				Target:     "build",
@@ -102,7 +146,7 @@ func Test_OptsFromManifest(t *testing.T) {
 			},
 			isOkteto: true,
 			expected: BuildOptions{
-				Tag:        "okteto.dev/service:dev",
+				Tag:        "okteto.dev/movies-service:okteto",
 				File:       filepath.Join("service", "CustomDockerfile"),
 				Target:     "build",
 				Path:       "service",
@@ -114,6 +158,7 @@ func Test_OptsFromManifest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			os.Unsetenv(model.OktetoGitCommitEnvVar)
 			okteto.CurrentStore = &okteto.OktetoContextStore{
 				Contexts: map[string]*okteto.OktetoContext{
 					"test": {
@@ -123,6 +168,7 @@ func Test_OptsFromManifest(t *testing.T) {
 				},
 				CurrentContext: "test",
 			}
+			os.Setenv(model.OktetoGitCommitEnvVar, tt.okGitCommitEnv)
 			result := OptsFromManifest(tt.serviceName, tt.buildInfo, tt.initialOpts)
 			assert.Equal(t, tt.expected, result)
 		})

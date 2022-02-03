@@ -1,4 +1,4 @@
-// Copyright 2021 The Okteto Authors
+// Copyright 2022 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -77,4 +77,15 @@ func configForReference(reference string) (v1.Config, error) {
 	}
 
 	return configFile.Config, nil
+}
+
+// GetReferecenceEnvs returns the values to setup the image environment variables
+func GetReferecenceEnvs(reference string) (reg, repo, tag, image string) {
+	ref, err := name.ParseReference(reference)
+	if err != nil {
+		oktetoLog.Debugf("error parsing reference: %s - %v", reference, err)
+		return "", "", "", reference
+	}
+
+	return ref.Context().RegistryStr(), ref.Context().RepositoryStr(), ref.Identifier(), ref.Name()
 }
