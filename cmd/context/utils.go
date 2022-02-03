@@ -1,4 +1,4 @@
-// Copyright 2021 The Okteto Authors
+// Copyright 2022 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -352,6 +352,12 @@ func getStackSubPath(basePath, src string) string {
 		".okteto/okteto-stack.yaml",
 		".okteto/stack.yml",
 		".okteto/stack.yaml",
+
+		"okteto-compose.yml",
+		"okteto-compose.yaml",
+		".okteto/okteto-compose.yml",
+		".okteto/okteto-compose.yaml",
+
 		"docker-compose.yml",
 		"docker-compose.yaml",
 		".okteto/docker-compose.yml",
