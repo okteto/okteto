@@ -239,9 +239,13 @@ func TrackBuildTransientError(oktetoBuilkitURL string, success bool) {
 }
 
 // TrackDeployStack sends a tracking event to mixpanel when the user deploys a stack
-func TrackDeployStack(success, isCompose bool) {
+func TrackDeployStack(success, isCompose bool, repo string) {
 	props := map[string]interface{}{
-		"isCompose": isCompose,
+		"isCompose":  isCompose,
+		"deployType": "stack",
+	}
+	if repo != "" {
+		props["repo"] = repo
 	}
 	track(deployStackEvent, success, props)
 }
