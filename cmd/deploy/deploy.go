@@ -224,46 +224,28 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 		oktetoLog.Information("Checking to build services at manifest")
 		if deployOptions.Manifest.Build != nil {
-
+			exit := make(chan error, 1)
 			for service, mOptions := range deployOptions.Manifest.Build {
-				buildOptions := build.BuildOptions{OutputMode: oktetoLog.GetOutputFormat()}
-				if mOptions.Name == "" {
-					mOptions.Name = deployOptions.Name
-				}
-				opts := build.OptsFromManifest(service, mOptions, buildOptions)
 
-				if deployOptions.Build {
-					oktetoLog.Debug("force build from manifest definition")
-					if err := runBuildAndSetEnvs(ctx, service, opts); err != nil {
-						return err
+				go func(service string, mOptions *model.BuildInfo) {
+					oktetoLog.Debugf("hello from goroutine %s", service)
+					err := buildFromManifest(ctx, service, mOptions, deployOptions)
+					if err != nil {
+						exit <- err
+						return
 					}
-					continue
-				}
+					exit <- nil
+					return
+				}(service, mOptions)
 
-				if build.ShouldOptimizeBuild(opts.Tag) {
-					oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
-					if skipBuild, err := checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
-						return err
-					} else if skipBuild {
-						continue
-					}
-				}
+			}
 
-				if imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag); err == oktetoErrors.ErrNotFound {
-					oktetoLog.Debugf("image not found, building image %s", opts.Tag)
-					if err := runBuildAndSetEnvs(ctx, service, opts); err != nil {
-						return err
-					}
-					continue
-				} else if err != nil {
-					return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
-				} else {
-					oktetoLog.Success("Skipping build for image for service %s found: %s", service, opts.Tag)
-					if err := setManifestEnvVars(service, imageWithDigest); err != nil {
-						return err
-					}
+			for i := 0; i < 2; i++ {
+				err, ok := <-exit
+				oktetoLog.Debugf("HOLA********** %v %v %v", err, ok, i)
+				if err != nil {
+					return err
 				}
-
 			}
 		}
 
@@ -695,4 +677,46 @@ func addEnvVars(ctx context.Context, cwd string) error {
 
 func shouldExecuteRemotely(options *Options) bool {
 	return options.Branch != "" || options.Repository != ""
+}
+
+func buildFromManifest(ctx context.Context, service string, mOptions *model.BuildInfo, deployOptions *Options) error {
+	buildOptions := build.BuildOptions{OutputMode: oktetoLog.GetOutputFormat()}
+	if mOptions.Name == "" {
+		mOptions.Name = deployOptions.Name
+	}
+	opts := build.OptsFromManifest(service, mOptions, buildOptions)
+
+	if deployOptions.Build {
+		oktetoLog.Debug("force build from manifest definition")
+		if err := runBuildAndSetEnvs(ctx, service, opts); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if build.ShouldOptimizeBuild(opts.Tag) {
+		oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
+		if skipBuild, err := checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
+			return err
+		} else if skipBuild {
+			return nil
+		}
+	}
+
+	imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
+	if err == oktetoErrors.ErrNotFound {
+		oktetoLog.Debugf("image not found, building image %s", opts.Tag)
+		if err := runBuildAndSetEnvs(ctx, service, opts); err != nil {
+			return err
+		}
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
+	}
+	oktetoLog.Debug("image found, skipping build")
+	if err := setManifestEnvVars(service, imageWithDigest); err != nil {
+		return err
+	}
+
+	return nil
 }
