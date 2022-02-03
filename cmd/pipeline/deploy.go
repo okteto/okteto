@@ -126,7 +126,7 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 		}
 		pipeline, err := oktetoClient.GetPipelineByRepository(ctx, opts.Repository)
 		if err == nil {
-			oktetoLog.Information("Pipeline URL: %s", getPipelineURL(pipeline.GitDeploy))
+			oktetoLog.Information("Pipeline URL: %s", GetPipelineURL(pipeline.GitDeploy))
 			oktetoLog.Success("Pipeline '%s' was already deployed", opts.Name)
 			return nil
 		}
@@ -144,25 +144,25 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 		}
 	}
 
-	resp, err := deployPipeline(ctx, opts)
+	resp, err := DeployPipeline(ctx, opts)
 	if err != nil {
 		return err
 	}
-	oktetoLog.Information("Pipeline URL: %s", getPipelineURL(resp.GitDeploy))
+	oktetoLog.Information("Pipeline URL: %s", GetPipelineURL(resp.GitDeploy))
 
 	if !opts.Wait {
 		oktetoLog.Success("Pipeline '%s' scheduled for deployment", opts.Name)
 		return nil
 	}
 
-	if err := waitUntilRunning(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
+	if err := WaitUntilRunning(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
 		return err
 	}
 	oktetoLog.Success("Pipeline '%s' successfully deployed", opts.Name)
 	return nil
 }
 
-func deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployResponse, error) {
+func DeployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployResponse, error) {
 	spinner := utils.NewSpinner("Deploying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()
@@ -215,13 +215,15 @@ func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
 
-func getPipelineURL(gitDeploy *types.GitDeploy) string {
+// GetPipelineURL returns the url for the pipeline
+func GetPipelineURL(gitDeploy *types.GitDeploy) string {
 	octx := okteto.Context()
 	pipelineURL := fmt.Sprintf("%s/#/spaces/%s?resourceId=%s", octx.Name, octx.Namespace, gitDeploy.ID)
 	return pipelineURL
 }
 
-func waitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
+// WaitUntilRunning stops the process until the deployment is running
+func WaitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
 	spinner := utils.NewSpinner("Waiting for the pipeline to be deployed...")
 	spinner.Start()
 	defer spinner.Stop()

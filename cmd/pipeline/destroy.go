@@ -102,7 +102,7 @@ func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 	}
 
 	if err := waitUntilDestroyed(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
-		oktetoLog.Information("Pipeline URL: %s", getPipelineURL(resp.GitDeploy))
+		oktetoLog.Information("Pipeline URL: %s", GetPipelineURL(resp.GitDeploy))
 		return err
 	}
 
