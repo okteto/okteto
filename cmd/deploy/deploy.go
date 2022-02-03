@@ -597,6 +597,14 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		os.Setenv(model.OktetoGitBranchEnvVar, branch)
 	}
 
+	if os.Getenv(model.GithubRepositoryEnvVar) == "" {
+		repo, err := model.GetRepositoryURL(cwd)
+		if err != nil {
+			oktetoLog.Infof("could not retrieve repo name: %s", err)
+		}
+		os.Setenv(model.GithubRepositoryEnvVar, repo)
+	}
+
 	if os.Getenv(model.OktetoGitCommitEnvVar) == "" {
 		sha, err := utils.GetGitCommit(ctx, cwd)
 		if err != nil {

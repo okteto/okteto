@@ -182,6 +182,13 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) {
 	cmap.Data[filenameField] = data.Filename
 	cmap.Data[yamlField] = base64.StdEncoding.EncodeToString(data.Manifest)
 	cmap.Data[iconField] = data.Icon
+	if data.Repository != "" {
+		cmap.Data[repoField] = data.Repository
+	}
+
+	if data.Branch != "" {
+		cmap.Data[branchField] = data.Branch
+	}
 
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
