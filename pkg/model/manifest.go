@@ -62,6 +62,12 @@ var (
 		".okteto/okteto-stack.yaml",
 		".okteto/stack.yml",
 		".okteto/stack.yaml",
+
+		"okteto-compose.yml",
+		"okteto-compose.yaml",
+		".okteto/okteto-compose.yml",
+		".okteto/okteto-compose.yaml",
+
 		"docker-compose.yml",
 		"docker-compose.yaml",
 		".okteto/docker-compose.yml",
