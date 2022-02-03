@@ -151,12 +151,15 @@ func TrackResetDatabase(success bool) {
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackUp(success bool, devName string, interactive, single, divert bool) {
+func TrackUp(success bool, devName, repo string, interactive, single, divert bool) {
 	props := map[string]interface{}{
 		"name":          devName,
 		"interactive":   interactive,
 		"singleService": single,
 		"divert":        divert,
+	}
+	if repo != "" {
+		props["repo"] = repo
 	}
 	track(upEvent, success, props)
 }
