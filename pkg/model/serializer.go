@@ -676,6 +676,38 @@ type manifestRaw struct {
 	DeprecatedDevs []string `yaml:"devs"`
 }
 
+type dependenciesRaw struct {
+	Repository   string      `json:"repository,omitempty" yaml:"repository,omitempty"`
+	ManifestPath string      `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
+	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
+	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (dependency *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		dependency.Repository = rawString
+		return nil
+	}
+
+	var rawDependency dependenciesRaw
+	err = unmarshal(&rawDependency)
+	if err != nil {
+		return err
+	}
+
+	dependency.Repository = rawDependency.Repository
+	dependency.ManifestPath = rawDependency.ManifestPath
+	dependency.Branch = rawDependency.Branch
+	dependency.Variables = rawDependency.Variables
+	dependency.Wait = rawDependency.Wait
+
+	return nil
+}
+
 func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	dev := NewDev()
 	err := unmarshal(&dev)

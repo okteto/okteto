@@ -125,6 +125,9 @@ type ManifestDevs map[string]*Dev
 //ManifestBuild defines all the build section
 type ManifestBuild map[string]*BuildInfo
 
+// ManifestDependencies represents the map of dependencies at a manifest
+type ManifestDependencies map[string]*Dependency
+
 //NewManifest creates a new empty manifest
 func NewManifest() *Manifest {
 	return &Manifest{
@@ -443,4 +446,13 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 	}
 
 	return m, nil
+}
+
+// Dependency represents a dependency object at the manifest
+type Dependency struct {
+	Repository   string      `json:"repository" yaml:"repository"`
+	ManifestPath string      `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
+	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
+	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
 }
