@@ -333,6 +333,7 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["success"] = success
 	props["contextType"] = getContextType(okteto.Context().Name)
 	props["context"] = okteto.Context().Name
+	props["cluster"] = okteto.Context().Name
 	if termType := os.Getenv(model.TermEnvVar); termType == "" {
 		props["term-type"] = "other"
 	} else {
