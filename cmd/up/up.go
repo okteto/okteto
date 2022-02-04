@@ -255,7 +255,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 	}
 
 	c := &deploy.DeployCommand{
-		GetManifest:        contextCMD.GetManifest,
+		GetManifest:        model.GetManifestV2,
 		Kubeconfig:         kubeconfig,
 		Executor:           utils.NewExecutor(oktetoLog.GetOutputFormat()),
 		Proxy:              proxy,
@@ -263,7 +263,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		K8sClientProvider:  okteto.NewK8sClientProvider(),
 	}
 
-	return c.RunDeploy(ctx, "", &deploy.Options{
+	return c.RunDeploy(ctx, &deploy.Options{
 		Name:         up.Manifest.Name,
 		ManifestPath: up.Manifest.Filename,
 	})
