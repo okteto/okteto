@@ -1058,8 +1058,11 @@ deploy:
 				Namespace: "test",
 				Build:     map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
-					Commands: []string{
-						"okteto stack deploy",
+					Commands: []DeployCommand{
+						{
+							Name:    "okteto stack deploy",
+							Command: "okteto stack deploy",
+						},
 					},
 				},
 				Dev:     map[string]*Dev{},
@@ -1085,8 +1088,11 @@ dev:
 				IsV2:  true,
 				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
-					Commands: []string{
-						"okteto stack deploy",
+					Commands: []DeployCommand{
+						{
+							Name:    "okteto stack deploy",
+							Command: "okteto stack deploy",
+						},
 					},
 				},
 				Dev: map[string]*Dev{
@@ -1691,8 +1697,11 @@ deploy:
 				Dev:   map[string]*Dev{},
 				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
-					Commands: []string{
-						"okteto stack deploy",
+					Commands: []DeployCommand{
+						{
+							Name:    "okteto stack deploy",
+							Command: "okteto stack deploy",
+						},
 					},
 				},
 			},
@@ -1712,8 +1721,11 @@ devs:
 				Dev:   map[string]*Dev{},
 				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
-					Commands: []string{
-						"okteto stack deploy",
+					Commands: []DeployCommand{
+						{
+							Name:    "okteto stack deploy",
+							Command: "okteto stack deploy",
+						},
 					},
 				},
 			},
@@ -1754,8 +1766,25 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 			deployInfoManifest: []byte(`
 - okteto stack deploy`),
 			expected: &DeployInfo{
-				Commands: []string{
-					"okteto stack deploy",
+				Commands: []DeployCommand{
+					{
+						Name:    "okteto stack deploy",
+						Command: "okteto stack deploy",
+					},
+				},
+			},
+		},
+		{
+			name: "list of commands extended",
+			deployInfoManifest: []byte(`
+- name: deploy stack
+  command: okteto stack deploy`),
+			expected: &DeployInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "deploy stack",
+						Command: "okteto stack deploy",
+					},
 				},
 			},
 		},
@@ -1764,8 +1793,11 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 			deployInfoManifest: []byte(`commands:
 - okteto stack deploy`),
 			expected: &DeployInfo{
-				Commands: []string{
-					"okteto stack deploy",
+				Commands: []DeployCommand{
+					DeployCommand{
+						Name:    "okteto stack deploy",
+						Command: "okteto stack deploy",
+					},
 				},
 			},
 		},
@@ -1778,7 +1810,7 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
       service: app
       port: 80`),
 			expected: &DeployInfo{
-				Commands: []string{},
+				Commands: []DeployCommand{},
 			},
 			isErrorExpected: true,
 		},
@@ -1793,7 +1825,7 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
   to:
     service: frontend`),
 			expected: &DeployInfo{
-				Commands: []string{},
+				Commands: []DeployCommand{},
 			},
 			isErrorExpected: true,
 		},
@@ -1819,7 +1851,7 @@ compose:
     service: api
     port: 8080`),
 			expected: &DeployInfo{
-				Commands: []string{},
+				Commands: []DeployCommand{},
 			},
 			isErrorExpected: true,
 		},
@@ -1838,6 +1870,56 @@ compose:
 
 			if !assert.Equal(t, tt.expected, result) {
 				t.Fatal("Failed")
+			}
+		})
+	}
+}
+
+func TestDeployInfoMarshalling(t *testing.T) {
+	tests := []struct {
+		name       string
+		deployInfo *DeployInfo
+		expected   string
+	}{
+		{
+			name: "same-name-and-cmd",
+			deployInfo: &DeployInfo{Commands: []DeployCommand{
+				{
+					Name:    "okteto build",
+					Command: "okteto build",
+				},
+				{
+					Name:    "okteto deploy",
+					Command: "okteto deploy",
+				},
+			}},
+			expected: "- okteto build\n- okteto deploy\n",
+		},
+		{
+			name: "different-name-cmd",
+			deployInfo: &DeployInfo{Commands: []DeployCommand{
+				{
+					Name:    "build",
+					Command: "okteto build",
+				},
+				{
+					Name:    "deploy",
+					Command: "okteto deploy",
+				},
+			}},
+			expected: "commands:\n- name: build\n  command: okteto build\n- name: deploy\n  command: okteto deploy\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshalled, err := yaml.Marshal(tt.deployInfo)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(marshalled) != tt.expected {
+				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
 			}
 		})
 	}

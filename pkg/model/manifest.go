@@ -102,17 +102,17 @@ var (
 
 //Manifest represents an okteto manifest
 type Manifest struct {
-	Name      string        `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context   string        `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon      string        `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy    *DeployInfo   `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev       ManifestDevs  `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy   []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build     ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
+	Name      string          `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace string          `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context   string          `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon      string          `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy    *DeployInfo     `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev       ManifestDevs    `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy   []DeployCommand `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build     ManifestBuild   `json:"build,omitempty" yaml:"build,omitempty"`
 
 	Type             Archetype `json:"-" yaml:"-"`
-	Filename         string    `json:"-" yaml:"-"`
+	Filename         string    `yaml:"-"`
 	CompleteManifest []byte    `json:"-" yaml:"-"`
 	IsV2             bool      `json:"-" yaml:"-"`
 }
@@ -146,13 +146,19 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 
 //DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
-	Commands []string `json:"commands,omitempty" yaml:"commands,omitempty"`
+	Commands []DeployCommand `json:"commands,omitempty" yaml:"commands,omitempty"`
+}
+
+//DeployCommand represents a command to be executed
+type DeployCommand struct {
+	Name    string `json:"name,omitempty" yaml:"name,omitempty"`
+	Command string `json:"command,omitempty" yaml:"command,omitempty"`
 }
 
 //NewDeployInfo creates a deploy Info
 func NewDeployInfo() *DeployInfo {
 	return &DeployInfo{
-		Commands: []string{},
+		Commands: []DeployCommand{},
 	}
 }
 
@@ -199,8 +205,15 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	if chartPath := getChartPath(cwd); chartPath != "" {
 		oktetoLog.Infof("Found chart")
 		chartManifest := &Manifest{
-			Type:     ChartType,
-			Deploy:   &DeployInfo{Commands: []string{fmt.Sprintf("helm upgrade --install ${%s} %s", OktetoNameEnvVar, chartPath)}},
+			Type: ChartType,
+			Deploy: &DeployInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    fmt.Sprintf("helm upgrade --install ${%s} %s", OktetoNameEnvVar, chartPath),
+						Command: fmt.Sprintf("helm upgrade --install ${%s} %s", OktetoNameEnvVar, chartPath),
+					},
+				},
+			},
 			Filename: chartPath,
 		}
 		if devManifest != nil {
@@ -212,8 +225,15 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	if manifestPath := getManifestsPath(cwd); manifestPath != "" {
 		oktetoLog.Infof("Found kubernetes manifests")
 		k8sManifest := &Manifest{
-			Type:     KubernetesType,
-			Deploy:   &DeployInfo{Commands: []string{fmt.Sprintf("kubectl apply -f %s", manifestPath)}},
+			Type: KubernetesType,
+			Deploy: &DeployInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    fmt.Sprintf("kubectl apply -f %s", manifestPath),
+						Command: fmt.Sprintf("kubectl apply -f %s", manifestPath),
+					},
+				},
+			},
 			Filename: manifestPath,
 		}
 		if devManifest != nil {
@@ -225,8 +245,15 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	if stackPath := getFilePath(cwd, stackFiles); stackPath != "" {
 		oktetoLog.Infof("Found okteto stack")
 		stackManifest := &Manifest{
-			Type:     StackType,
-			Deploy:   &DeployInfo{Commands: []string{fmt.Sprintf("okteto stack deploy --build -f %s", stackPath)}},
+			Type: StackType,
+			Deploy: &DeployInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    fmt.Sprintf("okteto stack deploy --build -f %s", stackPath),
+						Command: fmt.Sprintf("okteto stack deploy --build -f %s", stackPath),
+					},
+				},
+			},
 			Filename: stackPath,
 		}
 		if devManifest != nil {
@@ -236,7 +263,14 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	}
 	if devManifest != nil {
 		devManifest.Type = OktetoType
-		devManifest.Deploy = &DeployInfo{Commands: []string{"okteto push --deploy"}}
+		devManifest.Deploy = &DeployInfo{
+			Commands: []DeployCommand{
+				{
+					Name:    "okteto push --deploy",
+					Command: "okteto push --deploy",
+				},
+			},
+		}
 		return devManifest, nil
 	}
 	return nil, oktetoErrors.ErrManifestNotFound

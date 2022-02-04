@@ -141,7 +141,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		// Log error message but application can still be deleted
 		oktetoLog.Infof("could not find manifest file to be executed: %s", err)
 		manifest = &model.Manifest{
-			Destroy: []string{},
+			Destroy: []model.DeployCommand{},
 		}
 	}
 
@@ -226,7 +226,8 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 	for releaseName := range helmReleases {
 		oktetoLog.Debugf("uninstalling helm release %s", releaseName)
 		cmd := fmt.Sprintf(helmUninstallCommand, releaseName)
-		if err := dc.executor.Execute(cmd, opts.Variables); err != nil {
+		cmdInfo := model.DeployCommand{Command: cmd, Name: cmd}
+		if err := dc.executor.Execute(cmdInfo, opts.Variables); err != nil {
 			oktetoLog.Infof("could not uninstall helm release '%s': %s", releaseName, err)
 			if !opts.ForceDestroy {
 				return err
