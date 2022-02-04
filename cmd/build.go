@@ -38,7 +38,7 @@ func Build(ctx context.Context) *cobra.Command {
 	options := build.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [PATH]",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#build"),
+		Args:  utils.BuildMaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#build"),
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
@@ -67,7 +67,7 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if contextCMD.IsManifestV2Enabled() {
+			if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
 				cwd, err := os.Getwd()
 				if err != nil {
 					return err
@@ -78,19 +78,18 @@ func Build(ctx context.Context) *cobra.Command {
 					return err
 				}
 
-				if manifest.Build != nil {
-					if manifest.Namespace != "" {
-						ctxOpts.Namespace = manifest.Namespace
+				if manifest.Namespace != "" {
+					ctxOpts.Namespace = manifest.Namespace
+				}
+				if manifest.Context != "" {
+					ctxOpts.Context = manifest.Context
+				}
+				if manifest.Namespace != "" || manifest.Context != "" {
+					if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+						return err
 					}
-					if manifest.Context != "" {
-						ctxOpts.Context = manifest.Context
-					}
-					if manifest.Namespace != "" || manifest.Context != "" {
-						if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
-							return err
-						}
-					}
-
+				}
+				if len(manifest.Build) != 0 {
 					return buildV2(manifest.Build, options, args)
 				}
 				oktetoLog.Information("Build manifest not found. Looking for Dockerfile to run the build")
@@ -113,79 +112,100 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func keepOnlySelectedServices(service string, manifest model.ManifestBuild) {
-	for key := range manifest {
-		if key != service {
-			delete(manifest, key)
+func validateSelectedServices(selected []string, buildManifest model.ManifestBuild) error {
+	invalid := []string{}
+	for _, service := range selected {
+		if _, ok := buildManifest[service]; !ok {
+			invalid = append(invalid, service)
+
 		}
 	}
+	if len(invalid) != 0 {
+		return fmt.Errorf("invalid services names, not found at manifest: %v", invalid)
+	}
+	return nil
 }
 
-func buildV2(manifest model.ManifestBuild, options build.BuildOptions, args []string) error {
-	service := ""
-	if len(args) == 1 {
-		service = args[0]
+func isSelectedService(service string, selected []string) bool {
+	for _, s := range selected {
+		if s == service {
+			return true
+		}
 	}
+	return false
+}
 
-	// settings for single build
-	if service != "" {
-		_, ok := manifest[service]
-		if !ok {
-			return fmt.Errorf("invalid service name: %s", service)
-		}
+func buildV2(buildManifest model.ManifestBuild, cmdOptions build.BuildOptions, args []string) error {
 
-		keepOnlySelectedServices(service, manifest)
+	selectedArgs := []string{}
+	if len(args) != 0 {
+		selectedArgs = args
+	}
+	buildSelected := len(selectedArgs) > 0
+	isSingleService := len(selectedArgs) == 1
 
-		if options.Target != "" {
-			manifest[service].Target = options.Target
-		}
-		if len(options.CacheFrom) != 0 {
-			manifest[service].CacheFrom = options.CacheFrom
-		}
-		if options.Tag != "" {
-			manifest[service].Image = options.Tag
-		}
-
-	} else if options.Tag != "" || options.Target != "" || options.CacheFrom != nil || options.Secrets != nil {
+	// cmd flags only allowed when single service build
+	if !isSingleService && (cmdOptions.Tag != "" || cmdOptions.Target != "" || cmdOptions.CacheFrom != nil || cmdOptions.Secrets != nil) {
 		return fmt.Errorf("flags only allowed when building a single image with `okteto build [NAME]`")
 	}
 
-	for srv, manifestOptions := range manifest {
-		if !okteto.Context().IsOkteto && manifestOptions.Image == "" {
-			oktetoLog.Errorf("image is required for service %s", srv)
+	if buildSelected {
+		err := validateSelectedServices(selectedArgs, buildManifest)
+		if err != nil {
+			return err
+		}
+	}
+
+	for service, manifestOpts := range buildManifest {
+
+		if buildSelected && !isSelectedService(service, selectedArgs) {
 			continue
 		}
-		if cwd, err := os.Getwd(); err == nil && manifestOptions.Name == "" {
-			manifestOptions.Name = utils.InferApplicationName(cwd)
+
+		if isSingleService {
+			if cmdOptions.Target != "" {
+				manifestOpts.Target = cmdOptions.Target
+			}
+			if len(cmdOptions.CacheFrom) != 0 {
+				manifestOpts.CacheFrom = cmdOptions.CacheFrom
+			}
+			if cmdOptions.Tag != "" {
+				manifestOpts.Image = cmdOptions.Tag
+			}
+		}
+		if !okteto.Context().IsOkteto && manifestOpts.Image == "" {
+			oktetoLog.Errorf("image is required for service %s", service)
+			continue
+		}
+		if cwd, err := os.Getwd(); err == nil && manifestOpts.Name == "" {
+			manifestOpts.Name = utils.InferApplicationName(cwd)
 		}
 
-		opts := build.OptsFromManifest(srv, manifestOptions, options)
+		cmdOptsFromManifest := build.OptsFromManifest(service, manifestOpts, cmdOptions)
 
 		// check if image is at registry and skip
-		if build.ShouldOptimizeBuild(opts.Tag) && !options.BuildToGlobal {
+		if build.ShouldOptimizeBuild(cmdOptsFromManifest.Tag) && !cmdOptions.BuildToGlobal {
 			oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
-			globalReference := strings.Replace(opts.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
+			globalReference := strings.Replace(cmdOptsFromManifest.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 			if _, err := registry.GetImageTagWithDigest(globalReference); err == nil {
 				oktetoLog.Information("skipping build: image already exists at global registry -  %s", globalReference)
 				return nil
 			}
-			if registry.IsDevRegistry(opts.Tag) {
+			if registry.IsDevRegistry(cmdOptsFromManifest.Tag) {
 				// check if image already is at the registry
-				if _, err := registry.GetImageTagWithDigest(opts.Tag); err == nil {
-					oktetoLog.Information("skipping build: image already exists at registry - %s", opts.Tag)
+				if _, err := registry.GetImageTagWithDigest(cmdOptsFromManifest.Tag); err == nil {
+					oktetoLog.Information("skipping build: image already exists at registry - %s", cmdOptsFromManifest.Tag)
 					return nil
 				}
 			}
 		}
 		// when single build, transfer the secrets from the flag to the options
-		if srv == service {
-			opts.Secrets = options.Secrets
+		if isSingleService {
+			cmdOptsFromManifest.Secrets = cmdOptions.Secrets
 		}
 
-		err := buildV1(opts, []string{opts.Path})
-		if err != nil {
-			oktetoLog.Error(err)
-			continue
+		if err := buildV1(cmdOptsFromManifest, []string{cmdOptsFromManifest.Path}); err != nil {
+			return err
 		}
 	}
 	return nil

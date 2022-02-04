@@ -226,7 +226,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 		return err
 	}
 	var err error
-	if contextCMD.IsManifestV2Enabled() {
+	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
 		deployOptions.Manifest, err = contextCMD.GetManifestV2(cwd, deployOptions.ManifestPath)
 		if err != nil {
 			return err
