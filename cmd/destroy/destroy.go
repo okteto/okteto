@@ -151,7 +151,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	if manifest.Namespace == okteto.Context().Namespace {
 		manifest.Namespace = okteto.Context().Namespace
 	}
-	os.Setenv(model.OktetoAppNameEnvVar, opts.Name)
+	os.Setenv(model.OktetoNameEnvVar, opts.Name)
 	manifest, err = manifest.ExpandEnvVars()
 	if err != nil {
 		return err

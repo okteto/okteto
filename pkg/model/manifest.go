@@ -199,7 +199,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		oktetoLog.Infof("Found chart")
 		chartManifest := &Manifest{
 			Type:     ChartType,
-			Deploy:   &DeployInfo{Commands: []string{fmt.Sprintf("helm upgrade --install ${OKTETO_APP_NAME} %s", chartPath)}},
+			Deploy:   &DeployInfo{Commands: []string{fmt.Sprintf("helm upgrade --install ${%s} %s", OktetoNameEnvVar, chartPath)}},
 			Filename: chartPath,
 		}
 		if devManifest != nil {

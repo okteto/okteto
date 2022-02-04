@@ -304,9 +304,6 @@ const (
 	// BuildkitProgressEnvVar defines the output of buildkit
 	BuildkitProgressEnvVar = "BUILDKIT_PROGRESS"
 
-	// OktetoAppNameEnvVar defines the name of the app
-	OktetoAppNameEnvVar = "OKTETO_APP_NAME"
-
 	// OktetoGitCommitPrefix prefix added to OKTETO_GIT_COMMIT when inferred by cli
 	OktetoGitCommitPrefix = "dev"
 

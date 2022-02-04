@@ -199,7 +199,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		deployOptions.Manifest.Namespace = okteto.Context().Namespace
 	}
 
-	os.Setenv(model.OktetoAppNameEnvVar, deployOptions.Name)
+	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
 	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
 
