@@ -276,8 +276,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	for _, command := range deployOptions.Manifest.Deploy.Commands {
 		oktetoLog.SetStage(command.Name)
 		if err := dc.Executor.Execute(command, deployOptions.Variables); err != nil {
-			oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
-			return fmt.Errorf("error executing command '%s': %s", command, err.Error())
+			oktetoLog.Infof("error executing command '%s': %s", command.Name, err.Error())
+			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
 	}
 	oktetoLog.SetStage("")

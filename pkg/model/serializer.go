@@ -687,8 +687,9 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	manifest := manifestRaw{
-		Dev:   map[string]*Dev{},
-		Build: map[string]*BuildInfo{},
+		Dev:    map[string]*Dev{},
+		Build:  map[string]*BuildInfo{},
+		Deploy: NewDeployInfo(),
 	}
 	err = unmarshal(&manifest)
 	if err != nil {
@@ -743,8 +744,20 @@ func (d *DeployInfo) MarshalYAML() (interface{}, error) {
 }
 
 func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var commandsString []string
+	err := unmarshal(&commandsString)
+	if err == nil {
+		d.Commands = []DeployCommand{}
+		for _, cmdString := range commandsString {
+			d.Commands = append(d.Commands, DeployCommand{
+				Name:    cmdString,
+				Command: cmdString,
+			})
+		}
+		return nil
+	}
 	var commands []DeployCommand
-	err := unmarshal(&commands)
+	err = unmarshal(&commands)
 	if err == nil {
 		d.Commands = commands
 		return nil
