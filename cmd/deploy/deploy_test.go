@@ -19,7 +19,6 @@ import (
 	"os"
 	"testing"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/app"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -34,10 +33,19 @@ import (
 
 var fakeManifest *model.Manifest = &model.Manifest{
 	Deploy: &model.DeployInfo{
-		Commands: []string{
-			"printenv",
-			"ls -la",
-			"cat /tmp/test.txt",
+		Commands: []model.DeployCommand{
+			{
+				Name:    "printenv",
+				Command: "printenv",
+			},
+			{
+				Name:    "ls -la",
+				Command: "ls -la",
+			},
+			{
+				Name:    "cat /tmp/test.txt",
+				Command: "cat /tmp/test.txt",
+			},
 		},
 	},
 }
@@ -52,7 +60,7 @@ type fakeProxy struct {
 
 type fakeExecutor struct {
 	err      error
-	executed []string
+	executed []model.DeployCommand
 }
 
 type fakeKubeConfig struct {
@@ -88,7 +96,7 @@ func (fk *fakeProxy) GetToken() string {
 	return fk.token
 }
 
-func (fe *fakeExecutor) Execute(command string, _ []string) error {
+func (fe *fakeExecutor) Execute(command model.DeployCommand, _ []string) error {
 	fe.executed = append(fe.executed, command)
 	if fe.err != nil {
 		return fe.err
@@ -108,23 +116,22 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		proxy:    p,
-		executor: e,
-		kubeconfig: &fakeKubeConfig{
+	c := &DeployCommand{
+		Proxy:    p,
+		Executor: e,
+		Kubeconfig: &fakeKubeConfig{
 			errOnModify: assert.AnError,
 		},
-		k8sClientProvider: test.NewFakeK8sProvider(),
+		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -144,22 +151,21 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		getManifest:       getManifestWithError,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(),
+	c := &DeployCommand{
+		GetManifest:       getManifestWithError,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -181,22 +187,21 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		getManifest:       getFakeManifest,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(),
+	c := &DeployCommand{
+		GetManifest:       getFakeManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -209,7 +214,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	assert.True(t, p.shutdown)
 
 	//check if configmap has been created
-	fakeClient, _, err := c.k8sClientProvider.Provide(api.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.Provide(api.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
@@ -246,17 +251,16 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 			"actionLock": "test",
 		},
 	}
-	c := &deployCommand{
-		getManifest:       getFakeManifest,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(cmap),
+	c := &DeployCommand{
+		GetManifest:       getFakeManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(cmap),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -265,7 +269,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	assert.True(t, p.started)
 
 	//check if configmap has been created
-	fakeClient, _, err := c.k8sClientProvider.Provide(api.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.Provide(api.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
@@ -287,22 +291,22 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		getManifest:       getFakeManifest,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(),
+	c := &DeployCommand{
+		GetManifest:       getFakeManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
+
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -315,7 +319,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	assert.False(t, p.shutdown)
 
 	//check if configmap has been created
-	fakeClient, _, err := c.k8sClientProvider.Provide(api.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.Provide(api.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
@@ -336,22 +340,21 @@ func TestDeployWithoutErrors(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		getManifest:       getFakeManifest,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(),
+	c := &DeployCommand{
+		GetManifest:       getFakeManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -364,7 +367,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, p.shutdown)
 
 	//check if configmap has been created
-	fakeClient, _, err := c.k8sClientProvider.Provide(api.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.Provide(api.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
@@ -374,11 +377,11 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.Equal(t, app.DeployedStatus, cfg.Data["status"])
 }
 
-func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ string) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ string) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
 

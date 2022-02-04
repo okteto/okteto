@@ -171,3 +171,19 @@ func dfs(s *Stack, svcName string, visited, stack map[string]bool) bool {
 	stack[svcName] = false
 	return false
 }
+
+func fileExistsAndNotDir(filename string) bool {
+	info, err := os.Stat(filename)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func pathExistsAndDir(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil && os.IsNotExist(err) {
+		return false
+	}
+	return info.IsDir()
+}

@@ -32,6 +32,10 @@ var (
 		{"stack.yaml"},
 		{".okteto", "okteto-stack.yml"},
 		{".okteto", "okteto-stack.yaml"},
+		{"okteto-compose.yml"},
+		{"okteto-compose.yaml"},
+		{".okteto", "okteto-compose.yml"},
+		{".okteto", "okteto-compose.yaml"},
 		{"docker-compose.yml"},
 		{"docker-compose.yaml"},
 		{".okteto", "docker-compose.yml"},
@@ -116,7 +120,7 @@ func LoadStack(name string, stackPaths []string) (*model.Stack, error) {
 
 func isPathAComposeFile(path string) bool {
 	base := filepath.Base(path)
-	return strings.HasPrefix(base, "docker-compose")
+	return strings.HasPrefix(base, "docker-compose") || strings.HasPrefix(base, "okteto-compose")
 }
 
 func isDeprecatedExtension(stackPath string) bool {
