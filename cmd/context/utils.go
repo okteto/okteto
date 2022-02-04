@@ -230,7 +230,6 @@ func GetManifest(srcFolder string, opts ManifestOptions) (*model.Manifest, error
 			oktetoLog.Infof("could not load manifest: %s", err.Error())
 			return nil, err
 		}
-
 		manifest.Type = "pipeline"
 		manifest.Filename = pipelinePath
 		return manifest, nil

@@ -31,6 +31,7 @@ import (
 type upContext struct {
 	Cancel            context.CancelFunc
 	ShutdownCompleted chan bool
+	Manifest          *model.Manifest
 	Dev               *model.Dev
 	Translations      map[string]*apps.Translation
 	isRetry           bool

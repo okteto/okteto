@@ -19,6 +19,7 @@ import (
 
 //Manifest represents an okteto manifest
 type Manifest struct {
+	Name      string        `json:"name,omitempty" yaml:"name,omitempty"`
 	Namespace string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Context   string        `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon      string        `json:"icon,omitempty" yaml:"icon,omitempty"`
@@ -31,12 +32,14 @@ type Manifest struct {
 	Filename string `json:"-" yaml:"-"`
 }
 
+//ManifestDevs refers to all the devs that can be
 type ManifestDevs map[string]*Dev
 type ManifestBuild map[string]*BuildInfo
 
 func NewManifest() *Manifest {
 	return &Manifest{
-		Dev: make(map[string]*Dev),
+		Dev:    map[string]*Dev{},
+		Deploy: &DeployInfo{},
 	}
 }
 
@@ -51,7 +54,7 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 	return manifest
 }
 
-//DeployInfo represents a deploy section
+//DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
 	Commands []string `json:"commands,omitempty" yaml:"commands,omitempty"`
 }
