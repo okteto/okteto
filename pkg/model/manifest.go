@@ -34,6 +34,8 @@ var (
 	StackType Archetype = "stack"
 	//OktetoType represents a okteto manifest type
 	OktetoType Archetype = "okteto"
+	//OktetoType represents a okteto manifest type
+	OktetoManifestType Archetype = "manifest"
 	//PipelineType represents a okteto pipeline manifest type
 	PipelineType Archetype = "pipeline"
 	//KubernetesType represents a k8s manifest type
@@ -165,6 +167,18 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
+	var devManifest *Manifest
+	if oktetoPath := getFilePath(cwd, oktetoFiles); oktetoPath != "" {
+		oktetoLog.Infof("Found okteto file")
+		devManifest, err = GetManifestV2(oktetoPath)
+		if err != nil {
+			return nil, err
+		}
+		if devManifest.isV2() {
+			devManifest.Type = OktetoManifestType
+			return devManifest, nil
+		}
+	}
 
 	if pipelinePath := getFilePath(cwd, pipelineFiles); pipelinePath != "" {
 		oktetoLog.Infof("Found pipeline")
@@ -173,14 +187,10 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			return nil, err
 		}
 		pipelineManifest.Type = PipelineType
-		if oktetoPath := getFilePath(cwd, oktetoFiles); oktetoPath != "" {
-			oktetoLog.Infof("Found okteto file")
-			manifest, err := GetManifestV2(oktetoPath)
-			if err != nil {
-				return nil, err
-			}
-			pipelineManifest.mergeWithOktetoManifest(manifest)
+		if devManifest != nil {
+			pipelineManifest.mergeWithOktetoManifest(devManifest)
 		}
+
 		return pipelineManifest, nil
 
 	}
@@ -192,13 +202,8 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			Deploy:   &DeployInfo{Commands: []string{fmt.Sprintf("helm upgrade --install ${OKTETO_APP_NAME} %s", chartPath)}},
 			Filename: chartPath,
 		}
-		if oktetoPath := getFilePath(cwd, oktetoFiles); oktetoPath != "" {
-			oktetoLog.Infof("Found okteto file")
-			manifest, err := GetManifestV2(oktetoPath)
-			if err != nil {
-				return nil, err
-			}
-			chartManifest.mergeWithOktetoManifest(manifest)
+		if devManifest != nil {
+			chartManifest.mergeWithOktetoManifest(devManifest)
 		}
 		return chartManifest, nil
 
@@ -210,13 +215,8 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			Deploy:   &DeployInfo{Commands: []string{fmt.Sprintf("kubectl apply -f %s", manifestPath)}},
 			Filename: manifestPath,
 		}
-		if oktetoPath := getFilePath(cwd, oktetoFiles); oktetoPath != "" {
-			oktetoLog.Infof("Found okteto file")
-			manifest, err := GetManifestV2(oktetoPath)
-			if err != nil {
-				return nil, err
-			}
-			k8sManifest.mergeWithOktetoManifest(manifest)
+		if devManifest != nil {
+			k8sManifest.mergeWithOktetoManifest(devManifest)
 		}
 		return k8sManifest, nil
 	}
@@ -228,27 +228,16 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			Deploy:   &DeployInfo{Commands: []string{fmt.Sprintf("okteto stack deploy --build -f %s", stackPath)}},
 			Filename: stackPath,
 		}
-		if oktetoPath := getFilePath(cwd, oktetoFiles); oktetoPath != "" {
-			oktetoLog.Infof("Found okteto file")
-			manifest, err := GetManifestV2(oktetoPath)
-			if err != nil {
-				return nil, err
-			}
-			stackManifest.mergeWithOktetoManifest(manifest)
+		if devManifest != nil {
+			stackManifest.mergeWithOktetoManifest(devManifest)
 		}
 		return stackManifest, nil
 	}
-	if oktetoPath := getFilePath(cwd, oktetoFiles); oktetoPath != "" {
-		oktetoLog.Infof("Found okteto file")
-		manifest, err := GetManifestV2(oktetoPath)
-		if err != nil {
-			return nil, err
-		}
-		manifest.Type = OktetoType
-		manifest.Deploy = &DeployInfo{Commands: []string{"okteto push --deploy"}}
-		return manifest, nil
+	if devManifest != nil {
+		devManifest.Type = OktetoType
+		devManifest.Deploy = &DeployInfo{Commands: []string{"okteto push --deploy"}}
+		return devManifest, nil
 	}
-
 	return nil, oktetoErrors.ErrManifestNotFound
 }
 
@@ -413,4 +402,8 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 		return m, err
 	}
 	return result, nil
+}
+
+func (m *Manifest) isV2() bool {
+	return len(m.Deploy.Commands) > 0 && (len(m.Build) > 0 || len(m.Dev) > 0)
 }
