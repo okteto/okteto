@@ -687,7 +687,8 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	manifest := manifestRaw{
-		Dev: make(map[string]*Dev),
+		Dev:   map[string]*Dev{},
+		Build: map[string]*BuildInfo{},
 	}
 	err = unmarshal(&manifest)
 	if err != nil {
@@ -700,6 +701,7 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	d.Build = manifest.Build
 	d.Namespace = manifest.Namespace
 	d.Context = manifest.Context
+	d.IsV2 = true
 	return nil
 }
 
@@ -709,9 +711,15 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err == nil {
 		d.Commands = commands
 		return nil
-	} else {
+	}
+	type deployInfoRaw DeployInfo
+	var deploy deployInfoRaw
+	err = unmarshal(&deploy)
+	if err != nil {
 		return err
 	}
+	*d = DeployInfo(deploy)
+	return nil
 }
 
 type devRaw Dev

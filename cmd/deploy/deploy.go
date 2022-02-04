@@ -76,7 +76,7 @@ type proxyInterface interface {
 
 //DeployCommand defines the config for deploying an app
 type DeployCommand struct {
-	GetManifest func(srcFolder string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+	GetManifest func(path string) (*model.Manifest, error)
 
 	Proxy              proxyInterface
 	Kubeconfig         kubeConfigHandler
@@ -150,15 +150,14 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			c := &DeployCommand{
-				GetManifest: contextCMD.GetManifest,
-
+				GetManifest:        model.GetManifestV2,
 				Kubeconfig:         kubeconfig,
 				Executor:           utils.NewExecutor(oktetoLog.GetOutputFormat()),
 				Proxy:              proxy,
 				TempKubeconfigFile: GetTempKubeConfigFile(options.Name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 			}
-			return c.RunDeploy(ctx, cwd, options)
+			return c.RunDeploy(ctx, options)
 		},
 	}
 
@@ -178,23 +177,31 @@ func Deploy(ctx context.Context) *cobra.Command {
 }
 
 // RunDeploy runs the deploy sequence
-func (dc *DeployCommand) RunDeploy(ctx context.Context, cwd string, deployOptions *Options) error {
+func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
 	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
 		return err
 	}
 	var err error
-	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
-		deployOptions.Manifest, err = contextCMD.GetManifestV2(cwd, deployOptions.ManifestPath)
-		if err != nil {
-			return err
-		}
-		oktetoLog.Debug("found okteto manifest")
+	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
+	if err != nil {
+		return err
+	}
+	oktetoLog.Debug("found okteto manifest")
+	if deployOptions.Manifest.Deploy == nil {
+		return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
+	}
+	if deployOptions.Manifest.Context == "" {
+		deployOptions.Manifest.Context = okteto.Context().Name
+	}
+	if deployOptions.Manifest.Namespace == okteto.Context().Namespace {
+		deployOptions.Manifest.Namespace = okteto.Context().Namespace
+	}
 
-		if deployOptions.Manifest.Deploy == nil {
-			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
-		}
+	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
+
+	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
 
 		if deployOptions.Manifest.Build != nil {
 
@@ -239,27 +246,12 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, cwd string, deployOption
 
 			}
 		}
-
-		var parsedCommands []string
-		for _, command := range deployOptions.Manifest.Deploy.Commands {
-			parsedCommands = append(parsedCommands, expandManifestEnvVars(command))
-		}
-		deployOptions.Manifest.Deploy.Commands = parsedCommands
-
-	} else {
-		// Read manifest file with the commands to be executed
-		deployOptions.Manifest, err = dc.GetManifest(cwd, contextCMD.ManifestOptions{Name: deployOptions.Name, Filename: deployOptions.ManifestPath})
-		if err != nil {
-			oktetoLog.Infof("could not find manifest file to be executed: %s", err)
-			return err
-		}
-
-		if deployOptions.Manifest.Deploy == nil {
-			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
-		}
 	}
-	deployOptions.Manifest.Context = okteto.Context().Name
-	deployOptions.Manifest.Namespace = okteto.Context().Namespace
+
+	deployOptions.Manifest, err = deployOptions.Manifest.ExpandEnvVars()
+	if err != nil {
+		return err
+	}
 
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
 	dc.Proxy.Start()
@@ -289,7 +281,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, cwd string, deployOption
 		}
 	}
 	oktetoLog.SetStage("")
-
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		if err := dc.showEndpoints(ctx, deployOptions); err != nil {
 			oktetoLog.Infof("could not retrieve endpoints: %s", err)
@@ -343,10 +334,6 @@ func setManifestEnvVars(service, reference string) error {
 
 	oktetoLog.Debug("manifest env vars set")
 	return nil
-}
-
-func expandManifestEnvVars(manifest string) string {
-	return os.ExpandEnv(manifest)
 }
 
 func (dc *DeployCommand) cleanUp(ctx context.Context) {

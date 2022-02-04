@@ -150,6 +150,7 @@ build:
       - cache-image-1
       - cache-image-2`),
 			expectedManifest: &model.Manifest{
+				IsV2:      true,
 				Namespace: "test-namespace",
 				Context:   "manifest-context",
 				Build: model.ManifestBuild{
@@ -199,14 +200,12 @@ build:
 				filename = ""
 			}
 
-			cwd, err := os.Getwd()
-			if err != nil {
-				t.Errorf("unable to get current dir")
-			}
-			m, err := GetManifestV2(cwd, filename)
+			m, err := model.GetManifestV2(filename)
 			if tt.expectedErr {
 				assert.NotNil(t, err)
 			} else {
+				m.Filename = ""
+				m.CompleteManifest = nil
 				assert.EqualValues(t, tt.expectedManifest, m)
 			}
 

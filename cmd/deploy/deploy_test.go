@@ -19,7 +19,6 @@ import (
 	"os"
 	"testing"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -118,7 +117,7 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, "/tmp", opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -152,7 +151,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, "/tmp", opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -188,7 +187,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, "/tmp", opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -229,7 +228,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, "/tmp", opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -267,7 +266,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, "/tmp", opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -280,11 +279,11 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, p.shutdown)
 }
 
-func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ string) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ string) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
 
