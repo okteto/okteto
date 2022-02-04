@@ -701,6 +701,7 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	d.Build = manifest.Build
 	d.Namespace = manifest.Namespace
 	d.Context = manifest.Context
+	d.IsV2 = true
 	return nil
 }
 

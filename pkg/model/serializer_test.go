@@ -1064,6 +1064,7 @@ deploy:
 				},
 				Dev:     map[string]*Dev{},
 				Context: "context-to-use",
+				IsV2:    true,
 			},
 			isErrorExpected: false,
 		},
@@ -1081,6 +1082,7 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				IsV2:  true,
 				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []string{
@@ -1437,6 +1439,7 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				IsV2:  true,
 				Build: map[string]*BuildInfo{},
 				Dev: map[string]*Dev{
 					"test": {
@@ -1520,6 +1523,7 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				IsV2:  true,
 				Build: map[string]*BuildInfo{},
 				Dev: map[string]*Dev{
 					"test-1": {
@@ -1683,6 +1687,7 @@ deploy:
   - okteto stack deploy
 `),
 			expected: &Manifest{
+				IsV2:  true,
 				Dev:   map[string]*Dev{},
 				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
@@ -1703,6 +1708,7 @@ devs:
   - test
 `),
 			expected: &Manifest{
+				IsV2:  true,
 				Dev:   map[string]*Dev{},
 				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{

@@ -114,6 +114,7 @@ type Manifest struct {
 	Type             Archetype `json:"-" yaml:"-"`
 	Filename         string    `json:"-" yaml:"-"`
 	CompleteManifest []byte    `json:"-" yaml:"-"`
+	IsV2             bool      `json:"-" yaml:"-"`
 }
 
 //ManifestDevs defines all the dev section
@@ -174,7 +175,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		if devManifest.isV2() {
+		if devManifest.IsV2 {
 			devManifest.Type = OktetoManifestType
 			return devManifest, nil
 		}
@@ -402,8 +403,4 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 		return m, err
 	}
 	return result, nil
-}
-
-func (m *Manifest) isV2() bool {
-	return len(m.Deploy.Commands) > 0 && (len(m.Build) > 0 || len(m.Dev) > 0)
 }

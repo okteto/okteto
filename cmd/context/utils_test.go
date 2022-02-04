@@ -150,6 +150,7 @@ build:
       - cache-image-1
       - cache-image-2`),
 			expectedManifest: &model.Manifest{
+				IsV2:      true,
 				Namespace: "test-namespace",
 				Context:   "manifest-context",
 				Build: model.ManifestBuild{
