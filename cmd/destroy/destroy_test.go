@@ -129,7 +129,7 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 		getManifest:       getFakeManifest,
 		nsDestroyer:       destroyer,
 		executor:          executor,
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+		k8sClientProvider: test.NewFakeK8sProvider(),
 	}
 
 	err := cmd.runDestroy(ctx, cwd, opts)
@@ -182,7 +182,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 				secrets:           &secretHandler,
 				nsDestroyer:       &fakeDestroyer{},
 				executor:          executor,
-				k8sClientProvider: test.NewFakeK8sProvider(nil),
+				k8sClientProvider: test.NewFakeK8sProvider(),
 			}
 
 			err := cmd.runDestroy(ctx, cwd, opts)
@@ -301,7 +301,7 @@ func TestDestroyWithError(t *testing.T) {
 				secrets:           &secretHandler,
 				executor:          executor,
 				nsDestroyer:       destroyer,
-				k8sClientProvider: test.NewFakeK8sProvider(nil),
+				k8sClientProvider: test.NewFakeK8sProvider(),
 			}
 
 			err := cmd.runDestroy(ctx, cwd, opts)
@@ -503,7 +503,7 @@ func TestDestroyWithoutError(t *testing.T) {
 				secrets:           &secretHandler,
 				executor:          executor,
 				nsDestroyer:       destroyer,
-				k8sClientProvider: test.NewFakeK8sProvider(nil),
+				k8sClientProvider: test.NewFakeK8sProvider(),
 			}
 
 			err := cmd.runDestroy(ctx, cwd, opts)
@@ -543,7 +543,7 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 		secrets:           &secretHandler,
 		executor:          executor,
 		nsDestroyer:       destroyer,
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+		k8sClientProvider: test.NewFakeK8sProvider(),
 	}
 
 	err := cmd.runDestroy(ctx, cwd, opts)
@@ -581,7 +581,7 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 		secrets:           &secretHandler,
 		executor:          executor,
 		nsDestroyer:       destroyer,
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+		k8sClientProvider: test.NewFakeK8sProvider(),
 	}
 
 	err := cmd.runDestroy(ctx, cwd, opts)

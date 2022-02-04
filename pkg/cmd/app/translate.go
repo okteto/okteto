@@ -18,8 +18,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"math"
+	"os"
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -32,14 +34,18 @@ import (
 )
 
 const (
-	nameField     = "name"
-	statusField   = "status"
-	outputField   = "output"
-	repoField     = "repository"
-	branchField   = "branch"
-	filenameField = "filename"
-	yamlField     = "yaml"
-	iconField     = "icon"
+	nameField       = "name"
+	statusField     = "status"
+	outputField     = "output"
+	repoField       = "repository"
+	branchField     = "branch"
+	filenameField   = "filename"
+	yamlField       = "yaml"
+	iconField       = "icon"
+	actionLockField = "actionLock"
+	actionNameField = "actionName"
+
+	actionDefaultName = "cli"
 
 	// ProgressingStatus indicates that an app is being deployed
 	ProgressingStatus = "progressing"
@@ -85,7 +91,9 @@ func TranslateConfigMap(ctx context.Context, data *CfgData, c kubernetes.Interfa
 		}
 		cmap = translatedConfigMapSandBox(data)
 	} else {
-		updateCmap(cmap, data)
+		if err := updateCmap(cmap, data); err != nil {
+			return nil, err
+		}
 	}
 	if err := configmaps.Deploy(ctx, cmap, cmap.Namespace, c); err != nil {
 		return nil, err
@@ -105,7 +113,10 @@ func UpdateConfigMap(ctx context.Context, cmap *apiv1.ConfigMap, data *CfgData, 
 	if err != nil {
 		return err
 	}
-	updateCmap(cmap, data)
+	if err := updateCmap(cmap, data); err != nil {
+		return err
+	}
+	delete(cmap.Data, actionLockField)
 	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 }
 
@@ -175,13 +186,21 @@ func translatedConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 	return cmap
 }
 
-func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) {
+func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
+	actionName := os.Getenv(model.OktetoActionNameEnvVar)
+	if actionName == "" {
+		actionName = actionDefaultName
+	}
+	if v, ok := cmap.Data[actionLockField]; ok && v != actionName {
+		return errors.New("There is a deploy already running")
+	}
 	cmap.ObjectMeta.Labels[model.GitDeployLabel] = "true"
 	cmap.Data[nameField] = data.Name
 	cmap.Data[statusField] = data.Status
 	cmap.Data[filenameField] = data.Filename
 	cmap.Data[yamlField] = base64.StdEncoding.EncodeToString(data.Manifest)
 	cmap.Data[iconField] = data.Icon
+	cmap.Data[actionNameField] = actionName
 	if data.Repository != "" {
 		cmap.Data[repoField] = data.Repository
 	}
@@ -193,4 +212,5 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) {
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
 	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
+	return nil
 }

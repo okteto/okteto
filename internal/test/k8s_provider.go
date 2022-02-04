@@ -29,15 +29,24 @@ type FakeK8sProvider struct {
 	client  *fake.Clientset
 }
 
-func NewFakeK8sProvider(objects []runtime.Object) *FakeK8sProvider {
-	return &FakeK8sProvider{objects: objects}
+func NewFakeK8sProvider(objects ...runtime.Object) *FakeK8sProvider {
+	if len(objects) > 0 {
+		return &FakeK8sProvider{objects: objects}
+	}
+	return &FakeK8sProvider{}
 }
 
 func (f *FakeK8sProvider) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
 	if f.client != nil {
 		return f.client, nil, nil
 	}
-	c := fake.NewSimpleClientset(f.objects...)
+	var c *fake.Clientset
+	if len(f.objects) > 0 {
+		c = fake.NewSimpleClientset(f.objects...)
+	} else {
+		c = fake.NewSimpleClientset()
+	}
+
 	f.client = c
 	return c, nil, nil
 }
