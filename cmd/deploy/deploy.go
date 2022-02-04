@@ -223,53 +223,53 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 
 		oktetoLog.Information("Checking to build services at manifest")
-		if deployOptions.Manifest.Build != nil {
-			exit := make(chan error, 1)
-			for service, mOptions := range deployOptions.Manifest.Build {
 
-				go func(service string, mOptions *model.BuildInfo) {
-					oktetoLog.Debugf("hello from goroutine %s", service)
-					err := buildFromManifest(ctx, service, mOptions, deployOptions)
-					if err != nil {
-						exit <- err
-						return
-					}
-					exit <- nil
-					return
-				}(service, mOptions)
+		exit := make(chan error, 1)
+		numOfChecks := len(deployOptions.Manifest.Build)
+		for service, mOptions := range deployOptions.Manifest.Build {
 
-			}
-
-			for i := 0; i < 2; i++ {
-				err, ok := <-exit
-				oktetoLog.Debugf("HOLA********** %v %v %v", err, ok, i)
+			go func(service string, mOptions *model.BuildInfo) {
+				oktetoLog.Debugf("hello from goroutine %s", service)
+				err := buildFromManifest(ctx, service, mOptions, deployOptions)
 				if err != nil {
-					return err
+					exit <- err
+					return
 				}
-			}
+				exit <- nil
+				return
+			}(service, mOptions)
+
 		}
 
-		oktetoLog.Information("Checking to deploy dependencies at manifest")
-		for depName, dep := range deployOptions.Manifest.Dependencies {
-			pipOpts := &pipelineCMD.DeployOptions{
-				Name:       depName,
-				Repository: dep.Repository,
-				Branch:     dep.Branch,
-				File:       dep.ManifestPath,
-				Variables:  model.SerializeBuildArgs(dep.Variables),
-				Wait:       dep.Wait,
-				Timeout:    deployOptions.Timeout,
-			}
-			if deployOptions.Dependencies {
-				if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
-					return err
-				}
-				continue
-			}
-			if err := checkByNameAndDeployDependency(ctx, depName, pipOpts); err != nil {
+		for i := 0; i < numOfChecks; i++ {
+			err := <-exit
+			if err != nil {
 				return err
 			}
 		}
+	}
+
+	oktetoLog.Information("Checking to deploy dependencies at manifest")
+	for depName, dep := range deployOptions.Manifest.Dependencies {
+		pipOpts := &pipelineCMD.DeployOptions{
+			Name:       depName,
+			Repository: dep.Repository,
+			Branch:     dep.Branch,
+			File:       dep.ManifestPath,
+			Variables:  model.SerializeBuildArgs(dep.Variables),
+			Wait:       dep.Wait,
+			Timeout:    deployOptions.Timeout,
+		}
+		if deployOptions.Dependencies {
+			if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := checkByNameAndDeployDependency(ctx, depName, pipOpts); err != nil {
+			return err
+		}
+
 	}
 
 	deployOptions.Manifest, err = deployOptions.Manifest.ExpandEnvVars()
