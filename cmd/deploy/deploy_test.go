@@ -19,7 +19,6 @@ import (
 	"os"
 	"testing"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -112,23 +111,22 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		proxy:    p,
-		executor: e,
-		kubeconfig: &fakeKubeConfig{
+	c := &DeployCommand{
+		Proxy:    p,
+		Executor: e,
+		Kubeconfig: &fakeKubeConfig{
 			errOnModify: assert.AnError,
 		},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+		K8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -148,22 +146,21 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		getManifest:       getManifestWithError,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+	c := &DeployCommand{
+		GetManifest:       getManifestWithError,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -185,22 +182,21 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		getManifest:       getFakeManifest,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+	c := &DeployCommand{
+		GetManifest:       getFakeManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -226,22 +222,22 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		getManifest:       getFakeManifest,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+	c := &DeployCommand{
+		GetManifest:       getFakeManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
+
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -265,22 +261,21 @@ func TestDeployWithoutErrors(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		getManifest:       getFakeManifest,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+	c := &DeployCommand{
+		GetManifest:       getFakeManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(nil),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -293,11 +288,11 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, p.shutdown)
 }
 
-func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ string) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ string) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
 

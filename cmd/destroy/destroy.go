@@ -60,7 +60,7 @@ type Options struct {
 }
 
 type destroyCommand struct {
-	getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+	getManifest func(path string) (*model.Manifest, error)
 
 	executor    utils.ManifestExecutor
 	nsDestroyer destroyer
@@ -115,13 +115,13 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 
 			c := &destroyCommand{
-				getManifest: contextCMD.GetManifest,
+				getManifest: model.GetManifestV2,
 
 				executor:    utils.NewExecutor(oktetoLog.GetOutputFormat()),
 				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:     secrets.NewSecrets(k8sClient),
 			}
-			return c.runDestroy(ctx, cwd, options)
+			return c.runDestroy(ctx, options)
 		},
 	}
 
@@ -134,15 +134,27 @@ func Destroy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (dc *destroyCommand) runDestroy(ctx context.Context, cwd string, opts *Options) error {
+func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	// Read manifest file with the commands to be executed
-	manifest, err := dc.getManifest(cwd, contextCMD.ManifestOptions{Name: opts.Name, Filename: opts.ManifestPath, Namespace: opts.Namespace, K8sContext: opts.K8sContext})
+	manifest, err := dc.getManifest(opts.ManifestPath)
 	if err != nil {
 		// Log error message but application can still be deleted
 		oktetoLog.Infof("could not find manifest file to be executed: %s", err)
 		manifest = &model.Manifest{
 			Destroy: []model.DeployCommand{},
 		}
+	}
+
+	if manifest.Context == "" {
+		manifest.Context = okteto.Context().Name
+	}
+	if manifest.Namespace == okteto.Context().Namespace {
+		manifest.Namespace = okteto.Context().Namespace
+	}
+	os.Setenv(model.OktetoNameEnvVar, opts.Name)
+	manifest, err = manifest.ExpandEnvVars()
+	if err != nil {
+		return err
 	}
 
 	var commandErr error

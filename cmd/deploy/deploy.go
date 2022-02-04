@@ -16,7 +16,6 @@ package deploy
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,7 +27,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/pipeline"
@@ -76,14 +74,15 @@ type proxyInterface interface {
 	GetToken() string
 }
 
-type deployCommand struct {
-	getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+//DeployCommand defines the config for deploying an app
+type DeployCommand struct {
+	GetManifest func(path string) (*model.Manifest, error)
 
-	proxy              proxyInterface
-	kubeconfig         kubeConfigHandler
-	executor           utils.ManifestExecutor
-	tempKubeconfigFile string
-	k8sClientProvider  okteto.K8sClientProvider
+	Proxy              proxyInterface
+	Kubeconfig         kubeConfigHandler
+	Executor           utils.ManifestExecutor
+	TempKubeconfigFile string
+	K8sClientProvider  okteto.K8sClientProvider
 }
 
 //Deploy deploys the okteto manifest
@@ -142,65 +141,23 @@ func Deploy(ctx context.Context) *cobra.Command {
 				options.Name = utils.InferApplicationName(cwd)
 			}
 
-			// Look for a free local port to start the proxy
-			port, err := model.GetAvailablePort("localhost")
-			if err != nil {
-				oktetoLog.Infof("could not find a free port to start proxy server: %s", err)
-				return err
-			}
-			oktetoLog.Debugf("found available port %d", port)
+			kubeconfig := NewKubeConfig()
 
-			// TODO for now, using self-signed certificates
-			cert, err := tls.X509KeyPair(cert, key)
-			if err != nil {
-				oktetoLog.Infof("could not read certificate: %s", err)
-				return err
-			}
-
-			// Generate a token for the requests done to the proxy
-			sessionToken := uuid.NewString()
-
-			kubeconfig := newKubeConfig()
-			clusterConfig, err := kubeconfig.Read()
-			if err != nil {
-				oktetoLog.Infof("could not read kubeconfig file: %s", err)
-				return err
-			}
-
-			handler, err := getProxyHandler(options.Name, sessionToken, clusterConfig)
+			proxy, err := NewProxy(options.Name, kubeconfig)
 			if err != nil {
 				oktetoLog.Infof("could not configure local proxy: %s", err)
 				return err
 			}
 
-			s := &http.Server{
-				Addr:         fmt.Sprintf(":%d", port),
-				Handler:      handler,
-				ReadTimeout:  5 * time.Second,
-				WriteTimeout: 10 * time.Second,
-				IdleTimeout:  120 * time.Second,
-				TLSConfig: &tls.Config{
-					Certificates: []tls.Certificate{cert},
-
-					// Recommended security configuration by DeepSource
-					MinVersion: tls.VersionTLS12,
-					MaxVersion: tls.VersionTLS13,
-				},
+			c := &DeployCommand{
+				GetManifest:        model.GetManifestV2,
+				Kubeconfig:         kubeconfig,
+				Executor:           utils.NewExecutor(oktetoLog.GetOutputFormat()),
+				Proxy:              proxy,
+				TempKubeconfigFile: GetTempKubeConfigFile(options.Name),
+				K8sClientProvider:  okteto.NewK8sClientProvider(),
 			}
-
-			c := &deployCommand{
-				getManifest: contextCMD.GetManifest,
-
-				kubeconfig: kubeconfig,
-				executor:   utils.NewExecutor(oktetoLog.GetOutputFormat()),
-				proxy: newProxy(proxyConfig{
-					port:  port,
-					token: sessionToken,
-				}, s),
-				tempKubeconfigFile: fmt.Sprintf(tempKubeConfigTemplate, config.GetUserHomeDir(), options.Name),
-				k8sClientProvider:  okteto.NewK8sClientProvider(),
-			}
-			return c.runDeploy(ctx, cwd, options)
+			return c.RunDeploy(ctx, options)
 		},
 	}
 
@@ -219,23 +176,32 @@ func Deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOptions *Options) error {
-	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.tempKubeconfigFile)
-	if err := dc.kubeconfig.Modify(dc.proxy.GetPort(), dc.proxy.GetToken(), dc.tempKubeconfigFile); err != nil {
+// RunDeploy runs the deploy sequence
+func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
+	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
+	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
 		return err
 	}
 	var err error
-	if contextCMD.IsManifestV2Enabled() {
-		deployOptions.Manifest, err = contextCMD.GetManifestV2(cwd, deployOptions.ManifestPath)
-		if err != nil {
-			return err
-		}
-		oktetoLog.Debug("found okteto manifest")
+	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
+	if err != nil {
+		return err
+	}
+	oktetoLog.Debug("found okteto manifest")
+	if deployOptions.Manifest.Deploy == nil {
+		return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
+	}
+	if deployOptions.Manifest.Context == "" {
+		deployOptions.Manifest.Context = okteto.Context().Name
+	}
+	if deployOptions.Manifest.Namespace == okteto.Context().Namespace {
+		deployOptions.Manifest.Namespace = okteto.Context().Namespace
+	}
 
-		if deployOptions.Manifest.Deploy == nil {
-			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
-		}
+	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
+
+	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
 
 		if deployOptions.Manifest.Build != nil {
 
@@ -280,35 +246,22 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 
 			}
 		}
-
-		for _, cmdInfo := range deployOptions.Manifest.Deploy.Commands {
-			cmdInfo.Command = expandManifestEnvVars(cmdInfo.Command)
-		}
-
-	} else {
-		// Read manifest file with the commands to be executed
-		deployOptions.Manifest, err = dc.getManifest(cwd, contextCMD.ManifestOptions{Name: deployOptions.Name, Filename: deployOptions.ManifestPath})
-		if err != nil {
-			oktetoLog.Infof("could not find manifest file to be executed: %s", err)
-			return err
-		}
-
-		if deployOptions.Manifest.Deploy == nil {
-			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
-		}
 	}
-	deployOptions.Manifest.Context = okteto.Context().Name
-	deployOptions.Manifest.Namespace = okteto.Context().Namespace
 
-	oktetoLog.Debugf("starting server on %d", dc.proxy.GetPort())
-	dc.proxy.Start()
+	deployOptions.Manifest, err = deployOptions.Manifest.ExpandEnvVars()
+	if err != nil {
+		return err
+	}
+
+	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
+	dc.Proxy.Start()
 
 	defer dc.cleanUp(ctx)
 
 	deployOptions.Variables = append(
 		deployOptions.Variables,
 		// Set KUBECONFIG environment variable as environment for the commands to be executed
-		fmt.Sprintf("%s=%s", model.KubeConfigEnvVar, dc.tempKubeconfigFile),
+		fmt.Sprintf("%s=%s", model.KubeConfigEnvVar, dc.TempKubeconfigFile),
 		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all the Okteto commands executed within this command execution
 		// should not overwrite the server and the credentials in the kubeconfig
 		fmt.Sprintf("%s=true", model.OktetoWithinDeployCommandContextEnvVar),
@@ -322,13 +275,12 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, deployOption
 
 	for _, command := range deployOptions.Manifest.Deploy.Commands {
 		oktetoLog.SetStage(command.Name)
-		if err := dc.executor.Execute(command, deployOptions.Variables); err != nil {
+		if err := dc.Executor.Execute(command, deployOptions.Variables); err != nil {
 			oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command, err.Error())
 		}
 	}
 	oktetoLog.SetStage("")
-
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		if err := dc.showEndpoints(ctx, deployOptions); err != nil {
 			oktetoLog.Infof("could not retrieve endpoints: %s", err)
@@ -384,18 +336,14 @@ func setManifestEnvVars(service, reference string) error {
 	return nil
 }
 
-func expandManifestEnvVars(manifest string) string {
-	return os.ExpandEnv(manifest)
-}
-
-func (dc *deployCommand) cleanUp(ctx context.Context) {
-	oktetoLog.Debugf("removing temporal kubeconfig file '%s'", dc.tempKubeconfigFile)
-	if err := os.Remove(dc.tempKubeconfigFile); err != nil {
+func (dc *DeployCommand) cleanUp(ctx context.Context) {
+	oktetoLog.Debugf("removing temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
+	if err := os.Remove(dc.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not remove temporal kubeconfig file: %s", err)
 	}
 
 	oktetoLog.Debugf("stopping local server...")
-	if err := dc.proxy.Shutdown(ctx); err != nil {
+	if err := dc.Proxy.Shutdown(ctx); err != nil {
 		oktetoLog.Infof("could not stop local server: %s", err)
 	}
 }
@@ -474,7 +422,6 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 				rw.WriteHeader(500)
 				return
 			}
-
 			defer r.Body.Close()
 			if len(b) == 0 {
 				reverseProxy.ServeHTTP(rw, r)
@@ -543,12 +490,17 @@ func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handl
 
 }
 
-func (dc *deployCommand) showEndpoints(ctx context.Context, opts *Options) error {
+//GetTempKubeConfigFile returns a where the temp kubeConfigFile should be stored
+func GetTempKubeConfigFile(name string) string {
+	return fmt.Sprintf(tempKubeConfigTemplate, config.GetUserHomeDir(), name)
+}
+
+func (dc *DeployCommand) showEndpoints(ctx context.Context, opts *Options) error {
 	spinner := utils.NewSpinner("Retrieving endpoints...")
 	spinner.Start()
 	defer spinner.Stop()
 	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
-	iClient, err := dc.k8sClientProvider.GetIngressClient(ctx)
+	iClient, err := dc.K8sClientProvider.GetIngressClient(ctx)
 	if err != nil {
 		return err
 	}

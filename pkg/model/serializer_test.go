@@ -1037,6 +1037,17 @@ func TestManifestUnmarshalling(t *testing.T) {
 		isErrorExpected bool
 	}{
 		{
+			name: "only dev with service unsupported field",
+			manifest: []byte(`
+sync:
+  - app:/app
+services:
+  - name: svc
+    autocreate: true`),
+			expected:        nil,
+			isErrorExpected: true,
+		},
+		{
 			name: "manifest with namespace and context",
 			manifest: []byte(`
 namespace: test
@@ -1045,6 +1056,7 @@ deploy:
   - okteto stack deploy`),
 			expected: &Manifest{
 				Namespace: "test",
+				Build:     map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1055,6 +1067,7 @@ deploy:
 				},
 				Dev:     map[string]*Dev{},
 				Context: "context-to-use",
+				IsV2:    true,
 			},
 			isErrorExpected: false,
 		},
@@ -1072,6 +1085,8 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				IsV2:  true,
+				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1222,6 +1237,8 @@ dev:
 sync:
   - app:/app`),
 			expected: &Manifest{
+				Build:  map[string]*BuildInfo{},
+				Deploy: &DeployInfo{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1300,6 +1317,8 @@ sync:
 services:
   - name: svc`),
 			expected: &Manifest{
+				Build:  map[string]*BuildInfo{},
+				Deploy: &DeployInfo{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1385,6 +1404,7 @@ services:
 									Labels:      Labels{},
 									Annotations: Annotations{},
 								},
+								Volumes: []Volume{},
 							},
 						},
 						InitContainer: InitContainer{
@@ -1405,17 +1425,7 @@ services:
 			},
 			isErrorExpected: false,
 		},
-		{
-			name: "only dev with service unsupported field",
-			manifest: []byte(`
-sync:
-  - app:/app
-services:
-  - name: svc
-    autocreate: true`),
-			expected:        nil,
-			isErrorExpected: true,
-		},
+
 		{
 			name: "only dev with errors",
 			manifest: []byte(`
@@ -1435,6 +1445,8 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				IsV2:  true,
+				Build: map[string]*BuildInfo{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1517,6 +1529,8 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				IsV2:  true,
+				Build: map[string]*BuildInfo{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1679,7 +1693,9 @@ deploy:
   - okteto stack deploy
 `),
 			expected: &Manifest{
-				Dev: map[string]*Dev{},
+				IsV2:  true,
+				Dev:   map[string]*Dev{},
+				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1701,7 +1717,9 @@ devs:
   - test
 `),
 			expected: &Manifest{
-				Dev: map[string]*Dev{},
+				IsV2:  true,
+				Dev:   map[string]*Dev{},
+				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1724,7 +1742,12 @@ devs:
 				t.Fatal("Expected error but got none")
 			}
 
+			if err == nil && manifest != nil {
+				manifest.CompleteManifest = nil
+			}
+
 			if !assert.Equal(t, tt.expected, manifest) {
+
 				t.Fatal("Failed")
 			}
 		})
@@ -1770,9 +1793,13 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 			deployInfoManifest: []byte(`commands:
 - okteto stack deploy`),
 			expected: &DeployInfo{
-				Commands: []DeployCommand{},
+				Commands: []DeployCommand{
+					DeployCommand{
+						Name:    "okteto stack deploy",
+						Command: "okteto stack deploy",
+					},
+				},
 			},
-			isErrorExpected: true,
 		},
 		{
 			name: "compose with endpoints",
