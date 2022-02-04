@@ -100,6 +100,7 @@ var (
 
 //Manifest represents an okteto manifest
 type Manifest struct {
+	Name      string        `json:"name,omitempty" yaml:"name,omitempty"`
 	Namespace string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Context   string        `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon      string        `json:"icon,omitempty" yaml:"icon,omitempty"`
@@ -122,8 +123,9 @@ type ManifestBuild map[string]*BuildInfo
 //NewManifest creates a new empty manifest
 func NewManifest() *Manifest {
 	return &Manifest{
-		Dev:   map[string]*Dev{},
-		Build: map[string]*BuildInfo{},
+		Dev:    map[string]*Dev{},
+		Build:  map[string]*BuildInfo{},
+		Deploy: &DeployInfo{},
 	}
 }
 
@@ -139,7 +141,7 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 	return manifest
 }
 
-//DeployInfo represents a deploy section
+//DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
 	Commands []string `json:"commands,omitempty" yaml:"commands,omitempty"`
 }

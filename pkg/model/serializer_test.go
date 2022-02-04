@@ -1229,7 +1229,8 @@ dev:
 sync:
   - app:/app`),
 			expected: &Manifest{
-				Build: map[string]*BuildInfo{},
+				Build:  map[string]*BuildInfo{},
+				Deploy: &DeployInfo{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1308,7 +1309,8 @@ sync:
 services:
   - name: svc`),
 			expected: &Manifest{
-				Build: map[string]*BuildInfo{},
+				Build:  map[string]*BuildInfo{},
+				Deploy: &DeployInfo{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",

@@ -17,8 +17,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"os"
-	"strconv"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -211,12 +209,4 @@ func LoadManifestV2WithContext(ctx context.Context, namespace, path string) erro
 	}
 
 	return NewContextCommand().Run(ctx, ctxOptions)
-}
-
-func IsManifestV2Enabled() bool {
-	r, err := strconv.ParseBool(os.Getenv("OKTETO_ENABLE_MANIFEST_V2"))
-	if err != nil {
-		return false
-	}
-	return r
 }
