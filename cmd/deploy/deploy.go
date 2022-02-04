@@ -45,6 +45,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 )
@@ -224,28 +225,16 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 		oktetoLog.Information("Checking to build services at manifest")
 
-		exit := make(chan error, 1)
-		numOfChecks := len(deployOptions.Manifest.Build)
+		g, ctx := errgroup.WithContext(ctx)
 		for service, mOptions := range deployOptions.Manifest.Build {
-
-			go func(service string, mOptions *model.BuildInfo) {
-				oktetoLog.Debugf("hello from goroutine %s", service)
-				err := buildFromManifest(ctx, service, mOptions, deployOptions)
-				if err != nil {
-					exit <- err
-					return
-				}
-				exit <- nil
-				return
-			}(service, mOptions)
+			service, mOptions := service, mOptions
+			g.Go(func() error {
+				return buildFromManifest(ctx, service, mOptions, deployOptions)
+			})
 
 		}
-
-		for i := 0; i < numOfChecks; i++ {
-			err := <-exit
-			if err != nil {
-				return err
-			}
+		if err := g.Wait(); err != nil {
+			return err
 		}
 	}
 
