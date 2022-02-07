@@ -94,7 +94,7 @@ func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernete
 		err := configmaps.Create(ctx, cmap, cmap.Namespace, c)
 		if err != nil {
 			if k8sErrors.IsAlreadyExists(err) {
-				return nil, fmt.Errorf("There is a pipeline operation already running")
+				return nil, errors.New("There is a pipeline operation already running")
 			}
 			return nil, err
 		}
@@ -105,7 +105,7 @@ func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernete
 	}
 	if err := configmaps.Deploy(ctx, cmap, cmap.Namespace, c); err != nil {
 		if k8sErrors.IsConflict(err) {
-			return nil, fmt.Errorf("There is a pipeline operation already running")
+			return nil, errors.New("There is a pipeline operation already running")
 		}
 		return nil, err
 	}
