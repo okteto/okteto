@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
@@ -328,10 +329,10 @@ func Test_setManifestEnvVars(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registryEnv := fmt.Sprintf("build.%s.registry", tt.service)
-			imageEnv := fmt.Sprintf("build.%s.image", tt.service)
-			repositoryEnv := fmt.Sprintf("build.%s.repository", tt.service)
-			tagEnv := fmt.Sprintf("build.%s.tag", tt.service)
+			registryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", strings.ToUpper(tt.service))
+			imageEnv := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(tt.service))
+			repositoryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", strings.ToUpper(tt.service))
+			tagEnv := fmt.Sprintf("OKTETO_BUILD_%s_TAG", strings.ToUpper(tt.service))
 
 			envs := []string{registryEnv, imageEnv, repositoryEnv, tagEnv}
 			for _, e := range envs {
