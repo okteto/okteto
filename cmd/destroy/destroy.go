@@ -198,7 +198,11 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 
 		if len(manifest.Dependencies) > 0 {
 			for depName := range manifest.Dependencies {
-				if _, err := pipeline.DestroyPipeline(ctx, depName, opts.DestroyVolumes); err != nil {
+				destOpts := &pipeline.DestroyOptions{
+					Name:           depName,
+					DestroyVolumes: opts.DestroyVolumes,
+				}
+				if err := pipeline.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
 					return err
 				}
 			}

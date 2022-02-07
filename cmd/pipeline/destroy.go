@@ -91,7 +91,7 @@ func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 		opts.Name = getPipelineName(repo)
 	}
 
-	resp, err := DestroyPipeline(ctx, opts.Name, opts.DestroyVolumes)
+	resp, err := destroyPipeline(ctx, opts.Name, opts.DestroyVolumes)
 	if err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 	}
 
 	if err := waitUntilDestroyed(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
-		oktetoLog.Information("Pipeline URL: %s", GetPipelineURL(resp.GitDeploy))
+		oktetoLog.Information("Pipeline URL: %s", getPipelineURL(resp.GitDeploy))
 		return err
 	}
 
@@ -111,8 +111,7 @@ func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 	return nil
 }
 
-// DestroyPipeline destroys the pipeline
-func DestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
+func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
 	spinner := utils.NewSpinner("Destroying your pipeline...")
 	spinner.Start()
 	defer spinner.Stop()

@@ -259,7 +259,14 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.Information("Checking to deploy dependencies at manifest")
 		for depName, dep := range deployOptions.Manifest.Dependencies {
 			if deployOptions.Dependencies {
-				if err := deployDependency(ctx, depName, dep); err != nil {
+				pipOpts := &pipeline.DeployOptions{
+					Name:       depName,
+					Repository: dep.Repository,
+					Branch:     dep.Branch,
+					File:       dep.ManifestPath,
+					Variables:  model.SerializeBuildArgs(dep.Variables),
+				}
+				if err := pipeline.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
 					return err
 				}
 				continue
@@ -411,35 +418,6 @@ func setManifestEnvVars(service, reference string) error {
 	return nil
 }
 
-func deployDependency(ctx context.Context, name string, dependency *model.Dependency) error {
-
-	pipOpts := &pipeline.DeployOptions{
-		Name:       name,
-		Repository: dependency.Repository,
-		Branch:     dependency.Branch,
-		File:       dependency.ManifestPath,
-		Variables:  model.SerializeBuildArgs(dependency.Variables),
-	}
-
-	resp, err := pipeline.DeployPipeline(ctx, pipOpts)
-	if err != nil {
-		return err
-	}
-	oktetoLog.Information("Pipeline URL: %s", pipeline.GetPipelineURL(resp.GitDeploy))
-
-	if !dependency.Wait {
-		oktetoLog.Success("Dependency '%s' scheduled for deployment", name)
-		return nil
-	}
-
-	timeout := (5 * time.Minute)
-	if err := pipeline.WaitUntilRunning(ctx, name, resp.Action, timeout); err != nil {
-		return err
-	}
-	oktetoLog.Success("Dependency '%s' successfully deployed", name)
-	return nil
-}
-
 func checkByNameAndDeployDependency(ctx context.Context, name string, dependency *model.Dependency) error {
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
@@ -452,7 +430,14 @@ func checkByNameAndDeployDependency(ctx context.Context, name string, dependency
 		return err
 	}
 
-	return deployDependency(ctx, name, dependency)
+	pipOpts := &pipeline.DeployOptions{
+		Name:       name,
+		Repository: dependency.Repository,
+		Branch:     dependency.Branch,
+		File:       dependency.ManifestPath,
+		Variables:  model.SerializeBuildArgs(dependency.Variables),
+	}
+	return pipeline.ExecuteDeployPipeline(ctx, pipOpts)
 }
 
 func (dc *DeployCommand) cleanUp(ctx context.Context) {
