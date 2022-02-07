@@ -327,10 +327,10 @@ func setManifestEnvVars(service, reference string) error {
 
 	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repo, image, tag)
 
-	os.Setenv(fmt.Sprintf("build.%s.registry", service), reg)
-	os.Setenv(fmt.Sprintf("build.%s.repository", service), repo)
-	os.Setenv(fmt.Sprintf("build.%s.image", service), reference)
-	os.Setenv(fmt.Sprintf("build.%s.tag", service), tag)
+	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", strings.ToUpper(service)), reg)
+	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", strings.ToUpper(service)), repo)
+	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(service)), reference)
+	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_TAG", strings.ToUpper(service)), tag)
 
 	oktetoLog.Debug("manifest env vars set")
 	return nil
