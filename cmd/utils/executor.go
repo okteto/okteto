@@ -38,7 +38,8 @@ type executorDisplayer interface {
 }
 
 type plainExecutorDisplayer struct {
-	scanner *bufio.Scanner
+	stdoutScanner *bufio.Scanner
+	stderrScanner *bufio.Scanner
 }
 type jsonExecutorDisplayer struct {
 	stdoutScanner *bufio.Scanner
@@ -83,25 +84,40 @@ func startCommand(cmd *exec.Cmd) error {
 }
 
 func (e *plainExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
-
-	reader, err := cmd.StdoutPipe()
+	stdoutReader, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
 	}
-	cmd.Stderr = cmd.Stdout
+	e.stdoutScanner = bufio.NewScanner(stdoutReader)
 
-	if err := startCommand(cmd); err != nil {
+	stderrReader, err := cmd.StderrPipe()
+	if err != nil {
 		return err
 	}
-	e.scanner = bufio.NewScanner(reader)
-	return nil
+	e.stderrScanner = bufio.NewScanner(stderrReader)
+	return startCommand(cmd)
 }
 
 func (e *plainExecutorDisplayer) display(_ string) {
-	for e.scanner.Scan() {
-		line := e.scanner.Text()
-		oktetoLog.Println(line)
-	}
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		for e.stdoutScanner.Scan() {
+			line := e.stdoutScanner.Text()
+
+			oktetoLog.Println(line)
+		}
+		wg.Done()
+	}()
+
+	go func() {
+		for e.stderrScanner.Scan() {
+			line := e.stderrScanner.Text()
+			oktetoLog.Warning(line)
+		}
+		wg.Done()
+	}()
+	wg.Wait()
 }
 
 func (e *jsonExecutorDisplayer) startCommand(cmd *exec.Cmd) error {
