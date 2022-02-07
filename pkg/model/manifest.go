@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/a8m/envsubst"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
@@ -420,20 +421,20 @@ func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 
 // ExpandEnvVars expands env vars to be set on the manifest
 func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
-	bytes := m.CompleteManifest
-	if len(bytes) == 0 {
-		var err error
-		bytes, err = yaml.Marshal(m)
+	var err error
+	for idx, cmd := range m.Deploy.Commands {
+		cmd.Command, err = ExpandEnv(cmd.Command)
 		if err != nil {
-			return m, err
+			return nil, errors.New("could not parse env vars")
 		}
+		m.Deploy.Commands[idx] = cmd
 	}
-
-	manifestExpandedBytes := os.ExpandEnv(string(bytes))
-
-	result, err := Read([]byte(manifestExpandedBytes))
-	if err != nil {
-		return m, err
+	for idx, cmd := range m.Destroy {
+		cmd.Command, err = envsubst.String(cmd.Command)
+		if err != nil {
+			return nil, errors.New("could not parse env vars")
+		}
+		m.Destroy[idx] = cmd
 	}
-	return result, nil
+	return m, nil
 }
