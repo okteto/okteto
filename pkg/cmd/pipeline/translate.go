@@ -83,18 +83,18 @@ type CfgData struct {
 	Icon       string
 }
 
-// TranslateConfigMap translates the app into a configMap
-func TranslateConfigMap(ctx context.Context, data *CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
+// TranslateConfigMapAndDeploy translates the app into a configMap
+func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(data.Name), data.Namespace, c)
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
 			return nil, err
 		}
-		cmap = translatedConfigMapSandBox(data)
+		cmap = translateConfigMapSandBox(data)
 		err := configmaps.Create(ctx, cmap, cmap.Namespace, c)
 		if err != nil {
 			if k8sErrors.IsAlreadyExists(err) {
-				return nil, fmt.Errorf("A new deploy operation has started")
+				return nil, fmt.Errorf("There is a pipeline operation already running")
 			}
 			return nil, err
 		}
@@ -105,7 +105,7 @@ func TranslateConfigMap(ctx context.Context, data *CfgData, c kubernetes.Interfa
 	}
 	if err := configmaps.Deploy(ctx, cmap, cmap.Namespace, c); err != nil {
 		if k8sErrors.IsConflict(err) {
-			return nil, fmt.Errorf("Another pipeline operation is being executed")
+			return nil, fmt.Errorf("There is a pipeline operation already running")
 		}
 		return nil, err
 	}
@@ -163,7 +163,8 @@ func translateOutput(output *bytes.Buffer) []byte {
 	return data
 }
 
-func translatedConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
+// translateConfigMapSandBox creates a configmap adding data from a config data
+func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 	cmap := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: data.Namespace,
@@ -202,7 +203,7 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 		actionName = actionDefaultName
 	}
 	if _, ok := cmap.Data[actionLockField]; ok {
-		return errors.New("There is a deploy operation already running")
+		return errors.New("There is a pipeline operation already running")
 	}
 	cmap.ObjectMeta.Labels[model.GitDeployLabel] = "true"
 	cmap.Data[nameField] = data.Name

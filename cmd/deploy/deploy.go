@@ -275,7 +275,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if err != nil {
 		return err
 	}
-	cfg, err := pipeline.TranslateConfigMap(ctx, data, c)
+	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
 	if err != nil {
 		return err
 	}

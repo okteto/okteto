@@ -151,6 +151,10 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 			Destroy: []model.DeployCommand{},
 		}
 	}
+	manifest, err = manifest.ExpandEnvVars()
+	if err != nil {
+		return err
+	}
 
 	k8sCfg := kubeconfig.Get(config.GetKubeconfigPath())
 	c, _, err := dc.k8sClientProvider.Provide(k8sCfg)
@@ -168,7 +172,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		Name:      opts.Name,
 		Namespace: namespace,
 		Status:    pipeline.DestroyingStatus}
-	cfg, err := pipeline.TranslateConfigMap(ctx, data, c)
+	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
 	if err != nil {
 		return err
 	}

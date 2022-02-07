@@ -66,7 +66,7 @@ func Test_translateConfigMap(t *testing.T) {
 				Namespace: namespace,
 				Status:    tt.status,
 			}
-			cfg, err := TranslateConfigMap(ctx, data, fakeClient)
+			cfg, err := TranslateConfigMapAndDeploy(ctx, data, fakeClient)
 
 			assert.Nil(t, err)
 			assert.Equal(t, cfg.Data[statusField], tt.status)
