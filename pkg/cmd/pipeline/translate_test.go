@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package pipeline
 
 import (
 	"context"
@@ -28,7 +28,7 @@ func Test_translateConfigMap(t *testing.T) {
 	namespace := "test"
 	cmap := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      TranslateAppName("test"),
+			Name:      TranslatePipelineName("test"),
 			Namespace: namespace,
 			Labels:    map[string]string{},
 		},

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package pipeline
 
 import (
 	"bufio"
@@ -29,6 +29,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -84,18 +85,28 @@ type CfgData struct {
 
 // TranslateConfigMap translates the app into a configMap
 func TranslateConfigMap(ctx context.Context, data *CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
-	cmap, err := configmaps.Get(ctx, TranslateAppName(data.Name), data.Namespace, c)
+	cmap, err := configmaps.Get(ctx, TranslatePipelineName(data.Name), data.Namespace, c)
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
 			return nil, err
 		}
 		cmap = translatedConfigMapSandBox(data)
-	} else {
-		if err := updateCmap(cmap, data); err != nil {
+		err := configmaps.Create(ctx, cmap, cmap.Namespace, c)
+		if err != nil {
+			if k8sErrors.IsAlreadyExists(err) {
+				return nil, fmt.Errorf("A new deploy operation has started")
+			}
 			return nil, err
 		}
 	}
+
+	if err := updateCmap(cmap, data); err != nil {
+		return nil, err
+	}
 	if err := configmaps.Deploy(ctx, cmap, cmap.Namespace, c); err != nil {
+		if k8sErrors.IsConflict(err) {
+			return nil, fmt.Errorf("Another pipeline operation is being executed")
+		}
 		return nil, err
 	}
 	return cmap, nil
@@ -116,12 +127,11 @@ func UpdateConfigMap(ctx context.Context, cmap *apiv1.ConfigMap, data *CfgData, 
 	if err := updateCmap(cmap, data); err != nil {
 		return err
 	}
-	delete(cmap.Data, actionLockField)
 	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 }
 
-//TranslateAppName translate the name into the pipeline name
-func TranslateAppName(name string) string {
+// TranslatePipelineName translate the name into the pipeline name
+func TranslatePipelineName(name string) string {
 	return fmt.Sprintf("okteto-git-%s", name)
 }
 
@@ -157,7 +167,7 @@ func translatedConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 	cmap := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: data.Namespace,
-			Name:      TranslateAppName(data.Name),
+			Name:      TranslatePipelineName(data.Name),
 			Labels: map[string]string{
 				model.GitDeployLabel: "true",
 			},
@@ -191,8 +201,8 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 	if actionName == "" {
 		actionName = actionDefaultName
 	}
-	if v, ok := cmap.Data[actionLockField]; ok && v != actionName {
-		return errors.New("There is a deploy already running")
+	if _, ok := cmap.Data[actionLockField]; ok {
+		return errors.New("There is a deploy operation already running")
 	}
 	cmap.ObjectMeta.Labels[model.GitDeployLabel] = "true"
 	cmap.Data[nameField] = data.Name

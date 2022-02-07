@@ -29,10 +29,10 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
-	"github.com/okteto/okteto/cmd/pipeline"
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/cmd/app"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -99,7 +99,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if shouldExecuteRemotely(options) {
-				remoteOpts := &pipeline.DeployOptions{
+				remoteOpts := &pipelineCMD.DeployOptions{
 					Branch:     options.Branch,
 					Repository: options.Repository,
 					Name:       options.Name,
@@ -109,7 +109,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 					Variables:  options.Variables,
 					Timeout:    options.Timeout,
 				}
-				return pipeline.ExecuteDeployPipeline(ctx, remoteOpts)
+				return pipelineCMD.ExecuteDeployPipeline(ctx, remoteOpts)
 			}
 			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
@@ -259,13 +259,13 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	dc.Proxy.Start()
 
 	oktetoLog.LogIntoBuffer("Deploying '%s'...", deployOptions.Name)
-	data := &app.CfgData{
+	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
 		Namespace:  deployOptions.Manifest.Namespace,
 		Repository: os.Getenv(model.GithubRepositoryEnvVar),
 		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
 		Filename:   deployOptions.Manifest.Filename,
-		Status:     app.ProgressingStatus,
+		Status:     pipeline.ProgressingStatus,
 		Manifest:   deployOptions.Manifest.Manifest,
 		Icon:       deployOptions.Manifest.Icon,
 	}
@@ -275,7 +275,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if err != nil {
 		return err
 	}
-	cfg, err := app.TranslateConfigMap(ctx, data, c)
+	cfg, err := pipeline.TranslateConfigMap(ctx, data, c)
 	if err != nil {
 		return err
 	}
@@ -300,13 +300,13 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	err = dc.deploy(deployOptions)
 	if err != nil {
 		oktetoLog.LogIntoBuffer("Deployment failed: %s", err.Error())
-		data.Status = app.ErrorStatus
+		data.Status = pipeline.ErrorStatus
 	} else {
 		oktetoLog.LogIntoBuffer("'%s' successfully deployed", deployOptions.Name)
-		data.Status = app.DeployedStatus
+		data.Status = pipeline.DeployedStatus
 	}
 
-	if err := app.UpdateConfigMap(ctx, cfg, data, c); err != nil {
+	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
 		return err
 	}
 	if err != nil {

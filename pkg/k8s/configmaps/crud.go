@@ -54,7 +54,7 @@ func Deploy(ctx context.Context, cf *apiv1.ConfigMap, namespace string, c kubern
 	old, err := Get(ctx, cf.Name, namespace, c)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
-			return create(ctx, cf, namespace, c)
+			return Create(ctx, cf, namespace, c)
 		}
 		return err
 	}
@@ -73,7 +73,8 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 	return nil
 }
 
-func create(ctx context.Context, cf *apiv1.ConfigMap, namespace string, c kubernetes.Interface) error {
+// Create creates a configmap in a space
+func Create(ctx context.Context, cf *apiv1.ConfigMap, namespace string, c kubernetes.Interface) error {
 	_, err := c.CoreV1().ConfigMaps(namespace).Create(ctx, cf, metav1.CreateOptions{})
 	if err != nil {
 		return err

@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
-	"github.com/okteto/okteto/pkg/cmd/app"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -218,10 +218,10 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, app.TranslateAppName(opts.Name), okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
-	assert.Equal(t, app.ErrorStatus, cfg.Data["status"])
+	assert.Equal(t, pipeline.ErrorStatus, cfg.Data["status"])
 }
 
 func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
@@ -244,7 +244,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	}
 	cmap := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      app.TranslateAppName(opts.Name),
+			Name:      pipeline.TranslatePipelineName(opts.Name),
 			Namespace: "test",
 		},
 		Data: map[string]string{
@@ -273,7 +273,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, app.TranslateAppName(opts.Name), okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
 }
@@ -323,10 +323,10 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, app.TranslateAppName(opts.Name), okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
-	assert.Equal(t, app.DeployedStatus, cfg.Data["status"])
+	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
 }
 
 func TestDeployWithoutErrors(t *testing.T) {
@@ -371,10 +371,10 @@ func TestDeployWithoutErrors(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, app.TranslateAppName(opts.Name), okteto.Context().Namespace, fakeClient)
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
 	assert.Nil(t, err)
 	assert.NotNil(t, cfg)
-	assert.Equal(t, app.DeployedStatus, cfg.Data["status"])
+	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
 }
 
 func getManifestWithError(_ string) (*model.Manifest, error) {

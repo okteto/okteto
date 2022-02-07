@@ -20,7 +20,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/cmd/app"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -164,11 +164,11 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	}
 
 	oktetoLog.LogIntoBuffer("Destroying...")
-	data := &app.CfgData{
+	data := &pipeline.CfgData{
 		Name:      opts.Name,
 		Namespace: namespace,
-		Status:    app.DestroyingStatus}
-	cfg, err := app.TranslateConfigMap(ctx, data, c)
+		Status:    pipeline.DestroyingStatus}
+	cfg, err := pipeline.TranslateConfigMap(ctx, data, c)
 	if err != nil {
 		return err
 	}
@@ -279,7 +279,7 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 	return nil
 }
 
-func setErrorStatus(ctx context.Context, cfg *v1.ConfigMap, data *app.CfgData, err error, c kubernetes.Interface) error {
+func setErrorStatus(ctx context.Context, cfg *v1.ConfigMap, data *pipeline.CfgData, err error, c kubernetes.Interface) error {
 	oktetoLog.LogIntoBuffer("Destruction failed: %s", err.Error())
-	return app.UpdateConfigMap(ctx, cfg, data, c)
+	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
 }
