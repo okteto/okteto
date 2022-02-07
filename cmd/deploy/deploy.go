@@ -211,6 +211,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return fmt.Errorf("deploy of dependencies is only available for Okteto instances")
 		}
 
+		oktetoLog.Information("Checking to build services at manifest")
 		if deployOptions.Manifest.Build != nil {
 
 			for service, mOptions := range deployOptions.Manifest.Build {
@@ -246,7 +247,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 				} else if err != nil {
 					return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
 				} else {
-					oktetoLog.Debug("image found, skipping build")
+					oktetoLog.Success("Skipping build for image for service %s found: %s", service, opts.Tag)
 					if err := setManifestEnvVars(service, imageWithDigest); err != nil {
 						return err
 					}
@@ -255,6 +256,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			}
 		}
 
+		oktetoLog.Information("Checking to deploy dependencies at manifest")
 		for depName, dep := range deployOptions.Manifest.Dependencies {
 			if deployOptions.Dependencies {
 				if err := deployDependency(ctx, depName, dep); err != nil {
@@ -383,7 +385,7 @@ func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (b
 }
 
 func runBuildAndSetEnvs(ctx context.Context, service string, options build.BuildOptions) error {
-	oktetoLog.Information("building image for service %s", service)
+	oktetoLog.Information("Building image for service %s", service)
 	if err := build.Run(ctx, options); err != nil {
 		return err
 	}
@@ -391,6 +393,7 @@ func runBuildAndSetEnvs(ctx context.Context, service string, options build.Build
 	if err != nil {
 		return fmt.Errorf("error checking image at registry %s: %v", options.Tag, err)
 	}
+	oktetoLog.Success("Image for service %s: %s", service, options.Tag)
 	return setManifestEnvVars(service, imageWithDigest)
 }
 
@@ -425,7 +428,7 @@ func deployDependency(ctx context.Context, name string, dependency *model.Depend
 	oktetoLog.Information("Pipeline URL: %s", pipeline.GetPipelineURL(resp.GitDeploy))
 
 	if !dependency.Wait {
-		oktetoLog.Success("Pipeline '%s' scheduled for deployment", name)
+		oktetoLog.Success("Dependency '%s' scheduled for deployment", name)
 		return nil
 	}
 
@@ -433,7 +436,7 @@ func deployDependency(ctx context.Context, name string, dependency *model.Depend
 	if err := pipeline.WaitUntilRunning(ctx, name, resp.Action, timeout); err != nil {
 		return err
 	}
-	oktetoLog.Success("Pipeline '%s' successfully deployed", name)
+	oktetoLog.Success("Dependency '%s' successfully deployed", name)
 	return nil
 }
 
@@ -443,7 +446,7 @@ func checkByNameAndDeployDependency(ctx context.Context, name string, dependency
 		return err
 	}
 	if _, err := oktetoClient.GetPipelineByName(ctx, name); err == nil {
-		oktetoLog.Success("Pipeline '%s' was already deployed", name)
+		oktetoLog.Success("Dependency '%s' was already deployed", name)
 		return nil
 	} else if !oktetoErrors.IsNotFound(err) {
 		return err
