@@ -310,7 +310,7 @@ func (c *OktetoClient) GetPipelineByRepository(ctx context.Context, repository s
 	}
 
 	for _, gitDeploy := range queryStruct.Pipeline.GitDeploys {
-		if areSameRepository(string(gitDeploy.Repository), repository) {
+		if AreSameRepository(string(gitDeploy.Repository), repository) {
 			pipeline := &types.GitDeployResponse{
 				GitDeploy: &types.GitDeploy{
 					ID:         string(gitDeploy.Id),
@@ -324,7 +324,7 @@ func (c *OktetoClient) GetPipelineByRepository(ctx context.Context, repository s
 	return nil, oktetoErrors.ErrNotFound
 }
 
-func areSameRepository(repoA, repoB string) bool {
+func AreSameRepository(repoA, repoB string) bool {
 	parsedRepoA, _ := giturls.Parse(repoA)
 	parsedRepoB, _ := giturls.Parse(repoB)
 
