@@ -280,7 +280,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
 	}
-	oktetoLog.SetStage("")
+	oktetoLog.SetStage("Successfully deployed")
+
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		if err := dc.showEndpoints(ctx, deployOptions); err != nil {
 			oktetoLog.Infof("could not retrieve endpoints: %s", err)
