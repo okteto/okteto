@@ -150,7 +150,7 @@ func (e *jsonExecutorDisplayer) display(command string) {
 	go func() {
 		for e.stderrScanner.Scan() {
 			line := e.stderrScanner.Text()
-			oktetoLog.Fail(line)
+			oktetoLog.Warning(line)
 		}
 		wg.Done()
 	}()
