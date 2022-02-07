@@ -23,28 +23,35 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-type kubeConfig struct{}
+//KubeConfig refers to a KubeConfig object
+type KubeConfig struct{}
 
-func newKubeConfig() *kubeConfig {
-	return &kubeConfig{}
+//NewKubeConfig creates a new kubeconfig
+func NewKubeConfig() *KubeConfig {
+	return &KubeConfig{}
 }
 
-func (k *kubeConfig) Read() (*rest.Config, error) {
+//Read reads a kubeconfig from an apiConfig
+func (k *KubeConfig) Read() (*rest.Config, error) {
 	return clientcmd.BuildConfigFromKubeconfigGetter("", k.getCMDAPIConfig)
 }
 
-func (k *kubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) error {
+//Modify modifies the kubeconfig object to inject the proxy
+func (k *KubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) error {
 	clientCfg, err := k.getCMDAPIConfig()
 	if err != nil {
 		return err
 	}
 
+	// We should change only the config for the proxy, not the one in Context.Cfg
+	proxyCfg := clientCfg.DeepCopy()
+
 	// Retrieve the auth info for the current context and change the bearer token to validate the request in our proxy
-	authInfo := clientCfg.AuthInfos[clientCfg.Contexts[clientCfg.CurrentContext].AuthInfo]
+	authInfo := proxyCfg.AuthInfos[proxyCfg.Contexts[proxyCfg.CurrentContext].AuthInfo]
 	// Setting the token with the proxy session token
 	authInfo.Token = sessionToken
 	// Retrieve cluster info for current context
-	clusterInfo := clientCfg.Clusters[clientCfg.Contexts[clientCfg.CurrentContext].Cluster]
+	clusterInfo := proxyCfg.Clusters[proxyCfg.Contexts[proxyCfg.CurrentContext].Cluster]
 
 	// Change server to our proxy
 	clusterInfo.Server = fmt.Sprintf("https://localhost:%d", port)
@@ -52,14 +59,14 @@ func (k *kubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) e
 	clusterInfo.CertificateAuthorityData = cert
 
 	// Save on disk the config changes
-	if err := clientcmd.WriteToFile(*clientCfg, destKubeconfigFile); err != nil {
+	if err := clientcmd.WriteToFile(*proxyCfg, destKubeconfigFile); err != nil {
 		oktetoLog.Errorf("could not modify the k8s config: %s", err)
 		return err
 	}
 	return nil
 }
 
-func (*kubeConfig) getCMDAPIConfig() (*clientcmdapi.Config, error) {
+func (*KubeConfig) getCMDAPIConfig() (*clientcmdapi.Config, error) {
 	if okteto.Context().Cfg == nil {
 		return nil, fmt.Errorf("okteto context not initialized")
 	}

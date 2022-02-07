@@ -18,11 +18,12 @@ import (
 	"os/exec"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 //ManifestExecutor is the interface to execute a command
 type ManifestExecutor interface {
-	Execute(command string, env []string) error
+	Execute(command model.DeployCommand, env []string) error
 	CleanUp(err error)
 }
 
@@ -58,15 +59,16 @@ func NewExecutor(output string) *Executor {
 }
 
 // Execute executes the specified command adding `env` to the execution environment
-func (e *Executor) Execute(command string, env []string) error {
-	cmd := exec.Command("bash", "-c", command)
+func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
+
+	cmd := exec.Command("bash", "-c", cmdInfo.Command)
 	cmd.Env = append(os.Environ(), env...)
 
 	if err := e.displayer.startCommand(cmd); err != nil {
 		return err
 	}
 
-	e.displayer.display(command)
+	e.displayer.display(cmdInfo.Command)
 
 	err := cmd.Wait()
 

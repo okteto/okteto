@@ -18,19 +18,28 @@ import (
 	"fmt"
 	"testing"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var fakeManifest *model.Manifest = &model.Manifest{
-	Destroy: []string{
-		"printenv",
-		"ls -la",
-		"cat /tmp/test.txt",
+	Destroy: []model.DeployCommand{
+		{
+			Name:    "printenv",
+			Command: "printenv",
+		},
+		{
+			Name:    "ls -la",
+			Command: "ls -la",
+		},
+		{
+			Name:    "cat /tmp/test.txt",
+			Command: "cat /tmp/test.txt",
+		},
 	},
 }
 
@@ -48,7 +57,7 @@ type fakeSecretHandler struct {
 
 type fakeExecutor struct {
 	err      error
-	executed []string
+	executed []model.DeployCommand
 }
 
 func (fd *fakeDestroyer) DestroyWithLabel(_ context.Context, _ string, _ namespaces.DeleteAllOptions) error {
@@ -77,7 +86,7 @@ func (fd *fakeSecretHandler) List(_ context.Context, _, _ string) ([]v1.Secret, 
 	return fd.secrets, nil
 }
 
-func (fe *fakeExecutor) Execute(command string, _ []string) error {
+func (fe *fakeExecutor) Execute(command model.DeployCommand, _ []string) error {
 	fe.executed = append(fe.executed, command)
 	if fe.err != nil {
 		return fe.err
@@ -87,12 +96,11 @@ func (fe *fakeExecutor) Execute(command string, _ []string) error {
 }
 
 func (*fakeExecutor) CleanUp(_ error) {}
-
-func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ string) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ string) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
 
@@ -102,18 +110,24 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 	opts := &Options{
 		Name: "test-app",
 	}
-	cwd := "/okteto/src"
 	destroyer := &fakeDestroyer{
 		errOnVolumes: assert.AnError,
 	}
-
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	cmd := &destroyCommand{
 		getManifest: getFakeManifest,
 		nsDestroyer: destroyer,
 		executor:    executor,
 	}
 
-	err := cmd.runDestroy(ctx, cwd, opts)
+	err := cmd.runDestroy(ctx, opts)
 
 	assert.Error(t, err)
 	assert.Equal(t, 3, len(executor.executed))
@@ -123,13 +137,20 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 
 func TestDestroyWithErrorListingSecrets(t *testing.T) {
 	ctx := context.Background()
-	cwd := "/okteto/src"
 	secretHandler := fakeSecretHandler{
 		err: assert.AnError,
 	}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	tests := []struct {
 		name        string
-		getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+		getManifest func(path string) (*model.Manifest, error)
 		want        int
 	}{
 		{
@@ -157,7 +178,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 				executor:    executor,
 			}
 
-			err := cmd.runDestroy(ctx, cwd, opts)
+			err := cmd.runDestroy(ctx, opts)
 
 			assert.Error(t, err)
 			assert.Equal(t, tt.want, len(executor.executed))
@@ -167,18 +188,25 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 
 func TestDestroyWithError(t *testing.T) {
 	ctx := context.Background()
-	cwd := "/okteto/src"
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	tests := []struct {
 		name        string
-		getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+		getManifest func(path string) (*model.Manifest, error)
 		secrets     []v1.Secret
-		want        []string
+		want        []model.DeployCommand
 	}{
 		{
 			name:        "WithoutSecretsWithoutManifest",
 			getManifest: getManifestWithError,
 			secrets:     []v1.Secret{},
-			want:        []string{},
+			want:        []model.DeployCommand{},
 		},
 		{
 			name:        "WithoutSecretsWithManifest",
@@ -196,7 +224,7 @@ func TestDestroyWithError(t *testing.T) {
 					},
 				},
 			},
-			want: []string{},
+			want: []model.DeployCommand{},
 		},
 		{
 			name:        "WithSecretsWithManifest",
@@ -225,8 +253,11 @@ func TestDestroyWithError(t *testing.T) {
 					Type: model.HelmSecretType,
 				},
 			},
-			want: []string{
-				fmt.Sprintf(helmUninstallCommand, "helm-app"),
+			want: []model.DeployCommand{
+				{
+					Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "helm-app"),
+				},
 			},
 		},
 		{
@@ -244,7 +275,10 @@ func TestDestroyWithError(t *testing.T) {
 					Type: model.HelmSecretType,
 				},
 			},
-			want: append(fakeManifest.Destroy, fmt.Sprintf(helmUninstallCommand, "helm-app")),
+			want: append(fakeManifest.Destroy, model.DeployCommand{
+				Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),
+				Command: fmt.Sprintf(helmUninstallCommand, "helm-app"),
+			}),
 		},
 	}
 
@@ -267,7 +301,7 @@ func TestDestroyWithError(t *testing.T) {
 				nsDestroyer: destroyer,
 			}
 
-			err := cmd.runDestroy(ctx, cwd, opts)
+			err := cmd.runDestroy(ctx, opts)
 
 			assert.Error(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
@@ -279,18 +313,25 @@ func TestDestroyWithError(t *testing.T) {
 
 func TestDestroyWithoutError(t *testing.T) {
 	ctx := context.Background()
-	cwd := "/okteto/src"
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	tests := []struct {
 		name        string
-		getManifest func(cwd string, opts contextCMD.ManifestOptions) (*model.Manifest, error)
+		getManifest func(path string) (*model.Manifest, error)
 		secrets     []v1.Secret
-		want        []string
+		want        []model.DeployCommand
 	}{
 		{
 			name:        "WithoutSecretsWithoutManifest",
 			getManifest: getManifestWithError,
 			secrets:     []v1.Secret{},
-			want:        []string{},
+			want:        []model.DeployCommand{},
 		},
 		{
 			name:        "WithoutSecretsWithManifest",
@@ -308,7 +349,7 @@ func TestDestroyWithoutError(t *testing.T) {
 					},
 				},
 			},
-			want: []string{},
+			want: []model.DeployCommand{},
 		},
 		{
 			name:        "WithSecretsWithManifest",
@@ -337,8 +378,11 @@ func TestDestroyWithoutError(t *testing.T) {
 					Type: model.HelmSecretType,
 				},
 			},
-			want: []string{
-				fmt.Sprintf(helmUninstallCommand, "helm-app"),
+			want: []model.DeployCommand{
+				{
+					Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "helm-app"),
+				},
 			},
 		},
 		{
@@ -376,10 +420,19 @@ func TestDestroyWithoutError(t *testing.T) {
 					Type: model.HelmSecretType,
 				},
 			},
-			want: []string{
-				fmt.Sprintf(helmUninstallCommand, "helm-app"),
-				fmt.Sprintf(helmUninstallCommand, "another-helm-app"),
-				fmt.Sprintf(helmUninstallCommand, "last-helm-app"),
+			want: []model.DeployCommand{
+				{
+					Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "helm-app"),
+				},
+				{
+					Name:    fmt.Sprintf(helmUninstallCommand, "another-helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "another-helm-app"),
+				},
+				{
+					Name:    fmt.Sprintf(helmUninstallCommand, "last-helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "last-helm-app"),
+				},
 			},
 		},
 		{
@@ -397,7 +450,7 @@ func TestDestroyWithoutError(t *testing.T) {
 					Type: model.HelmSecretType,
 				},
 			},
-			want: append(fakeManifest.Destroy, fmt.Sprintf(helmUninstallCommand, "helm-app")),
+			want: append(fakeManifest.Destroy, model.DeployCommand{Name: fmt.Sprintf(helmUninstallCommand, "helm-app"), Command: fmt.Sprintf(helmUninstallCommand, "helm-app")}),
 		},
 		{
 			name:        "WithSeveralHelmSecretsWithManifest",
@@ -436,9 +489,18 @@ func TestDestroyWithoutError(t *testing.T) {
 			},
 			want: append(
 				fakeManifest.Destroy,
-				fmt.Sprintf(helmUninstallCommand, "helm-app"),
-				fmt.Sprintf(helmUninstallCommand, "another-helm-app"),
-				fmt.Sprintf(helmUninstallCommand, "last-helm-app"),
+				model.DeployCommand{
+					Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "helm-app"),
+				},
+				model.DeployCommand{
+					Name:    fmt.Sprintf(helmUninstallCommand, "another-helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "another-helm-app"),
+				},
+				model.DeployCommand{
+					Name:    fmt.Sprintf(helmUninstallCommand, "last-helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "last-helm-app"),
+				},
 			),
 		},
 	}
@@ -460,7 +522,7 @@ func TestDestroyWithoutError(t *testing.T) {
 				nsDestroyer: destroyer,
 			}
 
-			err := cmd.runDestroy(ctx, cwd, opts)
+			err := cmd.runDestroy(ctx, opts)
 
 			assert.NoError(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
@@ -472,7 +534,14 @@ func TestDestroyWithoutError(t *testing.T) {
 
 func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 	ctx := context.Background()
-	cwd := "/okteto/src"
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	executor := &fakeExecutor{
 		err: assert.AnError,
 	}
@@ -491,7 +560,7 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 		nsDestroyer: destroyer,
 	}
 
-	err := cmd.runDestroy(ctx, cwd, opts)
+	err := cmd.runDestroy(ctx, opts)
 
 	assert.Error(t, err)
 	assert.Equal(t, 1, len(executor.executed))
@@ -501,7 +570,14 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 
 func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	ctx := context.Background()
-	cwd := "/okteto/src"
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	executor := &fakeExecutor{
 		err: assert.AnError,
 	}
@@ -520,7 +596,7 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 		nsDestroyer: destroyer,
 	}
 
-	err := cmd.runDestroy(ctx, cwd, opts)
+	err := cmd.runDestroy(ctx, opts)
 
 	assert.Error(t, err)
 	assert.ElementsMatch(t, fakeManifest.Destroy, executor.executed)

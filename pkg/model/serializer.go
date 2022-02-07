@@ -664,13 +664,13 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Namespace string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context   string        `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon      string        `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy    *DeployInfo   `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev       ManifestDevs  `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy   []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build     ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
+	Namespace string          `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context   string          `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon      string          `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy    *DeployInfo     `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev       ManifestDevs    `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy   []DeployCommand `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build     ManifestBuild   `json:"build,omitempty" yaml:"build,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
 }
@@ -687,7 +687,8 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	manifest := manifestRaw{
-		Dev: make(map[string]*Dev),
+		Dev:   map[string]*Dev{},
+		Build: map[string]*BuildInfo{},
 	}
 	err = unmarshal(&manifest)
 	if err != nil {
@@ -700,18 +701,74 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	d.Build = manifest.Build
 	d.Namespace = manifest.Namespace
 	d.Context = manifest.Context
+	d.IsV2 = true
 	return nil
 }
 
+func (d *DeployCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var command string
+	err := unmarshal(&command)
+	if err == nil {
+		d.Command = command
+		d.Name = command
+		return nil
+	}
+
+	//prevent recursion
+	type deployCommand DeployCommand
+	var extendedCommand deployCommand
+	err = unmarshal(&extendedCommand)
+	if err != nil {
+		return err
+	}
+	*d = DeployCommand(extendedCommand)
+	return nil
+}
+
+func (d *DeployInfo) MarshalYAML() (interface{}, error) {
+	isCommandList := true
+	for _, cmd := range d.Commands {
+		if cmd.Command != cmd.Name {
+			isCommandList = false
+		}
+	}
+	if isCommandList {
+		result := []string{}
+		for _, cmd := range d.Commands {
+			result = append(result, cmd.Command)
+		}
+		return result, nil
+	}
+	return d, nil
+}
+
 func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var commands []string
-	err := unmarshal(&commands)
+	var commandsString []string
+	err := unmarshal(&commandsString)
+	if err == nil {
+		d.Commands = []DeployCommand{}
+		for _, cmdString := range commandsString {
+			d.Commands = append(d.Commands, DeployCommand{
+				Name:    cmdString,
+				Command: cmdString,
+			})
+		}
+		return nil
+	}
+	var commands []DeployCommand
+	err = unmarshal(&commands)
 	if err == nil {
 		d.Commands = commands
 		return nil
-	} else {
+	}
+	type deployInfoRaw DeployInfo
+	var deploy deployInfoRaw
+	err = unmarshal(&deploy)
+	if err != nil {
 		return err
 	}
+	*d = DeployInfo(deploy)
+	return nil
 }
 
 type devRaw Dev

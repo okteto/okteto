@@ -24,8 +24,10 @@ import (
 
 	"github.com/moby/term"
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/deploy"
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
@@ -51,7 +53,7 @@ type UpOptions struct {
 	Namespace  string
 	K8sContext string
 	Remote     int
-	AutoDeploy bool
+	Deploy     bool
 	Build      bool
 	ForcePull  bool
 	Reset      bool
@@ -82,12 +84,6 @@ func Up() *cobra.Command {
 			}
 
 			checkLocalWatchesConfiguration()
-
-			if upOptions.AutoDeploy {
-				oktetoLog.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
-    Set the 'autocreate' field in your okteto manifest to get the same behavior.
-    More information is available here: https://okteto.com/docs/reference/cli/#up`)
-			}
 
 			ctx := context.Background()
 
@@ -147,10 +143,11 @@ func Up() *cobra.Command {
 			}
 
 			if _, ok := os.LookupEnv(model.OktetoAutoDeployEnvVar); ok {
-				upOptions.AutoDeploy = true
+				upOptions.Deploy = true
 			}
 
 			up := &upContext{
+				Manifest:       manifest,
 				Dev:            dev,
 				Exit:           make(chan error, 1),
 				resetSyncthing: upOptions.Reset,
@@ -166,6 +163,13 @@ func Up() *cobra.Command {
 					return fmt.Errorf("failed to save the state of the terminal")
 				}
 				oktetoLog.Infof("Terminal: %v", up.stateTerm)
+			}
+
+			if upOptions.Deploy {
+				if err := up.deployApp(ctx); err != nil {
+					return err
+				}
+				up.Dev.Autocreate = false
 			}
 
 			err = up.start()
@@ -192,8 +196,7 @@ func Up() *cobra.Command {
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().IntVarP(&upOptions.Remote, "remote", "r", 0, "configures remote execution on the specified port")
-	cmd.Flags().BoolVarP(&upOptions.AutoDeploy, "deploy", "d", false, "create deployment when it doesn't exist in a namespace")
-	cmd.Flags().MarkHidden("deploy")
+	cmd.Flags().BoolVarP(&upOptions.Deploy, "deploy", "d", false, "run deploy section of dev manifest")
 	cmd.Flags().BoolVarP(&upOptions.Build, "build", "", false, "build on-the-fly the dev image using the info provided by the 'build' okteto manifest field")
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
@@ -235,10 +238,6 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 		dev.LoadRemote(ssh.GetPublicKey())
 	}
 
-	if !dev.Autocreate {
-		dev.Autocreate = upOptions.AutoDeploy
-	}
-
 	if upOptions.ForcePull {
 		dev.LoadForcePull()
 	}
@@ -247,6 +246,28 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 	dev.RegistryURL = okteto.Context().Registry
 
 	return nil
+}
+
+func (up *upContext) deployApp(ctx context.Context) error {
+	kubeconfig := deploy.NewKubeConfig()
+	proxy, err := deploy.NewProxy(up.Manifest.Name, kubeconfig)
+	if err != nil {
+		return err
+	}
+
+	c := &deploy.DeployCommand{
+		GetManifest:        model.GetManifestV2,
+		Kubeconfig:         kubeconfig,
+		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat()),
+		Proxy:              proxy,
+		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
+		K8sClientProvider:  okteto.NewK8sClientProvider(),
+	}
+
+	return c.RunDeploy(ctx, &deploy.Options{
+		Name:         up.Manifest.Name,
+		ManifestPath: up.Manifest.Filename,
+	})
 }
 
 func (up *upContext) start() error {
