@@ -282,6 +282,12 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	defer dc.cleanUp(ctx)
 
+	for _, variable := range deployOptions.Variables {
+		value := strings.SplitN(variable, "=", 2)[1]
+		if strings.TrimSpace(value) != "" {
+			oktetoLog.AddMaskedWord(value)
+		}
+	}
 	deployOptions.Variables = append(
 		deployOptions.Variables,
 		// Set KUBECONFIG environment variable as environment for the commands to be executed
@@ -296,6 +302,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
+	oktetoLog.EnableMasking()
 
 	err = dc.deploy(deployOptions)
 	if err != nil {
@@ -305,6 +312,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.LogIntoBuffer("'%s' successfully deployed", deployOptions.Name)
 		data.Status = pipeline.DeployedStatus
 	}
+	oktetoLog.SetStage("")
+	oktetoLog.DisableMasking()
 
 	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
 		return err

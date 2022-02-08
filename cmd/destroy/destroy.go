@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -162,6 +163,14 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		return err
 	}
 
+	for _, variable := range opts.Variables {
+		value := strings.SplitN(variable, "=", 2)[1]
+		if strings.TrimSpace(value) != "" {
+			oktetoLog.AddMaskedWord(value)
+		}
+	}
+	oktetoLog.EnableMasking()
+
 	namespace := opts.Namespace
 	if namespace == "" {
 		namespace = okteto.Context().Namespace
@@ -199,6 +208,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 			commandErr = err
 		}
 	}
+	oktetoLog.DisableMasking()
 
 	deployedByLs, err := labels.NewRequirement(
 		model.DeployedByLabel,
