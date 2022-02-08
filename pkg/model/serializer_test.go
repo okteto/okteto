@@ -1743,7 +1743,7 @@ devs:
 			}
 
 			if err == nil && manifest != nil {
-				manifest.CompleteManifest = nil
+				manifest.Manifest = nil
 			}
 
 			if !assert.Equal(t, tt.expected, manifest) {

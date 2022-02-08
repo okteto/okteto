@@ -204,8 +204,8 @@ type Capabilities struct {
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
 type EnvVar struct {
-	Name  string `yaml:"name,omitempty"`
-	Value string `yaml:"value,omitempty"`
+	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
+	Value string `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
 // Secret represents a development secret

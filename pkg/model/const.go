@@ -76,6 +76,9 @@ const (
 	// DeployedByLabel indicates the service account that deployed an object
 	DeployedByLabel = "dev.okteto.com/deployed-by"
 
+	// GitDeployLabel indicates the object is an app
+	GitDeployLabel = "dev.okteto.com/git-deploy"
+
 	// StackLabel indicates the object is a stack
 	StackLabel = "stack.okteto.com"
 
@@ -303,6 +306,9 @@ const (
 
 	// BuildkitProgressEnvVar defines the output of buildkit
 	BuildkitProgressEnvVar = "BUILDKIT_PROGRESS"
+
+	// OktetoActionNameEnvVar defines the name of the pipeline action name
+	OktetoActionNameEnvVar = "OKTETO_ACTION_NAME"
 
 	// OktetoGitCommitPrefix prefix added to OKTETO_GIT_COMMIT when inferred by cli
 	OktetoGitCommitPrefix = "dev"

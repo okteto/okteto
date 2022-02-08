@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func Test_UrlToKubernetesContext(t *testing.T) {
@@ -45,7 +44,7 @@ func Test_K8sContextToOktetoUrl(t *testing.T) {
 	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fakeK8sProvider := test.NewFakeK8sProvider([]runtime.Object{})
+			fakeK8sProvider := test.NewFakeK8sProvider()
 			if result := K8sContextToOktetoUrl(ctx, tt.in, "namespace", fakeK8sProvider); result != tt.want {
 				t.Errorf("Test '%s' failed: %s", tt.name, result)
 			}

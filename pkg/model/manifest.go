@@ -112,10 +112,10 @@ type Manifest struct {
 	Destroy   []DeployCommand `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build     ManifestBuild   `json:"build,omitempty" yaml:"build,omitempty"`
 
-	Type             Archetype `json:"-" yaml:"-"`
-	Filename         string    `yaml:"-"`
-	CompleteManifest []byte    `json:"-" yaml:"-"`
-	IsV2             bool      `json:"-" yaml:"-"`
+	Type     Archetype `json:"-" yaml:"-"`
+	Filename string    `yaml:"-"`
+	Manifest []byte    `json:"-" yaml:"-"`
+	IsV2     bool      `json:"-" yaml:"-"`
 }
 
 //ManifestDevs defines all the dev section
@@ -409,7 +409,7 @@ func Read(bytes []byte) (*Manifest, error) {
 		}
 		b.setBuildDefaults()
 	}
-	manifest.CompleteManifest = bytes
+	manifest.Manifest = bytes
 	return manifest, nil
 }
 
@@ -422,19 +422,24 @@ func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 // ExpandEnvVars expands env vars to be set on the manifest
 func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 	var err error
-	for idx, cmd := range m.Deploy.Commands {
-		cmd.Command, err = ExpandEnv(cmd.Command)
-		if err != nil {
-			return nil, errors.New("could not parse env vars")
+	if m.Deploy != nil {
+		for idx, cmd := range m.Deploy.Commands {
+			cmd.Command, err = ExpandEnv(cmd.Command)
+			if err != nil {
+				return nil, errors.New("could not parse env vars")
+			}
+			m.Deploy.Commands[idx] = cmd
 		}
-		m.Deploy.Commands[idx] = cmd
 	}
-	for idx, cmd := range m.Destroy {
-		cmd.Command, err = envsubst.String(cmd.Command)
-		if err != nil {
-			return nil, errors.New("could not parse env vars")
+	if m.Destroy != nil {
+		for idx, cmd := range m.Destroy {
+			cmd.Command, err = envsubst.String(cmd.Command)
+			if err != nil {
+				return nil, errors.New("could not parse env vars")
+			}
+			m.Destroy[idx] = cmd
 		}
-		m.Destroy[idx] = cmd
 	}
+
 	return m, nil
 }

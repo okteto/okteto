@@ -31,7 +31,7 @@ import (
 
 func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObjects []runtime.Object) *ContextCommand {
 	return &ContextCommand{
-		K8sClientProvider:    test.NewFakeK8sProvider(fakeObjects),
+		K8sClientProvider:    test.NewFakeK8sProvider(fakeObjects...),
 		LoginController:      test.NewFakeLoginController(user, nil),
 		OktetoClientProvider: client.NewFakeOktetoClientProvider(c),
 		OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
