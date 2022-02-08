@@ -1,96 +1,88 @@
-# Contributions
+# Contributing to Okteto CLI
 
-Interested in contributing? As an open source project, we'd appreciate any help and contributions!
-
-We follow the standard [GitHub pull request process](https://help.github.com/articles/about-pull-requests/). We'll try to review your contributions as soon as possible.
+Thank you for showing interest in contributing to Okteto CLI! We appreciate all kinds of contributions, suggestions, and feedback.
 
 ## Code of Conduct
 
-This project adheres to the Contributor Covenant [code of conduct](code-of-conduct.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to hello@okteto.com.
+This project adheres to the Contributor Covenant [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report any unacceptable behavior to hello@okteto.com.
 
-## File an Issue
+## Ways to contribute
 
-Not ready to contribute code, but see something that needs work? While we encourage everyone to contribute code, it is also appreciated when someone reports an issue. We use [GitHub issues](https://github.com/okteto/okteto/issues) for this.
+### Reporting Issues
 
-## Report security issues
+Reporting issues is a great way to help the project! This isn't just limited to reporting bugs but can also include features requests or suggestions for improvements in current behavior. We use [GitHub issues](https://github.com/okteto/okteto/issues) for tracking all such things. But if you want to report a sensitive security issue or a security exploit, you can directly contact the project maintainers on hello@okteto.com or via [a Twitter DM](https://twitter.com/oktetoHQ).
 
-If you want to report a sensitive security issue, or a security exploit, you can directly contact the project maintainers via [Twitter DM](https://twitter.com/oktetoHQ) or via hello@okteto.com.
+### Contributing Code
 
-## Pull Requests
+When contributing features or bug fixes to Okteto CLI, it'll be helpful to keep the following things in mind:
 
-When submitting a pull request, please make sure that it adheres to the following standard.
+- Communicating your changes before you start working
+- Including unit tests whenever relevant
+- Making sure your code passes the [lint checks](#lint)
+- Signing off on all your git commits by running `git commit -s'
+- Documenting all Go public types, structs, and functions in your code
 
-1. Code should be go fmt compliant.
-1. Public types, structs and funcs should be documented.
-1. It includes pertinent unit tests.
-1. Commits are signed-off (`git commit --signoff or -s`).
-1. It includes the whole template for issues and pull requests.
-1. It [references addressed issues](https://help.github.com/en/github/managing-your-work-on-github/closing-issues-using-keywords) in the PR description & commit messages.
-1. It has clear commit messages.
+Discussing your changes with the maintainers before implementation is one of the most important steps, as this sets you in the right direction before you begin. The best way to communicate this is through a detailed GitHub issue. Another way to discuss changes with maintainers is using the [#okteto](https://kubernetes.slack.com/messages/CM1QMQGS0/) channel on the Kubernetes slack.
 
-## Sign your work
+#### Making a Pull Request
 
-The sign-off is a simple line at the end of the explanation for a patch. Your signature certifies that you wrote the patch or otherwise have the right to pass it on as an open-source patch. The rules are pretty simple: if you can certify the below (from [developercertificate.org](https://developercertificate.org)):
+The following steps will walk you through the process of opening your first pull request:
+
+##### Create a clone of your fork
+
+Head over to the project repository on GitHub and click the **"Fork"** button. This allows you to work on your own copy of the project without being affected by the changes on the main repository. Once you've forked the project, clone it using:
 
 ```
-Developer Certificate of Origin
-Version 1.1
-
-Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
-1 Letterman Drive
-Suite D4700
-San Francisco, CA, 94129
-
-Everyone is permitted to copy and distribute verbatim copies of this
-license document, but changing it is not allowed.
-
-
-Developer's Certificate of Origin 1.1
-
-By making a contribution to this project, I certify that:
-
-(a) The contribution was created in whole or in part by me and I
-    have the right to submit it under the open source license
-    indicated in the file; or
-
-(b) The contribution is based upon previous work that, to the best
-    of my knowledge, is covered under an appropriate open source
-    license and I have the right under that license to submit that
-    work with modifications, whether created in whole or in part
-    by me, under the same open source license (unless I am
-    permitted to submit under a different license), as indicated
-    in the file; or
-
-(c) The contribution was provided directly to me by some other
-    person who certified (a), (b) or (c) and I have not modified
-    it.
-
-(d) I understand and agree that this project and the contribution
-    are public and that a record of the contribution (including all
-    personal information I submit with it, including my sign-off) is
-    maintained indefinitely and may be redistributed consistent with
-    this project or the open source license(s) involved.
+git clone https://github.com/YOUR-USERNAME/okteto.git
 ```
 
-Then you just add a line to every git commit message:
+##### Create a branch
+
+Creating a new branch for each feature/bugfix on your project fork is recommended. You can do this using:
+
+```
+git checkout -b <branch-name>
+```
+
+##### Commit and push your changes
+
+Once you've made your changes, you can stage them using:
+
+```
+git add .
+```
+
+After that, you'll need to commit them. For contributors to certify that they wrote or otherwise have the right to submit the code they are contributing to the project, we require them to acknowledge this by signing their work, which indicates they agree to the DCO found [here](https://developercertificate.org/).
+
+To sign your work, just add a line like this at the end of your commit message:
 
 ```
 Signed-off-by: Cindy Lopez <cindy.lopez@okteto.com>
 ```
 
-If you set your `user.name` and `user.email` git configs, you can sign your commit automatically with `git commit -s`.
+This can easily be done with the `-s' command-line option to append this automatically to your commit message.
 
-## Code of Conduct
+```
+git commit -s -m 'Meaningful commit message'
+```
 
-Please make sure to read and observe our [code of conduct](code-of-conduct.md).
+> In order to use the `-s' flag for auto signing the commits, you'll need to set your `user.name`and`user.email` git configs
 
-# Development Guide
+Finally, you can push your changes to GitHub using:
+
+```
+git push origin <branch-name>
+```
+
+Once you do that and visit the repository, you should see a button on the GitHub UI prompting you to make a PR.
+
+## Development Guide
 
 Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.17](https://golang.org/doc/go1.17). It uses go modules for dependency management.
 
-## Build
+### Building
 
-To start working on Okteto, simply fork this repository, clone the okteto repository locally, and run the following command at the root of the project:
+Once you've made your changes, you might want to build a binary of the Okteto CLI containing your changes to test them out. This can be done by running the following command at the root of the project:
 
 ```
 make
@@ -102,9 +94,9 @@ This will create the `okteto` binary in the `bin` folder. You can execute the bi
 bin/okteto
 ```
 
-After you make changes, simply run `make` again to recompile your changes.
+After you make more changes, simply run `make` again to recompile your changes.
 
-## Test
+### Testing
 
 Unit tests for the project can be executed by running:
 
@@ -122,19 +114,19 @@ make integration
 
 These tests will use your Kubernetes context to create a namespace and all the required k8s resources.
 
-## Lint
+### Linting
 
-Before submitting your changes, we recommend to lint the code by running:
+Before making a PR, we recommend contributors to run a lint check on their code by running:
 
 ```
 make lint
 ```
 
-The same command runs as part of CI on every PR.
+The same command also runs as part of CI on every PR.
 
 > This command requires that you have [golangci-lint](https://github.com/golangci/golangci-lint#install) available on your `$PATH`.
 
-## pre-commit
+### pre-commit
 
 A framework for managing and maintaining multi-language pre-commit hooks.
 Pre-commit can be [installed](https://pre-commit.com/#installation) with
@@ -156,7 +148,7 @@ To update use `pre-commit autoupdate`
 - [Usage](https://pre-commit.com/#usage)
 - [pre-commit-autoupdate](https://pre-commit.com/#pre-commit-autoupdate)
 
-## Spell checking
+### Spell checking
 
 We are running [misspell](https://github.com/client9/misspell) which is mainly written in
 [Golang](https://golang.org/) to check spelling with [GitHub Actions](.github/workflows/lint.yml). Correct
@@ -171,7 +163,7 @@ Notable `misspell` help options or flags are:
 We also run [codespell](https://github.com/codespell-project/codespell) with `pre-commit` to check spelling and
 [codespell](https://pypi.org/project/codespell/) runs against a [small custom dictionary](codespell.txt).
 
-## Linting/Style
+### Linting/Style
 
 We use `pre-commit` to lint our Markdown and YAML files, and we use:
 
