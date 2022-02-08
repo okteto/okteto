@@ -273,7 +273,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 				}
 				continue
 			}
-			if err := checkByNameAndDeployDependency(ctx, depName, dep, pipOpts); err != nil {
+			if err := checkByNameAndDeployDependency(ctx, depName, pipOpts); err != nil {
 				return err
 			}
 		}
@@ -420,7 +420,7 @@ func setManifestEnvVars(service, reference string) error {
 	return nil
 }
 
-func checkByNameAndDeployDependency(ctx context.Context, name string, dependency *model.Dependency, pipOpts *pipelineCMD.DeployOptions) error {
+func checkByNameAndDeployDependency(ctx context.Context, name string, pipOpts *pipelineCMD.DeployOptions) error {
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return err
