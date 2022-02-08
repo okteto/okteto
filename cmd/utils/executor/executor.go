@@ -68,7 +68,7 @@ func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 		return err
 	}
 
-	e.displayer.display(cmdInfo.Command)
+	e.displayer.display(cmdInfo.Name)
 
 	err := cmd.Wait()
 
