@@ -422,19 +422,24 @@ func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 // ExpandEnvVars expands env vars to be set on the manifest
 func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 	var err error
-	for idx, cmd := range m.Deploy.Commands {
-		cmd.Command, err = ExpandEnv(cmd.Command)
-		if err != nil {
-			return nil, errors.New("could not parse env vars")
+	if m.Deploy != nil {
+		for idx, cmd := range m.Deploy.Commands {
+			cmd.Command, err = ExpandEnv(cmd.Command)
+			if err != nil {
+				return nil, errors.New("could not parse env vars")
+			}
+			m.Deploy.Commands[idx] = cmd
 		}
-		m.Deploy.Commands[idx] = cmd
 	}
-	for idx, cmd := range m.Destroy {
-		cmd.Command, err = envsubst.String(cmd.Command)
-		if err != nil {
-			return nil, errors.New("could not parse env vars")
+	if m.Destroy != nil {
+		for idx, cmd := range m.Destroy {
+			cmd.Command, err = envsubst.String(cmd.Command)
+			if err != nil {
+				return nil, errors.New("could not parse env vars")
+			}
+			m.Destroy[idx] = cmd
 		}
-		m.Destroy[idx] = cmd
 	}
+
 	return m, nil
 }
