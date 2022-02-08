@@ -20,7 +20,7 @@ import (
 	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/cmd/pipeline"
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -198,11 +198,11 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 
 		if len(manifest.Dependencies) > 0 {
 			for depName := range manifest.Dependencies {
-				destOpts := &pipeline.DestroyOptions{
+				destOpts := &pipelineCMD.DestroyOptions{
 					Name:           depName,
 					DestroyVolumes: opts.DestroyVolumes,
 				}
-				if err := pipeline.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
+				if err := pipelineCMD.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
 					return err
 				}
 			}

@@ -258,22 +258,22 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 		oktetoLog.Information("Checking to deploy dependencies at manifest")
 		for depName, dep := range deployOptions.Manifest.Dependencies {
+			pipOpts := &pipelineCMD.DeployOptions{
+				Name:       depName,
+				Repository: dep.Repository,
+				Branch:     dep.Branch,
+				File:       dep.ManifestPath,
+				Variables:  model.SerializeBuildArgs(dep.Variables),
+				Wait:       dep.Wait,
+				Timeout:    deployOptions.Timeout,
+			}
 			if deployOptions.Dependencies {
-				pipOpts := &pipeline.DeployOptions{
-					Name:       depName,
-					Repository: dep.Repository,
-					Branch:     dep.Branch,
-					File:       dep.ManifestPath,
-					Variables:  model.SerializeBuildArgs(dep.Variables),
-					Wait:       dep.Wait,
-					Timeout:    deployOptions.Timeout,
-				}
-				if err := pipeline.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+				if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
 					return err
 				}
 				continue
 			}
-			if err := checkByNameAndDeployDependency(ctx, depName, dep); err != nil {
+			if err := checkByNameAndDeployDependency(ctx, depName, dep, pipOpts); err != nil {
 				return err
 			}
 		}
@@ -420,7 +420,7 @@ func setManifestEnvVars(service, reference string) error {
 	return nil
 }
 
-func checkByNameAndDeployDependency(ctx context.Context, name string, dependency *model.Dependency) error {
+func checkByNameAndDeployDependency(ctx context.Context, name string, dependency *model.Dependency, pipOpts *pipelineCMD.DeployOptions) error {
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return err
@@ -432,14 +432,7 @@ func checkByNameAndDeployDependency(ctx context.Context, name string, dependency
 		return err
 	}
 
-	pipOpts := &pipeline.DeployOptions{
-		Name:       name,
-		Repository: dependency.Repository,
-		Branch:     dependency.Branch,
-		File:       dependency.ManifestPath,
-		Variables:  model.SerializeBuildArgs(dependency.Variables),
-	}
-	return pipeline.ExecuteDeployPipeline(ctx, pipOpts)
+	return pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts)
 }
 
 func (dc *DeployCommand) cleanUp(ctx context.Context) {
