@@ -52,6 +52,13 @@ var (
 
 	questionSymbol        = " ? "
 	coloredQuestionSymbol = color.New(color.BgHiMagenta, color.FgBlack).Sprint(questionSymbol)
+
+	// InfoLevel is the json level for information
+	InfoLevel = "info"
+	// WarningLevel is the json level for warning
+	WarningLevel = "warn"
+	// ErrorLevel is the json level for error
+	ErrorLevel = "error"
 )
 
 type logger struct {
@@ -300,8 +307,7 @@ func GetOutputBuffer() *bytes.Buffer {
 	return log.buf
 }
 
-// LogIntoBuffer logs into the buffer but does not print anything
-func LogIntoBuffer(format string, args ...interface{}) {
-	log.writer.Infof(format, args)
-	log.writer.LogIntoBuffer(format, args...)
+// AddToBuffer logs into the buffer but does not print anything
+func AddToBuffer(level, format string, args ...interface{}) {
+	log.writer.AddToBuffer(level, format, args...)
 }

@@ -109,13 +109,13 @@ func (e *ttyExecutor) displayStdout() {
 				sanitizedLine := strings.ReplaceAll(line, cursorUp, "")
 				sanitizedLine = strings.ReplaceAll(sanitizedLine, resetLine, "")
 				e.linesToDisplay = append(e.linesToDisplay[:e.buildingpreviousLines-1], sanitizedLine)
-
 			} else {
 				if len(e.linesToDisplay) == e.numberOfLines {
 					e.linesToDisplay = e.linesToDisplay[1:]
 				}
 				e.linesToDisplay = append(e.linesToDisplay, line)
 			}
+			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, line)
 			continue
 		}
 		break
@@ -144,6 +144,7 @@ func (e *ttyExecutor) displayStderr() {
 				e.linesToDisplay = e.linesToDisplay[1:]
 			}
 			e.linesToDisplay = append(e.linesToDisplay, line)
+			oktetoLog.AddToBuffer(oktetoLog.WarningLevel, line)
 			continue
 		}
 		break
@@ -277,6 +278,5 @@ func (e *ttyExecutor) reset() {
 	e.err = nil
 
 	e.linesToDisplay = []string{}
-	e.screenbuf = nil
-
+	e.screenbuf.Reset()
 }

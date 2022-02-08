@@ -261,7 +261,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
 	dc.Proxy.Start()
 
-	oktetoLog.LogIntoBuffer("Deploying '%s'...", deployOptions.Name)
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deploying '%s'...", deployOptions.Name)
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
 		Namespace:  deployOptions.Manifest.Namespace,
@@ -328,10 +328,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	case err := <-exit:
 		oktetoLog.SetStage("")
 		if err != nil {
-			oktetoLog.LogIntoBuffer("Deployment failed: %s", err.Error())
+			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deployment failed: %s", err.Error())
 			data.Status = pipeline.ErrorStatus
 		} else {
-			oktetoLog.LogIntoBuffer("'%s' successfully deployed", deployOptions.Name)
+			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "'%s' successfully deployed", deployOptions.Name)
 			data.Status = pipeline.DeployedStatus
 		}
 		oktetoLog.SetStage("")
@@ -358,10 +358,13 @@ func (dc *DeployCommand) deploy(opts *Options) error {
 	for _, command := range opts.Manifest.Deploy.Commands {
 		oktetoLog.SetStage(command.Name)
 		if err := dc.Executor.Execute(command, opts.Variables); err != nil {
-			oktetoLog.Infof("error executing command '%s': %s", command.Name, err.Error())
+			oktetoLog.Fail("error executing command '%s': %s", command.Name, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
 	}
+
+	oktetoLog.SetStage("done")
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
 	oktetoLog.SetStage("")
 
 	return nil

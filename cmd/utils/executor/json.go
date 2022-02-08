@@ -71,7 +71,7 @@ func (e *jsonExecutor) display(command string) {
 				break
 			default:
 				line := e.stderrScanner.Text()
-				oktetoLog.Fail(line)
+				oktetoLog.Warning(line)
 				continue
 			}
 			break

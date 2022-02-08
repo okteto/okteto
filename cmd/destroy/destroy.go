@@ -182,7 +182,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		namespace = okteto.Context().Namespace
 	}
 
-	oktetoLog.LogIntoBuffer("Destroying...")
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destroying...")
 	data := &pipeline.CfgData{
 		Name:      opts.Name,
 		Namespace: namespace,
@@ -207,7 +207,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	go func() {
 		for _, command := range manifest.Destroy {
 			if err := dc.executor.Execute(command, opts.Variables); err != nil {
-				oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
+				oktetoLog.Fail("error executing command '%s': %s", command, err.Error())
 				if !opts.ForceDestroy {
 					if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
 						exit <- err
@@ -320,6 +320,6 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 }
 
 func setErrorStatus(ctx context.Context, cfg *v1.ConfigMap, data *pipeline.CfgData, err error, c kubernetes.Interface) error {
-	oktetoLog.LogIntoBuffer("Destruction failed: %s", err.Error())
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destruction failed: %s", err.Error())
 	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
 }
