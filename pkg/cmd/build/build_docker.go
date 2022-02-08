@@ -130,6 +130,8 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions BuildOption
 			dockerBuildOptions.Tags = append(dockerBuildOptions.Tags, buildOptions.Tag)
 		}
 
+		dockerBuildOptions.Target = buildOptions.Target
+
 		for _, buildArg := range buildOptions.BuildArgs {
 			kv := strings.SplitN(buildArg, "=", 2)
 			if len(kv) != 2 {

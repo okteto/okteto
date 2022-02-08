@@ -326,8 +326,8 @@ func (dc *DeployCommand) deploy(opts *Options) error {
 	for _, command := range opts.Manifest.Deploy.Commands {
 		oktetoLog.SetStage(command.Name)
 		if err := dc.Executor.Execute(command, opts.Variables); err != nil {
-			oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
-			return fmt.Errorf("error executing command '%s': %s", command, err.Error())
+			oktetoLog.Infof("error executing command '%s': %s", command.Name, err.Error())
+			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
 	}
 	oktetoLog.SetStage("")
@@ -372,10 +372,10 @@ func setManifestEnvVars(service, reference string) error {
 
 	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repo, image, tag)
 
-	os.Setenv(fmt.Sprintf("build.%s.registry", service), reg)
-	os.Setenv(fmt.Sprintf("build.%s.repository", service), repo)
-	os.Setenv(fmt.Sprintf("build.%s.image", service), reference)
-	os.Setenv(fmt.Sprintf("build.%s.tag", service), tag)
+	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", strings.ToUpper(service)), reg)
+	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", strings.ToUpper(service)), repo)
+	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(service)), reference)
+	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_TAG", strings.ToUpper(service)), tag)
 
 	oktetoLog.Debug("manifest env vars set")
 	return nil
@@ -559,6 +559,7 @@ func (dc *DeployCommand) showEndpoints(ctx context.Context, opts *Options) error
 			return len(eps[i]) < len(eps[j])
 		})
 		oktetoLog.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
+
 	}
 	return nil
 }
