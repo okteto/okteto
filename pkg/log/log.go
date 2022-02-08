@@ -14,6 +14,7 @@
 package log
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -58,8 +59,11 @@ type logger struct {
 	file   *logrus.Entry
 	writer OktetoWriter
 
-	stage       string
-	outputMode  string
+	stage      string
+	outputMode string
+
+	buf *bytes.Buffer
+
 	maskedWords []string
 	isMasked    bool
 	replacer    *strings.Replacer
@@ -82,6 +86,7 @@ func Init(level logrus.Level) {
 	log.out.SetLevel(level)
 	log.writer = log.getWriter(TTYFormat)
 	log.maskedWords = []string{}
+	log.buf = &bytes.Buffer{}
 }
 
 //ConfigureFileLogger configures the file to write
@@ -283,4 +288,15 @@ func redactMessage(message string) string {
 		return log.replacer.Replace(message)
 	}
 	return message
+}
+
+//GetOutputBuffer returns the buffer of the running command
+func GetOutputBuffer() *bytes.Buffer {
+	return log.buf
+}
+
+// LogIntoBuffer logs into the buffer but does not print anything
+func LogIntoBuffer(format string, args ...interface{}) {
+	log.writer.Infof(format, args)
+	log.writer.LogIntoBuffer(format, args...)
 }

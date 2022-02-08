@@ -21,6 +21,10 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/configmaps"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -30,6 +34,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -63,9 +68,10 @@ type Options struct {
 type destroyCommand struct {
 	getManifest func(path string) (*model.Manifest, error)
 
-	executor    utils.ManifestExecutor
-	nsDestroyer destroyer
-	secrets     secretHandler
+	executor          utils.ManifestExecutor
+	nsDestroyer       destroyer
+	secrets           secretHandler
+	k8sClientProvider okteto.K8sClientProvider
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -118,9 +124,10 @@ func Destroy(ctx context.Context) *cobra.Command {
 			c := &destroyCommand{
 				getManifest: model.GetManifestV2,
 
-				executor:    utils.NewExecutor(oktetoLog.GetOutputFormat()),
-				nsDestroyer: namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
-				secrets:     secrets.NewSecrets(k8sClient),
+				executor:          utils.NewExecutor(oktetoLog.GetOutputFormat()),
+				nsDestroyer:       namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
+				secrets:           secrets.NewSecrets(k8sClient),
+				k8sClientProvider: okteto.NewK8sClientProvider(),
 			}
 			return c.runDestroy(ctx, options)
 		},
@@ -145,6 +152,16 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 			Destroy: []model.DeployCommand{},
 		}
 	}
+	manifest, err = manifest.ExpandEnvVars()
+	if err != nil {
+		return err
+	}
+
+	k8sCfg := kubeconfig.Get(config.GetKubeconfigPath())
+	c, _, err := dc.k8sClientProvider.Provide(k8sCfg)
+	if err != nil {
+		return err
+	}
 
 	for _, variable := range opts.Variables {
 		value := strings.SplitN(variable, "=", 2)[1]
@@ -153,6 +170,21 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		}
 	}
 	oktetoLog.EnableMasking()
+
+	namespace := opts.Namespace
+	if namespace == "" {
+		namespace = okteto.Context().Namespace
+	}
+
+	oktetoLog.LogIntoBuffer("Destroying...")
+	data := &pipeline.CfgData{
+		Name:      opts.Name,
+		Namespace: namespace,
+		Status:    pipeline.DestroyingStatus}
+	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
+	if err != nil {
+		return err
+	}
 	if manifest.Context == "" {
 		manifest.Context = okteto.Context().Name
 	}
@@ -166,6 +198,9 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		if err := dc.executor.Execute(command, opts.Variables); err != nil {
 			oktetoLog.Infof("error executing command '%s': %s", command, err.Error())
 			if !opts.ForceDestroy {
+				if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
+					return err
+				}
 				return err
 			}
 
@@ -181,6 +216,9 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		[]string{opts.Name},
 	)
 	if err != nil {
+		if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
+			return err
+		}
 		return err
 	}
 	deployedBySelector := labels.NewSelector().Add(*deployedByLs).String()
@@ -190,11 +228,17 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	}
 
 	if err := dc.nsDestroyer.DestroySFSVolumes(ctx, opts.Namespace, deleteOpts); err != nil {
+		if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
+			return err
+		}
 		return err
 	}
 
 	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
 		if !opts.ForceDestroy {
+			if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
+				return err
+			}
 			return err
 		}
 	}
@@ -202,9 +246,15 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	oktetoLog.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
 	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
 		oktetoLog.Infof("could not delete all the resources: %s", err)
+		if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
+			return err
+		}
 		return err
 	}
 
+	if err := configmaps.Destroy(ctx, cfg.Name, namespace, c); err != nil {
+		return err
+	}
 	return commandErr
 }
 
@@ -241,4 +291,9 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 	}
 
 	return nil
+}
+
+func setErrorStatus(ctx context.Context, cfg *v1.ConfigMap, data *pipeline.CfgData, err error, c kubernetes.Interface) error {
+	oktetoLog.LogIntoBuffer("Destruction failed: %s", err.Error())
+	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
 }

@@ -41,6 +41,7 @@ type OktetoWriter interface {
 	Printf(format string, a ...interface{})
 
 	IsInteractive() bool
+	LogIntoBuffer(format string, a ...interface{})
 }
 
 const (
