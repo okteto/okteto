@@ -147,16 +147,25 @@ func (w *PlainWriter) Println(args ...interface{}) {
 
 // Fprintf prints a line with format
 func (w *PlainWriter) Fprintf(format string, a ...interface{}) {
-	fmt.Fprintf(w.out.Out, format, a...)
+	msg := fmt.Sprintf(format, a...)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
+	fmt.Fprint(w.out.Out, msg)
 }
 
 // Fprintln prints a line with format
 func (w *PlainWriter) Fprintln(args ...interface{}) {
+	msg := fmt.Sprint(args...)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
 	fmt.Fprintln(w.out.Out, args...)
 }
 
 // Print writes a line with colors
 func (w *PlainWriter) Print(args ...interface{}) {
+	msg := fmt.Sprint(args...)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
 	fmt.Fprint(w.out.Out, args...)
 }
 
@@ -168,4 +177,11 @@ func (w *PlainWriter) Printf(format string, a ...interface{}) {
 //IsInteractive checks if the writer is interactive
 func (*PlainWriter) IsInteractive() bool {
 	return false
+}
+
+//LogIntoBuffer logs into the buffer but does not print anything
+func (*PlainWriter) LogIntoBuffer(format string, a ...interface{}) {
+	msg := fmt.Sprintf(format, a...)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
 }

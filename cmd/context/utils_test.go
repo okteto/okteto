@@ -205,7 +205,7 @@ build:
 				assert.NotNil(t, err)
 			} else {
 				m.Filename = ""
-				m.CompleteManifest = nil
+				m.Manifest = nil
 				assert.EqualValues(t, tt.expectedManifest, m)
 			}
 
