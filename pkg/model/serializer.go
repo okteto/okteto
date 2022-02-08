@@ -16,6 +16,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	giturls "github.com/whilp/git-urls"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -682,6 +684,41 @@ type dependenciesRaw struct {
 	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
 	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
 	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
+}
+
+func getRepoNameFromGitURL(repo *url.URL) string {
+	repoPath := strings.Split(strings.TrimPrefix(repo.Path, "/"), "/")
+	return strings.ReplaceAll(repoPath[1], ".git", "")
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (md *ManifestDependencies) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawList []string
+	err := unmarshal(&rawList)
+	if err == nil {
+		rawMd := ManifestDependencies{}
+		for _, repo := range rawList {
+			r, err := giturls.Parse(repo)
+			if err != nil {
+				return err
+			}
+			name := getRepoNameFromGitURL(r)
+			rawMd[name] = &Dependency{
+				Repository: r.String(),
+			}
+		}
+		*md = rawMd
+		return nil
+	}
+
+	type manifestDependencies ManifestDependencies
+	var rawMap manifestDependencies
+	err = unmarshal(&rawMap)
+	if err != nil {
+		return err
+	}
+	*md = ManifestDependencies(rawMap)
+	return nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.

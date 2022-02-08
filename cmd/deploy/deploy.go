@@ -265,6 +265,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 					Branch:     dep.Branch,
 					File:       dep.ManifestPath,
 					Variables:  model.SerializeBuildArgs(dep.Variables),
+					Wait:       dep.Wait,
+					Timeout:    deployOptions.Timeout,
 				}
 				if err := pipeline.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
 					return err
