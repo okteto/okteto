@@ -15,12 +15,17 @@ package deploy
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
+	"github.com/google/uuid"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 type proxyConfig struct {
@@ -28,20 +33,69 @@ type proxyConfig struct {
 	token string
 }
 
-type proxy struct {
+//Proxy refers to a proxy configuration
+type Proxy struct {
 	s           *http.Server
 	proxyConfig proxyConfig
 }
 
-func newProxy(proxyConfig proxyConfig, s *http.Server) *proxy {
-	return &proxy{
-		proxyConfig: proxyConfig,
-		s:           s,
+//NewProxy creates a new proxy
+func NewProxy(name string, kubeconfig *KubeConfig) (*Proxy, error) {
+	// Look for a free local port to start the proxy
+	port, err := model.GetAvailablePort("localhost")
+	if err != nil {
+		oktetoLog.Errorf("could not find a free port to start proxy server: %s", err)
+		return nil, err
 	}
+	oktetoLog.Debugf("found available port %d", port)
+
+	// Generate a token for the requests done to the proxy
+	sessionToken := uuid.NewString()
+
+	clusterConfig, err := kubeconfig.Read()
+	if err != nil {
+		oktetoLog.Errorf("could not read kubeconfig file: %s", err)
+		return nil, err
+	}
+
+	handler, err := getProxyHandler(name, sessionToken, clusterConfig)
+	if err != nil {
+		oktetoLog.Errorf("could not configure local proxy: %s", err)
+		return nil, err
+	}
+
+	// TODO for now, using self-signed certificates
+	cert, err := tls.X509KeyPair(cert, key)
+	if err != nil {
+		oktetoLog.Errorf("could not read certificate: %s", err)
+		return nil, err
+	}
+
+	s := &http.Server{
+		Addr:         fmt.Sprintf(":%d", port),
+		Handler:      handler,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		TLSConfig: &tls.Config{
+			Certificates: []tls.Certificate{cert},
+
+			// Recommended security configuration by DeepSource
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: tls.VersionTLS13,
+		},
+	}
+	return &Proxy{
+		proxyConfig: proxyConfig{
+			port:  port,
+			token: sessionToken,
+		},
+		s: s,
+	}, nil
 }
 
 // Start starts the proxy server
-func (p *proxy) Start() {
+func (p *Proxy) Start() {
 	go func() {
 		sigint := make(chan os.Signal, 1)
 		signal.Notify(sigint, syscall.SIGTERM, syscall.SIGINT)
@@ -63,7 +117,7 @@ func (p *proxy) Start() {
 }
 
 // Shutdown stops the proxy server
-func (p *proxy) Shutdown(ctx context.Context) error {
+func (p *Proxy) Shutdown(ctx context.Context) error {
 	if p.s == nil {
 		return nil
 	}
@@ -72,11 +126,11 @@ func (p *proxy) Shutdown(ctx context.Context) error {
 }
 
 // GetPort retrieves the port configured for the proxy
-func (p *proxy) GetPort() int {
+func (p *Proxy) GetPort() int {
 	return p.proxyConfig.port
 }
 
 // GetToken Retrieves the token configured for the proxy
-func (p *proxy) GetToken() string {
+func (p *Proxy) GetToken() string {
 	return p.proxyConfig.token
 }
