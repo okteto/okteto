@@ -6,11 +6,11 @@ Thank you for showing interest in contributing to Okteto CLI! We appreciate all 
 
 This project adheres to the Contributor Covenant [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report any unacceptable behavior to hello@okteto.com.
 
-## Ways to contribute
+## Ways To Contribute
 
 ### Reporting Issues
 
-Reporting issues is a great way to help the project! This isn't just limited to reporting bugs but can also include features requests or suggestions for improvements in current behavior. We use [GitHub issues](https://github.com/okteto/okteto/issues) for tracking all such things. But if you want to report a sensitive security issue or a security exploit, you can directly contact the project maintainers on hello@okteto.com or via [a Twitter DM](https://twitter.com/oktetoHQ).
+Reporting issues is a great way to help the project! This isn't just limited to reporting bugs but can also include feature requests or suggestions for improvements in current behavior. We use [GitHub issues](https://github.com/okteto/okteto/issues) for tracking all such things. But if you want to report a sensitive security issue or a security exploit, you can directly contact the project maintainers on hello@okteto.com or via [a Twitter DM](https://twitter.com/oktetoHQ).
 
 ### Contributing Code
 
@@ -19,7 +19,7 @@ When contributing features or bug fixes to Okteto CLI, it'll be helpful to keep 
 - Communicating your changes before you start working
 - Including unit tests whenever relevant
 - Making sure your code passes the [lint checks](#lint)
-- Signing off on all your git commits by running `git commit -s'
+- Signing off on all your git commits by running `git commit -s`
 - Documenting all Go public types, structs, and functions in your code
 
 Discussing your changes with the maintainers before implementation is one of the most important steps, as this sets you in the right direction before you begin. The best way to communicate this is through a detailed GitHub issue. Another way to discuss changes with maintainers is using the [#okteto](https://kubernetes.slack.com/messages/CM1QMQGS0/) channel on the Kubernetes slack.
@@ -28,7 +28,7 @@ Discussing your changes with the maintainers before implementation is one of the
 
 The following steps will walk you through the process of opening your first pull request:
 
-##### Create a clone of your fork
+##### Create a Clone of Your Fork
 
 Head over to the project repository on GitHub and click the **"Fork"** button. This allows you to work on your own copy of the project without being affected by the changes on the main repository. Once you've forked the project, clone it using:
 
@@ -36,7 +36,7 @@ Head over to the project repository on GitHub and click the **"Fork"** button. T
 git clone https://github.com/YOUR-USERNAME/okteto.git
 ```
 
-##### Create a branch
+##### Create a Branch
 
 Creating a new branch for each feature/bugfix on your project fork is recommended. You can do this using:
 
@@ -44,7 +44,7 @@ Creating a new branch for each feature/bugfix on your project fork is recommende
 git checkout -b <branch-name>
 ```
 
-##### Commit and push your changes
+##### Commit and Push Your Changes
 
 Once you've made your changes, you can stage them using:
 
@@ -126,6 +126,11 @@ The same command also runs as part of CI on every PR.
 
 > This command requires that you have [golangci-lint](https://github.com/golangci/golangci-lint#install) available on your `$PATH`.
 
+We also use `pre-commit` to lint our Markdown and YAML files using the following linters:
+
+- [markdowlint-cli](https://github.com/igorshubovych/markdownlint-cli)
+- [yamllint](https://yamllint.readthedocs.io/en/stable/index.html)
+
 ### pre-commit
 
 A framework for managing and maintaining multi-language pre-commit hooks.
@@ -150,22 +155,11 @@ To update use `pre-commit autoupdate`
 
 ### Spell checking
 
-We are running [misspell](https://github.com/client9/misspell) which is mainly written in
-[Golang](https://golang.org/) to check spelling with [GitHub Actions](.github/workflows/lint.yml). Correct
-commonly misspelled English words quickly with `misspell`. `misspell` is different from most other spell checkers
-because it doesn't use a custom dictionary. You can run `misspell` locally against all files with:
+We are running [misspell](https://github.com/client9/misspell) to check for spelling errors using [GitHub Actions](.github/workflows/lint.yml). You can run this locally against all files using `misspell .` after [grabbing](https://github.com/client9/misspell#install) the `misspell` binary.
 
-Notable `misspell` help options or flags are:
+Some useful `misspell` flags:
 
-- `-i` string: ignore the following corrections, comma separated
+- `-i` string: ignore the following corrections, comma-separated
 - `-w`: Overwrite file with corrections (default is just to display)
 
-We also run [codespell](https://github.com/codespell-project/codespell) with `pre-commit` to check spelling and
-[codespell](https://pypi.org/project/codespell/) runs against a [small custom dictionary](codespell.txt).
-
-### Linting/Style
-
-We use `pre-commit` to lint our Markdown and YAML files, and we use:
-
-- [markdowlint-cli](https://github.com/igorshubovych/markdownlint-cli) - [npm](https://www.npmjs.com/package/markdownlint-cli) based and lints [Markdown](https://daringfireball.net/projects/markdown/) files using [markdownlint](https://github.com/DavidAnson/markdownlint)
-- [yamllint](https://yamllint.readthedocs.io/en/stable/index.html) - Lints [YAML](https://yaml.org/) files and is written in [Python](https://www.python.org/)
+We also run [codespell](https://github.com/codespell-project/codespell) to check spellings against a [small custom dictionary](codespell.txt).
