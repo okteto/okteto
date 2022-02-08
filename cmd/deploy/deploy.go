@@ -224,18 +224,46 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 
 		oktetoLog.Information("Checking to build services at manifest")
+		if deployOptions.Build {
+			// force build of all services
+			for service, mBuildInfo := range deployOptions.Manifest.Build {
+				if err := runBuildAndSetEnvs(ctx, service, mBuildInfo); err != nil {
+					return err
+				}
+			}
 
-		g, ctx := errgroup.WithContext(ctx)
-		for service, mOptions := range deployOptions.Manifest.Build {
-			service, mOptions := service, mOptions
-			g.Go(func() error {
-				return buildFromManifest(ctx, service, mOptions, deployOptions)
-			})
+		} else {
+			// check if images are at registry (global or dev) and set envs or send to build
+			toBuild := make(chan string, len(deployOptions.Manifest.Build))
+
+			g, gctx := errgroup.WithContext(ctx)
+			for service, mBuildInfo := range deployOptions.Manifest.Build {
+				service, mBuildInfo := service, mBuildInfo
+				g.Go(func() error {
+					return checkServicesToBuild(gctx, service, mBuildInfo, toBuild)
+				})
+			}
+
+			if err := g.Wait(); err != nil {
+				return err
+			}
+
+			for {
+				select {
+				case svc := <-toBuild:
+					mBuildInfo := deployOptions.Manifest.Build[svc]
+					if err := runBuildAndSetEnvs(ctx, svc, mBuildInfo); err != nil {
+						return err
+					}
+					continue
+				default:
+					break
+				}
+				break
+			}
 
 		}
-		if err := g.Wait(); err != nil {
-			return err
-		}
+
 	}
 
 	oktetoLog.Information("Checking to deploy dependencies at manifest")
@@ -398,8 +426,10 @@ func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (b
 
 }
 
-func runBuildAndSetEnvs(ctx context.Context, service string, options build.BuildOptions) error {
+func runBuildAndSetEnvs(ctx context.Context, service string, buildInfo *model.BuildInfo) error {
 	oktetoLog.Information("Building image for service %s", service)
+
+	options := build.OptsFromManifest(service, buildInfo, build.BuildOptions{})
 	if err := build.Run(ctx, options); err != nil {
 		return err
 	}
@@ -407,7 +437,8 @@ func runBuildAndSetEnvs(ctx context.Context, service string, options build.Build
 	if err != nil {
 		return fmt.Errorf("error checking image at registry %s: %v", options.Tag, err)
 	}
-	oktetoLog.Success("Image for service %s: %s", service, options.Tag)
+
+	oktetoLog.Success("Image for service %s built and pushed to registry: %s", service, options.Tag)
 	return setManifestEnvVars(service, imageWithDigest)
 }
 
@@ -668,21 +699,8 @@ func shouldExecuteRemotely(options *Options) bool {
 	return options.Branch != "" || options.Repository != ""
 }
 
-func buildFromManifest(ctx context.Context, service string, mOptions *model.BuildInfo, deployOptions *Options) error {
-	buildOptions := build.BuildOptions{OutputMode: oktetoLog.GetOutputFormat()}
-	if mOptions.Name == "" {
-		mOptions.Name = deployOptions.Name
-	}
-	opts := build.OptsFromManifest(service, mOptions, buildOptions)
-
-	if deployOptions.Build {
-		oktetoLog.Information("Building image for service %s", service)
-		if err := runBuildAndSetEnvs(ctx, service, opts); err != nil {
-			return err
-		}
-		oktetoLog.Success("Image for service %s built and pushed to registry: %s", service, opts.Tag)
-		return nil
-	}
+func checkServicesToBuild(ctx context.Context, service string, mOptions *model.BuildInfo, ch chan string) error {
+	opts := build.OptsFromManifest(service, mOptions, build.BuildOptions{})
 
 	if build.ShouldOptimizeBuild(opts.Tag) {
 		oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
@@ -696,17 +714,11 @@ func buildFromManifest(ctx context.Context, service string, mOptions *model.Buil
 
 	imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
 	if err == oktetoErrors.ErrNotFound {
-		oktetoLog.Information("Image for service %s not found, building %s", service, opts.Tag)
-		if err := runBuildAndSetEnvs(ctx, service, opts); err != nil {
-			return err
-		}
-		oktetoLog.Success("Image for service %s built and pushed to registry: %s", service, opts.Tag)
+		ch <- service
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
 	}
-	if err := setManifestEnvVars(service, imageWithDigest); err != nil {
-		return err
-	}
-	return nil
+
+	return setManifestEnvVars(service, imageWithDigest)
 }
