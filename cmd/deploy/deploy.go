@@ -538,7 +538,8 @@ func (dc *DeployCommand) showEndpoints(ctx context.Context, opts *Options) error
 		sort.Slice(eps, func(i, j int) bool {
 			return len(eps[i]) < len(eps[j])
 		})
-		oktetoLog.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
+		oktetoLog.Information("Endpoints available:")
+		oktetoLog.Printf("  - %s\n", strings.Join(eps, "\n  - "))
 	}
 	return nil
 }
