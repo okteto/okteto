@@ -131,6 +131,9 @@ var (
 
 	// ErrNoServicesinOktetoManifest raised when no services are defined in the okteto manifest
 	ErrNoServicesinOktetoManifest = fmt.Errorf("'okteto restart' is only supported when using the field 'services'")
+
+	// ErrManifestFoundButNoDeployCommands raised when a manifest is found but no deploy commands are defined
+	ErrManifestFoundButNoDeployCommands = errors.New("found okteto manifest, but no deploy commands where defined")
 )
 
 // IsForbidden raised if the Okteto API returns 401
