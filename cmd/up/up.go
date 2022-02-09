@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
@@ -168,11 +169,14 @@ func Up() *cobra.Command {
 				return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
 			}
 
-			if upOptions.Deploy {
-				if err := up.deployApp(ctx); err != nil {
+			if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
+				err := up.deployApp(ctx)
+				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
 					return err
 				}
-				up.Dev.Autocreate = false
+				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
+					up.Dev.Autocreate = false
+				}
 			}
 
 			err = up.start()
@@ -568,4 +572,8 @@ func printDisplayContext(dev *model.Dev, divertURL string) {
 		oktetoLog.Println(fmt.Sprintf("    %s       %s", oktetoLog.BlueString("URL:"), divertURL))
 	}
 	oktetoLog.Println()
+}
+
+func (up *upContext) isAppRunning(ctx context.Context) {
+
 }

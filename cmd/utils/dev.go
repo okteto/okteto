@@ -75,6 +75,13 @@ func LoadManifest(devPath string) (*model.Manifest, error) {
 		}
 		manifest.Name = InferApplicationName(cwd)
 	}
+	if manifest.Namespace == "" {
+		manifest.Namespace = okteto.Context().Namespace
+	}
+
+	if manifest.Context == "" {
+		manifest.Context = okteto.Context().Name
+	}
 
 	for _, dev := range manifest.Dev {
 		if err := loadManifestRc(dev); err != nil {
