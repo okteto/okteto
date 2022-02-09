@@ -163,6 +163,10 @@ func Up() *cobra.Command {
 				}
 				oktetoLog.Infof("Terminal: %v", up.stateTerm)
 			}
+			up.Client, up.RestConfig, err = okteto.GetK8sClient()
+			if err != nil {
+				return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
+			}
 
 			if upOptions.Deploy {
 				if err := up.deployApp(ctx); err != nil {
@@ -270,11 +274,6 @@ func (up *upContext) deployApp(ctx context.Context) error {
 }
 
 func (up *upContext) start() error {
-	var err error
-	up.Client, up.RestConfig, err = okteto.GetK8sClient()
-	if err != nil {
-		return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
-	}
 
 	ctx := context.Background()
 
