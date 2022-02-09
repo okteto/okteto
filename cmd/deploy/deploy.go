@@ -32,6 +32,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -181,7 +182,12 @@ func Deploy(ctx context.Context) *cobra.Command {
 				tempKubeconfigFile: fmt.Sprintf(tempKubeConfigTemplate, config.GetUserHomeDir(), options.Name),
 				k8sClientProvider:  okteto.NewK8sClientProvider(),
 			}
-			return c.runDeploy(ctx, cwd, options)
+
+			startTime := time.Now()
+			err = c.runDeploy(ctx, cwd, options)
+			duration := time.Since(startTime)
+			analytics.TrackDeploy(err == nil, utils.IsOktetoRepo(), err, duration, "pipeline")
+			return err
 		},
 	}
 
@@ -209,7 +215,6 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 			return err
 		}
 		oktetoLog.Debug("found okteto manifest")
-
 		if opts.Manifest.Deploy == nil {
 			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
 		}
