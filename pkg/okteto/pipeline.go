@@ -325,8 +325,14 @@ func (c *OktetoClient) GetPipelineByRepository(ctx context.Context, repository s
 }
 
 func AreSameRepository(repoA, repoB string) bool {
-	parsedRepoA, _ := giturls.Parse(repoA)
-	parsedRepoB, _ := giturls.Parse(repoB)
+	parsedRepoA, err := giturls.Parse(repoA)
+	if err != nil {
+		return false
+	}
+	parsedRepoB, err := giturls.Parse(repoB)
+	if err != nil {
+		return false
+	}
 
 	if parsedRepoA.Hostname() != parsedRepoB.Hostname() {
 		return false
