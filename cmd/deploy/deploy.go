@@ -262,29 +262,27 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 		}
 
-	}
-
-	oktetoLog.Information("Checking to deploy dependencies at manifest")
-	for depName, dep := range deployOptions.Manifest.Dependencies {
-		pipOpts := &pipelineCMD.DeployOptions{
-			Name:       depName,
-			Repository: dep.Repository,
-			Branch:     dep.Branch,
-			File:       dep.ManifestPath,
-			Variables:  model.SerializeBuildArgs(dep.Variables),
-			Wait:       dep.Wait,
-			Timeout:    deployOptions.Timeout,
-		}
-		if deployOptions.Dependencies {
-			if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+		oktetoLog.Information("Checking to deploy dependencies at manifest")
+		for depName, dep := range deployOptions.Manifest.Dependencies {
+			pipOpts := &pipelineCMD.DeployOptions{
+				Name:       depName,
+				Repository: dep.Repository,
+				Branch:     dep.Branch,
+				File:       dep.ManifestPath,
+				Variables:  model.SerializeBuildArgs(dep.Variables),
+				Wait:       dep.Wait,
+				Timeout:    deployOptions.Timeout,
+			}
+			if deployOptions.Dependencies {
+				if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+					return err
+				}
+				continue
+			}
+			if err := checkByNameAndDeployDependency(ctx, depName, pipOpts); err != nil {
 				return err
 			}
-			continue
 		}
-		if err := checkByNameAndDeployDependency(ctx, depName, pipOpts); err != nil {
-			return err
-		}
-
 	}
 
 	deployOptions.Manifest, err = deployOptions.Manifest.ExpandEnvVars()
