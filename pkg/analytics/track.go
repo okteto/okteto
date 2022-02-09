@@ -254,7 +254,7 @@ func TrackDestroyStack(success bool) {
 }
 
 // TrackDeploy sends a tracking event to mixpanel when the user deploys a pipeline from local
-func TrackDeploy(success, isOktetoRepo bool, err error, duration time.Duration, pipelineType model.Archetype) {
+func TrackDeploy(success, isOktetoRepo bool, err error, duration time.Duration, pipelineType string) {
 	if pipelineType == "" {
 		pipelineType = "pipeline"
 	}
