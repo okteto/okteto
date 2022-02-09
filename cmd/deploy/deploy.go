@@ -247,17 +247,19 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			if err := g.Wait(); err != nil {
 				return err
 			}
+			close(toBuild)
 
 			for {
 				select {
 				case svc := <-toBuild:
+					if svc == "" {
+						break
+					}
 					mBuildInfo := deployOptions.Manifest.Build[svc]
 					if err := runBuildAndSetEnvs(ctx, svc, mBuildInfo); err != nil {
 						return err
 					}
 					continue
-				default:
-					break
 				}
 				break
 			}
