@@ -218,44 +218,42 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
-	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
-		if deployOptions.Dependencies && !okteto.IsOkteto() {
-			return fmt.Errorf("deploy of dependencies is only available for Okteto instances")
-		}
+	if deployOptions.Dependencies && !okteto.IsOkteto() {
+		return fmt.Errorf("deploy of dependencies is only available for Okteto instances")
+	}
 
-		if deployOptions.Build {
-			oktetoLog.Information("Building services at manifest")
-			for service, mBuildInfo := range deployOptions.Manifest.Build {
-				oktetoLog.Debug("force build from manifest definition")
-				if err := runBuildAndSetEnvs(ctx, service, mBuildInfo); err != nil {
-					return err
-				}
-			}
-
-		} else if err := checkBuildFromManifest(ctx, deployOptions.Manifest.Build); err != nil {
-			return err
-		}
-
-		oktetoLog.Information("Checking to deploy dependencies at manifest")
-		for depName, dep := range deployOptions.Manifest.Dependencies {
-			pipOpts := &pipelineCMD.DeployOptions{
-				Name:       depName,
-				Repository: dep.Repository,
-				Branch:     dep.Branch,
-				File:       dep.ManifestPath,
-				Variables:  model.SerializeBuildArgs(dep.Variables),
-				Wait:       dep.Wait,
-				Timeout:    deployOptions.Timeout,
-			}
-			if deployOptions.Dependencies {
-				if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
-					return err
-				}
-				continue
-			}
-			if err := checkByNameAndDeployDependency(ctx, depName, pipOpts); err != nil {
+	if deployOptions.Build {
+		oktetoLog.Information("Building services at manifest")
+		for service, mBuildInfo := range deployOptions.Manifest.Build {
+			oktetoLog.Debug("force build from manifest definition")
+			if err := runBuildAndSetEnvs(ctx, service, mBuildInfo); err != nil {
 				return err
 			}
+		}
+
+	} else if err := checkBuildFromManifest(ctx, deployOptions.Manifest.Build); err != nil {
+		return err
+	}
+
+	oktetoLog.Information("Checking to deploy dependencies at manifest")
+	for depName, dep := range deployOptions.Manifest.Dependencies {
+		pipOpts := &pipelineCMD.DeployOptions{
+			Name:       depName,
+			Repository: dep.Repository,
+			Branch:     dep.Branch,
+			File:       dep.ManifestPath,
+			Variables:  model.SerializeBuildArgs(dep.Variables),
+			Wait:       dep.Wait,
+			Timeout:    deployOptions.Timeout,
+		}
+		if deployOptions.Dependencies {
+			if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := checkByNameAndDeployDependency(ctx, depName, pipOpts); err != nil {
+			return err
 		}
 	}
 
