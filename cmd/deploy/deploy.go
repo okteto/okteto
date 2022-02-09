@@ -250,18 +250,15 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			close(toBuild)
 
 			for {
-				select {
-				case svc := <-toBuild:
-					if svc == "" {
-						break
-					}
-					mBuildInfo := deployOptions.Manifest.Build[svc]
-					if err := runBuildAndSetEnvs(ctx, svc, mBuildInfo); err != nil {
-						return err
-					}
-					continue
+				svc, ok := <-toBuild
+				if svc == "" || !ok {
+					fmt.Println("vacio", ok)
+					break
 				}
-				break
+				mBuildInfo := deployOptions.Manifest.Build[svc]
+				if err := runBuildAndSetEnvs(ctx, svc, mBuildInfo); err != nil {
+					return err
+				}
 			}
 
 		}
