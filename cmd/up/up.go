@@ -573,7 +573,3 @@ func printDisplayContext(dev *model.Dev, divertURL string) {
 	}
 	oktetoLog.Println()
 }
-
-func (up *upContext) isAppRunning(ctx context.Context) {
-
-}
