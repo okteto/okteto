@@ -148,8 +148,11 @@ build:
       KEY2: Value2
     cache_from:
       - cache-image-1
-      - cache-image-2`),
+      - cache-image-2
+dependencies:
+  one: https://repo.url`),
 			expectedManifest: &model.Manifest{
+				IsV2:      true,
 				Namespace: "test-namespace",
 				Context:   "manifest-context",
 				Build: model.ManifestBuild{
@@ -174,6 +177,11 @@ build:
 				Dev:      model.ManifestDevs{},
 				Type:     "",
 				Filename: "",
+				Dependencies: model.ManifestDependencies{
+					"one": &model.Dependency{
+						Repository: "https://repo.url",
+					},
+				},
 			},
 		},
 		{
@@ -199,65 +207,13 @@ build:
 				filename = ""
 			}
 
-			cwd, err := os.Getwd()
-			if err != nil {
-				t.Errorf("unable to get current dir")
-			}
-			m, err := GetManifestV2(cwd, filename)
+			m, err := model.GetManifestV2(filename)
 			if tt.expectedErr {
 				assert.NotNil(t, err)
 			} else {
+				m.Filename = ""
+				m.Manifest = nil
 				assert.EqualValues(t, tt.expectedManifest, m)
-			}
-
-		})
-	}
-}
-
-func Test_IsManifestV2Enabled(t *testing.T) {
-	tests := []struct {
-		name       string
-		envDefined bool
-		envValue   string
-		expected   bool
-	}{
-		{
-			name:       "env-not-defined",
-			envDefined: false,
-			expected:   false,
-		},
-		{
-			name:       "env-value-not-valid",
-			envDefined: true,
-			envValue:   "test",
-			expected:   false,
-		},
-		{
-			name:       "env-value-valid-true",
-			envDefined: true,
-			envValue:   "true",
-			expected:   true,
-		},
-		{
-			name:       "env-value-valid-false",
-			envDefined: true,
-			envValue:   "false",
-			expected:   false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			os.Unsetenv("OKTETO_ENABLE_MANIFEST_V2")
-			if tt.envDefined {
-				err := os.Setenv("OKTETO_ENABLE_MANIFEST_V2", tt.envValue)
-				if err != nil {
-					t.Log(err)
-				}
-			}
-
-			if result := IsManifestV2Enabled(); result != tt.expected {
-				t.Errorf("test failed, expected %v, result %v", tt.expected, result)
 			}
 
 		})

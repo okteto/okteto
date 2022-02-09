@@ -55,7 +55,7 @@ build:
   app:
     context: .
 deploy:
-  - helm upgrade --install hello-world chart --set app.image=${build.app.image}`
+  - helm upgrade --install hello-world chart --set app.image=${OKTETO_BUILD_APP_IMAGE}`
 
 		chartContent = `
 apiVersion: v2
@@ -341,7 +341,7 @@ func expectBuiltImageNotFound(output string) error {
 }
 
 func expectImageFoundSkippingBuild(output string) error {
-	if ok := strings.Contains(output, "image found, skipping build"); !ok {
+	if ok := strings.Contains(output, "Skipping build for image for service"); !ok {
 		return errors.New("expected image found, skipping build")
 	}
 	return nil

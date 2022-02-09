@@ -16,6 +16,7 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -24,6 +25,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	giturls "github.com/whilp/git-urls"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -664,15 +666,83 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Namespace string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context   string        `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon      string        `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy    *DeployInfo   `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev       ManifestDevs  `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy   []string      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build     ManifestBuild `json:"build,omitempty" yaml:"build,omitempty"`
+	Namespace    string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context      string               `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon         string               `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy       *DeployInfo          `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev          ManifestDevs         `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy      []DeployCommand      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build        ManifestBuild        `json:"build,omitempty" yaml:"build,omitempty"`
+	Dependencies ManifestDependencies `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
+}
+
+type dependenciesRaw struct {
+	Repository   string      `json:"repository,omitempty" yaml:"repository,omitempty"`
+	ManifestPath string      `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
+	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
+	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
+}
+
+func getRepoNameFromGitURL(repo *url.URL) string {
+	repoPath := strings.Split(strings.TrimPrefix(repo.Path, "/"), "/")
+	return strings.ReplaceAll(repoPath[1], ".git", "")
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (md *ManifestDependencies) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawList []string
+	err := unmarshal(&rawList)
+	if err == nil {
+		rawMd := ManifestDependencies{}
+		for _, repo := range rawList {
+			r, err := giturls.Parse(repo)
+			if err != nil {
+				return err
+			}
+			name := getRepoNameFromGitURL(r)
+			rawMd[name] = &Dependency{
+				Repository: r.String(),
+			}
+		}
+		*md = rawMd
+		return nil
+	}
+
+	type manifestDependencies ManifestDependencies
+	var rawMap manifestDependencies
+	err = unmarshal(&rawMap)
+	if err != nil {
+		return err
+	}
+	*md = ManifestDependencies(rawMap)
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (dependency *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		dependency.Repository = rawString
+		return nil
+	}
+
+	var rawDependency dependenciesRaw
+	err = unmarshal(&rawDependency)
+	if err != nil {
+		return err
+	}
+
+	dependency.Repository = rawDependency.Repository
+	dependency.ManifestPath = rawDependency.ManifestPath
+	dependency.Branch = rawDependency.Branch
+	dependency.Variables = rawDependency.Variables
+	dependency.Wait = rawDependency.Wait
+
+	return nil
 }
 
 func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -687,7 +757,9 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	manifest := manifestRaw{
-		Dev: make(map[string]*Dev),
+		Dev:          map[string]*Dev{},
+		Build:        map[string]*BuildInfo{},
+		Dependencies: map[string]*Dependency{},
 	}
 	err = unmarshal(&manifest)
 	if err != nil {
@@ -700,18 +772,75 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	d.Build = manifest.Build
 	d.Namespace = manifest.Namespace
 	d.Context = manifest.Context
+	d.IsV2 = true
+	d.Dependencies = manifest.Dependencies
 	return nil
 }
 
+func (d *DeployCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var command string
+	err := unmarshal(&command)
+	if err == nil {
+		d.Command = command
+		d.Name = command
+		return nil
+	}
+
+	//prevent recursion
+	type deployCommand DeployCommand
+	var extendedCommand deployCommand
+	err = unmarshal(&extendedCommand)
+	if err != nil {
+		return err
+	}
+	*d = DeployCommand(extendedCommand)
+	return nil
+}
+
+func (d *DeployInfo) MarshalYAML() (interface{}, error) {
+	isCommandList := true
+	for _, cmd := range d.Commands {
+		if cmd.Command != cmd.Name {
+			isCommandList = false
+		}
+	}
+	if isCommandList {
+		result := []string{}
+		for _, cmd := range d.Commands {
+			result = append(result, cmd.Command)
+		}
+		return result, nil
+	}
+	return d, nil
+}
+
 func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var commands []string
-	err := unmarshal(&commands)
+	var commandsString []string
+	err := unmarshal(&commandsString)
+	if err == nil {
+		d.Commands = []DeployCommand{}
+		for _, cmdString := range commandsString {
+			d.Commands = append(d.Commands, DeployCommand{
+				Name:    cmdString,
+				Command: cmdString,
+			})
+		}
+		return nil
+	}
+	var commands []DeployCommand
+	err = unmarshal(&commands)
 	if err == nil {
 		d.Commands = commands
 		return nil
-	} else {
+	}
+	type deployInfoRaw DeployInfo
+	var deploy deployInfoRaw
+	err = unmarshal(&deploy)
+	if err != nil {
 		return err
 	}
+	*d = DeployInfo(deploy)
+	return nil
 }
 
 type devRaw Dev

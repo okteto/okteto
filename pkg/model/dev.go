@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -205,8 +204,8 @@ type Capabilities struct {
 
 // EnvVar represents an environment value. When loaded, it will expand from the current env
 type EnvVar struct {
-	Name  string `yaml:"name,omitempty"`
-	Value string `yaml:"value,omitempty"`
+	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
+	Value string `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
 // Secret represents a development secret
@@ -317,73 +316,6 @@ func NewDev() *Dev {
 		Lifecycle:            &Lifecycle{},
 		InitContainer:        InitContainer{Image: OktetoBinImageTag},
 	}
-}
-
-// Read reads an okteto manifests
-func Read(bytes []byte) (*Manifest, error) {
-	manifest := NewManifest()
-	if bytes != nil {
-		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
-			if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
-				var sb strings.Builder
-				_, _ = sb.WriteString("Invalid manifest:\n")
-				l := strings.Split(err.Error(), "\n")
-				for i := 1; i < len(l); i++ {
-					e := strings.TrimSuffix(l[i], "in type model.Manifest")
-					e = strings.TrimSpace(e)
-					_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
-				}
-
-				_, _ = sb.WriteString("    See https://okteto.com/docs/reference/manifest/ for details")
-				return nil, errors.New(sb.String())
-			}
-
-			msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid manifest:", 1)
-			msg = strings.TrimSuffix(msg, "in type model.Manifest")
-			return nil, errors.New(msg)
-		}
-	}
-	for dName, d := range manifest.Dev {
-		if d.Name == "" {
-			d.Name = dName
-		}
-		if err := d.expandEnvVars(); err != nil {
-			return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
-		}
-		for _, s := range d.Services {
-			if err := s.expandEnvVars(); err != nil {
-				return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
-			}
-			if err := s.validateForExtraFields(); err != nil {
-				return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
-			}
-		}
-
-		if err := d.SetDefaults(); err != nil {
-			return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
-		}
-		if err := d.translateDeprecatedMetadataFields(); err != nil {
-			return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
-		}
-
-		sort.SliceStable(d.Forward, func(i, j int) bool {
-			return d.Forward[i].less(&d.Forward[j])
-		})
-
-		sort.SliceStable(d.Reverse, func(i, j int) bool {
-			return d.Reverse[i].Local < d.Reverse[j].Local
-		})
-	}
-
-	for _, b := range manifest.Build {
-		if b.Name != "" {
-			b.Context = b.Name
-			b.Name = ""
-		}
-		setBuildDefaults(b)
-	}
-
-	return manifest, nil
 }
 
 func (dev *Dev) loadAbsPaths(devPath string) error {
@@ -509,8 +441,8 @@ func (dev *Dev) SetDefaults() error {
 	if dev.Command.Values == nil {
 		dev.Command.Values = []string{"sh"}
 	}
-	setBuildDefaults(dev.Image)
-	setBuildDefaults(dev.Push)
+	dev.Image.setBuildDefaults()
+	dev.Push.setBuildDefaults()
 
 	if err := dev.setTimeout(); err != nil {
 		return err
@@ -611,7 +543,7 @@ func (dev *Dev) SetDefaults() error {
 	return nil
 }
 
-func setBuildDefaults(build *BuildInfo) {
+func (build *BuildInfo) setBuildDefaults() {
 	if build == nil {
 		build = &BuildInfo{}
 	}

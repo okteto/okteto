@@ -17,22 +17,36 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
 var fakeManifest *model.Manifest = &model.Manifest{
 	Deploy: &model.DeployInfo{
-		Commands: []string{
-			"printenv",
-			"ls -la",
-			"cat /tmp/test.txt",
+		Commands: []model.DeployCommand{
+			{
+				Name:    "printenv",
+				Command: "printenv",
+			},
+			{
+				Name:    "ls -la",
+				Command: "ls -la",
+			},
+			{
+				Name:    "cat /tmp/test.txt",
+				Command: "cat /tmp/test.txt",
+			},
 		},
 	},
 }
@@ -47,7 +61,7 @@ type fakeProxy struct {
 
 type fakeExecutor struct {
 	err      error
-	executed []string
+	executed []model.DeployCommand
 }
 
 type fakeKubeConfig struct {
@@ -83,7 +97,7 @@ func (fk *fakeProxy) GetToken() string {
 	return fk.token
 }
 
-func (fe *fakeExecutor) Execute(command string, _ []string) error {
+func (fe *fakeExecutor) Execute(command model.DeployCommand, _ []string) error {
 	fe.executed = append(fe.executed, command)
 	if fe.err != nil {
 		return fe.err
@@ -103,23 +117,22 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		proxy:    p,
-		executor: e,
-		kubeconfig: &fakeKubeConfig{
+	c := &DeployCommand{
+		Proxy:    p,
+		Executor: e,
+		Kubeconfig: &fakeKubeConfig{
 			errOnModify: assert.AnError,
 		},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -139,22 +152,21 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		getManifest:       getManifestWithError,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+	c := &DeployCommand{
+		GetManifest:       getManifestWithError,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -176,22 +188,21 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		getManifest:       getFakeManifest,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+	c := &DeployCommand{
+		GetManifest:       getFakeManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -202,6 +213,70 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	assert.True(t, p.started)
 	// Proxy shutdown
 	assert.True(t, p.shutdown)
+
+	//check if configmap has been created
+	fakeClient, _, err := c.K8sClientProvider.Provide(api.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	assert.Nil(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, pipeline.ErrorStatus, cfg.Data["status"])
+}
+
+func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
+	p := &fakeProxy{
+		errOnShutdown: assert.AnError,
+	}
+	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
+	opts := &Options{
+		Name:         "movies",
+		ManifestPath: "",
+		Variables:    []string{},
+	}
+	cmap := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pipeline.TranslatePipelineName(opts.Name),
+			Namespace: "test",
+		},
+		Data: map[string]string{
+			"actionLock": "test",
+		},
+	}
+	c := &DeployCommand{
+		GetManifest:       getFakeManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(cmap),
+	}
+	ctx := context.Background()
+
+	err := c.RunDeploy(ctx, opts)
+
+	assert.Error(t, err)
+	// No command was executed
+	assert.Len(t, e.executed, 0)
+	// Proxy started
+	assert.True(t, p.started)
+
+	//check if configmap has been created
+	fakeClient, _, err := c.K8sClientProvider.Provide(api.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	assert.Nil(t, err)
+	assert.NotNil(t, cfg)
 }
 
 func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
@@ -217,22 +292,22 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		getManifest:       getFakeManifest,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+	c := &DeployCommand{
+		GetManifest:       getFakeManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
+
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -243,6 +318,16 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	assert.True(t, p.started)
 	// Proxy wasn't shutdown
 	assert.False(t, p.shutdown)
+
+	//check if configmap has been created
+	fakeClient, _, err := c.K8sClientProvider.Provide(api.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	assert.Nil(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
 }
 
 func TestDeployWithoutErrors(t *testing.T) {
@@ -256,22 +341,21 @@ func TestDeployWithoutErrors(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &deployCommand{
-		getManifest:       getFakeManifest,
-		proxy:             p,
-		executor:          e,
-		kubeconfig:        &fakeKubeConfig{},
-		k8sClientProvider: test.NewFakeK8sProvider(nil),
+	c := &DeployCommand{
+		GetManifest:       getFakeManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	ctx := context.Background()
-	cwd := "/tmp"
 	opts := &Options{
 		Name:         "movies",
 		ManifestPath: "",
 		Variables:    []string{},
 	}
 
-	err := c.runDeploy(ctx, cwd, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -282,13 +366,23 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, p.started)
 	// Proxy was shutdown
 	assert.True(t, p.shutdown)
+
+	//check if configmap has been created
+	fakeClient, _, err := c.K8sClientProvider.Provide(api.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	assert.Nil(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
 }
 
-func getManifestWithError(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getManifestWithError(_ string) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string, _ contextCMD.ManifestOptions) (*model.Manifest, error) {
+func getFakeManifest(_ string) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
 
@@ -324,10 +418,10 @@ func Test_setManifestEnvVars(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registryEnv := fmt.Sprintf("build.%s.registry", tt.service)
-			imageEnv := fmt.Sprintf("build.%s.image", tt.service)
-			repositoryEnv := fmt.Sprintf("build.%s.repository", tt.service)
-			tagEnv := fmt.Sprintf("build.%s.tag", tt.service)
+			registryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", strings.ToUpper(tt.service))
+			imageEnv := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(tt.service))
+			repositoryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", strings.ToUpper(tt.service))
+			tagEnv := fmt.Sprintf("OKTETO_BUILD_%s_TAG", strings.ToUpper(tt.service))
 
 			envs := []string{registryEnv, imageEnv, repositoryEnv, tagEnv}
 			for _, e := range envs {

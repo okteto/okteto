@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
 )
 
@@ -40,21 +41,36 @@ func NoArgsAccepted(url string) cobra.PositionalArgs {
 // MaximumNArgsAccepted returns an error if there are more than N args.
 func MaximumNArgsAccepted(n int, url string) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
-		var hint string
-		if url != "" {
-			hint = fmt.Sprintf("Visit %s for more information.", url)
-		}
-		if len(args) > n {
-			return oktetoErrors.UserError{
-				E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), n, len(args)),
-				Hint: hint,
-			}
-		}
-		return nil
+		return maxNArgs(cmd, n, url, args)
 	}
 }
 
-// MaximumNArgsAccepted returns an error if there are more than N args.
+func maxNArgs(cmd *cobra.Command, n int, url string, args []string) error {
+	var hint string
+	if url != "" {
+		hint = fmt.Sprintf("Visit %s for more information.", url)
+	}
+	if len(args) > n {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), n, len(args)),
+			Hint: hint,
+		}
+	}
+	return nil
+}
+
+// BuildMaximumNArgsAccepted returns an error if there are more than N args.
+func BuildMaximumNArgsAccepted(n int, url string) cobra.PositionalArgs {
+	return func(cmd *cobra.Command, args []string) error {
+		if LoadBoolean(model.OktetoManifestV2Enabled) {
+			return nil
+		}
+		return maxNArgs(cmd, n, url, args)
+	}
+
+}
+
+// MinimumNArgsAccepted returns an error if there are more than N args.
 func MinimumNArgsAccepted(n int, url string) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
 		var hint string
@@ -71,7 +87,7 @@ func MinimumNArgsAccepted(n int, url string) cobra.PositionalArgs {
 	}
 }
 
-// ExactArgs returns an error if there are not exactly n args.
+// ExactArgsAccepted returns an error if there are not exactly n args.
 func ExactArgsAccepted(n int, url string) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
 		var hint string
