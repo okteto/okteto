@@ -259,11 +259,12 @@ func TrackDeploy(success, isOktetoRepo bool, err error, duration time.Duration, 
 		pipelineType = "pipeline"
 	}
 	props := map[string]interface{}{
-		"origin":             "cli",
 		"pipelineType":       pipelineType,
 		"isOktetoRepository": isOktetoRepo,
-		"error":              err.Error(),
 		"duration":           duration.Seconds(),
+	}
+	if err != nil {
+		props["error"] = err.Error()
 	}
 	track(deployEvent, success, props)
 }
