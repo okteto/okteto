@@ -236,11 +236,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			// check if images are at registry (global or dev) and set envs or send to build
 			toBuild := make(chan string, len(deployOptions.Manifest.Build))
 
-			g, gctx := errgroup.WithContext(ctx)
+			g, _ := errgroup.WithContext(ctx)
 			for service, mBuildInfo := range deployOptions.Manifest.Build {
 				service, mBuildInfo := service, mBuildInfo
 				g.Go(func() error {
-					return checkServicesToBuild(gctx, service, mBuildInfo, toBuild)
+					return checkServicesToBuild(service, mBuildInfo, toBuild)
 				})
 			}
 
@@ -252,7 +252,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			for {
 				svc, ok := <-toBuild
 				if svc == "" || !ok {
-					fmt.Println("vacio", ok)
 					break
 				}
 				mBuildInfo := deployOptions.Manifest.Build[svc]
@@ -698,7 +697,7 @@ func shouldExecuteRemotely(options *Options) bool {
 	return options.Branch != "" || options.Repository != ""
 }
 
-func checkServicesToBuild(ctx context.Context, service string, mOptions *model.BuildInfo, ch chan string) error {
+func checkServicesToBuild(service string, mOptions *model.BuildInfo, ch chan string) error {
 	opts := build.OptsFromManifest(service, mOptions, build.BuildOptions{})
 
 	if build.ShouldOptimizeBuild(opts.Tag) {
