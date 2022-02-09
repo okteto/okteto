@@ -203,19 +203,13 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	}
 	os.Setenv(model.OktetoNameEnvVar, opts.Name)
 
-	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
-
-		if len(manifest.Dependencies) > 0 {
-			for depName := range manifest.Dependencies {
-				destOpts := &pipelineCMD.DestroyOptions{
-					Name:           depName,
-					DestroyVolumes: opts.DestroyVolumes,
-				}
-				if err := pipelineCMD.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
-					return err
-				}
-			}
-
+	for depName := range manifest.Dependencies {
+		destOpts := &pipelineCMD.DestroyOptions{
+			Name:           depName,
+			DestroyVolumes: opts.DestroyVolumes,
+		}
+		if err := pipelineCMD.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
+			return err
 		}
 	}
 
