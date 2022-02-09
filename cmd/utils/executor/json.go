@@ -48,13 +48,12 @@ func (e *jsonExecutor) startCommand(cmd *exec.Cmd) error {
 	return startCommand(cmd)
 }
 
-func (e *jsonExecutor) display(command string) {
+func (e *jsonExecutor) display(_ string) {
 	e.commandContext, e.cancel = context.WithCancel(context.Background())
 	go func() {
 		for e.stdoutScanner.Scan() {
 			select {
 			case <-e.commandContext.Done():
-				break
 			default:
 				line := e.stdoutScanner.Text()
 				oktetoLog.Println(line)
@@ -68,7 +67,6 @@ func (e *jsonExecutor) display(command string) {
 		for e.stderrScanner.Scan() {
 			select {
 			case <-e.commandContext.Done():
-				break
 			default:
 				line := e.stderrScanner.Text()
 				oktetoLog.Warning(line)

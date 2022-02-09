@@ -97,7 +97,6 @@ func (e *ttyExecutor) displayStdout() {
 	for e.stdoutScanner.Scan() {
 		select {
 		case <-e.commandContext.Done():
-			break
 		default:
 			line := strings.TrimSpace(e.stdoutScanner.Text())
 			if isTopDisplay(line) {
@@ -136,7 +135,6 @@ func (e *ttyExecutor) displayStderr() {
 	for e.stderrScanner.Scan() {
 		select {
 		case <-e.commandContext.Done():
-			break
 		default:
 			line := strings.TrimSpace(e.stderrScanner.Text())
 			e.err = errors.New(line)
