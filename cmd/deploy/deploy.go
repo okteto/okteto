@@ -161,8 +161,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 				TempKubeconfigFile: GetTempKubeConfigFile(options.Name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 			}
+			startTime := time.Now()
 			err = c.RunDeploy(ctx, options)
-			analytics.TrackDeploy(err == nil, utils.IsOktetoRepo())
+			duration := time.Since(startTime)
+			analytics.TrackDeploy(err == nil, utils.IsOktetoRepo(), err, duration)
 			return err
 		},
 	}
