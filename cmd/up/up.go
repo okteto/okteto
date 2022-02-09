@@ -274,15 +274,7 @@ func (up *upContext) start() error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		oktetoLog.Infof("failed to get the current working directory in up: %v", err)
-	}
-	repo, err := model.GetRepositoryURL(cwd)
-	if err != nil {
-		oktetoLog.Info("could not get repository from current dir")
-	}
-	analytics.TrackUp(true, up.Dev.Name, repo, up.getInteractive(), len(up.Dev.Services) == 0, up.Dev.Divert != nil)
+	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, utils.IsOktetoRepo(), up.Dev.Divert != nil)
 
 	go up.activateLoop()
 

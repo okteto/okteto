@@ -74,15 +74,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 			err = stack.Deploy(ctx, s, options)
 
-			cwd, err := os.Getwd()
-			if err != nil {
-				oktetoLog.Infof("failed to get the current working directory in up: %v", err)
-			}
-			repo, err := model.GetRepositoryURL(cwd)
-			if err != nil {
-				oktetoLog.Info("could not get repository from current dir")
-			}
-			analytics.TrackDeployStack(err == nil, s.IsCompose, repo)
+			analytics.TrackDeployStack(err == nil, s.IsCompose, utils.IsOktetoRepo())
 			if err == nil {
 				oktetoLog.Success("Stack '%s' successfully deployed", s.Name)
 			}

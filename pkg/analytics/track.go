@@ -151,15 +151,13 @@ func TrackResetDatabase(success bool) {
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackUp(success bool, devName, repo string, interactive, single, divert bool) {
+func TrackUp(success bool, devName string, interactive, single, divert, isOktetoRepository bool) {
 	props := map[string]interface{}{
-		"name":          devName,
-		"interactive":   interactive,
-		"singleService": single,
-		"divert":        divert,
-	}
-	if repo != "" {
-		props["repo"] = repo
+		"name":               devName,
+		"interactive":        interactive,
+		"singleService":      single,
+		"divert":             divert,
+		"isOktetoRepository": isOktetoRepository,
 	}
 	track(upEvent, success, props)
 }
@@ -239,13 +237,11 @@ func TrackBuildTransientError(oktetoBuilkitURL string, success bool) {
 }
 
 // TrackDeployStack sends a tracking event to mixpanel when the user deploys a stack
-func TrackDeployStack(success, isCompose bool, repo string) {
+func TrackDeployStack(success, isCompose, isOktetoRepo bool) {
 	props := map[string]interface{}{
-		"isCompose":  isCompose,
-		"deployType": "stack",
-	}
-	if repo != "" {
-		props["repo"] = repo
+		"isCompose":          isCompose,
+		"deployType":         "stack",
+		"isOktetoRepository": isOktetoRepo,
 	}
 	track(deployStackEvent, success, props)
 }
