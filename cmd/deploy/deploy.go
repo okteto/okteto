@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -86,6 +87,8 @@ type DeployCommand struct {
 	Executor           utils.ManifestExecutor
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
+
+	PipelineType model.Archetype
 }
 
 //Deploy deploys the okteto manifest
@@ -160,7 +163,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 				TempKubeconfigFile: GetTempKubeConfigFile(options.Name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 			}
-			return c.RunDeploy(ctx, options)
+			startTime := time.Now()
+			err = c.RunDeploy(ctx, options)
+			duration := time.Since(startTime)
+			analytics.TrackDeploy(err == nil, utils.IsOktetoRepo(), err, duration, c.PipelineType)
+			return err
 		},
 	}
 
@@ -203,6 +210,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if deployOptions.Manifest.Namespace == "" {
 		deployOptions.Manifest.Namespace = okteto.Context().Namespace
 	}
+	dc.PipelineType = deployOptions.Manifest.Type
 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 

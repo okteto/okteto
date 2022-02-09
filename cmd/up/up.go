@@ -294,7 +294,7 @@ func (up *upContext) start() error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, up.Dev.Divert != nil)
+	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, utils.IsOktetoRepo(), up.Dev.Divert != nil)
 
 	go up.activateLoop()
 
