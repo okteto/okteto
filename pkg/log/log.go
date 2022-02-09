@@ -14,10 +14,14 @@
 package log
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -51,11 +55,18 @@ var (
 )
 
 type logger struct {
-	out        *logrus.Logger
-	file       *logrus.Entry
-	writer     OktetoWriter
+	out    *logrus.Logger
+	file   *logrus.Entry
+	writer OktetoWriter
+
 	stage      string
 	outputMode string
+
+	buf *bytes.Buffer
+
+	maskedWords []string
+	isMasked    bool
+	replacer    *strings.Replacer
 }
 
 var log = &logger{
@@ -74,6 +85,8 @@ func Init(level logrus.Level) {
 	log.out.SetOutput(os.Stdout)
 	log.out.SetLevel(level)
 	log.writer = log.getWriter(TTYFormat)
+	log.maskedWords = []string{}
+	log.buf = &bytes.Buffer{}
 }
 
 //ConfigureFileLogger configures the file to write
@@ -213,25 +226,77 @@ func Hint(format string, args ...interface{}) {
 
 // Fail prints a message with the error symbol first, and the text in red
 func Fail(format string, args ...interface{}) {
-	log.writer.Fail(format, args...)
+	msg := fmt.Sprintf(format, args...)
+	msg = redactMessage(msg)
+	log.writer.Fail(msg)
 }
 
 // Println writes a line with colors
 func Println(args ...interface{}) {
-	log.writer.Println(args...)
+	msg := fmt.Sprint(args...)
+	msg = redactMessage(msg)
+	log.writer.Println(msg)
 }
 
 // Print writes a line with colors
 func Print(args ...interface{}) {
-	log.writer.Print(args...)
+	msg := fmt.Sprint(args...)
+	msg = redactMessage(msg)
+	log.writer.Print(msg)
 }
 
 // Printf writes a line with format
 func Printf(format string, args ...interface{}) {
-	log.writer.Printf(format, args...)
+	msg := fmt.Sprintf(format, args...)
+	msg = redactMessage(msg)
+	log.writer.Print(msg)
 }
 
 //IsInteractive checks if the writer is interactive
 func IsInteractive() bool {
 	return log.writer.IsInteractive()
+}
+
+// AddMaskedWord adds a new
+func AddMaskedWord(word string) {
+	if strings.TrimSpace(word) != "" {
+		log.maskedWords = append(log.maskedWords, word)
+	}
+}
+
+// EnableMasking starts redacting all variables
+func EnableMasking() {
+	log.isMasked = true
+	sort.Slice(log.maskedWords, func(i, j int) bool {
+		return len(log.maskedWords[i]) > len(log.maskedWords[j])
+	})
+	oldnew := []string{}
+	for _, maskWord := range log.maskedWords {
+		oldnew = append(oldnew, maskWord)
+		oldnew = append(oldnew, "***")
+	}
+	log.replacer = strings.NewReplacer(oldnew...)
+}
+
+// DisableMasking will stop showing secrets and vars
+func DisableMasking() {
+	log.isMasked = false
+}
+
+func redactMessage(message string) string {
+	if log.isMasked {
+		return log.replacer.Replace(message)
+	}
+	return message
+}
+
+//GetOutputBuffer returns the buffer of the running command
+func GetOutputBuffer() *bytes.Buffer {
+	return log.buf
+}
+
+// LogIntoBuffer logs into the buffer but does not print anything
+func LogIntoBuffer(format string, args ...interface{}) {
+	log.writer.Infof(format, args)
+	log.writer.LogIntoBuffer(format, args...)
 }

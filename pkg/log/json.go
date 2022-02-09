@@ -177,7 +177,10 @@ func (w *JSONWriter) Fail(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	msg := fmt.Sprintf("%s %s", errorSymbol, fmt.Sprintf(format, args...))
 	if msg != "" {
-		fmt.Fprintln(w.out.Out, convertToJSON("error", log.stage, msg))
+		msg = convertToJSON("error", log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+		fmt.Fprintln(w.out.Out, msg)
 	}
 }
 
@@ -195,14 +198,19 @@ func (w *JSONWriter) Fprintf(format string, a ...interface{}) {
 func (w *JSONWriter) Fprintln(args ...interface{}) {
 	msg := fmt.Sprint(args...)
 	if msg != "" {
-		fmt.Fprintln(w.out.Out, convertToJSON("info", log.stage, msg))
+		msg = convertToJSON("info", log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+		fmt.Fprintln(w.out.Out, msg)
 	}
 }
 
 // Print writes a line with colors
 func (w *JSONWriter) Print(args ...interface{}) {
-	msg := fmt.Sprint(args...)
-	fmt.Fprint(w.out.Out, convertToJSON("info", log.stage, msg))
+	msg := convertToJSON("info", log.stage, fmt.Sprint(args...))
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
+	fmt.Fprint(w.out.Out)
 }
 
 //Printf writes a line with format
@@ -212,7 +220,10 @@ func (w *JSONWriter) Printf(format string, a ...interface{}) {
 		w.Println(msg)
 		return
 	}
-	fmt.Fprint(w.out.Out, convertToJSON("info", log.stage, msg))
+	msg = convertToJSON("info", log.stage, msg)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
+	fmt.Fprint(w.out.Out, msg)
 }
 
 //IsInteractive checks if the writer is interactive
@@ -229,4 +240,12 @@ func convertToJSON(level, stage, message string) string {
 	}
 	messageJSON, _ := json.Marshal(messageStruct)
 	return string(messageJSON[:])
+}
+
+//LogIntoBuffer logs into the buffer but does not print anything
+func (*JSONWriter) LogIntoBuffer(format string, a ...interface{}) {
+	msg := fmt.Sprintf(format, a...)
+	msg = convertToJSON("info", log.stage, msg)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
 }

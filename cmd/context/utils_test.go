@@ -148,7 +148,9 @@ build:
       KEY2: Value2
     cache_from:
       - cache-image-1
-      - cache-image-2`),
+      - cache-image-2
+dependencies:
+  one: https://repo.url`),
 			expectedManifest: &model.Manifest{
 				IsV2:      true,
 				Namespace: "test-namespace",
@@ -175,6 +177,11 @@ build:
 				Dev:      model.ManifestDevs{},
 				Type:     "",
 				Filename: "",
+				Dependencies: model.ManifestDependencies{
+					"one": &model.Dependency{
+						Repository: "https://repo.url",
+					},
+				},
 			},
 		},
 		{
@@ -205,7 +212,7 @@ build:
 				assert.NotNil(t, err)
 			} else {
 				m.Filename = ""
-				m.CompleteManifest = nil
+				m.Manifest = nil
 				assert.EqualValues(t, tt.expectedManifest, m)
 			}
 

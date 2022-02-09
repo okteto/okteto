@@ -103,19 +103,20 @@ var (
 
 //Manifest represents an okteto manifest
 type Manifest struct {
-	Name      string          `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace string          `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context   string          `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon      string          `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy    *DeployInfo     `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev       ManifestDevs    `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy   []DeployCommand `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build     ManifestBuild   `json:"build,omitempty" yaml:"build,omitempty"`
+	Name         string               `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace    string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context      string               `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon         string               `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy       *DeployInfo          `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev          ManifestDevs         `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy      []DeployCommand      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build        ManifestBuild        `json:"build,omitempty" yaml:"build,omitempty"`
+	Dependencies ManifestDependencies `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 
-	Type             Archetype `json:"-" yaml:"-"`
-	Filename         string    `yaml:"-"`
-	CompleteManifest []byte    `json:"-" yaml:"-"`
-	IsV2             bool      `json:"-" yaml:"-"`
+	Type     Archetype `json:"-" yaml:"-"`
+	Filename string    `yaml:"-"`
+	Manifest []byte    `json:"-" yaml:"-"`
+	IsV2     bool      `json:"-" yaml:"-"`
 }
 
 //ManifestDevs defines all the dev section
@@ -124,12 +125,16 @@ type ManifestDevs map[string]*Dev
 //ManifestBuild defines all the build section
 type ManifestBuild map[string]*BuildInfo
 
+// ManifestDependencies represents the map of dependencies at a manifest
+type ManifestDependencies map[string]*Dependency
+
 //NewManifest creates a new empty manifest
 func NewManifest() *Manifest {
 	return &Manifest{
-		Dev:    map[string]*Dev{},
-		Build:  map[string]*BuildInfo{},
-		Deploy: &DeployInfo{},
+		Dev:          map[string]*Dev{},
+		Build:        map[string]*BuildInfo{},
+		Dependencies: map[string]*Dependency{},
+		Deploy:       &DeployInfo{},
 	}
 }
 
@@ -409,7 +414,7 @@ func Read(bytes []byte) (*Manifest, error) {
 		}
 		b.setBuildDefaults()
 	}
-	manifest.CompleteManifest = bytes
+	manifest.Manifest = bytes
 	return manifest, nil
 }
 
@@ -422,19 +427,33 @@ func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 // ExpandEnvVars expands env vars to be set on the manifest
 func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 	var err error
-	for idx, cmd := range m.Deploy.Commands {
-		cmd.Command, err = ExpandEnv(cmd.Command)
-		if err != nil {
-			return nil, errors.New("could not parse env vars")
+	if m.Deploy != nil {
+		for idx, cmd := range m.Deploy.Commands {
+			cmd.Command, err = ExpandEnv(cmd.Command)
+			if err != nil {
+				return nil, errors.New("could not parse env vars")
+			}
+			m.Deploy.Commands[idx] = cmd
 		}
-		m.Deploy.Commands[idx] = cmd
 	}
-	for idx, cmd := range m.Destroy {
-		cmd.Command, err = envsubst.String(cmd.Command)
-		if err != nil {
-			return nil, errors.New("could not parse env vars")
+	if m.Destroy != nil {
+		for idx, cmd := range m.Destroy {
+			cmd.Command, err = envsubst.String(cmd.Command)
+			if err != nil {
+				return nil, errors.New("could not parse env vars")
+			}
+			m.Destroy[idx] = cmd
 		}
-		m.Destroy[idx] = cmd
 	}
+
 	return m, nil
+}
+
+// Dependency represents a dependency object at the manifest
+type Dependency struct {
+	Repository   string      `json:"repository" yaml:"repository"`
+	ManifestPath string      `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
+	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
+	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
 }

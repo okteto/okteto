@@ -1065,9 +1065,10 @@ deploy:
 						},
 					},
 				},
-				Dev:     map[string]*Dev{},
-				Context: "context-to-use",
-				IsV2:    true,
+				Dev:          map[string]*Dev{},
+				Dependencies: map[string]*Dependency{},
+				Context:      "context-to-use",
+				IsV2:         true,
 			},
 			isErrorExpected: false,
 		},
@@ -1095,6 +1096,7 @@ dev:
 						},
 					},
 				},
+				Dependencies: map[string]*Dependency{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1237,8 +1239,9 @@ dev:
 sync:
   - app:/app`),
 			expected: &Manifest{
-				Build:  map[string]*BuildInfo{},
-				Deploy: &DeployInfo{},
+				Build:        map[string]*BuildInfo{},
+				Deploy:       &DeployInfo{},
+				Dependencies: map[string]*Dependency{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1317,8 +1320,9 @@ sync:
 services:
   - name: svc`),
 			expected: &Manifest{
-				Build:  map[string]*BuildInfo{},
-				Deploy: &DeployInfo{},
+				Build:        map[string]*BuildInfo{},
+				Deploy:       &DeployInfo{},
+				Dependencies: map[string]*Dependency{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1445,8 +1449,9 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
-				IsV2:  true,
-				Build: map[string]*BuildInfo{},
+				IsV2:         true,
+				Build:        map[string]*BuildInfo{},
+				Dependencies: map[string]*Dependency{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1529,8 +1534,9 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
-				IsV2:  true,
-				Build: map[string]*BuildInfo{},
+				IsV2:         true,
+				Build:        map[string]*BuildInfo{},
+				Dependencies: map[string]*Dependency{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1693,9 +1699,10 @@ deploy:
   - okteto stack deploy
 `),
 			expected: &Manifest{
-				IsV2:  true,
-				Dev:   map[string]*Dev{},
-				Build: map[string]*BuildInfo{},
+				IsV2:         true,
+				Dev:          map[string]*Dev{},
+				Build:        map[string]*BuildInfo{},
+				Dependencies: map[string]*Dependency{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1717,9 +1724,10 @@ devs:
   - test
 `),
 			expected: &Manifest{
-				IsV2:  true,
-				Dev:   map[string]*Dev{},
-				Build: map[string]*BuildInfo{},
+				IsV2:         true,
+				Dev:          map[string]*Dev{},
+				Build:        map[string]*BuildInfo{},
+				Dependencies: map[string]*Dependency{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1743,7 +1751,7 @@ devs:
 			}
 
 			if err == nil && manifest != nil {
-				manifest.CompleteManifest = nil
+				manifest.Manifest = nil
 			}
 
 			if !assert.Equal(t, tt.expected, manifest) {

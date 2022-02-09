@@ -108,7 +108,13 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 		opts.Name = getPipelineName(opts.Repository)
 	}
 
-	if opts.Branch == "" {
+	currentRepo, err := model.GetRepositoryURL(cwd)
+	if err != nil {
+		return err
+	}
+
+	if opts.Branch == "" && okteto.AreSameRepository(opts.Repository, currentRepo) {
+
 		oktetoLog.Info("inferring git repository branch")
 		b, err := utils.GetBranch(ctx, cwd)
 
