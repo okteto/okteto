@@ -49,6 +49,8 @@ const (
 	doctorEvent              = "Doctor"
 	buildEvent               = "Build"
 	buildTransientErrorEvent = "BuildTransientError"
+	deployEvent              = "Deploy"
+	destroyEvent             = "Destroy"
 	deployStackEvent         = "Deploy Stack"
 	destroyStackEvent        = "Destroy Stack"
 	loginEvent               = "Login"
@@ -249,6 +251,20 @@ func TrackDeployStack(success, isCompose, isOktetoRepo bool) {
 // TrackDestroyStack sends a tracking event to mixpanel when the user destroys a stack
 func TrackDestroyStack(success bool) {
 	track(destroyStackEvent, success, nil)
+}
+
+// TrackDeploy sends a tracking event to mixpanel when the user deploys a pipeline from local
+func TrackDeploy(success, isOktetoRepo bool) {
+	props := map[string]interface{}{
+		"deployType":         "pipeline",
+		"isOktetoRepository": isOktetoRepo,
+	}
+	track(deployEvent, success, props)
+}
+
+// TrackDestroy sends a tracking event to mixpanel when the user destroys a pipeline from local
+func TrackDestroy(success bool) {
+	track(destroyEvent, success, nil)
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in

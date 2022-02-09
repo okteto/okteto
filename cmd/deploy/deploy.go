@@ -32,6 +32,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -181,7 +182,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 				tempKubeconfigFile: fmt.Sprintf(tempKubeConfigTemplate, config.GetUserHomeDir(), options.Name),
 				k8sClientProvider:  okteto.NewK8sClientProvider(),
 			}
-			return c.runDeploy(ctx, cwd, options)
+			err = c.runDeploy(ctx, cwd, options)
+			analytics.TrackDeploy(err == nil, utils.IsOktetoRepo())
+			return err
 		},
 	}
 
