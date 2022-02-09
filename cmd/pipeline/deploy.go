@@ -110,7 +110,7 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 
 	currentRepo, err := model.GetRepositoryURL(cwd)
 	if err != nil {
-		return err
+		oktetoLog.Debug("cwd does not have .git folder")
 	}
 
 	if opts.Branch == "" && okteto.AreSameRepository(opts.Repository, currentRepo) {
