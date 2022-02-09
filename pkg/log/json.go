@@ -160,7 +160,10 @@ func (*JSONWriter) Question(format string, args ...interface{}) error {
 // Warning prints a message with the warning symbol first, and the text in yellow
 func (w *JSONWriter) Warning(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintln(fmt.Sprintf("%s %s", warningSymbol, fmt.Sprintf(format, args...)))
+	msg := fmt.Sprintf("%s %s", warningSymbol, fmt.Sprintf(format, args...))
+	if msg != "" {
+		fmt.Fprintln(w.out.Out, convertToJSON("warn", log.stage, msg))
+	}
 }
 
 // Hint prints a message with the text in blue
