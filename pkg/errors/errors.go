@@ -99,37 +99,37 @@ var (
 	// ErrDevPodDeleted raised if dev pod is deleted in the middle of the "okteto up" sequence
 	ErrDevPodDeleted = fmt.Errorf("development container has been removed")
 
-	//ErrDivertNotSupported raised if the divert feature is not supported in the current cluster
+	// ErrDivertNotSupported raised if the divert feature is not supported in the current cluster
 	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in namespaces managed by Okteto")
 
-	//ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
+	// ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
 	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available on Okteto Cloud or Okteto Enterprise")
 
-	//ErrTokenFlagNeeded is raised when the command is executed from inside a pod
+	// ErrTokenFlagNeeded is raised when the command is executed from inside a pod
 	ErrTokenFlagNeeded = fmt.Errorf("this command is not supported without the '--token' flag from inside a container")
 
-	//ErrNamespaceNotFound is raised when the namespace is not found on an okteto instance
+	// ErrNamespaceNotFound is raised when the namespace is not found on an okteto instance
 	ErrNamespaceNotFound = "namespace '%s' not found. Please verify that the namespace exists and that you have access to it"
 
-	//ErrKubernetesContextNotFound is raised when the kubernetes context is not found in kubeconfig
+	// ErrKubernetesContextNotFound is raised when the kubernetes context is not found in kubeconfig
 	ErrKubernetesContextNotFound = "context '%s' not found in '%s'"
 
-	//ErrNamespaceNotMatching is raised when the namespace arg doesn't match the manifest namespace
+	// ErrNamespaceNotMatching is raised when the namespace arg doesn't match the manifest namespace
 	ErrNamespaceNotMatching = fmt.Errorf("the namespace in the okteto manifest doesn't match your namespace argument")
 
-	//ErrContextNotMatching is raised when the context arg doesn't match the manifest context
+	// ErrContextNotMatching is raised when the context arg doesn't match the manifest context
 	ErrContextNotMatching = fmt.Errorf("the context in the okteto manifest doesn't match your context argument")
 
-	//ErrCorruptedOktetoContexts raised when the okteto context store is corrupted
+	// ErrCorruptedOktetoContexts raised when the okteto context store is corrupted
 	ErrCorruptedOktetoContexts = "okteto context store is corrupted. Delete the folder '%s' and try again"
 
-	//ErrIntSig raised if the we get an interrupt signal in the middle of a command
+	// ErrIntSig raised if the we get an interrupt signal in the middle of a command
 	ErrIntSig = fmt.Errorf("interrupt signal received")
 
-	//ErrKubernetesLongTimeToCreateDevContainer raised when the creation of the dev container times out
+	// ErrKubernetesLongTimeToCreateDevContainer raised when the creation of the dev container times out
 	ErrKubernetesLongTimeToCreateDevContainer = fmt.Errorf("kubernetes is taking too long to start your development container. Please check for errors and try again")
 
-	//ErrNoServicesinOktetoManifest raised when no services are defined in the okteto manifest
+	// ErrNoServicesinOktetoManifest raised when no services are defined in the okteto manifest
 	ErrNoServicesinOktetoManifest = fmt.Errorf("'okteto restart' is only supported when using the field 'services'")
 )
 
