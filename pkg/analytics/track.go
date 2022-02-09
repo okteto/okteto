@@ -254,10 +254,13 @@ func TrackDestroyStack(success bool) {
 }
 
 // TrackDeploy sends a tracking event to mixpanel when the user deploys a pipeline from local
-func TrackDeploy(success, isOktetoRepo bool, err error, duration time.Duration) {
+func TrackDeploy(success, isOktetoRepo bool, err error, duration time.Duration, pipelineType model.Archetype) {
+	if pipelineType == "" {
+		pipelineType = "pipeline"
+	}
 	props := map[string]interface{}{
 		"origin":             "cli",
-		"pipelineType":       "pipeline",
+		"pipelineType":       pipelineType,
 		"isOktetoRepository": isOktetoRepo,
 		"error":              err.Error(),
 		"duration":           duration.Seconds(),
@@ -356,6 +359,7 @@ func track(event string, success bool, props map[string]interface{}) {
 	props["contextType"] = getContextType(okteto.Context().Name)
 	props["context"] = okteto.Context().Name
 	props["cluster"] = okteto.Context().Name
+	props["isOkteto"] = okteto.Context().IsOkteto
 	if termType := os.Getenv(model.TermEnvVar); termType == "" {
 		props["term-type"] = "other"
 	} else {
