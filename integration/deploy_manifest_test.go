@@ -18,6 +18,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -33,6 +34,12 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	v1 "k8s.io/api/apps/v1"
 )
+
+type helmRelease struct {
+	Revision int                    `json:"revision"`
+	Status   string                 `json:"status"`
+	Other    map[string]interface{} `json:"-"`
+}
 
 func TestDeployFromManifest(t *testing.T) {
 	ctx := context.Background()
@@ -173,7 +180,7 @@ spec:
 			t.Fatal(err)
 		}
 
-		if err := expectHelmInstallation(output, releaseName, testNamespace); err != nil {
+		if err := expectHelm(output, releaseName, testNamespace, 1); err != nil {
 			t.Fatal(err)
 		}
 
@@ -209,7 +216,7 @@ spec:
 			t.Fatal(err)
 		}
 
-		if err := expectHelmUpgrade(output, releaseName, testNamespace, "2"); err != nil {
+		if err := expectHelm(output, releaseName, testNamespace, 2); err != nil {
 			t.Fatal(err)
 		}
 
@@ -245,7 +252,7 @@ spec:
 			t.Fatal(err)
 		}
 
-		if err := expectHelmUpgrade(output, releaseName, testNamespace, "3"); err != nil {
+		if err := expectHelm(output, releaseName, testNamespace, 3); err != nil {
 			t.Fatal(err)
 		}
 
@@ -300,7 +307,7 @@ spec:
 			t.Fatal(err)
 		}
 
-		if err := expectHelmUpgrade(output, releaseName, testNamespace, "4"); err != nil {
+		if err := expectHelm(output, releaseName, testNamespace, 4); err != nil {
 			t.Fatal(err)
 		}
 
@@ -366,24 +373,22 @@ func expectEnvSetting(output, namespace, repoDir, sha string) error {
 	return nil
 }
 
-func expectHelmInstallation(output, releaseName, namespace string) error {
-	if ok := strings.Contains(output, fmt.Sprintf(`Release "%s" does not exist. Installing it now.`, releaseName)) &&
-		strings.Contains(output, fmt.Sprintf("NAME: %s", releaseName)) &&
-		strings.Contains(output, fmt.Sprintf("NAMESPACE: %s", namespace)) &&
-		strings.Contains(output, "STATUS: deployed") &&
-		strings.Contains(output, "REVISION: 1"); !ok {
-		return errors.New("expected helm chart to be installed")
+func expectHelm(output, releaseName, namespace string, revision int) error {
+	cmd := exec.Command("helm", "history", releaseName, "-n", namespace, "-o", "json")
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("helm history failed: \nerror: %s \noutput: %s", err.Error(), string(o))
 	}
-	return nil
-}
-
-func expectHelmUpgrade(output, releaseName, namespace, revision string) error {
-	if ok := strings.Contains(output, fmt.Sprintf(`Release "%s" has been upgraded.`, releaseName)) &&
-		strings.Contains(output, fmt.Sprintf("NAME: %s", releaseName)) &&
-		strings.Contains(output, fmt.Sprintf("NAMESPACE: %s", namespace)) &&
-		strings.Contains(output, "STATUS: deployed") &&
-		strings.Contains(output, fmt.Sprintf("REVISION: %s", revision)); !ok {
-		return fmt.Errorf("expected helm chart to be upgraded to revision %s", revision)
+	helmHistoryOutput := []helmRelease{}
+	if err := json.Unmarshal(o, &helmHistoryOutput); err != nil {
+		return fmt.Errorf("could not parse %s: %s", string(o), err.Error())
+	}
+	if len(helmHistoryOutput) != 1 {
+		return fmt.Errorf("Wrong number of releases: Expected 1 but got %d", len(helmHistoryOutput))
+	}
+	helmRelease := helmHistoryOutput[0]
+	if helmRelease.Revision != revision || helmRelease.Status != "deployed" {
+		return fmt.Errorf("wrong helm release: %v", helmRelease)
 	}
 	return nil
 }
