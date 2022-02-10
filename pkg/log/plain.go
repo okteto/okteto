@@ -135,38 +135,59 @@ func (w *PlainWriter) Hint(format string, args ...interface{}) {
 
 // Fail prints a message with the error symbol first, and the text in red
 func (w *PlainWriter) Fail(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	msg := fmt.Sprintf(format, args...)
+	log.out.Info(msg)
 	w.Fprintf("%s %s\n", errorSymbol, fmt.Sprintf(format, args...))
+	if msg != "" {
+		msg = convertToJSON(ErrorLevel, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+	}
 }
 
 // Println writes a line with colors
 func (w *PlainWriter) Println(args ...interface{}) {
-	log.out.Info(args...)
+	msg := fmt.Sprint(args...)
+	log.out.Info(msg)
 	w.Fprintln(args...)
+	if msg != "" {
+		msg = convertToJSON(InfoLevel, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+	}
 }
 
 // Fprintf prints a line with format
 func (w *PlainWriter) Fprintf(format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
-	log.buf.WriteString(msg)
-	log.buf.WriteString("\n")
 	fmt.Fprint(w.out.Out, msg)
+	if msg != "" {
+		msg = convertToJSON(InfoLevel, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+	}
 }
 
 // Fprintln prints a line with format
 func (w *PlainWriter) Fprintln(args ...interface{}) {
 	msg := fmt.Sprint(args...)
-	log.buf.WriteString(msg)
-	log.buf.WriteString("\n")
 	fmt.Fprintln(w.out.Out, args...)
+	if msg != "" {
+		msg = convertToJSON(InfoLevel, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+	}
 }
 
 // Print writes a line with colors
 func (w *PlainWriter) Print(args ...interface{}) {
 	msg := fmt.Sprint(args...)
-	log.buf.WriteString(msg)
-	log.buf.WriteString("\n")
 	fmt.Fprint(w.out.Out, args...)
+	if msg != "" {
+		msg = convertToJSON(InfoLevel, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+	}
 }
 
 //Printf writes a line with format
@@ -179,9 +200,12 @@ func (*PlainWriter) IsInteractive() bool {
 	return false
 }
 
-//LogIntoBuffer logs into the buffer but does not print anything
-func (*PlainWriter) LogIntoBuffer(format string, a ...interface{}) {
+// AddToBuffer logs into the buffer but does not print anything
+func (*PlainWriter) AddToBuffer(level, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
-	log.buf.WriteString(msg)
-	log.buf.WriteString("\n")
+	if msg != "" {
+		msg = convertToJSON(level, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+	}
 }

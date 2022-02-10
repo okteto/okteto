@@ -392,7 +392,7 @@ docker:
 
 func TestDevToTranslationDebugEnabled(t *testing.T) {
 	oktetoLog.SetLevel("debug")
-	defer oktetoLog.SetLevel("info")
+	defer oktetoLog.SetLevel(oktetoLog.InfoLevel)
 	manifestBytes := []byte(`name: web
 image: dev-image
 namespace: n

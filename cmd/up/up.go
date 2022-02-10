@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/cmd/deploy"
 	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -265,7 +266,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 	c := &deploy.DeployCommand{
 		GetManifest:        model.GetManifestV2,
 		Kubeconfig:         kubeconfig,
-		Executor:           utils.NewExecutor(oktetoLog.GetOutputFormat()),
+		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat()),
 		Proxy:              proxy,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
 		K8sClientProvider:  okteto.NewK8sClientProvider(),

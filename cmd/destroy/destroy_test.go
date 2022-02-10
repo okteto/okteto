@@ -100,6 +100,7 @@ func (fe *fakeExecutor) Execute(command model.DeployCommand, _ []string) error {
 	return nil
 }
 
+func (*fakeExecutor) CleanUp(_ error) {}
 func getManifestWithError(_ string) (*model.Manifest, error) {
 	return nil, assert.AnError
 }

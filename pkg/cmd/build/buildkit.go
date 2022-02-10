@@ -196,7 +196,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 	eg.Go(func() error {
 		var c console.Console
 		if progress == oktetoLog.TTYFormat {
-			if cn, err := console.ConsoleFromFile(os.Stderr); err == nil {
+			if cn, err := console.ConsoleFromFile(os.Stdout); err == nil {
 				c = cn
 			}
 		}

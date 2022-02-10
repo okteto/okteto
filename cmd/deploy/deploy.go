@@ -17,12 +17,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"os/signal"
 	"sort"
 	"strings"
 	"time"
@@ -31,6 +33,7 @@ import (
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -84,7 +87,7 @@ type DeployCommand struct {
 
 	Proxy              proxyInterface
 	Kubeconfig         kubeConfigHandler
-	Executor           utils.ManifestExecutor
+	Executor           executor.ManifestExecutor
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
 
@@ -158,7 +161,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			c := &DeployCommand{
 				GetManifest:        model.GetManifestV2,
 				Kubeconfig:         kubeconfig,
-				Executor:           utils.NewExecutor(oktetoLog.GetOutputFormat()),
+				Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat()),
 				Proxy:              proxy,
 				TempKubeconfigFile: GetTempKubeConfigFile(options.Name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
@@ -295,7 +298,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
 	dc.Proxy.Start()
 
-	oktetoLog.LogIntoBuffer("Deploying '%s'...", deployOptions.Name)
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deploying '%s'...", deployOptions.Name)
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
 		Namespace:  deployOptions.Manifest.Namespace,
@@ -334,34 +337,54 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		fmt.Sprintf("%s=true", model.OktetoWithinDeployCommandContextEnvVar),
 		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
 		fmt.Sprintf("%s=true", model.OktetoDisableSpinnerEnvVar),
-		// Set BUILDKIT_PROGRESS=plain env variable, so all the commands disable docker tty builds
-		fmt.Sprintf("%s=true", model.BuildkitProgressEnvVar),
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
 	oktetoLog.EnableMasking()
 
-	err = dc.deploy(deployOptions)
-	if err != nil {
-		oktetoLog.LogIntoBuffer("Deployment failed: %s", err.Error())
-		data.Status = pipeline.ErrorStatus
-	} else {
-		oktetoLog.LogIntoBuffer("'%s' successfully deployed", deployOptions.Name)
-		data.Status = pipeline.DeployedStatus
-	}
-	oktetoLog.SetStage("")
-	oktetoLog.DisableMasking()
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
 
-	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
-		return err
-	}
-	if err != nil {
-		return err
-	}
+	go func() {
+		if err := dc.deploy(deployOptions); err != nil {
+			exit <- err
+			return
+		}
+		exit <- nil
+	}()
 
-	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-		if err := dc.showEndpoints(ctx, deployOptions); err != nil {
-			oktetoLog.Infof("could not retrieve endpoints: %s", err)
+	select {
+	case <-stop:
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+		sp := utils.NewSpinner("Shutting down...")
+		sp.Start()
+		defer sp.Stop()
+		dc.Executor.CleanUp(errors.New("Interrupt signal received"))
+		return oktetoErrors.ErrIntSig
+	case err := <-exit:
+		oktetoLog.SetStage("")
+		if err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deployment failed: %s", err.Error())
+			data.Status = pipeline.ErrorStatus
+		} else {
+			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "'%s' successfully deployed", deployOptions.Name)
+			data.Status = pipeline.DeployedStatus
+		}
+		oktetoLog.SetStage("")
+		oktetoLog.DisableMasking()
+
+		if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
+			return err
+		}
+		if err != nil {
+			return err
+		}
+
+		if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+			if err := dc.showEndpoints(ctx, deployOptions); err != nil {
+				oktetoLog.Infof("could not retrieve endpoints: %s", err)
+			}
 		}
 	}
 
@@ -372,10 +395,13 @@ func (dc *DeployCommand) deploy(opts *Options) error {
 	for _, command := range opts.Manifest.Deploy.Commands {
 		oktetoLog.SetStage(command.Name)
 		if err := dc.Executor.Execute(command, opts.Variables); err != nil {
-			oktetoLog.Infof("error executing command '%s': %s", command.Name, err.Error())
+			oktetoLog.Fail("error executing command '%s': %s", command.Name, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
 	}
+
+	oktetoLog.SetStage("done")
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
 	oktetoLog.SetStage("")
 
 	return nil
@@ -620,8 +646,8 @@ func (dc *DeployCommand) showEndpoints(ctx context.Context, opts *Options) error
 		sort.Slice(eps, func(i, j int) bool {
 			return len(eps[i]) < len(eps[j])
 		})
-		oktetoLog.Information("Endpoints available:\n  - %s\n", strings.Join(eps, "\n  - "))
-
+		oktetoLog.Information("Endpoints available:")
+		oktetoLog.Printf("  - %s\n", strings.Join(eps, "\n  - "))
 	}
 	return nil
 }

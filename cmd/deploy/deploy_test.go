@@ -106,6 +106,8 @@ func (fe *fakeExecutor) Execute(command model.DeployCommand, _ []string) error {
 	return nil
 }
 
+func (*fakeExecutor) CleanUp(_ error) {}
+
 func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}

@@ -136,8 +136,14 @@ func (w *TTYWriter) Hint(format string, args ...interface{}) {
 
 // Fail prints a message with the error symbol first, and the text in red
 func (w *TTYWriter) Fail(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	msg := fmt.Sprintf(format, args...)
+	log.out.Info(msg)
 	w.Fprintf("%s %s\n", coloredErrorSymbol, redString(format, args...))
+	if msg != "" {
+		msg = convertToJSON(ErrorLevel, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+	}
 }
 
 // Println writes a line with colors
@@ -149,25 +155,37 @@ func (w *TTYWriter) Println(args ...interface{}) {
 // Fprintf prints a line with format
 func (w *TTYWriter) Fprintf(format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
-	log.buf.WriteString(msg)
-	log.buf.WriteString("\n")
 	fmt.Fprint(w.out.Out, msg)
+	if msg != "" {
+		msg = convertToJSON(InfoLevel, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+	}
+
 }
 
 // Fprintln prints a line with format
 func (w *TTYWriter) Fprintln(args ...interface{}) {
 	msg := fmt.Sprint(args...)
-	log.buf.WriteString(msg)
-	log.buf.WriteString("\n")
 	fmt.Fprintln(w.out.Out, msg)
+	if msg != "" {
+		msg = convertToJSON(InfoLevel, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+	}
+
 }
 
 // Print writes a line with colors
 func (w *TTYWriter) Print(args ...interface{}) {
 	msg := fmt.Sprint(args...)
-	log.buf.WriteString(msg)
-	log.buf.WriteString("\n")
 	fmt.Fprint(w.out.Out, args...)
+	if msg != "" {
+		msg = convertToJSON(ErrorLevel, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+	}
+
 }
 
 //Printf writes a line with format
@@ -180,9 +198,12 @@ func (*TTYWriter) IsInteractive() bool {
 	return true
 }
 
-//LogIntoBuffer logs into the buffer but does not print anything
-func (*TTYWriter) LogIntoBuffer(format string, a ...interface{}) {
+// AddToBuffer logs into the buffer but does not print anything
+func (*TTYWriter) AddToBuffer(level, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
-	log.buf.WriteString(msg)
-	log.buf.WriteString("\n")
+	if msg != "" {
+		msg = convertToJSON(level, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+	}
 }
