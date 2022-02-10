@@ -249,11 +249,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			}
 			close(toBuild)
 
-			for {
-				svc, ok := <-toBuild
-				if svc == "" || !ok {
-					break
-				}
+			for svc := range toBuild {
 				mBuildInfo := deployOptions.Manifest.Build[svc]
 				if err := runBuildAndSetEnvs(ctx, svc, mBuildInfo); err != nil {
 					return err
