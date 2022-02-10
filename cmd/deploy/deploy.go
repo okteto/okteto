@@ -219,7 +219,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
 	if deployOptions.Dependencies && !okteto.IsOkteto() {
-		return fmt.Errorf("deploy of dependencies is only available for Okteto instances")
+		return fmt.Errorf("deploy of dependencies is only available in clusters managed by Okteto")
 	}
 
 	if deployOptions.Build {
