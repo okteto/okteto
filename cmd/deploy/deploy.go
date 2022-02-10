@@ -223,39 +223,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return fmt.Errorf("deploy of dependencies is only available for Okteto instances")
 		}
 
-		oktetoLog.Information("Checking to build services at manifest")
-		if deployOptions.Build {
-			// force build of all services
-			for service, mBuildInfo := range deployOptions.Manifest.Build {
-				if err := runBuildAndSetEnvs(ctx, service, mBuildInfo); err != nil {
-					return err
-				}
-			}
-
-		} else {
-			// check if images are at registry (global or dev) and set envs or send to build
-			toBuild := make(chan string, len(deployOptions.Manifest.Build))
-
-			g, _ := errgroup.WithContext(ctx)
-			for service, mBuildInfo := range deployOptions.Manifest.Build {
-				service, mBuildInfo := service, mBuildInfo
-				g.Go(func() error {
-					return checkServicesToBuild(service, mBuildInfo, toBuild)
-				})
-			}
-
-			if err := g.Wait(); err != nil {
-				return err
-			}
-			close(toBuild)
-
-			for svc := range toBuild {
-				mBuildInfo := deployOptions.Manifest.Build[svc]
-				if err := runBuildAndSetEnvs(ctx, svc, mBuildInfo); err != nil {
-					return err
-				}
-			}
-
+		if err := buildFromManifest(ctx, deployOptions.Manifest.Build, deployOptions.Build); err != nil {
+			return err
 		}
 
 		oktetoLog.Information("Checking to deploy dependencies at manifest")
@@ -713,4 +682,41 @@ func checkServicesToBuild(service string, mOptions *model.BuildInfo, ch chan str
 	}
 
 	return setManifestEnvVars(service, imageWithDigest)
+}
+
+func buildFromManifest(ctx context.Context, buildManifest model.ManifestBuild, forceBuild bool) error {
+	if forceBuild {
+		oktetoLog.Information("Building services at manifest")
+		// force build of all services
+		for service, mBuildInfo := range buildManifest {
+			if err := runBuildAndSetEnvs(ctx, service, mBuildInfo); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	oktetoLog.Information("Checking to build services at manifest")
+	// check if images are at registry (global or dev) and set envs or send to build
+	toBuild := make(chan string, len(buildManifest))
+	g, _ := errgroup.WithContext(ctx)
+
+	for service, mBuildInfo := range buildManifest {
+		service, mBuildInfo := service, mBuildInfo
+		g.Go(func() error {
+			return checkServicesToBuild(service, mBuildInfo, toBuild)
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	close(toBuild)
+
+	for svc := range toBuild {
+		mBuildInfo := buildManifest[svc]
+		if err := runBuildAndSetEnvs(ctx, svc, mBuildInfo); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
