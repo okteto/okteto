@@ -226,6 +226,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		if deployOptions.Build {
 			oktetoLog.Information("Building services at manifest")
 			for service, mBuildInfo := range deployOptions.Manifest.Build {
+				oktetoLog.Debug("force build from manifest definition")
 				if err := runBuildAndSetEnvs(ctx, service, mBuildInfo); err != nil {
 					return err
 				}
@@ -683,11 +684,13 @@ func checkServicesToBuild(service string, mOptions *model.BuildInfo, ch chan str
 
 	imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
 	if err == oktetoErrors.ErrNotFound {
+		oktetoLog.Debug("image not found, building image")
 		ch <- service
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
 	}
+	oktetoLog.Debug("Skipping build for image for service")
 
 	return setManifestEnvVars(service, imageWithDigest)
 }
