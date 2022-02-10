@@ -383,10 +383,10 @@ func expectHelm(output, releaseName, namespace string, revision int) error {
 	if err := json.Unmarshal(o, &helmHistoryOutput); err != nil {
 		return fmt.Errorf("could not parse %s: %s", string(o), err.Error())
 	}
-	if len(helmHistoryOutput) != 1 {
-		return fmt.Errorf("Wrong number of releases: Expected 1 but got %d", len(helmHistoryOutput))
+	if len(helmHistoryOutput) != revision {
+		return fmt.Errorf("Wrong number of releases: Expected %d but got %d", revision, len(helmHistoryOutput))
 	}
-	helmRelease := helmHistoryOutput[0]
+	helmRelease := helmHistoryOutput[revision-1]
 	if helmRelease.Revision != revision || helmRelease.Status != "deployed" {
 		return fmt.Errorf("wrong helm release: %v", helmRelease)
 	}
