@@ -223,8 +223,18 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return fmt.Errorf("deploy of dependencies is only available for Okteto instances")
 		}
 
-		if err := buildFromManifest(ctx, deployOptions.Manifest.Build, deployOptions.Build); err != nil {
-			return err
+		if deployOptions.Build {
+			oktetoLog.Information("Building services at manifest")
+			for service, mBuildInfo := range deployOptions.Manifest.Build {
+				if err := runBuildAndSetEnvs(ctx, service, mBuildInfo); err != nil {
+					return err
+				}
+			}
+
+		} else {
+			if err := checkBuildFromManifest(ctx, deployOptions.Manifest.Build); err != nil {
+				return err
+			}
 		}
 
 		oktetoLog.Information("Checking to deploy dependencies at manifest")
@@ -684,17 +694,7 @@ func checkServicesToBuild(service string, mOptions *model.BuildInfo, ch chan str
 	return setManifestEnvVars(service, imageWithDigest)
 }
 
-func buildFromManifest(ctx context.Context, buildManifest model.ManifestBuild, forceBuild bool) error {
-	if forceBuild {
-		oktetoLog.Information("Building services at manifest")
-		// force build of all services
-		for service, mBuildInfo := range buildManifest {
-			if err := runBuildAndSetEnvs(ctx, service, mBuildInfo); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
+func checkBuildFromManifest(ctx context.Context, buildManifest model.ManifestBuild) error {
 	oktetoLog.Information("Checking to build services at manifest")
 	// check if images are at registry (global or dev) and set envs or send to build
 	toBuild := make(chan string, len(buildManifest))
