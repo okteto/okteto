@@ -51,7 +51,6 @@ func Build(ctx context.Context) *cobra.Command {
 
 			isBuildV2 := options.Tag == "" &&
 				manifest.IsV2 &&
-				manifest.Type == "manifest" &&
 				len(manifest.Build) != 0
 
 			if isBuildV2 {
