@@ -45,6 +45,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 )
@@ -222,49 +223,16 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return fmt.Errorf("deploy of dependencies is only available for Okteto instances")
 		}
 
-		oktetoLog.Information("Checking to build services at manifest")
-		if deployOptions.Manifest.Build != nil {
-
-			for service, mOptions := range deployOptions.Manifest.Build {
-				buildOptions := build.BuildOptions{OutputMode: oktetoLog.GetOutputFormat()}
-				if mOptions.Name == "" {
-					mOptions.Name = deployOptions.Name
+		if deployOptions.Build {
+			oktetoLog.Information("Building services at manifest")
+			for service, mBuildInfo := range deployOptions.Manifest.Build {
+				if err := runBuildAndSetEnvs(ctx, service, mBuildInfo); err != nil {
+					return err
 				}
-				opts := build.OptsFromManifest(service, mOptions, buildOptions)
-
-				if deployOptions.Build {
-					oktetoLog.Debug("force build from manifest definition")
-					if err := runBuildAndSetEnvs(ctx, service, opts); err != nil {
-						return err
-					}
-					continue
-				}
-
-				if build.ShouldOptimizeBuild(opts.Tag) {
-					oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
-					if skipBuild, err := checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
-						return err
-					} else if skipBuild {
-						continue
-					}
-				}
-
-				if imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag); err == oktetoErrors.ErrNotFound {
-					oktetoLog.Debugf("image not found, building image %s", opts.Tag)
-					if err := runBuildAndSetEnvs(ctx, service, opts); err != nil {
-						return err
-					}
-					continue
-				} else if err != nil {
-					return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
-				} else {
-					oktetoLog.Success("Skipping build for image for service %s found: %s", service, opts.Tag)
-					if err := setManifestEnvVars(service, imageWithDigest); err != nil {
-						return err
-					}
-				}
-
 			}
+
+		} else if err := checkBuildFromManifest(ctx, deployOptions.Manifest.Build); err != nil {
+			return err
 		}
 
 		oktetoLog.Information("Checking to deploy dependencies at manifest")
@@ -427,8 +395,10 @@ func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (b
 
 }
 
-func runBuildAndSetEnvs(ctx context.Context, service string, options build.BuildOptions) error {
+func runBuildAndSetEnvs(ctx context.Context, service string, buildInfo *model.BuildInfo) error {
 	oktetoLog.Information("Building image for service %s", service)
+
+	options := build.OptsFromManifest(service, buildInfo, build.BuildOptions{})
 	if err := build.Run(ctx, options); err != nil {
 		return err
 	}
@@ -436,7 +406,8 @@ func runBuildAndSetEnvs(ctx context.Context, service string, options build.Build
 	if err != nil {
 		return fmt.Errorf("error checking image at registry %s: %v", options.Tag, err)
 	}
-	oktetoLog.Success("Image for service %s: %s", service, options.Tag)
+
+	oktetoLog.Success("Image for service %s built and pushed to registry: %s", service, options.Tag)
 	return setManifestEnvVars(service, imageWithDigest)
 }
 
@@ -695,4 +666,55 @@ func addEnvVars(ctx context.Context, cwd string) error {
 
 func shouldExecuteRemotely(options *Options) bool {
 	return options.Branch != "" || options.Repository != ""
+}
+
+func checkServicesToBuild(service string, mOptions *model.BuildInfo, ch chan string) error {
+	opts := build.OptsFromManifest(service, mOptions, build.BuildOptions{})
+
+	if build.ShouldOptimizeBuild(opts.Tag) {
+		oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
+		if skipBuild, err := checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
+			return err
+		} else if skipBuild {
+			oktetoLog.Information("Image for service %s found at global registry: %s ", service, opts.Tag)
+			return nil
+		}
+	}
+
+	imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
+	if err == oktetoErrors.ErrNotFound {
+		ch <- service
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
+	}
+
+	return setManifestEnvVars(service, imageWithDigest)
+}
+
+func checkBuildFromManifest(ctx context.Context, buildManifest model.ManifestBuild) error {
+	oktetoLog.Information("Checking to build services at manifest")
+	// check if images are at registry (global or dev) and set envs or send to build
+	toBuild := make(chan string, len(buildManifest))
+	g, _ := errgroup.WithContext(ctx)
+
+	for service, mBuildInfo := range buildManifest {
+		service, mBuildInfo := service, mBuildInfo
+		g.Go(func() error {
+			return checkServicesToBuild(service, mBuildInfo, toBuild)
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return err
+	}
+	close(toBuild)
+
+	for svc := range toBuild {
+		mBuildInfo := buildManifest[svc]
+		if err := runBuildAndSetEnvs(ctx, svc, mBuildInfo); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

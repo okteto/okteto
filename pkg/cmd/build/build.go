@@ -205,6 +205,10 @@ func translateDockerErr(err error) error {
 
 // OptsFromManifest returns the parsed options for the build from the manifest
 func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildOptions {
+	if b.Name == "" {
+		b.Name = os.Getenv(model.OktetoNameEnvVar)
+	}
+
 	args := model.SerializeBuildArgs(b.Args)
 
 	if okteto.Context().IsOkteto && b.Image == "" {
@@ -236,6 +240,9 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 		BuildArgs: args,
 	}
 
+	if o.OutputMode == "" {
+		o.OutputMode = oktetoLog.GetOutputFormat()
+	}
 	opts.OutputMode = setOutputMode(o.OutputMode)
 	return opts
 }
