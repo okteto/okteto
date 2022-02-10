@@ -15,13 +15,18 @@ package executor
 
 import (
 	"bufio"
+	"context"
 	"os/exec"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 type plainExecutor struct {
-	scanner *bufio.Scanner
+	stdoutScanner *bufio.Scanner
+	stderrScanner *bufio.Scanner
+
+	commandContext context.Context
+	cancel         context.CancelFunc
 }
 
 func newPlainExecutor() *plainExecutor {
@@ -29,24 +34,50 @@ func newPlainExecutor() *plainExecutor {
 }
 
 func (e *plainExecutor) startCommand(cmd *exec.Cmd) error {
-	reader, err := cmd.StdoutPipe()
+	stdoutReader, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
 	}
-	cmd.Stderr = cmd.Stdout
+	e.stdoutScanner = bufio.NewScanner(stdoutReader)
 
-	if err := startCommand(cmd); err != nil {
+	stderrReader, err := cmd.StderrPipe()
+	if err != nil {
 		return err
 	}
-	e.scanner = bufio.NewScanner(reader)
-	return nil
+	e.stderrScanner = bufio.NewScanner(stderrReader)
+	return startCommand(cmd)
 }
 
 func (e *plainExecutor) display(_ string) {
-	for e.scanner.Scan() {
-		line := e.scanner.Text()
-		oktetoLog.Println(line)
-	}
+	e.commandContext, e.cancel = context.WithCancel(context.Background())
+	go func() {
+		for e.stdoutScanner.Scan() {
+			select {
+			case <-e.commandContext.Done():
+			default:
+				line := e.stdoutScanner.Text()
+				oktetoLog.Println(line)
+				continue
+			}
+			break
+		}
+	}()
+
+	go func() {
+		for e.stderrScanner.Scan() {
+			select {
+			case <-e.commandContext.Done():
+			default:
+				line := e.stderrScanner.Text()
+				oktetoLog.Warning(line)
+				continue
+			}
+			break
+		}
+	}()
 }
 
-func (*plainExecutor) cleanUp(_ error) {}
+func (e *plainExecutor) cleanUp(_ error) {
+	e.cancel()
+	<-e.commandContext.Done()
+}

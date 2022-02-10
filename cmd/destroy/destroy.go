@@ -23,10 +23,12 @@ import (
 	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -135,7 +137,9 @@ func Destroy(ctx context.Context) *cobra.Command {
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProvider(),
 			}
-			return c.runDestroy(ctx, options)
+			err = c.runDestroy(ctx, options)
+			analytics.TrackDestroy(err == nil)
+			return err
 		},
 	}
 
@@ -198,6 +202,22 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		manifest.Namespace = okteto.Context().Namespace
 	}
 	os.Setenv(model.OktetoNameEnvVar, opts.Name)
+
+	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
+
+		if len(manifest.Dependencies) > 0 {
+			for depName := range manifest.Dependencies {
+				destOpts := &pipelineCMD.DestroyOptions{
+					Name:           depName,
+					DestroyVolumes: opts.DestroyVolumes,
+				}
+				if err := pipelineCMD.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
+					return err
+				}
+			}
+
+		}
+	}
 
 	var commandErr error
 	stop := make(chan os.Signal, 1)

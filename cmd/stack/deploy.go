@@ -73,7 +73,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			err = stack.Deploy(ctx, s, options)
-			analytics.TrackDeployStack(err == nil, s.IsCompose)
+
+			analytics.TrackDeployStack(err == nil, s.IsCompose, utils.IsOktetoRepo())
 			if err == nil {
 				oktetoLog.Success("Stack '%s' successfully deployed", s.Name)
 			}

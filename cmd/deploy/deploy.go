@@ -34,6 +34,7 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -60,6 +61,7 @@ type Options struct {
 	Variables    []string
 	Manifest     *model.Manifest
 	Build        bool
+	Dependencies bool
 
 	Repository string
 	Branch     string
@@ -88,6 +90,8 @@ type DeployCommand struct {
 	Executor           executor.ManifestExecutor
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
+
+	PipelineType model.Archetype
 }
 
 //Deploy deploys the okteto manifest
@@ -162,7 +166,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 				TempKubeconfigFile: GetTempKubeConfigFile(options.Name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 			}
-			return c.RunDeploy(ctx, options)
+			startTime := time.Now()
+			err = c.RunDeploy(ctx, options)
+			duration := time.Since(startTime)
+			analytics.TrackDeploy(err == nil, utils.IsOktetoRepo(), err, duration, c.PipelineType)
+			return err
 		},
 	}
 
@@ -172,6 +180,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the app")
 	cmd.Flags().MarkHidden("build")
+	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
+	cmd.Flags().MarkHidden("dependencies")
 
 	cmd.Flags().StringVarP(&options.Repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
 	cmd.Flags().StringVarP(&options.Branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
@@ -195,7 +205,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 	oktetoLog.Debug("found okteto manifest")
 	if deployOptions.Manifest.Deploy == nil {
-		return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
+		return oktetoErrors.ErrManifestFoundButNoDeployCommands
 	}
 	if deployOptions.Manifest.Context == "" {
 		deployOptions.Manifest.Context = okteto.Context().Name
@@ -203,11 +213,16 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if deployOptions.Manifest.Namespace == "" {
 		deployOptions.Manifest.Namespace = okteto.Context().Namespace
 	}
+	dc.PipelineType = deployOptions.Manifest.Type
 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
 	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
+		if deployOptions.Dependencies && !okteto.IsOkteto() {
+			return fmt.Errorf("deploy of dependencies is only available for Okteto instances")
+		}
 
+		oktetoLog.Information("Checking to build services at manifest")
 		if deployOptions.Manifest.Build != nil {
 
 			for service, mOptions := range deployOptions.Manifest.Build {
@@ -243,12 +258,34 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 				} else if err != nil {
 					return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
 				} else {
-					oktetoLog.Debug("image found, skipping build")
+					oktetoLog.Success("Skipping build for image for service %s found: %s", service, opts.Tag)
 					if err := setManifestEnvVars(service, imageWithDigest); err != nil {
 						return err
 					}
 				}
 
+			}
+		}
+
+		oktetoLog.Information("Checking to deploy dependencies at manifest")
+		for depName, dep := range deployOptions.Manifest.Dependencies {
+			pipOpts := &pipelineCMD.DeployOptions{
+				Name:       depName,
+				Repository: dep.Repository,
+				Branch:     dep.Branch,
+				File:       dep.ManifestPath,
+				Variables:  model.SerializeBuildArgs(dep.Variables),
+				Wait:       dep.Wait,
+				Timeout:    deployOptions.Timeout,
+			}
+			if deployOptions.Dependencies {
+				if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+					return err
+				}
+				continue
+			}
+			if err := checkByNameAndDeployDependency(ctx, depName, pipOpts); err != nil {
+				return err
 			}
 		}
 	}
@@ -391,7 +428,7 @@ func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (b
 }
 
 func runBuildAndSetEnvs(ctx context.Context, service string, options build.BuildOptions) error {
-	oktetoLog.Information("building image for service %s", service)
+	oktetoLog.Information("Building image for service %s", service)
 	if err := build.Run(ctx, options); err != nil {
 		return err
 	}
@@ -399,6 +436,7 @@ func runBuildAndSetEnvs(ctx context.Context, service string, options build.Build
 	if err != nil {
 		return fmt.Errorf("error checking image at registry %s: %v", options.Tag, err)
 	}
+	oktetoLog.Success("Image for service %s: %s", service, options.Tag)
 	return setManifestEnvVars(service, imageWithDigest)
 }
 
@@ -414,6 +452,21 @@ func setManifestEnvVars(service, reference string) error {
 
 	oktetoLog.Debug("manifest env vars set")
 	return nil
+}
+
+func checkByNameAndDeployDependency(ctx context.Context, name string, pipOpts *pipelineCMD.DeployOptions) error {
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	if _, err := oktetoClient.GetPipelineByName(ctx, name); err == nil {
+		oktetoLog.Success("Dependency '%s' was already deployed", name)
+		return nil
+	} else if !oktetoErrors.IsNotFound(err) {
+		return err
+	}
+
+	return pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts)
 }
 
 func (dc *DeployCommand) cleanUp(ctx context.Context) {

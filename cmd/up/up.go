@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
@@ -164,12 +165,19 @@ func Up() *cobra.Command {
 				}
 				oktetoLog.Infof("Terminal: %v", up.stateTerm)
 			}
+			up.Client, up.RestConfig, err = okteto.GetK8sClient()
+			if err != nil {
+				return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
+			}
 
-			if upOptions.Deploy {
-				if err := up.deployApp(ctx); err != nil {
+			if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
+				err := up.deployApp(ctx)
+				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
 					return err
 				}
-				up.Dev.Autocreate = false
+				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
+					up.Dev.Autocreate = false
+				}
 			}
 
 			err = up.start()
@@ -271,11 +279,6 @@ func (up *upContext) deployApp(ctx context.Context) error {
 }
 
 func (up *upContext) start() error {
-	var err error
-	up.Client, up.RestConfig, err = okteto.GetK8sClient()
-	if err != nil {
-		return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
-	}
 
 	ctx := context.Background()
 
@@ -295,7 +298,7 @@ func (up *upContext) start() error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
-	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, up.Dev.Divert != nil)
+	analytics.TrackUp(true, up.Dev.Name, up.getInteractive(), len(up.Dev.Services) == 0, utils.IsOktetoRepo(), up.Dev.Divert != nil)
 
 	go up.activateLoop()
 
