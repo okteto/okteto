@@ -202,7 +202,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 	oktetoLog.Debug("found okteto manifest")
 	if deployOptions.Manifest.Deploy == nil {
-		return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
+		return oktetoErrors.ErrManifestFoundButNoDeployCommands
 	}
 	if deployOptions.Manifest.Context == "" {
 		deployOptions.Manifest.Context = okteto.Context().Name
