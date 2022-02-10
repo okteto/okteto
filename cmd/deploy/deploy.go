@@ -231,10 +231,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 				}
 			}
 
-		} else {
-			if err := checkBuildFromManifest(ctx, deployOptions.Manifest.Build); err != nil {
-				return err
-			}
+		} else if err := checkBuildFromManifest(ctx, deployOptions.Manifest.Build); err != nil {
+			return err
 		}
 
 		oktetoLog.Information("Checking to deploy dependencies at manifest")
