@@ -44,12 +44,13 @@ func Build(ctx context.Context) *cobra.Command {
 
 			ctxOpts := &contextCMD.ContextOptions{}
 
-			manifest, err := model.GetManifestV2(options.File)
-			if err != nil {
-				return err
+			manifest, errManifest := model.GetManifestV2(options.File)
+			if errManifest != nil {
+				oktetoLog.Debug("error getting manifest v2 from file %s: %v", options.File, errManifest)
 			}
 
-			isBuildV2 := options.Tag == "" &&
+			isBuildV2 := errManifest == nil &&
+				options.Tag == "" &&
 				manifest.IsV2 &&
 				len(manifest.Build) != 0
 
