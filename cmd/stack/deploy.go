@@ -25,70 +25,50 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
-// Deploy deploys a stack
-func Deploy(ctx context.Context) *cobra.Command {
+// DeployCommand has all the namespaces subcommands
+type DeployCommand struct {
+	K8sClient      kubernetes.Interface
+	Config         *rest.Config
+	IsInsideDeploy bool
+}
+
+// deploy deploys a stack
+func deploy(ctx context.Context) *cobra.Command {
 	options := &stack.StackDeployOptions{}
 
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
 		Short: "Deploy a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			options.ServicesToDeploy = args
 
-			options.StackPath = loadComposePaths(options.StackPath)
-			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPath)
+			options.StackPaths = loadComposePaths(options.StackPaths)
+			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPaths)
 			if err != nil {
 				return err
 			}
-
-			if okteto.IsOkteto() {
-				create, err := utils.ShouldCreateNamespace(ctx, s.Namespace)
-				if err != nil {
-					return err
-				}
-				if create {
-					nsCmd, err := namespace.NewCommand()
-					if err != nil {
-						return err
-					}
-					nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: s.Namespace})
-				}
+			c, config, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get(config.GetKubeconfigPath()))
+			if err != nil {
+				return err
 			}
-
-			analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)
-
-			if len(args) > 0 {
-				options.ServicesToDeploy = args
-			} else {
-				definedSvcs := make([]string, 0)
-				for svcName := range s.Services {
-					definedSvcs = append(definedSvcs, svcName)
-				}
-				options.ServicesToDeploy = definedSvcs
+			dc := &DeployCommand{
+				K8sClient: c,
+				Config:    config,
 			}
-
-			err = stack.Deploy(ctx, s, options)
-
-			analytics.TrackDeployStack(err == nil, s.IsCompose, utils.IsOktetoRepo())
-			if err == nil {
-				oktetoLog.Success("Stack '%s' successfully deployed", s.Name)
-			}
-
-			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-				if err := stack.ListEndpoints(ctx, s, ""); err != nil {
-					return err
-				}
-			}
-
-			return err
+			return dc.RunDeploy(ctx, s, options)
 		},
 	}
-	cmd.Flags().StringArrayVarP(&options.StackPath, "file", "f", []string{}, "path to the stack manifest files. If more than one is passed the latest will overwrite the fields from the previous")
+	cmd.Flags().StringArrayVarP(&options.StackPaths, "file", "f", []string{}, "path to the stack manifest files. If more than one is passed the latest will overwrite the fields from the previous")
 	cmd.Flags().StringVarP(&options.Name, "name", "", "", "overwrites the stack name")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is deployed")
 	cmd.Flags().BoolVarP(&options.ForceBuild, "build", "", false, "build images before starting any Stack service")
@@ -97,6 +77,52 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (10 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	cmd.Flags().StringVarP(&options.Progress, "progress", "", oktetoLog.TTYFormat, "show plain/tty build output (default \"tty\")")
 	return cmd
+}
+
+// RunDeploy runs the deploy command sequence
+func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *stack.StackDeployOptions) error {
+
+	if okteto.IsOkteto() {
+		create, err := utils.ShouldCreateNamespace(ctx, s.Namespace)
+		if err != nil {
+			return err
+		}
+		if create {
+			nsCmd, err := namespace.NewCommand()
+			if err != nil {
+				return err
+			}
+			nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: s.Namespace})
+		}
+	}
+
+	analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)
+
+	if len(options.ServicesToDeploy) == 0 {
+		definedSvcs := make([]string, 0)
+		for svcName := range s.Services {
+			definedSvcs = append(definedSvcs, svcName)
+		}
+		options.ServicesToDeploy = definedSvcs
+	}
+
+	stackDeployer := &stack.Stack{
+		K8sClient: c.K8sClient,
+		Config:    c.Config,
+	}
+	err := stackDeployer.Deploy(ctx, s, options)
+
+	analytics.TrackDeployStack(err == nil, s.IsCompose, utils.IsOktetoRepo())
+	if err == nil {
+		oktetoLog.Success("Stack '%s' successfully deployed", s.Name)
+	}
+
+	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) || !c.IsInsideDeploy {
+		if err := stack.ListEndpoints(ctx, s, ""); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func splitComposeFileEnv(value string) []string {

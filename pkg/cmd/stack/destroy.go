@@ -112,7 +112,7 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 	return nil
 }
 
-func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c *kubernetes.Clientset) error {
+func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c kubernetes.Interface) error {
 	if err := destroyDeployments(ctx, spinner, s, c); err != nil {
 		return err
 	}
@@ -210,7 +210,7 @@ func destroyJobs(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c 
 	return nil
 }
 
-func destroyIngresses(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c *kubernetes.Clientset) error {
+func destroyIngresses(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c kubernetes.Interface) error {
 	iClient, err := ingresses.GetClient(ctx, c)
 	if err != nil {
 		return fmt.Errorf("error getting ingress client: %s", err.Error())

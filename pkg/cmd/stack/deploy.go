@@ -36,7 +36,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,8 +43,9 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// StackDeployOptions represents the different options available for stack commands
 type StackDeployOptions struct {
-	StackPath        []string
+	StackPaths       []string
 	Name             string
 	Namespace        string
 	ForceBuild       bool
@@ -56,14 +56,16 @@ type StackDeployOptions struct {
 	Progress         string
 }
 
-// Deploy deploys a stack
-func Deploy(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
-	c, config, err := okteto.GetK8sClient()
-	if err != nil {
-		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
-	}
+// Stack is the executor of stack commands
+type Stack struct {
+	K8sClient kubernetes.Interface
+	Config    *rest.Config
+}
 
-	if err := validateServicesToDeploy(ctx, s, options, c); err != nil {
+// Deploy deploys a stack
+func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
+
+	if err := validateServicesToDeploy(ctx, s, options, sd.K8sClient); err != nil {
 		return err
 	}
 
@@ -75,11 +77,11 @@ func Deploy(ctx context.Context, s *model.Stack, options *StackDeployOptions) er
 	output := fmt.Sprintf("Deploying stack '%s'...", s.Name)
 	cfg.Data[statusField] = progressingStatus
 	cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
-	if err := configmaps.Deploy(ctx, cfg, s.Namespace, c); err != nil {
+	if err := configmaps.Deploy(ctx, cfg, s.Namespace, sd.K8sClient); err != nil {
 		return err
 	}
 
-	err = deploy(ctx, s, c, config, options)
+	err := deploy(ctx, s, sd.K8sClient, sd.Config, options)
 	if err != nil {
 		output = fmt.Sprintf("%s\nStack '%s' deployment failed: %s", output, s.Name, err.Error())
 		cfg.Data[statusField] = errorStatus
@@ -90,14 +92,14 @@ func Deploy(ctx context.Context, s *model.Stack, options *StackDeployOptions) er
 		cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
 	}
 
-	if err := configmaps.Deploy(ctx, cfg, s.Namespace, c); err != nil {
+	if err := configmaps.Deploy(ctx, cfg, s.Namespace, sd.K8sClient); err != nil {
 		return err
 	}
 
 	return err
 }
 
-func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config *rest.Config, options *StackDeployOptions) error {
+func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *StackDeployOptions) error {
 	DisplayWarnings(s)
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
 	spinner.Start()
@@ -179,7 +181,7 @@ func deploy(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, config
 	return nil
 }
 
-func deployServices(ctx context.Context, stack *model.Stack, k8sClient *kubernetes.Clientset, config *rest.Config, spinner *utils.Spinner, options *StackDeployOptions) error {
+func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, spinner *utils.Spinner, options *StackDeployOptions) error {
 	deployedSvcs := make(map[string]bool)
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(options.Timeout)
@@ -530,7 +532,7 @@ func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *i
 	return c.Update(ctx, iModel)
 }
 
-func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c *kubernetes.Clientset) error {
+func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c kubernetes.Interface) error {
 	var numPods int32 = 0
 	for _, svc := range s.Services {
 		numPods += svc.Replicas
