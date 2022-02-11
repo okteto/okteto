@@ -103,6 +103,13 @@ func Up() *cobra.Command {
 					return err
 				}
 			}
+			if manifest.Name == "" {
+				wd, err := os.Getwd()
+				if err != nil {
+					return err
+				}
+				manifest.Name = utils.InferApplicationName(wd)
+			}
 
 			dev, err := utils.GetDevFromManifest(manifest)
 			if err != nil {
@@ -200,7 +207,7 @@ func Up() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&upOptions.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&upOptions.DevPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().IntVarP(&upOptions.Remote, "remote", "r", 0, "configures remote execution on the specified port")
@@ -230,7 +237,7 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 	}
 
 	oktetoLog.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
-	return utils.LoadManifest(devPath)
+	return model.GetManifestV2(devPath)
 }
 
 func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
@@ -264,7 +271,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 	}
 
 	c := &deploy.DeployCommand{
-		GetManifest:        model.GetManifestV2,
+		GetManifest:        up.getManifest,
 		Kubeconfig:         kubeconfig,
 		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat()),
 		Proxy:              proxy,
@@ -275,9 +282,17 @@ func (up *upContext) deployApp(ctx context.Context) error {
 	return c.RunDeploy(ctx, &deploy.Options{
 		Name:         up.Manifest.Name,
 		ManifestPath: up.Manifest.Filename,
+		Timeout:      5 * time.Minute,
+		Build:        true,
 	})
 }
 
+func (up *upContext) getManifest(path string) (*model.Manifest, error) {
+	if up.Manifest != nil {
+		return up.Manifest, nil
+	}
+	return model.GetManifestV2(path)
+}
 func (up *upContext) start() error {
 
 	ctx := context.Background()

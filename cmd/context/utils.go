@@ -129,7 +129,11 @@ func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextRe
 }
 
 func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.Manifest, error) {
-	ctxResource, err := utils.LoadManifestContext(opts.Filename)
+	m, err := model.GetManifestV2(opts.Filename)
+	if err != nil {
+		return nil, err
+	}
+	ctxResource, err := utils.LoadManifestContext(m.Filename)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +156,19 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 		return nil, err
 	}
 
-	return utils.LoadManifest(opts.Filename)
+	m.Namespace = okteto.Context().Namespace
+	m.Context = okteto.Context().Name
+
+	for _, dev := range m.Dev {
+		if err := utils.LoadManifestRc(dev); err != nil {
+			return nil, err
+		}
+
+		dev.Namespace = okteto.Context().Namespace
+		dev.Context = okteto.Context().Name
+	}
+
+	return m, nil
 }
 
 func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string) (*model.Stack, error) {
@@ -178,7 +194,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 		return nil, err
 	}
 
-	s, err := utils.LoadStack(name, stackPaths)
+	s, err := model.LoadStack(name, stackPaths)
 	if err != nil {
 		if name == "" {
 			return nil, err

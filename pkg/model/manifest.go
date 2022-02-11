@@ -27,21 +27,21 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-//Archetype represents the type of manifest
+// Archetype represents the type of manifest
 type Archetype string
 
 var (
-	//StackType represents a stack manifest type
+	// StackType represents a stack manifest type
 	StackType Archetype = "stack"
-	//OktetoType represents a okteto manifest type
+	// OktetoType represents a okteto manifest type
 	OktetoType Archetype = "okteto"
 	//OktetoType represents a okteto manifest type
 	OktetoManifestType Archetype = "manifest"
-	//PipelineType represents a okteto pipeline manifest type
+	// PipelineType represents a okteto pipeline manifest type
 	PipelineType Archetype = "pipeline"
-	//KubernetesType represents a k8s manifest type
+	// KubernetesType represents a k8s manifest type
 	KubernetesType Archetype = "kubernetes"
-	//ChartType represents a k8s manifest type
+	// ChartType represents a k8s manifest type
 	ChartType Archetype = "chart"
 )
 
@@ -101,7 +101,7 @@ var (
 	}
 )
 
-//Manifest represents an okteto manifest
+// Manifest represents an okteto manifest
 type Manifest struct {
 	Name         string               `json:"name,omitempty" yaml:"name,omitempty"`
 	Namespace    string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
@@ -119,16 +119,16 @@ type Manifest struct {
 	IsV2     bool      `json:"-" yaml:"-"`
 }
 
-//ManifestDevs defines all the dev section
+// ManifestDevs defines all the dev section
 type ManifestDevs map[string]*Dev
 
-//ManifestBuild defines all the build section
+// ManifestBuild defines all the build section
 type ManifestBuild map[string]*BuildInfo
 
 // ManifestDependencies represents the map of dependencies at a manifest
 type ManifestDependencies map[string]*Dependency
 
-//NewManifest creates a new empty manifest
+// NewManifest creates a new empty manifest
 func NewManifest() *Manifest {
 	return &Manifest{
 		Dev:          map[string]*Dev{},
@@ -138,7 +138,7 @@ func NewManifest() *Manifest {
 	}
 }
 
-//NewManifestFromDev creates a manifest from a dev
+// NewManifestFromDev creates a manifest from a dev
 func NewManifestFromDev(dev *Dev) *Manifest {
 	manifest := NewManifest()
 	name, err := ExpandEnv(dev.Name)
@@ -150,12 +150,20 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 	return manifest
 }
 
-//DeployInfo represents what must be deployed for the app to work
+// DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
 	Commands []DeployCommand `json:"commands,omitempty" yaml:"commands,omitempty"`
+	Compose  *ComposeInfo    `json:"compose,omitempty" yaml:"compose,omitempty"`
 }
 
-//DeployCommand represents a command to be executed
+// ComposeInfo represents information about compose file
+type ComposeInfo struct {
+	Manifest  []string     `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Endpoints EndpointSpec `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	Stack     *Stack       `json:"-,omitempty" yaml:"-,omitempty"`
+}
+
+// DeployCommand represents a command to be executed
 type DeployCommand struct {
 	Name    string `json:"name,omitempty" yaml:"name,omitempty"`
 	Command string `json:"command,omitempty" yaml:"command,omitempty"`
@@ -189,6 +197,13 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		}
 		if devManifest.IsV2 {
 			devManifest.Type = OktetoManifestType
+			s, err := LoadStack("", devManifest.Deploy.Compose.Manifest)
+			if err != nil {
+				return nil, err
+			}
+			devManifest.Deploy.Compose.Stack = s
+			s.Endpoints = devManifest.Deploy.Compose.Endpoints
+			devManifest.InferFromStack()
 			return devManifest, nil
 		}
 	}
@@ -220,6 +235,8 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 					},
 				},
 			},
+			Dev:      ManifestDevs{},
+			Build:    ManifestBuild{},
 			Filename: chartPath,
 		}
 		if devManifest != nil {
@@ -240,6 +257,8 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 					},
 				},
 			},
+			Dev:      ManifestDevs{},
+			Build:    ManifestBuild{},
 			Filename: manifestPath,
 		}
 		if devManifest != nil {
@@ -253,17 +272,26 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		stackManifest := &Manifest{
 			Type: StackType,
 			Deploy: &DeployInfo{
-				Commands: []DeployCommand{
-					{
-						Name:    fmt.Sprintf("okteto stack deploy --build -f %s", stackPath),
-						Command: fmt.Sprintf("okteto stack deploy --build -f %s", stackPath),
+				Compose: &ComposeInfo{
+					Manifest: []string{
+						stackPath,
 					},
 				},
 			},
+			Dev:      ManifestDevs{},
+			Build:    ManifestBuild{},
 			Filename: stackPath,
+			IsV2:     true,
 		}
+		s, err := LoadStack("", stackManifest.Deploy.Compose.Manifest)
+		if err != nil {
+			return nil, err
+		}
+		stackManifest.Deploy.Compose.Stack = s
 		if devManifest != nil {
 			stackManifest.mergeWithOktetoManifest(devManifest)
+		} else {
+			stackManifest.InferFromStack()
 		}
 		return stackManifest, nil
 	}
@@ -372,27 +400,35 @@ func Read(bytes []byte) (*Manifest, error) {
 			return nil, errors.New(msg)
 		}
 	}
-	for dName, d := range manifest.Dev {
+	if err := manifest.setDefaults(); err != nil {
+		return nil, err
+	}
+	manifest.Manifest = bytes
+	return manifest, nil
+}
+
+func (m *Manifest) setDefaults() error {
+	for dName, d := range m.Dev {
 		if d.Name == "" {
 			d.Name = dName
 		}
 		if err := d.expandEnvVars(); err != nil {
-			return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+			return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
 		}
 		for _, s := range d.Services {
 			if err := s.expandEnvVars(); err != nil {
-				return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+				return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
 			}
 			if err := s.validateForExtraFields(); err != nil {
-				return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+				return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
 			}
 		}
 
 		if err := d.SetDefaults(); err != nil {
-			return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+			return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
 		}
 		if err := d.translateDeprecatedMetadataFields(); err != nil {
-			return nil, fmt.Errorf("Error on dev '%s': %s", d.Name, err)
+			return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
 		}
 		sort.SliceStable(d.Forward, func(i, j int) bool {
 			return d.Forward[i].less(&d.Forward[j])
@@ -403,19 +439,18 @@ func Read(bytes []byte) (*Manifest, error) {
 		})
 
 		if err := d.translateDeprecatedVolumeFields(); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	for _, b := range manifest.Build {
+	for _, b := range m.Build {
 		if b.Name != "" {
 			b.Context = b.Name
 			b.Name = ""
 		}
 		b.setBuildDefaults()
 	}
-	manifest.Manifest = bytes
-	return manifest, nil
+	return nil
 }
 
 func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
@@ -456,4 +491,40 @@ type Dependency struct {
 	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
 	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
 	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
+}
+
+// InferFromStack infers data from a stackfile
+func (m *Manifest) InferFromStack() (*Manifest, error) {
+
+	for svcName, svcInfo := range m.Deploy.Compose.Stack.Services {
+		d := NewDev()
+		for _, p := range svcInfo.Ports {
+			if p.HostPort != 0 {
+				d.Forward = append(d.Forward, Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
+			}
+		}
+
+		for _, v := range svcInfo.VolumeMounts {
+			if pathExistsAndDir(v.LocalPath) {
+				d.Sync.Folders = append(d.Sync.Folders, SyncFolder{
+					LocalPath:  v.LocalPath,
+					RemotePath: v.RemotePath,
+				})
+			}
+		}
+		d.Command = svcInfo.Command
+		d.EnvFiles = svcInfo.EnvFiles
+		d.Environment = svcInfo.Environment
+		d.Name = svcName
+
+		m.Dev[svcName] = d
+
+		if svcInfo.Build == nil {
+			continue
+		}
+		buildInfo := svcInfo.Build
+		m.Build[svcName] = buildInfo
+	}
+	m.setDefaults()
+	return m, nil
 }

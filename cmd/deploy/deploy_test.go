@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd/api"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var fakeManifest *model.Manifest = &model.Manifest{
@@ -74,6 +75,9 @@ func (*fakeKubeConfig) Read() (*rest.Config, error) {
 
 func (fc *fakeKubeConfig) Modify(_ int, _, _ string) error {
 	return fc.errOnModify
+}
+func (fc *fakeKubeConfig) GetModifiedCMDAPIConfig() (*clientcmdapi.Config, error) {
+	return nil, nil
 }
 
 func (fk *fakeProxy) Start() {

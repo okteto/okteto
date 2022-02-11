@@ -32,11 +32,14 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
+	stackCMD "github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/cmd/utils/displayer"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -311,20 +314,51 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	)
 	oktetoLog.EnableMasking()
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-	exit := make(chan error, 1)
+	err = dc.deploy(ctx, deployOptions)
 
+	if err != nil {
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deployment failed: %s", err.Error())
+		data.Status = pipeline.ErrorStatus
+	} else {
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "'%s' successfully deployed", deployOptions.Name)
+		data.Status = pipeline.DeployedStatus
+	}
+	oktetoLog.SetStage("")
+	oktetoLog.DisableMasking()
+
+	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
+		return err
+	}
+	if err != nil {
+		return err
+	}
+
+	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+		if err := dc.showEndpoints(ctx, deployOptions); err != nil {
+			oktetoLog.Infof("could not retrieve endpoints: %s", err)
+		}
+	}
+
+	return nil
+}
+
+func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
+	stopCmds := make(chan os.Signal, 1)
+	signal.Notify(stopCmds, os.Interrupt)
+	exit := make(chan error, 1)
 	go func() {
-		if err := dc.deploy(deployOptions); err != nil {
-			exit <- err
-			return
+		for _, command := range opts.Manifest.Deploy.Commands {
+			oktetoLog.SetStage(command.Name)
+			if err := dc.Executor.Execute(command, opts.Variables); err != nil {
+				oktetoLog.Fail("error executing command '%s': %s", command.Name, err.Error())
+				exit <- fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
+				return
+			}
 		}
 		exit <- nil
 	}()
-
 	select {
-	case <-stop:
+	case <-stopCmds:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		sp := utils.NewSpinner("Shutting down...")
 		sp.Start()
@@ -332,40 +366,53 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		dc.Executor.CleanUp(errors.New("Interrupt signal received"))
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
-		oktetoLog.SetStage("")
-		if err != nil {
-			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deployment failed: %s", err.Error())
-			data.Status = pipeline.ErrorStatus
-		} else {
-			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "'%s' successfully deployed", deployOptions.Name)
-			data.Status = pipeline.DeployedStatus
-		}
-		oktetoLog.SetStage("")
-		oktetoLog.DisableMasking()
-
-		if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
-			return err
-		}
 		if err != nil {
 			return err
-		}
-
-		if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-			if err := dc.showEndpoints(ctx, deployOptions); err != nil {
-				oktetoLog.Infof("could not retrieve endpoints: %s", err)
-			}
 		}
 	}
 
-	return nil
-}
+	stopCompose := make(chan os.Signal, 1)
+	signal.Notify(stopCompose, os.Interrupt)
+	exitCompose := make(chan error, 1)
 
-func (dc *DeployCommand) deploy(opts *Options) error {
-	for _, command := range opts.Manifest.Deploy.Commands {
-		oktetoLog.SetStage(command.Name)
-		if err := dc.Executor.Execute(command, opts.Variables); err != nil {
-			oktetoLog.Fail("error executing command '%s': %s", command.Name, err.Error())
-			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
+	go func() {
+		if opts.Manifest.Deploy.Compose != nil {
+			oktetoLog.SetStage("Deploying stack")
+			reader, writer := io.Pipe()
+			oktetoLog.SetOutput(writer)
+			exit := make(chan error, 1)
+			stop := make(chan os.Signal, 1)
+			signal.Notify(stop, os.Interrupt)
+			d := displayer.NewDisplayer(oktetoLog.GetOutputFormat(), reader, nil)
+			d.Display("Deploying stack")
+			go func() {
+				err := dc.deployStack(ctx, opts)
+				writer.Close()
+				exit <- err
+			}()
+			select {
+			case err := <-exit:
+				d.CleanUp(err)
+			case <-stop:
+				d.CleanUp(errors.New("Interrupt signal received"))
+				exitCompose <- oktetoErrors.ErrIntSig
+			}
+			oktetoLog.SetOutput(os.Stdout)
+		}
+	}()
+
+	select {
+	case <-stopCmds:
+		os.Unsetenv(model.OktetoDisableSpinnerEnvVar)
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+		sp := utils.NewSpinner("Shutting down...")
+		sp.Start()
+		defer sp.Stop()
+		dc.Executor.CleanUp(errors.New("Interrupt signal received"))
+		return oktetoErrors.ErrIntSig
+	case err := <-exitCompose:
+		if err != nil {
+			return err
 		}
 	}
 
@@ -374,6 +421,39 @@ func (dc *DeployCommand) deploy(opts *Options) error {
 	oktetoLog.SetStage("")
 
 	return nil
+}
+
+func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
+	composeInfo := opts.Manifest.Deploy.Compose
+	composeInfo.Stack.Namespace = okteto.Context().Namespace
+	stackOpts := &stack.StackDeployOptions{
+		StackPaths: composeInfo.Manifest,
+		ForceBuild: false,
+		Wait:       opts.Wait,
+		Timeout:    opts.Timeout,
+	}
+
+	c, _, err := dc.K8sClientProvider.Provide(kubeconfig.Get([]string{dc.TempKubeconfigFile}))
+	if err != nil {
+		return err
+	}
+	cfg, err := dc.Kubeconfig.Read()
+	if err != nil {
+		return err
+	}
+	stackCommand := stackCMD.DeployCommand{
+		K8sClient:      c,
+		Config:         cfg,
+		IsInsideDeploy: true,
+	}
+	os.Setenv(model.OktetoDisableSpinnerEnvVar, "true")
+
+	err = stackCommand.RunDeploy(ctx, composeInfo.Stack, stackOpts)
+	if err != nil {
+		return err
+	}
+	os.Unsetenv(model.OktetoDisableSpinnerEnvVar)
+	return err
 }
 
 func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (bool, error) {
