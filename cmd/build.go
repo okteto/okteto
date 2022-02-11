@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -38,15 +39,48 @@ func Build(ctx context.Context) *cobra.Command {
 	options := build.BuildOptions{}
 	cmd := &cobra.Command{
 		Use:   "build [PATH]",
-		Args:  utils.BuildMaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#build"),
 		Short: "Build (and optionally push) a Docker image",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			ctxOpts := &contextCMD.ContextOptions{}
+
+			manifest, err := model.GetManifestV2(options.File)
+			if err != nil {
 				return err
 			}
-			if okteto.IsOkteto() && options.Namespace != "" {
-				create, err := utils.ShouldCreateNamespace(ctx, options.Namespace)
+
+			isBuildV2 := options.Tag == "" &&
+				manifest.IsV2 &&
+				len(manifest.Build) != 0
+
+			if isBuildV2 {
+				if manifest.Context != "" {
+					ctxOpts.Context = manifest.Context
+					if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
+						return err
+					}
+				}
+
+				if options.Namespace == "" && manifest.Namespace != "" {
+					ctxOpts.Namespace = manifest.Namespace
+				}
+			} else {
+				v1Args := 1
+				docsURL := "https://okteto.com/docs/reference/cli/#build"
+				if len(args) != v1Args {
+					return oktetoErrors.UserError{
+						E:    fmt.Errorf("%q requires %d arg(s), but received %d", cmd.CommandPath(), v1Args, len(args)),
+						Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
+					}
+				}
+
+				if options.Namespace != "" {
+					ctxOpts.Namespace = options.Namespace
+				}
+			}
+
+			if okteto.IsOkteto() && ctxOpts.Namespace != "" {
+				create, err := utils.ShouldCreateNamespace(ctx, ctxOpts.Namespace)
 				if err != nil {
 					return err
 				}
@@ -55,39 +89,18 @@ func Build(ctx context.Context) *cobra.Command {
 					if err != nil {
 						return err
 					}
-					nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: options.Namespace})
+					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
+						return err
+					}
 				}
-			}
-
-			ctxOpts := &contextCMD.ContextOptions{
-				Namespace: options.Namespace,
 			}
 
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
 				return err
 			}
 
-			if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
-				manifest, err := model.GetManifestV2(options.File)
-				if err != nil {
-					return err
-				}
-
-				if manifest.Namespace != "" {
-					ctxOpts.Namespace = manifest.Namespace
-				}
-				if manifest.Context != "" {
-					ctxOpts.Context = manifest.Context
-				}
-				if manifest.Namespace != "" || manifest.Context != "" {
-					if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
-						return err
-					}
-				}
-				if len(manifest.Build) != 0 {
-					return buildV2(manifest.Build, options, args)
-				}
-				oktetoLog.Information("Build manifest not found. Looking for Dockerfile to run the build")
+			if isBuildV2 {
+				return buildV2(manifest.Build, options, args)
 			}
 
 			return buildV1(options, args)

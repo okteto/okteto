@@ -320,7 +320,6 @@ spec:
 
 func runOktetoDeploy(oktetoPath, repoDir string) (string, error) {
 	cmd := exec.Command(oktetoPath, "deploy", "-l", "debug")
-	cmd.Env = append(os.Environ(), "OKTETO_ENABLE_MANIFEST_V2=true")
 	cmd.Dir = repoDir
 	o, err := cmd.CombinedOutput()
 	if err != nil {
@@ -331,7 +330,6 @@ func runOktetoDeploy(oktetoPath, repoDir string) (string, error) {
 
 func runOktetoDeployForceBuild(oktetoPath, repoDir string) (string, error) {
 	cmd := exec.Command(oktetoPath, "deploy", "--build", "-l", "debug")
-	cmd.Env = append(os.Environ(), "OKTETO_ENABLE_MANIFEST_V2=true")
 	cmd.Dir = repoDir
 	o, err := cmd.CombinedOutput()
 	if err != nil {

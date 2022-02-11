@@ -17,7 +17,6 @@ import (
 	"fmt"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/cobra"
 )
 
@@ -57,17 +56,6 @@ func maxNArgs(cmd *cobra.Command, n int, url string, args []string) error {
 		}
 	}
 	return nil
-}
-
-// BuildMaximumNArgsAccepted returns an error if there are more than N args.
-func BuildMaximumNArgsAccepted(n int, url string) cobra.PositionalArgs {
-	return func(cmd *cobra.Command, args []string) error {
-		if LoadBoolean(model.OktetoManifestV2Enabled) {
-			return nil
-		}
-		return maxNArgs(cmd, n, url, args)
-	}
-
 }
 
 // MinimumNArgsAccepted returns an error if there are more than N args.

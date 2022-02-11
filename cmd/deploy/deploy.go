@@ -218,44 +218,46 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
-	if utils.LoadBoolean(model.OktetoManifestV2Enabled) {
-		if deployOptions.Dependencies && !okteto.IsOkteto() {
-			return fmt.Errorf("deploy of dependencies is only available for Okteto instances")
-		}
+	if deployOptions.Dependencies && !okteto.IsOkteto() {
+		return fmt.Errorf("deploy of dependencies is only available in clusters managed by Okteto")
+	}
 
-		if deployOptions.Build {
+	if deployOptions.Build {
+		if len(deployOptions.Manifest.Build) != 0 {
 			oktetoLog.Information("Building services at manifest")
-			for service, mBuildInfo := range deployOptions.Manifest.Build {
-				oktetoLog.Debug("force build from manifest definition")
-				if err := runBuildAndSetEnvs(ctx, service, mBuildInfo); err != nil {
-					return err
-				}
-			}
-
-		} else if err := checkBuildFromManifest(ctx, deployOptions.Manifest.Build); err != nil {
-			return err
 		}
-
-		oktetoLog.Information("Checking to deploy dependencies at manifest")
-		for depName, dep := range deployOptions.Manifest.Dependencies {
-			pipOpts := &pipelineCMD.DeployOptions{
-				Name:       depName,
-				Repository: dep.Repository,
-				Branch:     dep.Branch,
-				File:       dep.ManifestPath,
-				Variables:  model.SerializeBuildArgs(dep.Variables),
-				Wait:       dep.Wait,
-				Timeout:    deployOptions.Timeout,
-			}
-			if deployOptions.Dependencies {
-				if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
-					return err
-				}
-				continue
-			}
-			if err := checkByNameAndDeployDependency(ctx, depName, pipOpts); err != nil {
+		for service, mBuildInfo := range deployOptions.Manifest.Build {
+			oktetoLog.Debug("force build from manifest definition")
+			if err := runBuildAndSetEnvs(ctx, service, mBuildInfo); err != nil {
 				return err
 			}
+		}
+
+	} else if err := checkBuildFromManifest(ctx, deployOptions.Manifest.Build); err != nil {
+		return err
+	}
+
+	if len(deployOptions.Manifest.Dependencies) != 0 {
+		oktetoLog.Information("Checking to deploy dependencies at manifest")
+	}
+	for depName, dep := range deployOptions.Manifest.Dependencies {
+		pipOpts := &pipelineCMD.DeployOptions{
+			Name:       depName,
+			Repository: dep.Repository,
+			Branch:     dep.Branch,
+			File:       dep.ManifestPath,
+			Variables:  model.SerializeBuildArgs(dep.Variables),
+			Wait:       dep.Wait,
+			Timeout:    deployOptions.Timeout,
+		}
+		if deployOptions.Dependencies {
+			if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := checkByNameAndDeployDependency(ctx, depName, pipOpts); err != nil {
+			return err
 		}
 	}
 
@@ -696,7 +698,10 @@ func checkServicesToBuild(service string, mOptions *model.BuildInfo, ch chan str
 }
 
 func checkBuildFromManifest(ctx context.Context, buildManifest model.ManifestBuild) error {
-	oktetoLog.Information("Checking to build services at manifest")
+	if len(buildManifest) != 0 {
+		oktetoLog.Information("Checking to build services at manifest")
+	}
+
 	// check if images are at registry (global or dev) and set envs or send to build
 	toBuild := make(chan string, len(buildManifest))
 	g, _ := errgroup.WithContext(ctx)
