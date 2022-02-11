@@ -1250,3 +1250,10 @@ func DivertName(name, username string) string {
 func DevCloneName(name string) string {
 	return fmt.Sprintf("%s-okteto", name)
 }
+
+func getLocalhost() string {
+	if runtime.GOOS != "windows" {
+		return PrivilegedLocalhost
+	}
+	return Localhost
+}
