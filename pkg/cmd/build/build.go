@@ -231,12 +231,16 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, b.Name, service, tag)
 	}
 
+	file := b.Dockerfile
+	if !filepath.IsAbs(b.Dockerfile) {
+		file = filepath.Join(b.Context, b.Dockerfile)
+	}
 	opts := BuildOptions{
 		CacheFrom: b.CacheFrom,
 		Target:    b.Target,
 		Path:      b.Context,
 		Tag:       b.Image,
-		File:      filepath.Join(b.Context, b.Dockerfile),
+		File:      file,
 		BuildArgs: args,
 	}
 
