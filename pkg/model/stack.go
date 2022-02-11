@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -30,6 +31,24 @@ import (
 
 var (
 	errBadStackName = "must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character"
+	//DefaultStackManifest default okteto stack manifest file
+	possibleStackManifests = [][]string{
+		{"okteto-stack.yml"},
+		{"okteto-stack.yaml"},
+		{"stack.yml"},
+		{"stack.yaml"},
+		{".okteto", "okteto-stack.yml"},
+		{".okteto", "okteto-stack.yaml"},
+		{"okteto-compose.yml"},
+		{"okteto-compose.yaml"},
+		{".okteto", "okteto-compose.yml"},
+		{".okteto", "okteto-compose.yaml"},
+		{"docker-compose.yml"},
+		{"docker-compose.yaml"},
+		{".okteto", "docker-compose.yml"},
+		{".okteto", "docker-compose.yaml"},
+	}
+	deprecatedManifests = []string{"stack.yml", "stack.yaml"}
 )
 
 // Stack represents an okteto stack
@@ -600,4 +619,108 @@ func (r *StackResources) IsDefaultValue() bool {
 
 func (svcResources ServiceResources) IsDefaultValue() bool {
 	return svcResources.CPU.Value.IsZero() && svcResources.Memory.Value.IsZero() && svcResources.Storage.Size.Value.IsZero() && svcResources.Storage.Class == ""
+}
+
+func isPathAComposeFile(path string) bool {
+	base := filepath.Base(path)
+	return strings.HasPrefix(base, "docker-compose") || strings.HasPrefix(base, "okteto-compose")
+}
+
+// LoadStack loads an okteto stack manifest checking "yml" and "yaml"
+func LoadStack(name string, stackPaths []string) (*Stack, error) {
+	var resultStack *Stack
+
+	if len(stackPaths) == 0 {
+		stack, err := inferStack(name)
+		if err != nil {
+			return nil, err
+		}
+		resultStack = resultStack.Merge(stack)
+
+	} else {
+		for _, stackPath := range stackPaths {
+			if FileExists(stackPath) {
+				stack, err := getStack(name, stackPath)
+				if err != nil {
+					return nil, err
+				}
+
+				resultStack = resultStack.Merge(stack)
+				continue
+			}
+			return nil, fmt.Errorf("'%s' does not exist", stackPath)
+		}
+	}
+
+	if err := resultStack.Validate(); err != nil {
+		return nil, err
+	}
+	return resultStack, nil
+}
+
+func inferStack(name string) (*Stack, error) {
+	for _, possibleStackManifest := range possibleStackManifests {
+		manifestPath := filepath.Join(possibleStackManifest...)
+		if FileExists(manifestPath) {
+			stack, err := getStack(name, manifestPath)
+			if err != nil {
+				return nil, err
+			}
+
+			return stack, nil
+		}
+	}
+	return nil, oktetoErrors.UserError{
+		E:    fmt.Errorf("could not detect any stack file to deploy"),
+		Hint: "Try setting the flag '--file' pointing to your stack file",
+	}
+}
+
+func getStack(name, manifestPath string) (*Stack, error) {
+	var isCompose bool
+	if isDeprecatedExtension(manifestPath) {
+		deprecatedFile := filepath.Base(manifestPath)
+		oktetoLog.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", deprecatedFile)
+	}
+	if isPathAComposeFile(manifestPath) {
+		isCompose = true
+	}
+	stack, err := GetStack(name, manifestPath, isCompose)
+	if err != nil {
+		return nil, err
+	}
+	overrideStack, err := getOverrideFile(manifestPath)
+	if err == nil {
+		oktetoLog.Info("override file detected. Merging it")
+		stack = stack.Merge(overrideStack)
+	}
+	return stack, nil
+}
+
+func isDeprecatedExtension(stackPath string) bool {
+	base := filepath.Base(stackPath)
+	for _, deprecatedManifest := range deprecatedManifests {
+		if deprecatedManifest == base {
+			return true
+		}
+	}
+	return false
+}
+
+func getOverrideFile(stackPath string) (*Stack, error) {
+	extension := filepath.Ext(stackPath)
+	fileName := strings.TrimSuffix(stackPath, extension)
+	overridePath := fmt.Sprintf("%s.override%s", fileName, extension)
+	var isCompose bool
+	if FileExists(stackPath) {
+		if isPathAComposeFile(stackPath) {
+			isCompose = true
+		}
+		stack, err := GetStack("", overridePath, isCompose)
+		if err != nil {
+			return nil, err
+		}
+		return stack, nil
+	}
+	return nil, fmt.Errorf("override file not found")
 }
