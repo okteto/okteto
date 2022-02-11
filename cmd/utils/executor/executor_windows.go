@@ -18,11 +18,9 @@
 package executor
 
 import (
-	"bufio"
-	"os"
+	"github.com/okteto/okteto/cmd/utils/displayer"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"os/exec"
-
-	"github.com/manifoldco/promptui/screenbuf"
 )
 
 func (e *ttyExecutor) startCommand(cmd *exec.Cmd) error {
