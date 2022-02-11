@@ -399,6 +399,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 			}
 			oktetoLog.SetOutput(os.Stdout)
 		}
+		exitCompose <- nil
 	}()
 
 	select {
