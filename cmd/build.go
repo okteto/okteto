@@ -46,7 +46,7 @@ func Build(ctx context.Context) *cobra.Command {
 
 			manifest, errManifest := model.GetManifestV2(options.File)
 			if errManifest != nil {
-				oktetoLog.Debug("error getting manifest v2 from file %s: %v", options.File, errManifest)
+				oktetoLog.Debug("error getting manifest v2 from file %s: %v. Fallback to build v1", options.File, errManifest)
 			}
 
 			isBuildV2 := errManifest == nil &&
