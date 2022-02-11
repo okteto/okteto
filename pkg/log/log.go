@@ -131,9 +131,14 @@ func SetLevel(level string) {
 	}
 }
 
-//GetOutputFormat returns the output format of the command
+// GetOutputFormat returns the output format of the command
 func GetOutputFormat() string {
 	return log.outputMode
+}
+
+// SetOutput sets the log output
+func SetOutput(output io.Writer) {
+	log.out.SetOutput(output)
 }
 
 // SetOutputFormat sets the output format
@@ -231,6 +236,11 @@ func Warning(format string, args ...interface{}) {
 	log.writer.Warning(format, args...)
 }
 
+// FWarning prints a message with the warning symbol first, and the text in yellow to a specific writer
+func FWarning(w io.Writer, format string, args ...interface{}) {
+	log.writer.FWarning(w, format, args...)
+}
+
 // Hint prints a message with the text in blue
 func Hint(format string, args ...interface{}) {
 	log.writer.Hint(format, args...)
@@ -248,6 +258,13 @@ func Println(args ...interface{}) {
 	msg := fmt.Sprint(args...)
 	msg = redactMessage(msg)
 	log.writer.Println(msg)
+}
+
+// FPrintln writes a line with colors to specific writer
+func FPrintln(w io.Writer, args ...interface{}) {
+	msg := fmt.Sprint(args...)
+	msg = redactMessage(msg)
+	log.writer.FPrintln(w, msg)
 }
 
 // Print writes a line with colors

@@ -26,18 +26,15 @@ import (
 )
 
 func (e *ttyExecutor) startCommand(cmd *exec.Cmd) error {
-	e.screenbuf = screenbuf.New(os.Stdout)
-
 	stdoutReader, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
 	}
-	e.stdoutScanner = bufio.NewScanner(stdoutReader)
 
 	stderrReader, err := cmd.StderrPipe()
 	if err != nil {
 		return err
 	}
-	e.stderrScanner = bufio.NewScanner(stderrReader)
+	e.displayer = displayer.NewDisplayer(oktetoLog.GetOutputFormat(), stdoutReader, stderrReader)
 	return startCommand(cmd)
 }
