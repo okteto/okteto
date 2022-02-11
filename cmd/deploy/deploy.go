@@ -223,7 +223,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	if deployOptions.Build {
-		oktetoLog.Information("Building services at manifest")
+		if len(deployOptions.Manifest.Build) != 0 {
+			oktetoLog.Information("Building services at manifest")
+		}
 		for service, mBuildInfo := range deployOptions.Manifest.Build {
 			oktetoLog.Debug("force build from manifest definition")
 			if err := runBuildAndSetEnvs(ctx, service, mBuildInfo); err != nil {
@@ -235,7 +237,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
-	oktetoLog.Information("Checking to deploy dependencies at manifest")
+	if len(deployOptions.Manifest.Dependencies) != 0 {
+		oktetoLog.Information("Checking to deploy dependencies at manifest")
+	}
 	for depName, dep := range deployOptions.Manifest.Dependencies {
 		pipOpts := &pipelineCMD.DeployOptions{
 			Name:       depName,
@@ -694,7 +698,10 @@ func checkServicesToBuild(service string, mOptions *model.BuildInfo, ch chan str
 }
 
 func checkBuildFromManifest(ctx context.Context, buildManifest model.ManifestBuild) error {
-	oktetoLog.Information("Checking to build services at manifest")
+	if len(buildManifest) != 0 {
+		oktetoLog.Information("Checking to build services at manifest")
+	}
+
 	// check if images are at registry (global or dev) and set envs or send to build
 	toBuild := make(chan string, len(buildManifest))
 	g, _ := errgroup.WithContext(ctx)
