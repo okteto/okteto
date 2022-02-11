@@ -112,7 +112,9 @@ const (
 	StatefulSet = "StatefulSet"
 
 	//Localhost localhost
-	Localhost                   = "localhost"
+	Localhost = "localhost"
+	//PrivilegedLocalhost localhost
+	PrivilegedLocalhost         = "0.0.0.0"
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
 	oktetoDefaultSSHServerPort  = 2222
 	//OktetoDefaultPVSize default volume size
