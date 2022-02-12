@@ -13,7 +13,7 @@ require (
 	github.com/containerd/console v1.0.3
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/cli v20.10.12+incompatible
-	github.com/docker/distribution v2.7.1+incompatible
+	github.com/docker/distribution v2.8.0+incompatible
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
@@ -203,11 +203,13 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-require github.com/google/go-containerregistry v0.8.0
+require (
+	github.com/creack/pty v1.1.17
+	github.com/google/go-containerregistry v0.8.0
+)
 
 require (
 	github.com/Sirupsen/logrus v0.0.0-00010101000000-000000000000 // indirect
-	github.com/creack/pty v1.1.17 // indirect
 	github.com/docker/libnetwork v0.5.6 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/rancher/wrangler v0.7.3-0.20210224225730-5ed69efb6ab9 // indirect
