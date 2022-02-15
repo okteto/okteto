@@ -21,12 +21,6 @@ type ttyExecutor struct {
 	displayer displayer.Displayer
 }
 
-var (
-	spinnerChars = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-	cursorUp     = "\x1b[1A"
-	resetLine    = "\x1b[0G"
-)
-
 func newTTYExecutor() *ttyExecutor {
 	return &ttyExecutor{}
 }

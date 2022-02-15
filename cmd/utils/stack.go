@@ -39,7 +39,6 @@ var (
 		{".okteto", "docker-compose.yml"},
 		{".okteto", "docker-compose.yaml"},
 	}
-	deprecatedManifests = []string{"stack.yml", "stack.yaml"}
 )
 
 //LoadStackContext loads the namespace and context of an okteto stack manifest

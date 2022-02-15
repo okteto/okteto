@@ -168,7 +168,7 @@ func (w *JSONWriter) Warning(format string, args ...interface{}) {
 }
 
 // FWarning prints a message with the warning symbol first, and the text in yellow
-func (w *JSONWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
+func (*JSONWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	msg := fmt.Sprintf("%s %s", warningSymbol, fmt.Sprintf(format, args...))
 	if msg != "" {

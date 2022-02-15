@@ -75,7 +75,7 @@ func (*fakeKubeConfig) Read() (*rest.Config, error) {
 func (fc *fakeKubeConfig) Modify(_ int, _, _ string) error {
 	return fc.errOnModify
 }
-func (fc *fakeKubeConfig) GetModifiedCMDAPIConfig() (*clientcmdapi.Config, error) {
+func (*fakeKubeConfig) GetModifiedCMDAPIConfig() (*clientcmdapi.Config, error) {
 	return nil, nil
 }
 
