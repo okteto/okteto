@@ -152,15 +152,15 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 
 // DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
-	Commands []DeployCommand `json:"commands,omitempty" yaml:"commands,omitempty"`
-	Compose  *ComposeInfo    `json:"compose,omitempty" yaml:"compose,omitempty"`
+	Commands  []DeployCommand `json:"commands,omitempty" yaml:"commands,omitempty"`
+	Compose   *ComposeInfo    `json:"compose,omitempty" yaml:"compose,omitempty"`
+	Endpoints EndpointSpec    `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 
 // ComposeInfo represents information about compose file
 type ComposeInfo struct {
-	Manifest  []string     `json:"manifest,omitempty" yaml:"manifest,omitempty"`
-	Endpoints EndpointSpec `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
-	Stack     *Stack       `json:"-,omitempty" yaml:"-,omitempty"`
+	Manifest []string `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Stack    *Stack   `json:"-,omitempty" yaml:"-,omitempty"`
 }
 
 // DeployCommand represents a command to be executed
@@ -202,7 +202,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 				return nil, err
 			}
 			devManifest.Deploy.Compose.Stack = s
-			s.Endpoints = devManifest.Deploy.Compose.Endpoints
+			s.Endpoints = devManifest.Deploy.Endpoints
 			devManifest.InferFromStack()
 			return devManifest, nil
 		}
