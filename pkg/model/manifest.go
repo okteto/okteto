@@ -510,12 +510,6 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 				d.Forward = append(d.Forward, fwd)
 			}
 		}
-		for _, p := range svcInfo.Ports {
-			if p.HostPort != 0 {
-				d.Forward = append(d.Forward, Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
-			}
-		}
-
 		for _, v := range svcInfo.VolumeMounts {
 			if pathExistsAndDir(v.LocalPath) {
 				d.Sync.Folders = append(d.Sync.Folders, SyncFolder{
