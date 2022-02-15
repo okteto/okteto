@@ -203,19 +203,21 @@ func (w *JSONWriter) Println(args ...interface{}) {
 func (w *JSONWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
 	if strings.HasSuffix(format, "\n") {
-		w.Println(msg)
+		w.FPrintln(writer, msg)
 		return
 	}
-	msg = convertToJSON(InfoLevel, log.stage, msg)
-	log.buf.WriteString(msg)
-	log.buf.WriteString("\n")
+	if msg != "" && writer == w.out.Out {
+		msg = convertToJSON(InfoLevel, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+	}
 	fmt.Fprint(writer, msg)
 }
 
 // FPrintln prints a line with format
 func (w *JSONWriter) FPrintln(writer io.Writer, args ...interface{}) {
 	msg := fmt.Sprint(args...)
-	if msg != "" {
+	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		log.buf.WriteString(msg)
 		log.buf.WriteString("\n")

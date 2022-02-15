@@ -163,7 +163,7 @@ func (w *TTYWriter) Println(args ...interface{}) {
 func (w *TTYWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
 	fmt.Fprint(writer, msg)
-	if msg != "" {
+	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		log.buf.WriteString(msg)
 		log.buf.WriteString("\n")
@@ -175,7 +175,7 @@ func (w *TTYWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
 func (w *TTYWriter) FPrintln(writer io.Writer, args ...interface{}) {
 	msg := fmt.Sprint(args...)
 	fmt.Fprintln(writer, msg)
-	if msg != "" {
+	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		log.buf.WriteString(msg)
 		log.buf.WriteString("\n")
