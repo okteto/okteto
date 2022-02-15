@@ -198,10 +198,15 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 		if progress == oktetoLog.TTYFormat {
 			if cn, err := console.ConsoleFromFile(os.Stdout); err == nil {
 				c = cn
+			} else {
+				oktetoLog.Debugf("could not create console from file: %s ", err)
+			}
+			if oktetoLog.GetOutput() != os.Stdout {
+				c = nil
 			}
 		}
 		// not using shared context to not disrupt display but let it finish reporting errors
-		return progressui.DisplaySolveStatus(context.TODO(), "", c, os.Stdout, ch)
+		return progressui.DisplaySolveStatus(context.TODO(), "", c, oktetoLog.GetOutput(), ch)
 	})
 
 	return eg.Wait()
