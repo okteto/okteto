@@ -62,7 +62,7 @@ func TestRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dev, err := utils.GetDevFromManifest(manifest)
+	dev, err := utils.GetDevFromManifest(manifest, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dev, err = utils.GetDevFromManifest(manifest)
+	dev, err = utils.GetDevFromManifest(manifest, "")
 	if err != nil {
 		t.Fatal(err)
 	}
