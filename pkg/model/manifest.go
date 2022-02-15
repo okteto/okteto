@@ -197,13 +197,18 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		}
 		if devManifest.IsV2 {
 			devManifest.Type = OktetoManifestType
-			s, err := LoadStack("", devManifest.Deploy.Compose.Manifest)
-			if err != nil {
-				return nil, err
+			if devManifest.Deploy != nil && devManifest.Deploy.Compose != nil && len(devManifest.Deploy.Compose.Manifest) > 0 {
+				s, err := LoadStack("", devManifest.Deploy.Compose.Manifest)
+				if err != nil {
+					return nil, err
+				}
+				devManifest.Deploy.Compose.Stack = s
+				s.Endpoints = devManifest.Deploy.Endpoints
+				devManifest, err = devManifest.InferFromStack()
+				if err != nil {
+					return nil, err
+				}
 			}
-			devManifest.Deploy.Compose.Stack = s
-			s.Endpoints = devManifest.Deploy.Endpoints
-			devManifest.InferFromStack()
 			return devManifest, nil
 		}
 	}
