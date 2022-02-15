@@ -38,9 +38,9 @@ type doctorOptions struct {
 func Doctor() *cobra.Command {
 	doctorOpts := &doctorOptions{}
 	cmd := &cobra.Command{
-		Use:   "doctor",
+		Use:   "doctor [svc]",
 		Short: "Generate a zip file with the okteto logs",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#doctor"),
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#doctor"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Info("starting doctor command")
 			ctx := context.Background()
@@ -59,7 +59,11 @@ func Doctor() *cobra.Command {
 				return err
 			}
 
-			dev, err := utils.GetDevFromManifest(manifest)
+			devName := ""
+			if len(args) == 1 {
+				devName = args[0]
+			}
+			dev, err := utils.GetDevFromManifest(manifest, devName)
 			if err != nil {
 				return err
 			}

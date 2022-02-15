@@ -64,9 +64,9 @@ type UpOptions struct {
 func Up() *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
-		Use:   "up",
+		Use:   "up [svc]",
 		Short: "Activate your development container",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#up"),
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
@@ -103,8 +103,11 @@ func Up() *cobra.Command {
 					return err
 				}
 			}
-
-			dev, err := utils.GetDevFromManifest(manifest)
+			devName := ""
+			if len(args) == 1 {
+				devName = args[0]
+			}
+			dev, err := utils.GetDevFromManifest(manifest, devName)
 			if err != nil {
 				return err
 			}

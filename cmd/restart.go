@@ -38,9 +38,9 @@ func Restart() *cobra.Command {
 	var devPath string
 
 	cmd := &cobra.Command{
-		Use:   "restart",
+		Use:   "restart [svc]",
 		Short: "Restart the deployments listed in the services field of the okteto manifest",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#restart"),
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#restart"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
@@ -50,7 +50,11 @@ func Restart() *cobra.Command {
 				return err
 			}
 
-			dev, err := utils.GetDevFromManifest(manifest)
+			devName := ""
+			if len(args) == 1 {
+				devName = args[0]
+			}
+			dev, err := utils.GetDevFromManifest(manifest, devName)
 			if err != nil {
 				return err
 			}
