@@ -163,11 +163,14 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		}
 		return nil, fmt.Errorf("dev '%s' does not exists", devName)
 	}
-	devs := make([]string, 0)
+	devs := []SelectorItem{}
 	for k := range manifest.Dev {
-		devs = append(devs, k)
+		devs = append(devs, SelectorItem{
+			Name:  k,
+			Label: k,
+		})
 	}
-	devKey, err := AskForOptions(devs, "Select the dev you want to operate with:")
+	devKey, _, err := AskForOptionsOkteto(context.Background(), devs, "Select the dev you want to operate with:")
 	if err != nil {
 		return nil, err
 	}
