@@ -495,9 +495,21 @@ type Dependency struct {
 
 // InferFromStack infers data from a stackfile
 func (m *Manifest) InferFromStack() (*Manifest, error) {
-
+	portsMapping := getPortMapping(m.Deploy.Compose.Stack)
 	for svcName, svcInfo := range m.Deploy.Compose.Stack.Services {
 		d := NewDev()
+		for portSvcName, portList := range portsMapping {
+			for _, p := range portList {
+				fwd := Forward{
+					Local:  int(p.HostPort),
+					Remote: int(p.ContainerPort),
+				}
+				if portSvcName != svcName {
+					fwd.ServiceName = portSvcName
+				}
+				d.Forward = append(d.Forward, fwd)
+			}
+		}
 		for _, p := range svcInfo.Ports {
 			if p.HostPort != 0 {
 				d.Forward = append(d.Forward, Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
@@ -527,4 +539,20 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 	}
 	m.setDefaults()
 	return m, nil
+}
+
+func getPortMapping(stack *Stack) map[string][]Port {
+	result := map[string][]Port{}
+	for svcName, svc := range stack.Services {
+		for _, p := range svc.Ports {
+			if p.HostPort != 0 {
+				if _, ok := result[svcName]; ok {
+					result[svcName] = append(result[svcName], p)
+				} else {
+					result[svcName] = []Port{p}
+				}
+			}
+		}
+	}
+	return result
 }
