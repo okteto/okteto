@@ -135,7 +135,9 @@ func (d *TTYDisplayer) displayStdout() {
 				}
 				d.linesToDisplay = append(d.linesToDisplay, line)
 			}
-			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, line)
+			if os.Stdout == oktetoLog.GetOutput() {
+				oktetoLog.AddToBuffer(oktetoLog.InfoLevel, line)
+			}
 			continue
 		}
 		break
@@ -163,7 +165,9 @@ func (d *TTYDisplayer) displayStderr() {
 				d.linesToDisplay = d.linesToDisplay[1:]
 			}
 			d.linesToDisplay = append(d.linesToDisplay, line)
-			oktetoLog.AddToBuffer(oktetoLog.WarningLevel, line)
+			if os.Stdout == oktetoLog.GetOutput() {
+				oktetoLog.AddToBuffer(oktetoLog.WarningLevel, line)
+			}
 			continue
 		}
 		break
