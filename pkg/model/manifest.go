@@ -524,6 +524,5 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 		m.Build[svcName] = buildInfo
 	}
 	m.setDefaults()
-	m.Manifest = m.Deploy.Compose.Stack.Manifest
 	return m, nil
 }

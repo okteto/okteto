@@ -282,6 +282,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		Icon:       deployOptions.Manifest.Icon,
 	}
 
+	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType {
+		data.Manifest = deployOptions.Manifest.Deploy.Compose.Stack.Manifest
+	}
 	k8sCfg := kubeconfig.Get(config.GetKubeconfigPath())
 	c, _, err := dc.K8sClientProvider.Provide(k8sCfg)
 	if err != nil {
