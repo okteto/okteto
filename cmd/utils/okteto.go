@@ -20,6 +20,7 @@ import (
 	"strconv"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 )
@@ -52,6 +53,7 @@ func HasAccessToNamespace(ctx context.Context, namespace string, oktetoClient ty
 	return false, nil
 }
 
+// LoadBoolean loads a boolean environment variable and returns it value
 func LoadBoolean(k string) bool {
 	v := os.Getenv(k)
 	if v == "" {
@@ -66,6 +68,7 @@ func LoadBoolean(k string) bool {
 	return h
 }
 
+// ShouldCreateNamespace checks if the namespace exists and if not ask the user if he wants to create it
 func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
@@ -76,6 +79,9 @@ func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
 		return false, err
 	}
 	if !hasAccess {
+		if LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+			return false, fmt.Errorf("cannot deploy on a namespace that doesn't exist. Please create %s and try again", ns)
+		}
 		create, err := AskYesNo(fmt.Sprintf("The namespace %s doesn't exist. Do you want to create it? [y/n] ", ns))
 		if err != nil {
 			return false, err

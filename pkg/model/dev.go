@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -315,6 +316,10 @@ func NewDev() *Dev {
 		Probes:               &Probes{},
 		Lifecycle:            &Lifecycle{},
 		InitContainer:        InitContainer{Image: OktetoBinImageTag},
+		Metadata: &Metadata{
+			Labels:      Labels{},
+			Annotations: Annotations{},
+		},
 	}
 }
 
@@ -478,6 +483,9 @@ func (dev *Dev) SetDefaults() error {
 	}
 	if dev.Interface == "" {
 		dev.Interface = Localhost
+		if runtime.GOOS != "windows" {
+			dev.Interface = PrivilegedLocalhost
+		}
 	}
 	if dev.SSHServerPort == 0 {
 		dev.SSHServerPort = oktetoDefaultSSHServerPort
@@ -1241,4 +1249,11 @@ func DivertName(name, username string) string {
 // DevCloneName returns the name of the mirrored version of a given resource
 func DevCloneName(name string) string {
 	return fmt.Sprintf("%s-okteto", name)
+}
+
+func getLocalhost() string {
+	if runtime.GOOS != "windows" {
+		return PrivilegedLocalhost
+	}
+	return Localhost
 }

@@ -13,6 +13,8 @@
 
 package log
 
+import "io"
+
 //OktetoWriter implements the interface of the writers
 type OktetoWriter interface {
 	Debug(args ...interface{})
@@ -33,11 +35,13 @@ type OktetoWriter interface {
 	Information(format string, args ...interface{})
 	Question(format string, args ...interface{}) error
 	Warning(format string, args ...interface{})
+	FWarning(w io.Writer, format string, args ...interface{})
 	Hint(format string, args ...interface{})
 
 	Println(args ...interface{})
+	FPrintln(w io.Writer, args ...interface{})
 	Print(args ...interface{})
-	Fprintf(format string, a ...interface{})
+	Fprintf(w io.Writer, format string, a ...interface{})
 	Printf(format string, a ...interface{})
 
 	IsInteractive() bool

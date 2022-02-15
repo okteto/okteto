@@ -15,6 +15,7 @@ package log
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/sirupsen/logrus"
 )
@@ -93,51 +94,57 @@ func (*PlainWriter) Fatalf(format string, args ...interface{}) {
 // Green writes a line in green
 func (w *PlainWriter) Green(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintln(fmt.Sprintf(format, args...))
+	w.FPrintln(w.out.Out, fmt.Sprintf(format, args...))
 }
 
 // Yellow writes a line in yellow
 func (w *PlainWriter) Yellow(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintln(fmt.Sprintf(format, args...))
+	w.FPrintln(w.out.Out, fmt.Sprintf(format, args...))
 }
 
 // Success prints a message with the success symbol first, and the text in green
 func (w *PlainWriter) Success(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf("%s %s\n", successSymbol, fmt.Sprintf(format, args...))
+	w.Fprintf(w.out.Out, "%s %s\n", successSymbol, fmt.Sprintf(format, args...))
 }
 
 // Information prints a message with the information symbol first, and the text in blue
 func (w *PlainWriter) Information(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf("%s %s\n", informationSymbol, fmt.Sprintf(format, args...))
+	w.Fprintf(w.out.Out, "%s %s\n", informationSymbol, fmt.Sprintf(format, args...))
 }
 
 // Question prints a message with the question symbol first, and the text in magenta
 func (w *PlainWriter) Question(format string, args ...interface{}) error {
 	log.out.Infof(format, args...)
-	w.Fprintf("%s %s", questionSymbol, fmt.Sprintf(format, args...))
+	w.Fprintf(w.out.Out, "%s %s", questionSymbol, fmt.Sprintf(format, args...))
 	return nil
 }
 
 // Warning prints a message with the warning symbol first, and the text in yellow
 func (w *PlainWriter) Warning(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf("%s %s\n", warningSymbol, fmt.Sprintf(format, args...))
+	w.Fprintf(w.out.Out, "%s %s\n", warningSymbol, fmt.Sprintf(format, args...))
+}
+
+// FWarning prints a message with the warning symbol first, and the text in yellow into an specific writer
+func (w *PlainWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
+	log.out.Infof(format, args...)
+	w.Fprintf(writer, "%s %s\n", coloredWarningSymbol, yellowString(format, args...))
 }
 
 // Hint prints a message with the text in blue
 func (w *PlainWriter) Hint(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf("%s\n", fmt.Sprintf(format, args...))
+	w.Fprintf(w.out.Out, "%s\n", fmt.Sprintf(format, args...))
 }
 
 // Fail prints a message with the error symbol first, and the text in red
 func (w *PlainWriter) Fail(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	log.out.Info(msg)
-	w.Fprintf("%s %s\n", errorSymbol, fmt.Sprintf(format, args...))
+	w.Fprintf(w.out.Out, "%s %s\n", errorSymbol, fmt.Sprintf(format, args...))
 	if msg != "" {
 		msg = convertToJSON(ErrorLevel, log.stage, msg)
 		log.buf.WriteString(msg)
@@ -149,7 +156,7 @@ func (w *PlainWriter) Fail(format string, args ...interface{}) {
 func (w *PlainWriter) Println(args ...interface{}) {
 	msg := fmt.Sprint(args...)
 	log.out.Info(msg)
-	w.Fprintln(args...)
+	w.FPrintln(w.out.Out, args...)
 	if msg != "" {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		log.buf.WriteString(msg)
@@ -158,21 +165,21 @@ func (w *PlainWriter) Println(args ...interface{}) {
 }
 
 // Fprintf prints a line with format
-func (w *PlainWriter) Fprintf(format string, a ...interface{}) {
+func (w *PlainWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
-	fmt.Fprint(w.out.Out, msg)
-	if msg != "" {
+	fmt.Fprint(writer, msg)
+	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		log.buf.WriteString(msg)
 		log.buf.WriteString("\n")
 	}
 }
 
-// Fprintln prints a line with format
-func (w *PlainWriter) Fprintln(args ...interface{}) {
+// FPrintln prints a line with format
+func (w *PlainWriter) FPrintln(writer io.Writer, args ...interface{}) {
 	msg := fmt.Sprint(args...)
-	fmt.Fprintln(w.out.Out, args...)
-	if msg != "" {
+	fmt.Fprintln(writer, args...)
+	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		log.buf.WriteString(msg)
 		log.buf.WriteString("\n")
@@ -192,7 +199,7 @@ func (w *PlainWriter) Print(args ...interface{}) {
 
 //Printf writes a line with format
 func (w *PlainWriter) Printf(format string, a ...interface{}) {
-	w.Fprintf(format, a...)
+	w.Fprintf(w.out.Out, format, a...)
 }
 
 //IsInteractive checks if the writer is interactive

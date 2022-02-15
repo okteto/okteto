@@ -1,6 +1,3 @@
-//go:build !windows
-// +build !windows
-
 // Copyright 2022 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,28 +11,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package executor
+package displayer
 
 import (
-	"os/exec"
+	"io"
 
-	"github.com/creack/pty"
-	"github.com/okteto/okteto/cmd/utils/displayer"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-func (e *ttyExecutor) startCommand(cmd *exec.Cmd) error {
+// Displayer displays the commands from another writer to stdout
+type Displayer interface {
+	Display(commandName string)
+	CleanUp(err error)
+}
 
-	stderrReader, err := cmd.StderrPipe()
-	if err != nil {
-		return err
+// NewDisplayer returns a new displayer
+func NewDisplayer(output string, stdout, stderr io.Reader) Displayer {
+	var displayer Displayer
+	switch output {
+	case oktetoLog.TTYFormat:
+		displayer = newTTYDisplayer(stdout, stderr)
+	case oktetoLog.PlainFormat:
+		displayer = newPlainDisplayer(stdout, stderr)
+	case oktetoLog.JSONFormat:
+		displayer = newJSONDisplayer(stdout, stderr)
+	default:
+		displayer = newTTYDisplayer(stdout, stderr)
 	}
-
-	f, err := pty.Start(cmd)
-	if err != nil {
-		return err
-	}
-
-	e.displayer = displayer.NewDisplayer(oktetoLog.GetOutputFormat(), f, stderrReader)
-	return nil
+	return displayer
 }

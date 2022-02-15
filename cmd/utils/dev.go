@@ -84,7 +84,7 @@ func LoadManifest(devPath string) (*model.Manifest, error) {
 	}
 
 	for _, dev := range manifest.Dev {
-		if err := loadManifestRc(dev); err != nil {
+		if err := LoadManifestRc(dev); err != nil {
 			return nil, err
 		}
 
@@ -95,7 +95,7 @@ func LoadManifest(devPath string) (*model.Manifest, error) {
 	return manifest, nil
 }
 
-func loadManifestRc(dev *model.Dev) error {
+func LoadManifestRc(dev *model.Dev) error {
 	defaultDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yml")
 	secondaryDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yaml")
 	var devRc *model.DevRC

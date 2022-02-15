@@ -206,7 +206,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.Build = svcBuild
-			if okteto.IsOkteto() && !registry.IsOktetoRegistry(svc.Image) {
+			if okteto.IsOkteto() {
 				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto-with-volume-mounts", s.Name, name)
 			}
 			if !options.ForceBuild {

@@ -16,6 +16,7 @@ package log
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 	"time"
 
@@ -131,25 +132,25 @@ func (*JSONWriter) Fatalf(format string, args ...interface{}) {
 // Green writes a line in green
 func (w *JSONWriter) Green(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintln(fmt.Sprintf(format, args...))
+	w.FPrintln(w.out.Out, fmt.Sprintf(format, args...))
 }
 
 // Yellow writes a line in yellow
 func (w *JSONWriter) Yellow(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintln(fmt.Sprintf(format, args...))
+	w.FPrintln(w.out.Out, fmt.Sprintf(format, args...))
 }
 
 // Success prints a message with the success symbol first, and the text in green
 func (w *JSONWriter) Success(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintln(fmt.Sprintf("%s %s", successSymbol, fmt.Sprintf(format, args...)))
+	w.FPrintln(w.out.Out, fmt.Sprintf("%s %s", successSymbol, fmt.Sprintf(format, args...)))
 }
 
 // Information prints a message with the information symbol first, and the text in blue
 func (w *JSONWriter) Information(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintln(fmt.Sprintf("%s %s", informationSymbol, fmt.Sprintf(format, args...)))
+	w.FPrintln(w.out.Out, fmt.Sprintf("%s %s", informationSymbol, fmt.Sprintf(format, args...)))
 }
 
 // Question prints a message with the question symbol first, and the text in magenta
@@ -166,10 +167,19 @@ func (w *JSONWriter) Warning(format string, args ...interface{}) {
 	}
 }
 
+// FWarning prints a message with the warning symbol first, and the text in yellow
+func (*JSONWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
+	log.out.Infof(format, args...)
+	msg := fmt.Sprintf("%s %s", warningSymbol, fmt.Sprintf(format, args...))
+	if msg != "" {
+		fmt.Fprintln(writer, convertToJSON("warn", log.stage, msg))
+	}
+}
+
 // Hint prints a message with the text in blue
 func (w *JSONWriter) Hint(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintln(fmt.Sprintf(format, args...))
+	w.FPrintln(w.out.Out, fmt.Sprintf(format, args...))
 }
 
 // Fail prints a message with the error symbol first, and the text in red
@@ -186,22 +196,32 @@ func (w *JSONWriter) Fail(format string, args ...interface{}) {
 
 // Println writes a line with colors
 func (w *JSONWriter) Println(args ...interface{}) {
-	w.Fprintln(args...)
+	w.FPrintln(w.out.Out, args...)
 }
 
 // Fprintf prints a line with format
-func (w *JSONWriter) Fprintf(format string, a ...interface{}) {
-	w.Printf(format, a...)
-}
-
-// Fprintln prints a line with format
-func (w *JSONWriter) Fprintln(args ...interface{}) {
-	msg := fmt.Sprint(args...)
-	if msg != "" {
+func (w *JSONWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
+	msg := fmt.Sprintf(format, a...)
+	if strings.HasSuffix(format, "\n") {
+		w.FPrintln(writer, msg)
+		return
+	}
+	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		log.buf.WriteString(msg)
 		log.buf.WriteString("\n")
-		fmt.Fprintln(w.out.Out, msg)
+	}
+	fmt.Fprint(writer, msg)
+}
+
+// FPrintln prints a line with format
+func (w *JSONWriter) FPrintln(writer io.Writer, args ...interface{}) {
+	msg := fmt.Sprint(args...)
+	if msg != "" && writer == w.out.Out {
+		msg = convertToJSON(InfoLevel, log.stage, msg)
+		log.buf.WriteString(msg)
+		log.buf.WriteString("\n")
+		fmt.Fprintln(writer, msg)
 	}
 }
 
@@ -215,15 +235,7 @@ func (w *JSONWriter) Print(args ...interface{}) {
 
 //Printf writes a line with format
 func (w *JSONWriter) Printf(format string, a ...interface{}) {
-	msg := fmt.Sprintf(format, a...)
-	if strings.HasSuffix(format, "\n") {
-		w.Println(msg)
-		return
-	}
-	msg = convertToJSON(InfoLevel, log.stage, msg)
-	log.buf.WriteString(msg)
-	log.buf.WriteString("\n")
-	fmt.Fprint(w.out.Out, msg)
+	w.Fprintf(w.out.Out, format, a...)
 }
 
 //IsInteractive checks if the writer is interactive

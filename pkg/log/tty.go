@@ -15,6 +15,7 @@ package log
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/fatih/color"
 	"github.com/sirupsen/logrus"
@@ -94,51 +95,57 @@ func (*TTYWriter) Fatalf(format string, args ...interface{}) {
 // Green writes a line in green
 func (w *TTYWriter) Green(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintln(greenString(format, args...))
+	w.FPrintln(w.out.Out, greenString(format, args...))
 }
 
 // Yellow writes a line in yellow
 func (w *TTYWriter) Yellow(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintln(yellowString(format, args...))
+	w.FPrintln(w.out.Out, yellowString(format, args...))
 }
 
 // Success prints a message with the success symbol first, and the text in green
 func (w *TTYWriter) Success(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf("%s %s\n", coloredSuccessSymbol, greenString(format, args...))
+	w.Fprintf(w.out.Out, "%s %s\n", coloredSuccessSymbol, greenString(format, args...))
 }
 
 // Information prints a message with the information symbol first, and the text in blue
 func (w *TTYWriter) Information(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf("%s %s\n", coloredInformationSymbol, blueString(format, args...))
+	w.Fprintf(w.out.Out, "%s %s\n", coloredInformationSymbol, blueString(format, args...))
 }
 
 // Question prints a message with the question symbol first, and the text in magenta
 func (w *TTYWriter) Question(format string, args ...interface{}) error {
 	log.out.Infof(format, args...)
-	w.Fprintf("%s %s", coloredQuestionSymbol, color.MagentaString(format, args...))
+	w.Fprintf(w.out.Out, "%s %s", coloredQuestionSymbol, color.MagentaString(format, args...))
 	return nil
 }
 
 // Warning prints a message with the warning symbol first, and the text in yellow
 func (w *TTYWriter) Warning(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf("%s %s\n", coloredWarningSymbol, yellowString(format, args...))
+	w.Fprintf(w.out.Out, "%s %s\n", coloredWarningSymbol, yellowString(format, args...))
+}
+
+// FWarning prints a message with the warning symbol first, and the text in yellow into an specific writer
+func (w *TTYWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
+	log.out.Infof(format, args...)
+	w.Fprintf(writer, "%s %s\n", coloredWarningSymbol, yellowString(format, args...))
 }
 
 // Hint prints a message with the text in blue
 func (w *TTYWriter) Hint(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf("%s\n", blueString(format, args...))
+	w.Fprintf(w.out.Out, "%s\n", blueString(format, args...))
 }
 
 // Fail prints a message with the error symbol first, and the text in red
 func (w *TTYWriter) Fail(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	log.out.Info(msg)
-	w.Fprintf("%s %s\n", coloredErrorSymbol, redString(format, args...))
+	w.Fprintf(w.out.Out, "%s %s\n", coloredErrorSymbol, redString(format, args...))
 	if msg != "" {
 		msg = convertToJSON(ErrorLevel, log.stage, msg)
 		log.buf.WriteString(msg)
@@ -149,14 +156,14 @@ func (w *TTYWriter) Fail(format string, args ...interface{}) {
 // Println writes a line with colors
 func (w *TTYWriter) Println(args ...interface{}) {
 	log.out.Info(args...)
-	w.Fprintln(args...)
+	w.FPrintln(w.out.Out, args...)
 }
 
 // Fprintf prints a line with format
-func (w *TTYWriter) Fprintf(format string, a ...interface{}) {
+func (w *TTYWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
-	fmt.Fprint(w.out.Out, msg)
-	if msg != "" {
+	fmt.Fprint(writer, msg)
+	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		log.buf.WriteString(msg)
 		log.buf.WriteString("\n")
@@ -164,11 +171,11 @@ func (w *TTYWriter) Fprintf(format string, a ...interface{}) {
 
 }
 
-// Fprintln prints a line with format
-func (w *TTYWriter) Fprintln(args ...interface{}) {
+// FPrintln prints a line with format
+func (w *TTYWriter) FPrintln(writer io.Writer, args ...interface{}) {
 	msg := fmt.Sprint(args...)
-	fmt.Fprintln(w.out.Out, msg)
-	if msg != "" {
+	fmt.Fprintln(writer, msg)
+	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		log.buf.WriteString(msg)
 		log.buf.WriteString("\n")
@@ -190,7 +197,7 @@ func (w *TTYWriter) Print(args ...interface{}) {
 
 //Printf writes a line with format
 func (w *TTYWriter) Printf(format string, a ...interface{}) {
-	w.Fprintf(format, a...)
+	w.Fprintf(w.out.Out, format, a...)
 }
 
 //IsInteractive checks if the writer is interactive

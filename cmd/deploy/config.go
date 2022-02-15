@@ -33,12 +33,12 @@ func NewKubeConfig() *KubeConfig {
 
 //Read reads a kubeconfig from an apiConfig
 func (k *KubeConfig) Read() (*rest.Config, error) {
-	return clientcmd.BuildConfigFromKubeconfigGetter("", k.getCMDAPIConfig)
+	return clientcmd.BuildConfigFromKubeconfigGetter("", k.GetCMDAPIConfig)
 }
 
 //Modify modifies the kubeconfig object to inject the proxy
 func (k *KubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) error {
-	clientCfg, err := k.getCMDAPIConfig()
+	clientCfg, err := k.GetCMDAPIConfig()
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func (k *KubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) e
 	return nil
 }
 
-func (*KubeConfig) getCMDAPIConfig() (*clientcmdapi.Config, error) {
+func (*KubeConfig) GetCMDAPIConfig() (*clientcmdapi.Config, error) {
 	if okteto.Context().Cfg == nil {
 		return nil, fmt.Errorf("okteto context not initialized")
 	}

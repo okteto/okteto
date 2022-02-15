@@ -29,7 +29,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd/api"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 var fakeManifest *model.Manifest = &model.Manifest{
@@ -74,6 +74,9 @@ func (*fakeKubeConfig) Read() (*rest.Config, error) {
 
 func (fc *fakeKubeConfig) Modify(_ int, _, _ string) error {
 	return fc.errOnModify
+}
+func (*fakeKubeConfig) GetModifiedCMDAPIConfig() (*clientcmdapi.Config, error) {
+	return nil, nil
 }
 
 func (fk *fakeProxy) Start() {
@@ -217,7 +220,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	assert.True(t, p.shutdown)
 
 	//check if configmap has been created
-	fakeClient, _, err := c.K8sClientProvider.Provide(api.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
@@ -272,7 +275,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	assert.True(t, p.started)
 
 	//check if configmap has been created
-	fakeClient, _, err := c.K8sClientProvider.Provide(api.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
@@ -322,7 +325,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	assert.False(t, p.shutdown)
 
 	//check if configmap has been created
-	fakeClient, _, err := c.K8sClientProvider.Provide(api.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
@@ -370,7 +373,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	assert.True(t, p.shutdown)
 
 	//check if configmap has been created
-	fakeClient, _, err := c.K8sClientProvider.Provide(api.NewConfig())
+	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}

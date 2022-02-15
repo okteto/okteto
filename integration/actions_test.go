@@ -622,7 +622,7 @@ func executeDestroyStackAction(ctx context.Context, namespace, filePath string) 
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer deleteGitRepo(ctx, actionFolder)
 
-	log.Printf("Deleting stack %s", namespace)
+	log.Printf("Deleting compose %s", namespace)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
 	args := []string{namespace, "", filePath}
 	cmd := exec.Command(command, args...)
@@ -632,7 +632,7 @@ func executeDestroyStackAction(ctx context.Context, namespace, filePath string) 
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
 	}
 
-	log.Printf("destroy stack output: \n%s\n", string(o))
+	log.Printf("destroy compose output: \n%s\n", string(o))
 	return nil
 }
 

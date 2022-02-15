@@ -78,7 +78,9 @@ func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 
 // CleanUp cleans the execution lines
 func (e *Executor) CleanUp(err error) {
-	e.displayer.cleanUp(err)
+	if e.displayer != nil {
+		e.displayer.cleanUp(err)
+	}
 }
 
 func startCommand(cmd *exec.Cmd) error {
