@@ -136,6 +136,11 @@ func GetOutputFormat() string {
 	return log.outputMode
 }
 
+// GetOutput returns the log output
+func GetOutput() io.Writer {
+	return log.out.Out
+}
+
 // SetOutput sets the log output
 func SetOutput(output io.Writer) {
 	log.out.SetOutput(output)
