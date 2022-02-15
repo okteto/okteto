@@ -101,7 +101,6 @@ build:
 
 func runOktetoBuild(ctx context.Context, oktetoPath, pathToManifestFile, repoDir string) (string, error) {
 	cmd := exec.Command(oktetoPath, "build", "-f", pathToManifestFile, "-l", "debug")
-	cmd.Env = append(os.Environ(), "OKTETO_ENABLE_MANIFEST_V2=true")
 	cmd.Dir = repoDir
 	o, err := cmd.CombinedOutput()
 	if err != nil {

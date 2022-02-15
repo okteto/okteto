@@ -54,7 +54,7 @@ func Exec() *cobra.Command {
 				return err
 			}
 
-			dev, err := utils.GetDevFromManifest(manifest)
+			dev, err := utils.GetDevFromManifest(manifest, "")
 			if err != nil {
 				return err
 			}

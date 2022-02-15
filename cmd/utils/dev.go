@@ -143,23 +143,38 @@ func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 	return nil, err
 }
 
-func GetDevFromManifest(manifest *model.Manifest) (*model.Dev, error) {
+func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
 	if len(manifest.Dev) == 0 {
 		return nil, fmt.Errorf("okteto manifest has no dev references")
 	} else if len(manifest.Dev) == 1 {
-		for _, dev := range manifest.Dev {
+		for name, dev := range manifest.Dev {
+			if devName != "" && devName != name {
+				return nil, fmt.Errorf("dev '%s' does not exists", devName)
+			}
 			return dev, nil
 		}
 	}
 
-	devs := make([]string, 0)
-	for k := range manifest.Dev {
-		devs = append(devs, k)
+	if devName != "" {
+		for k := range manifest.Dev {
+			if k == devName {
+				return manifest.Dev[devName], nil
+			}
+		}
+		return nil, fmt.Errorf("dev '%s' does not exists", devName)
 	}
-	devKey, err := AskForOptions(devs, "Select the dev you want to operate with:")
+	devs := []SelectorItem{}
+	for k := range manifest.Dev {
+		devs = append(devs, SelectorItem{
+			Name:  k,
+			Label: k,
+		})
+	}
+	devKey, _, err := AskForOptionsOkteto(context.Background(), devs, "Select the dev you want to operate with:")
 	if err != nil {
 		return nil, err
 	}
+
 	return manifest.Dev[devKey], nil
 }
 

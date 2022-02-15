@@ -317,7 +317,4 @@ const (
 
 	// OktetoDefaultImageTag default tag assigned to image to build
 	OktetoDefaultImageTag = "okteto"
-
-	// OktetoManifestV2Enabled defines if manifest v2 is enabled
-	OktetoManifestV2Enabled = "OKTETO_ENABLE_MANIFEST_V2"
 )
