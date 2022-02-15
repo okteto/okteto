@@ -45,7 +45,7 @@ func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout ti
 	}
 
 	cfg := translateConfigMap(s)
-	output := fmt.Sprintf("Destroying stack '%s'...", s.Name)
+	output := fmt.Sprintf("Destroying compose '%s'...", s.Name)
 	cfg.Data[statusField] = destroyingStatus
 	cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
 	if err := configmaps.Deploy(ctx, cfg, s.Namespace, c); err != nil {
@@ -54,7 +54,7 @@ func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout ti
 
 	err = destroy(ctx, s, removeVolumes, c, timeout)
 	if err != nil {
-		output = fmt.Sprintf("%s\nStack '%s' destruction failed: %s", output, s.Name, err.Error())
+		output = fmt.Sprintf("%s\nCompose '%s' destruction failed: %s", output, s.Name, err.Error())
 		cfg.Data[statusField] = errorStatus
 		cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
 		if err := configmaps.Deploy(ctx, cfg, s.Namespace, c); err != nil {
@@ -67,7 +67,7 @@ func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout ti
 }
 
 func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kubernetes.Clientset, timeout time.Duration) error {
-	spinner := utils.NewSpinner(fmt.Sprintf("Destroying stack '%s'...", s.Name))
+	spinner := utils.NewSpinner(fmt.Sprintf("Destroying compose '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()
 

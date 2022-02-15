@@ -32,7 +32,7 @@ type Archetype string
 
 var (
 	// StackType represents a stack manifest type
-	StackType Archetype = "stack"
+	StackType Archetype = "compose"
 	// OktetoType represents a okteto manifest type
 	OktetoType Archetype = "okteto"
 	//OktetoType represents a okteto manifest type
@@ -268,7 +268,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	}
 
 	if stackPath := getFilePath(cwd, stackFiles); stackPath != "" {
-		oktetoLog.Infof("Found okteto stack")
+		oktetoLog.Infof("Found okteto compose")
 		stackManifest := &Manifest{
 			Type: StackType,
 			Deploy: &DeployInfo{

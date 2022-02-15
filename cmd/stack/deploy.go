@@ -48,7 +48,7 @@ func deploy(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
-		Short: "Deploy a stack",
+		Short: "Deploy a compose",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			options.ServicesToDeploy = args
 
@@ -68,10 +68,10 @@ func deploy(ctx context.Context) *cobra.Command {
 			return dc.RunDeploy(ctx, s, options)
 		},
 	}
-	cmd.Flags().StringArrayVarP(&options.StackPaths, "file", "f", []string{}, "path to the stack manifest files. If more than one is passed the latest will overwrite the fields from the previous")
-	cmd.Flags().StringVarP(&options.Name, "name", "", "", "overwrites the stack name")
-	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is deployed")
-	cmd.Flags().BoolVarP(&options.ForceBuild, "build", "", false, "build images before starting any Stack service")
+	cmd.Flags().StringArrayVarP(&options.StackPaths, "file", "f", []string{}, "path to the compose manifest files. If more than one is passed the latest will overwrite the fields from the previous")
+	cmd.Flags().StringVarP(&options.Name, "name", "", "", "overwrites the compose name")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the compose namespace where the compose is deployed")
+	cmd.Flags().BoolVarP(&options.ForceBuild, "build", "", false, "build images before starting any compose service")
 	cmd.Flags().BoolVarP(&options.Wait, "wait", "", false, "wait until a minimum number of containers are in a ready state for every service")
 	cmd.Flags().BoolVarP(&options.NoCache, "no-cache", "", false, "do not use cache when building the image")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (10 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
@@ -114,7 +114,7 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 
 	analytics.TrackDeployStack(err == nil, s.IsCompose, utils.IsOktetoRepo())
 	if err == nil {
-		oktetoLog.Success("Stack '%s' successfully deployed", s.Name)
+		oktetoLog.Success("Compose '%s' successfully deployed", s.Name)
 	}
 
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) || !c.IsInsideDeploy {

@@ -280,7 +280,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	if err := yaml.UnmarshalStrict(bytes, s); err != nil {
 		if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 			var sb strings.Builder
-			_, _ = sb.WriteString("Invalid stack manifest:\n")
+			_, _ = sb.WriteString("Invalid compose manifest:\n")
 			l := strings.Split(err.Error(), "\n")
 			for i := 1; i < len(l); i++ {
 				e := strings.TrimSuffix(l[i], "in type model.Stack")
@@ -292,7 +292,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 			return nil, errors.New(sb.String())
 		}
 
-		msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid stack manifest:", 1)
+		msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid compose manifest:", 1)
 		msg = strings.TrimSuffix(msg, "in type model.Stack")
 		return nil, errors.New(msg)
 	}
@@ -340,7 +340,7 @@ func (svc *Service) IgnoreSyncVolumes(s *Stack) {
 
 func (s *Stack) Validate() error {
 	if err := validateStackName(s.Name); err != nil {
-		return fmt.Errorf("Invalid stack name: %s", err)
+		return fmt.Errorf("Invalid compose name: %s", err)
 	}
 	if len(s.Services) == 0 {
 		return fmt.Errorf("Invalid stack: 'services' cannot be empty")
@@ -671,8 +671,8 @@ func inferStack(name string) (*Stack, error) {
 		}
 	}
 	return nil, oktetoErrors.UserError{
-		E:    fmt.Errorf("could not detect any stack file to deploy"),
-		Hint: "Try setting the flag '--file' pointing to your stack file",
+		E:    fmt.Errorf("could not detect any compose file to deploy"),
+		Hint: "Try setting the flag '--file' pointing to your compose file",
 	}
 }
 
@@ -680,7 +680,7 @@ func getStack(name, manifestPath string) (*Stack, error) {
 	var isCompose bool
 	if isDeprecatedExtension(manifestPath) {
 		deprecatedFile := filepath.Base(manifestPath)
-		oktetoLog.Warning("The file %s will be deprecated as a default stack file name in a future version. Please consider renaming your stack file to 'okteto-stack.yml'", deprecatedFile)
+		oktetoLog.Warning("The file %s will be deprecated as a default compose file name in a future version. Please consider renaming your compose file to 'okteto-stack.yml'", deprecatedFile)
 	}
 	if isPathAComposeFile(manifestPath) {
 		isCompose = true

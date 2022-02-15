@@ -61,8 +61,8 @@ func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
 		}
 		if !found {
 			return nil, oktetoErrors.UserError{
-				E:    fmt.Errorf("could not detect any stack file to deploy"),
-				Hint: "Try setting the flag '--file' pointing to your stack file",
+				E:    fmt.Errorf("could not detect any compose file to deploy"),
+				Hint: "Try setting the flag '--file' pointing to your compose file",
 			}
 		}
 	}

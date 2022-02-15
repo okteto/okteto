@@ -74,7 +74,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 	}
 
 	cfg := translateConfigMap(s)
-	output := fmt.Sprintf("Deploying stack '%s'...", s.Name)
+	output := fmt.Sprintf("Deploying compose '%s'...", s.Name)
 	cfg.Data[statusField] = progressingStatus
 	cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
 	if err := configmaps.Deploy(ctx, cfg, s.Namespace, sd.K8sClient); err != nil {
@@ -83,11 +83,11 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 
 	err := deploy(ctx, s, sd.K8sClient, sd.Config, options)
 	if err != nil {
-		output = fmt.Sprintf("%s\nStack '%s' deployment failed: %s", output, s.Name, err.Error())
+		output = fmt.Sprintf("%s\nCompose '%s' deployment failed: %s", output, s.Name, err.Error())
 		cfg.Data[statusField] = errorStatus
 		cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
 	} else {
-		output = fmt.Sprintf("%s\nStack '%s' successfully deployed", output, s.Name)
+		output = fmt.Sprintf("%s\nCompose '%s' successfully deployed", output, s.Name)
 		cfg.Data[statusField] = deployedStatus
 		cfg.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(output))
 	}
@@ -101,7 +101,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 
 func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *StackDeployOptions) error {
 	DisplayWarnings(s)
-	spinner := utils.NewSpinner(fmt.Sprintf("Deploying stack '%s'...", s.Name))
+	spinner := utils.NewSpinner(fmt.Sprintf("Deploying compose '%s'...", s.Name))
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -189,7 +189,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("stack '%s' didn't finish after %s", stack.Name, options.Timeout.String())
+			return fmt.Errorf("compose '%s' didn't finish after %s", stack.Name, options.Timeout.String())
 		case <-t.C:
 			for len(deployedSvcs) != len(options.ServicesToDeploy) {
 				for _, svcName := range options.ServicesToDeploy {
@@ -388,7 +388,7 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 			return fmt.Errorf("name collision: the deployment '%s' was running before deploying your stack", svcName)
 		}
 		if old.Labels[model.StackNameLabel] != s.Name {
-			return fmt.Errorf("name collision: the deployment '%s' belongs to the stack '%s'", svcName, old.Labels[model.StackNameLabel])
+			return fmt.Errorf("name collision: the deployment '%s' belongs to the compose '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
 			d.Labels[model.DeployedByLabel] = v
@@ -420,7 +420,7 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 			return fmt.Errorf("name collision: the statefulset '%s' was running before deploying your stack", svcName)
 		}
 		if old.Labels[model.StackNameLabel] != s.Name {
-			return fmt.Errorf("name collision: the statefulset '%s' belongs to the stack '%s'", svcName, old.Labels[model.StackNameLabel])
+			return fmt.Errorf("name collision: the statefulset '%s' belongs to the compose '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
 			sfs.Labels[model.DeployedByLabel] = v
@@ -452,7 +452,7 @@ func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes
 			return fmt.Errorf("name collision: the job '%s' was running before deploying your stack", svcName)
 		}
 		if old.Labels[model.StackNameLabel] != s.Name {
-			return fmt.Errorf("name collision: the job '%s' belongs to the stack '%s'", svcName, old.Labels[model.StackNameLabel])
+			return fmt.Errorf("name collision: the job '%s' belongs to the compose '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 	}
 
@@ -484,7 +484,7 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 			return fmt.Errorf("name collision: the volume '%s' was running before deploying your stack", pvc.Name)
 		}
 		if old.Labels[model.StackNameLabel] != s.Name {
-			return fmt.Errorf("name collision: the volume '%s' belongs to the stack '%s'", pvc.Name, old.Labels[model.StackNameLabel])
+			return fmt.Errorf("name collision: the volume '%s' belongs to the compose '%s'", pvc.Name, old.Labels[model.StackNameLabel])
 		}
 
 		old.Spec.Resources.Requests["storage"] = pvc.Spec.Resources.Requests["storage"]
@@ -522,11 +522,11 @@ func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *i
 	}
 
 	if old.GetLabels()[model.StackNameLabel] == "" {
-		return fmt.Errorf("name collision: the ingress '%s' was running before deploying your stack", ingressName)
+		return fmt.Errorf("name collision: the ingress '%s' was running before deploying your compose", ingressName)
 	}
 
 	if old.GetLabels()[model.StackNameLabel] != s.Name {
-		return fmt.Errorf("name collision: the endpoint '%s' belongs to the stack '%s'", ingressName, old.GetLabels()[model.StackNameLabel])
+		return fmt.Errorf("name collision: the endpoint '%s' belongs to the compose '%s'", ingressName, old.GetLabels()[model.StackNameLabel])
 	}
 
 	return c.Update(ctx, iModel)

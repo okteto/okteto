@@ -1494,9 +1494,9 @@ func validateExtensions(stack StackRaw) error {
 		}
 	}
 	if len(nonValidFields) == 1 {
-		return fmt.Errorf("Invalid stack manifest: Field '%s' is not supported.\n    More information is available here: https://okteto.com/docs/reference/stacks/", nonValidFields[0])
+		return fmt.Errorf("Invalid compose manifest: Field '%s' is not supported.\n    More information is available here: https://okteto.com/docs/reference/stacks/", nonValidFields[0])
 	} else if len(nonValidFields) > 1 {
-		return fmt.Errorf(`Invalid stack manifest: The following fields are not supported.
+		return fmt.Errorf(`Invalid compose manifest: The following fields are not supported.
     - %s
     More information is available here: https://okteto.com/docs/reference/stacks/`, strings.Join(nonValidFields, "\n    - "))
 	}

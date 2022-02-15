@@ -51,15 +51,15 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			}
 
 			if err := stack.ListEndpoints(ctx, s, output); err != nil {
-				oktetoLog.Success("Stack '%s' successfully deployed", s.Name)
+				oktetoLog.Success("Compose '%s' successfully deployed", s.Name)
 			}
 			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&output, "output", "o", "", "output format. One of: ['json']")
-	cmd.Flags().StringArrayVarP(&stackPath, "file", "f", []string{}, "path to the stack manifest files. If more than one is passed the latest will overwrite the fields from the previous")
-	cmd.Flags().StringVarP(&name, "name", "", "", "overwrites the stack name")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is deployed")
+	cmd.Flags().StringArrayVarP(&stackPath, "file", "f", []string{}, "path to the compose manifest files. If more than one is passed the latest will overwrite the fields from the previous")
+	cmd.Flags().StringVarP(&name, "name", "", "", "overwrites the compose name")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the compose namespace where the compose is deployed")
 
 	return cmd
 }

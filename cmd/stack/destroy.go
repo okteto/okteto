@@ -33,7 +33,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	var rm bool
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
-		Short: "Destroy a stack",
+		Short: "Destroy a compose",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#destroy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath)
@@ -54,9 +54,9 @@ func Destroy(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().StringArrayVarP(&stackPath, "file", "f", []string{}, "path to the stack manifest file")
-	cmd.Flags().StringVarP(&name, "name", "", "", "overwrites the stack name")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the stack namespace where the stack is destroyed")
+	cmd.Flags().StringArrayVarP(&stackPath, "file", "f", []string{}, "path to the compose manifest file")
+	cmd.Flags().StringVarP(&name, "name", "", "", "overwrites the compose name")
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the compose namespace where the compose is destroyed")
 	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volumes")
 	return cmd
 }

@@ -377,14 +377,14 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 
 	go func() {
 		if opts.Manifest.Deploy.Compose != nil {
-			oktetoLog.SetStage("Deploying stack")
+			oktetoLog.SetStage("Deploying compose")
 			reader, writer := io.Pipe()
 			oktetoLog.SetOutput(writer)
 			exit := make(chan error, 1)
 			stop := make(chan os.Signal, 1)
 			signal.Notify(stop, os.Interrupt)
 			d := displayer.NewDisplayer(oktetoLog.GetOutputFormat(), reader, nil)
-			d.Display("Deploying stack")
+			d.Display("Deploying compose")
 			go func() {
 				err := dc.deployStack(ctx, opts)
 				writer.Close()
