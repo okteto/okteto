@@ -239,6 +239,18 @@ func AskIfOktetoInit(devPath string) bool {
 	return result
 }
 
+// AsksQuestion asks a question to the user
+func AsksQuestion(q string) (string, error) {
+	var answer string
+
+	oktetoLog.Question(q)
+	if _, err := fmt.Scanln(&answer); err != nil {
+		return "", err
+	}
+
+	return answer, nil
+}
+
 //AskIfDeploy asks if a new deployment must be created
 func AskIfDeploy(name, namespace string) error {
 	deploy, err := AskYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", name, namespace))
