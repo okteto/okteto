@@ -108,7 +108,7 @@ func Up() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				manifest.Name = utils.InferApplicationName(wd)
+				manifest.Name = utils.InferName(wd)
 			}
 			devName := ""
 			if len(args) == 1 {

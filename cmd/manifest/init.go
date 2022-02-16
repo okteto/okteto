@@ -141,7 +141,7 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 
 	if manifest != nil {
 		mc.manifest = manifest
-		manifest.Name = utils.InferApplicationName(cwd)
+		manifest.Name = utils.InferName(cwd)
 		if err := manifest.WriteToFile(opts.DevPath); err != nil {
 			return err
 		}
@@ -260,7 +260,7 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 		var name string
 		var buildInfo *model.BuildInfo
 		if dockerfile == dockerfileName {
-			name = utils.InferApplicationName(cwd)
+			name = utils.InferName(cwd)
 			buildInfo = &model.BuildInfo{
 				Context: ".",
 			}

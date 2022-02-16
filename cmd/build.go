@@ -187,7 +187,7 @@ func buildV2(buildManifest model.ManifestBuild, cmdOptions build.BuildOptions, a
 			continue
 		}
 		if cwd, err := os.Getwd(); err == nil && manifestOpts.Name == "" {
-			manifestOpts.Name = utils.InferApplicationName(cwd)
+			manifestOpts.Name = utils.InferName(cwd)
 		}
 
 		cmdOptsFromManifest := build.OptsFromManifest(service, manifestOpts, cmdOptions)

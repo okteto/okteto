@@ -151,7 +151,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 			addEnvVars(ctx, cwd)
 			if options.Name == "" {
-				options.Name = utils.InferApplicationName(cwd)
+				options.Name = utils.InferName(cwd)
 			}
 
 			kubeconfig := NewKubeConfig()
