@@ -805,6 +805,7 @@ func checkBuildFromManifest(ctx context.Context, buildManifest model.ManifestBui
 		if err := runBuildAndSetEnvs(ctx, svc, mBuildInfo); err != nil {
 			return err
 		}
+		oktetoLog.Warning("Image for service '%s' was built because it did not already exist. To rebuild this image you must use 'okteto build' or 'okteto deploy --build'.", svc)
 	}
 
 	return nil
