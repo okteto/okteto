@@ -71,6 +71,8 @@ type Options struct {
 	Branch     string
 	Wait       bool
 	Timeout    time.Duration
+
+	ShowCTA bool
 }
 
 type kubeConfigHandler interface {
@@ -153,6 +155,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if options.Name == "" {
 				options.Name = utils.InferApplicationName(cwd)
 			}
+			options.ShowCTA = true
 
 			kubeconfig := NewKubeConfig()
 
@@ -340,6 +343,16 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 		if err := dc.showEndpoints(ctx, deployOptions); err != nil {
 			oktetoLog.Infof("could not retrieve endpoints: %s", err)
+		}
+	}
+	if pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c) {
+		if deployOptions.ShowCTA {
+			oktetoLog.Success("Great work deploying your application.\n    Try running `okteto up` next")
+		}
+	} else {
+		return oktetoErrors.UserError{
+			E:    errors.New("It seems that you haven't deployed anything"),
+			Hint: "Please try updating your deploy section on your manifest and try again",
 		}
 	}
 
