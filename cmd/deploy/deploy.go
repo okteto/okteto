@@ -345,7 +345,13 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			oktetoLog.Infof("could not retrieve endpoints: %s", err)
 		}
 	}
-	if pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c) {
+
+	hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
+	if err != nil {
+		return err
+	}
+
+	if hasDeployed {
 		if deployOptions.ShowCTA {
 			oktetoLog.Success("%s successfully deployed.\n    Run `okteto up` to activate your development container.", deployOptions.Name)
 		}

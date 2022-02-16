@@ -36,31 +36,31 @@ func IsDeployed(ctx context.Context, name, namespace string, c kubernetes.Interf
 }
 
 // HasDeployedSomething checks if the pipeline has deployed any deployment/statefulset/job
-func HasDeployedSomething(ctx context.Context, name, ns string, c kubernetes.Interface) bool {
-	labels := fmt.Sprintf("%s=%s",model.DeployedByLabel, name)
+func HasDeployedSomething(ctx context.Context, name, ns string, c kubernetes.Interface) (bool, error) {
+	labels := fmt.Sprintf("%s=%s", model.DeployedByLabel, name)
 	dList, err := deployments.List(ctx, ns, labels, c)
 	if err != nil {
-		return false
+		return false, err
 	}
 	if len(dList) > 0 {
-		return true
+		return true, nil
 	}
 
 	sfsList, err := statefulsets.List(ctx, ns, labels, c)
 	if err != nil {
-		return false
+		return false, err
 	}
 	if len(sfsList) > 0 {
-		return true
+		return true, nil
 	}
 
 	jobsList, err := jobs.List(ctx, ns, labels, c)
 	if err != nil {
-		return false
+		return false, err
 	}
 	if len(jobsList) > 0 {
-		return true
+		return true, nil
 	}
 
-	return false
+	return false, nil
 }
