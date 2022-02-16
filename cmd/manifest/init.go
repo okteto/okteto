@@ -300,8 +300,8 @@ func inferDeploySection(cwd string) (*model.DeployInfo, error) {
 	return &model.DeployInfo{
 		Commands: []model.DeployCommand{
 			{
-				Name:    "Replace this line with helm or kubectl commands to deploy your application",
-				Command: "Replace this line with helm or kubectl commands to deploy your application",
+				Name:    "Deploy",
+				Command: model.FakeCommand,
 			},
 		},
 	}, nil

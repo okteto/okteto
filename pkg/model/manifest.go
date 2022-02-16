@@ -58,7 +58,8 @@ const (
   - https://github.com/okteto/b
   - frontend/okteto.yml`
 
-	fakeCommand = "echo 'Replace this line with helm or kubectl commands to deploy your application'"
+	// FakeCommand prints into terminal a fake command
+	FakeCommand = "echo 'Replace this line with helm or kubectl commands to deploy your application'"
 )
 
 var (
@@ -561,8 +562,8 @@ func (m *Manifest) WriteToFile(filePath string) error {
 		if len(m.Deploy.Commands) == 0 && m.Deploy.Compose == nil {
 			m.Deploy.Commands = []DeployCommand{
 				{
-					Name:    fakeCommand,
-					Command: fakeCommand,
+					Name:    FakeCommand,
+					Command: FakeCommand,
 				},
 			}
 		}
