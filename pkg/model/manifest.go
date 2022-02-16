@@ -25,6 +25,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
+	yaml3 "gopkg.in/yaml.v3"
 )
 
 // Archetype represents the type of manifest
@@ -35,7 +36,7 @@ var (
 	StackType Archetype = "compose"
 	// OktetoType represents a okteto manifest type
 	OktetoType Archetype = "okteto"
-	//OktetoType represents a okteto manifest type
+	// OktetoManifestType represents a okteto manifest type
 	OktetoManifestType Archetype = "manifest"
 	// PipelineType represents a okteto pipeline manifest type
 	PipelineType Archetype = "pipeline"
@@ -43,6 +44,21 @@ var (
 	KubernetesType Archetype = "kubernetes"
 	// ChartType represents a k8s manifest type
 	ChartType Archetype = "chart"
+)
+
+const (
+	buildHeadComment = "The build section defines a list of images and how to build them.\nMore info: https://www.okteto.com/docs/reference/manifest/#build"
+	buildExample     = `build:
+  my-service:
+    context: .`
+	deployHeadComment       = "The deploy section defines how to deploy.\nMore info: https://www.okteto.com/docs/reference/manifest/#deploy"
+	devHeadComment          = "The dev section defines how okteto up will work for a service.\nMore info: https://www.okteto.com/docs/reference/manifest/#dev"
+	dependenciesHeadComment = "The dependencies section defines which resources must be deployed to work.\nMore info: https://www.okteto.com/docs/reference/manifest/#dependencies"
+	dependenciesExample     = `dependencies:
+  - https://github.com/okteto/b
+  - frontend/okteto.yml`
+
+	fakeCommand = "echo 'Replace this line with helm or kubectl commands to deploy your application'"
 )
 
 var (
@@ -160,7 +176,7 @@ type DeployInfo struct {
 // ComposeInfo represents information about compose file
 type ComposeInfo struct {
 	Manifest []string `json:"manifest,omitempty" yaml:"manifest,omitempty"`
-	Stack    *Stack   `json:"-,omitempty" yaml:"-,omitempty"`
+	Stack    *Stack   `json:"-" yaml:"-"`
 }
 
 // DeployCommand represents a command to be executed
@@ -178,16 +194,16 @@ func NewDeployInfo() *DeployInfo {
 
 //GetManifestV2 gets a manifest from a path or search for the files to generate it
 func GetManifestV2(manifestPath string) (*Manifest, error) {
-	if manifestPath != "" && fileExistsAndNotDir(manifestPath) {
-		return getManifest(manifestPath)
-	} else if manifestPath != "" && pathExistsAndDir(manifestPath) {
-		return nil, fmt.Errorf("can not parse a dir path")
-	}
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
+	if manifestPath != "" && fileExistsAndNotDir(manifestPath) {
+		return getManifest(manifestPath)
+	} else if manifestPath != "" && pathExistsAndDir(manifestPath) {
+		cwd = manifestPath
+	}
+
 	var devManifest *Manifest
 	if oktetoPath := getFilePath(cwd, oktetoFiles); oktetoPath != "" {
 		oktetoLog.Infof("Found okteto file")
@@ -213,6 +229,40 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		}
 	}
 
+	inferredManifest, err := GetInferredManifest(cwd)
+	if err != nil {
+		return nil, err
+	}
+	if inferredManifest != nil {
+		if devManifest != nil {
+			inferredManifest.mergeWithOktetoManifest(devManifest)
+		} else if inferredManifest.Type == StackType {
+			inferredManifest, err = inferredManifest.InferFromStack()
+			if err != nil {
+				return nil, err
+			}
+			inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
+		}
+		return inferredManifest, nil
+	}
+
+	if devManifest != nil {
+		devManifest.Type = OktetoType
+		devManifest.Deploy = &DeployInfo{
+			Commands: []DeployCommand{
+				{
+					Name:    "okteto push --deploy",
+					Command: "okteto push --deploy",
+				},
+			},
+		}
+		return devManifest, nil
+	}
+	return nil, oktetoErrors.ErrManifestNotFound
+}
+
+// GetInferredManifest infers the manifest from a directory
+func GetInferredManifest(cwd string) (*Manifest, error) {
 	if pipelinePath := getFilePath(cwd, pipelineFiles); pipelinePath != "" {
 		oktetoLog.Infof("Found pipeline")
 		pipelineManifest, err := GetManifestV2(pipelinePath)
@@ -220,10 +270,6 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			return nil, err
 		}
 		pipelineManifest.Type = PipelineType
-		if devManifest != nil {
-			pipelineManifest.mergeWithOktetoManifest(devManifest)
-		}
-
 		return pipelineManifest, nil
 
 	}
@@ -244,9 +290,6 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			Build:    ManifestBuild{},
 			Filename: chartPath,
 		}
-		if devManifest != nil {
-			chartManifest.mergeWithOktetoManifest(devManifest)
-		}
 		return chartManifest, nil
 
 	}
@@ -265,9 +308,6 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			Dev:      ManifestDevs{},
 			Build:    ManifestBuild{},
 			Filename: manifestPath,
-		}
-		if devManifest != nil {
-			k8sManifest.mergeWithOktetoManifest(devManifest)
 		}
 		return k8sManifest, nil
 	}
@@ -293,26 +333,9 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			return nil, err
 		}
 		stackManifest.Deploy.Compose.Stack = s
-		if devManifest != nil {
-			stackManifest.mergeWithOktetoManifest(devManifest)
-		} else {
-			stackManifest.InferFromStack()
-		}
 		return stackManifest, nil
 	}
-	if devManifest != nil {
-		devManifest.Type = OktetoType
-		devManifest.Deploy = &DeployInfo{
-			Commands: []DeployCommand{
-				{
-					Name:    "okteto push --deploy",
-					Command: "okteto push --deploy",
-				},
-			},
-		}
-		return devManifest, nil
-	}
-	return nil, oktetoErrors.ErrManifestNotFound
+	return nil, nil
 }
 
 // get returns a Dev object from a given file
@@ -530,4 +553,156 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 	}
 	m.setDefaults()
 	return m, nil
+}
+
+// WriteToFile writes a manifest to a file with comments to make it easier to understand
+func (m *Manifest) WriteToFile(filePath string) error {
+	if m.Deploy != nil {
+		if len(m.Deploy.Commands) == 0 && m.Deploy.Compose == nil {
+			m.Deploy.Commands = []DeployCommand{
+				{
+					Name:    fakeCommand,
+					Command: fakeCommand,
+				},
+			}
+		}
+	}
+	if len(m.Dev) == 0 {
+		m.Dev = ManifestDevs{
+			m.Name: NewDev(),
+		}
+	}
+	m.Context = ""
+	m.Namespace = ""
+	//Unmarshal with yamlv2 because we have the marshal with yaml v2
+	bytes, err := yaml.Marshal(m)
+	if err != nil {
+		return err
+	}
+	doc := yaml3.Node{}
+	if err := yaml3.Unmarshal(bytes, &doc); err != nil {
+		return err
+	}
+	doc = *doc.Content[0]
+	currentSection := ""
+	for idx, section := range doc.Content {
+		switch section.Value {
+		case "build":
+			currentSection = "build"
+			section.HeadComment = buildHeadComment
+		case "deploy":
+			currentSection = "deploy"
+			section.HeadComment = deployHeadComment
+		case "dev":
+			currentSection = "dev"
+			section.HeadComment = devHeadComment
+		}
+		if idx%2 == 0 {
+			continue
+		}
+		if currentSection == "build" {
+			for _, subsection := range section.Content {
+				if subsection.Kind != yaml3.ScalarNode {
+					continue
+				}
+				serviceName := strings.ToUpper(subsection.Value)
+				subsection.HeadComment = fmt.Sprintf("You can use the following env vars to refer to this build:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_TAG: image tag", serviceName, serviceName, serviceName, serviceName)
+			}
+		}
+	}
+
+	doc = m.reorderDocFields(doc)
+
+	out, err := yaml3.Marshal(doc)
+	if err != nil {
+		return err
+	}
+	out = addEmptyLineBetweenSections(out)
+	if err := os.WriteFile(filePath, out, 0600); err != nil {
+		oktetoLog.Infof("failed to write stignore file: %s", err)
+		return err
+	}
+	return nil
+}
+
+// reorderDocFields orders the manifest to be: name -> build -> deploy -> dependencies -> dev
+func (m *Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
+	contentCopy := []*yaml3.Node{}
+	nodes := []int{}
+	nameDefinitionIdx := getDocIdx(doc.Content, "name")
+	if nameDefinitionIdx != -1 {
+		contentCopy = append(contentCopy, doc.Content[nameDefinitionIdx], doc.Content[nameDefinitionIdx+1])
+		nodes = append(nodes, nameDefinitionIdx, nameDefinitionIdx+1)
+	}
+
+	buildDefinitionIdx := getDocIdx(doc.Content, "build")
+	if buildDefinitionIdx != -1 {
+		contentCopy = append(contentCopy, doc.Content[buildDefinitionIdx], doc.Content[buildDefinitionIdx+1])
+		nodes = append(nodes, buildDefinitionIdx, buildDefinitionIdx+1)
+	} else {
+		whereToInject := getDocIdx(contentCopy, "name")
+		contentCopy[whereToInject].FootComment = fmt.Sprintf("%s\n%s", buildHeadComment, buildExample)
+	}
+
+	deployDefinitionIdx := getDocIdx(doc.Content, "deploy")
+	if deployDefinitionIdx != -1 {
+		contentCopy = append(contentCopy, doc.Content[deployDefinitionIdx], doc.Content[deployDefinitionIdx+1])
+		nodes = append(nodes, deployDefinitionIdx, deployDefinitionIdx+1)
+	}
+
+	dependenciesDefinitionIdx := getDocIdx(doc.Content, "dependencies")
+	if dependenciesDefinitionIdx != -1 {
+		contentCopy = append(contentCopy, doc.Content[dependenciesDefinitionIdx], doc.Content[dependenciesDefinitionIdx+1])
+		nodes = append(nodes, dependenciesDefinitionIdx, dependenciesDefinitionIdx+1)
+	} else {
+		whereToInject := getDocIdx(contentCopy, "deploy")
+		contentCopy[whereToInject].FootComment = fmt.Sprintf("%s\n%s", dependenciesHeadComment, dependenciesExample)
+	}
+
+	devDefinitionIdx := getDocIdx(doc.Content, "dev")
+	if devDefinitionIdx != -1 {
+		contentCopy = append(contentCopy, doc.Content[devDefinitionIdx], doc.Content[devDefinitionIdx+1])
+		nodes = append(nodes, devDefinitionIdx, devDefinitionIdx+1)
+	}
+
+	// We need to inject all the other fields remaining
+	if len(doc.Content) != len(contentCopy) {
+		for idx := range doc.Content {
+			found := false
+			for _, copyIdx := range nodes {
+				if copyIdx == idx {
+					found = true
+					break
+				}
+			}
+			if found {
+				continue
+			}
+			contentCopy = append(contentCopy, doc.Content[idx])
+		}
+	}
+	doc.Content = contentCopy
+	return doc
+}
+
+func getDocIdx(contents []*yaml3.Node, value string) int {
+	for idx, node := range contents {
+		if node.Value == value {
+			return idx
+		}
+	}
+	return -1
+}
+func addEmptyLineBetweenSections(out []byte) []byte {
+	prevLineCommented := false
+	newYaml := ""
+	for _, line := range strings.Split(string(out), "\n") {
+		isLineCommented := strings.HasPrefix(strings.TrimSpace(line), "#")
+		if !prevLineCommented && isLineCommented {
+			newYaml += "\n"
+		}
+		newYaml += line + "\n"
+		prevLineCommented = isLineCommented
+	}
+	return []byte(newYaml)
 }

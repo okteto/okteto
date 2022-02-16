@@ -798,6 +798,9 @@ func (d *DeployCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func (d *DeployInfo) MarshalYAML() (interface{}, error) {
+	if d.Compose != nil && len(d.Compose.Manifest) != 0 {
+		return d, nil
+	}
 	isCommandList := true
 	for _, cmd := range d.Commands {
 		if cmd.Command != cmd.Name {
@@ -902,7 +905,39 @@ func (d *Dev) MarshalYAML() (interface{}, error) {
 	if d.AreDefaultPersistentVolumeValues() {
 		toMarshall.PersistentVolumeInfo = nil
 	}
-
+	if toMarshall.ImagePullPolicy == apiv1.PullAlways {
+		toMarshall.ImagePullPolicy = ""
+	}
+	toMarshall.Push = nil
+	toMarshall.Image = nil
+	if toMarshall.Lifecycle != nil && (!toMarshall.Lifecycle.PostStart || !toMarshall.Lifecycle.PostStop) {
+		toMarshall.Lifecycle = nil
+	}
+	if toMarshall.Metadata != nil && len(toMarshall.Metadata.Annotations) == 0 && len(toMarshall.Metadata.Labels) == 0 {
+		toMarshall.Metadata = nil
+	}
+	if toMarshall.InitContainer.Image == OktetoBinImageTag {
+		toMarshall.InitContainer.Image = ""
+	}
+	if toMarshall.Timeout.Default == 1*time.Minute && toMarshall.Timeout.Resources == 2*time.Minute {
+		toMarshall.Timeout.Default = 0
+		toMarshall.Timeout.Resources = 0
+	}
+	if toMarshall.Sync.RescanInterval == DefaultSyncthingRescanInterval && toMarshall.Sync.Compression {
+		toMarshall.Sync.Compression = false
+	}
+	if toMarshall.Interface == Localhost || toMarshall.Interface == PrivilegedLocalhost {
+		toMarshall.Interface = ""
+	}
+	if toMarshall.SSHServerPort == oktetoDefaultSSHServerPort {
+		toMarshall.SSHServerPort = 0
+	}
+	if toMarshall.Workdir == "/okteto" {
+		toMarshall.Workdir = ""
+	}
+	if isDefaultSecurityContext((*Dev)(&toMarshall)) {
+		toMarshall.SecurityContext = nil
+	}
 	return Dev(toMarshall), nil
 
 }
@@ -912,6 +947,27 @@ func isDefaultProbes(d *Dev) bool {
 		if d.Probes.Liveness || d.Probes.Readiness || d.Probes.Startup {
 			return false
 		}
+	}
+	return true
+}
+func isDefaultSecurityContext(d *Dev) bool {
+	if d.SecurityContext == nil {
+		return true
+	}
+	if d.SecurityContext.Capabilities != nil {
+		return false
+	}
+	if d.SecurityContext.RunAsNonRoot != nil {
+		return false
+	}
+	if d.SecurityContext.FSGroup != nil && *d.SecurityContext.FSGroup != 0 {
+		return false
+	}
+	if d.SecurityContext.RunAsGroup != nil && *d.SecurityContext.RunAsGroup != 0 {
+		return false
+	}
+	if d.SecurityContext.RunAsUser != nil && *d.SecurityContext.RunAsUser != 0 {
+		return false
 	}
 	return true
 }

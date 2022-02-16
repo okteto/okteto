@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/destroy"
 	initCMD "github.com/okteto/okteto/cmd/init"
+	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/preview"
@@ -109,6 +110,7 @@ func main() {
 	root.AddCommand(contextCMD.Context())
 	root.AddCommand(cmd.Kubeconfig())
 	root.AddCommand(cmd.Build(ctx))
+	root.AddCommand(manifest.Manifest(ctx))
 
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(pipeline.Pipeline(ctx))
