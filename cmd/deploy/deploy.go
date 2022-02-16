@@ -155,7 +155,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if options.Name == "" {
 				options.Name = utils.InferApplicationName(cwd)
 			}
-			options.ShowCTA = true
+			options.ShowCTA = oktetoLog.IsInteractive()
 
 			kubeconfig := NewKubeConfig()
 
