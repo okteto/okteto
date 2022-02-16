@@ -347,7 +347,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 	if pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c) {
 		if deployOptions.ShowCTA {
-			oktetoLog.Success("Great work deploying your application.\n    Try running `okteto up` next")
+			oktetoLog.Success("%s successfully deployed.\n    Run `okteto up` to activate your development container.", deployOptions.Name)
 		}
 	} else {
 		return oktetoErrors.ErrDeployHasNotDeployAnyResource
