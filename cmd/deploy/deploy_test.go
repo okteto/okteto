@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	oktetoError "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -314,7 +315,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 
 	err := c.RunDeploy(ctx, opts)
 
-	assert.NoError(t, err)
+	assert.ErrorIs(t, err, oktetoError.ErrDeployHasNotDeployAnyResource)
 	// No command was executed
 	assert.Len(t, e.executed, 3)
 	// Check expected commands were executed
@@ -362,7 +363,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 
 	err := c.RunDeploy(ctx, opts)
 
-	assert.NoError(t, err)
+	assert.ErrorIs(t, err, oktetoError.ErrDeployHasNotDeployAnyResource)
 	// No command was executed
 	assert.Len(t, e.executed, 3)
 	// Check expected commands were executed

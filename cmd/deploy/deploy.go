@@ -350,10 +350,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			oktetoLog.Success("Great work deploying your application.\n    Try running `okteto up` next")
 		}
 	} else {
-		return oktetoErrors.UserError{
-			E:    errors.New("It seems that you haven't deployed anything"),
-			Hint: "Please try updating your deploy section on your manifest and try again",
-		}
+		return oktetoErrors.ErrDeployHasNotDeployAnyResource
 	}
 
 	return nil
