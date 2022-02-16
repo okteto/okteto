@@ -66,7 +66,7 @@ This can easily be done with the `-s' command-line option to append this automat
 git commit -s -m 'Meaningful commit message'
 ```
 
-> In order to use the `-s' flag for auto signing the commits, you'll need to set your `user.name`and`user.email` git configs
+> In order to use the `-s` flag for auto signing the commits, you'll need to set your `user.name`and`user.email` git configs
 
 Finally, you can push your changes to GitHub using:
 
