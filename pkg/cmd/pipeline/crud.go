@@ -19,7 +19,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -51,14 +50,6 @@ func HasDeployedSomething(ctx context.Context, name, ns string, c kubernetes.Int
 		return false, err
 	}
 	if len(sfsList) > 0 {
-		return true, nil
-	}
-
-	jobsList, err := jobs.List(ctx, ns, labels, c)
-	if err != nil {
-		return false, err
-	}
-	if len(jobsList) > 0 {
 		return true, nil
 	}
 
