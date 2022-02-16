@@ -136,10 +136,10 @@ var (
 	ErrManifestFoundButNoDeployCommands = errors.New("found okteto manifest, but no deploy commands where defined")
 
 	// ErrDeployHasNotDeployAnyResource raised when a deploy command has not created any resource
-	ErrDeployHasNotDeployAnyResource = UserError{
-		E:    errors.New("It seems that you haven't deployed anything"),
-		Hint: "Please try updating your deploy section on your manifest and try again",
-	}
+	ErrDeployHasNotDeployAnyResource = errors.New("It seems that you haven't deployed anything")
+
+	// ErrDeployHasFailedCommand raised when a deploy command is executed and fails
+	ErrDeployHasFailedCommand = "Error while executing command: %s"
 )
 
 // IsForbidden raised if the Okteto API returns 401
