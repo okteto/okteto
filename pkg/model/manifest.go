@@ -574,6 +574,21 @@ func (m *Manifest) WriteToFile(filePath string) error {
 			m.Name: NewDev(),
 		}
 	}
+	for _, d := range m.Dev {
+		if d.Image.Name != "" {
+			d.Image.Context = ""
+			d.Image.Dockerfile = ""
+		} else {
+			d.Image = nil
+		}
+
+		if d.Push.Name != "" {
+			d.Push.Context = ""
+			d.Push.Dockerfile = ""
+		} else {
+			d.Push = nil
+		}
+	}
 	m.Context = ""
 	m.Namespace = ""
 	//Unmarshal with yamlv2 because we have the marshal with yaml v2

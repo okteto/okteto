@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -548,7 +549,15 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (s SyncFolder) MarshalYAML() (interface{}, error) {
-	return s.LocalPath + ":" + s.RemotePath, nil
+	cwd, err := os.Getwd()
+	if err != nil {
+		return s.LocalPath + ":" + s.RemotePath, nil
+	}
+	relPath, err := filepath.Rel(cwd, s.LocalPath)
+	if err != nil {
+		return s.LocalPath + ":" + s.RemotePath, nil
+	}
+	return relPath + ":" + s.RemotePath, nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -908,8 +917,6 @@ func (d *Dev) MarshalYAML() (interface{}, error) {
 	if toMarshall.ImagePullPolicy == apiv1.PullAlways {
 		toMarshall.ImagePullPolicy = ""
 	}
-	toMarshall.Push = nil
-	toMarshall.Image = nil
 	if toMarshall.Lifecycle != nil && (!toMarshall.Lifecycle.PostStart || !toMarshall.Lifecycle.PostStop) {
 		toMarshall.Lifecycle = nil
 	}
