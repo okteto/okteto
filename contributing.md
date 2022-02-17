@@ -28,7 +28,7 @@ Discussing your changes with the maintainers before implementation is one of the
 
 The following steps will walk you through the process of opening your first pull request:
 
-##### Create a Clone of Your Fork
+##### Fork the Repository
 
 Head over to the project repository on GitHub and click the **"Fork"** button. This allows you to work on your own copy of the project without being affected by the changes on the main repository. Once you've forked the project, clone it using:
 
