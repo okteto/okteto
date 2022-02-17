@@ -51,6 +51,7 @@ const (
 	buildExample     = `build:
   my-service:
     context: .`
+	buildSvcEnvVars         = "You can use the following env vars to refer to this build:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_TAG: image tag"
 	deployHeadComment       = "The deploy section defines how to deploy.\nMore info: https://www.okteto.com/docs/reference/manifest/#deploy"
 	devHeadComment          = "The dev section defines how okteto up will work for a service.\nMore info: https://www.okteto.com/docs/reference/manifest/#dev"
 	dependenciesHeadComment = "The dependencies section defines which resources must be deployed to work.\nMore info: https://www.okteto.com/docs/reference/manifest/#dependencies"
@@ -199,7 +200,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
-	if manifestPath != "" && fileExistsAndNotDir(manifestPath) {
+	if manifestPath != "" && FileExistsAndNotDir(manifestPath) {
 		return getManifest(manifestPath)
 	} else if manifestPath != "" && pathExistsAndDir(manifestPath) {
 		cwd = manifestPath
@@ -376,7 +377,7 @@ func getManifest(devPath string) (*Manifest, error) {
 func getFilePath(cwd string, files []string) string {
 	for _, name := range files {
 		path := filepath.Join(cwd, name)
-		if fileExistsAndNotDir(path) {
+		if FileExistsAndNotDir(path) {
 			return path
 		}
 	}
@@ -607,7 +608,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 					continue
 				}
 				serviceName := strings.ToUpper(subsection.Value)
-				subsection.HeadComment = fmt.Sprintf("You can use the following env vars to refer to this build:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_TAG: image tag", serviceName, serviceName, serviceName, serviceName)
+				subsection.HeadComment = fmt.Sprintf(buildSvcEnvVars, serviceName, serviceName, serviceName, serviceName)
 			}
 		}
 	}
