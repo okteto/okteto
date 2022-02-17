@@ -116,7 +116,6 @@ func main() {
 	root.AddCommand(initCMD.Init())
 	root.AddCommand(up.Up())
 	root.AddCommand(cmd.Down())
-	root.AddCommand(cmd.Push(ctx))
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor())
 	root.AddCommand(cmd.Exec())
@@ -131,6 +130,7 @@ func main() {
 	root.AddCommand(cmd.Create(ctx))
 	root.AddCommand(cmd.List(ctx))
 	root.AddCommand(cmd.Delete(ctx))
+	root.AddCommand(cmd.Push(ctx))
 
 	err := root.Execute()
 
