@@ -506,8 +506,8 @@ func TestDev_validateName(t *testing.T) {
 			dev := &Dev{
 				Name:            tt.devName,
 				ImagePullPolicy: apiv1.PullAlways,
-				Image:           &BuildInfo{},
-				Push:            &BuildInfo{},
+				Image:           &DevBuildInfo{},
+				Push:            &DevBuildInfo{},
 				Sync: Sync{
 					Folders: []SyncFolder{
 						{
@@ -533,7 +533,7 @@ func TestDev_readImageContext(t *testing.T) {
 	tests := []struct {
 		name     string
 		manifest []byte
-		expected *BuildInfo
+		expected *DevBuildInfo
 	}{
 		{
 			name: "context pointing to url",
@@ -541,7 +541,7 @@ func TestDev_readImageContext(t *testing.T) {
 image:
   context: https://github.com/okteto/okteto.git
 `),
-			expected: &BuildInfo{
+			expected: &DevBuildInfo{
 				Context: "https://github.com/okteto/okteto.git",
 			},
 		},
@@ -551,7 +551,7 @@ image:
 image:
   context: .
 `),
-			expected: &BuildInfo{
+			expected: &DevBuildInfo{
 				Context:    ".",
 				Dockerfile: "Dockerfile",
 			},

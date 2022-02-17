@@ -161,8 +161,8 @@ func generateManifestFile(devPath string) (string, error) {
 	}
 
 	dev := &model.Dev{
-		Image:       &model.BuildInfo{},
-		Push:        &model.BuildInfo{},
+		Image:       &model.DevBuildInfo{},
+		Push:        &model.DevBuildInfo{},
 		Environment: make([]model.EnvVar, 0),
 		Secrets:     make([]model.Secret, 0),
 		Forward:     make([]model.Forward, 0),

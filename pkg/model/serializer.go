@@ -285,6 +285,24 @@ func (sync Sync) MarshalYAML() (interface{}, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (buildInfo *DevBuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		buildInfo.Name = rawString
+		return nil
+	}
+	var rawBuildInfo BuildInfo
+	err = unmarshal(&rawBuildInfo)
+	if err != nil {
+		return err
+	}
+	oktetoLog.Yellow("The extended syntax is deprecated for dev. You can still build your images setting you build section on your manifes")
+	*buildInfo = DevBuildInfo(rawBuildInfo)
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
 	err := unmarshal(&rawString)
