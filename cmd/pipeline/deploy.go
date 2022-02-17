@@ -24,6 +24,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -95,16 +96,17 @@ func deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if skipIfExists {
-				oktetoClient, err := okteto.NewOktetoClient()
+				c, _, err := okteto.GetK8sClient()
 				if err != nil {
-					return err
+					return fmt.Errorf("failed to load okteto context '%s': %v", okteto.Context().Name, err)
 				}
-				pipeline, err := oktetoClient.GetPipelineByRepository(ctx, repository)
+
+				_, err = configmaps.Get(ctx, fmt.Sprintf("okteto-git-%s", name), okteto.Context().Namespace, c)
 				if err == nil {
-					oktetoLog.Information("Pipeline URL: %s", getPipelineURL(pipeline.GitDeploy))
-					oktetoLog.Success("Pipeline '%s' was already deployed", name)
+					oktetoLog.Success("Skipping '%s' because it's already deployed", name)
 					return nil
 				}
+
 				if !oktetoErrors.IsNotFound(err) {
 					return err
 				}
