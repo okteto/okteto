@@ -25,6 +25,9 @@ import (
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
+	initCMD "github.com/okteto/okteto/pkg/cmd/init"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -33,7 +36,8 @@ import (
 
 // ManifestCommand has all the namespaces subcommands
 type ManifestCommand struct {
-	manifest *model.Manifest
+	manifest          *model.Manifest
+	K8sClientProvider okteto.K8sClientProvider
 }
 
 // InitOpts defines the option for manifest init
@@ -74,7 +78,9 @@ func Init() *cobra.Command {
 			}
 
 			opts.ShowCTA = oktetoLog.IsInteractive()
-			mc := &ManifestCommand{}
+			mc := &ManifestCommand{
+				K8sClientProvider: okteto.NewK8sClientProvider(),
+			}
 
 			return mc.Init(ctx, opts)
 		},
@@ -158,30 +164,87 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 				return err
 			}
 			if answer {
-				kubeconfig := deploy.NewKubeConfig()
-				proxy, err := deploy.NewProxy(manifest.Name, kubeconfig)
-				if err != nil {
+				if err := mc.deploy(ctx, opts); err != nil {
 					return err
 				}
 
-				c := &deploy.DeployCommand{
-					GetManifest:        mc.getManifest,
-					Kubeconfig:         kubeconfig,
-					Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat()),
-					Proxy:              proxy,
-					TempKubeconfigFile: deploy.GetTempKubeConfigFile(manifest.Name),
-					K8sClientProvider:  okteto.NewK8sClientProvider(),
+				answer, err := utils.AskYesNo("do you want to configure your dev environments?")
+				if err != nil {
+					return err
 				}
-
-				return c.RunDeploy(ctx, &deploy.Options{
-					Name:         manifest.Name,
-					ManifestPath: opts.DevPath,
-					Timeout:      5 * time.Minute,
-					Build:        true,
-				})
+				if answer {
+					if err := mc.configureDevsByResources(ctx, opts); err != nil {
+						return err
+					}
+				}
 			}
 			oktetoLog.Success("Okteto manifest configured correctly.\n    Run `okteto up` to activate your development container")
 		}
+	}
+	return nil
+}
+
+func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
+	kubeconfig := deploy.NewKubeConfig()
+	proxy, err := deploy.NewProxy(mc.manifest.Name, kubeconfig)
+	if err != nil {
+		return err
+	}
+
+	c := &deploy.DeployCommand{
+		GetManifest:        mc.getManifest,
+		Kubeconfig:         kubeconfig,
+		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat()),
+		Proxy:              proxy,
+		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
+		K8sClientProvider:  mc.K8sClientProvider,
+	}
+
+	err = c.RunDeploy(ctx, &deploy.Options{
+		Name:         mc.manifest.Name,
+		ManifestPath: opts.DevPath,
+		Timeout:      5 * time.Minute,
+		Build:        true,
+		Wait:         true,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, opts *InitOpts) error {
+	c, _, err := okteto.GetK8sClient()
+	if err != nil {
+		return err
+	}
+
+	dList, err := pipeline.ListDeployments(ctx, mc.manifest.Name, mc.manifest.Namespace, c)
+	if err != nil {
+		return err
+	}
+	for _, d := range dList {
+		app := apps.NewDeploymentApp(&d)
+		if apps.IsDevModeOn(app) {
+			oktetoLog.Infof("App '%s' is in dev mode", app.ObjectMeta().Name)
+			continue
+		}
+		container := ""
+		if len(app.PodSpec().Containers) > 1 {
+			container = app.PodSpec().Containers[0].Name
+		}
+
+		dev := model.NewDev()
+		suffix := fmt.Sprintf("Analyzing %s '%s'...", app.Kind(), app.ObjectMeta().Name)
+		spinner := utils.NewSpinner(suffix)
+		spinner.Start()
+		err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, "")
+		if err != nil {
+			return err
+		}
+		spinner.Stop()
+		oktetoLog.Success("dev '%s'configured correctly", app.ObjectMeta().Name)
+		mc.manifest.Dev[app.ObjectMeta().Name] = dev
 	}
 	return nil
 }
@@ -269,12 +332,14 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 		if dockerfile == dockerfileName {
 			name = utils.InferName(cwd)
 			buildInfo = &model.BuildInfo{
-				Context: ".",
+				Context:    ".",
+				Dockerfile: dockerfile,
 			}
 		} else {
 			name = filepath.Dir(dockerfile)
 			buildInfo = &model.BuildInfo{
-				Context: filepath.Dir(dockerfile),
+				Context:    filepath.Dir(dockerfile),
+				Dockerfile: dockerfile,
 			}
 		}
 		if !okteto.IsOkteto() {
