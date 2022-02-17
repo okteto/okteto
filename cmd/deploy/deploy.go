@@ -53,7 +53,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const headerUpgrade = "Upgrade"
+const (
+	headerUpgrade          = "Upgrade"
+	succesfullyDeployedmsg = "'%s' successfully deployed."
+)
 
 var tempKubeConfigTemplate = "%s/.okteto/kubeconfig-%s"
 
@@ -71,6 +74,8 @@ type Options struct {
 	Branch     string
 	Wait       bool
 	Timeout    time.Duration
+
+	ShowCTA bool
 }
 
 type kubeConfigHandler interface {
@@ -153,6 +158,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if options.Name == "" {
 				options.Name = utils.InferApplicationName(cwd)
 			}
+			options.ShowCTA = oktetoLog.IsInteractive()
 
 			kubeconfig := NewKubeConfig()
 
@@ -320,30 +326,48 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	err = dc.deploy(ctx, deployOptions)
 
-	if err != nil {
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deployment failed: %s", err.Error())
-		data.Status = pipeline.ErrorStatus
-	} else {
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "'%s' successfully deployed", deployOptions.Name)
-		data.Status = pipeline.DeployedStatus
-	}
 	oktetoLog.SetStage("")
 	oktetoLog.DisableMasking()
+
+	if err != nil {
+		err = oktetoErrors.UserError{
+			E:    fmt.Errorf(oktetoErrors.ErrDeployHasFailedCommand, err),
+			Hint: "Please try updating your deploy section on your manifest and try again",
+		}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, err.Error())
+		data.Status = pipeline.ErrorStatus
+	} else {
+		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
+		if err != nil {
+			return err
+		}
+		if hasDeployed {
+			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+				if err := dc.showEndpoints(ctx, deployOptions); err != nil {
+					oktetoLog.Infof("could not retrieve endpoints: %s", err)
+				}
+			}
+			if deployOptions.ShowCTA {
+				oktetoLog.Success(succesfullyDeployedmsg, deployOptions.Name)
+				if oktetoLog.IsInteractive() {
+					oktetoLog.Green("    Run `okteto up` to activate your development container.")
+				}
+			}
+			data.Status = pipeline.DeployedStatus
+		} else {
+			err = oktetoErrors.UserError{
+				E:    oktetoErrors.ErrDeployHasNotDeployAnyResource,
+				Hint: "Please try updating your deploy section on your manifest and try again",
+			}
+			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, err.Error())
+			data.Status = pipeline.ErrorStatus
+		}
+	}
 
 	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
 		return err
 	}
-	if err != nil {
-		return err
-	}
-
-	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-		if err := dc.showEndpoints(ctx, deployOptions); err != nil {
-			oktetoLog.Infof("could not retrieve endpoints: %s", err)
-		}
-	}
-
-	return nil
+	return err
 }
 
 func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
@@ -354,7 +378,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		for _, command := range opts.Manifest.Deploy.Commands {
 			oktetoLog.SetStage(command.Name)
 			if err := dc.Executor.Execute(command, opts.Variables); err != nil {
-				oktetoLog.Fail("error executing command '%s': %s", command.Name, err.Error())
+				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 				exit <- fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 				return
 			}

@@ -666,6 +666,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
+	Name         string               `json:"name,omitempty" yaml:"name,omitempty"`
 	Namespace    string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Context      string               `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon         string               `json:"icon,omitempty" yaml:"icon,omitempty"`

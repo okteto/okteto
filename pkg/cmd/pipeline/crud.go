@@ -15,8 +15,12 @@ package pipeline
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/statefulsets"
+	"github.com/okteto/okteto/pkg/model"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 )
@@ -28,4 +32,26 @@ func IsDeployed(ctx context.Context, name, namespace string, c kubernetes.Interf
 		return false
 	}
 	return cmap.Data[statusField] != ErrorStatus
+}
+
+// HasDeployedSomething checks if the pipeline has deployed any deployment/statefulset/job
+func HasDeployedSomething(ctx context.Context, name, ns string, c kubernetes.Interface) (bool, error) {
+	labels := fmt.Sprintf("%s=%s", model.DeployedByLabel, name)
+	dList, err := deployments.List(ctx, ns, labels, c)
+	if err != nil {
+		return false, err
+	}
+	if len(dList) > 0 {
+		return true, nil
+	}
+
+	sfsList, err := statefulsets.List(ctx, ns, labels, c)
+	if err != nil {
+		return false, err
+	}
+	if len(sfsList) > 0 {
+		return true, nil
+	}
+
+	return false, nil
 }
