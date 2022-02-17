@@ -756,7 +756,6 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if !isManifestFieldNotFound(err) {
 		return err
 	}
-	type manifestRaw Manifest
 
 	manifest := manifestRaw{
 		Dev:          map[string]*Dev{},
