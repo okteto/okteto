@@ -127,12 +127,13 @@ func getNamespacesSelection(ctx context.Context) ([]utils.SelectorItem, error) {
 
 	namespaces := []utils.SelectorItem{}
 	for _, space := range spaces {
-
-		namespaces = append(namespaces, utils.SelectorItem{
-			Name:   space.ID,
-			Label:  space.ID,
-			Enable: true,
-		})
+		if space.Status != "Deleting" {
+			namespaces = append(namespaces, utils.SelectorItem{
+				Name:   space.ID,
+				Label:  space.ID,
+				Enable: true,
+			})
+		}
 	}
 
 	namespaces = append(namespaces, []utils.SelectorItem{

@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -257,12 +258,19 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 			"actionLock": "test",
 		},
 	}
+	deployment := &v1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				model.DeployedByLabel: "movies",
+			},
+		},
+	}
 	c := &DeployCommand{
 		GetManifest:       getFakeManifest,
 		Proxy:             p,
 		Executor:          e,
 		Kubeconfig:        &fakeKubeConfig{},
-		K8sClientProvider: test.NewFakeK8sProvider(cmap),
+		K8sClientProvider: test.NewFakeK8sProvider(cmap, deployment),
 	}
 	ctx := context.Background()
 
@@ -288,6 +296,14 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	p := &fakeProxy{
 		errOnShutdown: assert.AnError,
 	}
+	deployment := &v1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				model.DeployedByLabel: "movies",
+			},
+			Namespace: "test",
+		},
+	}
 	e := &fakeExecutor{}
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		Contexts: map[string]*okteto.OktetoContext{
@@ -302,7 +318,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		Proxy:             p,
 		Executor:          e,
 		Kubeconfig:        &fakeKubeConfig{},
-		K8sClientProvider: test.NewFakeK8sProvider(),
+		K8sClientProvider: test.NewFakeK8sProvider(deployment),
 	}
 	ctx := context.Background()
 
@@ -346,12 +362,20 @@ func TestDeployWithoutErrors(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
+	deployment := &v1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				model.DeployedByLabel: "movies",
+			},
+			Namespace: "test",
+		},
+	}
 	c := &DeployCommand{
 		GetManifest:       getFakeManifest,
 		Proxy:             p,
 		Executor:          e,
 		Kubeconfig:        &fakeKubeConfig{},
-		K8sClientProvider: test.NewFakeK8sProvider(),
+		K8sClientProvider: test.NewFakeK8sProvider(deployment),
 	}
 	ctx := context.Background()
 	opts := &Options{
