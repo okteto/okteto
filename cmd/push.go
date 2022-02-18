@@ -52,9 +52,10 @@ type pushOptions struct {
 func Push(ctx context.Context) *cobra.Command {
 	pushOpts := &pushOptions{}
 	cmd := &cobra.Command{
-		Use:   "push [svc]",
-		Short: "Build, push and redeploy source code to the target app",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#push"),
+		Use:    "push [svc]",
+		Short:  "Build, push and redeploy source code to the target app",
+		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#push"),
+		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)

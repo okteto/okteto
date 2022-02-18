@@ -23,9 +23,10 @@ import (
 //Pipeline pipeline management commands
 func Pipeline(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "pipeline",
-		Short: "Pipeline management commands",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli#pipeline"),
+		Use:    "pipeline",
+		Short:  "Pipeline management commands",
+		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli#pipeline"),
+		Hidden: true,
 	}
 	cmd.AddCommand(deploy(ctx))
 	cmd.AddCommand(destroy(ctx))

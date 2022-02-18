@@ -113,12 +113,9 @@ func main() {
 	root.AddCommand(manifest.Manifest(ctx))
 
 	root.AddCommand(namespace.Namespace(ctx))
-	root.AddCommand(pipeline.Pipeline(ctx))
-	root.AddCommand(stack.Stack(ctx))
 	root.AddCommand(initCMD.Init())
 	root.AddCommand(up.Up())
 	root.AddCommand(cmd.Down())
-	root.AddCommand(cmd.Push(ctx))
 	root.AddCommand(cmd.Status())
 	root.AddCommand(cmd.Doctor())
 	root.AddCommand(cmd.Exec())
@@ -133,6 +130,9 @@ func main() {
 	root.AddCommand(cmd.Create(ctx))
 	root.AddCommand(cmd.List(ctx))
 	root.AddCommand(cmd.Delete(ctx))
+	root.AddCommand(stack.Stack(ctx))
+	root.AddCommand(cmd.Push(ctx))
+	root.AddCommand(pipeline.Pipeline(ctx))
 
 	err := root.Execute()
 
