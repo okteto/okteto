@@ -30,7 +30,7 @@ import (
 )
 
 func (dc *DeployCommand) wait(ctx context.Context, opts *Options) error {
-	spinner := utils.NewSpinner("Waiting for the pipeline to be deployed...")
+	spinner := utils.NewSpinner(fmt.Sprintf("Waiting for %s to be deployed...", opts.Name))
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -65,7 +65,7 @@ func (dc *DeployCommand) waitForResourcesToBeRunning(ctx context.Context, opts *
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("pipeline '%s' didn't finish after %s", opts.Manifest.Name, opts.Timeout.String())
+			return fmt.Errorf("'%s' deploy didn't finish after %s", opts.Manifest.Name, opts.Timeout.String())
 		case <-ticker.C:
 			dList, err := pipeline.ListDeployments(ctx, opts.Manifest.Name, opts.Manifest.Namespace, c)
 			if err != nil {

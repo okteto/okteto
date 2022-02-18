@@ -206,7 +206,7 @@ func deprecatedWaitToBeDestroyed(ctx context.Context, name string, timeout time.
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
+			return fmt.Errorf("'%s' destroy didn't finish after %s", name, timeout.String())
 		case <-t.C:
 			p, err := oktetoClient.GetPipelineByName(ctx, name)
 			if err != nil {

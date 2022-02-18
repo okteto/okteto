@@ -46,7 +46,7 @@ func (c *OktetoClient) WaitForActionToFinish(ctx context.Context, pipelineName, 
 		select {
 		case <-to.C:
 			oktetoLog.Infof("action '%s' didn't finish after %s", actionName, timeout.String())
-			return fmt.Errorf("pipeline '%s' didn't finish after %s", pipelineName, timeout.String())
+			return fmt.Errorf("'%s' didn't finish after %s", pipelineName, timeout.String())
 		case <-t.C:
 			a, err := c.GetAction(ctx, actionName)
 			if err != nil {

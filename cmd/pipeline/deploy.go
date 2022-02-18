@@ -228,7 +228,7 @@ func getPipelineURL(gitDeploy *types.GitDeploy) string {
 }
 
 func waitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
-	spinner := utils.NewSpinner("Waiting for the pipeline to be deployed...")
+	spinner := utils.NewSpinner(fmt.Sprintf("Waiting for %s to be deployed...", name))
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -286,7 +286,7 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name string, timeout time.D
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
+			return fmt.Errorf("'%s' deploy didn't finish after %s", name, timeout.String())
 		case <-t.C:
 			p, err := oktetoClient.GetPipelineByName(ctx, name)
 			if err != nil {
@@ -326,7 +326,7 @@ func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
+			return fmt.Errorf("'%s' deploy didn't finish after %s", name, timeout.String())
 		case <-ticker.C:
 			resourceStatus, err := oktetoClient.GetResourcesStatusFromPipeline(ctx, name)
 			if err != nil {
