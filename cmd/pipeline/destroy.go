@@ -47,6 +47,7 @@ func destroy(ctx context.Context) *cobra.Command {
 		Short: "Destroy an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			oktetoLog.Warning("'okteto pipeline destroy' is deprecated in favor of 'okteto destroy', and will be removed in a future version")
 			return ExecuteDestroyPipeline(ctx, opts)
 
 		},
