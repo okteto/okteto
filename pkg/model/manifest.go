@@ -243,7 +243,8 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			if err != nil {
 				return nil, err
 			}
-			inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
+			//TODO: uncomment
+			// inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
 		}
 		return inferredManifest, nil
 	}
