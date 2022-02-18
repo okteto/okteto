@@ -23,10 +23,10 @@ import (
 //Stack stack management commands
 func Stack(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Hidden: true,
 		Use:    "stack",
 		Short:  "Stack management commands",
 		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#stack"),
+		Hidden: true,
 	}
 	cmd.AddCommand(deploy(ctx))
 	cmd.AddCommand(Destroy(ctx))

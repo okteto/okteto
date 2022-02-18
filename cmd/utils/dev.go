@@ -73,7 +73,7 @@ func LoadManifest(devPath string) (*model.Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		manifest.Name = InferApplicationName(cwd)
+		manifest.Name = InferName(cwd)
 	}
 	if manifest.Namespace == "" {
 		manifest.Namespace = okteto.Context().Namespace
@@ -237,6 +237,18 @@ func AskIfOktetoInit(devPath string) bool {
 		return false
 	}
 	return result
+}
+
+// AsksQuestion asks a question to the user
+func AsksQuestion(q string) (string, error) {
+	var answer string
+
+	oktetoLog.Question(q)
+	if _, err := fmt.Scanln(&answer); err != nil {
+		return "", err
+	}
+
+	return answer, nil
 }
 
 //AskIfDeploy asks if a new deployment must be created

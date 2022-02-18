@@ -156,7 +156,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 			addEnvVars(ctx, cwd)
 			if options.Name == "" {
-				options.Name = utils.InferApplicationName(cwd)
+				options.Name = utils.InferName(cwd)
 			}
 			options.ShowCTA = oktetoLog.IsInteractive()
 
@@ -334,6 +334,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return err
 		}
 		if hasDeployed {
+			if deployOptions.Wait {
+				if err := dc.wait(ctx, deployOptions); err != nil {
+					return err
+				}
+			}
 			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 				if err := dc.showEndpoints(ctx, deployOptions); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
@@ -806,6 +811,7 @@ func checkBuildFromManifest(ctx context.Context, buildManifest model.ManifestBui
 		if err := runBuildAndSetEnvs(ctx, svc, mBuildInfo); err != nil {
 			return err
 		}
+		oktetoLog.Warning("Image for service '%s' was built because it did not already exist. To rebuild this image you must use 'okteto build' or 'okteto deploy --build'.", svc)
 	}
 
 	return nil

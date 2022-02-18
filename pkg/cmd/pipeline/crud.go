@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
+	v1 "k8s.io/api/apps/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 )
@@ -32,6 +33,26 @@ func IsDeployed(ctx context.Context, name, namespace string, c kubernetes.Interf
 		return false
 	}
 	return cmap.Data[statusField] != ErrorStatus
+}
+
+// ListDeployments list all the deployments created by the pipeline
+func ListDeployments(ctx context.Context, name, ns string, c kubernetes.Interface) ([]v1.Deployment, error) {
+	labels := fmt.Sprintf("%s=%s", model.DeployedByLabel, name)
+	dList, err := deployments.List(ctx, ns, labels, c)
+	if err != nil {
+		return nil, err
+	}
+	return dList, nil
+}
+
+// ListStatefulsets list all the sfs created by the pipeline
+func ListStatefulsets(ctx context.Context, name, ns string, c kubernetes.Interface) ([]v1.StatefulSet, error) {
+	labels := fmt.Sprintf("%s=%s", model.DeployedByLabel, name)
+	sfsList, err := statefulsets.List(ctx, ns, labels, c)
+	if err != nil {
+		return nil, err
+	}
+	return sfsList, nil
 }
 
 // HasDeployedSomething checks if the pipeline has deployed any deployment/statefulset/job

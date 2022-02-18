@@ -232,7 +232,7 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 	}
 
 	file := b.Dockerfile
-	if !filepath.IsAbs(b.Dockerfile) {
+	if !filepath.IsAbs(b.Dockerfile) && !model.FileExistsAndNotDir(file) {
 		file = filepath.Join(b.Context, b.Dockerfile)
 	}
 	opts := BuildOptions{

@@ -156,7 +156,7 @@ type ExternalVolume struct {
 
 // PersistentVolumeInfo info about the persistent volume
 type PersistentVolumeInfo struct {
-	Enabled      bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Enabled      bool   `json:"enabled,omitempty" yaml:"enabled"`
 	StorageClass string `json:"storageClass,omitempty" yaml:"storageClass,omitempty"`
 	Size         string `json:"size,omitempty" yaml:"size,omitempty"`
 }

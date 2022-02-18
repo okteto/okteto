@@ -106,7 +106,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 
 			if options.Name == "" {
-				options.Name = utils.InferApplicationName(cwd)
+				options.Name = utils.InferName(cwd)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}

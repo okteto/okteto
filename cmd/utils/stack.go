@@ -15,9 +15,12 @@ package utils
 
 import (
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -81,4 +84,27 @@ func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
 		}
 	}
 	return ctxResource, nil
+}
+
+// GetStackFiles returns the list of stack files on a path
+func GetStackFiles(cwd string) []string {
+	result := []string{}
+	paths, err := ioutil.ReadDir(cwd)
+	if err != nil {
+		return nil
+	}
+	for _, info := range paths {
+		if info.IsDir() {
+			continue
+		}
+		if strings.HasPrefix(info.Name(), "docker-compose") || strings.HasPrefix(info.Name(), "okteto-compose") || strings.HasPrefix(info.Name(), "okteto-stack") || strings.HasPrefix(info.Name(), "stack") {
+			result = append(result, info.Name())
+		}
+	}
+
+	if err != nil {
+		log.Infof("could not get stack files: %s", err.Error())
+	}
+	return result
+
 }
