@@ -37,7 +37,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 		Use:   "endpoints [service...]",
 		Short: "Show endpoints for a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			oktetoLog.Warning("'okteto stack endpoints' is deprecated and will be removed in a future version")
 			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath)
 			if err != nil {
 				return err
@@ -60,7 +60,6 @@ func Endpoints(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringArrayVarP(&stackPath, "file", "f", []string{}, "path to the compose manifest files. If more than one is passed the latest will overwrite the fields from the previous")
 	cmd.Flags().StringVarP(&name, "name", "", "", "overwrites the compose name")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "overwrites the compose namespace where the compose is deployed")
-
 	return cmd
 }
 

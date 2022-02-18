@@ -246,26 +246,18 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
-	if len(deployOptions.Manifest.Dependencies) != 0 {
-		oktetoLog.Information("Checking to deploy dependencies at manifest")
-	}
 	for depName, dep := range deployOptions.Manifest.Dependencies {
 		pipOpts := &pipelineCMD.DeployOptions{
-			Name:       depName,
-			Repository: dep.Repository,
-			Branch:     dep.Branch,
-			File:       dep.ManifestPath,
-			Variables:  model.SerializeBuildArgs(dep.Variables),
-			Wait:       dep.Wait,
-			Timeout:    deployOptions.Timeout,
+			Name:         depName,
+			Repository:   dep.Repository,
+			Branch:       dep.Branch,
+			File:         dep.ManifestPath,
+			Variables:    model.SerializeBuildArgs(dep.Variables),
+			Wait:         dep.Wait,
+			Timeout:      deployOptions.Timeout,
+			SkipIfExists: !deployOptions.Dependencies,
 		}
-		if deployOptions.Dependencies {
-			if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
-				return err
-			}
-			continue
-		}
-		if err := checkByNameAndDeployDependency(ctx, depName, pipOpts); err != nil {
+		if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
 			return err
 		}
 	}
@@ -538,21 +530,6 @@ func setManifestEnvVars(service, reference string) error {
 
 	oktetoLog.Debug("manifest env vars set")
 	return nil
-}
-
-func checkByNameAndDeployDependency(ctx context.Context, name string, pipOpts *pipelineCMD.DeployOptions) error {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-	if _, err := oktetoClient.GetPipelineByName(ctx, name); err == nil {
-		oktetoLog.Success("Dependency '%s' was already deployed", name)
-		return nil
-	} else if !oktetoErrors.IsNotFound(err) {
-		return err
-	}
-
-	return pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts)
 }
 
 func (dc *DeployCommand) cleanUp(ctx context.Context) {

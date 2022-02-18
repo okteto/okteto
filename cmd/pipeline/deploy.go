@@ -23,7 +23,9 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -126,16 +128,17 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 	}
 
 	if opts.SkipIfExists {
-		oktetoClient, err := okteto.NewOktetoClient()
+		c, _, err := okteto.GetK8sClient()
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to load okteto context '%s': %v", okteto.Context().Name, err)
 		}
-		pipeline, err := oktetoClient.GetPipelineByRepository(ctx, opts.Repository)
+
+		_, err = configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, c)
 		if err == nil {
-			oktetoLog.Information("Pipeline URL: %s", getPipelineURL(pipeline.GitDeploy))
-			oktetoLog.Success("Pipeline '%s' was already deployed", opts.Name)
+			oktetoLog.Success("Skipping '%s' because it's already deployed", opts.Name)
 			return nil
 		}
+
 		if !oktetoErrors.IsNotFound(err) {
 			return err
 		}
@@ -183,6 +186,7 @@ func deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployR
 	if err != nil {
 		return nil, err
 	}
+
 	go func() {
 		varList := []types.Variable{}
 		for _, v := range opts.Variables {
