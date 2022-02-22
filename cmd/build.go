@@ -50,7 +50,6 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 
 			isBuildV2 := errManifest == nil &&
-				options.Tag == "" &&
 				manifest.IsV2 &&
 				len(manifest.Build) != 0
 
@@ -66,11 +65,11 @@ func Build(ctx context.Context) *cobra.Command {
 					ctxOpts.Namespace = manifest.Namespace
 				}
 			} else {
-				v1Args := 1
+				maxV1Args := 1
 				docsURL := "https://okteto.com/docs/reference/cli/#build"
-				if len(args) != v1Args {
+				if len(args) > maxV1Args {
 					return oktetoErrors.UserError{
-						E:    fmt.Errorf("%q requires %d arg(s), but received %d", cmd.CommandPath(), v1Args, len(args)),
+						E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), maxV1Args, len(args)),
 						Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
 					}
 				}
