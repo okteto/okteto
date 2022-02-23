@@ -50,7 +50,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			err = stack.Destroy(ctx, s, rm, to)
 			analytics.TrackDestroyStack(err == nil)
 			if err == nil {
-				oktetoLog.Success("Stack '%s' successfully destroyed", s.Name)
+				oktetoLog.Success("Compose '%s' successfully destroyed", s.Name)
 			}
 			return err
 		},

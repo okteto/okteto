@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/deploy"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
@@ -30,7 +31,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
@@ -89,11 +89,10 @@ func Destroy(ctx context.Context) *cobra.Command {
 	}
 
 	cmd := &cobra.Command{
-		Use:    "destroy",
-		Short:  `Destroy everything created by "okteto deploy" command`,
-		Long:   `Destroy everything created by "okteto deploy" command. You can also include a "destroy" section in your Okteto manifest with a list of commands to be executed when the application is destroyed`,
-		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#version"),
-		Hidden: true,
+		Use:   "destroy",
+		Short: `Destroy everything created by the 'okteto deploy' command`,
+		Long:  `Destroy everything created by the 'okteto deploy' command. You can also include a 'destroy' section in your okteto manifest with a list of custom commands to be executed on destroy`,
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.ManifestPath); err != nil {
@@ -137,17 +136,24 @@ func Destroy(ctx context.Context) *cobra.Command {
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProvider(),
 			}
+
+			kubeconfigPath := deploy.GetTempKubeConfigFile(options.Name)
+			if err := kubeconfig.Write(okteto.Context().Cfg, kubeconfigPath); err != nil {
+				return err
+			}
+			os.Setenv("KUBECONFIG", kubeconfigPath)
+			defer os.Remove(kubeconfigPath)
 			err = c.runDestroy(ctx, options)
 			analytics.TrackDestroy(err == nil)
 			return err
 		},
 	}
 
-	cmd.Flags().StringVar(&options.Name, "name", "", "application name")
+	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
-	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the application destroy even if there is an error executing the custom destroy commands defined in the manifest")
-	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the application was deployed")
+	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands defined in the manifest")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment was deployed")
 
 	return cmd
 }
@@ -167,8 +173,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		return err
 	}
 
-	k8sCfg := kubeconfig.Get(config.GetKubeconfigPath())
-	c, _, err := dc.k8sClientProvider.Provide(k8sCfg)
+	c, _, err := dc.k8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
 		return err
 	}
@@ -240,7 +245,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		dc.executor.CleanUp(errors.New("Interrupt signal received"))
+		dc.executor.CleanUp(errors.New("interrupt signal received"))
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
@@ -319,7 +324,7 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 
 	// If the application to be destroyed was deployed with helm, we try to uninstall it to avoid to leave orphan release resources
 	for releaseName := range helmReleases {
-		oktetoLog.Debugf("uninstalling helm release %s", releaseName)
+		oktetoLog.Debugf("uninstalling helm release '%s'", releaseName)
 		cmd := fmt.Sprintf(helmUninstallCommand, releaseName)
 		cmdInfo := model.DeployCommand{Command: cmd, Name: cmd}
 		if err := dc.executor.Execute(cmdInfo, opts.Variables); err != nil {

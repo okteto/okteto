@@ -47,20 +47,20 @@ var (
 )
 
 const (
-	buildHeadComment = "The build section defines a list of images and how to build them.\nMore info: https://www.okteto.com/docs/reference/manifest/#build"
+	buildHeadComment = "The build section defines how to build the images of your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#build"
 	buildExample     = `build:
   my-service:
     context: .`
-	buildSvcEnvVars         = "You can use the following env vars to refer to this build:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_TAG: image tag"
-	deployHeadComment       = "The deploy section defines how to deploy.\nMore info: https://www.okteto.com/docs/reference/manifest/#deploy"
-	devHeadComment          = "The dev section defines how okteto up will work for a service.\nMore info: https://www.okteto.com/docs/reference/manifest/#dev"
-	dependenciesHeadComment = "The dependencies section defines which resources must be deployed to work.\nMore info: https://www.okteto.com/docs/reference/manifest/#dependencies"
+	buildSvcEnvVars         = "You can use the following env vars to refer to this image in your deploy commands:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_TAG: image tag"
+	deployHeadComment       = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#deploy"
+	devHeadComment          = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/manifest/#dev"
+	dependenciesHeadComment = "The dependencies section defines other git repositories to be deployed as part of your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#dependencies"
 	dependenciesExample     = `dependencies:
   - https://github.com/okteto/b
   - frontend/okteto.yml`
 
 	// FakeCommand prints into terminal a fake command
-	FakeCommand = "echo 'Replace this line with helm or kubectl commands to deploy your application'"
+	FakeCommand = "echo 'Replace this line with the proper 'helm' or 'kubectl' commands to deploy your development environment'"
 )
 
 var (

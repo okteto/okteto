@@ -155,8 +155,8 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 		if !dev.Autocreate {
 			return oktetoErrors.UserError{
 				E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
-				Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
-    Or set the 'autocreate' field in your okteto manifest if you want to create a standalone deployment
+				Hint: `Verify that your application is running and your okteto context is pointing to the right namespace
+    Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
     More information is available here: https://okteto.com/docs/reference/cli#up`,
 			}
 		}

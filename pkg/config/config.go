@@ -165,7 +165,7 @@ func GetState(dev *model.Dev) (UpState, error) {
 	if err != nil {
 		oktetoLog.Infof("error reading state file: %s", err.Error())
 		return Failed, oktetoErrors.UserError{
-			E:    fmt.Errorf("development mode is not enabled on your deployment"),
+			E:    fmt.Errorf("development mode isn't enabled on your deployment"),
 			Hint: "Run 'okteto up' to enable it and try again",
 		}
 	}

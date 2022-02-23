@@ -145,11 +145,11 @@ func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 
 func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
 	if len(manifest.Dev) == 0 {
-		return nil, fmt.Errorf("okteto manifest has no dev references")
+		return nil, fmt.Errorf("okteto manifest has no 'dev'. Configure it with ' okteto manifest update'")
 	} else if len(manifest.Dev) == 1 {
 		for name, dev := range manifest.Dev {
 			if devName != "" && devName != name {
-				return nil, fmt.Errorf("dev '%s' does not exists", devName)
+				return nil, fmt.Errorf("dev '%s' doesn't exist", devName)
 			}
 			return dev, nil
 		}
@@ -170,7 +170,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 			Label: k,
 		})
 	}
-	devKey, _, err := AskForOptionsOkteto(context.Background(), devs, "Select the dev you want to operate with:")
+	devKey, _, err := AskForOptionsOkteto(context.Background(), devs, "Select the development container you want to activate:")
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +260,7 @@ func AskIfDeploy(name, namespace string) error {
 	if !deploy {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("deployment %s doesn't exist in namespace %s", name, namespace),
-			Hint: "Deploy your application first or use 'okteto namespace' to select a different namespace and try again",
+			Hint: "Launch your application first or use 'okteto namespace' to select a different namespace and try again",
 		}
 	}
 	return nil
@@ -322,7 +322,7 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 		}
 		if dev.Autocreate {
 			if isRetry && !doesAutocreateAppExist(ctx, dev, c) {
-				return nil, false, fmt.Errorf("Development container has been deactivated")
+				return nil, false, fmt.Errorf("development container has been deactivated")
 			}
 			return apps.NewDeploymentApp(deployments.Sandbox(dev)), true, nil
 		}
@@ -336,7 +336,7 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 		}
 		return nil, false, oktetoErrors.UserError{
 			E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
-			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
+			Hint: `Verify that your application is running and your okteto context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
     More information is available here: https://okteto.com/docs/reference/cli/#up`,
 		}

@@ -23,9 +23,10 @@ import (
 // Manifest manifest management commands
 func Manifest(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "manifest",
-		Short: "Manifest management commands",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli#pipeline"),
+		Use:    "manifest",
+		Short:  "Manifest management commands",
+		Hidden: true,
+		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli#manifest"),
 	}
 	cmd.AddCommand(Init())
 	return cmd

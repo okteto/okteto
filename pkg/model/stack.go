@@ -671,8 +671,8 @@ func inferStack(name string) (*Stack, error) {
 		}
 	}
 	return nil, oktetoErrors.UserError{
-		E:    fmt.Errorf("could not detect any compose file to deploy"),
-		Hint: "Try setting the flag '--file' pointing to your compose file",
+		E:    fmt.Errorf("could not detect any compose file"),
+		Hint: "If you have a compose file, use the flag '--file' to point to your compose file",
 	}
 }
 

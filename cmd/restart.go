@@ -39,7 +39,7 @@ func Restart() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "restart [svc]",
-		Short: "Restart the deployments listed in the services field of the okteto manifest",
+		Short: "Restart the deployments listed in the services field of your okteto manifest",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#restart"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
