@@ -56,7 +56,7 @@ func Init() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "init",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
-		Short: "Automatically generate your okteto manifest file",
+		Short: "Automatically generate your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
@@ -135,11 +135,11 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 			}
 		}
 	} else {
-		selection, err := utils.AskForOptions([]string{"compose", "kubernetes"}, "How do you want to deploy your application?")
+		selection, err := utils.AskForOptions([]string{"Docker Compose", "Kubernetes Manifest"}, "How do you want to launch your development environment?")
 		if err != nil {
 			return err
 		}
-		if selection == "compose" {
+		if selection == "Docker Compose" {
 			manifest, err = createNewCompose()
 			if err != nil {
 				return err
@@ -159,7 +159,7 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 			return err
 		}
 		if opts.ShowCTA {
-			answer, err := utils.AskYesNo("Do you want to deploy?")
+			answer, err := utils.AskYesNo("Do you want to launch your development environment? [y/n]: ")
 			if err != nil {
 				return err
 			}
@@ -168,7 +168,7 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 					return err
 				}
 
-				answer, err := utils.AskYesNo("do you want to configure your dev environments?")
+				answer, err := utils.AskYesNo("Do you want to configure your development containers? [y/n]: ")
 				if err != nil {
 					return err
 				}
@@ -178,7 +178,8 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 					}
 				}
 			}
-			oktetoLog.Success("Okteto manifest configured correctly.\n    Run `okteto up` to activate your development container")
+			oktetoLog.Success("Okteto manifest configured correctly")
+			oktetoLog.Information("Run 'okteto up' to activate your development container")
 		}
 	}
 	return nil
@@ -204,8 +205,8 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		Name:         mc.manifest.Name,
 		ManifestPath: opts.DevPath,
 		Timeout:      5 * time.Minute,
-		Build:        true,
-		Wait:         true,
+		Build:        false,
+		Wait:         false,
 	})
 	if err != nil {
 		return err
@@ -243,7 +244,7 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, opts *I
 			return err
 		}
 		spinner.Stop()
-		oktetoLog.Success("dev '%s'configured correctly", app.ObjectMeta().Name)
+		oktetoLog.Success("Development container '%s' configured correctly", app.ObjectMeta().Name)
 		mc.manifest.Dev[app.ObjectMeta().Name] = dev
 	}
 	return nil
@@ -301,7 +302,8 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 }
 
 func createNewCompose() (*model.Manifest, error) {
-	oktetoLog.Information("docker-compose helps you define a multicontainer application. Learn how to configure a compose here: https://github.com/compose-spec/compose-spec/blob/master/spec.md")
+	oktetoLog.Information("Docker Compose helps you define a multicontainer application")
+	oktetoLog.Information("Learn how to configure a docker compose file here: https://github.com/compose-spec/compose-spec/blob/master/spec.md")
 	return nil, nil
 }
 

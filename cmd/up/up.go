@@ -65,7 +65,7 @@ func Up() *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
 		Use:   "up [svc]",
-		Short: "Activate your development container",
+		Short: "Launch your development environment",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
@@ -181,6 +181,9 @@ func Up() *cobra.Command {
 			}
 
 			if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
+				if !upOptions.Deploy {
+					oktetoLog.Warning("Development environment '%s' doesn't exist or has errors and it needs to be deployed", up.Manifest.Name)
+				}
 				err := up.deployApp(ctx)
 				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
 					return err
@@ -188,6 +191,9 @@ func Up() *cobra.Command {
 				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
 					up.Dev.Autocreate = false
 				}
+			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
+				oktetoLog.Information("Development environment '%s' already deployed.", up.Manifest.Name)
+				oktetoLog.Information("To redeploy your development environment run 'okteto deploy' or 'okteto up %s --deploy'", up.Dev.Name)
 			}
 
 			err = up.start()
@@ -286,7 +292,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		Name:         up.Manifest.Name,
 		ManifestPath: up.Manifest.Filename,
 		Timeout:      5 * time.Minute,
-		Build:        true,
+		Build:        false,
 	})
 }
 
@@ -425,7 +431,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
-			Hint: "Try creating a Dockerfile or specify 'context' and 'dockerfile' fields.",
+			Hint: "Try creating a Dockerfile field or specify the 'context' and 'dockerfile' fields in your okteto manifest.",
 		}
 	}
 

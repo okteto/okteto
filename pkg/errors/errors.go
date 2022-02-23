@@ -139,10 +139,10 @@ var (
 	ErrUserAnsweredNoToCreateFromCompose = fmt.Errorf("user does not want to create from compose")
 
 	// ErrDeployHasNotDeployAnyResource raised when a deploy command has not created any resource
-	ErrDeployHasNotDeployAnyResource = errors.New("It seems that you haven't deployed anything")
+	ErrDeployHasNotDeployAnyResource = errors.New("it seems that you haven't deployed anything")
 
 	// ErrDeployHasFailedCommand raised when a deploy command is executed and fails
-	ErrDeployHasFailedCommand = "Error while executing command: %s"
+	ErrDeployHasFailedCommand = errors.New("one of the commands in the 'deploy' section of your okteto manifests failed")
 )
 
 // IsForbidden raised if the Okteto API returns 401

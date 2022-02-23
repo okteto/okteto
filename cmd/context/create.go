@@ -142,6 +142,9 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 	} else if ctxOptions.Token == "" {
 		//this is to avoid login with the browser again if we already have a valid token
 		ctxOptions.Token = okCtx.Token
+		if ctxOptions.Builder == "" && okCtx.Builder != "" {
+			ctxOptions.Builder = okCtx.Builder
+		}
 	}
 
 	ctxStore.CurrentContext = ctxOptions.Context

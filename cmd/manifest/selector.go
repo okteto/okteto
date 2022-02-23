@@ -82,7 +82,7 @@ func selectDockerfiles(cwd string) ([]string, error) {
 		return nil, err
 	}
 
-	dockerfiles = append(dockerfiles, "that's all")
+	dockerfiles = append(dockerfiles, "No, thanks!")
 	index := -1
 	toConfigure := []string{}
 	for index < 0 {
@@ -90,7 +90,7 @@ func selectDockerfiles(cwd string) ([]string, error) {
 			break
 		}
 		prompt := promptui.Select{
-			Label: "Which dockerfile do you want to configure?",
+			Label: "Do you need to build any of the following Dockerfiles as part of your development environment?",
 			Items: dockerfiles,
 		}
 

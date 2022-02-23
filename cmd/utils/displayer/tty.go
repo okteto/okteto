@@ -225,7 +225,7 @@ func renderCommand(spinnerChar, command string) []byte {
 	if err != nil {
 		return []byte{}
 	}
-	command = fmt.Sprintf(" Running %s", command)
+	command = fmt.Sprintf(" Running '%s'", command)
 	return render(tpl, command)
 }
 

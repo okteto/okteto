@@ -119,9 +119,6 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 		oktetoLog.Information("Using %s @ %s as context", okteto.Context().Namespace, okteto.RemoveSchema(okteto.Context().Name))
 	}
 
-	if ctxOptions.IsCtxCommand {
-		oktetoLog.Information("Run 'okteto kubeconfig' to set your kubectl credentials")
-	}
 	return nil
 }
 

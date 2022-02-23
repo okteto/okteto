@@ -38,8 +38,8 @@ func Build(ctx context.Context) *cobra.Command {
 
 	options := build.BuildOptions{}
 	cmd := &cobra.Command{
-		Use:   "build [PATH]",
-		Short: "Build (and optionally push) a Docker image",
+		Use:   "build [service...]",
+		Short: "Build and push the images defined in the 'build' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			ctxOpts := &contextCMD.ContextOptions{}
@@ -182,8 +182,7 @@ func buildV2(buildManifest model.ManifestBuild, cmdOptions build.BuildOptions, a
 			}
 		}
 		if !okteto.Context().IsOkteto && manifestOpts.Image == "" {
-			oktetoLog.Errorf("image is required for service %s", service)
-			continue
+			return fmt.Errorf("'build.%s.image' is required if your context is not managed by Okteto", service)
 		}
 		if cwd, err := os.Getwd(); err == nil && manifestOpts.Name == "" {
 			manifestOpts.Name = utils.InferName(cwd)
@@ -196,13 +195,13 @@ func buildV2(buildManifest model.ManifestBuild, cmdOptions build.BuildOptions, a
 			oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
 			globalReference := strings.Replace(cmdOptsFromManifest.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 			if _, err := registry.GetImageTagWithDigest(globalReference); err == nil {
-				oktetoLog.Information("skipping build: image already exists at global registry -  %s", globalReference)
+				oktetoLog.Information("skipping build: image %s is already built at global registry", globalReference)
 				return nil
 			}
 			if registry.IsDevRegistry(cmdOptsFromManifest.Tag) {
 				// check if image already is at the registry
 				if _, err := registry.GetImageTagWithDigest(cmdOptsFromManifest.Tag); err == nil {
-					oktetoLog.Information("skipping build: image already exists at registry - %s", cmdOptsFromManifest.Tag)
+					oktetoLog.Information("skipping build: image %s is already built", cmdOptsFromManifest.Tag)
 					return nil
 				}
 			}
@@ -238,10 +237,14 @@ func buildV1(options build.BuildOptions, args []string) error {
 		return fmt.Errorf("invalid Dockerfile: %s", err.Error())
 	}
 
+	buildMsg := "Building the image"
+	if options.Tag != "" {
+		buildMsg = fmt.Sprintf("Building the image '%s'", options.Tag)
+	}
 	if okteto.Context().Builder == "" {
-		oktetoLog.Information("Building your image using your local docker daemon")
+		oktetoLog.Information("%s using your local docker daemon", buildMsg)
 	} else {
-		oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
+		oktetoLog.Information("%s in %s...", buildMsg, okteto.Context().Builder)
 	}
 
 	ctx := context.Background()
