@@ -336,6 +336,13 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 			return nil, err
 		}
 		stackManifest.Deploy.Compose.Stack = s
+
+		for srv := range stackManifest.Deploy.Compose.Stack.Services {
+			s := stackManifest.Deploy.Compose.Stack.Services[srv]
+			if s.Build != nil {
+				stackManifest.Build[srv] = s.Build
+			}
+		}
 		return stackManifest, nil
 	}
 	return nil, nil
