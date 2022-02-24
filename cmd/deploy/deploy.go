@@ -481,7 +481,7 @@ func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (b
 
 	imageWithDigest, err := registry.GetImageTagWithDigest(globalReference)
 	if err == oktetoErrors.ErrNotFound {
-		oktetoLog.Debug("image not found at global registry, not running optimization for deployment")
+		oktetoLog.Debug("image not built at global registry, not running optimization for deployment")
 		return false, nil
 	}
 	if err != nil {
@@ -491,7 +491,7 @@ func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (b
 	if err := setManifestEnvVars(service, imageWithDigest); err != nil {
 		return false, err
 	}
-	oktetoLog.Debug("image found at global registry, running optimization for deployment")
+	oktetoLog.Debug("image already built at global registry, running optimization for deployment")
 	return true, nil
 
 }

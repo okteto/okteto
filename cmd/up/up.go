@@ -220,9 +220,11 @@ func Up() *cobra.Command {
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().IntVarP(&upOptions.Remote, "remote", "r", 0, "configures remote execution on the specified port")
-	cmd.Flags().BoolVarP(&upOptions.Deploy, "deploy", "d", false, "run deploy section of dev manifest")
+	cmd.Flags().BoolVarP(&upOptions.Deploy, "deploy", "d", false, "Force execution of the commands in the 'deploy' section of the okteto manifest (defaults to 'false')")
 	cmd.Flags().BoolVarP(&upOptions.Build, "build", "", false, "build on-the-fly the dev image using the info provided by the 'build' okteto manifest field")
+	cmd.Flags().MarkHidden("build")
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
+	cmd.Flags().MarkHidden("pull")
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
 	return cmd
 }
@@ -431,7 +433,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
-			Hint: "Try creating a Dockerfile field or specify the 'context' and 'dockerfile' fields in your okteto manifest.",
+			Hint: "Try creating a Dockerfile file or specify the 'context' and 'dockerfile' fields in your okteto manifest.",
 		}
 	}
 

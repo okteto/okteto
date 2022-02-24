@@ -145,7 +145,7 @@ func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 
 func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
 	if len(manifest.Dev) == 0 {
-		return nil, fmt.Errorf("okteto manifest has no 'dev'. Configure it with ' okteto manifest update'")
+		return nil, fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
 	} else if len(manifest.Dev) == 1 {
 		for name, dev := range manifest.Dev {
 			if devName != "" && devName != name {

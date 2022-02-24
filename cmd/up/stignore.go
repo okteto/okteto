@@ -44,7 +44,7 @@ func addStignoreSecrets(dev *model.Dev) error {
 		if err != nil {
 			return oktetoErrors.UserError{
 				E:    err,
-				Hint: "Update the `sync` field of your okteto manifest to point to a valid directory path",
+				Hint: "Update the 'sync' field of your okteto manifest to point to a valid directory path",
 			}
 		}
 		defer infile.Close()
