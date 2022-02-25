@@ -560,7 +560,7 @@ func (dev *Dev) SetDefaults() error {
 		},
 		EnvVar{
 			Name:  "HISTFILE",
-			Value: "bashrc",
+			Value: "/var/okteto/bashrc/.bash_history",
 		},
 		EnvVar{
 			Name:  "BASHOPTS",
@@ -1066,6 +1066,12 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				},
 			)
 		}
+		rule.Volumes = append(rule.Volumes,
+			VolumeMount{
+				Name:      main.GetVolumeName(),
+				MountPath: "/var/okteto/bashrc",
+				SubPath:   "okteto-bash-history",
+			})
 	}
 
 	for _, v := range dev.ExternalVolumes {
