@@ -131,7 +131,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 			os.Setenv(model.OktetoWithinDeployCommandContextEnvVar, "false")
 
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.ManifestPath); err != nil {
-				return err
+				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: options.Namespace}); err != nil {
+					return err
+				}
 			}
 
 			if okteto.IsOkteto() {
@@ -200,6 +202,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 // RunDeploy runs the deploy sequence
 func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
+	oktetoLog.SetStage("Spin up environment")
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
 	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
