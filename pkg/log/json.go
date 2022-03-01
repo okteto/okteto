@@ -187,6 +187,9 @@ func (w *JSONWriter) Fail(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	msg := fmt.Sprintf("%s %s", errorSymbol, fmt.Sprintf(format, args...))
 	if msg != "" {
+		if log.stage == "" {
+			log.stage = "Internal server error"
+		}
 		msg = convertToJSON(ErrorLevel, log.stage, msg)
 		log.buf.WriteString(msg)
 		log.buf.WriteString("\n")
@@ -258,5 +261,7 @@ func convertToJSON(level, stage, message string) string {
 func (w *JSONWriter) AddToBuffer(level, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
 	msg = convertToJSON(level, log.stage, msg)
-	w.Println(msg)
+	log.buf.WriteString(msg)
+	log.buf.WriteString("\n")
+	fmt.Fprintln(w.out.Out, msg)
 }
