@@ -213,7 +213,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if err != nil {
 		return err
 	}
-	oktetoLog.SetStage("")
 	oktetoLog.Debug("found okteto manifest")
 	if deployOptions.Manifest.Deploy == nil {
 		return oktetoErrors.ErrManifestFoundButNoDeployCommands
@@ -224,6 +223,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if deployOptions.Manifest.Namespace == "" {
 		deployOptions.Manifest.Namespace = okteto.Context().Namespace
 	}
+	oktetoLog.SetStage("")
+
 	dc.PipelineType = deployOptions.Manifest.Type
 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
