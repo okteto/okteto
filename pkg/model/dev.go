@@ -545,32 +545,6 @@ func (dev *Dev) SetDefaults() error {
 		}
 	}
 
-	dev.Environment = append(dev.Environment,
-		EnvVar{
-			Name:  "HISTSIZE",
-			Value: "10000000",
-		},
-		EnvVar{
-			Name:  "HISTFILESIZE",
-			Value: "10000000",
-		},
-		EnvVar{
-			Name:  "HISTCONTROL",
-			Value: "ignoreboth:erasedups",
-		},
-		EnvVar{
-			Name:  "HISTFILE",
-			Value: "/var/okteto/bashrc/.bash_history",
-		},
-		EnvVar{
-			Name:  "BASHOPTS",
-			Value: "histappend",
-		},
-		EnvVar{
-			Name:  "PROMPT_COMMAND",
-			Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND",
-		})
-
 	return nil
 }
 

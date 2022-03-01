@@ -340,6 +340,32 @@ func TranslateEnvVars(c *apiv1.Container, rule *model.TranslationRule) {
 			c.Env = append(c.Env, apiv1.EnvVar{Name: envvar.Name, Value: value})
 		}
 	}
+
+	c.Env = append(c.Env,
+		apiv1.EnvVar{
+			Name:  "HISTSIZE",
+			Value: "10000000",
+		},
+		apiv1.EnvVar{
+			Name:  "HISTFILESIZE",
+			Value: "10000000",
+		},
+		apiv1.EnvVar{
+			Name:  "HISTCONTROL",
+			Value: "ignoreboth:erasedups",
+		},
+		apiv1.EnvVar{
+			Name:  "HISTFILE",
+			Value: "/var/okteto/bashrc/.bash_history",
+		},
+		apiv1.EnvVar{
+			Name:  "BASHOPTS",
+			Value: "histappend",
+		},
+		apiv1.EnvVar{
+			Name:  "PROMPT_COMMAND",
+			Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND",
+		})
 }
 
 //TranslateVolumeMounts translates the volumes attached to a container
