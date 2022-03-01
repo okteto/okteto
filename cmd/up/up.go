@@ -210,6 +210,8 @@ func Up() *cobra.Command {
 					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 				case oktetoErrors.CommandError:
 					oktetoLog.Infof("CommandError: %v", err)
+				case oktetoErrors.UserError:
+					return err
 				}
 
 			}
@@ -368,7 +370,10 @@ func (up *upContext) activateLoop() {
 			}
 		}
 		if up.isRetry && up.hasDevIDChanged(ctx) {
-			up.Exit <- fmt.Errorf("could not connect to dev: another okteto process is modifying it")
+			up.Exit <- oktetoErrors.UserError{
+				E:    fmt.Errorf("session disconnected: there is another `okteto up` session on this container"),
+				Hint: "Try running 'okteto exec' to get another session on this container",
+			}
 			return
 		}
 		err := up.activate()
