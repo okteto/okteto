@@ -315,8 +315,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.EnableMasking()
 
 	err = dc.deploy(ctx, deployOptions)
-
-	oktetoLog.SetStage("")
 	oktetoLog.DisableMasking()
 
 	if err != nil {
@@ -327,6 +325,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, err.Error())
 		data.Status = pipeline.ErrorStatus
 	} else {
+		oktetoLog.SetStage("")
 		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
 		if err != nil {
 			return err
