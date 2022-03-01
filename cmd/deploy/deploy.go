@@ -202,17 +202,18 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 // RunDeploy runs the deploy sequence
 func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
-	oktetoLog.SetStage("setup")
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
 	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
 		return err
 	}
 	var err error
+	oktetoLog.SetStage("Read manifest")
 	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
 		return err
 	}
+	oktetoLog.SetStage("")
 	oktetoLog.Debug("found okteto manifest")
 	if deployOptions.Manifest.Deploy == nil {
 		return oktetoErrors.ErrManifestFoundButNoDeployCommands
