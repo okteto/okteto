@@ -53,6 +53,7 @@ type upContext struct {
 	spinner           *utils.Spinner
 	StartTime         time.Time
 	Options           *UpOptions
+	ID                string
 }
 
 // Forwarder is an interface for the port-forwarding features

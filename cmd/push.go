@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -177,8 +178,11 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 			pushOpts.ImageTag = registry.GetImageTag("", dev.Name, dev.Namespace, oktetoRegistryURL)
 		}
 	}
-
-	trMap, err := apps.GetTranslations(ctx, dev, app, false, c)
+	id := uuid.New().String()
+	if value, ok := app.ObjectMeta().Annotations[model.OktetoDevIDAnnotation]; ok {
+		id = value
+	}
+	trMap, err := apps.GetTranslations(ctx, dev, app, false, id, c)
 	if err != nil {
 		return err
 	}

@@ -34,6 +34,9 @@ const (
 	// OktetoSampleAnnotation indicates that the repo is a okteto sample
 	OktetoSampleAnnotation = "dev.okteto.com/sample"
 
+	// OktetoDevIDAnnotation indicates that the dev uid
+	OktetoDevIDAnnotation = "dev.okteto.com/dev-id"
+
 	// DetachedDevLabel indicates the detached dev pods
 	DetachedDevLabel = "detached.dev.okteto.com"
 

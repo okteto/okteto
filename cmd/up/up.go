@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/moby/term"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
@@ -164,6 +165,7 @@ func Up() *cobra.Command {
 				resetSyncthing: upOptions.Reset,
 				StartTime:      time.Now(),
 				Options:        upOptions,
+				ID:             uuid.New().String(),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -351,6 +353,7 @@ func (up *upContext) activateLoop() {
 
 	defer config.DeleteStateFile(up.Dev)
 
+	ctx := context.Background()
 	for {
 		if up.isRetry || isTransientError {
 			oktetoLog.Infof("waiting for shutdown sequence to finish")
@@ -364,7 +367,10 @@ func (up *upContext) activateLoop() {
 				<-t.C
 			}
 		}
-
+		if up.isRetry && up.hasDevIDChanged(ctx) {
+			up.Exit <- fmt.Errorf("could not connect to dev: another okteto process is modifying it")
+			return
+		}
 		err := up.activate()
 		if err != nil {
 			oktetoLog.Infof("activate failed with: %s", err)
@@ -386,6 +392,17 @@ func (up *upContext) activateLoop() {
 		up.Exit <- nil
 		return
 	}
+}
+
+func (up *upContext) hasDevIDChanged(ctx context.Context) bool {
+	app, err := utils.GetDevApp(ctx, up.Dev, up.Client)
+	if err != nil {
+		return false
+	}
+	if value, ok := app.ObjectMeta().Annotations[model.OktetoDevIDAnnotation]; ok {
+		return value != up.ID
+	}
+	return false
 }
 
 // waitUntilExitOrInterruptOrApply blocks execution until a stop signal is sent, a disconnect event or an error or the app is modify
