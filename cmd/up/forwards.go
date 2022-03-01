@@ -92,7 +92,7 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 			f = forwardWithServiceName
 		}
 
-		err := waitUntilPortIsAvailable(up.Dev.Interface, f.Local, up.Dev.Timeout.Default)
+		err := waitUntilPortIsAvailable(up.Dev.Interface, f.Local)
 		if err != nil {
 			return err
 		}
@@ -116,9 +116,9 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 	return up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
 }
 
-func waitUntilPortIsAvailable(iface string, port int, timeout time.Duration) error {
-	ticker := time.NewTicker(5 * time.Second)
-	timeoutTicker := time.NewTicker(timeout)
+func waitUntilPortIsAvailable(iface string, port int) error {
+	ticker := time.NewTicker(1 * time.Second)
+	timeoutTicker := time.NewTicker(30 * time.Second)
 
 	for {
 		select {
