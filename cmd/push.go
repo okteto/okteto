@@ -179,7 +179,7 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 		}
 	}
 	id := uuid.New().String()
-	if value, ok := app.ObjectMeta().Annotations[model.OktetoDevIDAnnotation]; ok {
+	if value, ok := app.ObjectMeta().Annotations[model.OktetoSessionIDAnnotation]; ok {
 		id = value
 	}
 	trMap, err := apps.GetTranslations(ctx, dev, app, false, id, c)

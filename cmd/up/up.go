@@ -404,7 +404,7 @@ func (up *upContext) hasDevIDChanged(ctx context.Context) bool {
 	if err != nil {
 		return false
 	}
-	if value, ok := app.ObjectMeta().Annotations[model.OktetoDevIDAnnotation]; ok {
+	if value, ok := app.ObjectMeta().Annotations[model.OktetoSessionIDAnnotation]; ok {
 		return value != up.ID
 	}
 	return false
