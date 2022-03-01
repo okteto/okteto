@@ -254,10 +254,9 @@ func convertToJSON(level, stage, message string) string {
 	return string(messageJSON[:])
 }
 
-// AddToBuffer logs into the buffer but does not print anything
-func (*JSONWriter) AddToBuffer(level, format string, a ...interface{}) {
+// AddToBuffer logs into the buffer and writes to stdout if its a json writer
+func (w *JSONWriter) AddToBuffer(level, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
 	msg = convertToJSON(level, log.stage, msg)
-	log.buf.WriteString(msg)
-	log.buf.WriteString("\n")
+	w.Println(msg)
 }
