@@ -202,7 +202,7 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 	if actionName == "" {
 		actionName = actionDefaultName
 	}
-	if _, ok := cmap.Data[actionLockField]; ok {
+	if val, ok := cmap.Data[actionLockField]; ok && val != actionName {
 		return errors.New("There is a pipeline operation already running")
 	}
 	cmap.ObjectMeta.Labels[model.GitDeployLabel] = "true"

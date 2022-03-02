@@ -131,7 +131,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 			os.Setenv(model.OktetoWithinDeployCommandContextEnvVar, "false")
 
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.ManifestPath); err != nil {
-				return err
+				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: options.Namespace}); err != nil {
+					return err
+				}
 			}
 
 			if okteto.IsOkteto() {
@@ -206,6 +208,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 	var err error
+	oktetoLog.SetStage("Read manifest")
 	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
 		return err
@@ -220,6 +223,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if deployOptions.Manifest.Namespace == "" {
 		deployOptions.Manifest.Namespace = okteto.Context().Namespace
 	}
+	oktetoLog.SetStage("")
+
 	dc.PipelineType = deployOptions.Manifest.Type
 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
@@ -311,8 +316,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.EnableMasking()
 
 	err = dc.deploy(ctx, deployOptions)
-
-	oktetoLog.SetStage("")
 	oktetoLog.DisableMasking()
 
 	if err != nil {
@@ -323,6 +326,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, err.Error())
 		data.Status = pipeline.ErrorStatus
 	} else {
+		oktetoLog.SetStage("")
 		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
 		if err != nil {
 			return err
