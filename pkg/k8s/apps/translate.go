@@ -47,6 +47,7 @@ type Translation struct {
 	App     App
 	DevApp  App
 	Rules   []*model.TranslationRule
+	ID      string
 }
 
 func (tr *Translation) translate() error {
@@ -78,6 +79,8 @@ func (tr *Translation) translate() error {
 		tr.DevApp.SetReplicas(1)
 		tr.DevApp.TemplateObjectMeta().Labels[model.InteractiveDevLabel] = tr.Dev.Name
 		TranslateOktetoSyncSecret(tr.DevApp.PodSpec(), tr.Dev.Name)
+		tr.DevApp.ObjectMeta().Annotations[model.OktetoSessionIDAnnotation] = tr.ID
+		tr.DevApp.TemplateObjectMeta().Annotations[model.OktetoSessionIDAnnotation] = tr.ID
 	} else {
 		tr.DevApp.TemplateObjectMeta().Labels[model.DetachedDevLabel] = tr.Dev.Name
 		TranslatePodAffinity(tr.DevApp.PodSpec(), tr.MainDev.Name)
