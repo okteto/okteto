@@ -170,10 +170,6 @@ func Up() *cobra.Command {
 
 			err = up.start()
 
-			if err := up.Client.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
-				oktetoLog.Infof("error deleting deprecated volume: %v", err)
-			}
-
 			if err != nil {
 				switch err.(type) {
 				default:
@@ -181,9 +177,10 @@ func Up() *cobra.Command {
 				case oktetoErrors.CommandError:
 					oktetoLog.Infof("CommandError: %v", err)
 				}
-
 			}
-
+			if err := up.Client.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
+				oktetoLog.Infof("error deleting deprecated volume: %v", err)
+			}
 			return err
 		},
 	}
