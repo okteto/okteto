@@ -22,6 +22,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+const (
+	defaultErrorStage = "Internal server error"
+)
+
 //JSONWriter writes into a JSON terminal
 type JSONWriter struct {
 	out  *logrus.Logger

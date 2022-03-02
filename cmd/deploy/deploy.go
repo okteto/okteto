@@ -99,7 +99,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 			os.Setenv(model.OktetoWithinDeployCommandContextEnvVar, "false")
 
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.ManifestPath); err != nil {
-				return err
+				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: options.Namespace}); err != nil {
+					return err
+				}
 			}
 
 			if okteto.IsOkteto() {
@@ -211,6 +213,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 		return err
 	}
 	var err error
+	oktetoLog.SetStage("Read manifest")
 	if contextCMD.IsManifestV2Enabled() {
 		opts.Manifest, err = contextCMD.GetManifestV2(cwd, opts.ManifestPath)
 		if err != nil {
@@ -279,6 +282,7 @@ func (dc *deployCommand) runDeploy(ctx context.Context, cwd string, opts *Option
 			return fmt.Errorf("found okteto manifest, but no deploy commands where defined")
 		}
 	}
+	oktetoLog.SetStage("")
 	opts.Manifest.Context = okteto.Context().Name
 	opts.Manifest.Namespace = okteto.Context().Namespace
 	dc.PipelineType = opts.Manifest.Type
