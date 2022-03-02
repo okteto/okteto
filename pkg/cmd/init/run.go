@@ -75,7 +75,12 @@ func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, co
 		setResourcesFromPod(dev, pod, container)
 	}
 
-	return setForwardsFromPod(ctx, dev, pod, c)
+	if err := setForwardsFromPod(ctx, dev, pod, c); err != nil {
+		return err
+	}
+
+	discardReverseIfCollision(dev)
+	return nil
 }
 
 func getRunningPod(ctx context.Context, app apps.App, container string, c kubernetes.Interface) (*apiv1.Pod, error) {
@@ -159,6 +164,19 @@ func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *
 		)
 	}
 	return nil
+}
+
+// discardReverseIfCollision discards the reverse forward port if there is a collision with a forwarded port
+func discardReverseIfCollision(dev *model.Dev) {
+	seenPorts := map[int]bool{}
+	for _, forward := range dev.Forward {
+		seenPorts[forward.Local] = true
+	}
+	for i, reverse := range dev.Reverse {
+		if seenPorts[reverse.Local] {
+			dev.Reverse = append(dev.Reverse[:i], dev.Reverse[i+1:]...)
+		}
+	}
 }
 
 func setNameAndLabelsFromApp(dev *model.Dev, app apps.App) {
