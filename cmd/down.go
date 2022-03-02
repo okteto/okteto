@@ -118,7 +118,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		}
 		spinner.Start()
 
-		trMap, err := apps.GetTranslations(ctx, dev, app, false, c)
+		trMap, err := apps.GetTranslations(ctx, dev, app, false, "", c)
 		if err != nil {
 			exit <- err
 			return

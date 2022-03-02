@@ -247,7 +247,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	}
 
 	resetOnDevContainerStart := up.resetSyncthing || !up.Dev.PersistentVolumeEnabled()
-	trMap, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.Client)
+	trMap, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.ID, up.Client)
 	if err != nil {
 		return err
 	}
