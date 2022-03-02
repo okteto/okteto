@@ -401,7 +401,7 @@ func (up *upContext) activateLoop() {
 
 func (up *upContext) hasDevIDChanged(ctx context.Context) bool {
 	app, err := utils.GetDevApp(ctx, up.Dev, up.Client)
-	if err != nil {
+	if err != nil || app == nil {
 		return false
 	}
 	if value, ok := app.ObjectMeta().Annotations[model.OktetoSessionIDAnnotation]; ok {
