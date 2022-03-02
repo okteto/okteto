@@ -369,7 +369,7 @@ func (up *upContext) activateLoop() {
 				<-t.C
 			}
 		}
-		if up.isRetry && up.hasDevIDChanged(ctx) {
+		if up.isRetry && up.hasSessionIDChanged(ctx) {
 			up.Exit <- oktetoErrors.UserError{
 				E:    fmt.Errorf("session disconnected: there is another `okteto up` session on this container"),
 				Hint: "Try running 'okteto exec' to get another session on this container",
@@ -399,9 +399,9 @@ func (up *upContext) activateLoop() {
 	}
 }
 
-func (up *upContext) hasDevIDChanged(ctx context.Context) bool {
+func (up *upContext) hasSessionIDChanged(ctx context.Context) bool {
 	app, err := utils.GetDevApp(ctx, up.Dev, up.Client)
-	if err != nil {
+	if err != nil || app == nil {
 		return false
 	}
 	if value, ok := app.ObjectMeta().Annotations[model.OktetoSessionIDAnnotation]; ok {
