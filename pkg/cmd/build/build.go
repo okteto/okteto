@@ -227,8 +227,11 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 		if o.BuildToGlobal {
 			targetRegistry = okteto.GlobalRegistry
 		}
-
 		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, b.Name, service, tag)
+		if len(b.VolumesToInclude) > 0 {
+			b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, b.Name, service, model.OktetoImageTagWithVolumes)
+		}
+
 	}
 
 	file := b.Dockerfile

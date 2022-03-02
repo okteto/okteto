@@ -116,13 +116,14 @@ type Args struct {
 
 // BuildInfo represents the build info to generate an image
 type BuildInfo struct {
-	Name       string      `yaml:"name,omitempty"`
-	Context    string      `yaml:"context,omitempty"`
-	Dockerfile string      `yaml:"dockerfile,omitempty"`
-	CacheFrom  []string    `yaml:"cache_from,omitempty"`
-	Target     string      `yaml:"target,omitempty"`
-	Args       Environment `yaml:"args,omitempty"`
-	Image      string      `yaml:"image,omitempty"`
+	Name             string        `yaml:"name,omitempty"`
+	Context          string        `yaml:"context,omitempty"`
+	Dockerfile       string        `yaml:"dockerfile,omitempty"`
+	CacheFrom        []string      `yaml:"cache_from,omitempty"`
+	Target           string        `yaml:"target,omitempty"`
+	Args             Environment   `yaml:"args,omitempty"`
+	Image            string        `yaml:"image,omitempty"`
+	VolumesToInclude []StackVolume `yaml:"-"`
 }
 
 // Volume represents a volume in the development container

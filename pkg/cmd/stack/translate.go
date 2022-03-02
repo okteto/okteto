@@ -150,7 +150,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 			return hasBuiltSomething, fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
 		}
 		if okteto.IsOkteto() && !registry.IsOktetoRegistry(svc.Image) {
-			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
+			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:%s", s.Name, name, model.OktetoDefaultImageTag)
 		}
 		if !options.ForceBuild {
 			if _, err := registry.GetImageTagWithDigest(svc.Image); err != oktetoErrors.ErrNotFound {
@@ -207,7 +207,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 			}
 			svc.Build = svcBuild
 			if okteto.IsOkteto() {
-				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto-with-volume-mounts", s.Name, name)
+				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:%s", s.Name, name, model.OktetoImageTagWithVolumes)
 			}
 			if !options.ForceBuild {
 				if _, err := registry.GetImageTagWithDigest(svc.Image); err != oktetoErrors.ErrNotFound {

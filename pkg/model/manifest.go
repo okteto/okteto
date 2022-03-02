@@ -236,15 +236,15 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		return nil, err
 	}
 	if inferredManifest != nil {
-		if devManifest != nil {
-			inferredManifest.mergeWithOktetoManifest(devManifest)
-		} else if inferredManifest.Type == StackType {
+		if inferredManifest.Type == StackType {
 			inferredManifest, err = inferredManifest.InferFromStack()
 			if err != nil {
 				return nil, err
 			}
-			//TODO: uncomment
-			// inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
+			inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
+		}
+		if devManifest != nil {
+			inferredManifest.mergeWithOktetoManifest(devManifest)
 		}
 		return inferredManifest, nil
 	}
@@ -337,12 +337,6 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		}
 		stackManifest.Deploy.Compose.Stack = s
 
-		for srv := range stackManifest.Deploy.Compose.Stack.Services {
-			s := stackManifest.Deploy.Compose.Stack.Services[srv]
-			if s.Build != nil {
-				stackManifest.Build[srv] = s.Build
-			}
-		}
 		return stackManifest, nil
 	}
 	return nil, nil
@@ -535,6 +529,7 @@ type Dependency struct {
 func (m *Manifest) InferFromStack() (*Manifest, error) {
 	for svcName, svcInfo := range m.Deploy.Compose.Stack.Services {
 		d := NewDev()
+		toMount := []StackVolume{}
 		for _, p := range svcInfo.Ports {
 			if p.HostPort != 0 {
 				d.Forward = append(d.Forward, Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
@@ -547,6 +542,7 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 					RemotePath: v.RemotePath,
 				})
 			}
+			toMount = append(toMount, v)
 		}
 		d.Command = svcInfo.Command
 		d.EnvFiles = svcInfo.EnvFiles
@@ -559,6 +555,10 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 			continue
 		}
 		buildInfo := svcInfo.Build
+		if svcInfo.Image != "" {
+			buildInfo.Image = svcInfo.Image
+		}
+		buildInfo.VolumesToInclude = toMount
 		m.Build[svcName] = buildInfo
 	}
 	m.setDefaults()
