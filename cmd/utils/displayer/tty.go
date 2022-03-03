@@ -247,13 +247,13 @@ func renderCommand(spinnerChar, command string, charsPerLine int) [][]byte {
 		result = append(result, render(firstLineTpl, command))
 		return result
 	}
-	iterations := (len(command) + 4) / charsPerLine
+	iterations := (len(command) + 3) / charsPerLine
 	for i := 0; i < iterations+1; i++ {
-		start := i*charsPerLine - 4
+		start := i*charsPerLine - 3
 		if start < 0 {
 			start = 0
 		}
-		end := i*charsPerLine + charsPerLine - 4
+		end := i*charsPerLine + charsPerLine - 3
 		if i == iterations {
 			end = len(command) - 1
 		}
