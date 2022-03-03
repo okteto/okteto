@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	githubSshUrl        = "git@github.com:"
+	githubHttpsUrl      = "https://github.com/"
 	applyPath           = "okteto/apply"
 	buildPath           = "okteto/build"
 	createNamespacePath = "okteto/create-namespace"
@@ -145,7 +145,7 @@ func TestBuildActionPipeline(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, buildPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, buildPath)
 	actionFolder := strings.Split(buildPath, "/")[1]
 	log.Printf("cloning build action repository: %s", actionRepo)
 	if err := cloneGitRepo(ctx, actionRepo); err != nil {
@@ -359,7 +359,7 @@ func getTestNamespace() string {
 
 func executeCreateNamespaceAction(ctx context.Context, namespace string) error {
 	okteto.CurrentStore = nil
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, createNamespacePath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, createNamespacePath)
 	actionFolder := strings.Split(createNamespacePath, "/")[1]
 	log.Printf("cloning create namespace repository: %s", actionRepo)
 	if err := cloneGitRepo(ctx, actionRepo); err != nil {
@@ -390,7 +390,7 @@ func executeCreateNamespaceAction(ctx context.Context, namespace string) error {
 
 func executeChangeNamespaceAction(ctx context.Context, namespace string) error {
 	okteto.CurrentStore = nil
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, namespacePath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, namespacePath)
 	actionFolder := strings.Split(namespacePath, "/")[1]
 	log.Printf("cloning changing namespace repository: %s", actionRepo)
 	if err := cloneGitRepo(ctx, actionRepo); err != nil {
@@ -418,7 +418,7 @@ func executeChangeNamespaceAction(ctx context.Context, namespace string) error {
 }
 
 func executeDeleteNamespaceAction(ctx context.Context, namespace string) error {
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, deleteNamespacePath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, deleteNamespacePath)
 	actionFolder := strings.Split(deleteNamespacePath, "/")[1]
 	log.Printf("cloning changing namespace repository: %s", actionRepo)
 	if err := cloneGitRepo(ctx, actionRepo); err != nil {
@@ -442,7 +442,7 @@ func executeDeleteNamespaceAction(ctx context.Context, namespace string) error {
 }
 
 func executeDeployPipelineAction(ctx context.Context, namespace string) error {
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, pipelinePath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, pipelinePath)
 	actionFolder := strings.Split(pipelinePath, "/")[1]
 	log.Printf("cloning pipeline repository: %s", actionRepo)
 	err := cloneGitRepo(ctx, actionRepo)
@@ -480,7 +480,7 @@ func executeDeployPipelineAction(ctx context.Context, namespace string) error {
 }
 
 func executeDestroyPipelineAction(ctx context.Context, namespace string) error {
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, destroyPipelinePath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, destroyPipelinePath)
 	actionFolder := strings.Split(destroyPipelinePath, "/")[1]
 	log.Printf("cloning destroy pipeline repository: %s", actionRepo)
 	if err := cloneGitRepo(ctx, actionRepo); err != nil {
@@ -515,7 +515,7 @@ func executeApply(ctx context.Context, namespace string) error {
 		return err
 	}
 
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, applyPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, applyPath)
 	actionFolder := strings.Split(applyPath, "/")[1]
 	log.Printf("cloning apply repository: %s", actionRepo)
 	err = cloneGitRepo(ctx, actionRepo)
@@ -555,7 +555,7 @@ func executePushAction(ctx context.Context, namespace string) error {
 		return err
 	}
 
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, pushPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, pushPath)
 	actionFolder := strings.Split(pushPath, "/")[1]
 	log.Printf("cloning push repository: %s", actionRepo)
 	err = cloneGitRepo(ctx, actionRepo)
@@ -588,7 +588,7 @@ func executePushAction(ctx context.Context, namespace string) error {
 
 func executeDeployStackAction(ctx context.Context, namespace, filePath string) error {
 
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, deployStackPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, deployStackPath)
 	actionFolder := strings.Split(deployStackPath, "/")[1]
 	log.Printf("cloning pipeline repository: %s", actionRepo)
 	err := cloneGitRepo(ctx, actionRepo)
@@ -613,7 +613,7 @@ func executeDeployStackAction(ctx context.Context, namespace, filePath string) e
 }
 
 func executeDestroyStackAction(ctx context.Context, namespace, filePath string) error {
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, destroyStackPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, destroyStackPath)
 	actionFolder := strings.Split(destroyStackPath, "/")[1]
 	log.Printf("cloning destroy path repository: %s", actionRepo)
 	if err := cloneGitRepo(ctx, actionRepo); err != nil {
@@ -642,7 +642,7 @@ func executeLoginAction(ctx context.Context) error {
 		token = okteto.Context().Token
 	}
 
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, loginPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, loginPath)
 	actionFolder := strings.Split(loginPath, "/")[1]
 	log.Printf("cloning build action repository: %s", actionRepo)
 	if err := cloneGitRepo(ctx, actionRepo); err != nil {
@@ -674,7 +674,7 @@ func executeContextAction(ctx context.Context) error {
 		token = okteto.Context().Token
 	}
 
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, contextPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, contextPath)
 	actionFolder := strings.Split(contextPath, "/")[1]
 	log.Printf("cloning build action repository: %s", actionRepo)
 	if err := cloneGitRepo(ctx, actionRepo); err != nil {
@@ -705,7 +705,7 @@ func executeDeployPreviewAction(ctx context.Context, namespace string) error {
 	if err != nil {
 		return err
 	}
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, deployPreviewPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, deployPreviewPath)
 	actionFolder := strings.Split(deployPreviewPath, "/")[1]
 	log.Printf("cloning destroy path repository: %s", actionRepo)
 	if err := cloneGitRepo(ctx, actionRepo); err != nil {
@@ -729,7 +729,7 @@ func executeDeployPreviewAction(ctx context.Context, namespace string) error {
 }
 
 func executeDestroyPreviewAction(ctx context.Context, namespace string) error {
-	actionRepo := fmt.Sprintf("%s%s.git", githubSshUrl, destroyPreviewPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, destroyPreviewPath)
 	actionFolder := strings.Split(destroyPreviewPath, "/")[1]
 	log.Printf("cloning destroy path repository: %s", actionRepo)
 	if err := cloneGitRepo(ctx, actionRepo); err != nil {
