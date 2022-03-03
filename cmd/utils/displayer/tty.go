@@ -99,11 +99,14 @@ func (d *TTYDisplayer) displayCommand() {
 		for i := 0; i < len(spinnerChars); i++ {
 			select {
 			case <-t.C:
-				commandLine := renderCommand(spinnerChars[i], d.command)
-				d.screenbuf.Write(commandLine)
+				width, _, _ := term.GetSize(int(os.Stdout.Fd()))
+				commandLines := renderCommand(spinnerChars[i], d.command, width)
+				for _, commandLine := range commandLines {
+					d.screenbuf.Write(commandLine)
+				}
 				lines := renderLines(d.linesToDisplay)
 				for _, line := range lines {
-					d.screenbuf.Write([]byte(line))
+					d.screenbuf.Write(line)
 				}
 				d.screenbuf.Flush()
 			case <-d.commandContext.Done():
@@ -217,16 +220,53 @@ func (d *TTYDisplayer) CleanUp(err error) {
 
 }
 
-func renderCommand(spinnerChar, command string) []byte {
-	commandTemplate := fmt.Sprintf(` %s {{ . | oktetoblue }}: `, spinnerChar)
+func renderCommand(spinnerChar, command string, charsPerLine int) [][]byte {
+	firstLineCommandTemplate := fmt.Sprintf(` %s {{ . | oktetoblue }}`, spinnerChar)
+	otherLineCommandTemplate := `    {{ . | oktetoblue }}`
+	lastLineCommandTemplate := `    {{ . | oktetoblue }}:`
 	funcMap := promptui.FuncMap
 	funcMap["oktetoblue"] = oktetoLog.BlueString
-	tpl, err := template.New("").Funcs(funcMap).Parse(commandTemplate)
+	firstLineTpl, err := template.New("").Funcs(funcMap).Parse(firstLineCommandTemplate)
 	if err != nil {
-		return []byte{}
+		return [][]byte{}
 	}
+
+	otherLinesTpl, err := template.New("").Funcs(funcMap).Parse(otherLineCommandTemplate)
+	if err != nil {
+		return [][]byte{}
+	}
+
+	lastLineTpl, err := template.New("").Funcs(funcMap).Parse(lastLineCommandTemplate)
+	if err != nil {
+		return [][]byte{}
+	}
+
 	command = fmt.Sprintf(" Running '%s'", command)
-	return render(tpl, command)
+	result := [][]byte{}
+	if charsPerLine == 0 || charsPerLine < 5 {
+		result = append(result, render(firstLineTpl, command))
+		return result
+	}
+	iterations := (len(command) + 4) / charsPerLine
+	for i := 0; i < iterations+1; i++ {
+		start := i*charsPerLine - 4
+		if start < 0 {
+			start = 0
+		}
+		end := i*charsPerLine + charsPerLine - 4
+		if i == iterations {
+			end = len(command) - 1
+		}
+		currentLine := command[start:end]
+		if i == 0 {
+			result = append(result, render(firstLineTpl, currentLine))
+		} else if i < iterations-1 {
+			result = append(result, render(otherLinesTpl, currentLine))
+		} else {
+			result = append(result, render(lastLineTpl, currentLine))
+		}
+	}
+	return result
 }
 
 func renderSuccessCommand(command string) []byte {
