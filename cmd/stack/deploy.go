@@ -116,6 +116,8 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 	analytics.TrackDeployStack(err == nil, s.IsCompose, utils.IsOktetoRepo())
 	if err == nil {
 		oktetoLog.Success("Compose '%s' successfully deployed", s.Name)
+	} else {
+		return err
 	}
 
 	if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) || !c.IsInsideDeploy {
