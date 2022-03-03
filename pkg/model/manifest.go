@@ -656,7 +656,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 }
 
 // reorderDocFields orders the manifest to be: name -> build -> deploy -> dependencies -> dev
-func (m *Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
+func (*Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
 	contentCopy := []*yaml3.Node{}
 	nodes := []int{}
 	nameDefinitionIdx := getDocIdx(doc.Content, "name")

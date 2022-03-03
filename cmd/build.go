@@ -100,7 +100,7 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 
 			if isBuildV2 {
-				return buildV2(ctx, manifest, options, args)
+				return buildV2(manifest, options, args)
 			}
 
 			return buildV1(options, args)
@@ -143,7 +143,7 @@ func isSelectedService(service string, selected []string) bool {
 	return false
 }
 
-func buildV2(ctx context.Context, manifest *model.Manifest, cmdOptions build.BuildOptions, args []string) error {
+func buildV2(manifest *model.Manifest, cmdOptions build.BuildOptions, args []string) error {
 	buildManifest := manifest.Build
 	selectedArgs := []string{}
 	if len(args) != 0 {
