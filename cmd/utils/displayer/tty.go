@@ -262,7 +262,7 @@ func renderLines(queue []string) [][]byte {
 	result := [][]byte{}
 	for _, line := range queue {
 		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
-		line = fmt.Sprintf("   %s", strings.TrimSpace(line))
+		line = fmt.Sprintf("    %s", strings.TrimSpace(line))
 		if width > 4 && len(line)+2 > width {
 			result = append(result, render(tpl, fmt.Sprintf("%s...", line[:width-5])))
 		} else if line == "" {
