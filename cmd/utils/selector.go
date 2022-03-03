@@ -75,8 +75,8 @@ type SelectorItem struct {
 }
 
 //AskForOptionsOkteto given some options ask the user to select one
-func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label string) (string, bool, error) {
-	selectedTemplate := getSelectedTemplate()
+func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label, selectedTpl string) (string, bool, error) {
+	selectedTemplate := getSelectedTemplate(selectedTpl)
 	activeTemplate := getActiveTemplate()
 	inactiveTemplate := getInactiveTemplate()
 
@@ -461,8 +461,12 @@ func (*stdout) Close() error {
 	return os.Stderr.Close()
 }
 
-func getSelectedTemplate() string {
+func getSelectedTemplate(selectTpl string) string {
 	result := `{{ " ✓ " | bgGreen | black }} {{ .Label | green }}`
+	if selectTpl != "" {
+		result = fmt.Sprintf(`{{ " ✓ " | bgGreen | black }} {{ "%s '" | green }}{{ .Label | green }}{{ "' selected" | green }}`, selectTpl)
+	}
+
 	result = changeColorForWindows(result)
 	return result
 }
