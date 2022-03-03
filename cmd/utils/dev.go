@@ -170,7 +170,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 			Label: k,
 		})
 	}
-	devKey, _, err := AskForOptionsOkteto(context.Background(), devs, "Select the development container you want to activate:", "development container")
+	devKey, _, err := AskForOptionsOkteto(context.Background(), devs, "Select the development container you want to activate:", "Development container")
 	if err != nil {
 		return nil, err
 	}
