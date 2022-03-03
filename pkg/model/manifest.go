@@ -545,10 +545,7 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 		}
 		for _, v := range svcInfo.VolumeMounts {
 			if pathExistsAndDir(v.LocalPath) {
-				d.Sync.Folders = append(d.Sync.Folders, SyncFolder{
-					LocalPath:  v.LocalPath,
-					RemotePath: v.RemotePath,
-				})
+				d.Sync.Folders = append(d.Sync.Folders, SyncFolder(v))
 			}
 			toMount = append(toMount, v)
 		}
