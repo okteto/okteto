@@ -75,6 +75,7 @@ func getK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config) (*kubernete
 	if err != nil {
 		return nil, nil, err
 	}
+	config.WarningHandler = rest.NoWarnings{}
 
 	config.Timeout = getKubernetesTimeout()
 
@@ -92,6 +93,7 @@ func getDynamicClient(clientAPIConfig *clientcmdapi.Config) (dynamic.Interface, 
 	if err != nil {
 		return nil, nil, err
 	}
+	config.WarningHandler = rest.NoWarnings{}
 
 	config.Timeout = getKubernetesTimeout()
 
@@ -110,6 +112,7 @@ func getDiscoveryClient(clientAPIConfig *clientcmdapi.Config) (discovery.Discove
 	if err != nil {
 		return nil, nil, err
 	}
+	config.WarningHandler = rest.NoWarnings{}
 
 	config.Timeout = getKubernetesTimeout()
 
