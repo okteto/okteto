@@ -23,6 +23,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -84,17 +85,32 @@ func (d *TTYDisplayer) Display(commandName string) {
 
 	d.hideCursor()
 	d.commandContext, d.cancel = context.WithCancel(context.Background())
-	go d.displayCommand()
+	wg := &sync.WaitGroup{}
+	wgDelta := 0
 	if d.stdoutScanner != nil {
-		go d.displayStdout()
+		wgDelta++
 	}
 	if d.stderrScanner != nil {
-		go d.displayStderr()
+		wgDelta++
 	}
+	wg.Add(wgDelta)
+
+	commandChan := make(chan bool, 1)
+	go d.displayCommand(commandChan)
+	if d.stdoutScanner != nil {
+		go d.displayStdout(wg)
+	}
+	if d.stderrScanner != nil {
+		go d.displayStderr(wg)
+	}
+	wg.Wait()
+	d.cancel()
+	<-commandChan
 }
 
-func (d *TTYDisplayer) displayCommand() {
+func (d *TTYDisplayer) displayCommand(commandChan chan bool) {
 	t := time.NewTicker(50 * time.Millisecond)
+	shouldExit := false
 	for {
 		for i := 0; i < len(spinnerChars); i++ {
 			select {
@@ -107,14 +123,20 @@ func (d *TTYDisplayer) displayCommand() {
 				}
 				d.screenbuf.Flush()
 			case <-d.commandContext.Done():
-				return
+				shouldExit = true
 			}
-
+			if shouldExit {
+				break
+			}
+		}
+		if shouldExit {
+			break
 		}
 	}
+	commandChan <- true
 }
 
-func (d *TTYDisplayer) displayStdout() {
+func (d *TTYDisplayer) displayStdout(wg *sync.WaitGroup) {
 	for d.stdoutScanner.Scan() {
 		select {
 		case <-d.commandContext.Done():
@@ -145,6 +167,7 @@ func (d *TTYDisplayer) displayStdout() {
 	if d.stdoutScanner.Err() != nil {
 		oktetoLog.Infof("Error reading command output: %s", d.stdoutScanner.Err().Error())
 	}
+	wg.Done()
 }
 
 func checkIfIsBuildingLine(line string) bool {
@@ -154,7 +177,7 @@ func checkIfIsBuildingLine(line string) bool {
 	return false
 }
 
-func (d *TTYDisplayer) displayStderr() {
+func (d *TTYDisplayer) displayStderr(wg *sync.WaitGroup) {
 	for d.stderrScanner.Scan() {
 		select {
 		case <-d.commandContext.Done():
@@ -175,6 +198,7 @@ func (d *TTYDisplayer) displayStderr() {
 	if d.stderrScanner.Err() != nil {
 		oktetoLog.Infof("Error reading command output: %s", d.stderrScanner.Err().Error())
 	}
+	wg.Done()
 }
 
 func isTopDisplay(line string) bool {
