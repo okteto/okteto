@@ -260,7 +260,7 @@ func renderCommand(spinnerChar, command string, charsPerLine int) [][]byte {
 		currentLine := command[start:end]
 		if i == 0 {
 			result = append(result, render(firstLineTpl, currentLine))
-		} else if i < iterations-1 {
+		} else if i < iterations {
 			result = append(result, render(otherLinesTpl, currentLine))
 		} else {
 			result = append(result, render(lastLineTpl, currentLine))
