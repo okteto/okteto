@@ -177,9 +177,12 @@ type DeployInfo struct {
 
 // ComposeInfo represents information about compose file
 type ComposeInfo struct {
-	Manifest []string `json:"manifest,omitempty" yaml:"manifest,omitempty"`
-	Stack    *Stack   `json:"-" yaml:"-"`
+	Manifest ManifestList `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Stack    *Stack       `json:"-" yaml:"-"`
 }
+
+// ManifestList is a list containing all the compose files
+type ManifestList []string
 
 // DeployCommand represents a command to be executed
 type DeployCommand struct {

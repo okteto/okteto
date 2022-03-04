@@ -1933,6 +1933,113 @@ func TestDeployInfoMarshalling(t *testing.T) {
 	}
 }
 
+func TestComposeInfoUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name                string
+		composeInfoManifest []byte
+		expected            *ComposeInfo
+	}{
+		{
+			name: "list of compose",
+			composeInfoManifest: []byte(`
+- docker-compose.yml
+- docker-compose.dev.yml`),
+			expected: &ComposeInfo{
+				Manifest: []string{
+					"docker-compose.yml",
+					"docker-compose.dev.yml",
+				},
+			},
+		},
+		{
+			name:                "a docker compose",
+			composeInfoManifest: []byte(`docker-compose.yml`),
+			expected: &ComposeInfo{
+				Manifest: []string{
+					"docker-compose.yml",
+				},
+			},
+		},
+		{
+			name:                "extended notation one compose",
+			composeInfoManifest: []byte(`manifest: docker-compose.yml`),
+			expected: &ComposeInfo{
+				Manifest: []string{
+					"docker-compose.yml",
+				},
+			},
+		},
+		{
+			name: "extended notation one compose",
+			composeInfoManifest: []byte(`manifest:
+  - docker-compose.yml
+  - docker-compose.dev.yml`),
+			expected: &ComposeInfo{
+				Manifest: []string{
+					"docker-compose.yml",
+					"docker-compose.dev.yml",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := &ComposeInfo{}
+
+			err := yaml.UnmarshalStrict(tt.composeInfoManifest, &result)
+			if err != nil {
+				t.Fatalf("Not expecting error but got %s", err)
+			}
+
+			if !assert.Equal(t, tt.expected, result) {
+				t.Fatal("Failed")
+			}
+		})
+	}
+}
+
+func TestManifestListUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name                 string
+		manifestListManifest []byte
+		expected             *ManifestList
+	}{
+		{
+			name: "list of compose",
+			manifestListManifest: []byte(`
+- docker-compose.yml
+- docker-compose.dev.yml`),
+			expected: &ManifestList{
+				"docker-compose.yml",
+				"docker-compose.dev.yml",
+			},
+		},
+		{
+			name:                 "a docker compose",
+			manifestListManifest: []byte(`docker-compose.yml`),
+			expected: &ManifestList{
+				"docker-compose.yml",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := &ManifestList{}
+
+			err := yaml.UnmarshalStrict(tt.manifestListManifest, &result)
+			if err != nil {
+				t.Fatalf("Not expecting error but got %s", err)
+			}
+
+			if !assert.Equal(t, tt.expected, result) {
+				t.Fatal("Failed")
+			}
+		})
+	}
+}
+
 func TestManifestBuildUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name            string

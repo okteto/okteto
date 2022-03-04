@@ -856,6 +856,48 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (c *ComposeInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		c.Manifest = []string{rawString}
+		return nil
+	}
+	var rawListString []string
+	err = unmarshal(&rawListString)
+	if err == nil {
+		c.Manifest = rawListString
+		return nil
+	}
+
+	type composeInfoRaw ComposeInfo
+	var compose composeInfoRaw
+	err = unmarshal(&compose)
+	if err != nil {
+		return err
+	}
+	*c = ComposeInfo(compose)
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (m *ManifestList) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		*m = ManifestList{rawString}
+		return nil
+	}
+	var rawListString []string
+	err = unmarshal(&rawListString)
+	if err != nil {
+		return err
+	}
+	*m = ManifestList(rawListString)
+	return nil
+}
+
 type devRaw Dev
 
 func (d *devRaw) UnmarshalYAML(unmarshal func(interface{}) error) error {
