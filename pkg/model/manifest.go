@@ -284,7 +284,40 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto pipeline manifest unmarshalled successfully")
 		pipelineManifest.Type = PipelineType
 		return pipelineManifest, nil
+	}
 
+	if stackPath := getFilePath(cwd, stackFiles); stackPath != "" {
+		oktetoLog.Infof("Found okteto compose")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto compose manifest on %s", stackPath)
+		stackManifest := &Manifest{
+			Type: StackType,
+			Deploy: &DeployInfo{
+				Compose: &ComposeInfo{
+					Manifest: []string{
+						stackPath,
+					},
+				},
+			},
+			Dev:      ManifestDevs{},
+			Build:    ManifestBuild{},
+			Filename: stackPath,
+			IsV2:     true,
+		}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
+		s, err := LoadStack("", stackManifest.Deploy.Compose.Manifest)
+		if err != nil {
+			return nil, err
+		}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
+		stackManifest.Deploy.Compose.Stack = s
+
+		for srv := range stackManifest.Deploy.Compose.Stack.Services {
+			s := stackManifest.Deploy.Compose.Stack.Services[srv]
+			if s.Build != nil {
+				stackManifest.Build[srv] = s.Build
+			}
+		}
+		return stackManifest, nil
 	}
 
 	if chartPath := getChartPath(cwd); chartPath != "" {
@@ -327,39 +360,6 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		return k8sManifest, nil
 	}
 
-	if stackPath := getFilePath(cwd, stackFiles); stackPath != "" {
-		oktetoLog.Infof("Found okteto compose")
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto compose manifest on %s", stackPath)
-		stackManifest := &Manifest{
-			Type: StackType,
-			Deploy: &DeployInfo{
-				Compose: &ComposeInfo{
-					Manifest: []string{
-						stackPath,
-					},
-				},
-			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: stackPath,
-			IsV2:     true,
-		}
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
-		s, err := LoadStack("", stackManifest.Deploy.Compose.Manifest)
-		if err != nil {
-			return nil, err
-		}
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
-		stackManifest.Deploy.Compose.Stack = s
-
-		for srv := range stackManifest.Deploy.Compose.Stack.Services {
-			s := stackManifest.Deploy.Compose.Stack.Services[srv]
-			if s.Build != nil {
-				stackManifest.Build[srv] = s.Build
-			}
-		}
-		return stackManifest, nil
-	}
 	return nil, nil
 }
 
