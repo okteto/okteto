@@ -261,3 +261,18 @@ func GetOktetoContextsStorePath() string {
 func GetCertificatePath() string {
 	return filepath.Join(GetOktetoHome(), ".ca.crt")
 }
+
+// GetDeployOrigin gets the pipeline deploy origin. This is the initiator of the
+// deploy action: web, cli, github-action, etc
+func GetDeployOrigin() (src string) {
+	src = os.Getenv(model.OktetoOriginEnvVar)
+	if src == "" {
+		src = "cli"
+	}
+	// deploys within another okteto deploy take precedence as a deploy origin.
+	// This is running okteto pipeline deploy as a step of another okteto deploy
+	if os.Getenv(model.OktetoWithinDeployCommandContextEnvVar) == "true" {
+		src = "okteto-deploy"
+	}
+	return
+}

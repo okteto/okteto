@@ -339,10 +339,7 @@ func track(event string, success bool, props map[string]interface{}) {
 		mpOS = "Linux"
 	}
 
-	origin, ok := os.LookupEnv(model.OktetoOriginEnvVar)
-	if !ok {
-		origin = "cli"
-	}
+	origin := config.GetDeployOrigin()
 
 	if props == nil {
 		props = map[string]interface{}{}

@@ -314,7 +314,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
 	oktetoLog.EnableMasking()
-
 	err = dc.deploy(ctx, deployOptions)
 	oktetoLog.DisableMasking()
 
