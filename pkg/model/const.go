@@ -273,6 +273,10 @@ const (
 	// OktetoWithinDeployCommandContextEnvVar defines if an okteto command is executed by deploy command
 	OktetoWithinDeployCommandContextEnvVar = "OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT"
 
+	// OktetoSkipConfigCredentialsUpdate prevents the kubernetes config from being updated
+	// with the okteto credentials
+	OktetoSkipConfigCredentialsUpdate = "OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE"
+
 	// OktetoTimeoutEnvVar defines the timeout for okteto commands
 	OktetoTimeoutEnvVar = "OKTETO_TIMEOUT"
 
