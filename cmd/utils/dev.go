@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/manifoldco/promptui"
@@ -73,7 +74,7 @@ func LoadManifest(devPath string) (*model.Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		manifest.Name = InferApplicationName(cwd)
+		manifest.Name = InferName(cwd)
 	}
 	if manifest.Namespace == "" {
 		manifest.Namespace = okteto.Context().Namespace
@@ -145,11 +146,11 @@ func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 
 func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
 	if len(manifest.Dev) == 0 {
-		return nil, fmt.Errorf("okteto manifest has no dev references")
+		return nil, fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
 	} else if len(manifest.Dev) == 1 {
 		for name, dev := range manifest.Dev {
 			if devName != "" && devName != name {
-				return nil, fmt.Errorf("dev '%s' does not exists", devName)
+				return nil, fmt.Errorf("dev '%s' doesn't exist", devName)
 			}
 			return dev, nil
 		}
@@ -163,14 +164,26 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		}
 		return nil, fmt.Errorf("dev '%s' does not exists", devName)
 	}
-	devs := []SelectorItem{}
+	devs := []string{}
 	for k := range manifest.Dev {
-		devs = append(devs, SelectorItem{
-			Name:  k,
-			Label: k,
+		devs = append(devs, k)
+	}
+	sort.Slice(devs, func(i, j int) bool {
+		l1, l2 := len(devs[i]), len(devs[j])
+		if l1 != l2 {
+			return l1 < l2
+		}
+		return devs[i] < devs[j]
+	})
+	items := []SelectorItem{}
+	for _, dev := range devs {
+		items = append(items, SelectorItem{
+			Name:   dev,
+			Label:  dev,
+			Enable: true,
 		})
 	}
-	devKey, _, err := AskForOptionsOkteto(context.Background(), devs, "Select the dev you want to operate with:")
+	devKey, _, err := AskForOptionsOkteto(context.Background(), items, "Select the development container you want to activate:", "Development container")
 	if err != nil {
 		return nil, err
 	}
@@ -239,6 +252,18 @@ func AskIfOktetoInit(devPath string) bool {
 	return result
 }
 
+// AsksQuestion asks a question to the user
+func AsksQuestion(q string) (string, error) {
+	var answer string
+
+	oktetoLog.Question(q)
+	if _, err := fmt.Scanln(&answer); err != nil {
+		return "", err
+	}
+
+	return answer, nil
+}
+
 //AskIfDeploy asks if a new deployment must be created
 func AskIfDeploy(name, namespace string) error {
 	deploy, err := AskYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", name, namespace))
@@ -248,7 +273,7 @@ func AskIfDeploy(name, namespace string) error {
 	if !deploy {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("deployment %s doesn't exist in namespace %s", name, namespace),
-			Hint: "Deploy your application first or use 'okteto namespace' to select a different namespace and try again",
+			Hint: "Launch your application first or use 'okteto namespace' to select a different namespace and try again",
 		}
 	}
 	return nil
@@ -310,7 +335,7 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 		}
 		if dev.Autocreate {
 			if isRetry && !doesAutocreateAppExist(ctx, dev, c) {
-				return nil, false, fmt.Errorf("Development container has been deactivated")
+				return nil, false, fmt.Errorf("development container has been deactivated")
 			}
 			return apps.NewDeploymentApp(deployments.Sandbox(dev)), true, nil
 		}
@@ -324,7 +349,7 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 		}
 		return nil, false, oktetoErrors.UserError{
 			E: fmt.Errorf("application '%s' not found in namespace '%s'", dev.Name, dev.Namespace),
-			Hint: `Verify that your application has been deployed and your Kubernetes context is pointing to the right namespace
+			Hint: `Verify that your application is running and your okteto context is pointing to the right namespace
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
     More information is available here: https://okteto.com/docs/reference/cli/#up`,
 		}
@@ -346,4 +371,17 @@ func doesAutocreateAppExist(ctx context.Context, dev *model.Dev, c kubernetes.In
 		return err == nil
 	}
 	return err == nil
+}
+
+// GetDevApp returns the cloned app if exists, error otherwise
+func GetDevApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface) (apps.App, error) {
+	devAppDev := *dev
+	devAppDev.Name = model.DevCloneName(dev.Name)
+	app, err := apps.Get(ctx, &devAppDev, dev.Namespace, c)
+	if err != nil && !oktetoErrors.IsNotFound(err) {
+		oktetoLog.Infof("getApp autocreate k8s error, retrying...")
+		_, err := apps.Get(ctx, &devAppDev, dev.Namespace, c)
+		return nil, err
+	}
+	return app, nil
 }

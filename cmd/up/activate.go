@@ -65,7 +65,7 @@ func (up *upContext) activate() error {
 
 	if v, ok := app.ObjectMeta().Annotations[model.OktetoAutoCreateAnnotation]; up.Dev.Autocreate && (!ok || v != model.OktetoUpCmd) {
 		return oktetoErrors.UserError{
-			E:    fmt.Errorf("resource %s already exist", up.Dev.Name),
+			E:    fmt.Errorf("app '%s' already exist", up.Dev.Name),
 			Hint: "use a different name in your okteto.yaml, or remove the autocreate property",
 		}
 	}
@@ -247,7 +247,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	}
 
 	resetOnDevContainerStart := up.resetSyncthing || !up.Dev.PersistentVolumeEnabled()
-	trMap, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.Client)
+	trMap, err := apps.GetTranslations(ctx, up.Dev, app, resetOnDevContainerStart, up.ID, up.Client)
 	if err != nil {
 		return err
 	}

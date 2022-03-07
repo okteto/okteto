@@ -25,6 +25,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
+	yaml3 "gopkg.in/yaml.v3"
 )
 
 // Archetype represents the type of manifest
@@ -35,7 +36,7 @@ var (
 	StackType Archetype = "compose"
 	// OktetoType represents a okteto manifest type
 	OktetoType Archetype = "okteto"
-	//OktetoType represents a okteto manifest type
+	// OktetoManifestType represents a okteto manifest type
 	OktetoManifestType Archetype = "manifest"
 	// PipelineType represents a okteto pipeline manifest type
 	PipelineType Archetype = "pipeline"
@@ -43,6 +44,23 @@ var (
 	KubernetesType Archetype = "kubernetes"
 	// ChartType represents a k8s manifest type
 	ChartType Archetype = "chart"
+)
+
+const (
+	buildHeadComment = "The build section defines how to build the images of your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#build"
+	buildExample     = `build:
+  my-service:
+    context: .`
+	buildSvcEnvVars         = "You can use the following env vars to refer to this image in your deploy commands:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_TAG: image tag"
+	deployHeadComment       = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#deploy"
+	devHeadComment          = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/manifest/#dev"
+	dependenciesHeadComment = "The dependencies section defines other git repositories to be deployed as part of your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#dependencies"
+	dependenciesExample     = `dependencies:
+  - https://github.com/okteto/b
+  - frontend/okteto.yml`
+
+	// FakeCommand prints into terminal a fake command
+	FakeCommand = "echo 'Replace this line with the proper 'helm' or 'kubectl' commands to deploy your development environment'"
 )
 
 var (
@@ -159,9 +177,12 @@ type DeployInfo struct {
 
 // ComposeInfo represents information about compose file
 type ComposeInfo struct {
-	Manifest []string `json:"manifest,omitempty" yaml:"manifest,omitempty"`
-	Stack    *Stack   `json:"-,omitempty" yaml:"-,omitempty"`
+	Manifest ManifestList `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Stack    *Stack       `json:"-" yaml:"-"`
 }
+
+// ManifestList is a list containing all the compose files
+type ManifestList []string
 
 // DeployCommand represents a command to be executed
 type DeployCommand struct {
@@ -178,24 +199,27 @@ func NewDeployInfo() *DeployInfo {
 
 //GetManifestV2 gets a manifest from a path or search for the files to generate it
 func GetManifestV2(manifestPath string) (*Manifest, error) {
-	if manifestPath != "" && fileExistsAndNotDir(manifestPath) {
-		return getManifest(manifestPath)
-	} else if manifestPath != "" && pathExistsAndDir(manifestPath) {
-		return nil, fmt.Errorf("can not parse a dir path")
-	}
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
+	if manifestPath != "" && FileExistsAndNotDir(manifestPath) {
+		return getManifest(manifestPath)
+	} else if manifestPath != "" && pathExistsAndDir(manifestPath) {
+		cwd = manifestPath
+	}
+
 	var devManifest *Manifest
 	if oktetoPath := getFilePath(cwd, oktetoFiles); oktetoPath != "" {
 		oktetoLog.Infof("Found okteto file")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto manifest on %s", oktetoPath)
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling manifest...")
 		devManifest, err = GetManifestV2(oktetoPath)
 		if err != nil {
 			return nil, err
 		}
 		if devManifest.IsV2 {
+			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v2 unmarshalled successfully")
 			devManifest.Type = OktetoManifestType
 			if devManifest.Deploy != nil && devManifest.Deploy.Compose != nil && len(devManifest.Deploy.Compose.Manifest) > 0 {
 				s, err := LoadStack("", devManifest.Deploy.Compose.Manifest)
@@ -211,95 +235,27 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			}
 			return devManifest, nil
 		}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest unmarshalled successfully")
 	}
 
-	if pipelinePath := getFilePath(cwd, pipelineFiles); pipelinePath != "" {
-		oktetoLog.Infof("Found pipeline")
-		pipelineManifest, err := GetManifestV2(pipelinePath)
-		if err != nil {
-			return nil, err
-		}
-		pipelineManifest.Type = PipelineType
+	inferredManifest, err := GetInferredManifest(cwd)
+	if err != nil {
+		return nil, err
+	}
+	if inferredManifest != nil {
 		if devManifest != nil {
-			pipelineManifest.mergeWithOktetoManifest(devManifest)
+			inferredManifest.mergeWithOktetoManifest(devManifest)
+		} else if inferredManifest.Type == StackType {
+			inferredManifest, err = inferredManifest.InferFromStack()
+			if err != nil {
+				return nil, err
+			}
+			//TODO: uncomment
+			// inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
 		}
-
-		return pipelineManifest, nil
-
+		return inferredManifest, nil
 	}
 
-	if chartPath := getChartPath(cwd); chartPath != "" {
-		oktetoLog.Infof("Found chart")
-		chartManifest := &Manifest{
-			Type: ChartType,
-			Deploy: &DeployInfo{
-				Commands: []DeployCommand{
-					{
-						Name:    fmt.Sprintf("helm upgrade --install ${%s} %s", OktetoNameEnvVar, chartPath),
-						Command: fmt.Sprintf("helm upgrade --install ${%s} %s", OktetoNameEnvVar, chartPath),
-					},
-				},
-			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: chartPath,
-		}
-		if devManifest != nil {
-			chartManifest.mergeWithOktetoManifest(devManifest)
-		}
-		return chartManifest, nil
-
-	}
-	if manifestPath := getManifestsPath(cwd); manifestPath != "" {
-		oktetoLog.Infof("Found kubernetes manifests")
-		k8sManifest := &Manifest{
-			Type: KubernetesType,
-			Deploy: &DeployInfo{
-				Commands: []DeployCommand{
-					{
-						Name:    fmt.Sprintf("kubectl apply -f %s", manifestPath),
-						Command: fmt.Sprintf("kubectl apply -f %s", manifestPath),
-					},
-				},
-			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: manifestPath,
-		}
-		if devManifest != nil {
-			k8sManifest.mergeWithOktetoManifest(devManifest)
-		}
-		return k8sManifest, nil
-	}
-
-	if stackPath := getFilePath(cwd, stackFiles); stackPath != "" {
-		oktetoLog.Infof("Found okteto compose")
-		stackManifest := &Manifest{
-			Type: StackType,
-			Deploy: &DeployInfo{
-				Compose: &ComposeInfo{
-					Manifest: []string{
-						stackPath,
-					},
-				},
-			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: stackPath,
-			IsV2:     true,
-		}
-		s, err := LoadStack("", stackManifest.Deploy.Compose.Manifest)
-		if err != nil {
-			return nil, err
-		}
-		stackManifest.Deploy.Compose.Stack = s
-		if devManifest != nil {
-			stackManifest.mergeWithOktetoManifest(devManifest)
-		} else {
-			stackManifest.InferFromStack()
-		}
-		return stackManifest, nil
-	}
 	if devManifest != nil {
 		devManifest.Type = OktetoType
 		devManifest.Deploy = &DeployInfo{
@@ -315,7 +271,99 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	return nil, oktetoErrors.ErrManifestNotFound
 }
 
-// get returns a Dev object from a given file
+// GetInferredManifest infers the manifest from a directory
+func GetInferredManifest(cwd string) (*Manifest, error) {
+	if pipelinePath := getFilePath(cwd, pipelineFiles); pipelinePath != "" {
+		oktetoLog.Infof("Found pipeline")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto pipeline manifest on %s", pipelinePath)
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling pipeline manifest...")
+		pipelineManifest, err := GetManifestV2(pipelinePath)
+		if err != nil {
+			return nil, err
+		}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto pipeline manifest unmarshalled successfully")
+		pipelineManifest.Type = PipelineType
+		return pipelineManifest, nil
+
+	}
+
+	if chartPath := getChartPath(cwd); chartPath != "" {
+		oktetoLog.Infof("Found chart")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found helm chart on %s", chartPath)
+		chartManifest := &Manifest{
+			Type: ChartType,
+			Deploy: &DeployInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    fmt.Sprintf("helm upgrade --install ${%s} %s", OktetoNameEnvVar, chartPath),
+						Command: fmt.Sprintf("helm upgrade --install ${%s} %s", OktetoNameEnvVar, chartPath),
+					},
+				},
+			},
+			Dev:      ManifestDevs{},
+			Build:    ManifestBuild{},
+			Filename: chartPath,
+		}
+		return chartManifest, nil
+
+	}
+	if manifestPath := getManifestsPath(cwd); manifestPath != "" {
+		oktetoLog.Infof("Found kubernetes manifests")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found kubernetes manifest on %s", manifestPath)
+		k8sManifest := &Manifest{
+			Type: KubernetesType,
+			Deploy: &DeployInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    fmt.Sprintf("kubectl apply -f %s", manifestPath),
+						Command: fmt.Sprintf("kubectl apply -f %s", manifestPath),
+					},
+				},
+			},
+			Dev:      ManifestDevs{},
+			Build:    ManifestBuild{},
+			Filename: manifestPath,
+		}
+		return k8sManifest, nil
+	}
+
+	if stackPath := getFilePath(cwd, stackFiles); stackPath != "" {
+		oktetoLog.Infof("Found okteto compose")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto compose manifest on %s", stackPath)
+		stackManifest := &Manifest{
+			Type: StackType,
+			Deploy: &DeployInfo{
+				Compose: &ComposeInfo{
+					Manifest: []string{
+						stackPath,
+					},
+				},
+			},
+			Dev:      ManifestDevs{},
+			Build:    ManifestBuild{},
+			Filename: stackPath,
+			IsV2:     true,
+		}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
+		s, err := LoadStack("", stackManifest.Deploy.Compose.Manifest)
+		if err != nil {
+			return nil, err
+		}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
+		stackManifest.Deploy.Compose.Stack = s
+
+		for srv := range stackManifest.Deploy.Compose.Stack.Services {
+			s := stackManifest.Deploy.Compose.Stack.Services[srv]
+			if s.Build != nil {
+				stackManifest.Build[srv] = s.Build
+			}
+		}
+		return stackManifest, nil
+	}
+	return nil, nil
+}
+
+// getManifest returns a Dev object from a given file
 func getManifest(devPath string) (*Manifest, error) {
 	b, err := os.ReadFile(devPath)
 	if err != nil {
@@ -352,7 +400,7 @@ func getManifest(devPath string) (*Manifest, error) {
 func getFilePath(cwd string, files []string) string {
 	for _, name := range files {
 		path := filepath.Join(cwd, name)
-		if fileExistsAndNotDir(path) {
+		if FileExistsAndNotDir(path) {
 			return path
 		}
 	}
@@ -530,4 +578,171 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 	}
 	m.setDefaults()
 	return m, nil
+}
+
+// WriteToFile writes a manifest to a file with comments to make it easier to understand
+func (m *Manifest) WriteToFile(filePath string) error {
+	if m.Deploy != nil {
+		if len(m.Deploy.Commands) == 0 && m.Deploy.Compose == nil {
+			m.Deploy.Commands = []DeployCommand{
+				{
+					Name:    FakeCommand,
+					Command: FakeCommand,
+				},
+			}
+		}
+	}
+	if len(m.Dev) == 0 {
+		m.Dev = ManifestDevs{
+			m.Name: NewDev(),
+		}
+	}
+	for _, d := range m.Dev {
+		if d.Image.Name != "" {
+			d.Image.Context = ""
+			d.Image.Dockerfile = ""
+		} else {
+			d.Image = nil
+		}
+
+		if d.Push.Name != "" {
+			d.Push.Context = ""
+			d.Push.Dockerfile = ""
+		} else {
+			d.Push = nil
+		}
+	}
+	m.Context = ""
+	m.Namespace = ""
+	//Unmarshal with yamlv2 because we have the marshal with yaml v2
+	bytes, err := yaml.Marshal(m)
+	if err != nil {
+		return err
+	}
+	doc := yaml3.Node{}
+	if err := yaml3.Unmarshal(bytes, &doc); err != nil {
+		return err
+	}
+	doc = *doc.Content[0]
+	currentSection := ""
+	for idx, section := range doc.Content {
+		switch section.Value {
+		case "build":
+			currentSection = "build"
+			section.HeadComment = buildHeadComment
+		case "deploy":
+			currentSection = "deploy"
+			section.HeadComment = deployHeadComment
+		case "dev":
+			currentSection = "dev"
+			section.HeadComment = devHeadComment
+		}
+		if idx%2 == 0 {
+			continue
+		}
+		if currentSection == "build" {
+			for _, subsection := range section.Content {
+				if subsection.Kind != yaml3.ScalarNode {
+					continue
+				}
+				serviceName := strings.ToUpper(subsection.Value)
+				subsection.HeadComment = fmt.Sprintf(buildSvcEnvVars, serviceName, serviceName, serviceName, serviceName)
+			}
+		}
+	}
+
+	doc = m.reorderDocFields(doc)
+
+	out, err := yaml3.Marshal(doc)
+	if err != nil {
+		return err
+	}
+	out = addEmptyLineBetweenSections(out)
+	if err := os.WriteFile(filePath, out, 0600); err != nil {
+		oktetoLog.Infof("failed to write stignore file: %s", err)
+		return err
+	}
+	return nil
+}
+
+// reorderDocFields orders the manifest to be: name -> build -> deploy -> dependencies -> dev
+func (m *Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
+	contentCopy := []*yaml3.Node{}
+	nodes := []int{}
+	nameDefinitionIdx := getDocIdx(doc.Content, "name")
+	if nameDefinitionIdx != -1 {
+		contentCopy = append(contentCopy, doc.Content[nameDefinitionIdx], doc.Content[nameDefinitionIdx+1])
+		nodes = append(nodes, nameDefinitionIdx, nameDefinitionIdx+1)
+	}
+
+	buildDefinitionIdx := getDocIdx(doc.Content, "build")
+	if buildDefinitionIdx != -1 {
+		contentCopy = append(contentCopy, doc.Content[buildDefinitionIdx], doc.Content[buildDefinitionIdx+1])
+		nodes = append(nodes, buildDefinitionIdx, buildDefinitionIdx+1)
+	} else {
+		whereToInject := getDocIdx(contentCopy, "name")
+		contentCopy[whereToInject].FootComment = fmt.Sprintf("%s\n%s", buildHeadComment, buildExample)
+	}
+
+	deployDefinitionIdx := getDocIdx(doc.Content, "deploy")
+	if deployDefinitionIdx != -1 {
+		contentCopy = append(contentCopy, doc.Content[deployDefinitionIdx], doc.Content[deployDefinitionIdx+1])
+		nodes = append(nodes, deployDefinitionIdx, deployDefinitionIdx+1)
+	}
+
+	dependenciesDefinitionIdx := getDocIdx(doc.Content, "dependencies")
+	if dependenciesDefinitionIdx != -1 {
+		contentCopy = append(contentCopy, doc.Content[dependenciesDefinitionIdx], doc.Content[dependenciesDefinitionIdx+1])
+		nodes = append(nodes, dependenciesDefinitionIdx, dependenciesDefinitionIdx+1)
+	} else {
+		whereToInject := getDocIdx(contentCopy, "deploy")
+		contentCopy[whereToInject].FootComment = fmt.Sprintf("%s\n%s", dependenciesHeadComment, dependenciesExample)
+	}
+
+	devDefinitionIdx := getDocIdx(doc.Content, "dev")
+	if devDefinitionIdx != -1 {
+		contentCopy = append(contentCopy, doc.Content[devDefinitionIdx], doc.Content[devDefinitionIdx+1])
+		nodes = append(nodes, devDefinitionIdx, devDefinitionIdx+1)
+	}
+
+	// We need to inject all the other fields remaining
+	if len(doc.Content) != len(contentCopy) {
+		for idx := range doc.Content {
+			found := false
+			for _, copyIdx := range nodes {
+				if copyIdx == idx {
+					found = true
+					break
+				}
+			}
+			if found {
+				continue
+			}
+			contentCopy = append(contentCopy, doc.Content[idx])
+		}
+	}
+	doc.Content = contentCopy
+	return doc
+}
+
+func getDocIdx(contents []*yaml3.Node, value string) int {
+	for idx, node := range contents {
+		if node.Value == value {
+			return idx
+		}
+	}
+	return -1
+}
+func addEmptyLineBetweenSections(out []byte) []byte {
+	prevLineCommented := false
+	newYaml := ""
+	for _, line := range strings.Split(string(out), "\n") {
+		isLineCommented := strings.HasPrefix(strings.TrimSpace(line), "#")
+		if !prevLineCommented && isLineCommented {
+			newYaml += "\n"
+		}
+		newYaml += line + "\n"
+		prevLineCommented = isLineCommented
+	}
+	return []byte(newYaml)
 }

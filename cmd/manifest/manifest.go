@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pipeline
+package manifest
 
 import (
 	"context"
@@ -20,15 +20,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Pipeline pipeline management commands
-func Pipeline(ctx context.Context) *cobra.Command {
+// Manifest manifest management commands
+func Manifest(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:    "pipeline",
-		Short:  "Pipeline management commands",
-		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli#pipeline"),
+		Use:    "manifest",
+		Short:  "Manifest management commands",
 		Hidden: true,
+		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli#manifest"),
 	}
-	cmd.AddCommand(deploy(ctx))
-	cmd.AddCommand(destroy(ctx))
+	cmd.AddCommand(Init())
 	return cmd
 }

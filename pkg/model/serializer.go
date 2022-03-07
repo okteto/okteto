@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -548,7 +549,15 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (s SyncFolder) MarshalYAML() (interface{}, error) {
-	return s.LocalPath + ":" + s.RemotePath, nil
+	cwd, err := os.Getwd()
+	if err != nil {
+		return s.LocalPath + ":" + s.RemotePath, nil
+	}
+	relPath, err := filepath.Rel(cwd, s.LocalPath)
+	if err != nil {
+		return s.LocalPath + ":" + s.RemotePath, nil
+	}
+	return relPath + ":" + s.RemotePath, nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -666,6 +675,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
+	Name         string               `json:"name,omitempty" yaml:"name,omitempty"`
 	Namespace    string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Context      string               `json:"context,omitempty" yaml:"context,omitempty"`
 	Icon         string               `json:"icon,omitempty" yaml:"icon,omitempty"`
@@ -798,6 +808,9 @@ func (d *DeployCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func (d *DeployInfo) MarshalYAML() (interface{}, error) {
+	if d.Compose != nil && len(d.Compose.Manifest) != 0 {
+		return d, nil
+	}
 	isCommandList := true
 	for _, cmd := range d.Commands {
 		if cmd.Command != cmd.Name {
@@ -840,6 +853,48 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	*d = DeployInfo(deploy)
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (c *ComposeInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		c.Manifest = []string{rawString}
+		return nil
+	}
+	var rawListString []string
+	err = unmarshal(&rawListString)
+	if err == nil {
+		c.Manifest = rawListString
+		return nil
+	}
+
+	type composeInfoRaw ComposeInfo
+	var compose composeInfoRaw
+	err = unmarshal(&compose)
+	if err != nil {
+		return err
+	}
+	*c = ComposeInfo(compose)
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (m *ManifestList) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		*m = ManifestList{rawString}
+		return nil
+	}
+	var rawListString []string
+	err = unmarshal(&rawListString)
+	if err != nil {
+		return err
+	}
+	*m = ManifestList(rawListString)
 	return nil
 }
 
@@ -902,7 +957,37 @@ func (d *Dev) MarshalYAML() (interface{}, error) {
 	if d.AreDefaultPersistentVolumeValues() {
 		toMarshall.PersistentVolumeInfo = nil
 	}
-
+	if toMarshall.ImagePullPolicy == apiv1.PullAlways {
+		toMarshall.ImagePullPolicy = ""
+	}
+	if toMarshall.Lifecycle != nil && (!toMarshall.Lifecycle.PostStart || !toMarshall.Lifecycle.PostStop) {
+		toMarshall.Lifecycle = nil
+	}
+	if toMarshall.Metadata != nil && len(toMarshall.Metadata.Annotations) == 0 && len(toMarshall.Metadata.Labels) == 0 {
+		toMarshall.Metadata = nil
+	}
+	if toMarshall.InitContainer.Image == OktetoBinImageTag {
+		toMarshall.InitContainer.Image = ""
+	}
+	if toMarshall.Timeout.Default == 1*time.Minute && toMarshall.Timeout.Resources == 2*time.Minute {
+		toMarshall.Timeout.Default = 0
+		toMarshall.Timeout.Resources = 0
+	}
+	if toMarshall.Sync.RescanInterval == DefaultSyncthingRescanInterval && toMarshall.Sync.Compression {
+		toMarshall.Sync.Compression = false
+	}
+	if toMarshall.Interface == Localhost || toMarshall.Interface == PrivilegedLocalhost {
+		toMarshall.Interface = ""
+	}
+	if toMarshall.SSHServerPort == oktetoDefaultSSHServerPort {
+		toMarshall.SSHServerPort = 0
+	}
+	if toMarshall.Workdir == "/okteto" {
+		toMarshall.Workdir = ""
+	}
+	if isDefaultSecurityContext((*Dev)(&toMarshall)) {
+		toMarshall.SecurityContext = nil
+	}
 	return Dev(toMarshall), nil
 
 }
@@ -912,6 +997,27 @@ func isDefaultProbes(d *Dev) bool {
 		if d.Probes.Liveness || d.Probes.Readiness || d.Probes.Startup {
 			return false
 		}
+	}
+	return true
+}
+func isDefaultSecurityContext(d *Dev) bool {
+	if d.SecurityContext == nil {
+		return true
+	}
+	if d.SecurityContext.Capabilities != nil {
+		return false
+	}
+	if d.SecurityContext.RunAsNonRoot != nil {
+		return false
+	}
+	if d.SecurityContext.FSGroup != nil && *d.SecurityContext.FSGroup != 0 {
+		return false
+	}
+	if d.SecurityContext.RunAsGroup != nil && *d.SecurityContext.RunAsGroup != 0 {
+		return false
+	}
+	if d.SecurityContext.RunAsUser != nil && *d.SecurityContext.RunAsUser != 0 {
+		return false
 	}
 	return true
 }

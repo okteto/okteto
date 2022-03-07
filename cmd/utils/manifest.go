@@ -20,8 +20,8 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-// InferApplicationName infers the application name from the folder received as parameter
-func InferApplicationName(cwd string) string {
+// InferName infers the application name from the folder received as parameter
+func InferName(cwd string) string {
 	repo, err := model.GetRepositoryURL(cwd)
 	if err != nil {
 		oktetoLog.Info("inferring name from folder")

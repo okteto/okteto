@@ -172,7 +172,8 @@ func dfs(s *Stack, svcName string, visited, stack map[string]bool) bool {
 	return false
 }
 
-func fileExistsAndNotDir(filename string) bool {
+// FileExistsAndNotDir checks if the file exists and its not a dir
+func FileExistsAndNotDir(filename string) bool {
 	info, err := os.Stat(filename)
 	if err != nil && os.IsNotExist(err) {
 		return false

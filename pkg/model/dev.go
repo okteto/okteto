@@ -156,7 +156,7 @@ type ExternalVolume struct {
 
 // PersistentVolumeInfo info about the persistent volume
 type PersistentVolumeInfo struct {
-	Enabled      bool   `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	Enabled      bool   `json:"enabled,omitempty" yaml:"enabled"`
 	StorageClass string `json:"storageClass,omitempty" yaml:"storageClass,omitempty"`
 	Size         string `json:"size,omitempty" yaml:"size,omitempty"`
 }
@@ -705,20 +705,20 @@ func (dev *Dev) validateSync() error {
 			if errors.Is(err, os.ErrNotExist) {
 				return oktetoErrors.UserError{
 					E:    fmt.Errorf("path '%s' does not exist", folder.LocalPath),
-					Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+					Hint: "Update the 'sync' field in your okteto manifest file to a valid directory path",
 				}
 			}
 
 			return oktetoErrors.UserError{
 				E:    fmt.Errorf("File paths are not supported on sync fields"),
-				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+				Hint: "Update the 'sync' field in your okteto manifest file to a valid directory path",
 			}
 		}
 
 		if !validPath.IsDir() {
 			return oktetoErrors.UserError{
 				E:    fmt.Errorf("File paths are not supported on sync fields"),
-				Hint: "Update the `sync` field in your okteto manifest file to a valid directory path.",
+				Hint: "Update the 'sync' field in your okteto manifest file to a valid directory path",
 			}
 		}
 

@@ -16,8 +16,10 @@ package up
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/forward"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -89,6 +91,12 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 			up.Dev.Forward[idx] = forwardWithServiceName
 			f = forwardWithServiceName
 		}
+
+		err := waitUntilPortIsAvailable(up.Dev.Interface, f.Local)
+		if err != nil {
+			return err
+		}
+
 		if err := up.Forwarder.Add(f); err != nil {
 			return err
 		}
@@ -106,4 +114,23 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 	}
 
 	return up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
+}
+
+func waitUntilPortIsAvailable(iface string, port int) error {
+	ticker := time.NewTicker(1 * time.Second)
+	timeoutTicker := time.NewTicker(30 * time.Second)
+
+	for {
+		select {
+		case <-ticker.C:
+			if model.IsPortAvailable(iface, port) {
+				return nil
+			}
+		case <-timeoutTicker.C:
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("local port %d is already in-use in your local machine", port),
+				Hint: "Please release the port and try again",
+			}
+		}
+	}
 }

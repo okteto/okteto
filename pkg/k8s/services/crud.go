@@ -101,7 +101,7 @@ func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface
 }
 
 // GetPortsByPod returns the ports exposed via endpoint of a given pod
-func GetPortsByPod(ctx context.Context, p *apiv1.Pod, c *kubernetes.Clientset) ([]int, error) {
+func GetPortsByPod(ctx context.Context, p *apiv1.Pod, c kubernetes.Interface) ([]int, error) {
 	eList, err := c.CoreV1().Endpoints(p.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err

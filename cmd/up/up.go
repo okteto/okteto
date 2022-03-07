@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/moby/term"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
@@ -65,7 +66,7 @@ func Up() *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
 		Use:   "up [svc]",
-		Short: "Activate your development container",
+		Short: "Launch your development environment",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
@@ -108,7 +109,7 @@ func Up() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				manifest.Name = utils.InferApplicationName(wd)
+				manifest.Name = utils.InferName(wd)
 			}
 			devName := ""
 			if len(args) == 1 {
@@ -164,6 +165,7 @@ func Up() *cobra.Command {
 				resetSyncthing: upOptions.Reset,
 				StartTime:      time.Now(),
 				Options:        upOptions,
+				ID:             uuid.New().String(),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -181,6 +183,9 @@ func Up() *cobra.Command {
 			}
 
 			if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
+				if !upOptions.Deploy {
+					oktetoLog.Warning("Development environment '%s' doesn't exist or has errors and it needs to be deployed", up.Manifest.Name)
+				}
 				err := up.deployApp(ctx)
 				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
 					return err
@@ -188,6 +193,9 @@ func Up() *cobra.Command {
 				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
 					up.Dev.Autocreate = false
 				}
+			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
+				oktetoLog.Information("Development environment '%s' already deployed.", up.Manifest.Name)
+				oktetoLog.Information("To redeploy your development environment run 'okteto deploy' or 'okteto up %s --deploy'", up.Dev.Name)
 			}
 
 			err = up.start()
@@ -202,6 +210,8 @@ func Up() *cobra.Command {
 					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 				case oktetoErrors.CommandError:
 					oktetoLog.Infof("CommandError: %v", err)
+				case oktetoErrors.UserError:
+					return err
 				}
 
 			}
@@ -214,9 +224,11 @@ func Up() *cobra.Command {
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().IntVarP(&upOptions.Remote, "remote", "r", 0, "configures remote execution on the specified port")
-	cmd.Flags().BoolVarP(&upOptions.Deploy, "deploy", "d", false, "run deploy section of dev manifest")
+	cmd.Flags().BoolVarP(&upOptions.Deploy, "deploy", "d", false, "Force execution of the commands in the 'deploy' section of the okteto manifest (defaults to 'false')")
 	cmd.Flags().BoolVarP(&upOptions.Build, "build", "", false, "build on-the-fly the dev image using the info provided by the 'build' okteto manifest field")
+	cmd.Flags().MarkHidden("build")
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
+	cmd.Flags().MarkHidden("pull")
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
 	return cmd
 }
@@ -286,7 +298,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		Name:         up.Manifest.Name,
 		ManifestPath: up.Manifest.Filename,
 		Timeout:      5 * time.Minute,
-		Build:        true,
+		Build:        false,
 	})
 }
 
@@ -343,6 +355,7 @@ func (up *upContext) activateLoop() {
 
 	defer config.DeleteStateFile(up.Dev)
 
+	ctx := context.Background()
 	for {
 		if up.isRetry || isTransientError {
 			oktetoLog.Infof("waiting for shutdown sequence to finish")
@@ -356,7 +369,13 @@ func (up *upContext) activateLoop() {
 				<-t.C
 			}
 		}
-
+		if up.isRetry && up.hasSessionIDChanged(ctx) {
+			up.Exit <- oktetoErrors.UserError{
+				E:    fmt.Errorf("session disconnected: there is another `okteto up` session on this container"),
+				Hint: "Try running 'okteto exec' to get another session on this container",
+			}
+			return
+		}
 		err := up.activate()
 		if err != nil {
 			oktetoLog.Infof("activate failed with: %s", err)
@@ -378,6 +397,17 @@ func (up *upContext) activateLoop() {
 		up.Exit <- nil
 		return
 	}
+}
+
+func (up *upContext) hasSessionIDChanged(ctx context.Context) bool {
+	app, err := utils.GetDevApp(ctx, up.Dev, up.Client)
+	if err != nil || app == nil {
+		return false
+	}
+	if value, ok := app.ObjectMeta().Annotations[model.OktetoSessionIDAnnotation]; ok {
+		return value != up.ID
+	}
+	return false
 }
 
 // waitUntilExitOrInterruptOrApply blocks execution until a stop signal is sent, a disconnect event or an error or the app is modify
@@ -425,7 +455,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
-			Hint: "Try creating a Dockerfile or specify 'context' and 'dockerfile' fields.",
+			Hint: "Try creating a Dockerfile file or specify the 'context' and 'dockerfile' fields in your okteto manifest.",
 		}
 	}
 

@@ -47,6 +47,7 @@ func destroy(ctx context.Context) *cobra.Command {
 		Short: "Destroy an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			oktetoLog.Warning("'okteto pipeline destroy' is deprecated in favor of 'okteto destroy', and will be removed in a future version")
 			return ExecuteDestroyPipeline(ctx, opts)
 
 		},
@@ -206,7 +207,7 @@ func deprecatedWaitToBeDestroyed(ctx context.Context, name string, timeout time.
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("pipeline '%s' didn't finish after %s", name, timeout.String())
+			return fmt.Errorf("'%s' destroy didn't finish after %s", name, timeout.String())
 		case <-t.C:
 			p, err := oktetoClient.GetPipelineByName(ctx, name)
 			if err != nil {

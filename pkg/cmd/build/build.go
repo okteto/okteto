@@ -131,7 +131,7 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
 		return err
 	}
 
-	if buildOptions.Tag != "" {
+	if err == nil && buildOptions.Tag != "" {
 		if _, err := registry.GetImageTagWithDigest(buildOptions.Tag); err != nil {
 			oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
 	  %s,
@@ -183,8 +183,8 @@ func validateImage(imageTag string) error {
 			prefix = okteto.GlobalRegistry
 		}
 		return oktetoErrors.UserError{
-			E:    fmt.Errorf("Can not use '%s' as the image tag.", imageTag),
-			Hint: fmt.Sprintf("The syntax for using okteto registry is: '%s/image_name'", prefix),
+			E:    fmt.Errorf("'%s' isn't a valid image tag", imageTag),
+			Hint: fmt.Sprintf("The Okteto Registry syntax is: '%s/image_name'", prefix),
 		}
 	}
 	return nil
@@ -197,7 +197,7 @@ func translateDockerErr(err error) error {
 	if strings.HasPrefix(err.Error(), "failed to dial gRPC: cannot connect to the Docker daemon") {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("cannot connect to Docker Daemon"),
-			Hint: "Please start the service and try again",
+			Hint: "Please start the Docker Daemon or configure a builder endpoint with 'okteto context --builder BUILDKIT_URL",
 		}
 	}
 	return err
@@ -232,7 +232,7 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 	}
 
 	file := b.Dockerfile
-	if !filepath.IsAbs(b.Dockerfile) {
+	if !filepath.IsAbs(b.Dockerfile) && !model.FileExistsAndNotDir(file) {
 		file = filepath.Join(b.Context, b.Dockerfile)
 	}
 	opts := BuildOptions{

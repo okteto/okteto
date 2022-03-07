@@ -134,6 +134,15 @@ var (
 
 	// ErrManifestFoundButNoDeployCommands raised when a manifest is found but no deploy commands are defined
 	ErrManifestFoundButNoDeployCommands = errors.New("found okteto manifest, but no deploy commands where defined")
+
+	// ErrUserAnsweredNoToCreateFromCompose raised when the user has selected a compose file but is trying to deploy without it
+	ErrUserAnsweredNoToCreateFromCompose = fmt.Errorf("user does not want to create from compose")
+
+	// ErrDeployHasNotDeployAnyResource raised when a deploy command has not created any resource
+	ErrDeployHasNotDeployAnyResource = errors.New("it seems that you haven't deployed anything")
+
+	// ErrDeployHasFailedCommand raised when a deploy command is executed and fails
+	ErrDeployHasFailedCommand = errors.New("one of the commands in the 'deploy' section of your okteto manifests failed")
 )
 
 // IsForbidden raised if the Okteto API returns 401
