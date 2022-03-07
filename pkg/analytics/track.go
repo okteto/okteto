@@ -50,6 +50,7 @@ const (
 	buildEvent               = "Build"
 	buildTransientErrorEvent = "BuildTransientError"
 	deployEvent              = "Deploy"
+	oktetoDeployEvent        = "Okteto Deploy"
 	destroyEvent             = "Destroy"
 	deployStackEvent         = "Deploy Stack"
 	destroyStackEvent        = "Destroy Stack"
@@ -253,20 +254,39 @@ func TrackDestroyStack(success bool) {
 	track(destroyStackEvent, success, nil)
 }
 
-// TrackDeploy sends a tracking event to mixpanel when the user deploys a pipeline from local
-func TrackDeploy(success, isOktetoRepo bool, err error, duration time.Duration, pipelineType model.Archetype) {
-	if pipelineType == "" {
-		pipelineType = "pipeline"
+type TrackDeployMetadata struct {
+	Success                bool
+	IsOktetoRepo           bool
+	Err                    error
+	Duration               time.Duration
+	PipelineType           model.Archetype
+	DeployType             string
+	IsPreview              bool
+	HasDependenciesSection bool
+	HasBuildSection        bool
+}
+
+// TrackDeploy sends a tracking event to mixpanel when the user deploys a pipeline
+func TrackDeploy(m TrackDeployMetadata) {
+	// skip deploys from nested okteto deploys and manifest dependencies
+	if config.GetDeployOrigin() == "okteto-deploy" {
+		return
+	}
+	if m.PipelineType == "" {
+		m.PipelineType = "pipeline"
 	}
 	props := map[string]interface{}{
-		"pipelineType":       pipelineType,
-		"isOktetoRepository": isOktetoRepo,
-		"duration":           duration.Seconds(),
+		"pipelineType":           m.PipelineType,
+		"isOktetoRepository":     m.IsOktetoRepo,
+		"duration":               m.Duration.Seconds(),
+		"deployType":             m.DeployType,
+		"isPreview":              m.IsPreview,
+		"hasDependenciesSection": m.HasDependenciesSection,
 	}
-	if err != nil {
-		props["error"] = err.Error()
+	if m.Err != nil {
+		props["error"] = m.Err.Error()
 	}
-	track(deployEvent, success, props)
+	track(oktetoDeployEvent, m.Success, props)
 }
 
 // TrackDestroy sends a tracking event to mixpanel when the user destroys a pipeline from local
@@ -352,6 +372,7 @@ func track(event string, success bool, props map[string]interface{}) {
 		props["clusterType"] = okteto.Context().ClusterType
 	}
 
+	props["source"] = origin
 	props["origin"] = origin
 	props["success"] = success
 	props["contextType"] = getContextType(okteto.Context().Name)

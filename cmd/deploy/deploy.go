@@ -179,8 +179,25 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 			startTime := time.Now()
 			err = c.RunDeploy(ctx, options)
-			duration := time.Since(startTime)
-			analytics.TrackDeploy(err == nil, utils.IsOktetoRepo(), err, duration, c.PipelineType)
+
+			deployType := "custom"
+			if options.Manifest.IsV2 &&
+				options.Manifest.Deploy != nil &&
+				options.Manifest.Deploy.Compose != nil &&
+				options.Manifest.Deploy.Compose.Manifest != nil {
+				deployType = "compose"
+			}
+			analytics.TrackDeploy(analytics.TrackDeployMetadata{
+				Success:                err == nil,
+				IsOktetoRepo:           utils.IsOktetoRepo(),
+				Duration:               time.Since(startTime),
+				PipelineType:           c.PipelineType,
+				DeployType:             deployType,
+				IsPreview:              false, // TODO: How should we get this value?
+				HasDependenciesSection: options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0,
+				HasBuildSection:        options.Manifest.IsV2 && len(options.Manifest.Build) > 0,
+			})
+
 			return err
 		},
 	}
@@ -246,6 +263,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	for depName, dep := range deployOptions.Manifest.Dependencies {
+		dep.Variables = append(dep.Variables, model.EnvVar{
+			Name:  "OKTETO_ORIGIN",
+			Value: "okteto-deploy",
+		})
 		pipOpts := &pipelineCMD.DeployOptions{
 			Name:         depName,
 			Repository:   dep.Repository,

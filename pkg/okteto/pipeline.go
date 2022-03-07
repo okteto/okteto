@@ -32,9 +32,6 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 
 	gitDeployResponse := &types.GitDeployResponse{}
 
-	variablesArg := []InputVariable{
-		{Name: graphql.String("OKTETO_ORIGIN"), Value: graphql.String(origin)},
-	}
 	if len(variables) > 0 {
 		var mutation struct {
 			GitDeployResponse struct {
@@ -52,10 +49,24 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename)"`
 		}
 
+		variablesArg := []InputVariable{}
 		for _, v := range variables {
 			variablesArg = append(variablesArg, InputVariable{
 				Name:  graphql.String(v.Name),
 				Value: graphql.String(v.Value),
+			})
+		}
+		// if OKTETO_ORIGIN was provided don't override it
+		injectOrigin := true
+		for _, v := range variablesArg {
+			if v.Name == "OKTETO_ORIGIN" {
+				injectOrigin = false
+			}
+		}
+		if injectOrigin {
+			variablesArg = append(variablesArg, InputVariable{
+				Name:  graphql.String("OKTETO_ORIGIN"),
+				Value: graphql.String(origin),
 			})
 		}
 		queryVariables := map[string]interface{}{
@@ -113,7 +124,9 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 			"space":      graphql.String(Context().Namespace),
 			"branch":     graphql.String(branch),
 			"filename":   graphql.String(filename),
-			"variables":  variablesArg,
+			"variables": []InputVariable{
+				{Name: graphql.String("OKTETO_ORIGIN"), Value: graphql.String(origin)},
+			},
 		}
 
 		err := mutate(ctx, &mutation, queryVariables, c.client)
