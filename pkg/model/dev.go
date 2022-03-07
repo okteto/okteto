@@ -58,8 +58,8 @@ type Dev struct {
 	Namespace            string             `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string             `json:"container,omitempty" yaml:"container,omitempty"`
 	EmptyImage           bool               `json:"-" yaml:"-"`
-	Image                *BuildInfo         `json:"image,omitempty" yaml:"image,omitempty"`
-	Push                 *BuildInfo         `json:"-" yaml:"push,omitempty"`
+	Image                *DevBuildInfo      `json:"image,omitempty" yaml:"image,omitempty"`
+	Push                 *DevBuildInfo      `json:"-" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy   `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Secrets              []Secret           `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command            `json:"command,omitempty" yaml:"command,omitempty"`
@@ -124,6 +124,9 @@ type BuildInfo struct {
 	Args       Environment `yaml:"args,omitempty"`
 	Image      string      `yaml:"image,omitempty"`
 }
+
+// DevBuildInfo throws a warning if it's not single line
+type DevBuildInfo BuildInfo
 
 // Volume represents a volume in the development container
 type Volume struct {
@@ -302,8 +305,8 @@ func Get(devPath string) (*Manifest, error) {
 }
 func NewDev() *Dev {
 	return &Dev{
-		Image:       &BuildInfo{},
-		Push:        &BuildInfo{},
+		Image:       &DevBuildInfo{},
+		Push:        &DevBuildInfo{},
 		Environment: make(Environment, 0),
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]Forward, 0),
@@ -428,7 +431,7 @@ func (dev *Dev) loadSelector() error {
 func (dev *Dev) loadImage() error {
 	var err error
 	if dev.Image == nil {
-		dev.Image = &BuildInfo{}
+		dev.Image = &DevBuildInfo{}
 	}
 	if len(dev.Image.Name) > 0 {
 		dev.Image.Name, err = ExpandEnv(dev.Image.Name)
@@ -549,6 +552,18 @@ func (dev *Dev) SetDefaults() error {
 	}
 
 	return nil
+}
+
+func (build *DevBuildInfo) setBuildDefaults() {
+	if build == nil {
+		build = &DevBuildInfo{}
+	}
+	if build.Context == "" {
+		build.Context = "."
+	}
+	if _, err := url.ParseRequestURI(build.Context); err != nil && build.Dockerfile == "" {
+		build.Dockerfile = "Dockerfile"
+	}
 }
 
 func (build *BuildInfo) setBuildDefaults() {
