@@ -248,7 +248,11 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			if err != nil {
 				return nil, err
 			}
-			inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
+
+			if devManifest != nil && devManifest.Deploy != nil && len(devManifest.Deploy.Endpoints) != 0 {
+				inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
+			}
+
 		}
 		if devManifest != nil {
 			inferredManifest.mergeWithOktetoManifest(devManifest)
@@ -568,8 +572,13 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 		d.EnvFiles = svcInfo.EnvFiles
 		d.Environment = svcInfo.Environment
 		d.Name = svcName
-
-		m.Dev[svcName] = d
+		err := d.SetDefaults()
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := m.Dev[svcName]; !ok {
+			m.Dev[svcName] = d
+		}
 
 		if svcInfo.Build == nil {
 			continue
@@ -579,7 +588,9 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 			buildInfo.Image = svcInfo.Image
 		}
 		buildInfo.VolumesToInclude = toMount
-		m.Build[svcName] = buildInfo
+		if _, ok := m.Build[svcName]; !ok {
+			m.Build[svcName] = buildInfo
+		}
 	}
 	m.setDefaults()
 	return m, nil
