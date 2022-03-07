@@ -18,6 +18,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"sync"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
@@ -50,6 +51,15 @@ func newJSONDisplayer(stdout, stderr io.Reader) *jsonDisplayer {
 
 func (d *jsonDisplayer) Display(_ string) {
 	d.commandContext, d.cancel = context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+	wgDelta := 0
+	if d.stdoutScanner != nil {
+		wgDelta++
+	}
+	if d.stderrScanner != nil {
+		wgDelta++
+	}
+	wg.Add(wgDelta)
 	if d.stdoutScanner != nil {
 		go func() {
 			for d.stdoutScanner.Scan() {
@@ -62,6 +72,7 @@ func (d *jsonDisplayer) Display(_ string) {
 				}
 				break
 			}
+			wg.Done()
 		}()
 	}
 
@@ -77,8 +88,10 @@ func (d *jsonDisplayer) Display(_ string) {
 				}
 				break
 			}
+			wg.Done()
 		}()
 	}
+	wg.Wait()
 }
 
 // CleanUp stops displaying

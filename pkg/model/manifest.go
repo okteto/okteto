@@ -177,9 +177,12 @@ type DeployInfo struct {
 
 // ComposeInfo represents information about compose file
 type ComposeInfo struct {
-	Manifest []string `json:"manifest,omitempty" yaml:"manifest,omitempty"`
-	Stack    *Stack   `json:"-" yaml:"-"`
+	Manifest ManifestList `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Stack    *Stack       `json:"-" yaml:"-"`
 }
+
+// ManifestList is a list containing all the compose files
+type ManifestList []string
 
 // DeployCommand represents a command to be executed
 type DeployCommand struct {
@@ -209,11 +212,14 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	var devManifest *Manifest
 	if oktetoPath := getFilePath(cwd, oktetoFiles); oktetoPath != "" {
 		oktetoLog.Infof("Found okteto file")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto manifest on %s", oktetoPath)
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling manifest...")
 		devManifest, err = GetManifestV2(oktetoPath)
 		if err != nil {
 			return nil, err
 		}
 		if devManifest.IsV2 {
+			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v2 unmarshalled successfully")
 			devManifest.Type = OktetoManifestType
 			if devManifest.Deploy != nil && devManifest.Deploy.Compose != nil && len(devManifest.Deploy.Compose.Manifest) > 0 {
 				s, err := LoadStack("", devManifest.Deploy.Compose.Manifest)
@@ -229,6 +235,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			}
 			return devManifest, nil
 		}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest unmarshalled successfully")
 	}
 
 	inferredManifest, err := GetInferredManifest(cwd)
@@ -268,17 +275,48 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 func GetInferredManifest(cwd string) (*Manifest, error) {
 	if pipelinePath := getFilePath(cwd, pipelineFiles); pipelinePath != "" {
 		oktetoLog.Infof("Found pipeline")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto pipeline manifest on %s", pipelinePath)
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling pipeline manifest...")
 		pipelineManifest, err := GetManifestV2(pipelinePath)
 		if err != nil {
 			return nil, err
 		}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto pipeline manifest unmarshalled successfully")
 		pipelineManifest.Type = PipelineType
 		return pipelineManifest, nil
+	}
 
+	if stackPath := getFilePath(cwd, stackFiles); stackPath != "" {
+		oktetoLog.Infof("Found okteto compose")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto compose manifest on %s", stackPath)
+		stackManifest := &Manifest{
+			Type: StackType,
+			Deploy: &DeployInfo{
+				Compose: &ComposeInfo{
+					Manifest: []string{
+						stackPath,
+					},
+				},
+			},
+			Dev:      ManifestDevs{},
+			Build:    ManifestBuild{},
+			Filename: stackPath,
+			IsV2:     true,
+		}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
+		s, err := LoadStack("", stackManifest.Deploy.Compose.Manifest)
+		if err != nil {
+			return nil, err
+		}
+		stackManifest.Deploy.Compose.Stack = s
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
+
+		return stackManifest, nil
 	}
 
 	if chartPath := getChartPath(cwd); chartPath != "" {
 		oktetoLog.Infof("Found chart")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found helm chart on %s", chartPath)
 		chartManifest := &Manifest{
 			Type: ChartType,
 			Deploy: &DeployInfo{
@@ -298,6 +336,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 	}
 	if manifestPath := getManifestsPath(cwd); manifestPath != "" {
 		oktetoLog.Infof("Found kubernetes manifests")
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found kubernetes manifest on %s", manifestPath)
 		k8sManifest := &Manifest{
 			Type: KubernetesType,
 			Deploy: &DeployInfo{
@@ -315,34 +354,10 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		return k8sManifest, nil
 	}
 
-	if stackPath := getFilePath(cwd, stackFiles); stackPath != "" {
-		oktetoLog.Infof("Found okteto compose")
-		stackManifest := &Manifest{
-			Type: StackType,
-			Deploy: &DeployInfo{
-				Compose: &ComposeInfo{
-					Manifest: []string{
-						stackPath,
-					},
-				},
-			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: stackPath,
-			IsV2:     true,
-		}
-		s, err := LoadStack("", stackManifest.Deploy.Compose.Manifest)
-		if err != nil {
-			return nil, err
-		}
-		stackManifest.Deploy.Compose.Stack = s
-
-		return stackManifest, nil
-	}
 	return nil, nil
 }
 
-// get returns a Dev object from a given file
+// getManifest returns a Dev object from a given file
 func getManifest(devPath string) (*Manifest, error) {
 	b, err := os.ReadFile(devPath)
 	if err != nil {

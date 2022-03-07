@@ -23,6 +23,7 @@ import (
 	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -84,37 +85,61 @@ func (d *TTYDisplayer) Display(commandName string) {
 
 	d.hideCursor()
 	d.commandContext, d.cancel = context.WithCancel(context.Background())
-	go d.displayCommand()
+	wg := &sync.WaitGroup{}
+	wgDelta := 0
 	if d.stdoutScanner != nil {
-		go d.displayStdout()
+		wgDelta++
 	}
 	if d.stderrScanner != nil {
-		go d.displayStderr()
+		wgDelta++
 	}
+	wg.Add(wgDelta)
+
+	commandChan := make(chan bool, 1)
+	go d.displayCommand(commandChan)
+	if d.stdoutScanner != nil {
+		go d.displayStdout(wg)
+	}
+	if d.stderrScanner != nil {
+		go d.displayStderr(wg)
+	}
+	wg.Wait()
+	d.cancel()
+	<-commandChan
 }
 
-func (d *TTYDisplayer) displayCommand() {
+func (d *TTYDisplayer) displayCommand(commandChan chan bool) {
 	t := time.NewTicker(50 * time.Millisecond)
+	shouldExit := false
 	for {
 		for i := 0; i < len(spinnerChars); i++ {
 			select {
 			case <-t.C:
-				commandLine := renderCommand(spinnerChars[i], d.command)
-				d.screenbuf.Write(commandLine)
+				width, _, _ := term.GetSize(int(os.Stdout.Fd()))
+				commandLines := renderCommand(spinnerChars[i], d.command, width)
+				for _, commandLine := range commandLines {
+					d.screenbuf.Write(commandLine)
+				}
 				lines := renderLines(d.linesToDisplay)
 				for _, line := range lines {
-					d.screenbuf.Write([]byte(line))
+					d.screenbuf.Write(line)
 				}
 				d.screenbuf.Flush()
 			case <-d.commandContext.Done():
-				return
+				shouldExit = true
 			}
-
+			if shouldExit {
+				break
+			}
+		}
+		if shouldExit {
+			break
 		}
 	}
+	commandChan <- true
 }
 
-func (d *TTYDisplayer) displayStdout() {
+func (d *TTYDisplayer) displayStdout(wg *sync.WaitGroup) {
 	for d.stdoutScanner.Scan() {
 		select {
 		case <-d.commandContext.Done():
@@ -145,6 +170,7 @@ func (d *TTYDisplayer) displayStdout() {
 	if d.stdoutScanner.Err() != nil {
 		oktetoLog.Infof("Error reading command output: %s", d.stdoutScanner.Err().Error())
 	}
+	wg.Done()
 }
 
 func checkIfIsBuildingLine(line string) bool {
@@ -154,7 +180,7 @@ func checkIfIsBuildingLine(line string) bool {
 	return false
 }
 
-func (d *TTYDisplayer) displayStderr() {
+func (d *TTYDisplayer) displayStderr(wg *sync.WaitGroup) {
 	for d.stderrScanner.Scan() {
 		select {
 		case <-d.commandContext.Done():
@@ -175,6 +201,7 @@ func (d *TTYDisplayer) displayStderr() {
 	if d.stderrScanner.Err() != nil {
 		oktetoLog.Infof("Error reading command output: %s", d.stderrScanner.Err().Error())
 	}
+	wg.Done()
 }
 
 func isTopDisplay(line string) bool {
@@ -217,16 +244,53 @@ func (d *TTYDisplayer) CleanUp(err error) {
 
 }
 
-func renderCommand(spinnerChar, command string) []byte {
-	commandTemplate := fmt.Sprintf(` %s {{ . | oktetoblue }}: `, spinnerChar)
+func renderCommand(spinnerChar, command string, charsPerLine int) [][]byte {
+	firstLineCommandTemplate := fmt.Sprintf(` %s {{ . | oktetoblue }}`, spinnerChar)
+	otherLineCommandTemplate := `    {{ . | oktetoblue }}`
+	lastLineCommandTemplate := `    {{ . | oktetoblue }}:`
 	funcMap := promptui.FuncMap
 	funcMap["oktetoblue"] = oktetoLog.BlueString
-	tpl, err := template.New("").Funcs(funcMap).Parse(commandTemplate)
+	firstLineTpl, err := template.New("").Funcs(funcMap).Parse(firstLineCommandTemplate)
 	if err != nil {
-		return []byte{}
+		return [][]byte{}
 	}
+
+	otherLinesTpl, err := template.New("").Funcs(funcMap).Parse(otherLineCommandTemplate)
+	if err != nil {
+		return [][]byte{}
+	}
+
+	lastLineTpl, err := template.New("").Funcs(funcMap).Parse(lastLineCommandTemplate)
+	if err != nil {
+		return [][]byte{}
+	}
+
 	command = fmt.Sprintf(" Running '%s'", command)
-	return render(tpl, command)
+	result := [][]byte{}
+	if charsPerLine == 0 || charsPerLine < 5 {
+		result = append(result, render(firstLineTpl, command))
+		return result
+	}
+	iterations := (len(command) + 3) / charsPerLine
+	for i := 0; i < iterations+1; i++ {
+		start := i*charsPerLine - 3
+		if start < 0 {
+			start = 0
+		}
+		end := i*charsPerLine + charsPerLine - 3
+		if i == iterations {
+			end = len(command) - 1
+		}
+		currentLine := command[start:end]
+		if i == 0 {
+			result = append(result, render(firstLineTpl, currentLine))
+		} else if i < iterations {
+			result = append(result, render(otherLinesTpl, currentLine))
+		} else {
+			result = append(result, render(lastLineTpl, currentLine))
+		}
+	}
+	return result
 }
 
 func renderSuccessCommand(command string) []byte {
@@ -262,7 +326,7 @@ func renderLines(queue []string) [][]byte {
 	result := [][]byte{}
 	for _, line := range queue {
 		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
-		line = fmt.Sprintf("   %s", strings.TrimSpace(line))
+		line = fmt.Sprintf("    %s", strings.TrimSpace(line))
 		if width > 4 && len(line)+2 > width {
 			result = append(result, render(tpl, fmt.Sprintf("%s...", line[:width-5])))
 		} else if line == "" {

@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/moby/term"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
@@ -164,6 +165,7 @@ func Up() *cobra.Command {
 				resetSyncthing: upOptions.Reset,
 				StartTime:      time.Now(),
 				Options:        upOptions,
+				ID:             uuid.New().String(),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -208,6 +210,8 @@ func Up() *cobra.Command {
 					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 				case oktetoErrors.CommandError:
 					oktetoLog.Infof("CommandError: %v", err)
+				case oktetoErrors.UserError:
+					return err
 				}
 
 			}
@@ -351,6 +355,7 @@ func (up *upContext) activateLoop() {
 
 	defer config.DeleteStateFile(up.Dev)
 
+	ctx := context.Background()
 	for {
 		if up.isRetry || isTransientError {
 			oktetoLog.Infof("waiting for shutdown sequence to finish")
@@ -364,7 +369,13 @@ func (up *upContext) activateLoop() {
 				<-t.C
 			}
 		}
-
+		if up.isRetry && up.hasSessionIDChanged(ctx) {
+			up.Exit <- oktetoErrors.UserError{
+				E:    fmt.Errorf("session disconnected: there is another `okteto up` session on this container"),
+				Hint: "Try running 'okteto exec' to get another session on this container",
+			}
+			return
+		}
 		err := up.activate()
 		if err != nil {
 			oktetoLog.Infof("activate failed with: %s", err)
@@ -386,6 +397,17 @@ func (up *upContext) activateLoop() {
 		up.Exit <- nil
 		return
 	}
+}
+
+func (up *upContext) hasSessionIDChanged(ctx context.Context) bool {
+	app, err := utils.GetDevApp(ctx, up.Dev, up.Client)
+	if err != nil || app == nil {
+		return false
+	}
+	if value, ok := app.ObjectMeta().Annotations[model.OktetoSessionIDAnnotation]; ok {
+		return value != up.ID
+	}
+	return false
 }
 
 // waitUntilExitOrInterruptOrApply blocks execution until a stop signal is sent, a disconnect event or an error or the app is modify

@@ -131,7 +131,7 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
 		return err
 	}
 
-	if buildOptions.Tag != "" {
+	if err == nil && buildOptions.Tag != "" {
 		if _, err := registry.GetImageTagWithDigest(buildOptions.Tag); err != nil {
 			oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
 	  %s,

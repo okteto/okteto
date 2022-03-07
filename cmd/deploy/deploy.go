@@ -131,7 +131,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 			os.Setenv(model.OktetoWithinDeployCommandContextEnvVar, "false")
 
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.ManifestPath); err != nil {
-				return err
+				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: options.Namespace}); err != nil {
+					return err
+				}
 			}
 
 			if okteto.IsOkteto() {
@@ -206,6 +208,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 	var err error
+	oktetoLog.SetStage("Read manifest")
 	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
 		return err
@@ -220,6 +223,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if deployOptions.Manifest.Namespace == "" {
 		deployOptions.Manifest.Namespace = okteto.Context().Namespace
 	}
+	oktetoLog.SetStage("")
+
 	dc.PipelineType = deployOptions.Manifest.Type
 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
@@ -311,8 +316,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.EnableMasking()
 
 	err = dc.deploy(ctx, deployOptions)
-
-	oktetoLog.SetStage("")
 	oktetoLog.DisableMasking()
 
 	if err != nil {
@@ -323,6 +326,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, err.Error())
 		data.Status = pipeline.ErrorStatus
 	} else {
+		oktetoLog.SetStage("")
 		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
 		if err != nil {
 			return err
@@ -376,17 +380,24 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		}
 		exit <- nil
 	}()
-	select {
-	case <-stopCmds:
-		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		sp := utils.NewSpinner("Shutting down...")
-		sp.Start()
-		defer sp.Stop()
-		dc.Executor.CleanUp(errors.New("interrupt signal received"))
-		return oktetoErrors.ErrIntSig
-	case err := <-exit:
-		if err != nil {
-			return err
+	shouldExit := false
+	for {
+		select {
+		case <-stopCmds:
+			oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+			sp := utils.NewSpinner("Shutting down...")
+			sp.Start()
+			defer sp.Stop()
+			dc.Executor.CleanUp(errors.New("interrupt signal received"))
+			return oktetoErrors.ErrIntSig
+		case err := <-exit:
+			if err != nil {
+				return err
+			}
+			shouldExit = true
+		}
+		if shouldExit {
+			break
 		}
 	}
 
@@ -403,36 +414,46 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 			stop := make(chan os.Signal, 1)
 			signal.Notify(stop, os.Interrupt)
 			d := displayer.NewDisplayer(oktetoLog.GetOutputFormat(), reader, nil)
-			d.Display("Deploying compose")
 			go func() {
 				err := dc.deployStack(ctx, opts)
 				writer.Close()
 				exit <- err
 			}()
-			select {
-			case err := <-exit:
-				d.CleanUp(err)
-			case <-stop:
-				d.CleanUp(errors.New("Interrupt signal received"))
-				exitCompose <- oktetoErrors.ErrIntSig
+			d.Display("Deploying compose")
+			shouldExit := false
+			for {
+				select {
+				case err := <-exit:
+					d.CleanUp(err)
+					shouldExit = true
+				case <-stop:
+					d.CleanUp(errors.New("Interrupt signal received"))
+					exitCompose <- oktetoErrors.ErrIntSig
+					return
+				}
+				if shouldExit {
+					break
+				}
 			}
 			oktetoLog.SetOutput(os.Stdout)
 		}
 		exitCompose <- nil
 	}()
-
-	select {
-	case <-stopCmds:
-		os.Unsetenv(model.OktetoDisableSpinnerEnvVar)
-		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		sp := utils.NewSpinner("Shutting down...")
-		sp.Start()
-		defer sp.Stop()
-		dc.Executor.CleanUp(errors.New("Interrupt signal received"))
-		return oktetoErrors.ErrIntSig
-	case err := <-exitCompose:
-		if err != nil {
-			return err
+	shouldExit = false
+	for {
+		select {
+		case <-stopCmds:
+			os.Unsetenv(model.OktetoDisableSpinnerEnvVar)
+			oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+			return oktetoErrors.ErrIntSig
+		case err := <-exitCompose:
+			if err != nil {
+				return err
+			}
+			shouldExit = true
+		}
+		if shouldExit {
+			break
 		}
 	}
 
