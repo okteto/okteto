@@ -297,7 +297,7 @@ func (buildInfo *DevBuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) 
 	if err != nil {
 		return err
 	}
-	oktetoLog.Yellow("The extended syntax is deprecated for dev. You can still build your images setting you build section on your manifes")
+	oktetoLog.Yellow("The `image` extended syntax is deprecated. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/manifest/#build")
 	*buildInfo = DevBuildInfo(rawBuildInfo)
 	return nil
 }
