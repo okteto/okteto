@@ -53,12 +53,14 @@ type pushOptions struct {
 func Push(ctx context.Context) *cobra.Command {
 	pushOpts := &pushOptions{}
 	cmd := &cobra.Command{
+		Hidden: true,
 		Use:    "push [svc]",
 		Short:  "Build, push and redeploy source code to the target app",
 		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#push"),
-		Hidden: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+				oktetoLog.Warning("'okteto push' is deprecated in favor of 'okteto deploy', and will be removed in a future version")
+			}
 			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)
 			if err != nil {
 				if oktetoErrors.IsNotExist(err) && len(pushOpts.AppName) > 0 {
