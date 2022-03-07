@@ -243,15 +243,15 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		return nil, err
 	}
 	if inferredManifest != nil {
-		if devManifest != nil {
-			inferredManifest.mergeWithOktetoManifest(devManifest)
-		} else if inferredManifest.Type == StackType {
+		if inferredManifest.Type == StackType {
 			inferredManifest, err = inferredManifest.InferFromStack()
 			if err != nil {
 				return nil, err
 			}
-			//TODO: uncomment
-			// inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
+			inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
+		}
+		if devManifest != nil {
+			inferredManifest.mergeWithOktetoManifest(devManifest)
 		}
 		return inferredManifest, nil
 	}
@@ -308,15 +308,9 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
 		stackManifest.Deploy.Compose.Stack = s
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
 
-		for srv := range stackManifest.Deploy.Compose.Stack.Services {
-			s := stackManifest.Deploy.Compose.Stack.Services[srv]
-			if s.Build != nil {
-				stackManifest.Build[srv] = s.Build
-			}
-		}
 		return stackManifest, nil
 	}
 
@@ -523,6 +517,14 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 			}
 			m.Deploy.Commands[idx] = cmd
 		}
+		if m.Deploy.Compose != nil && m.Deploy.Compose.Stack != nil {
+			for _, svc := range m.Deploy.Compose.Stack.Services {
+				svc.Image, err = ExpandEnv(svc.Image)
+				if err != nil {
+					return nil, errors.New("could not parse env vars")
+				}
+			}
+		}
 	}
 	if m.Destroy != nil {
 		for idx, cmd := range m.Destroy {
@@ -550,6 +552,7 @@ type Dependency struct {
 func (m *Manifest) InferFromStack() (*Manifest, error) {
 	for svcName, svcInfo := range m.Deploy.Compose.Stack.Services {
 		d := NewDev()
+		toMount := []StackVolume{}
 		for _, p := range svcInfo.Ports {
 			if p.HostPort != 0 {
 				d.Forward = append(d.Forward, Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
@@ -557,11 +560,9 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 		}
 		for _, v := range svcInfo.VolumeMounts {
 			if pathExistsAndDir(v.LocalPath) {
-				d.Sync.Folders = append(d.Sync.Folders, SyncFolder{
-					LocalPath:  v.LocalPath,
-					RemotePath: v.RemotePath,
-				})
+				d.Sync.Folders = append(d.Sync.Folders, SyncFolder(v))
 			}
+			toMount = append(toMount, v)
 		}
 		d.Command = svcInfo.Command
 		d.EnvFiles = svcInfo.EnvFiles
@@ -574,6 +575,10 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 			continue
 		}
 		buildInfo := svcInfo.Build
+		if svcInfo.Image != "" {
+			buildInfo.Image = svcInfo.Image
+		}
+		buildInfo.VolumesToInclude = toMount
 		m.Build[svcName] = buildInfo
 	}
 	m.setDefaults()
@@ -666,7 +671,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 }
 
 // reorderDocFields orders the manifest to be: name -> build -> deploy -> dependencies -> dev
-func (m *Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
+func (*Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
 	contentCopy := []*yaml3.Node{}
 	nodes := []int{}
 	nameDefinitionIdx := getDocIdx(doc.Content, "name")

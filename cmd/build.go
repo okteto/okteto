@@ -100,7 +100,7 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 
 			if isBuildV2 {
-				return buildV2(manifest.Build, options, args)
+				return buildV2(manifest, options, args)
 			}
 
 			return buildV1(options, args)
@@ -143,8 +143,8 @@ func isSelectedService(service string, selected []string) bool {
 	return false
 }
 
-func buildV2(buildManifest model.ManifestBuild, cmdOptions build.BuildOptions, args []string) error {
-
+func buildV2(manifest *model.Manifest, cmdOptions build.BuildOptions, args []string) error {
+	buildManifest := manifest.Build
 	selectedArgs := []string{}
 	if len(args) != 0 {
 		selectedArgs = args
@@ -164,7 +164,7 @@ func buildV2(buildManifest model.ManifestBuild, cmdOptions build.BuildOptions, a
 		}
 	}
 
-	for service, manifestOpts := range buildManifest {
+	for service, buildInfo := range buildManifest {
 
 		if buildSelected && !isSelectedService(service, selectedArgs) {
 			continue
@@ -172,23 +172,27 @@ func buildV2(buildManifest model.ManifestBuild, cmdOptions build.BuildOptions, a
 
 		if isSingleService {
 			if cmdOptions.Target != "" {
-				manifestOpts.Target = cmdOptions.Target
+				buildInfo.Target = cmdOptions.Target
 			}
 			if len(cmdOptions.CacheFrom) != 0 {
-				manifestOpts.CacheFrom = cmdOptions.CacheFrom
+				buildInfo.CacheFrom = cmdOptions.CacheFrom
 			}
 			if cmdOptions.Tag != "" {
-				manifestOpts.Image = cmdOptions.Tag
+				buildInfo.Image = cmdOptions.Tag
 			}
 		}
-		if !okteto.Context().IsOkteto && manifestOpts.Image == "" {
+		if !okteto.Context().IsOkteto && buildInfo.Image == "" {
 			return fmt.Errorf("'build.%s.image' is required if your context is not managed by Okteto", service)
 		}
-		if cwd, err := os.Getwd(); err == nil && manifestOpts.Name == "" {
-			manifestOpts.Name = utils.InferName(cwd)
+		if cwd, err := os.Getwd(); err == nil && buildInfo.Name == "" {
+			buildInfo.Name = utils.InferName(cwd)
 		}
 
-		cmdOptsFromManifest := build.OptsFromManifest(service, manifestOpts, cmdOptions)
+		volumesToInclude := buildInfo.VolumesToInclude
+		if len(buildInfo.VolumesToInclude) > 0 {
+			buildInfo.VolumesToInclude = nil
+		}
+		cmdOptsFromManifest := build.OptsFromManifest(service, buildInfo, cmdOptions)
 
 		// check if image is at registry and skip
 		if build.ShouldOptimizeBuild(cmdOptsFromManifest.Tag) && !cmdOptions.BuildToGlobal {
@@ -213,6 +217,20 @@ func buildV2(buildManifest model.ManifestBuild, cmdOptions build.BuildOptions, a
 
 		if err := buildV1(cmdOptsFromManifest, []string{cmdOptsFromManifest.Path}); err != nil {
 			return err
+		}
+		if len(volumesToInclude) > 0 {
+			oktetoLog.Information("Including volume hosts for service '%s'", service)
+			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(cmdOptsFromManifest.Tag, volumesToInclude)
+			if err != nil {
+				return err
+			}
+			svcBuild.VolumesToInclude = volumesToInclude
+			svcBuild.Name = buildInfo.Name
+			options := build.OptsFromManifest(service, svcBuild, build.BuildOptions{})
+			if err := buildV1(options, []string{options.Path}); err != nil {
+				return err
+			}
+
 		}
 	}
 	return nil

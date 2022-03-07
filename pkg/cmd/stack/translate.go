@@ -149,15 +149,16 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		if !okteto.IsOkteto() && svc.Image == "" {
 			return hasBuiltSomething, fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", name)
 		}
+		image := svc.Image
 		if okteto.IsOkteto() && !registry.IsOktetoRegistry(svc.Image) {
-			svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, name)
+			image = fmt.Sprintf("okteto.dev/%s-%s:%s", s.Name, name, model.OktetoDefaultImageTag)
 		}
 		if !options.ForceBuild {
-			if _, err := registry.GetImageTagWithDigest(svc.Image); err != oktetoErrors.ErrNotFound {
+			if _, err := registry.GetImageTagWithDigest(image); err != oktetoErrors.ErrNotFound {
 				s.Services[name] = svc
 				continue
 			}
-			oktetoLog.Infof("image '%s' not found, building it", svc.Image)
+			oktetoLog.Infof("image '%s' not found, building it", image)
 		}
 		if !hasBuiltSomething {
 			hasBuiltSomething = true
@@ -173,7 +174,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 		buildOptions := build.BuildOptions{
 			Path:       svc.Build.Context,
 			File:       svc.Build.Dockerfile,
-			Tag:        svc.Image,
+			Tag:        image,
 			Target:     svc.Build.Target,
 			NoCache:    options.NoCache,
 			CacheFrom:  svc.Build.CacheFrom,
@@ -184,6 +185,7 @@ func buildServices(ctx context.Context, s *model.Stack, options *StackDeployOpti
 			return hasBuiltSomething, err
 		}
 		svc.SetLastBuiltAnnotation()
+		svc.Image = image
 		s.Services[name] = svc
 		oktetoLog.Success("Image for service '%s' successfully pushed", name)
 	}
@@ -206,15 +208,16 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.Build = svcBuild
+			image := svc.Image
 			if okteto.IsOkteto() {
-				svc.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto-with-volume-mounts", s.Name, name)
+				image = fmt.Sprintf("okteto.dev/%s-%s:%s", s.Name, name, model.OktetoImageTagWithVolumes)
 			}
 			if !options.ForceBuild {
-				if _, err := registry.GetImageTagWithDigest(svc.Image); err != oktetoErrors.ErrNotFound {
+				if _, err := registry.GetImageTagWithDigest(image); err != oktetoErrors.ErrNotFound {
 					s.Services[name] = svc
 					continue
 				}
-				oktetoLog.Infof("image '%s' not found, building it", svc.Image)
+				oktetoLog.Infof("image '%s' not found, building it", image)
 			}
 			if !hasBuiltSomething && !hasAddedAnyVolumeMounts {
 				hasAddedAnyVolumeMounts = true
@@ -226,7 +229,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 			buildOptions := build.BuildOptions{
 				Path:       svc.Build.Context,
 				File:       svc.Build.Dockerfile,
-				Tag:        svc.Image,
+				Tag:        image,
 				Target:     svc.Build.Target,
 				NoCache:    options.NoCache,
 				CacheFrom:  svc.Build.CacheFrom,
@@ -237,6 +240,7 @@ func addVolumeMountsToBuiltImage(ctx context.Context, s *model.Stack, options *S
 				return hasAddedAnyVolumeMounts, err
 			}
 			svc.SetLastBuiltAnnotation()
+			svc.Image = image
 			s.Services[name] = svc
 			oktetoLog.Success("Image for service '%s' successfully pushed", name)
 		}
