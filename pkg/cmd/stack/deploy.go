@@ -111,7 +111,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 	go func() {
 
-		addHiddenExposedPortsToStack(s, options)
+		addFieldsFromImage(s, options)
 
 		for _, name := range options.ServicesToDeploy {
 			if len(s.Services[name].Ports) > 0 {
@@ -594,12 +594,12 @@ func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	}
 }
 
-func addHiddenExposedPortsToStack(s *model.Stack, options *StackDeployOptions) {
+func addFieldsFromImage(s *model.Stack, options *StackDeployOptions) {
 	for _, svcName := range options.ServicesToDeploy {
 		svc := s.Services[svcName]
 		addHiddenExposedPortsToSvc(svc)
+		addHiddenEnvsToSvc(svc)
 	}
-
 }
 
 func addHiddenExposedPortsToSvc(svc *model.Service) {
@@ -609,6 +609,19 @@ func addHiddenExposedPortsToSvc(svc *model.Service) {
 			if !model.IsAlreadyAdded(port, svc.Ports) {
 				svc.Ports = append(svc.Ports, port)
 			}
+		}
+	}
+}
+
+func addHiddenEnvsToSvc(svc *model.Service) {
+	envs := map[string]string{}
+	for _, env := range svc.Environment {
+		envs[env.Name] = env.Value
+	}
+	hiddenEnvs := registry.GetHiddenEnvVars(svc.Image)
+	for _, env := range hiddenEnvs {
+		if _, ok := envs[env.Name]; !ok {
+			svc.Environment = append(svc.Environment, env)
 		}
 	}
 }

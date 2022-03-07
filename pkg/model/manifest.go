@@ -248,7 +248,11 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			if err != nil {
 				return nil, err
 			}
-			inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
+
+			if devManifest != nil && devManifest.Deploy != nil && len(devManifest.Deploy.Endpoints) != 0 {
+				inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
+			}
+
 		}
 		if devManifest != nil {
 			inferredManifest.mergeWithOktetoManifest(devManifest)

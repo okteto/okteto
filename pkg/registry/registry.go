@@ -115,6 +115,30 @@ func GetHiddenExposePorts(image string) []model.Port {
 	return exposedPorts
 }
 
+// GetHiddenEnvVars returns the default environment variables from the image
+func GetHiddenEnvVars(image string) model.Environment {
+	envs := model.Environment{}
+
+	image = ExpandOktetoDevRegistry(image)
+	image = ExpandOktetoGlobalRegistry(image)
+
+	config, err := configForReference(image)
+	if err != nil {
+		return envs
+	}
+	for _, env := range config.Env {
+		parts := strings.Split(env, "=")
+		if len(parts) != 2 {
+			oktetoLog.Infof("could not parse: %s", env)
+		}
+		envs = append(envs, model.EnvVar{
+			Name:  parts[0],
+			Value: parts[1],
+		})
+	}
+	return envs
+}
+
 func getRegistryURL(image string) string {
 	registry, _ := GetRegistryAndRepo(image)
 	if registry == "docker.io" {
