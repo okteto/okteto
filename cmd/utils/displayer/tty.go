@@ -310,42 +310,19 @@ func renderLines(queue []string, charsPerLine int) [][]byte {
 		if len(line) == len(lineWithoutColors) {
 			result = append(result, renderLogWithoutColors(tpl, line, charsPerLine)...)
 		} else {
-			//result = append(result, renderLogWithColors(tpl, line, lineWithoutColors)...)
+			result = append(result, renderLogWithColors(tpl, line, charsPerLine)...)
 			continue
 		}
-
-		// if charsPerLine > 4 && len(lineWithoutColors)+2 > charsPerLine {
-		// iterations := (len(lineWithoutColors)) / charsPerLine
-		// prevIdxWithColor := 0
-		// for i := 0; i < iterations+1; i++ {
-		// 	end := i*charsPerLine + charsPerLine
-		// 	if i == iterations {
-		// 		end = len(lineWithoutColors)
-		// 	}
-		// 	start := i * charsPerLine
-		// 	if start < 0 {
-		// 		start = 0
-		// 	}
-		// 	currentLine := lineWithoutColors[start:end]
-		// 	if strings.HasSuffix(currentLine, " ") {
-		// 		currentLine = currentLine[:len(currentLine)-1]
-		// 	}
-
-		// 	last := currentLine[strings.LastIndex(currentLine, " ")+1:]
-		// 	cutAfterThisWord := strings.Count(currentLine, " "+last)
-		// 	lineResult := ""
-		// 	aux := line[prevIdxWithColor:]
-		// 	for i := 0; i < cutAfterThisWord; i++ {
-		// 		lineCut := strings.Index(aux, " "+last)
-		// 		lineResult += aux[:lineCut+len(last)+1]
-		// 		aux = aux[lineCut+len(last)+1:]
-		// 	}
-		// 	prevIdxWithColor += len(lineResult)
-
-		// }
 	}
 	return result
 }
+
+func renderLogWithColors(tpl *template.Template, line string, charsPerLine int) [][]byte {
+	result := [][]byte{}
+	result = append(result, render(tpl, fmt.Sprintf("%s...", line[:charsPerLine-5])))
+	return result
+}
+
 func renderLogWithoutColors(tpl *template.Template, line string, charsPerLine int) [][]byte {
 	result := [][]byte{}
 	if line == "" {
