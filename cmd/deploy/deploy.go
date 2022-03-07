@@ -380,17 +380,24 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		}
 		exit <- nil
 	}()
-	select {
-	case <-stopCmds:
-		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		sp := utils.NewSpinner("Shutting down...")
-		sp.Start()
-		defer sp.Stop()
-		dc.Executor.CleanUp(errors.New("interrupt signal received"))
-		return oktetoErrors.ErrIntSig
-	case err := <-exit:
-		if err != nil {
-			return err
+	shouldExit := false
+	for {
+		select {
+		case <-stopCmds:
+			oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+			sp := utils.NewSpinner("Shutting down...")
+			sp.Start()
+			defer sp.Stop()
+			dc.Executor.CleanUp(errors.New("interrupt signal received"))
+			return oktetoErrors.ErrIntSig
+		case err := <-exit:
+			if err != nil {
+				return err
+			}
+			shouldExit = true
+		}
+		if shouldExit {
+			break
 		}
 	}
 
@@ -407,36 +414,46 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 			stop := make(chan os.Signal, 1)
 			signal.Notify(stop, os.Interrupt)
 			d := displayer.NewDisplayer(oktetoLog.GetOutputFormat(), reader, nil)
-			d.Display("Deploying compose")
 			go func() {
 				err := dc.deployStack(ctx, opts)
 				writer.Close()
 				exit <- err
 			}()
-			select {
-			case err := <-exit:
-				d.CleanUp(err)
-			case <-stop:
-				d.CleanUp(errors.New("Interrupt signal received"))
-				exitCompose <- oktetoErrors.ErrIntSig
+			d.Display("Deploying compose")
+			shouldExit := false
+			for {
+				select {
+				case err := <-exit:
+					d.CleanUp(err)
+					shouldExit = true
+				case <-stop:
+					d.CleanUp(errors.New("Interrupt signal received"))
+					exitCompose <- oktetoErrors.ErrIntSig
+					return
+				}
+				if shouldExit {
+					break
+				}
 			}
 			oktetoLog.SetOutput(os.Stdout)
 		}
 		exitCompose <- nil
 	}()
-
-	select {
-	case <-stopCmds:
-		os.Unsetenv(model.OktetoDisableSpinnerEnvVar)
-		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		sp := utils.NewSpinner("Shutting down...")
-		sp.Start()
-		defer sp.Stop()
-		dc.Executor.CleanUp(errors.New("Interrupt signal received"))
-		return oktetoErrors.ErrIntSig
-	case err := <-exitCompose:
-		if err != nil {
-			return err
+	shouldExit = false
+	for {
+		select {
+		case <-stopCmds:
+			os.Unsetenv(model.OktetoDisableSpinnerEnvVar)
+			oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+			return oktetoErrors.ErrIntSig
+		case err := <-exitCompose:
+			if err != nil {
+				return err
+			}
+			shouldExit = true
+		}
+		if shouldExit {
+			break
 		}
 	}
 
