@@ -31,6 +31,10 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 	origin := config.GetDeployOrigin()
 
 	gitDeployResponse := &types.GitDeployResponse{}
+
+	variablesArg := []InputVariable{
+		{Name: graphql.String("OKTETO_ORIGIN"), Value: graphql.String(origin)},
+	}
 	if len(variables) > 0 {
 		var mutation struct {
 			GitDeployResponse struct {
@@ -45,11 +49,11 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 					Status     graphql.String
 					Repository graphql.String
 				}
-			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, source: $source)"`
+			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename)"`
 		}
-		variablesVariable := make([]InputVariable, 0)
+
 		for _, v := range variables {
-			variablesVariable = append(variablesVariable, InputVariable{
+			variablesArg = append(variablesArg, InputVariable{
 				Name:  graphql.String(v.Name),
 				Value: graphql.String(v.Value),
 			})
@@ -59,9 +63,8 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 			"repository": graphql.String(repository),
 			"space":      graphql.String(Context().Namespace),
 			"branch":     graphql.String(branch),
-			"variables":  variablesVariable,
+			"variables":  variablesArg,
 			"filename":   graphql.String(filename),
-			"source":     graphql.String(origin),
 		}
 
 		err := mutate(ctx, &mutation, queryVariables, c.client)
@@ -101,15 +104,16 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 					Status     graphql.String
 					Repository graphql.String
 				}
-			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, filename: $filename, source: $source)"`
+			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, filename: $filename)"`
 		}
+
 		queryVariables := map[string]interface{}{
 			"name":       graphql.String(name),
 			"repository": graphql.String(repository),
 			"space":      graphql.String(Context().Namespace),
 			"branch":     graphql.String(branch),
 			"filename":   graphql.String(filename),
-			"source":     graphql.String(origin),
+			"variables":  variablesArg,
 		}
 
 		err := mutate(ctx, &mutation, queryVariables, c.client)
@@ -141,14 +145,13 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
 func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, repository, branch, filename string, variables []types.Variable) (*types.GitDeployResponse, error) {
-	origin := config.GetDeployOrigin()
 	gitDeployResponse := &types.GitDeployResponse{}
 	if len(variables) > 0 {
 		var mutation struct {
 			GitDeployResponse struct {
 				Id     graphql.String
 				Status graphql.String
-			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename, source: $source)"`
+			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename)"`
 		}
 		variablesVariable := make([]InputVariable, 0)
 		for _, v := range variables {
@@ -164,7 +167,6 @@ func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, repos
 			"branch":     graphql.String(branch),
 			"variables":  variablesVariable,
 			"filename":   graphql.String(filename),
-			"source":     graphql.String(origin),
 		}
 
 		err := mutate(ctx, &mutation, queryVariables, c.client)
@@ -182,7 +184,7 @@ func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, repos
 			GitDeployResponse struct {
 				Id     graphql.String
 				Status graphql.String
-			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, filename: $filename, source: $source)"`
+			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, filename: $filename)"`
 		}
 		queryVariables := map[string]interface{}{
 			"name":       graphql.String(name),
@@ -190,7 +192,6 @@ func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, repos
 			"space":      graphql.String(Context().Namespace),
 			"branch":     graphql.String(branch),
 			"filename":   graphql.String(filename),
-			"source":     graphql.String(origin),
 		}
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
@@ -207,14 +208,13 @@ func (c *OktetoClient) deprecatedDeployPipeline(ctx context.Context, name, repos
 
 //TODO: remove when all users are in Okteto Enterprise >= 0.10.0
 func (c *OktetoClient) deployPipelineWithoutFilename(ctx context.Context, name, repository, branch string, variables []types.Variable) (*types.GitDeployResponse, error) {
-	origin := config.GetDeployOrigin()
 	gitDeployResponse := &types.GitDeployResponse{}
 	if len(variables) > 0 {
 		var mutation struct {
 			GitDeployResponse struct {
 				Id     graphql.String
 				Status graphql.String
-			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, source: $source)"`
+			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables)"`
 		}
 		variablesVariable := make([]InputVariable, 0)
 		for _, v := range variables {
@@ -229,7 +229,6 @@ func (c *OktetoClient) deployPipelineWithoutFilename(ctx context.Context, name, 
 			"space":      graphql.String(Context().Namespace),
 			"branch":     graphql.String(branch),
 			"variables":  variablesVariable,
-			"source":     graphql.String(origin),
 		}
 
 		err := mutate(ctx, &mutation, queryVariables, c.client)
@@ -247,14 +246,13 @@ func (c *OktetoClient) deployPipelineWithoutFilename(ctx context.Context, name, 
 			GitDeployResponse struct {
 				Id     graphql.String
 				Status graphql.String
-			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, source: $source)"`
+			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch)"`
 		}
 		queryVariables := map[string]interface{}{
 			"name":       graphql.String(name),
 			"repository": graphql.String(repository),
 			"space":      graphql.String(Context().Namespace),
 			"branch":     graphql.String(branch),
-			"source":     graphql.String(origin),
 		}
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
