@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/manifoldco/promptui"
@@ -163,14 +164,26 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		}
 		return nil, fmt.Errorf("dev '%s' does not exists", devName)
 	}
-	devs := []SelectorItem{}
+	devs := []string{}
 	for k := range manifest.Dev {
-		devs = append(devs, SelectorItem{
-			Name:  k,
-			Label: k,
+		devs = append(devs, k)
+	}
+	sort.Slice(devs, func(i, j int) bool {
+		l1, l2 := len(devs[i]), len(devs[j])
+		if l1 != l2 {
+			return l1 < l2
+		}
+		return devs[i] < devs[j]
+	})
+	items := []SelectorItem{}
+	for _, dev := range devs {
+		items = append(items, SelectorItem{
+			Name:   dev,
+			Label:  dev,
+			Enable: true,
 		})
 	}
-	devKey, _, err := AskForOptionsOkteto(context.Background(), devs, "Select the development container you want to activate:", "Development container")
+	devKey, _, err := AskForOptionsOkteto(context.Background(), items, "Select the development container you want to activate:", "Development container")
 	if err != nil {
 		return nil, err
 	}
