@@ -29,7 +29,7 @@ import (
 // IsDeployed checks if a pipeline has been
 func IsDeployed(ctx context.Context, name, namespace string, c kubernetes.Interface) bool {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
-	if err != nil && k8sErrors.IsNotFound(err) {
+	if (err != nil && k8sErrors.IsNotFound(err)) || cmap == nil {
 		return false
 	}
 	return cmap.Data[statusField] != ErrorStatus

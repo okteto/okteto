@@ -155,7 +155,7 @@ func (d *TTYDisplayer) displayStdout(wg *sync.WaitGroup) {
 				sanitizedLine = strings.ReplaceAll(sanitizedLine, resetLine, "")
 				d.linesToDisplay = append(d.linesToDisplay[:d.buildingpreviousLines-1], sanitizedLine)
 			} else {
-				if len(d.linesToDisplay) == d.numberOfLines {
+				if len(d.linesToDisplay) >= d.numberOfLines {
 					d.linesToDisplay = d.linesToDisplay[1:]
 				}
 				d.linesToDisplay = append(d.linesToDisplay, line)
@@ -187,7 +187,7 @@ func (d *TTYDisplayer) displayStderr(wg *sync.WaitGroup) {
 		default:
 			line := strings.TrimSpace(d.stderrScanner.Text())
 			d.err = errors.New(line)
-			if len(d.linesToDisplay) == d.numberOfLines {
+			if len(d.linesToDisplay) >= d.numberOfLines {
 				d.linesToDisplay = d.linesToDisplay[1:]
 			}
 			d.linesToDisplay = append(d.linesToDisplay, line)
@@ -271,13 +271,10 @@ func renderCommand(spinnerChar, command string, charsPerLine int) [][]byte {
 		result = append(result, render(firstLineTpl, command))
 		return result
 	}
-	iterations := (len(command) + 3) / charsPerLine
+	iterations := (len(command) + 4) / charsPerLine
+	start := 0
+	end := charsPerLine - 5
 	for i := 0; i < iterations+1; i++ {
-		start := i*charsPerLine - 3
-		if start < 0 {
-			start = 0
-		}
-		end := i*charsPerLine + charsPerLine - 3
 		if i == iterations {
 			end = len(command) - 1
 		}
@@ -289,6 +286,8 @@ func renderCommand(spinnerChar, command string, charsPerLine int) [][]byte {
 		} else {
 			result = append(result, render(lastLineTpl, currentLine))
 		}
+		start = end
+		end += charsPerLine - 5
 	}
 	return result
 }

@@ -206,7 +206,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 }
 
 //LoadManifestV2WithContext initializes the okteto context taking into account command flags and manifest namespace/context fields
-func LoadManifestV2WithContext(ctx context.Context, namespace, path string) error {
+func LoadManifestV2WithContext(ctx context.Context, namespace, k8sContext, path string) error {
 	ctxOptions := &ContextOptions{
 		Namespace: namespace,
 		Show:      true,
@@ -218,9 +218,23 @@ func LoadManifestV2WithContext(ctx context.Context, namespace, path string) erro
 			return err
 		}
 	} else {
-		ctxOptions.Context = manifest.Context
-		if ctxOptions.Namespace == "" {
-			ctxOptions.Namespace = manifest.Namespace
+		ctxResource, err := utils.LoadManifestContext(manifest.Filename)
+		if err != nil {
+			return err
+		}
+
+		if err := ctxResource.UpdateNamespace(namespace); err != nil {
+			return err
+		}
+
+		if err := ctxResource.UpdateContext(k8sContext); err != nil {
+			return err
+		}
+
+		ctxOptions = &ContextOptions{
+			Context:   ctxResource.Context,
+			Namespace: ctxResource.Namespace,
+			Show:      true,
 		}
 	}
 
