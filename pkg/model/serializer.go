@@ -287,24 +287,6 @@ func (sync Sync) MarshalYAML() (interface{}, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (buildInfo *DevBuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rawString string
-	err := unmarshal(&rawString)
-	if err == nil {
-		buildInfo.Name = rawString
-		return nil
-	}
-	var rawBuildInfo BuildInfo
-	err = unmarshal(&rawBuildInfo)
-	if err != nil {
-		return err
-	}
-	oktetoLog.Yellow("The `image` extended syntax is deprecated. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/manifest/#build")
-	*buildInfo = DevBuildInfo(rawBuildInfo)
-	return nil
-}
-
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
 	err := unmarshal(&rawString)

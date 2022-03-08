@@ -304,7 +304,7 @@ func GetDevDefaults(language, workdir string) (*model.Dev, error) {
 	vals := languageDefaults[language]
 
 	dev := &model.Dev{
-		Image: &model.DevBuildInfo{
+		Image: &model.BuildInfo{
 			Name: vals.image,
 		},
 		Command: model.Command{

@@ -69,7 +69,7 @@ func TestGetStatefulset(t *testing.T) {
 	dev := &model.Dev{
 		Name:      "test",
 		Namespace: "test",
-		Image: &model.DevBuildInfo{
+		Image: &model.BuildInfo{
 			Name: "image",
 		},
 		PersistentVolumeInfo: &model.PersistentVolumeInfo{
@@ -114,7 +114,7 @@ func TestGetDeployment(t *testing.T) {
 	dev := &model.Dev{
 		Name:      "test",
 		Namespace: "test",
-		Image: &model.DevBuildInfo{
+		Image: &model.BuildInfo{
 			Name: "image",
 		},
 		PersistentVolumeInfo: &model.PersistentVolumeInfo{

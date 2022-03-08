@@ -15,6 +15,7 @@ package model
 
 import (
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -83,6 +84,10 @@ devs:
 }
 
 func TestInferFromStack(t *testing.T) {
+	devInterface := PrivilegedLocalhost
+	if runtime.GOOS == "windows" {
+		devInterface = Localhost
+	}
 	stack := &Stack{
 		Services: map[string]*Service{
 			"test": {
@@ -139,11 +144,11 @@ func TestInferFromStack(t *testing.T) {
 							},
 						},
 						EmptyImage: true,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
-						Push: &DevBuildInfo{
+						Push: &BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
@@ -172,7 +177,7 @@ func TestInferFromStack(t *testing.T) {
 						Command: Command{
 							Values: []string{"sh"},
 						},
-						Interface: "0.0.0.0",
+						Interface: devInterface,
 						Services:  []*Dev{},
 						Sync: Sync{
 							RescanInterval: 300,
@@ -230,11 +235,11 @@ func TestInferFromStack(t *testing.T) {
 							},
 						},
 						EmptyImage: true,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
-						Push: &DevBuildInfo{
+						Push: &BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
@@ -317,7 +322,7 @@ func TestInferFromStack(t *testing.T) {
 						},
 						Selector:   Selector{},
 						EmptyImage: true,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},

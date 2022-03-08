@@ -46,7 +46,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 			expectErr:  false,
 			dev: &model.Dev{
 				Name: "loaded",
-				Image: &model.DevBuildInfo{
+				Image: &model.BuildInfo{
 					Name: "okteto/test:1.0",
 				},
 				Sync: model.Sync{

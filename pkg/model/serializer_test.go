@@ -1114,7 +1114,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1124,7 +1124,7 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &DevBuildInfo{
+						Push: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1179,7 +1179,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1189,7 +1189,7 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &DevBuildInfo{
+						Push: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1259,7 +1259,7 @@ sync:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1269,7 +1269,7 @@ sync:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &DevBuildInfo{
+						Push: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1340,7 +1340,7 @@ services:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1350,7 +1350,7 @@ services:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &DevBuildInfo{
+						Push: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1380,7 +1380,7 @@ services:
 								Annotations:     Annotations{},
 								Selector:        Selector{},
 								EmptyImage:      true,
-								Image:           &DevBuildInfo{},
+								Image:           &BuildInfo{},
 								ImagePullPolicy: v1.PullAlways,
 								Secrets:         []Secret{},
 								Probes: &Probes{
@@ -1469,7 +1469,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1480,7 +1480,7 @@ dev:
 							Enabled: true,
 						},
 						Secrets: make([]Secret, 0),
-						Push: &DevBuildInfo{
+						Push: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1554,7 +1554,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1564,7 +1564,7 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &DevBuildInfo{
+						Push: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1619,7 +1619,7 @@ dev:
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",
@@ -1629,7 +1629,7 @@ dev:
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
-						Push: &DevBuildInfo{
+						Push: &BuildInfo{
 							Name:       "",
 							Context:    ".",
 							Dockerfile: "Dockerfile",

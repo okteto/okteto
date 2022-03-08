@@ -468,7 +468,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 		{
 			name: "default",
 			manifest: &Dev{
-				Image:         &DevBuildInfo{},
+				Image:         &BuildInfo{},
 				SSHServerPort: oktetoDefaultSSHServerPort,
 			},
 			expected: Environment{
@@ -479,7 +479,7 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 		{
 			name: "custom port",
 			manifest: &Dev{
-				Image:         &DevBuildInfo{},
+				Image:         &BuildInfo{},
 				SSHServerPort: 22220,
 			},
 			expected: Environment{
