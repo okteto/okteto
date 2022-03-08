@@ -34,7 +34,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Down deactivates the development container
@@ -131,10 +130,6 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		if err := down.Run(dev, app, trMap, true, c); err != nil {
 			exit <- err
 			return
-		}
-
-		if err := c.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
-			oktetoLog.Infof("error deleting deprecated volume: %v", err)
 		}
 
 		spinner.Stop()

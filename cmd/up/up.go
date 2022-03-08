@@ -42,7 +42,6 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/spf13/cobra"
 )
@@ -199,10 +198,6 @@ func Up() *cobra.Command {
 			}
 
 			err = up.start()
-
-			if err := up.Client.CoreV1().PersistentVolumeClaims(dev.Namespace).Delete(ctx, fmt.Sprintf(model.DeprecatedOktetoVolumeNameTemplate, dev.Name), metav1.DeleteOptions{}); err != nil {
-				oktetoLog.Infof("error deleting deprecated volume: %v", err)
-			}
 
 			if err != nil {
 				switch err.(type) {
