@@ -343,7 +343,7 @@ func renderLines(queue []string, charsPerLine int) [][]byte {
 func renderLogWithColors(tpl *template.Template, line string, charsPerLine int) [][]byte {
 	result := [][]byte{}
 	if charsPerLine > 4 && len(line)+2 > charsPerLine {
-		result = append(result, render(tpl, fmt.Sprintf("%s...", line[:charsPerLine-5])))
+		result = append(result, render(tpl, fmt.Sprintf("    %s...", line[:charsPerLine-5])))
 	} else if line == "" {
 		result = append(result, []byte(""))
 	} else {
