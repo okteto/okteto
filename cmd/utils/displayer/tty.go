@@ -347,7 +347,7 @@ func renderLogWithColors(tpl *template.Template, line string, charsPerLine int) 
 	} else if line == "" {
 		result = append(result, []byte(""))
 	} else {
-		result = append(result, render(tpl, line))
+		result = append(result, render(tpl, fmt.Sprintf("    %s...", line)))
 	}
 	return result
 }
