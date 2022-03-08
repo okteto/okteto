@@ -49,8 +49,7 @@ const (
 	doctorEvent              = "Doctor"
 	buildEvent               = "Build"
 	buildTransientErrorEvent = "BuildTransientError"
-	deployEvent              = "Deploy"
-	oktetoDeployEvent        = "Okteto Deploy"
+	deployEvent              = "OktetoDeploy"
 	destroyEvent             = "Destroy"
 	deployStackEvent         = "Deploy Stack"
 	destroyStackEvent        = "Destroy Stack"
@@ -286,7 +285,7 @@ func TrackDeploy(m TrackDeployMetadata) {
 	if m.Err != nil {
 		props["error"] = m.Err.Error()
 	}
-	track(oktetoDeployEvent, m.Success, props)
+	track(deployEvent, m.Success, props)
 }
 
 // TrackDestroy sends a tracking event to mixpanel when the user destroys a pipeline from local
