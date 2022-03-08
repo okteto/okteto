@@ -844,9 +844,9 @@ func checkBuildFromManifest(ctx context.Context, manifest *model.Manifest) error
 	g, _ := errgroup.WithContext(ctx)
 
 	for service := range buildManifest {
-		service := service
+		svc := service
 		g.Go(func() error {
-			return checkServicesToBuild(service, manifest, toBuild)
+			return checkServicesToBuild(svc, manifest, toBuild)
 		})
 	}
 	if err := g.Wait(); err != nil {
