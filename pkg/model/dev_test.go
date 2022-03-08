@@ -522,7 +522,7 @@ func TestDev_validateName(t *testing.T) {
 			if err := dev.SetDefaults(); err != nil {
 				t.Fatalf("error applying defaults: %v", err)
 			}
-			if err := dev.validate(); (err != nil) != tt.wantErr {
+			if err := dev.Validate(); (err != nil) != tt.wantErr {
 				t.Errorf("Dev.validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -989,7 +989,7 @@ func Test_validate(t *testing.T) {
 
 			dev := manifest.Dev["deployment"]
 
-			err = dev.validate()
+			err = dev.Validate()
 			if tt.expectErr && err == nil {
 				t.Error("didn't get the expected error")
 			}
