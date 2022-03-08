@@ -187,13 +187,14 @@ func Deploy(ctx context.Context) *cobra.Command {
 				options.Manifest.Deploy.Compose.Manifest != nil {
 				deployType = "compose"
 			}
+
 			analytics.TrackDeploy(analytics.TrackDeployMetadata{
 				Success:                err == nil,
 				IsOktetoRepo:           utils.IsOktetoRepo(),
 				Duration:               time.Since(startTime),
 				PipelineType:           c.PipelineType,
 				DeployType:             deployType,
-				IsPreview:              false, // TODO: How should we get this value?
+				IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
 				HasDependenciesSection: options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0,
 				HasBuildSection:        options.Manifest.IsV2 && len(options.Manifest.Build) > 0,
 			})
