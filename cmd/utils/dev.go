@@ -183,12 +183,11 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 			Enable: true,
 		})
 	}
-	// devKey, _, err := AskForOptionsOkteto(context.Background(), items, "Select the development container you want to activate:", "Development container")
-	// if err != nil {
-	// 	return nil, err
-	// }
+	devKey, _, err := AskForOptionsOkteto(context.Background(), items, "Select the development container you want to activate:", "Development container")
+	if err != nil {
+		return nil, err
+	}
 
-	devKey := "api"
 	return manifest.Dev[devKey], nil
 }
 
