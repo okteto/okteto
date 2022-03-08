@@ -295,10 +295,6 @@ func Get(devPath string) (*Manifest, error) {
 			return nil, err
 		}
 
-		if err := dev.validate(); err != nil {
-			return nil, err
-		}
-
 		dev.computeParentSyncFolder()
 	}
 
@@ -649,7 +645,8 @@ func (dev *Dev) expandEnvFiles() error {
 	return nil
 }
 
-func (dev *Dev) validate() error {
+// Validate validates if a dev environment is correctly formed
+func (dev *Dev) Validate() error {
 	if dev.Name == "" {
 		return fmt.Errorf("Name cannot be empty")
 	}

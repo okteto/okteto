@@ -383,10 +383,6 @@ func getManifest(devPath string) (*Manifest, error) {
 			return nil, err
 		}
 
-		if err := dev.validate(); err != nil {
-			return nil, err
-		}
-
 		dev.computeParentSyncFolder()
 	}
 

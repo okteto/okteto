@@ -188,6 +188,10 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		return nil, err
 	}
 
+	if err := manifest.Dev[devKey].Validate(); err != nil {
+		return nil, err
+	}
+
 	return manifest.Dev[devKey], nil
 }
 
