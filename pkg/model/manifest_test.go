@@ -268,7 +268,7 @@ func TestInferFromStack(t *testing.T) {
 						Command: Command{
 							Values: []string{"sh"},
 						},
-						Interface: "0.0.0.0",
+						Interface: devInterface,
 						Services:  []*Dev{},
 						Sync: Sync{
 							RescanInterval: 300,
@@ -344,7 +344,7 @@ func TestInferFromStack(t *testing.T) {
 						Command: Command{
 							Values: []string{"sh"},
 						},
-						Interface: "0.0.0.0",
+						Interface: devInterface,
 						Sync: Sync{
 							RescanInterval: 300,
 							Folders: []SyncFolder{
