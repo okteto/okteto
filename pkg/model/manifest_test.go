@@ -139,11 +139,11 @@ func TestInferFromStack(t *testing.T) {
 							},
 						},
 						EmptyImage: true,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
-						Push: &DevBuildInfo{
+						Push: &BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
@@ -230,11 +230,11 @@ func TestInferFromStack(t *testing.T) {
 							},
 						},
 						EmptyImage: true,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
-						Push: &DevBuildInfo{
+						Push: &BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
@@ -317,7 +317,7 @@ func TestInferFromStack(t *testing.T) {
 						},
 						Selector:   Selector{},
 						EmptyImage: true,
-						Image: &DevBuildInfo{
+						Image: &BuildInfo{
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
