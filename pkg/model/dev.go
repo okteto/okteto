@@ -58,8 +58,8 @@ type Dev struct {
 	Namespace            string             `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	Container            string             `json:"container,omitempty" yaml:"container,omitempty"`
 	EmptyImage           bool               `json:"-" yaml:"-"`
-	Image                *DevBuildInfo      `json:"image,omitempty" yaml:"image,omitempty"`
-	Push                 *DevBuildInfo      `json:"-" yaml:"push,omitempty"`
+	Image                *BuildInfo         `json:"image,omitempty" yaml:"image,omitempty"`
+	Push                 *BuildInfo         `json:"-" yaml:"push,omitempty"`
 	ImagePullPolicy      apiv1.PullPolicy   `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Secrets              []Secret           `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command            `json:"command,omitempty" yaml:"command,omitempty"`
@@ -125,9 +125,6 @@ type BuildInfo struct {
 	Image            string        `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume `yaml:"-"`
 }
-
-// DevBuildInfo throws a warning if it's not single line
-type DevBuildInfo BuildInfo
 
 // Volume represents a volume in the development container
 type Volume struct {
@@ -306,8 +303,8 @@ func Get(devPath string) (*Manifest, error) {
 }
 func NewDev() *Dev {
 	return &Dev{
-		Image:       &DevBuildInfo{},
-		Push:        &DevBuildInfo{},
+		Image:       &BuildInfo{},
+		Push:        &BuildInfo{},
 		Environment: make(Environment, 0),
 		Secrets:     make([]Secret, 0),
 		Forward:     make([]Forward, 0),
@@ -432,7 +429,7 @@ func (dev *Dev) loadSelector() error {
 func (dev *Dev) loadImage() error {
 	var err error
 	if dev.Image == nil {
-		dev.Image = &DevBuildInfo{}
+		dev.Image = &BuildInfo{}
 	}
 	if len(dev.Image.Name) > 0 {
 		dev.Image.Name, err = ExpandEnv(dev.Image.Name)
@@ -449,6 +446,9 @@ func (dev *Dev) loadImage() error {
 func (dev *Dev) SetDefaults() error {
 	if dev.Command.Values == nil {
 		dev.Command.Values = []string{"sh"}
+	}
+	if dev.Image.Context != "" || dev.Image.Dockerfile != "" {
+		oktetoLog.Yellow(`The 'image' extended syntax is deprecated. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/manifest/#build"`)
 	}
 	dev.Image.setBuildDefaults()
 	dev.Push.setBuildDefaults()
@@ -553,18 +553,6 @@ func (dev *Dev) SetDefaults() error {
 	}
 
 	return nil
-}
-
-func (build *DevBuildInfo) setBuildDefaults() {
-	if build == nil {
-		build = &DevBuildInfo{}
-	}
-	if build.Context == "" {
-		build.Context = "."
-	}
-	if _, err := url.ParseRequestURI(build.Context); err != nil && build.Dockerfile == "" {
-		build.Dockerfile = "Dockerfile"
-	}
 }
 
 func (build *BuildInfo) setBuildDefaults() {
