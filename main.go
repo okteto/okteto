@@ -121,7 +121,7 @@ func main() {
 	root.AddCommand(cmd.Exec())
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.Restart())
-	root.AddCommand(cmd.Update())
+	root.AddCommand(cmd.UpdateDeprecated())
 	root.AddCommand(deploy.Deploy(ctx))
 	root.AddCommand(destroy.Destroy(ctx))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
