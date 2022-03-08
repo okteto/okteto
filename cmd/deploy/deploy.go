@@ -473,11 +473,7 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 		Timeout:    opts.Timeout,
 	}
 
-	c, _, err := dc.K8sClientProvider.Provide(kubeconfig.Get([]string{dc.TempKubeconfigFile}))
-	if err != nil {
-		return err
-	}
-	cfg, err := dc.Kubeconfig.Read()
+	c, cfg, err := dc.K8sClientProvider.Provide(kubeconfig.Get([]string{dc.TempKubeconfigFile}))
 	if err != nil {
 		return err
 	}
@@ -805,8 +801,9 @@ func shouldExecuteRemotely(options *Options) bool {
 	return options.Branch != "" || options.Repository != ""
 }
 
-func checkServicesToBuild(service string, mOptions model.BuildInfo, ch chan string) error {
-	opts := build.OptsFromManifest(service, &mOptions, build.BuildOptions{})
+func checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
+	buildInfo := manifest.Build[service]
+	opts := build.OptsFromManifest(service, buildInfo, build.BuildOptions{})
 
 	if build.ShouldOptimizeBuild(opts.Tag) {
 		oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
@@ -828,7 +825,16 @@ func checkServicesToBuild(service string, mOptions model.BuildInfo, ch chan stri
 	}
 	oktetoLog.Debug("Skipping build for image for service")
 
-	return setManifestEnvVars(service, imageWithDigest)
+	if err := setManifestEnvVars(service, imageWithDigest); err != nil {
+		return err
+	}
+	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
+		stack := manifest.Deploy.Compose.Stack
+		if stack.Services[service].Image == "" {
+			stack.Services[service].Image = fmt.Sprintf("$OKTETO_BUILD_%s_IMAGE", strings.ToUpper(service))
+		}
+	}
+	return nil
 }
 
 func checkBuildFromManifest(ctx context.Context, manifest *model.Manifest) error {
@@ -837,10 +843,10 @@ func checkBuildFromManifest(ctx context.Context, manifest *model.Manifest) error
 	toBuild := make(chan string, len(buildManifest))
 	g, _ := errgroup.WithContext(ctx)
 
-	for service, mBuildInfo := range buildManifest {
-		service, mBuildInfo := service, *mBuildInfo
+	for service := range buildManifest {
+		svc := service
 		g.Go(func() error {
-			return checkServicesToBuild(service, mBuildInfo, toBuild)
+			return checkServicesToBuild(svc, manifest, toBuild)
 		})
 	}
 	if err := g.Wait(); err != nil {
