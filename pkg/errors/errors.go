@@ -143,6 +143,9 @@ var (
 
 	// ErrDeployHasFailedCommand raised when a deploy command is executed and fails
 	ErrDeployHasFailedCommand = errors.New("one of the commands in the 'deploy' section of your okteto manifests failed")
+
+	// ErrGitHubNotVerifiedEmail is raised when github login has not a verified email
+	ErrGitHubNotVerifiedEmail = errors.New("github-not-verified-email")
 )
 
 // IsForbidden raised if the Okteto API returns 401
@@ -210,4 +213,8 @@ func IsClosedNetwork(err error) bool {
 	}
 
 	return strings.Contains(err.Error(), "use of closed network connection")
+}
+
+func IsErrGitHubNotVerifiedEmail(err error) bool {
+	return err.Error() == ErrGitHubNotVerifiedEmail.Error()
 }
