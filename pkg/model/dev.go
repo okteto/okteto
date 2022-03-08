@@ -447,9 +447,6 @@ func (dev *Dev) SetDefaults() error {
 	if dev.Command.Values == nil {
 		dev.Command.Values = []string{"sh"}
 	}
-	if dev.Image.Context != "" || dev.Image.Dockerfile != "" {
-		oktetoLog.Yellow(`The 'image' extended syntax is deprecated. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/manifest/#build"`)
-	}
 	dev.Image.setBuildDefaults()
 	dev.Push.setBuildDefaults()
 
