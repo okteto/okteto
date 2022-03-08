@@ -115,7 +115,7 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 					Status     graphql.String
 					Repository graphql.String
 				}
-			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, filename: $filename)"`
+			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, filename: $filename, variables: $variables)"`
 		}
 
 		queryVariables := map[string]interface{}{
