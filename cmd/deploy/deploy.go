@@ -517,6 +517,7 @@ func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (b
 }
 
 func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Manifest) error {
+	oktetoLog.SetStage(fmt.Sprintf("Building service %s", service))
 	buildInfo := manifest.Build[service]
 	oktetoLog.Information("Building image for service '%s'", service)
 	volumesToInclude := buildInfo.VolumesToInclude
@@ -558,6 +559,7 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 			stack.Services[service].Image = fmt.Sprintf("$OKTETO_BUILD_%s_IMAGE", strings.ToUpper(service))
 		}
 	}
+	oktetoLog.SetStage("")
 	return nil
 }
 
