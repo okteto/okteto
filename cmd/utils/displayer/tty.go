@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -33,10 +34,13 @@ import (
 	"golang.org/x/term"
 )
 
+const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
+
 var (
 	spinnerChars = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 	cursorUp     = "\x1b[1A"
 	resetLine    = "\x1b[0G"
+	re           = regexp.MustCompile(ansi)
 )
 
 // TTYDisplayer displays with a screenbuff
@@ -120,7 +124,7 @@ func (d *TTYDisplayer) displayCommand(commandChan chan bool) {
 				for _, commandLine := range commandLines {
 					d.screenbuf.Write(commandLine)
 				}
-				lines := renderLines(d.linesToDisplay)
+				lines := renderLines(d.linesToDisplay, width)
 				for _, line := range lines {
 					d.screenbuf.Write(line)
 				}
@@ -231,7 +235,8 @@ func (d *TTYDisplayer) CleanUp(err error) {
 		d.screenbuf.Clear()
 		d.screenbuf.Flush()
 		d.screenbuf.Write(message)
-		lines := renderLines(d.linesToDisplay)
+		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
+		lines := renderLines(d.linesToDisplay, width)
 		for _, line := range lines {
 			d.screenbuf.Write([]byte(line))
 		}
@@ -316,7 +321,7 @@ func renderFailCommand(command string, err error) []byte {
 	return render(tpl, message)
 }
 
-func renderLines(queue []string) [][]byte {
+func renderLines(queue []string, charsPerLine int) [][]byte {
 	lineTemplate := "{{ . | white }} "
 	tpl, err := template.New("").Funcs(promptui.FuncMap).Parse(lineTemplate)
 	if err != nil {
@@ -325,16 +330,51 @@ func renderLines(queue []string) [][]byte {
 
 	result := [][]byte{}
 	for _, line := range queue {
-		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
-		line = fmt.Sprintf("    %s", strings.TrimSpace(line))
-		if width > 4 && len(line)+2 > width {
-			result = append(result, render(tpl, fmt.Sprintf("%s...", line[:width-5])))
-		} else if line == "" {
-			result = append(result, []byte(""))
+		lineWithoutColors := re.ReplaceAllString(line, "")
+		if len(line) == len(lineWithoutColors) {
+			result = append(result, renderLogWithoutColors(tpl, line, charsPerLine)...)
 		} else {
-			result = append(result, render(tpl, line))
+			result = append(result, renderLogWithColors(tpl, line, charsPerLine)...)
+			continue
 		}
+	}
+	return result
+}
 
+func renderLogWithColors(tpl *template.Template, line string, charsPerLine int) [][]byte {
+	result := [][]byte{}
+	result = append(result, render(tpl, fmt.Sprintf("%s...", line[:charsPerLine-5])))
+	return result
+}
+
+func renderLogWithoutColors(tpl *template.Template, line string, charsPerLine int) [][]byte {
+	result := [][]byte{}
+	if line == "" {
+		result = append(result, []byte(""))
+	} else if charsPerLine == 0 {
+		line = fmt.Sprintf("    %s", strings.TrimSpace(line))
+		result = append(result, render(tpl, line))
+	} else if iterations := len(line) / (charsPerLine - 4); iterations != 0 {
+		start := 0
+		end := charsPerLine - 5
+		for i := 0; i < iterations+1; i++ {
+			if i == iterations {
+				end = len(line) - 1
+			}
+			currentLine := line[start:end]
+			prevWhitespaces := len(currentLine) - len(strings.TrimSpace(currentLine))
+			if prevWhitespaces != 0 {
+				currentLine = line[start : end+prevWhitespaces]
+			}
+			currentLine = fmt.Sprintf("    %s", strings.TrimSpace(currentLine))
+			result = append(result, render(tpl, currentLine))
+			start = end + prevWhitespaces
+			end += charsPerLine - 5 - prevWhitespaces
+
+		}
+	} else {
+		line = fmt.Sprintf("    %s", strings.TrimSpace(line))
+		result = append(result, render(tpl, line))
 	}
 	return result
 }
