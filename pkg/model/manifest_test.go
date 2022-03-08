@@ -15,6 +15,7 @@ package model
 
 import (
 	"os"
+	"runtime"
 	"testing"
 	"time"
 
@@ -83,6 +84,10 @@ devs:
 }
 
 func TestInferFromStack(t *testing.T) {
+	devInterface := PrivilegedLocalhost
+	if runtime.GOOS == "windows" {
+		devInterface = Localhost
+	}
 	stack := &Stack{
 		Services: map[string]*Service{
 			"test": {
@@ -172,7 +177,7 @@ func TestInferFromStack(t *testing.T) {
 						Command: Command{
 							Values: []string{"sh"},
 						},
-						Interface: "0.0.0.0",
+						Interface: devInterface,
 						Services:  []*Dev{},
 						Sync: Sync{
 							RescanInterval: 300,
