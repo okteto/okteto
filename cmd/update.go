@@ -29,12 +29,13 @@ const (
 	INSTALL_PATH = "/usr/local/bin/okteto"
 )
 
-//Update check if there is a new version available and updates it
-func Update() *cobra.Command {
+//Update checks if there is a new version available and updates it
+func UpdateDeprecated() *cobra.Command {
 	return &cobra.Command{
 		Use:   "update",
-		Short: "Update okteto version",
+		Short: "Update Okteto CLI version",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			oktetoLog.Warning("'okteto update' is deprecated in favor of 'okteto version update', and will be removed in a future version")
 			currentVersion, err := semver.NewVersion(config.VersionString)
 			if err != nil {
 				return fmt.Errorf("could not retrieve version")
