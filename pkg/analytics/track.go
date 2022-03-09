@@ -281,6 +281,7 @@ func TrackDeploy(m TrackDeployMetadata) {
 		"deployType":             m.DeployType,
 		"isPreview":              m.IsPreview,
 		"hasDependenciesSection": m.HasDependenciesSection,
+		"hasBuildSection":        m.HasBuildSection,
 	}
 	if m.Err != nil {
 		props["error"] = m.Err.Error()
