@@ -340,7 +340,6 @@ func TranslateEnvVars(c *apiv1.Container, rule *model.TranslationRule) {
 			c.Env = append(c.Env, apiv1.EnvVar{Name: envvar.Name, Value: value})
 		}
 	}
-
 }
 
 //TranslateVolumeMounts translates the volumes attached to a container
