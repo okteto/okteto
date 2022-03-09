@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
@@ -51,7 +52,7 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 	if err := validateNamespace(name, "preview environment"); err != nil {
 		return nil, err
 	}
-
+	origin := config.GetDeployOrigin()
 	previewResponse := &types.PreviewResponse{}
 
 	if len(variables) > 0 {
@@ -73,6 +74,19 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 			variablesVariable = append(variablesVariable, InputVariable{
 				Name:  graphql.String(v.Name),
 				Value: graphql.String(v.Value),
+			})
+		}
+		// if OKTETO_ORIGIN was provided don't override it
+		injectOrigin := true
+		for _, v := range variablesVariable {
+			if v.Name == "OKTETO_ORIGIN" {
+				injectOrigin = false
+			}
+		}
+		if injectOrigin {
+			variablesVariable = append(variablesVariable, InputVariable{
+				Name:  graphql.String("OKTETO_ORIGIN"),
+				Value: graphql.String(origin),
 			})
 		}
 		queryVariables := map[string]interface{}{
@@ -110,7 +124,7 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 				Preview struct {
 					Id graphql.String
 				}
-			} `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, filename: $filename)"`
+			} `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, filename: $filename, variables: $variables)"`
 		}
 
 		queryVariables := map[string]interface{}{
@@ -120,6 +134,9 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 			"branch":     graphql.String(branch),
 			"sourceURL":  graphql.String(sourceUrl),
 			"filename":   graphql.String(filename),
+			"variables": []InputVariable{
+				{Name: graphql.String("OKTETO_ORIGIN"), Value: graphql.String(origin)},
+			},
 		}
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {

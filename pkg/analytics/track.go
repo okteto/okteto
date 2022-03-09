@@ -32,7 +32,7 @@ import (
 const (
 	// skipcq GSC-G101
 	// This is mixpanel's public token, is needed to send analytics to the project
-	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
+	mixpanelToken = "db84e1636cf6489d13582457eb63dfeb"
 
 	upEvent                  = "Up"
 	upErrorEvent             = "Up Error"
@@ -267,10 +267,6 @@ type TrackDeployMetadata struct {
 
 // TrackDeploy sends a tracking event to mixpanel when the user deploys a pipeline
 func TrackDeploy(m TrackDeployMetadata) {
-	// skip deploys from nested okteto deploys and manifest dependencies
-	if config.GetDeployOrigin() == "okteto-deploy" {
-		return
-	}
 	if m.PipelineType == "" {
 		m.PipelineType = "pipeline"
 	}
@@ -310,6 +306,9 @@ func TrackSignup(success bool, userID string) {
 
 // TrackContext sends a tracking event to mixpanel when the user use context in
 func TrackContext(success bool) {
+	if config.RunningInInstaller() {
+		return
+	}
 	track(contextEvent, success, nil)
 }
 
@@ -348,6 +347,11 @@ func track(event string, success bool, props map[string]interface{}) {
 	if !okteto.IsContextInitialized() || (!okteto.Context().Analytics && !okteto.IsOktetoCloud()) {
 		return
 	}
+	// skip events from nested okteto deploys and manifest dependencies
+	origin := config.GetDeployOrigin()
+	if origin == "okteto-deploy" {
+		return
+	}
 
 	mpOS := ""
 	switch runtime.GOOS {
@@ -358,8 +362,6 @@ func track(event string, success bool, props map[string]interface{}) {
 	case "linux":
 		mpOS = "Linux"
 	}
-
-	origin := config.GetDeployOrigin()
 
 	if props == nil {
 		props = map[string]interface{}{}

@@ -276,3 +276,7 @@ func GetDeployOrigin() (src string) {
 	}
 	return
 }
+
+func RunningInInstaller() bool {
+	return os.Getenv(model.OktetoInInstaller) == "true"
+}
