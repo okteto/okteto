@@ -18,8 +18,6 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/analytics"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -51,31 +49,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 		Short:   "Configure the current namespace of the okteto context",
 		Aliases: []string{"ns"},
 		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#namespace"),
-		RunE: func(cmd *cobra.Command, args []string) error {
-
-			namespace := ""
-			if len(args) > 0 {
-				namespace = args[0]
-			}
-			if options.personal {
-				namespace = okteto.Context().PersonalNamespace
-			}
-			if !okteto.IsOkteto() {
-				return oktetoErrors.ErrContextIsNotOktetoCluster
-			}
-
-			nsCmd, err := NewCommand()
-			if err != nil {
-				return err
-			}
-			err = nsCmd.Use(ctx, namespace)
-			if err != nil {
-				return err
-			}
-
-			analytics.TrackNamespace(err == nil, len(args) > 0)
-			return err
-		},
+		RunE:    Use(ctx).RunE,
 	}
 	cmd.Flags().BoolVarP(&options.personal, "personal", "", false, "Load personal account")
 
