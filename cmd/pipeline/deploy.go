@@ -136,7 +136,7 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 
 		_, err = configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, c)
 		if err == nil {
-			oktetoLog.Success("Skipping '%s' because it's already deployed", opts.Name)
+			oktetoLog.Success("Skipping repository '%s' because it's already deployed", opts.Name)
 			return nil
 		}
 
@@ -158,22 +158,21 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 	if err != nil {
 		return err
 	}
-	oktetoLog.Information("Pipeline URL: %s", getPipelineURL(resp.GitDeploy))
 
 	if !opts.Wait {
-		oktetoLog.Success("Pipeline '%s' scheduled for deployment", opts.Name)
+		oktetoLog.Success("Repository '%s' scheduled for deployment", opts.Name)
 		return nil
 	}
 
 	if err := waitUntilRunning(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
 		return err
 	}
-	oktetoLog.Success("Pipeline '%s' successfully deployed", opts.Name)
+	oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
 	return nil
 }
 
 func deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployResponse, error) {
-	spinner := utils.NewSpinner("Deploying your pipeline...")
+	spinner := utils.NewSpinner(fmt.Sprintf("Deploying repository '%s'...", opts.Name))
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -226,14 +225,8 @@ func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
 
-func getPipelineURL(gitDeploy *types.GitDeploy) string {
-	octx := okteto.Context()
-	pipelineURL := fmt.Sprintf("%s/#/spaces/%s?resourceId=%s", octx.Name, octx.Namespace, gitDeploy.ID)
-	return pipelineURL
-}
-
 func waitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
-	spinner := utils.NewSpinner(fmt.Sprintf("Waiting for %s to be deployed...", name))
+	spinner := utils.NewSpinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", name))
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -299,7 +292,7 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name string, timeout time.D
 					return nil
 				}
 
-				return fmt.Errorf("failed to get pipeline '%s': %s", name, err)
+				return fmt.Errorf("failed to get repository '%s': %s", name, err)
 			}
 
 			switch p.Status {
@@ -308,10 +301,10 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name string, timeout time.D
 			case "error":
 				attempts++
 				if attempts > 30 {
-					return fmt.Errorf("pipeline '%s' failed", name)
+					return fmt.Errorf("repository '%s' failed", name)
 				}
 			default:
-				oktetoLog.Infof("pipeline '%s' is '%s'", name, p.Status)
+				oktetoLog.Infof("repository '%s' is '%s'", name, p.Status)
 			}
 		}
 	}
@@ -347,7 +340,7 @@ func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.
 				}
 			}
 			if len(errorsMap) > 0 {
-				return fmt.Errorf("pipeline '%s' deployed with errors", name)
+				return fmt.Errorf("repository '%s' deployed with errors", name)
 			}
 			if areAllRunning {
 				return nil

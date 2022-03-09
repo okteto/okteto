@@ -98,22 +98,21 @@ func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 	}
 
 	if !opts.Wait {
-		oktetoLog.Success("Pipeline '%s' scheduled for destruction", opts.Name)
+		oktetoLog.Success("Repository '%s' scheduled for destruction", opts.Name)
 		return nil
 	}
 
 	if err := waitUntilDestroyed(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
-		oktetoLog.Information("Pipeline URL: %s", getPipelineURL(resp.GitDeploy))
 		return err
 	}
 
-	oktetoLog.Success("Pipeline '%s' successfully destroyed", opts.Name)
+	oktetoLog.Success("Repository '%s' successfully destroyed", opts.Name)
 
 	return nil
 }
 
 func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
-	spinner := utils.NewSpinner("Destroying your pipeline...")
+	spinner := utils.NewSpinner(fmt.Sprintf("Destroying repository '%s'...", name))
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -133,11 +132,11 @@ func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*ty
 		resp, err = oktetoClient.DestroyPipeline(ctx, name, destroyVolumes)
 		if err != nil {
 			if oktetoErrors.IsNotFound(err) {
-				oktetoLog.Infof("pipeline '%s' not found", name)
+				oktetoLog.Infof("repository '%s' not found", name)
 				exit <- nil
 				return
 			}
-			exit <- fmt.Errorf("failed to destroy pipeline '%s': %w", name, err)
+			exit <- fmt.Errorf("failed to destroy repository '%s': %w", name, err)
 			return
 		}
 		exit <- nil
@@ -156,7 +155,7 @@ func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*ty
 }
 
 func waitUntilDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
-	spinner := utils.NewSpinner("Waiting for the pipeline to be destroyed...")
+	spinner := utils.NewSpinner(fmt.Sprintf("Waiting for the repository '%s' to be destroyed...", name))
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -214,11 +213,11 @@ func deprecatedWaitToBeDestroyed(ctx context.Context, name string, timeout time.
 				if oktetoErrors.IsNotFound(err) || oktetoErrors.IsNotExist(err) {
 					return nil
 				}
-				return fmt.Errorf("failed to get pipeline '%s': %s", name, err)
+				return fmt.Errorf("failed to get repository '%s': %s", name, err)
 			}
 
 			if p.Status == "error" {
-				return fmt.Errorf("pipeline '%s' failed", name)
+				return fmt.Errorf("repository '%s' failed", name)
 			}
 		}
 	}

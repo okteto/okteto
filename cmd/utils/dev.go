@@ -162,7 +162,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 				return manifest.Dev[devName], nil
 			}
 		}
-		return nil, fmt.Errorf("dev '%s' does not exists", devName)
+		return nil, fmt.Errorf("development container '%s' doesn't exist", devName)
 	}
 	devs := []string{}
 	for k := range manifest.Dev {
