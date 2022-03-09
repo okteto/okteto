@@ -293,6 +293,12 @@ services:
 						Name:  "OKTETO_NAME",
 						Value: "web",
 					},
+					{Name: "HISTSIZE", Value: "10000000"},
+					{Name: "HISTFILESIZE", Value: "10000000"},
+					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+					{Name: "BASHOPTS", Value: "histappend"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 				},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  &runAsUser,
@@ -342,6 +348,11 @@ services:
 						ReadOnly:  false,
 						MountPath: "/path",
 						SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						MountPath: "/var/okteto/bashrc",
+						SubPath:   "okteto-bash-history",
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
@@ -502,6 +513,14 @@ services:
 				ImagePullPolicy: apiv1.PullAlways,
 				Command:         []string{"./run_worker.sh"},
 				Args:            []string{},
+				Env: []apiv1.EnvVar{
+					{Name: "HISTSIZE", Value: "10000000"},
+					{Name: "HISTFILESIZE", Value: "10000000"},
+					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+					{Name: "BASHOPTS", Value: "histappend"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+				},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  pointer.Int64Ptr(0),
 					RunAsGroup: pointer.Int64Ptr(0),
@@ -512,6 +531,11 @@ services:
 						ReadOnly:  false,
 						MountPath: "/src",
 						SubPath:   path.Join(model.SourceCodeSubPath, "worker"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						MountPath: "/var/okteto/bashrc",
+						SubPath:   "okteto-bash-history",
 					},
 				},
 				LivenessProbe:  nil,
@@ -878,6 +902,12 @@ docker:
 						Name:  "DOCKER_TLS_VERIFY",
 						Value: "1",
 					},
+					{Name: "HISTSIZE", Value: "10000000"},
+					{Name: "HISTFILESIZE", Value: "10000000"},
+					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+					{Name: "BASHOPTS", Value: "histappend"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 				},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  pointer.Int64Ptr(0),
@@ -907,6 +937,11 @@ docker:
 						ReadOnly:  false,
 						MountPath: "/app",
 						SubPath:   model.SourceCodeSubPath,
+					},
+					{
+						Name:      dev.GetVolumeName(),
+						MountPath: "/var/okteto/bashrc",
+						SubPath:   "okteto-bash-history",
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
@@ -1358,6 +1393,12 @@ environment:
 			Name:  "OKTETO_USERNAME",
 			Value: "cindy",
 		},
+		{Name: "HISTSIZE", Value: "10000000"},
+		{Name: "HISTFILESIZE", Value: "10000000"},
+		{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+		{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+		{Name: "BASHOPTS", Value: "histappend"},
+		{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 	}
 	if !reflect.DeepEqual(envOK, tr.DevApp.PodSpec().Containers[0].Env) {
 		t.Fatalf("Wrong env generation %+v", tr.DevApp.PodSpec().Containers[0].Env)
@@ -1610,6 +1651,12 @@ services:
 						Name:  "OKTETO_NAME",
 						Value: "web",
 					},
+					{Name: "HISTSIZE", Value: "10000000"},
+					{Name: "HISTFILESIZE", Value: "10000000"},
+					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+					{Name: "BASHOPTS", Value: "histappend"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 				},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  &runAsUser,
@@ -1659,6 +1706,11 @@ services:
 						ReadOnly:  false,
 						MountPath: "/path",
 						SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						MountPath: "/var/okteto/bashrc",
+						SubPath:   "okteto-bash-history",
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
@@ -1809,12 +1861,25 @@ services:
 					RunAsUser:  pointer.Int64Ptr(0),
 					RunAsGroup: pointer.Int64Ptr(0),
 				},
+				Env: []apiv1.EnvVar{
+					{Name: "HISTSIZE", Value: "10000000"},
+					{Name: "HISTFILESIZE", Value: "10000000"},
+					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+					{Name: "BASHOPTS", Value: "histappend"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+				},
 				VolumeMounts: []apiv1.VolumeMount{
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/src",
 						SubPath:   path.Join(model.SourceCodeSubPath, "worker"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						MountPath: "/var/okteto/bashrc",
+						SubPath:   "okteto-bash-history",
 					},
 				},
 				LivenessProbe:  nil,
