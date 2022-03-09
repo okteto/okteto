@@ -1040,12 +1040,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				},
 			)
 		}
-		rule.Volumes = append(rule.Volumes,
-			VolumeMount{
-				Name:      main.GetVolumeName(),
-				MountPath: "/var/okteto/bashrc",
-				SubPath:   "okteto-bash-history",
-			})
+		enableHistoryVolume(rule, main)
 	}
 
 	for _, v := range dev.ExternalVolumes {
@@ -1060,6 +1055,41 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 	}
 
 	return rule
+}
+
+func enableHistoryVolume(rule *TranslationRule, main *Dev) {
+	rule.Volumes = append(rule.Volumes,
+		VolumeMount{
+			Name:      main.GetVolumeName(),
+			MountPath: "/var/okteto/bashrc",
+			SubPath:   "okteto-bash-history",
+		})
+
+	rule.Environment = append(rule.Environment,
+		EnvVar{
+			Name:  "HISTSIZE",
+			Value: "10000000",
+		},
+		EnvVar{
+			Name:  "HISTFILESIZE",
+			Value: "10000000",
+		},
+		EnvVar{
+			Name:  "HISTCONTROL",
+			Value: "ignoreboth:erasedups",
+		},
+		EnvVar{
+			Name:  "HISTFILE",
+			Value: "/var/okteto/bashrc/.bash_history",
+		},
+		EnvVar{
+			Name:  "BASHOPTS",
+			Value: "histappend",
+		},
+		EnvVar{
+			Name:  "PROMPT_COMMAND",
+			Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND",
+		})
 }
 
 func areProbesEnabled(probes *Probes) bool {
