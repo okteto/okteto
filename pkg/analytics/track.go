@@ -49,7 +49,7 @@ const (
 	doctorEvent              = "Doctor"
 	buildEvent               = "Build"
 	buildTransientErrorEvent = "BuildTransientError"
-	deployEvent              = "OktetoDeploy"
+	deployEvent              = "UnifiedDeploy"
 	destroyEvent             = "Destroy"
 	deployStackEvent         = "Deploy Stack"
 	destroyStackEvent        = "Destroy Stack"
