@@ -49,7 +49,7 @@ const (
 	doctorEvent              = "Doctor"
 	buildEvent               = "Build"
 	buildTransientErrorEvent = "BuildTransientError"
-	deployEvent              = "UnifiedDeploy"
+	deployEvent              = "Deploy"
 	destroyEvent             = "Destroy"
 	deployStackEvent         = "Deploy Stack"
 	destroyStackEvent        = "Destroy Stack"
@@ -152,16 +152,25 @@ func TrackResetDatabase(success bool) {
 	track(syncResetDatabase, success, nil)
 }
 
+type TrackUpMetadata struct {
+	IsInteractive          bool
+	IsOktetoRepository     bool
+	HasDependenciesSection bool
+	HasBuildSection        bool
+	HasDeploySection       bool
+	Success                bool
+}
+
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackUp(success bool, devName string, interactive, single, divert, isOktetoRepository bool) {
+func TrackUp(m TrackUpMetadata) {
 	props := map[string]interface{}{
-		"name":               devName,
-		"interactive":        interactive,
-		"singleService":      single,
-		"divert":             divert,
-		"isOktetoRepository": isOktetoRepository,
+		"isInteractive":          m.IsInteractive,
+		"isOktetoRepository":     m.IsOktetoRepository,
+		"hasDependenciesSection": m.HasDependenciesSection,
+		"hasBuildSection":        m.HasBuildSection,
+		"hasDeploySection":       m.HasDeploySection,
 	}
-	track(upEvent, success, props)
+	track(upEvent, m.Success, props)
 }
 
 // TrackUpError sends a tracking event to mixpanel when the okteto up command fails
