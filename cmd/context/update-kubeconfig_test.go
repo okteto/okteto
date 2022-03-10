@@ -82,7 +82,7 @@ func Test_updateKubeconfig(t *testing.T) {
 			},
 		},
 		{
-			name:          "create if it does not exists",
+			name:          "create if it doesn't exist",
 			kubeconfigCtx: test.KubeconfigFields{},
 			context: &okteto.OktetoContextStore{
 				CurrentContext: "to-change",

@@ -144,6 +144,10 @@ func Destroy(ctx context.Context) *cobra.Command {
 			defer os.Remove(kubeconfigPath)
 			err = c.runDestroy(ctx, options)
 			analytics.TrackDestroy(err == nil)
+			if err == nil {
+				oktetoLog.Success("Development environment '%s' successfully destroyed", options.Name)
+			}
+
 			return err
 		},
 	}
@@ -254,6 +258,10 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		}
 	}
 	oktetoLog.DisableMasking()
+
+	spinner := utils.NewSpinner(fmt.Sprintf("Destroying development environment '%s'...", opts.Name))
+	spinner.Start()
+	defer spinner.Stop()
 
 	deployedByLs, err := labels.NewRequirement(
 		model.DeployedByLabel,
