@@ -230,6 +230,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	go func() {
 		for _, command := range manifest.Destroy {
 			if err := dc.executor.Execute(command, opts.Variables); err != nil {
+				oktetoLog.SetStage(command.Name)
 				oktetoLog.Fail("error executing command '%s': %s", command, err.Error())
 				if !opts.ForceDestroy {
 					if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
@@ -257,6 +258,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 			return err
 		}
 	}
+	oktetoLog.SetStage("")
 	oktetoLog.DisableMasking()
 
 	spinner := utils.NewSpinner(fmt.Sprintf("Destroying development environment '%s'...", opts.Name))
@@ -280,6 +282,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		IncludeVolumes: opts.DestroyVolumes,
 	}
 
+	oktetoLog.SetStage("Destroying volumes")
 	if err := dc.nsDestroyer.DestroySFSVolumes(ctx, opts.Namespace, deleteOpts); err != nil {
 		if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
 			return err
@@ -287,6 +290,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		return err
 	}
 
+	oktetoLog.SetStage("Destroying Helm release")
 	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
 		if !opts.ForceDestroy {
 			if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
@@ -297,6 +301,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	}
 
 	oktetoLog.Debugf("destroying resources with deployed-by label '%s'", deployedBySelector)
+	oktetoLog.SetStage(fmt.Sprintf("Destroying by label '%s'", deployedBySelector))
 	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
 		oktetoLog.Infof("could not delete all the resources: %s", err)
 		if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
@@ -305,6 +310,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		return err
 	}
 
+	oktetoLog.SetStage("Destroying configmap")
 	if err := configmaps.Destroy(ctx, cfg.Name, namespace, c); err != nil {
 		return err
 	}
