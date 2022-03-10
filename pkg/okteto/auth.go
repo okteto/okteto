@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
@@ -50,6 +51,9 @@ func Auth(ctx context.Context, code, url string) (*types.User, error) {
 	user, err := oktetoClient.authUser(ctx, code)
 	if err != nil {
 		oktetoLog.Infof("authentication error: %s", err)
+		if oktetoErrors.IsErrGitHubNotVerifiedEmail(err) {
+			return nil, fmt.Errorf("Your GitHub account doesn't have a verified primary email address. Please check your GitHub account email settings and try again")
+		}
 		return nil, fmt.Errorf("authentication error, please try again")
 	}
 
