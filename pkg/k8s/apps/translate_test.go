@@ -405,7 +405,7 @@ services:
 	}
 	marshalledD1, _ := yaml.Marshal(tr1.App.PodSpec())
 	marshalledD1Orig, _ := yaml.Marshal(d1Orig.Spec.Template.Spec)
-	if string(marshalledD1) != string(marshalledD1Orig) {
+	if !bytes.Equal(marshalledD1, marshalledD1Orig) {
 		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledD1), string(marshalledD1Orig))
 	}
 
@@ -440,7 +440,7 @@ services:
 	}
 	marshalledDevD1, _ := yaml.Marshal(tr1.DevApp.PodSpec())
 	marshalledDevD1OK, _ := yaml.Marshal(dDevPod1OK)
-	if string(marshalledDevD1) != string(marshalledDevD1OK) {
+	if !bytes.Equal(marshalledDevD1, marshalledDevD1OK) {
 		t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
 	}
 
@@ -566,7 +566,7 @@ services:
 	}
 	marshalledD2, _ := yaml.Marshal(tr2.App.PodSpec())
 	marshalledD2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
-	if string(marshalledD2) != string(marshalledD2Orig) {
+	if !bytes.Equal(marshalledD2, marshalledD2Orig) {
 		t.Fatalf("Wrong d2 generation.\nActual %+v, \nExpected %+v", string(marshalledD2), string(marshalledD2Orig))
 	}
 
@@ -592,7 +592,7 @@ services:
 	}
 	marshalledDevD2, _ := yaml.Marshal(tr2.DevApp.PodSpec())
 	marshalledDevD2OK, _ := yaml.Marshal(d2DevPodOK)
-	if string(marshalledDevD2) != string(marshalledDevD2OK) {
+	if !bytes.Equal(marshalledDevD2, marshalledDevD2OK) {
 		t.Fatalf("Wrong dev d2 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD2), string(marshalledDevD2OK))
 	}
 
@@ -742,7 +742,7 @@ persistentVolume:
 	marshalledDev, _ := yaml.Marshal(tr.DevApp.PodSpec())
 	marshalledDevOK, _ := yaml.Marshal(dDevPodOK)
 
-	if string(marshalledDev) != string(marshalledDevOK) {
+	if !bytes.Equal(marshalledDev, marshalledDevOK) {
 		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDev), string(marshalledDevOK))
 	}
 }
@@ -1757,7 +1757,7 @@ services:
 	}
 	marshalledSfs1, _ := yaml.Marshal(tr1.App.PodSpec())
 	marshalledSfs1Orig, _ := yaml.Marshal(sfs1Orig.Spec.Template.Spec)
-	if string(marshalledSfs1) != string(marshalledSfs1Orig) {
+	if !bytes.Equal(marshalledSfs1, marshalledSfs1Orig) {
 		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledSfs1), string(marshalledSfs1Orig))
 	}
 
@@ -1783,7 +1783,7 @@ services:
 	}
 	marshalledDevSfs1, _ := yaml.Marshal(tr1.DevApp.PodSpec())
 	marshalledDevSfs1OK, _ := yaml.Marshal(sfs1PodDev)
-	if string(marshalledDevSfs1) != string(marshalledDevSfs1OK) {
+	if !bytes.Equal(marshalledDevSfs1, marshalledDevSfs1OK) {
 		t.Fatalf("Wrong dev sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevSfs1), string(marshalledDevSfs1OK))
 	}
 
@@ -1910,7 +1910,7 @@ services:
 	}
 	marshalledSfs2, _ := yaml.Marshal(tr2.App.PodSpec())
 	marshalledSfs2Orig, _ := yaml.Marshal(sfs2Orig.Spec.Template.Spec)
-	if string(marshalledSfs2) != string(marshalledSfs2Orig) {
+	if !bytes.Equal(marshalledSfs2, marshalledSfs2Orig) {
 		t.Fatalf("Wrong sfs2 generation.\nActual %+v, \nExpected %+v", string(marshalledSfs2), string(marshalledSfs2Orig))
 	}
 
@@ -1936,7 +1936,7 @@ services:
 	}
 	marshalledDevSfs2, _ := yaml.Marshal(tr2.DevApp.PodSpec())
 	marshalledDevSfs2OK, _ := yaml.Marshal(sfs2DevPod)
-	if string(marshalledDevSfs2) != string(marshalledDevSfs2OK) {
+	if !bytes.Equal(marshalledDevSfs2, marshalledDevSfs2OK) {
 		t.Fatalf("Wrong dev sfs2 generation.\nActual %+v, \nExpected %+v", string(marshalledDevSfs2), string(marshalledDevSfs2OK))
 	}
 
