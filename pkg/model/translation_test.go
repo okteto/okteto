@@ -14,6 +14,7 @@
 package model
 
 import (
+	"bytes"
 	"path"
 	"reflect"
 	"testing"
@@ -314,7 +315,7 @@ initContainer:
 
 	marshalled, _ := yaml.Marshal(rule)
 	marshalledOK, _ := yaml.Marshal(ruleOK)
-	if string(marshalled) != string(marshalledOK) {
+	if !bytes.Equal(marshalled, marshalledOK) {
 		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
 	}
 }
@@ -431,7 +432,7 @@ docker:
 
 	marshalled, _ := yaml.Marshal(rule)
 	marshalledOK, _ := yaml.Marshal(ruleOK)
-	if string(marshalled) != string(marshalledOK) {
+	if !bytes.Equal(marshalled, marshalledOK) {
 		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
 	}
 }
@@ -511,7 +512,7 @@ sync:
 
 	marshalled, _ := yaml.Marshal(rule)
 	marshalledOK, _ := yaml.Marshal(ruleOK)
-	if string(marshalled) != string(marshalledOK) {
+	if !bytes.Equal(marshalled, marshalledOK) {
 		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
 	}
 }
@@ -677,7 +678,7 @@ securityContext:
 		rule := dev.ToTranslationRule(dev, false)
 		marshalled, _ := yaml.Marshal(rule.SecurityContext)
 		marshalledOK, _ := yaml.Marshal(test.translated)
-		if string(marshalled) != string(marshalledOK) {
+		if !bytes.Equal(marshalled, marshalledOK) {
 			t.Fatalf("Wrong rule generation for %s.\nActual %s, \nExpected %s", dev.Name, string(marshalled), string(marshalledOK))
 		}
 	}

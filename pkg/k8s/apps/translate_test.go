@@ -14,6 +14,7 @@
 package apps
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -1005,7 +1006,7 @@ docker:
 	}
 	marshalled, _ := yaml.Marshal(tr.DevApp.PodSpec())
 	marshalledOK, _ := yaml.Marshal(dDevPodOK)
-	if string(marshalled) != string(marshalledOK) {
+	if !bytes.Equal(marshalled, marshalledOK) {
 		t.Fatalf("Wrong d generation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledOK))
 	}
 }
