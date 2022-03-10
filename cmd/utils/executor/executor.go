@@ -63,7 +63,6 @@ func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 
 	cmd := exec.Command("bash", "-c", cmdInfo.Command)
 	cmd.Env = append(os.Environ(), env...)
-
 	if err := e.displayer.startCommand(cmd); err != nil {
 		return err
 	}

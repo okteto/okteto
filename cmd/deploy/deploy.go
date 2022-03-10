@@ -34,7 +34,6 @@ import (
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	stackCMD "github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/cmd/utils/displayer"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
@@ -371,6 +370,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	go func() {
 		for _, command := range opts.Manifest.Deploy.Commands {
 			oktetoLog.SetStage(command.Name)
+			oktetoLog.Information("Running %s", command.Name)
 			if err := dc.Executor.Execute(command, opts.Variables); err != nil {
 				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 				exit <- fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
@@ -407,26 +407,21 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	go func() {
 		if opts.Manifest.Deploy.Compose != nil {
 			oktetoLog.SetStage("Deploying compose")
-			reader, writer := io.Pipe()
-			oktetoLog.SetOutput(writer)
+
 			exit := make(chan error, 1)
 			stop := make(chan os.Signal, 1)
 			signal.Notify(stop, os.Interrupt)
-			d := displayer.NewDisplayer(oktetoLog.GetOutputFormat(), reader, nil)
 			go func() {
 				err := dc.deployStack(ctx, opts)
-				writer.Close()
 				exit <- err
 			}()
-			d.Display("Deploying compose")
 			shouldExit := false
 			for {
 				select {
 				case err := <-exit:
-					d.CleanUp(err)
+					exitCompose <- err
 					shouldExit = true
 				case <-stop:
-					d.CleanUp(errors.New("Interrupt signal received"))
 					exitCompose <- oktetoErrors.ErrIntSig
 					return
 				}
@@ -434,7 +429,6 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 					break
 				}
 			}
-			oktetoLog.SetOutput(os.Stdout)
 		}
 		exitCompose <- nil
 	}()
@@ -482,13 +476,11 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 		Config:         cfg,
 		IsInsideDeploy: true,
 	}
-	os.Setenv(model.OktetoDisableSpinnerEnvVar, "true")
-
+	oktetoLog.Information("Deploying compose")
 	err = stackCommand.RunDeploy(ctx, composeInfo.Stack, stackOpts)
 	if err != nil {
 		return err
 	}
-	os.Unsetenv(model.OktetoDisableSpinnerEnvVar)
 	return err
 }
 
