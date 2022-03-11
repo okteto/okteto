@@ -177,6 +177,9 @@ func buildWithDocker(ctx context.Context, buildOptions BuildOptions) error {
 }
 
 func validateImage(imageTag string) error {
+	if strings.HasPrefix(imageTag, okteto.Context().Registry) && strings.Count(imageTag, "/") == 2 {
+		return nil
+	}
 	if (registry.IsOktetoRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {
 		prefix := okteto.DevRegistry
 		if registry.IsGlobalRegistry(imageTag) {
