@@ -20,6 +20,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 
@@ -366,7 +367,8 @@ func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.St
 	forwarder.Start(podName, stack.Namespace)
 	defer forwarder.Stop()
 	for _, port := range portsToTest {
-		url := fmt.Sprintf("%s:%d", model.Localhost, port)
+		p := strconv.Itoa(port)
+		url := net.JoinHostPort(model.Localhost, p)
 		_, err := net.Dial("tcp", url)
 		if err != nil {
 			continue
@@ -385,10 +387,12 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 	isNewDeployment := old == nil || old.Name == ""
 	if !isNewDeployment {
 		if old.Labels[model.StackNameLabel] == "" {
-			return fmt.Errorf("name collision: the deployment '%s' was running before deploying your stack", svcName)
+			oktetoLog.Warning("skipping deploy of %s due to name collision: the deployment '%s' was running before deploying your stack", svcName, svcName)
+			return nil
 		}
 		if old.Labels[model.StackNameLabel] != s.Name {
-			return fmt.Errorf("name collision: the deployment '%s' belongs to the compose '%s'", svcName, old.Labels[model.StackNameLabel])
+			oktetoLog.Warning("skipping deploy of %s due to name collision: the deployment '%s' belongs to the compose '%s'", svcName, old.Labels[model.StackNameLabel])
+			return nil
 		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
 			d.Labels[model.DeployedByLabel] = v
@@ -417,10 +421,12 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 		}
 	} else {
 		if old.Labels[model.StackNameLabel] == "" {
-			return fmt.Errorf("name collision: the statefulset '%s' was running before deploying your stack", svcName)
+			oktetoLog.Warning("skipping deploy of %s due to name collision: the statefulset '%s' was running before deploying your stack", svcName, svcName)
+			return nil
 		}
 		if old.Labels[model.StackNameLabel] != s.Name {
-			return fmt.Errorf("name collision: the statefulset '%s' belongs to the compose '%s'", svcName, old.Labels[model.StackNameLabel])
+			oktetoLog.Warning("skipping deploy of %s due to name collision: the statefulset '%s' belongs to the compose '%s'", svcName, svcName, old.Labels[model.StackNameLabel])
+			return nil
 		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
 			sfs.Labels[model.DeployedByLabel] = v
@@ -449,10 +455,12 @@ func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes
 	isNewJob := old == nil || old.Name == ""
 	if !isNewJob {
 		if old.Labels[model.StackNameLabel] == "" {
-			return fmt.Errorf("name collision: the job '%s' was running before deploying your stack", svcName)
+			oktetoLog.Warning("skipping deploy of %s due to name collision: the job '%s' was running before deploying your stack", svcName, svcName)
+			return nil
 		}
 		if old.Labels[model.StackNameLabel] != s.Name {
-			return fmt.Errorf("name collision: the job '%s' belongs to the compose '%s'", svcName, old.Labels[model.StackNameLabel])
+			oktetoLog.Warning("skipping deploy of %s due to name collision: the job '%s' belongs to the compose '%s'", svcName, svcName, old.Labels[model.StackNameLabel])
+			return nil
 		}
 	}
 
@@ -481,10 +489,12 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 		}
 	} else {
 		if old.Labels[model.StackNameLabel] == "" {
-			return fmt.Errorf("name collision: the volume '%s' was running before deploying your stack", pvc.Name)
+			oktetoLog.Warning("skipping deploy of %s due to name collision: the volume '%s' was running before deploying your stack", pvc.Name)
+			return nil
 		}
 		if old.Labels[model.StackNameLabel] != s.Name {
-			return fmt.Errorf("name collision: the volume '%s' belongs to the compose '%s'", pvc.Name, old.Labels[model.StackNameLabel])
+			oktetoLog.Warning("skipping deploy of %s due to name collision: the volume '%s' belongs to the compose '%s'", pvc.Name, old.Labels[model.StackNameLabel])
+			return nil
 		}
 
 		old.Spec.Resources.Requests["storage"] = pvc.Spec.Resources.Requests["storage"]
@@ -522,11 +532,13 @@ func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *i
 	}
 
 	if old.GetLabels()[model.StackNameLabel] == "" {
-		return fmt.Errorf("name collision: the ingress '%s' was running before deploying your compose", ingressName)
+		oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", ingressName)
+		return nil
 	}
 
 	if old.GetLabels()[model.StackNameLabel] != s.Name {
-		return fmt.Errorf("name collision: the endpoint '%s' belongs to the compose '%s'", ingressName, old.GetLabels()[model.StackNameLabel])
+		oktetoLog.Warning("skipping deploy of %s due to name collision: the endpoint '%s' belongs to the compose '%s'", ingressName, old.GetLabels()[model.StackNameLabel])
+		return nil
 	}
 
 	return c.Update(ctx, iModel)
