@@ -273,6 +273,17 @@ const (
 	// OktetoWithinDeployCommandContextEnvVar defines if an okteto command is executed by deploy command
 	OktetoWithinDeployCommandContextEnvVar = "OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT"
 
+	// OktetoInInstaller if set to true okteto is running inside the pipeline installer
+	OktetoInInstaller = "OKTETO_IN_INSTALLER"
+
+	// OktetoSkipConfigCredentialsUpdate prevents the kubernetes config from being updated
+	// with the okteto credentials
+	OktetoSkipConfigCredentialsUpdate = "OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE"
+
+	// OktetoCurrentDeployBelongsToPreview if set the current okteto deploy belongs
+	// to a preview environment
+	OktetoCurrentDeployBelongsToPreview = "OKTETO_CURRENT_DEPLOY_BELONGS_TO_PREVIEW"
+
 	// OktetoTimeoutEnvVar defines the timeout for okteto commands
 	OktetoTimeoutEnvVar = "OKTETO_TIMEOUT"
 

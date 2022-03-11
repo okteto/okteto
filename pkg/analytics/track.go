@@ -152,16 +152,25 @@ func TrackResetDatabase(success bool) {
 	track(syncResetDatabase, success, nil)
 }
 
+type TrackUpMetadata struct {
+	IsInteractive          bool
+	IsOktetoRepository     bool
+	HasDependenciesSection bool
+	HasBuildSection        bool
+	HasDeploySection       bool
+	Success                bool
+}
+
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackUp(success bool, devName string, interactive, single, divert, isOktetoRepository bool) {
+func TrackUp(m TrackUpMetadata) {
 	props := map[string]interface{}{
-		"name":               devName,
-		"interactive":        interactive,
-		"singleService":      single,
-		"divert":             divert,
-		"isOktetoRepository": isOktetoRepository,
+		"isInteractive":          m.IsInteractive,
+		"isOktetoRepository":     m.IsOktetoRepository,
+		"hasDependenciesSection": m.HasDependenciesSection,
+		"hasBuildSection":        m.HasBuildSection,
+		"hasDeploySection":       m.HasDeploySection,
 	}
-	track(upEvent, success, props)
+	track(upEvent, m.Success, props)
 }
 
 // TrackUpError sends a tracking event to mixpanel when the okteto up command fails
@@ -253,20 +262,36 @@ func TrackDestroyStack(success bool) {
 	track(destroyStackEvent, success, nil)
 }
 
-// TrackDeploy sends a tracking event to mixpanel when the user deploys a pipeline from local
-func TrackDeploy(success, isOktetoRepo bool, err error, duration time.Duration, pipelineType model.Archetype) {
-	if pipelineType == "" {
-		pipelineType = "pipeline"
+type TrackDeployMetadata struct {
+	Success                bool
+	IsOktetoRepo           bool
+	Err                    error
+	Duration               time.Duration
+	PipelineType           model.Archetype
+	DeployType             string
+	IsPreview              bool
+	HasDependenciesSection bool
+	HasBuildSection        bool
+}
+
+// TrackDeploy sends a tracking event to mixpanel when the user deploys a pipeline
+func TrackDeploy(m TrackDeployMetadata) {
+	if m.PipelineType == "" {
+		m.PipelineType = "pipeline"
 	}
 	props := map[string]interface{}{
-		"pipelineType":       pipelineType,
-		"isOktetoRepository": isOktetoRepo,
-		"duration":           duration.Seconds(),
+		"pipelineType":           m.PipelineType,
+		"isOktetoRepository":     m.IsOktetoRepo,
+		"duration":               m.Duration.Seconds(),
+		"deployType":             m.DeployType,
+		"isPreview":              m.IsPreview,
+		"hasDependenciesSection": m.HasDependenciesSection,
+		"hasBuildSection":        m.HasBuildSection,
 	}
-	if err != nil {
-		props["error"] = err.Error()
+	if m.Err != nil {
+		props["error"] = m.Err.Error()
 	}
-	track(deployEvent, success, props)
+	track(deployEvent, m.Success, props)
 }
 
 // TrackDestroy sends a tracking event to mixpanel when the user destroys a pipeline from local
@@ -290,6 +315,9 @@ func TrackSignup(success bool, userID string) {
 
 // TrackContext sends a tracking event to mixpanel when the user use context in
 func TrackContext(success bool) {
+	if config.RunningInInstaller() {
+		return
+	}
 	track(contextEvent, success, nil)
 }
 
@@ -328,6 +356,11 @@ func track(event string, success bool, props map[string]interface{}) {
 	if !okteto.IsContextInitialized() || (!okteto.Context().Analytics && !okteto.IsOktetoCloud()) {
 		return
 	}
+	// skip events from nested okteto deploys and manifest dependencies
+	origin := config.GetDeployOrigin()
+	if origin == "okteto-deploy" {
+		return
+	}
 
 	mpOS := ""
 	switch runtime.GOOS {
@@ -337,11 +370,6 @@ func track(event string, success bool, props map[string]interface{}) {
 		mpOS = "Windows"
 	case "linux":
 		mpOS = "Linux"
-	}
-
-	origin, ok := os.LookupEnv(model.OktetoOriginEnvVar)
-	if !ok {
-		origin = "cli"
 	}
 
 	if props == nil {
@@ -355,6 +383,7 @@ func track(event string, success bool, props map[string]interface{}) {
 		props["clusterType"] = okteto.Context().ClusterType
 	}
 
+	props["source"] = origin
 	props["origin"] = origin
 	props["success"] = success
 	props["contextType"] = getContextType(okteto.Context().Name)
