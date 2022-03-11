@@ -55,6 +55,7 @@ const (
 	hostKeyAlgorithms             = "HostKeyAlgorithms"
 	userKnownHostsFileKeyword     = "UserKnownHostsFile"
 	identityFile                  = "IdentityFile"
+	identitiesOnly                = "IdentitiesOnly"
 )
 
 func newHost(hostnames, comments []string) *host {

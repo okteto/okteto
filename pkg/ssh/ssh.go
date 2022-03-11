@@ -51,6 +51,7 @@ func add(path, name, iface string, port int) error {
 		newParam(strictHostKeyCheckingKeyword, []string{"no"}, nil),
 		newParam(userKnownHostsFileKeyword, []string{"/dev/null"}, nil),
 		newParam(identityFile, []string{"\"" + privateKey + "\""}, nil),
+		newParam(identitiesOnly, []string{"yes"}, nil),
 	}
 
 	cfg.hosts = append(cfg.hosts, host)
