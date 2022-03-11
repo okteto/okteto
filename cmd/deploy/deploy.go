@@ -112,7 +112,12 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#deploy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			if err := validateOptionVars(options.Variables); err != nil {
+				return err
+			}
+			if err := setOptionVarsAsEnvs(options.Variables); err != nil {
+				return err
+			}
 			if shouldExecuteRemotely(options) {
 				remoteOpts := &pipelineCMD.DeployOptions{
 					Branch:     options.Branch,
