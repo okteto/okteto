@@ -533,6 +533,9 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 			m.Deploy.Compose.Stack = s
 			s.Endpoints = m.Deploy.Endpoints
 			m, err = m.InferFromStack()
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 	if m.Destroy != nil {
