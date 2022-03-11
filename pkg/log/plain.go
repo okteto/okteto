@@ -131,7 +131,7 @@ func (w *PlainWriter) Warning(format string, args ...interface{}) {
 // FWarning prints a message with the warning symbol first, and the text in yellow into an specific writer
 func (w *PlainWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf(writer, "%s %s\n", coloredWarningSymbol, yellowString(format, args...))
+	w.Fprintf(writer, "%s %s\n", warningSymbol, fmt.Sprintf(format, args...))
 }
 
 // Hint prints a message with the text in blue
