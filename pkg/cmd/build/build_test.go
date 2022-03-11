@@ -55,6 +55,15 @@ func Test_validateImage(t *testing.T) {
 }
 
 func Test_OptsFromManifest(t *testing.T) {
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+				Registry:  "this.is.my.okteto.registry",
+			},
+		},
+		CurrentContext: "test",
+	}
 	tests := []struct {
 		name           string
 		serviceName    string
