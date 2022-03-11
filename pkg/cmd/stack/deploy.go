@@ -20,6 +20,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 
@@ -366,7 +367,8 @@ func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.St
 	forwarder.Start(podName, stack.Namespace)
 	defer forwarder.Stop()
 	for _, port := range portsToTest {
-		url := fmt.Sprintf("%s:%d", model.Localhost, port)
+		p := strconv.Itoa(port)
+		url := net.JoinHostPort(model.Localhost, p)
 		_, err := net.Dial("tcp", url)
 		if err != nil {
 			continue
