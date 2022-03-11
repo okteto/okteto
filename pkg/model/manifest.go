@@ -526,11 +526,15 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 			m.Deploy.Commands[idx] = cmd
 		}
 		if m.Deploy.Compose != nil && m.Deploy.Compose.Stack != nil {
-			for _, svc := range m.Deploy.Compose.Stack.Services {
-				svc.Image, err = ExpandEnv(svc.Image)
-				if err != nil {
-					return nil, errors.New("could not parse env vars")
-				}
+			s, err := LoadStack("", m.Deploy.Compose.Manifest)
+			if err != nil {
+				return nil, err
+			}
+			m.Deploy.Compose.Stack = s
+			s.Endpoints = m.Deploy.Endpoints
+			m, err = m.InferFromStack()
+			if err != nil {
+				return nil, err
 			}
 		}
 	}

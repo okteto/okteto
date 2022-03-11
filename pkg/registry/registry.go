@@ -139,7 +139,7 @@ func IsDevRegistry(tag string) bool {
 
 // IsOktetoRegistry returns if an image tag is pointing to the okteto registry
 func IsOktetoRegistry(tag string) bool {
-	return IsDevRegistry(tag) || IsGlobalRegistry(tag)
+	return IsDevRegistry(tag) || IsGlobalRegistry(tag) || strings.HasPrefix(tag, okteto.Context().Registry)
 }
 
 // replaceRegistry replaces the short registry url with the okteto registry url

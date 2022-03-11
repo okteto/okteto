@@ -153,6 +153,15 @@ func Test_GetRegistryAndRepo(t *testing.T) {
 }
 
 func Test_IsOktetoRegistry(t *testing.T) {
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+				Registry:  "this.is.my.okteto.registry",
+			},
+		},
+		CurrentContext: "test",
+	}
 	var tests = []struct {
 		name string
 		tag  string
@@ -166,6 +175,11 @@ func Test_IsOktetoRegistry(t *testing.T) {
 		{
 			name: "is-not-dev-registry",
 			tag:  "okteto.global/image",
+			want: true,
+		},
+		{
+			name: "is-expanded-dev-registry",
+			tag:  "this.is.my.okteto.registry/user/image",
 			want: true,
 		},
 		{
