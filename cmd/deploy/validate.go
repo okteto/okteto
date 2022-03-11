@@ -31,3 +31,13 @@ func validateOptionVars(variables []string) error {
 	}
 	return nil
 }
+
+func setOptionVarsAsEnvs(variables []string) error {
+	for _, v := range variables {
+		kv := strings.SplitN(v, "=", 2)
+		if err := os.Setenv(kv[0], kv[1]); err != nil {
+			return err
+		}
+	}
+	return nil
+}

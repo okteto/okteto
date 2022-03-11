@@ -116,6 +116,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err := validateOptionVars(options.Variables); err != nil {
 				return err
 			}
+			if err := setOptionVarsAsEnvs(options.Variables); err != nil {
+				return err
+			}
 			if shouldExecuteRemotely(options) {
 				remoteOpts := &pipelineCMD.DeployOptions{
 					Branch:     options.Branch,
