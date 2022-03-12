@@ -17,7 +17,7 @@ Today, most developers try to either run parts of the infrastructure locally or 
 
 ## How it works
 
-Okteto allows you to develop inside a container. When you run `okteto up` your Kubernetes deployment is replaced by a development container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can be any [docker image](https://okteto.com/docs/reference/development-environment/). The development container inherits the same secrets, configmaps, volumes or any other configuration value of the original Kubernetes deployment.
+Okteto allows you to develop inside a container. When you run `okteto up` your Kubernetes deployment is replaced by a development container that contains your development tools (e.g. maven and jdk, or npm, python, go compiler, debuggers, etc). This development container can be any [docker image](https://okteto.com/docs/reference/development-environments/). The development container inherits the same secrets, configmaps, volumes or any other configuration value of the original Kubernetes deployment.
 
 In addition to that, `okteto up` will:
 
@@ -44,7 +44,7 @@ The end result is that the remote cluster is seen by your IDE and tools as a loc
 
 ## Getting started
 
-All you need to get started is to [install the Okteto CLI](https://okteto.com/docs/getting-started/installation/) and have access to a Kubernetes cluster.
+All you need to get started is to [install the Okteto CLI](https://okteto.com/docs/getting-started/) and have access to a Kubernetes cluster.
 
 You can also use `okteto` with [Okteto Cloud](https://okteto.com/), a **Kubernetes Namespace as a Service** platform where you can deploy your Kubernetes applications and development containers for free.
 
@@ -58,7 +58,7 @@ We created a [few guides to help you get started](https://github.com/okteto/samp
 
 ## Useful links
 
-- [Installation guides](https://okteto.com/docs/getting-started/installation/)
+- [Installation guides](https://okteto.com/docs/getting-started/)
 - [CLI reference](https://okteto.com/docs/reference/cli)
 - [Okteto manifest reference](https://okteto.com/docs/reference/manifest/)
 - [Samples](https://github.com/okteto/samples)

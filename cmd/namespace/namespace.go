@@ -47,7 +47,7 @@ func NewCommand() (*NamespaceCommand, error) {
 func Namespace(ctx context.Context) *cobra.Command {
 	options := &UseOptions{}
 	cmd := &cobra.Command{
-		Use:     "namespace [name]",
+		Use:     "namespace",
 		Short:   "Configure the current namespace of the okteto context",
 		Aliases: []string{"ns"},
 		Args:    utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#namespace"),

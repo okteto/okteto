@@ -288,7 +288,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 				_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
 			}
 
-			_, _ = sb.WriteString("    See https://okteto.com/docs/reference/stacks/ for details")
+			_, _ = sb.WriteString("    See https://okteto.com/docs/reference/compose/ for details")
 			return nil, errors.New(sb.String())
 		}
 

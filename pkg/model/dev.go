@@ -688,7 +688,7 @@ func (dev *Dev) Validate() error {
 	}
 
 	if dev.Docker.Enabled && !dev.PersistentVolumeEnabled() {
-		oktetoLog.Information("https://okteto.com/docs/reference/manifest/#docker-object-optional")
+		oktetoLog.Information("https://okteto.com/docs/reference/manifest-v1/#docker-object-optional")
 		return fmt.Errorf("Docker support requires persistent volume to be enabled")
 	}
 
@@ -1159,7 +1159,7 @@ func (dev *Dev) translateDeprecatedMetadataFields() error {
 }
 
 func (service *Dev) validateForExtraFields() error {
-	errorMessage := "%q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest/#services for documentation"
+	errorMessage := "%q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest-v1/#services-object-optional for documentation"
 	if service.Username != "" {
 		return fmt.Errorf(errorMessage, "username")
 	}
