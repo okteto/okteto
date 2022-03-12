@@ -129,7 +129,9 @@ func Test_deployDeployment(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	err := deployDeployment(ctx, "test", stack, client)
+	spinner := utils.NewSpinner("Starting...")
+	spinner.Start()
+	_, err := deployDeployment(ctx, "test", stack, client, spinner)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -163,7 +165,9 @@ func Test_deployVolumes(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	err := deployVolume(ctx, "a", stack, client)
+	spinner := utils.NewSpinner("Starting...")
+	spinner.Start()
+	err := deployVolume(ctx, "a", stack, client, spinner)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -197,7 +201,9 @@ func Test_deploySfs(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	err := deployStatefulSet(ctx, "test", stack, client)
+	spinner := utils.NewSpinner("Starting...")
+	spinner.Start()
+	_, err := deployStatefulSet(ctx, "test", stack, client, spinner)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -222,7 +228,9 @@ func Test_deployJob(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	err := deployJob(ctx, "test", stack, client)
+	spinner := utils.NewSpinner("Starting...")
+	spinner.Start()
+	_, err := deployJob(ctx, "test", stack, client, spinner)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
