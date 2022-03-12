@@ -152,7 +152,7 @@ func destroyDeployments(ctx context.Context, spinner *utils.Spinner, s *model.St
 		if _, ok := s.Services[dList[i].Name]; ok {
 			oktetoLog.Success("Destroyed previous service '%s'", dList[i].Name)
 		} else {
-			oktetoLog.Success("Destroyed service '%s'", dList[i].Name)
+			oktetoLog.Success("Service '%s' destroyed", dList[i].Name)
 		}
 		spinner.Start()
 	}
@@ -178,7 +178,7 @@ func destroyStatefulsets(ctx context.Context, spinner *utils.Spinner, s *model.S
 		if _, ok := s.Services[sfsList[i].Name]; ok {
 			oktetoLog.Success("Destroyed previous service '%s'", sfsList[i].Name)
 		} else {
-			oktetoLog.Success("Destroyed service '%s'", sfsList[i].Name)
+			oktetoLog.Success("Service '%s' destroyed", sfsList[i].Name)
 		}
 		spinner.Start()
 	}
@@ -203,7 +203,7 @@ func destroyJobs(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c 
 		if _, ok := s.Services[jobsList[i].Name]; ok {
 			oktetoLog.Success("Destroyed previous service '%s'", jobsList[i].Name)
 		} else {
-			oktetoLog.Success("Destroyed service '%s'", jobsList[i].Name)
+			oktetoLog.Success("Service '%s' destroyed", jobsList[i].Name)
 		}
 		spinner.Start()
 	}
@@ -232,7 +232,7 @@ func destroyIngresses(ctx context.Context, spinner *utils.Spinner, s *model.Stac
 			return fmt.Errorf("error destroying ingress '%s': %s", iList[i].GetName(), err)
 		}
 		spinner.Stop()
-		oktetoLog.Success("Destroyed endpoint '%s'", iList[i].GetName())
+		oktetoLog.Success("Endpoint '%s' destroyed", iList[i].GetName())
 		spinner.Start()
 	}
 	return nil
@@ -267,7 +267,7 @@ func destroyStackVolumes(ctx context.Context, spinner *utils.Spinner, s *model.S
 				return fmt.Errorf("error destroying volume '%s': %s", v.Name, err)
 			}
 			spinner.Stop()
-			oktetoLog.Success("Destroyed volume '%s'", v.Name)
+			oktetoLog.Success("Volume '%s' destroyed", v.Name)
 			spinner.Start()
 		}
 	}
