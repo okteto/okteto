@@ -58,7 +58,7 @@ We created a [few guides to help you get started](https://github.com/okteto/samp
 
 ## Useful links
 
-- [Installation guides](https://okteto.com/docs/getting-started/)
+- [Getting started](https://okteto.com/docs/getting-started/)
 - [CLI reference](https://okteto.com/docs/reference/cli)
 - [Okteto manifest reference](https://okteto.com/docs/reference/manifest/)
 - [Samples](https://github.com/okteto/samples)
