@@ -110,11 +110,10 @@ func deployStack(ctx context.Context, oktetoPath, stackPath, dir string) error {
 	cmd.Env = os.Environ()
 	cmd.Dir = dir
 
-	stderr, _ := cmd.StderrPipe()
+	stdout, _ := cmd.StdoutPipe()
 	cmd.Start()
 
-	scanner := bufio.NewScanner(stderr)
-	scanner.Split(bufio.ScanWords)
+	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		m := scanner.Text()
 		fmt.Println(m)
