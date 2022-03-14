@@ -48,7 +48,7 @@ var (
 
 // Dev represents a development container
 type Dev struct {
-	Name                 string             `json:"name" yaml:"name"`
+	Name                 string             `json:"name,omitempty" yaml:"name,omitempty"`
 	Username             string             `json:"-" yaml:"-"`
 	RegistryURL          string             `json:"-" yaml:"-"`
 	Selector             Selector           `json:"selector,omitempty" yaml:"selector,omitempty"`

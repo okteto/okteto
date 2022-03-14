@@ -634,6 +634,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 		}
 	}
 	for _, d := range m.Dev {
+		d.Name = ""
 		if d.Image.Name != "" {
 			d.Image.Context = ""
 			d.Image.Dockerfile = ""
