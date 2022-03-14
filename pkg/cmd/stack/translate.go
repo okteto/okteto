@@ -121,7 +121,7 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
 	hasBuiltSomething := false
 	for svcName, svcInfo := range s.Services {
-		if svcInfo.Build == nil {
+		if svcInfo.Build == nil && len(svcInfo.VolumeMounts) == 0 {
 			continue
 		}
 		if !okteto.IsOkteto() && svcInfo.Image == "" {
@@ -152,25 +152,32 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		}
 
 		buildInfo := svcInfo.Build
-		oktetoLog.Information("Building image for service '%s'", svcName)
+		volumesToInclude := svcInfo.VolumeMounts
+		var options build.BuildOptions
+		if buildInfo != nil {
+			oktetoLog.Information("Building image for service '%s'", svcName)
 
-		volumesToInclude := buildInfo.VolumesToInclude
-		if len(buildInfo.VolumesToInclude) > 0 {
-			buildInfo.VolumesToInclude = nil
-		}
+			if len(buildInfo.VolumesToInclude) > 0 {
+				buildInfo.VolumesToInclude = nil
+			}
 
-		options := build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
-		if err := build.Run(ctx, options); err != nil {
-			return err
-		}
-		_, err := registry.GetImageTagWithDigest(options.Tag)
-		if err != nil {
-			return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
+			options = build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
+			if err := build.Run(ctx, options); err != nil {
+				return err
+			}
+			_, err := registry.GetImageTagWithDigest(options.Tag)
+			if err != nil {
+				return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
+			}
 		}
 
 		if len(volumesToInclude) > 0 {
 			oktetoLog.Information("Including volume hosts for service '%s'", svcName)
-			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(options.Tag, volumesToInclude)
+			fromImage := options.Tag
+			if fromImage == "" {
+				fromImage = svcInfo.Image
+			}
+			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(fromImage, volumesToInclude)
 			if err != nil {
 				return err
 			}
