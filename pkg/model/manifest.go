@@ -596,7 +596,8 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		if _, ok := m.Dev[svcName]; !ok {
+
+		if _, ok := m.Dev[svcName]; !ok && len(d.Sync.Folders) > 0 {
 			m.Dev[svcName] = d
 		}
 
