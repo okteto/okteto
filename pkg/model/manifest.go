@@ -292,6 +292,10 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 
 	if stackPath := getFilePath(cwd, stackFiles); stackPath != "" {
 		oktetoLog.Infof("Found okteto compose")
+		stackPath, err := filepath.Rel(cwd, stackPath)
+		if err != nil {
+			return nil, err
+		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto compose manifest on %s", stackPath)
 		stackManifest := &Manifest{
 			Type: StackType,
@@ -320,6 +324,10 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 
 	if chartPath := getChartPath(cwd); chartPath != "" {
 		oktetoLog.Infof("Found chart")
+		chartPath, err := filepath.Rel(cwd, chartPath)
+		if err != nil {
+			return nil, err
+		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found helm chart on %s", chartPath)
 		chartManifest := &Manifest{
 			Type: ChartType,
@@ -340,6 +348,10 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 	}
 	if manifestPath := getManifestsPath(cwd); manifestPath != "" {
 		oktetoLog.Infof("Found kubernetes manifests")
+		manifestPath, err := filepath.Rel(cwd, manifestPath)
+		if err != nil {
+			return nil, err
+		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found kubernetes manifest on %s", manifestPath)
 		k8sManifest := &Manifest{
 			Type: KubernetesType,
