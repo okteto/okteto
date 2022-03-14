@@ -539,6 +539,7 @@ func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *i
 		spinner.Stop()
 		oktetoLog.Success("Endpoint '%s' created", ingressName)
 		spinner.Start()
+		return nil
 	}
 
 	if old.GetLabels()[model.StackNameLabel] == "" {
