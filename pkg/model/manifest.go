@@ -14,6 +14,7 @@
 package model
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -564,12 +565,12 @@ type Dependency struct {
 func (m *Manifest) InferFromStack() (*Manifest, error) {
 	for svcName, svcInfo := range m.Deploy.Compose.Stack.Services {
 		d := NewDev()
-		toMount := []StackVolume{}
 		for _, p := range svcInfo.Ports {
 			if p.HostPort != 0 {
 				d.Forward = append(d.Forward, Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
 			}
 		}
+		toMount := []StackVolume{}
 		for _, v := range svcInfo.VolumeMounts {
 			if pathExistsAndDir(v.LocalPath) {
 				d.Sync.Folders = append(d.Sync.Folders, SyncFolder(v))
@@ -639,12 +640,12 @@ func (m *Manifest) WriteToFile(filePath string) error {
 	m.Context = ""
 	m.Namespace = ""
 	//Unmarshal with yamlv2 because we have the marshal with yaml v2
-	bytes, err := yaml.Marshal(m)
+	b, err := yaml.Marshal(m)
 	if err != nil {
 		return err
 	}
 	doc := yaml3.Node{}
-	if err := yaml3.Unmarshal(bytes, &doc); err != nil {
+	if err := yaml3.Unmarshal(b, &doc); err != nil {
 		return err
 	}
 	doc = *doc.Content[0]
@@ -677,11 +678,15 @@ func (m *Manifest) WriteToFile(filePath string) error {
 
 	doc = m.reorderDocFields(doc)
 
-	out, err := yaml3.Marshal(doc)
+	buffer := bytes.NewBuffer(nil)
+	encoder := yaml3.NewEncoder(buffer)
+	encoder.SetIndent(2)
+
+	err = encoder.Encode(doc)
 	if err != nil {
 		return err
 	}
-	out = addEmptyLineBetweenSections(out)
+	out := addEmptyLineBetweenSections(buffer.Bytes())
 	if err := os.WriteFile(filePath, out, 0600); err != nil {
 		oktetoLog.Infof("failed to write stignore file: %s", err)
 		return err
