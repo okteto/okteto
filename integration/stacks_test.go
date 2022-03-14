@@ -106,7 +106,7 @@ func TestStacks(t *testing.T) {
 
 func deployStack(ctx context.Context, oktetoPath, stackPath, dir string) error {
 	log.Printf("okteto stack deploy %s", stackPath)
-	cmd := exec.Command(oktetoPath, "stack", "deploy", "-f", stackPath, "--build", "--wait")
+	cmd := exec.Command(oktetoPath, "stack", "deploy", "-f", stackPath, "--build", "--wait", "--loglevel=info")
 	cmd.Env = os.Environ()
 	cmd.Dir = dir
 
