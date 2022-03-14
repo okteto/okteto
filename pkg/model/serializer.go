@@ -882,6 +882,16 @@ func (c *ComposeInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+// MarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (c *ComposeInfo) MarshalYAML() (interface{}, error) {
+	if len(c.Manifest) == 1 {
+		return c.Manifest[0], nil
+	} else if len(c.Manifest) > 1 {
+		return c.Manifest, nil
+	}
+	return c, nil
+}
+
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (m *ManifestList) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
