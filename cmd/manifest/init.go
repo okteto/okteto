@@ -112,7 +112,7 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 			return err
 		}
 		if composePath != "" {
-			answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? ")
+			answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? [y/n] ")
 			if err != nil {
 				return err
 			}
