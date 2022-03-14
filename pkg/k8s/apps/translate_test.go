@@ -14,6 +14,7 @@
 package apps
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -293,6 +294,12 @@ services:
 						Name:  "OKTETO_NAME",
 						Value: "web",
 					},
+					{Name: "HISTSIZE", Value: "10000000"},
+					{Name: "HISTFILESIZE", Value: "10000000"},
+					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+					{Name: "BASHOPTS", Value: "histappend"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 				},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  &runAsUser,
@@ -344,6 +351,11 @@ services:
 						SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
 					},
 					{
+						Name:      dev1.GetVolumeName(),
+						MountPath: "/var/okteto/bashrc",
+						SubPath:   "okteto-bash-history",
+					},
+					{
 						Name:      oktetoSyncSecretVolume,
 						ReadOnly:  false,
 						MountPath: "/var/syncthing/secret/",
@@ -393,7 +405,7 @@ services:
 	}
 	marshalledD1, _ := yaml.Marshal(tr1.App.PodSpec())
 	marshalledD1Orig, _ := yaml.Marshal(d1Orig.Spec.Template.Spec)
-	if string(marshalledD1) != string(marshalledD1Orig) {
+	if !bytes.Equal(marshalledD1, marshalledD1Orig) {
 		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledD1), string(marshalledD1Orig))
 	}
 
@@ -428,7 +440,7 @@ services:
 	}
 	marshalledDevD1, _ := yaml.Marshal(tr1.DevApp.PodSpec())
 	marshalledDevD1OK, _ := yaml.Marshal(dDevPod1OK)
-	if string(marshalledDevD1) != string(marshalledDevD1OK) {
+	if !bytes.Equal(marshalledDevD1, marshalledDevD1OK) {
 		t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
 	}
 
@@ -502,6 +514,14 @@ services:
 				ImagePullPolicy: apiv1.PullAlways,
 				Command:         []string{"./run_worker.sh"},
 				Args:            []string{},
+				Env: []apiv1.EnvVar{
+					{Name: "HISTSIZE", Value: "10000000"},
+					{Name: "HISTFILESIZE", Value: "10000000"},
+					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+					{Name: "BASHOPTS", Value: "histappend"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+				},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  pointer.Int64Ptr(0),
 					RunAsGroup: pointer.Int64Ptr(0),
@@ -512,6 +532,11 @@ services:
 						ReadOnly:  false,
 						MountPath: "/src",
 						SubPath:   path.Join(model.SourceCodeSubPath, "worker"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						MountPath: "/var/okteto/bashrc",
+						SubPath:   "okteto-bash-history",
 					},
 				},
 				LivenessProbe:  nil,
@@ -541,7 +566,7 @@ services:
 	}
 	marshalledD2, _ := yaml.Marshal(tr2.App.PodSpec())
 	marshalledD2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
-	if string(marshalledD2) != string(marshalledD2Orig) {
+	if !bytes.Equal(marshalledD2, marshalledD2Orig) {
 		t.Fatalf("Wrong d2 generation.\nActual %+v, \nExpected %+v", string(marshalledD2), string(marshalledD2Orig))
 	}
 
@@ -567,7 +592,7 @@ services:
 	}
 	marshalledDevD2, _ := yaml.Marshal(tr2.DevApp.PodSpec())
 	marshalledDevD2OK, _ := yaml.Marshal(d2DevPodOK)
-	if string(marshalledDevD2) != string(marshalledDevD2OK) {
+	if !bytes.Equal(marshalledDevD2, marshalledDevD2OK) {
 		t.Fatalf("Wrong dev d2 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD2), string(marshalledDevD2OK))
 	}
 
@@ -717,7 +742,7 @@ persistentVolume:
 	marshalledDev, _ := yaml.Marshal(tr.DevApp.PodSpec())
 	marshalledDevOK, _ := yaml.Marshal(dDevPodOK)
 
-	if string(marshalledDev) != string(marshalledDevOK) {
+	if !bytes.Equal(marshalledDev, marshalledDevOK) {
 		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDev), string(marshalledDevOK))
 	}
 }
@@ -878,6 +903,12 @@ docker:
 						Name:  "DOCKER_TLS_VERIFY",
 						Value: "1",
 					},
+					{Name: "HISTSIZE", Value: "10000000"},
+					{Name: "HISTFILESIZE", Value: "10000000"},
+					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+					{Name: "BASHOPTS", Value: "histappend"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 				},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  pointer.Int64Ptr(0),
@@ -907,6 +938,11 @@ docker:
 						ReadOnly:  false,
 						MountPath: "/app",
 						SubPath:   model.SourceCodeSubPath,
+					},
+					{
+						Name:      dev.GetVolumeName(),
+						MountPath: "/var/okteto/bashrc",
+						SubPath:   "okteto-bash-history",
 					},
 					{
 						Name:      oktetoSyncSecretVolume,
@@ -970,7 +1006,7 @@ docker:
 	}
 	marshalled, _ := yaml.Marshal(tr.DevApp.PodSpec())
 	marshalledOK, _ := yaml.Marshal(dDevPodOK)
-	if string(marshalled) != string(marshalledOK) {
+	if !bytes.Equal(marshalled, marshalledOK) {
 		t.Fatalf("Wrong d generation.\nActual %+v, \nExpected %+v", string(marshalled), string(marshalledOK))
 	}
 }
@@ -1358,6 +1394,12 @@ environment:
 			Name:  "OKTETO_USERNAME",
 			Value: "cindy",
 		},
+		{Name: "HISTSIZE", Value: "10000000"},
+		{Name: "HISTFILESIZE", Value: "10000000"},
+		{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+		{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+		{Name: "BASHOPTS", Value: "histappend"},
+		{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 	}
 	if !reflect.DeepEqual(envOK, tr.DevApp.PodSpec().Containers[0].Env) {
 		t.Fatalf("Wrong env generation %+v", tr.DevApp.PodSpec().Containers[0].Env)
@@ -1610,6 +1652,12 @@ services:
 						Name:  "OKTETO_NAME",
 						Value: "web",
 					},
+					{Name: "HISTSIZE", Value: "10000000"},
+					{Name: "HISTFILESIZE", Value: "10000000"},
+					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+					{Name: "BASHOPTS", Value: "histappend"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 				},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  &runAsUser,
@@ -1661,6 +1709,11 @@ services:
 						SubPath:   path.Join(model.SourceCodeSubPath, "sub"),
 					},
 					{
+						Name:      dev1.GetVolumeName(),
+						MountPath: "/var/okteto/bashrc",
+						SubPath:   "okteto-bash-history",
+					},
+					{
 						Name:      oktetoSyncSecretVolume,
 						ReadOnly:  false,
 						MountPath: "/var/syncthing/secret/",
@@ -1704,7 +1757,7 @@ services:
 	}
 	marshalledSfs1, _ := yaml.Marshal(tr1.App.PodSpec())
 	marshalledSfs1Orig, _ := yaml.Marshal(sfs1Orig.Spec.Template.Spec)
-	if string(marshalledSfs1) != string(marshalledSfs1Orig) {
+	if !bytes.Equal(marshalledSfs1, marshalledSfs1Orig) {
 		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledSfs1), string(marshalledSfs1Orig))
 	}
 
@@ -1730,7 +1783,7 @@ services:
 	}
 	marshalledDevSfs1, _ := yaml.Marshal(tr1.DevApp.PodSpec())
 	marshalledDevSfs1OK, _ := yaml.Marshal(sfs1PodDev)
-	if string(marshalledDevSfs1) != string(marshalledDevSfs1OK) {
+	if !bytes.Equal(marshalledDevSfs1, marshalledDevSfs1OK) {
 		t.Fatalf("Wrong dev sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevSfs1), string(marshalledDevSfs1OK))
 	}
 
@@ -1809,12 +1862,25 @@ services:
 					RunAsUser:  pointer.Int64Ptr(0),
 					RunAsGroup: pointer.Int64Ptr(0),
 				},
+				Env: []apiv1.EnvVar{
+					{Name: "HISTSIZE", Value: "10000000"},
+					{Name: "HISTFILESIZE", Value: "10000000"},
+					{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+					{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+					{Name: "BASHOPTS", Value: "histappend"},
+					{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+				},
 				VolumeMounts: []apiv1.VolumeMount{
 					{
 						Name:      dev1.GetVolumeName(),
 						ReadOnly:  false,
 						MountPath: "/src",
 						SubPath:   path.Join(model.SourceCodeSubPath, "worker"),
+					},
+					{
+						Name:      dev1.GetVolumeName(),
+						MountPath: "/var/okteto/bashrc",
+						SubPath:   "okteto-bash-history",
 					},
 				},
 				LivenessProbe:  nil,
@@ -1844,7 +1910,7 @@ services:
 	}
 	marshalledSfs2, _ := yaml.Marshal(tr2.App.PodSpec())
 	marshalledSfs2Orig, _ := yaml.Marshal(sfs2Orig.Spec.Template.Spec)
-	if string(marshalledSfs2) != string(marshalledSfs2Orig) {
+	if !bytes.Equal(marshalledSfs2, marshalledSfs2Orig) {
 		t.Fatalf("Wrong sfs2 generation.\nActual %+v, \nExpected %+v", string(marshalledSfs2), string(marshalledSfs2Orig))
 	}
 
@@ -1870,7 +1936,7 @@ services:
 	}
 	marshalledDevSfs2, _ := yaml.Marshal(tr2.DevApp.PodSpec())
 	marshalledDevSfs2OK, _ := yaml.Marshal(sfs2DevPod)
-	if string(marshalledDevSfs2) != string(marshalledDevSfs2OK) {
+	if !bytes.Equal(marshalledDevSfs2, marshalledDevSfs2OK) {
 		t.Fatalf("Wrong dev sfs2 generation.\nActual %+v, \nExpected %+v", string(marshalledDevSfs2), string(marshalledDevSfs2OK))
 	}
 
