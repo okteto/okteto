@@ -376,16 +376,3 @@ func doesAutocreateAppExist(ctx context.Context, dev *model.Dev, c kubernetes.In
 	}
 	return err == nil
 }
-
-// GetDevApp returns the cloned app if exists, error otherwise
-func GetDevApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface) (apps.App, error) {
-	devAppDev := *dev
-	devAppDev.Name = model.DevCloneName(dev.Name)
-	app, err := apps.Get(ctx, &devAppDev, dev.Namespace, c)
-	if err != nil && !oktetoErrors.IsNotFound(err) {
-		oktetoLog.Infof("getApp autocreate k8s error, retrying...")
-		_, err := apps.Get(ctx, &devAppDev, dev.Namespace, c)
-		return nil, err
-	}
-	return app, nil
-}
