@@ -60,6 +60,10 @@ func IsTransientError(err error) bool {
 	case strings.Contains(err.Error(), "failed commit on ref") && strings.Contains(err.Error(), "500 Internal Server Error"),
 		strings.Contains(err.Error(), "transport is closing"):
 		return true
+	case strings.Contains(err.Error(), "transport: error while dialing: dial tcp: i/o timeout"):
+		return true
+	case strings.Contains(err.Error(), "error while dialing: dial tcp: lookup buildkit") && strings.Contains(err.Error(), "no such host"):
+		return true
 	case strings.Contains(err.Error(), "failed commit on ref") && strings.Contains(err.Error(), "400 Bad Request"):
 		return true
 	case strings.Contains(err.Error(), "failed to do request") && strings.Contains(err.Error(), "http: server closed idle connection"):
