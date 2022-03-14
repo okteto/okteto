@@ -57,8 +57,7 @@ const (
 	devHeadComment          = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/manifest/#dev"
 	dependenciesHeadComment = "The dependencies section defines other git repositories to be deployed as part of your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#dependencies"
 	dependenciesExample     = `dependencies:
-  - https://github.com/okteto/b
-  - frontend/okteto.yml`
+  - https://github.com/okteto/b`
 
 	// FakeCommand prints into terminal a fake command
 	FakeCommand = "echo 'Replace this line with the proper 'helm' or 'kubectl' commands to deploy your development environment'"
