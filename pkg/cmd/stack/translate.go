@@ -184,6 +184,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 				return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
 			}
 		}
+		svcInfo.Image = options.Tag
 		oktetoLog.Success("Image for service '%s' pushed to registry: %s", svcName, options.Tag)
 		oktetoLog.SetStage("")
 	}
