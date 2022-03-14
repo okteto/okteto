@@ -1442,7 +1442,7 @@ services:
         cpu: "500m"
     workdir: /app
     %s`, tt.value))
-			expected := fmt.Sprintf("Error on dev 'deployment': %q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest/#services for documentation", tt.name)
+			expected := fmt.Sprintf("Error on dev 'deployment': %q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest-v1/#services-object-optional for documentation", tt.name)
 
 			_, err := Read(manifest)
 			if err == nil {
