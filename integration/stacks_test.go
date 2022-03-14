@@ -106,15 +106,14 @@ func TestStacks(t *testing.T) {
 
 func deployStack(ctx context.Context, oktetoPath, stackPath, dir string) error {
 	log.Printf("okteto stack deploy %s", stackPath)
-	cmd := exec.Command(oktetoPath, "stack", "deploy", "-f", stackPath, "--build", "--wait")
+	cmd := exec.Command(oktetoPath, "stack", "deploy", "-f", stackPath, "--build", "--wait", "--loglevel=info")
 	cmd.Env = os.Environ()
 	cmd.Dir = dir
 
-	stderr, _ := cmd.StderrPipe()
+	stdout, _ := cmd.StdoutPipe()
 	cmd.Start()
 
-	scanner := bufio.NewScanner(stderr)
-	scanner.Split(bufio.ScanWords)
+	scanner := bufio.NewScanner(stdout)
 	for scanner.Scan() {
 		m := scanner.Text()
 		fmt.Println(m)
@@ -128,7 +127,7 @@ func deployStack(ctx context.Context, oktetoPath, stackPath, dir string) error {
 
 func destroyStack(ctx context.Context, oktetoPath, stackManifest, dir string) error {
 	log.Printf("okteto stack destroy")
-	cmd := exec.Command(oktetoPath, "stack", "destroy", "-f", stackManifest)
+	cmd := exec.Command(oktetoPath, "stack", "destroy", "-f", stackManifest, "--loglevel=debug")
 	cmd.Env = os.Environ()
 	cmd.Dir = dir
 	o, err := cmd.CombinedOutput()
