@@ -418,7 +418,7 @@ func getChartPath(cwd string) string {
 	for _, name := range chartsSubPath {
 		path := filepath.Join(cwd, name, "Chart.yaml")
 		if FileExists(path) {
-			return path
+			return filepath.Dir(path)
 		}
 	}
 	return ""
