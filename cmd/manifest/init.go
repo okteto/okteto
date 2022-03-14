@@ -162,7 +162,7 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 					}
 				}
 			}
-			oktetoLog.Success("Okteto manifest configured correctly")
+			oktetoLog.Success("Okteto manifest (%s) configured correctly", opts.DevPath)
 			oktetoLog.Information("Run 'okteto up' to activate your development container")
 		}
 	}
