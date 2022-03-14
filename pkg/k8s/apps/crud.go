@@ -101,13 +101,12 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 }
 
 //GetTranslations fills all the deployments pointed by a development container
-func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, uid string, c kubernetes.Interface) (map[string]*Translation, error) {
+func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
 	mainTr := &Translation{
 		MainDev: dev,
 		Dev:     dev,
 		App:     app,
 		Rules:   []*model.TranslationRule{dev.ToTranslationRule(dev, reset)},
-		ID:      uid,
 	}
 	result := map[string]*Translation{app.ObjectMeta().Name: mainTr}
 
