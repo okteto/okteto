@@ -107,7 +107,7 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 
 	var manifest *model.Manifest
 	if len(composeFiles) > 0 {
-		composePath, create, err := selectComposeFile(composeFiles)
+		composePath, err := selectComposeFile(composeFiles)
 		if err != nil {
 			return err
 		}
@@ -123,11 +123,6 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 			if err != nil {
 				return err
 			}
-		} else if create {
-			manifest, err = createNewCompose()
-			if err != nil {
-				return err
-			}
 		} else {
 			manifest, err = createFromKubernetes(cwd)
 			if err != nil {
@@ -135,20 +130,9 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 			}
 		}
 	} else {
-		selection, err := utils.AskForOptions([]string{"Docker Compose", "Kubernetes Manifest"}, "How do you want to launch your development environment?")
+		manifest, err = createFromKubernetes(cwd)
 		if err != nil {
 			return err
-		}
-		if selection == "Docker Compose" {
-			manifest, err = createNewCompose()
-			if err != nil {
-				return err
-			}
-		} else {
-			manifest, err = createFromKubernetes(cwd)
-			if err != nil {
-				return err
-			}
 		}
 	}
 
@@ -299,12 +283,6 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 		}
 	}
 	return manifest, err
-}
-
-func createNewCompose() (*model.Manifest, error) {
-	oktetoLog.Information("Docker Compose helps you define a multicontainer application")
-	oktetoLog.Information("Learn how to configure a docker compose file here: https://github.com/compose-spec/compose-spec/blob/master/spec.md")
-	return nil, nil
 }
 
 func createFromKubernetes(cwd string) (*model.Manifest, error) {
