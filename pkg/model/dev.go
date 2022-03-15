@@ -636,6 +636,10 @@ func (dev *Dev) Validate() error {
 		return fmt.Errorf("Name cannot be empty")
 	}
 
+	if dev.Image == nil {
+		dev.Image = &BuildInfo{}
+	}
+
 	if ValidKubeNameRegex.MatchString(dev.Name) {
 		return errBadName
 	}

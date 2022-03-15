@@ -91,7 +91,8 @@ func Init() *cobra.Command {
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 			}
 
-			return mc.RunInitV2(ctx, opts)
+			_, err = mc.RunInitV2(ctx, opts)
+			return err
 		},
 	}
 
@@ -103,21 +104,21 @@ func Init() *cobra.Command {
 }
 
 // RunInitV2 initializes a new okteto manifest
-func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) error {
+func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
 
 	var manifest *model.Manifest
 	var err error
 	if !opts.Overwrite {
 		manifest, err = model.GetManifestV2(opts.DevPath)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	if manifest == nil {
+	if manifest == nil || len(manifest.Build) == 0 || manifest.Deploy == nil {
 		manifest, err = mc.configureManifestDeployAndBuild(opts.Workdir)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -125,25 +126,25 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) error 
 		mc.manifest = manifest
 		manifest.Name = utils.InferName(opts.Workdir)
 		if err := manifest.WriteToFile(opts.DevPath); err != nil {
-			return err
+			return nil, err
 		}
 		if opts.ShowCTA {
 			answer, err := utils.AskYesNo("Do you want to launch your development environment? [y/n]: ")
 			if err != nil {
-				return err
+				return nil, err
 			}
 			if answer {
 				if err := mc.deploy(ctx, opts); err != nil {
-					return err
+					return nil, err
 				}
 
 				answer, err := utils.AskYesNo("Do you want to configure your development containers? [y/n]: ")
 				if err != nil {
-					return err
+					return nil, err
 				}
 				if answer {
 					if err := mc.configureDevsByResources(ctx, opts); err != nil {
-						return err
+						return nil, err
 					}
 				}
 			}
@@ -154,7 +155,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) error 
 			oktetoLog.Information("Run 'okteto up' to activate your development container")
 		}
 	}
-	return nil
+	return manifest, nil
 }
 
 func (mc *ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Manifest, error) {

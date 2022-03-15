@@ -55,6 +55,7 @@ func TestRun(t *testing.T) {
 	opts := &InitOpts{
 		DevPath:  p,
 		Language: "golang",
+		Workdir:  dir,
 	}
 
 	if err := mc.RunInitV1(ctx, opts); err != nil {
@@ -83,6 +84,7 @@ func TestRun(t *testing.T) {
 	opts = &InitOpts{
 		DevPath:   p,
 		Language:  "ruby",
+		Workdir:   dir,
 		Overwrite: true,
 	}
 
@@ -119,6 +121,7 @@ func TestRunJustCreateNecessaryFields(t *testing.T) {
 	opts := &InitOpts{
 		DevPath:  p,
 		Language: "golang",
+		Workdir:  dir,
 	}
 	if err := mc.RunInitV1(ctx, opts); err != nil {
 		t.Fatal(err)

@@ -588,6 +588,10 @@ type Dependency struct {
 
 // InferFromStack infers data from a stackfile
 func (m *Manifest) InferFromStack() (*Manifest, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		oktetoLog.Info("could not detect working directory")
+	}
 	for svcName, svcInfo := range m.Deploy.Compose.Stack.Services {
 		d := NewDev()
 		for _, p := range svcInfo.Ports {
@@ -623,6 +627,14 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 			buildInfo.Image = svcInfo.Image
 		}
 		buildInfo.VolumesToInclude = toMount
+		buildInfo.Context, err = filepath.Rel(cwd, buildInfo.Context)
+		if err != nil {
+			return nil, err
+		}
+		buildInfo.Dockerfile, err = filepath.Rel(cwd, buildInfo.Dockerfile)
+		if err != nil {
+			return nil, err
+		}
 		if _, ok := m.Build[svcName]; !ok {
 			m.Build[svcName] = buildInfo
 		}

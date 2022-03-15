@@ -67,10 +67,8 @@ func Init() *cobra.Command {
 					return err
 				}
 			} else {
-
-				if err := mc.RunInitV2(ctx, opts); err != nil {
-					return err
-				}
+				_, err := mc.RunInitV2(ctx, opts)
+				return err
 			}
 			return nil
 		},
