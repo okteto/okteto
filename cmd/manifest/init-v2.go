@@ -143,7 +143,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 					return nil, err
 				}
 				if answer {
-					if err := mc.configureDevsByResources(ctx, opts); err != nil {
+					if err := mc.configureDevsByResources(ctx); err != nil {
 						return nil, err
 					}
 				}
@@ -158,7 +158,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 	return manifest, nil
 }
 
-func (mc *ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Manifest, error) {
+func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Manifest, error) {
 
 	composeFiles := utils.GetStackFiles(cwd)
 	if len(composeFiles) > 0 {
@@ -224,7 +224,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 	return nil
 }
 
-func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, opts *InitOpts) error {
+func (mc *ManifestCommand) configureDevsByResources(ctx context.Context) error {
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
@@ -326,6 +326,9 @@ func createFromKubernetes(cwd string) (*model.Manifest, error) {
 		return nil, err
 	}
 	manifest.Dev, err = inferDevsSection(cwd)
+	if err != nil {
+		return nil, err
+	}
 
 	return manifest, nil
 }
@@ -393,7 +396,7 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 			oktetoLog.Debugf("could not detect any okteto manifest on %s", f.Name())
 			continue
 		}
-		if dev.IsV2 == false && len(dev.Dev) != 0 {
+		if !dev.IsV2 && len(dev.Dev) != 0 {
 			devs[f.Name()] = dev.Dev[f.Name()]
 		}
 	}

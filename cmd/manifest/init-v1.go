@@ -85,7 +85,7 @@ func InitV1(opts *InitOpts) error {
 }
 
 // RunInitV1 runs the sequence to generate okteto.yml
-func (mc *ManifestCommand) RunInitV1(ctx context.Context, opts *InitOpts) error {
+func (*ManifestCommand) RunInitV1(ctx context.Context, opts *InitOpts) error {
 	oktetoLog.Println("This command walks you through creating an okteto manifest.")
 	oktetoLog.Println("It only covers the most common items, and tries to guess sensible defaults.")
 	oktetoLog.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
