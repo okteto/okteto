@@ -52,9 +52,23 @@ const (
 	buildExample     = `build:
   my-service:
     context: .`
-	buildSvcEnvVars         = "You can use the following env vars to refer to this image in your deploy commands:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_TAG: image tag"
-	deployHeadComment       = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#deploy"
-	devHeadComment          = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/manifest/#dev"
+	buildSvcEnvVars   = "You can use the following env vars to refer to this image in your deploy commands:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_TAG: image tag"
+	deployHeadComment = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#deploy"
+	devHeadComment    = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/manifest/#dev"
+	devExample        = `dev:
+  selector:
+    app.kubernetes.io/part-of: test
+  image: python:3
+  command: ["python", "app.py"]
+  workdir: /usr/src/app
+  sync:
+   - .:/usr/src/app
+  environment:
+    - name=$USER
+  forward:
+    - 8080:80
+  reverse:
+    - 9000:9001`
 	dependenciesHeadComment = "The dependencies section defines other git repositories to be deployed as part of your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#dependencies"
 	dependenciesExample     = `dependencies:
   - https://github.com/okteto/b`
@@ -629,11 +643,6 @@ func (m *Manifest) WriteToFile(filePath string) error {
 			}
 		}
 	}
-	if len(m.Dev) == 0 {
-		m.Dev = ManifestDevs{
-			m.Name: NewDev(),
-		}
-	}
 	for _, d := range m.Dev {
 		d.Name = ""
 		if d.Image.Name != "" {
@@ -745,6 +754,14 @@ func (*Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
 	if devDefinitionIdx != -1 {
 		contentCopy = append(contentCopy, doc.Content[devDefinitionIdx], doc.Content[devDefinitionIdx+1])
 		nodes = append(nodes, devDefinitionIdx, devDefinitionIdx+1)
+	} else {
+		whereToInject := getDocIdx(contentCopy, "dependencies")
+		if dependenciesDefinitionIdx == -1 {
+			whereToInject = getDocIdx(contentCopy, "deploy")
+			contentCopy[whereToInject].FootComment += fmt.Sprintf("\n\n%s\n%s", devHeadComment, devExample)
+		} else {
+			contentCopy[whereToInject].FootComment += fmt.Sprintf("%s\n%s", devHeadComment, devExample)
+		}
 	}
 
 	// We need to inject all the other fields remaining
