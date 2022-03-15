@@ -232,7 +232,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 	var err error
-	oktetoLog.SetStage("Read manifest")
+	oktetoLog.SetStage("Load manifest")
 	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
 		return err
