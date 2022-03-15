@@ -78,7 +78,7 @@ func ReadRC(bytes []byte) (*DevRC, error) {
 
 func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 	if len(devRc.Annotations) > 0 {
-		oktetoLog.Warning("The field 'annotations' is deprecated. Use the field 'metadata.Annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
+		oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in version 2.2.0. Use the field 'metadata.Annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
 		for annotationKey, annotationValue := range devRc.Annotations {
 			dev.Metadata.Annotations[annotationKey] = annotationValue
 		}
@@ -142,7 +142,7 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 	}
 
 	if len(devRc.Labels) > 0 {
-		oktetoLog.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
+		oktetoLog.Warning("The field 'labels' is deprecated and will be removed in version 2.2.0. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
 		for labelKey, labelValue := range devRc.Labels {
 			dev.Selector[labelKey] = labelValue
 		}

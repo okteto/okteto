@@ -496,7 +496,7 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
+		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field and will be removed in version 2.2.0. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
 		v.LocalPath, err = ExpandEnv(parts[0])
 		if err != nil {
 			return err

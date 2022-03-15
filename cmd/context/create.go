@@ -79,7 +79,7 @@ If you need to automate authentication or if you don't want to use browser-based
 	$ okteto context create https://cloud.okteto.com --token ${OKTETO_TOKEN}
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			oktetoLog.Warning("'okteto context create' is deprecated in favor of 'okteto context use', and will be removed in version 1.16")
+			oktetoLog.Warning("'okteto context create' is deprecated in favor of 'okteto context use', and will be removed in version 2.2.0")
 			ctx := context.Background()
 
 			ctxOptions.Context = args[0]
