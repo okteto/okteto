@@ -26,7 +26,6 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/destroy"
-	initCMD "github.com/okteto/okteto/cmd/init"
 	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/pipeline"
@@ -113,7 +112,7 @@ func main() {
 	root.AddCommand(manifest.Manifest(ctx))
 
 	root.AddCommand(namespace.Namespace(ctx))
-	root.AddCommand(initCMD.Init())
+	root.AddCommand(cmd.Init())
 	root.AddCommand(up.Up())
 	root.AddCommand(cmd.Down())
 	root.AddCommand(cmd.Status())

@@ -129,67 +129,7 @@ func TestInferFromStack(t *testing.T) {
 						VolumesToInclude: []StackVolume{},
 					},
 				},
-				Dev: ManifestDevs{
-					"test": &Dev{
-						Name: "test",
-						Metadata: &Metadata{
-							Labels:      Labels{},
-							Annotations: Annotations{},
-						},
-						Selector: Selector{},
-						Forward: []Forward{
-							{
-								Local:  8080,
-								Remote: 8080,
-							},
-						},
-						EmptyImage: true,
-						Image: &BuildInfo{
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-						},
-						Push: &BuildInfo{
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-						},
-						ImagePullPolicy: apiv1.PullAlways,
-						Probes:          &Probes{},
-						Lifecycle:       &Lifecycle{},
-						Workdir:         "/okteto",
-						SecurityContext: &SecurityContext{
-							RunAsUser:  pointer.Int64(0),
-							RunAsGroup: pointer.Int64(0),
-							FSGroup:    pointer.Int64(0),
-						},
-						SSHServerPort: 2222,
-						Volumes:       []Volume{},
-						Timeout: Timeout{
-							Default:   60 * time.Second,
-							Resources: 120 * time.Second,
-						},
-						InitContainer: InitContainer{
-							Image: OktetoBinImageTag,
-						},
-						PersistentVolumeInfo: &PersistentVolumeInfo{
-							Enabled: true,
-						},
-						Secrets: []Secret{},
-						Command: Command{
-							Values: []string{"sh"},
-						},
-						Interface: devInterface,
-						Services:  []*Dev{},
-						Sync: Sync{
-							RescanInterval: 300,
-							Folders: []SyncFolder{
-								{
-									LocalPath:  ".",
-									RemotePath: "/okteto",
-								},
-							},
-						},
-					},
-				},
+				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
 					Compose: &ComposeInfo{
 						Stack: stack,
@@ -220,67 +160,7 @@ func TestInferFromStack(t *testing.T) {
 						Dockerfile: "test-1/Dockerfile",
 					},
 				},
-				Dev: ManifestDevs{
-					"test": &Dev{
-						Name: "test",
-						Metadata: &Metadata{
-							Labels:      Labels{},
-							Annotations: Annotations{},
-						},
-						Selector: Selector{},
-						Forward: []Forward{
-							{
-								Local:  8080,
-								Remote: 8080,
-							},
-						},
-						EmptyImage: true,
-						Image: &BuildInfo{
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-						},
-						Push: &BuildInfo{
-							Context:    ".",
-							Dockerfile: "Dockerfile",
-						},
-						ImagePullPolicy: apiv1.PullAlways,
-						Probes:          &Probes{},
-						Lifecycle:       &Lifecycle{},
-						Workdir:         "/okteto",
-						SecurityContext: &SecurityContext{
-							RunAsUser:  pointer.Int64(0),
-							RunAsGroup: pointer.Int64(0),
-							FSGroup:    pointer.Int64(0),
-						},
-						SSHServerPort: 2222,
-						Volumes:       []Volume{},
-						Timeout: Timeout{
-							Default:   60 * time.Second,
-							Resources: 120 * time.Second,
-						},
-						InitContainer: InitContainer{
-							Image: OktetoBinImageTag,
-						},
-						PersistentVolumeInfo: &PersistentVolumeInfo{
-							Enabled: true,
-						},
-						Secrets: []Secret{},
-						Command: Command{
-							Values: []string{"sh"},
-						},
-						Interface: devInterface,
-						Services:  []*Dev{},
-						Sync: Sync{
-							RescanInterval: 300,
-							Folders: []SyncFolder{
-								{
-									LocalPath:  ".",
-									RemotePath: "/okteto",
-								},
-							},
-						},
-					},
-				},
+				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
 					Compose: &ComposeInfo{
 						Stack: stack,

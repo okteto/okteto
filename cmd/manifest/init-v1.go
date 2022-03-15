@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package init
+package manifest
 
 import (
 	"context"
@@ -32,8 +32,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-
-	"github.com/spf13/cobra"
 )
 
 const (
@@ -42,91 +40,71 @@ const (
 	defaultInitValues = "Use default values"
 )
 
-// Init automatically generates the manifest
-func Init() *cobra.Command {
-	var namespace string
-	var k8sContext string
-	var devPath string
-	var overwrite bool
-	var outputMode string
-	cmd := &cobra.Command{
-		Use:   "init",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
-		Short: "Automatically generate your okteto manifest",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
-			oktetoLog.SetOutputFormat(outputMode)
+// InitV1 automatically generates the manifest
+func InitV1(opts *InitOpts) error {
+	ctx := context.Background()
 
-			ctxResource := &model.ContextResource{}
-			if err := ctxResource.UpdateNamespace(namespace); err != nil {
-				return err
-			}
-
-			if err := ctxResource.UpdateContext(k8sContext); err != nil {
-				return err
-			}
-			ctxOptions := &contextCMD.ContextOptions{
-				Context:   ctxResource.Context,
-				Namespace: ctxResource.Namespace,
-				Show:      true,
-			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
-				return err
-			}
-
-			l := os.Getenv(model.OktetoLanguageEnvVar)
-			workDir, err := os.Getwd()
-			if err != nil {
-				return err
-			}
-
-			if err := Run(devPath, l, workDir, overwrite); err != nil {
-				return err
-			}
-
-			oktetoLog.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
-
-			if devPath == utils.DefaultManifest {
-				oktetoLog.Information("Run 'okteto up' to activate your development container")
-			} else {
-				oktetoLog.Information("Run 'okteto up -f %s' to activate your development container", devPath)
-			}
-			return nil
-		},
+	ctxResource := &model.ContextResource{}
+	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
+		return err
 	}
 
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace target for generating the okteto manifest")
-	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context target for generating the okteto manifest")
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
-	cmd.Flags().BoolVarP(&overwrite, "overwrite", "o", false, "overwrite existing manifest file")
+	if err := ctxResource.UpdateContext(opts.Context); err != nil {
+		return err
+	}
+	ctxOptions := &contextCMD.ContextOptions{
+		Context:   ctxResource.Context,
+		Namespace: ctxResource.Namespace,
+		Show:      true,
+	}
+	if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+		return err
+	}
 
-	//Replace output -o flag by overwrite
-	cmd.Flags().StringVarP(&outputMode, "output", "", "tty", "output format (tty, plain, json)")
-	return cmd
+	opts.Language = os.Getenv(model.OktetoLanguageEnvVar)
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	opts.Workdir = cwd
+
+	mc := &ManifestCommand{}
+	if err := mc.RunInitV1(ctx, opts); err != nil {
+		return err
+	}
+
+	oktetoLog.Success(fmt.Sprintf("okteto manifest (%s) created", opts.DevPath))
+
+	if opts.DevPath == utils.DefaultManifest {
+		oktetoLog.Information("Run 'okteto up' to activate your development container")
+	} else {
+		oktetoLog.Information("Run 'okteto up -f %s' to activate your development container", opts.DevPath)
+	}
+	return nil
 }
 
-// Run runs the sequence to generate okteto.yml
-func Run(devPath, language, workDir string, overwrite bool) error {
+// RunInitV1 runs the sequence to generate okteto.yml
+func (mc *ManifestCommand) RunInitV1(ctx context.Context, opts *InitOpts) error {
 	oktetoLog.Println("This command walks you through creating an okteto manifest.")
 	oktetoLog.Println("It only covers the most common items, and tries to guess sensible defaults.")
 	oktetoLog.Println("See https://okteto.com/docs/reference/manifest/ for the official documentation about the okteto manifest.")
-	ctx := context.Background()
-	devPath, err := validateDevPath(devPath, overwrite)
-	if err != nil {
+
+	if err := validateDevPath(opts.DevPath, opts.Overwrite); err != nil {
 		return err
 	}
 
 	checkForRunningApp := false
-	if language == "" {
+	if opts.Language == "" {
 		checkForRunningApp = true
 	}
-
-	language, err = GetLanguage(language, workDir)
+	var err error
+	opts.Language, err = GetLanguage(opts.Language, opts.Workdir)
 	if err != nil {
 		return err
 	}
 
-	dev, err := linguist.GetDevDefaults(language, workDir)
+	dev, err := linguist.GetDevDefaults(opts.Language, opts.Workdir)
 	if err != nil {
 		return err
 	}
@@ -138,7 +116,7 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 		}
 		if app == nil {
 			dev.Autocreate = true
-			linguist.SetForwardDefaults(dev, language)
+			linguist.SetForwardDefaults(dev, opts.Language)
 		} else {
 			dev.Container = container
 			if container == "" {
@@ -148,13 +126,13 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 			suffix := fmt.Sprintf("Analyzing %s '%s'...", app.Kind(), app.ObjectMeta().Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
-			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language)
+			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, opts.Language)
 			spinner.Stop()
 			if err == nil {
 				oktetoLog.Success(fmt.Sprintf("%s '%s' successfully analyzed", app.Kind(), app.ObjectMeta().Name))
 			} else {
 				oktetoLog.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", app.Kind(), app.ObjectMeta().Name, err))
-				linguist.SetForwardDefaults(dev, language)
+				linguist.SetForwardDefaults(dev, opts.Language)
 			}
 		}
 
@@ -166,7 +144,7 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 			}
 		}
 	} else {
-		linguist.SetForwardDefaults(dev, language)
+		linguist.SetForwardDefaults(dev, opts.Language)
 		dev.PersistentVolumeInfo = &model.PersistentVolumeInfo{
 			Enabled: true,
 		}
@@ -174,24 +152,24 @@ func Run(devPath, language, workDir string, overwrite bool) error {
 
 	dev.Namespace = ""
 	dev.Context = ""
-	if err := dev.Save(devPath); err != nil {
+	if err := dev.Save(opts.DevPath); err != nil {
 		return err
 	}
 
-	devDir, err := filepath.Abs(filepath.Dir(devPath))
+	devDir, err := filepath.Abs(filepath.Dir(opts.DevPath))
 	if err != nil {
 		return err
 	}
 	stignore := filepath.Join(devDir, stignoreFile)
 
 	if !model.FileExists(stignore) {
-		c := linguist.GetSTIgnore(language)
+		c := linguist.GetSTIgnore(opts.Language)
 		if err := os.WriteFile(stignore, c, 0600); err != nil {
 			oktetoLog.Infof("failed to write stignore file: %s", err)
 		}
 	}
 
-	analytics.TrackInit(true, language)
+	analytics.TrackInit(true, opts.Language)
 	return nil
 }
 
@@ -250,16 +228,6 @@ func supportsPersistentVolumes(ctx context.Context) bool {
 
 	oktetoLog.Infof("default storage class not found")
 	return false
-}
-
-func validateDevPath(devPath string, overwrite bool) (string, error) {
-	if !overwrite {
-		if model.FileExists(devPath) {
-			return "", fmt.Errorf("%s already exists. Run this command again with the '-o' flag to overwrite it", devPath)
-		}
-	}
-
-	return devPath, nil
 }
 
 // GetLanguage returns the language of a given folder

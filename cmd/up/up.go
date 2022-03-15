@@ -26,7 +26,7 @@ import (
 	"github.com/moby/term"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
-	initCMD "github.com/okteto/okteto/cmd/init"
+	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -243,10 +243,7 @@ func Up() *cobra.Command {
 }
 
 func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath string) (*model.Manifest, error) {
-	workDir, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("unknown current folder: %s", err)
-	}
+
 	ctxOptions := &contextCMD.ContextOptions{
 		Context:   k8sContext,
 		Namespace: namespace,
@@ -256,7 +253,8 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 		return nil, err
 	}
 
-	if err := initCMD.Run(devPath, "", workDir, false); err != nil {
+	mc := &manifest.ManifestCommand{}
+	if err := mc.RunInitV2(ctx, &manifest.InitOpts{DevPath: devPath, ShowCTA: false}); err != nil {
 		return nil, err
 	}
 

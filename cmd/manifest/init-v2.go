@@ -47,7 +47,11 @@ type InitOpts struct {
 	Context   string
 	Overwrite bool
 
-	ShowCTA bool
+	ShowCTA  bool
+	Version1 bool
+
+	Language string
+	Workdir  string
 }
 
 // Init automatically generates the manifest
@@ -77,12 +81,17 @@ func Init() *cobra.Command {
 				return err
 			}
 
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			opts.Workdir = cwd
 			opts.ShowCTA = oktetoLog.IsInteractive()
 			mc := &ManifestCommand{
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 			}
 
-			return mc.Init(ctx, opts)
+			return mc.RunInitV2(ctx, opts)
 		},
 	}
 
@@ -93,15 +102,11 @@ func Init() *cobra.Command {
 	return cmd
 }
 
-// Init initializes a new okteto manifest
-func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
-
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
+// RunInitV2 initializes a new okteto manifest
+func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) error {
 
 	var manifest *model.Manifest
+	var err error
 	if !opts.Overwrite {
 		manifest, err = model.GetManifestV2(opts.DevPath)
 		if err != nil {
@@ -110,7 +115,7 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 	}
 
 	if manifest == nil {
-		manifest, err = mc.configureManifestDeployAndBuild(cwd)
+		manifest, err = mc.configureManifestDeployAndBuild(opts.Workdir)
 		if err != nil {
 			return err
 		}
@@ -118,7 +123,7 @@ func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
 
 	if manifest != nil {
 		mc.manifest = manifest
-		manifest.Name = utils.InferName(cwd)
+		manifest.Name = utils.InferName(opts.Workdir)
 		if err := manifest.WriteToFile(opts.DevPath); err != nil {
 			return err
 		}
@@ -173,20 +178,20 @@ func (mc *ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.M
 				return nil, err
 			}
 			return manifest, nil
-		} else {
-			manifest, err := createFromKubernetes(cwd)
-			if err != nil {
-				return nil, err
-			}
-			return manifest, nil
 		}
-	} else {
 		manifest, err := createFromKubernetes(cwd)
 		if err != nil {
 			return nil, err
 		}
 		return manifest, nil
+
 	}
+	manifest, err := createFromKubernetes(cwd)
+	if err != nil {
+		return nil, err
+	}
+	return manifest, nil
+
 }
 
 func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
