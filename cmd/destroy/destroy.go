@@ -157,7 +157,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands defined in the manifest")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment was deployed")
-	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the up command is executed")
+	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment was deployed")
 
 	return cmd
 }
@@ -291,7 +291,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		return err
 	}
 
-  oktetoLog.SetStage("Destroying Helm release")
+	oktetoLog.SetStage("Destroying Helm release")
 	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector, spinner); err != nil {
 		if !opts.ForceDestroy {
 			if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {

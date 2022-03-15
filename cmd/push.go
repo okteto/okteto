@@ -19,7 +19,6 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/google/uuid"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -56,10 +55,10 @@ func Push(ctx context.Context) *cobra.Command {
 		Hidden: true,
 		Use:    "push [svc]",
 		Short:  "Build, push and redeploy source code to the target app",
-		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#push"),
+		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli-v1/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-				oktetoLog.Warning("'okteto push' is deprecated in favor of 'okteto deploy', and will be removed in a future version")
+				oktetoLog.Warning("'okteto push' is deprecated in favor of 'okteto deploy', and will be removed in version 2.2.0")
 			}
 			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)
 			if err != nil {
@@ -113,7 +112,7 @@ func Push(ctx context.Context) *cobra.Command {
 			oktetoRegistryURL := okteto.Context().Registry
 
 			if pushOpts.AutoDeploy {
-				oktetoLog.Warning(`The 'deploy' flag is deprecated and will be removed in a future release.
+				oktetoLog.Warning(`The 'deploy' flag is deprecated and will be removed in version 2.2.0.
     Set the 'autocreate' field in your okteto manifest to get the same behavior.
     More information is available here: https://okteto.com/docs/reference/cli#up`)
 			}
@@ -180,11 +179,8 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 			pushOpts.ImageTag = registry.GetImageTag("", dev.Name, dev.Namespace, oktetoRegistryURL)
 		}
 	}
-	id := uuid.New().String()
-	if value, ok := app.ObjectMeta().Annotations[model.OktetoSessionIDAnnotation]; ok {
-		id = value
-	}
-	trMap, err := apps.GetTranslations(ctx, dev, app, false, id, c)
+
+	trMap, err := apps.GetTranslations(ctx, dev, app, false, c)
 	if err != nil {
 		return err
 	}

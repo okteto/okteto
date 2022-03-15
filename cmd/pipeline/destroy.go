@@ -45,16 +45,16 @@ func destroy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy",
 		Short: "Destroy an okteto pipeline",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli-v1/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			oktetoLog.Warning("'okteto pipeline destroy' is deprecated in favor of 'okteto destroy', and will be removed in a future version")
+			oktetoLog.Warning("'okteto pipeline destroy' is deprecated in favor of 'okteto destroy', and will be removed in version 2.2.0")
 			return ExecuteDestroyPipeline(ctx, opts)
 
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.Name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
-	cmd.Flags().StringVarP(&opts.Namespace, "namespace", "n", "", "namespace where the up command is executed (defaults to the current namespace)")
+	cmd.Flags().StringVarP(&opts.Namespace, "namespace", "n", "", "namespace where the pipeline is destroyed (defaults to the current namespace)")
 	cmd.Flags().BoolVarP(&opts.Wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
 	cmd.Flags().BoolVarP(&opts.DestroyVolumes, "volumes", "v", false, "destroy persistent volumes created by the pipeline (defaults to false)")
 	cmd.Flags().DurationVarP(&opts.Timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")

@@ -211,7 +211,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the okteto manifest file")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment is deployed")
-	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the up command is executed")
+	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment is deployed")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
 	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the development environment")
 	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
@@ -347,10 +347,13 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.EnableMasking()
 	err = dc.deploy(ctx, deployOptions)
 	oktetoLog.DisableMasking()
+	oktetoLog.SetStage("done")
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
+	oktetoLog.SetStage("")
 
 	if err != nil {
 		err = oktetoErrors.UserError{
-			E:    oktetoErrors.ErrDeployHasFailedCommand,
+			E:    err,
 			Hint: "Update the 'deploy' section of your okteto manifest and try again",
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, err.Error())
@@ -436,28 +439,9 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	go func() {
 		if opts.Manifest.Deploy.Compose != nil {
 			oktetoLog.SetStage("Deploying compose")
-
-			exit := make(chan error, 1)
-			stop := make(chan os.Signal, 1)
-			signal.Notify(stop, os.Interrupt)
-			go func() {
-				err := dc.deployStack(ctx, opts)
-				exit <- err
-			}()
-			shouldExit := false
-			for {
-				select {
-				case err := <-exit:
-					exitCompose <- err
-					shouldExit = true
-				case <-stop:
-					exitCompose <- oktetoErrors.ErrIntSig
-					return
-				}
-				if shouldExit {
-					break
-				}
-			}
+			err := dc.deployStack(ctx, opts)
+			exitCompose <- err
+			return
 		}
 		exitCompose <- nil
 	}()
@@ -470,7 +454,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 			return oktetoErrors.ErrIntSig
 		case err := <-exitCompose:
 			if err != nil {
-				return err
+				return fmt.Errorf("Error deploying compose: %w", err)
 			}
 			shouldExit = true
 		}
@@ -478,11 +462,6 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 			break
 		}
 	}
-
-	oktetoLog.SetStage("done")
-	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
-	oktetoLog.SetStage("")
-
 	return nil
 }
 
@@ -506,11 +485,7 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 		IsInsideDeploy: true,
 	}
 	oktetoLog.Information("Deploying compose")
-	err = stackCommand.RunDeploy(ctx, composeInfo.Stack, stackOpts)
-	if err != nil {
-		return err
-	}
-	return err
+	return stackCommand.RunDeploy(ctx, composeInfo.Stack, stackOpts)
 }
 
 func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (bool, error) {

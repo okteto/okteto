@@ -43,7 +43,7 @@ func deprecatedCreateNamespace(ctx context.Context) *cobra.Command {
 		Use:   "namespace <name>",
 		Short: "Create a namespace",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			oktetoLog.Warning("'okteto create namespace' is deprecated in favor of 'okteto namespace create', and will be removed in version 1.16")
+			oktetoLog.Warning("'okteto create namespace' is deprecated in favor of 'okteto namespace create', and will be removed in version 2.2.0")
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}

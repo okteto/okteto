@@ -14,6 +14,7 @@
 package model
 
 import (
+	"bytes"
 	"path"
 	"reflect"
 	"testing"
@@ -91,6 +92,12 @@ services:
 				Name:  "OKTETO_NAME",
 				Value: "web",
 			},
+			{Name: "HISTSIZE", Value: "10000000"},
+			{Name: "HISTFILESIZE", Value: "10000000"},
+			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+			{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+			{Name: "BASHOPTS", Value: "histappend"},
+			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 		},
 		SecurityContext: &SecurityContext{
 			RunAsUser:  pointer.Int64Ptr(0),
@@ -127,6 +134,11 @@ services:
 				Name:      dev.GetVolumeName(),
 				MountPath: "/path",
 				SubPath:   path.Join(SourceCodeSubPath, "sub"),
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: "/var/okteto/bashrc",
+				SubPath:   "okteto-bash-history",
 			},
 		},
 		InitContainer: InitContainer{Image: OktetoBinImageTag},
@@ -179,11 +191,24 @@ services:
 		},
 		Resources:        ResourceRequirements{},
 		PersistentVolume: true,
+		Environment: Environment{
+			{Name: "HISTSIZE", Value: "10000000"},
+			{Name: "HISTFILESIZE", Value: "10000000"},
+			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+			{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+			{Name: "BASHOPTS", Value: "histappend"},
+			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
+		},
 		Volumes: []VolumeMount{
 			{
 				Name:      dev.GetVolumeName(),
 				MountPath: "/src",
 				SubPath:   path.Join(SourceCodeSubPath, "worker"),
+			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: "/var/okteto/bashrc",
+				SubPath:   "okteto-bash-history",
 			},
 		},
 		Secrets: make([]Secret, 0),
@@ -237,6 +262,12 @@ initContainer:
 				Name:  "OKTETO_NAME",
 				Value: "web",
 			},
+			{Name: "HISTSIZE", Value: "10000000"},
+			{Name: "HISTFILESIZE", Value: "10000000"},
+			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+			{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+			{Name: "BASHOPTS", Value: "histappend"},
+			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 		},
 		SecurityContext: &SecurityContext{
 			RunAsUser:  pointer.Int64Ptr(0),
@@ -261,6 +292,11 @@ initContainer:
 				MountPath: "/app",
 				SubPath:   SourceCodeSubPath,
 			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: "/var/okteto/bashrc",
+				SubPath:   "okteto-bash-history",
+			},
 		},
 		InitContainer: InitContainer{
 			Image: "image",
@@ -279,7 +315,7 @@ initContainer:
 
 	marshalled, _ := yaml.Marshal(rule)
 	marshalledOK, _ := yaml.Marshal(ruleOK)
-	if string(marshalled) != string(marshalledOK) {
+	if !bytes.Equal(marshalled, marshalledOK) {
 		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
 	}
 }
@@ -342,6 +378,12 @@ docker:
 				Name:  "DOCKER_TLS_VERIFY",
 				Value: "1",
 			},
+			{Name: "HISTSIZE", Value: "10000000"},
+			{Name: "HISTFILESIZE", Value: "10000000"},
+			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+			{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+			{Name: "BASHOPTS", Value: "histappend"},
+			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 		},
 		SecurityContext: &SecurityContext{
 			RunAsUser:  pointer.Int64Ptr(0),
@@ -375,6 +417,11 @@ docker:
 				MountPath: "/app",
 				SubPath:   SourceCodeSubPath,
 			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: "/var/okteto/bashrc",
+				SubPath:   "okteto-bash-history",
+			},
 		},
 		InitContainer: InitContainer{Image: OktetoBinImageTag},
 		Docker: DinDContainer{
@@ -385,7 +432,7 @@ docker:
 
 	marshalled, _ := yaml.Marshal(rule)
 	marshalledOK, _ := yaml.Marshal(ruleOK)
-	if string(marshalled) != string(marshalledOK) {
+	if !bytes.Equal(marshalled, marshalledOK) {
 		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
 	}
 }
@@ -425,6 +472,12 @@ sync:
 				Name:  "OKTETO_NAME",
 				Value: "web",
 			},
+			{Name: "HISTSIZE", Value: "10000000"},
+			{Name: "HISTFILESIZE", Value: "10000000"},
+			{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+			{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+			{Name: "BASHOPTS", Value: "histappend"},
+			{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 		},
 		SecurityContext: &SecurityContext{
 			RunAsUser:  pointer.Int64Ptr(0),
@@ -448,13 +501,18 @@ sync:
 				MountPath: "/app",
 				SubPath:   SourceCodeSubPath,
 			},
+			{
+				Name:      dev.GetVolumeName(),
+				MountPath: "/var/okteto/bashrc",
+				SubPath:   "okteto-bash-history",
+			},
 		},
 		InitContainer: InitContainer{Image: OktetoBinImageTag},
 	}
 
 	marshalled, _ := yaml.Marshal(rule)
 	marshalledOK, _ := yaml.Marshal(ruleOK)
-	if string(marshalled) != string(marshalledOK) {
+	if !bytes.Equal(marshalled, marshalledOK) {
 		t.Fatalf("Wrong rule generation.\nActual %s, \nExpected %s", string(marshalled), string(marshalledOK))
 	}
 }
@@ -474,6 +532,12 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 			expected: Environment{
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
+				{Name: "HISTSIZE", Value: "10000000"},
+				{Name: "HISTFILESIZE", Value: "10000000"},
+				{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+				{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+				{Name: "BASHOPTS", Value: "histappend"},
+				{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 			},
 		},
 		{
@@ -486,6 +550,12 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 				{Name: "OKTETO_NAMESPACE", Value: ""},
 				{Name: "OKTETO_NAME", Value: ""},
 				{Name: oktetoSSHServerPortVariable, Value: "22220"},
+				{Name: "HISTSIZE", Value: "10000000"},
+				{Name: "HISTFILESIZE", Value: "10000000"},
+				{Name: "HISTCONTROL", Value: "ignoreboth:erasedups"},
+				{Name: "HISTFILE", Value: "/var/okteto/bashrc/.bash_history"},
+				{Name: "BASHOPTS", Value: "histappend"},
+				{Name: "PROMPT_COMMAND", Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND"},
 			},
 		},
 	}
@@ -608,7 +678,7 @@ securityContext:
 		rule := dev.ToTranslationRule(dev, false)
 		marshalled, _ := yaml.Marshal(rule.SecurityContext)
 		marshalledOK, _ := yaml.Marshal(test.translated)
-		if string(marshalled) != string(marshalledOK) {
+		if !bytes.Equal(marshalled, marshalledOK) {
 			t.Fatalf("Wrong rule generation for %s.\nActual %s, \nExpected %s", dev.Name, string(marshalled), string(marshalledOK))
 		}
 	}

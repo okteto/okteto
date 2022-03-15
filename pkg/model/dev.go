@@ -467,7 +467,7 @@ func (dev *Dev) SetDefaults() error {
 	}
 
 	if dev.Healthchecks {
-		oktetoLog.Yellow("The use of 'healthchecks' field is deprecated and will be removed in a future release. Please use the field 'probes' instead.")
+		oktetoLog.Yellow("The use of 'healthchecks' field is deprecated and will be removed in version 2.2.0. Please use the field 'probes' instead.")
 		if dev.Probes == nil {
 			dev.Probes = &Probes{Liveness: true, Readiness: true, Startup: true}
 		}
@@ -692,7 +692,7 @@ func (dev *Dev) Validate() error {
 	}
 
 	if dev.Docker.Enabled && !dev.PersistentVolumeEnabled() {
-		oktetoLog.Information("https://okteto.com/docs/reference/manifest/#docker-object-optional")
+		oktetoLog.Information("https://okteto.com/docs/reference/manifest-v1/#docker-object-optional")
 		return fmt.Errorf("Docker support requires persistent volume to be enabled")
 	}
 
@@ -1044,6 +1044,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				},
 			)
 		}
+		enableHistoryVolume(rule, main)
 	}
 
 	for _, v := range dev.ExternalVolumes {
@@ -1058,6 +1059,41 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 	}
 
 	return rule
+}
+
+func enableHistoryVolume(rule *TranslationRule, main *Dev) {
+	rule.Volumes = append(rule.Volumes,
+		VolumeMount{
+			Name:      main.GetVolumeName(),
+			MountPath: "/var/okteto/bashrc",
+			SubPath:   "okteto-bash-history",
+		})
+
+	rule.Environment = append(rule.Environment,
+		EnvVar{
+			Name:  "HISTSIZE",
+			Value: "10000000",
+		},
+		EnvVar{
+			Name:  "HISTFILESIZE",
+			Value: "10000000",
+		},
+		EnvVar{
+			Name:  "HISTCONTROL",
+			Value: "ignoreboth:erasedups",
+		},
+		EnvVar{
+			Name:  "HISTFILE",
+			Value: "/var/okteto/bashrc/.bash_history",
+		},
+		EnvVar{
+			Name:  "BASHOPTS",
+			Value: "histappend",
+		},
+		EnvVar{
+			Name:  "PROMPT_COMMAND",
+			Value: "history -a ; history -c ; history -r ; $PROMPT_COMMAND",
+		})
 }
 
 func areProbesEnabled(probes *Probes) bool {
@@ -1132,28 +1168,28 @@ func GetTimeout() (time.Duration, error) {
 
 func (dev *Dev) translateDeprecatedMetadataFields() error {
 	if len(dev.Labels) > 0 {
-		oktetoLog.Warning("The field 'labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
+		oktetoLog.Warning("The field 'labels' is deprecated and will be removed in version 2.2.0. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
 		for k, v := range dev.Labels {
 			dev.Selector[k] = v
 		}
 	}
 
 	if len(dev.Annotations) > 0 {
-		oktetoLog.Warning("The field 'annotations' is deprecated. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
+		oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in version 2.2.0. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
 		for k, v := range dev.Annotations {
 			dev.Metadata.Annotations[k] = v
 		}
 	}
 	for _, s := range dev.Services {
 		if len(s.Labels) > 0 {
-			oktetoLog.Warning("The field '%s.labels' is deprecated. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
+			oktetoLog.Warning("The field '%s.labels' is deprecated and will be removed in version 2.2.0. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
 			for k, v := range s.Labels {
 				s.Selector[k] = v
 			}
 		}
 
 		if len(s.Annotations) > 0 {
-			oktetoLog.Warning("The field 'annotations' is deprecated. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
+			oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in version 2.2.0. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
 			for k, v := range s.Annotations {
 				s.Metadata.Annotations[k] = v
 			}
@@ -1163,7 +1199,7 @@ func (dev *Dev) translateDeprecatedMetadataFields() error {
 }
 
 func (service *Dev) validateForExtraFields() error {
-	errorMessage := "%q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest/#services for documentation"
+	errorMessage := "%q is not supported in Services. Please visit https://okteto.com/docs/reference/manifest-v1/#services-object-optional for documentation"
 	if service.Username != "" {
 		return fmt.Errorf(errorMessage, "username")
 	}

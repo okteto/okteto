@@ -35,7 +35,7 @@ func UpdateDeprecated() *cobra.Command {
 		Use:   "update",
 		Short: "Update Okteto CLI version",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			oktetoLog.Warning("'okteto update' is deprecated in favor of 'okteto version update', and will be removed in a future version")
+			oktetoLog.Warning("'okteto update' is deprecated in favor of 'okteto version update', and will be removed in version 2.2.0")
 			currentVersion, err := semver.NewVersion(config.VersionString)
 			if err != nil {
 				return fmt.Errorf("could not retrieve version")

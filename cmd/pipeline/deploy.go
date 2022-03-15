@@ -54,15 +54,15 @@ func deploy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy an okteto pipeline",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#deploy"),
+		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli-v1/#deploy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			oktetoLog.Warning("'okteto pipeline deploy' is deprecated in favor of 'okteto deploy [--branch] [--repository]', and will be removed in a future version")
+			oktetoLog.Warning("'okteto pipeline deploy' is deprecated in favor of 'okteto deploy [--branch] [--repository]', and will be removed in version 2.2.0")
 			return ExecuteDeployPipeline(ctx, opts)
 		},
 	}
 
 	cmd.Flags().StringVarP(&opts.Name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
-	cmd.Flags().StringVarP(&opts.Namespace, "namespace", "n", "", "namespace where the up command is executed (defaults to the current namespace)")
+	cmd.Flags().StringVarP(&opts.Namespace, "namespace", "n", "", "namespace where the pipeline is deployed (defaults to the current namespace)")
 	cmd.Flags().StringVarP(&opts.Repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
 	cmd.Flags().StringVarP(&opts.Branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
 	cmd.Flags().BoolVarP(&opts.Wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
@@ -146,7 +146,7 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 	}
 
 	if opts.Filename != "" {
-		oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag")
+		oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in version 2.2.0. Please consider using 'file' flag")
 		if opts.File == "" {
 			opts.File = opts.Filename
 		} else {

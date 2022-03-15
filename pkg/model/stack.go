@@ -249,12 +249,20 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 			svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
 			svc.Build.Dockerfile = loadAbsPath(svc.Build.Context, svc.Build.Dockerfile)
 		}
+		toMount := []StackVolume{}
+		for _, v := range svc.VolumeMounts {
+			toMount = append(toMount, v)
+		}
+		svc.Build.VolumesToInclude = toMount
 	}
 	return s, nil
 }
 
 func getStackName(name, stackPath, actualStackName string) (string, error) {
 	if name != "" {
+		if err := os.Setenv(OktetoNameEnvVar, name); err != nil {
+			return "", err
+		}
 		return name, nil
 	}
 	if actualStackName == "" {
@@ -265,7 +273,13 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 				return "", err
 			}
 		}
+		if err := os.Setenv(OktetoNameEnvVar, name); err != nil {
+			return "", err
+		}
 		return name, nil
+	}
+	if err := os.Setenv(OktetoNameEnvVar, name); err != nil {
+		return "", err
 	}
 	return actualStackName, nil
 }
@@ -288,7 +302,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 				_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
 			}
 
-			_, _ = sb.WriteString("    See https://okteto.com/docs/reference/stacks/ for details")
+			_, _ = sb.WriteString("    See https://okteto.com/docs/reference/compose/ for details")
 			return nil, errors.New(sb.String())
 		}
 

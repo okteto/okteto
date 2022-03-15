@@ -93,7 +93,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			if filename != "" {
-				oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag'")
+				oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in version 2.2.0. Please consider using 'file' flag'")
 				if file == "" {
 					file = filename
 				} else {
