@@ -287,17 +287,17 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 		Filename: composePath,
 		IsV2:     true,
 	}
-	manifest, err = manifest.InferFromStack()
+	cwd, err := os.Getwd()
+	if err != nil {
+		oktetoLog.Info("could not detect working directory")
+	}
+	manifest, err = manifest.InferFromStack(cwd)
 	if err != nil {
 		return nil, err
 	}
 	manifest.Context = okteto.Context().Name
 	manifest.Namespace = okteto.Context().Namespace
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get the current working directory: %w", err)
-	}
 	for _, build := range manifest.Build {
 		build.Context, err = filepath.Rel(cwd, build.Context)
 		if err != nil {

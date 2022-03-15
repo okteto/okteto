@@ -247,7 +247,7 @@ func TestInferFromStack(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := tt.currentManifest.InferFromStack()
+			result, err := tt.currentManifest.InferFromStack("")
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedManifest, result)
 		})

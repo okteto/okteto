@@ -242,7 +242,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 				}
 				devManifest.Deploy.Compose.Stack = s
 				s.Endpoints = devManifest.Deploy.Endpoints
-				devManifest, err = devManifest.InferFromStack()
+				devManifest, err = devManifest.InferFromStack(cwd)
 				if err != nil {
 					return nil, err
 				}
@@ -258,7 +258,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	}
 	if inferredManifest != nil {
 		if inferredManifest.Type == StackType {
-			inferredManifest, err = inferredManifest.InferFromStack()
+			inferredManifest, err = inferredManifest.InferFromStack(cwd)
 			if err != nil {
 				return nil, err
 			}
@@ -558,7 +558,11 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 			}
 			m.Deploy.Compose.Stack = s
 			s.Endpoints = m.Deploy.Endpoints
-			m, err = m.InferFromStack()
+			cwd, err := os.Getwd()
+			if err != nil {
+				oktetoLog.Info("could not detect working directory")
+			}
+			m, err = m.InferFromStack(cwd)
 			if err != nil {
 				return nil, err
 			}
@@ -587,11 +591,7 @@ type Dependency struct {
 }
 
 // InferFromStack infers data from a stackfile
-func (m *Manifest) InferFromStack() (*Manifest, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		oktetoLog.Info("could not detect working directory")
-	}
+func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 	for svcName, svcInfo := range m.Deploy.Compose.Stack.Services {
 		d := NewDev()
 		for _, p := range svcInfo.Ports {
@@ -629,11 +629,11 @@ func (m *Manifest) InferFromStack() (*Manifest, error) {
 		buildInfo.VolumesToInclude = toMount
 		buildInfo.Context, err = filepath.Rel(cwd, buildInfo.Context)
 		if err != nil {
-			return nil, err
+			oktetoLog.Infof("can not make svc[%s].build.context relative to cwd", svcName)
 		}
 		buildInfo.Dockerfile, err = filepath.Rel(cwd, buildInfo.Dockerfile)
 		if err != nil {
-			return nil, err
+			oktetoLog.Infof("can not make svc[%s].build.dockerfile relative to cwd", svcName)
 		}
 		if _, ok := m.Build[svcName]; !ok {
 			m.Build[svcName] = buildInfo
