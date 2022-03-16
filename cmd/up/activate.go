@@ -16,6 +16,7 @@ package up
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -85,6 +86,12 @@ func (up *upContext) activate() error {
 
 	if _, err := registry.GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
 		oktetoLog.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
+		if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("The image '%s' doesn't exist and can't be build", up.Dev.Image.Name),
+				Hint: "Please update your build section and try again",
+			}
+		}
 		up.Options.Build = true
 	}
 

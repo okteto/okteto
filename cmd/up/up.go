@@ -218,6 +218,8 @@ func Up() *cobra.Command {
 					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 				case oktetoErrors.CommandError:
 					oktetoLog.Infof("CommandError: %v", err)
+				case oktetoErrors.UserError:
+					return err
 				}
 
 			}
