@@ -181,7 +181,8 @@ func Up() *cobra.Command {
 
 			if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
 				if !upOptions.Deploy {
-					oktetoLog.Warning("Development environment '%s' doesn't exist or has errors and it needs to be deployed", up.Manifest.Name)
+					oktetoLog.Information("Deploying development environment '%s'...", up.Manifest.Name)
+					oktetoLog.Information("To redeploy your development environment manually run 'okteto deploy' or 'okteto up --deploy'")
 				}
 				startTime := time.Now()
 				err := up.deployApp(ctx)
