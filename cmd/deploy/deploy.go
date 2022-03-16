@@ -401,13 +401,14 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	exit := make(chan error, 1)
 	go func() {
 		for _, command := range opts.Manifest.Deploy.Commands {
-			oktetoLog.SetStage(command.Name)
 			oktetoLog.Information("Running %s", command.Name)
+			oktetoLog.SetStage(command.Name)
 			if err := dc.Executor.Execute(command, opts.Variables); err != nil {
 				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 				exit <- fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 				return
 			}
+			oktetoLog.SetStage("")
 		}
 		exit <- nil
 	}()
