@@ -1142,6 +1142,9 @@ func ExpandEnv(value string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error expanding environment on '%s': %s", value, err.Error())
 	}
+	if result == "" {
+		return value, nil
+	}
 	return result, nil
 }
 

@@ -500,7 +500,7 @@ func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (b
 		return false, err
 	}
 
-	if err := setManifestEnvVars(service, imageWithDigest); err != nil {
+	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
 		return false, err
 	}
 	oktetoLog.Debug("image already built at global registry, running optimization for deployment")
@@ -542,7 +542,7 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 		}
 	}
 	oktetoLog.Success("Image for service '%s' pushed to registry: %s", service, options.Tag)
-	if err := setManifestEnvVars(service, imageWithDigest); err != nil {
+	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
 		return err
 	}
 	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
@@ -555,7 +555,8 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 	return nil
 }
 
-func setManifestEnvVars(service, reference string) error {
+// SetManifestEnvVars set okteto build env vars
+func SetManifestEnvVars(service, reference string) error {
 	reg, repo, tag, image := registry.GetReferecenceEnvs(reference)
 
 	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repo, image, tag)
@@ -821,7 +822,7 @@ func checkServicesToBuild(service string, manifest *model.Manifest, ch chan stri
 	}
 	oktetoLog.Debug("Skipping build for image for service")
 
-	if err := setManifestEnvVars(service, imageWithDigest); err != nil {
+	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
 		return err
 	}
 	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
