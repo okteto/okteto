@@ -232,7 +232,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 	var err error
-	oktetoLog.SetStage("Read manifest")
+	oktetoLog.SetStage("Load manifest")
 	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
 		return err
@@ -856,8 +856,8 @@ func checkBuildFromManifest(ctx context.Context, manifest *model.Manifest) error
 	}
 
 	for svc := range toBuild {
-		oktetoLog.Warning("Image for service '%s' doesn't exist and it needs to be built", svc)
-		oktetoLog.Information("To rebuild this image run 'okteto build %s' or 'okteto deploy --build'", svc)
+		oktetoLog.Information("Building image for service '%s'...", svc)
+		oktetoLog.Information("To rebuild your image manually run 'okteto build %s' or 'okteto deploy --build'", svc)
 		if err := runBuildAndSetEnvs(ctx, svc, manifest); err != nil {
 			return err
 		}
