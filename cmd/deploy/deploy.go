@@ -186,11 +186,18 @@ func Deploy(ctx context.Context) *cobra.Command {
 			err = c.RunDeploy(ctx, options)
 
 			deployType := "custom"
-			if options.Manifest.IsV2 &&
-				options.Manifest.Deploy != nil &&
-				options.Manifest.Deploy.Compose != nil &&
-				options.Manifest.Deploy.Compose.Manifest != nil {
-				deployType = "compose"
+			hasDependencySection := false
+			hasBuildSection := false
+			if options.Manifest != nil {
+				if options.Manifest.IsV2 &&
+					options.Manifest.Deploy != nil &&
+					options.Manifest.Deploy.Compose != nil &&
+					options.Manifest.Deploy.Compose.Manifest != nil {
+					deployType = "compose"
+				}
+
+				hasDependencySection = options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0
+				hasBuildSection = options.Manifest.IsV2 && len(options.Manifest.Build) > 0
 			}
 
 			analytics.TrackDeploy(analytics.TrackDeployMetadata{
@@ -200,8 +207,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 				PipelineType:           c.PipelineType,
 				DeployType:             deployType,
 				IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
-				HasDependenciesSection: options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0,
-				HasBuildSection:        options.Manifest.IsV2 && len(options.Manifest.Build) > 0,
+				HasDependenciesSection: hasDependencySection,
+				HasBuildSection:        hasBuildSection,
 			})
 
 			return err
