@@ -204,7 +204,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		return nil, err
 	}
 	if manifestPath != "" && FileExistsAndNotDir(manifestPath) {
-		return getManifest(manifestPath)
+		return getManifestFromFile(manifestPath)
 	} else if manifestPath != "" && pathExistsAndDir(manifestPath) {
 		cwd = manifestPath
 	}
@@ -214,25 +214,11 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		oktetoLog.Infof("Found okteto file")
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto manifest on %s", oktetoPath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling manifest...")
-		devManifest, err = GetManifestV2(oktetoPath)
+		devManifest, err := getManifestFromFile(oktetoPath)
 		if err != nil {
 			return nil, err
 		}
 		if devManifest.IsV2 {
-			oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v2 unmarshalled successfully")
-			devManifest.Type = OktetoManifestType
-			if devManifest.Deploy != nil && devManifest.Deploy.Compose != nil && len(devManifest.Deploy.Compose.Manifest) > 0 {
-				s, err := LoadStack("", devManifest.Deploy.Compose.Manifest)
-				if err != nil {
-					return nil, err
-				}
-				devManifest.Deploy.Compose.Stack = s
-				s.Endpoints = devManifest.Deploy.Endpoints
-				devManifest, err = devManifest.InferFromStack()
-				if err != nil {
-					return nil, err
-				}
-			}
 			return devManifest, nil
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest unmarshalled successfully")
@@ -273,6 +259,32 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		return devManifest, nil
 	}
 	return nil, oktetoErrors.ErrManifestNotFound
+}
+
+func getManifestFromFile(manifestPath string) (*Manifest, error) {
+	devManifest, err := getManifest(manifestPath)
+	if err != nil {
+		return nil, err
+	}
+	if devManifest.IsV2 {
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v2 unmarshalled successfully")
+		devManifest.Type = OktetoManifestType
+		if devManifest.Deploy != nil && devManifest.Deploy.Compose != nil && len(devManifest.Deploy.Compose.Manifest) > 0 {
+			s, err := LoadStack("", devManifest.Deploy.Compose.Manifest)
+			if err != nil {
+				return nil, err
+			}
+			devManifest.Deploy.Compose.Stack = s
+			s.Endpoints = devManifest.Deploy.Endpoints
+			devManifest, err = devManifest.InferFromStack()
+			if err != nil {
+				return nil, err
+			}
+		}
+		return devManifest, nil
+	}
+	return devManifest, nil
+
 }
 
 // GetInferredManifest infers the manifest from a directory
