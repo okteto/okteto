@@ -47,6 +47,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
+	giturls "github.com/whilp/git-urls"
 	"golang.org/x/sync/errgroup"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
@@ -775,7 +776,11 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		if err != nil {
 			oktetoLog.Infof("could not retrieve repo name: %s", err)
 		}
-		os.Setenv(model.GithubRepositoryEnvVar, repo)
+		repoHTTPS, err := switchSSHRepoToHTTPS(repo)
+		if err != nil {
+			return err
+		}
+		os.Setenv(model.GithubRepositoryEnvVar, repoHTTPS.String())
 	}
 
 	if os.Getenv(model.OktetoGitCommitEnvVar) == "" {
@@ -800,6 +805,21 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		os.Setenv(model.OktetoBuildkitHostURLEnvVar, okteto.Context().Builder)
 	}
 	return nil
+}
+
+func switchSSHRepoToHTTPS(repo string) (*url.URL, error) {
+	repoURL, err := giturls.Parse(repo)
+	if err != nil {
+		return nil, err
+	}
+	if repoURL.Scheme == "ssh" {
+		repoURL.Scheme = "https"
+		repoURL.User = nil
+		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
+		return repoURL, nil
+	}
+
+	return nil, fmt.Errorf("could not detect repo protocol")
 }
 
 func shouldExecuteRemotely(options *Options) bool {
