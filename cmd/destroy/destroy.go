@@ -230,6 +230,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	go func() {
 		for _, command := range manifest.Destroy {
 			oktetoLog.Information("Running %s", command.Name)
+			oktetoLog.SetStage(command.Name)
 			if err := dc.executor.Execute(command, opts.Variables); err != nil {
 				oktetoLog.Fail("error executing command '%s': %s", command.Name, err.Error())
 				if !opts.ForceDestroy {
