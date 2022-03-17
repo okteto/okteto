@@ -264,7 +264,30 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 func getManifestFromFile(manifestPath string) (*Manifest, error) {
 	devManifest, err := getManifest(manifestPath)
 	if err != nil {
-		return nil, err
+		oktetoLog.Info("devManifest err, fallback to stack unmarshall")
+		stackManifest := &Manifest{
+			Type: StackType,
+			Deploy: &DeployInfo{
+				Compose: &ComposeInfo{
+					Manifest: []string{
+						manifestPath,
+					},
+				},
+			},
+			Dev:      ManifestDevs{},
+			Build:    ManifestBuild{},
+			Filename: manifestPath,
+			IsV2:     true,
+		}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
+		s, stackErr := LoadStack("", stackManifest.Deploy.Compose.Manifest)
+		//We should return the error returned by the devManifest instead of the stack
+		if stackErr != nil {
+			return nil, err
+		}
+		stackManifest.Deploy.Compose.Stack = s
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
+		return stackManifest, nil
 	}
 	if devManifest.IsV2 {
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v2 unmarshalled successfully")
