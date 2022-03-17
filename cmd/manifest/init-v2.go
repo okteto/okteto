@@ -130,23 +130,29 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 			return nil, err
 		}
 		if opts.ShowCTA {
-			answer, err := utils.AskYesNo("Do you want to launch your development environment? [y/n]: ")
+			c, _, err := mc.K8sClientProvider.Provide(okteto.Context().Cfg)
 			if err != nil {
 				return nil, err
 			}
-			if answer {
-				if err := mc.deploy(ctx, opts); err != nil {
-					return nil, err
-				}
-
-				answer, err := utils.AskYesNo("Do you want to configure your development containers? [y/n]: ")
+			if !pipeline.IsDeployed(ctx, manifest.Name, manifest.Namespace, c) {
+				answer, err := utils.AskYesNo("Do you want to launch your development environment? [y/n]: ")
 				if err != nil {
 					return nil, err
 				}
 				if answer {
-					if err := mc.configureDevsByResources(ctx); err != nil {
+					if err := mc.deploy(ctx, opts); err != nil {
 						return nil, err
 					}
+				}
+			}
+
+			answer, err := utils.AskYesNo("Do you want to configure your development containers? [y/n]: ")
+			if err != nil {
+				return nil, err
+			}
+			if answer {
+				if err := mc.configureDevsByResources(ctx); err != nil {
+					return nil, err
 				}
 			}
 			oktetoLog.Success("Okteto manifest (%s) configured successfully", opts.DevPath)
