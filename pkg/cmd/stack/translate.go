@@ -88,7 +88,7 @@ func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 
 func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, filename string) error {
 	var err error
-	filename, err = model.ExpandEnv(filename)
+	filename, err = model.ExpandEnv(filename, true)
 	if err != nil {
 		return err
 	}

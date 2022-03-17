@@ -159,7 +159,7 @@ func NewManifest() *Manifest {
 // NewManifestFromDev creates a manifest from a dev
 func NewManifestFromDev(dev *Dev) *Manifest {
 	manifest := NewManifest()
-	name, err := ExpandEnv(dev.Name)
+	name, err := ExpandEnv(dev.Name, true)
 	if err != nil {
 		oktetoLog.Infof("could not expand dev name '%s'", dev.Name)
 		name = dev.Name
@@ -519,7 +519,7 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 	var err error
 	if m.Deploy != nil {
 		for idx, cmd := range m.Deploy.Commands {
-			cmd.Command, err = ExpandEnv(cmd.Command)
+			cmd.Command, err = ExpandEnv(cmd.Command, true)
 			if err != nil {
 				return nil, errors.New("could not parse env vars")
 			}
