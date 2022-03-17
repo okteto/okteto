@@ -130,14 +130,16 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 
 		if !options.ForceBuild {
 			buildInfo := svcInfo.Build
-			opts := build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
-			if _, err := registry.GetImageTagWithDigest(opts.Tag); err != oktetoErrors.ErrNotFound {
-				if svcInfo.Image == "" {
-					svcInfo.Image = opts.Tag
+			if buildInfo != nil {
+				opts := build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
+				if _, err := registry.GetImageTagWithDigest(opts.Tag); err != oktetoErrors.ErrNotFound {
+					if svcInfo.Image == "" {
+						svcInfo.Image = opts.Tag
+					}
+					continue
 				}
-				continue
+				oktetoLog.Infof("image '%s' not found, building it", opts.Tag)
 			}
-			oktetoLog.Infof("image '%s' not found, building it", opts.Tag)
 		}
 
 		oktetoLog.SetStage(fmt.Sprintf("Building service %s", svcName))
