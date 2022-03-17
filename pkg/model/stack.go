@@ -278,7 +278,7 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 		}
 		return name, nil
 	}
-	if err := os.Setenv(OktetoNameEnvVar, name); err != nil {
+	if err := os.Setenv(OktetoNameEnvVar, actualStackName); err != nil {
 		return "", err
 	}
 	return actualStackName, nil
