@@ -128,13 +128,13 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		if !okteto.IsOkteto() && buildInfo.Image == "" {
 			return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", svcName)
 		}
+		opts := build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
 
 		if okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
-			buildInfo.Image = fmt.Sprintf("okteto.dev/%s-%s:okteto", s.Name, svcName)
+			buildInfo.Image = opts.Tag
 		}
 		if !options.ForceBuild {
 			if buildInfo != nil {
-				opts := build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
 				if _, err := registry.GetImageTagWithDigest(opts.Tag); err != oktetoErrors.ErrNotFound {
 					svcInfo.Image = opts.Tag
 					continue
