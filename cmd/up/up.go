@@ -643,6 +643,6 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 	}
 
 	var err error
-	m.Dev[devName].Image.Name, err = model.ExpandEnv(m.Dev[devName].Image.Name)
+	m.Dev[devName].Image.Name, err = model.ExpandEnv(m.Dev[devName].Image.Name, false)
 	return err
 }

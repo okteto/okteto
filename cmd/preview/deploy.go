@@ -329,7 +329,7 @@ func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.
 }
 
 func getExpandedName(name string) string {
-	expandedName, err := model.ExpandEnv(name)
+	expandedName, err := model.ExpandEnv(name, true)
 	if err != nil {
 		return name
 	}

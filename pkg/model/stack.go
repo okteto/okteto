@@ -214,7 +214,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 		return nil, err
 	}
 
-	expandedManifest, err := ExpandEnv(string(b))
+	expandedManifest, err := ExpandEnv(string(b), true)
 	if err != nil {
 		return nil, err
 	}

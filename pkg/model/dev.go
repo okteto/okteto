@@ -381,7 +381,7 @@ func (dev *Dev) expandEnvVars() error {
 func (dev *Dev) loadName() error {
 	var err error
 	if len(dev.Name) > 0 {
-		dev.Name, err = ExpandEnv(dev.Name)
+		dev.Name, err = ExpandEnv(dev.Name, true)
 		if err != nil {
 			return err
 		}
@@ -392,7 +392,7 @@ func (dev *Dev) loadName() error {
 func (dev *Dev) loadNamespace() error {
 	var err error
 	if len(dev.Namespace) > 0 {
-		dev.Namespace, err = ExpandEnv(dev.Namespace)
+		dev.Namespace, err = ExpandEnv(dev.Namespace, true)
 		if err != nil {
 			return err
 		}
@@ -403,7 +403,7 @@ func (dev *Dev) loadNamespace() error {
 func (dev *Dev) loadContext() error {
 	var err error
 	if len(dev.Context) > 0 {
-		dev.Context, err = ExpandEnv(dev.Context)
+		dev.Context, err = ExpandEnv(dev.Context, true)
 		if err != nil {
 			return err
 		}
@@ -414,7 +414,7 @@ func (dev *Dev) loadContext() error {
 func (dev *Dev) loadSelector() error {
 	var err error
 	for i := range dev.Selector {
-		dev.Selector[i], err = ExpandEnv(dev.Selector[i])
+		dev.Selector[i], err = ExpandEnv(dev.Selector[i], true)
 		if err != nil {
 			return err
 		}
@@ -428,7 +428,7 @@ func (dev *Dev) loadImage() error {
 		dev.Image = &BuildInfo{}
 	}
 	if len(dev.Image.Name) > 0 {
-		dev.Image.Name, err = ExpandEnv(dev.Image.Name)
+		dev.Image.Name, err = ExpandEnv(dev.Image.Name, false)
 		if err != nil {
 			return err
 		}
@@ -600,7 +600,7 @@ func (dev *Dev) setTimeout() error {
 
 func (dev *Dev) expandEnvFiles() error {
 	for _, envFile := range dev.EnvFiles {
-		filename, err := ExpandEnv(envFile)
+		filename, err := ExpandEnv(envFile, true)
 		if err != nil {
 			return err
 		}
@@ -1137,12 +1137,12 @@ func (s *Secret) GetFileName() string {
 }
 
 //ExpandEnv expands the environments supporting the notation "${var:-$DEFAULT}"
-func ExpandEnv(value string) (string, error) {
+func ExpandEnv(value string, expandIfEmpty bool) (string, error) {
 	result, err := envsubst.String(value)
 	if err != nil {
 		return "", fmt.Errorf("error expanding environment on '%s': %s", value, err.Error())
 	}
-	if result == "" {
+	if result == "" && !expandIfEmpty {
 		return value, nil
 	}
 	return result, nil
