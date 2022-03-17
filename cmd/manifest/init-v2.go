@@ -100,6 +100,7 @@ func Init() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Context, "context", "c", "", "context target for generating the okteto manifest")
 	cmd.Flags().StringVarP(&opts.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&opts.Overwrite, "replace", "r", false, "overwrite existing manifest file")
+	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: www.okteto.com/docs/reference/manifest-v1/")
 	return cmd
 }
 
@@ -148,7 +149,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 					}
 				}
 			}
-			oktetoLog.Success("Okteto manifest (%s) configured correctly", opts.DevPath)
+			oktetoLog.Success("Okteto manifest (%s) configured successfully", opts.DevPath)
 			if !answer {
 				oktetoLog.Information("Run 'okteto init' to continue configuring your dev section")
 			}
@@ -254,7 +255,7 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context) error {
 			return err
 		}
 		spinner.Stop()
-		oktetoLog.Success("Development container '%s' configured correctly", app.ObjectMeta().Name)
+		oktetoLog.Success("Development container '%s' configured successfully", app.ObjectMeta().Name)
 		mc.manifest.Dev[app.ObjectMeta().Name] = dev
 	}
 	return nil

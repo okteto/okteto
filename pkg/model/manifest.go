@@ -56,22 +56,19 @@ const (
 	deployHeadComment = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#deploy"
 	devHeadComment    = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/manifest/#dev"
 	devExample        = `dev:
-  selector:
-    app.kubernetes.io/part-of: test
-  image: python:3
-  command: ["python", "app.py"]
-  workdir: /usr/src/app
-  sync:
-   - .:/usr/src/app
-  environment:
-    - name=$USER
-  forward:
-    - 8080:80
-  reverse:
-    - 9000:9001`
+  sample:
+    image: okteto/dev:latest
+    command: bash
+    workdir: /usr/src/app
+    sync:
+      - .:/usr/src/app
+    environment:
+      - name=$USER
+    forward:
+      - 8080:80`
 	dependenciesHeadComment = "The dependencies section defines other git repositories to be deployed as part of your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#dependencies"
 	dependenciesExample     = `dependencies:
-  - https://github.com/okteto/b`
+  - https://github.com/okteto/sample`
 
 	// FakeCommand prints into terminal a fake command
 	FakeCommand = "echo 'Replace this line with the proper 'helm' or 'kubectl' commands to deploy your development environment'"
