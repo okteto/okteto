@@ -186,11 +186,18 @@ func Deploy(ctx context.Context) *cobra.Command {
 			err = c.RunDeploy(ctx, options)
 
 			deployType := "custom"
-			if options.Manifest.IsV2 &&
-				options.Manifest.Deploy != nil &&
-				options.Manifest.Deploy.Compose != nil &&
-				options.Manifest.Deploy.Compose.Manifest != nil {
-				deployType = "compose"
+			hasDependencySection := false
+			hasBuildSection := false
+			if options.Manifest != nil {
+				if options.Manifest.IsV2 &&
+					options.Manifest.Deploy != nil &&
+					options.Manifest.Deploy.Compose != nil &&
+					options.Manifest.Deploy.Compose.Manifest != nil {
+					deployType = "compose"
+				}
+
+				hasDependencySection = options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0
+				hasBuildSection = options.Manifest.IsV2 && len(options.Manifest.Build) > 0
 			}
 
 			analytics.TrackDeploy(analytics.TrackDeployMetadata{
@@ -200,8 +207,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 				PipelineType:           c.PipelineType,
 				DeployType:             deployType,
 				IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
-				HasDependenciesSection: options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0,
-				HasBuildSection:        options.Manifest.IsV2 && len(options.Manifest.Build) > 0,
+				HasDependenciesSection: hasDependencySection,
+				HasBuildSection:        hasBuildSection,
 			})
 
 			return err
@@ -232,7 +239,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 	var err error
-	oktetoLog.SetStage("Read manifest")
+	oktetoLog.SetStage("Load manifest")
 	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
 		return err
@@ -401,13 +408,14 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	exit := make(chan error, 1)
 	go func() {
 		for _, command := range opts.Manifest.Deploy.Commands {
-			oktetoLog.SetStage(command.Name)
 			oktetoLog.Information("Running %s", command.Name)
+			oktetoLog.SetStage(command.Name)
 			if err := dc.Executor.Execute(command, opts.Variables); err != nil {
 				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 				exit <- fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 				return
 			}
+			oktetoLog.SetStage("")
 		}
 		exit <- nil
 	}()
@@ -500,7 +508,7 @@ func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (b
 		return false, err
 	}
 
-	if err := setManifestEnvVars(service, imageWithDigest); err != nil {
+	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
 		return false, err
 	}
 	oktetoLog.Debug("image already built at global registry, running optimization for deployment")
@@ -542,7 +550,7 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 		}
 	}
 	oktetoLog.Success("Image for service '%s' pushed to registry: %s", service, options.Tag)
-	if err := setManifestEnvVars(service, imageWithDigest); err != nil {
+	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
 		return err
 	}
 	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
@@ -555,7 +563,8 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 	return nil
 }
 
-func setManifestEnvVars(service, reference string) error {
+// SetManifestEnvVars set okteto build env vars
+func SetManifestEnvVars(service, reference string) error {
 	reg, repo, tag, image := registry.GetReferecenceEnvs(reference)
 
 	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repo, image, tag)
@@ -821,7 +830,7 @@ func checkServicesToBuild(service string, manifest *model.Manifest, ch chan stri
 	}
 	oktetoLog.Debug("Skipping build for image for service")
 
-	if err := setManifestEnvVars(service, imageWithDigest); err != nil {
+	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
 		return err
 	}
 	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
@@ -856,8 +865,8 @@ func checkBuildFromManifest(ctx context.Context, manifest *model.Manifest) error
 	}
 
 	for svc := range toBuild {
-		oktetoLog.Warning("Image for service '%s' doesn't exist and it needs to be built", svc)
-		oktetoLog.Information("To rebuild this image run 'okteto build %s' or 'okteto deploy --build'", svc)
+		oktetoLog.Information("Building image for service '%s'...", svc)
+		oktetoLog.Information("To rebuild your image manually run 'okteto build %s' or 'okteto deploy --build'", svc)
 		if err := runBuildAndSetEnvs(ctx, svc, manifest); err != nil {
 			return err
 		}

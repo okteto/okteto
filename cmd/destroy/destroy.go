@@ -232,7 +232,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 			oktetoLog.Information("Running %s", command.Name)
 			oktetoLog.SetStage(command.Name)
 			if err := dc.executor.Execute(command, opts.Variables); err != nil {
-				oktetoLog.Fail("error executing command '%s': %s", command, err.Error())
+				oktetoLog.Fail("error executing command '%s': %s", command.Name, err.Error())
 				if !opts.ForceDestroy {
 					if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
 						exit <- err

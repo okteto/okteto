@@ -214,7 +214,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 		return nil, err
 	}
 
-	expandedManifest, err := ExpandEnv(string(b))
+	expandedManifest, err := ExpandEnv(string(b), true)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +278,7 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 		}
 		return name, nil
 	}
-	if err := os.Setenv(OktetoNameEnvVar, name); err != nil {
+	if err := os.Setenv(OktetoNameEnvVar, actualStackName); err != nil {
 		return "", err
 	}
 	return actualStackName, nil

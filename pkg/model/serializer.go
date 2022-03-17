@@ -149,14 +149,14 @@ func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, "=", 2)
 	e.Name = parts[0]
 	if len(parts) == 2 {
-		e.Value, err = ExpandEnv(parts[1])
+		e.Value, err = ExpandEnv(parts[1], true)
 		if err != nil {
 			return err
 		}
 		return nil
 	}
 
-	e.Name, err = ExpandEnv(parts[0])
+	e.Name, err = ExpandEnv(parts[0], true)
 	if err != nil {
 		return err
 	}
@@ -384,7 +384,7 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	rawExpanded, err := ExpandEnv(raw)
+	rawExpanded, err := ExpandEnv(raw, true)
 	if err != nil {
 		return err
 	}
@@ -497,7 +497,7 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
 		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field and will be removed in version 2.2.0. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
-		v.LocalPath, err = ExpandEnv(parts[0])
+		v.LocalPath, err = ExpandEnv(parts[0], true)
 		if err != nil {
 			return err
 		}
@@ -523,22 +523,22 @@ func (s *SyncFolder) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.Split(raw, ":")
 	if len(parts) == 2 {
-		s.LocalPath, err = ExpandEnv(parts[0])
+		s.LocalPath, err = ExpandEnv(parts[0], true)
 		if err != nil {
 			return err
 		}
-		s.RemotePath, err = ExpandEnv(parts[1])
+		s.RemotePath, err = ExpandEnv(parts[1], true)
 		if err != nil {
 			return err
 		}
 		return nil
 	} else if len(parts) == 3 {
 		windowsPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
-		s.LocalPath, err = ExpandEnv(windowsPath)
+		s.LocalPath, err = ExpandEnv(windowsPath, true)
 		if err != nil {
 			return err
 		}
-		s.RemotePath, err = ExpandEnv(parts[2])
+		s.RemotePath, err = ExpandEnv(parts[2], true)
 		if err != nil {
 			return err
 		}
@@ -1111,7 +1111,7 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
-		value, err = ExpandEnv(value)
+		value, err = ExpandEnv(value, true)
 		if err != nil {
 			return nil, err
 		}

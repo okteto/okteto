@@ -415,7 +415,7 @@ func getFakeManifest(_ string) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
 
-func Test_setManifestEnvVars(t *testing.T) {
+func Test_SetManifestEnvVars(t *testing.T) {
 	tests := []struct {
 		name          string
 		service       string
@@ -464,7 +464,7 @@ func Test_setManifestEnvVars(t *testing.T) {
 				}
 			}
 
-			setManifestEnvVars(tt.service, tt.reference)
+			SetManifestEnvVars(tt.service, tt.reference)
 
 			registryEnvValue := os.Getenv(registryEnv)
 			imageEnvValue := os.Getenv(imageEnv)
