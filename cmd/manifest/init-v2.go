@@ -90,8 +90,14 @@ func Init() *cobra.Command {
 			mc := &ManifestCommand{
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 			}
-
-			_, err = mc.RunInitV2(ctx, opts)
+			if opts.Version1 {
+				if err := mc.RunInitV1(ctx, opts); err != nil {
+					return err
+				}
+			} else {
+				_, err := mc.RunInitV2(ctx, opts)
+				return err
+			}
 			return err
 		},
 	}
@@ -129,12 +135,17 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 		if err := manifest.WriteToFile(opts.DevPath); err != nil {
 			return nil, err
 		}
+		oktetoLog.Success("Okteto manifest (%s) deploy and build configured successfully", opts.DevPath)
 		if opts.ShowCTA {
 			c, _, err := mc.K8sClientProvider.Provide(okteto.Context().Cfg)
 			if err != nil {
 				return nil, err
 			}
-			if !pipeline.IsDeployed(ctx, manifest.Name, manifest.Namespace, c) {
+			namespace := manifest.Namespace
+			if namespace == "" {
+				namespace = okteto.Context().Namespace
+			}
+			if !pipeline.IsDeployed(ctx, manifest.Name, namespace, c) {
 				answer, err := utils.AskYesNo("Do you want to launch your development environment? [y/n]: ")
 				if err != nil {
 					return nil, err
@@ -146,20 +157,25 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 				}
 			}
 
-			answer, err := utils.AskYesNo("Do you want to configure your development containers? [y/n]: ")
-			if err != nil {
-				return nil, err
-			}
+			// answer, err := utils.AskYesNo("Do you want to configure your development containers? [y/n]: ")
+			// if err != nil {
+			// 	return nil, err
+			// }
+			answer := true
 			if answer {
-				if err := mc.configureDevsByResources(ctx); err != nil {
+				if err := mc.configureDevsByResources(ctx, namespace); err != nil {
 					return nil, err
 				}
 			}
+
 			oktetoLog.Success("Okteto manifest (%s) configured successfully", opts.DevPath)
 			if !answer {
 				oktetoLog.Information("Run 'okteto init' to continue configuring your dev section")
 			}
 			oktetoLog.Information("Run 'okteto up' to activate your development container")
+		}
+		if err := manifest.WriteToFile(opts.DevPath); err != nil {
+			return nil, err
 		}
 	}
 	return manifest, nil
@@ -231,13 +247,18 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 	return nil
 }
 
-func (mc *ManifestCommand) configureDevsByResources(ctx context.Context) error {
+func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespace string) error {
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
 
-	dList, err := pipeline.ListDeployments(ctx, mc.manifest.Name, mc.manifest.Namespace, c)
+	dList, err := pipeline.ListDeployments(ctx, mc.manifest.Name, namespace, c)
+	if err != nil {
+		return err
+	}
+
+	wd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
@@ -256,15 +277,47 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context) error {
 		suffix := fmt.Sprintf("Analyzing %s '%s'...", app.Kind(), app.ObjectMeta().Name)
 		spinner := utils.NewSpinner(suffix)
 		spinner.Start()
-		err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, "")
+
+		language, err := getLanguageFromPath(wd, app.ObjectMeta().Name)
 		if err != nil {
 			return err
+		}
+		err = initCMD.SetDevDefaultsFromImage(ctx, dev, app)
+		if err != nil {
+			return err
+		}
+		err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language)
+		if err != nil {
+			oktetoLog.Infof("could not get defaults from app: %s", err.Error())
 		}
 		spinner.Stop()
 		oktetoLog.Success("Development container '%s' configured successfully", app.ObjectMeta().Name)
 		mc.manifest.Dev[app.ObjectMeta().Name] = dev
 	}
 	return nil
+}
+
+func getLanguageFromPath(wd, appName string) (string, error) {
+	possibleAppPath := filepath.Join(wd, appName)
+	language := ""
+	var err error
+	if fInfo, err := os.Stat(possibleAppPath); err != nil {
+		oktetoLog.Infof("could not detect path: %s", err)
+	} else {
+		if fInfo.IsDir() {
+			language, err = GetLanguage("", possibleAppPath)
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+	if language == "" {
+		language, err = GetLanguage("", wd)
+		if err != nil {
+			return "", err
+		}
+	}
+	return language, nil
 }
 
 func validateDevPath(devPath string, overwrite bool) error {

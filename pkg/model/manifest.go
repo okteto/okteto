@@ -668,8 +668,6 @@ func (m *Manifest) WriteToFile(filePath string) error {
 			d.Push = nil
 		}
 	}
-	m.Context = ""
-	m.Namespace = ""
 	//Unmarshal with yamlv2 because we have the marshal with yaml v2
 	b, err := yaml.Marshal(m)
 	if err != nil {

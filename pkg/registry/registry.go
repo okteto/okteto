@@ -30,6 +30,13 @@ const (
 	dockerRegistry = "https://registry.hub.docker.com"
 )
 
+// ImageConfig is the struct of the information that can be inferred from an image
+type ImageConfig struct {
+	CMD          []string
+	Workdir      string
+	ExposedPorts []int
+}
+
 // GetImageTagWithDigest returns the image tag digest
 func GetImageTagWithDigest(imageTag string) (string, error) {
 	reference := imageTag
@@ -67,6 +74,43 @@ func ExpandOktetoGlobalRegistry(tag string) string {
 // ExpandOktetoDevRegistry translates okteto.dev
 func ExpandOktetoDevRegistry(tag string) string {
 	return replaceRegistry(tag, okteto.DevRegistry, okteto.Context().Namespace)
+}
+
+// GetImageConfigFromImage gets information from the image
+func GetImageConfigFromImage(image string) (*ImageConfig, error) {
+	imageConfig := &ImageConfig{
+		CMD:          []string{},
+		ExposedPorts: []int{},
+	}
+
+	image = ExpandOktetoDevRegistry(image)
+	image = ExpandOktetoGlobalRegistry(image)
+
+	config, err := configForReference(image)
+	if err != nil {
+		return nil, err
+	}
+	if config.ExposedPorts != nil {
+		for port := range config.ExposedPorts {
+			if strings.Contains(port, "/") {
+				port = port[:strings.Index(port, "/")]
+				portInt, err := strconv.Atoi(port)
+				if err != nil {
+					continue
+				}
+				imageConfig.ExposedPorts = append(imageConfig.ExposedPorts, portInt)
+
+			}
+		}
+	}
+	if config.WorkingDir != "" {
+		imageConfig.Workdir = config.WorkingDir
+	}
+
+	if len(config.Cmd) > 0 {
+		imageConfig.CMD = config.Cmd
+	}
+	return imageConfig, nil
 }
 
 // GetRegistryAndRepo returns image tag and the registry to push the image

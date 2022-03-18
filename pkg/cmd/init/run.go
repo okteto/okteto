@@ -25,6 +25,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
@@ -39,12 +40,37 @@ const (
 	defaultWorkdirPath = "/okteto"
 )
 
+// SetDevDefaultsFromImage sets dev defaults from a image
+func SetDevDefaultsFromImage(ctx context.Context, dev *model.Dev, app apps.App) error {
+	image := app.PodSpec().Containers[0].Image
+	config, err := registry.GetImageConfigFromImage(image)
+	if err != nil {
+		return err
+	}
+
+	if len(config.CMD) > 0 {
+		dev.Command = model.Command{Values: config.CMD}
+	}
+	if len(config.ExposedPorts) > 0 {
+		for _, p := range config.ExposedPorts {
+			dev.Forward = append(dev.Forward, model.Forward{Local: p, Remote: p})
+		}
+	}
+	if config.Workdir != "" {
+		dev.Workdir = config.Workdir
+	}
+	return nil
+}
+
 // SetDevDefaultsFromApp sets dev defaults from a running app
 func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, container, language string) error {
 	c, config, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
+
+	setAnnotationsFromApp(dev, app)
+	setNameAndLabelsFromApp(dev, app)
 
 	pod, err := getRunningPod(ctx, app, container, c)
 	if err != nil {
@@ -67,9 +93,6 @@ func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, co
 
 		dev.Command.Values = getCommandFromPod(ctx, pod, container, config, c)
 	}
-
-	setAnnotationsFromApp(dev, app)
-	setNameAndLabelsFromApp(dev, app)
 
 	if !okteto.IsOkteto() {
 		setResourcesFromPod(dev, pod, container)
