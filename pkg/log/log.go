@@ -151,6 +151,11 @@ func SetOutputFormat(format string) {
 	log.writer = log.getWriter(format)
 }
 
+// GetOutputWriter sets the output format
+func GetOutputWriter() OktetoWriter {
+	return log.writer
+}
+
 // SetStage sets the stage of the logger
 func SetStage(stage string) {
 	log.stage = stage

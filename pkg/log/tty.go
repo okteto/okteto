@@ -16,10 +16,15 @@ package log
 import (
 	"fmt"
 	"io"
+	"regexp"
 
 	"github.com/fatih/color"
 	"github.com/sirupsen/logrus"
 )
+
+const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
+
+var ansiRegex = regexp.MustCompile(ansi)
 
 //TTYWriter writes into a tty terminal
 type TTYWriter struct {
@@ -148,8 +153,10 @@ func (w *TTYWriter) Fail(format string, args ...interface{}) {
 	w.Fprintf(w.out.Out, "%s %s\n", coloredErrorSymbol, redString(format, args...))
 	if msg != "" {
 		msg = convertToJSON(ErrorLevel, log.stage, msg)
-		log.buf.WriteString(msg)
-		log.buf.WriteString("\n")
+		if msg != "" {
+			log.buf.WriteString(msg)
+			log.buf.WriteString("\n")
+		}
 	}
 }
 
@@ -165,8 +172,10 @@ func (w *TTYWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
 	fmt.Fprint(writer, msg)
 	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
-		log.buf.WriteString(msg)
-		log.buf.WriteString("\n")
+		if msg != "" {
+			log.buf.WriteString(msg)
+			log.buf.WriteString("\n")
+		}
 	}
 
 }
@@ -177,8 +186,10 @@ func (w *TTYWriter) FPrintln(writer io.Writer, args ...interface{}) {
 	fmt.Fprintln(writer, msg)
 	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
-		log.buf.WriteString(msg)
-		log.buf.WriteString("\n")
+		if msg != "" {
+			log.buf.WriteString(msg)
+			log.buf.WriteString("\n")
+		}
 	}
 
 }
@@ -189,8 +200,10 @@ func (w *TTYWriter) Print(args ...interface{}) {
 	fmt.Fprint(w.out.Out, args...)
 	if msg != "" {
 		msg = convertToJSON(ErrorLevel, log.stage, msg)
-		log.buf.WriteString(msg)
-		log.buf.WriteString("\n")
+		if msg != "" {
+			log.buf.WriteString(msg)
+			log.buf.WriteString("\n")
+		}
 	}
 
 }
@@ -210,7 +223,14 @@ func (*TTYWriter) AddToBuffer(level, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
 	if msg != "" {
 		msg = convertToJSON(level, log.stage, msg)
-		log.buf.WriteString(msg)
-		log.buf.WriteString("\n")
+		if msg != "" {
+			log.buf.WriteString(msg)
+			log.buf.WriteString("\n")
+		}
 	}
+}
+
+// AddToBuffer logs into the buffer but does not print anything
+func (w *TTYWriter) Write(p []byte) (n int, err error) {
+	return w.out.Out.Write(p)
 }

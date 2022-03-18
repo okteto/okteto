@@ -143,8 +143,6 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 			}
 		}
 
-		oktetoLog.SetStage(fmt.Sprintf("Building service %s", svcName))
-
 		if !hasBuiltSomething {
 			hasBuiltSomething = true
 			if okteto.Context().Builder != "" {
@@ -195,7 +193,6 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		}
 		svcInfo.Image = options.Tag
 		oktetoLog.Success("Image for service '%s' pushed to registry: %s", svcName, options.Tag)
-		oktetoLog.SetStage("")
 	}
 
 	return nil
