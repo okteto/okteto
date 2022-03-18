@@ -652,6 +652,9 @@ func (m *Manifest) WriteToFile(filePath string) error {
 			}
 		}
 	}
+	for _, b := range m.Build {
+		b.Name = ""
+	}
 	for dName, d := range m.Dev {
 		d.Name = ""
 		if d.Image != nil && d.Image.Name != "" {
