@@ -25,7 +25,7 @@ import (
 	"github.com/moby/term"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
-	initCMD "github.com/okteto/okteto/cmd/init"
+	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -89,7 +89,7 @@ func Up() *cobra.Command {
 			ctx := context.Background()
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
-			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
+			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				if !strings.Contains(err.Error(), "okteto init") {
 					return err
@@ -98,28 +98,67 @@ func Up() *cobra.Command {
 					return err
 				}
 
-				manifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
+				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
 				if err != nil {
 					return err
 				}
 			}
-			if manifest.Name == "" {
-				wd, err := os.Getwd()
-				if err != nil {
-					return err
-				}
-				manifest.Name = utils.InferName(wd)
+			wd, err := os.Getwd()
+			if err != nil {
+				return err
 			}
-			os.Setenv(model.OktetoNameEnvVar, manifest.Name)
+			if oktetoManifest.Name == "" {
+				oktetoManifest.Name = utils.InferName(wd)
+			}
+			os.Setenv(model.OktetoNameEnvVar, oktetoManifest.Name)
 			devName := ""
 			if len(args) == 1 {
 				devName = args[0]
 			}
-			dev, err := utils.GetDevFromManifest(manifest, devName)
+			if len(oktetoManifest.Dev) == 0 {
+				oktetoLog.Warning("okteto manifest has no 'dev' section.")
+				answer, err := utils.AskYesNo("Do you want to configure okteto manifest now? [y/n]")
+				if err != nil {
+					return err
+				}
+				if answer {
+					mc := &manifest.ManifestCommand{
+						K8sClientProvider: okteto.NewK8sClientProvider(),
+					}
+					if upOptions.DevPath == "" {
+						upOptions.DevPath = utils.DefaultManifest
+					}
+					oktetoManifest, err = mc.RunInitV2(ctx, &manifest.InitOpts{
+						DevPath:          upOptions.DevPath,
+						Namespace:        upOptions.Namespace,
+						Context:          upOptions.K8sContext,
+						ShowCTA:          false,
+						Workdir:          wd,
+						AutoDeploy:       true,
+						AutoConfigureDev: true,
+					})
+					if err != nil {
+						return err
+					}
+					if oktetoManifest.Namespace == "" {
+						oktetoManifest.Namespace = okteto.Context().Namespace
+					}
+					if oktetoManifest.Context == "" {
+						oktetoManifest.Context = okteto.Context().Name
+					}
+					oktetoManifest.IsV2 = true
+					for _, d := range oktetoManifest.Dev {
+						if err := d.SetDefaults(); err != nil {
+							return err
+						}
+					}
+				}
+			}
+			dev, err := utils.GetDevFromManifest(oktetoManifest, devName)
 			if err != nil {
 				return err
 			}
-			if err := setBuildEnvVars(manifest, dev.Name); err != nil {
+			if err := setBuildEnvVars(oktetoManifest, dev.Name); err != nil {
 				return err
 			}
 
@@ -162,7 +201,7 @@ func Up() *cobra.Command {
 			}
 
 			up := &upContext{
-				Manifest:       manifest,
+				Manifest:       oktetoManifest,
 				Dev:            dev,
 				Exit:           make(chan error, 1),
 				resetSyncthing: upOptions.Reset,
@@ -247,9 +286,9 @@ func Up() *cobra.Command {
 }
 
 func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath string) (*model.Manifest, error) {
-	workDir, err := os.Getwd()
+	dir, err := os.Getwd()
 	if err != nil {
-		return nil, fmt.Errorf("unknown current folder: %s", err)
+		return nil, err
 	}
 	ctxOptions := &contextCMD.ContextOptions{
 		Context:   k8sContext,
@@ -260,12 +299,16 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 		return nil, err
 	}
 
-	if err := initCMD.Run(devPath, "", workDir, false); err != nil {
+	mc := &manifest.ManifestCommand{
+		K8sClientProvider: okteto.NewK8sClientProvider(),
+	}
+	manifest, err := mc.RunInitV2(ctx, &manifest.InitOpts{DevPath: devPath, ShowCTA: false, Workdir: dir})
+	if err != nil {
 		return nil, err
 	}
 
 	oktetoLog.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
-	return model.GetManifestV2(devPath)
+	return manifest, nil
 }
 
 func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {

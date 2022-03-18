@@ -133,9 +133,12 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 	if err != nil {
 		return nil, err
 	}
-	ctxResource, err := utils.LoadManifestContext(m.Filename)
-	if err != nil {
-		return nil, err
+	ctxResource := &model.ContextResource{}
+	if m.Type != model.ChartType && m.Type != model.KubernetesType {
+		ctxResource, err = utils.LoadManifestContext(m.Filename)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
@@ -218,9 +221,12 @@ func LoadManifestV2WithContext(ctx context.Context, namespace, k8sContext, path 
 			return err
 		}
 	} else {
-		ctxResource, err := utils.LoadManifestContext(manifest.Filename)
-		if err != nil {
-			return err
+		ctxResource := &model.ContextResource{}
+		if manifest.Type != model.ChartType && manifest.Type != model.KubernetesType {
+			ctxResource, err = utils.LoadManifestContext(manifest.Filename)
+			if err != nil {
+				return err
+			}
 		}
 
 		if err := ctxResource.UpdateNamespace(namespace); err != nil {

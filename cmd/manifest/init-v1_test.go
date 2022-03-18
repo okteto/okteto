@@ -11,9 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package init
+package manifest
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,11 +45,20 @@ func TestRun(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := context.Background()
 
 	defer os.RemoveAll(dir)
 
 	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.New().String()))
-	if err := Run(p, "golang", dir, false); err != nil {
+
+	mc := &ManifestCommand{}
+	opts := &InitOpts{
+		DevPath:  p,
+		Language: "golang",
+		Workdir:  dir,
+	}
+
+	if err := mc.RunInitV1(ctx, opts); err != nil {
 		t.Fatal(err)
 	}
 
@@ -71,7 +81,14 @@ func TestRun(t *testing.T) {
 		t.Errorf("got %s, expected %s", dev.Image, "okteto/golang:1")
 	}
 
-	if err := Run(p, "ruby", dir, true); err != nil {
+	opts = &InitOpts{
+		DevPath:   p,
+		Language:  "ruby",
+		Workdir:   dir,
+		Overwrite: true,
+	}
+
+	if err := mc.RunInitV1(ctx, opts); err != nil {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
 
@@ -95,11 +112,18 @@ func TestRunJustCreateNecessaryFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := context.Background()
 
 	defer os.RemoveAll(dir)
 
+	mc := &ManifestCommand{}
 	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.New().String()))
-	if err := Run(p, "golang", dir, false); err != nil {
+	opts := &InitOpts{
+		DevPath:  p,
+		Language: "golang",
+		Workdir:  dir,
+	}
+	if err := mc.RunInitV1(ctx, opts); err != nil {
 		t.Fatal(err)
 	}
 

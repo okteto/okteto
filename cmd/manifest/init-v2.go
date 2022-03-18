@@ -25,12 +25,15 @@ import (
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
+	"github.com/okteto/okteto/pkg/cmd/build"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/k8s/apps"
+	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +50,14 @@ type InitOpts struct {
 	Context   string
 	Overwrite bool
 
-	ShowCTA bool
+	ShowCTA  bool
+	Version1 bool
+
+	Language string
+	Workdir  string
+
+	AutoDeploy       bool
+	AutoConfigureDev bool
 }
 
 // Init automatically generates the manifest
@@ -77,12 +87,24 @@ func Init() *cobra.Command {
 				return err
 			}
 
+			cwd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			opts.Workdir = cwd
 			opts.ShowCTA = oktetoLog.IsInteractive()
 			mc := &ManifestCommand{
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 			}
-
-			return mc.Init(ctx, opts)
+			if opts.Version1 {
+				if err := mc.RunInitV1(ctx, opts); err != nil {
+					return err
+				}
+			} else {
+				_, err := mc.RunInitV2(ctx, opts)
+				return err
+			}
+			return err
 		},
 	}
 
@@ -90,99 +112,127 @@ func Init() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Context, "context", "c", "", "context target for generating the okteto manifest")
 	cmd.Flags().StringVarP(&opts.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&opts.Overwrite, "replace", "r", false, "overwrite existing manifest file")
+	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: www.okteto.com/docs/reference/manifest-v1/")
+	cmd.Flags().BoolVarP(&opts.AutoDeploy, "deploy", "", false, "deploy the application after generate the okteto manifest")
+	cmd.Flags().BoolVarP(&opts.AutoConfigureDev, "configure-devs", "", false, "configure devs after deploying the application")
 	return cmd
 }
 
-// Init initializes a new okteto manifest
-func (mc *ManifestCommand) Init(ctx context.Context, opts *InitOpts) error {
-	if err := validateDevPath(opts.DevPath, opts.Overwrite); err != nil {
-		return err
-	}
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
-	composeFiles := utils.GetStackFiles(cwd)
-
+// RunInitV2 initializes a new okteto manifest
+func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
+	os.Setenv(model.OktetoNameEnvVar, utils.InferName(opts.Workdir))
 	var manifest *model.Manifest
-	if len(composeFiles) > 0 {
-		composePath, create, err := selectComposeFile(composeFiles)
+	var err error
+	if !opts.Overwrite {
+		manifest, err = model.GetManifestV2(opts.DevPath)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		if composePath != "" {
-			answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? ")
-			if err != nil {
-				return err
-			}
-			if !answer {
-				return nil
-			}
-			manifest, err = createFromCompose(composePath)
-			if err != nil {
-				return err
-			}
-		} else if create {
-			manifest, err = createNewCompose()
-			if err != nil {
-				return err
-			}
-		} else {
-			manifest, err = createFromKubernetes(cwd)
-			if err != nil {
-				return err
-			}
-		}
-	} else {
-		selection, err := utils.AskForOptions([]string{"Docker Compose", "Kubernetes Manifest"}, "How do you want to launch your development environment?")
+	}
+
+	if manifest == nil || len(manifest.Build) == 0 || manifest.Deploy == nil {
+		manifest, err = mc.configureManifestDeployAndBuild(opts.Workdir)
 		if err != nil {
-			return err
-		}
-		if selection == "Docker Compose" {
-			manifest, err = createNewCompose()
-			if err != nil {
-				return err
-			}
-		} else {
-			manifest, err = createFromKubernetes(cwd)
-			if err != nil {
-				return err
-			}
+			return nil, err
 		}
 	}
 
 	if manifest != nil {
 		mc.manifest = manifest
-		manifest.Name = utils.InferName(cwd)
+		manifest.Name = os.Getenv(model.OktetoNameEnvVar)
 		if err := manifest.WriteToFile(opts.DevPath); err != nil {
-			return err
+			return nil, err
 		}
-		if opts.ShowCTA {
-			answer, err := utils.AskYesNo("Do you want to launch your development environment? [y/n]: ")
-			if err != nil {
-				return err
-			}
-			if answer {
-				if err := mc.deploy(ctx, opts); err != nil {
-					return err
-				}
+		oktetoLog.Success("Okteto manifest (%s) deploy and build configured successfully", opts.DevPath)
 
-				answer, err := utils.AskYesNo("Do you want to configure your development containers? [y/n]: ")
+		c, _, err := mc.K8sClientProvider.Provide(okteto.Context().Cfg)
+		if err != nil {
+			return nil, err
+		}
+		namespace := manifest.Namespace
+		if namespace == "" {
+			namespace = okteto.Context().Namespace
+		}
+		isDeployed := pipeline.IsDeployed(ctx, manifest.Name, namespace, c)
+		deployAnswer := false
+		if !isDeployed && !opts.AutoDeploy {
+			deployAnswer, err = utils.AskYesNo("Do you want to launch your development environment? [y/n]: ")
+			if err != nil {
+				return nil, err
+			}
+		}
+		if deployAnswer || opts.AutoDeploy {
+			if err := mc.deploy(ctx, opts); err != nil {
+				return nil, err
+			}
+			isDeployed = true
+		}
+
+		if isDeployed {
+			configureDevEnvsAnswer := false
+			if !opts.AutoConfigureDev {
+				configureDevEnvsAnswer, err = utils.AskYesNo("Do you want to configure your development containers? [y/n]: ")
 				if err != nil {
-					return err
-				}
-				if answer {
-					if err := mc.configureDevsByResources(ctx, opts); err != nil {
-						return err
-					}
+					return nil, err
 				}
 			}
-			oktetoLog.Success("Okteto manifest configured correctly")
-			oktetoLog.Information("Run 'okteto up' to activate your development container")
+
+			if configureDevEnvsAnswer || opts.AutoConfigureDev {
+				if err := mc.configureDevsByResources(ctx, namespace); err != nil {
+					return nil, err
+				}
+			}
+
+			if err := manifest.WriteToFile(opts.DevPath); err != nil {
+				return nil, err
+			}
+			oktetoLog.Success("Okteto manifest (%s) configured successfully", opts.DevPath)
+			if opts.ShowCTA {
+				if !configureDevEnvsAnswer {
+					oktetoLog.Information("Run 'okteto init' to continue configuring your dev section")
+				}
+				oktetoLog.Information("Run 'okteto up' to activate your development container")
+			}
 		}
 	}
-	return nil
+	return manifest, nil
+}
+
+func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Manifest, error) {
+
+	composeFiles := utils.GetStackFiles(cwd)
+	if len(composeFiles) > 0 {
+		composePath, err := selectComposeFile(composeFiles)
+		if err != nil {
+			return nil, err
+		}
+		if composePath != "" {
+			answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? [y/n] ")
+			if err != nil {
+				return nil, err
+			}
+			if !answer {
+				return nil, nil
+			}
+			manifest, err := createFromCompose(composePath)
+			if err != nil {
+				return nil, err
+			}
+			return manifest, nil
+		}
+		manifest, err := createFromKubernetes(cwd)
+		if err != nil {
+			return nil, err
+		}
+		return manifest, nil
+
+	}
+	manifest, err := createFromKubernetes(cwd)
+	if err != nil {
+		return nil, err
+	}
+	return manifest, nil
+
 }
 
 func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
@@ -214,13 +264,18 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 	return nil
 }
 
-func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, opts *InitOpts) error {
+func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespace string) error {
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
 
-	dList, err := pipeline.ListDeployments(ctx, mc.manifest.Name, mc.manifest.Namespace, c)
+	dList, err := pipeline.ListDeployments(ctx, mc.manifest.Name, namespace, c)
+	if err != nil {
+		return err
+	}
+
+	wd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
@@ -235,19 +290,84 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, opts *I
 			container = app.PodSpec().Containers[0].Name
 		}
 
-		dev := model.NewDev()
 		suffix := fmt.Sprintf("Analyzing %s '%s'...", app.Kind(), app.ObjectMeta().Name)
 		spinner := utils.NewSpinner(suffix)
 		spinner.Start()
-		err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, "")
+
+		path := getPathFromApp(wd, app.ObjectMeta().Name)
+
+		language, err := getLanguageFromPath(wd, path)
 		if err != nil {
 			return err
 		}
+
+		configFromImage, err := initCMD.GetDevDefaultsFromImage(ctx, app)
+		if err != nil {
+			return err
+		}
+		dev, err := linguist.GetDevDefaults(language, path, configFromImage)
+		if err != nil {
+			return err
+		}
+		setFromImageConfig(dev, configFromImage)
+
+		err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language)
+		if err != nil {
+			oktetoLog.Infof("could not get defaults from app: %s", err.Error())
+		}
 		spinner.Stop()
-		oktetoLog.Success("Development container '%s' configured correctly", app.ObjectMeta().Name)
+		oktetoLog.Success("Development container '%s' configured successfully", app.ObjectMeta().Name)
 		mc.manifest.Dev[app.ObjectMeta().Name] = dev
 	}
 	return nil
+}
+
+func setFromImageConfig(dev *model.Dev, imageConfig *registry.ImageConfig) {
+	if len(dev.Command.Values) == 0 && len(imageConfig.CMD) > 0 {
+		dev.Command = model.Command{Values: imageConfig.CMD}
+	}
+
+	if imageConfig.Workdir != "" {
+		dev.Workdir = imageConfig.Workdir
+	}
+}
+
+func getLanguageFromPath(wd, appName string) (string, error) {
+	possibleAppPath := filepath.Join(wd, appName)
+	language := ""
+	var err error
+	if fInfo, err := os.Stat(possibleAppPath); err != nil {
+		oktetoLog.Infof("could not detect path: %s", err)
+	} else {
+		if fInfo.IsDir() {
+			language, err = GetLanguage("", possibleAppPath)
+			if err != nil {
+				return "", err
+			}
+		}
+	}
+	if language == "" {
+		language, err = GetLanguage("", wd)
+		if err != nil {
+			return "", err
+		}
+	}
+	return language, nil
+}
+
+func getPathFromApp(wd, appName string) string {
+	possibleAppPath := filepath.Join(wd, appName)
+
+	if fInfo, err := os.Stat(possibleAppPath); err != nil {
+		oktetoLog.Infof("could not detect path: %s", err)
+	} else {
+		if fInfo.IsDir() {
+			path, _ := filepath.Rel(wd, possibleAppPath)
+			return path
+		}
+
+	}
+	return wd
 }
 
 func validateDevPath(devPath string, overwrite bool) error {
@@ -277,17 +397,17 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 		Filename: composePath,
 		IsV2:     true,
 	}
-	manifest, err = manifest.InferFromStack()
+	cwd, err := os.Getwd()
+	if err != nil {
+		oktetoLog.Info("could not detect working directory")
+	}
+	manifest, err = manifest.InferFromStack(cwd)
 	if err != nil {
 		return nil, err
 	}
 	manifest.Context = okteto.Context().Name
 	manifest.Namespace = okteto.Context().Namespace
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get the current working directory: %w", err)
-	}
 	for _, build := range manifest.Build {
 		build.Context, err = filepath.Rel(cwd, build.Context)
 		if err != nil {
@@ -299,12 +419,6 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 		}
 	}
 	return manifest, err
-}
-
-func createNewCompose() (*model.Manifest, error) {
-	oktetoLog.Information("Docker Compose helps you define a multicontainer application")
-	oktetoLog.Information("Learn how to configure a docker compose file here: https://github.com/compose-spec/compose-spec/blob/master/spec.md")
-	return nil, nil
 }
 
 func createFromKubernetes(cwd string) (*model.Manifest, error) {
@@ -322,6 +436,9 @@ func createFromKubernetes(cwd string) (*model.Manifest, error) {
 		return nil, err
 	}
 	manifest.Dev, err = inferDevsSection(cwd)
+	if err != nil {
+		return nil, err
+	}
 
 	return manifest, nil
 }
@@ -350,6 +467,8 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 				return nil, err
 			}
 			buildInfo.Image = imageName
+		} else {
+			_ = build.OptsFromManifest(name, buildInfo, build.BuildOptions{})
 		}
 		manifestBuild[name] = buildInfo
 	}
@@ -389,7 +508,7 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 			oktetoLog.Debugf("could not detect any okteto manifest on %s", f.Name())
 			continue
 		}
-		if dev.IsV2 == false && len(dev.Dev) != 0 {
+		if !dev.IsV2 && len(dev.Dev) != 0 {
 			devs[f.Name()] = dev.Dev[f.Name()]
 		}
 	}

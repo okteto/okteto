@@ -25,6 +25,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
@@ -39,12 +40,22 @@ const (
 	defaultWorkdirPath = "/okteto"
 )
 
+// GetDevDefaultsFromImage sets dev defaults from a image
+func GetDevDefaultsFromImage(ctx context.Context, app apps.App) (*registry.ImageConfig, error) {
+	image := app.PodSpec().Containers[0].Image
+	return registry.GetImageConfigFromImage(image)
+
+}
+
 // SetDevDefaultsFromApp sets dev defaults from a running app
 func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, container, language string) error {
 	c, config, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
 	}
+
+	setAnnotationsFromApp(dev, app)
+	setNameAndLabelsFromApp(dev, app)
 
 	pod, err := getRunningPod(ctx, app, container, c)
 	if err != nil {
@@ -63,13 +74,14 @@ func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, co
 	if updateImageFromPod {
 		dev.Image = nil
 		dev.SecurityContext = getSecurityContextFromPod(ctx, pod, container, config, c)
-		dev.Sync.Folders[0].RemotePath = getWorkdirFromPod(ctx, dev, pod, container, config, c)
+		if dev.Workdir == "" {
+			dev.Sync.Folders[0].RemotePath = getWorkdirFromPod(ctx, dev, pod, container, config, c)
+		}
+		if len(dev.Command.Values) == 0 {
+			dev.Command.Values = getCommandFromPod(ctx, pod, container, config, c)
+		}
 
-		dev.Command.Values = getCommandFromPod(ctx, pod, container, config, c)
 	}
-
-	setAnnotationsFromApp(dev, app)
-	setNameAndLabelsFromApp(dev, app)
 
 	if !okteto.IsOkteto() {
 		setResourcesFromPod(dev, pod, container)

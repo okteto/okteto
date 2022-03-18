@@ -24,28 +24,23 @@ import (
 )
 
 const (
-	newComposeOption  = "New compose file"
 	noneComposeOption = "None of the above"
 
 	dockerfileName = "Dockerfile"
 )
 
-func selectComposeFile(paths []string) (string, bool, error) {
+func selectComposeFile(paths []string) (string, error) {
 	if len(paths) == 1 {
-		return paths[0], false, nil
+		return paths[0], nil
 	}
 
-	paths = append(paths, newComposeOption)
 	paths = append(paths, noneComposeOption)
 	selection, err := utils.AskForOptions(paths, "Select the compose to use:")
 	if err != nil || selection == noneComposeOption {
-		return "", false, err
-	}
-	if selection == newComposeOption {
-		return "", true, nil
+		return "", err
 	}
 
-	return selection, false, nil
+	return selection, nil
 }
 
 func selectDockerfiles(cwd string) ([]string, error) {

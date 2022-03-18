@@ -48,7 +48,7 @@ var (
 
 // Dev represents a development container
 type Dev struct {
-	Name                 string             `json:"name" yaml:"name"`
+	Name                 string             `json:"name,omitempty" yaml:"name,omitempty"`
 	Username             string             `json:"-" yaml:"-"`
 	RegistryURL          string             `json:"-" yaml:"-"`
 	Selector             Selector           `json:"selector,omitempty" yaml:"selector,omitempty"`
@@ -634,6 +634,10 @@ func (dev *Dev) expandEnvFiles() error {
 func (dev *Dev) Validate() error {
 	if dev.Name == "" {
 		return fmt.Errorf("Name cannot be empty")
+	}
+
+	if dev.Image == nil {
+		dev.Image = &BuildInfo{}
 	}
 
 	if ValidKubeNameRegex.MatchString(dev.Name) {

@@ -187,8 +187,17 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 	if err != nil {
 		return nil, err
 	}
+	dev := manifest.Dev[devKey]
 
-	if err := manifest.Dev[devKey].Validate(); err != nil {
+	dev.Name = devKey
+	if dev.Namespace == "" {
+		dev.Namespace = manifest.Namespace
+	}
+
+	if dev.Context == "" {
+		dev.Context = manifest.Context
+	}
+	if err := dev.Validate(); err != nil {
 		return nil, err
 	}
 
