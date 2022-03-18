@@ -652,16 +652,21 @@ func (m *Manifest) WriteToFile(filePath string) error {
 			}
 		}
 	}
-	for _, d := range m.Dev {
+	for dName, d := range m.Dev {
 		d.Name = ""
-		if d.Image.Name != "" {
+		if d.Image != nil && d.Image.Name != "" {
 			d.Image.Context = ""
 			d.Image.Dockerfile = ""
 		} else {
-			d.Image = nil
+			if v, ok := m.Build[dName]; ok {
+				d.Image = &BuildInfo{Name: v.Image}
+			} else {
+				d.Image = nil
+			}
+
 		}
 
-		if d.Push.Name != "" {
+		if d.Push != nil && d.Push.Name != "" {
 			d.Push.Context = ""
 			d.Push.Dockerfile = ""
 		} else {

@@ -40,26 +40,11 @@ const (
 	defaultWorkdirPath = "/okteto"
 )
 
-// SetDevDefaultsFromImage sets dev defaults from a image
-func SetDevDefaultsFromImage(ctx context.Context, dev *model.Dev, app apps.App) error {
+// GetDevDefaultsFromImage sets dev defaults from a image
+func GetDevDefaultsFromImage(ctx context.Context, app apps.App) (*registry.ImageConfig, error) {
 	image := app.PodSpec().Containers[0].Image
-	config, err := registry.GetImageConfigFromImage(image)
-	if err != nil {
-		return err
-	}
+	return registry.GetImageConfigFromImage(image)
 
-	if len(config.CMD) > 0 {
-		dev.Command = model.Command{Values: config.CMD}
-	}
-	if len(config.ExposedPorts) > 0 {
-		for _, p := range config.ExposedPorts {
-			dev.Forward = append(dev.Forward, model.Forward{Local: p, Remote: p})
-		}
-	}
-	if config.Workdir != "" {
-		dev.Workdir = config.Workdir
-	}
-	return nil
 }
 
 // SetDevDefaultsFromApp sets dev defaults from a running app
@@ -89,9 +74,13 @@ func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, co
 	if updateImageFromPod {
 		dev.Image = nil
 		dev.SecurityContext = getSecurityContextFromPod(ctx, pod, container, config, c)
-		dev.Sync.Folders[0].RemotePath = getWorkdirFromPod(ctx, dev, pod, container, config, c)
+		if dev.Workdir == "" {
+			dev.Sync.Folders[0].RemotePath = getWorkdirFromPod(ctx, dev, pod, container, config, c)
+		}
+		if len(dev.Command.Values) == 0 {
+			dev.Command.Values = getCommandFromPod(ctx, pod, container, config, c)
+		}
 
-		dev.Command.Values = getCommandFromPod(ctx, pod, container, config, c)
 	}
 
 	if !okteto.IsOkteto() {

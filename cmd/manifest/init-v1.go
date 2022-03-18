@@ -30,6 +30,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -104,7 +105,7 @@ func (*ManifestCommand) RunInitV1(ctx context.Context, opts *InitOpts) error {
 		return err
 	}
 
-	dev, err := linguist.GetDevDefaults(opts.Language, opts.Workdir)
+	dev, err := linguist.GetDevDefaults(opts.Language, opts.Workdir, &registry.ImageConfig{})
 	if err != nil {
 		return err
 	}

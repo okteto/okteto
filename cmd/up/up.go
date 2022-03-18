@@ -127,11 +127,13 @@ func Up() *cobra.Command {
 						upOptions.DevPath = utils.DefaultManifest
 					}
 					oktetoManifest, err = mc.RunInitV2(ctx, &manifest.InitOpts{
-						DevPath:   upOptions.DevPath,
-						Namespace: upOptions.Namespace,
-						Context:   upOptions.K8sContext,
-						ShowCTA:   false,
-						Workdir:   wd,
+						DevPath:          upOptions.DevPath,
+						Namespace:        upOptions.Namespace,
+						Context:          upOptions.K8sContext,
+						ShowCTA:          false,
+						Workdir:          wd,
+						AutoDeploy:       true,
+						AutoConfigureDev: true,
 					})
 					if err != nil {
 						return err
@@ -143,6 +145,11 @@ func Up() *cobra.Command {
 						oktetoManifest.Context = okteto.Context().Name
 					}
 					oktetoManifest.IsV2 = true
+					for _, d := range oktetoManifest.Dev {
+						if err := d.SetDefaults(); err != nil {
+							return err
+						}
+					}
 				}
 			}
 			dev, err := utils.GetDevFromManifest(oktetoManifest, devName)
