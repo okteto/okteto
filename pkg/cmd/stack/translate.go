@@ -128,6 +128,11 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		if !okteto.IsOkteto() && buildInfo.Image == "" {
 			return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", svcName)
 		}
+		if buildInfo == nil {
+			buildInfo = &model.BuildInfo{
+				VolumesToInclude: svcInfo.VolumeMounts,
+			}
+		}
 		opts := build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
 
 		if okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
@@ -154,7 +159,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 
 		volumesToInclude := svcInfo.VolumeMounts
 		var options build.BuildOptions
-		if buildInfo != nil {
+		if buildInfo != nil && buildInfo.Dockerfile != "" {
 			oktetoLog.Information("Building image for service '%s'", svcName)
 
 			if len(buildInfo.VolumesToInclude) > 0 {
