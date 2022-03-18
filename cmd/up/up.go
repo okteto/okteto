@@ -110,7 +110,7 @@ func Up() *cobra.Command {
 			if oktetoManifest.Name == "" {
 				oktetoManifest.Name = utils.InferName(wd)
 			}
-			os.Setenv(model.OktetoNameEnvVar, manifest.Name)
+			os.Setenv(model.OktetoNameEnvVar, oktetoManifest.Name)
 			devName := ""
 			if len(args) == 1 {
 				devName = args[0]
@@ -158,7 +158,7 @@ func Up() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := setBuildEnvVars(manifest, dev.Name); err != nil {
+			if err := setBuildEnvVars(oktetoManifest, dev.Name); err != nil {
 				return err
 			}
 
