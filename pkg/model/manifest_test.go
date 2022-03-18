@@ -15,6 +15,7 @@ package model
 
 import (
 	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
@@ -94,7 +95,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: &BuildInfo{
 					Name:       "test",
 					Context:    "test",
-					Dockerfile: "test/Dockerfile",
+					Dockerfile: filepath.Join("test", "Dockerfile"),
 				},
 				Ports: []Port{
 					{
@@ -125,7 +126,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{
 					"test": &BuildInfo{
 						Context:          "test",
-						Dockerfile:       "test/Dockerfile",
+						Dockerfile:       filepath.Join("test", "Dockerfile"),
 						VolumesToInclude: []StackVolume{},
 					},
 				},
@@ -144,7 +145,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{
 					"test": &BuildInfo{
 						Context:    "test-1",
-						Dockerfile: "test-1/Dockerfile",
+						Dockerfile: filepath.Join("test-1", "Dockerfile"),
 					},
 				},
 				Deploy: &DeployInfo{
@@ -157,7 +158,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{
 					"test": &BuildInfo{
 						Context:    "test-1",
-						Dockerfile: "test-1/Dockerfile",
+						Dockerfile: filepath.Join("test-1", "Dockerfile"),
 					},
 				},
 				Dev: ManifestDevs{},
@@ -188,7 +189,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{
 					"test": &BuildInfo{
 						Context:          "test",
-						Dockerfile:       "test/Dockerfile",
+						Dockerfile:       filepath.Join("test", "Dockerfile"),
 						VolumesToInclude: []StackVolume{},
 					},
 				},

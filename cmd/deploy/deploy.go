@@ -278,6 +278,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	for depName, dep := range deployOptions.Manifest.Dependencies {
+		oktetoLog.Information("Deploying dependency '%s'", depName)
 		dep.Variables = append(dep.Variables, model.EnvVar{
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
@@ -816,6 +817,9 @@ func switchSSHRepoToHTTPS(repo string) (*url.URL, error) {
 		repoURL.Scheme = "https"
 		repoURL.User = nil
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
+		return repoURL, nil
+	}
+	if repoURL.Scheme == "https" {
 		return repoURL, nil
 	}
 
