@@ -269,3 +269,13 @@ func (w *JSONWriter) AddToBuffer(level, format string, a ...interface{}) {
 	log.buf.WriteString("\n")
 	fmt.Fprintln(w.out.Out, msg)
 }
+
+// AddToBuffer logs into the buffer but does not print anything
+func (w *JSONWriter) Write(p []byte) (n int, err error) {
+	msg := string(p)
+	msg = convertToJSON(InfoLevel, log.stage, msg)
+	if !strings.HasSuffix(msg, "\n") {
+		msg += "\n"
+	}
+	return w.out.Out.Write([]byte(msg))
+}

@@ -46,6 +46,8 @@ type OktetoWriter interface {
 
 	IsInteractive() bool
 	AddToBuffer(level, format string, a ...interface{})
+
+	Write(p []byte) (n int, err error)
 }
 
 const (
