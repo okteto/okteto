@@ -246,7 +246,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 				return nil, err
 			}
 
-			if devManifest != nil && devManifest.Deploy != nil && len(devManifest.Deploy.Endpoints) != 0 {
+			if devManifest != nil && devManifest.Deploy != nil && devManifest.Deploy.Endpoints != nil {
 				inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
 			}
 
@@ -309,7 +309,9 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 				return nil, err
 			}
 			devManifest.Deploy.Compose.Stack = s
-			s.Endpoints = devManifest.Deploy.Endpoints
+			if devManifest.Deploy != nil && devManifest.Deploy.Endpoints != nil {
+				s.Endpoints = devManifest.Deploy.Endpoints
+			}
 			devManifest, err = devManifest.InferFromStack(cwd)
 			if err != nil {
 				return nil, err
@@ -589,7 +591,9 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 				return nil, err
 			}
 			m.Deploy.Compose.Stack = s
-			s.Endpoints = m.Deploy.Endpoints
+			if m.Deploy.Endpoints != nil {
+				s.Endpoints = m.Deploy.Endpoints
+			}
 			cwd, err := os.Getwd()
 			if err != nil {
 				oktetoLog.Info("could not detect working directory")

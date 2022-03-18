@@ -204,8 +204,9 @@ func (w *JSONWriter) Fail(format string, args ...interface{}) {
 		if msg != "" {
 			log.buf.WriteString(msg)
 			log.buf.WriteString("\n")
+			fmt.Fprintln(w.out.Out, msg)
 		}
-		fmt.Fprintln(w.out.Out, msg)
+
 	}
 }
 
@@ -227,8 +228,9 @@ func (w *JSONWriter) Fprintf(writer io.Writer, format string, a ...interface{}) 
 			log.buf.WriteString(msg)
 			log.buf.WriteString("\n")
 		}
+		fmt.Fprint(writer, msg)
 	}
-	fmt.Fprint(writer, msg)
+
 }
 
 // FPrintln prints a line with format
@@ -239,8 +241,9 @@ func (w *JSONWriter) FPrintln(writer io.Writer, args ...interface{}) {
 		if msg != "" {
 			log.buf.WriteString(msg)
 			log.buf.WriteString("\n")
+			fmt.Fprintln(writer, msg)
 		}
-		fmt.Fprintln(writer, msg)
+
 	}
 }
 
@@ -250,8 +253,9 @@ func (w *JSONWriter) Print(args ...interface{}) {
 	if msg != "" {
 		log.buf.WriteString(msg)
 		log.buf.WriteString("\n")
+		fmt.Fprint(w.out.Out, msg)
 	}
-	fmt.Fprint(w.out.Out, msg)
+
 }
 
 //Printf writes a line with format
@@ -285,8 +289,8 @@ func (w *JSONWriter) AddToBuffer(level, format string, a ...interface{}) {
 	if msg != "" {
 		log.buf.WriteString(msg)
 		log.buf.WriteString("\n")
+		fmt.Fprintln(w.out.Out, msg)
 	}
-	fmt.Fprintln(w.out.Out, msg)
 }
 
 // AddToBuffer logs into the buffer but does not print anything
