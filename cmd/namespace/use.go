@@ -62,6 +62,7 @@ func Use(ctx context.Context) *cobra.Command {
 				return err
 			}
 			err = nsCmd.Use(ctx, namespace)
+
 			analytics.TrackNamespace(err == nil, len(args) > 0)
 			return err
 		},

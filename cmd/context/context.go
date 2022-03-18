@@ -14,10 +14,7 @@
 package context
 
 import (
-	"context"
-
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/spf13/cobra"
 )
 
@@ -40,20 +37,7 @@ To set your default context, run the ` + "`okteto context`" + ` command:
 
 This will prompt you to select one of your existing contexts or to create a new one.
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
-			if len(args) == 1 {
-				ctxOptions.Context = args[0]
-			}
-
-			ctxOptions.IsCtxCommand = true
-			ctxOptions.Save = true
-			ctxCmd := NewContextCommand()
-
-			err := ctxCmd.Run(ctx, ctxOptions)
-			analytics.TrackContext(err == nil)
-			return err
-		},
+		RunE: Use().RunE,
 	}
 	cmd.AddCommand(Show())
 	cmd.AddCommand(Use())

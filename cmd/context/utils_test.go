@@ -175,7 +175,7 @@ dependencies:
 				},
 				Icon:     "",
 				Dev:      model.ManifestDevs{},
-				Type:     "",
+				Type:     model.OktetoManifestType,
 				Filename: "",
 				Dependencies: model.ManifestDependencies{
 					"one": &model.Dependency{

@@ -88,7 +88,7 @@ func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
 
 func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, filename string) error {
 	var err error
-	filename, err = model.ExpandEnv(filename)
+	filename, err = model.ExpandEnv(filename, true)
 	if err != nil {
 		return err
 	}
@@ -124,20 +124,23 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		if svcInfo.Build == nil && len(svcInfo.VolumeMounts) == 0 {
 			continue
 		}
-		if !okteto.IsOkteto() && svcInfo.Image == "" {
+		buildInfo := svcInfo.Build
+		if !okteto.IsOkteto() && buildInfo.Image == "" {
 			return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", svcName)
 		}
+		opts := build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
 
+		if okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
+			buildInfo.Image = opts.Tag
+		}
 		if !options.ForceBuild {
-			buildInfo := svcInfo.Build
-			opts := build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
-			if _, err := registry.GetImageTagWithDigest(opts.Tag); err != oktetoErrors.ErrNotFound {
-				if svcInfo.Image == "" {
+			if buildInfo != nil {
+				if _, err := registry.GetImageTagWithDigest(opts.Tag); err != oktetoErrors.ErrNotFound {
 					svcInfo.Image = opts.Tag
+					continue
 				}
-				continue
+				oktetoLog.Infof("image '%s' not found, building it", opts.Tag)
 			}
-			oktetoLog.Infof("image '%s' not found, building it", opts.Tag)
 		}
 
 		oktetoLog.SetStage(fmt.Sprintf("Building service %s", svcName))
@@ -151,7 +154,6 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 			}
 		}
 
-		buildInfo := svcInfo.Build
 		volumesToInclude := svcInfo.VolumeMounts
 		var options build.BuildOptions
 		if buildInfo != nil {

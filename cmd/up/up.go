@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/build"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -109,6 +110,7 @@ func Up() *cobra.Command {
 			if oktetoManifest.Name == "" {
 				oktetoManifest.Name = utils.InferName(wd)
 			}
+			os.Setenv(model.OktetoNameEnvVar, manifest.Name)
 			devName := ""
 			if len(args) == 1 {
 				devName = args[0]
@@ -154,6 +156,9 @@ func Up() *cobra.Command {
 			}
 			dev, err := utils.GetDevFromManifest(oktetoManifest, devName)
 			if err != nil {
+				return err
+			}
+			if err := setBuildEnvVars(manifest, dev.Name); err != nil {
 				return err
 			}
 
@@ -220,7 +225,8 @@ func Up() *cobra.Command {
 
 			if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
 				if !upOptions.Deploy {
-					oktetoLog.Warning("Development environment '%s' doesn't exist or has errors and it needs to be deployed", up.Manifest.Name)
+					oktetoLog.Information("Deploying development environment '%s'...", up.Manifest.Name)
+					oktetoLog.Information("To redeploy your development environment manually run 'okteto deploy' or 'okteto up --deploy'")
 				}
 				startTime := time.Now()
 				err := up.deployApp(ctx)
@@ -256,6 +262,8 @@ func Up() *cobra.Command {
 					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 				case oktetoErrors.CommandError:
 					oktetoLog.Infof("CommandError: %v", err)
+				case oktetoErrors.UserError:
+					return err
 				}
 
 			}
@@ -659,4 +667,28 @@ func printDisplayContext(dev *model.Dev, divertURL string) {
 		oktetoLog.Println(fmt.Sprintf("    %s       %s", oktetoLog.BlueString("URL:"), divertURL))
 	}
 	oktetoLog.Println()
+}
+
+func setBuildEnvVars(m *model.Manifest, devName string) error {
+	sp := utils.NewSpinner("Loading build env vars...")
+	sp.Start()
+	defer sp.Stop()
+
+	for buildName, buildInfo := range m.Build {
+		opts := build.OptsFromManifest(buildName, buildInfo, build.BuildOptions{})
+		imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
+		if err == oktetoErrors.ErrNotFound {
+			os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(buildName)), opts.Tag)
+		} else if err != nil {
+			return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
+		} else {
+			if err := deploy.SetManifestEnvVars(devName, imageWithDigest); err != nil {
+				return err
+			}
+		}
+	}
+
+	var err error
+	m.Dev[devName].Image.Name, err = model.ExpandEnv(m.Dev[devName].Image.Name, false)
+	return err
 }
