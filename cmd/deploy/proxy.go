@@ -14,18 +14,27 @@
 package deploy
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/okteto/okteto/cmd/utils"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 )
 
 type proxyConfig struct {
@@ -35,8 +44,13 @@ type proxyConfig struct {
 
 //Proxy refers to a proxy configuration
 type Proxy struct {
-	s           *http.Server
-	proxyConfig proxyConfig
+	s            *http.Server
+	proxyConfig  proxyConfig
+	proxyHandler *proxyHandler
+}
+
+type proxyHandler struct {
+	Name string
 }
 
 //NewProxy creates a new proxy
@@ -58,7 +72,8 @@ func NewProxy(name string, kubeconfig *KubeConfig) (*Proxy, error) {
 		return nil, err
 	}
 
-	handler, err := getProxyHandler(name, sessionToken, clusterConfig)
+	ph := &proxyHandler{}
+	handler, err := ph.getProxyHandler(sessionToken, clusterConfig)
 	if err != nil {
 		oktetoLog.Errorf("could not configure local proxy: %s", err)
 		return nil, err
@@ -90,7 +105,8 @@ func NewProxy(name string, kubeconfig *KubeConfig) (*Proxy, error) {
 			port:  port,
 			token: sessionToken,
 		},
-		s: s,
+		s:            s,
+		proxyHandler: ph,
 	}, nil
 }
 
@@ -133,4 +149,139 @@ func (p *Proxy) GetPort() int {
 // GetToken Retrieves the token configured for the proxy
 func (p *Proxy) GetToken() string {
 	return p.proxyConfig.token
+}
+
+// SetName sets the name to be in the deployed-by label
+func (p *Proxy) SetName(name string) {
+	p.proxyHandler.SetName(name)
+}
+
+func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config) (http.Handler, error) {
+	// By default we don't disable HTTP/2
+	trans, err := newProtocolTransport(clusterConfig, false)
+	if err != nil {
+		oktetoLog.Infof("could not get http transport from config: %s", err)
+		return nil, err
+	}
+
+	handler := http.NewServeMux()
+
+	destinationURL := &url.URL{
+		Host:   strings.TrimPrefix(clusterConfig.Host, "https://"),
+		Scheme: "https",
+	}
+	proxy := httputil.NewSingleHostReverseProxy(destinationURL)
+	proxy.Transport = trans
+
+	oktetoLog.Debugf("forwarding host: %s", clusterConfig.Host)
+
+	handler.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
+		requestToken := r.Header.Get("Authorization")
+		expectedToken := fmt.Sprintf("Bearer %s", token)
+		// Validate token with the generated for the local kubeconfig file
+		if requestToken != expectedToken {
+			rw.WriteHeader(401)
+			return
+		}
+
+		// Set the right bearer token based on the original kubeconfig. Authorization header should not be sent
+		// if clusterConfig.BearerToken is empty
+		if clusterConfig.BearerToken != "" {
+			r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", clusterConfig.BearerToken))
+		} else {
+			r.Header.Del("Authorization")
+		}
+
+		reverseProxy := proxy
+		if isSPDY(r) {
+			oktetoLog.Debugf("detected SPDY request, disabling HTTP/2 for request %s %s", r.Method, r.URL.String())
+			// In case of a SPDY request, we create a new proxy with HTTP/2 disabled
+			t, err := newProtocolTransport(clusterConfig, true)
+			if err != nil {
+				oktetoLog.Infof("could not disabled HTTP/2: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+			reverseProxy = httputil.NewSingleHostReverseProxy(destinationURL)
+			reverseProxy.Transport = t
+		}
+
+		// Modify all resources updated or created to include the label.
+		if r.Method == "PUT" || r.Method == "POST" {
+			b, err := io.ReadAll(r.Body)
+			if err != nil {
+				oktetoLog.Infof("could not read the request body: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+			defer r.Body.Close()
+			if len(b) == 0 {
+				reverseProxy.ServeHTTP(rw, r)
+				return
+			}
+
+			var body map[string]json.RawMessage
+			if err := json.Unmarshal(b, &body); err != nil {
+				oktetoLog.Infof("could not unmarshal request: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+
+			m, ok := body["metadata"]
+			if !ok {
+				oktetoLog.Info("request body doesn't have metadata field")
+				rw.WriteHeader(500)
+				return
+			}
+
+			var metadata metav1.ObjectMeta
+			if err := json.Unmarshal(m, &metadata); err != nil {
+				oktetoLog.Infof("could not process resource's metadata: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+
+			if metadata.Labels == nil {
+				metadata.Labels = map[string]string{}
+			}
+			metadata.Labels[model.DeployedByLabel] = ph.Name
+
+			if metadata.Annotations == nil {
+				metadata.Annotations = map[string]string{}
+			}
+			if utils.IsOktetoRepo() {
+				metadata.Annotations[model.OktetoSampleAnnotation] = "true"
+			}
+
+			metadataAsByte, err := json.Marshal(metadata)
+			if err != nil {
+				oktetoLog.Infof("could not process resource's metadata: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+
+			body["metadata"] = metadataAsByte
+
+			b, err = json.Marshal(body)
+			if err != nil {
+				oktetoLog.Infof("could not marshal modified body: %s", err)
+				rw.WriteHeader(500)
+				return
+			}
+
+			// Needed to set the new Content-Length
+			r.ContentLength = int64(len(b))
+			r.Body = io.NopCloser(bytes.NewBuffer(b))
+		}
+
+		// Redirect request to the k8s server (based on the transport HTTP generated from the config)
+		reverseProxy.ServeHTTP(rw, r)
+	})
+
+	return handler, nil
+
+}
+
+func (ph *proxyHandler) SetName(name string) {
+	ph.Name = name
 }

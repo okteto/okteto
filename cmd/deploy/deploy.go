@@ -14,14 +14,10 @@
 package deploy
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/signal"
@@ -49,7 +45,6 @@ import (
 	"github.com/spf13/cobra"
 	giturls "github.com/whilp/git-urls"
 	"golang.org/x/sync/errgroup"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 )
 
@@ -89,6 +84,7 @@ type proxyInterface interface {
 	Shutdown(ctx context.Context) error
 	GetPort() int
 	GetToken() string
+	SetName(name string)
 }
 
 //DeployCommand defines the config for deploying an app
@@ -162,9 +158,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 
 			addEnvVars(ctx, cwd)
-			if options.Name == "" {
-				options.Name = utils.InferName(cwd)
-			}
 			options.ShowCTA = oktetoLog.IsInteractive()
 
 			kubeconfig := NewKubeConfig()
@@ -234,12 +227,15 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 // RunDeploy runs the deploy sequence
 func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
 	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
 		return err
 	}
-	var err error
 	oktetoLog.SetStage("Load manifest")
 	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
@@ -254,6 +250,15 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 	if deployOptions.Manifest.Namespace == "" {
 		deployOptions.Manifest.Namespace = okteto.Context().Namespace
+	}
+
+	if deployOptions.Name == "" {
+		if deployOptions.Manifest.Name != "" {
+			deployOptions.Name = deployOptions.Manifest.Name
+		} else {
+			deployOptions.Name = utils.InferName(cwd)
+		}
+		dc.Proxy.SetName(deployOptions.Name)
 	}
 	oktetoLog.SetStage("")
 
@@ -606,132 +611,6 @@ func newProtocolTransport(clusterConfig *rest.Config, disableHTTP2 bool) (http.R
 
 func isSPDY(r *http.Request) bool {
 	return strings.HasPrefix(strings.ToLower(r.Header.Get(headerUpgrade)), "spdy/")
-}
-
-func getProxyHandler(name, token string, clusterConfig *rest.Config) (http.Handler, error) {
-	// By default we don't disable HTTP/2
-	trans, err := newProtocolTransport(clusterConfig, false)
-	if err != nil {
-		oktetoLog.Infof("could not get http transport from config: %s", err)
-		return nil, err
-	}
-
-	handler := http.NewServeMux()
-
-	destinationURL := &url.URL{
-		Host:   strings.TrimPrefix(clusterConfig.Host, "https://"),
-		Scheme: "https",
-	}
-	proxy := httputil.NewSingleHostReverseProxy(destinationURL)
-	proxy.Transport = trans
-
-	oktetoLog.Debugf("forwarding host: %s", clusterConfig.Host)
-
-	handler.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
-		requestToken := r.Header.Get("Authorization")
-		expectedToken := fmt.Sprintf("Bearer %s", token)
-		// Validate token with the generated for the local kubeconfig file
-		if requestToken != expectedToken {
-			rw.WriteHeader(401)
-			return
-		}
-
-		// Set the right bearer token based on the original kubeconfig. Authorization header should not be sent
-		// if clusterConfig.BearerToken is empty
-		if clusterConfig.BearerToken != "" {
-			r.Header.Set("Authorization", fmt.Sprintf("Bearer %s", clusterConfig.BearerToken))
-		} else {
-			r.Header.Del("Authorization")
-		}
-
-		reverseProxy := proxy
-		if isSPDY(r) {
-			oktetoLog.Debugf("detected SPDY request, disabling HTTP/2 for request %s %s", r.Method, r.URL.String())
-			// In case of a SPDY request, we create a new proxy with HTTP/2 disabled
-			t, err := newProtocolTransport(clusterConfig, true)
-			if err != nil {
-				oktetoLog.Infof("could not disabled HTTP/2: %s", err)
-				rw.WriteHeader(500)
-				return
-			}
-			reverseProxy = httputil.NewSingleHostReverseProxy(destinationURL)
-			reverseProxy.Transport = t
-		}
-
-		// Modify all resources updated or created to include the label.
-		if r.Method == "PUT" || r.Method == "POST" {
-			b, err := io.ReadAll(r.Body)
-			if err != nil {
-				oktetoLog.Infof("could not read the request body: %s", err)
-				rw.WriteHeader(500)
-				return
-			}
-			defer r.Body.Close()
-			if len(b) == 0 {
-				reverseProxy.ServeHTTP(rw, r)
-				return
-			}
-
-			var body map[string]json.RawMessage
-			if err := json.Unmarshal(b, &body); err != nil {
-				oktetoLog.Infof("could not unmarshal request: %s", err)
-				rw.WriteHeader(500)
-				return
-			}
-
-			m, ok := body["metadata"]
-			if !ok {
-				oktetoLog.Info("request body doesn't have metadata field")
-				rw.WriteHeader(500)
-				return
-			}
-
-			var metadata metav1.ObjectMeta
-			if err := json.Unmarshal(m, &metadata); err != nil {
-				oktetoLog.Infof("could not process resource's metadata: %s", err)
-				rw.WriteHeader(500)
-				return
-			}
-
-			if metadata.Labels == nil {
-				metadata.Labels = map[string]string{}
-			}
-			metadata.Labels[model.DeployedByLabel] = name
-
-			if metadata.Annotations == nil {
-				metadata.Annotations = map[string]string{}
-			}
-			if utils.IsOktetoRepo() {
-				metadata.Annotations[model.OktetoSampleAnnotation] = "true"
-			}
-
-			metadataAsByte, err := json.Marshal(metadata)
-			if err != nil {
-				oktetoLog.Infof("could not process resource's metadata: %s", err)
-				rw.WriteHeader(500)
-				return
-			}
-
-			body["metadata"] = metadataAsByte
-
-			b, err = json.Marshal(body)
-			if err != nil {
-				oktetoLog.Infof("could not marshal modified body: %s", err)
-				rw.WriteHeader(500)
-				return
-			}
-
-			// Needed to set the new Content-Length
-			r.ContentLength = int64(len(b))
-			r.Body = io.NopCloser(bytes.NewBuffer(b))
-		}
-
-		// Redirect request to the k8s server (based on the transport HTTP generated from the config)
-		reverseProxy.ServeHTTP(rw, r)
-	})
-
-	return handler, nil
-
 }
 
 //GetTempKubeConfigFile returns a where the temp kubeConfigFile should be stored

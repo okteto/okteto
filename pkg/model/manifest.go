@@ -245,11 +245,12 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			if err != nil {
 				return nil, err
 			}
-
 			if devManifest != nil && devManifest.Deploy != nil && devManifest.Deploy.Endpoints != nil {
 				inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
 			}
-
+			if inferredManifest.Deploy.Compose.Stack.Name != "" {
+				inferredManifest.Name = inferredManifest.Deploy.Compose.Stack.Name
+			}
 		}
 		if devManifest != nil {
 			inferredManifest.mergeWithOktetoManifest(devManifest)
@@ -297,6 +298,9 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			return nil, err
 		}
 		stackManifest.Deploy.Compose.Stack = s
+		if stackManifest.Deploy.Compose.Stack.Name != "" {
+			stackManifest.Name = stackManifest.Deploy.Compose.Stack.Name
+		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
 		return stackManifest, nil
 	}
