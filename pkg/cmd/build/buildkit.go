@@ -41,6 +41,8 @@ const (
 	frontend = "dockerfile.v0"
 )
 
+type buildWriter struct{}
+
 // getSolveOpt returns the buildkit solve options
 func getSolveOpt(buildOptions BuildOptions) (*client.SolveOpt, error) {
 	var localDirs map[string]string
@@ -186,6 +188,9 @@ func getClientForOktetoCluster(ctx context.Context) (*client.Client, error) {
 
 func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string) error {
 	ch := make(chan *client.SolveStatus)
+	ttyChannel := make(chan *client.SolveStatus)
+	plainChannel := make(chan *client.SolveStatus)
+
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
 		var err error
@@ -194,18 +199,49 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 	})
 
 	eg.Go(func() error {
+		done := false
+		for {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case ss, ok := <-ch:
+				if ok {
+					ttyChannel <- ss
+					plainChannel <- ss
+				} else {
+					done = true
+				}
+			}
+			if done {
+				close(ttyChannel)
+				close(plainChannel)
+				break
+			}
+		}
+		return nil
+	})
+
+	eg.Go(func() error {
 		var c console.Console
+		w := &buildWriter{}
+		go progressui.DisplaySolveStatus(context.TODO(), "", c, w, plainChannel)
+
 		if progress == oktetoLog.TTYFormat {
 			if cn, err := console.ConsoleFromFile(os.Stdout); err == nil {
 				c = cn
 			} else {
 				oktetoLog.Debugf("could not create console from file: %s ", err)
 			}
-
 		}
 		// not using shared context to not disrupt display but let it finish reporting errors
-		return progressui.DisplaySolveStatus(context.TODO(), "", c, oktetoLog.GetOutputWriter(), ch)
+		return progressui.DisplaySolveStatus(context.TODO(), "", c, oktetoLog.GetOutputWriter(), ttyChannel)
 	})
 
 	return eg.Wait()
+}
+
+func (*buildWriter) Write(p []byte) (int, error) {
+	msg := string(p)
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, msg)
+	return 0, nil
 }
