@@ -682,7 +682,7 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 		} else if err != nil {
 			return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
 		} else {
-			if err := deploy.SetManifestEnvVars(devName, imageWithDigest); err != nil {
+			if err := deploy.SetManifestEnvVars(buildName, imageWithDigest); err != nil {
 				return err
 			}
 		}
