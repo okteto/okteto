@@ -258,8 +258,16 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		} else {
 			deployOptions.Name = utils.InferName(cwd)
 		}
-		dc.Proxy.SetName(deployOptions.Name)
+
+	} else {
+		if deployOptions.Manifest != nil {
+			deployOptions.Manifest.Name = deployOptions.Name
+		}
+		if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.Compose != nil && deployOptions.Manifest.Deploy.Compose.Stack != nil {
+			deployOptions.Manifest.Deploy.Compose.Stack.Name = deployOptions.Name
+		}
 	}
+	dc.Proxy.SetName(deployOptions.Name)
 	oktetoLog.SetStage("")
 
 	dc.PipelineType = deployOptions.Manifest.Type
