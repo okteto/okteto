@@ -140,8 +140,8 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		}
 		if !options.ForceBuild {
 			if buildInfo != nil {
-				if _, err := registry.GetImageTagWithDigest(opts.Tag); err != oktetoErrors.ErrNotFound {
-					svcInfo.Image = opts.Tag
+				if imageTagWithDigest, err := registry.GetImageTagWithDigest(opts.Tag); err != oktetoErrors.ErrNotFound {
+					svcInfo.Image = imageTagWithDigest
 					continue
 				}
 				oktetoLog.Infof("image '%s' not found, building it", opts.Tag)
@@ -159,6 +159,8 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 
 		volumesToInclude := svcInfo.VolumeMounts
 		var options build.BuildOptions
+		var imageTagWithDigest string
+		var err error
 		if buildInfo != nil && buildInfo.Dockerfile != "" {
 			oktetoLog.Information("Building image for service '%s'", svcName)
 
@@ -170,7 +172,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 			if err := build.Run(ctx, options); err != nil {
 				return err
 			}
-			_, err := registry.GetImageTagWithDigest(options.Tag)
+			imageTagWithDigest, err = registry.GetImageTagWithDigest(options.Tag)
 			if err != nil {
 				return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
 			}
@@ -191,13 +193,13 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 			if err := build.Run(ctx, options); err != nil {
 				return err
 			}
-			_, err = registry.GetImageTagWithDigest(options.Tag)
+			imageTagWithDigest, err = registry.GetImageTagWithDigest(options.Tag)
 			if err != nil {
 				return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
 			}
 		}
-		svcInfo.Image = options.Tag
-		oktetoLog.Success("Image for service '%s' pushed to registry: %s", svcName, options.Tag)
+		svcInfo.Image = imageTagWithDigest
+		oktetoLog.Success("Image for service '%s' pushed to registry: %s", svcName, imageTagWithDigest)
 	}
 
 	return nil
