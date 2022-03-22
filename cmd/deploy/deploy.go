@@ -570,8 +570,8 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 	}
 	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
 		stack := manifest.Deploy.Compose.Stack
-		if stack.Services[service].Image == "" {
-			stack.Services[service].Image = fmt.Sprintf("$OKTETO_BUILD_%s_IMAGE", strings.ToUpper(service))
+		if svc, ok := stack.Services[service]; ok {
+			svc.Image = fmt.Sprintf("$OKTETO_BUILD_%s_IMAGE", strings.ToUpper(service))
 		}
 	}
 	oktetoLog.SetStage("")
