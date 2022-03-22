@@ -225,7 +225,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		oktetoLog.Infof("Found okteto file")
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto manifest on %s", oktetoPath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling manifest...")
-		devManifest, err := getManifestFromFile(cwd, oktetoPath)
+		devManifest, err = getManifestFromFile(cwd, oktetoPath)
 		if err != nil {
 			return nil, err
 		}
