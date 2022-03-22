@@ -18,6 +18,7 @@ package integration
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,6 +31,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	v1 "k8s.io/api/apps/v1"
@@ -41,30 +43,23 @@ type helmRelease struct {
 	Other    map[string]interface{} `json:"-"`
 }
 
-func TestDeployFromManifest(t *testing.T) {
-	ctx := context.Background()
-	oktetoPath, err := getOktetoPath(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+const (
+	gitRepo          = "git@github.com:okteto/go-getting-started.git"
+	repoDir          = "go-getting-started"
+	manifestFilename = "okteto.yml"
+	chartDir         = "chart"
+	chartFilename    = "Chart.yaml"
+	templateFilename = "k8s.yaml"
+	releaseName      = "hello-world"
 
-	const (
-		gitRepo          = "git@github.com:okteto/go-getting-started.git"
-		repoDir          = "go-getting-started"
-		manifestFilename = "okteto.yml"
-		chartDir         = "chart"
-		chartFilename    = "Chart.yaml"
-		templateFilename = "k8s.yaml"
-		releaseName      = "hello-world"
-
-		manifestContent = `
+	manifestContent = `
 build:
   app:
     context: .
 deploy:
   - helm upgrade --install hello-world chart --set app.image=${OKTETO_BUILD_APP_IMAGE}`
 
-		chartContent = `
+	chartContent = `
 apiVersion: v2
 name: hello-world
 description: A React application in Kubernetes
@@ -72,7 +67,7 @@ type: application
 version: 0.1.0
 appVersion: 1.0.0`
 
-		templateContent = `
+	templateContent = `
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -105,7 +100,14 @@ spec:
       port: 8080
   selector:
     app: hello-world`
-	)
+)
+
+func TestDeployFromManifest(t *testing.T) {
+	ctx := context.Background()
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	var (
 		testID          = strings.ToLower(fmt.Sprintf("DeployFromManifest-%s-%d", runtime.GOOS, time.Now().Unix()))
@@ -428,5 +430,103 @@ func expectDeployment(ctx context.Context, d *v1.Deployment, images []string, re
 		return fmt.Errorf("expected images to match container images, found %d", found)
 	}
 	return nil
+
+}
+
+func TestDeployOutput(t *testing.T) {
+	ctx := context.Background()
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var (
+		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
+		originNamespace = getCurrentNamespace()
+	)
+
+	if err := cloneGitRepo(ctx, gitRepo); err != nil {
+		t.Fatal(err)
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	manifestPath := filepath.Join(cwd, repoDir)
+	if err := writeFile(manifestPath, manifestFilename, manifestContent); err != nil {
+		t.Fatal(err)
+	}
+
+	pathToChartDir := filepath.Join(cwd, repoDir, chartDir)
+	if err := os.Mkdir(pathToChartDir, 0777); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeFile(pathToChartDir, chartFilename, chartContent); err != nil {
+		t.Fatal(err)
+	}
+
+	pathToTemplateDir := filepath.Join(pathToChartDir, "templates")
+	if err := os.Mkdir(pathToTemplateDir, 0777); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeFile(pathToTemplateDir, templateFilename, templateContent); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		changeToNamespace(ctx, oktetoPath, originNamespace)
+		deleteNamespace(ctx, oktetoPath, testNamespace)
+		deleteGitRepo(ctx, repoDir)
+	})
+	t.Run("okteto deploy output", func(t *testing.T) {
+
+		_, err := runOktetoDeploy(oktetoPath, repoDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		cmap, err := getConfigmap(ctx, testNamespace, fmt.Sprintf("okteto-git-%s", repoDir))
+		if err != nil {
+			t.Fatal(err)
+		}
+		uiOutput, err := base64.StdEncoding.DecodeString(cmap.Data["output"])
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var text log.JSONLogFormat
+		stageLines := map[string][]string{}
+		prevLine := ""
+		for _, l := range strings.Split(string(uiOutput), "\n") {
+			if err := json.Unmarshal([]byte(l), &text); err != nil {
+				if prevLine != "EOF" {
+					t.Fatalf("not json format: %s", l)
+				}
+			}
+			if _, ok := stageLines[text.Stage]; ok {
+				stageLines[text.Stage] = append(stageLines[text.Stage], text.Message)
+			} else {
+				stageLines[text.Stage] = []string{text.Message}
+			}
+			prevLine = text.Message
+		}
+		stagesToTest := []string{"Load manifest", "Building service app", "helm upgrade --install hello-world chart --set app.image=${OKTETO_BUILD_APP_IMAGE}", "done"}
+		for _, ss := range stagesToTest {
+			if _, ok := stageLines[ss]; !ok {
+				t.Fatalf("deploy didn't have the stage '%s'", ss)
+			}
+			if strings.HasPrefix(ss, "Building service") {
+				if len(stageLines[ss]) < 5 {
+					t.Fatalf("Not sending build output on stage %s. Output:%s", ss, stageLines[ss])
+				}
+			}
+		}
+	})
 
 }
