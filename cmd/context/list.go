@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"text/tabwriter"
@@ -22,7 +23,10 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
+
+var output string
 
 // Lists all contexts managed by okteto
 func List() *cobra.Command {
@@ -40,7 +44,7 @@ func List() *cobra.Command {
 			return nil
 		},
 	}
-
+	cmd.Flags().StringVarP(&output, "output", "o", "", "Output format. One of: json|yaml")
 	return cmd
 }
 
@@ -52,20 +56,41 @@ func executeListContext(ctx context.Context) error {
 		return fmt.Errorf("no contexts are available. Run 'okteto context' to configure your first okteto context")
 	}
 
-	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-	fmt.Fprintf(w, "Name\tNamespace\tBuilder\tRegistry\n")
 	ctxStore := okteto.ContextStore()
+
+	var ctxs []okteto.OktetoContext
 	for _, ctxSelector := range contexts {
 		if okCtx, ok := ctxStore.Contexts[ctxSelector.Name]; ok && okCtx.Builder != "" {
 			ctxSelector.Builder = okCtx.Builder
 		}
-
-		if ctxSelector.Name == ctxStore.CurrentContext {
-			ctxSelector.Name += " *"
-		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ctxSelector.Name, ctxSelector.Namespace, ctxSelector.Builder, ctxSelector.Registry)
+		ctxs = append(ctxs, okteto.OktetoContext{Name: ctxSelector.Name, Namespace: ctxSelector.Namespace, Builder: ctxSelector.Builder, Registry: ctxSelector.Registry})
 	}
 
-	w.Flush()
+	if output == "" {
+		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
+		fmt.Fprintf(w, "Name\tNamespace\tBuilder\tRegistry\n")
+		for _, ctx := range ctxs {
+			if ctx.Name == ctxStore.CurrentContext {
+				ctx.Name += " *"
+			}
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ctx.Name, ctx.Namespace, ctx.Builder, ctx.Registry)
+		}
+		w.Flush()
+	} else if output == "json" {
+		ctxRaw, err := json.MarshalIndent(ctxs, "", "\t")
+		if err != nil {
+			return err
+		}
+		fmt.Print(string(ctxRaw))
+	} else if output == "yaml" {
+		ctxRaw, err := yaml.Marshal(&ctxs)
+		if err != nil {
+			return err
+		}
+		fmt.Print(string(ctxRaw))
+	} else {
+		return fmt.Errorf("unable to match a printer suitable for the output format \"%s\", allowed formats are: json, yaml", output)
+	}
+
 	return nil
 }
