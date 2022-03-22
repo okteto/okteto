@@ -43,23 +43,30 @@ type helmRelease struct {
 	Other    map[string]interface{} `json:"-"`
 }
 
-const (
-	gitRepo          = "git@github.com:okteto/go-getting-started.git"
-	repoDir          = "go-getting-started"
-	manifestFilename = "okteto.yml"
-	chartDir         = "chart"
-	chartFilename    = "Chart.yaml"
-	templateFilename = "k8s.yaml"
-	releaseName      = "hello-world"
+func TestDeployFromManifest(t *testing.T) {
+	ctx := context.Background()
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	manifestContent = `
+	const (
+		gitRepo          = "git@github.com:okteto/go-getting-started.git"
+		repoDir          = "go-getting-started"
+		manifestFilename = "okteto.yml"
+		chartDir         = "chart"
+		chartFilename    = "Chart.yaml"
+		templateFilename = "k8s.yaml"
+		releaseName      = "hello-world"
+
+		manifestContent = `
 build:
   app:
     context: .
 deploy:
   - helm upgrade --install hello-world chart --set app.image=${OKTETO_BUILD_APP_IMAGE}`
 
-	chartContent = `
+		chartContent = `
 apiVersion: v2
 name: hello-world
 description: A React application in Kubernetes
@@ -67,7 +74,7 @@ type: application
 version: 0.1.0
 appVersion: 1.0.0`
 
-	templateContent = `
+		templateContent = `
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -100,14 +107,7 @@ spec:
       port: 8080
   selector:
     app: hello-world`
-)
-
-func TestDeployFromManifest(t *testing.T) {
-	ctx := context.Background()
-	oktetoPath, err := getOktetoPath(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	)
 
 	var (
 		testID          = strings.ToLower(fmt.Sprintf("DeployFromManifest-%s-%d", runtime.GOOS, time.Now().Unix()))
@@ -440,6 +440,8 @@ func TestDeployOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	gitRepo := "https://github.com/okteto/voting-app"
+	repoDir := "voting-app"
 	var (
 		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().Unix()))
 		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
@@ -450,39 +452,13 @@ func TestDeployOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	manifestPath := filepath.Join(cwd, repoDir)
-	if err := writeFile(manifestPath, manifestFilename, manifestContent); err != nil {
-		t.Fatal(err)
-	}
-
-	pathToChartDir := filepath.Join(cwd, repoDir, chartDir)
-	if err := os.Mkdir(pathToChartDir, 0777); err != nil {
-		t.Fatal(err)
-	}
-	if err := writeFile(pathToChartDir, chartFilename, chartContent); err != nil {
-		t.Fatal(err)
-	}
-
-	pathToTemplateDir := filepath.Join(pathToChartDir, "templates")
-	if err := os.Mkdir(pathToTemplateDir, 0777); err != nil {
-		t.Fatal(err)
-	}
-	if err := writeFile(pathToTemplateDir, templateFilename, templateContent); err != nil {
-		t.Fatal(err)
-	}
-
 	if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
 		changeToNamespace(ctx, oktetoPath, originNamespace)
 		deleteNamespace(ctx, oktetoPath, testNamespace)
-		deleteGitRepo(ctx, repoDir)
+		deleteGitRepo(ctx, "")
 	})
 	t.Run("okteto deploy output", func(t *testing.T) {
 
@@ -516,7 +492,7 @@ func TestDeployOutput(t *testing.T) {
 			}
 			prevLine = text.Message
 		}
-		stagesToTest := []string{"Load manifest", "Building service app", "helm upgrade --install hello-world chart --set app.image=${OKTETO_BUILD_APP_IMAGE}", "done"}
+		stagesToTest := []string{"Load manifest", "Building service vote", "Deploying compose", "done"}
 		for _, ss := range stagesToTest {
 			if _, ok := stageLines[ss]; !ok {
 				t.Fatalf("deploy didn't have the stage '%s'", ss)
