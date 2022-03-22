@@ -44,7 +44,7 @@ The end result is that the remote cluster is seen by your IDE and tools as a loc
 
 ## Getting started
 
-All you need to get started is to [install the Okteto CLI](https://okteto.com/docs/getting-started/) and have access to a Kubernetes cluster.
+All you need to get started is to [install the Okteto CLI](https://www.okteto.com/docs/getting-started/installation/) and have access to a Kubernetes cluster.
 
 You can also use `okteto` with [Okteto Cloud](https://okteto.com/), a **Kubernetes Namespace as a Service** platform where you can deploy your Kubernetes applications and development containers for free.
 
@@ -58,7 +58,7 @@ We created a [few guides to help you get started](https://github.com/okteto/samp
 
 ## Useful links
 
-- [Getting started](https://okteto.com/docs/getting-started/)
+- [Getting started](https://www.okteto.com/docs/getting-started/installation/)
 - [CLI reference](https://okteto.com/docs/reference/cli)
 - [Okteto manifest reference](https://okteto.com/docs/reference/manifest/)
 - [Samples](https://github.com/okteto/samples)
