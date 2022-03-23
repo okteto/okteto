@@ -227,7 +227,7 @@ func OptsFromManifest(service string, b *model.BuildInfo, o *BuildOptions) *Buil
 
 		// if flag --global, point to global registry
 		targetRegistry := okteto.DevRegistry
-		if o.BuildToGlobal {
+		if o != nil && o.BuildToGlobal {
 			targetRegistry = okteto.GlobalRegistry
 		}
 		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, b.Name, service, tag)
@@ -250,10 +250,12 @@ func OptsFromManifest(service string, b *model.BuildInfo, o *BuildOptions) *Buil
 		BuildArgs: args,
 	}
 
-	if o.OutputMode == "" {
-		o.OutputMode = oktetoLog.GetOutputFormat()
+	outputMode := oktetoLog.GetOutputFormat()
+	if o != nil && o.OutputMode != "" {
+		outputMode = o.OutputMode
 	}
-	opts.OutputMode = setOutputMode(o.OutputMode)
+	opts.OutputMode = setOutputMode(outputMode)
+
 	return opts
 }
 
