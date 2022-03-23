@@ -141,6 +141,12 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 	if manifest != nil {
 		mc.manifest = manifest
 		manifest.Name = os.Getenv(model.OktetoNameEnvVar)
+		if opts.Namespace == "" {
+			manifest.Namespace = ""
+		}
+		if opts.Context == "" {
+			manifest.Context = ""
+		}
 		if err := manifest.WriteToFile(opts.DevPath); err != nil {
 			return nil, err
 		}
@@ -208,7 +214,8 @@ func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Mani
 			return nil, err
 		}
 		if composePath != "" {
-			answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? [y/n] ")
+			// answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? [y/n] ")
+			answer := true
 			if err != nil {
 				return nil, err
 			}
@@ -403,11 +410,19 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 	manifest.Namespace = okteto.Context().Namespace
 
 	for _, build := range manifest.Build {
-		build.Context, err = filepath.Rel(cwd, build.Context)
+		context, err := filepath.Abs(build.Context)
+		if err != nil {
+			return nil, fmt.Errorf("can not get absolute path of %s", build.Context)
+		}
+		build.Context, err = filepath.Rel(cwd, context)
 		if err != nil {
 			return nil, fmt.Errorf("can not set the relative path of '%s' from your current working directory: '%s'", build.Context, cwd)
 		}
-		build.Dockerfile, err = filepath.Rel(cwd, build.Dockerfile)
+		dockerfile, err := filepath.Abs(build.Dockerfile)
+		if err != nil {
+			return nil, fmt.Errorf("can not get absolute path of %s", build.Context)
+		}
+		build.Dockerfile, err = filepath.Rel(cwd, dockerfile)
 		if err != nil {
 			return nil, fmt.Errorf("can not set the relative path of '%s' from your current working directory: '%s'", build.Context, cwd)
 		}
