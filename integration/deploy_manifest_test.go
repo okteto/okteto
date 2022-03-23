@@ -460,7 +460,7 @@ func TestDeployAndUpEnvVars(t *testing.T) {
 	t.Cleanup(func() {
 		changeToNamespace(ctx, oktetoPath, originNamespace)
 		deleteNamespace(ctx, oktetoPath, testNamespace)
-		deleteGitRepo(ctx, "")
+		deleteGitRepo(ctx, repoDir)
 	})
 	t.Run("okteto deploy output", func(t *testing.T) {
 
