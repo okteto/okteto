@@ -121,11 +121,11 @@ func Init() *cobra.Command {
 // RunInitV2 initializes a new okteto manifest
 func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
 	os.Setenv(model.OktetoNameEnvVar, utils.InferName(opts.Workdir))
-	var manifest *model.Manifest
+	manifest := model.NewManifest()
 	var err error
 	if !opts.Overwrite {
-		manifest, err = model.GetManifestV2(opts.DevPath)
-		if err != nil {
+		manifest, _ = model.GetManifestV2(opts.DevPath)
+		if err != nil && !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
 			return nil, err
 		}
 	}
