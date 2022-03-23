@@ -279,7 +279,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageFromApp, oktetoRegistr
 	oktetoLog.Infof("pushing with image tag %s", buildTag)
 
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
-	buildOptions := build.BuildOptions{
+	buildOptions := &build.BuildOptions{
 		Path:       dev.Push.Context,
 		File:       dev.Push.Dockerfile,
 		Tag:        buildTag,

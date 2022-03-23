@@ -133,7 +133,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 				VolumesToInclude: svcInfo.VolumeMounts,
 			}
 		}
-		opts := build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
+		opts := build.OptsFromManifest(svcName, buildInfo, &build.BuildOptions{})
 
 		if okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
 			buildInfo.Image = opts.Tag
@@ -158,7 +158,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		}
 
 		volumesToInclude := svcInfo.VolumeMounts
-		var options build.BuildOptions
+		var options *build.BuildOptions
 		var imageTagWithDigest string
 		var err error
 		if buildInfo != nil && buildInfo.Dockerfile != "" {
@@ -168,7 +168,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 				buildInfo.VolumesToInclude = nil
 			}
 
-			options = build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
+			options = build.OptsFromManifest(svcName, buildInfo, &build.BuildOptions{})
 			if err := build.Run(ctx, options); err != nil {
 				return err
 			}
@@ -189,7 +189,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 				return err
 			}
 			svcBuild.VolumesToInclude = volumesToInclude
-			options = build.OptsFromManifest(svcName, svcBuild, build.BuildOptions{})
+			options = build.OptsFromManifest(svcName, svcBuild, &build.BuildOptions{})
 			if err := build.Run(ctx, options); err != nil {
 				return err
 			}

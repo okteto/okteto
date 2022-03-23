@@ -511,7 +511,7 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 	return stackCommand.RunDeploy(ctx, composeInfo.Stack, stackOpts)
 }
 
-func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (bool, error) {
+func checkImageAtGlobalAndSetEnvs(service string, options *build.BuildOptions) (bool, error) {
 	globalReference := strings.Replace(options.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 
 	imageWithDigest, err := registry.GetImageTagWithDigest(globalReference)
@@ -539,7 +539,7 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 	if len(buildInfo.VolumesToInclude) > 0 {
 		buildInfo.VolumesToInclude = nil
 	}
-	options := build.OptsFromManifest(service, buildInfo, build.BuildOptions{})
+	options := build.OptsFromManifest(service, buildInfo, &build.BuildOptions{})
 	if err := build.Run(ctx, options); err != nil {
 		return err
 	}
@@ -555,7 +555,7 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 			return err
 		}
 		svcBuild.VolumesToInclude = volumesToInclude
-		options = build.OptsFromManifest(service, svcBuild, build.BuildOptions{})
+		options = build.OptsFromManifest(service, svcBuild, &build.BuildOptions{})
 		if err := build.Run(ctx, options); err != nil {
 			return err
 		}
@@ -719,7 +719,7 @@ func shouldExecuteRemotely(options *Options) bool {
 
 func checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
 	buildInfo := manifest.Build[service]
-	opts := build.OptsFromManifest(service, buildInfo, build.BuildOptions{})
+	opts := build.OptsFromManifest(service, buildInfo, &build.BuildOptions{})
 
 	if build.ShouldOptimizeBuild(opts.Tag) {
 		oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")

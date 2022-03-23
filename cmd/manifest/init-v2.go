@@ -468,7 +468,7 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 			}
 			buildInfo.Image = imageName
 		} else {
-			_ = build.OptsFromManifest(name, buildInfo, build.BuildOptions{})
+			_ = build.OptsFromManifest(name, buildInfo, &build.BuildOptions{})
 		}
 		manifestBuild[name] = buildInfo
 	}
