@@ -158,7 +158,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		}
 
 		volumesToInclude := svcInfo.VolumeMounts
-		var options *build.BuildOptions
+		options := &build.BuildOptions{}
 		var imageTagWithDigest string
 		var err error
 		if buildInfo != nil && buildInfo.Dockerfile != "" {
