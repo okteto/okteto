@@ -785,6 +785,7 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	d.Context = manifest.Context
 	d.IsV2 = true
 	d.Dependencies = manifest.Dependencies
+	d.Name = manifest.Name
 	return nil
 }
 

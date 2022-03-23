@@ -184,7 +184,10 @@ func buildV2(manifest *model.Manifest, cmdOptions build.BuildOptions, args []str
 		if !okteto.Context().IsOkteto && buildInfo.Image == "" {
 			return fmt.Errorf("'build.%s.image' is required if your context is not managed by Okteto", service)
 		}
-		if cwd, err := os.Getwd(); err == nil && buildInfo.Name == "" {
+
+		if manifest.Name != "" {
+			buildInfo.Name = manifest.Name
+		} else if cwd, err := os.Getwd(); err == nil && manifest.Name == "" {
 			buildInfo.Name = utils.InferName(cwd)
 		}
 
