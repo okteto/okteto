@@ -700,6 +700,8 @@ func (m *Manifest) WriteToFile(filePath string) error {
 	}
 	for dName, d := range m.Dev {
 		d.Name = ""
+		d.Context = ""
+		d.Namespace = ""
 		if d.Image != nil && d.Image.Name != "" {
 			d.Image.Context = ""
 			d.Image.Dockerfile = ""
