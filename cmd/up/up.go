@@ -525,7 +525,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
 
-	buildOptions := buildCMD.BuildOptions{
+	buildOptions := &buildCMD.BuildOptions{
 		Path:       up.Dev.Image.Context,
 		File:       up.Dev.Image.Dockerfile,
 		Tag:        imageTag,
@@ -675,7 +675,7 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 	defer sp.Stop()
 
 	for buildName, buildInfo := range m.Build {
-		opts := build.OptsFromManifest(buildName, buildInfo, build.BuildOptions{})
+		opts := build.OptsFromManifest(buildName, buildInfo, &build.BuildOptions{})
 		imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
 		if err == oktetoErrors.ErrNotFound {
 			os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(buildName)), opts.Tag)

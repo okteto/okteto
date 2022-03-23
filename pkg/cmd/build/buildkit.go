@@ -44,7 +44,7 @@ const (
 type buildWriter struct{}
 
 // getSolveOpt returns the buildkit solve options
-func getSolveOpt(buildOptions BuildOptions) (*client.SolveOpt, error) {
+func getSolveOpt(buildOptions *BuildOptions) (*client.SolveOpt, error) {
 	var localDirs map[string]string
 	var frontendAttrs map[string]string
 

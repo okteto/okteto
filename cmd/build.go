@@ -100,10 +100,10 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 
 			if isBuildV2 {
-				return buildV2(manifest, options, args)
+				return buildV2(manifest, &options, args)
 			}
 
-			return buildV1(options, args)
+			return buildV1(&options, args)
 		},
 	}
 
@@ -143,7 +143,7 @@ func isSelectedService(service string, selected []string) bool {
 	return false
 }
 
-func buildV2(manifest *model.Manifest, cmdOptions build.BuildOptions, args []string) error {
+func buildV2(manifest *model.Manifest, cmdOptions *build.BuildOptions, args []string) error {
 	buildManifest := manifest.Build
 	selectedArgs := []string{}
 	if len(args) != 0 {
@@ -229,7 +229,7 @@ func buildV2(manifest *model.Manifest, cmdOptions build.BuildOptions, args []str
 			}
 			svcBuild.VolumesToInclude = volumesToInclude
 			svcBuild.Name = buildInfo.Name
-			options := build.OptsFromManifest(service, svcBuild, build.BuildOptions{})
+			options := build.OptsFromManifest(service, svcBuild, &build.BuildOptions{})
 			if err := buildV1(options, []string{options.Path}); err != nil {
 				return err
 			}
@@ -239,7 +239,7 @@ func buildV2(manifest *model.Manifest, cmdOptions build.BuildOptions, args []str
 	return nil
 }
 
-func buildV1(options build.BuildOptions, args []string) error {
+func buildV1(options *build.BuildOptions, args []string) error {
 	path := "."
 	if len(args) == 1 {
 		path = args[0]
