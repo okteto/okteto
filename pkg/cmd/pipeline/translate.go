@@ -236,6 +236,9 @@ func AddDeployLabels(ctx context.Context, name, ns string, c kubernetes.Interfac
 	}
 	for _, d := range dList {
 		repo := os.Getenv(model.GithubRepositoryEnvVar)
+		if d.Annotations == nil {
+			d.Annotations = map[string]string{}
+		}
 		if repo != "" {
 			d.Annotations[model.OktetoRepositoryAnnotation] = repo
 		}
