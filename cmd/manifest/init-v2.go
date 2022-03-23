@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
-	"github.com/okteto/okteto/pkg/cmd/build"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -462,8 +461,6 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 				return nil, err
 			}
 			buildInfo.Image = imageName
-		} else {
-			_ = build.OptsFromManifest(name, buildInfo, build.BuildOptions{})
 		}
 		manifestBuild[name] = buildInfo
 	}
