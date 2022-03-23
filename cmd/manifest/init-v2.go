@@ -15,6 +15,7 @@ package manifest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -509,7 +511,9 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 			continue
 		}
 		if !dev.IsV2 && len(dev.Dev) != 0 {
-			devs[f.Name()] = dev.Dev[f.Name()]
+			for devName, d := range dev.Dev {
+				devs[devName] = d
+			}
 		}
 	}
 	return devs, nil
