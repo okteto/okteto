@@ -726,7 +726,7 @@ func checkServicesToBuild(service string, manifest *model.Manifest, ch chan stri
 		if skipBuild, err := checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
 			return err
 		} else if skipBuild {
-			oktetoLog.Information("Image for service '%s' already built at global registry: %s ", service, opts.Tag)
+			oktetoLog.Information("Skipping '%s' build. Image already exists at Okteto Registry", service)
 			return nil
 		}
 	}
