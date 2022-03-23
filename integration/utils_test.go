@@ -74,6 +74,17 @@ func cloneGitRepo(ctx context.Context, name string) error {
 	return nil
 }
 
+func cloneGitRepoWithBranch(ctx context.Context, name, branch string) error {
+	log.Printf("cloning git repo %s", name)
+	cmd := exec.Command("git", "clone", "--branch", branch, name)
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("cloning git repo %s failed: %s - %s", name, string(o), err)
+	}
+	log.Printf("clone git repo %s success", name)
+	return nil
+}
+
 func deleteGitRepo(ctx context.Context, path string) error {
 	log.Printf("delete git repo %s", path)
 	err := os.RemoveAll(path)
