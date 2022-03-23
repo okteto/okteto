@@ -741,11 +741,14 @@ func (m *Manifest) WriteToFile(filePath string) error {
 			d.Image.Dockerfile = ""
 		} else {
 			if v, ok := m.Build[dName]; ok {
-				d.Image = &BuildInfo{Name: v.Image}
+				if v.Image != "" {
+					d.Image = &BuildInfo{Name: v.Image}
+				} else {
+					d.Image = nil
+				}
 			} else {
 				d.Image = nil
 			}
-
 		}
 
 		if d.Push != nil && d.Push.Name != "" {
