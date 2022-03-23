@@ -26,6 +26,8 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
+	"github.com/okteto/okteto/pkg/k8s/deployments"
+	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
@@ -223,5 +225,36 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
 	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
+	return nil
+}
+
+// AddDeployLabels add deploy labels to the deployments/sfs
+func AddDeployLabels(ctx context.Context, name, ns string, c kubernetes.Interface) error {
+	dList, err := ListDeployments(ctx, name, ns, c)
+	if err != nil {
+		return err
+	}
+	for _, d := range dList {
+		repo := os.Getenv(model.GithubRepositoryEnvVar)
+		if repo != "" {
+			d.Annotations[model.OktetoRepositoryAnnotation] = repo
+		}
+		d.Annotations[model.OktetoDevNameAnnotation] = d.Name
+		if err := deployments.PatchAnnotations(ctx, &d, c); err != nil {
+			oktetoLog.Infof("error patching deployment %s annotation: %s\n", d.Name, err.Error())
+		}
+	}
+
+	sfsList, err := ListStatefulsets(ctx, name, ns, c)
+	if err != nil {
+		return err
+	}
+	for _, sfs := range sfsList {
+		sfs.Annotations[model.OktetoRepositoryAnnotation] = os.Getenv("")
+		sfs.Annotations[model.OktetoDevNameAnnotation] = sfs.Name
+		if err := statefulsets.PatchAnnotations(ctx, &sfs, c); err != nil {
+			oktetoLog.Infof("error patching deployment %s annotation: %s\n", sfs.Name, err.Error())
+		}
+	}
 	return nil
 }

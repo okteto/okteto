@@ -61,6 +61,9 @@ const (
 	//OktetoRepositoryAnnotation indicates the git repo url with the source code of this component
 	OktetoRepositoryAnnotation = "dev.okteto.com/repository"
 
+	//OktetoDevNameAnnotation indicates the name of the dev to be deployed
+	OktetoDevNameAnnotation = "dev.okteto.com/name"
+
 	//OktetoPathAnnotation indicates the okteto manifest path of this component
 	OktetoPathAnnotation = "dev.okteto.com/path"
 

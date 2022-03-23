@@ -411,6 +411,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Status = pipeline.DeployedStatus
 	}
 
+	if err := pipeline.AddDeployLabels(ctx, deployOptions.Manifest.Name, deployOptions.Manifest.Namespace, c); err != nil {
+		return err
+	}
 	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
 		return err
 	}

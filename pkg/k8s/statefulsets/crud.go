@@ -15,6 +15,7 @@ package statefulsets
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -27,8 +28,15 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
+
+type patchAnnotations struct {
+	Op    string            `json:"op"`
+	Path  string            `json:"path"`
+	Value map[string]string `json:"value"`
+}
 
 //Sandbox returns a default statefulset for a given dev
 func Sandbox(dev *model.Dev) *appsv1.StatefulSet {
@@ -242,4 +250,24 @@ func TranslateDivert(username string, sfs *appsv1.StatefulSet) *appsv1.StatefulS
 
 	result.ResourceVersion = ""
 	return result
+}
+
+// PatchAnnotations patches the statefulset annotations
+func PatchAnnotations(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) error {
+	payload := []patchAnnotations{
+		{
+			Op:    "replace",
+			Path:  "/metadata/annotations",
+			Value: sfs.Annotations,
+		},
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return err
+
+	}
+	if _, err := c.AppsV1().StatefulSets(sfs.Namespace).Patch(ctx, sfs.Name, types.JSONPatchType, payloadBytes, metav1.PatchOptions{}); err != nil {
+		return err
+	}
+	return nil
 }

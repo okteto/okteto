@@ -15,6 +15,7 @@ package deployments
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -26,11 +27,18 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/pointer"
 )
 
-//GSandbox returns a base deployment for a dev
+type patchAnnotations struct {
+	Op    string            `json:"op"`
+	Path  string            `json:"path"`
+	Value map[string]string `json:"value"`
+}
+
+// Sandbox returns a base deployment for a dev
 func Sandbox(dev *model.Dev) *appsv1.Deployment {
 	image := dev.Image.Name
 	if image == "" {
@@ -247,4 +255,24 @@ func TranslateDivert(username string, d *appsv1.Deployment) *appsv1.Deployment {
 	}
 	result.ResourceVersion = ""
 	return result
+}
+
+// PatchAnnotations patches the deployment annotations
+func PatchAnnotations(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) error {
+	payload := []patchAnnotations{
+		{
+			Op:    "replace",
+			Path:  "/metadata/annotations",
+			Value: d.Annotations,
+		},
+	}
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return err
+
+	}
+	if _, err := c.AppsV1().Deployments(d.Namespace).Patch(ctx, d.Name, types.JSONPatchType, payloadBytes, metav1.PatchOptions{}); err != nil {
+		return err
+	}
+	return nil
 }
