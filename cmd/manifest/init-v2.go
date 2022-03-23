@@ -372,13 +372,6 @@ func getPathFromApp(wd, appName string) string {
 	return wd
 }
 
-func validateDevPath(devPath string, overwrite bool) error {
-	if !overwrite && model.FileExists(devPath) {
-		return fmt.Errorf("%s already exists. Run this command again with the '--replace' flag to overwrite it", devPath)
-	}
-	return nil
-}
-
 func createFromCompose(composePath string) (*model.Manifest, error) {
 	stack, err := model.LoadStack("", []string{composePath})
 	if err != nil {
