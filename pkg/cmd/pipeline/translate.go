@@ -227,8 +227,8 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 	return nil
 }
 
-// AddDeployLabels add deploy labels to the deployments/sfs
-func AddDeployLabels(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface) error {
+// AddDevAnnotations add deploy labels to the deployments/sfs
+func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface) error {
 	repo := os.Getenv(model.GithubRepositoryEnvVar)
 	for devName, dev := range manifest.Dev {
 		app, err := apps.Get(ctx, dev, manifest.Namespace, c)
