@@ -130,6 +130,9 @@ func getDataSubPath(path string) string {
 
 func (dev *Dev) getSourceSubPath(path string) string {
 	path = path[len(filepath.VolumeName(path)):]
+	if dev.parentSyncFolder == "" {
+		dev.parentSyncFolder = "/"
+	}
 	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(path))
 	if err != nil {
 		oktetoLog.Fatalf("error on getSourceSubPath of '%s': %s", path, err.Error())
