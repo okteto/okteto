@@ -147,10 +147,13 @@ func Up() *cobra.Command {
 						oktetoManifest.Context = okteto.Context().Name
 					}
 					oktetoManifest.IsV2 = true
-					for _, d := range oktetoManifest.Dev {
+					for devName, d := range oktetoManifest.Dev {
 						if err := d.SetDefaults(); err != nil {
 							return err
 						}
+						d.Name = devName
+						d.Namespace = oktetoManifest.Namespace
+						d.Context = oktetoManifest.Context
 					}
 				}
 			}
@@ -689,6 +692,9 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 	}
 
 	var err error
-	m.Dev[devName].Image.Name, err = model.ExpandEnv(m.Dev[devName].Image.Name, false)
+	if m.Dev[devName].Image != nil {
+		m.Dev[devName].Image.Name, err = model.ExpandEnv(m.Dev[devName].Image.Name, false)
+	}
+
 	return err
 }

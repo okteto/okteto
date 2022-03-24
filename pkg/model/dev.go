@@ -443,7 +443,13 @@ func (dev *Dev) SetDefaults() error {
 	if dev.Command.Values == nil {
 		dev.Command.Values = []string{"sh"}
 	}
+	if dev.Image == nil {
+		dev.Image = &BuildInfo{}
+	}
 	dev.Image.setBuildDefaults()
+	if dev.Push == nil {
+		dev.Push = &BuildInfo{}
+	}
 	dev.Push.setBuildDefaults()
 
 	if err := dev.setTimeout(); err != nil {
@@ -502,7 +508,7 @@ func (dev *Dev) SetDefaults() error {
 	if dev.Docker.Enabled && dev.Docker.Image == "" {
 		dev.Docker.Image = DefaultDinDImage
 	}
-
+	dev.computeParentSyncFolder()
 	for _, s := range dev.Services {
 		if s.ImagePullPolicy == "" {
 			s.ImagePullPolicy = apiv1.PullAlways
@@ -549,9 +555,6 @@ func (dev *Dev) SetDefaults() error {
 }
 
 func (build *BuildInfo) setBuildDefaults() {
-	if build == nil {
-		build = &BuildInfo{}
-	}
 	if build.Context == "" {
 		build.Context = "."
 	}
