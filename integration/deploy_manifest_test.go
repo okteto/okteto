@@ -17,16 +17,19 @@
 package integration
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -429,4 +432,84 @@ func expectDeployment(ctx context.Context, d *v1.Deployment, images []string, re
 	}
 	return nil
 
+}
+
+func TestDeployAndUpEnvVars(t *testing.T) {
+	ctx := context.Background()
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gitRepo := "https://github.com/okteto/movies"
+	repoDir := "movies"
+	branch := "pchico83/manifest-v2"
+	var (
+		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
+		originNamespace = getCurrentNamespace()
+	)
+
+	if err := cloneGitRepoWithBranch(ctx, gitRepo, branch); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		changeToNamespace(ctx, oktetoPath, originNamespace)
+		deleteNamespace(ctx, oktetoPath, testNamespace)
+		deleteGitRepo(ctx, repoDir)
+	})
+	t.Run("okteto deploy output", func(t *testing.T) {
+
+		_, err := runOktetoDeploy(oktetoPath, repoDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var wg sync.WaitGroup
+		upErrorChannel := make(chan error, 1)
+		_, err = upWithSvc(ctx, &wg, testNamespace, repoDir, "frontend", oktetoPath, upErrorChannel)
+		if err != nil {
+			t.Fatal(err)
+		}
+		d, err := getDeployment(ctx, testNamespace, "frontend")
+		if err != nil {
+			t.Fatal(err)
+		}
+		image := fmt.Sprintf("%s/%s/%s-frontend@sha", okteto.Context().Registry, testNamespace, repoDir)
+		containerImage := d.Spec.Template.Spec.Containers[0].Image
+		if !strings.HasPrefix(containerImage, image) {
+			t.Fatalf("error unmarshalling env vars. expected image starts like '%s' but got %s", image, containerImage)
+		}
+	})
+
+}
+
+func upWithSvc(ctx context.Context, wg *sync.WaitGroup, namespace, dir, svc, oktetoPath string, upErrorChannel chan error) (*os.Process, error) {
+	var out bytes.Buffer
+	cmd := exec.Command(oktetoPath, "up", "-n", namespace, svc)
+	cmd.Dir = dir
+	cmd.Env = os.Environ()
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	log.Printf("up command: %s", cmd.String())
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("okteto up failed to start: %s", err)
+	}
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		if err := cmd.Wait(); err != nil {
+			if err != nil {
+				log.Printf("okteto up exited: %s.\nOutput:\n%s", err, out.String())
+				upErrorChannel <- fmt.Errorf("Okteto up exited before completion")
+			}
+		}
+	}()
+
+	return cmd.Process, waitForReady(namespace, svc, upErrorChannel)
 }
