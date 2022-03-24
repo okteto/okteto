@@ -1744,6 +1744,11 @@ devs:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			manifest, err := Read(tt.manifest)
+			if manifest != nil {
+				for _, d := range manifest.Dev {
+					d.parentSyncFolder = ""
+				}
+			}
 			if err != nil && !tt.isErrorExpected {
 				t.Fatalf("Not expecting error but got %s", err)
 			} else if tt.isErrorExpected && err == nil {
