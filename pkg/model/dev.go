@@ -508,7 +508,7 @@ func (dev *Dev) SetDefaults() error {
 	if dev.Docker.Enabled && dev.Docker.Image == "" {
 		dev.Docker.Image = DefaultDinDImage
 	}
-	dev.computeParentSyncFolder()
+
 	for _, s := range dev.Services {
 		if s.ImagePullPolicy == "" {
 			s.ImagePullPolicy = apiv1.PullAlways
