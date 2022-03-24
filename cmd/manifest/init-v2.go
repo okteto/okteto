@@ -215,8 +215,7 @@ func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Mani
 			return nil, err
 		}
 		if composePath != "" {
-			// answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? [y/n] ")
-			answer := true
+			answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? [y/n] ")
 			if err != nil {
 				return nil, err
 			}

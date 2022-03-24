@@ -35,7 +35,7 @@ func selectComposeFile(paths []string) (string, error) {
 		return paths[0], nil
 	}
 
-	// paths = append(paths, noneComposeOption)
+	paths = append(paths, noneComposeOption)
 	selection, err := utils.AskForOptions(paths, "Select the compose to use:")
 	if err != nil || selection == noneComposeOption {
 		return "", err
