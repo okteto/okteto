@@ -403,16 +403,14 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 					oktetoLog.Information("Run 'okteto up' to activate your development container")
 				}
 			}
-
+			if err := pipeline.AddDeployLabels(ctx, deployOptions.Manifest, c); err != nil {
+				return err
+			}
 		} else {
 			oktetoLog.Warning(`%s
     Update the 'deploy' section of your manifest and try again`, oktetoErrors.ErrDeployHasNotDeployAnyResource.Error())
 		}
 		data.Status = pipeline.DeployedStatus
-	}
-
-	if err := pipeline.AddDeployLabels(ctx, deployOptions.Manifest.Name, deployOptions.Manifest.Namespace, c); err != nil {
-		return err
 	}
 	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
 		return err

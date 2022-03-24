@@ -41,6 +41,7 @@ type App interface {
 	Refresh(ctx context.Context, c kubernetes.Interface) error
 	Watch(ctx context.Context, result chan error, c kubernetes.Interface)
 	Deploy(ctx context.Context, c kubernetes.Interface) error
+	PatchAnnotations(ctx context.Context, c kubernetes.Interface) error
 	Destroy(ctx context.Context, c kubernetes.Interface) error
 
 	Divert(username string) App

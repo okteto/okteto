@@ -202,6 +202,10 @@ func (i *DeploymentApp) Destroy(ctx context.Context, c kubernetes.Interface) err
 	return deployments.Destroy(ctx, i.d.Name, i.d.Namespace, c)
 }
 
+func (i *DeploymentApp) PatchAnnotations(ctx context.Context, c kubernetes.Interface) error {
+	return deployments.PatchAnnotations(ctx, i.d, c)
+}
+
 func (i *DeploymentApp) Divert(username string) App {
 	return &DeploymentApp{d: deployments.TranslateDivert(username, i.d)}
 }
