@@ -64,13 +64,14 @@ type secretHandler interface {
 
 // Options destroy commands options
 type Options struct {
-	ManifestPath   string
-	Name           string
-	Variables      []string
-	Namespace      string
-	DestroyVolumes bool
-	ForceDestroy   bool
-	K8sContext     string
+	ManifestPath        string
+	Name                string
+	Variables           []string
+	Namespace           string
+	DestroyVolumes      bool
+	DestroyDependencies bool
+	ForceDestroy        bool
+	K8sContext          string
 }
 
 type destroyCommand struct {
@@ -155,6 +156,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
+	cmd.Flags().BoolVarP(&options.DestroyDependencies, "dependencies", "d", false, "destroy dependencies")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands defined in the manifest")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment was deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment was deployed")
@@ -212,13 +214,15 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	}
 	os.Setenv(model.OktetoNameEnvVar, opts.Name)
 
-	for depName := range manifest.Dependencies {
-		destOpts := &pipelineCMD.DestroyOptions{
-			Name:           depName,
-			DestroyVolumes: opts.DestroyVolumes,
-		}
-		if err := pipelineCMD.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
-			return err
+	if opts.DestroyDependencies {
+		for depName := range manifest.Dependencies {
+			destOpts := &pipelineCMD.DestroyOptions{
+				Name:           depName,
+				DestroyVolumes: opts.DestroyVolumes,
+			}
+			if err := pipelineCMD.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
+				return err
+			}
 		}
 	}
 
