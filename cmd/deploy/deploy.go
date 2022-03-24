@@ -536,8 +536,8 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 	oktetoLog.SetStage(fmt.Sprintf("Building service %s", service))
 	buildInfo := manifest.Build[service]
 	oktetoLog.Information("Building image for service '%s'", service)
-	volumesToInclude := buildInfo.VolumesToInclude
-	if len(buildInfo.VolumesToInclude) > 0 {
+	volumesToInclude := build.GetVolumesToInclude(buildInfo.VolumesToInclude)
+	if len(volumesToInclude) > 0 {
 		buildInfo.VolumesToInclude = nil
 	}
 	options := build.OptsFromManifest(service, buildInfo, &build.BuildOptions{})

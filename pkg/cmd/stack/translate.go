@@ -148,6 +148,10 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 			}
 		}
 
+		volumesToInclude := build.GetVolumesToInclude(svcInfo.VolumeMounts)
+		if buildInfo == nil || buildInfo.Dockerfile == "" && len(volumesToInclude) == 0 {
+			continue
+		}
 		if !hasBuiltSomething {
 			hasBuiltSomething = true
 			if okteto.Context().Builder != "" {
@@ -157,14 +161,13 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 			}
 		}
 
-		volumesToInclude := svcInfo.VolumeMounts
 		options := &build.BuildOptions{}
 		var imageTagWithDigest string
 		var err error
 		if buildInfo != nil && buildInfo.Dockerfile != "" {
 			oktetoLog.Information("Building image for service '%s'", svcName)
 
-			if len(buildInfo.VolumesToInclude) > 0 {
+			if len(volumesToInclude) > 0 {
 				buildInfo.VolumesToInclude = nil
 			}
 
