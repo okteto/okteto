@@ -390,13 +390,15 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 			return nil, err
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found helm chart on %s", chartPath)
+		tags := inferHelmTags(chartPath)
+		command := fmt.Sprintf("helm upgrade --install ${%s} %s %s", OktetoNameEnvVar, chartPath, tags)
 		chartManifest := &Manifest{
 			Type: ChartType,
 			Deploy: &DeployInfo{
 				Commands: []DeployCommand{
 					{
-						Name:    fmt.Sprintf("helm upgrade --install ${%s} %s", OktetoNameEnvVar, chartPath),
-						Command: fmt.Sprintf("helm upgrade --install ${%s} %s", OktetoNameEnvVar, chartPath),
+						Name:    command,
+						Command: command,
 					},
 				},
 			},
@@ -432,6 +434,38 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 	}
 
 	return nil, nil
+}
+
+func inferHelmTags(path string) string {
+	valuesPath := filepath.Join(path, "values.yaml")
+	if _, err := os.Stat(valuesPath); err != nil {
+		oktetoLog.Info("chart values not found")
+		return ""
+	}
+	type valuesImages struct {
+		Image string `yaml:"image,omitempty"`
+	}
+
+	b, err := os.ReadFile(valuesPath)
+	if err != nil {
+		oktetoLog.Info("could not read file values")
+		return ""
+	}
+	tags := map[string]*valuesImages{}
+	if err := yaml.Unmarshal(b, tags); err != nil {
+		oktetoLog.Info("could not parse values image tags")
+		return ""
+	}
+	result := ""
+	for svcName, image := range tags {
+		if image == nil {
+			continue
+		}
+		if image.Image != "" {
+			result += fmt.Sprintf(" --set %s.image=${OKTETO_BUILD_%s_IMAGE}", svcName, strings.ToUpper(svcName))
+		}
+	}
+	return result
 }
 
 // getManifest returns a Dev object from a given file
@@ -709,16 +743,21 @@ func (m *Manifest) WriteToFile(filePath string) error {
 	}
 	for dName, d := range m.Dev {
 		d.Name = ""
+		d.Context = ""
+		d.Namespace = ""
 		if d.Image != nil && d.Image.Name != "" {
 			d.Image.Context = ""
 			d.Image.Dockerfile = ""
 		} else {
 			if v, ok := m.Build[dName]; ok {
-				d.Image = &BuildInfo{Name: v.Image}
+				if v.Image != "" {
+					d.Image = &BuildInfo{Name: v.Image}
+				} else {
+					d.Image = nil
+				}
 			} else {
 				d.Image = nil
 			}
-
 		}
 
 		if d.Push != nil && d.Push.Name != "" {

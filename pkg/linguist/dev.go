@@ -304,7 +304,7 @@ func GetDevDefaults(language, workdir string, imageConfig *registry.ImageConfig)
 	language = NormalizeLanguage(language)
 	vals := languageDefaults[language]
 
-	if imageConfig.Workdir == "" {
+	if imageConfig.Workdir == "" || imageConfig.Workdir == "/" {
 		imageConfig.Workdir = vals.path
 	}
 	dev := &model.Dev{

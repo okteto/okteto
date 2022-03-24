@@ -15,6 +15,7 @@ package manifest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -28,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -113,7 +115,7 @@ func Init() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&opts.Overwrite, "replace", "r", false, "overwrite existing manifest file")
 	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: www.okteto.com/docs/reference/manifest-v1/")
-	cmd.Flags().BoolVarP(&opts.AutoDeploy, "deploy", "", false, "deploy the application after generate the okteto manifest")
+	cmd.Flags().BoolVarP(&opts.AutoDeploy, "deploy", "", false, "deploy the application after generate the okteto manifest if it's not running already")
 	cmd.Flags().BoolVarP(&opts.AutoConfigureDev, "configure-devs", "", false, "configure devs after deploying the application")
 	return cmd
 }
@@ -121,11 +123,11 @@ func Init() *cobra.Command {
 // RunInitV2 initializes a new okteto manifest
 func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
 	os.Setenv(model.OktetoNameEnvVar, utils.InferName(opts.Workdir))
-	var manifest *model.Manifest
+	manifest := model.NewManifest()
 	var err error
 	if !opts.Overwrite {
-		manifest, err = model.GetManifestV2(opts.DevPath)
-		if err != nil {
+		manifest, _ = model.GetManifestV2(opts.DevPath)
+		if err != nil && !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
 			return nil, err
 		}
 	}
@@ -140,6 +142,12 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 	if manifest != nil {
 		mc.manifest = manifest
 		manifest.Name = os.Getenv(model.OktetoNameEnvVar)
+		if opts.Namespace == "" {
+			manifest.Namespace = ""
+		}
+		if opts.Context == "" {
+			manifest.Context = ""
+		}
 		if err := manifest.WriteToFile(opts.DevPath); err != nil {
 			return nil, err
 		}
@@ -161,7 +169,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 				return nil, err
 			}
 		}
-		if deployAnswer || opts.AutoDeploy {
+		if deployAnswer || (!isDeployed && opts.AutoDeploy) {
 			if err := mc.deploy(ctx, opts); err != nil {
 				return nil, err
 			}
@@ -207,7 +215,8 @@ func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Mani
 			return nil, err
 		}
 		if composePath != "" {
-			answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? [y/n] ")
+			// answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? [y/n] ")
+			answer := true
 			if err != nil {
 				return nil, err
 			}
@@ -370,13 +379,6 @@ func getPathFromApp(wd, appName string) string {
 	return wd
 }
 
-func validateDevPath(devPath string, overwrite bool) error {
-	if !overwrite && model.FileExists(devPath) {
-		return fmt.Errorf("%s already exists. Run this command again with the '--replace' flag to overwrite it", devPath)
-	}
-	return nil
-}
-
 func createFromCompose(composePath string) (*model.Manifest, error) {
 	stack, err := model.LoadStack("", []string{composePath})
 	if err != nil {
@@ -409,11 +411,19 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 	manifest.Namespace = okteto.Context().Namespace
 
 	for _, build := range manifest.Build {
-		build.Context, err = filepath.Rel(cwd, build.Context)
+		context, err := filepath.Abs(build.Context)
+		if err != nil {
+			return nil, fmt.Errorf("can not get absolute path of %s", build.Context)
+		}
+		build.Context, err = filepath.Rel(cwd, context)
 		if err != nil {
 			return nil, fmt.Errorf("can not set the relative path of '%s' from your current working directory: '%s'", build.Context, cwd)
 		}
-		build.Dockerfile, err = filepath.Rel(cwd, build.Dockerfile)
+		dockerfile, err := filepath.Abs(build.Dockerfile)
+		if err != nil {
+			return nil, fmt.Errorf("can not get absolute path of %s", build.Context)
+		}
+		build.Dockerfile, err = filepath.Rel(cwd, dockerfile)
 		if err != nil {
 			return nil, fmt.Errorf("can not set the relative path of '%s' from your current working directory: '%s'", build.Context, cwd)
 		}
@@ -462,7 +472,7 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 			}
 		}
 		if !okteto.IsOkteto() {
-			imageName, err := utils.AsksQuestion(fmt.Sprintf("Which is the image name for %s", dockerfile))
+			imageName, err := utils.AsksQuestion(fmt.Sprintf("Which is the image name for %s: ", dockerfile))
 			if err != nil {
 				return nil, err
 			}
@@ -509,7 +519,9 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 			continue
 		}
 		if !dev.IsV2 && len(dev.Dev) != 0 {
-			devs[f.Name()] = dev.Dev[f.Name()]
+			for devName, d := range dev.Dev {
+				devs[devName] = d
+			}
 		}
 	}
 	return devs, nil
@@ -517,7 +529,15 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 
 func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
 	if mc.manifest != nil {
-		return mc.manifest, nil
+		//Deepcopy so it does not get overwritten these changes
+		manifest := *mc.manifest
+		b := model.ManifestBuild{}
+		for k, v := range mc.manifest.Build {
+			info := *v
+			b[k] = &info
+		}
+		manifest.Build = b
+		return &manifest, nil
 	}
 	return model.GetManifestV2(path)
 }

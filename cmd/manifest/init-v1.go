@@ -325,3 +325,10 @@ func askForContainer(app apps.App) (string, error) {
 		fmt.Sprintf("%s '%s' has %d containers. Select the container you want to replace with your development container:", app.Kind(), app.ObjectMeta().Name, len(app.PodSpec().Containers)),
 	)
 }
+
+func validateDevPath(devPath string, overwrite bool) error {
+	if !overwrite && model.FileExists(devPath) {
+		return fmt.Errorf("%s already exists. Run this command again with the '--replace' flag to overwrite it", devPath)
+	}
+	return nil
+}

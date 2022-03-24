@@ -132,7 +132,12 @@ func (dev *Dev) getSourceSubPath(path string) string {
 	path = path[len(filepath.VolumeName(path)):]
 	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(path))
 	if err != nil {
-		oktetoLog.Fatalf("error on getSourceSubPath of '%s': %s", path, err.Error())
+		oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
+		p, err := filepath.Abs(path)
+		if err != nil {
+			oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
+		}
+		return filepath.ToSlash(p)
 	}
 	return filepath.ToSlash(filepath.Join(SourceCodeSubPath, filepath.ToSlash(rel)))
 }

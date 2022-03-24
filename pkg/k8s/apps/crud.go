@@ -50,7 +50,7 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 
 //IsDevModeOn returns if a statefulset is in devmode
 func IsDevModeOn(app App) bool {
-	return app.ObjectMeta().Labels[model.DevLabel] == "true" || len(app.ObjectMeta().Labels[model.DevLabel]) > 0
+	return app.ObjectMeta().Labels[model.DevLabel] == "true" || len(app.ObjectMeta().Labels[model.DevCloneLabel]) > 0
 }
 
 //SetLastBuiltAnnotation sets the app timestamp

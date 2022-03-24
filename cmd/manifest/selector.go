@@ -26,7 +26,8 @@ import (
 const (
 	noneComposeOption = "None of the above"
 
-	dockerfileName = "Dockerfile"
+	noMoreDockerfileOption = "No, thanks!"
+	dockerfileName         = "Dockerfile"
 )
 
 func selectComposeFile(paths []string) (string, error) {
@@ -34,7 +35,7 @@ func selectComposeFile(paths []string) (string, error) {
 		return paths[0], nil
 	}
 
-	paths = append(paths, noneComposeOption)
+	// paths = append(paths, noneComposeOption)
 	selection, err := utils.AskForOptions(paths, "Select the compose to use:")
 	if err != nil || selection == noneComposeOption {
 		return "", err
@@ -77,7 +78,7 @@ func selectDockerfiles(cwd string) ([]string, error) {
 		return nil, err
 	}
 
-	dockerfiles = append(dockerfiles, "No, thanks!")
+	dockerfiles = append(dockerfiles, noMoreDockerfileOption)
 	index := -1
 	toConfigure := []string{}
 	for index < 0 {
@@ -94,7 +95,7 @@ func selectDockerfiles(cwd string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
-		if selection == "that's all" {
+		if selection == noMoreDockerfileOption {
 			break
 		} else {
 			dockerfiles = append(dockerfiles[:idx], dockerfiles[idx+1:]...)
