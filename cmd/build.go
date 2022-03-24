@@ -202,7 +202,7 @@ func buildV2(manifest *model.Manifest, cmdOptions *build.BuildOptions, args []st
 			oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
 			globalReference := strings.Replace(cmdOptsFromManifest.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 			if _, err := registry.GetImageTagWithDigest(globalReference); err == nil {
-				oktetoLog.Information("skipping build: image %s is already built at global registry", globalReference)
+				oktetoLog.Information("Skipping '%s' build. Image already exists at the Okteto Registry", service)
 				return nil
 			}
 			if registry.IsDevRegistry(cmdOptsFromManifest.Tag) {
