@@ -135,6 +135,9 @@ var (
 	// ErrManifestFoundButNoDeployCommands raised when a manifest is found but no deploy commands are defined
 	ErrManifestFoundButNoDeployCommands = errors.New("found okteto manifest, but no deploy commands where defined")
 
+	// ErrDeployCantDeploySvcsIfNotCompose raised when a manifest is found but no compose info is detected and args are passed to deploy command
+	ErrDeployCantDeploySvcsIfNotCompose = errors.New("services args are can only be used while trying to deploy a compose")
+
 	// ErrUserAnsweredNoToCreateFromCompose raised when the user has selected a compose file but is trying to deploy without it
 	ErrUserAnsweredNoToCreateFromCompose = fmt.Errorf("user does not want to create from compose")
 

@@ -57,14 +57,15 @@ var tempKubeConfigTemplate = "%s/.okteto/kubeconfig-%s"
 
 // Options options for deploy command
 type Options struct {
-	ManifestPath string
-	Name         string
-	Namespace    string
-	K8sContext   string
-	Variables    []string
-	Manifest     *model.Manifest
-	Build        bool
-	Dependencies bool
+	ManifestPath     string
+	Name             string
+	Namespace        string
+	K8sContext       string
+	Variables        []string
+	Manifest         *model.Manifest
+	Build            bool
+	Dependencies     bool
+	servicesToDeploy []string
 
 	Repository string
 	Branch     string
@@ -105,9 +106,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 	options := &Options{}
 
 	cmd := &cobra.Command{
-		Use:   "deploy",
+		Use:   "deploy [service...]",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#deploy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := validateOptionVars(options.Variables); err != nil {
 				return err
@@ -159,6 +159,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 			addEnvVars(ctx, cwd)
 			options.ShowCTA = oktetoLog.IsInteractive()
+			options.servicesToDeploy = args
 
 			kubeconfig := NewKubeConfig()
 
@@ -244,6 +245,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.Debug("found okteto manifest")
 	if deployOptions.Manifest.Deploy == nil {
 		return oktetoErrors.ErrManifestFoundButNoDeployCommands
+	}
+	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy.Compose == nil {
+		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 	if deployOptions.Manifest.Context == "" {
 		deployOptions.Manifest.Context = okteto.Context().Name
@@ -493,10 +497,11 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 	composeInfo := opts.Manifest.Deploy.Compose
 	composeInfo.Stack.Namespace = okteto.Context().Namespace
 	stackOpts := &stack.StackDeployOptions{
-		StackPaths: composeInfo.Manifest,
-		ForceBuild: false,
-		Wait:       opts.Wait,
-		Timeout:    opts.Timeout,
+		StackPaths:       composeInfo.Manifest,
+		ForceBuild:       false,
+		Wait:             opts.Wait,
+		Timeout:          opts.Timeout,
+		ServicesToDeploy: opts.servicesToDeploy,
 	}
 
 	c, cfg, err := dc.K8sClientProvider.Provide(kubeconfig.Get([]string{dc.TempKubeconfigFile}))
