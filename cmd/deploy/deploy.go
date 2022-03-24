@@ -403,14 +403,15 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 					oktetoLog.Information("Run 'okteto up' to activate your development container")
 				}
 			}
-
+			if err := pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, c); err != nil {
+				oktetoLog.Warning("could not add dev annotations due to: %s", err.Error())
+			}
 		} else {
 			oktetoLog.Warning(`%s
     Update the 'deploy' section of your manifest and try again`, oktetoErrors.ErrDeployHasNotDeployAnyResource.Error())
 		}
 		data.Status = pipeline.DeployedStatus
 	}
-
 	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
 		return err
 	}
@@ -511,7 +512,7 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 	return stackCommand.RunDeploy(ctx, composeInfo.Stack, stackOpts)
 }
 
-func checkImageAtGlobalAndSetEnvs(service string, options build.BuildOptions) (bool, error) {
+func checkImageAtGlobalAndSetEnvs(service string, options *build.BuildOptions) (bool, error) {
 	globalReference := strings.Replace(options.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 
 	imageWithDigest, err := registry.GetImageTagWithDigest(globalReference)
@@ -539,7 +540,7 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 	if len(buildInfo.VolumesToInclude) > 0 {
 		buildInfo.VolumesToInclude = nil
 	}
-	options := build.OptsFromManifest(service, buildInfo, build.BuildOptions{})
+	options := build.OptsFromManifest(service, buildInfo, &build.BuildOptions{})
 	if err := build.Run(ctx, options); err != nil {
 		return err
 	}
@@ -555,7 +556,7 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 			return err
 		}
 		svcBuild.VolumesToInclude = volumesToInclude
-		options = build.OptsFromManifest(service, svcBuild, build.BuildOptions{})
+		options = build.OptsFromManifest(service, svcBuild, &build.BuildOptions{})
 		if err := build.Run(ctx, options); err != nil {
 			return err
 		}
@@ -719,14 +720,14 @@ func shouldExecuteRemotely(options *Options) bool {
 
 func checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
 	buildInfo := manifest.Build[service]
-	opts := build.OptsFromManifest(service, buildInfo, build.BuildOptions{})
+	opts := build.OptsFromManifest(service, buildInfo, &build.BuildOptions{})
 
 	if build.ShouldOptimizeBuild(opts.Tag) {
 		oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
 		if skipBuild, err := checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
 			return err
 		} else if skipBuild {
-			oktetoLog.Information("Image for service '%s' already built at global registry: %s ", service, opts.Tag)
+			oktetoLog.Information("Skipping '%s' build. Image already exists at Okteto Registry", service)
 			return nil
 		}
 	}

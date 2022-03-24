@@ -255,6 +255,13 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		if devManifest != nil {
 			inferredManifest.mergeWithOktetoManifest(devManifest)
 		}
+		if len(inferredManifest.Manifest) == 0 {
+			bytes, err := yaml.Marshal(inferredManifest)
+			if err != nil {
+				return nil, err
+			}
+			inferredManifest.Manifest = bytes
+		}
 		return inferredManifest, nil
 	}
 
@@ -301,6 +308,7 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 		if stackManifest.Deploy.Compose.Stack.Name != "" {
 			stackManifest.Name = stackManifest.Deploy.Compose.Stack.Name
 		}
+		stackManifest.Manifest = s.Manifest
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
 		return stackManifest, nil
 	}
@@ -369,6 +377,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 			return nil, err
 		}
 		stackManifest.Deploy.Compose.Stack = s
+		stackManifest.Manifest = s.Manifest
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
 
 		return stackManifest, nil

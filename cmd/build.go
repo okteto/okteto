@@ -100,10 +100,10 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 
 			if isBuildV2 {
-				return buildV2(manifest, options, args)
+				return buildV2(manifest, &options, args)
 			}
 
-			return buildV1(options, args)
+			return buildV1(&options, args)
 		},
 	}
 
@@ -143,7 +143,7 @@ func isSelectedService(service string, selected []string) bool {
 	return false
 }
 
-func buildV2(manifest *model.Manifest, cmdOptions build.BuildOptions, args []string) error {
+func buildV2(manifest *model.Manifest, cmdOptions *build.BuildOptions, args []string) error {
 	buildManifest := manifest.Build
 	selectedArgs := []string{}
 	if len(args) != 0 {
@@ -184,7 +184,10 @@ func buildV2(manifest *model.Manifest, cmdOptions build.BuildOptions, args []str
 		if !okteto.Context().IsOkteto && buildInfo.Image == "" {
 			return fmt.Errorf("'build.%s.image' is required if your context is not managed by Okteto", service)
 		}
-		if cwd, err := os.Getwd(); err == nil && buildInfo.Name == "" {
+
+		if manifest.Name != "" {
+			buildInfo.Name = manifest.Name
+		} else if cwd, err := os.Getwd(); err == nil && manifest.Name == "" {
 			buildInfo.Name = utils.InferName(cwd)
 		}
 
@@ -199,7 +202,7 @@ func buildV2(manifest *model.Manifest, cmdOptions build.BuildOptions, args []str
 			oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
 			globalReference := strings.Replace(cmdOptsFromManifest.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 			if _, err := registry.GetImageTagWithDigest(globalReference); err == nil {
-				oktetoLog.Information("skipping build: image %s is already built at global registry", globalReference)
+				oktetoLog.Information("Skipping '%s' build. Image already exists at the Okteto Registry", service)
 				return nil
 			}
 			if registry.IsDevRegistry(cmdOptsFromManifest.Tag) {
@@ -226,7 +229,7 @@ func buildV2(manifest *model.Manifest, cmdOptions build.BuildOptions, args []str
 			}
 			svcBuild.VolumesToInclude = volumesToInclude
 			svcBuild.Name = buildInfo.Name
-			options := build.OptsFromManifest(service, svcBuild, build.BuildOptions{})
+			options := build.OptsFromManifest(service, svcBuild, &build.BuildOptions{})
 			if err := buildV1(options, []string{options.Path}); err != nil {
 				return err
 			}
@@ -236,7 +239,7 @@ func buildV2(manifest *model.Manifest, cmdOptions build.BuildOptions, args []str
 	return nil
 }
 
-func buildV1(options build.BuildOptions, args []string) error {
+func buildV1(options *build.BuildOptions, args []string) error {
 	path := "."
 	if len(args) == 1 {
 		path = args[0]

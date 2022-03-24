@@ -48,7 +48,7 @@ type BuildOptions struct {
 }
 
 // Run runs the build sequence
-func Run(ctx context.Context, buildOptions BuildOptions) error {
+func Run(ctx context.Context, buildOptions *BuildOptions) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
 	if okteto.Context().Builder == "" {
 		if err := buildWithDocker(ctx, buildOptions); err != nil {
@@ -77,7 +77,7 @@ func setOutputMode(outputMode string) string {
 
 }
 
-func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
+func buildWithOkteto(ctx context.Context, buildOptions *BuildOptions) error {
 	oktetoLog.Infof("building your image on %s", okteto.Context().Builder)
 	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {
@@ -153,7 +153,7 @@ func buildWithOkteto(ctx context.Context, buildOptions BuildOptions) error {
 }
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209
-func buildWithDocker(ctx context.Context, buildOptions BuildOptions) error {
+func buildWithDocker(ctx context.Context, buildOptions *BuildOptions) error {
 
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -207,7 +207,7 @@ func translateDockerErr(err error) error {
 }
 
 // OptsFromManifest returns the parsed options for the build from the manifest
-func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildOptions {
+func OptsFromManifest(service string, b *model.BuildInfo, o *BuildOptions) *BuildOptions {
 	if b.Name == "" {
 		b.Name = os.Getenv(model.OktetoNameEnvVar)
 	}
@@ -227,7 +227,7 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 
 		// if flag --global, point to global registry
 		targetRegistry := okteto.DevRegistry
-		if o.BuildToGlobal {
+		if o != nil && o.BuildToGlobal {
 			targetRegistry = okteto.GlobalRegistry
 		}
 		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, b.Name, service, tag)
@@ -241,7 +241,7 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 	if !filepath.IsAbs(b.Dockerfile) && !model.FileExistsAndNotDir(file) {
 		file = filepath.Join(b.Context, b.Dockerfile)
 	}
-	opts := BuildOptions{
+	opts := &BuildOptions{
 		CacheFrom: b.CacheFrom,
 		Target:    b.Target,
 		Path:      b.Context,
@@ -250,10 +250,12 @@ func OptsFromManifest(service string, b *model.BuildInfo, o BuildOptions) BuildO
 		BuildArgs: args,
 	}
 
-	if o.OutputMode == "" {
-		o.OutputMode = oktetoLog.GetOutputFormat()
+	outputMode := oktetoLog.GetOutputFormat()
+	if o != nil && o.OutputMode != "" {
+		outputMode = o.OutputMode
 	}
-	opts.OutputMode = setOutputMode(o.OutputMode)
+	opts.OutputMode = setOutputMode(outputMode)
+
 	return opts
 }
 

@@ -184,6 +184,10 @@ func (i *StatefulSetApp) Deploy(ctx context.Context, c kubernetes.Interface) err
 	return err
 }
 
+func (i *StatefulSetApp) PatchAnnotations(ctx context.Context, c kubernetes.Interface) error {
+	return statefulsets.PatchAnnotations(ctx, i.sfs, c)
+}
+
 func (i *StatefulSetApp) Destroy(ctx context.Context, c kubernetes.Interface) error {
 	return statefulsets.Destroy(ctx, i.sfs.Name, i.sfs.Namespace, c)
 }
