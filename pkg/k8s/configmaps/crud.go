@@ -18,7 +18,6 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -51,15 +50,12 @@ func List(ctx context.Context, namespace, labelSelector string, c kubernetes.Int
 
 // Deploy creates or updates a configmap
 func Deploy(ctx context.Context, cf *apiv1.ConfigMap, namespace string, c kubernetes.Interface) error {
-	old, err := Get(ctx, cf.Name, namespace, c)
+	_, err := Get(ctx, cf.Name, namespace, c)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
 			return Create(ctx, cf, namespace, c)
 		}
 		return err
-	}
-	if old.Labels[model.OktetoInstallerRunningLabel] == "true" {
-		return nil
 	}
 	return update(ctx, cf, namespace, c)
 }
