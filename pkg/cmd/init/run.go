@@ -15,7 +15,12 @@ package init
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
@@ -47,8 +52,26 @@ func GetDevDefaultsFromImage(ctx context.Context, app apps.App) (*registry.Image
 
 }
 
+// SetImage sets dev defaults from a running app
+func SetImage(ctx context.Context, dev *model.Dev, language, path string) error {
+	language = linguist.NormalizeLanguage(language)
+	updateImageFromPod := false
+	switch language {
+	case linguist.Javascript:
+		if path != "" {
+			updateImageFromPod = !doesItHaveWebpackAsDependency(path)
+		}
+	case linguist.Python, linguist.Ruby, linguist.Php:
+		updateImageFromPod = true
+	}
+	if updateImageFromPod {
+		dev.Image = nil
+	}
+	return nil
+}
+
 // SetDevDefaultsFromApp sets dev defaults from a running app
-func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, container, language string) error {
+func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, container, language, path string) error {
 	c, config, err := okteto.GetK8sClient()
 	if err != nil {
 		return err
@@ -62,13 +85,21 @@ func SetDevDefaultsFromApp(ctx context.Context, dev *model.Dev, app apps.App, co
 		return err
 	}
 
-	language = linguist.NormalizeLanguage(language)
-	updateImageFromPod := false
-	switch language {
-	case linguist.Javascript:
-		updateImageFromPod = pods.HasPackageJson(ctx, pod, container, config, c)
-	case linguist.Python, linguist.Ruby, linguist.Php:
-		updateImageFromPod = true
+	updateImageFromPod := true
+	if dev.Image != nil {
+		language = linguist.NormalizeLanguage(language)
+		updateImageFromPod = false
+		switch language {
+		case linguist.Javascript:
+			if path != "" {
+				updateImageFromPod = !doesItHaveWebpackAsDependency(path)
+			} else {
+				updateImageFromPod = pods.HasPackageJson(ctx, pod, container, config, c)
+			}
+
+		case linguist.Python, linguist.Ruby, linguist.Php:
+			updateImageFromPod = true
+		}
 	}
 
 	if updateImageFromPod {
@@ -233,4 +264,38 @@ func setResourcesFromPod(dev *model.Dev, pod *apiv1.Pod, container string) {
 		}
 		return
 	}
+}
+
+func doesItHaveWebpackAsDependency(path string) bool {
+	packagePath := filepath.Join(path, "package.json")
+	if _, err := os.Stat(packagePath); err != nil {
+		oktetoLog.Infof("could not detect 'package.json' on path: %s", path)
+		return false
+	}
+
+	b, err := ioutil.ReadFile(packagePath)
+	if err != nil {
+		oktetoLog.Infof("could not read 'package.json' on '%s' because of: %s", path, err)
+		return false
+	}
+	type dependencyPackage struct {
+		Dependencies    map[string]string `json:"dependencies,omitempty"`
+		DevDependencies map[string]string `json:"devDependencies,omitempty"`
+	}
+	dependencies := &dependencyPackage{}
+	if err := json.Unmarshal(b, dependencies); err != nil {
+		oktetoLog.Infof("could not unmarshal 'package.json' on '%s' because of: %s", path, err)
+		return false
+	}
+	for key := range dependencies.Dependencies {
+		if strings.Contains(key, "webpack") {
+			return true
+		}
+	}
+	for key := range dependencies.DevDependencies {
+		if strings.Contains(key, "webpack") {
+			return true
+		}
+	}
+	return false
 }

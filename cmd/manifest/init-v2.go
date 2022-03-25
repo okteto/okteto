@@ -20,13 +20,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
-	"github.com/okteto/okteto/pkg/cmd/build"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -298,7 +298,7 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 			container = app.PodSpec().Containers[0].Name
 		}
 
-		suffix := fmt.Sprintf("Analyzing %s '%s'...", app.Kind(), app.ObjectMeta().Name)
+		suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(app.Kind()), app.ObjectMeta().Name)
 		spinner := utils.NewSpinner(suffix)
 		spinner.Start()
 
@@ -318,8 +318,10 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 			return err
 		}
 		setFromImageConfig(dev, configFromImage)
-
-		err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language)
+		if err := initCMD.SetImage(ctx, dev, language, path); err != nil {
+			return err
+		}
+		err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language, path)
 		if err != nil {
 			oktetoLog.Infof("could not get defaults from app: %s", err.Error())
 		}
@@ -476,8 +478,6 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 				return nil, err
 			}
 			buildInfo.Image = imageName
-		} else {
-			_ = build.OptsFromManifest(name, buildInfo, &build.BuildOptions{})
 		}
 		manifestBuild[name] = buildInfo
 	}
@@ -536,6 +536,17 @@ func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
 			b[k] = &info
 		}
 		manifest.Build = b
+		d := model.NewDeployInfo()
+		if mc.manifest.Deploy != nil {
+			commands := []model.DeployCommand{}
+			for _, cmd := range mc.manifest.Deploy.Commands {
+				commands = append(commands, cmd)
+			}
+			d.Commands = commands
+			d.Endpoints = mc.manifest.Deploy.Endpoints
+			d.Compose = mc.manifest.Deploy.Compose
+		}
+		manifest.Deploy = d
 		return &manifest, nil
 	}
 	return model.GetManifestV2(path)
