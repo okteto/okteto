@@ -191,8 +191,8 @@ func buildV2(manifest *model.Manifest, cmdOptions *build.BuildOptions, args []st
 			buildInfo.Name = utils.InferName(cwd)
 		}
 
-		volumesToInclude := buildInfo.VolumesToInclude
-		if len(buildInfo.VolumesToInclude) > 0 {
+		volumesToInclude := build.GetVolumesToInclude(buildInfo.VolumesToInclude)
+		if len(volumesToInclude) > 0 {
 			buildInfo.VolumesToInclude = nil
 		}
 		cmdOptsFromManifest := build.OptsFromManifest(service, buildInfo, cmdOptions)
