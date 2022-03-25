@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -124,11 +125,12 @@ func (*ManifestCommand) RunInitV1(ctx context.Context, opts *InitOpts) error {
 				container = app.PodSpec().Containers[0].Name
 			}
 
+			path := getPathFromApp(opts.Workdir, app.ObjectMeta().Name)
 
 			suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(app.Kind()), app.ObjectMeta().Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
-			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, opts.Language)
+			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, opts.Language, path)
 			spinner.Stop()
 			if err == nil {
 				oktetoLog.Success(fmt.Sprintf("%s '%s' successfully analyzed", strings.ToLower(app.Kind()), app.ObjectMeta().Name))
