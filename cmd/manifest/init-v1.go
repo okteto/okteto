@@ -124,15 +124,16 @@ func (*ManifestCommand) RunInitV1(ctx context.Context, opts *InitOpts) error {
 				container = app.PodSpec().Containers[0].Name
 			}
 
-			suffix := fmt.Sprintf("Analyzing %s '%s'...", app.Kind(), app.ObjectMeta().Name)
+
+			suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(app.Kind()), app.ObjectMeta().Name)
 			spinner := utils.NewSpinner(suffix)
 			spinner.Start()
 			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, opts.Language)
 			spinner.Stop()
 			if err == nil {
-				oktetoLog.Success(fmt.Sprintf("%s '%s' successfully analyzed", app.Kind(), app.ObjectMeta().Name))
+				oktetoLog.Success(fmt.Sprintf("%s '%s' successfully analyzed", strings.ToLower(app.Kind()), app.ObjectMeta().Name))
 			} else {
-				oktetoLog.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", app.Kind(), app.ObjectMeta().Name, err))
+				oktetoLog.Yellow(fmt.Sprintf("%s '%s' analysis failed: %s", strings.ToLower(app.Kind()), app.ObjectMeta().Name, err))
 				linguist.SetForwardDefaults(dev, opts.Language)
 			}
 		}

@@ -298,7 +298,7 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 			container = app.PodSpec().Containers[0].Name
 		}
 
-		suffix := fmt.Sprintf("Analyzing %s '%s'...", app.Kind(), app.ObjectMeta().Name)
+		suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(app.Kind()), app.ObjectMeta().Name)
 		spinner := utils.NewSpinner(suffix)
 		spinner.Start()
 
