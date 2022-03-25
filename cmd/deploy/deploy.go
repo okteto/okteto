@@ -152,12 +152,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			cwd, err := os.Getwd()
-			if err != nil {
-				return fmt.Errorf("failed to get the current working directory: %w", err)
-			}
-
-			addEnvVars(ctx, cwd)
 			options.ShowCTA = oktetoLog.IsInteractive()
 			options.servicesToDeploy = args
 
@@ -231,6 +225,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
+
+	if err := addEnvVars(ctx, cwd); err != nil {
+		return err
 	}
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
 	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
