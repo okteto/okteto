@@ -227,9 +227,6 @@ func (c *OktetoClient) DestroyPreview(ctx context.Context, name string) error {
 	}
 
 	err := mutate(ctx, &mutation, variables, c.client)
-	if oktetoErrors.IsNotFound(err) {
-		return nil
-	}
 	return err
 }
 
