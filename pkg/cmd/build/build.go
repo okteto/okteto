@@ -274,8 +274,6 @@ func GetVolumesToInclude(volumesToInclude []model.StackVolume) []model.StackVolu
 	for _, p := range volumesToInclude {
 		if _, err := os.Stat(p.LocalPath); err == nil {
 			result = append(result, p)
-		} else {
-
 		}
 	}
 	return result
