@@ -229,7 +229,7 @@ func buildV2(manifest *model.Manifest, cmdOptions *build.BuildOptions, args []st
 			}
 			svcBuild.VolumesToInclude = volumesToInclude
 			svcBuild.Name = buildInfo.Name
-			options := build.OptsFromManifest(service, svcBuild, &build.BuildOptions{})
+			options := build.OptsFromManifest(service, svcBuild, cmdOptions)
 			if err := buildV1(options, []string{options.Path}); err != nil {
 				return err
 			}
