@@ -201,7 +201,9 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	data := &pipeline.CfgData{
 		Name:      opts.Name,
 		Namespace: namespace,
-		Status:    pipeline.DestroyingStatus}
+		Status:    pipeline.DestroyingStatus,
+		Filename:  manifest.Filename,
+	}
 	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
 	if err != nil {
 		return err
