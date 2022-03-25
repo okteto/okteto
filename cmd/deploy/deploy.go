@@ -410,9 +410,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			if err := pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, c); err != nil {
 				oktetoLog.Warning("could not add dev annotations due to: %s", err.Error())
 			}
-		} else {
-			oktetoLog.Warning(`%s
-    Update the 'deploy' section of your manifest and try again`, oktetoErrors.ErrDeployHasNotDeployAnyResource.Error())
 		}
 		data.Status = pipeline.DeployedStatus
 	}
