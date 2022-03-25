@@ -665,11 +665,15 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		if err != nil {
 			oktetoLog.Infof("could not retrieve repo name: %s", err)
 		}
-		repoHTTPS, err := switchSSHRepoToHTTPS(repo)
-		if err != nil {
-			return err
+
+		if repo != "" {
+			repoHTTPS, err := switchSSHRepoToHTTPS(repo)
+			if err != nil {
+				return err
+			}
+			repo = repoHTTPS.String()
 		}
-		os.Setenv(model.GithubRepositoryEnvVar, repoHTTPS.String())
+		os.Setenv(model.GithubRepositoryEnvVar, repo)
 	}
 
 	if os.Getenv(model.OktetoGitCommitEnvVar) == "" {
