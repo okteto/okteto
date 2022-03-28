@@ -16,6 +16,7 @@ package stack
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -140,6 +141,13 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		}
 		if !options.ForceBuild {
 			if buildInfo != nil {
+				if build.ShouldOptimizeBuild(opts.Tag) {
+					oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
+					if imageTagWithDigest := getGlobalTagWithDigest(opts.Tag); imageTagWithDigest != "" {
+						svcInfo.Image = imageTagWithDigest
+						continue
+					}
+				}
 				if imageTagWithDigest, err := registry.GetImageTagWithDigest(opts.Tag); err != oktetoErrors.ErrNotFound {
 					svcInfo.Image = imageTagWithDigest
 					continue
@@ -206,6 +214,20 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 	}
 
 	return nil
+}
+
+func getGlobalTagWithDigest(imageTag string) string {
+	globalReference := strings.Replace(imageTag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
+	imageWithDigest, err := registry.GetImageTagWithDigest(globalReference)
+	if errors.Is(err, oktetoErrors.ErrNotFound) {
+		oktetoLog.Debug("image not built at global registry, not running optimization for deployment")
+		return ""
+	}
+	if err != nil {
+		oktetoLog.Debugf("could not get image due to: %s", err)
+		return ""
+	}
+	return imageWithDigest
 }
 
 func getAccessibleVolumeMounts(stack *model.Stack, svcName string) []model.StackVolume {
