@@ -637,6 +637,19 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 			if err != nil {
 				return nil, err
 			}
+			for svcName, svc := range s.Services {
+				if svc.Build == nil && len(svc.VolumeMounts) == 0 {
+					continue
+				}
+				tag := fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(svcName, "-", "_")))
+				expandedTag, err := ExpandEnv(tag, true)
+				if err != nil {
+					return nil, err
+				}
+				if expandedTag != "" {
+					svc.Image = expandedTag
+				}
+			}
 			m.Deploy.Compose.Stack = s
 			if m.Deploy.Endpoints != nil {
 				s.Endpoints = m.Deploy.Endpoints
