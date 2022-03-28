@@ -14,7 +14,10 @@
 package executor
 
 import (
+	"os/exec"
+
 	"github.com/okteto/okteto/cmd/utils/displayer"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 type ttyExecutor struct {
@@ -33,4 +36,18 @@ func (e *ttyExecutor) cleanUp(err error) {
 	if e.displayer != nil {
 		e.displayer.CleanUp(err)
 	}
+}
+
+func (e *ttyExecutor) startCommand(cmd *exec.Cmd) error {
+	stdoutReader, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+
+	stderrReader, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	e.displayer = displayer.NewDisplayer(oktetoLog.GetOutputFormat(), stdoutReader, stderrReader)
+	return startCommand(cmd)
 }
