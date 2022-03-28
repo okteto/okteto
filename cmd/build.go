@@ -163,9 +163,8 @@ func buildV2(manifest *model.Manifest, cmdOptions *build.BuildOptions, args []st
 			return err
 		}
 	}
-
+	isStack := manifest.Type == model.StackType
 	for service, buildInfo := range buildManifest {
-
 		if buildSelected && !isSelectedService(service, selectedArgs) {
 			continue
 		}
@@ -195,6 +194,10 @@ func buildV2(manifest *model.Manifest, cmdOptions *build.BuildOptions, args []st
 		if len(volumesToInclude) > 0 {
 			buildInfo.VolumesToInclude = nil
 		}
+
+		if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
+			buildInfo.Image = ""
+		}
 		cmdOptsFromManifest := build.OptsFromManifest(service, buildInfo, cmdOptions)
 
 		// check if image is at registry and skip
@@ -203,13 +206,13 @@ func buildV2(manifest *model.Manifest, cmdOptions *build.BuildOptions, args []st
 			globalReference := strings.Replace(cmdOptsFromManifest.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 			if _, err := registry.GetImageTagWithDigest(globalReference); err == nil {
 				oktetoLog.Debugf("Skipping '%s' build. Image already exists at the Okteto Registry", service)
-				return nil
+				continue
 			}
 			if registry.IsDevRegistry(cmdOptsFromManifest.Tag) {
 				// check if image already is at the registry
 				if _, err := registry.GetImageTagWithDigest(cmdOptsFromManifest.Tag); err == nil {
 					oktetoLog.Debugf("skipping build: image %s is already built", cmdOptsFromManifest.Tag)
-					return nil
+					continue
 				}
 			}
 		}

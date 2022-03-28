@@ -535,10 +535,14 @@ func checkImageAtGlobalAndSetEnvs(service string, options *build.BuildOptions) (
 func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Manifest) error {
 	oktetoLog.SetStage(fmt.Sprintf("Building service %s", service))
 	buildInfo := manifest.Build[service]
+	isStack := manifest.Type == model.StackType
 	oktetoLog.Information("Building image for service '%s'", service)
 	volumesToInclude := build.GetVolumesToInclude(buildInfo.VolumesToInclude)
 	if len(volumesToInclude) > 0 {
 		buildInfo.VolumesToInclude = nil
+	}
+	if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
+		buildInfo.Image = ""
 	}
 	options := build.OptsFromManifest(service, buildInfo, &build.BuildOptions{})
 	if err := build.Run(ctx, options); err != nil {
@@ -572,7 +576,7 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
 		stack := manifest.Deploy.Compose.Stack
 		if svc, ok := stack.Services[service]; ok {
-			svc.Image = fmt.Sprintf("$OKTETO_BUILD_%s_IMAGE", strings.ToUpper(service))
+			svc.Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(service, "-", "_")))
 		}
 	}
 	oktetoLog.SetStage("")
@@ -585,6 +589,7 @@ func SetManifestEnvVars(service, reference string) error {
 
 	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repo, image, tag)
 
+	service = strings.ReplaceAll(service, "-", "_")
 	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", strings.ToUpper(service)), reg)
 	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", strings.ToUpper(service)), repo)
 	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(service)), reference)
@@ -724,6 +729,10 @@ func shouldExecuteRemotely(options *Options) bool {
 
 func checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
 	buildInfo := manifest.Build[service]
+	isStack := manifest.Type == model.StackType
+	if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
+		buildInfo.Image = ""
+	}
 	opts := build.OptsFromManifest(service, buildInfo, &build.BuildOptions{})
 
 	if build.ShouldOptimizeBuild(opts.Tag) {
@@ -752,7 +761,7 @@ func checkServicesToBuild(service string, manifest *model.Manifest, ch chan stri
 	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
 		stack := manifest.Deploy.Compose.Stack
 		if stack.Services[service].Image == "" {
-			stack.Services[service].Image = fmt.Sprintf("$OKTETO_BUILD_%s_IMAGE", strings.ToUpper(service))
+			stack.Services[service].Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(service, "-", "_")))
 		}
 	}
 	return nil
