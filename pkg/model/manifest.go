@@ -215,7 +215,12 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		return nil, err
 	}
 	if manifestPath != "" && FileExistsAndNotDir(manifestPath) {
-		return getManifestFromFile(cwd, manifestPath)
+		manifest, err := getManifestFromFile(cwd, manifestPath)
+		if err != nil {
+			return nil, err
+		}
+		manifest.Filename = manifestPath
+		return manifest, nil
 	} else if manifestPath != "" && pathExistsAndDir(manifestPath) {
 		cwd = manifestPath
 	}
@@ -293,10 +298,9 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 					},
 				},
 			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: manifestPath,
-			IsV2:     true,
+			Dev:   ManifestDevs{},
+			Build: ManifestBuild{},
+			IsV2:  true,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
 		s, stackErr := LoadStack("", stackManifest.Deploy.Compose.Manifest)
@@ -366,10 +370,9 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 					},
 				},
 			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: stackPath,
-			IsV2:     true,
+			Dev:   ManifestDevs{},
+			Build: ManifestBuild{},
+			IsV2:  true,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
 		s, err := LoadStack("", stackManifest.Deploy.Compose.Manifest)
@@ -402,9 +405,8 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 					},
 				},
 			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: chartPath,
+			Dev:   ManifestDevs{},
+			Build: ManifestBuild{},
 		}
 		return chartManifest, nil
 
@@ -426,9 +428,8 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 					},
 				},
 			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: manifestPath,
+			Dev:   ManifestDevs{},
+			Build: ManifestBuild{},
 		}
 		return k8sManifest, nil
 	}
@@ -492,8 +493,6 @@ func getManifest(devPath string) (*Manifest, error) {
 
 		dev.computeParentSyncFolder()
 	}
-
-	manifest.Filename = devPath
 
 	return manifest, nil
 }
