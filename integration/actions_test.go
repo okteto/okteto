@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -134,19 +135,32 @@ func TestBuildActionPipeline(t *testing.T) {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
 
-	dir, err := os.MkdirTemp("", "")
+	cwd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
 	}
-	log.Printf("created tempdir: %s", dir)
-	dockerfilePath := filepath.Join(dir, "Dockerfile")
+	tempDir, err := os.MkdirTemp("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Printf("created tempdir: %s", tempDir)
+	dockerfilePath := filepath.Join(tempDir, "Dockerfile")
 	dockerfileContent := []byte("FROM alpine")
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
 		t.Fatal(err)
 	}
+	manifestPath := filepath.Join(tempDir, "okteto.yml")
+	manifestContent := []byte(`
+build:
+  alpine:
+    context: .
+`)
+	if err := os.WriteFile(manifestPath, manifestContent, 0644); err != nil {
+		t.Fatal(err)
+	}
 
 	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, buildPath)
-	actionFolder := strings.Split(buildPath, "/")[1]
+	actionFolder := path.Join(cwd, strings.Split(buildPath, "/")[1])
 	log.Printf("cloning build action repository: %s", actionRepo)
 	if err := cloneGitRepo(ctx, actionRepo); err != nil {
 		t.Fatal(err)
@@ -157,13 +171,25 @@ func TestBuildActionPipeline(t *testing.T) {
 	log.Printf("building image")
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
 
-	args := []string{fmt.Sprintf("okteto.dev/%s:latest", namespace), dockerfilePath, dir}
+	// test v1 build with dockerfile
+	args := []string{fmt.Sprintf("okteto.dev/%s:latest", namespace), dockerfilePath, tempDir}
 
 	cmd := exec.Command(command, args...)
 	cmd.Env = os.Environ()
+	cmd.Dir = tempDir
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("%s %s: %s", command, strings.Join(args, " "), string(o))
+	}
+
+	// test v2 build with manifest
+	argsV2 := []string{"", manifestPath}
+	cmdV2 := exec.Command(command, argsV2...)
+	cmdV2.Env = os.Environ()
+	cmdV2.Dir = tempDir
+	o2, err := cmdV2.CombinedOutput()
+	if err != nil {
+		t.Fatalf("%s %s: %s", command, strings.Join(args, " "), string(o2))
 	}
 
 }
