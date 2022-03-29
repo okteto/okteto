@@ -219,7 +219,14 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		manifest.Filename = manifestPath
+		path := ""
+		if filepath.IsAbs(manifestPath) {
+			path, err = filepath.Rel(cwd, manifestPath)
+			if err != nil {
+				oktetoLog.Debugf("could not detect relative path to %s: %s", manifestPath, err)
+			}
+		}
+		manifest.Filename = path
 		return manifest, nil
 	} else if manifestPath != "" && pathExistsAndDir(manifestPath) {
 		cwd = manifestPath
