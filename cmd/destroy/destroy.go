@@ -174,6 +174,18 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 			Destroy: []model.DeployCommand{},
 		}
 	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
+	if opts.Name == "" {
+		if manifest.Name != "" {
+			opts.Name = manifest.Name
+		} else {
+			opts.Name = utils.InferName(cwd)
+		}
+
+	}
 	manifest, err = manifest.ExpandEnvVars()
 	if err != nil {
 		return err
