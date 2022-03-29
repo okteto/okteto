@@ -168,29 +168,32 @@ build:
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer deleteGitRepo(ctx, actionFolder)
 
-	log.Printf("building image")
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
 
-	// test v1 build with dockerfile
-	args := []string{fmt.Sprintf("okteto.dev/%s:latest", namespace), dockerfilePath, tempDir}
-
-	cmd := exec.Command(command, args...)
-	cmd.Env = os.Environ()
-	cmd.Dir = tempDir
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("%s %s: %s", command, strings.Join(args, " "), string(o))
-	}
-
-	// test v2 build with manifest
-	argsV2 := []string{"", manifestPath}
-	cmdV2 := exec.Command(command, argsV2...)
-	cmdV2.Env = os.Environ()
-	cmdV2.Dir = tempDir
-	o2, err := cmdV2.CombinedOutput()
-	if err != nil {
-		t.Fatalf("%s %s: %s", command, strings.Join(args, " "), string(o2))
-	}
+	t.Run("okteto build with dockerfile", func(t *testing.T) {
+		// test v1 build with dockerfile
+		log.Printf("building image")
+		args := []string{fmt.Sprintf("okteto.dev/%s:latest", namespace), dockerfilePath, tempDir}
+		cmd := exec.Command(command, args...)
+		cmd.Env = os.Environ()
+		cmd.Dir = tempDir
+		o, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("%s %s: %s", command, strings.Join(args, " "), string(o))
+		}
+	})
+	t.Run("okteto build with manifest", func(t *testing.T) {
+		// test v2 build with manifest
+		log.Printf("building image")
+		args := []string{"", manifestPath}
+		cmd := exec.Command(command, args...)
+		cmd.Env = os.Environ()
+		cmd.Dir = tempDir
+		o, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("%s %s: %s", command, strings.Join(args, " "), string(o))
+		}
+	})
 
 }
 
