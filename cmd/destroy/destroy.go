@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
 	"strings"
 
@@ -72,6 +73,11 @@ type Options struct {
 	DestroyDependencies bool
 	ForceDestroy        bool
 	K8sContext          string
+
+	Repository string
+	Branch     string
+	Wait       bool
+	Timeout    time.Duration
 }
 
 type destroyCommand struct {
@@ -95,6 +101,16 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Long:  `Destroy everything created by the 'okteto deploy' command. You can also include a 'destroy' section in your okteto manifest with a list of custom commands to be executed on destroy`,
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if shouldExecuteRemotely(options) {
+				remoteOpts := &pipelineCMD.DestroyOptions{
+					Name:           options.Name,
+					Namespace:      options.Namespace,
+					Wait:           options.Wait,
+					DestroyVolumes: options.DestroyVolumes,
+					Timeout:        options.Timeout,
+				}
+				return pipelineCMD.ExecuteDestroyPipeline(ctx, remoteOpts)
+			}
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
 				return err
 			}
@@ -160,6 +176,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands defined in the manifest")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment was deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment was deployed")
+
+	cmd.Flags().StringVarP(&options.Repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
+	cmd.Flags().StringVarP(&options.Branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
+	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the development environment is deployed (defaults to false)")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 
 	return cmd
 }
@@ -365,4 +386,8 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 func setErrorStatus(ctx context.Context, cfg *v1.ConfigMap, data *pipeline.CfgData, err error, c kubernetes.Interface) error {
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destruction failed: %s", err.Error())
 	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
+}
+
+func shouldExecuteRemotely(options *Options) bool {
+	return options.Branch != "" || options.Repository != ""
 }
