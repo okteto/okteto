@@ -472,6 +472,9 @@ func (dev *Dev) SetDefaults() error {
 		dev.Selector = make(Selector)
 	}
 
+	if dev.InitContainer.Image == "" {
+		dev.InitContainer.Image = OktetoBinImageTag
+	}
 	if dev.Healthchecks {
 		oktetoLog.Yellow("The use of 'healthchecks' field is deprecated and will be removed in version 2.2.0. Please use the field 'probes' instead.")
 		if dev.Probes == nil {
