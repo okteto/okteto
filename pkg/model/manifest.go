@@ -214,6 +214,9 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
+	if manifestPath != "" {
+		manifestPath = filepath.Join(cwd, manifestPath)
+	}
 	if manifestPath != "" && FileExistsAndNotDir(manifestPath) {
 		manifest, err := getManifestFromFile(cwd, manifestPath)
 		if err != nil {
