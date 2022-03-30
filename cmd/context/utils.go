@@ -153,6 +153,11 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 		return nil, err
 	}
 
+	// We need to read it again to propagate secrets env vars
+	m, err = model.GetManifestV2(opts.Filename)
+	if err != nil {
+		return nil, err
+	}
 	m.Namespace = okteto.Context().Namespace
 	m.Context = okteto.Context().Name
 
