@@ -133,14 +133,8 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 	if err != nil {
 		return nil, err
 	}
-	ctxResource := &model.ContextResource{}
-	if m.Type != model.ChartType && m.Type != model.KubernetesType {
-		ctxResource, err = utils.LoadManifestContext(m.Filename)
-		if err != nil {
-			return nil, err
-		}
-	}
 
+	ctxResource := model.GetContextResourceFromManifest(m)
 	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
 		return nil, err
 	}
