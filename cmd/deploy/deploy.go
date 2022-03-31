@@ -152,6 +152,18 @@ func Deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
+			cwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get the current working directory: %w", err)
+			}
+			name := ""
+			if options.Name == "" {
+				name = utils.InferName(cwd)
+				if err != nil {
+					return fmt.Errorf("could not infer environment name")
+				}
+			}
+
 			options.ShowCTA = oktetoLog.IsInteractive()
 			options.servicesToDeploy = args
 
@@ -168,7 +180,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Kubeconfig:         kubeconfig,
 				Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat()),
 				Proxy:              proxy,
-				TempKubeconfigFile: GetTempKubeConfigFile(options.Name),
+				TempKubeconfigFile: GetTempKubeConfigFile(name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 			}
 			startTime := time.Now()

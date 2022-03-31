@@ -103,9 +103,9 @@ func Destroy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
 			}
-
+			name := ""
 			if options.Name == "" {
-				options.Name = utils.InferName(cwd)
+				name = utils.InferName(cwd)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}
@@ -137,7 +137,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				k8sClientProvider: okteto.NewK8sClientProvider(),
 			}
 
-			kubeconfigPath := deploy.GetTempKubeConfigFile(options.Name)
+			kubeconfigPath := deploy.GetTempKubeConfigFile(name)
 			if err := kubeconfig.Write(okteto.Context().Cfg, kubeconfigPath); err != nil {
 				return err
 			}
@@ -173,6 +173,18 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		manifest = &model.Manifest{
 			Destroy: []model.DeployCommand{},
 		}
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
+	if opts.Name == "" {
+		if manifest.Name != "" {
+			opts.Name = manifest.Name
+		} else {
+			opts.Name = utils.InferName(cwd)
+		}
+
 	}
 	manifest, err = manifest.ExpandEnvVars()
 	if err != nil {
