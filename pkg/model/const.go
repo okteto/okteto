@@ -326,6 +326,9 @@ const (
 	// OktetoActionNameEnvVar defines the name of the pipeline action name
 	OktetoActionNameEnvVar = "OKTETO_ACTION_NAME"
 
+	// OktetoAutogenerateStignoreEnvVar skips the autogenerate stignore dialog and creates the default one
+	OktetoAutogenerateStignoreEnvVar = "OKTETO_AUTOGENERATE_STIGNORE"
+
 	// OktetoGitCommitPrefix prefix added to OKTETO_GIT_COMMIT when inferred by cli
 	OktetoGitCommitPrefix = "dev"
 
