@@ -144,6 +144,9 @@ func (iClient *Client) GetEndpointsBySelector(ctx context.Context, namespace, la
 		}
 		for i := range iList.Items {
 			for _, rule := range iList.Items[i].Spec.Rules {
+				if rule.Host == "" {
+					continue
+				}
 				for _, path := range rule.IngressRuleValue.HTTP.Paths {
 					result = append(result, fmt.Sprintf("https://%s%s", rule.Host, path.Path))
 				}
