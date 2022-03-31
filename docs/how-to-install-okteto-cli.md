@@ -30,7 +30,7 @@ Alternatively, you can directly download the binary [from GitHub](https://github
 
 #### Which binary should I download?
 
-First of all you need to check your OS and architecture to download the correct binary. You can check your OS by running:
+First you need to check your OS and architecture to download the correct binary. You can check your OS by running:
 
 ```console
 uname
