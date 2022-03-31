@@ -14,12 +14,12 @@
 package manifest
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 
-	"github.com/manifoldco/promptui"
 	"github.com/okteto/okteto/cmd/utils"
 )
 
@@ -44,7 +44,7 @@ func selectComposeFile(paths []string) (string, error) {
 	return selection, nil
 }
 
-func selectDockerfiles(cwd string) ([]string, error) {
+func selectDockerfiles(ctx context.Context, cwd string) ([]string, error) {
 	dockerfiles := []string{}
 	files, err := ioutil.ReadDir(cwd)
 	if err != nil {
@@ -85,12 +85,16 @@ func selectDockerfiles(cwd string) ([]string, error) {
 		if len(dockerfiles) == 1 {
 			break
 		}
-		prompt := promptui.Select{
-			Label: "Do you need to build any of the following Dockerfiles as part of your development environment?",
-			Items: dockerfiles,
+		dockerfilesItems := []utils.SelectorItem{}
+		for _, d := range dockerfiles {
+			dockerfilesItems = append(dockerfilesItems, utils.SelectorItem{
+				Name:   d,
+				Label:  d,
+				Enable: true,
+			})
 		}
 
-		idx, selection, err := prompt.Run()
+		selection, _, err := utils.AskForOptionsOkteto(ctx, dockerfilesItems, "Do you need to build any of the following Dockerfiles as part of your development environment?", "")
 
 		if err != nil {
 			return nil, err
@@ -98,8 +102,13 @@ func selectDockerfiles(cwd string) ([]string, error) {
 		if selection == noMoreDockerfileOption {
 			break
 		} else {
-			dockerfiles = append(dockerfiles[:idx], dockerfiles[idx+1:]...)
-			toConfigure = append(toConfigure, selection)
+			for idx, d := range dockerfiles {
+				if d != selection {
+					continue
+				}
+				dockerfiles = append(dockerfiles[:idx], dockerfiles[idx+1:]...)
+				toConfigure = append(toConfigure, selection)
+			}
 		}
 	}
 	if err := validateDockerfileSelection(toConfigure); err != nil {

@@ -133,7 +133,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 	}
 
 	if manifest == nil || len(manifest.Build) == 0 || manifest.Deploy == nil {
-		manifest, err = mc.configureManifestDeployAndBuild(opts.Workdir)
+		manifest, err = mc.configureManifestDeployAndBuild(ctx, opts.Workdir)
 		if err != nil {
 			return nil, err
 		}
@@ -206,7 +206,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 	return manifest, nil
 }
 
-func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Manifest, error) {
+func (*ManifestCommand) configureManifestDeployAndBuild(ctx context.Context, cwd string) (*model.Manifest, error) {
 
 	composeFiles := utils.GetStackFiles(cwd)
 	if len(composeFiles) > 0 {
@@ -228,14 +228,14 @@ func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Mani
 			}
 			return manifest, nil
 		}
-		manifest, err := createFromKubernetes(cwd)
+		manifest, err := createFromKubernetes(ctx, cwd)
 		if err != nil {
 			return nil, err
 		}
 		return manifest, nil
 
 	}
-	manifest, err := createFromKubernetes(cwd)
+	manifest, err := createFromKubernetes(ctx, cwd)
 	if err != nil {
 		return nil, err
 	}
@@ -432,9 +432,9 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 	return manifest, err
 }
 
-func createFromKubernetes(cwd string) (*model.Manifest, error) {
+func createFromKubernetes(ctx context.Context, cwd string) (*model.Manifest, error) {
 	manifest := model.NewManifest()
-	dockerfiles, err := selectDockerfiles(cwd)
+	dockerfiles, err := selectDockerfiles(ctx, cwd)
 	if err != nil {
 		return nil, err
 	}

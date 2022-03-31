@@ -30,6 +30,7 @@ import (
 	"github.com/manifoldco/promptui/screenbuf"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"golang.org/x/term"
 )
 
 const (
@@ -411,9 +412,27 @@ func (s *OktetoSelector) renderDetails(item interface{}) [][]byte {
 }
 
 func (s *OktetoSelector) renderLabel(sb *screenbuf.ScreenBuf) {
+	width, _, _ := term.GetSize(int(os.Stdout.Fd()))
 	for _, labelLine := range strings.Split(s.Label, "\n") {
-		labelLineBytes := render(s.OktetoTemplates.label, labelLine)
-		sb.Write(labelLineBytes)
+		if width == 0 {
+			labelLineBytes := render(s.OktetoTemplates.label, labelLine)
+			sb.Write(labelLineBytes)
+		} else {
+			lines := len(labelLine) / width
+			lastChar := 0
+			for i := 0; i < lines+1; i++ {
+				if lines == i {
+					midLine := labelLine[lastChar:]
+					labelLineBytes := render(s.OktetoTemplates.label, midLine)
+					sb.Write(labelLineBytes)
+					break
+				}
+				midLine := labelLine[lastChar : lastChar+width]
+				labelLineBytes := render(s.OktetoTemplates.label, midLine)
+				sb.Write(labelLineBytes)
+				lastChar += width
+			}
+		}
 	}
 }
 
