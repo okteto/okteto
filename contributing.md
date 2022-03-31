@@ -18,7 +18,7 @@ When contributing features or bug fixes to Okteto CLI, it'll be helpful to keep 
 
 - Communicating your changes before you start working
 - Including unit tests whenever relevant
-- Making sure your code passes the [lint checks](#lint)
+- Making sure your code passes the [lint checks](#linting)
 - Signing off on all your git commits by running `git commit -s`
 - Documenting all Go public types, structs, and functions in your code
 
