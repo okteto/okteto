@@ -115,19 +115,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err := setOptionVarsAsEnvs(options.Variables); err != nil {
 				return err
 			}
-			if shouldExecuteRemotely(options) {
-				remoteOpts := &pipelineCMD.DeployOptions{
-					Branch:     options.Branch,
-					Repository: options.Repository,
-					Name:       options.Name,
-					Namespace:  options.Namespace,
-					Wait:       options.Wait,
-					File:       options.ManifestPath,
-					Variables:  options.Variables,
-					Timeout:    options.Timeout,
-				}
-				return pipelineCMD.ExecuteDeployPipeline(ctx, remoteOpts)
-			}
+
 			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(model.OktetoSkipConfigCredentialsUpdate, "false")
@@ -228,8 +216,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the development environment")
 	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
 
-	cmd.Flags().StringVarP(&options.Repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
-	cmd.Flags().StringVarP(&options.Branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
 	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the development environment is deployed (defaults to false)")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 

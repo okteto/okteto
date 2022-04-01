@@ -56,7 +56,6 @@ func deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploy an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli-v1/#deploy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			oktetoLog.Warning("'okteto pipeline deploy' is deprecated in favor of 'okteto deploy [--branch] [--repository]', and will be removed in version 2.2.0")
 			return ExecuteDeployPipeline(ctx, opts)
 		},
 	}
