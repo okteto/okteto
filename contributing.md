@@ -78,7 +78,7 @@ Once you do that and visit the repository, you should see a button on the GitHub
 
 ## Development Guide
 
-Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.17](https://golang.org/doc/go1.17). It uses go modules for dependency management.
+Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.17](https://go.dev/doc/go1.17). It uses go modules for dependency management.
 
 ### Building
 
