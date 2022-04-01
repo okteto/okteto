@@ -362,13 +362,13 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 		cmdInfo := model.DeployCommand{Command: cmd, Name: cmd}
 		spinner.Stop()
 		oktetoLog.Information("Running %s", cmdInfo.Name)
-		spinner.Start()
 		if err := dc.executor.Execute(cmdInfo, opts.Variables); err != nil {
 			oktetoLog.Infof("could not uninstall helm release '%s': %s", releaseName, err)
 			if !opts.ForceDestroy {
 				return err
 			}
 		}
+		spinner.Start()
 	}
 
 	return nil
