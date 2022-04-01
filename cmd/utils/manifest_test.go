@@ -44,17 +44,17 @@ func TestGetWorkdirFromManifest(t *testing.T) {
 		{
 			name:         "full path",
 			path:         filepath.Join("/usr", "okteto.yml"),
-			expectedPath: "/usr",
+			expectedPath: filepath.Clean("/usr"),
 		},
 		{
 			name:         "full path on .okteto",
 			path:         filepath.Join("/usr", ".okteto", "okteto.yml"),
-			expectedPath: "/usr",
+			expectedPath: filepath.Clean("/usr"),
 		},
 		{
 			name:         "relative path with more than two paths ahead",
 			path:         filepath.Join("~", "app", ".okteto", "okteto.yml"),
-			expectedPath: "~/app",
+			expectedPath: filepath.Join("~", "app"),
 		},
 	}
 
