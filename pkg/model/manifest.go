@@ -474,6 +474,7 @@ func inferHelmTags(path string) string {
 		}
 		if image.Image != "" {
 			result += fmt.Sprintf(" --set %s.image=${OKTETO_BUILD_%s_IMAGE}", svcName, strings.ToUpper(svcName))
+			os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(svcName)), image.Image)
 		}
 	}
 	return result

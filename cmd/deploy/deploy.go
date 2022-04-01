@@ -21,7 +21,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"sort"
 	"strings"
 	"time"
 
@@ -407,7 +406,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 				}
 			}
 			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-				if err := dc.showEndpoints(ctx, deployOptions); err != nil {
+				if err := dc.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name}); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
 				}
 			}
@@ -642,30 +641,6 @@ func isSPDY(r *http.Request) bool {
 //GetTempKubeConfigFile returns a where the temp kubeConfigFile should be stored
 func GetTempKubeConfigFile(name string) string {
 	return fmt.Sprintf(tempKubeConfigTemplate, config.GetUserHomeDir(), name)
-}
-
-func (dc *DeployCommand) showEndpoints(ctx context.Context, opts *Options) error {
-	spinner := utils.NewSpinner("Retrieving endpoints...")
-	spinner.Start()
-	defer spinner.Stop()
-	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
-	iClient, err := dc.K8sClientProvider.GetIngressClient(ctx)
-	if err != nil {
-		return err
-	}
-	eps, err := iClient.GetEndpointsBySelector(ctx, okteto.Context().Namespace, labelSelector)
-	if err != nil {
-		return err
-	}
-	spinner.Stop()
-	if len(eps) > 0 {
-		sort.Slice(eps, func(i, j int) bool {
-			return len(eps[i]) < len(eps[j])
-		})
-		oktetoLog.Information("Endpoints available:")
-		oktetoLog.Printf("  - %s\n", strings.Join(eps, "\n  - "))
-	}
-	return nil
 }
 
 func addEnvVars(ctx context.Context, cwd string) error {

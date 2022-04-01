@@ -123,6 +123,7 @@ func main() {
 	root.AddCommand(cmd.UpdateDeprecated())
 	root.AddCommand(deploy.Deploy(ctx))
 	root.AddCommand(destroy.Destroy(ctx))
+	root.AddCommand(deploy.Endpoints(ctx))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 
 	//deprecated
