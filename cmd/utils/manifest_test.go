@@ -50,6 +50,11 @@ func TestGetWorkdirFromManifest(t *testing.T) {
 			path:         "/usr/.okteto/okteto.yml",
 			expectedPath: "/usr",
 		},
+		{
+			name:         "relative path with more than two paths ahead",
+			path:         "~/app/.okteto/okteto.yml",
+			expectedPath: "~/app",
+		},
 	}
 
 	for _, tt := range tests {
