@@ -14,6 +14,7 @@
 package utils
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,12 +28,12 @@ func TestGetWorkdirFromManifest(t *testing.T) {
 	}{
 		{
 			name:         "inside .okteto folder",
-			path:         ".okteto/okteto.yml",
+			path:         filepath.Join(".okteto", "okteto.yml"),
 			expectedPath: ".",
 		},
 		{
 			name:         "one path ahead",
-			path:         "test/okteto.yml",
+			path:         filepath.Join("test", "okteto.yml"),
 			expectedPath: "test",
 		},
 		{
@@ -42,18 +43,18 @@ func TestGetWorkdirFromManifest(t *testing.T) {
 		},
 		{
 			name:         "full path",
-			path:         "/usr/okteto.yml",
-			expectedPath: "/usr",
+			path:         filepath.Join("/usr", "okteto.yml"),
+			expectedPath: filepath.Clean("/usr"),
 		},
 		{
 			name:         "full path on .okteto",
-			path:         "/usr/.okteto/okteto.yml",
-			expectedPath: "/usr",
+			path:         filepath.Join("/usr", ".okteto", "okteto.yml"),
+			expectedPath: filepath.Clean("/usr"),
 		},
 		{
 			name:         "relative path with more than two paths ahead",
-			path:         "~/app/.okteto/okteto.yml",
-			expectedPath: "~/app",
+			path:         filepath.Join("~", "app", ".okteto", "okteto.yml"),
+			expectedPath: filepath.Join("~", "app"),
 		},
 	}
 
