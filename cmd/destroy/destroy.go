@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 
 	"strings"
 
@@ -95,6 +96,12 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Long:  `Destroy everything created by the 'okteto deploy' command. You can also include a 'destroy' section in your okteto manifest with a list of custom commands to be executed on destroy`,
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if options.ManifestPath != "" {
+				dir := filepath.Dir(options.ManifestPath)
+				if err := os.Chdir(dir); err != nil {
+					return err
+				}
+			}
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
 				return err
 			}

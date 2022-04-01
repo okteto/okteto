@@ -88,6 +88,12 @@ func Up() *cobra.Command {
 
 			ctx := context.Background()
 
+			if upOptions.DevPath != "" {
+				dir := filepath.Dir(upOptions.DevPath)
+				if err := os.Chdir(dir); err != nil {
+					return err
+				}
+			}
 			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
 			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
