@@ -89,8 +89,7 @@ func Up() *cobra.Command {
 			ctx := context.Background()
 
 			if upOptions.DevPath != "" {
-				dir := filepath.Dir(upOptions.DevPath)
-				if err := os.Chdir(dir); err != nil {
+				if err := os.Chdir(utils.GetWorkdirFromManifestPath(upOptions.DevPath)); err != nil {
 					return err
 				}
 			}

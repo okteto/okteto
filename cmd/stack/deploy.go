@@ -16,7 +16,6 @@ package stack
 import (
 	"context"
 	"os"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -54,8 +53,7 @@ func deploy(ctx context.Context) *cobra.Command {
 
 			options.StackPaths = loadComposePaths(options.StackPaths)
 			if len(options.StackPaths) == 1 {
-				dir := filepath.Dir(options.StackPaths[0])
-				if err := os.Chdir(dir); err != nil {
+				if err := os.Chdir(utils.GetWorkdirFromManifestPath(options.StackPaths[0])); err != nil {
 					return err
 				}
 			}

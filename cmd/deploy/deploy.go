@@ -21,7 +21,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -133,8 +132,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(model.OktetoSkipConfigCredentialsUpdate, "false")
 			if options.ManifestPath != "" {
-				dir := filepath.Dir(options.ManifestPath)
-				if err := os.Chdir(dir); err != nil {
+				if err := os.Chdir(utils.GetWorkdirFromManifestPath(options.ManifestPath)); err != nil {
 					return err
 				}
 			}

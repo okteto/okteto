@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 
 	"strings"
 
@@ -97,8 +96,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if options.ManifestPath != "" {
-				dir := filepath.Dir(options.ManifestPath)
-				if err := os.Chdir(dir); err != nil {
+				if err := os.Chdir(utils.GetWorkdirFromManifestPath(options.ManifestPath)); err != nil {
 					return err
 				}
 			}
