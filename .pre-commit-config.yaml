@@ -44,13 +44,14 @@ repos:
     rev: v2.6.1
     hooks:
       - id: prettier
-        exclude: ^\.vscode/tasks\.json$
+        name: Run prettier
+        description: Format files with prettier
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.31.1
     hooks:
       - id: markdownlint
         name: Run markdownlint
-        description: Checks the style of Markdown files
+        description: Check Markdown files with markdownlint
         entry: markdownlint -c .github/linters/.markdown-lint.yml .
         types: [markdown]
         files: \.(md|mdown|markdown)$
