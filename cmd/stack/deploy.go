@@ -52,6 +52,11 @@ func deploy(ctx context.Context) *cobra.Command {
 			options.ServicesToDeploy = args
 
 			options.StackPaths = loadComposePaths(options.StackPaths)
+			if len(options.StackPaths) == 1 {
+				if err := os.Chdir(utils.GetWorkdirFromManifestPath(options.StackPaths[0])); err != nil {
+					return err
+				}
+			}
 			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPaths)
 			if err != nil {
 				return err
