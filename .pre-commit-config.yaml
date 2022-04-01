@@ -26,11 +26,8 @@ repos:
       - id: end-of-file-fixer
       - id: fix-byte-order-marker
       - id: mixed-line-ending
-      - id: pretty-format-json
-        args: [--autofix, --indent=4, --no-sort-keys]
       - id: trailing-whitespace
         exclude: ^\.github/pull_request_template\.md$
-      - id: check-json
   - repo: https://github.com/jumanjihouse/pre-commit-hooks
     rev: 2.1.6
     hooks:
