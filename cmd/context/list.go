@@ -81,7 +81,7 @@ func executeListContext(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		fmt.Print(string(ctxRaw))
+		fmt.Println(string(ctxRaw))
 	} else if output == "yaml" {
 		ctxRaw, err := yaml.Marshal(&ctxs)
 		if err != nil {
