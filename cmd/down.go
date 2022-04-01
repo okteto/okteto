@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -51,6 +52,12 @@ func Down() *cobra.Command {
 			ctx := context.Background()
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
+			if devPath != "" {
+				dir := filepath.Dir(devPath)
+				if err := os.Chdir(dir); err != nil {
+					return err
+				}
+			}
 			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				return err
