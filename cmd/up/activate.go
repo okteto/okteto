@@ -111,9 +111,6 @@ func (up *upContext) activate() error {
 		if oktetoErrors.IsTransient(err) {
 			return err
 		}
-		if strings.Contains(err.Error(), "Privileged containers are not allowed") && up.Dev.Docker.Enabled {
-			return fmt.Errorf("docker support requires privileged containers. Privileged containers are not allowed in your current cluster")
-		}
 		if _, ok := err.(oktetoErrors.UserError); ok {
 			return err
 		}
