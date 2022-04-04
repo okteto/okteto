@@ -112,7 +112,7 @@ func (w *PlainWriter) Success(format string, args ...interface{}) {
 // Information prints a message with the information symbol first, and the text in blue
 func (w *PlainWriter) Information(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf(w.out.Out, "%s %s\n", informationSymbol, fmt.Sprintf(format, args...))
+	w.Fprintf(w.out.Out, "INFO: %s\n", fmt.Sprintf(format, args...))
 }
 
 // Question prints a message with the question symbol first, and the text in magenta
@@ -125,13 +125,13 @@ func (w *PlainWriter) Question(format string, args ...interface{}) error {
 // Warning prints a message with the warning symbol first, and the text in yellow
 func (w *PlainWriter) Warning(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf(w.out.Out, "%s %s\n", warningSymbol, fmt.Sprintf(format, args...))
+	w.Fprintf(w.out.Out, "WARNING: %s\n", fmt.Sprintf(format, args...))
 }
 
 // FWarning prints a message with the warning symbol first, and the text in yellow into an specific writer
 func (w *PlainWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf(writer, "%s %s\n", warningSymbol, fmt.Sprintf(format, args...))
+	w.Fprintf(writer, "WARNING: %s\n", fmt.Sprintf(format, args...))
 }
 
 // Hint prints a message with the text in blue
@@ -144,7 +144,7 @@ func (w *PlainWriter) Hint(format string, args ...interface{}) {
 func (w *PlainWriter) Fail(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	log.out.Info(msg)
-	w.Fprintf(w.out.Out, "%s %s\n", errorSymbol, fmt.Sprintf(format, args...))
+	w.Fprintf(w.out.Out, "ERROR: %s\n", fmt.Sprintf(format, args...))
 	if msg != "" {
 		msg = convertToJSON(ErrorLevel, log.stage, msg)
 		if msg != "" {
