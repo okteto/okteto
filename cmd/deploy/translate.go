@@ -127,9 +127,6 @@ func translateStatefulSetSpec(body map[string]json.RawMessage, name string) erro
 		return fmt.Errorf("could not process statefulset spec: %s", err)
 	}
 	spec.Template.Labels[model.DeployedByLabel] = name
-	for i := range spec.VolumeClaimTemplates {
-		spec.VolumeClaimTemplates[i].Labels[model.DeployedByLabel] = name
-	}
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process statefulset's spec: %s", err)
