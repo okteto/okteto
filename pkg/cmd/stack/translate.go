@@ -133,6 +133,8 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 			buildInfo = &model.BuildInfo{
 				VolumesToInclude: svcInfo.VolumeMounts,
 			}
+		} else {
+			buildInfo.Image = svcInfo.Image
 		}
 		opts := build.OptsFromManifest(svcName, buildInfo, &build.BuildOptions{})
 
