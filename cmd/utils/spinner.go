@@ -81,7 +81,7 @@ func (p *Spinner) Update(text string) {
 	p.sp.Suffix = fmt.Sprintf(" %s", ucFirst(text))
 	p.sp.FinalMSG = fmt.Sprintf(" %s", ucFirst(text))
 	if !spinnerSupport {
-		oktetoLog.Println(strings.TrimSpace(p.sp.Suffix))
+		oktetoLog.Println(strings.TrimSpace(text))
 	}
 }
 
