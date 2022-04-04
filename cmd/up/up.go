@@ -375,6 +375,9 @@ func (up *upContext) getManifest(path string) (*model.Manifest, error) {
 func (up *upContext) start() error {
 
 	ctx := context.Background()
+	if err := up.stopRunningUpOnSameFolder(); err != nil {
+		return err
+	}
 
 	if up.Dev.Divert != nil {
 		if err := diverts.Create(ctx, up.Dev, up.Client); err != nil {
