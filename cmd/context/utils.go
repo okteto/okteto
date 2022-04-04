@@ -220,13 +220,7 @@ func LoadManifestV2WithContext(ctx context.Context, namespace, k8sContext, path 
 			return err
 		}
 	} else {
-		ctxResource := &model.ContextResource{}
-		if manifest.Type != model.ChartType && manifest.Type != model.KubernetesType {
-			ctxResource, err = utils.LoadManifestContext(manifest.Filename)
-			if err != nil {
-				return err
-			}
-		}
+		ctxResource := model.GetContextResourceFromManifest(manifest)
 
 		if err := ctxResource.UpdateNamespace(namespace); err != nil {
 			return err
