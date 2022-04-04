@@ -161,6 +161,15 @@ func (dc *DeployCommand) showEndpoints(ctx context.Context, opts *EndpointsOptio
 			return err
 		}
 		oktetoLog.Println(string(bytes))
+	case "md":
+		if len(eps) == 0 {
+			oktetoLog.Printf("There are no available endpoints for '%s'\n", opts.Name)
+		} else {
+			oktetoLog.Printf("Available endpoints:\n")
+			for _, e := range eps {
+				oktetoLog.Printf("\n - [%s](%s)\n", e, e)
+			}
+		}
 	default:
 		if len(eps) == 0 {
 			oktetoLog.Printf("There are no available endpoints for '%s'\n", opts.Name)
