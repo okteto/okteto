@@ -23,6 +23,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -45,11 +46,30 @@ func Endpoints(ctx context.Context) *cobra.Command {
 		Use:   "endpoints",
 		Short: "Show endpoints for an environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: options.Namespace}); err != nil {
-					return err
+			ctxResource, err := utils.LoadManifestContext(options.ManifestPath)
+			if err != nil {
+				if oktetoErrors.IsNotExist(err) {
+					ctxResource = &model.ContextResource{}
 				}
+			}
+
+			if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
+				return err
+			}
+
+			if err := ctxResource.UpdateContext(options.K8sContext); err != nil {
+				return err
+			}
+
+			ctxOptions := &contextCMD.ContextOptions{
+				Context:   ctxResource.Context,
+				Namespace: ctxResource.Namespace,
+			}
+			if options.Output == "" {
+				ctxOptions.Show = true
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+				return err
 			}
 			c := &DeployCommand{
 				GetManifest:       model.GetManifestV2,
@@ -70,8 +90,14 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				} else {
 					options.Name = utils.InferName(cwd)
 				}
+				if options.Namespace == "" {
+					options.Namespace = manifest.Namespace
+				}
+			}
+			if options.Namespace == "" {
 				options.Namespace = okteto.Context().Namespace
 			}
+
 			if err := validateOutput(options.Output); err != nil {
 				return err
 			}
@@ -99,8 +125,11 @@ func validateOutput(output string) error {
 
 func (dc *DeployCommand) getEndpoints(ctx context.Context, opts *EndpointsOptions) ([]string, error) {
 	spinner := utils.NewSpinner("Retrieving endpoints...")
-	spinner.Start()
-	defer spinner.Stop()
+	if opts.Output == "" {
+		spinner.Start()
+		defer spinner.Stop()
+	}
+
 	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
 	iClient, err := dc.K8sClientProvider.GetIngressClient(ctx)
 	if err != nil {
@@ -132,6 +161,15 @@ func (dc *DeployCommand) showEndpoints(ctx context.Context, opts *EndpointsOptio
 			return err
 		}
 		oktetoLog.Println(string(bytes))
+	case "md":
+		if len(eps) == 0 {
+			oktetoLog.Printf("There are no available endpoints for '%s'\n", opts.Name)
+		} else {
+			oktetoLog.Printf("Available endpoints:\n")
+			for _, e := range eps {
+				oktetoLog.Printf("\n - [%s](%s)\n", e, e)
+			}
+		}
 	default:
 		if len(eps) == 0 {
 			oktetoLog.Printf("There are no available endpoints for '%s'\n", opts.Name)
