@@ -106,7 +106,7 @@ func (w *PlainWriter) Yellow(format string, args ...interface{}) {
 // Success prints a message with the success symbol first, and the text in green
 func (w *PlainWriter) Success(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
-	w.Fprintf(w.out.Out, "%s %s\n", successSymbol, fmt.Sprintf(format, args...))
+	w.Fprintf(w.out.Out, "SUCCESS: %s\n", fmt.Sprintf(format, args...))
 }
 
 // Information prints a message with the information symbol first, and the text in blue
