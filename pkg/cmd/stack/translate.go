@@ -129,6 +129,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		if !okteto.IsOkteto() && buildInfo.Image == "" {
 			return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", svcName)
 		}
+		buildInfo.Image = svcInfo.Image
 		if buildInfo == nil {
 			buildInfo = &model.BuildInfo{
 				VolumesToInclude: svcInfo.VolumeMounts,
