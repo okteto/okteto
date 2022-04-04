@@ -174,6 +174,8 @@ func Up() *cobra.Command {
 				return err
 			}
 
+			dev.Forward = append(dev.Forward, model.Forward{Local: 5005, Remote: 5005})
+
 			if syncthing.ShouldUpgrade() {
 				oktetoLog.Println("Installing dependencies...")
 				if err := downloadSyncthing(); err != nil {
