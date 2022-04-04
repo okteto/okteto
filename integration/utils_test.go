@@ -29,6 +29,7 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -157,4 +158,46 @@ func updateKubeConfig(oktetoPath string) error {
 
 func writeFile(path, filename, content string) error {
 	return ioutil.WriteFile(filepath.Join(path, filename), []byte(content), 0777)
+}
+
+// returns the version of the running cli
+func runningSemverVersion(ctx context.Context) (string, error) {
+	oktetoPath, ok := os.LookupEnv(model.OktetoPathEnvVar)
+	if !ok {
+		oktetoPath = "/usr/local/bin/okteto"
+	}
+
+	cmd := exec.Command(oktetoPath, "version")
+	cmd.Env = os.Environ()
+
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("okteto version failed: %s - %s", string(o), err)
+	}
+
+	versionOutput := strings.TrimPrefix(string(o), "okteto version ")
+	if versionOutput == "" {
+		return "", fmt.Errorf("empty semver version %s", versionOutput)
+	}
+	return versionOutput, nil
+}
+
+func checkIfCurrentCLIVersion(ctx context.Context, constraint string) bool {
+	c, err := semver.NewConstraint(constraint)
+	if err != nil {
+		return false
+	}
+
+	rVersion, err := runningSemverVersion(ctx)
+	if err != nil {
+		return false
+	}
+	// check if version has rc
+	semV := strings.SplitN(rVersion, "-", 2)[0]
+	v, err := semver.NewVersion(semV)
+	if err != nil {
+		return false
+	}
+
+	return c.Check(v)
 }

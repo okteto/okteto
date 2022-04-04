@@ -143,6 +143,7 @@ func TestBuildActionPipeline(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.RemoveAll(tempDir)
 	log.Printf("created tempdir: %s", tempDir)
 	dockerfilePath := filepath.Join(tempDir, "Dockerfile")
 	dockerfileContent := []byte("FROM alpine")
@@ -184,6 +185,10 @@ build:
 	})
 	t.Run("okteto build with manifest", func(t *testing.T) {
 		// test v2 build with manifest
+		isV2CLI := checkIfCurrentCLIVersion(ctx, ">= 2.0.0")
+		if !isV2CLI {
+			t.Skip("skipping test for v2")
+		}
 		log.Printf("building image")
 		args := []string{"", manifestPath}
 		cmd := exec.Command(command, args...)
