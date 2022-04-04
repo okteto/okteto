@@ -144,7 +144,23 @@ func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 	return nil, err
 }
 
-func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
+func GetDevFromManifest(manifest *model.Manifest, devName string, isDockerExtension bool) (*model.Dev, error) {
+	if isDockerExtension {
+		if len(manifest.Dev) == 0 {
+			return nil, fmt.Errorf("add volumes to a service to create dev containers")
+		} else if len(manifest.Dev) == 1 {
+			for name, d := range manifest.Dev {
+				oktetoLog.Infof("Developing on %s", name)
+				return d, nil
+			}
+		} else {
+			oktetoLog.Info("choosing a dev environment random")
+			for name, d := range manifest.Dev {
+				oktetoLog.Infof("Developing on %s", name)
+				return d, nil
+			}
+		}
+	}
 	if len(manifest.Dev) == 0 {
 		return nil, fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
 	} else if len(manifest.Dev) == 1 {

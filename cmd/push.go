@@ -95,7 +95,7 @@ func Push(ctx context.Context) *cobra.Command {
 			if len(args) == 1 {
 				devName = args[0]
 			}
-			dev, err := utils.GetDevFromManifest(manifest, devName)
+			dev, err := utils.GetDevFromManifest(manifest, devName, false)
 			if err != nil {
 				return err
 			}

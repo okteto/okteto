@@ -58,6 +58,8 @@ type UpOptions struct {
 	Build      bool
 	ForcePull  bool
 	Reset      bool
+
+	DockerExtension bool
 }
 
 // Up starts a development container
@@ -68,6 +70,12 @@ func Up() *cobra.Command {
 		Short: "Launch your development environment",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if upOptions.DockerExtension {
+				if err := enableDockerExtension(); err != nil {
+					return err
+				}
+			}
+
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
 			}
@@ -162,7 +170,7 @@ func Up() *cobra.Command {
 					}
 				}
 			}
-			dev, err := utils.GetDevFromManifest(oktetoManifest, devName)
+			dev, err := utils.GetDevFromManifest(oktetoManifest, devName, upOptions.DockerExtension)
 			if err != nil {
 				return err
 			}
@@ -290,6 +298,8 @@ func Up() *cobra.Command {
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().MarkHidden("pull")
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
+	cmd.Flags().BoolVarP(&upOptions.DockerExtension, "docker-extension", "", false, "enable docker extension development")
+	cmd.Flags().MarkHidden("docker-extension")
 	return cmd
 }
 
@@ -375,6 +385,9 @@ func (up *upContext) getManifest(path string) (*model.Manifest, error) {
 func (up *upContext) start() error {
 
 	ctx := context.Background()
+	if err := up.stopRunningUpOnSameFolder(); err != nil {
+		return err
+	}
 
 	if up.Dev.Divert != nil {
 		if err := diverts.Create(ctx, up.Dev, up.Client); err != nil {
@@ -702,4 +715,12 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 	}
 
 	return err
+}
+
+func enableDockerExtension() error {
+	if err := os.Setenv(model.OktetoAutogenerateStignoreEnvVar, "true"); err != nil {
+		return err
+	}
+	oktetoLog.SetOutputFormat(oktetoLog.PlainFormat)
+	return nil
 }
