@@ -1602,7 +1602,9 @@ func Test_Environment(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			if tt.setEnvar {
-				os.Setenv("OKTETO_ENVTEST", "myvalue")
+				if err := os.Setenv("OKTETO_ENVTEST", "myvalue"); err != nil {
+					t.Fatal(err)
+				}
 				defer os.Unsetenv("OKTETO_ENVTEST")
 			}
 
