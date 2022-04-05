@@ -175,14 +175,18 @@ func getBuildInfoWithVolumeMounts(buildInfo *model.BuildInfo, isStackManifest bo
 	if isStackManifest && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
 		result.Image = ""
 	}
+	result.VolumesToInclude = getAccessibleVolumeMounts(buildInfo)
+	return result
+}
+
+func getAccessibleVolumeMounts(buildInfo *model.BuildInfo) []model.StackVolume {
 	accessibleVolumeMounts := make([]model.StackVolume, 0)
 	for _, volume := range buildInfo.VolumesToInclude {
 		if _, err := os.Stat(volume.LocalPath); !os.IsNotExist(err) {
 			accessibleVolumeMounts = append(accessibleVolumeMounts, volume)
 		}
 	}
-
-	return result
+	return accessibleVolumeMounts
 }
 
 func getToBuildSvcs(manifest *model.Manifest, options *types.BuildOptions) []string {

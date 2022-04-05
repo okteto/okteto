@@ -64,7 +64,7 @@ func Test_validateImage(t *testing.T) {
 	}
 }
 
-func Test_OptsFromManifest(t *testing.T) {
+func Test_OptsFromBuildInfo(t *testing.T) {
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		Contexts: map[string]*okteto.OktetoContext{
 			"test": {
@@ -86,7 +86,7 @@ func Test_OptsFromManifest(t *testing.T) {
 		{
 			name:        "empty-values-is-okteto",
 			serviceName: "service",
-			buildInfo:   &model.BuildInfo{Name: "movies"},
+			buildInfo:   &model.BuildInfo{},
 			isOkteto:    true,
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
@@ -97,7 +97,7 @@ func Test_OptsFromManifest(t *testing.T) {
 		{
 			name:           "empty-values-is-okteto-local",
 			serviceName:    "service",
-			buildInfo:      &model.BuildInfo{Name: "movies"},
+			buildInfo:      &model.BuildInfo{},
 			okGitCommitEnv: "dev1235466",
 			isOkteto:       true,
 			expected: &types.BuildOptions{
@@ -109,7 +109,7 @@ func Test_OptsFromManifest(t *testing.T) {
 		{
 			name:           "empty-values-is-okteto-pipeline",
 			serviceName:    "service",
-			buildInfo:      &model.BuildInfo{Name: "movies"},
+			buildInfo:      &model.BuildInfo{},
 			okGitCommitEnv: "1235466",
 			isOkteto:       true,
 			expected: &types.BuildOptions{
@@ -122,7 +122,6 @@ func Test_OptsFromManifest(t *testing.T) {
 			name:        "empty-values-is-okteto-pipeline-withArgs",
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
-				Name: "movies",
 				Args: model.Environment{
 					{
 						Name:  "arg1",
@@ -140,7 +139,7 @@ func Test_OptsFromManifest(t *testing.T) {
 		{
 			name:        "empty-values-is-not-okteto",
 			serviceName: "service",
-			buildInfo:   &model.BuildInfo{Name: "movies"},
+			buildInfo:   &model.BuildInfo{},
 			isOkteto:    false,
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
@@ -151,7 +150,6 @@ func Test_OptsFromManifest(t *testing.T) {
 			name:        "all-values-no-image",
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
-				Name:       "movies",
 				Context:    "service",
 				Dockerfile: "CustomDockerfile",
 				Target:     "build",
@@ -191,12 +189,13 @@ func Test_OptsFromManifest(t *testing.T) {
 				CurrentContext: "test",
 			}
 			manifest := &model.Manifest{
+				Name: "movies",
 				Build: model.ManifestBuild{
 					tt.serviceName: tt.buildInfo,
 				},
 			}
 			os.Setenv(model.OktetoGitCommitEnvVar, tt.okGitCommitEnv)
-			result := OptsFromManifest(tt.serviceName, manifest, tt.initialOpts)
+			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

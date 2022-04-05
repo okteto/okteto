@@ -65,7 +65,7 @@ func (bc *Command) checkServicesToBuild(service string, manifest *model.Manifest
 	if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
 		buildInfo.Image = ""
 	}
-	opts := build.OptsFromManifest(service, manifest, &types.BuildOptions{})
+	opts := build.OptsFromBuildInfo(manifest.Name, service, buildInfo, &types.BuildOptions{})
 
 	if build.ShouldOptimizeBuild(opts.Tag) {
 		oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")

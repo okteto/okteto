@@ -106,6 +106,11 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
+	dir, err := os.MkdirTemp("", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
@@ -120,7 +125,7 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 				Image: "nginx",
 				VolumesToInclude: []model.StackVolume{
 					{
-						LocalPath:  "test",
+						LocalPath:  dir,
 						RemotePath: "test",
 					},
 				},
@@ -150,8 +155,12 @@ func TestTwoStepsBuild(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-
-	dir, err := createDockerfile()
+	dir, err := os.MkdirTemp("", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	dir, err = createDockerfile()
 	assert.NoError(t, err)
 	defer os.RemoveAll(dir)
 
@@ -169,7 +178,7 @@ func TestTwoStepsBuild(t *testing.T) {
 				Dockerfile: filepath.Join(dir, "Dockerfile"),
 				VolumesToInclude: []model.StackVolume{
 					{
-						LocalPath:  "test",
+						LocalPath:  dir,
 						RemotePath: "test",
 					},
 				},
@@ -276,4 +285,23 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 	image, err = bc.Registry.GetImageTagWithDigest(image)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, image)
+}
+
+func Test_getAccessibleVolumeMounts(t *testing.T) {
+	existingPath := "./existing-folder"
+	missingPath := "./missing-folder"
+	buildInfo := &model.BuildInfo{
+		VolumesToInclude: []model.StackVolume{
+			{LocalPath: existingPath, RemotePath: "/data/logs"},
+			{LocalPath: missingPath, RemotePath: "/data/logs"},
+		},
+	}
+	err := os.Mkdir(existingPath, 0755)
+	if err != nil {
+		t.Fatal(err)
+	}
+	volumes := getAccessibleVolumeMounts(buildInfo)
+	err = os.Remove(existingPath)
+	assert.NoError(t, err)
+	assert.Len(t, volumes, 1)
 }

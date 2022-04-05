@@ -207,6 +207,9 @@ func translateDockerErr(err error) error {
 
 // OptsFromBuildInfo returns the parsed options for the build from the manifest
 func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions) *types.BuildOptions {
+	if o == nil {
+		o = &types.BuildOptions{}
+	}
 	if o.Target != "" {
 		b.Target = o.Target
 	}
