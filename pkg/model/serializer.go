@@ -314,18 +314,18 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (buildInfo BuildInfo) MarshalYAML() (interface{}, error) {
+func (buildInfo *BuildInfo) MarshalYAML() (interface{}, error) {
 	if buildInfo.Context != "" && buildInfo.Context != "." {
-		return buildInfoRaw(buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	if buildInfo.Dockerfile != "" && buildInfo.Dockerfile != "./Dockerfile" {
-		return buildInfoRaw(buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	if buildInfo.Target != "" {
-		return buildInfoRaw(buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	if buildInfo.Args != nil && len(buildInfo.Args) != 0 {
-		return buildInfoRaw(buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	return buildInfo.Name, nil
 }
