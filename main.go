@@ -31,7 +31,6 @@ import (
 	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/preview"
 	"github.com/okteto/okteto/cmd/stack"
-	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -113,13 +112,10 @@ func main() {
 
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(cmd.Init())
-	root.AddCommand(up.Up())
-	root.AddCommand(cmd.Down())
-	root.AddCommand(cmd.Status())
-	root.AddCommand(cmd.Doctor())
-	root.AddCommand(cmd.Exec())
+
+	root.AddCommand(cmd.Dev())
+
 	root.AddCommand(preview.Preview(ctx))
-	root.AddCommand(cmd.Restart())
 	root.AddCommand(cmd.UpdateDeprecated())
 	root.AddCommand(deploy.Deploy(ctx))
 	root.AddCommand(destroy.Destroy(ctx))
