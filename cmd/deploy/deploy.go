@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	buildCMD "github.com/okteto/okteto/cmd/build"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
@@ -32,7 +33,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/config"
@@ -41,10 +41,9 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	giturls "github.com/whilp/git-urls"
-	"golang.org/x/sync/errgroup"
 	"k8s.io/client-go/rest"
 )
 
@@ -88,7 +87,7 @@ type proxyInterface interface {
 	SetName(name string)
 }
 
-//DeployCommand defines the config for deploying an app
+// DeployCommand defines the config for deploying an app
 type DeployCommand struct {
 	GetManifest func(path string) (*model.Manifest, error)
 
@@ -97,6 +96,7 @@ type DeployCommand struct {
 	Executor           executor.ManifestExecutor
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
+	Builder            *buildCMD.Command
 
 	PipelineType model.Archetype
 }
@@ -170,6 +170,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Proxy:              proxy,
 				TempKubeconfigFile: GetTempKubeConfigFile(options.Name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
+				Builder:            buildCMD.NewBuildCommand(),
 			}
 			startTime := time.Now()
 			err = c.RunDeploy(ctx, options)
@@ -281,15 +282,26 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	if deployOptions.Build {
-		for service := range deployOptions.Manifest.Build {
-			oktetoLog.Debug("force build from manifest definition")
-			if err := runBuildAndSetEnvs(ctx, service, deployOptions.Manifest); err != nil {
+		buildOptions := &types.BuildOptions{
+			EnableStages: true,
+		}
+		if err := dc.Builder.BuildV2(ctx, deployOptions.Manifest, buildOptions); err != nil {
+			return err
+		}
+	} else {
+		svcsToBuild, err := dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest)
+		if err != nil {
+			return err
+		}
+		if len(svcsToBuild) != 0 {
+			buildOptions := &types.BuildOptions{
+				Args:         svcsToBuild,
+				EnableStages: true,
+			}
+			if err := dc.Builder.BuildV2(ctx, deployOptions.Manifest, buildOptions); err != nil {
 				return err
 			}
 		}
-
-	} else if err := checkBuildFromManifest(ctx, deployOptions.Manifest); err != nil {
-		return err
 	}
 
 	for depName, dep := range deployOptions.Manifest.Dependencies {
@@ -313,10 +325,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
-	deployOptions.Manifest, err = deployOptions.Manifest.ExpandEnvVars()
-	if err != nil {
-		return err
-	}
+	// deployOptions.Manifest, err = deployOptions.Manifest.ExpandEnvVars()
+	// if err != nil {
+	// 	return err
+	// }
 
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
 	dc.Proxy.Start()
@@ -512,93 +524,6 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 	return stackCommand.RunDeploy(ctx, composeInfo.Stack, stackOpts)
 }
 
-func checkImageAtGlobalAndSetEnvs(service string, options *build.BuildOptions) (bool, error) {
-	globalReference := strings.Replace(options.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
-
-	imageWithDigest, err := registry.GetImageTagWithDigest(globalReference)
-	if err == oktetoErrors.ErrNotFound {
-		oktetoLog.Debug("image not built at global registry, not running optimization for deployment")
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-
-	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
-		return false, err
-	}
-	oktetoLog.Debug("image already built at global registry, running optimization for deployment")
-	return true, nil
-
-}
-
-func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Manifest) error {
-	oktetoLog.SetStage(fmt.Sprintf("Building service %s", service))
-	buildInfo := manifest.Build[service]
-	isStack := manifest.Type == model.StackType
-	oktetoLog.Information("Building image for service '%s'", service)
-	volumesToInclude := build.GetVolumesToInclude(buildInfo.VolumesToInclude)
-	if len(volumesToInclude) > 0 {
-		buildInfo.VolumesToInclude = nil
-	}
-	if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
-		buildInfo.Image = ""
-	}
-	options := build.OptsFromManifest(service, buildInfo, &build.BuildOptions{})
-	if err := build.Run(ctx, options); err != nil {
-		return err
-	}
-	imageWithDigest, err := registry.GetImageTagWithDigest(options.Tag)
-	if err != nil {
-		return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
-	}
-
-	if len(volumesToInclude) > 0 {
-		oktetoLog.Information("Including volume hosts for service '%s'", service)
-		svcBuild, err := registry.CreateDockerfileWithVolumeMounts(options.Tag, volumesToInclude)
-		if err != nil {
-			return err
-		}
-		svcBuild.VolumesToInclude = volumesToInclude
-		options = build.OptsFromManifest(service, svcBuild, &build.BuildOptions{})
-		if err := build.Run(ctx, options); err != nil {
-			return err
-		}
-		imageWithDigest, err = registry.GetImageTagWithDigest(options.Tag)
-		if err != nil {
-			return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
-		}
-	}
-	oktetoLog.Success("Image for service '%s' pushed to registry: %s", service, options.Tag)
-	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
-		return err
-	}
-	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
-		stack := manifest.Deploy.Compose.Stack
-		if svc, ok := stack.Services[service]; ok {
-			svc.Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(service, "-", "_")))
-		}
-	}
-	oktetoLog.SetStage("")
-	return nil
-}
-
-// SetManifestEnvVars set okteto build env vars
-func SetManifestEnvVars(service, reference string) error {
-	reg, repo, tag, image := registry.GetReferecenceEnvs(reference)
-
-	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repo, image, tag)
-
-	service = strings.ReplaceAll(service, "-", "_")
-	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", strings.ToUpper(service)), reg)
-	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", strings.ToUpper(service)), repo)
-	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(service)), reference)
-	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_TAG", strings.ToUpper(service)), tag)
-
-	oktetoLog.Debug("manifest env vars set")
-	return nil
-}
-
 func (dc *DeployCommand) cleanUp(ctx context.Context) {
 	oktetoLog.Debugf("removing temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
 	if err := os.Remove(dc.TempKubeconfigFile); err != nil {
@@ -725,77 +650,4 @@ func switchSSHRepoToHTTPS(repo string) (*url.URL, error) {
 
 func shouldExecuteRemotely(options *Options) bool {
 	return options.Branch != "" || options.Repository != ""
-}
-
-func checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
-	buildInfo := manifest.Build[service]
-	isStack := manifest.Type == model.StackType
-	if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
-		buildInfo.Image = ""
-	}
-	opts := build.OptsFromManifest(service, buildInfo, &build.BuildOptions{})
-
-	if build.ShouldOptimizeBuild(opts.Tag) {
-		oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
-		if skipBuild, err := checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
-			return err
-		} else if skipBuild {
-			oktetoLog.Debugf("Skipping '%s' build. Image already exists at Okteto Registry", service)
-			return nil
-		}
-	}
-
-	imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
-	if err == oktetoErrors.ErrNotFound {
-		oktetoLog.Debug("image not found, building image")
-		ch <- service
-		return nil
-	} else if err != nil {
-		return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
-	}
-	oktetoLog.Debug("Skipping build for image for service")
-
-	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
-		return err
-	}
-	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
-		stack := manifest.Deploy.Compose.Stack
-		if stack.Services[service].Image == "" {
-			stack.Services[service].Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(service, "-", "_")))
-		}
-	}
-	return nil
-}
-
-func checkBuildFromManifest(ctx context.Context, manifest *model.Manifest) error {
-	buildManifest := manifest.Build
-	// check if images are at registry (global or dev) and set envs or send to build
-	toBuild := make(chan string, len(buildManifest))
-	g, _ := errgroup.WithContext(ctx)
-
-	for service := range buildManifest {
-		svc := service
-		g.Go(func() error {
-			return checkServicesToBuild(svc, manifest, toBuild)
-		})
-	}
-	if err := g.Wait(); err != nil {
-		return err
-	}
-	close(toBuild)
-
-	if len(toBuild) == 0 {
-		oktetoLog.Information("Images were already built. To rebuild your images run 'okteto build' or 'okteto deploy --build'")
-		return nil
-	}
-
-	for svc := range toBuild {
-		oktetoLog.Information("Building image for service '%s'...", svc)
-		oktetoLog.Information("To rebuild your image manually run 'okteto build %s' or 'okteto deploy --build'", svc)
-		if err := runBuildAndSetEnvs(ctx, svc, manifest); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

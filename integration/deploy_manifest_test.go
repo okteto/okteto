@@ -156,7 +156,7 @@ spec:
 		deleteNamespace(ctx, oktetoPath, testNamespace)
 		deleteGitRepo(ctx, repoDir)
 	})
-
+	reg := registry.NewOktetoRegistry()
 	t.Run("okteto deploy should build images if not exists at registry", func(t *testing.T) {
 
 		output, err := runOktetoDeploy(oktetoPath, repoDir)
@@ -164,7 +164,7 @@ spec:
 			t.Fatal(err)
 		}
 
-		imageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
+		imageWithDigest, err := reg.GetImageTagWithDigest(expectedImage)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -195,7 +195,7 @@ spec:
 
 	t.Run("okteto deploy should not build images if already at registry", func(t *testing.T) {
 
-		imageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
+		imageWithDigest, err := reg.GetImageTagWithDigest(expectedImage)
 		if err != nil {
 			t.Fatalf("image is not at registry: %v", err)
 		}
@@ -231,7 +231,7 @@ spec:
 
 	t.Run("okteto deploy --build should force the build an image does not change if no code changes", func(t *testing.T) {
 
-		imageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
+		imageWithDigest, err := reg.GetImageTagWithDigest(expectedImage)
 		if err != nil {
 			t.Fatalf("image is not at registry: %v", err)
 		}
@@ -266,7 +266,7 @@ spec:
 	})
 
 	t.Run("okteto deploy --build should force the build an image change if code changes", func(t *testing.T) {
-		imageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
+		imageWithDigest, err := reg.GetImageTagWithDigest(expectedImage)
 		if err != nil {
 			t.Fatalf("image is not at registry: %v", err)
 		}
@@ -287,7 +287,7 @@ spec:
 			t.Fatal(err)
 		}
 
-		newImageWithDigest, err := registry.GetImageTagWithDigest(expectedImage)
+		newImageWithDigest, err := reg.GetImageTagWithDigest(expectedImage)
 		if err != nil {
 			t.Fatalf("image is not at registry: %v", err)
 		}

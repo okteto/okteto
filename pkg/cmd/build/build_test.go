@@ -10,6 +10,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -79,15 +80,15 @@ func Test_OptsFromManifest(t *testing.T) {
 		buildInfo      *model.BuildInfo
 		okGitCommitEnv string
 		isOkteto       bool
-		initialOpts    *BuildOptions
-		expected       *BuildOptions
+		initialOpts    *types.BuildOptions
+		expected       *types.BuildOptions
 	}{
 		{
 			name:        "empty-values-is-okteto",
 			serviceName: "service",
 			buildInfo:   &model.BuildInfo{Name: "movies"},
 			isOkteto:    true,
-			expected: &BuildOptions{
+			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
 				BuildArgs:  []string{},
@@ -99,7 +100,7 @@ func Test_OptsFromManifest(t *testing.T) {
 			buildInfo:      &model.BuildInfo{Name: "movies"},
 			okGitCommitEnv: "dev1235466",
 			isOkteto:       true,
-			expected: &BuildOptions{
+			expected: &types.BuildOptions{
 				Tag:        "okteto.dev/movies-service:okteto",
 				OutputMode: oktetoLog.TTYFormat,
 				BuildArgs:  []string{},
@@ -111,7 +112,7 @@ func Test_OptsFromManifest(t *testing.T) {
 			buildInfo:      &model.BuildInfo{Name: "movies"},
 			okGitCommitEnv: "1235466",
 			isOkteto:       true,
-			expected: &BuildOptions{
+			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:114921fe985b5f874c8d312b0a098959da6d119209c9d1e42a89c4309569692d",
 				BuildArgs:  []string{},
@@ -130,7 +131,7 @@ func Test_OptsFromManifest(t *testing.T) {
 				}},
 			okGitCommitEnv: "1235466",
 			isOkteto:       true,
-			expected: &BuildOptions{
+			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:c0776074a88fa37835b1dfa67365b6a6b08b11c4cf49a9d42524ea9797959e58",
 				BuildArgs:  []string{"arg1=value1"},
@@ -141,7 +142,7 @@ func Test_OptsFromManifest(t *testing.T) {
 			serviceName: "service",
 			buildInfo:   &model.BuildInfo{Name: "movies"},
 			isOkteto:    false,
-			expected: &BuildOptions{
+			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				BuildArgs:  []string{},
 			},
@@ -162,11 +163,11 @@ func Test_OptsFromManifest(t *testing.T) {
 					},
 				},
 			},
-			initialOpts: &BuildOptions{
+			initialOpts: &types.BuildOptions{
 				OutputMode: "tty",
 			},
 			isOkteto: true,
-			expected: &BuildOptions{
+			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
 				File:       filepath.Join("service", "CustomDockerfile"),
@@ -189,8 +190,13 @@ func Test_OptsFromManifest(t *testing.T) {
 				},
 				CurrentContext: "test",
 			}
+			manifest := &model.Manifest{
+				Build: model.ManifestBuild{
+					tt.serviceName: tt.buildInfo,
+				},
+			}
 			os.Setenv(model.OktetoGitCommitEnvVar, tt.okGitCommitEnv)
-			result := OptsFromManifest(tt.serviceName, tt.buildInfo, tt.initialOpts)
+			result := OptsFromManifest(tt.serviceName, manifest, tt.initialOpts)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

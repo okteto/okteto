@@ -71,7 +71,7 @@ devs:
 			m, err := Read(tt.manifest)
 			assert.NoError(t, err)
 
-			m, err = m.ExpandEnvVars()
+			err = m.ExpandEnvVars()
 			if tt.expectedErr {
 				assert.Error(t, err)
 			} else {

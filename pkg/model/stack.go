@@ -54,6 +54,7 @@ var (
 // Stack represents an okteto stack
 type Stack struct {
 	Manifest  []byte                 `yaml:"-"`
+	Paths     []string               `yaml:"-"`
 	Warnings  StackWarnings          `yaml:"-"`
 	IsCompose bool                   `yaml:"-"`
 	Name      string                 `yaml:"name"`
@@ -222,7 +223,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	s.Paths = []string{stackPath}
 	s.Name, err = getStackName(name, stackPath, s.Name)
 	if err != nil {
 		return nil, err
@@ -543,6 +544,7 @@ func (stack *Stack) Merge(otherStack *Stack) *Stack {
 	if len(otherStack.Volumes) > 0 {
 		stack.Volumes = otherStack.Volumes
 	}
+	stack.Paths = append(stack.Paths, otherStack.Paths...)
 	stack = stack.mergeServices(otherStack)
 	return stack
 }

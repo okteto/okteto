@@ -23,6 +23,7 @@ import (
 	"unicode"
 
 	"github.com/okteto/okteto/cmd"
+	"github.com/okteto/okteto/cmd/build"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/destroy"
@@ -108,7 +109,7 @@ func main() {
 	root.AddCommand(cmd.Login())
 	root.AddCommand(contextCMD.Context())
 	root.AddCommand(cmd.Kubeconfig())
-	root.AddCommand(cmd.Build(ctx))
+	root.AddCommand(build.Build(ctx))
 	root.AddCommand(manifest.Manifest(ctx))
 
 	root.AddCommand(namespace.Namespace(ctx))

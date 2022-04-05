@@ -28,7 +28,7 @@ import (
 	"github.com/containerd/console"
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/distribution/reference"
-	"github.com/docker/docker/api/types"
+	dockerTypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
@@ -49,12 +49,13 @@ import (
 	"github.com/moby/buildkit/util/progress/progresswriter"
 	"github.com/moby/term"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 )
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build_buildkit.go#L48
-func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions *BuildOptions, cli *client.Client) error {
+func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions *types.BuildOptions, cli *client.Client) error {
 	oktetoLog.Infof("building your image with docker client v%s", cli.ClientVersion())
 	s, err := session.NewSession(context.Background(), buildOptions.Path, "")
 	if err != nil {
@@ -118,9 +119,9 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions *BuildOptio
 			s.Close()
 		}()
 		buildID := stringid.GenerateRandomID()
-		dockerBuildOptions := types.ImageBuildOptions{
+		dockerBuildOptions := dockerTypes.ImageBuildOptions{
 			BuildID:       buildID,
-			Version:       types.BuilderBuildKit,
+			Version:       dockerTypes.BuilderBuildKit,
 			Dockerfile:    filepath.Base(buildOptions.File),
 			RemoteContext: remote,
 			SessionID:     s.ID(),
@@ -164,7 +165,7 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions *BuildOptio
 }
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209
-func buildWithDockerDaemon(ctx context.Context, buildOptions *BuildOptions, cli *client.Client) error {
+func buildWithDockerDaemon(ctx context.Context, buildOptions *types.BuildOptions, cli *client.Client) error {
 	oktetoLog.Infof("building your image with docker client v%s", cli.ClientVersion())
 
 	dockerBuildContext, err := getBuildContext(buildOptions.Path, buildOptions.File)
@@ -193,7 +194,7 @@ func buildWithDockerDaemon(ctx context.Context, buildOptions *BuildOptions, cli 
 
 	imageID := ""
 	aux := func(msg jsonmessage.JSONMessage) {
-		var result types.BuildResult
+		var result dockerTypes.BuildResult
 		if err := json.Unmarshal(*msg.Aux, &result); err != nil {
 			oktetoLog.Infof(fmt.Sprintf("Failed to parse aux message: %s", err))
 		} else {
@@ -218,7 +219,7 @@ func buildWithDockerDaemon(ctx context.Context, buildOptions *BuildOptions, cli 
 
 }
 
-func displayStatus(out *os.File, eg *errgroup.Group, response types.ImageBuildResponse, buildOutputMode string, at session.Attachable) error {
+func displayStatus(out *os.File, eg *errgroup.Group, response dockerTypes.ImageBuildResponse, buildOutputMode string, at session.Attachable) error {
 
 	displayStatus := func(out *os.File, displayCh chan *buildkitClient.SolveStatus) {
 		var c console.Console
@@ -246,7 +247,7 @@ func displayStatus(out *os.File, eg *errgroup.Group, response types.ImageBuildRe
 
 	writeAux := func(msg jsonmessage.JSONMessage) {
 		if msg.ID == "moby.image.id" {
-			var result types.BuildResult
+			var result dockerTypes.BuildResult
 			if err := json.Unmarshal(*msg.Aux, &result); err != nil {
 				oktetoLog.Errorf("failed to parse aux message: %v", err)
 			}
@@ -377,8 +378,8 @@ func readDockerignore(contextDir string) ([]string, error) {
 }
 
 // getDockerOptions returns the docker build options
-func getDockerOptions(buildOptions *BuildOptions) (types.ImageBuildOptions, error) {
-	opts := types.ImageBuildOptions{
+func getDockerOptions(buildOptions *types.BuildOptions) (dockerTypes.ImageBuildOptions, error) {
+	opts := dockerTypes.ImageBuildOptions{
 		SuppressOutput: false,
 		Remove:         true,
 		ForceRemove:    true,
@@ -427,7 +428,7 @@ func pushImage(ctx context.Context, tag string, client *client.Client) error {
 		return err
 	}
 	requestPrivilege := command.RegistryAuthenticationPrivilegedFunc(dockerCli, repoInfo.Index, "push")
-	options := types.ImagePushOptions{
+	options := dockerTypes.ImagePushOptions{
 		RegistryAuth:  encodedAuth,
 		PrivilegeFunc: requestPrivilege,
 	}
@@ -440,7 +441,7 @@ func pushImage(ctx context.Context, tag string, client *client.Client) error {
 	return jsonmessage.DisplayJSONMessagesToStream(responseBody, dockerCli.Out(), nil)
 }
 
-func ResolveAuthConfig(ctx context.Context, dockerCli *command.DockerCli, cli *client.Client, repoInfo *dockerRegistry.RepositoryInfo) types.AuthConfig {
+func ResolveAuthConfig(ctx context.Context, dockerCli *command.DockerCli, cli *client.Client, repoInfo *dockerRegistry.RepositoryInfo) dockerTypes.AuthConfig {
 	configKey := repoInfo.Index.Name
 	if repoInfo.Index.Official {
 		info, err := cli.Info(ctx)
@@ -454,5 +455,5 @@ func ResolveAuthConfig(ctx context.Context, dockerCli *command.DockerCli, cli *c
 	}
 
 	a, _ := dockerCli.ConfigFile().GetAuthConfig(configKey)
-	return types.AuthConfig(a)
+	return dockerTypes.AuthConfig(a)
 }

@@ -554,12 +554,12 @@ func (dev *Dev) SetDefaults() error {
 	return nil
 }
 
-func (build *BuildInfo) setBuildDefaults() {
-	if build.Context == "" {
-		build.Context = "."
+func (b *BuildInfo) setBuildDefaults() {
+	if b.Context == "" {
+		b.Context = "."
 	}
-	if _, err := url.ParseRequestURI(build.Context); err != nil && build.Dockerfile == "" {
-		build.Dockerfile = "Dockerfile"
+	if _, err := url.ParseRequestURI(b.Context); err != nil && b.Dockerfile == "" {
+		b.Dockerfile = "Dockerfile"
 	}
 }
 
@@ -1300,4 +1300,33 @@ func getLocalhost() string {
 		return PrivilegedLocalhost
 	}
 	return Localhost
+}
+
+// Copy clones the buildInfo without the pointers
+func (b *BuildInfo) Copy() *BuildInfo {
+	result := &BuildInfo{
+		Name:       b.Name,
+		Context:    b.Context,
+		Dockerfile: b.Dockerfile,
+		Target:     b.Target,
+		Image:      b.Image,
+	}
+	cacheFrom := []string{}
+	for _, c := range b.CacheFrom {
+		cacheFrom = append(cacheFrom, c)
+	}
+	result.CacheFrom = cacheFrom
+
+	args := Environment{}
+	for _, e := range b.Args {
+		args = append(args, e)
+	}
+	result.Args = args
+
+	volumesToMount := []StackVolume{}
+	for _, v := range b.VolumesToInclude {
+		volumesToMount = append(volumesToMount, v)
+	}
+	result.VolumesToInclude = volumesToMount
+	return result
 }

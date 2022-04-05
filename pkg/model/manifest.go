@@ -167,6 +167,35 @@ func NewManifest() *Manifest {
 	}
 }
 
+// NewManifestFromStack creates a new manifest from a stack struct
+func NewManifestFromStack(stack *Stack) *Manifest {
+	stackManifest := &Manifest{
+		Type:      StackType,
+		Name:      stack.Name,
+		Namespace: stack.Namespace,
+		Deploy: &DeployInfo{
+			Compose: &ComposeInfo{
+				Manifest: stack.Paths,
+				Stack:    stack,
+			},
+		},
+		Dev:   ManifestDevs{},
+		Build: ManifestBuild{},
+		IsV2:  true,
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		oktetoLog.Fail("Can not find cwd: %s", err)
+		return nil
+	}
+	stackManifest, err = stackManifest.InferFromStack(cwd)
+	if err != nil {
+		oktetoLog.Fail("Can not convert stack to Manifestv2: %s", err)
+		return nil
+	}
+	return stackManifest
+}
+
 // NewManifestFromDev creates a manifest from a dev
 func NewManifestFromDev(dev *Dev) *Manifest {
 	manifest := NewManifest()
@@ -622,29 +651,32 @@ func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 }
 
 // ExpandEnvVars expands env vars to be set on the manifest
-func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
+func (m *Manifest) ExpandEnvVars() error {
 	var err error
 	if m.Deploy != nil {
 		for idx, cmd := range m.Deploy.Commands {
 			cmd.Command, err = ExpandEnv(cmd.Command, true)
 			if err != nil {
-				return nil, errors.New("could not parse env vars")
+				return errors.New("could not parse env vars")
 			}
 			m.Deploy.Commands[idx] = cmd
 		}
 		if m.Deploy.Compose != nil && m.Deploy.Compose.Stack != nil {
 			s, err := LoadStack("", m.Deploy.Compose.Manifest)
 			if err != nil {
-				return nil, err
+				oktetoLog.Infof("Could not reload stack manifest: %s", err)
+				s = m.Deploy.Compose.Stack
 			}
+			s.Namespace = m.Deploy.Compose.Stack.Namespace
+			s.Context = m.Deploy.Compose.Stack.Context
 			for svcName, svc := range s.Services {
-				if svc.Build == nil && len(svc.VolumeMounts) == 0 {
+				if _, ok := m.Build[svcName]; svc.Build == nil && len(svc.VolumeMounts) == 0 && !ok {
 					continue
 				}
 				tag := fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(svcName, "-", "_")))
 				expandedTag, err := ExpandEnv(tag, true)
 				if err != nil {
-					return nil, err
+					return err
 				}
 				if expandedTag != "" {
 					svc.Image = expandedTag
@@ -660,7 +692,7 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 			}
 			m, err = m.InferFromStack(cwd)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
@@ -668,13 +700,13 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 		for idx, cmd := range m.Destroy {
 			cmd.Command, err = envsubst.String(cmd.Command)
 			if err != nil {
-				return nil, errors.New("could not parse env vars")
+				return errors.New("could not parse env vars")
 			}
 			m.Destroy[idx] = cmd
 		}
 	}
 
-	return m, nil
+	return nil
 }
 
 // Dependency represents a dependency object at the manifest

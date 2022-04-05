@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/cmd/build"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/utils"
@@ -257,6 +258,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		Proxy:              proxy,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
+		Builder:            build.NewBuildCommand(),
 	}
 
 	err = c.RunDeploy(ctx, &deploy.Options{
