@@ -123,6 +123,7 @@ type BuildInfo struct {
 	Args             Environment   `yaml:"args,omitempty"`
 	Image            string        `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume `yaml:"-"`
+	ExportCache      string        `yaml:"export_cache,omitempty"`
 }
 
 // Volume represents a volume in the development container

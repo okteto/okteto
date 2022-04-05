@@ -42,6 +42,7 @@ type buildInfoRaw struct {
 	Args             Environment   `yaml:"args,omitempty"`
 	Image            string        `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume `yaml:"-"`
+	ExportCache      string        `yaml:"export_cache,omitempty"`
 }
 
 type syncRaw struct {
@@ -308,6 +309,7 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	buildInfo.Args = rawBuildInfo.Args
 	buildInfo.Image = rawBuildInfo.Image
 	buildInfo.CacheFrom = rawBuildInfo.CacheFrom
+	buildInfo.ExportCache = rawBuildInfo.ExportCache
 	return nil
 }
 
