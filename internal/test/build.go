@@ -77,14 +77,6 @@ func (fb *FakeOktetoRegistry) AddImageByName(images ...string) error {
 	return nil
 }
 
-// AddImageByStruct adds an image to the registry
-func (fb *FakeOktetoRegistry) AddImageByStruct(images ...FakeImage) error {
-	for _, image := range images {
-		fb.Registry[image.ImageRef] = &image
-	}
-	return nil
-}
-
 // GetImageTagWithDigest returns the image tag digest
 func (fb *FakeOktetoRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
 	if _, ok := fb.Registry[imageTag]; !ok {

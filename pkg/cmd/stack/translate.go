@@ -257,7 +257,7 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					InitContainers:                initContainers,
 					Affinity:                      translateAffinity(svc),
-					Volumes:                       translateVolumes(svcName, svc),
+					Volumes:                       translateVolumes(svc),
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -267,7 +267,7 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 							Env:             translateServiceEnvironment(svc),
 							Ports:           translateContainerPorts(svc),
 							SecurityContext: translateSecurityContext(svc),
-							VolumeMounts:    translateVolumeMounts(svcName, svc),
+							VolumeMounts:    translateVolumeMounts(svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
 							ReadinessProbe:  healthcheckProbe,
@@ -316,14 +316,14 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 							Env:             translateServiceEnvironment(svc),
 							Ports:           translateContainerPorts(svc),
 							SecurityContext: translateSecurityContext(svc),
-							VolumeMounts:    translateVolumeMounts(svcName, svc),
+							VolumeMounts:    translateVolumeMounts(svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
 							ReadinessProbe:  healthcheckProbe,
 							LivenessProbe:   healthcheckProbe,
 						},
 					},
-					Volumes: translateVolumes(svcName, svc),
+					Volumes: translateVolumes(svc),
 				},
 			},
 		},
@@ -444,7 +444,7 @@ func translateVolumeClaimTemplates(svcName string, s *model.Stack) []apiv1.Persi
 	return nil
 }
 
-func translateVolumes(svcName string, svc *model.Service) []apiv1.Volume {
+func translateVolumes(svc *model.Service) []apiv1.Volume {
 	volumes := make([]apiv1.Volume, 0)
 	for _, volume := range svc.Volumes {
 		name := getVolumeClaimName(&volume)
@@ -680,7 +680,7 @@ func translateServiceType(svc model.Service) apiv1.ServiceType {
 	return apiv1.ServiceTypeClusterIP
 }
 
-func translateVolumeMounts(svcName string, svc *model.Service) []apiv1.VolumeMount {
+func translateVolumeMounts(svc *model.Service) []apiv1.VolumeMount {
 	result := []apiv1.VolumeMount{}
 	for i, v := range svc.Volumes {
 		name := getVolumeClaimName(&v)

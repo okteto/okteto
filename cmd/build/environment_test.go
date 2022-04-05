@@ -77,7 +77,6 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			}
 
 			registry := test.NewFakeOktetoRegistry(nil)
-			registry.AddImageByStruct()
 			bc := &Command{
 				Registry: registry,
 			}

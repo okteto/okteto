@@ -23,7 +23,7 @@ import (
 )
 
 // SetServicetEnvVars set okteto build env vars
-func (bc *Command) SetServicetEnvVars(service, reference string) error {
+func (*Command) SetServicetEnvVars(service, reference string) error {
 	reg, repo, tag, image := registry.GetReferecenceEnvs(reference)
 
 	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repo, image, tag)

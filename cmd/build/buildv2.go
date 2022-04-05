@@ -64,11 +64,7 @@ func (bc *Command) BuildV2(ctx context.Context, manifest *model.Manifest, option
 	if options.EnableStages {
 		oktetoLog.SetStage("")
 	}
-	if err := manifest.ExpandEnvVars(); err != nil {
-		return err
-	}
-
-	return nil
+	return manifest.ExpandEnvVars()
 }
 func (bc *Command) buildService(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	buildSvcInfo := manifest.Build[svcName]

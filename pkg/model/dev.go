@@ -1312,21 +1312,15 @@ func (b *BuildInfo) Copy() *BuildInfo {
 		Image:      b.Image,
 	}
 	cacheFrom := []string{}
-	for _, c := range b.CacheFrom {
-		cacheFrom = append(cacheFrom, c)
-	}
+	cacheFrom = append(cacheFrom, b.CacheFrom...)
 	result.CacheFrom = cacheFrom
 
 	args := Environment{}
-	for _, e := range b.Args {
-		args = append(args, e)
-	}
+	args = append(args, b.Args...)
 	result.Args = args
 
 	volumesToMount := []StackVolume{}
-	for _, v := range b.VolumesToInclude {
-		volumesToMount = append(volumesToMount, v)
-	}
+	volumesToMount = append(volumesToMount, b.VolumesToInclude...)
 	result.VolumesToInclude = volumesToMount
 	return result
 }

@@ -140,8 +140,5 @@ func loadContext(ctx context.Context, manifest *model.Manifest, isBuildV2 bool, 
 		}
 	}
 
-	if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
-		return err
-	}
-	return nil
+	return contextCMD.NewContextCommand().Run(ctx, ctxOpts)
 }
