@@ -639,7 +639,11 @@ func (dev *Dev) expandEnvFiles() error {
 // Validate validates if a dev environment is correctly formed
 func (dev *Dev) Validate() error {
 	if dev.Name == "" {
-		return fmt.Errorf("Name cannot be empty")
+		return fmt.Errorf("name cannot be empty")
+	}
+
+	if dev.Docker.Enabled {
+		oktetoLog.Yellow("The use of 'docker' field is deprecated and will be removed in version 2.2.0'.")
 	}
 
 	if dev.Image == nil {
