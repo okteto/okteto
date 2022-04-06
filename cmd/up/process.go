@@ -88,7 +88,9 @@ func getParent(p *process.Process) (*process.Process, error) {
 	if err != nil {
 		return nil, fmt.Errorf("can not find parent")
 	}
-	if parent.Pid < 100 {
+	if runtime.GOOS == "windows" && (parent.Pid == 0 || parent.Pid == 4) {
+		return nil, fmt.Errorf("can't remove root process")
+	} else if runtime.GOOS != "windows" && parent.Pid < 100 {
 		return nil, fmt.Errorf("can't remove root process")
 	}
 	pName, err := parent.Name()
