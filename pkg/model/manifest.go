@@ -188,9 +188,11 @@ type DeployInfo struct {
 
 // ComposeSectionInfo represents information about compose file
 type ComposeSectionInfo struct {
-	ComposesInfo []ComposeInfo `json:"manifest,omitempty" yaml:"manifest,omitempty"`
-	Stack        *Stack        `json:"-" yaml:"-"`
+	ComposesInfo ComposeInfoList `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Stack        *Stack          `json:"-" yaml:"-"`
 }
+
+type ComposeInfoList []ComposeInfo
 
 type ComposeInfo struct {
 	File             string           `json:"file,omitempty" yaml:"file,omitempty"`

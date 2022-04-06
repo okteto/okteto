@@ -860,19 +860,10 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (c *ComposeSectionInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var singleComposeInfo ComposeInfo
-	err := unmarshal(&singleComposeInfo)
+	var composeInfoList ComposeInfoList
+	err := unmarshal(&composeInfoList)
 	if err == nil {
-		c.ComposesInfo = []ComposeInfo{
-			singleComposeInfo,
-		}
-		return nil
-	}
-
-	var multipleComposeInfo []ComposeInfo
-	err = unmarshal(&multipleComposeInfo)
-	if err == nil {
-		c.ComposesInfo = multipleComposeInfo
+		c.ComposesInfo = composeInfoList
 		return nil
 	}
 
@@ -894,6 +885,26 @@ func (c *ComposeSectionInfo) MarshalYAML() (interface{}, error) {
 		return c.ComposesInfo, nil
 	}
 	return c, nil
+}
+
+func (c *ComposeInfoList) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var singleComposeInfo ComposeInfo
+	err := unmarshal(&singleComposeInfo)
+	if err == nil {
+		*c = []ComposeInfo{
+			singleComposeInfo,
+		}
+		return nil
+	}
+
+	var multipleComposeInfo []ComposeInfo
+	err = unmarshal(&multipleComposeInfo)
+	if err == nil {
+		*c = multipleComposeInfo
+		return nil
+	}
+
+	return err
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
