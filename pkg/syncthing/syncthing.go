@@ -37,7 +37,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/google/uuid"
-	gops "github.com/mitchellh/go-ps"
 	"github.com/shirou/gopsutil/process"
 )
 
@@ -810,22 +809,6 @@ func (s *Syncthing) HardTerminate() error {
 				oktetoLog.Infof("error getting name for process %d: %s", p.Pid, err.Error())
 			}
 			continue
-		}
-
-		// workaround until https://github.com/shirou/gopsutil/issues/1043 is fixed
-		if name == "" && runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
-			pr, err := gops.FindProcess(int(p.Pid))
-			if err != nil {
-				oktetoLog.Infof("error getting process %d: %s", p.Pid, err.Error())
-				continue
-			}
-
-			if pr == nil {
-				oktetoLog.Infof("process  %d not found", p.Pid)
-				continue
-			}
-
-			name = pr.Executable()
 		}
 
 		if name == "" {

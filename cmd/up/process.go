@@ -20,7 +20,6 @@ import (
 	"strings"
 	"time"
 
-	gops "github.com/mitchellh/go-ps"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/shirou/gopsutil/process"
@@ -44,22 +43,6 @@ func (up *upContext) stopRunningUpOnSameFolder() error {
 				oktetoLog.Infof("error getting name for process %d: %s", p.Pid, err.Error())
 			}
 			continue
-		}
-
-		// workaround until https://github.com/shirou/gopsutil/issues/1043 is fixed
-		if name == "" && runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
-			pr, err := gops.FindProcess(int(p.Pid))
-			if err != nil {
-				oktetoLog.Infof("error getting process %d: %s", p.Pid, err.Error())
-				continue
-			}
-
-			if pr == nil {
-				oktetoLog.Infof("process  %d not found", p.Pid)
-				continue
-			}
-
-			name = pr.Executable()
 		}
 
 		if name == "" {
