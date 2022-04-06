@@ -5,3 +5,4 @@ workdir: /okteto
 volumes:
   - /go/pkg/
   - /root/.cache/go-build/
+autocreate: true

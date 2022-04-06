@@ -300,7 +300,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 }
 
 func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
-	devManifest, err := getManifest(manifestPath)
+	devManifest, err := getOktetoManifest(manifestPath)
 	if err != nil {
 		oktetoLog.Info("devManifest err, fallback to stack unmarshall")
 		stackManifest := &Manifest{
@@ -343,12 +343,16 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v2 unmarshalled successfully")
 		devManifest.Type = OktetoManifestType
 		if devManifest.Deploy != nil && devManifest.Deploy.ComposeSection != nil && len(devManifest.Deploy.ComposeSection.ComposesInfo) > 0 {
-			s, err := LoadStack("", devManifest.Deploy.ComposeSection.ComposesInfo)
+			var stackFiles []string
+			for _, composeInfo := range devManifest.Deploy.ComposeSection.ComposesInfo {
+				stackFiles = append(stackFiles, composeInfo.File)
+			}
+			s, err := LoadStack("", stackFiles)
 			if err != nil {
 				return nil, err
 			}
 			devManifest.Deploy.ComposeSection.Stack = s
-			if devManifest.Deploy != nil && devManifest.Deploy.Endpoints != nil {
+			if devManifest.Deploy.Endpoints != nil {
 				s.Endpoints = devManifest.Deploy.Endpoints
 			}
 			devManifest, err = devManifest.InferFromStack(cwd)
@@ -398,7 +402,11 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 			IsV2:  true,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
-		s, err := LoadStack("", stackManifest.Deploy.ComposeSection.ComposesInfo)
+		var stackFiles []string
+		for _, composeInfo := range stackManifest.Deploy.ComposeSection.ComposesInfo {
+			stackFiles = append(stackFiles, composeInfo.File)
+		}
+		s, err := LoadStack("", stackFiles)
 		if err != nil {
 			return nil, err
 		}
@@ -493,8 +501,8 @@ func inferHelmTags(path string) string {
 	return result
 }
 
-// getManifest returns a Dev object from a given file
-func getManifest(devPath string) (*Manifest, error) {
+// getOktetoManifest returns an okteto object from a given file
+func getOktetoManifest(devPath string) (*Manifest, error) {
 	b, err := os.ReadFile(devPath)
 	if err != nil {
 		return nil, err
@@ -645,18 +653,22 @@ func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 }
 
 // ExpandEnvVars expands env vars to be set on the manifest
-func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
+func (manifest *Manifest) ExpandEnvVars() (*Manifest, error) {
 	var err error
-	if m.Deploy != nil {
-		for idx, cmd := range m.Deploy.Commands {
+	if manifest.Deploy != nil {
+		for idx, cmd := range manifest.Deploy.Commands {
 			cmd.Command, err = ExpandEnv(cmd.Command, true)
 			if err != nil {
 				return nil, errors.New("could not parse env vars")
 			}
-			m.Deploy.Commands[idx] = cmd
+			manifest.Deploy.Commands[idx] = cmd
 		}
-		if m.Deploy.ComposeSection != nil && m.Deploy.ComposeSection.Stack != nil {
-			s, err := LoadStack("", m.Deploy.ComposeSection.ComposesInfo)
+		if manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
+			var stackFiles []string
+			for _, composeInfo := range manifest.Deploy.ComposeSection.ComposesInfo {
+				stackFiles = append(stackFiles, composeInfo.File)
+			}
+			s, err := LoadStack("", stackFiles)
 			if err != nil {
 				return nil, err
 			}
@@ -673,31 +685,31 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 					svc.Image = expandedTag
 				}
 			}
-			m.Deploy.ComposeSection.Stack = s
-			if m.Deploy.Endpoints != nil {
-				s.Endpoints = m.Deploy.Endpoints
+			manifest.Deploy.ComposeSection.Stack = s
+			if manifest.Deploy.Endpoints != nil {
+				s.Endpoints = manifest.Deploy.Endpoints
 			}
 			cwd, err := os.Getwd()
 			if err != nil {
 				oktetoLog.Info("could not detect working directory")
 			}
-			m, err = m.InferFromStack(cwd)
+			manifest, err = manifest.InferFromStack(cwd)
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
-	if m.Destroy != nil {
-		for idx, cmd := range m.Destroy {
+	if manifest.Destroy != nil {
+		for idx, cmd := range manifest.Destroy {
 			cmd.Command, err = envsubst.String(cmd.Command)
 			if err != nil {
 				return nil, errors.New("could not parse env vars")
 			}
-			m.Destroy[idx] = cmd
+			manifest.Destroy[idx] = cmd
 		}
 	}
 
-	return m, nil
+	return manifest, nil
 }
 
 // Dependency represents a dependency object at the manifest
