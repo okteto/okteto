@@ -46,7 +46,6 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	}
 	dir, err := createDockerfile()
 	assert.NoError(t, err)
-	defer os.RemoveAll(dir)
 
 	tag := "okteto.dev/test"
 	options := &types.BuildOptions{
