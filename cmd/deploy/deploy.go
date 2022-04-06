@@ -271,15 +271,17 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
-	var manifestDeclaredServicesToDeploy []string
-	for _, composeInfo := range deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo {
-		manifestDeclaredServicesToDeploy = append(manifestDeclaredServicesToDeploy, composeInfo.ServicesToDeploy...)
-	}
-	if len(deployOptions.servicesToDeploy) > 0 && len(manifestDeclaredServicesToDeploy) > 0 {
-		oktetoLog.Warning("overwriting manifest's `services to deploy` with command line arguments")
-	}
-	if len(deployOptions.servicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
-		deployOptions.servicesToDeploy = manifestDeclaredServicesToDeploy
+	if deployOptions.Manifest != nil && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil {
+		var manifestDeclaredServicesToDeploy []string
+		for _, composeInfo := range deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo {
+			manifestDeclaredServicesToDeploy = append(manifestDeclaredServicesToDeploy, composeInfo.ServicesToDeploy...)
+		}
+		if len(deployOptions.servicesToDeploy) > 0 && len(manifestDeclaredServicesToDeploy) > 0 {
+			oktetoLog.Warning("overwriting manifest's `services to deploy` with command line arguments")
+		}
+		if len(deployOptions.servicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
+			deployOptions.servicesToDeploy = manifestDeclaredServicesToDeploy
+		}
 	}
 
 	dc.Proxy.SetName(deployOptions.Name)
