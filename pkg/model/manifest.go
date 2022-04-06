@@ -181,19 +181,23 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 
 // DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
-	Commands  []DeployCommand `json:"commands,omitempty" yaml:"commands,omitempty"`
-	Compose   *ComposeInfo    `json:"compose,omitempty" yaml:"compose,omitempty"`
-	Endpoints EndpointSpec    `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	Commands       []DeployCommand     `json:"commands,omitempty" yaml:"commands,omitempty"`
+	ComposeSection *ComposeSectionInfo `json:"compose,omitempty" yaml:"compose,omitempty"`
+	Endpoints      EndpointSpec        `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 }
 
-// ComposeInfo represents information about compose file
+// ComposeSectionInfo represents information about compose file
+type ComposeSectionInfo struct {
+	ComposesInfo []ComposeInfo `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Stack        *Stack        `json:"-" yaml:"-"`
+}
+
 type ComposeInfo struct {
-	Manifest ManifestList `json:"manifest,omitempty" yaml:"manifest,omitempty"`
-	Stack    *Stack       `json:"-" yaml:"-"`
+	File             string           `json:"file,omitempty" yaml:"file,omitempty"`
+	ServicesToDeploy ServicesToDeploy `json:"services,omitempty" yaml:"services,omitempty"`
 }
 
-// ManifestList is a list containing all the compose files
-type ManifestList []string
+type ServicesToDeploy []string
 
 // DeployCommand represents a command to be executed
 type DeployCommand struct {
@@ -261,10 +265,10 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 				return nil, err
 			}
 			if devManifest != nil && devManifest.Deploy != nil && devManifest.Deploy.Endpoints != nil {
-				inferredManifest.Deploy.Compose.Stack.Endpoints = devManifest.Deploy.Endpoints
+				inferredManifest.Deploy.ComposeSection.Stack.Endpoints = devManifest.Deploy.Endpoints
 			}
-			if inferredManifest.Deploy.Compose.Stack.Name != "" {
-				inferredManifest.Name = inferredManifest.Deploy.Compose.Stack.Name
+			if inferredManifest.Deploy.ComposeSection.Stack.Name != "" {
+				inferredManifest.Name = inferredManifest.Deploy.ComposeSection.Stack.Name
 			}
 		}
 		if devManifest != nil {
@@ -302,9 +306,9 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 		stackManifest := &Manifest{
 			Type: StackType,
 			Deploy: &DeployInfo{
-				Compose: &ComposeInfo{
-					Manifest: []string{
-						manifestPath,
+				ComposeSection: &ComposeSectionInfo{
+					ComposesInfo: []ComposeInfo{
+						{File: manifestPath},
 					},
 				},
 			},
@@ -313,14 +317,19 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			IsV2:  true,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
-		s, stackErr := LoadStack("", stackManifest.Deploy.Compose.Manifest)
+
+		var composeFiles []string
+		for _, composeInfo := range stackManifest.Deploy.ComposeSection.ComposesInfo {
+			composeFiles = append(composeFiles, composeInfo.File)
+		}
+		s, stackErr := LoadStack("", composeFiles)
 		//We should return the error returned by the devManifest instead of the stack
 		if stackErr != nil {
 			return nil, err
 		}
-		stackManifest.Deploy.Compose.Stack = s
-		if stackManifest.Deploy.Compose.Stack.Name != "" {
-			stackManifest.Name = stackManifest.Deploy.Compose.Stack.Name
+		stackManifest.Deploy.ComposeSection.Stack = s
+		if stackManifest.Deploy.ComposeSection.Stack.Name != "" {
+			stackManifest.Name = stackManifest.Deploy.ComposeSection.Stack.Name
 		}
 		stackManifest, err = stackManifest.InferFromStack(cwd)
 		if err != nil {
@@ -333,12 +342,12 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 	if devManifest.IsV2 {
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v2 unmarshalled successfully")
 		devManifest.Type = OktetoManifestType
-		if devManifest.Deploy != nil && devManifest.Deploy.Compose != nil && len(devManifest.Deploy.Compose.Manifest) > 0 {
-			s, err := LoadStack("", devManifest.Deploy.Compose.Manifest)
+		if devManifest.Deploy != nil && devManifest.Deploy.ComposeSection != nil && len(devManifest.Deploy.ComposeSection.ComposesInfo) > 0 {
+			s, err := LoadStack("", devManifest.Deploy.ComposeSection.ComposesInfo)
 			if err != nil {
 				return nil, err
 			}
-			devManifest.Deploy.Compose.Stack = s
+			devManifest.Deploy.ComposeSection.Stack = s
 			if devManifest.Deploy != nil && devManifest.Deploy.Endpoints != nil {
 				s.Endpoints = devManifest.Deploy.Endpoints
 			}
@@ -378,9 +387,9 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		stackManifest := &Manifest{
 			Type: StackType,
 			Deploy: &DeployInfo{
-				Compose: &ComposeInfo{
-					Manifest: []string{
-						stackPath,
+				ComposeSection: &ComposeSectionInfo{
+					ComposesInfo: []ComposeInfo{
+						{File: stackPath},
 					},
 				},
 			},
@@ -389,11 +398,11 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 			IsV2:  true,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
-		s, err := LoadStack("", stackManifest.Deploy.Compose.Manifest)
+		s, err := LoadStack("", stackManifest.Deploy.ComposeSection.ComposesInfo)
 		if err != nil {
 			return nil, err
 		}
-		stackManifest.Deploy.Compose.Stack = s
+		stackManifest.Deploy.ComposeSection.Stack = s
 		stackManifest.Manifest = s.Manifest
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
 
@@ -646,8 +655,8 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 			}
 			m.Deploy.Commands[idx] = cmd
 		}
-		if m.Deploy.Compose != nil && m.Deploy.Compose.Stack != nil {
-			s, err := LoadStack("", m.Deploy.Compose.Manifest)
+		if m.Deploy.ComposeSection != nil && m.Deploy.ComposeSection.Stack != nil {
+			s, err := LoadStack("", m.Deploy.ComposeSection.ComposesInfo)
 			if err != nil {
 				return nil, err
 			}
@@ -664,7 +673,7 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 					svc.Image = expandedTag
 				}
 			}
-			m.Deploy.Compose.Stack = s
+			m.Deploy.ComposeSection.Stack = s
 			if m.Deploy.Endpoints != nil {
 				s.Endpoints = m.Deploy.Endpoints
 			}
@@ -702,7 +711,7 @@ type Dependency struct {
 
 // InferFromStack infers data from a stackfile
 func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
-	for svcName, svcInfo := range m.Deploy.Compose.Stack.Services {
+	for svcName, svcInfo := range m.Deploy.ComposeSection.Stack.Services {
 		d := NewDev()
 		for _, p := range svcInfo.Ports {
 			if p.HostPort != 0 {
@@ -756,7 +765,7 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 // WriteToFile writes a manifest to a file with comments to make it easier to understand
 func (m *Manifest) WriteToFile(filePath string) error {
 	if m.Deploy != nil {
-		if len(m.Deploy.Commands) == 0 && m.Deploy.Compose == nil {
+		if len(m.Deploy.Commands) == 0 && m.Deploy.ComposeSection == nil {
 			m.Deploy.Commands = []DeployCommand{
 				{
 					Name:    FakeCommand,

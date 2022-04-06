@@ -388,9 +388,9 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 	manifest := &model.Manifest{
 		Type: model.StackType,
 		Deploy: &model.DeployInfo{
-			Compose: &model.ComposeInfo{
-				Manifest: []string{
-					composePath,
+			ComposeSection: &model.ComposeSectionInfo{
+				ComposesInfo: []model.ComposeInfo{
+					{File: composePath},
 				},
 				Stack: stack,
 			},
@@ -544,7 +544,7 @@ func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
 			}
 			d.Commands = commands
 			d.Endpoints = mc.manifest.Deploy.Endpoints
-			d.Compose = mc.manifest.Deploy.Compose
+			d.ComposeSection = mc.manifest.Deploy.ComposeSection
 		}
 		manifest.Deploy = d
 		return &manifest, nil
