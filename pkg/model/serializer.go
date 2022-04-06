@@ -869,6 +869,13 @@ func (c *ComposeSectionInfo) UnmarshalYAML(unmarshal func(interface{}) error) er
 		return nil
 	}
 
+	var multipleComposeInfo []ComposeInfo
+	err = unmarshal(&multipleComposeInfo)
+	if err == nil {
+		c.ComposesInfo = multipleComposeInfo
+		return nil
+	}
+
 	type composeSectionInfoRaw ComposeSectionInfo // This is necessary to prevent recursion
 	var compose composeSectionInfoRaw
 	err = unmarshal(&compose)

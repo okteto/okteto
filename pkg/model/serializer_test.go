@@ -1807,7 +1807,7 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 - okteto stack deploy`),
 			expected: &DeployInfo{
 				Commands: []DeployCommand{
-					DeployCommand{
+					{
 						Name:    "okteto stack deploy",
 						Command: "okteto stack deploy",
 					},
@@ -1946,8 +1946,7 @@ func TestComposeSectionInfoUnmarshalling(t *testing.T) {
 	}{
 		{
 			name: "list of compose",
-			composeInfoManifest: []byte(`
-- docker-compose.yml
+			composeInfoManifest: []byte(`- docker-compose.yml
 - docker-compose.dev.yml`),
 			expected: &ComposeSectionInfo{
 				ComposesInfo: []ComposeInfo{
@@ -1983,8 +1982,9 @@ func TestComposeSectionInfoUnmarshalling(t *testing.T) {
 			},
 		},
 		{
-			name: "extended notation one compose",
-			composeInfoManifest: []byte(`manifest:
+			name: "multiple compose under `manifest`",
+			composeInfoManifest: []byte(`
+manifest:
   - docker-compose.yml
   - docker-compose.dev.yml`),
 			expected: &ComposeSectionInfo{
