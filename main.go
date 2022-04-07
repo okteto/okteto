@@ -134,7 +134,7 @@ func main() {
 	}
 
 	for _, command := range deprecatedDevCommands {
-		command.Deprecated = "use `dev` instead"
+		command.Deprecated = fmt.Sprintf("use `dev %s` instead", command.Use)
 		command.Hidden = true
 		root.AddCommand(command)
 	}
