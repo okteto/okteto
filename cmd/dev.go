@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/up"
@@ -9,18 +10,25 @@ import (
 )
 
 func Dev(ctx context.Context) *cobra.Command {
-	command := &cobra.Command{
+	devCommand := &cobra.Command{
 		Use:   "dev [up|down|status|doctor|exec|restart]",
 		Short: "Manage your development environment",
 	}
 
-	command.AddCommand(up.Up())
-	command.AddCommand(Down())
-	command.AddCommand(Status())
-	command.AddCommand(Doctor())
-	command.AddCommand(Exec())
-	command.AddCommand(Restart())
-	command.AddCommand(deploy.Endpoints(ctx))
+	devSubCommands := []*cobra.Command{
+		up.Up(),
+		Down(),
+		Status(),
+		Doctor(),
+		Exec(),
+		Restart(),
+		deploy.Endpoints(ctx),
+	}
 
-	return command
+	for _, subCommand := range devSubCommands {
+		subCommand.Short = fmt.Sprintf("%s. %s", subCommand.Short, fmt.Sprintf("You can use `okteto %s` as an alias", subCommand.Use))
+		devCommand.AddCommand(subCommand)
+	}
+
+	return devCommand
 }

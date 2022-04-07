@@ -123,7 +123,7 @@ func main() {
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 
 	// Aliases. They are already under `dev`
-	deprecatedDevCommands := []*cobra.Command{
+	aliasDevCommands := []*cobra.Command{
 		up.Up(),
 		cmd.Down(),
 		cmd.Status(),
@@ -133,8 +133,7 @@ func main() {
 		deploy.Endpoints(ctx),
 	}
 
-	for _, command := range deprecatedDevCommands {
-		command.Deprecated = fmt.Sprintf("use `dev %s` instead", command.Use)
+	for _, command := range aliasDevCommands {
 		command.Hidden = true
 		root.AddCommand(command)
 	}
