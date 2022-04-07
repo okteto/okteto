@@ -34,7 +34,7 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 	in := strings.NewReader("\n")
 	var out bytes.Buffer
 
-	cmd := "cat /var/okteto/bin/version.txt; cat /proc/sys/fs/inotify/max_user_watches; [ -f /var/okteto/cloudbin/start.sh ] && echo yes || echo no; /var/okteto/bin/clean >/dev/null 2>&1"
+	cmd := "cat /var/okteto/bin/version.txt; cat /proc/sys/fs/inotify/max_user_watches; /var/okteto/bin/clean >/dev/null 2>&1"
 
 	err := exec.Exec(
 		ctx,

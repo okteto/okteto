@@ -908,28 +908,6 @@ func Test_validate(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name: "docker-with-persistent-volume",
-			manifest: []byte(`
-      name: deployment
-      sync:
-        - .:/app
-      docker:
-        enabled: true`),
-			expectErr: false,
-		},
-		{
-			name: "docker-without-persistent-volume",
-			manifest: []byte(`
-      name: deployment
-      sync:
-        - .:/app
-      persistentVolume:
-        enabled: false
-      docker:
-        enabled: true`),
-			expectErr: true,
-		},
-		{
 			name: "runAsNonRoot-with-root-user",
 			manifest: []byte(`
       name: deployment
@@ -1364,19 +1342,6 @@ func Test_validateForExtraFields(t *testing.T) {
 			value: `timeout:
                    default: 3m
                    resources: 5m`,
-		},
-		{
-			name: "docker",
-			value: `docker:
-                   enabled: true
-                   image: docker:20-dind
-                   resources:
-                     requests:
-                       cpu: 30m
-                       memory: 30Mi
-                     limits:
-                       cpu: 30m
-                       memory: 30Mi`,
 		},
 		{
 			name: "divert",

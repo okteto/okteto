@@ -94,7 +94,6 @@ func (tr *Translation) translate() error {
 			TranslateOktetoBinVolumeMounts(devContainer)
 			TranslateOktetoInitBinContainer(rule, tr.DevApp.PodSpec())
 			TranslateOktetoInitFromImageContainer(tr.DevApp.PodSpec(), rule)
-			TranslateDinDContainer(tr.DevApp.PodSpec(), rule)
 			TranslateOktetoBinVolume(tr.DevApp.PodSpec())
 		}
 	}
@@ -193,56 +192,6 @@ func TranslatePodSpec(podSpec *apiv1.PodSpec, rule *model.TranslationRule) {
 
 	TranslateOktetoNodeSelector(podSpec, rule.NodeSelector)
 	TranslateOktetoAffinity(podSpec, rule.Affinity)
-}
-
-//TranslateDinDContainer translates the DinD container
-func TranslateDinDContainer(spec *apiv1.PodSpec, rule *model.TranslationRule) {
-	if !rule.Docker.Enabled {
-		return
-	}
-	c := apiv1.Container{
-		Name:  "dind",
-		Image: rule.Docker.Image,
-		Env: []apiv1.EnvVar{
-			{
-				Name:  "DOCKER_TLS_CERTDIR",
-				Value: model.DefaultDockerCertDir,
-			},
-		},
-		VolumeMounts: []apiv1.VolumeMount{},
-		SecurityContext: &apiv1.SecurityContext{
-			Privileged: pointer.BoolPtr(true),
-		},
-	}
-
-	for _, v := range rule.Volumes {
-		if isDockerVolumeMount(v.SubPath) {
-			c.VolumeMounts = append(
-				c.VolumeMounts,
-				apiv1.VolumeMount{
-					Name:      v.Name,
-					MountPath: v.MountPath,
-					SubPath:   v.SubPath,
-				},
-			)
-		}
-	}
-
-	translateInitResources(&c, rule.Docker.Resources)
-
-	spec.Containers = append(spec.Containers, c)
-}
-
-func isDockerVolumeMount(subPath string) bool {
-	if strings.HasPrefix(subPath, model.SourceCodeSubPath) {
-		return true
-	}
-
-	if subPath == model.DefaultDockerCertDirSubPath {
-		return true
-	}
-
-	return subPath == model.DefaultDockerCacheDirSubPath
 }
 
 //TranslateProbes translates the probes attached to a container
@@ -346,9 +295,6 @@ func TranslateVolumeMounts(c *apiv1.Container, rule *model.TranslationRule) {
 	}
 
 	for _, v := range rule.Volumes {
-		if v.SubPath == model.DefaultDockerCacheDirSubPath {
-			continue
-		}
 		c.VolumeMounts = append(
 			c.VolumeMounts,
 			apiv1.VolumeMount{
