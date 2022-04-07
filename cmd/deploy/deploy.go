@@ -295,7 +295,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 		if len(svcsToBuild) != 0 {
 			buildOptions := &types.BuildOptions{
-				Args:         svcsToBuild,
+				CommandArgs:  svcsToBuild,
 				EnableStages: true,
 			}
 			if err := dc.Builder.BuildV2(ctx, deployOptions.Manifest, buildOptions); err != nil {

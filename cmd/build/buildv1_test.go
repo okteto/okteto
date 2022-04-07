@@ -49,8 +49,8 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 
 	tag := "okteto.dev/test"
 	options := &types.BuildOptions{
-		Args: []string{dir},
-		Tag:  tag,
+		CommandArgs: []string{dir},
+		Tag:         tag,
 	}
 	err = bc.BuildV1(ctx, options)
 
@@ -84,8 +84,8 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 
 	tag := "okteto.dev/test"
 	options := &types.BuildOptions{
-		Args: []string{dir},
-		Tag:  tag,
+		CommandArgs: []string{dir},
+		Tag:         tag,
 	}
 	err = bc.BuildV1(ctx, options)
 	// no error from the build
@@ -118,7 +118,7 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	defer os.RemoveAll(dir)
 
 	options := &types.BuildOptions{
-		Args: []string{dir},
+		CommandArgs: []string{dir},
 	}
 	err = bc.BuildV1(ctx, options)
 	// no error from the build

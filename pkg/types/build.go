@@ -26,6 +26,8 @@ type BuildOptions struct {
 	Target        string
 	Namespace     string
 	BuildToGlobal bool
-	Args          []string
-	EnableStages  bool
+
+	// CommandArgs comes from the user input on the command
+	CommandArgs  []string
+	EnableStages bool
 }

@@ -186,8 +186,8 @@ func getAccessibleVolumeMounts(buildInfo *model.BuildInfo) []model.StackVolume {
 }
 
 func getToBuildSvcs(manifest *model.Manifest, options *types.BuildOptions) []string {
-	if len(options.Args) != 0 {
-		return options.Args
+	if len(options.CommandArgs) != 0 {
+		return options.CommandArgs
 	}
 	toBuild := []string{}
 	for svcName := range manifest.Build {

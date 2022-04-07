@@ -31,8 +31,8 @@ func (bc *Command) BuildV1(ctx context.Context, options *types.BuildOptions) err
 	if options.Path != "" {
 		path = options.Path
 	}
-	if len(options.Args) == 1 {
-		path = options.Args[0]
+	if len(options.CommandArgs) == 1 {
+		path = options.CommandArgs[0]
 	}
 
 	if err := utils.CheckIfDirectory(path); err != nil {

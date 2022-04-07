@@ -58,7 +58,7 @@ func Build(ctx context.Context) *cobra.Command {
 			bc := NewBuildCommand()
 
 			manifest, isBuildV2 := bc.getManifestAndBuildVersion(options)
-			options.Args = args
+			options.CommandArgs = args
 			if err := loadContext(ctx, manifest, isBuildV2, options); err != nil {
 				return err
 			}
@@ -112,9 +112,9 @@ func loadContext(ctx context.Context, manifest *model.Manifest, isBuildV2 bool, 
 	} else {
 		maxV1Args := 1
 		docsURL := "https://okteto.com/docs/reference/cli/#build"
-		if len(options.Args) > maxV1Args {
+		if len(options.CommandArgs) > maxV1Args {
 			return oktetoErrors.UserError{
-				E:    fmt.Errorf("when passing a context to 'okteto build', it accepts at most %d arg(s), but received %d", maxV1Args, len(options.Args)),
+				E:    fmt.Errorf("when passing a context to 'okteto build', it accepts at most %d arg(s), but received %d", maxV1Args, len(options.CommandArgs)),
 				Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
 			}
 		}

@@ -131,7 +131,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		}
 		if len(svcsToBuild) != 0 {
 			buildOptions := &types.BuildOptions{
-				Args:         svcsToBuild,
+				CommandArgs:  svcsToBuild,
 				EnableStages: true,
 			}
 			if err := builder.BuildV2(ctx, manifest, buildOptions); err != nil {
