@@ -538,11 +538,7 @@ func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
 		manifest.Build = b
 		d := model.NewDeployInfo()
 		if mc.manifest.Deploy != nil {
-			commands := []model.DeployCommand{}
-			for _, cmd := range mc.manifest.Deploy.Commands {
-				commands = append(commands, cmd)
-			}
-			d.Commands = commands
+			copy(d.Commands, mc.manifest.Deploy.Commands)
 			d.Endpoints = mc.manifest.Deploy.Endpoints
 			d.ComposeSection = mc.manifest.Deploy.ComposeSection
 		}
