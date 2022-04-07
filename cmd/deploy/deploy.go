@@ -718,10 +718,6 @@ func switchSSHRepoToHTTPS(repo string) (*url.URL, error) {
 	return nil, fmt.Errorf("could not detect repo protocol")
 }
 
-func shouldExecuteRemotely(options *Options) bool {
-	return options.Branch != "" || options.Repository != ""
-}
-
 func checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
 	buildInfo := manifest.Build[service]
 	isStack := manifest.Type == model.StackType

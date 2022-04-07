@@ -334,7 +334,7 @@ func renderLogWithoutColors(tpl *template.Template, line string, charsPerLine in
 	if line == "" {
 		result = append(result, []byte(""))
 	} else if charsPerLine == 0 {
-		line = fmt.Sprintf("%s", strings.TrimSpace(line))
+		line = strings.TrimSpace(line)
 		result = append(result, render(tpl, line))
 	} else if iterations := len(line) / charsPerLine; iterations != 0 {
 		start := 0
