@@ -630,10 +630,6 @@ func (dev *Dev) Validate() error {
 		return fmt.Errorf("name cannot be empty")
 	}
 
-	if dev.Docker.Enabled {
-		oktetoLog.Yellow("The use of 'docker' field is deprecated and will be removed in version 2.2.0'.")
-	}
-
 	if dev.Image == nil {
 		dev.Image = &BuildInfo{}
 	}
