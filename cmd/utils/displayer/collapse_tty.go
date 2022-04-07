@@ -344,14 +344,14 @@ func renderLogWithoutColors(tpl *template.Template, line string, charsPerLine in
 				end = len(line) - 1
 			}
 			currentLine := line[start:end]
-			currentLine = fmt.Sprintf("%s", strings.TrimSpace(currentLine))
+			currentLine = strings.TrimSpace(currentLine)
 			result = append(result, render(tpl, currentLine))
 			start = end
 			end += charsPerLine - 2
 
 		}
 	} else {
-		line = fmt.Sprintf("%s", strings.TrimSpace(line))
+		line = strings.TrimSpace(line)
 		result = append(result, render(tpl, line))
 	}
 	return result
