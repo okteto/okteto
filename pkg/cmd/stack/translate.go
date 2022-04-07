@@ -110,10 +110,15 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 	}
 
 	for name, value := range envMap {
-		svc.Environment = append(
-			svc.Environment,
-			model.EnvVar{Name: name, Value: value},
-		)
+		if value == "" {
+			value = os.Getenv(name)
+		}
+		if value != "" {
+			svc.Environment = append(
+				svc.Environment,
+				model.EnvVar{Name: name, Value: value},
+			)
+		}
 	}
 
 	return nil

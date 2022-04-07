@@ -614,10 +614,15 @@ func (dev *Dev) expandEnvFiles() error {
 		}
 
 		for name, value := range envMap {
-			dev.Environment = append(
-				dev.Environment,
-				EnvVar{Name: name, Value: value},
-			)
+			if value == "" {
+				value = os.Getenv(name)
+			}
+			if value != "" {
+				dev.Environment = append(
+					dev.Environment,
+					EnvVar{Name: name, Value: value},
+				)
+			}
 		}
 	}
 
