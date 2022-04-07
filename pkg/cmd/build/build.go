@@ -107,8 +107,10 @@ func buildWithOkteto(ctx context.Context, buildOptions *BuildOptions) error {
 			buildOptions.CacheFrom[i] = registry.ExpandOktetoDevRegistry(buildOptions.CacheFrom[i])
 			buildOptions.CacheFrom[i] = registry.ExpandOktetoGlobalRegistry(buildOptions.CacheFrom[i])
 		}
-		buildOptions.ExportCache = registry.ExpandOktetoDevRegistry(buildOptions.ExportCache)
-		buildOptions.ExportCache = registry.ExpandOktetoGlobalRegistry(buildOptions.ExportCache)
+		if buildOptions.ExportCache != "" {
+			buildOptions.ExportCache = registry.ExpandOktetoDevRegistry(buildOptions.ExportCache)
+			buildOptions.ExportCache = registry.ExpandOktetoGlobalRegistry(buildOptions.ExportCache)
+		}
 	}
 	opt, err := getSolveOpt(buildOptions)
 	if err != nil {
