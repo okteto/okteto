@@ -21,7 +21,6 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
-	"sort"
 	"strings"
 	"time"
 
@@ -115,23 +114,15 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err := setOptionVarsAsEnvs(options.Variables); err != nil {
 				return err
 			}
-			if shouldExecuteRemotely(options) {
-				remoteOpts := &pipelineCMD.DeployOptions{
-					Branch:     options.Branch,
-					Repository: options.Repository,
-					Name:       options.Name,
-					Namespace:  options.Namespace,
-					Wait:       options.Wait,
-					File:       options.ManifestPath,
-					Variables:  options.Variables,
-					Timeout:    options.Timeout,
-				}
-				return pipelineCMD.ExecuteDeployPipeline(ctx, remoteOpts)
-			}
+
 			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(model.OktetoSkipConfigCredentialsUpdate, "false")
-
+			if options.ManifestPath != "" {
+				if err := os.Chdir(utils.GetWorkdirFromManifestPath(options.ManifestPath)); err != nil {
+					return err
+				}
+			}
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
 				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: options.Namespace}); err != nil {
 					return err
@@ -152,6 +143,18 @@ func Deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
+			cwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get the current working directory: %w", err)
+			}
+			name := ""
+			if options.Name == "" {
+				name = utils.InferName(cwd)
+				if err != nil {
+					return fmt.Errorf("could not infer environment name")
+				}
+			}
+
 			options.ShowCTA = oktetoLog.IsInteractive()
 			options.servicesToDeploy = args
 
@@ -168,7 +171,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Kubeconfig:         kubeconfig,
 				Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat()),
 				Proxy:              proxy,
-				TempKubeconfigFile: GetTempKubeConfigFile(options.Name),
+				TempKubeconfigFile: GetTempKubeConfigFile(name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 				Builder:            buildCMD.NewBuildCommand(),
 			}
@@ -213,8 +216,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the development environment")
 	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
 
-	cmd.Flags().StringVarP(&options.Repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
-	cmd.Flags().StringVarP(&options.Branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
 	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the development environment is deployed (defaults to false)")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 
@@ -402,7 +403,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 				}
 			}
 			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-				if err := dc.showEndpoints(ctx, deployOptions); err != nil {
+				if err := dc.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name}); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
 				}
 			}
@@ -550,30 +551,6 @@ func isSPDY(r *http.Request) bool {
 //GetTempKubeConfigFile returns a where the temp kubeConfigFile should be stored
 func GetTempKubeConfigFile(name string) string {
 	return fmt.Sprintf(tempKubeConfigTemplate, config.GetUserHomeDir(), name)
-}
-
-func (dc *DeployCommand) showEndpoints(ctx context.Context, opts *Options) error {
-	spinner := utils.NewSpinner("Retrieving endpoints...")
-	spinner.Start()
-	defer spinner.Stop()
-	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
-	iClient, err := dc.K8sClientProvider.GetIngressClient(ctx)
-	if err != nil {
-		return err
-	}
-	eps, err := iClient.GetEndpointsBySelector(ctx, okteto.Context().Namespace, labelSelector)
-	if err != nil {
-		return err
-	}
-	spinner.Stop()
-	if len(eps) > 0 {
-		sort.Slice(eps, func(i, j int) bool {
-			return len(eps[i]) < len(eps[j])
-		})
-		oktetoLog.Information("Endpoints available:")
-		oktetoLog.Printf("  - %s\n", strings.Join(eps, "\n  - "))
-	}
-	return nil
 }
 
 func addEnvVars(ctx context.Context, cwd string) error {

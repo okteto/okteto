@@ -125,13 +125,7 @@ const (
 	//OktetoUpCmd up command
 	OktetoUpCmd = "up"
 	//OktetoPushCmd push command
-	OktetoPushCmd                = "push"
-	DefaultDinDImage             = "docker:20-dind"
-	DefaultDockerHost            = "tcp://127.0.0.1:2376"
-	DefaultDockerCertDir         = "/certs"
-	DefaultDockerCacheDir        = "/var/lib/docker"
-	DefaultDockerCertDirSubPath  = "certs"
-	DefaultDockerCacheDirSubPath = "docker"
+	OktetoPushCmd = "push"
 
 	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"
@@ -325,6 +319,9 @@ const (
 
 	// OktetoActionNameEnvVar defines the name of the pipeline action name
 	OktetoActionNameEnvVar = "OKTETO_ACTION_NAME"
+
+	// OktetoAutogenerateStignoreEnvVar skips the autogenerate stignore dialog and creates the default one
+	OktetoAutogenerateStignoreEnvVar = "OKTETO_AUTOGENERATE_STIGNORE"
 
 	// OktetoGitCommitPrefix prefix added to OKTETO_GIT_COMMIT when inferred by cli
 	OktetoGitCommitPrefix = "dev"

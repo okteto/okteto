@@ -16,6 +16,7 @@ package model
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -430,6 +431,9 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 
 	svc.Environment = Environment{}
 	for _, env := range serviceRaw.Environment {
+		if env.Value == "" {
+			env.Value = os.Getenv(env.Name)
+		}
 		if env.Value != "" {
 			svc.Environment = append(svc.Environment, env)
 		}

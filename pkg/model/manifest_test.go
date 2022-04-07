@@ -212,6 +212,7 @@ func TestInferFromStack(t *testing.T) {
 							Dockerfile: "Dockerfile",
 						},
 						ImagePullPolicy: apiv1.PullAlways,
+						InitContainer:   InitContainer{Image: OktetoBinImageTag},
 						Probes:          &Probes{},
 						Lifecycle:       &Lifecycle{},
 						Workdir:         "/okteto",

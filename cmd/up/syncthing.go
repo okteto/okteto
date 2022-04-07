@@ -141,7 +141,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 				return
 			case <-time.NewTicker(1 * time.Second).C:
 				inSynchronizationFile := up.Sy.GetInSynchronizationFile(ctx)
-				if inSynchronizationFile != "" {
+				if inSynchronizationFile != "" && oktetoLog.GetOutputFormat() != oktetoLog.PlainFormat {
 					spinner.Stop()
 					progressBar.UpdateItemInSync(inSynchronizationFile)
 				}
@@ -154,8 +154,12 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 		for c := range reporter {
 			value := int64(c)
 			if value > 0 && value < 100 {
-				spinner.Stop()
-				progressBar.SetCurrent(value)
+				if oktetoLog.GetOutputFormat() == oktetoLog.PlainFormat {
+					spinner.Update(fmt.Sprintf("Synchronizing your files [%d]...", value))
+				} else {
+					spinner.Stop()
+					progressBar.SetCurrent(value)
+				}
 			}
 		}
 		quit <- true

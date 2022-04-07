@@ -12,6 +12,16 @@ type ContextResource struct {
 	Namespace string
 }
 
+// GetContextResourceFromManifest retrieves the ctxresource from a manifest
+func GetContextResourceFromManifest(m *Manifest) *ContextResource {
+	ctxResource := &ContextResource{}
+	if m != nil {
+		ctxResource.Context = os.ExpandEnv(m.Context)
+		ctxResource.Namespace = os.ExpandEnv(m.Namespace)
+	}
+	return ctxResource
+}
+
 // GetContextResource returns a ContextResource object from a given file
 func GetContextResource(filePath string) (*ContextResource, error) {
 	bytes, err := os.ReadFile(filePath)

@@ -11,7 +11,7 @@ repos:
       - id: identity
       - id: check-hooks-apply
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
+    rev: v4.1.0
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
@@ -26,13 +26,10 @@ repos:
       - id: end-of-file-fixer
       - id: fix-byte-order-marker
       - id: mixed-line-ending
-      - id: pretty-format-json
-        args: [--autofix, --indent=4, --no-sort-keys]
       - id: trailing-whitespace
         exclude: ^\.github/pull_request_template\.md$
-      - id: check-json
   - repo: https://github.com/jumanjihouse/pre-commit-hooks
-    rev: 2.1.5
+    rev: 2.1.6
     hooks:
       - id: shellcheck
       # - id: shfmt
@@ -44,16 +41,17 @@ repos:
         description: Check Spelling with codespell
         entry: codespell --ignore-words=codespell.txt
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v2.5.1
+    rev: v2.6.1
     hooks:
       - id: prettier
-        exclude: ^\.vscode/tasks\.json$
+        name: Run prettier
+        description: Format files with prettier
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.30.0
+    rev: v0.31.1
     hooks:
       - id: markdownlint
         name: Run markdownlint
-        description: Checks the style of Markdown files
+        description: Check Markdown files with markdownlint
         entry: markdownlint -c .github/linters/.markdown-lint.yml .
         types: [markdown]
         files: \.(md|mdown|markdown)$

@@ -133,14 +133,8 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 	if err != nil {
 		return nil, err
 	}
-	ctxResource := &model.ContextResource{}
-	if m.Type != model.ChartType && m.Type != model.KubernetesType {
-		ctxResource, err = utils.LoadManifestContext(m.Filename)
-		if err != nil {
-			return nil, err
-		}
-	}
 
+	ctxResource := model.GetContextResourceFromManifest(m)
 	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
 		return nil, err
 	}
@@ -159,6 +153,11 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 		return nil, err
 	}
 
+	// We need to read it again to propagate secrets env vars
+	m, err = model.GetManifestV2(opts.Filename)
+	if err != nil {
+		return nil, err
+	}
 	m.Namespace = okteto.Context().Namespace
 	m.Context = okteto.Context().Name
 
@@ -221,13 +220,7 @@ func LoadManifestV2WithContext(ctx context.Context, namespace, k8sContext, path 
 			return err
 		}
 	} else {
-		ctxResource := &model.ContextResource{}
-		if manifest.Type != model.ChartType && manifest.Type != model.KubernetesType {
-			ctxResource, err = utils.LoadManifestContext(manifest.Filename)
-			if err != nil {
-				return err
-			}
-		}
+		ctxResource := model.GetContextResourceFromManifest(manifest)
 
 		if err := ctxResource.UpdateNamespace(namespace); err != nil {
 			return err

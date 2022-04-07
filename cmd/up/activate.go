@@ -111,9 +111,6 @@ func (up *upContext) activate() error {
 		if oktetoErrors.IsTransient(err) {
 			return err
 		}
-		if strings.Contains(err.Error(), "Privileged containers are not allowed") && up.Dev.Docker.Enabled {
-			return fmt.Errorf("docker support requires privileged containers. Privileged containers are not allowed in your current cluster")
-		}
 		if _, ok := err.(oktetoErrors.UserError); ok {
 			return err
 		}
@@ -154,9 +151,9 @@ func (up *upContext) activate() error {
 		oktetoLog.Debugf("clean command output: %s", output)
 
 		outByCommand := strings.Split(strings.TrimSpace(output), "\n")
-		var version, watches, hook string
+		var version, watches string
 		if len(outByCommand) >= 3 {
-			version, watches, hook = outByCommand[0], outByCommand[1], outByCommand[2]
+			version, watches = outByCommand[0], outByCommand[1]
 
 			if isWatchesConfigurationTooLow(watches) {
 				folder := config.GetNamespaceHome(up.Dev.Namespace)
@@ -191,13 +188,6 @@ func (up *upContext) activate() error {
 		printDisplayContext(up.Dev, divertURL)
 		durationActivateUp := time.Since(up.StartTime)
 		analytics.TrackDurationActivateUp(durationActivateUp)
-		if hook == "yes" {
-			oktetoLog.Information("Running start.sh hook...")
-			if err := up.runCommand(ctx, []string{"/var/okteto/cloudbin/start.sh"}); err != nil {
-				up.CommandResult <- err
-				return
-			}
-		}
 		up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
 	}()
 

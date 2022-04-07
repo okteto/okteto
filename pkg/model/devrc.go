@@ -16,7 +16,6 @@ type DevRC struct {
 	Annotations          Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
-	Docker               DinDContainer         `json:"docker,omitempty" yaml:"docker,omitempty"`
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
@@ -90,19 +89,6 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 	if len(devRc.Command.Values) != 0 {
 		oktetoLog.Warning("Start command has been replaced with okteto developer file command")
 		dev.Command.Values = devRc.Command.Values
-	}
-
-	if devRc.Docker.Enabled {
-		dev.Docker.Enabled = devRc.Docker.Enabled
-	}
-	if devRc.Docker.Image != "" {
-		dev.Docker.Image = devRc.Docker.Image
-	}
-	for resourceKey, resourceValue := range devRc.Docker.Resources.Limits {
-		dev.Docker.Resources.Limits[resourceKey] = resourceValue
-	}
-	for resourceKey, resourceValue := range devRc.Docker.Resources.Requests {
-		dev.Docker.Resources.Requests[resourceKey] = resourceValue
 	}
 
 	for _, env := range devRc.Environment {

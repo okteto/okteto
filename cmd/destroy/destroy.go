@@ -95,6 +95,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Long:  `Destroy everything created by the 'okteto deploy' command. You can also include a 'destroy' section in your okteto manifest with a list of custom commands to be executed on destroy`,
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if options.ManifestPath != "" {
+				if err := os.Chdir(utils.GetWorkdirFromManifestPath(options.ManifestPath)); err != nil {
+					return err
+				}
+			}
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
 				return err
 			}
@@ -103,9 +108,9 @@ func Destroy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
 			}
-
+			name := ""
 			if options.Name == "" {
-				options.Name = utils.InferName(cwd)
+				name = utils.InferName(cwd)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}
@@ -137,7 +142,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				k8sClientProvider: okteto.NewK8sClientProvider(),
 			}
 
-			kubeconfigPath := deploy.GetTempKubeConfigFile(options.Name)
+			kubeconfigPath := deploy.GetTempKubeConfigFile(name)
 			if err := kubeconfig.Write(okteto.Context().Cfg, kubeconfigPath); err != nil {
 				return err
 			}
@@ -173,6 +178,18 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		manifest = &model.Manifest{
 			Destroy: []model.DeployCommand{},
 		}
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
+	if opts.Name == "" {
+		if manifest.Name != "" {
+			opts.Name = manifest.Name
+		} else {
+			opts.Name = utils.InferName(cwd)
+		}
+
 	}
 	err = manifest.ExpandEnvVars()
 	if err != nil {
@@ -350,13 +367,13 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 		cmdInfo := model.DeployCommand{Command: cmd, Name: cmd}
 		spinner.Stop()
 		oktetoLog.Information("Running %s", cmdInfo.Name)
-		spinner.Start()
 		if err := dc.executor.Execute(cmdInfo, opts.Variables); err != nil {
 			oktetoLog.Infof("could not uninstall helm release '%s': %s", releaseName, err)
 			if !opts.ForceDestroy {
 				return err
 			}
 		}
+		spinner.Start()
 	}
 
 	return nil

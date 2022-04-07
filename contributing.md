@@ -18,7 +18,7 @@ When contributing features or bug fixes to Okteto CLI, it'll be helpful to keep 
 
 - Communicating your changes before you start working
 - Including unit tests whenever relevant
-- Making sure your code passes the [lint checks](#lint)
+- Making sure your code passes the [lint checks](#linting)
 - Signing off on all your git commits by running `git commit -s`
 - Documenting all Go public types, structs, and functions in your code
 
@@ -78,7 +78,7 @@ Once you do that and visit the repository, you should see a button on the GitHub
 
 ## Development Guide
 
-Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.17](https://golang.org/doc/go1.17). It uses go modules for dependency management.
+Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.17](https://go.dev/doc/go1.17). It uses go modules for dependency management.
 
 ### Building
 

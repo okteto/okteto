@@ -134,7 +134,23 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 }
 
 func askIfCreateStignoreDefaults(folder, stignorePath string) error {
+	autogenerateStignore := utils.LoadBoolean(model.OktetoAutogenerateStignoreEnvVar)
+
 	oktetoLog.Information("'.stignore' doesn't exist in folder '%s'.", folder)
+
+	if autogenerateStignore {
+		l, err := linguist.ProcessDirectory(stignorePath)
+		if err != nil {
+			oktetoLog.Infof("failed to process directory: %s", err)
+			l = linguist.Unrecognized
+		}
+		c := linguist.GetSTIgnore(l)
+		if err := os.WriteFile(stignorePath, c, 0600); err != nil {
+			return fmt.Errorf("failed to write stignore file for '%s': %s", folder, err.Error())
+		}
+		return nil
+	}
+
 	oktetoLog.Information("Okteto requires a '.stignore' file to ignore file patterns that help optimize the synchronization service.")
 	stignoreDefaults, err := utils.AskYesNo("Do you want to infer defaults for the '.stignore' file? (otherwise, it will be left blank) [y/n] ")
 	if err != nil {

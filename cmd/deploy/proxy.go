@@ -17,7 +17,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,10 +29,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/okteto/okteto/cmd/utils"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 )
 
@@ -220,51 +217,9 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 				return
 			}
 
-			var body map[string]json.RawMessage
-			if err := json.Unmarshal(b, &body); err != nil {
-				oktetoLog.Infof("could not unmarshal request: %s", err)
-				rw.WriteHeader(500)
-				return
-			}
-
-			m, ok := body["metadata"]
-			if !ok {
-				oktetoLog.Info("request body doesn't have metadata field")
-				rw.WriteHeader(500)
-				return
-			}
-
-			var metadata metav1.ObjectMeta
-			if err := json.Unmarshal(m, &metadata); err != nil {
-				oktetoLog.Infof("could not process resource's metadata: %s", err)
-				rw.WriteHeader(500)
-				return
-			}
-
-			if metadata.Labels == nil {
-				metadata.Labels = map[string]string{}
-			}
-			metadata.Labels[model.DeployedByLabel] = ph.Name
-
-			if metadata.Annotations == nil {
-				metadata.Annotations = map[string]string{}
-			}
-			if utils.IsOktetoRepo() {
-				metadata.Annotations[model.OktetoSampleAnnotation] = "true"
-			}
-
-			metadataAsByte, err := json.Marshal(metadata)
+			b, err = translateBody(b, ph.Name)
 			if err != nil {
-				oktetoLog.Infof("could not process resource's metadata: %s", err)
-				rw.WriteHeader(500)
-				return
-			}
-
-			body["metadata"] = metadataAsByte
-
-			b, err = json.Marshal(body)
-			if err != nil {
-				oktetoLog.Infof("could not marshal modified body: %s", err)
+				oktetoLog.Info(err)
 				rw.WriteHeader(500)
 				return
 			}

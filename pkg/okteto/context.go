@@ -60,15 +60,15 @@ type OktetoContext struct {
 	Username          string               `json:"username,omitempty" yaml:"username,omitempty"`
 	Token             string               `json:"token,omitempty" yaml:"token,omitempty"`
 	Namespace         string               `json:"namespace" yaml:"namespace,omitempty"`
-	Cfg               *clientcmdapi.Config `json:"-"`
+	Cfg               *clientcmdapi.Config `json:"-" yaml:"-"`
 	Builder           string               `json:"builder,omitempty" yaml:"builder,omitempty"`
 	Registry          string               `json:"registry,omitempty" yaml:"registry,omitempty"`
 	Certificate       string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
 	PersonalNamespace string               `json:"personalNamespace,omitempty" yaml:"personalNamespace,omitempty"`
-	GlobalNamespace   string               `json:"-"`
-	Analytics         bool                 `json:"-"`
-	ClusterType       string               `json:"-"`
-	IsOkteto          bool                 `json:"isOkteto"`
+	GlobalNamespace   string               `json:"-" yaml:"-"`
+	Analytics         bool                 `json:"-" yaml:"-"`
+	ClusterType       string               `json:"-" yaml:"-"`
+	IsOkteto          bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
 }
 
 // InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context
