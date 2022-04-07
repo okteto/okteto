@@ -114,26 +114,46 @@ func main() {
 	root.AddCommand(namespace.Namespace(ctx))
 	root.AddCommand(cmd.Init())
 
-	root.AddCommand(cmd.Dev())
+	root.AddCommand(cmd.Dev(ctx))
 
 	root.AddCommand(preview.Preview(ctx))
 	root.AddCommand(cmd.UpdateDeprecated())
 	root.AddCommand(deploy.Deploy(ctx))
 	root.AddCommand(destroy.Destroy(ctx))
-	root.AddCommand(deploy.Endpoints(ctx))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 
 	// Aliases. They are already under `dev`
-	root.AddCommand(up.Up())
-	root.AddCommand(cmd.Down())
+	deprecatedDevCommands := []*cobra.Command{
+		up.Up(),
+		cmd.Down(),
+		cmd.Status(),
+		cmd.Doctor(),
+		cmd.Exec(),
+		cmd.Restart(),
+		deploy.Endpoints(ctx),
+	}
+
+	for _, command := range deprecatedDevCommands {
+		command.Deprecated = "use `dev` instead"
+		command.Hidden = true
+		root.AddCommand(command)
+	}
 
 	//deprecated
-	root.AddCommand(cmd.Create(ctx))
-	root.AddCommand(cmd.List(ctx))
-	root.AddCommand(cmd.Delete(ctx))
-	root.AddCommand(stack.Stack(ctx))
-	root.AddCommand(cmd.Push(ctx))
-	root.AddCommand(pipeline.Pipeline(ctx))
+	deprecatedCommands := []*cobra.Command{
+		cmd.Create(ctx),
+		cmd.List(ctx),
+		cmd.Delete(ctx),
+		stack.Stack(ctx),
+		cmd.Push(ctx),
+		pipeline.Pipeline(ctx),
+	}
+
+	for _, command := range deprecatedCommands {
+		command.Deprecated = "This command is deprecated. Check the documentation how to use the new commands: https://www.okteto.com/docs/next/reference/cli/"
+		command.Hidden = true
+		root.AddCommand(command)
+	}
 
 	err := root.Execute()
 
