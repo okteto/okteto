@@ -88,6 +88,11 @@ func Up() *cobra.Command {
 
 			ctx := context.Background()
 
+			if upOptions.DevPath != "" {
+				if err := os.Chdir(utils.GetWorkdirFromManifestPath(upOptions.DevPath)); err != nil {
+					return err
+				}
+			}
 			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
 			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
@@ -147,10 +152,13 @@ func Up() *cobra.Command {
 						oktetoManifest.Context = okteto.Context().Name
 					}
 					oktetoManifest.IsV2 = true
-					for _, d := range oktetoManifest.Dev {
+					for devName, d := range oktetoManifest.Dev {
 						if err := d.SetDefaults(); err != nil {
 							return err
 						}
+						d.Name = devName
+						d.Namespace = oktetoManifest.Namespace
+						d.Context = oktetoManifest.Context
 					}
 				}
 			}
@@ -525,7 +533,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
 
-	buildOptions := buildCMD.BuildOptions{
+	buildOptions := &buildCMD.BuildOptions{
 		Path:       up.Dev.Image.Context,
 		File:       up.Dev.Image.Dockerfile,
 		Tag:        imageTag,
@@ -675,7 +683,7 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 	defer sp.Stop()
 
 	for buildName, buildInfo := range m.Build {
-		opts := build.OptsFromManifest(buildName, buildInfo, build.BuildOptions{})
+		opts := build.OptsFromManifest(buildName, buildInfo, &build.BuildOptions{})
 		imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
 		if err == oktetoErrors.ErrNotFound {
 			os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(buildName)), opts.Tag)
@@ -689,6 +697,9 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 	}
 
 	var err error
-	m.Dev[devName].Image.Name, err = model.ExpandEnv(m.Dev[devName].Image.Name, false)
+	if m.Dev[devName].Image != nil {
+		m.Dev[devName].Image.Name, err = model.ExpandEnv(m.Dev[devName].Image.Name, false)
+	}
+
 	return err
 }

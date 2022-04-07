@@ -14,19 +14,20 @@
 package manifest
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 
-	"github.com/manifoldco/promptui"
 	"github.com/okteto/okteto/cmd/utils"
 )
 
 const (
 	noneComposeOption = "None of the above"
 
-	dockerfileName = "Dockerfile"
+	noMoreDockerfileOption = "No, thanks!"
+	dockerfileName         = "Dockerfile"
 )
 
 func selectComposeFile(paths []string) (string, error) {
@@ -43,7 +44,7 @@ func selectComposeFile(paths []string) (string, error) {
 	return selection, nil
 }
 
-func selectDockerfiles(cwd string) ([]string, error) {
+func selectDockerfiles(ctx context.Context, cwd string) ([]string, error) {
 	dockerfiles := []string{}
 	files, err := ioutil.ReadDir(cwd)
 	if err != nil {
@@ -77,28 +78,37 @@ func selectDockerfiles(cwd string) ([]string, error) {
 		return nil, err
 	}
 
-	dockerfiles = append(dockerfiles, "No, thanks!")
+	dockerfiles = append(dockerfiles, noMoreDockerfileOption)
 	index := -1
 	toConfigure := []string{}
 	for index < 0 {
 		if len(dockerfiles) == 1 {
 			break
 		}
-		prompt := promptui.Select{
-			Label: "Do you need to build any of the following Dockerfiles as part of your development environment?",
-			Items: dockerfiles,
+		dockerfilesItems := []utils.SelectorItem{}
+		for _, d := range dockerfiles {
+			dockerfilesItems = append(dockerfilesItems, utils.SelectorItem{
+				Name:   d,
+				Label:  d,
+				Enable: true,
+			})
 		}
 
-		idx, selection, err := prompt.Run()
+		selection, _, err := utils.AskForOptionsOkteto(ctx, dockerfilesItems, "Do you need to build any of the following Dockerfiles as part of your development environment?", "")
 
 		if err != nil {
 			return nil, err
 		}
-		if selection == "that's all" {
+		if selection == noMoreDockerfileOption {
 			break
 		} else {
-			dockerfiles = append(dockerfiles[:idx], dockerfiles[idx+1:]...)
-			toConfigure = append(toConfigure, selection)
+			for idx, d := range dockerfiles {
+				if d != selection {
+					continue
+				}
+				dockerfiles = append(dockerfiles[:idx], dockerfiles[idx+1:]...)
+				toConfigure = append(toConfigure, selection)
+			}
 		}
 	}
 	if err := validateDockerfileSelection(toConfigure); err != nil {

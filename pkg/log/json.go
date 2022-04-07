@@ -269,7 +269,8 @@ func (*JSONWriter) IsInteractive() bool {
 }
 
 func convertToJSON(level, stage, message string) string {
-	if stage == "" {
+	message = strings.TrimSpace(message)
+	if stage == "" || message == "" {
 		return ""
 	}
 	messageStruct := jsonMessage{

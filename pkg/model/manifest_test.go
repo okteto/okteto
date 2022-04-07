@@ -207,7 +207,12 @@ func TestInferFromStack(t *testing.T) {
 							Context:    ".",
 							Dockerfile: "Dockerfile",
 						},
+						Push: &BuildInfo{
+							Context:    ".",
+							Dockerfile: "Dockerfile",
+						},
 						ImagePullPolicy: apiv1.PullAlways,
+						InitContainer:   InitContainer{Image: OktetoBinImageTag},
 						Probes:          &Probes{},
 						Lifecycle:       &Lifecycle{},
 						Workdir:         "/okteto",
@@ -249,6 +254,11 @@ func TestInferFromStack(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := tt.currentManifest.InferFromStack("")
+			if result != nil {
+				for _, d := range result.Dev {
+					d.parentSyncFolder = ""
+				}
+			}
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expectedManifest, result)
 		})

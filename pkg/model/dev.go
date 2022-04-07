@@ -82,7 +82,6 @@ type Dev struct {
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	InitFromImage        bool                  `json:"initFromImage,omitempty" yaml:"initFromImage,omitempty"`
 	Timeout              Timeout               `json:"timeout,omitempty" yaml:"timeout,omitempty"`
-	Docker               DinDContainer         `json:"docker,omitempty" yaml:"docker,omitempty"`
 	Divert               *Divert               `json:"divert,omitempty" yaml:"divert,omitempty"`
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
@@ -164,13 +163,6 @@ type PersistentVolumeInfo struct {
 
 // InitContainer represents the initial container
 type InitContainer struct {
-	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
-	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
-}
-
-// DinDContainer represents the DinD container
-type DinDContainer struct {
-	Enabled   bool                 `json:"enabled,omitempty" yaml:"enabled,omitempty"`
 	Image     string               `json:"image,omitempty" yaml:"image,omitempty"`
 	Resources ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
@@ -443,7 +435,13 @@ func (dev *Dev) SetDefaults() error {
 	if dev.Command.Values == nil {
 		dev.Command.Values = []string{"sh"}
 	}
+	if dev.Image == nil {
+		dev.Image = &BuildInfo{}
+	}
 	dev.Image.setBuildDefaults()
+	if dev.Push == nil {
+		dev.Push = &BuildInfo{}
+	}
 	dev.Push.setBuildDefaults()
 
 	if err := dev.setTimeout(); err != nil {
@@ -466,6 +464,9 @@ func (dev *Dev) SetDefaults() error {
 		dev.Selector = make(Selector)
 	}
 
+	if dev.InitContainer.Image == "" {
+		dev.InitContainer.Image = OktetoBinImageTag
+	}
 	if dev.Healthchecks {
 		oktetoLog.Yellow("The use of 'healthchecks' field is deprecated and will be removed in version 2.2.0. Please use the field 'probes' instead.")
 		if dev.Probes == nil {
@@ -497,10 +498,6 @@ func (dev *Dev) SetDefaults() error {
 		dev.Sync.RescanInterval = rescanInterval
 	} else if dev.Sync.RescanInterval == 0 {
 		dev.Sync.RescanInterval = DefaultSyncthingRescanInterval
-	}
-
-	if dev.Docker.Enabled && dev.Docker.Image == "" {
-		dev.Docker.Image = DefaultDinDImage
 	}
 
 	for _, s := range dev.Services {
@@ -549,9 +546,6 @@ func (dev *Dev) SetDefaults() error {
 }
 
 func (build *BuildInfo) setBuildDefaults() {
-	if build == nil {
-		build = &BuildInfo{}
-	}
 	if build.Context == "" {
 		build.Context = "."
 	}
@@ -633,7 +627,7 @@ func (dev *Dev) expandEnvFiles() error {
 // Validate validates if a dev environment is correctly formed
 func (dev *Dev) Validate() error {
 	if dev.Name == "" {
-		return fmt.Errorf("Name cannot be empty")
+		return fmt.Errorf("name cannot be empty")
 	}
 
 	if dev.Image == nil {
@@ -689,11 +683,6 @@ func (dev *Dev) Validate() error {
 		if err := s.validateVolumes(dev); err != nil {
 			return err
 		}
-	}
-
-	if dev.Docker.Enabled && !dev.PersistentVolumeEnabled() {
-		oktetoLog.Information("https://okteto.com/docs/reference/manifest-v1/#docker-object-optional")
-		return fmt.Errorf("Docker support requires persistent volume to be enabled")
 	}
 
 	return nil
@@ -885,7 +874,6 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		Secrets:          dev.Secrets,
 		WorkDir:          dev.Workdir,
 		PersistentVolume: main.PersistentVolumeEnabled(),
-		Docker:           main.Docker,
 		Volumes:          []VolumeMount{},
 		SecurityContext:  dev.SecurityContext,
 		ServiceAccount:   dev.ServiceAccount,
@@ -929,40 +917,6 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				EnvVar{
 					Name:  "OKTETO_USERNAME",
 					Value: dev.Username,
-				},
-			)
-		}
-		if dev.Docker.Enabled {
-			rule.Environment = append(
-				rule.Environment,
-				EnvVar{
-					Name:  "OKTETO_REGISTRY_URL",
-					Value: dev.RegistryURL,
-				},
-				EnvVar{
-					Name:  "DOCKER_HOST",
-					Value: DefaultDockerHost,
-				},
-				EnvVar{
-					Name:  "DOCKER_CERT_PATH",
-					Value: "/certs/client",
-				},
-				EnvVar{
-					Name:  "DOCKER_TLS_VERIFY",
-					Value: "1",
-				},
-			)
-			rule.Volumes = append(
-				rule.Volumes,
-				VolumeMount{
-					Name:      main.GetVolumeName(),
-					MountPath: DefaultDockerCertDir,
-					SubPath:   DefaultDockerCertDirSubPath,
-				},
-				VolumeMount{
-					Name:      main.GetVolumeName(),
-					MountPath: DefaultDockerCacheDir,
-					SubPath:   DefaultDockerCacheDirSubPath,
 				},
 			)
 		}
@@ -1014,9 +968,6 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 				filename = filepath.Base(s.LocalPath)
 			}
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", filename, s.RemotePath))
-		}
-		if dev.Docker.Enabled {
-			rule.Args = append(rule.Args, "-d")
 		}
 	} else if len(dev.Command.Values) > 0 {
 		rule.Command = dev.Command.Values
@@ -1271,9 +1222,6 @@ func (service *Dev) validateForExtraFields() error {
 	}
 	if service.Timeout != (Timeout{}) {
 		return fmt.Errorf(errorMessage, "timeout")
-	}
-	if service.Docker.Enabled && service.Docker.Image != "" {
-		return fmt.Errorf(errorMessage, "docker")
 	}
 	if service.Divert != nil {
 		return fmt.Errorf(errorMessage, "divert")

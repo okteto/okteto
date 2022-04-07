@@ -54,7 +54,7 @@ import (
 )
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build_buildkit.go#L48
-func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions BuildOptions, cli *client.Client) error {
+func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions *BuildOptions, cli *client.Client) error {
 	oktetoLog.Infof("building your image with docker client v%s", cli.ClientVersion())
 	s, err := session.NewSession(context.Background(), buildOptions.Path, "")
 	if err != nil {
@@ -164,7 +164,7 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions BuildOption
 }
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209
-func buildWithDockerDaemon(ctx context.Context, buildOptions BuildOptions, cli *client.Client) error {
+func buildWithDockerDaemon(ctx context.Context, buildOptions *BuildOptions, cli *client.Client) error {
 	oktetoLog.Infof("building your image with docker client v%s", cli.ClientVersion())
 
 	dockerBuildContext, err := getBuildContext(buildOptions.Path, buildOptions.File)
@@ -377,7 +377,7 @@ func readDockerignore(contextDir string) ([]string, error) {
 }
 
 // getDockerOptions returns the docker build options
-func getDockerOptions(buildOptions BuildOptions) (types.ImageBuildOptions, error) {
+func getDockerOptions(buildOptions *BuildOptions) (types.ImageBuildOptions, error) {
 	opts := types.ImageBuildOptions{
 		SuppressOutput: false,
 		Remove:         true,

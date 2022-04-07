@@ -18,12 +18,10 @@ import (
 	"context"
 	"io"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/manifoldco/promptui/screenbuf"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"golang.org/x/term"
 )
 
 type ttyDisplayer struct {
@@ -78,27 +76,7 @@ func (d *ttyDisplayer) Display(command string) {
 				case <-d.commandContext.Done():
 				default:
 					line := d.stdoutScanner.Text()
-					if isTopDisplay(line) {
-						prevState := d.isBuilding
-						d.isBuilding = checkIfIsBuildingLine(line)
-						if d.isBuilding && d.isBuilding != prevState {
-							d.buildingpreviousLines = len(d.linesToDisplay)
-						}
-						sanitizedLine := strings.ReplaceAll(line, cursorUp, "")
-						sanitizedLine = strings.ReplaceAll(sanitizedLine, resetLine, "")
-						d.linesToDisplay = append(d.linesToDisplay[:d.buildingpreviousLines-1], sanitizedLine)
-					} else {
-						d.linesToDisplay = append(d.linesToDisplay, line)
-					}
-					if os.Stdout == oktetoLog.GetOutput() {
-						oktetoLog.AddToBuffer(oktetoLog.InfoLevel, line)
-					}
-					width, _, _ := term.GetSize(int(os.Stdout.Fd()))
-					lines := renderLines(d.linesToDisplay, width)
-					for _, line := range lines {
-						d.screenbuf.Write(line)
-					}
-					d.screenbuf.Flush()
+					oktetoLog.Println(line)
 					continue
 				}
 				break

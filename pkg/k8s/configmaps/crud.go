@@ -58,7 +58,7 @@ func Deploy(ctx context.Context, cf *apiv1.ConfigMap, namespace string, c kubern
 		}
 		return err
 	}
-	if old.Labels[model.OktetoInstallerRunningLabel] == "true" {
+	if old.Labels[model.OktetoInstallerRunningLabel] == "true" && old.Labels[model.GitDeployLabel] != "true" {
 		return nil
 	}
 	return update(ctx, cf, namespace, c)

@@ -1580,6 +1580,16 @@ func Test_Environment(t *testing.T) {
 			environment: Environment{},
 		},
 		{
+			name:        "empty envs - exists envar",
+			manifest:    []byte("services:\n  app:\n    environment:\n        OKTETO_ENVTEST:\n    image: okteto/vote:1"),
+			environment: Environment{EnvVar{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
+		},
+		{
+			name:        "empty list envs - exists envar",
+			manifest:    []byte("services:\n  app:\n    environment:\n      - OKTETO_ENVTEST\n    image: okteto/vote:1"),
+			environment: Environment{EnvVar{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
+		},
+		{
 			name:        "noenvs",
 			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1"),
 			environment: Environment{},
@@ -1587,6 +1597,10 @@ func Test_Environment(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
+			if err := os.Setenv("OKTETO_ENVTEST", "myvalue"); err != nil {
+				t.Fatal(err)
+			}
 
 			s, err := ReadStack(tt.manifest, false)
 			if err != nil {

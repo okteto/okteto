@@ -64,13 +64,14 @@ type secretHandler interface {
 
 // Options destroy commands options
 type Options struct {
-	ManifestPath   string
-	Name           string
-	Variables      []string
-	Namespace      string
-	DestroyVolumes bool
-	ForceDestroy   bool
-	K8sContext     string
+	ManifestPath        string
+	Name                string
+	Variables           []string
+	Namespace           string
+	DestroyVolumes      bool
+	DestroyDependencies bool
+	ForceDestroy        bool
+	K8sContext          string
 }
 
 type destroyCommand struct {
@@ -94,6 +95,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Long:  `Destroy everything created by the 'okteto deploy' command. You can also include a 'destroy' section in your okteto manifest with a list of custom commands to be executed on destroy`,
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if options.ManifestPath != "" {
+				if err := os.Chdir(utils.GetWorkdirFromManifestPath(options.ManifestPath)); err != nil {
+					return err
+				}
+			}
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
 				return err
 			}
@@ -102,9 +108,9 @@ func Destroy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
 			}
-
+			name := ""
 			if options.Name == "" {
-				options.Name = utils.InferName(cwd)
+				name = utils.InferName(cwd)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}
@@ -136,7 +142,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				k8sClientProvider: okteto.NewK8sClientProvider(),
 			}
 
-			kubeconfigPath := deploy.GetTempKubeConfigFile(options.Name)
+			kubeconfigPath := deploy.GetTempKubeConfigFile(name)
 			if err := kubeconfig.Write(okteto.Context().Cfg, kubeconfigPath); err != nil {
 				return err
 			}
@@ -155,6 +161,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().BoolVarP(&options.DestroyVolumes, "volumes", "v", false, "remove persistent volumes")
+	cmd.Flags().BoolVarP(&options.DestroyDependencies, "dependencies", "d", false, "destroy dependencies")
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands defined in the manifest")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment was deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment was deployed")
@@ -171,6 +178,18 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		manifest = &model.Manifest{
 			Destroy: []model.DeployCommand{},
 		}
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
+	if opts.Name == "" {
+		if manifest.Name != "" {
+			opts.Name = manifest.Name
+		} else {
+			opts.Name = utils.InferName(cwd)
+		}
+
 	}
 	manifest, err = manifest.ExpandEnvVars()
 	if err != nil {
@@ -199,7 +218,9 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	data := &pipeline.CfgData{
 		Name:      opts.Name,
 		Namespace: namespace,
-		Status:    pipeline.DestroyingStatus}
+		Status:    pipeline.DestroyingStatus,
+		Filename:  manifest.Filename,
+	}
 	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
 	if err != nil {
 		return err
@@ -212,13 +233,15 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	}
 	os.Setenv(model.OktetoNameEnvVar, opts.Name)
 
-	for depName := range manifest.Dependencies {
-		destOpts := &pipelineCMD.DestroyOptions{
-			Name:           depName,
-			DestroyVolumes: opts.DestroyVolumes,
-		}
-		if err := pipelineCMD.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
-			return err
+	if opts.DestroyDependencies {
+		for depName := range manifest.Dependencies {
+			destOpts := &pipelineCMD.DestroyOptions{
+				Name:           depName,
+				DestroyVolumes: opts.DestroyVolumes,
+			}
+			if err := pipelineCMD.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -344,13 +367,13 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 		cmdInfo := model.DeployCommand{Command: cmd, Name: cmd}
 		spinner.Stop()
 		oktetoLog.Information("Running %s", cmdInfo.Name)
-		spinner.Start()
 		if err := dc.executor.Execute(cmdInfo, opts.Variables); err != nil {
 			oktetoLog.Infof("could not uninstall helm release '%s': %s", releaseName, err)
 			if !opts.ForceDestroy {
 				return err
 			}
 		}
+		spinner.Start()
 	}
 
 	return nil

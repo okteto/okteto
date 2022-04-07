@@ -214,8 +214,23 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	if err != nil {
 		return nil, err
 	}
+	if manifestPath != "" && !filepath.IsAbs(manifestPath) {
+		manifestPath = filepath.Join(cwd, manifestPath)
+	}
 	if manifestPath != "" && FileExistsAndNotDir(manifestPath) {
-		return getManifestFromFile(cwd, manifestPath)
+		manifest, err := getManifestFromFile(cwd, manifestPath)
+		if err != nil {
+			return nil, err
+		}
+		path := ""
+		if filepath.IsAbs(manifestPath) {
+			path, err = filepath.Rel(cwd, manifestPath)
+			if err != nil {
+				oktetoLog.Debugf("could not detect relative path to %s: %s", manifestPath, err)
+			}
+		}
+		manifest.Filename = path
+		return manifest, nil
 	} else if manifestPath != "" && pathExistsAndDir(manifestPath) {
 		cwd = manifestPath
 	}
@@ -225,7 +240,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		oktetoLog.Infof("Found okteto file")
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto manifest on %s", oktetoPath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling manifest...")
-		devManifest, err := getManifestFromFile(cwd, oktetoPath)
+		devManifest, err = getManifestFromFile(cwd, oktetoPath)
 		if err != nil {
 			return nil, err
 		}
@@ -254,6 +269,13 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		}
 		if devManifest != nil {
 			inferredManifest.mergeWithOktetoManifest(devManifest)
+		}
+		if len(inferredManifest.Manifest) == 0 {
+			bytes, err := yaml.Marshal(inferredManifest)
+			if err != nil {
+				return nil, err
+			}
+			inferredManifest.Manifest = bytes
 		}
 		return inferredManifest, nil
 	}
@@ -286,10 +308,9 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 					},
 				},
 			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: manifestPath,
-			IsV2:     true,
+			Dev:   ManifestDevs{},
+			Build: ManifestBuild{},
+			IsV2:  true,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
 		s, stackErr := LoadStack("", stackManifest.Deploy.Compose.Manifest)
@@ -301,6 +322,11 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 		if stackManifest.Deploy.Compose.Stack.Name != "" {
 			stackManifest.Name = stackManifest.Deploy.Compose.Stack.Name
 		}
+		stackManifest, err = stackManifest.InferFromStack(cwd)
+		if err != nil {
+			return nil, err
+		}
+		stackManifest.Manifest = s.Manifest
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
 		return stackManifest, nil
 	}
@@ -358,10 +384,9 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 					},
 				},
 			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: stackPath,
-			IsV2:     true,
+			Dev:   ManifestDevs{},
+			Build: ManifestBuild{},
+			IsV2:  true,
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling compose...")
 		s, err := LoadStack("", stackManifest.Deploy.Compose.Manifest)
@@ -369,6 +394,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 			return nil, err
 		}
 		stackManifest.Deploy.Compose.Stack = s
+		stackManifest.Manifest = s.Manifest
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto compose unmarshalled successfully")
 
 		return stackManifest, nil
@@ -381,19 +407,20 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 			return nil, err
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found helm chart on %s", chartPath)
+		tags := inferHelmTags(chartPath)
+		command := fmt.Sprintf("helm upgrade --install ${%s} %s %s", OktetoNameEnvVar, chartPath, tags)
 		chartManifest := &Manifest{
 			Type: ChartType,
 			Deploy: &DeployInfo{
 				Commands: []DeployCommand{
 					{
-						Name:    fmt.Sprintf("helm upgrade --install ${%s} %s", OktetoNameEnvVar, chartPath),
-						Command: fmt.Sprintf("helm upgrade --install ${%s} %s", OktetoNameEnvVar, chartPath),
+						Name:    command,
+						Command: command,
 					},
 				},
 			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: chartPath,
+			Dev:   ManifestDevs{},
+			Build: ManifestBuild{},
 		}
 		return chartManifest, nil
 
@@ -415,14 +442,46 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 					},
 				},
 			},
-			Dev:      ManifestDevs{},
-			Build:    ManifestBuild{},
-			Filename: manifestPath,
+			Dev:   ManifestDevs{},
+			Build: ManifestBuild{},
 		}
 		return k8sManifest, nil
 	}
 
 	return nil, nil
+}
+
+func inferHelmTags(path string) string {
+	valuesPath := filepath.Join(path, "values.yaml")
+	if _, err := os.Stat(valuesPath); err != nil {
+		oktetoLog.Info("chart values not found")
+		return ""
+	}
+	type valuesImages struct {
+		Image string `yaml:"image,omitempty"`
+	}
+
+	b, err := os.ReadFile(valuesPath)
+	if err != nil {
+		oktetoLog.Info("could not read file values")
+		return ""
+	}
+	tags := map[string]*valuesImages{}
+	if err := yaml.Unmarshal(b, tags); err != nil {
+		oktetoLog.Info("could not parse values image tags")
+		return ""
+	}
+	result := ""
+	for svcName, image := range tags {
+		if image == nil {
+			continue
+		}
+		if image.Image != "" {
+			result += fmt.Sprintf(" --set %s.image=${OKTETO_BUILD_%s_IMAGE}", svcName, strings.ToUpper(svcName))
+			os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(svcName)), image.Image)
+		}
+	}
+	return result
 }
 
 // getManifest returns a Dev object from a given file
@@ -449,8 +508,6 @@ func getManifest(devPath string) (*Manifest, error) {
 
 		dev.computeParentSyncFolder()
 	}
-
-	manifest.Filename = devPath
 
 	return manifest, nil
 }
@@ -594,6 +651,19 @@ func (m *Manifest) ExpandEnvVars() (*Manifest, error) {
 			if err != nil {
 				return nil, err
 			}
+			for svcName, svc := range s.Services {
+				if svc.Build == nil && len(svc.VolumeMounts) == 0 {
+					continue
+				}
+				tag := fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(svcName, "-", "_")))
+				expandedTag, err := ExpandEnv(tag, true)
+				if err != nil {
+					return nil, err
+				}
+				if expandedTag != "" {
+					svc.Image = expandedTag
+				}
+			}
 			m.Deploy.Compose.Stack = s
 			if m.Deploy.Endpoints != nil {
 				s.Endpoints = m.Deploy.Endpoints
@@ -700,16 +770,21 @@ func (m *Manifest) WriteToFile(filePath string) error {
 	}
 	for dName, d := range m.Dev {
 		d.Name = ""
+		d.Context = ""
+		d.Namespace = ""
 		if d.Image != nil && d.Image.Name != "" {
 			d.Image.Context = ""
 			d.Image.Dockerfile = ""
 		} else {
 			if v, ok := m.Build[dName]; ok {
-				d.Image = &BuildInfo{Name: v.Image}
+				if v.Image != "" {
+					d.Image = &BuildInfo{Name: v.Image}
+				} else {
+					d.Image = nil
+				}
 			} else {
 				d.Image = nil
 			}
-
 		}
 
 		if d.Push != nil && d.Push.Name != "" {

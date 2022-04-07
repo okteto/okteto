@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -223,5 +224,24 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
 	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
+	return nil
+}
+
+// AddDevAnnotations add deploy labels to the deployments/sfs
+func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface) error {
+	repo := os.Getenv(model.GithubRepositoryEnvVar)
+	for devName, dev := range manifest.Dev {
+		app, err := apps.Get(ctx, dev, manifest.Namespace, c)
+		if err != nil {
+			return err
+		}
+		if repo != "" {
+			app.ObjectMeta().Annotations[model.OktetoRepositoryAnnotation] = repo
+		}
+		app.ObjectMeta().Annotations[model.OktetoDevNameAnnotation] = devName
+		if err := app.PatchAnnotations(ctx, c); err != nil {
+			return err
+		}
+	}
 	return nil
 }

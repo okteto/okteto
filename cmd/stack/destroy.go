@@ -15,6 +15,7 @@ package stack
 
 import (
 	"context"
+	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -37,6 +38,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli-v1/#destroy-2"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning("'okteto stack destroy' is deprecated in favor of 'okteto destroy', and will be removed in version 2.2.0")
+			if len(stackPath) == 1 {
+				if err := os.Chdir(utils.GetWorkdirFromManifestPath(stackPath[0])); err != nil {
+					return err
+				}
+			}
 			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath)
 			if err != nil {
 				return err

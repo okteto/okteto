@@ -25,8 +25,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/stack"
-	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -54,11 +52,16 @@ func deploy(ctx context.Context) *cobra.Command {
 			options.ServicesToDeploy = args
 
 			options.StackPaths = loadComposePaths(options.StackPaths)
+			if len(options.StackPaths) == 1 {
+				if err := os.Chdir(utils.GetWorkdirFromManifestPath(options.StackPaths[0])); err != nil {
+					return err
+				}
+			}
 			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPaths)
 			if err != nil {
 				return err
 			}
-			c, config, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get(config.GetKubeconfigPath()))
+			c, config, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
 			if err != nil {
 				return err
 			}

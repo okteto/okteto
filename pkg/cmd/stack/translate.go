@@ -16,6 +16,7 @@ package stack
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -132,22 +133,35 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 			buildInfo = &model.BuildInfo{
 				VolumesToInclude: svcInfo.VolumeMounts,
 			}
+		} else {
+			buildInfo.Image = svcInfo.Image
 		}
-		opts := build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
+		opts := build.OptsFromManifest(svcName, buildInfo, &build.BuildOptions{})
 
 		if okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
 			buildInfo.Image = opts.Tag
 		}
 		if !options.ForceBuild {
 			if buildInfo != nil {
-				if _, err := registry.GetImageTagWithDigest(opts.Tag); err != oktetoErrors.ErrNotFound {
-					svcInfo.Image = opts.Tag
+				if build.ShouldOptimizeBuild(opts.Tag) {
+					oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
+					if imageTagWithDigest := getGlobalTagWithDigest(opts.Tag); imageTagWithDigest != "" {
+						svcInfo.Image = imageTagWithDigest
+						continue
+					}
+				}
+				if imageTagWithDigest, err := registry.GetImageTagWithDigest(opts.Tag); err != oktetoErrors.ErrNotFound {
+					svcInfo.Image = imageTagWithDigest
 					continue
 				}
 				oktetoLog.Infof("image '%s' not found, building it", opts.Tag)
 			}
 		}
 
+		volumesToInclude := build.GetVolumesToInclude(svcInfo.VolumeMounts)
+		if buildInfo == nil || buildInfo.Dockerfile == "" && len(volumesToInclude) == 0 {
+			continue
+		}
 		if !hasBuiltSomething {
 			hasBuiltSomething = true
 			if okteto.Context().Builder != "" {
@@ -157,20 +171,21 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 			}
 		}
 
-		volumesToInclude := svcInfo.VolumeMounts
-		var options build.BuildOptions
+		options := &build.BuildOptions{}
+		var imageTagWithDigest string
+		var err error
 		if buildInfo != nil && buildInfo.Dockerfile != "" {
 			oktetoLog.Information("Building image for service '%s'", svcName)
 
-			if len(buildInfo.VolumesToInclude) > 0 {
+			if len(volumesToInclude) > 0 {
 				buildInfo.VolumesToInclude = nil
 			}
 
-			options = build.OptsFromManifest(svcName, buildInfo, build.BuildOptions{})
+			options = build.OptsFromManifest(svcName, buildInfo, &build.BuildOptions{})
 			if err := build.Run(ctx, options); err != nil {
 				return err
 			}
-			_, err := registry.GetImageTagWithDigest(options.Tag)
+			imageTagWithDigest, err = registry.GetImageTagWithDigest(options.Tag)
 			if err != nil {
 				return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
 			}
@@ -187,20 +202,34 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 				return err
 			}
 			svcBuild.VolumesToInclude = volumesToInclude
-			options = build.OptsFromManifest(svcName, svcBuild, build.BuildOptions{})
+			options = build.OptsFromManifest(svcName, svcBuild, &build.BuildOptions{})
 			if err := build.Run(ctx, options); err != nil {
 				return err
 			}
-			_, err = registry.GetImageTagWithDigest(options.Tag)
+			imageTagWithDigest, err = registry.GetImageTagWithDigest(options.Tag)
 			if err != nil {
 				return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
 			}
 		}
-		svcInfo.Image = options.Tag
-		oktetoLog.Success("Image for service '%s' pushed to registry: %s", svcName, options.Tag)
+		svcInfo.Image = imageTagWithDigest
+		oktetoLog.Success("Image for service '%s' pushed to registry: %s", svcName, imageTagWithDigest)
 	}
 
 	return nil
+}
+
+func getGlobalTagWithDigest(imageTag string) string {
+	globalReference := strings.Replace(imageTag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
+	imageWithDigest, err := registry.GetImageTagWithDigest(globalReference)
+	if errors.Is(err, oktetoErrors.ErrNotFound) {
+		oktetoLog.Debug("image not built at global registry, not running optimization for deployment")
+		return ""
+	}
+	if err != nil {
+		oktetoLog.Debugf("could not get image due to: %s", err)
+		return ""
+	}
+	return imageWithDigest
 }
 
 func getAccessibleVolumeMounts(stack *model.Stack, svcName string) []model.StackVolume {

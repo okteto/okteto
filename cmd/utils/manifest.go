@@ -31,3 +31,12 @@ func InferName(cwd string) string {
 	oktetoLog.Info("inferring name from git repository URL")
 	return model.TranslateURLToName(repo)
 }
+
+// GetWorkdirFromManifestPath sets the path
+func GetWorkdirFromManifestPath(manifestPath string) string {
+	dir := filepath.Dir(manifestPath)
+	if filepath.Base(dir) == ".okteto" {
+		dir = filepath.Dir(dir)
+	}
+	return dir
+}

@@ -100,8 +100,8 @@ func main() {
 		},
 	}
 
-	root.PersistentFlags().StringVarP(&logLevel, "loglevel", "l", "warn", "amount of information outputted (debug, info, warn, error)")
-	root.PersistentFlags().StringVarP(&outputMode, "output", "o", oktetoLog.TTYFormat, "output format (tty, plain, json)")
+	root.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "amount of information outputted (debug, info, warn, error)")
+	root.PersistentFlags().StringVar(&outputMode, "log-output", oktetoLog.TTYFormat, "output format for logs (tty, plain, json)")
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
@@ -123,6 +123,7 @@ func main() {
 	root.AddCommand(cmd.UpdateDeprecated())
 	root.AddCommand(deploy.Deploy(ctx))
 	root.AddCommand(destroy.Destroy(ctx))
+	root.AddCommand(deploy.Endpoints(ctx))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 
 	//deprecated

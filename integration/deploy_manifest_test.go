@@ -17,21 +17,25 @@
 package integration
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
+
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	v1 "k8s.io/api/apps/v1"
@@ -442,6 +446,7 @@ func TestDeployOutput(t *testing.T) {
 
 	gitRepo := "https://github.com/okteto/voting-app"
 	repoDir := "voting-app"
+
 	var (
 		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().Unix()))
 		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
@@ -449,6 +454,78 @@ func TestDeployOutput(t *testing.T) {
 	)
 
 	if err := cloneGitRepo(ctx, gitRepo); err != nil {
+		if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			changeToNamespace(ctx, oktetoPath, originNamespace)
+			deleteNamespace(ctx, oktetoPath, testNamespace)
+			deleteGitRepo(ctx, "")
+		})
+		t.Run("okteto deploy output", func(t *testing.T) {
+
+			_, err := runOktetoDeploy(oktetoPath, repoDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			cmap, err := getConfigmap(ctx, testNamespace, fmt.Sprintf("okteto-git-%s", repoDir))
+			if err != nil {
+				t.Fatal(err)
+			}
+			uiOutput, err := base64.StdEncoding.DecodeString(cmap.Data["output"])
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var text oktetoLog.JSONLogFormat
+			stageLines := map[string][]string{}
+			prevLine := ""
+			for _, l := range strings.Split(string(uiOutput), "\n") {
+				if err := json.Unmarshal([]byte(l), &text); err != nil {
+					if prevLine != "EOF" {
+						t.Fatalf("not json format: %s", l)
+					}
+				}
+				if _, ok := stageLines[text.Stage]; ok {
+					stageLines[text.Stage] = append(stageLines[text.Stage], text.Message)
+				} else {
+					stageLines[text.Stage] = []string{text.Message}
+				}
+				prevLine = text.Message
+			}
+			stagesToTest := []string{"Load manifest", "Building service vote", "Deploying compose", "done"}
+			for _, ss := range stagesToTest {
+				if _, ok := stageLines[ss]; !ok {
+					t.Fatalf("deploy didn't have the stage '%s'", ss)
+				}
+				if strings.HasPrefix(ss, "Building service") {
+					if len(stageLines[ss]) < 5 {
+						t.Fatalf("Not sending build output on stage %s. Output:%s", ss, stageLines[ss])
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestDeployAndUpEnvVars(t *testing.T) {
+	ctx := context.Background()
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gitRepo := "https://github.com/okteto/movies"
+	repoDir := "movies"
+	branch := "pchico83/manifest-v2"
+	var (
+		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
+		originNamespace = getCurrentNamespace()
+	)
+
+	if err := cloneGitRepoWithBranch(ctx, gitRepo, branch); err != nil {
 		t.Fatal(err)
 	}
 
@@ -458,7 +535,7 @@ func TestDeployOutput(t *testing.T) {
 	t.Cleanup(func() {
 		changeToNamespace(ctx, oktetoPath, originNamespace)
 		deleteNamespace(ctx, oktetoPath, testNamespace)
-		deleteGitRepo(ctx, "")
+		deleteGitRepo(ctx, repoDir)
 	})
 	t.Run("okteto deploy output", func(t *testing.T) {
 
@@ -466,43 +543,48 @@ func TestDeployOutput(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		cmap, err := getConfigmap(ctx, testNamespace, fmt.Sprintf("okteto-git-%s", repoDir))
+		var wg sync.WaitGroup
+		upErrorChannel := make(chan error, 1)
+		_, err = upWithSvc(ctx, &wg, testNamespace, repoDir, "frontend", oktetoPath, upErrorChannel)
 		if err != nil {
 			t.Fatal(err)
 		}
-		uiOutput, err := base64.StdEncoding.DecodeString(cmap.Data["output"])
+		d, err := getDeployment(ctx, testNamespace, "frontend")
 		if err != nil {
 			t.Fatal(err)
 		}
-
-		var text log.JSONLogFormat
-		stageLines := map[string][]string{}
-		prevLine := ""
-		for _, l := range strings.Split(string(uiOutput), "\n") {
-			if err := json.Unmarshal([]byte(l), &text); err != nil {
-				if prevLine != "EOF" {
-					t.Fatalf("not json format: %s", l)
-				}
-			}
-			if _, ok := stageLines[text.Stage]; ok {
-				stageLines[text.Stage] = append(stageLines[text.Stage], text.Message)
-			} else {
-				stageLines[text.Stage] = []string{text.Message}
-			}
-			prevLine = text.Message
-		}
-		stagesToTest := []string{"Load manifest", "Building service vote", "Deploying compose", "done"}
-		for _, ss := range stagesToTest {
-			if _, ok := stageLines[ss]; !ok {
-				t.Fatalf("deploy didn't have the stage '%s'", ss)
-			}
-			if strings.HasPrefix(ss, "Building service") {
-				if len(stageLines[ss]) < 5 {
-					t.Fatalf("Not sending build output on stage %s. Output:%s", ss, stageLines[ss])
-				}
-			}
+		image := fmt.Sprintf("%s/%s/%s-frontend@sha", okteto.Context().Registry, testNamespace, repoDir)
+		containerImage := d.Spec.Template.Spec.Containers[0].Image
+		if !strings.HasPrefix(containerImage, image) {
+			t.Fatalf("error unmarshalling env vars. expected image starts like '%s' but got %s", image, containerImage)
 		}
 	})
 
+}
+
+func upWithSvc(ctx context.Context, wg *sync.WaitGroup, namespace, dir, svc, oktetoPath string, upErrorChannel chan error) (*os.Process, error) {
+	var out bytes.Buffer
+	cmd := exec.Command(oktetoPath, "up", "-n", namespace, svc)
+	cmd.Dir = dir
+	cmd.Env = os.Environ()
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	log.Printf("up command: %s", cmd.String())
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("okteto up failed to start: %s", err)
+	}
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		if err := cmd.Wait(); err != nil {
+			if err != nil {
+				log.Printf("okteto up exited: %s.\nOutput:\n%s", err, out.String())
+				upErrorChannel <- fmt.Errorf("Okteto up exited before completion")
+			}
+		}
+	}()
+
+	return cmd.Process, waitForReady(namespace, svc, upErrorChannel)
 }
