@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"runtime"
@@ -59,28 +58,6 @@ type TTYCollapseDisplayer struct {
 
 	isBuilding            bool
 	buildingpreviousLines int
-}
-
-func newTTYCollapseDisplayer(stdout, stderr io.Reader) *TTYCollapseDisplayer {
-	var (
-		stdoutScanner *bufio.Scanner
-		stderrScanner *bufio.Scanner
-	)
-	if stdout != nil {
-		stdoutScanner = bufio.NewScanner(stdout)
-	}
-	if stderr != nil {
-		stderrScanner = bufio.NewScanner(stderr)
-	}
-
-	return &TTYCollapseDisplayer{
-		numberOfLines:  25,
-		linesToDisplay: []string{},
-
-		stdoutScanner: stdoutScanner,
-		stderrScanner: stderrScanner,
-		screenbuf:     screenbuf.New(os.Stdout),
-	}
 }
 
 // Display displays a
