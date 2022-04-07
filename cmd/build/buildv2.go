@@ -101,12 +101,12 @@ func (bc *Command) buildSvcFromDockerfile(ctx context.Context, manifest *model.M
 	if build.ShouldOptimizeBuild(buildOptions.Tag) && !buildOptions.BuildToGlobal {
 		oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
 		globalReference := strings.Replace(buildOptions.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
-		if _, err := registry.NewOktetoRegistry().GetImageTagWithDigest(globalReference); err == nil {
+		if _, err := bc.Registry.GetImageTagWithDigest(globalReference); err == nil {
 			oktetoLog.Debugf("Skipping '%s' build. Image already exists at the Okteto Registry", svcName)
 			return globalReference, nil
 		}
 		if registry.IsDevRegistry(buildOptions.Tag) {
-			if _, err := registry.NewOktetoRegistry().GetImageTagWithDigest(buildOptions.Tag); err == nil {
+			if _, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag); err == nil {
 				oktetoLog.Debugf("skipping build: image %s is already built", buildOptions.Tag)
 				return buildOptions.Tag, nil
 			}
