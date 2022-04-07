@@ -794,6 +794,26 @@ func TestUpCompose(t *testing.T) {
 		t.Fatalf("Expected to have only one endpoint for svc 'vote' but got %d", len(svc.Spec.Ports))
 	}
 
+	ingress, err := getIngress(ctx, namespace, "okteto-vote")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, rule := range ingress.Spec.Rules {
+		for _, path := range rule.HTTP.Paths {
+			svc := path.Backend.Service
+			if svc.Name != "vote" {
+				t.Fatalf("ingress is referencing other service: %s", svc.Name)
+			}
+			if svc.Port.Number == 5005 {
+				t.Fatal("Didn't expect a debugger to have an endpoint")
+			}
+		}
+	}
+	if len(svc.Spec.Ports) != 1 {
+		t.Fatalf("Expected to have only one endpoint for svc 'vote' but got %d", len(svc.Spec.Ports))
+	}
+
 	if !model.IsPortAvailable("localhost", 5005) {
 		t.Fatal("Expected to have 5005 as port on localhost taken but it was not")
 	}
