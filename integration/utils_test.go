@@ -138,7 +138,6 @@ func getService(ctx context.Context, ns, name string) (*corev1.Service, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return client.CoreV1().Services(ns).Get(ctx, name, metav1.GetOptions{})
 }
 
@@ -149,6 +148,15 @@ func getIngress(ctx context.Context, ns, name string) (*networkingv1.Ingress, er
 	}
 
 	return client.NetworkingV1().Ingresses(ns).Get(ctx, name, metav1.GetOptions{})
+}
+
+func getConfigmap(ctx context.Context, ns, name string) (*corev1.ConfigMap, error) {
+	client, _, err := K8sClient()
+	if err != nil {
+		return nil, err
+	}
+
+	return client.CoreV1().ConfigMaps(ns).Get(ctx, name, metav1.GetOptions{})
 }
 
 func writeDeployment(template *template.Template, name, path string) error {

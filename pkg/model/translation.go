@@ -40,7 +40,6 @@ type TranslationRule struct {
 	InitContainer     InitContainer        `json:"initContainers,omitempty"`
 	Probes            *Probes              `json:"probes" yaml:"probes"`
 	Lifecycle         *Lifecycle           `json:"lifecycle" yaml:"lifecycle"`
-	Docker            DinDContainer        `json:"docker" yaml:"docker"`
 	NodeSelector      map[string]string    `json:"nodeSelector" yaml:"nodeSelector"`
 	Affinity          *apiv1.Affinity      `json:"affinity" yaml:"affinity"`
 }
