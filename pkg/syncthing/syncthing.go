@@ -868,6 +868,9 @@ func getParent(p *process.Process) (*process.Process, error) {
 		return nil, fmt.Errorf("can't remove root process")
 	}
 	pName, err := parent.Name()
+	if err != nil {
+		oktetoLog.Infof("could not get  parent: %s", err)
+	}
 	if pName == name {
 		return getParent(parent)
 	}
