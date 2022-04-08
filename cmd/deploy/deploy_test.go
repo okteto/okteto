@@ -492,3 +492,85 @@ func Test_SetManifestEnvVars(t *testing.T) {
 		})
 	}
 }
+
+func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
+	tests := []struct {
+		name             string
+		options          *Options
+		expectedServices []string
+	}{
+		{
+			name: "no manifest services to deploy",
+			options: &Options{
+				servicesToDeploy: []string{"a", "b"},
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						ComposeSection: &model.ComposeSectionInfo{
+							ComposesInfo: []model.ComposeInfo{},
+						},
+					},
+				},
+			},
+			expectedServices: []string{"a", "b"},
+		},
+		{
+			name: "no options services to deploy",
+			options: &Options{
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						ComposeSection: &model.ComposeSectionInfo{
+							ComposesInfo: []model.ComposeInfo{
+								{ServicesToDeploy: []string{"a", "b"}},
+								{ServicesToDeploy: []string{"c", "d"}},
+							},
+						},
+					},
+				},
+			},
+			expectedServices: []string{"a", "b", "c", "d"},
+		},
+		{
+			name: "both",
+			options: &Options{
+				servicesToDeploy: []string{"from command a", "from command b"},
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						ComposeSection: &model.ComposeSectionInfo{
+							ComposesInfo: []model.ComposeInfo{
+								{ServicesToDeploy: []string{"c", "d"}},
+							},
+						},
+					},
+				},
+			},
+			expectedServices: []string{"from command a", "from command b"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mergeServicesToDeployFromOptionsAndManifest(test.options)
+			// We have to check them as if they were sets to account for order
+			expected := map[string]bool{}
+			for _, service := range test.expectedServices {
+				expected[service] = true
+			}
+
+			got := map[string]bool{}
+			for _, service := range test.options.servicesToDeploy {
+				got[service] = true
+			}
+
+			for service := range got {
+				if !expected[service] {
+					t.Errorf("service %s was not expected", service)
+				}
+			}
+			for service := range expected {
+				if !got[service] {
+					t.Errorf("service %s was not found", service)
+				}
+			}
+		})
+	}
+}

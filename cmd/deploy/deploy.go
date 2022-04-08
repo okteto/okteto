@@ -268,19 +268,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 		if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
 			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
-		}
-	}
 
-	if deployOptions.Manifest != nil && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil {
-		var manifestDeclaredServicesToDeploy []string
-		for _, composeInfo := range deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo {
-			manifestDeclaredServicesToDeploy = append(manifestDeclaredServicesToDeploy, composeInfo.ServicesToDeploy...)
-		}
-		if len(deployOptions.servicesToDeploy) > 0 && len(manifestDeclaredServicesToDeploy) > 0 {
-			oktetoLog.Warning("overwriting manifest's `services to deploy` with command line arguments")
-		}
-		if len(deployOptions.servicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
-			deployOptions.servicesToDeploy = manifestDeclaredServicesToDeploy
+			mergeServicesToDeployFromOptionsAndManifest(deployOptions)
 		}
 	}
 
@@ -430,6 +419,20 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 	return err
+}
+
+func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
+	var manifestDeclaredServicesToDeploy []string
+	for _, composeInfo := range deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo {
+		manifestDeclaredServicesToDeploy = append(manifestDeclaredServicesToDeploy, composeInfo.ServicesToDeploy...)
+	}
+
+	if len(deployOptions.servicesToDeploy) > 0 && len(manifestDeclaredServicesToDeploy) > 0 {
+		oktetoLog.Warning("overwriting manifest's `services to deploy` with command line arguments")
+	}
+	if len(deployOptions.servicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
+		deployOptions.servicesToDeploy = manifestDeclaredServicesToDeploy
+	}
 }
 
 func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
