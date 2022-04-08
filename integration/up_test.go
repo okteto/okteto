@@ -814,7 +814,7 @@ func TestUpCompose(t *testing.T) {
 		t.Fatalf("Expected to have only one endpoint for svc 'vote' but got %d", len(svc.Spec.Ports))
 	}
 
-	if !model.IsPortAvailable("localhost", 5005) {
+	if !model.IsPortAvailable("0.0.0.0", 5005) {
 		t.Fatal("Expected to have 5005 as port on localhost taken but it was not")
 	}
 
