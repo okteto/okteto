@@ -399,7 +399,7 @@ func (up *upContext) start() error {
 		HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
 		HasDeploySection: (up.Manifest.IsV2 &&
 			up.Manifest.Deploy != nil &&
-			(len(up.Manifest.Deploy.Commands) > 0 || up.Manifest.Deploy.Compose.Manifest != nil)),
+			(len(up.Manifest.Deploy.Commands) > 0 || up.Manifest.Deploy.ComposeSection.ComposesInfo != nil)),
 	})
 
 	go up.activateLoop()

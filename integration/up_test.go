@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -812,6 +813,14 @@ func TestUpCompose(t *testing.T) {
 	}
 	if len(svc.Spec.Ports) != 1 {
 		t.Fatalf("Expected to have only one endpoint for svc 'vote' but got %d", len(svc.Spec.Ports))
+	}
+
+	port := "5005"
+	ln, err := net.Listen("tcp", ":"+port)
+
+	if err == nil {
+		_ = ln.Close()
+		t.Fatalf("port 5005 is available locally")
 	}
 
 	if err := downSvc(ctx, "vote", microservicesComposeFolder, oktetoPath); err != nil {

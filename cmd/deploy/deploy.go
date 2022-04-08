@@ -183,8 +183,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if options.Manifest != nil {
 				if options.Manifest.IsV2 &&
 					options.Manifest.Deploy != nil &&
-					options.Manifest.Deploy.Compose != nil &&
-					options.Manifest.Deploy.Compose.Manifest != nil {
+					options.Manifest.Deploy.ComposeSection != nil &&
+					options.Manifest.Deploy.ComposeSection.ComposesInfo != nil {
 					deployType = "compose"
 				}
 
@@ -245,7 +245,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if deployOptions.Manifest.Deploy == nil {
 		return oktetoErrors.ErrManifestFoundButNoDeployCommands
 	}
-	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy.Compose == nil {
+	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy.ComposeSection == nil {
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 	if deployOptions.Manifest.Context == "" {
@@ -266,10 +266,13 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		if deployOptions.Manifest != nil {
 			deployOptions.Manifest.Name = deployOptions.Name
 		}
-		if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.Compose != nil && deployOptions.Manifest.Deploy.Compose.Stack != nil {
-			deployOptions.Manifest.Deploy.Compose.Stack.Name = deployOptions.Name
+		if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
+			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
+
+			mergeServicesToDeployFromOptionsAndManifest(deployOptions)
 		}
 	}
+
 	dc.Proxy.SetName(deployOptions.Name)
 	oktetoLog.SetStage("")
 
@@ -335,7 +338,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType {
-		data.Manifest = deployOptions.Manifest.Deploy.Compose.Stack.Manifest
+		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
@@ -418,6 +421,20 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	return err
 }
 
+func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
+	var manifestDeclaredServicesToDeploy []string
+	for _, composeInfo := range deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo {
+		manifestDeclaredServicesToDeploy = append(manifestDeclaredServicesToDeploy, composeInfo.ServicesToDeploy...)
+	}
+
+	if len(deployOptions.servicesToDeploy) > 0 && len(manifestDeclaredServicesToDeploy) > 0 {
+		oktetoLog.Warning("overwriting manifest's `services to deploy` with command line arguments")
+	}
+	if len(deployOptions.servicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
+		deployOptions.servicesToDeploy = manifestDeclaredServicesToDeploy
+	}
+}
+
 func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	stopCmds := make(chan os.Signal, 1)
 	signal.Notify(stopCmds, os.Interrupt)
@@ -461,7 +478,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	exitCompose := make(chan error, 1)
 
 	go func() {
-		if opts.Manifest.Deploy.Compose != nil {
+		if opts.Manifest.Deploy.ComposeSection != nil {
 			oktetoLog.SetStage("Deploying compose")
 			err := dc.deployStack(ctx, opts)
 			exitCompose <- err
@@ -490,10 +507,14 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 }
 
 func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
-	composeInfo := opts.Manifest.Deploy.Compose
-	composeInfo.Stack.Namespace = okteto.Context().Namespace
+	composeSectionInfo := opts.Manifest.Deploy.ComposeSection
+	composeSectionInfo.Stack.Namespace = okteto.Context().Namespace
+	var composeFiles []string
+	for _, composeInfo := range composeSectionInfo.ComposesInfo {
+		composeFiles = append(composeFiles, composeInfo.File)
+	}
 	stackOpts := &stack.StackDeployOptions{
-		StackPaths:       composeInfo.Manifest,
+		StackPaths:       composeFiles,
 		ForceBuild:       false,
 		Wait:             opts.Wait,
 		Timeout:          opts.Timeout,
@@ -510,7 +531,7 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 		IsInsideDeploy: true,
 	}
 	oktetoLog.Information("Deploying compose")
-	return stackCommand.RunDeploy(ctx, composeInfo.Stack, stackOpts)
+	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
 }
 
 func checkImageAtGlobalAndSetEnvs(service string, options *build.BuildOptions) (bool, error) {
@@ -574,8 +595,8 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
 		return err
 	}
-	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
-		stack := manifest.Deploy.Compose.Stack
+	if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
+		stack := manifest.Deploy.ComposeSection.Stack
 		if svc, ok := stack.Services[service]; ok {
 			svc.Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(service, "-", "_")))
 		}
@@ -700,10 +721,6 @@ func switchSSHRepoToHTTPS(repo string) (*url.URL, error) {
 	return nil, fmt.Errorf("could not detect repo protocol")
 }
 
-func shouldExecuteRemotely(options *Options) bool {
-	return options.Branch != "" || options.Repository != ""
-}
-
 func checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
 	buildInfo := manifest.Build[service]
 	isStack := manifest.Type == model.StackType
@@ -735,8 +752,8 @@ func checkServicesToBuild(service string, manifest *model.Manifest, ch chan stri
 	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
 		return err
 	}
-	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
-		stack := manifest.Deploy.Compose.Stack
+	if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
+		stack := manifest.Deploy.ComposeSection.Stack
 		if stack.Services[service].Image == "" {
 			stack.Services[service].Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(service, "-", "_")))
 		}

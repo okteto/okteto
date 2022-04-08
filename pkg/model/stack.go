@@ -249,11 +249,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 			svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
 			svc.Build.Dockerfile = loadAbsPath(svc.Build.Context, svc.Build.Dockerfile)
 		}
-		toMount := []StackVolume{}
-		for _, v := range svc.VolumeMounts {
-			toMount = append(toMount, v)
-		}
-		svc.Build.VolumesToInclude = toMount
+		copy(svc.Build.VolumesToInclude, svc.Volumes)
 	}
 	return s, nil
 }

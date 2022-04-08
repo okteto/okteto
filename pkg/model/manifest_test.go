@@ -117,7 +117,7 @@ func TestInferFromStack(t *testing.T) {
 				Dev:   ManifestDevs{},
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
-					Compose: &ComposeInfo{
+					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},
@@ -132,7 +132,7 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
-					Compose: &ComposeInfo{
+					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},
@@ -149,7 +149,7 @@ func TestInferFromStack(t *testing.T) {
 					},
 				},
 				Deploy: &DeployInfo{
-					Compose: &ComposeInfo{
+					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},
@@ -163,7 +163,7 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
-					Compose: &ComposeInfo{
+					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},
@@ -180,7 +180,7 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
-					Compose: &ComposeInfo{
+					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},
@@ -243,7 +243,7 @@ func TestInferFromStack(t *testing.T) {
 					},
 				},
 				Deploy: &DeployInfo{
-					Compose: &ComposeInfo{
+					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},

@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"regexp"
 	"runtime"
@@ -59,28 +58,6 @@ type TTYCollapseDisplayer struct {
 
 	isBuilding            bool
 	buildingpreviousLines int
-}
-
-func newTTYCollapseDisplayer(stdout, stderr io.Reader) *TTYCollapseDisplayer {
-	var (
-		stdoutScanner *bufio.Scanner
-		stderrScanner *bufio.Scanner
-	)
-	if stdout != nil {
-		stdoutScanner = bufio.NewScanner(stdout)
-	}
-	if stderr != nil {
-		stderrScanner = bufio.NewScanner(stderr)
-	}
-
-	return &TTYCollapseDisplayer{
-		numberOfLines:  25,
-		linesToDisplay: []string{},
-
-		stdoutScanner: stdoutScanner,
-		stderrScanner: stderrScanner,
-		screenbuf:     screenbuf.New(os.Stdout),
-	}
 }
 
 // Display displays a
@@ -357,7 +334,7 @@ func renderLogWithoutColors(tpl *template.Template, line string, charsPerLine in
 	if line == "" {
 		result = append(result, []byte(""))
 	} else if charsPerLine == 0 {
-		line = fmt.Sprintf("%s", strings.TrimSpace(line))
+		line = strings.TrimSpace(line)
 		result = append(result, render(tpl, line))
 	} else if iterations := len(line) / charsPerLine; iterations != 0 {
 		start := 0
@@ -367,14 +344,14 @@ func renderLogWithoutColors(tpl *template.Template, line string, charsPerLine in
 				end = len(line) - 1
 			}
 			currentLine := line[start:end]
-			currentLine = fmt.Sprintf("%s", strings.TrimSpace(currentLine))
+			currentLine = strings.TrimSpace(currentLine)
 			result = append(result, render(tpl, currentLine))
 			start = end
 			end += charsPerLine - 2
 
 		}
 	} else {
-		line = fmt.Sprintf("%s", strings.TrimSpace(line))
+		line = strings.TrimSpace(line)
 		result = append(result, render(tpl, line))
 	}
 	return result
