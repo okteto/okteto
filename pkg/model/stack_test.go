@@ -18,7 +18,6 @@ import (
 	"reflect"
 	"testing"
 
-	apiv1 "k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -903,7 +902,7 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 							{
 								HostPort:      8080,
 								ContainerPort: 8080,
-								Protocol:      apiv1.ProtocolTCP,
+								Protocol:      corev1.ProtocolTCP,
 							},
 						},
 					},

@@ -1807,7 +1807,7 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 - okteto stack deploy`),
 			expected: &DeployInfo{
 				Commands: []DeployCommand{
-					DeployCommand{
+					{
 						Name:    "okteto stack deploy",
 						Command: "okteto stack deploy",
 					},
@@ -1938,51 +1938,101 @@ func TestDeployInfoMarshalling(t *testing.T) {
 	}
 }
 
-func TestComposeInfoUnmarshalling(t *testing.T) {
+func TestComposeSectionInfoUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name                string
 		composeInfoManifest []byte
-		expected            *ComposeInfo
+		expected            *ComposeSectionInfo
 	}{
 		{
 			name: "list of compose",
-			composeInfoManifest: []byte(`
-- docker-compose.yml
+			composeInfoManifest: []byte(`- docker-compose.yml
 - docker-compose.dev.yml`),
-			expected: &ComposeInfo{
-				Manifest: []string{
-					"docker-compose.yml",
-					"docker-compose.dev.yml",
+			expected: &ComposeSectionInfo{
+				ComposesInfo: []ComposeInfo{
+					{
+						File: "docker-compose.yml",
+					},
+					{
+						File: "docker-compose.dev.yml",
+					},
 				},
 			},
 		},
 		{
 			name:                "a docker compose",
 			composeInfoManifest: []byte(`docker-compose.yml`),
-			expected: &ComposeInfo{
-				Manifest: []string{
-					"docker-compose.yml",
+			expected: &ComposeSectionInfo{
+				ComposesInfo: []ComposeInfo{
+					{
+						File: "docker-compose.yml",
+					},
 				},
 			},
 		},
 		{
 			name:                "extended notation one compose",
 			composeInfoManifest: []byte(`manifest: docker-compose.yml`),
-			expected: &ComposeInfo{
-				Manifest: []string{
-					"docker-compose.yml",
+			expected: &ComposeSectionInfo{
+				ComposesInfo: []ComposeInfo{
+					{
+						File: "docker-compose.yml",
+					},
 				},
 			},
 		},
 		{
-			name: "extended notation one compose",
-			composeInfoManifest: []byte(`manifest:
+			name: "multiple compose under `manifest`",
+			composeInfoManifest: []byte(`
+manifest:
   - docker-compose.yml
   - docker-compose.dev.yml`),
-			expected: &ComposeInfo{
-				Manifest: []string{
-					"docker-compose.yml",
-					"docker-compose.dev.yml",
+			expected: &ComposeSectionInfo{
+				ComposesInfo: []ComposeInfo{
+					{
+						File: "docker-compose.yml",
+					},
+					{
+						File: "docker-compose.dev.yml",
+					},
+				},
+			},
+		},
+		{
+			name: "compose with services",
+			composeInfoManifest: []byte(`
+file: docker-compose.yml
+services:
+  - a
+  - b`),
+			expected: &ComposeSectionInfo{
+				ComposesInfo: []ComposeInfo{
+					{
+						File:             "docker-compose.yml",
+						ServicesToDeploy: []string{"a", "b"},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple compose with services",
+			composeInfoManifest: []byte(`
+- file: docker-compose.yml
+  services:
+    - a
+    - b
+- file: another-docker-compose.yml
+  services: c`),
+			expected: &ComposeSectionInfo{
+				ComposesInfo: []ComposeInfo{
+					{
+						File:             "docker-compose.yml",
+						ServicesToDeploy: []string{"a", "b"},
+					},
+					{
+						File:             "another-docker-compose.yml",
+						ServicesToDeploy: []string{"c"},
+					},
 				},
 			},
 		},
@@ -1990,7 +2040,7 @@ func TestComposeInfoUnmarshalling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := &ComposeInfo{}
+			result := &ComposeSectionInfo{}
 
 			err := yaml.UnmarshalStrict(tt.composeInfoManifest, &result)
 			if err != nil {
@@ -2004,34 +2054,45 @@ func TestComposeInfoUnmarshalling(t *testing.T) {
 	}
 }
 
-func TestManifestListUnmarshalling(t *testing.T) {
+func TestComposeInfoUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name                 string
 		manifestListManifest []byte
-		expected             *ManifestList
+		expected             *ComposeInfo
 	}{
 		{
-			name: "list of compose",
+			name: "docker compose without key",
 			manifestListManifest: []byte(`
-- docker-compose.yml
-- docker-compose.dev.yml`),
-			expected: &ManifestList{
-				"docker-compose.yml",
-				"docker-compose.dev.yml",
+docker-compose.yml`),
+			expected: &ComposeInfo{
+				File: "docker-compose.yml",
 			},
 		},
 		{
-			name:                 "a docker compose",
-			manifestListManifest: []byte(`docker-compose.yml`),
-			expected: &ManifestList{
-				"docker-compose.yml",
+			name: "docker compose",
+			manifestListManifest: []byte(`
+file: docker-compose.yml`),
+			expected: &ComposeInfo{
+				File: "docker-compose.yml",
+			},
+		},
+		{
+			name: "docker compose with services",
+			manifestListManifest: []byte(`
+file: docker-compose.yml
+services: a`),
+			expected: &ComposeInfo{
+				File: "docker-compose.yml",
+				ServicesToDeploy: []string{
+					"a",
+				},
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := &ManifestList{}
+			result := &ComposeInfo{}
 
 			err := yaml.UnmarshalStrict(tt.manifestListManifest, &result)
 			if err != nil {
