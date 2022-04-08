@@ -349,7 +349,7 @@ func getEndpointsFromPorts(services map[string]*ServiceRaw) EndpointSpec {
 func getAccessiblePorts(ports []PortRaw) []PortRaw {
 	accessiblePorts := make([]PortRaw, 0)
 	for _, p := range ports {
-		if p.HostPort != 0 && !isSkippablePort(p.ContainerPort) {
+		if p.HostPort != 0 && !IsSkippablePort(p.ContainerPort) {
 			accessiblePorts = append(accessiblePorts, p)
 		}
 	}
@@ -887,9 +887,6 @@ func getPortWithMapping(p *PortRaw, portString string) error {
 		if err != nil {
 			return err
 		}
-		if isSkippablePort(p.HostPort) {
-			p.HostPort = 0
-		}
 
 		portDigit, protocol, err := getPortAndProtocol(containerPortString, portString)
 		if err != nil {
@@ -905,7 +902,7 @@ func getPortWithMapping(p *PortRaw, portString string) error {
 	return nil
 }
 
-func isSkippablePort(port int32) bool {
+func IsSkippablePort(port int32) bool {
 	skippablePorts := map[int32]string{3306: "MySQL", 1521: "OracleDB", 1830: "OracleDB", 5432: "PostgreSQL",
 		1433: "SQL Server", 1434: "SQL Server", 7210: "MaxDB", 7473: "Neo4j", 7474: "Neo4j", 8529: "ArangoDB",
 		7000: "Cassandra", 7001: "Cassandra", 9042: "Cassandra", 8086: "InfluxDB", 9200: "Elasticsearch", 9300: "Elasticsearch",
