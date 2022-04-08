@@ -770,7 +770,7 @@ func TestUpCompose(t *testing.T) {
 
 	log.Printf("created namespace %s \n", namespace)
 
-	if err := cloneGitRepo(ctx, microservicesComposeRepo); err != nil {
+	if err := cloneGitRepoWithBranch(ctx, microservicesComposeRepo, "jlopezbarb/fix-win-build"); err != nil {
 		t.Fatal(err)
 	}
 	defer deleteGitRepo(ctx, microservicesComposeRepo)
