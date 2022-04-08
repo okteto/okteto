@@ -25,6 +25,7 @@ type ContextOptions struct {
 	Context          string
 	Namespace        string
 	Builder          string
+	DockerDesktop    bool
 	OnlyOkteto       bool
 	Show             bool
 	Save             bool
