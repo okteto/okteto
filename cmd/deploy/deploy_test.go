@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -561,15 +562,8 @@ func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
 				got[service] = true
 			}
 
-			for service := range got {
-				if !expected[service] {
-					t.Errorf("service %s was not expected", service)
-				}
-			}
-			for service := range expected {
-				if !got[service] {
-					t.Errorf("service %s was not found", service)
-				}
+			if !reflect.DeepEqual(expected, got) {
+				t.Errorf("expected %v, got %v", expected, got)
 			}
 		})
 	}
