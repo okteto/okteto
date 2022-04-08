@@ -42,6 +42,7 @@ func Down() *cobra.Command {
 	var namespace string
 	var k8sContext string
 	var rm bool
+	var all bool
 
 	cmd := &cobra.Command{
 		Use:   "down [svc]",
@@ -59,6 +60,22 @@ func Down() *cobra.Command {
 			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				return err
+			}
+
+			if all {
+				devs, err := utils.GetAllDevsFromManifest(manifest)
+				if err != nil {
+					return err
+				}
+				for _, dev := range devs {
+					if err := runDown(ctx, dev, rm); err != nil {
+						analytics.TrackDown(false)
+						err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+						return err
+					}
+				}
+				analytics.TrackDown(true)
+				return nil
 			}
 
 			devName := ""
@@ -83,6 +100,7 @@ func Down() *cobra.Command {
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volume")
+	cmd.Flags().BoolVarP(&all, "all", "A", false, "deactivate all running dev containers")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the down command is executed")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the down command is executed")
 	return cmd
