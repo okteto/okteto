@@ -46,3 +46,20 @@ type App interface {
 
 	Divert(username string) App
 }
+
+type StaticPod interface {
+	Kind() string
+	ObjectMeta() metav1.ObjectMeta
+	PodSpec() *apiv1.PodSpec
+
+	DevClone() App
+
+	CheckConditionErrors(dev *model.Dev) error
+	GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error)
+
+	Refresh(ctx context.Context, c kubernetes.Interface) error
+	Watch(ctx context.Context, result chan error, c kubernetes.Interface)
+	Deploy(ctx context.Context, c kubernetes.Interface) error
+	PatchAnnotations(ctx context.Context, c kubernetes.Interface) error
+	Destroy(ctx context.Context, c kubernetes.Interface) error
+}
