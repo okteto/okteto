@@ -270,6 +270,39 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
 
 			mergeServicesToDeployFromOptionsAndManifest(deployOptions)
+			if len(deployOptions.servicesToDeploy) > 0 {
+				servicesToDeploy := map[string]bool{}
+				for _, service := range deployOptions.servicesToDeploy {
+					servicesToDeploy[service] = true
+				}
+
+				// Only deploy endpoints from servicesToDeploy
+				for serviceName := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints {
+					if !servicesToDeploy[serviceName] {
+						delete(deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints, serviceName)
+					}
+				}
+
+				// Only deploy volumes from servicesToDeploy
+				volumesToDeploy := map[string]bool{}
+
+				for serviceName, serviceSpec := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
+					if servicesToDeploy[serviceName] {
+						for _, volume := range serviceSpec.Volumes {
+							if deployOptions.Manifest.Deploy.ComposeSection.Stack.Volumes[volume.RemotePath] != nil {
+								volumesToDeploy[volume.LocalPath] = true
+							}
+						}
+					}
+				}
+
+				for volume := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Volumes {
+					if !volumesToDeploy[volume] {
+						delete(deployOptions.Manifest.Deploy.ComposeSection.Stack.Volumes, volume)
+					}
+				}
+
+			}
 		}
 	}
 
