@@ -69,7 +69,15 @@ type OktetoContext struct {
 	Analytics         bool                 `json:"-" yaml:"-"`
 	ClusterType       string               `json:"-" yaml:"-"`
 	IsOkteto          bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
-	Current           bool                 `json:"current" yaml:"current"`
+}
+
+// OktetoContextViewer contains info to show
+type OktetoContextViewer struct {
+	Name      string `json:"name" yaml:"name,omitempty"`
+	Namespace string `json:"namespace" yaml:"namespace,omitempty"`
+	Builder   string `json:"builder,omitempty" yaml:"builder,omitempty"`
+	Registry  string `json:"registry,omitempty" yaml:"registry,omitempty"`
+	Current   bool   `json:"current" yaml:"current"`
 }
 
 // InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context
@@ -451,4 +459,23 @@ func isLocalHostname(clusterHost string) bool {
 	ipAddress := net.ParseIP(host)
 	return ipAddress.IsPrivate() || ipAddress.IsUnspecified() || ipAddress.IsLinkLocalUnicast() ||
 		ipAddress.IsLoopback() || ipAddress.IsLinkLocalMulticast() || host == "kubernetes.docker.internal"
+}
+
+// ToViewer transforms to a viewer struct
+func (c *OktetoContext) ToViewer() *OktetoContextViewer {
+	builder := c.Builder
+	if builder == "" {
+		builder = "docker"
+	}
+	registry := c.Registry
+	if builder == "" {
+		registry = "-"
+	}
+	return &OktetoContextViewer{
+		Name:      c.Name,
+		Namespace: c.Namespace,
+		Builder:   builder,
+		Registry:  registry,
+		Current:   Context().Name == c.Name,
+	}
 }

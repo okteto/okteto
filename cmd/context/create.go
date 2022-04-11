@@ -312,19 +312,7 @@ func isUrl(u string) bool {
 }
 
 func showCurrentCtxJSON() error {
-	if okteto.Context().Builder == "" {
-		okteto.Context().Builder = "docker"
-	}
-	if okteto.Context().Registry == "" {
-		okteto.Context().Registry = "-"
-	}
-	okCtx := &okteto.OktetoContext{
-		Name:      okteto.Context().Name,
-		Namespace: okteto.Context().Namespace,
-		Builder:   okteto.Context().Builder,
-		Registry:  okteto.Context().Registry,
-		Current:   true,
-	}
+	okCtx := okteto.Context().ToViewer()
 	ctxRaw, err := json.MarshalIndent(okCtx, "", "\t")
 	if err != nil {
 		return err
