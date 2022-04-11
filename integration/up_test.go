@@ -816,7 +816,7 @@ func TestUpCompose(t *testing.T) {
 	}
 
 	port := "5005"
-	ln, err := net.Listen("tcp", ":"+port)
+	ln, err := net.Listen("tcp", "localhost:"+port)
 
 	if err == nil {
 		_ = ln.Close()
