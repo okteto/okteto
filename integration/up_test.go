@@ -816,7 +816,11 @@ func TestUpCompose(t *testing.T) {
 	}
 
 	if runtime.GOOS == "windows" {
-		if model.IsPortAvailable("0.0.0.0", 5005) {
+		port := "5005"
+		ln, err := net.Listen("tcp", "[::1]:"+port)
+
+		if err == nil {
+			_ = ln.Close()
 			t.Fatalf("port 5005 is available locally")
 		}
 	} else {
