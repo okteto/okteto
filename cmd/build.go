@@ -37,12 +37,11 @@ import (
 func Build(ctx context.Context) *cobra.Command {
 
 	options := build.BuildOptions{}
+
 	cmd := &cobra.Command{
 		Use:   "build [service...]",
 		Short: "Build and push the images defined in the 'build' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			ctxOpts := &contextCMD.ContextOptions{}
 
 			manifest, errManifest := model.GetManifestV2(options.File)
 			if errManifest != nil {
@@ -54,15 +53,8 @@ func Build(ctx context.Context) *cobra.Command {
 				len(manifest.Build) != 0
 
 			if isBuildV2 {
-				if manifest.Context != "" {
-					ctxOpts.Context = manifest.Context
-					if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
-						return err
-					}
-				}
-
 				if options.Namespace == "" && manifest.Namespace != "" {
-					ctxOpts.Namespace = manifest.Namespace
+					options.Namespace = manifest.Namespace
 				}
 			} else {
 				maxV1Args := 1
@@ -73,14 +65,14 @@ func Build(ctx context.Context) *cobra.Command {
 						Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
 					}
 				}
-
-				if options.Namespace != "" {
-					ctxOpts.Namespace = options.Namespace
-				}
 			}
 
-			if okteto.IsOkteto() && ctxOpts.Namespace != "" {
-				create, err := utils.ShouldCreateNamespace(ctx, ctxOpts.Namespace)
+			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.File); err != nil {
+				return err
+			}
+
+			if okteto.IsOkteto() && options.Namespace != "" {
+				create, err := utils.ShouldCreateNamespace(ctx, options.Namespace)
 				if err != nil {
 					return err
 				}
@@ -89,14 +81,10 @@ func Build(ctx context.Context) *cobra.Command {
 					if err != nil {
 						return err
 					}
-					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
+					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: options.Namespace}); err != nil {
 						return err
 					}
 				}
-			}
-
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
-				return err
 			}
 
 			if isBuildV2 {
@@ -107,6 +95,7 @@ func Build(ctx context.Context) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the exec command is executed")
 	cmd.Flags().StringVarP(&options.File, "file", "f", "", "path to the Okteto Manifest (default is 'okteto.yml')")
 	cmd.Flags().StringVarP(&options.Tag, "tag", "t", "", "name and optionally a tag in the 'name:tag' format (it is automatically pushed)")
 	cmd.Flags().StringVarP(&options.Target, "target", "", "", "set the target build stage to build")
@@ -115,7 +104,7 @@ func Build(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.OutputMode, "progress", "", oktetoLog.TTYFormat, "show plain/tty build output")
 	cmd.Flags().StringArrayVar(&options.BuildArgs, "build-arg", nil, "set build-time variables")
 	cmd.Flags().StringArrayVar(&options.Secrets, "secret", nil, "secret files exposed to the build. Format: id=mysecret,src=/local/secret")
-	cmd.Flags().StringVarP(&options.Namespace, "namespace", "", "", "namespace against which the image will be consumed. Default is the one defined at okteto context or okteto manifest")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "namespace against which the image will be consumed. Default is the one defined at okteto context or okteto manifest")
 	cmd.Flags().BoolVarP(&options.BuildToGlobal, "global", "", false, "push the image to the global registry")
 	return cmd
 }
