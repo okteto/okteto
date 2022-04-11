@@ -770,7 +770,7 @@ func TestUpCompose(t *testing.T) {
 
 	log.Printf("created namespace %s \n", namespace)
 
-	if err := cloneGitRepoWithBranch(ctx, microservicesComposeRepo, "jlopezbarb/fix-win-build"); err != nil {
+	if err := cloneGitRepo(ctx, microservicesComposeRepo); err != nil {
 		t.Fatal(err)
 	}
 	defer deleteGitRepo(ctx, microservicesComposeRepo)
@@ -815,12 +815,18 @@ func TestUpCompose(t *testing.T) {
 		t.Fatalf("Expected to have only one endpoint for svc 'vote' but got %d", len(svc.Spec.Ports))
 	}
 
-	port := "5005"
-	ln, err := net.Listen("tcp", ":"+port)
+	if runtime.GOOS == "windows" {
+		if model.IsPortAvailable("0.0.0.0", 5005) {
+			t.Fatalf("port 5005 is available locally")
+		}
+	} else {
+		port := "5005"
+		ln, err := net.Listen("tcp", ":"+port)
 
-	if err == nil {
-		_ = ln.Close()
-		t.Fatalf("port 5005 is available locally")
+		if err == nil {
+			_ = ln.Close()
+			t.Fatalf("port 5005 is available locally")
+		}
 	}
 
 	if err := downSvc(ctx, "vote", microservicesComposeFolder, oktetoPath); err != nil {
