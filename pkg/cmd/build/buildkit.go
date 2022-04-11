@@ -102,6 +102,7 @@ func getSolveOpt(buildOptions *BuildOptions) (*client.SolveOpt, error) {
 		FrontendAttrs: frontendAttrs,
 		Session:       attachable,
 		CacheImports:  []client.CacheOptionsEntry{},
+		CacheExports:  []client.CacheOptionsEntry{},
 	}
 
 	if buildOptions.Tag != "" {
@@ -125,6 +126,22 @@ func getSolveOpt(buildOptions *BuildOptions) (*client.SolveOpt, error) {
 		)
 	}
 
+	if buildOptions.ExportCache != "" {
+		mode := "min"
+		if buildOptions.ExportCache != buildOptions.Tag {
+			mode = "max"
+		}
+		opt.CacheExports = append(
+			opt.CacheExports,
+			client.CacheOptionsEntry{
+				Type: "registry",
+				Attrs: map[string]string{
+					"ref":  buildOptions.ExportCache,
+					"mode": mode,
+				},
+			},
+		)
+	}
 	return opt, nil
 }
 

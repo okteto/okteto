@@ -42,6 +42,7 @@ type buildInfoRaw struct {
 	Args             Environment   `yaml:"args,omitempty"`
 	Image            string        `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume `yaml:"-"`
+	ExportCache      string        `yaml:"export_cache,omitempty"`
 }
 
 type syncRaw struct {
@@ -308,22 +309,23 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	buildInfo.Args = rawBuildInfo.Args
 	buildInfo.Image = rawBuildInfo.Image
 	buildInfo.CacheFrom = rawBuildInfo.CacheFrom
+	buildInfo.ExportCache = rawBuildInfo.ExportCache
 	return nil
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (buildInfo BuildInfo) MarshalYAML() (interface{}, error) {
+func (buildInfo *BuildInfo) MarshalYAML() (interface{}, error) {
 	if buildInfo.Context != "" && buildInfo.Context != "." {
-		return buildInfoRaw(buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	if buildInfo.Dockerfile != "" && buildInfo.Dockerfile != "./Dockerfile" {
-		return buildInfoRaw(buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	if buildInfo.Target != "" {
-		return buildInfoRaw(buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	if buildInfo.Args != nil && len(buildInfo.Args) != 0 {
-		return buildInfoRaw(buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	return buildInfo.Name, nil
 }
