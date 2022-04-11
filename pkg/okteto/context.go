@@ -69,6 +69,7 @@ type OktetoContext struct {
 	Analytics         bool                 `json:"-" yaml:"-"`
 	ClusterType       string               `json:"-" yaml:"-"`
 	IsOkteto          bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
+	Current           bool                 `json:"current" yaml:"current"`
 }
 
 // InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context

@@ -63,7 +63,13 @@ func executeListContext(ctx context.Context) error {
 		if okCtx, ok := ctxStore.Contexts[ctxSelector.Name]; ok && okCtx.Builder != "" {
 			ctxSelector.Builder = okCtx.Builder
 		}
-		ctxs = append(ctxs, okteto.OktetoContext{Name: ctxSelector.Name, Namespace: ctxSelector.Namespace, Builder: ctxSelector.Builder, Registry: ctxSelector.Registry})
+		ctxs = append(ctxs, okteto.OktetoContext{
+			Name:      ctxSelector.Name,
+			Namespace: ctxSelector.Namespace,
+			Builder:   ctxSelector.Builder,
+			Registry:  ctxSelector.Registry,
+			Current:   ctxSelector.Name == okteto.Context().Name,
+		})
 	}
 
 	if output == "" {
