@@ -379,11 +379,20 @@ func TestUpDeployments(t *testing.T) {
 
 	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[model.DeploymentRevisionAnnotation])
 
-	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true, false); err != nil {
+	newProccess, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath, upErrorChannel)
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
+		t.Error(err)
+	}
+
+	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true, false); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := checkIfUpFinished(ctx, newProccess.Pid); err != nil {
 		t.Error(err)
 	}
 
@@ -816,7 +825,7 @@ func TestUpCompose(t *testing.T) {
 	}
 
 	port := "5005"
-	ln, err := net.Listen("tcp", ":"+port)
+	ln, err := net.Listen("tcp", "localhost:"+port)
 
 	if err == nil {
 		_ = ln.Close()

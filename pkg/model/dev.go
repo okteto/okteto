@@ -123,6 +123,7 @@ type BuildInfo struct {
 	Args             Environment   `yaml:"args,omitempty"`
 	Image            string        `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume `yaml:"-"`
+	ExportCache      string        `yaml:"export_cache,omitempty"`
 }
 
 // Volume represents a volume in the development container
@@ -614,10 +615,15 @@ func (dev *Dev) expandEnvFiles() error {
 		}
 
 		for name, value := range envMap {
-			dev.Environment = append(
-				dev.Environment,
-				EnvVar{Name: name, Value: value},
-			)
+			if value == "" {
+				value = os.Getenv(name)
+			}
+			if value != "" {
+				dev.Environment = append(
+					dev.Environment,
+					EnvVar{Name: name, Value: value},
+				)
+			}
 		}
 	}
 
