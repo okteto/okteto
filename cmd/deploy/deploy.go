@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"reflect"
 	"strings"
 	"time"
 
@@ -389,7 +390,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 					oktetoLog.Information("Run 'okteto up' to activate your development container")
 				}
 			}
-			if err := pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, c); err != nil {
+			if err := pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy, c); err != nil {
 				oktetoLog.Warning("could not add dev annotations due to: %s", err.Error())
 			}
 		}
@@ -438,7 +439,16 @@ func setDeployOptionsValuesFromManifest(deployOptions *Options, cwd string) {
 
 			onlyDeployVolumesFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack, servicesToDeploy)
 
+		} else {
+			deployOptions.servicesToDeploy = []string{}
+			for service := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
+				deployOptions.servicesToDeploy = append(deployOptions.servicesToDeploy, service)
+			}
 		}
+	}
+
+	if len(deployOptions.servicesToDeploy) == 0 {
+		deployOptions.servicesToDeploy = []string{deployOptions.Name}
 	}
 }
 
@@ -446,6 +456,20 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	var manifestDeclaredServicesToDeploy []string
 	for _, composeInfo := range deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo {
 		manifestDeclaredServicesToDeploy = append(manifestDeclaredServicesToDeploy, composeInfo.ServicesToDeploy...)
+	}
+
+	manifestDeclaredServicesToDeploySet := map[string]bool{}
+	for _, service := range manifestDeclaredServicesToDeploy {
+		manifestDeclaredServicesToDeploySet[service] = true
+	}
+
+	commandDeclaredServicesToDeploy := map[string]bool{}
+	for _, service := range deployOptions.servicesToDeploy {
+		commandDeclaredServicesToDeploy[service] = true
+	}
+
+	if reflect.DeepEqual(manifestDeclaredServicesToDeploySet, commandDeclaredServicesToDeploy) {
+		return
 	}
 
 	if len(deployOptions.servicesToDeploy) > 0 && len(manifestDeclaredServicesToDeploy) > 0 {
