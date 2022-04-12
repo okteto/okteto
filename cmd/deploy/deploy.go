@@ -268,19 +268,22 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 		if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
 			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
+		}
+	}
 
-			mergeServicesToDeployFromOptionsAndManifest(deployOptions)
-			if len(deployOptions.servicesToDeploy) > 0 {
-				servicesToDeploy := map[string]bool{}
-				for _, service := range deployOptions.servicesToDeploy {
-					servicesToDeploy[service] = true
-				}
+	if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
 
-				onlyDeployEndpointsFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints, servicesToDeploy)
-
-				onlyDeployVolumesFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack, servicesToDeploy)
-
+		mergeServicesToDeployFromOptionsAndManifest(deployOptions)
+		if len(deployOptions.servicesToDeploy) > 0 {
+			servicesToDeploy := map[string]bool{}
+			for _, service := range deployOptions.servicesToDeploy {
+				servicesToDeploy[service] = true
 			}
+
+			onlyDeployEndpointsFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints, servicesToDeploy)
+
+			onlyDeployVolumesFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack, servicesToDeploy)
+
 		}
 	}
 
@@ -447,10 +450,15 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 }
 
 func onlyDeployEndpointsFromServicesToDeploy(endpoints model.EndpointSpec, servicesToDeploy map[string]bool) {
-	for serviceName := range endpoints {
-		if !servicesToDeploy[serviceName] {
-			delete(endpoints, serviceName)
+	for key, spec := range endpoints {
+		newRules := []model.EndpointRule{}
+		for _, rule := range spec.Rules {
+			if servicesToDeploy[rule.Service] {
+				newRules = append(newRules, rule)
+			}
 		}
+		spec.Rules = newRules
+		endpoints[key] = spec
 	}
 }
 
