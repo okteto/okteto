@@ -26,7 +26,10 @@ func Dev(ctx context.Context) *cobra.Command {
 	}
 
 	for _, subCommand := range devSubCommands {
-		subCommand.Short = fmt.Sprintf("%s. %s", subCommand.Short, fmt.Sprintf("You can use `okteto %s` as an alias", subCommand.Use))
+		if subCommand.Long == "" {
+			subCommand.Long = subCommand.Short
+		}
+		subCommand.Long = fmt.Sprintf("%s. %s", subCommand.Long, fmt.Sprintf("You can use `okteto %s` as an alias", subCommand.Use))
 		devCommand.AddCommand(subCommand)
 	}
 
