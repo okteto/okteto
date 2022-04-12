@@ -583,15 +583,22 @@ func Test_onlyDeployEndpointsFromServicesToDeploy(t *testing.T) {
 			name: "multiple endpoints",
 			args: args{
 				endpoints: model.EndpointSpec{
-					"a": {},
-					"b": {},
+					"manifest": {
+						Rules: []model.EndpointRule{
+							{Service: "a"},
+							{Service: "b"},
+						},
+					},
 				},
 				servicesToDeploy: map[string]bool{
 					"a": true,
 				},
 			},
 			expected: model.EndpointSpec{
-				"a": {},
+				"manifest": {Rules: []model.EndpointRule{
+					{Service: "a"},
+				},
+				},
 			},
 		},
 		{
@@ -599,7 +606,7 @@ func Test_onlyDeployEndpointsFromServicesToDeploy(t *testing.T) {
 			args: args{
 				endpoints: model.EndpointSpec{},
 				servicesToDeploy: map[string]bool{
-					"a": true,
+					"manifest": true,
 				},
 			},
 			expected: model.EndpointSpec{},
