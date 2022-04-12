@@ -276,31 +276,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 					servicesToDeploy[service] = true
 				}
 
-				// Only deploy endpoints from servicesToDeploy
-				for serviceName := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints {
-					if !servicesToDeploy[serviceName] {
-						delete(deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints, serviceName)
-					}
-				}
+				onlyDeployEndpointsFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints, servicesToDeploy)
 
-				// Only deploy volumes from servicesToDeploy
-				volumesToDeploy := map[string]bool{}
-
-				for serviceName, serviceSpec := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
-					if servicesToDeploy[serviceName] {
-						for _, volume := range serviceSpec.Volumes {
-							if deployOptions.Manifest.Deploy.ComposeSection.Stack.Volumes[volume.RemotePath] != nil {
-								volumesToDeploy[volume.LocalPath] = true
-							}
-						}
-					}
-				}
-
-				for volume := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Volumes {
-					if !volumesToDeploy[volume] {
-						delete(deployOptions.Manifest.Deploy.ComposeSection.Stack.Volumes, volume)
-					}
-				}
+				onlyDeployVolumesFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack, servicesToDeploy)
 
 			}
 		}
@@ -465,6 +443,35 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 	if len(deployOptions.servicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
 		deployOptions.servicesToDeploy = manifestDeclaredServicesToDeploy
+	}
+}
+
+func onlyDeployEndpointsFromServicesToDeploy(endpoints model.EndpointSpec, servicesToDeploy map[string]bool) {
+	for serviceName := range endpoints {
+		if !servicesToDeploy[serviceName] {
+			delete(endpoints, serviceName)
+		}
+	}
+}
+
+func onlyDeployVolumesFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) {
+
+	volumesToDeploy := map[string]bool{}
+
+	for serviceName, serviceSpec := range stack.Services {
+		if servicesToDeploy[serviceName] {
+			for _, volume := range serviceSpec.Volumes {
+				if stack.Volumes[volume.LocalPath] != nil {
+					volumesToDeploy[volume.LocalPath] = true
+				}
+			}
+		}
+	}
+
+	for volume := range stack.Volumes {
+		if !volumesToDeploy[volume] {
+			delete(stack.Volumes, volume)
+		}
 	}
 }
 
