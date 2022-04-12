@@ -248,44 +248,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy.ComposeSection == nil {
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
-	if deployOptions.Manifest.Context == "" {
-		deployOptions.Manifest.Context = okteto.Context().Name
-	}
-	if deployOptions.Manifest.Namespace == "" {
-		deployOptions.Manifest.Namespace = okteto.Context().Namespace
-	}
 
-	if deployOptions.Name == "" {
-		if deployOptions.Manifest.Name != "" {
-			deployOptions.Name = deployOptions.Manifest.Name
-		} else {
-			deployOptions.Name = utils.InferName(cwd)
-		}
-
-	} else {
-		if deployOptions.Manifest != nil {
-			deployOptions.Manifest.Name = deployOptions.Name
-		}
-		if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
-			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
-		}
-	}
-
-	if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
-
-		mergeServicesToDeployFromOptionsAndManifest(deployOptions)
-		if len(deployOptions.servicesToDeploy) > 0 {
-			servicesToDeploy := map[string]bool{}
-			for _, service := range deployOptions.servicesToDeploy {
-				servicesToDeploy[service] = true
-			}
-
-			onlyDeployEndpointsFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints, servicesToDeploy)
-
-			onlyDeployVolumesFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack, servicesToDeploy)
-
-		}
-	}
+	setDeployOptionsValuesFromManifest(deployOptions, cwd)
 
 	dc.Proxy.SetName(deployOptions.Name)
 	oktetoLog.SetStage("")
@@ -335,6 +299,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if err != nil {
 		return err
 	}
+
+	setDeployOptionsValuesFromManifest(deployOptions, cwd)
 
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
 	dc.Proxy.Start()
@@ -433,6 +399,47 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 	return err
+}
+
+func setDeployOptionsValuesFromManifest(deployOptions *Options, cwd string) {
+	if deployOptions.Manifest.Context == "" {
+		deployOptions.Manifest.Context = okteto.Context().Name
+	}
+	if deployOptions.Manifest.Namespace == "" {
+		deployOptions.Manifest.Namespace = okteto.Context().Namespace
+	}
+
+	if deployOptions.Name == "" {
+		if deployOptions.Manifest.Name != "" {
+			deployOptions.Name = deployOptions.Manifest.Name
+		} else {
+			deployOptions.Name = utils.InferName(cwd)
+		}
+
+	} else {
+		if deployOptions.Manifest != nil {
+			deployOptions.Manifest.Name = deployOptions.Name
+		}
+		if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
+			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
+		}
+	}
+
+	if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
+
+		mergeServicesToDeployFromOptionsAndManifest(deployOptions)
+		if len(deployOptions.servicesToDeploy) > 0 {
+			servicesToDeploy := map[string]bool{}
+			for _, service := range deployOptions.servicesToDeploy {
+				servicesToDeploy[service] = true
+			}
+
+			onlyDeployEndpointsFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints, servicesToDeploy)
+
+			onlyDeployVolumesFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack, servicesToDeploy)
+
+		}
+	}
 }
 
 func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
