@@ -37,7 +37,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/google/uuid"
-	gops "github.com/mitchellh/go-ps"
 	"github.com/shirou/gopsutil/process"
 )
 
@@ -812,22 +811,6 @@ func (s *Syncthing) HardTerminate() error {
 			continue
 		}
 
-		// workaround until https://github.com/shirou/gopsutil/issues/1043 is fixed
-		if name == "" && runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
-			pr, err := gops.FindProcess(int(p.Pid))
-			if err != nil {
-				oktetoLog.Infof("error getting process %d: %s", p.Pid, err.Error())
-				continue
-			}
-
-			if pr == nil {
-				oktetoLog.Infof("process  %d not found", p.Pid)
-				continue
-			}
-
-			name = pr.Executable()
-		}
-
 		if name == "" {
 			oktetoLog.Infof("ignoring pid %d with no name: %v", p.Pid, p)
 			continue
@@ -846,6 +829,21 @@ func (s *Syncthing) HardTerminate() error {
 		if !strings.Contains(cmdline, fmt.Sprintf("-home %s", s.Home)) {
 			continue
 		}
+
+		oktetoLog.Infof("terminating syncthing %d with wait: %s", p.Pid, s.Home)
+		parent, err := getParent(p)
+		if err != nil {
+			oktetoLog.Info("can not find parent")
+			continue
+		}
+
+		if parent != nil {
+			if err := terminate(parent, true); err != nil {
+				oktetoLog.Infof("error terminating syncthing %d with wait: %s", p.Pid, err.Error())
+				continue
+			}
+		}
+
 		oktetoLog.Infof("terminating syncthing %d with wait: %s", p.Pid, s.Home)
 		if err := terminate(p, true); err != nil {
 			oktetoLog.Infof("error terminating syncthing %d with wait: %s", p.Pid, err.Error())
@@ -853,6 +851,30 @@ func (s *Syncthing) HardTerminate() error {
 		oktetoLog.Infof("terminated syncthing %d with wait: %s", p.Pid, s.Home)
 	}
 	return nil
+}
+
+func getParent(p *process.Process) (*process.Process, error) {
+	name, err := p.Name()
+	if err != nil {
+		return nil, fmt.Errorf("can not get parent name")
+	}
+	parent, err := p.Parent()
+	if err != nil {
+		return nil, fmt.Errorf("can not find parent")
+	}
+	if runtime.GOOS == "windows" && (parent.Pid == 0 || parent.Pid == 4) {
+		return nil, fmt.Errorf("can't remove root process")
+	} else if runtime.GOOS != "windows" && parent.Pid < 100 {
+		return nil, fmt.Errorf("can't remove root process")
+	}
+	pName, err := parent.Name()
+	if err != nil {
+		oktetoLog.Infof("could not get  parent: %s", err)
+	}
+	if pName == name {
+		return getParent(parent)
+	}
+	return parent, nil
 }
 
 // SoftTerminate halts the background process

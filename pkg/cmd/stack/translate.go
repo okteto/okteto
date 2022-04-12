@@ -110,10 +110,15 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 	}
 
 	for name, value := range envMap {
-		svc.Environment = append(
-			svc.Environment,
-			model.EnvVar{Name: name, Value: value},
-		)
+		if value == "" {
+			value = os.Getenv(name)
+		}
+		if value != "" {
+			svc.Environment = append(
+				svc.Environment,
+				model.EnvVar{Name: name, Value: value},
+			)
+		}
 	}
 
 	return nil
@@ -129,11 +134,12 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		if !okteto.IsOkteto() && buildInfo.Image == "" {
 			return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", svcName)
 		}
-		buildInfo.Image = svcInfo.Image
 		if buildInfo == nil {
 			buildInfo = &model.BuildInfo{
 				VolumesToInclude: svcInfo.VolumeMounts,
 			}
+		} else {
+			buildInfo.Image = svcInfo.Image
 		}
 		opts := build.OptsFromManifest(svcName, buildInfo, &build.BuildOptions{})
 
@@ -861,6 +867,9 @@ func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 	result := []apiv1.ServicePort{}
 	for _, p := range svc.Ports {
+		if model.IsSkippablePort(p.HostPort) {
+			continue
+		}
 		if !isServicePortAdded(p.ContainerPort, result) {
 			result = append(
 				result,

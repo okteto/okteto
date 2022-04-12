@@ -125,13 +125,7 @@ const (
 	//OktetoUpCmd up command
 	OktetoUpCmd = "up"
 	//OktetoPushCmd push command
-	OktetoPushCmd                = "push"
-	DefaultDinDImage             = "docker:20-dind"
-	DefaultDockerHost            = "tcp://127.0.0.1:2376"
-	DefaultDockerCertDir         = "/certs"
-	DefaultDockerCacheDir        = "/var/lib/docker"
-	DefaultDockerCertDirSubPath  = "certs"
-	DefaultDockerCacheDirSubPath = "docker"
+	OktetoPushCmd = "push"
 
 	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"
@@ -248,6 +242,9 @@ const (
 
 	// OktetoOriginEnvVar defines where is executing okteto
 	OktetoOriginEnvVar = "OKTETO_ORIGIN"
+
+	// OktetoDockerDesktopOrigin indicates the origin of the command is the Docker Desktop extension
+	OktetoDockerDesktopOrigin = "docker-desktop"
 
 	// OktetoFolderEnvVar defines the path of okteto folder
 	OktetoFolderEnvVar = "OKTETO_FOLDER"

@@ -45,6 +45,7 @@ type BuildOptions struct {
 	Target        string
 	Namespace     string
 	BuildToGlobal bool
+	ExportCache   string
 }
 
 // Run runs the build sequence
@@ -105,6 +106,10 @@ func buildWithOkteto(ctx context.Context, buildOptions *BuildOptions) error {
 		for i := range buildOptions.CacheFrom {
 			buildOptions.CacheFrom[i] = registry.ExpandOktetoDevRegistry(buildOptions.CacheFrom[i])
 			buildOptions.CacheFrom[i] = registry.ExpandOktetoGlobalRegistry(buildOptions.CacheFrom[i])
+		}
+		if buildOptions.ExportCache != "" {
+			buildOptions.ExportCache = registry.ExpandOktetoDevRegistry(buildOptions.ExportCache)
+			buildOptions.ExportCache = registry.ExpandOktetoGlobalRegistry(buildOptions.ExportCache)
 		}
 	}
 	opt, err := getSolveOpt(buildOptions)
@@ -242,12 +247,13 @@ func OptsFromManifest(service string, b *model.BuildInfo, o *BuildOptions) *Buil
 		file = filepath.Join(b.Context, b.Dockerfile)
 	}
 	opts := &BuildOptions{
-		CacheFrom: b.CacheFrom,
-		Target:    b.Target,
-		Path:      b.Context,
-		Tag:       b.Image,
-		File:      file,
-		BuildArgs: args,
+		CacheFrom:   b.CacheFrom,
+		Target:      b.Target,
+		Path:        b.Context,
+		Tag:         b.Image,
+		File:        file,
+		BuildArgs:   args,
+		ExportCache: b.ExportCache,
 	}
 
 	outputMode := oktetoLog.GetOutputFormat()

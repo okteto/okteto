@@ -908,28 +908,6 @@ func Test_validate(t *testing.T) {
 			expectErr: true,
 		},
 		{
-			name: "docker-with-persistent-volume",
-			manifest: []byte(`
-      name: deployment
-      sync:
-        - .:/app
-      docker:
-        enabled: true`),
-			expectErr: false,
-		},
-		{
-			name: "docker-without-persistent-volume",
-			manifest: []byte(`
-      name: deployment
-      sync:
-        - .:/app
-      persistentVolume:
-        enabled: false
-      docker:
-        enabled: true`),
-			expectErr: true,
-		},
-		{
 			name: "runAsNonRoot-with-root-user",
 			manifest: []byte(`
       name: deployment
@@ -1366,19 +1344,6 @@ func Test_validateForExtraFields(t *testing.T) {
                    resources: 5m`,
 		},
 		{
-			name: "docker",
-			value: `docker:
-                   enabled: true
-                   image: docker:20-dind
-                   resources:
-                     requests:
-                       cpu: 30m
-                       memory: 30Mi
-                     limits:
-                       cpu: 30m
-                       memory: 30Mi`,
-		},
-		{
 			name: "divert",
 			value: `divert:
                    ingress: api
@@ -1473,11 +1438,6 @@ func createEnvFile(content map[string]string) (string, error) {
 }
 
 func Test_expandEnvFiles(t *testing.T) {
-	file, err := os.CreateTemp("", ".env")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(file.Name())
 
 	tests := []struct {
 		name     string
@@ -1489,9 +1449,7 @@ func Test_expandEnvFiles(t *testing.T) {
 			name: "add new envs",
 			dev: &Dev{
 				Environment: Environment{},
-				EnvFiles: EnvFiles{
-					file.Name(),
-				},
+				EnvFiles:    EnvFiles{},
 			},
 			envs: []byte("key1=value1"),
 			expected: Environment{
@@ -1510,9 +1468,7 @@ func Test_expandEnvFiles(t *testing.T) {
 						Value: "value1",
 					},
 				},
-				EnvFiles: EnvFiles{
-					file.Name(),
-				},
+				EnvFiles: EnvFiles{},
 			},
 			envs: []byte("key1=value100"),
 			expected: Environment{
@@ -1522,9 +1478,43 @@ func Test_expandEnvFiles(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "empty env - infer value",
+			dev: &Dev{
+				Environment: Environment{},
+				EnvFiles:    EnvFiles{},
+			},
+			envs: []byte("OKTETO_TEST="),
+			expected: Environment{
+				EnvVar{
+					Name:  "OKTETO_TEST",
+					Value: "myvalue",
+				},
+			},
+		},
+		{
+			name: "empty env - empty value",
+			dev: &Dev{
+				Environment: Environment{},
+				EnvFiles:    EnvFiles{},
+			},
+			envs:     []byte("OKTETO_TEST2="),
+			expected: Environment{},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("%s is present", tt.name), func(t *testing.T) {
+
+			file, err := os.CreateTemp("", ".env")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(file.Name())
+
+			tt.dev.EnvFiles = EnvFiles{file.Name()}
+
+			os.Setenv("OKTETO_TEST", "myvalue")
+
 			if _, err = file.Write(tt.envs); err != nil {
 				t.Fatal("Failed to write to temporary file", err)
 			}

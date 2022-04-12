@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -182,8 +183,10 @@ persistentVolume:
 environment:
   VAR: value2
 `
-	divertGitRepo   = "git@github.com:okteto/catalog.git"
-	divertGitFolder = "catalog"
+	divertGitRepo              = "git@github.com:okteto/catalog.git"
+	divertGitFolder            = "catalog"
+	microservicesComposeRepo   = "https://github.com/okteto/microservices-demo-compose"
+	microservicesComposeFolder = "microservices-demo-compose"
 )
 
 var mode string
@@ -376,11 +379,20 @@ func TestUpDeployments(t *testing.T) {
 
 	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[model.DeploymentRevisionAnnotation])
 
-	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true, false); err != nil {
+	newProccess, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath, upErrorChannel)
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
+		t.Error(err)
+	}
+
+	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true, false); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := checkIfUpFinished(ctx, newProccess.Pid); err != nil {
 		t.Error(err)
 	}
 
@@ -742,6 +754,96 @@ func TestUpAutocreate(t *testing.T) {
 	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
 		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
 	}
+}
+
+func TestUpCompose(t *testing.T) {
+	tName := fmt.Sprintf("TestUpCompose-%s-%s", runtime.GOOS, mode)
+	ctx := context.Background()
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := exec.LookPath(kubectlBinary); err != nil {
+		t.Fatalf("kubectl is not in the path: %s", err)
+	}
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	namespace := fmt.Sprintf("%s-%s", name, user)
+	log.Printf("running %s \n", tName)
+	startNamespace := getCurrentNamespace()
+	defer changeToNamespace(ctx, oktetoPath, startNamespace)
+
+	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
+		t.Fatal(err)
+	}
+
+	log.Printf("created namespace %s \n", namespace)
+
+	if err := cloneGitRepo(ctx, microservicesComposeRepo); err != nil {
+		t.Fatal(err)
+	}
+	defer deleteGitRepo(ctx, microservicesComposeRepo)
+
+	log.Printf("cloned repo %s \n", microservicesComposeRepo)
+
+	defer deleteGitRepo(ctx, microservicesComposeFolder)
+
+	var wg sync.WaitGroup
+	upErrorChannel := make(chan error, 1)
+	p, err := upWithSvc(ctx, &wg, namespace, microservicesComposeFolder, "vote", oktetoPath, upErrorChannel)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	svc, err := getService(ctx, namespace, "vote")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(svc.Spec.Ports) != 1 {
+		t.Fatalf("Expected to have only one endpoint for svc 'vote' but got %d", len(svc.Spec.Ports))
+	}
+
+	ingress, err := getIngress(ctx, namespace, "okteto-vote")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, rule := range ingress.Spec.Rules {
+		for _, path := range rule.HTTP.Paths {
+			svc := path.Backend.Service
+			if svc.Name != "vote" {
+				t.Fatalf("ingress is referencing other service: %s", svc.Name)
+			}
+			if svc.Port.Number == 5005 {
+				t.Fatal("Didn't expect a debugger to have an endpoint")
+			}
+		}
+	}
+	if len(svc.Spec.Ports) != 1 {
+		t.Fatalf("Expected to have only one endpoint for svc 'vote' but got %d", len(svc.Spec.Ports))
+	}
+
+	port := "5005"
+	ln, err := net.Listen("tcp", "localhost:"+port)
+
+	if err == nil {
+		_ = ln.Close()
+		t.Fatalf("port 5005 is available locally")
+	}
+
+	if err := downSvc(ctx, "vote", microservicesComposeFolder, oktetoPath); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
+		t.Error(err)
+	}
+
+	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
+		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
+	}
+
 }
 
 func oktetoPipeline(ctx context.Context, oktetoPath, repo, folder string) error {
@@ -1162,6 +1264,20 @@ func down(ctx context.Context, namespace, name, manifestPath, oktetoPath string,
 				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+func downSvc(ctx context.Context, name, folder, oktetoPath string) error {
+	downCMD := exec.Command(oktetoPath, "down", name, "-v")
+	downCMD.Env = os.Environ()
+	downCMD.Dir = folder
+	o, err := downCMD.CombinedOutput()
+
+	log.Printf("okteto down output:\n%s", string(o))
+	if err != nil {
+		return fmt.Errorf("okteto down failed: %s", err)
 	}
 
 	return nil

@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -185,6 +186,11 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 
 	if ctxOptions.IsCtxCommand {
 		oktetoLog.Success("Using context %s @ %s", okteto.Context().Namespace, okteto.RemoveSchema(ctxStore.CurrentContext))
+		if oktetoLog.GetOutputFormat() == oktetoLog.JSONFormat {
+			if err := showCurrentCtxJSON(); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -303,4 +309,14 @@ func isUrl(u string) bool {
 		return false
 	}
 	return parsedUrl.Scheme != "" && parsedUrl.Host != ""
+}
+
+func showCurrentCtxJSON() error {
+	okCtx := okteto.Context().ToViewer()
+	ctxRaw, err := json.MarshalIndent(okCtx, "", "\t")
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(ctxRaw))
+	return nil
 }

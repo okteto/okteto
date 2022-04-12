@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/pointer"
 )
@@ -494,67 +493,67 @@ func Test_PortUnmarshalling(t *testing.T) {
 		{
 			name:          "singlePort",
 			portRaw:       "3000",
-			expected:      PortRaw{ContainerPort: 3000, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{ContainerPort: 3000, Protocol: apiv1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "singleRange",
 			portRaw:       "3000-3005",
-			expected:      PortRaw{ContainerFrom: 3000, ContainerTo: 3005, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{ContainerFrom: 3000, ContainerTo: 3005, Protocol: apiv1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "singlePortForwarding",
 			portRaw:       "8000:8000",
-			expected:      PortRaw{HostPort: 8000, ContainerPort: 8000, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{HostPort: 8000, ContainerPort: 8000, Protocol: apiv1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "RangeForwarding",
 			portRaw:       "9090-9091:8080-8081",
-			expected:      PortRaw{ContainerFrom: 8080, ContainerTo: 8081, HostFrom: 9090, HostTo: 9091, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{ContainerFrom: 8080, ContainerTo: 8081, HostFrom: 9090, HostTo: 9091, Protocol: apiv1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "RangeForwardingNotSameLength",
 			portRaw:       "9090-9092:8080-8081",
-			expected:      PortRaw{ContainerFrom: 8080, ContainerTo: 8081, HostFrom: 9090, HostTo: 9091, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{ContainerFrom: 8080, ContainerTo: 8081, HostFrom: 9090, HostTo: 9091, Protocol: apiv1.ProtocolTCP},
 			expectedError: true,
 		},
 		{
 			name:          "DifferentPort",
 			portRaw:       "49100:22",
-			expected:      PortRaw{HostPort: 49100, ContainerPort: 22, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{HostPort: 49100, ContainerPort: 22, Protocol: apiv1.ProtocolTCP},
 			expectedError: false,
 		},
 		{
 			name:          "LocalhostForwarding",
 			portRaw:       "127.0.0.1:8000:8001",
-			expected:      PortRaw{HostPort: 8000, ContainerPort: 8001, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{HostPort: 8000, ContainerPort: 8001, Protocol: apiv1.ProtocolTCP},
 			expectedError: true,
 		},
 		{
 			name:          "Localhost Range",
 			portRaw:       "127.0.0.1:5000-5010:5000-5010",
-			expected:      PortRaw{ContainerPort: 0, Protocol: v1.ProtocolTCP},
+			expected:      PortRaw{ContainerPort: 0, Protocol: apiv1.ProtocolTCP},
 			expectedError: true,
 		},
 		{
 			name:          "Protocol",
 			portRaw:       "6060:6060/udp",
-			expected:      PortRaw{HostPort: 6060, ContainerPort: 6060, Protocol: v1.ProtocolUDP},
+			expected:      PortRaw{HostPort: 6060, ContainerPort: 6060, Protocol: apiv1.ProtocolUDP},
 			expectedError: false,
 		},
 		{
 			name:          "ProtocolWithoutMapping",
 			portRaw:       "6060/udp",
-			expected:      PortRaw{ContainerPort: 6060, Protocol: v1.ProtocolUDP},
+			expected:      PortRaw{ContainerPort: 6060, Protocol: apiv1.ProtocolUDP},
 			expectedError: false,
 		},
 		{
 			name:          "RangeProtocol",
 			portRaw:       "6060-6061:6060-6061/udp",
-			expected:      PortRaw{ContainerFrom: 6060, ContainerTo: 6061, HostFrom: 6060, HostTo: 6061, Protocol: v1.ProtocolUDP},
+			expected:      PortRaw{ContainerFrom: 6060, ContainerTo: 6061, HostFrom: 6060, HostTo: 6061, Protocol: apiv1.ProtocolUDP},
 			expectedError: false,
 		},
 	}
@@ -992,12 +991,12 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213-9215\n    expose:\n    - 8213-8215\n    image: okteto/vote:1"),
 			isPublic: false,
 			ports: []Port{
-				{ContainerPort: 9213, Protocol: v1.ProtocolTCP},
-				{ContainerPort: 9214, Protocol: v1.ProtocolTCP},
-				{ContainerPort: 9215, Protocol: v1.ProtocolTCP},
-				{ContainerPort: 8213, Protocol: v1.ProtocolTCP},
-				{ContainerPort: 8214, Protocol: v1.ProtocolTCP},
-				{ContainerPort: 8215, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 9213, Protocol: apiv1.ProtocolTCP},
+				{ContainerPort: 9214, Protocol: apiv1.ProtocolTCP},
+				{ContainerPort: 9215, Protocol: apiv1.ProtocolTCP},
+				{ContainerPort: 8213, Protocol: apiv1.ProtocolTCP},
+				{ContainerPort: 8214, Protocol: apiv1.ProtocolTCP},
+				{ContainerPort: 8215, Protocol: apiv1.ProtocolTCP},
 			},
 		},
 		{
@@ -1005,56 +1004,56 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    expose:\n    - 8213\n    image: okteto/vote:1"),
 			isPublic: false,
 			ports: []Port{
-				{ContainerPort: 9213, Protocol: v1.ProtocolTCP},
-				{ContainerPort: 8213, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 9213, Protocol: apiv1.ProtocolTCP},
+				{ContainerPort: 8213, Protocol: apiv1.ProtocolTCP},
 			},
 		},
 		{
 			name:     "not-public-port-but-with-assignation",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213:9213\n    image: okteto/vote:1"),
 			isPublic: true,
-			ports:    []Port{{ContainerPort: 9213, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 9213, Protocol: apiv1.ProtocolTCP}},
 		},
 		{
 			name:     "not-public-range-but-with-assignation",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213-9215:9213-9215\n    image: okteto/vote:1"),
 			isPublic: false,
 			ports: []Port{
-				{HostPort: 9213, ContainerPort: 9213, Protocol: v1.ProtocolTCP},
-				{HostPort: 9213, ContainerPort: 9214, Protocol: v1.ProtocolTCP},
-				{HostPort: 9213, ContainerPort: 9215, Protocol: v1.ProtocolTCP},
+				{HostPort: 9213, ContainerPort: 9213, Protocol: apiv1.ProtocolTCP},
+				{HostPort: 9213, ContainerPort: 9214, Protocol: apiv1.ProtocolTCP},
+				{HostPort: 9213, ContainerPort: 9215, Protocol: apiv1.ProtocolTCP},
 			},
 		},
 		{
 			name:     "Public-service",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    public: true\n    image: okteto/vote:1"),
 			isPublic: true,
-			ports:    []Port{{ContainerPort: 9213, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 9213, Protocol: apiv1.ProtocolTCP}},
 		},
 		{
 			name:     "Public-service-with-range",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213-9215\n    public: true\n    image: okteto/vote:1"),
 			isPublic: true,
 			ports: []Port{
-				{ContainerPort: 9213, Protocol: v1.ProtocolTCP},
-				{ContainerPort: 9214, Protocol: v1.ProtocolTCP},
-				{ContainerPort: 9215, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 9213, Protocol: apiv1.ProtocolTCP},
+				{ContainerPort: 9214, Protocol: apiv1.ProtocolTCP},
+				{ContainerPort: 9215, Protocol: apiv1.ProtocolTCP},
 			},
 		},
 		{
 			name:     "not-public-service",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213\n    image: okteto/vote:1"),
 			isPublic: false,
-			ports:    []Port{{ContainerPort: 9213, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 9213, Protocol: apiv1.ProtocolTCP}},
 		},
 		{
 			name:     "not-public-service",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 9213-9215\n    image: okteto/vote:1"),
 			isPublic: false,
 			ports: []Port{
-				{ContainerPort: 9213, Protocol: v1.ProtocolTCP},
-				{ContainerPort: 9214, Protocol: v1.ProtocolTCP},
-				{ContainerPort: 9215, Protocol: v1.ProtocolTCP},
+				{ContainerPort: 9213, Protocol: apiv1.ProtocolTCP},
+				{ContainerPort: 9214, Protocol: apiv1.ProtocolTCP},
+				{ContainerPort: 9215, Protocol: apiv1.ProtocolTCP},
 			},
 		},
 
@@ -1062,19 +1061,19 @@ func Test_validateIngressCreationPorts(t *testing.T) {
 			name:     "mysql-port-forwarding",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 3306:3306\n    image: okteto/vote:1"),
 			isPublic: false,
-			ports:    []Port{{ContainerPort: 3306, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 3306, Protocol: apiv1.ProtocolTCP}},
 		},
 		{
 			name:     "mysql-port-forwarding-and-public",
 			manifest: []byte("services:\n  app:\n    ports:\n    - 3306:3306\n    image: okteto/vote:1\n    public: true"),
 			isPublic: true,
-			ports:    []Port{{ContainerPort: 3306, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 3306, Protocol: apiv1.ProtocolTCP}},
 		},
 		{
 			name:     "mysql-expose-forwarding-and-public",
 			manifest: []byte("services:\n  app:\n    expose:\n    - 3306:3306\n    image: okteto/vote:1\n    public: true"),
 			isPublic: false,
-			ports:    []Port{{ContainerPort: 3306, Protocol: v1.ProtocolTCP}},
+			ports:    []Port{{ContainerPort: 3306, Protocol: apiv1.ProtocolTCP}},
 		},
 	}
 	for _, tt := range tests {
@@ -1103,37 +1102,37 @@ func Test_unmarshalVolumes(t *testing.T) {
 	}{
 		{
 			name:           "simple volume",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n"),
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n"),
 			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: make(map[string]string), Annotations: make(map[string]string)},
 		},
 		{
 			name:           "volume with size",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    size: 2Gi"),
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    size: 2Gi"),
 			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("2Gi")}, Labels: make(map[string]string), Annotations: make(map[string]string)},
 		},
 		{
 			name:           "volume with driver_opts.size",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    driver_opts:\n      size: 2Gi"),
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    driver_opts:\n      size: 2Gi"),
 			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("2Gi")}, Labels: make(map[string]string), Annotations: make(map[string]string)},
 		},
 		{
 			name:           "volume with driver_opts.class",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    driver_opts:\n      class: standard"),
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    driver_opts:\n      class: standard"),
 			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Class: "standard", Labels: make(map[string]string), Annotations: make(map[string]string)},
 		},
 		{
 			name:           "volume with class",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    class: standard"),
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    class: standard"),
 			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Class: "standard", Labels: make(map[string]string), Annotations: make(map[string]string)},
 		},
 		{
 			name:           "volume with labels",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    labels:\n      env: test"),
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    labels:\n      env: test"),
 			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Labels: Labels{}, Annotations: Annotations{"env": "test"}},
 		},
 		{
 			name:           "volume with annotations",
-			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  v1:\n    annotations:\n      env: test"),
+			manifest:       []byte("services:\n  app:\n    image: okteto/vote:1\nvolumes:\n  apiv1:\n    annotations:\n      env: test"),
 			expectedVolume: &VolumeSpec{Size: Quantity{resource.MustParse("1Gi")}, Annotations: map[string]string{"env": "test"}, Labels: make(map[string]string)},
 		},
 	}
@@ -1143,8 +1142,8 @@ func Test_unmarshalVolumes(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unmarshal failed: %s", err.Error())
 			}
-			if !reflect.DeepEqual(s.Volumes["v1"], tt.expectedVolume) {
-				t.Fatalf("Expected %v but got %v", tt.expectedVolume, s.Volumes["v1"])
+			if !reflect.DeepEqual(s.Volumes["apiv1"], tt.expectedVolume) {
+				t.Fatalf("Expected %v but got %v", tt.expectedVolume, s.Volumes["apiv1"])
 			}
 		})
 	}
@@ -1580,6 +1579,16 @@ func Test_Environment(t *testing.T) {
 			environment: Environment{},
 		},
 		{
+			name:        "empty envs - exists envar",
+			manifest:    []byte("services:\n  app:\n    environment:\n        OKTETO_ENVTEST:\n    image: okteto/vote:1"),
+			environment: Environment{EnvVar{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
+		},
+		{
+			name:        "empty list envs - exists envar",
+			manifest:    []byte("services:\n  app:\n    environment:\n      - OKTETO_ENVTEST\n    image: okteto/vote:1"),
+			environment: Environment{EnvVar{Name: "OKTETO_ENVTEST", Value: "myvalue"}},
+		},
+		{
 			name:        "noenvs",
 			manifest:    []byte("services:\n  app:\n    image: okteto/vote:1"),
 			environment: Environment{},
@@ -1587,6 +1596,10 @@ func Test_Environment(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+
+			if err := os.Setenv("OKTETO_ENVTEST", "myvalue"); err != nil {
+				t.Fatal(err)
+			}
 
 			s, err := ReadStack(tt.manifest, false)
 			if err != nil {
