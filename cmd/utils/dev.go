@@ -283,6 +283,11 @@ func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, erro
 	if err := dev.SetDefaults(); err != nil {
 		return nil, err
 	}
+	for _, d := range dev.Services {
+		if err := d.SetDefaults(); err != nil {
+			return nil, err
+		}
+	}
 	dev.Name = detachModePodName
 	dev.Namespace = okteto.Context().Namespace
 	dev.Context = okteto.Context().Name

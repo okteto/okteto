@@ -437,6 +437,11 @@ func (dev *Dev) SetDefaults() error {
 	if dev.Command.Values == nil {
 		dev.Command.Values = []string{"sh"}
 	}
+	if len(dev.Forward) > 0 {
+		sort.SliceStable(dev.Forward, func(i, j int) bool {
+			return dev.Forward[i].less(&dev.Forward[j])
+		})
+	}
 	if dev.Image == nil {
 		dev.Image = &BuildInfo{}
 	}
@@ -490,11 +495,7 @@ func (dev *Dev) SetDefaults() error {
 	if dev.SSHServerPort == 0 {
 		dev.SSHServerPort = oktetoDefaultSSHServerPort
 	}
-	if len(dev.Forward) > 0 {
-		sort.SliceStable(dev.Forward, func(i, j int) bool {
-			return dev.Forward[i].less(&dev.Forward[j])
-		})
-	}
+
 	dev.setRunAsUserDefaults(dev)
 
 	if os.Getenv(OktetoRescanIntervalEnvVar) != "" {
