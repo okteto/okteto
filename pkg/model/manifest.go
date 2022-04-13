@@ -291,8 +291,8 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		devManifest.Deploy = &DeployInfo{
 			Commands: []DeployCommand{
 				{
-					Name:    "okteto push --deploy",
-					Command: "okteto push --deploy",
+					Name:    "okteto push",
+					Command: "okteto push",
 				},
 			},
 		}
