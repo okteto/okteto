@@ -16,10 +16,13 @@ package okteto
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+
+	"net/http/httputil"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -222,4 +225,37 @@ func (c *OktetoClient) Previews() types.PreviewInterface {
 // User retrieves the UserClient
 func (c *OktetoClient) User() types.UserInterface {
 	return c.user
+}
+
+type traceTransport struct {
+	Writer    io.Writer
+	Transport http.RoundTripper
+}
+
+func (t *traceTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	var u http.RoundTripper
+	if t.Transport != nil {
+		u = t.Transport
+	} else {
+		u = http.DefaultTransport
+	}
+
+	reqBytes, err := httputil.DumpRequestOut(req, true)
+	if err != nil {
+		return nil, err
+	}
+	t.Writer.Write(reqBytes)
+
+	resp, err := u.RoundTrip(req)
+	if err != nil {
+		return nil, err
+	}
+
+	respBytes, err := httputil.DumpResponse(resp, true)
+	if err != nil {
+		return nil, err
+	}
+	t.Writer.Write(respBytes)
+
+	return resp, nil
 }
