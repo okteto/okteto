@@ -931,15 +931,15 @@ func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 
 func getSvcProbe(svc *model.Service) *apiv1.Probe {
 	if svc.Healtcheck != nil {
-		var handler apiv1.Handler
+		var handler apiv1.ProbeHandler
 		if len(svc.Healtcheck.Test) != 0 {
-			handler = apiv1.Handler{
+			handler = apiv1.ProbeHandler{
 				Exec: &apiv1.ExecAction{
 					Command: svc.Healtcheck.Test,
 				},
 			}
 		} else {
-			handler = apiv1.Handler{
+			handler = apiv1.ProbeHandler{
 				HTTPGet: &apiv1.HTTPGetAction{
 					Path: svc.Healtcheck.HTTP.Path,
 					Port: intstr.IntOrString{IntVal: svc.Healtcheck.HTTP.Port},
@@ -947,7 +947,7 @@ func getSvcProbe(svc *model.Service) *apiv1.Probe {
 			}
 		}
 		return &apiv1.Probe{
-			Handler:             handler,
+			ProbeHandler:        handler,
 			TimeoutSeconds:      int32(svc.Healtcheck.Timeout.Seconds()),
 			PeriodSeconds:       int32(svc.Healtcheck.Interval.Seconds()),
 			FailureThreshold:    int32(svc.Healtcheck.Retries),

@@ -90,10 +90,11 @@ func (tr *Translation) translate() error {
 		TranslateDevContainer(devContainer, rule)
 		TranslatePodSpec(tr.DevApp.PodSpec(), rule)
 		TranslateOktetoDevSecret(tr.DevApp.PodSpec(), tr.Dev.Name, rule.Secrets)
+		TranslateOktetoInitFromImageContainer(tr.DevApp.PodSpec(), rule)
 		if rule.IsMainDevContainer() {
 			TranslateOktetoBinVolumeMounts(devContainer)
 			TranslateOktetoInitBinContainer(rule, tr.DevApp.PodSpec())
-			TranslateOktetoInitFromImageContainer(tr.DevApp.PodSpec(), rule)
+
 			TranslateOktetoBinVolume(tr.DevApp.PodSpec())
 		}
 	}

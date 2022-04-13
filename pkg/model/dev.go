@@ -63,6 +63,7 @@ type Dev struct {
 	ImagePullPolicy      apiv1.PullPolicy   `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Secrets              []Secret           `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command            `json:"command,omitempty" yaml:"command,omitempty"`
+	Args                 Command            `json:"args,omitempty" yaml:"args,omitempty"`
 	Probes               *Probes            `json:"probes,omitempty" yaml:"probes,omitempty"`
 	Lifecycle            *Lifecycle         `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
 	Workdir              string             `json:"workdir,omitempty" yaml:"workdir,omitempty"`
@@ -969,6 +970,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			}
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", filename, s.RemotePath))
 		}
+	} else if len(dev.Args.Values) > 0 {
+		rule.Args = dev.Args.Values
 	} else if len(dev.Command.Values) > 0 {
 		rule.Command = dev.Command.Values
 		rule.Args = []string{}

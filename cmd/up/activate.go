@@ -188,7 +188,11 @@ func (up *upContext) activate() error {
 		printDisplayContext(up.Dev, divertURL)
 		durationActivateUp := time.Since(up.StartTime)
 		analytics.TrackDurationActivateUp(durationActivateUp)
-		up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
+		if up.Options.Detach {
+			up.CommandResult <- up.showDetachedLogs(ctx)
+		} else {
+			up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
+		}
 	}()
 
 	prevError := up.waitUntilExitOrInterruptOrApply(ctx)

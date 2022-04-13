@@ -726,24 +726,7 @@ type Dependency struct {
 // InferFromStack infers data from a stackfile
 func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 	for svcName, svcInfo := range m.Deploy.ComposeSection.Stack.Services {
-		d := NewDev()
-		for _, p := range svcInfo.Ports {
-			if p.HostPort != 0 {
-				d.Forward = append(d.Forward, Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
-			}
-		}
-		toMount := []StackVolume{}
-		for _, v := range svcInfo.VolumeMounts {
-			if pathExistsAndDir(v.LocalPath) {
-				d.Sync.Folders = append(d.Sync.Folders, SyncFolder(v))
-			}
-			toMount = append(toMount, v)
-		}
-		d.Command = svcInfo.Command
-		d.EnvFiles = svcInfo.EnvFiles
-		d.Environment = svcInfo.Environment
-		d.Name = svcName
-		err := d.SetDefaults()
+		d, err := svcInfo.ToDev(svcName)
 		if err != nil {
 			return nil, err
 		}
@@ -759,7 +742,7 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 		if svcInfo.Image != "" {
 			buildInfo.Image = svcInfo.Image
 		}
-		buildInfo.VolumesToInclude = toMount
+		buildInfo.VolumesToInclude = svcInfo.VolumeMounts
 		buildInfo.Context, err = filepath.Rel(cwd, buildInfo.Context)
 		if err != nil {
 			oktetoLog.Infof("can not make svc[%s].build.context relative to cwd", svcName)
