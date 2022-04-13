@@ -1255,7 +1255,7 @@ func Test_translateSvcProbe(t *testing.T) {
 				},
 			},
 			expected: &apiv1.Probe{
-				Handler: apiv1.Handler{
+				ProbeHandler: apiv1.ProbeHandler{
 					HTTPGet: &apiv1.HTTPGetAction{
 						Path: "/",
 						Port: intstr.IntOrString{IntVal: 8080},
@@ -1279,7 +1279,7 @@ func Test_translateSvcProbe(t *testing.T) {
 				},
 			},
 			expected: &apiv1.Probe{
-				Handler: apiv1.Handler{
+				ProbeHandler: apiv1.ProbeHandler{
 					HTTPGet: &apiv1.HTTPGetAction{
 						Path: "/",
 						Port: intstr.IntOrString{IntVal: 8080},
@@ -1301,7 +1301,7 @@ func Test_translateSvcProbe(t *testing.T) {
 				},
 			},
 			expected: &apiv1.Probe{
-				Handler: apiv1.Handler{
+				ProbeHandler: apiv1.ProbeHandler{
 					Exec: &apiv1.ExecAction{
 						Command: []string{"curl", "db-service:8080/readiness"},
 					},
@@ -1322,7 +1322,7 @@ func Test_translateSvcProbe(t *testing.T) {
 				},
 			},
 			expected: &apiv1.Probe{
-				Handler: apiv1.Handler{
+				ProbeHandler: apiv1.ProbeHandler{
 					Exec: &apiv1.ExecAction{
 						Command: []string{"curl", "db-service:8080/readiness"},
 					},

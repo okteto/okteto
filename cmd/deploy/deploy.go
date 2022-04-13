@@ -21,6 +21,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"reflect"
 	"strings"
 	"time"
 
@@ -248,30 +249,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy.ComposeSection == nil {
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
-	if deployOptions.Manifest.Context == "" {
-		deployOptions.Manifest.Context = okteto.Context().Name
-	}
-	if deployOptions.Manifest.Namespace == "" {
-		deployOptions.Manifest.Namespace = okteto.Context().Namespace
-	}
 
-	if deployOptions.Name == "" {
-		if deployOptions.Manifest.Name != "" {
-			deployOptions.Name = deployOptions.Manifest.Name
-		} else {
-			deployOptions.Name = utils.InferName(cwd)
-		}
-
-	} else {
-		if deployOptions.Manifest != nil {
-			deployOptions.Manifest.Name = deployOptions.Name
-		}
-		if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
-			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
-
-			mergeServicesToDeployFromOptionsAndManifest(deployOptions)
-		}
-	}
+	setDeployOptionsValuesFromManifest(deployOptions, cwd)
 
 	dc.Proxy.SetName(deployOptions.Name)
 	oktetoLog.SetStage("")
@@ -321,6 +300,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if err != nil {
 		return err
 	}
+
+	setDeployOptionsValuesFromManifest(deployOptions, cwd)
 
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
 	dc.Proxy.Start()
@@ -409,7 +390,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 					oktetoLog.Information("Run 'okteto up' to activate your development container")
 				}
 			}
-			if err := pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, c); err != nil {
+			if err := pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy, c); err != nil {
 				oktetoLog.Warning("could not add dev annotations due to: %s", err.Error())
 			}
 		}
@@ -421,10 +402,74 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	return err
 }
 
+func setDeployOptionsValuesFromManifest(deployOptions *Options, cwd string) {
+	if deployOptions.Manifest.Context == "" {
+		deployOptions.Manifest.Context = okteto.Context().Name
+	}
+	if deployOptions.Manifest.Namespace == "" {
+		deployOptions.Manifest.Namespace = okteto.Context().Namespace
+	}
+
+	if deployOptions.Name == "" {
+		if deployOptions.Manifest.Name != "" {
+			deployOptions.Name = deployOptions.Manifest.Name
+		} else {
+			deployOptions.Name = utils.InferName(cwd)
+		}
+
+	} else {
+		if deployOptions.Manifest != nil {
+			deployOptions.Manifest.Name = deployOptions.Name
+		}
+		if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
+			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
+		}
+	}
+
+	if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
+
+		mergeServicesToDeployFromOptionsAndManifest(deployOptions)
+		if len(deployOptions.servicesToDeploy) > 0 {
+			servicesToDeploy := map[string]bool{}
+			for _, service := range deployOptions.servicesToDeploy {
+				servicesToDeploy[service] = true
+			}
+
+			onlyDeployEndpointsFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints, servicesToDeploy)
+
+			onlyDeployVolumesFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack, servicesToDeploy)
+
+		} else {
+			deployOptions.servicesToDeploy = []string{}
+			for service := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
+				deployOptions.servicesToDeploy = append(deployOptions.servicesToDeploy, service)
+			}
+		}
+	}
+
+	if len(deployOptions.servicesToDeploy) == 0 {
+		deployOptions.servicesToDeploy = []string{deployOptions.Name}
+	}
+}
+
 func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	var manifestDeclaredServicesToDeploy []string
 	for _, composeInfo := range deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo {
 		manifestDeclaredServicesToDeploy = append(manifestDeclaredServicesToDeploy, composeInfo.ServicesToDeploy...)
+	}
+
+	manifestDeclaredServicesToDeploySet := map[string]bool{}
+	for _, service := range manifestDeclaredServicesToDeploy {
+		manifestDeclaredServicesToDeploySet[service] = true
+	}
+
+	commandDeclaredServicesToDeploy := map[string]bool{}
+	for _, service := range deployOptions.servicesToDeploy {
+		commandDeclaredServicesToDeploy[service] = true
+	}
+
+	if reflect.DeepEqual(manifestDeclaredServicesToDeploySet, commandDeclaredServicesToDeploy) {
+		return
 	}
 
 	if len(deployOptions.servicesToDeploy) > 0 && len(manifestDeclaredServicesToDeploy) > 0 {
@@ -432,6 +477,40 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 	if len(deployOptions.servicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
 		deployOptions.servicesToDeploy = manifestDeclaredServicesToDeploy
+	}
+}
+
+func onlyDeployEndpointsFromServicesToDeploy(endpoints model.EndpointSpec, servicesToDeploy map[string]bool) {
+	for key, spec := range endpoints {
+		newRules := []model.EndpointRule{}
+		for _, rule := range spec.Rules {
+			if servicesToDeploy[rule.Service] {
+				newRules = append(newRules, rule)
+			}
+		}
+		spec.Rules = newRules
+		endpoints[key] = spec
+	}
+}
+
+func onlyDeployVolumesFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) {
+
+	volumesToDeploy := map[string]bool{}
+
+	for serviceName, serviceSpec := range stack.Services {
+		if servicesToDeploy[serviceName] {
+			for _, volume := range serviceSpec.Volumes {
+				if stack.Volumes[volume.LocalPath] != nil {
+					volumesToDeploy[volume.LocalPath] = true
+				}
+			}
+		}
+	}
+
+	for volume := range stack.Volumes {
+		if !volumesToDeploy[volume] {
+			delete(stack.Volumes, volume)
+		}
 	}
 }
 

@@ -35,9 +35,7 @@ import (
 
 const (
 	esc        = "\033["
-	hideCursor = esc + "?25l"
 	showCursor = esc + "?25h"
-	clearLine  = esc + "2K"
 )
 
 // OktetoSelector represents the selector

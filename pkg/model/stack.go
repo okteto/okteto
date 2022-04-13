@@ -348,6 +348,30 @@ func (svc *Service) IgnoreSyncVolumes(s *Stack) {
 	svc.VolumeMounts = notIgnoredVolumes
 }
 
+// ToDev translates a service into a dev
+func (svc *Service) ToDev(svcName string) (*Dev, error) {
+	d := NewDev()
+	for _, p := range svc.Ports {
+		if p.HostPort != 0 {
+			d.Forward = append(d.Forward, Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
+		}
+	}
+	for _, v := range svc.VolumeMounts {
+		if pathExistsAndDir(v.LocalPath) {
+			d.Sync.Folders = append(d.Sync.Folders, SyncFolder(v))
+		}
+	}
+	d.Command = svc.Command
+	d.EnvFiles = svc.EnvFiles
+	d.Environment = svc.Environment
+	d.Name = svcName
+	err := d.SetDefaults()
+	if err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
 func (s *Stack) Validate() error {
 	if err := validateStackName(s.Name); err != nil {
 		return fmt.Errorf("Invalid compose name: %s", err)
