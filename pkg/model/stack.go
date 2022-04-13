@@ -261,11 +261,11 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 		}
 		return name, nil
 	}
-	nameEnvVar := os.Getenv(OktetoNameEnvVar)
-	if nameEnvVar != "" {
-		return nameEnvVar, nil
-	}
 	if actualStackName == "" {
+		nameEnvVar := os.Getenv(OktetoNameEnvVar)
+		if nameEnvVar != "" {
+			return nameEnvVar, nil
+		}
 		name, err := GetValidNameFromGitRepo(filepath.Dir(stackPath))
 		if err != nil {
 			name, err = GetValidNameFromFolder(filepath.Dir(stackPath))
