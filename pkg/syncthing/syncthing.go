@@ -52,7 +52,6 @@ const (
 	certFile   = "cert.pem"
 	keyFile    = "key.pem"
 	configFile = "config.xml"
-	logFile    = "syncthing.log"
 
 	// DefaultRemoteDeviceID remote syncthing device ID
 	DefaultRemoteDeviceID = "ATOPHFJ-VPVLDFY-QVZDCF2-OQQ7IOW-OG4DIXF-OA7RWU3-ZYA4S22-SI4XVAU"

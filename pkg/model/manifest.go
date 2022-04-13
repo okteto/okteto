@@ -688,8 +688,11 @@ func (manifest *Manifest) ExpandEnvVars() (*Manifest, error) {
 				}
 			}
 			manifest.Deploy.ComposeSection.Stack = s
-			if manifest.Deploy.Endpoints != nil {
-				s.Endpoints = manifest.Deploy.Endpoints
+			if len(manifest.Deploy.Endpoints) > 0 {
+				if len(manifest.Deploy.ComposeSection.Stack.Endpoints) > 0 {
+					oktetoLog.Warning("Endpoints are defined in the stack and in the manifest. The endpoints defined in the manifest will be used")
+				}
+				manifest.Deploy.ComposeSection.Stack.Endpoints = manifest.Deploy.Endpoints
 			}
 			cwd, err := os.Getwd()
 			if err != nil {

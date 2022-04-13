@@ -32,9 +32,7 @@ type ttyDisplayer struct {
 	commandContext context.Context
 	cancel         context.CancelFunc
 
-	linesToDisplay        []string
-	isBuilding            bool
-	buildingpreviousLines int
+	linesToDisplay []string
 }
 
 func newTTYDisplayer(stdout, stderr io.Reader) *ttyDisplayer {

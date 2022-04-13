@@ -228,19 +228,26 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 }
 
 // AddDevAnnotations add deploy labels to the deployments/sfs
-func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface) error {
+func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, services []string, c kubernetes.Interface) error {
 	repo := os.Getenv(model.GithubRepositoryEnvVar)
+	servicesSet := map[string]bool{}
+	for _, s := range services {
+		servicesSet[s] = true
+	}
+
 	for devName, dev := range manifest.Dev {
-		app, err := apps.Get(ctx, dev, manifest.Namespace, c)
-		if err != nil {
-			return err
-		}
-		if repo != "" {
-			app.ObjectMeta().Annotations[model.OktetoRepositoryAnnotation] = repo
-		}
-		app.ObjectMeta().Annotations[model.OktetoDevNameAnnotation] = devName
-		if err := app.PatchAnnotations(ctx, c); err != nil {
-			return err
+		if servicesSet[devName] {
+			app, err := apps.Get(ctx, dev, manifest.Namespace, c)
+			if err != nil {
+				return err
+			}
+			if repo != "" {
+				app.ObjectMeta().Annotations[model.OktetoRepositoryAnnotation] = repo
+			}
+			app.ObjectMeta().Annotations[model.OktetoDevNameAnnotation] = devName
+			if err := app.PatchAnnotations(ctx, c); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

@@ -49,7 +49,6 @@ const (
 	ownerLabel           = "owner"
 	nameLabel            = "name"
 	helmOwner            = "helm"
-	typeField            = "type"
 	helmUninstallCommand = "helm uninstall %s"
 )
 
