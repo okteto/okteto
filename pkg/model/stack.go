@@ -255,6 +255,10 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 }
 
 func getStackName(name, stackPath, actualStackName string) (string, error) {
+	nameEnvVar := os.Getenv(OktetoNameEnvVar)
+	if nameEnvVar != "" {
+		return nameEnvVar, nil
+	}
 	if name != "" {
 		if err := os.Setenv(OktetoNameEnvVar, name); err != nil {
 			return "", err
