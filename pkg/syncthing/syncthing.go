@@ -797,6 +797,7 @@ func (s *Syncthing) HardTerminate() error {
 		return err
 	}
 
+	pid := os.Getgid()
 	for _, p := range pList {
 		if p.Pid == 0 {
 			continue
@@ -837,7 +838,7 @@ func (s *Syncthing) HardTerminate() error {
 			continue
 		}
 
-		if parent != nil {
+		if parent != nil && parent.Pid != int32(pid) {
 			if err := terminate(parent, true); err != nil {
 				oktetoLog.Infof("error terminating syncthing %d with wait: %s", p.Pid, err.Error())
 				continue
