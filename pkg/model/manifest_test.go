@@ -125,9 +125,8 @@ func TestInferFromStack(t *testing.T) {
 			expectedManifest: &Manifest{
 				Build: ManifestBuild{
 					"test": &BuildInfo{
-						Context:          "test",
-						Dockerfile:       filepath.Join("test", "Dockerfile"),
-						VolumesToInclude: []StackVolume{},
+						Context:    "test",
+						Dockerfile: filepath.Join("test", "Dockerfile"),
 					},
 				},
 				Dev: ManifestDevs{},
@@ -188,9 +187,8 @@ func TestInferFromStack(t *testing.T) {
 			expectedManifest: &Manifest{
 				Build: ManifestBuild{
 					"test": &BuildInfo{
-						Context:          "test",
-						Dockerfile:       filepath.Join("test", "Dockerfile"),
-						VolumesToInclude: []StackVolume{},
+						Context:    "test",
+						Dockerfile: filepath.Join("test", "Dockerfile"),
 					},
 				},
 				Dev: ManifestDevs{
