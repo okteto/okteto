@@ -67,10 +67,6 @@ func Build(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.File); err != nil {
-				return err
-			}
-
 			if okteto.IsOkteto() && options.Namespace != "" {
 				create, err := utils.ShouldCreateNamespace(ctx, options.Namespace)
 				if err != nil {
@@ -88,10 +84,24 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 
 			if isBuildV2 {
+				if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.File); err != nil {
+					return err
+				}
+
 				return buildV2(manifest, &options, args)
+			} else {
+				ctxOptions := &contextCMD.ContextOptions{
+					Context:   options.K8sContext,
+					Namespace: options.Namespace,
+					Show:      true,
+				}
+				if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+					return err
+				}
+
+				return buildV1(&options, args)
 			}
 
-			return buildV1(&options, args)
 		},
 	}
 
