@@ -742,7 +742,7 @@ func Test_GetDevDetach(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.want.SetDefaults()
+			tt.want.SetDefaults()
 			for _, d := range tt.want.Services {
 				d.SetDefaults()
 			}
@@ -752,7 +752,18 @@ func Test_GetDevDetach(t *testing.T) {
 
 			d, err := GetDevDetachMode(tt.input, tt.devs)
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, d)
+
+			assert.Len(t, d.Services, len(tt.want.Services))
+			assert.Len(t, d.Sync.Folders, len(tt.want.Sync.Folders))
+			assert.Len(t, d.Forward, len(tt.want.Forward))
+
+			for _, testDev := range d.Services {
+				if d.Name != "test" {
+					continue
+				}
+				assert.Equal(t, tt.want.Services[0].Sync.Folders, testDev.Sync.Folders)
+				assert.Equal(t, tt.want.Services[0].Forward, testDev.Forward)
+			}
 		})
 	}
 }

@@ -239,6 +239,9 @@ func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, erro
 			}
 			for _, f := range d.Sync.Folders {
 				mountValue := filepath.Join("/", d.Name, f.RemotePath)
+				if runtime.GOOS == "windows" {
+					mountValue = filepath.ToSlash(mountValue)
+				}
 				dev.Sync.Folders = append(dev.Sync.Folders, model.SyncFolder{
 					LocalPath:  f.LocalPath,
 					RemotePath: mountValue,
@@ -271,6 +274,9 @@ func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, erro
 			dev.Services = append(dev.Services, d)
 			for _, f := range d.Sync.Folders {
 				mountValue := filepath.Join("/", d.Name, f.RemotePath)
+				if runtime.GOOS == "windows" {
+					mountValue = filepath.ToSlash(mountValue)
+				}
 				dev.Sync.Folders = append(dev.Sync.Folders, model.SyncFolder{
 					LocalPath:  f.LocalPath,
 					RemotePath: mountValue,
