@@ -379,7 +379,10 @@ func TestUpDeployments(t *testing.T) {
 
 	log.Printf("deployment: %s, revision: %s", d.Name, d.Annotations[model.DeploymentRevisionAnnotation])
 
-	newProccess, err := up(ctx, &wg, namespace, name, manifestPath, oktetoPath, upErrorChannel)
+	var newWg sync.WaitGroup
+	newUpErrorChannel := make(chan error, 1)
+
+	newProccess, err := up(ctx, &newWg, namespace, name, manifestPath, oktetoPath, newUpErrorChannel)
 	if err != nil {
 		t.Fatal(err)
 	}
