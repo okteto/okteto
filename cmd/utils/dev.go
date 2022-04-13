@@ -38,6 +38,7 @@ const (
 	//DefaultManifest default okteto manifest file
 	DefaultManifest   = "okteto.yml"
 	secondaryManifest = "okteto.yaml"
+	detachModePodName = "okteto-dev-env"
 )
 
 func LoadManifestContext(devPath string) (*model.ContextResource, error) {
@@ -208,9 +209,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, error) {
 	dev := model.NewDev()
 	dev.Autocreate = true
-	if err := dev.SetDefaults(); err != nil {
-		return nil, err
-	}
+
 	if manifest.Type == model.StackType {
 		for svcName, svc := range manifest.Deploy.ComposeSection.Stack.Services {
 			d, err := svc.ToDev(svcName)
@@ -221,6 +220,9 @@ func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, erro
 				localPort := forward.Local
 				if !model.IsPortAvailable(dev.Interface, forward.Local) {
 					localPort, err = model.GetAvailablePort(dev.Interface)
+					if err != nil {
+						return nil, err
+					}
 				}
 				dev.Forward = append(dev.Forward, model.Forward{
 					Local:       localPort,
@@ -230,6 +232,9 @@ func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, erro
 				})
 			}
 			if len(d.Sync.Folders) == 0 {
+				continue
+			}
+			if len(devs) > 0 && !isInDevs(svcName, devs) {
 				continue
 			}
 			for _, f := range d.Sync.Folders {
@@ -243,18 +248,55 @@ func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, erro
 			dev.Services = append(dev.Services, d)
 		}
 	} else {
-		for _, d := range manifest.Dev {
+		var err error
+		for dName, d := range manifest.Dev {
+			for _, forward := range d.Forward {
+				localPort := forward.Local
+				if !model.IsPortAvailable(dev.Interface, forward.Local) {
+					localPort, err = model.GetAvailablePort(dev.Interface)
+					if err != nil {
+						return nil, err
+					}
+				}
+				dev.Forward = append(dev.Forward, model.Forward{
+					Local:       localPort,
+					Remote:      forward.Remote,
+					ServiceName: d.Name,
+					Service:     true,
+				})
+			}
+			if len(devs) > 0 && !isInDevs(dName, devs) {
+				continue
+			}
 			dev.Services = append(dev.Services, d)
 			for _, f := range d.Sync.Folders {
-				d.Sync.Folders = append(d.Sync.Folders, f)
+				mountValue := filepath.Join("/", d.Name, f.RemotePath)
+				dev.Sync.Folders = append(dev.Sync.Folders, model.SyncFolder{
+					LocalPath:  f.LocalPath,
+					RemotePath: mountValue,
+				})
+				f.LocalPath = mountValue
 			}
+
 		}
 	}
-	dev.Name = "okteto-dev-env"
+	if err := dev.SetDefaults(); err != nil {
+		return nil, err
+	}
+	dev.Name = detachModePodName
 	dev.Namespace = okteto.Context().Namespace
 	dev.Context = okteto.Context().Name
 
 	return dev, nil
+}
+
+func isInDevs(svc string, devs []string) bool {
+	for _, d := range devs {
+		if svc == d {
+			return true
+		}
+	}
+	return false
 }
 
 //AskYesNo prompts for yes/no confirmation

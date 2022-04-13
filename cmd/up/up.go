@@ -304,7 +304,7 @@ func Up() *cobra.Command {
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().MarkHidden("pull")
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
-	cmd.Flags().BoolVarP(&upOptions.Detach, "detach", "", false, "reset the file synchronization database")
+	cmd.Flags().BoolVarP(&upOptions.Detach, "detach", "", false, "activate one more development containers in detached mode")
 	return cmd
 }
 
