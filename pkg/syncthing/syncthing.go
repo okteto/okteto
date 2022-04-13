@@ -796,7 +796,7 @@ func (s *Syncthing) HardTerminate() error {
 		return err
 	}
 
-	// pid := os.Getgid()
+	pid := os.Getpid()
 	for _, p := range pList {
 		if p.Pid == 0 {
 			continue
@@ -831,23 +831,24 @@ func (s *Syncthing) HardTerminate() error {
 		}
 
 		oktetoLog.Infof("terminating syncthing %d with wait: %s", p.Pid, s.Home)
-		// parent, err := getParent(p)
-		// if err != nil {
-		// 	oktetoLog.Info("can not find parent")
-		// }
+		parent, err := getParent(p)
+		if err != nil {
+			oktetoLog.Info("can not find parent")
+		}
 
 		oktetoLog.Infof("terminating syncthing %d with wait: %s", p.Pid, s.Home)
 		if err := terminate(p, true); err != nil {
 			oktetoLog.Infof("error terminating syncthing %d with wait: %s", p.Pid, err.Error())
 		}
-		// if parent != nil && parent.Pid != int32(pid) {
-		// 	if err := terminate(parent, true); err != nil {
-		// 		oktetoLog.Infof("error terminating syncthing %d with wait: %s", p.Pid, err.Error())
-		// 		continue
-		// 	}
-		// }
+		if parent != nil && parent.Pid != int32(pid) {
+			if err := terminate(parent, true); err != nil {
+				oktetoLog.Infof("error terminating syncthing %d with wait: %s", p.Pid, err.Error())
+				continue
+			}
+		}
 		oktetoLog.Infof("terminated syncthing %d with wait: %s", p.Pid, s.Home)
 	}
+
 	return nil
 }
 
