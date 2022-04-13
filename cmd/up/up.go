@@ -82,6 +82,7 @@ func Up() *cobra.Command {
 			}
 			if upOptions.DockerDesktop {
 				upOptions.Detach = true
+				os.Setenv(model.OktetoOriginEnvVar, model.OktetoDockerDesktopOrigin)
 			}
 			u := utils.UpgradeAvailable()
 			if len(u) > 0 {
