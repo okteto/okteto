@@ -387,7 +387,7 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = getContent(indexEndpoint, 150, upErrorChannel)
+	_, err = getContent(indexEndpoint, 150, newUpErrorChannel)
 	if err != nil {
 		t.Fatalf("failed to get index content: %s", err)
 	}
