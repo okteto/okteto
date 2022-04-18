@@ -42,6 +42,7 @@ type buildInfoRaw struct {
 	Args             Environment   `yaml:"args,omitempty"`
 	Image            string        `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume `yaml:"-"`
+	ExportCache      string        `yaml:"export_cache,omitempty"`
 }
 
 type syncRaw struct {
@@ -308,22 +309,23 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	buildInfo.Args = rawBuildInfo.Args
 	buildInfo.Image = rawBuildInfo.Image
 	buildInfo.CacheFrom = rawBuildInfo.CacheFrom
+	buildInfo.ExportCache = rawBuildInfo.ExportCache
 	return nil
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (buildInfo BuildInfo) MarshalYAML() (interface{}, error) {
+func (buildInfo *BuildInfo) MarshalYAML() (interface{}, error) {
 	if buildInfo.Context != "" && buildInfo.Context != "." {
-		return buildInfoRaw(buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	if buildInfo.Dockerfile != "" && buildInfo.Dockerfile != "./Dockerfile" {
-		return buildInfoRaw(buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	if buildInfo.Target != "" {
-		return buildInfoRaw(buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	if buildInfo.Args != nil && len(buildInfo.Args) != 0 {
-		return buildInfoRaw(buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	return buildInfo.Name, nil
 }
@@ -810,7 +812,7 @@ func (d *DeployCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func (d *DeployInfo) MarshalYAML() (interface{}, error) {
-	if d.Compose != nil && len(d.Compose.Manifest) != 0 {
+	if d.ComposeSection != nil && len(d.ComposeSection.ComposesInfo) != 0 {
 		return d, nil
 	}
 	isCommandList := true
@@ -859,55 +861,91 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (c *ComposeInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rawString string
-	err := unmarshal(&rawString)
+func (c *ComposeSectionInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var composeInfoList ComposeInfoList
+	err := unmarshal(&composeInfoList)
 	if err == nil {
-		c.Manifest = []string{rawString}
-		return nil
-	}
-	var rawListString []string
-	err = unmarshal(&rawListString)
-	if err == nil {
-		c.Manifest = rawListString
+		c.ComposesInfo = composeInfoList
 		return nil
 	}
 
-	type composeInfoRaw ComposeInfo
-	var compose composeInfoRaw
+	type composeSectionInfoRaw ComposeSectionInfo // This is necessary to prevent recursion
+	var compose composeSectionInfoRaw
 	err = unmarshal(&compose)
-	if err != nil {
-		return err
+	if err == nil {
+		*c = ComposeSectionInfo(compose)
+		return nil
 	}
-	*c = ComposeInfo(compose)
-	return nil
+	return err
 }
 
 // MarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (c *ComposeInfo) MarshalYAML() (interface{}, error) {
-	if len(c.Manifest) == 1 {
-		return c.Manifest[0], nil
-	} else if len(c.Manifest) > 1 {
-		return c.Manifest, nil
+func (c *ComposeSectionInfo) MarshalYAML() (interface{}, error) {
+	if len(c.ComposesInfo) == 1 {
+		return c.ComposesInfo[0], nil
+	} else if len(c.ComposesInfo) > 1 {
+		return c.ComposesInfo, nil
 	}
 	return c, nil
 }
 
+func (c *ComposeInfoList) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var singleComposeInfo ComposeInfo
+	err := unmarshal(&singleComposeInfo)
+	if err == nil {
+		*c = []ComposeInfo{
+			singleComposeInfo,
+		}
+		return nil
+	}
+
+	var multipleComposeInfo []ComposeInfo
+	err = unmarshal(&multipleComposeInfo)
+	if err == nil {
+		*c = multipleComposeInfo
+		return nil
+	}
+
+	return err
+}
+
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (m *ManifestList) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (c *ComposeInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
 	err := unmarshal(&rawString)
 	if err == nil {
-		*m = ManifestList{rawString}
+		*c = ComposeInfo{File: rawString}
 		return nil
 	}
-	var rawListString []string
-	err = unmarshal(&rawListString)
-	if err != nil {
-		return err
+
+	type composeInfoRaw ComposeInfo
+	var composeHolder composeInfoRaw
+	err = unmarshal(&composeHolder)
+	if err == nil {
+		*c = ComposeInfo(composeHolder)
+		return nil
 	}
-	*m = ManifestList(rawListString)
-	return nil
+	return err
+}
+
+func (s *ServicesToDeploy) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		*s = ServicesToDeploy{
+			rawString,
+		}
+		return nil
+	}
+
+	type servicesToDeployRaw ServicesToDeploy
+	var servicesToDeployHolder servicesToDeployRaw
+	err = unmarshal(&servicesToDeployHolder)
+	if err == nil {
+		*s = ServicesToDeploy(servicesToDeployHolder)
+		return nil
+	}
+	return err
 }
 
 type devRaw Dev

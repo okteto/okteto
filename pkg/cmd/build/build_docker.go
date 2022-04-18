@@ -446,10 +446,7 @@ func ResolveAuthConfig(ctx context.Context, dockerCli *command.DockerCli, cli *c
 	if repoInfo.Index.Official {
 		info, err := cli.Info(ctx)
 		if err != nil {
-			configKey = dockerRegistry.IndexServer
-		}
-		if info.IndexServerAddress == "" {
-			configKey = dockerRegistry.IndexServer
+			oktetoLog.Info("Error getting information about the docker server: %s", err)
 		}
 		configKey = info.IndexServerAddress
 	}

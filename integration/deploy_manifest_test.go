@@ -19,11 +19,13 @@ package integration
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
+
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -33,6 +35,7 @@ import (
 	"testing"
 	"time"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	v1 "k8s.io/api/apps/v1"
@@ -432,6 +435,78 @@ func expectDeployment(ctx context.Context, d *v1.Deployment, images []string, re
 	}
 	return nil
 
+}
+
+func TestDeployOutput(t *testing.T) {
+	ctx := context.Background()
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	gitRepo := "https://github.com/okteto/voting-app"
+	repoDir := "voting-app"
+
+	var (
+		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
+		originNamespace = getCurrentNamespace()
+	)
+
+	if err := cloneGitRepo(ctx, gitRepo); err != nil {
+		if err := createNamespace(ctx, oktetoPath, testNamespace); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			changeToNamespace(ctx, oktetoPath, originNamespace)
+			deleteNamespace(ctx, oktetoPath, testNamespace)
+			deleteGitRepo(ctx, "")
+		})
+		t.Run("okteto deploy output", func(t *testing.T) {
+
+			_, err := runOktetoDeploy(oktetoPath, repoDir)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			cmap, err := getConfigmap(ctx, testNamespace, fmt.Sprintf("okteto-git-%s", repoDir))
+			if err != nil {
+				t.Fatal(err)
+			}
+			uiOutput, err := base64.StdEncoding.DecodeString(cmap.Data["output"])
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var text oktetoLog.JSONLogFormat
+			stageLines := map[string][]string{}
+			prevLine := ""
+			for _, l := range strings.Split(string(uiOutput), "\n") {
+				if err := json.Unmarshal([]byte(l), &text); err != nil {
+					if prevLine != "EOF" {
+						t.Fatalf("not json format: %s", l)
+					}
+				}
+				if _, ok := stageLines[text.Stage]; ok {
+					stageLines[text.Stage] = append(stageLines[text.Stage], text.Message)
+				} else {
+					stageLines[text.Stage] = []string{text.Message}
+				}
+				prevLine = text.Message
+			}
+			stagesToTest := []string{"Load manifest", "Building service vote", "Deploying compose", "done"}
+			for _, ss := range stagesToTest {
+				if _, ok := stageLines[ss]; !ok {
+					t.Fatalf("deploy didn't have the stage '%s'", ss)
+				}
+				if strings.HasPrefix(ss, "Building service") {
+					if len(stageLines[ss]) < 5 {
+						t.Fatalf("Not sending build output on stage %s. Output:%s", ss, stageLines[ss])
+					}
+				}
+			}
+		})
+	}
 }
 
 func TestDeployAndUpEnvVars(t *testing.T) {

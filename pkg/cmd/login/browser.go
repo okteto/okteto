@@ -21,6 +21,10 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"text/template"
+
+	"github.com/okteto/okteto/pkg/model"
 )
 
 // Handler handles the authentication using a browser
@@ -31,6 +35,13 @@ type Handler struct {
 	port     int
 	response chan string
 	errChan  chan error
+}
+
+// OriginData
+type OriginData struct {
+	Meta    string
+	Origin  string
+	Message string
 }
 
 func (h *Handler) handle() http.Handler {
@@ -44,7 +55,19 @@ func (h *Handler) handle() http.Handler {
 			return
 		}
 
-		if _, err := w.Write(loginHTML); err != nil {
+		data := &OriginData{
+			Meta:    "http-equiv=\"Content-type\" content=\"text/html; charset=utf-8\"",
+			Origin:  "the Okteto CLI",
+			Message: "Close this window and go back to your terminal",
+		}
+		if os.Getenv(model.OktetoOriginEnvVar) == model.OktetoDockerDesktopOrigin {
+			data.Meta = "http-equiv=\"refresh\" content=\"1; url = docker-desktop://dashboard/open\""
+			data.Origin = "Docker Desktop"
+			data.Message = "Close this window and go back to Docker Desktop"
+		}
+
+		htmlTemplate := template.Must(template.New("response").Parse(loginHTMLTemplate))
+		if err := htmlTemplate.Execute(w, data); err != nil {
 			h.errChan <- fmt.Errorf("failed to write to the response: %s", err)
 			w.WriteHeader(http.StatusInternalServerError)
 		}

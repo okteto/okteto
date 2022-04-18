@@ -105,6 +105,10 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 			buildOptions.CacheFrom[i] = registry.ExpandOktetoDevRegistry(buildOptions.CacheFrom[i])
 			buildOptions.CacheFrom[i] = registry.ExpandOktetoGlobalRegistry(buildOptions.CacheFrom[i])
 		}
+		if buildOptions.ExportCache != "" {
+			buildOptions.ExportCache = registry.ExpandOktetoDevRegistry(buildOptions.ExportCache)
+			buildOptions.ExportCache = registry.ExpandOktetoGlobalRegistry(buildOptions.ExportCache)
+		}
 	}
 	opt, err := getSolveOpt(buildOptions)
 	if err != nil {
@@ -314,12 +318,13 @@ func OptsFromManifest(service string, manifest *model.Manifest, o *types.BuildOp
 		file = filepath.Join(b.Context, b.Dockerfile)
 	}
 	opts := &types.BuildOptions{
-		CacheFrom: b.CacheFrom,
-		Target:    b.Target,
-		Path:      b.Context,
-		Tag:       b.Image,
-		File:      file,
-		BuildArgs: args,
+		CacheFrom:   b.CacheFrom,
+		Target:      b.Target,
+		Path:        b.Context,
+		Tag:         b.Image,
+		File:        file,
+		BuildArgs:   args,
+		ExportCache: b.ExportCache,
 	}
 
 	outputMode := oktetoLog.GetOutputFormat()

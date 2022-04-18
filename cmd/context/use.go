@@ -61,6 +61,9 @@ Or a Kubernetes context:
 				ctxOptions.Context = strings.TrimSuffix(args[0], "/")
 			}
 
+			if ctxOptions.DockerDesktop {
+				os.Setenv(model.OktetoOriginEnvVar, model.OktetoDockerDesktopOrigin)
+			}
 			ctxOptions.IsCtxCommand = true
 			ctxOptions.Save = true
 
@@ -78,7 +81,9 @@ Or a Kubernetes context:
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
 	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")
 	cmd.Flags().BoolVarP(&ctxOptions.OnlyOkteto, "okteto", "", false, "only shows okteto cluster options")
+	cmd.Flags().BoolVarP(&ctxOptions.DockerDesktop, "docker-desktop", "", false, "if the command is executed from the Docker Desktop extension")
 	cmd.Flags().MarkHidden("okteto")
+	cmd.Flags().MarkHidden("docker-desktop")
 	return cmd
 }
 

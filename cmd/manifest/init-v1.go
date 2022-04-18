@@ -38,7 +38,6 @@ import (
 
 const (
 	stignoreFile      = ".stignore"
-	secondaryManifest = "okteto.yaml"
 	defaultInitValues = "Use default values"
 )
 

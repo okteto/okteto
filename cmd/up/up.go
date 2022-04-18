@@ -52,15 +52,19 @@ import (
 // ReconnectingMessage is the message shown when we are trying to reconnect
 const ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
 
+// UpOptions represents the options available on up command
 type UpOptions struct {
 	DevPath    string
 	Namespace  string
 	K8sContext string
+	DevName    string
+	Devs       []string
 	Remote     int
 	Deploy     bool
 	Build      bool
 	ForcePull  bool
 	Reset      bool
+	Detach     bool
 }
 
 // Up starts a development container
@@ -73,6 +77,10 @@ func Up() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
+			}
+
+			if err := upOptions.AddArgs(cmd, args); err != nil {
+				return err
 			}
 
 			u := utils.UpgradeAvailable()
@@ -119,10 +127,7 @@ func Up() *cobra.Command {
 				oktetoManifest.Name = utils.InferName(wd)
 			}
 			os.Setenv(model.OktetoNameEnvVar, oktetoManifest.Name)
-			devName := ""
-			if len(args) == 1 {
-				devName = args[0]
-			}
+
 			if len(oktetoManifest.Dev) == 0 {
 				oktetoLog.Warning("okteto manifest has no 'dev' section.")
 				answer, err := utils.AskYesNo("Do you want to configure okteto manifest now? [y/n]")
@@ -165,10 +170,19 @@ func Up() *cobra.Command {
 					}
 				}
 			}
-			dev, err := utils.GetDevFromManifest(oktetoManifest, devName)
-			if err != nil {
-				return err
+			var dev *model.Dev
+			if upOptions.Detach {
+				dev, err = utils.GetDevDetachMode(oktetoManifest, upOptions.Devs)
+				if err != nil {
+					return err
+				}
+			} else {
+				dev, err = utils.GetDevFromManifest(oktetoManifest, upOptions.DevName)
+				if err != nil {
+					return err
+				}
 			}
+
 			if err := setBuildEnvVars(oktetoManifest, dev.Name); err != nil {
 				return err
 			}
@@ -244,7 +258,7 @@ func Up() *cobra.Command {
 				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
 					return err
 				}
-				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
+				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err && !upOptions.Detach {
 					up.Dev.Autocreate = false
 				}
 				if err != nil {
@@ -293,7 +307,28 @@ func Up() *cobra.Command {
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().MarkHidden("pull")
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
+	cmd.Flags().BoolVarP(&upOptions.Detach, "detach", "", false, "activate one more development containers in detached mode")
 	return cmd
+}
+
+// AddArgs sets the args as options and return err if it's not compatible
+func (o *UpOptions) AddArgs(cmd *cobra.Command, args []string) error {
+	if o.Detach {
+		o.Devs = args
+	} else {
+		maxV1Args := 1
+		docsURL := "https://okteto.com/docs/reference/cli/#up"
+		if len(args) > maxV1Args {
+			cmd.Help()
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), maxV1Args, len(args)),
+				Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
+			}
+		} else if len(args) == 1 {
+			o.DevName = args[0]
+		}
+	}
+	return nil
 }
 
 func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath string) (*model.Manifest, error) {
@@ -403,7 +438,7 @@ func (up *upContext) start() error {
 		HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
 		HasDeploySection: (up.Manifest.IsV2 &&
 			up.Manifest.Deploy != nil &&
-			(len(up.Manifest.Deploy.Commands) > 0 || up.Manifest.Deploy.Compose.Manifest != nil)),
+			(len(up.Manifest.Deploy.Commands) > 0 || up.Manifest.Deploy.ComposeSection.ComposesInfo != nil)),
 	})
 
 	go up.activateLoop()
@@ -720,8 +755,8 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 		}
 	}
 
-	if m.Dev[devName].Image != nil {
-		var err error
+	var err error
+	if value, ok := m.Dev[devName]; ok && value.Image != nil {
 		m.Dev[devName].Image.Name, err = model.ExpandEnv(m.Dev[devName].Image.Name, false)
 		if err != nil {
 			return err

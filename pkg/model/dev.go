@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -63,6 +64,7 @@ type Dev struct {
 	ImagePullPolicy      apiv1.PullPolicy   `json:"imagePullPolicy,omitempty" yaml:"imagePullPolicy,omitempty"`
 	Secrets              []Secret           `json:"secrets,omitempty" yaml:"secrets,omitempty"`
 	Command              Command            `json:"command,omitempty" yaml:"command,omitempty"`
+	Args                 Command            `json:"args,omitempty" yaml:"args,omitempty"`
 	Probes               *Probes            `json:"probes,omitempty" yaml:"probes,omitempty"`
 	Lifecycle            *Lifecycle         `json:"lifecycle,omitempty" yaml:"lifecycle,omitempty"`
 	Workdir              string             `json:"workdir,omitempty" yaml:"workdir,omitempty"`
@@ -123,6 +125,7 @@ type BuildInfo struct {
 	Args             Environment   `yaml:"args,omitempty"`
 	Image            string        `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume `yaml:"-"`
+	ExportCache      string        `yaml:"export_cache,omitempty"`
 }
 
 // Volume represents a volume in the development container
@@ -435,6 +438,11 @@ func (dev *Dev) SetDefaults() error {
 	if dev.Command.Values == nil {
 		dev.Command.Values = []string{"sh"}
 	}
+	if len(dev.Forward) > 0 {
+		sort.SliceStable(dev.Forward, func(i, j int) bool {
+			return dev.Forward[i].less(&dev.Forward[j])
+		})
+	}
 	if dev.Image == nil {
 		dev.Image = &BuildInfo{}
 	}
@@ -488,6 +496,7 @@ func (dev *Dev) SetDefaults() error {
 	if dev.SSHServerPort == 0 {
 		dev.SSHServerPort = oktetoDefaultSSHServerPort
 	}
+
 	dev.setRunAsUserDefaults(dev)
 
 	if os.Getenv(OktetoRescanIntervalEnvVar) != "" {
@@ -614,10 +623,15 @@ func (dev *Dev) expandEnvFiles() error {
 		}
 
 		for name, value := range envMap {
-			dev.Environment = append(
-				dev.Environment,
-				EnvVar{Name: name, Value: value},
-			)
+			if value == "" {
+				value = os.Getenv(name)
+			}
+			if value != "" {
+				dev.Environment = append(
+					dev.Environment,
+					EnvVar{Name: name, Value: value},
+				)
+			}
 		}
 	}
 
@@ -969,6 +983,8 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			}
 			rule.Args = append(rule.Args, "-s", fmt.Sprintf("%s:%s", filename, s.RemotePath))
 		}
+	} else if len(dev.Args.Values) > 0 {
+		rule.Args = dev.Args.Values
 	} else if len(dev.Command.Values) > 0 {
 		rule.Command = dev.Command.Values
 		rule.Args = []string{}

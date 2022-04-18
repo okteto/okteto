@@ -107,10 +107,15 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 	}
 
 	for name, value := range envMap {
-		svc.Environment = append(
-			svc.Environment,
-			model.EnvVar{Name: name, Value: value},
-		)
+		if value == "" {
+			value = os.Getenv(name)
+		}
+		if value != "" {
+			svc.Environment = append(
+				svc.Environment,
+				model.EnvVar{Name: name, Value: value},
+			)
+		}
 	}
 
 	return nil
@@ -762,6 +767,9 @@ func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 	result := []apiv1.ServicePort{}
 	for _, p := range svc.Ports {
+		if model.IsSkippablePort(p.HostPort) {
+			continue
+		}
 		if !isServicePortAdded(p.ContainerPort, result) {
 			result = append(
 				result,
@@ -828,15 +836,15 @@ func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 
 func getSvcProbe(svc *model.Service) *apiv1.Probe {
 	if svc.Healtcheck != nil {
-		var handler apiv1.Handler
+		var handler apiv1.ProbeHandler
 		if len(svc.Healtcheck.Test) != 0 {
-			handler = apiv1.Handler{
+			handler = apiv1.ProbeHandler{
 				Exec: &apiv1.ExecAction{
 					Command: svc.Healtcheck.Test,
 				},
 			}
 		} else {
-			handler = apiv1.Handler{
+			handler = apiv1.ProbeHandler{
 				HTTPGet: &apiv1.HTTPGetAction{
 					Path: svc.Healtcheck.HTTP.Path,
 					Port: intstr.IntOrString{IntVal: svc.Healtcheck.HTTP.Port},
@@ -844,7 +852,7 @@ func getSvcProbe(svc *model.Service) *apiv1.Probe {
 			}
 		}
 		return &apiv1.Probe{
-			Handler:             handler,
+			ProbeHandler:        handler,
 			TimeoutSeconds:      int32(svc.Healtcheck.Timeout.Seconds()),
 			PeriodSeconds:       int32(svc.Healtcheck.Interval.Seconds()),
 			FailureThreshold:    int32(svc.Healtcheck.Retries),

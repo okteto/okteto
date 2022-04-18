@@ -37,7 +37,7 @@ import (
 const (
 	env = `A=hello
 # comment
-
+OKTETO_TEST=
 
 B=$B
 
@@ -89,6 +89,7 @@ func Test_translateEnvVars(t *testing.T) {
 	os.Setenv("B", "2")
 	os.Setenv("ENV_PATH", tmpFile.Name())
 	os.Setenv("ENV_PATH2", tmpFile2.Name())
+	os.Setenv("OKTETO_TEST", "myvalue")
 	stack := &model.Stack{
 		Name: "name",
 		Services: map[string]*model.Service{
@@ -109,7 +110,7 @@ func Test_translateEnvVars(t *testing.T) {
 	if stack.Services["1"].Image != "image" {
 		t.Errorf("Wrong image: %s", stack.Services["1"].Image)
 	}
-	if len(stack.Services["1"].Environment) != 5 {
+	if len(stack.Services["1"].Environment) != 6 {
 		t.Errorf("Wrong environment: %v", stack.Services["1"].Environment)
 	}
 	for _, e := range stack.Services["1"].Environment {
@@ -127,6 +128,9 @@ func Test_translateEnvVars(t *testing.T) {
 		}
 		if e.Name == "E" && e.Value != "word -notword" {
 			t.Errorf("Wrong environment variable E: %s", e.Value)
+		}
+		if e.Name == "OKTETO_TEST" && e.Value != "myvalue" {
+			t.Errorf("Wrong environment variable OKTETO_TEST: %s", e.Value)
 		}
 	}
 }
@@ -1218,7 +1222,7 @@ func Test_translateSvcProbe(t *testing.T) {
 				},
 			},
 			expected: &apiv1.Probe{
-				Handler: apiv1.Handler{
+				ProbeHandler: apiv1.ProbeHandler{
 					HTTPGet: &apiv1.HTTPGetAction{
 						Path: "/",
 						Port: intstr.IntOrString{IntVal: 8080},
@@ -1242,7 +1246,7 @@ func Test_translateSvcProbe(t *testing.T) {
 				},
 			},
 			expected: &apiv1.Probe{
-				Handler: apiv1.Handler{
+				ProbeHandler: apiv1.ProbeHandler{
 					HTTPGet: &apiv1.HTTPGetAction{
 						Path: "/",
 						Port: intstr.IntOrString{IntVal: 8080},
@@ -1264,7 +1268,7 @@ func Test_translateSvcProbe(t *testing.T) {
 				},
 			},
 			expected: &apiv1.Probe{
-				Handler: apiv1.Handler{
+				ProbeHandler: apiv1.ProbeHandler{
 					Exec: &apiv1.ExecAction{
 						Command: []string{"curl", "db-service:8080/readiness"},
 					},
@@ -1285,7 +1289,7 @@ func Test_translateSvcProbe(t *testing.T) {
 				},
 			},
 			expected: &apiv1.Probe{
-				Handler: apiv1.Handler{
+				ProbeHandler: apiv1.ProbeHandler{
 					Exec: &apiv1.ExecAction{
 						Command: []string{"curl", "db-service:8080/readiness"},
 					},

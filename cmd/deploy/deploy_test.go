@@ -15,6 +15,7 @@ package deploy
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
@@ -412,4 +413,204 @@ func getManifestWithError(_ string) (*model.Manifest, error) {
 
 func getFakeManifest(_ string) (*model.Manifest, error) {
 	return fakeManifest, nil
+}
+
+func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
+	tests := []struct {
+		name             string
+		options          *Options
+		expectedServices []string
+	}{
+		{
+			name: "no manifest services to deploy",
+			options: &Options{
+				servicesToDeploy: []string{"a", "b"},
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						ComposeSection: &model.ComposeSectionInfo{
+							ComposesInfo: []model.ComposeInfo{},
+						},
+					},
+				},
+			},
+			expectedServices: []string{"a", "b"},
+		},
+		{
+			name: "no options services to deploy",
+			options: &Options{
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						ComposeSection: &model.ComposeSectionInfo{
+							ComposesInfo: []model.ComposeInfo{
+								{ServicesToDeploy: []string{"a", "b"}},
+								{ServicesToDeploy: []string{"c", "d"}},
+							},
+						},
+					},
+				},
+			},
+			expectedServices: []string{"a", "b", "c", "d"},
+		},
+		{
+			name: "both",
+			options: &Options{
+				servicesToDeploy: []string{"from command a", "from command b"},
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{
+						ComposeSection: &model.ComposeSectionInfo{
+							ComposesInfo: []model.ComposeInfo{
+								{ServicesToDeploy: []string{"c", "d"}},
+							},
+						},
+					},
+				},
+			},
+			expectedServices: []string{"from command a", "from command b"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			mergeServicesToDeployFromOptionsAndManifest(test.options)
+			// We have to check them as if they were sets to account for order
+			expected := map[string]bool{}
+			for _, service := range test.expectedServices {
+				expected[service] = true
+			}
+
+			got := map[string]bool{}
+			for _, service := range test.options.servicesToDeploy {
+				got[service] = true
+			}
+
+			if !reflect.DeepEqual(expected, got) {
+				t.Errorf("expected %v, got %v", expected, got)
+			}
+		})
+	}
+}
+
+func Test_onlyDeployEndpointsFromServicesToDeploy(t *testing.T) {
+	type args struct {
+		endpoints        model.EndpointSpec
+		servicesToDeploy map[string]bool
+	}
+	tests := []struct {
+		name     string
+		args     args
+		expected model.EndpointSpec
+	}{
+		{
+			name: "multiple endpoints",
+			args: args{
+				endpoints: model.EndpointSpec{
+					"manifest": {
+						Rules: []model.EndpointRule{
+							{Service: "a"},
+							{Service: "b"},
+						},
+					},
+				},
+				servicesToDeploy: map[string]bool{
+					"a": true,
+				},
+			},
+			expected: model.EndpointSpec{
+				"manifest": {Rules: []model.EndpointRule{
+					{Service: "a"},
+				},
+				},
+			},
+		},
+		{
+			name: "no endpoints",
+			args: args{
+				endpoints: model.EndpointSpec{},
+				servicesToDeploy: map[string]bool{
+					"manifest": true,
+				},
+			},
+			expected: model.EndpointSpec{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			onlyDeployEndpointsFromServicesToDeploy(tt.args.endpoints, tt.args.servicesToDeploy)
+			if !reflect.DeepEqual(tt.args.endpoints, tt.expected) {
+				t.Errorf("expected %v, got %v", tt.expected, tt.args.endpoints)
+			}
+		})
+	}
+}
+
+func Test_onlyDeployVolumesFromServicesToDeploy(t *testing.T) {
+	type args struct {
+		stack            *model.Stack
+		servicesToDeploy map[string]bool
+	}
+	tests := []struct {
+		name     string
+		args     args
+		expected map[string]*model.VolumeSpec
+	}{
+		{
+			name: "multiple volumes",
+			args: args{
+				servicesToDeploy: map[string]bool{
+					"service b":  true,
+					"service bc": true,
+				},
+				stack: &model.Stack{
+					Services: map[string]*model.Service{
+						"service ab": {
+							Volumes: []model.StackVolume{
+								{
+									LocalPath: "volume a",
+								},
+								{
+									LocalPath: "volume b",
+								},
+							},
+						},
+						"service b": {
+							Volumes: []model.StackVolume{
+								{
+									LocalPath: "volume b",
+								},
+							},
+						},
+						"service bc": {
+							Volumes: []model.StackVolume{
+								{
+									LocalPath: "volume b",
+								},
+								{
+									LocalPath: "volume c",
+								},
+							},
+						},
+					},
+					Volumes: map[string]*model.VolumeSpec{
+						"volume a": {},
+						"volume b": {},
+						"volume c": {},
+					},
+				},
+			},
+			expected: map[string]*model.VolumeSpec{
+				"volume b": {},
+				"volume c": {},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			onlyDeployVolumesFromServicesToDeploy(tt.args.stack, tt.args.servicesToDeploy)
+			if !reflect.DeepEqual(tt.args.stack.Volumes, tt.expected) {
+				t.Errorf("expected %v, got %v", tt.expected, tt.args.stack.Volumes)
+			}
+		})
+	}
 }

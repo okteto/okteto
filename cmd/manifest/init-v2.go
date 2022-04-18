@@ -390,9 +390,9 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 	manifest := &model.Manifest{
 		Type: model.StackType,
 		Deploy: &model.DeployInfo{
-			Compose: &model.ComposeInfo{
-				Manifest: []string{
-					composePath,
+			ComposeSection: &model.ComposeSectionInfo{
+				ComposesInfo: []model.ComposeInfo{
+					{File: composePath},
 				},
 				Stack: stack,
 			},
@@ -540,13 +540,9 @@ func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
 		manifest.Build = b
 		d := model.NewDeployInfo()
 		if mc.manifest.Deploy != nil {
-			commands := []model.DeployCommand{}
-			for _, cmd := range mc.manifest.Deploy.Commands {
-				commands = append(commands, cmd)
-			}
-			d.Commands = commands
+			copy(d.Commands, mc.manifest.Deploy.Commands)
 			d.Endpoints = mc.manifest.Deploy.Endpoints
-			d.Compose = mc.manifest.Deploy.Compose
+			d.ComposeSection = mc.manifest.Deploy.ComposeSection
 		}
 		manifest.Deploy = d
 		return &manifest, nil

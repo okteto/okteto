@@ -243,6 +243,9 @@ const (
 	// OktetoOriginEnvVar defines where is executing okteto
 	OktetoOriginEnvVar = "OKTETO_ORIGIN"
 
+	// OktetoDockerDesktopOrigin indicates the origin of the command is the Docker Desktop extension
+	OktetoDockerDesktopOrigin = "docker-desktop"
+
 	// OktetoFolderEnvVar defines the path of okteto folder
 	OktetoFolderEnvVar = "OKTETO_FOLDER"
 

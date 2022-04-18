@@ -208,8 +208,8 @@ const (
 	DependsOnServiceCompleted DependsOnCondition = "service_completed_successfully"
 )
 
-// GetStack returns an okteto stack object from a given file
-func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
+// GetStackFromPath returns an okteto stack object from a given file
+func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	b, err := os.ReadFile(stackPath)
 	if err != nil {
 		return nil, err
@@ -250,11 +250,7 @@ func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
 			svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
 			svc.Build.Dockerfile = loadAbsPath(svc.Build.Context, svc.Build.Dockerfile)
 		}
-		toMount := []StackVolume{}
-		for _, v := range svc.VolumeMounts {
-			toMount = append(toMount, v)
-		}
-		svc.Build.VolumesToInclude = toMount
+		copy(svc.Build.VolumesToInclude, svc.Volumes)
 	}
 	return s, nil
 }
@@ -267,6 +263,10 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 		return name, nil
 	}
 	if actualStackName == "" {
+		nameEnvVar := os.Getenv(OktetoNameEnvVar)
+		if nameEnvVar != "" {
+			return nameEnvVar, nil
+		}
 		name, err := GetValidNameFromGitRepo(filepath.Dir(stackPath))
 		if err != nil {
 			name, err = GetValidNameFromFolder(filepath.Dir(stackPath))
@@ -353,6 +353,30 @@ func (svc *Service) IgnoreSyncVolumes(s *Stack) {
 	svc.VolumeMounts = notIgnoredVolumes
 }
 
+// ToDev translates a service into a dev
+func (svc *Service) ToDev(svcName string) (*Dev, error) {
+	d := NewDev()
+	for _, p := range svc.Ports {
+		if p.HostPort != 0 {
+			d.Forward = append(d.Forward, Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
+		}
+	}
+	for _, v := range svc.VolumeMounts {
+		if pathExistsAndDir(v.LocalPath) {
+			d.Sync.Folders = append(d.Sync.Folders, SyncFolder(v))
+		}
+	}
+	d.Command = svc.Command
+	d.EnvFiles = svc.EnvFiles
+	d.Environment = svc.Environment
+	d.Name = svcName
+	err := d.SetDefaults()
+	if err != nil {
+		return nil, err
+	}
+	return d, nil
+}
+
 func (s *Stack) Validate() error {
 	if err := validateStackName(s.Name); err != nil {
 		return fmt.Errorf("Invalid compose name: %s", err)
@@ -390,11 +414,7 @@ func (s *Stack) Validate() error {
 		}
 		svc.IgnoreSyncVolumes(s)
 	}
-	if err := validateDependsOn(s); err != nil {
-		return err
-	}
-
-	return nil
+	return validateDependsOn(s)
 }
 
 func validateStackName(name string) error {
@@ -633,7 +653,7 @@ func (r *StackResources) IsDefaultValue() bool {
 	return false
 }
 
-func (svcResources ServiceResources) IsDefaultValue() bool {
+func (svcResources *ServiceResources) IsDefaultValue() bool {
 	return svcResources.CPU.Value.IsZero() && svcResources.Memory.Value.IsZero() && svcResources.Storage.Size.Value.IsZero() && svcResources.Storage.Class == ""
 }
 
@@ -701,7 +721,7 @@ func getStack(name, manifestPath string) (*Stack, error) {
 	if isPathAComposeFile(manifestPath) {
 		isCompose = true
 	}
-	stack, err := GetStack(name, manifestPath, isCompose)
+	stack, err := GetStackFromPath(name, manifestPath, isCompose)
 	if err != nil {
 		return nil, err
 	}
@@ -732,7 +752,7 @@ func getOverrideFile(stackPath string) (*Stack, error) {
 		if isPathAComposeFile(stackPath) {
 			isCompose = true
 		}
-		stack, err := GetStack("", overridePath, isCompose)
+		stack, err := GetStackFromPath("", overridePath, isCompose)
 		if err != nil {
 			return nil, err
 		}

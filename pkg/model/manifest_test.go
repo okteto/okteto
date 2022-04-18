@@ -117,7 +117,7 @@ func TestInferFromStack(t *testing.T) {
 				Dev:   ManifestDevs{},
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
-					Compose: &ComposeInfo{
+					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},
@@ -125,14 +125,13 @@ func TestInferFromStack(t *testing.T) {
 			expectedManifest: &Manifest{
 				Build: ManifestBuild{
 					"test": &BuildInfo{
-						Context:          "test",
-						Dockerfile:       filepath.Join("test", "Dockerfile"),
-						VolumesToInclude: []StackVolume{},
+						Context:    "test",
+						Dockerfile: filepath.Join("test", "Dockerfile"),
 					},
 				},
 				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
-					Compose: &ComposeInfo{
+					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},
@@ -149,7 +148,7 @@ func TestInferFromStack(t *testing.T) {
 					},
 				},
 				Deploy: &DeployInfo{
-					Compose: &ComposeInfo{
+					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},
@@ -163,7 +162,7 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
-					Compose: &ComposeInfo{
+					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},
@@ -180,7 +179,7 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
-					Compose: &ComposeInfo{
+					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},
@@ -188,9 +187,8 @@ func TestInferFromStack(t *testing.T) {
 			expectedManifest: &Manifest{
 				Build: ManifestBuild{
 					"test": &BuildInfo{
-						Context:          "test",
-						Dockerfile:       filepath.Join("test", "Dockerfile"),
-						VolumesToInclude: []StackVolume{},
+						Context:    "test",
+						Dockerfile: filepath.Join("test", "Dockerfile"),
 					},
 				},
 				Dev: ManifestDevs{
@@ -243,7 +241,7 @@ func TestInferFromStack(t *testing.T) {
 					},
 				},
 				Deploy: &DeployInfo{
-					Compose: &ComposeInfo{
+					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},

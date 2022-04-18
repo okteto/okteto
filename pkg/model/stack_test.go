@@ -18,7 +18,6 @@ import (
 	"reflect"
 	"testing"
 
-	apiv1 "k8s.io/api/core/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -903,7 +902,7 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 							{
 								HostPort:      8080,
 								ContainerPort: 8080,
-								Protocol:      apiv1.ProtocolTCP,
+								Protocol:      corev1.ProtocolTCP,
 							},
 						},
 					},
@@ -953,7 +952,7 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 				os.Setenv(key, value)
 			}
 
-			stack, err := GetStack("test", tmpFile.Name(), false)
+			stack, err := GetStackFromPath("test", tmpFile.Name(), false)
 			if err != nil {
 				t.Fatalf("Error detected: %s", err.Error())
 			}
@@ -1058,5 +1057,78 @@ func Test_validateDependsOn(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func Test_getStackName(t *testing.T) {
+	tests := []struct {
+		testName        string
+		name            string
+		stackPath       string
+		actualStackName string
+		nameEnv         string
+		expected        string
+		expectedErr     bool
+	}{
+		{
+			testName: "name is not empty",
+			name:     "stack1",
+			expected: "stack1",
+		},
+		{
+			testName:        "actualStackName is not empty",
+			actualStackName: "stack2",
+			expected:        "stack2",
+		},
+		{
+			testName: "name and actualName and stackPath are empty - name env var not empty",
+			nameEnv:  "stack3",
+			expected: "stack3",
+		},
+		{
+			testName:  "name and actualName are empty - name env var and stackPath not empty",
+			nameEnv:   "stack3",
+			stackPath: "path/to/stack4/compose.yaml",
+			expected:  "stack3",
+		},
+		{
+			testName:  "name and actualName are empty - infer from folder",
+			stackPath: "path/to/stack4/compose.yaml",
+			expected:  "stack4",
+		},
+		{
+			testName:        "(name and actualStackName) are not empty",
+			name:            "stack1",
+			actualStackName: "stack2",
+			expected:        "stack1",
+		},
+		{
+			testName:        "name is empty and (nameEnv and actualStackName) are not empty",
+			actualStackName: "stack1",
+			nameEnv:         "stack2",
+			expected:        "stack1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.testName, func(t *testing.T) {
+			os.Setenv(OktetoNameEnvVar, tt.nameEnv)
+			res, err := getStackName(tt.name, tt.stackPath, tt.actualStackName)
+			resEnv := os.Getenv(OktetoNameEnvVar)
+
+			if err == nil && tt.expectedErr {
+				t.Fatal("expected error but not thrown")
+			}
+			if err != nil && !tt.expectedErr {
+				t.Fatal(err)
+			}
+			if res != tt.expected {
+				t.Fatalf("expected %s, got %s", tt.expected, res)
+			}
+			if resEnv != tt.expected {
+				t.Fatalf("expected env OKTETO_NAME %s, got %s", tt.expected, resEnv)
+			}
+		})
+
 	}
 }
