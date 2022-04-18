@@ -163,17 +163,12 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 
 	// Check if the tag is already on global/dev registry and skip
 	if build.ShouldOptimizeBuild(buildOptions.Tag) && !buildOptions.BuildToGlobal {
-		oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
-		globalReference := strings.Replace(buildOptions.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
-		if _, err := bc.Registry.GetImageTagWithDigest(globalReference); err == nil {
-			oktetoLog.Debugf("Skipping '%s' build. Image already exists at the Okteto Registry", svcName)
-			return globalReference, nil
+		tag, err := bc.optimizeBuild(buildOptions, svcName)
+		if err != nil {
+			return "", err
 		}
-		if registry.IsDevRegistry(buildOptions.Tag) {
-			if _, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag); err == nil {
-				oktetoLog.Debugf("skipping build: image %s is already built", buildOptions.Tag)
-				return buildOptions.Tag, nil
-			}
+		if tag != "" {
+			return tag, nil
 		}
 	}
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
@@ -184,6 +179,22 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		return "", fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
 	}
 	return imageTagWithDigest, nil
+}
+
+func (bc *OktetoBuilder) optimizeBuild(buildOptions *types.BuildOptions, svcName string) (string, error) {
+	oktetoLog.Debug("found optimizing the build flow")
+	globalReference := strings.Replace(buildOptions.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
+	if _, err := bc.Registry.GetImageTagWithDigest(globalReference); err == nil {
+		oktetoLog.Debugf("Skipping '%s' build. Image already exists at the Okteto Registry", svcName)
+		return globalReference, nil
+	}
+	if registry.IsDevRegistry(buildOptions.Tag) {
+		if _, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag); err == nil {
+			oktetoLog.Debugf("skipping build: image %s is already built", buildOptions.Tag)
+			return buildOptions.Tag, nil
+		}
+	}
+	return "", nil
 }
 
 func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {

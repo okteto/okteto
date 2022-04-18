@@ -68,7 +68,7 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 	opts := build.OptsFromBuildInfo(manifest.Name, service, buildInfo, &types.BuildOptions{})
 
 	if build.ShouldOptimizeBuild(opts.Tag) {
-		oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
+		oktetoLog.Debug("tag detected, optimizing sha")
 		if skipBuild, err := bc.checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
 			return err
 		} else if skipBuild {
