@@ -15,18 +15,12 @@ package build
 
 import (
 	"context"
-	"fmt"
 
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
-	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/cmd/namespace"
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -101,51 +95,4 @@ func (bc *Command) getBuilder(isBuildV2 bool) Builder {
 		return buildv2.NewBuilder(bc.Builder, bc.Registry)
 	}
 	return buildv1.NewBuilder(bc.Builder, bc.Registry)
-}
-
-func loadContext(ctx context.Context, manifest *model.Manifest, isBuildV2 bool, options *types.BuildOptions) error {
-	ctxOpts := &contextCMD.ContextOptions{}
-	if isBuildV2 {
-		if manifest.Context != "" {
-			ctxOpts.Context = manifest.Context
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
-				return err
-			}
-		}
-
-		if options.Namespace == "" && manifest.Namespace != "" {
-			ctxOpts.Namespace = manifest.Namespace
-		}
-	} else {
-		maxV1Args := 1
-		docsURL := "https://okteto.com/docs/reference/cli/#build"
-		if len(options.CommandArgs) > maxV1Args {
-			return oktetoErrors.UserError{
-				E:    fmt.Errorf("when passing a context to 'okteto build', it accepts at most %d arg(s), but received %d", maxV1Args, len(options.CommandArgs)),
-				Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
-			}
-		}
-
-		if options.Namespace != "" {
-			ctxOpts.Namespace = options.Namespace
-		}
-	}
-
-	if okteto.IsOkteto() && ctxOpts.Namespace != "" {
-		create, err := utils.ShouldCreateNamespace(ctx, ctxOpts.Namespace)
-		if err != nil {
-			return err
-		}
-		if create {
-			nsCmd, err := namespace.NewCommand()
-			if err != nil {
-				return err
-			}
-			if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
-				return err
-			}
-		}
-	}
-
-	return contextCMD.NewContextCommand().Run(ctx, ctxOpts)
 }
