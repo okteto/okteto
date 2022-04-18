@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -57,6 +58,29 @@ func TestNoServiceBuilt(t *testing.T) {
 	alreadyBuilt := []string{"test/test-1", "test/test-2"}
 	fakeReg.AddImageByName(alreadyBuilt...)
 	ctx := context.Background()
+	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest)
+	//should not throw error
+	assert.NoError(t, err)
+	assert.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
+}
+
+func TestServicesNotInStack(t *testing.T) {
+	fakeReg := test.NewFakeOktetoRegistry(nil)
+	bc := &OktetoBuilder{
+		Registry: fakeReg,
+	}
+	alreadyBuilt := []string{"test/test-1"}
+	fakeReg.AddImageByName(alreadyBuilt...)
+	ctx := context.Background()
+	stack := &model.Stack{
+		Services: map[string]*model.Service{
+			"test-not-stack": {},
+			"test-1":         {},
+		},
+	}
+	fakeManifest.Deploy = &model.DeployInfo{ComposeSection: &model.ComposeSectionInfo{
+		Stack: stack,
+	}}
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest)
 	//should not throw error
 	assert.NoError(t, err)
