@@ -833,7 +833,7 @@ func checkServicesToBuild(service string, manifest *model.Manifest, ch chan stri
 	}
 	if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 		stack := manifest.Deploy.ComposeSection.Stack
-		if stack.Services[service].Image == "" {
+		if svc, ok := stack.Services[service]; ok && svc.Image == "" {
 			stack.Services[service].Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(service, "-", "_")))
 		}
 	}
