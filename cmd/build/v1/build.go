@@ -18,9 +18,12 @@ import (
 	"fmt"
 	"path/filepath"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -53,7 +56,37 @@ func NewBuilderFromScratch() *OktetoBuilder {
 
 // LoadContext Loads the okteto context based on a build v2
 func (bc *OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOptions) error {
-	return nil
+	ctxOpts := &contextCMD.ContextOptions{}
+	maxV1Args := 1
+	docsURL := "https://okteto.com/docs/reference/cli/#build"
+	if len(options.CommandArgs) > maxV1Args {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("when passing a context to 'okteto build', it accepts at most %d arg(s), but received %d", maxV1Args, len(options.CommandArgs)),
+			Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
+		}
+	}
+
+	if options.Namespace != "" {
+		ctxOpts.Namespace = options.Namespace
+	}
+
+	if okteto.IsOkteto() && ctxOpts.Namespace != "" {
+		create, err := utils.ShouldCreateNamespace(ctx, ctxOpts.Namespace)
+		if err != nil {
+			return err
+		}
+		if create {
+			nsCmd, err := namespace.NewCommand()
+			if err != nil {
+				return err
+			}
+			if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return contextCMD.NewContextCommand().Run(ctx, ctxOpts)
 }
 
 // Build builds the images defined by a Dockerfile
