@@ -207,8 +207,8 @@ const (
 	DependsOnServiceCompleted DependsOnCondition = "service_completed_successfully"
 )
 
-// GetStack returns an okteto stack object from a given file
-func GetStack(name, stackPath string, isCompose bool) (*Stack, error) {
+// GetStackFromPath returns an okteto stack object from a given file
+func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	b, err := os.ReadFile(stackPath)
 	if err != nil {
 		return nil, err
@@ -389,11 +389,7 @@ func (s *Stack) Validate() error {
 		}
 		svc.IgnoreSyncVolumes(s)
 	}
-	if err := validateDependsOn(s); err != nil {
-		return err
-	}
-
-	return nil
+	return validateDependsOn(s)
 }
 
 func validateStackName(name string) error {
@@ -631,7 +627,7 @@ func (r *StackResources) IsDefaultValue() bool {
 	return false
 }
 
-func (svcResources ServiceResources) IsDefaultValue() bool {
+func (svcResources *ServiceResources) IsDefaultValue() bool {
 	return svcResources.CPU.Value.IsZero() && svcResources.Memory.Value.IsZero() && svcResources.Storage.Size.Value.IsZero() && svcResources.Storage.Class == ""
 }
 
@@ -699,7 +695,7 @@ func getStack(name, manifestPath string) (*Stack, error) {
 	if isPathAComposeFile(manifestPath) {
 		isCompose = true
 	}
-	stack, err := GetStack(name, manifestPath, isCompose)
+	stack, err := GetStackFromPath(name, manifestPath, isCompose)
 	if err != nil {
 		return nil, err
 	}
@@ -730,7 +726,7 @@ func getOverrideFile(stackPath string) (*Stack, error) {
 		if isPathAComposeFile(stackPath) {
 			isCompose = true
 		}
-		stack, err := GetStack("", overridePath, isCompose)
+		stack, err := GetStackFromPath("", overridePath, isCompose)
 		if err != nil {
 			return nil, err
 		}

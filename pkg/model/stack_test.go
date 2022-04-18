@@ -952,7 +952,7 @@ func TestStack_ExpandEnvsAtFileLevel(t *testing.T) {
 				os.Setenv(key, value)
 			}
 
-			stack, err := GetStack("test", tmpFile.Name(), false)
+			stack, err := GetStackFromPath("test", tmpFile.Name(), false)
 			if err != nil {
 				t.Fatalf("Error detected: %s", err.Error())
 			}
