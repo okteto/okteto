@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package v2
 
 import (
 	"context"
@@ -20,6 +20,7 @@ import (
 	"os"
 	"strings"
 
+	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -29,10 +30,42 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 )
 
-// BuildV2 builds the images defined by a manifest
-func (bc *Command) BuildV2(ctx context.Context, manifest *model.Manifest, options *types.BuildOptions) error {
-	toBuildSvcs := getToBuildSvcs(manifest, options)
-	if err := validateOptions(manifest, toBuildSvcs, options); err != nil {
+// OktetoBuilder builds the images
+type OktetoBuilder struct {
+	Builder   build.OktetoBuilderInterface
+	Registry  build.OktetoRegistryInterface
+	V1Builder *buildv1.OktetoBuilder
+}
+
+// NewBuilder creates a new okteto builder
+func NewBuilder(builder build.OktetoBuilderInterface, registry build.OktetoRegistryInterface) *OktetoBuilder {
+	return &OktetoBuilder{
+		Builder:   builder,
+		Registry:  registry,
+		V1Builder: buildv1.NewBuilder(builder, registry),
+	}
+}
+
+// NewBuilderFromScratch creates a new okteto builder
+func NewBuilderFromScratch() *OktetoBuilder {
+	builder := &build.OktetoBuilder{}
+	registry := registry.NewOktetoRegistry()
+	return &OktetoBuilder{
+		Builder:   builder,
+		Registry:  registry,
+		V1Builder: buildv1.NewBuilder(builder, registry),
+	}
+}
+
+// LoadContext Loads the okteto context based on a build v2
+func (bc *OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOptions) error {
+	return nil
+}
+
+// Build builds the images defined by a manifest
+func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
+	toBuildSvcs := getToBuildSvcs(options.Manifest, options)
+	if err := validateOptions(options.Manifest, toBuildSvcs, options); err != nil {
 		if errors.Is(err, oktetoErrors.ErrNoServicesToBuildDefined) {
 			oktetoLog.Infof("skipping BuildV2 due to not having any svc to build")
 			return nil
@@ -40,7 +73,7 @@ func (bc *Command) BuildV2(ctx context.Context, manifest *model.Manifest, option
 		return err
 	}
 
-	buildManifest := manifest.Build
+	buildManifest := options.Manifest.Build
 
 	for _, svcToBuild := range toBuildSvcs {
 		if options.EnableStages {
@@ -52,21 +85,20 @@ func (bc *Command) BuildV2(ctx context.Context, manifest *model.Manifest, option
 			return fmt.Errorf("'build.%s.image' is required if your context is not managed by Okteto", svcToBuild)
 		}
 
-		imageTag, err := bc.buildService(ctx, manifest, svcToBuild, options)
+		imageTag, err := bc.buildService(ctx, options.Manifest, svcToBuild, options)
 		if err != nil {
 			return err
 		}
 		oktetoLog.Success("Image for service '%s' pushed to registry: %s", svcToBuild, imageTag)
-		if err := bc.SetServicetEnvVars(svcToBuild, imageTag); err != nil {
-			return err
-		}
+		bc.SetServiceEnvVars(svcToBuild, imageTag)
 	}
 	if options.EnableStages {
 		oktetoLog.SetStage("")
 	}
-	return manifest.ExpandEnvVars()
+	return options.Manifest.ExpandEnvVars()
 }
-func (bc *Command) buildService(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
+
+func (bc *OktetoBuilder) buildService(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	buildSvcInfo := manifest.Build[svcName]
 
 	switch {
@@ -90,7 +122,7 @@ func (bc *Command) buildService(ctx context.Context, manifest *model.Manifest, s
 	return "", nil
 }
 
-func (bc *Command) buildSvcFromDockerfile(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
+func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	oktetoLog.Information("Building image for service '%s'", svcName)
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
@@ -112,7 +144,7 @@ func (bc *Command) buildSvcFromDockerfile(ctx context.Context, manifest *model.M
 			}
 		}
 	}
-	if err := bc.BuildV1(ctx, buildOptions); err != nil {
+	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
 	imageTagWithDigest, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag)
@@ -122,7 +154,7 @@ func (bc *Command) buildSvcFromDockerfile(ctx context.Context, manifest *model.M
 	return imageTagWithDigest, nil
 }
 
-func (bc *Command) addVolumeMounts(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
+func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	oktetoLog.Information("Including volume hosts for service '%s'", svcName)
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
@@ -137,7 +169,7 @@ func (bc *Command) addVolumeMounts(ctx context.Context, manifest *model.Manifest
 		return "", err
 	}
 	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, &types.BuildOptions{})
-	if err := bc.BuildV1(ctx, buildOptions); err != nil {
+	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
 	imageTagWithDigest, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag)

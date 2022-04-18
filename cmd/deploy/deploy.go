@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	buildCMD "github.com/okteto/okteto/cmd/build"
+	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
@@ -95,7 +95,7 @@ type DeployCommand struct {
 	Executor           executor.ManifestExecutor
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
-	Builder            *buildCMD.Command
+	Builder            *buildv2.OktetoBuilder
 
 	PipelineType model.Archetype
 }
@@ -173,7 +173,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Proxy:              proxy,
 				TempKubeconfigFile: GetTempKubeConfigFile(name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
-				Builder:            buildCMD.NewBuildCommand(),
+				Builder:            buildv2.NewBuilderFromScratch(),
 			}
 			startTime := time.Now()
 			err = c.RunDeploy(ctx, options)
@@ -285,8 +285,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if deployOptions.Build {
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
+			Manifest:     deployOptions.Manifest,
 		}
-		if err := dc.Builder.BuildV2(ctx, deployOptions.Manifest, buildOptions); err != nil {
+		if err := dc.Builder.Build(ctx, buildOptions); err != nil {
 			return err
 		}
 	} else {
@@ -298,8 +299,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			buildOptions := &types.BuildOptions{
 				CommandArgs:  svcsToBuild,
 				EnableStages: true,
+				Manifest:     deployOptions.Manifest,
 			}
-			if err := dc.Builder.BuildV2(ctx, deployOptions.Manifest, buildOptions); err != nil {
+			if err := dc.Builder.Build(ctx, buildOptions); err != nil {
 				return err
 			}
 		}

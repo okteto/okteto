@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/compose-spec/godotenv"
-	buildCMD "github.com/okteto/okteto/cmd/build"
+	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -118,10 +118,12 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 
 func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
 	manifest := model.NewManifestFromStack(s)
-	builder := buildCMD.NewBuildCommand()
+	builder := buildv2.NewBuilderFromScratch()
 	if options.ForceBuild {
-		buildOptions := &types.BuildOptions{}
-		if err := builder.BuildV2(ctx, manifest, buildOptions); err != nil {
+		buildOptions := &types.BuildOptions{
+			Manifest: manifest,
+		}
+		if err := builder.Build(ctx, buildOptions); err != nil {
 			return err
 		}
 	} else {
@@ -131,10 +133,10 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		}
 		if len(svcsToBuild) != 0 {
 			buildOptions := &types.BuildOptions{
-				CommandArgs:  svcsToBuild,
-				EnableStages: true,
+				CommandArgs: svcsToBuild,
+				Manifest:    manifest,
 			}
-			if err := builder.BuildV2(ctx, manifest, buildOptions); err != nil {
+			if err := builder.Build(ctx, buildOptions); err != nil {
 				return err
 			}
 		}

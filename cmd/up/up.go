@@ -24,7 +24,8 @@ import (
 	"time"
 
 	"github.com/moby/term"
-	buildCMD "github.com/okteto/okteto/cmd/build"
+	buildv1 "github.com/okteto/okteto/cmd/build/v1"
+	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/manifest"
@@ -358,7 +359,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		Proxy:              proxy,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
 		K8sClientProvider:  okteto.NewK8sClientProvider(),
-		Builder:            buildCMD.NewBuildCommand(),
+		Builder:            buildv2.NewBuilderFromScratch(),
 	}
 
 	return c.RunDeploy(ctx, &deploy.Options{
@@ -562,7 +563,8 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		BuildArgs:  buildArgs,
 		OutputMode: oktetoLog.TTYFormat,
 	}
-	if err := buildCMD.NewBuildCommand().BuildV1(ctx, buildOptions); err != nil {
+	builder := buildv1.NewBuilderFromScratch()
+	if err := builder.Build(ctx, buildOptions); err != nil {
 		return err
 	}
 	for _, s := range up.Dev.Services {
@@ -706,9 +708,8 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 		opts := build.OptsFromBuildInfo(m.Name, buildName, buildInfo, &types.BuildOptions{})
 		imageWithDigest, err := registry.NewOktetoRegistry().GetImageTagWithDigest(opts.Tag)
 		if err == nil {
-			if err := buildCMD.NewBuildCommand().SetServicetEnvVars(buildName, imageWithDigest); err != nil {
-				return err
-			}
+			builder := buildv2.NewBuilderFromScratch()
+			builder.SetServiceEnvVars(buildName, imageWithDigest)
 		} else if errors.Is(err, oktetoErrors.ErrNotFound) {
 			sanitizedSvc := strings.ReplaceAll(buildName, "-", "_")
 			if err := os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(sanitizedSvc)), opts.Tag); err != nil {

@@ -19,7 +19,7 @@ import (
 	"os"
 	"os/signal"
 
-	buildCMD "github.com/okteto/okteto/cmd/build"
+	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -290,7 +290,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageFromApp, oktetoRegistr
 		BuildArgs:  buildArgs,
 		OutputMode: pushOpts.Progress,
 	}
-	if err := buildCMD.NewBuildCommand().BuildV1(ctx, buildOptions); err != nil {
+	if err := buildv1.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
 

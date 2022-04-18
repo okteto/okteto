@@ -17,6 +17,8 @@ import (
 	"context"
 	"fmt"
 
+	buildv1 "github.com/okteto/okteto/cmd/build/v1"
+	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
@@ -59,15 +61,13 @@ func Build(ctx context.Context) *cobra.Command {
 
 			manifest, isBuildV2 := bc.getManifestAndBuildVersion(options)
 			options.CommandArgs = args
-			if err := loadContext(ctx, manifest, isBuildV2, options); err != nil {
+			options.Manifest = manifest
+
+			builder := bc.getBuilder(isBuildV2)
+			if err := builder.LoadContext(ctx, options); err != nil {
 				return err
 			}
-
-			if isBuildV2 {
-				return bc.BuildV2(ctx, manifest, options)
-			}
-
-			return bc.BuildV1(ctx, options)
+			return builder.Build(ctx, options)
 		},
 	}
 
@@ -94,6 +94,13 @@ func (bc *Command) getManifestAndBuildVersion(options *types.BuildOptions) (*mod
 		manifest.IsV2 &&
 		len(manifest.Build) != 0
 	return manifest, isBuildV2
+}
+
+func (bc *Command) getBuilder(isBuildV2 bool) Builder {
+	if isBuildV2 {
+		return buildv2.NewBuilder(bc.Builder, bc.Registry)
+	}
+	return buildv1.NewBuilder(bc.Builder, bc.Registry)
 }
 
 func loadContext(ctx context.Context, manifest *model.Manifest, isBuildV2 bool, options *types.BuildOptions) error {

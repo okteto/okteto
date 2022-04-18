@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package v1
 
 import (
 	"context"
@@ -20,13 +20,44 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/cmd/build"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 )
 
-// BuildV1 builds the images defined by a Dockerfile
-func (bc *Command) BuildV1(ctx context.Context, options *types.BuildOptions) error {
+// OktetoBuilder builds the images
+type OktetoBuilder struct {
+	Builder  build.OktetoBuilderInterface
+	Registry build.OktetoRegistryInterface
+}
+
+// NewBuilder creates a new okteto builder
+func NewBuilder(builder build.OktetoBuilderInterface, registry build.OktetoRegistryInterface) *OktetoBuilder {
+	return &OktetoBuilder{
+		Builder:  builder,
+		Registry: registry,
+	}
+}
+
+// NewBuilderFromScratch creates a new okteto builder
+func NewBuilderFromScratch() *OktetoBuilder {
+	builder := &build.OktetoBuilder{}
+	registry := registry.NewOktetoRegistry()
+	return &OktetoBuilder{
+		Builder:  builder,
+		Registry: registry,
+	}
+}
+
+// LoadContext Loads the okteto context based on a build v2
+func (bc *OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOptions) error {
+	return nil
+}
+
+// Build builds the images defined by a Dockerfile
+func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
 	path := "."
 	if options.Path != "" {
 		path = options.Path

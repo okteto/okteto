@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package v2
 
 import (
 	"context"
@@ -19,12 +19,25 @@ import (
 	"path/filepath"
 	"testing"
 
+	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
+
+var fakeManifest *model.Manifest = &model.Manifest{
+	Build: model.ManifestBuild{
+		"test-1": &model.BuildInfo{
+			Image: "test/test-1",
+		},
+		"test-2": &model.BuildInfo{
+			Image: "test/test-2",
+		},
+	},
+	IsV2: true,
+}
 
 func TestValidateOptions(t *testing.T) {
 	var tests = []struct {
@@ -114,9 +127,10 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &Command{
-		Builder:  builder,
-		Registry: registry,
+	bc := &OktetoBuilder{
+		Builder:   builder,
+		Registry:  registry,
+		V1Builder: buildv1.NewBuilder(builder, registry),
 	}
 	manifest := &model.Manifest{
 		Name: "test",
@@ -166,9 +180,10 @@ func TestTwoStepsBuild(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &Command{
-		Builder:  builder,
-		Registry: registry,
+	bc := &OktetoBuilder{
+		Builder:   builder,
+		Registry:  registry,
+		V1Builder: buildv1.NewBuilder(builder, registry),
 	}
 	manifest := &model.Manifest{
 		Name: "test",
@@ -218,9 +233,10 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &Command{
-		Builder:  builder,
-		Registry: registry,
+	bc := &OktetoBuilder{
+		Builder:   builder,
+		Registry:  registry,
+		V1Builder: buildv1.NewBuilder(builder, registry),
 	}
 	manifest := &model.Manifest{
 		Name: "test",
@@ -261,9 +277,10 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &Command{
-		Builder:  builder,
-		Registry: registry,
+	bc := &OktetoBuilder{
+		Builder:   builder,
+		Registry:  registry,
+		V1Builder: buildv1.NewBuilder(builder, registry),
 	}
 	manifest := &model.Manifest{
 		Name: "test",
@@ -304,4 +321,17 @@ func Test_getAccessibleVolumeMounts(t *testing.T) {
 	err = os.Remove(existingPath)
 	assert.NoError(t, err)
 	assert.Len(t, volumes, 1)
+}
+
+func createDockerfile() (string, error) {
+	dir, err := os.MkdirTemp("", "build")
+	if err != nil {
+		return "", err
+	}
+	dockerfilePath := filepath.Join(dir, "Dockerfile")
+	err = os.WriteFile(dockerfilePath, []byte("Hello"), 0755)
+	if err != nil {
+		return "", err
+	}
+	return dir, nil
 }

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package v2
 
 import (
 	"fmt"
@@ -22,8 +22,8 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 )
 
-// SetServicetEnvVars set okteto build env vars
-func (*Command) SetServicetEnvVars(service, reference string) error {
+// SetServiceEnvVars set okteto build env vars
+func (*OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	reg, repo, tag, image := registry.GetReferecenceEnvs(reference)
 
 	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repo, image, tag)
@@ -36,5 +36,5 @@ func (*Command) SetServicetEnvVars(service, reference string) error {
 	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_TAG", sanitizedSvc), tag)
 
 	oktetoLog.Debug("manifest env vars set")
-	return nil
+	return
 }

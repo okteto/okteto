@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package v2
 
 import (
 	"context"
@@ -29,7 +29,7 @@ import (
 )
 
 // GetServicesToBuild returns the services it has to built because they are not already built
-func (bc *Command) GetServicesToBuild(ctx context.Context, manifest *model.Manifest) ([]string, error) {
+func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest) ([]string, error) {
 	buildManifest := manifest.Build
 
 	// check if images are at registry (global or dev) and set envs or send to build
@@ -59,7 +59,7 @@ func (bc *Command) GetServicesToBuild(ctx context.Context, manifest *model.Manif
 	return svcsToBuildList, nil
 }
 
-func (bc *Command) checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
+func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
 	buildInfo := manifest.Build[service]
 	isStack := manifest.Type == model.StackType
 	if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
@@ -87,19 +87,18 @@ func (bc *Command) checkServicesToBuild(service string, manifest *model.Manifest
 	}
 	oktetoLog.Debug("Skipping build for image for service")
 
-	if err := bc.SetServicetEnvVars(service, imageWithDigest); err != nil {
-		return err
-	}
+	bc.SetServiceEnvVars(service, imageWithDigest)
+
 	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
 		stack := manifest.Deploy.Compose.Stack
-		if stack.Services[service].Image == "" {
+		if svc, ok := stack.Services[service]; ok && svc.Image == "" {
 			stack.Services[service].Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(service, "-", "_")))
 		}
 	}
 	return nil
 }
 
-func (bc *Command) checkImageAtGlobalAndSetEnvs(service string, options *types.BuildOptions) (bool, error) {
+func (bc *OktetoBuilder) checkImageAtGlobalAndSetEnvs(service string, options *types.BuildOptions) (bool, error) {
 	globalReference := strings.Replace(options.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 
 	imageWithDigest, err := bc.Registry.GetImageTagWithDigest(globalReference)
@@ -111,9 +110,7 @@ func (bc *Command) checkImageAtGlobalAndSetEnvs(service string, options *types.B
 		return false, err
 	}
 
-	if err := bc.SetServicetEnvVars(service, imageWithDigest); err != nil {
-		return false, err
-	}
+	bc.SetServiceEnvVars(service, imageWithDigest)
 	oktetoLog.Debug("image already built at global registry, running optimization for deployment")
 	return true, nil
 

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package v2
 
 import (
 	"context"
@@ -23,9 +23,8 @@ import (
 
 func TestAllServicesAlreadyBuilt(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := &Command{
-		GetManifest: getFakeManifest,
-		Registry:    fakeReg,
+	bc := &OktetoBuilder{
+		Registry: fakeReg,
 	}
 	alreadyBuilt := []string{}
 	fakeReg.AddImageByName(alreadyBuilt...)
@@ -38,9 +37,8 @@ func TestAllServicesAlreadyBuilt(t *testing.T) {
 
 func TestServicesNotAreAlreadyBuilt(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := &Command{
-		GetManifest: getFakeManifest,
-		Registry:    fakeReg,
+	bc := &OktetoBuilder{
+		Registry: fakeReg,
 	}
 	alreadyBuilt := []string{"test/test-1"}
 	fakeReg.AddImageByName(alreadyBuilt...)
@@ -53,9 +51,8 @@ func TestServicesNotAreAlreadyBuilt(t *testing.T) {
 
 func TestNoServiceBuilt(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := &Command{
-		GetManifest: getFakeManifest,
-		Registry:    fakeReg,
+	bc := &OktetoBuilder{
+		Registry: fakeReg,
 	}
 	alreadyBuilt := []string{"test/test-1", "test/test-2"}
 	fakeReg.AddImageByName(alreadyBuilt...)

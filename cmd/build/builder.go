@@ -11,26 +11,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package build
 
-import "github.com/okteto/okteto/pkg/model"
+import (
+	"context"
 
-//BuildOptions define the options available for build
-type BuildOptions struct {
-	BuildArgs     []string
-	CacheFrom     []string
-	File          string
-	NoCache       bool
-	OutputMode    string
-	Path          string
-	Secrets       []string
-	Tag           string
-	Target        string
-	Namespace     string
-	BuildToGlobal bool
-	// CommandArgs comes from the user input on the command
-	CommandArgs  []string
-	EnableStages bool
+	"github.com/okteto/okteto/pkg/types"
+)
 
-	Manifest *model.Manifest
+// Builder is the interface to build any image
+type Builder interface {
+	Build(ctx context.Context, options *types.BuildOptions) error
+	LoadContext(ctx context.Context, options *types.BuildOptions) error
 }

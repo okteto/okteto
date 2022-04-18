@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package v2
 
 import (
 	"context"
@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -77,12 +78,10 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			}
 
 			registry := test.NewFakeOktetoRegistry(nil)
-			bc := &Command{
+			bc := &OktetoBuilder{
 				Registry: registry,
 			}
-			if err := bc.SetServicetEnvVars(tt.service, tt.reference); err != nil {
-				t.Fatal(err)
-			}
+			bc.SetServiceEnvVars(tt.service, tt.reference)
 
 			registryEnvValue := os.Getenv(registryEnv)
 			imageEnvValue := os.Getenv(imageEnv)
@@ -123,9 +122,10 @@ func TestExpandCommandVariables(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &Command{
-		Builder:  builder,
-		Registry: registry,
+	bc := &OktetoBuilder{
+		Builder:   builder,
+		Registry:  registry,
+		V1Builder: buildv1.NewBuilder(builder, registry),
 	}
 	manifest := &model.Manifest{
 		Name: "test",
@@ -148,7 +148,9 @@ func TestExpandCommandVariables(t *testing.T) {
 			},
 		},
 	}
-	err := bc.BuildV2(ctx, manifest, &types.BuildOptions{})
+	err := bc.Build(ctx, &types.BuildOptions{
+		Manifest: manifest,
+	})
 
 	// error from the build
 	assert.NoError(t, err)
@@ -172,9 +174,10 @@ func TestExpandStackVariables(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &Command{
-		Builder:  builder,
-		Registry: registry,
+	bc := &OktetoBuilder{
+		Builder:   builder,
+		Registry:  registry,
+		V1Builder: buildv1.NewBuilder(builder, registry),
 	}
 	stack := &model.Stack{
 		Services: map[string]*model.Service{
@@ -205,7 +208,9 @@ func TestExpandStackVariables(t *testing.T) {
 		Type: model.StackType,
 		IsV2: true,
 	}
-	err := bc.BuildV2(ctx, manifest, &types.BuildOptions{})
+	err := bc.Build(ctx, &types.BuildOptions{
+		Manifest: manifest,
+	})
 
 	// error from the build
 	assert.NoError(t, err)

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package build
+package v1
 
 import (
 	"context"
@@ -40,7 +40,7 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry, fmt.Errorf("failed to build error"))
-	bc := &Command{
+	bc := &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
 	}
@@ -52,7 +52,7 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 		CommandArgs: []string{dir},
 		Tag:         tag,
 	}
-	err = bc.BuildV1(ctx, options)
+	err = bc.Build(ctx, options)
 
 	// error from the build
 	assert.Error(t, err)
@@ -74,7 +74,7 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &Command{
+	bc := &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
 	}
@@ -87,7 +87,7 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 		CommandArgs: []string{dir},
 		Tag:         tag,
 	}
-	err = bc.BuildV1(ctx, options)
+	err = bc.Build(ctx, options)
 	// no error from the build
 	assert.NoError(t, err)
 	// the image is at the fake registry
@@ -109,7 +109,7 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &Command{
+	bc := &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
 	}
@@ -120,7 +120,7 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	options := &types.BuildOptions{
 		CommandArgs: []string{dir},
 	}
-	err = bc.BuildV1(ctx, options)
+	err = bc.Build(ctx, options)
 	// no error from the build
 	assert.NoError(t, err)
 	// the image is not at the fake registry
