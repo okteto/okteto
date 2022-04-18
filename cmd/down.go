@@ -63,19 +63,10 @@ func Down() *cobra.Command {
 			}
 
 			if all {
-				devs, err := utils.GetAllDevsFromManifest(manifest)
+				err := allDown(ctx, manifest, rm)
 				if err != nil {
 					return err
 				}
-				for _, dev := range devs {
-					if err := runDown(ctx, dev, rm); err != nil {
-						analytics.TrackDown(false)
-						err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
-						return err
-					}
-				}
-				analytics.TrackDown(true)
-				return nil
 			}
 
 			devName := ""
@@ -104,6 +95,21 @@ func Down() *cobra.Command {
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the down command is executed")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the down command is executed")
 	return cmd
+}
+
+func allDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
+	if len(manifest.Dev) == 0 {
+		return fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
+	}
+	for _, dev := range manifest.Dev {
+		if err := runDown(ctx, dev, rm); err != nil {
+			analytics.TrackDown(false)
+			err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+			return err
+		}
+	}
+	analytics.TrackDown(true)
+	return nil
 }
 
 func runDown(ctx context.Context, dev *model.Dev, rm bool) error {

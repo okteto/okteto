@@ -144,17 +144,6 @@ func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 	return nil, err
 }
 
-func GetAllDevsFromManifest(manifest *model.Manifest) ([]*model.Dev, error) {
-	if len(manifest.Dev) == 0 {
-		return nil, fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
-	}
-	var devs []*model.Dev
-	for _, d := range manifest.Dev {
-		devs = append(devs, d)
-	}
-	return devs, nil
-}
-
 func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
 	if len(manifest.Dev) == 0 {
 		return nil, fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
