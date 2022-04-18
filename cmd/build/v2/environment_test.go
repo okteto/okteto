@@ -201,7 +201,7 @@ func TestExpandStackVariables(t *testing.T) {
 			},
 		},
 		Deploy: &model.DeployInfo{
-			Compose: &model.ComposeInfo{
+			ComposeSection: &model.ComposeSectionInfo{
 				Stack: stack,
 			},
 		},
@@ -216,6 +216,6 @@ func TestExpandStackVariables(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Not substituted by empty string
-	assert.NotEmpty(t, manifest.Deploy.Compose.Stack.Services["test"].Image)
-	assert.NotEqual(t, manifest.Deploy.Compose.Stack.Services["test"].Image, "{OKTETO_BUILD_TEST_IMAGE}")
+	assert.NotEmpty(t, manifest.Deploy.ComposeSection.Stack.Services["test"].Image)
+	assert.NotEqual(t, manifest.Deploy.ComposeSection.Stack.Services["test"].Image, "{OKTETO_BUILD_TEST_IMAGE}")
 }

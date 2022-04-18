@@ -89,8 +89,8 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 
 	bc.SetServiceEnvVars(service, imageWithDigest)
 
-	if manifest.Deploy != nil && manifest.Deploy.Compose != nil && manifest.Deploy.Compose.Stack != nil {
-		stack := manifest.Deploy.Compose.Stack
+	if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
+		stack := manifest.Deploy.ComposeSection.Stack
 		if svc, ok := stack.Services[service]; ok && svc.Image == "" {
 			stack.Services[service].Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(service, "-", "_")))
 		}

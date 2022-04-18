@@ -70,6 +70,10 @@ func (bc *OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOp
 		ctxOpts.Namespace = options.Namespace
 	}
 
+	if options.K8sContext != "" {
+		ctxOpts.Context = options.K8sContext
+	}
+
 	if okteto.IsOkteto() && ctxOpts.Namespace != "" {
 		create, err := utils.ShouldCreateNamespace(ctx, ctxOpts.Namespace)
 		if err != nil {

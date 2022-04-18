@@ -146,7 +146,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 			}
 		}
 	}
-	*s = *manifest.Deploy.Compose.Stack
+	*s = *manifest.Deploy.ComposeSection.Stack
 	return nil
 }
 

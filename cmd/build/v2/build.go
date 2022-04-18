@@ -71,6 +71,9 @@ func (bc *OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOp
 	if options.Namespace == "" && options.Manifest.Namespace != "" {
 		ctxOpts.Namespace = options.Manifest.Namespace
 	}
+	if options.K8sContext == "" && options.Manifest.Context != "" {
+		ctxOpts.Context = options.Manifest.Context
+	}
 	if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
 		return err
 	}
