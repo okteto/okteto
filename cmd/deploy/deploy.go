@@ -662,13 +662,19 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 			return err
 		}
 		svcBuild.VolumesToInclude = volumesToInclude
-		options = build.OptsFromManifest(service, svcBuild, &build.BuildOptions{})
-		if err := build.Run(ctx, options); err != nil {
+		options = build.OptsFromManifest(service, svcBuild, nil)
+		if tagWithDigest, ok, err := options.SkipBuild(service); ok {
+			imageWithDigest = tagWithDigest
+		} else if err != nil && err != oktetoErrors.ErrNotFound {
 			return err
-		}
-		imageWithDigest, err = registry.GetImageTagWithDigest(options.Tag)
-		if err != nil {
-			return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
+		} else {
+			if err := build.Run(ctx, options); err != nil {
+				return err
+			}
+			imageWithDigest, err = registry.GetImageTagWithDigest(options.Tag)
+			if err != nil {
+				return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
+			}
 		}
 	}
 	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
