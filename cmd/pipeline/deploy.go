@@ -54,7 +54,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy an okteto pipeline",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli-v1/#deploy"),
+		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/cli/#deploy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return ExecuteDeployPipeline(ctx, opts)
 		},
