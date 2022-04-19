@@ -63,6 +63,281 @@ func Test_validateImage(t *testing.T) {
 	}
 }
 
+func Test_getBuildOptionsFromManifest(t *testing.T) {
+	tests := []struct {
+		name              string
+		service           string
+		isOktetoContext   bool
+		manifestBuildInfo *model.BuildInfo
+		expected          *BuildOptions
+		nameEnv           string
+		commitEnv         string
+	}{
+		{
+			name:            "no-okteto-context",
+			service:         "service",
+			isOktetoContext: false,
+			manifestBuildInfo: &model.BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
+			expected: &BuildOptions{
+				Path: ".",
+				File: "Dockerfile",
+			},
+		},
+		{
+			name:            "okteto-context-no-image-name-env",
+			service:         "service",
+			nameEnv:         "parent",
+			isOktetoContext: true,
+			manifestBuildInfo: &model.BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
+			expected: &BuildOptions{
+				Path: ".",
+				File: "Dockerfile",
+				Tag:  "okteto.dev/parent-service:okteto",
+			},
+		},
+		{
+			name:            "okteto-context-no-image-name",
+			service:         "service",
+			isOktetoContext: true,
+			manifestBuildInfo: &model.BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+				Name:       "parent",
+			},
+			expected: &BuildOptions{
+				Path: ".",
+				File: "Dockerfile",
+				Tag:  "okteto.dev/parent-service:okteto",
+			},
+		},
+		{
+			name:            "manifest-no-image-no-name",
+			service:         "service",
+			isOktetoContext: true,
+			manifestBuildInfo: &model.BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
+			expected: &BuildOptions{
+				Path: ".",
+				File: "Dockerfile",
+				Tag:  "okteto.dev/service:okteto",
+			},
+		},
+		{
+			name:    "manifest-image",
+			service: "service",
+			manifestBuildInfo: &model.BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+				Image:      "okteto.dev/myservice:mytag",
+			},
+			expected: &BuildOptions{
+				Path: ".",
+				File: "Dockerfile",
+				Tag:  "okteto.dev/myservice:mytag",
+			},
+		},
+		{
+			name:            "is-pipeline",
+			service:         "service",
+			isOktetoContext: true,
+			manifestBuildInfo: &model.BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
+			nameEnv:   "parent",
+			commitEnv: "1234568555569985",
+			expected: &BuildOptions{
+				Path: ".",
+				File: "Dockerfile",
+				Tag:  "okteto.dev/parent-service:55440a5a4e502b6466f865d8f949c2dbc6651369ef7813099b7f24198aa62fd9",
+			},
+		},
+		{
+			name:            "is-not-pipeline",
+			service:         "service",
+			isOktetoContext: true,
+			manifestBuildInfo: &model.BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
+			nameEnv:   "parent",
+			commitEnv: "dev1234568555569985",
+			expected: &BuildOptions{
+				Path: ".",
+				File: "Dockerfile",
+				Tag:  "okteto.dev/parent-service:okteto",
+			},
+		},
+		{
+			name:            "is-volume-mounts-is-pipeline",
+			service:         "service",
+			isOktetoContext: true,
+			manifestBuildInfo: &model.BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+				VolumesToInclude: []model.StackVolume{
+					{
+						LocalPath:  "local",
+						RemotePath: "remote",
+					},
+				},
+			},
+			nameEnv:   "parent",
+			commitEnv: "1234568555569985",
+			expected: &BuildOptions{
+				Path: ".",
+				File: "Dockerfile",
+				Tag:  "okteto.dev/parent-service:okteto-with-volume-mounts",
+			},
+		},
+		{
+			name:            "is-volume-mounts-is-not-pipeline",
+			service:         "service",
+			isOktetoContext: true,
+			manifestBuildInfo: &model.BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+				VolumesToInclude: []model.StackVolume{
+					{
+						LocalPath:  "local",
+						RemotePath: "remote",
+					},
+				},
+			},
+			nameEnv:   "parent",
+			commitEnv: "dev1234568555569985",
+			expected: &BuildOptions{
+				Path: ".",
+				File: "Dockerfile",
+				Tag:  "okteto.dev/parent-service:okteto-with-volume-mounts",
+			},
+		},
+		{
+			name:            "default-values",
+			service:         "service",
+			isOktetoContext: true,
+			manifestBuildInfo: &model.BuildInfo{
+				Target:      "build",
+				Context:     ".",
+				Dockerfile:  "Dockerfile",
+				CacheFrom:   []string{"cache-url"},
+				ExportCache: "export-url",
+			},
+			nameEnv: "parent",
+			expected: &BuildOptions{
+				Path:        ".",
+				File:        "Dockerfile",
+				Tag:         "okteto.dev/parent-service:okteto",
+				Target:      "build",
+				CacheFrom:   []string{"cache-url"},
+				ExportCache: "export-url",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			os.Setenv(model.OktetoNameEnvVar, tt.nameEnv)
+			os.Setenv(model.OktetoGitCommitEnvVar, tt.commitEnv)
+			okteto.CurrentStore = &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						Namespace: "test",
+						IsOkteto:  tt.isOktetoContext,
+					},
+				},
+				CurrentContext: "test",
+			}
+
+			res := getBuildOptionsFromManifest(tt.service, tt.manifestBuildInfo)
+			assert.Exactly(t, tt.expected, res)
+		})
+	}
+}
+
+func Test_overrideManifestBuildOptions(t *testing.T) {
+	tests := []struct {
+		name                 string
+		isOktetoContext      bool
+		manifestBuildOptions *BuildOptions
+		cmdBuildOptions      *BuildOptions
+		expected             *BuildOptions
+	}{
+		{
+			name:                 "nil-options",
+			manifestBuildOptions: nil,
+			cmdBuildOptions:      nil,
+			expected: &BuildOptions{
+				OutputMode: "tty",
+			},
+		},
+		{
+			name:            "build-global",
+			isOktetoContext: true,
+			manifestBuildOptions: &BuildOptions{
+				Tag: "okteto.dev/service:okteto",
+			},
+			cmdBuildOptions: &BuildOptions{
+				BuildToGlobal: true,
+			},
+			expected: &BuildOptions{
+				Tag:        "okteto.global/service:okteto",
+				OutputMode: "tty",
+			},
+		},
+		{
+			name: "override-all-cmdOptions",
+			manifestBuildOptions: &BuildOptions{
+				Tag: "okteto.dev/service:okteto",
+			},
+			cmdBuildOptions: &BuildOptions{
+				Tag:        "okteto.dev/service:newtag",
+				NoCache:    true,
+				Namespace:  "namespace",
+				K8sContext: "context",
+				Secrets:    []string{"SECRET=mysecret"},
+				CacheFrom:  []string{"cache-url"},
+				BuildArgs:  []string{"ARG1=argvalue"},
+				OutputMode: "plain",
+			},
+			expected: &BuildOptions{
+				Tag:        "okteto.dev/service:newtag",
+				OutputMode: "plain",
+				NoCache:    true,
+				Namespace:  "namespace",
+				K8sContext: "context",
+				Secrets:    []string{"SECRET=mysecret"},
+				CacheFrom:  []string{"cache-url"},
+				BuildArgs:  []string{"ARG1=argvalue"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			okteto.CurrentStore = &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						Namespace: "test",
+						IsOkteto:  tt.isOktetoContext,
+					},
+				},
+				CurrentContext: "test",
+			}
+			res := overrideManifestBuildOptions(tt.manifestBuildOptions, tt.cmdBuildOptions)
+			assert.Exactly(t, tt.expected, res)
+		})
+	}
+}
+
 func Test_OptsFromManifest(t *testing.T) {
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		Contexts: map[string]*okteto.OktetoContext{
@@ -74,53 +349,51 @@ func Test_OptsFromManifest(t *testing.T) {
 		CurrentContext: "test",
 	}
 	tests := []struct {
-		name           string
-		serviceName    string
-		buildInfo      *model.BuildInfo
+		name              string
+		service           string
+		manifestBuildInfo *model.BuildInfo
+		cmdBuildOptions   *BuildOptions
+
 		okGitCommitEnv string
 		isOkteto       bool
-		initialOpts    *BuildOptions
 		expected       *BuildOptions
 	}{
 		{
-			name:        "empty-values-is-okteto",
-			serviceName: "service",
-			buildInfo:   &model.BuildInfo{Name: "movies"},
-			isOkteto:    true,
+			name:              "empty-values-is-okteto",
+			service:           "service",
+			manifestBuildInfo: &model.BuildInfo{Name: "movies"},
+			isOkteto:          true,
 			expected: &BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
-				BuildArgs:  []string{},
 			},
 		},
 		{
-			name:           "empty-values-is-okteto-local",
-			serviceName:    "service",
-			buildInfo:      &model.BuildInfo{Name: "movies"},
-			okGitCommitEnv: "dev1235466",
-			isOkteto:       true,
+			name:              "empty-values-is-okteto-local",
+			service:           "service",
+			manifestBuildInfo: &model.BuildInfo{Name: "movies"},
+			okGitCommitEnv:    "dev1235466",
+			isOkteto:          true,
 			expected: &BuildOptions{
 				Tag:        "okteto.dev/movies-service:okteto",
 				OutputMode: oktetoLog.TTYFormat,
-				BuildArgs:  []string{},
 			},
 		},
 		{
-			name:           "empty-values-is-okteto-pipeline",
-			serviceName:    "service",
-			buildInfo:      &model.BuildInfo{Name: "movies"},
-			okGitCommitEnv: "1235466",
-			isOkteto:       true,
+			name:              "empty-values-is-okteto-pipeline",
+			service:           "service",
+			manifestBuildInfo: &model.BuildInfo{Name: "movies"},
+			okGitCommitEnv:    "1235466",
+			isOkteto:          true,
 			expected: &BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:114921fe985b5f874c8d312b0a098959da6d119209c9d1e42a89c4309569692d",
-				BuildArgs:  []string{},
 			},
 		},
 		{
-			name:        "empty-values-is-okteto-pipeline-withArgs",
-			serviceName: "service",
-			buildInfo: &model.BuildInfo{
+			name:    "empty-values-is-okteto-pipeline-withArgs",
+			service: "service",
+			manifestBuildInfo: &model.BuildInfo{
 				Name: "movies",
 				Args: model.Environment{
 					{
@@ -137,19 +410,18 @@ func Test_OptsFromManifest(t *testing.T) {
 			},
 		},
 		{
-			name:        "empty-values-is-not-okteto",
-			serviceName: "service",
-			buildInfo:   &model.BuildInfo{Name: "movies"},
-			isOkteto:    false,
+			name:              "empty-values-is-not-okteto",
+			service:           "service",
+			manifestBuildInfo: &model.BuildInfo{Name: "movies"},
+			isOkteto:          false,
 			expected: &BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
-				BuildArgs:  []string{},
 			},
 		},
 		{
-			name:        "all-values-no-image",
-			serviceName: "service",
-			buildInfo: &model.BuildInfo{
+			name:    "all-values-no-image",
+			service: "service",
+			manifestBuildInfo: &model.BuildInfo{
 				Name:       "movies",
 				Context:    "service",
 				Dockerfile: "CustomDockerfile",
@@ -162,7 +434,7 @@ func Test_OptsFromManifest(t *testing.T) {
 					},
 				},
 			},
-			initialOpts: &BuildOptions{
+			cmdBuildOptions: &BuildOptions{
 				OutputMode: "tty",
 			},
 			isOkteto: true,
@@ -179,7 +451,7 @@ func Test_OptsFromManifest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			os.Unsetenv(model.OktetoGitCommitEnvVar)
+			os.Setenv(model.OktetoGitCommitEnvVar, tt.okGitCommitEnv)
 			okteto.CurrentStore = &okteto.OktetoContextStore{
 				Contexts: map[string]*okteto.OktetoContext{
 					"test": {
@@ -189,8 +461,7 @@ func Test_OptsFromManifest(t *testing.T) {
 				},
 				CurrentContext: "test",
 			}
-			os.Setenv(model.OktetoGitCommitEnvVar, tt.okGitCommitEnv)
-			result := OptsFromManifest(tt.serviceName, tt.buildInfo, tt.initialOpts)
+			result := OptsFromManifest(tt.service, tt.manifestBuildInfo, tt.cmdBuildOptions)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

@@ -262,3 +262,34 @@ func TestInferFromStack(t *testing.T) {
 		})
 	}
 }
+
+func Test_ManifestBuild_GetServices(t *testing.T) {
+
+	tests := []struct {
+		name          string
+		buildManifest *ManifestBuild
+		expected      []string
+	}{
+		{
+			name: "has-services",
+			buildManifest: &ManifestBuild{
+				"one": &BuildInfo{},
+				"two": &BuildInfo{},
+			},
+			expected: []string{"one", "two"},
+		},
+		{
+			name:          "empty-services",
+			buildManifest: &ManifestBuild{},
+			expected:      []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := tt.buildManifest.GetServices()
+			assert.Exactly(t, tt.expected, res)
+		})
+	}
+
+}

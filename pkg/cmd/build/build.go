@@ -218,9 +218,10 @@ func getBuildOptionsFromManifest(service string, manifestBuildInfo *model.BuildI
 		Path:        manifestBuildInfo.Context,
 		CacheFrom:   manifestBuildInfo.CacheFrom,
 		ExportCache: manifestBuildInfo.ExportCache,
-		BuildArgs:   model.SerializeBuildArgs(manifestBuildInfo.Args),
-		OutputMode:  setOutputMode(oktetoLog.GetOutputFormat()),
 		Tag:         manifestBuildInfo.Image,
+	}
+	if len(manifestBuildInfo.Args) > 0 {
+		buildOptions.BuildArgs = model.SerializeBuildArgs(manifestBuildInfo.Args)
 	}
 
 	buildOptions.File = manifestBuildInfo.Dockerfile
@@ -235,18 +236,23 @@ func getBuildOptionsFromManifest(service string, manifestBuildInfo *model.BuildI
 
 		envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
 		isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
+		isPipeline := envGitCommit != "" && !isLocalEnvGitCommit
 
 		targetRegistry := okteto.DevRegistry
 		tag := model.OktetoDefaultImageTag
 
 		if len(manifestBuildInfo.VolumesToInclude) > 0 {
 			tag = model.OktetoImageTagWithVolumes
-		} else if envGitCommit != "" && !isLocalEnvGitCommit {
+		} else if isPipeline {
 			// if build is running at a pipeline with OKTETO_GIT_COMMIT, tag is replaced by a sha of this params
 			params := strings.Join(buildOptions.BuildArgs, "") + envGitCommit
 			tag = fmt.Sprintf("%x", sha256.Sum256([]byte(params)))
 		}
-		buildOptions.Tag = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestBuildInfo.Name, service, tag)
+		if manifestBuildInfo.Name != "" {
+			buildOptions.Tag = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestBuildInfo.Name, service, tag)
+		} else {
+			buildOptions.Tag = fmt.Sprintf("%s/%s:%s", targetRegistry, service, tag)
+		}
 	}
 
 	return buildOptions
@@ -256,24 +262,38 @@ func overrideManifestBuildOptions(manifestBuildOptions, cmdBuildOptions *BuildOp
 	if cmdBuildOptions == nil {
 		cmdBuildOptions = &BuildOptions{}
 	}
+	if manifestBuildOptions == nil {
+		manifestBuildOptions = &BuildOptions{}
+	}
 
 	// copy the remaining of cmdOptions into the manifestBuildOptions
-	if cmdBuildOptions.K8sContext != "" {
+	if cmdBuildOptions.K8sContext != manifestBuildOptions.K8sContext {
 		manifestBuildOptions.K8sContext = cmdBuildOptions.K8sContext
 	}
-	if cmdBuildOptions.Namespace != "" {
+	if cmdBuildOptions.Namespace != manifestBuildOptions.Namespace {
 		manifestBuildOptions.Namespace = cmdBuildOptions.Namespace
 	}
 	if len(cmdBuildOptions.Secrets) > 0 {
 		manifestBuildOptions.Secrets = cmdBuildOptions.Secrets
 	}
-	if manifestBuildOptions.NoCache != cmdBuildOptions.NoCache {
+	if cmdBuildOptions.NoCache != manifestBuildOptions.NoCache {
 		manifestBuildOptions.NoCache = cmdBuildOptions.NoCache
+	}
+	if len(cmdBuildOptions.BuildArgs) > 0 {
+		manifestBuildOptions.BuildArgs = cmdBuildOptions.BuildArgs
+	}
+	if len(cmdBuildOptions.CacheFrom) > 0 {
+		manifestBuildOptions.CacheFrom = cmdBuildOptions.CacheFrom
+	}
+	if cmdBuildOptions.ExportCache != manifestBuildOptions.ExportCache {
+		manifestBuildOptions.ExportCache = cmdBuildOptions.ExportCache
 	}
 
 	// override output mode from cmdBuildOptions
 	if cmdBuildOptions.OutputMode != "" {
 		manifestBuildOptions.OutputMode = setOutputMode(cmdBuildOptions.OutputMode)
+	} else if manifestBuildOptions.OutputMode == "" {
+		manifestBuildOptions.OutputMode = setOutputMode(oktetoLog.GetOutputFormat())
 	}
 
 	if cmdBuildOptions.Tag != "" {
