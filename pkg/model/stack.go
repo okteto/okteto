@@ -661,7 +661,7 @@ func isPathAComposeFile(path string) bool {
 }
 
 // LoadStack loads an okteto stack manifest checking "yml" and "yaml"
-func LoadStack(name string, stackPaths []string) (*Stack, error) {
+func LoadStack(name string, stackPaths []string, validate bool) (*Stack, error) {
 	var resultStack *Stack
 
 	if len(stackPaths) == 0 {
@@ -685,10 +685,12 @@ func LoadStack(name string, stackPaths []string) (*Stack, error) {
 			return nil, fmt.Errorf("'%s' does not exist", stackPath)
 		}
 	}
-
-	if err := resultStack.Validate(); err != nil {
-		return nil, err
+	if validate {
+		if err := resultStack.Validate(); err != nil {
+			return nil, err
+		}
 	}
+
 	return resultStack, nil
 }
 

@@ -57,7 +57,7 @@ func Test_multipleStack(t *testing.T) {
 	}
 	paths = append(paths, path)
 
-	stack, err := model.LoadStack("", paths)
+	stack, err := model.LoadStack("", paths, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +106,7 @@ func Test_overrideFileStack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stack, err := model.LoadStack("", paths)
+	stack, err := model.LoadStack("", paths, true)
 	if err != nil {
 		t.Fatal(err)
 	}

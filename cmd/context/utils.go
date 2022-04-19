@@ -196,7 +196,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 		return nil, err
 	}
 
-	s, err := model.LoadStack(name, stackPaths)
+	s, err := model.LoadStack(name, stackPaths, true)
 	if err != nil {
 		if name == "" {
 			return nil, err

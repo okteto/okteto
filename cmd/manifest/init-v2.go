@@ -381,7 +381,7 @@ func getPathFromApp(wd, appName string) string {
 }
 
 func createFromCompose(composePath string) (*model.Manifest, error) {
-	stack, err := model.LoadStack("", []string{composePath})
+	stack, err := model.LoadStack("", []string{composePath}, true)
 	if err != nil {
 		return nil, err
 	}

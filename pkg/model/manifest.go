@@ -324,7 +324,7 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 		for _, composeInfo := range stackManifest.Deploy.ComposeSection.ComposesInfo {
 			composeFiles = append(composeFiles, composeInfo.File)
 		}
-		s, stackErr := LoadStack("", composeFiles)
+		s, stackErr := LoadStack("", composeFiles, false)
 		//We should return the error returned by the devManifest instead of the stack
 		if stackErr != nil {
 			return nil, err
@@ -349,7 +349,7 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			for _, composeInfo := range devManifest.Deploy.ComposeSection.ComposesInfo {
 				stackFiles = append(stackFiles, composeInfo.File)
 			}
-			s, err := LoadStack("", stackFiles)
+			s, err := LoadStack("", stackFiles, false)
 			if err != nil {
 				return nil, err
 			}
@@ -408,7 +408,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		for _, composeInfo := range stackManifest.Deploy.ComposeSection.ComposesInfo {
 			stackFiles = append(stackFiles, composeInfo.File)
 		}
-		s, err := LoadStack("", stackFiles)
+		s, err := LoadStack("", stackFiles, true)
 		if err != nil {
 			return nil, err
 		}
@@ -670,7 +670,7 @@ func (manifest *Manifest) ExpandEnvVars() (*Manifest, error) {
 			for _, composeInfo := range manifest.Deploy.ComposeSection.ComposesInfo {
 				stackFiles = append(stackFiles, composeInfo.File)
 			}
-			s, err := LoadStack("", stackFiles)
+			s, err := LoadStack("", stackFiles, true)
 			if err != nil {
 				return nil, err
 			}
