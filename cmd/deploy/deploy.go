@@ -834,7 +834,6 @@ func checkServicesToBuild(service string, manifest *model.Manifest, ch chan stri
 		}
 		oktetoLog.Debugf("Skipping '%s' build. Image already exists at Okteto Registry", service)
 	} else if err != nil && err != oktetoErrors.ErrNotFound {
-		// not applicated and error while checking - return err
 		return err
 	} else if !ok {
 		oktetoLog.Debug("image not found, building image")

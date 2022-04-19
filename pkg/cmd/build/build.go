@@ -300,7 +300,7 @@ func (opts *BuildOptions) optimizedGlobalBuild() (string, bool, error) {
 	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
 	shouldApply := registry.IsOktetoRegistry(opts.Tag) && envGitCommit != "" && !isLocalEnvGitCommit
 	if !shouldApply {
-		return opts.Tag, false, nil
+		return "", false, nil
 	}
 	oktetoLog.Debugf("Applying global build optimization for image %s", opts.Tag)
 
@@ -319,10 +319,6 @@ func (opts *BuildOptions) optimizedGlobalBuild() (string, bool, error) {
 
 // checkImageAtRegistry returns if build should be optimized because the image is already at the dev registry
 func (opts *BuildOptions) checkImageAtRegistry() (string, bool, error) {
-	// only check at pipelines
-	if strings.HasSuffix(opts.Tag, model.OktetoDefaultImageTag) {
-		return opts.Tag, false, nil
-	}
 	oktetoLog.Debugf("Checking registry for image %s", opts.Tag)
 	tagWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
 	if err != nil {
@@ -335,10 +331,10 @@ func (opts *BuildOptions) checkImageAtRegistry() (string, bool, error) {
 // SkipBuild returns if build has to be skipped and the tag with digest if found at registry
 func (opts *BuildOptions) SkipBuild(service string) (string, bool, error) {
 	if opts.NoCache {
-		return opts.Tag, false, nil
+		return "", false, nil
 	}
 	if !registry.IsOktetoRegistry(opts.Tag) {
-		return opts.Tag, false, nil
+		return "", false, nil
 	}
 
 	if tagWithDigest, ok, err := opts.optimizedGlobalBuild(); ok {
