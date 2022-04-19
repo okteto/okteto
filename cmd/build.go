@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
@@ -205,35 +204,19 @@ func buildV2(manifest *model.Manifest, cmdOptions *build.BuildOptions, args []st
 		if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
 			buildInfo.Image = ""
 		}
-		cmdOptsFromManifest := build.OptsFromManifest(service, buildInfo, cmdOptions)
+		optsFromManifest := build.OptsFromManifest(service, buildInfo, cmdOptions)
 
 		// check if image is at registry and skip
-		if build.ShouldOptimizeBuild(cmdOptsFromManifest.Tag) && !cmdOptions.BuildToGlobal {
-			oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
-			globalReference := strings.Replace(cmdOptsFromManifest.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
-			if _, err := registry.GetImageTagWithDigest(globalReference); err == nil {
-				oktetoLog.Debugf("Skipping '%s' build. Image already exists at the Okteto Registry", service)
-				continue
-			}
-			if registry.IsDevRegistry(cmdOptsFromManifest.Tag) {
-				// check if image already is at the registry
-				if _, err := registry.GetImageTagWithDigest(cmdOptsFromManifest.Tag); err == nil {
-					oktetoLog.Debugf("skipping build: image %s is already built", cmdOptsFromManifest.Tag)
-					continue
-				}
-			}
-		}
-		// when single build, transfer the secrets from the flag to the options
-		if isSingleService {
-			cmdOptsFromManifest.Secrets = cmdOptions.Secrets
+		if _, ok, _ := optsFromManifest.SkipBuild(service); ok {
+			continue
 		}
 
-		if err := buildV1(cmdOptsFromManifest, []string{cmdOptsFromManifest.Path}); err != nil {
+		if err := buildV1(optsFromManifest, []string{optsFromManifest.Path}); err != nil {
 			return err
 		}
 		if len(volumesToInclude) > 0 {
 			oktetoLog.Information("Including volume hosts for service '%s'", service)
-			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(cmdOptsFromManifest.Tag, volumesToInclude)
+			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(optsFromManifest.Tag, volumesToInclude)
 			if err != nil {
 				return err
 			}
