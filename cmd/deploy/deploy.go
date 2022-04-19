@@ -622,26 +622,6 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
 }
 
-func checkImageAtGlobalAndSetEnvs(service string, options *build.BuildOptions) (bool, error) {
-	globalReference := strings.Replace(options.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
-
-	imageWithDigest, err := registry.GetImageTagWithDigest(globalReference)
-	if err == oktetoErrors.ErrNotFound {
-		oktetoLog.Debug("image not built at global registry, not running optimization for deployment")
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-
-	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
-		return false, err
-	}
-	oktetoLog.Debug("image already built at global registry, running optimization for deployment")
-	return true, nil
-
-}
-
 func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Manifest) error {
 	oktetoLog.SetStage(fmt.Sprintf("Building service %s", service))
 	buildInfo := manifest.Build[service]

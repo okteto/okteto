@@ -16,7 +16,6 @@ package stack
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,7 +26,6 @@ import (
 	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -214,20 +212,6 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 	}
 
 	return nil
-}
-
-func getGlobalTagWithDigest(imageTag string) string {
-	globalReference := strings.Replace(imageTag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
-	imageWithDigest, err := registry.GetImageTagWithDigest(globalReference)
-	if errors.Is(err, oktetoErrors.ErrNotFound) {
-		oktetoLog.Debug("image not built at global registry, not running optimization for deployment")
-		return ""
-	}
-	if err != nil {
-		oktetoLog.Debugf("could not get image due to: %s", err)
-		return ""
-	}
-	return imageWithDigest
 }
 
 func getAccessibleVolumeMounts(stack *model.Stack, svcName string) []model.StackVolume {
