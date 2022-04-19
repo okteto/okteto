@@ -141,25 +141,18 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		} else {
 			buildInfo.Image = svcInfo.Image
 		}
-		opts := build.OptsFromManifest(svcName, buildInfo, &build.BuildOptions{})
+		buildOpts := build.OptsFromManifest(svcName, buildInfo, &build.BuildOptions{})
 
 		if okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
 			buildInfo.Image = ""
 		}
 		if !options.ForceBuild {
 			if buildInfo != nil {
-				if build.ShouldOptimizeBuild(opts.Tag) {
-					oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
-					if imageTagWithDigest := getGlobalTagWithDigest(opts.Tag); imageTagWithDigest != "" {
-						svcInfo.Image = imageTagWithDigest
-						continue
-					}
-				}
-				if imageTagWithDigest, err := registry.GetImageTagWithDigest(opts.Tag); err != oktetoErrors.ErrNotFound {
-					svcInfo.Image = imageTagWithDigest
+				if tagWithDigest, ok, _ := buildOpts.SkipBuild(svcName); ok {
+					svcInfo.Image = tagWithDigest
 					continue
 				}
-				oktetoLog.Infof("image '%s' not found, building it", opts.Tag)
+				oktetoLog.Infof("image '%s' not found, building it", buildOpts.Tag)
 			}
 		}
 
