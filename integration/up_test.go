@@ -387,7 +387,7 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-reconnect", name), contentPath, 300, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-reconnect", name), contentPath, 300, newUpErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
