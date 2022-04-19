@@ -296,12 +296,6 @@ func OptsFromManifest(service string, manifestBuildInfo *model.BuildInfo, cmdBui
 
 // optimizedGlobalBuild returns if build should be optimized because the image is already at the global registry
 func (opts *BuildOptions) optimizedGlobalBuild() (string, bool, error) {
-	envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
-	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
-	shouldApply := registry.IsOktetoRegistry(opts.Tag) && envGitCommit != "" && !isLocalEnvGitCommit
-	if !shouldApply {
-		return "", false, nil
-	}
 	oktetoLog.Debugf("Applying global build optimization for image %s", opts.Tag)
 
 	globalReference := opts.Tag
@@ -334,6 +328,12 @@ func (opts *BuildOptions) SkipBuild(service string) (string, bool, error) {
 		return "", false, nil
 	}
 	if !registry.IsOktetoRegistry(opts.Tag) {
+		return "", false, nil
+	}
+	envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
+	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
+	isPipeline := envGitCommit != "" && !isLocalEnvGitCommit
+	if !isPipeline {
 		return "", false, nil
 	}
 
