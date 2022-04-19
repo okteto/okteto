@@ -25,7 +25,7 @@ func Stack(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "stack",
 		Short:  "Stack management commands",
-		Args:   utils.NoArgsAccepted("https://okteto.com/docs/reference/cli-v1/#stack"),
+		Args:   utils.NoArgsAccepted("https://www.okteto.com/docs/0.10/reference/cli/#stack"),
 		Hidden: true,
 	}
 	cmd.AddCommand(deploy(ctx))
