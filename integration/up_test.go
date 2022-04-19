@@ -387,9 +387,8 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = getContent(indexEndpoint, 300, newUpErrorChannel)
-	if err != nil {
-		t.Fatalf("failed to get index content: %s", err)
+	if err := testUpdateContent(fmt.Sprintf("%s-reconnect", name), contentPath, 300, upErrorChannel); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
