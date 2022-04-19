@@ -159,6 +159,15 @@ type ManifestDevs map[string]*Dev
 // ManifestBuild defines all the build section
 type ManifestBuild map[string]*BuildInfo
 
+// GetServices returns a list of services declared at the build manifest
+func (mb ManifestBuild) GetServices() []string {
+	services := []string{}
+	for k := range mb {
+		services = append(services, k)
+	}
+	return services
+}
+
 // ManifestDependencies represents the map of dependencies at a manifest
 type ManifestDependencies map[string]*Dependency
 
