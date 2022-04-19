@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -85,10 +86,7 @@ func translateMetadata(body map[string]json.RawMessage, name string) error {
 		return fmt.Errorf("could not process resource's metadata: %s", err)
 	}
 
-	if metadata.Labels == nil {
-		metadata.Labels = map[string]string{}
-	}
-	metadata.Labels[model.DeployedByLabel] = name
+	labels.SetInMetadata(&metadata, model.DeployedByLabel, name)
 
 	if metadata.Annotations == nil {
 		metadata.Annotations = map[string]string{}
@@ -112,7 +110,7 @@ func translateDeploymentSpec(body map[string]json.RawMessage, name string) error
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		return fmt.Errorf("could not process deployment spec: %s", err)
 	}
-	spec.Template.Labels[model.DeployedByLabel] = name
+	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, name)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process deployment's spec: %s", err)
@@ -126,7 +124,7 @@ func translateStatefulSetSpec(body map[string]json.RawMessage, name string) erro
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		return fmt.Errorf("could not process statefulset spec: %s", err)
 	}
-	spec.Template.Labels[model.DeployedByLabel] = name
+	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, name)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process statefulset's spec: %s", err)
@@ -140,7 +138,7 @@ func translateJobSpec(body map[string]json.RawMessage, name string) error {
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		return fmt.Errorf("could not process job spec: %s", err)
 	}
-	spec.Template.Labels[model.DeployedByLabel] = name
+	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, name)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process job's spec: %s", err)
@@ -154,7 +152,7 @@ func translateCronJobSpec(body map[string]json.RawMessage, name string) error {
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		return fmt.Errorf("could not process cronjob spec: %s", err)
 	}
-	spec.JobTemplate.Spec.Template.Labels[model.DeployedByLabel] = name
+	labels.SetInMetadata(&spec.JobTemplate.Spec.Template.ObjectMeta, model.DeployedByLabel, name)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process cronjob's spec: %s", err)
@@ -168,7 +166,7 @@ func translateDaemonSetSpec(body map[string]json.RawMessage, name string) error 
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		return fmt.Errorf("could not process daemonset spec: %s", err)
 	}
-	spec.Template.Labels[model.DeployedByLabel] = name
+	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, name)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process daemonset's spec: %s", err)
@@ -182,7 +180,7 @@ func translateReplicationControllerSpec(body map[string]json.RawMessage, name st
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		return fmt.Errorf("could not process replicationcontroller spec: %s", err)
 	}
-	spec.Template.Labels[model.DeployedByLabel] = name
+	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, name)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process replicationcontroller's spec: %s", err)
@@ -196,7 +194,7 @@ func translateReplicaSetSpec(body map[string]json.RawMessage, name string) error
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		return fmt.Errorf("could not process replicaset spec: %s", err)
 	}
-	spec.Template.Labels[model.DeployedByLabel] = name
+	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, name)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process replicaset's spec: %s", err)

@@ -16,6 +16,8 @@ package labels
 import (
 	"reflect"
 	"testing"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestTransformLabelsToSelector(t *testing.T) {
@@ -54,6 +56,47 @@ func TestTransformLabelsToSelector(t *testing.T) {
 				t.Errorf("didn't transformed correctly. Actual %+v, Expected one of %+v", result, tt.expected)
 			}
 
+		})
+	}
+}
+
+func TestSetInMetadata(t *testing.T) {
+	tests := []struct {
+		name     string
+		om       *metav1.ObjectMeta
+		key      string
+		value    string
+		expected map[string]string
+	}{
+		{
+			name:     "empty-labels",
+			om:       &metav1.ObjectMeta{},
+			key:      "key",
+			value:    "value",
+			expected: map[string]string{"key": "value"},
+		},
+		{
+			name:     "update-label",
+			om:       &metav1.ObjectMeta{Labels: map[string]string{"key": "old"}},
+			key:      "key",
+			value:    "new",
+			expected: map[string]string{"key": "new"},
+		},
+		{
+			name:     "new-label",
+			om:       &metav1.ObjectMeta{Labels: map[string]string{"key1": "value1"}},
+			key:      "key2",
+			value:    "value2",
+			expected: map[string]string{"key1": "value1", "key2": "value2"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			SetInMetadata(tt.om, tt.key, tt.value)
+			if !reflect.DeepEqual(tt.om.Labels, tt.expected) {
+				t.Errorf("error in %s: Actual %+v, Expected one of %+v", tt.name, tt.om.Labels, tt.expected)
+			}
 		})
 	}
 }
