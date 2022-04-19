@@ -287,3 +287,111 @@ func Test_translateRegistry(t *testing.T) {
 	}
 
 }
+
+func Test_IsExtendedOktetoRegistry(t *testing.T) {
+	var tests = []struct {
+		name     string
+		tag      string
+		registry string
+		want     bool
+	}{
+		{
+			name:     "is-extended-registry",
+			tag:      "registry.okteto.dev/namespace/image",
+			registry: "registry.okteto.dev",
+			want:     true,
+		},
+		{
+			name:     "is-not-extended-registry",
+			tag:      "okteto.global/image",
+			registry: "registry.okteto.dev",
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			okteto.CurrentStore = &okteto.OktetoContextStore{
+				CurrentContext: "test",
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						Name:     "test",
+						Registry: tt.registry,
+					},
+				},
+			}
+
+			if got := IsExtendedOktetoRegistry(tt.tag); got != tt.want {
+				t.Errorf("registry.IsExtendedOktetoRegistry = %v, want %v", got, tt.want)
+			}
+
+		})
+	}
+}
+
+func Test_ReplaceTargetRepository(t *testing.T) {
+	oktetoRegistry := "registry.okteto.dev"
+	
+	var tests = []struct {
+		name      string
+		tag       string
+		target    string
+		namespace string
+		want      string
+	}{
+		{
+			name:      "dev-to-global",
+			tag:       "okteto.dev/image",
+			target:    okteto.GlobalRegistry,
+			namespace: "mynamespace",
+			want:      "okteto.global/image",
+		},
+		{
+			name:      "global-to-dev",
+			tag:       "okteto.global/image",
+			target:    okteto.DevRegistry,
+			namespace: "mynamespace",
+			want:      "okteto.dev/image",
+		},
+		{
+			name:      "extended-dev-to-global",
+			tag:       "registry.okteto.dev/namespace/image",
+			target:    okteto.GlobalRegistry,
+			namespace: "okteto",
+			want:      "registry.okteto.dev/okteto/image",
+		},
+		{
+			name:      "extended-global-to-dev",
+			tag:       "registry.okteto.dev/okteto/image",
+			target:    okteto.DevRegistry,
+			namespace: "mynamespace",
+			want:      "registry.okteto.dev/mynamespace/image",
+		},
+		{
+			name:      "default-return",
+			tag:       "okteto/image",
+			target:    okteto.DevRegistry,
+			namespace: "mynamespace",
+			want:      "okteto/image",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			okteto.CurrentStore = &okteto.OktetoContextStore{
+				CurrentContext: "test",
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						Name:     "test",
+						Registry: oktetoRegistry,
+					},
+				},
+			}
+
+			if got := ReplaceTargetRepository(tt.tag, tt.target, tt.namespace); got != tt.want {
+				t.Errorf("registry.ReplaceTargetRepository = %v, want %v", got, tt.want)
+			}
+
+		})
+	}
+}

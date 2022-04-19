@@ -181,9 +181,14 @@ func IsDevRegistry(tag string) bool {
 	return strings.HasPrefix(tag, okteto.DevRegistry)
 }
 
+// IsExtendedOktetoRegistry returns if an image tag is pointing to the dev okteto registry
+func IsExtendedOktetoRegistry(tag string) bool {
+	return strings.HasPrefix(tag, okteto.Context().Registry)
+}
+
 // IsOktetoRegistry returns if an image tag is pointing to the okteto registry
 func IsOktetoRegistry(tag string) bool {
-	return IsDevRegistry(tag) || IsGlobalRegistry(tag) || strings.HasPrefix(tag, okteto.Context().Registry)
+	return IsDevRegistry(tag) || IsGlobalRegistry(tag) || IsExtendedOktetoRegistry(tag)
 }
 
 // replaceRegistry replaces the short registry url with the okteto registry url
@@ -194,4 +199,18 @@ func replaceRegistry(input, registryType, namespace string) string {
 		return strings.Replace(input, registryType, fmt.Sprintf("%s/%s", okteto.Context().Registry, namespace), 1)
 	}
 	return input
+}
+
+// ReplaceTargetRepository swaps the repository for the image at the okteto registry
+func ReplaceTargetRepository(tag, newTarget, namespace string) string {
+	if IsDevRegistry(tag) {
+		return strings.Replace(tag, okteto.DevRegistry, newTarget, 1)
+	} else if IsGlobalRegistry(tag) {
+		return strings.Replace(tag, okteto.GlobalRegistry, newTarget, 1)
+	} else if IsExtendedOktetoRegistry(tag) {
+		splitTag := strings.Split(tag, "/")
+		splitTag[1] = namespace
+		return strings.Join(splitTag, "/")
+	}
+	return tag
 }
