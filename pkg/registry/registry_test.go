@@ -331,7 +331,7 @@ func Test_IsExtendedOktetoRegistry(t *testing.T) {
 
 func Test_ReplaceTargetRepository(t *testing.T) {
 	oktetoRegistry := "registry.okteto.dev"
-	
+
 	var tests = []struct {
 		name      string
 		tag       string
