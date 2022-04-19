@@ -40,7 +40,7 @@ test:
 
 .PHONY: integration
 integration:
-	go test github.com/okteto/okteto/integration -tags="common integration actions" --count=1 -v -timeout 45m
+	go test github.com/okteto/okteto/integration -tags="common integration actions" --count=1 -v -timeout 1h
 
 .PHONY: integration-actions
 integration-actions:

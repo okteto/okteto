@@ -306,13 +306,13 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	waitForDeployment(ctx, namespace, name, 2, 120)
+	waitForDeployment(ctx, namespace, name, 2, 300)
 
 	defer showUpLogs(name, namespace, t)
 
 	log.Println("getting synchronized content")
 
-	content, err := getContent(indexEndpoint, 150, upErrorChannel)
+	content, err := getContent(indexEndpoint, 300, upErrorChannel)
 	if err != nil {
 		t.Fatalf("failed to get index content: %s", err)
 	}
@@ -323,7 +323,7 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatalf("expected synchronized index content to be '%s', got '%s'", name, content)
 	}
 
-	content, err = getContent(varEndpoint, 150, upErrorChannel)
+	content, err = getContent(varEndpoint, 300, upErrorChannel)
 	if err != nil {
 		t.Fatalf("failed to get var content: %s", err)
 	}
@@ -352,7 +352,7 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 150, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-updated", name), contentPath, 300, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
@@ -360,7 +360,7 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 150, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
@@ -368,7 +368,7 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 150, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
@@ -387,9 +387,8 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = getContent(indexEndpoint, 150, newUpErrorChannel)
-	if err != nil {
-		t.Fatalf("failed to get index content: %s", err)
+	if err := testUpdateContent(fmt.Sprintf("%s-reconnect", name), contentPath, 300, newUpErrorChannel); err != nil {
+		t.Fatal(err)
 	}
 
 	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
@@ -481,13 +480,13 @@ func TestUpStatefulset(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	waitForStatefulset(ctx, namespace, name, 120)
+	waitForStatefulset(ctx, namespace, name, 300)
 
 	defer showUpLogs(name, namespace, t)
 
 	log.Println("getting synchronized content")
 
-	content, err := getContent(indexEndpoint, 120, upErrorChannel)
+	content, err := getContent(indexEndpoint, 300, upErrorChannel)
 	if err != nil {
 		t.Fatalf("failed to get content: %s", err)
 	}
@@ -497,7 +496,7 @@ func TestUpStatefulset(t *testing.T) {
 		t.Fatalf("expected synchronized content to be %s, got %s", name, content)
 	}
 
-	content, err = getContent(varEndpoint, 150, upErrorChannel)
+	content, err = getContent(varEndpoint, 300, upErrorChannel)
 	if err != nil {
 		t.Fatalf("failed to get var content: %s", err)
 	}
@@ -609,7 +608,7 @@ func TestDivert(t *testing.T) {
 
 	log.Printf("pipeline using %s \n", divertGitRepo)
 
-	waitForDeployment(ctx, namespace, "health-checker", 1, 120)
+	waitForDeployment(ctx, namespace, "health-checker", 1, 300)
 
 	if err := modifyDivertApp(); err != nil {
 		t.Fatal(err)
@@ -623,17 +622,17 @@ func TestDivert(t *testing.T) {
 	}
 
 	divertedSvcName := fmt.Sprintf("health-checker-%s-okteto", user)
-	waitForDeployment(ctx, namespace, divertedSvcName, 2, 120)
+	waitForDeployment(ctx, namespace, divertedSvcName, 2, 300)
 
 	defer showUpLogs(name, namespace, t)
 
 	apiSvc := "catalog-chart"
-	originalContent, err := getContent(fmt.Sprintf("https://%s-%s.%s/data", apiSvc, namespace, appsSubdomain), 150, upErrorChannel)
+	originalContent, err := getContent(fmt.Sprintf("https://%s-%s.%s/data", apiSvc, namespace, appsSubdomain), 300, upErrorChannel)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if err := waitForDivertedContent(originalContent, namespace, apiSvc, upErrorChannel, 150); err != nil {
+	if err := waitForDivertedContent(originalContent, namespace, apiSvc, upErrorChannel, 300); err != nil {
 
 		t.Fatal("Contents are the same")
 	}
@@ -707,13 +706,13 @@ func TestUpAutocreate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	waitForDeployment(ctx, namespace, fmt.Sprintf("%s-okteto", name), 1, 120)
+	waitForDeployment(ctx, namespace, fmt.Sprintf("%s-okteto", name), 1, 300)
 
 	defer showUpLogs(name, namespace, t)
 
 	log.Println("getting synchronized content")
 
-	content, err := getContent(indexEndpoint, 150, upErrorChannel)
+	content, err := getContent(indexEndpoint, 300, upErrorChannel)
 	if err != nil {
 		t.Fatalf("failed to get index content: %s", err)
 	}
@@ -732,7 +731,7 @@ func TestUpAutocreate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 150, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-kill-syncthing", name), contentPath, 300, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
@@ -740,7 +739,7 @@ func TestUpAutocreate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 150, upErrorChannel); err != nil {
+	if err := testUpdateContent(fmt.Sprintf("%s-destroy-pod", name), contentPath, 300, upErrorChannel); err != nil {
 		t.Fatal(err)
 	}
 
