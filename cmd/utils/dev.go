@@ -295,6 +295,7 @@ func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, erro
 		}
 	}
 	dev.Name = detachModePodName
+	dev.Image = &model.BuildInfo{Name: "busybox"}
 	dev.Namespace = okteto.Context().Namespace
 	dev.Context = okteto.Context().Name
 
