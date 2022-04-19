@@ -252,7 +252,7 @@ func getBuildOptionsFromManifest(service string, manifestBuildInfo *model.BuildI
 	return buildOptions
 }
 
-func overrideManifestBuildOptions(manifestBuildOptions *BuildOptions, cmdBuildOptions *BuildOptions) *BuildOptions {
+func overrideManifestBuildOptions(manifestBuildOptions, cmdBuildOptions *BuildOptions) *BuildOptions {
 	if cmdBuildOptions == nil {
 		cmdBuildOptions = &BuildOptions{}
 	}
