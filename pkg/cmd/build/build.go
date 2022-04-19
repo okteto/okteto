@@ -212,62 +212,88 @@ func translateDockerErr(err error) error {
 	return err
 }
 
-// OptsFromManifest returns the parsed options for the build from the manifest
-func OptsFromManifest(service string, b *model.BuildInfo, o *BuildOptions) *BuildOptions {
-	if b.Name == "" {
-		b.Name = os.Getenv(model.OktetoNameEnvVar)
+func getBuildOptionsFromManifest(service string, manifestBuildInfo *model.BuildInfo) *BuildOptions {
+	buildOptions := &BuildOptions{
+		Target:      manifestBuildInfo.Target,
+		Path:        manifestBuildInfo.Context,
+		CacheFrom:   manifestBuildInfo.CacheFrom,
+		ExportCache: manifestBuildInfo.ExportCache,
+		BuildArgs:   model.SerializeBuildArgs(manifestBuildInfo.Args),
+		OutputMode:  setOutputMode(oktetoLog.GetOutputFormat()),
+		Tag:         manifestBuildInfo.Image,
 	}
 
-	args := model.SerializeBuildArgs(b.Args)
+	buildOptions.File = manifestBuildInfo.Dockerfile
+	if !filepath.IsAbs(manifestBuildInfo.Dockerfile) && !model.FileExistsAndNotDir(manifestBuildInfo.Dockerfile) {
+		buildOptions.File = filepath.Join(manifestBuildInfo.Context, manifestBuildInfo.Dockerfile)
+	}
 
-	if okteto.Context().IsOkteto && b.Image == "" {
-		tag := model.OktetoDefaultImageTag
+	if okteto.Context().IsOkteto && buildOptions.Tag == "" {
+		if manifestBuildInfo.Name == "" {
+			manifestBuildInfo.Name = os.Getenv(model.OktetoNameEnvVar)
+		}
 
 		envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
 		isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
 
-		if envGitCommit != "" && !isLocalEnvGitCommit {
-			params := strings.Join(args, "") + envGitCommit
+		targetRegistry := okteto.DevRegistry
+		tag := model.OktetoDefaultImageTag
+
+		if len(manifestBuildInfo.VolumesToInclude) > 0 {
+			tag = model.OktetoImageTagWithVolumes
+		} else if envGitCommit != "" && !isLocalEnvGitCommit {
+			// if build is running at a pipeline with OKTETO_GIT_COMMIT, tag is replaced by a sha of this params
+			params := strings.Join(buildOptions.BuildArgs, "") + envGitCommit
 			tag = fmt.Sprintf("%x", sha256.Sum256([]byte(params)))
 		}
-
-		// if flag --global, point to global registry
-		targetRegistry := okteto.DevRegistry
-		if o != nil && o.BuildToGlobal {
-			targetRegistry = okteto.GlobalRegistry
-		}
-		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, b.Name, service, tag)
-		if len(b.VolumesToInclude) > 0 {
-			b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, b.Name, service, model.OktetoImageTagWithVolumes)
-		}
-
+		buildOptions.Tag = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestBuildInfo.Name, service, tag)
 	}
 
-	file := b.Dockerfile
-	if !filepath.IsAbs(b.Dockerfile) && !model.FileExistsAndNotDir(file) {
-		file = filepath.Join(b.Context, b.Dockerfile)
-	}
-	opts := &BuildOptions{
-		CacheFrom:   b.CacheFrom,
-		Target:      b.Target,
-		Path:        b.Context,
-		Tag:         b.Image,
-		File:        file,
-		BuildArgs:   args,
-		ExportCache: b.ExportCache,
-	}
-
-	outputMode := oktetoLog.GetOutputFormat()
-	if o != nil && o.OutputMode != "" {
-		outputMode = o.OutputMode
-	}
-	opts.OutputMode = setOutputMode(outputMode)
-
-	return opts
+	return buildOptions
 }
 
-// ShouldOptimizeBuild returns if optimization should be applied
-func ShouldOptimizeBuild(image string) bool {
+func overrideManifestBuildOptions(manifestBuildOptions *BuildOptions, cmdBuildOptions *BuildOptions) *BuildOptions {
+	if cmdBuildOptions == nil {
+		cmdBuildOptions = &BuildOptions{}
+	}
+
+	// copy the remaining of cmdOptions into the manifestBuildOptions
+	if cmdBuildOptions.K8sContext != "" {
+		manifestBuildOptions.K8sContext = cmdBuildOptions.K8sContext
+	}
+	if cmdBuildOptions.Namespace != "" {
+		manifestBuildOptions.Namespace = cmdBuildOptions.Namespace
+	}
+	if len(cmdBuildOptions.Secrets) > 0 {
+		manifestBuildOptions.Secrets = cmdBuildOptions.Secrets
+	}
+	if manifestBuildOptions.NoCache != cmdBuildOptions.NoCache {
+		manifestBuildOptions.NoCache = cmdBuildOptions.NoCache
+	}
+
+	// override output mode from cmdBuildOptions
+	if cmdBuildOptions.OutputMode != "" {
+		manifestBuildOptions.OutputMode = setOutputMode(cmdBuildOptions.OutputMode)
+	}
+
+	if cmdBuildOptions.Tag != "" {
+		manifestBuildOptions.Tag = cmdBuildOptions.Tag
+	}
+
+	// override Tag if global registry
+	if okteto.Context().IsOkteto && cmdBuildOptions.BuildToGlobal {
+		manifestBuildOptions.Tag = registry.ReplaceTargetRepository(manifestBuildOptions.Tag, okteto.GlobalRegistry, manifestBuildOptions.Namespace)
+	}
+
+	return manifestBuildOptions
+}
+
+// OptsFromManifest returns the parsed options for the build from the manifest
+func OptsFromManifest(service string, manifestBuildInfo *model.BuildInfo, cmdBuildOptions *BuildOptions) *BuildOptions {
+	manifestBuildOptions := getBuildOptionsFromManifest(service, manifestBuildInfo)
+	return overrideManifestBuildOptions(manifestBuildOptions, cmdBuildOptions)
+}
+
 	envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
 	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
 	return registry.IsOktetoRegistry(image) &&
