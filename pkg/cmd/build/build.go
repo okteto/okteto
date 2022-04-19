@@ -308,6 +308,7 @@ func (opts *BuildOptions) optimizedGlobalBuild() (string, bool, error) {
 		return opts.Tag, false, err
 	}
 	oktetoLog.Debugf("skipping build: image %s is already built", globalReference)
+	opts.Tag = globalReference
 	return tagWithDigest, true, nil
 }
 
