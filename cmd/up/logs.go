@@ -134,6 +134,7 @@ func getSternConfig(kubeconfigPath string) (*stern.Config, error) {
 		LabelSelector:       labelSelector,
 		FieldSelector:       fields.Everything(),
 		AllNamespaces:       false,
+		Follow:              true,
 		ErrOut:              os.Stderr,
 		Out:                 os.Stdout,
 		ContainerStates:     []stern.ContainerState{"running"},
