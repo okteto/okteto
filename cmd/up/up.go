@@ -51,17 +51,18 @@ const ReconnectingMessage = "Trying to reconnect to your cluster. File synchroni
 
 // UpOptions represents the options available on up command
 type UpOptions struct {
-	DevPath    string
-	Namespace  string
-	K8sContext string
-	DevName    string
-	Devs       []string
-	Remote     int
-	Deploy     bool
-	Build      bool
-	ForcePull  bool
-	Reset      bool
-	Detach     bool
+	DevPath       string
+	Namespace     string
+	K8sContext    string
+	DevName       string
+	Devs          []string
+	Remote        int
+	Deploy        bool
+	Build         bool
+	ForcePull     bool
+	Reset         bool
+	Detach        bool
+	DockerDesktop bool
 }
 
 // Up starts a development container
@@ -79,7 +80,10 @@ func Up() *cobra.Command {
 			if err := upOptions.AddArgs(cmd, args); err != nil {
 				return err
 			}
-
+			if upOptions.DockerDesktop {
+				os.Setenv(model.OktetoOriginEnvVar, model.OktetoDockerDesktopOrigin)
+				os.Setenv(model.OktetoAutogenerateStignoreEnvVar, "true")
+			}
 			u := utils.UpgradeAvailable()
 			if len(u) > 0 {
 				warningFolder := filepath.Join(config.GetOktetoHome(), ".warnings")
@@ -305,6 +309,8 @@ func Up() *cobra.Command {
 	cmd.Flags().MarkHidden("pull")
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
 	cmd.Flags().BoolVarP(&upOptions.Detach, "detach", "", false, "activate one more development containers in detached mode")
+	cmd.Flags().BoolVarP(&upOptions.DockerDesktop, "docker-desktop", "", false, "if the command is executed from the Docker Desktop extension")
+	cmd.Flags().MarkHidden("docker-desktop")
 	return cmd
 }
 
