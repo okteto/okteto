@@ -50,6 +50,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -258,6 +259,8 @@ func TestUpDeployments(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer os.RemoveAll(dir)
+
 	log.Printf("created tempdir: %s", dir)
 
 	dPath := filepath.Join(dir, "deployment.yaml")
@@ -287,6 +290,7 @@ func TestUpDeployments(t *testing.T) {
 	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
 		t.Fatal(err)
 	}
+	defer deleteNamespace(ctx, oktetoPath, namespace)
 
 	if err := deploy(ctx, namespace, name, dPath, true); err != nil {
 		t.Fatal(err)
@@ -372,6 +376,11 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	initialPod, err := getPod(ctx, c, name, namespace)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	d, err = getDeployment(ctx, namespace, name)
 	if err != nil {
 		t.Fatal(err)
@@ -395,6 +404,15 @@ func TestUpDeployments(t *testing.T) {
 		t.Error(err)
 	}
 
+	newPod, err := getPod(ctx, c, name, namespace)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if initialPod.Name != newPod.Name {
+		t.Fatalf("expected pods to have the same name: %s - %s", initialPod.Name, newPod.Name)
+	}
+
 	if err := down(ctx, namespace, name, manifestPath, oktetoPath, true, false); err != nil {
 		t.Fatal(err)
 	}
@@ -405,10 +423,6 @@ func TestUpDeployments(t *testing.T) {
 
 	if err := compareDeployment(ctx, originalDeployment); err != nil {
 		t.Error(err)
-	}
-
-	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
-		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
 	}
 
 }
@@ -1245,6 +1259,20 @@ func destroyPod(ctx context.Context, name, namespace string) error {
 	}
 
 	return nil
+}
+
+func getPod(ctx context.Context, c *kubernetes.Clientset, name, namespace string) (*corev1.Pod, error) {
+	log.Printf("getting pods of %s", name)
+
+	pods, err := c.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("app=%s", name)})
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve deployment %s pods: %s", name, err.Error())
+	}
+	if len(pods.Items) != 1 {
+		return nil, fmt.Errorf("failed to retrieve deployment %s pod: %v", name, err)
+	}
+	return &pods.Items[0], nil
+
 }
 
 func down(ctx context.Context, namespace, name, manifestPath, oktetoPath string, isDeployment, skipComprobation bool) error {
