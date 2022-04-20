@@ -52,9 +52,11 @@ func Down() *cobra.Command {
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
 			if devPath != "" {
-				if err := os.Chdir(utils.GetWorkdirFromManifestPath(devPath)); err != nil {
+				workdir := utils.GetWorkdirFromManifestPath(devPath)
+				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
+				devPath = utils.GetManifestPathFromWorkdir(devPath, workdir)
 			}
 			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
