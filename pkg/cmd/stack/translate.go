@@ -177,7 +177,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 				buildInfo.VolumesToInclude = nil
 			}
 
-			options = build.OptsFromManifest(svcName, buildInfo, &build.BuildOptions{})
+			options = build.OptsFromManifest(svcName, buildInfo, nil)
 			if err := build.Run(ctx, options); err != nil {
 				return err
 			}

@@ -161,7 +161,7 @@ type ManifestBuild map[string]*BuildInfo
 
 // GetServices returns a list of services declared at the build manifest
 func (mb ManifestBuild) GetServices() []string {
-	services := []string{}
+	services := make([]string, 0, len(mb))
 	for k := range mb {
 		services = append(services, k)
 	}

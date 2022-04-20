@@ -261,12 +261,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
-	if deployOptions.Dependencies && !okteto.IsOkteto() {
-		return fmt.Errorf("'dependencies' is only available in clusters managed by Okteto")
-	}
-
-	buildServices := deployOptions.Manifest.Build.GetServices()
-	if !deployOptions.Build {
+	var buildServices []string
+	if deployOptions.Build {
+		oktetoLog.Debug("force build from manifest definition")
+		buildServices = deployOptions.Manifest.Build.GetServices()
+	} else {
 		buildServices, err = selectedServicesToBuild(ctx, deployOptions.Manifest)
 		if err != nil {
 			return err
@@ -282,6 +281,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		if err := runBuildAndSetEnvs(ctx, service, deployOptions.Manifest); err != nil {
 			return err
 		}
+	}
+
+	if deployOptions.Dependencies && !okteto.IsOkteto() {
+		return fmt.Errorf("'dependencies' is only available in clusters managed by Okteto")
 	}
 
 	for depName, dep := range deployOptions.Manifest.Dependencies {
@@ -622,6 +625,7 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
 }
 
+// runBuildAndSetEnvs
 func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Manifest) error {
 	oktetoLog.SetStage(fmt.Sprintf("Building service %s", service))
 	buildInfo := manifest.Build[service]
@@ -644,7 +648,6 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 	} else if err != nil && err != oktetoErrors.ErrNotFound {
 		return err
 	} else if !ok {
-		// build image and set envs
 		if err := build.Run(ctx, options); err != nil {
 			return err
 		}
@@ -806,6 +809,8 @@ func switchSSHRepoToHTTPS(repo string) (*url.URL, error) {
 	return nil, fmt.Errorf("could not detect repo protocol")
 }
 
+// checkServicesToBuild checks the service image at the registry and sets the envs if found, or returns through
+// the chan to build the service
 func checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
 	buildInfo := manifest.Build[service]
 	isStack := manifest.Type == model.StackType
@@ -836,6 +841,8 @@ func checkServicesToBuild(service string, manifest *model.Manifest, ch chan stri
 	return nil
 }
 
+// selectedServicesToBuild runs though a goroutine the check of images for services in parallel
+// and returns list of services that need to be built
 func selectedServicesToBuild(ctx context.Context, manifest *model.Manifest) ([]string, error) {
 	services := []string{}
 	buildManifest := manifest.Build

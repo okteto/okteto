@@ -327,7 +327,7 @@ func (opts *BuildOptions) optimizedGlobalBuild() (string, bool, error) {
 	if err != nil {
 		return opts.Tag, false, err
 	}
-	oktetoLog.Debugf("skipping build: image %s is already built", globalReference)
+	oktetoLog.Debugf("skipping build: image %s is already built", opts.Tag)
 	opts.Tag = globalReference
 	return tagWithDigest, true, nil
 }
@@ -357,6 +357,7 @@ func (opts *BuildOptions) SkipBuild(service string) (string, bool, error) {
 	if !isPipeline {
 		return "", false, nil
 	}
+	oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
 
 	if tagWithDigest, ok, err := opts.optimizedGlobalBuild(); ok {
 		// global optimization has been applied and use global tag for deployment
