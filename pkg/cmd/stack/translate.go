@@ -144,7 +144,7 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 		opts := build.OptsFromManifest(svcName, buildInfo, &build.BuildOptions{})
 
 		if okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
-			buildInfo.Image = opts.Tag
+			buildInfo.Image = ""
 		}
 		if !options.ForceBuild {
 			if buildInfo != nil {
