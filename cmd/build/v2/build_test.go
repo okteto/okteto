@@ -304,6 +304,53 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 	assert.NotEmpty(t, image)
 }
 
+func TestBuildWithStack(t *testing.T) {
+	ctx := context.Background()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+				Registry:  "my-registry",
+			},
+		},
+		CurrentContext: "test",
+	}
+
+	dir, err := createDockerfile()
+	assert.NoError(t, err)
+	defer os.RemoveAll(dir)
+
+	registry := test.NewFakeOktetoRegistry(nil)
+	builder := test.NewFakeOktetoBuilder(registry)
+	bc := &OktetoBuilder{
+		Builder:   builder,
+		Registry:  registry,
+		V1Builder: buildv1.NewBuilder(builder, registry),
+	}
+	manifest := &model.Manifest{
+		Name: "test",
+		Type: model.StackType,
+		Build: model.ManifestBuild{
+			"test": &model.BuildInfo{
+				Context:    dir,
+				Dockerfile: filepath.Join(dir, "Dockerfile"),
+				Image:      "okteto/test:q",
+			},
+		},
+	}
+	image, err := bc.buildService(ctx, manifest, "test", &types.BuildOptions{})
+
+	// error from the build
+	assert.NoError(t, err)
+	// assert that the name of the image is the dev one
+	assert.Equal(t, "okteto.dev/test-test:okteto", image)
+	// the image is at the fake registry
+	image, err = bc.Registry.GetImageTagWithDigest(image)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, image)
+}
+
 func Test_getAccessibleVolumeMounts(t *testing.T) {
 	existingPath := "./existing-folder"
 	missingPath := "./missing-folder"
