@@ -102,3 +102,86 @@ func Test_printDisplayContext(t *testing.T) {
 	}
 
 }
+
+func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
+	var tests = []struct {
+		name                    string
+		dev                     *model.Dev
+		upOptions               *UpOptions
+		expectedNumManifestEnvs int
+	}{
+		{
+			name:                    "Add only env vars from cmd to dev container",
+			dev:                     &model.Dev{},
+			upOptions:               &UpOptions{Envs: []string{"VAR1=value1", "VAR2=value2"}},
+			expectedNumManifestEnvs: 2,
+		},
+		{
+			name: "Add env vars from cmd and manifest to dev container",
+			dev: &model.Dev{
+				Environment: model.Environment{
+					{
+						Name:  "VAR_FROM_MANIFEST",
+						Value: "value",
+					},
+				},
+			},
+			upOptions:               &UpOptions{Envs: []string{"VAR1=value1", "VAR2=value2"}},
+			expectedNumManifestEnvs: 3,
+		},
+		{
+			name: "Overwrite env vars when is required",
+			dev: &model.Dev{
+				Environment: model.Environment{
+					{
+						Name:  "VAR_TO_OVERWRITE",
+						Value: "oldValue",
+					},
+				},
+			},
+			upOptions:               &UpOptions{Envs: []string{"VAR_TO_OVERWRITE=newValue", "VAR2=value2"}},
+			expectedNumManifestEnvs: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := setEnvVarsFromCmd(tt.dev, tt.upOptions)
+			if err != nil {
+				t.Fatalf("unexpected error in  setEnvVarsFromCmd: %s", err)
+			}
+
+			if tt.expectedNumManifestEnvs != len(tt.dev.Environment) {
+				t.Fatalf("error in setEnvVarsFromCmd; expected num variables in container %d but got %d", tt.expectedNumManifestEnvs, len(tt.dev.Environment))
+			}
+		})
+	}
+}
+
+func TestGetErrorWhenWrongEnvVarFormatIsGivenInCmd(t *testing.T) {
+	var tests = []struct {
+		name      string
+		dev       *model.Dev
+		upOptions *UpOptions
+	}{
+		{
+			name:      "Wrong format: KEY: VALUE instead KEY=VALUE",
+			dev:       &model.Dev{},
+			upOptions: &UpOptions{Envs: []string{"VAR1: value1"}},
+		},
+		{
+			name:      "Wrong format: KEY VALUE instead KEY=VALUE",
+			dev:       &model.Dev{},
+			upOptions: &UpOptions{Envs: []string{"VAR1 value1"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := setEnvVarsFromCmd(tt.dev, tt.upOptions)
+			if err == nil {
+				t.Fatal("expected error in setEnvVarsFromCmd func due wrong format but gol nil")
+			}
+		})
+	}
+}
