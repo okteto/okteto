@@ -56,6 +56,7 @@ type UpOptions struct {
 	K8sContext string
 	DevName    string
 	Devs       []string
+	Envs       []string
 	Remote     int
 	Deploy     bool
 	Build      bool
@@ -297,6 +298,7 @@ func Up() *cobra.Command {
 	cmd.Flags().StringVarP(&upOptions.DevPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
+	cmd.Flags().StringArrayVarP(&upOptions.Envs, "env", "e", []string{}, "envs to add to the development container")
 	cmd.Flags().IntVarP(&upOptions.Remote, "remote", "r", 0, "configures remote execution on the specified port")
 	cmd.Flags().BoolVarP(&upOptions.Deploy, "deploy", "d", false, "Force execution of the commands in the 'deploy' section of the okteto manifest (defaults to 'false')")
 	cmd.Flags().BoolVarP(&upOptions.Build, "build", "", false, "build on-the-fly the dev image using the info provided by the 'build' okteto manifest field")
@@ -371,8 +373,37 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 		dev.LoadForcePull()
 	}
 
+	if len(upOptions.Envs) > 0 {
+		if err := setEnvVarsFromCmd(dev, upOptions); err != nil {
+			return err
+		}
+	}
+
 	dev.Username = okteto.Context().Username
 	dev.RegistryURL = okteto.Context().Registry
+
+	return nil
+}
+
+func setEnvVarsFromCmd(dev *model.Dev, upOptions *UpOptions) error {
+	envVarsIndexFromManifest := make(map[string]int)
+	for i, manifestEnv := range dev.Environment {
+		envVarsIndexFromManifest[manifestEnv.Name] = i
+	}
+
+	for _, v := range upOptions.Envs {
+		kv := strings.SplitN(v, "=", 2)
+		if len(kv) != 2 {
+			return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
+		}
+
+		varNameToAdd, varValueToAdd := kv[0], kv[1]
+		if envvIndexManifest, ok := envVarsIndexFromManifest[varNameToAdd]; ok {
+			dev.Environment[envvIndexManifest].Value = varValueToAdd
+		} else {
+			dev.Environment = append(dev.Environment, model.EnvVar{Name: varNameToAdd, Value: varValueToAdd})
+		}
+	}
 
 	return nil
 }
