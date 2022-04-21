@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -29,9 +30,13 @@ import (
 )
 
 var (
-	moviesRepo    = "okteto/movies"
-	moviesRepoURL = "git@github.com:okteto/movies.git"
-	moviesFolder  = "movies"
+	moviesRepo             = "okteto/movies"
+	moviesRepoURL          = "git@github.com:okteto/movies.git"
+	moviesFolder           = "movies"
+	deployManifestTemplate = `
+deploy:
+  - %s deploy -f okteto-pipeline.yml
+  - kubectl get pods`
 )
 
 func TestDeployDestroy(t *testing.T) {
@@ -65,7 +70,20 @@ func TestDeployDestroy(t *testing.T) {
 
 		defer deleteGitRepo(ctx, moviesFolder)
 
-		if err := oktetoDeploy(ctx, oktetoPath); err != nil {
+		workdir, err := os.Getwd()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := writeFile(filepath.Join(workdir, moviesFolder), "okteto.yml", fmt.Sprintf(deployManifestTemplate, oktetoPath)); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := updateKubeConfig(oktetoPath); err != nil {
+			t.Fatal(err)
+		}
+
+		manifestPath := "okteto.yml"
+		if err := oktetoDeploy(ctx, oktetoPath, manifestPath); err != nil {
 			t.Fatal(err)
 		}
 
@@ -91,9 +109,9 @@ func TestDeployDestroy(t *testing.T) {
 	})
 }
 
-func oktetoDeploy(ctx context.Context, oktetoManifestPath string) error {
-	log.Printf("okteto deploy %s", oktetoManifestPath)
-	cmd := exec.Command(oktetoManifestPath, "deploy")
+func oktetoDeploy(ctx context.Context, oktetoPath, manifestPath string) error {
+	log.Printf("okteto deploy %s", oktetoPath)
+	cmd := exec.Command(oktetoPath, "deploy", "-f", manifestPath)
 	cmd.Env = append(os.Environ(), "OKTETO_GIT_COMMIT=dev")
 	cmd.Dir = moviesFolder
 	o, err := cmd.CombinedOutput()
