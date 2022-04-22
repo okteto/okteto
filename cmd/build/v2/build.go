@@ -141,6 +141,11 @@ func (bc *OktetoBuilder) buildService(ctx context.Context, manifest *model.Manif
 	buildSvcInfo := manifest.Build[svcName]
 
 	switch {
+	case shouldAddVolumeMounts(buildSvcInfo) && !okteto.IsOkteto():
+		return "", oktetoErrors.UserError{
+			E:    fmt.Errorf("Build with volume mounts is not supported on vanilla clusters"),
+			Hint: "Please connect to a okteto cluster and try again",
+		}
 	case shouldBuildFromDockerfile(buildSvcInfo) && shouldAddVolumeMounts(buildSvcInfo):
 		image, err := bc.buildSvcFromDockerfile(ctx, manifest, svcName, options)
 		if err != nil {

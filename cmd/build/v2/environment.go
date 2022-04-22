@@ -36,5 +36,4 @@ func (*OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_TAG", sanitizedSvc), tag)
 
 	oktetoLog.Debug("manifest env vars set")
-	return
 }
