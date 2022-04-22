@@ -402,14 +402,22 @@ func setEnvVarsFromCmd(dev *model.Dev, upOptions *UpOptions) error {
 	for _, v := range upOptions.Envs {
 		kv := strings.SplitN(v, "=", 2)
 		if len(kv) != 2 {
-			return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
+			if kv[0] == "" {
+				return fmt.Errorf("invalid variable value '%s': please review the accepted formats at https://www.okteto.com/docs/reference/manifest/#environment-string-optional ", v)
+			}
+			kv = append(kv, os.Getenv(kv[0]))
 		}
 
 		varNameToAdd, varValueToAdd := kv[0], kv[1]
+		expandedEnv, err := model.ExpandEnv(varValueToAdd, true)
+		if err != nil {
+			return err
+		}
+
 		if envvIndexManifest, ok := envVarsIndexFromManifest[varNameToAdd]; ok {
-			dev.Environment[envvIndexManifest].Value = varValueToAdd
+			dev.Environment[envvIndexManifest].Value = expandedEnv
 		} else {
-			dev.Environment = append(dev.Environment, model.EnvVar{Name: varNameToAdd, Value: varValueToAdd})
+			dev.Environment = append(dev.Environment, model.EnvVar{Name: varNameToAdd, Value: expandedEnv})
 		}
 	}
 
