@@ -30,14 +30,19 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 )
 
+// OktetoBuilderInterface runs the build of an image
+type OktetoBuilderInterface interface {
+	Run(ctx context.Context, buildOptions *types.BuildOptions) error
+}
+
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
-	Builder  build.OktetoBuilderInterface
+	Builder  OktetoBuilderInterface
 	Registry build.OktetoRegistryInterface
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder build.OktetoBuilderInterface, registry build.OktetoRegistryInterface) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry build.OktetoRegistryInterface) *OktetoBuilder {
 	return &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,

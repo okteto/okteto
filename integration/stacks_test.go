@@ -74,7 +74,7 @@ func TestStacks(t *testing.T) {
 		log.Printf("deployed stack using %s\n", stackManifest)
 
 		endpoint := fmt.Sprintf("https://vote-%s.%s", namespace, appsSubdomain)
-		content, err := getContent(endpoint, 150, nil)
+		content, err := getContent(endpoint, 300, nil)
 		if err != nil {
 			t.Fatalf("failed to get stack content: %s", err)
 		}
@@ -106,10 +106,7 @@ func TestStacks(t *testing.T) {
 
 func deployStack(ctx context.Context, oktetoPath, stackPath, dir string) error {
 	log.Printf("okteto stack deploy %s", stackPath)
-	cmd := exec.Command(oktetoPath, "deploy", "-f", stackPath, "--build", "--wait", "--log-level=info")
-	if runtime.GOOS == "windows" {
-		cmd = exec.Command(oktetoPath, "stack", "deploy", "-f", stackPath, "--build", "--wait", "--log-level=info")
-	}
+	cmd := exec.Command(oktetoPath, "stack", "deploy", "-f", stackPath, "--build", "--wait", "--loglevel=info")
 	cmd.Env = os.Environ()
 	cmd.Dir = dir
 
@@ -130,7 +127,7 @@ func deployStack(ctx context.Context, oktetoPath, stackPath, dir string) error {
 
 func destroyStack(ctx context.Context, oktetoPath, stackManifest, dir string) error {
 	log.Printf("okteto stack destroy")
-	cmd := exec.Command(oktetoPath, "stack", "destroy", "-f", stackManifest, "--log-level=debug")
+	cmd := exec.Command(oktetoPath, "stack", "destroy", "-f", stackManifest, "--loglevel=debug")
 	cmd.Env = os.Environ()
 	cmd.Dir = dir
 	o, err := cmd.CombinedOutput()
