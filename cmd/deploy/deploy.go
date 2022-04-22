@@ -720,7 +720,3 @@ func switchSSHRepoToHTTPS(repo string) (*url.URL, error) {
 
 	return nil, fmt.Errorf("could not detect repo protocol")
 }
-
-func shouldExecuteRemotely(options *Options) bool {
-	return options.Branch != "" || options.Repository != ""
-}
