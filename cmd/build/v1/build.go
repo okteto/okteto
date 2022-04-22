@@ -54,7 +54,7 @@ func NewBuilderFromScratch() *OktetoBuilder {
 	}
 }
 
-// LoadContext Loads the okteto context based on a build v2
+// LoadContext Loads the okteto context based on a build v1
 func (bc *OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOptions) error {
 	ctxOpts := &contextCMD.ContextOptions{}
 	maxV1Args := 1
