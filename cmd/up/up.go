@@ -15,6 +15,7 @@ package up
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -109,14 +110,14 @@ func Up() *cobra.Command {
 			}
 			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
 			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
-			if err != nil {
-				if !strings.Contains(err.Error(), "okteto init") {
-					return err
-				}
+			if err != nil && errors.Is(err, oktetoErrors.ErrManifestNotFound) {
 				if !utils.AskIfOktetoInit(upOptions.DevPath) {
 					return err
 				}
 
+				if upOptions.DevPath == "" {
+					upOptions.DevPath = utils.DefaultManifest
+				}
 				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
 				if err != nil {
 					return err
@@ -357,8 +358,6 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 	if err != nil {
 		return nil, err
 	}
-
-	oktetoLog.Success(fmt.Sprintf("okteto manifest (%s) created", devPath))
 	return manifest, nil
 }
 
