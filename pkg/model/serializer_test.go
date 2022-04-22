@@ -349,8 +349,8 @@ func TestLifecycleMashalling(t *testing.T) {
 	}
 }
 
-func TestSecretMashalling(t *testing.T) {
-	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
+func TestSecretMarshalling(t *testing.T) {
+	file, err := os.CreateTemp("", "okteto-secret-test")
 	if err != nil {
 		log.Fatal(err)
 	}
