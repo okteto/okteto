@@ -109,7 +109,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
 			}
-			name := ""
+			name := options.Name
 			if options.Name == "" {
 				name = utils.InferName(cwd)
 				if err != nil {

@@ -387,7 +387,7 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 
 func (up *upContext) deployApp(ctx context.Context) error {
 	kubeconfig := deploy.NewKubeConfig()
-	proxy, err := deploy.NewProxy(up.Manifest.Name, kubeconfig)
+	proxy, err := deploy.NewProxy(kubeconfig)
 	if err != nil {
 		return err
 	}
