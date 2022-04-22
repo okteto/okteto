@@ -63,16 +63,20 @@ func NewBuilderFromScratch() *OktetoBuilder {
 // LoadContext Loads the okteto context based on a build v2
 func (bc *OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOptions) error {
 	ctxOpts := &contextCMD.ContextOptions{}
+
 	if options.Manifest.Context != "" {
 		ctxOpts.Context = options.Manifest.Context
-
+	}
+	if options.K8sContext != "" {
+		ctxOpts.Context = options.K8sContext
 	}
 
-	if options.Namespace == "" && options.Manifest.Namespace != "" {
+	if options.Manifest.Namespace != "" {
+		ctxOpts.Namespace = options.Manifest.Namespace
 		ctxOpts.Namespace = options.Manifest.Namespace
 	}
-	if options.K8sContext == "" && options.Manifest.Context != "" {
-		ctxOpts.Context = options.Manifest.Context
+	if options.Namespace != "" {
+		ctxOpts.Namespace = options.Namespace
 	}
 	if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
 		return err
