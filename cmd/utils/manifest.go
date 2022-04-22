@@ -40,3 +40,12 @@ func GetWorkdirFromManifestPath(manifestPath string) string {
 	}
 	return dir
 }
+
+// GetManifestPathFromWorkdir returns the path from a workdir
+func GetManifestPathFromWorkdir(manifestPath, workdir string) string {
+	mPath, err := filepath.Rel(workdir, manifestPath)
+	if err != nil {
+		return ""
+	}
+	return mPath
+}

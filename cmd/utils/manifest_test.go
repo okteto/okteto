@@ -15,6 +15,7 @@ package utils
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -62,6 +63,13 @@ func TestGetWorkdirFromManifest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := GetWorkdirFromManifestPath(tt.path)
 			assert.Equal(t, tt.expectedPath, result)
+			newManifestPath := GetManifestPathFromWorkdir(tt.path, result)
+			if strings.Contains(tt.path, ".okteto") {
+				assert.Equal(t, filepath.Join(".okteto", "okteto.yml"), newManifestPath)
+			} else {
+				assert.Equal(t, "okteto.yml", newManifestPath)
+			}
+
 		})
 	}
 }
