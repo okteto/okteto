@@ -245,7 +245,7 @@ func (*ManifestCommand) configureManifestDeployAndBuild(ctx context.Context, cwd
 
 func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 	kubeconfig := deploy.NewKubeConfig()
-	proxy, err := deploy.NewProxy(mc.manifest.Name, kubeconfig)
+	proxy, err := deploy.NewProxy(kubeconfig)
 	if err != nil {
 		return err
 	}

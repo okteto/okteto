@@ -51,7 +51,7 @@ type proxyHandler struct {
 }
 
 //NewProxy creates a new proxy
-func NewProxy(name string, kubeconfig *KubeConfig) (*Proxy, error) {
+func NewProxy(kubeconfig *KubeConfig) (*Proxy, error) {
 	// Look for a free local port to start the proxy
 	port, err := model.GetAvailablePort("localhost")
 	if err != nil {
