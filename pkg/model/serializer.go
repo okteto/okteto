@@ -19,6 +19,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -391,6 +392,15 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	parts := strings.Split(rawExpanded, ":")
+	if runtime.GOOS == "windows" {
+		if len(parts) >= 3 {
+			localPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
+			if filepath.IsAbs(localPath) {
+				parts = append([]string{localPath}, parts[2:]...)
+			}
+		}
+	}
+
 	if len(parts) < 2 || len(parts) > 3 {
 		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
 	}

@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -144,9 +145,10 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 	}
 
 	ctxOptions := &ContextOptions{
-		Context:   ctxResource.Context,
-		Namespace: ctxResource.Namespace,
-		Show:      true,
+		Context:       ctxResource.Context,
+		Namespace:     ctxResource.Namespace,
+		Show:          true,
+		DockerDesktop: os.Getenv(model.OktetoOriginEnvVar) == model.OktetoDockerDesktopOrigin,
 	}
 
 	if err := NewContextCommand().Run(ctx, ctxOptions); err != nil {
@@ -196,7 +198,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 		return nil, err
 	}
 
-	s, err := model.LoadStack(name, stackPaths)
+	s, err := model.LoadStack(name, stackPaths, true)
 	if err != nil {
 		if name == "" {
 			return nil, err

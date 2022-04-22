@@ -136,7 +136,7 @@ jobs:
             OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
             OKTETO_SKIP_CLEANUP: 'true'
           command: |
-            go test github.com/okteto/okteto/integration -tags="common integration actions" --count=1 -v -timeout 45m
+            go test github.com/okteto/okteto/integration -tags="common integration actions" --count=1 -v -timeout 1h
       - save_cache:
           key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
           paths:

@@ -115,7 +115,7 @@ func Init() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Context, "context", "c", "", "context target for generating the okteto manifest")
 	cmd.Flags().StringVarP(&opts.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&opts.Overwrite, "replace", "r", false, "overwrite existing manifest file")
-	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: www.okteto.com/docs/reference/manifest-v1/")
+	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: https://www.okteto.com/docs/0.10/reference/manifest/")
 	cmd.Flags().BoolVarP(&opts.AutoDeploy, "deploy", "", false, "deploy the application after generate the okteto manifest if it's not running already")
 	cmd.Flags().BoolVarP(&opts.AutoConfigureDev, "configure-devs", "", false, "configure devs after deploying the application")
 	return cmd
@@ -149,6 +149,22 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 		if opts.Context == "" {
 			manifest.Context = ""
 		}
+
+		if manifest.IsDeployDefault() && len(manifest.Build) == 1 {
+			if err := configureAutoCreateDev(manifest); err != nil {
+				return nil, err
+			}
+			manifest.Deploy = nil
+			if err := manifest.WriteToFile(opts.DevPath); err != nil {
+				return nil, err
+			}
+			oktetoLog.Success("Okteto manifest (%s) configured successfully", opts.DevPath)
+			if opts.ShowCTA {
+				oktetoLog.Information("Run 'okteto up' to activate your development container")
+			}
+			return manifest, nil
+		}
+
 		if err := manifest.WriteToFile(opts.DevPath); err != nil {
 			return nil, err
 		}
@@ -246,7 +262,7 @@ func (*ManifestCommand) configureManifestDeployAndBuild(ctx context.Context, cwd
 
 func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 	kubeconfig := deploy.NewKubeConfig()
-	proxy, err := deploy.NewProxy(mc.manifest.Name, kubeconfig)
+	proxy, err := deploy.NewProxy(kubeconfig)
 	if err != nil {
 		return err
 	}
@@ -383,7 +399,7 @@ func getPathFromApp(wd, appName string) string {
 }
 
 func createFromCompose(composePath string) (*model.Manifest, error) {
-	stack, err := model.LoadStack("", []string{composePath})
+	stack, err := model.LoadStack("", []string{composePath}, true)
 	if err != nil {
 		return nil, err
 	}
@@ -548,4 +564,25 @@ func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
 		return &manifest, nil
 	}
 	return model.GetManifestV2(path)
+}
+
+func configureAutoCreateDev(manifest *model.Manifest) error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	language, err := GetLanguage("", wd)
+	if err != nil {
+		return err
+	}
+
+	dev, err := linguist.GetDevDefaults(language, wd, &registry.ImageConfig{})
+	if err != nil {
+		return err
+	}
+
+	dev.Autocreate = true
+	linguist.SetForwardDefaults(dev, language)
+	manifest.Dev[dev.Name] = dev
+	return nil
 }

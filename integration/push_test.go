@@ -69,7 +69,7 @@ func TestPush(t *testing.T) {
 		log.Printf("pushed using %s \n", pushManifest)
 
 		endpoint := fmt.Sprintf("https://react-getting-started-%s.%s", namespace, appsSubdomain)
-		content, err := getContent(endpoint, 150, nil)
+		content, err := getContent(endpoint, 300, nil)
 		if err != nil {
 			t.Fatalf("failed to get app content: %s", err)
 		}

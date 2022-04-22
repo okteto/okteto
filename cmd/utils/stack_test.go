@@ -28,13 +28,13 @@ const (
   app:
     environment:
       a: b
-    image: okteto/okteto
+    image: ${OKTETO_BUILD_APP_IMAGE}
 `
 	secondStack = `services:
   app:
     labels:
       a: b
-    image: test
+    image: ${OKTETO_BUILD_APP_IMAGE}
 `
 )
 
@@ -57,11 +57,10 @@ func Test_multipleStack(t *testing.T) {
 	}
 	paths = append(paths, path)
 
-	stack, err := model.LoadStack("", paths)
+	stack, err := model.LoadStack("", paths, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	var svcResult = &model.Service{
 		Environment: model.Environment{
 			model.EnvVar{
@@ -72,10 +71,29 @@ func Test_multipleStack(t *testing.T) {
 		Labels: model.Labels{
 			"a": "b",
 		},
-		Image: "test",
+		Image: "",
+	}
+	svc := stack.Services["app"]
+
+	if !reflect.DeepEqual(svc.Environment, svcResult.Environment) {
+		t.Fatalf("Expected %v but got %v", svcResult.Environment, svc.Environment)
+	}
+	if !reflect.DeepEqual(svc.Labels, svcResult.Labels) {
+		t.Fatalf("Expected %v but got %v", svcResult.Labels, svc.Labels)
+	}
+	if svc.Image != svcResult.Image {
+		t.Fatalf("Expected %v but got %v", svcResult.Image, svc.Image)
 	}
 
-	svc := stack.Services["app"]
+	os.Setenv("OKTETO_BUILD_APP_IMAGE", "test")
+	svcResult.Image = "test"
+
+	stack, err = model.LoadStack("", paths, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	svc = stack.Services["app"]
 
 	if !reflect.DeepEqual(svc.Environment, svcResult.Environment) {
 		t.Fatalf("Expected %v but got %v", svcResult.Environment, svc.Environment)
@@ -106,7 +124,7 @@ func Test_overrideFileStack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	stack, err := model.LoadStack("", paths)
+	stack, err := model.LoadStack("", paths, true)
 	if err != nil {
 		t.Fatal(err)
 	}

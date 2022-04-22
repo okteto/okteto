@@ -35,13 +35,15 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
 		Short: "Destroy a compose",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli-v1/#destroy-2"),
+		Args:  utils.MaximumNArgsAccepted(1, "https://www.okteto.com/docs/0.10/reference/cli/#destroy-2"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			oktetoLog.Warning("'okteto stack destroy' is deprecated in favor of 'okteto destroy', and will be removed in version 2.2.0")
 			if len(stackPath) == 1 {
-				if err := os.Chdir(utils.GetWorkdirFromManifestPath(stackPath[0])); err != nil {
+				workdir := utils.GetWorkdirFromManifestPath(stackPath[0])
+				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
+				stackPath[0] = utils.GetManifestPathFromWorkdir(stackPath[0], workdir)
 			}
 			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath)
 			if err != nil {

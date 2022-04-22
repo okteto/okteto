@@ -37,6 +37,13 @@ func Set(o metav1.Object, key, value string) {
 	o.SetLabels(labels)
 }
 
+func SetInMetadata(om *metav1.ObjectMeta, key, value string) {
+	if om.Labels == nil {
+		om.Labels = map[string]string{}
+	}
+	om.Labels[key] = value
+}
+
 // TransformLabelsToSelector transforms a map of labels into a string k8s selector
 func TransformLabelsToSelector(labels map[string]string) string {
 	labelList := make([]string, 0)

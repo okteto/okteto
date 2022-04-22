@@ -102,7 +102,7 @@ func TestAutoWake(t *testing.T) {
 	}
 
 	endpoint := fmt.Sprintf("https://%s-%s.%s", name, namespace, appsSubdomain)
-	content, err := getContent(endpoint, 150, nil)
+	content, err := getContent(endpoint, 300, nil)
 	if err != nil {
 		t.Fatalf("failed to get content: %s", err)
 	}
@@ -115,11 +115,11 @@ func TestAutoWake(t *testing.T) {
 	}
 
 	time.Sleep(5 * time.Second)
-	if err := checkIfSleeping(ctx, name, namespace, 150); err != nil {
+	if err := checkIfSleeping(ctx, name, namespace, 300); err != nil {
 		t.Fatal(err)
 	}
 
-	content, err = getContent(endpoint, 150, nil)
+	content, err = getContent(endpoint, 300, nil)
 	if err != nil {
 		t.Fatalf("failed to get content: %s", err)
 	}
@@ -127,7 +127,7 @@ func TestAutoWake(t *testing.T) {
 		t.Fatalf("failed to get content")
 	}
 
-	if err := checkIfAwake(ctx, name, namespace, false, 150); err != nil {
+	if err := checkIfAwake(ctx, name, namespace, false, 300); err != nil {
 		t.Fatal(err)
 	}
 
@@ -135,7 +135,7 @@ func TestAutoWake(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := checkIfSleeping(ctx, name, namespace, 150); err != nil {
+	if err := checkIfSleeping(ctx, name, namespace, 300); err != nil {
 		t.Fatal(err)
 	}
 
@@ -146,7 +146,7 @@ func TestAutoWake(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := checkIfAwake(ctx, name, namespace, true, 150); err != nil {
+	if err := checkIfAwake(ctx, name, namespace, true, 300); err != nil {
 		t.Fatal(err)
 	}
 

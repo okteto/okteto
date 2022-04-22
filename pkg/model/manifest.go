@@ -54,8 +54,12 @@ const (
     context: .`
 	buildSvcEnvVars   = "You can use the following env vars to refer to this image in your deploy commands:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_TAG: image tag"
 	deployHeadComment = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#deploy"
-	devHeadComment    = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/manifest/#dev"
-	devExample        = `dev:
+	deployExample     = `deploy:
+  commands:
+  - name: Deploy
+    command: echo 'Replace this line with the proper 'helm' or 'kubectl' commands to deploy your development environment'`
+	devHeadComment = "The dev section defines how to activate a development container\nMore info: https://www.okteto.com/docs/reference/manifest/#dev"
+	devExample     = `dev:
   sample:
     image: okteto/dev:latest
     command: bash
@@ -128,6 +132,7 @@ var (
 		"k8s.yml",
 		"k8s.yaml",
 	}
+	priorityOrder = []string{"dev", "dependencies", "deploy", "build", "name"}
 )
 
 // Manifest represents an okteto manifest
@@ -359,7 +364,7 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 		for _, composeInfo := range stackManifest.Deploy.ComposeSection.ComposesInfo {
 			composeFiles = append(composeFiles, composeInfo.File)
 		}
-		s, stackErr := LoadStack("", composeFiles)
+		s, stackErr := LoadStack("", composeFiles, false)
 		//We should return the error returned by the devManifest instead of the stack
 		if stackErr != nil {
 			return nil, err
@@ -384,7 +389,7 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			for _, composeInfo := range devManifest.Deploy.ComposeSection.ComposesInfo {
 				stackFiles = append(stackFiles, composeInfo.File)
 			}
-			s, err := LoadStack("", stackFiles)
+			s, err := LoadStack("", stackFiles, false)
 			if err != nil {
 				return nil, err
 			}
@@ -443,7 +448,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		for _, composeInfo := range stackManifest.Deploy.ComposeSection.ComposesInfo {
 			stackFiles = append(stackFiles, composeInfo.File)
 		}
-		s, err := LoadStack("", stackFiles)
+		s, err := LoadStack("", stackFiles, true)
 		if err != nil {
 			return nil, err
 		}
@@ -705,7 +710,7 @@ func (manifest *Manifest) ExpandEnvVars() error {
 			for _, composeInfo := range manifest.Deploy.ComposeSection.ComposesInfo {
 				stackFiles = append(stackFiles, composeInfo.File)
 			}
-			s, err := LoadStack("", stackFiles)
+			s, err := LoadStack("", stackFiles, true)
 			if err != nil {
 				oktetoLog.Infof("Could not reload stack manifest: %s", err)
 				s = manifest.Deploy.ComposeSection.Stack
@@ -911,7 +916,7 @@ func (*Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
 		contentCopy = append(contentCopy, doc.Content[buildDefinitionIdx], doc.Content[buildDefinitionIdx+1])
 		nodes = append(nodes, buildDefinitionIdx, buildDefinitionIdx+1)
 	} else {
-		whereToInject := getDocIdx(contentCopy, "name")
+		whereToInject := getDocIdxWithPrior(contentCopy, "name")
 		contentCopy[whereToInject].FootComment = fmt.Sprintf("%s\n%s", buildHeadComment, buildExample)
 	}
 
@@ -919,6 +924,17 @@ func (*Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
 	if deployDefinitionIdx != -1 {
 		contentCopy = append(contentCopy, doc.Content[deployDefinitionIdx], doc.Content[deployDefinitionIdx+1])
 		nodes = append(nodes, deployDefinitionIdx, deployDefinitionIdx+1)
+	} else {
+		whereToInject := getDocIdxWithPrior(contentCopy, "build")
+		footComment := fmt.Sprintf("%s\n%s", deployHeadComment, deployExample)
+		if buildDefinitionIdx == -1 {
+			footComment = "\n" + footComment
+		}
+		if contentCopy[whereToInject].FootComment == "" {
+			contentCopy[whereToInject].FootComment = footComment
+		} else {
+			contentCopy[whereToInject].FootComment += footComment
+		}
 	}
 
 	dependenciesDefinitionIdx := getDocIdx(doc.Content, "dependencies")
@@ -926,8 +942,16 @@ func (*Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
 		contentCopy = append(contentCopy, doc.Content[dependenciesDefinitionIdx], doc.Content[dependenciesDefinitionIdx+1])
 		nodes = append(nodes, dependenciesDefinitionIdx, dependenciesDefinitionIdx+1)
 	} else {
-		whereToInject := getDocIdx(contentCopy, "deploy")
-		contentCopy[whereToInject].FootComment = fmt.Sprintf("%s\n%s", dependenciesHeadComment, dependenciesExample)
+		whereToInject := getDocIdxWithPrior(contentCopy, "deploy")
+		footComment := fmt.Sprintf("%s\n%s", dependenciesHeadComment, dependenciesExample)
+		if deployDefinitionIdx == -1 {
+			footComment = "\n\n" + footComment
+		}
+		if contentCopy[whereToInject].FootComment == "" {
+			contentCopy[whereToInject].FootComment = footComment
+		} else {
+			contentCopy[whereToInject].FootComment += footComment
+		}
 	}
 
 	devDefinitionIdx := getDocIdx(doc.Content, "dev")
@@ -935,12 +959,15 @@ func (*Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
 		contentCopy = append(contentCopy, doc.Content[devDefinitionIdx], doc.Content[devDefinitionIdx+1])
 		nodes = append(nodes, devDefinitionIdx, devDefinitionIdx+1)
 	} else {
-		whereToInject := getDocIdx(contentCopy, "dependencies")
+		whereToInject := getDocIdxWithPrior(contentCopy, "dependencies")
+		footComment := fmt.Sprintf("%s\n%s", devHeadComment, devExample)
 		if dependenciesDefinitionIdx == -1 {
-			whereToInject = getDocIdx(contentCopy, "deploy")
-			contentCopy[whereToInject].FootComment += fmt.Sprintf("\n\n%s\n%s", devHeadComment, devExample)
+			footComment = "\n" + footComment
+		}
+		if contentCopy[whereToInject].FootComment == "" {
+			contentCopy[whereToInject].FootComment = footComment
 		} else {
-			contentCopy[whereToInject].FootComment += fmt.Sprintf("%s\n%s", devHeadComment, devExample)
+			contentCopy[whereToInject].FootComment += footComment
 		}
 	}
 
@@ -964,6 +991,20 @@ func (*Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
 	return doc
 }
 
+func getDocIdxWithPrior(contents []*yaml3.Node, value string) int {
+	for idx, node := range contents {
+		if node.Value == value {
+			return idx
+		}
+	}
+	for idx, val := range priorityOrder {
+		if val == value {
+			return getDocIdx(contents, priorityOrder[idx+1])
+		}
+	}
+	return -1
+}
+
 func getDocIdx(contents []*yaml3.Node, value string) int {
 	for idx, node := range contents {
 		if node.Value == value {
@@ -972,6 +1013,7 @@ func getDocIdx(contents []*yaml3.Node, value string) int {
 	}
 	return -1
 }
+
 func addEmptyLineBetweenSections(out []byte) []byte {
 	prevLineCommented := false
 	newYaml := ""
@@ -984,4 +1026,15 @@ func addEmptyLineBetweenSections(out []byte) []byte {
 		prevLineCommented = isLineCommented
 	}
 	return []byte(newYaml)
+}
+
+// IsDeployDefault returns true if the command is empty or if it has the default one
+func (m *Manifest) IsDeployDefault() bool {
+	if m.Deploy == nil {
+		return true
+	}
+	if len(m.Deploy.Commands) == 1 && m.Deploy.Commands[0].Command == FakeCommand {
+		return true
+	}
+	return false
 }

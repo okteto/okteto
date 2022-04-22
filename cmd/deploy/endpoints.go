@@ -47,9 +47,11 @@ func Endpoints(ctx context.Context) *cobra.Command {
 		Short: "Show endpoints for an environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if options.ManifestPath != "" {
-				if err := os.Chdir(utils.GetWorkdirFromManifestPath(options.ManifestPath)); err != nil {
+				workdir := utils.GetWorkdirFromManifestPath(options.ManifestPath)
+				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
+				options.ManifestPath = utils.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
 			}
 
 			ctxResource, err := utils.LoadManifestContext(options.ManifestPath)

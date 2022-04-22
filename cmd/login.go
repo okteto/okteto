@@ -31,7 +31,7 @@ func Login() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "login [url]",
-		Args:   utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli-v1/#login"),
+		Args:   utils.MaximumNArgsAccepted(1, "https://www.okteto.com/docs/0.10/reference/cli/#login"),
 		Short:  "Log into Okteto",
 		Long: `Log into Okteto
 
