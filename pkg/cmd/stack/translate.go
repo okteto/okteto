@@ -145,13 +145,16 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 			buildInfo.Image = ""
 		}
 		if !options.ForceBuild {
-			if buildInfo != nil {
-				if tagWithDigest, ok, _ := buildOpts.SkipBuild(svcName); ok {
-					svcInfo.Image = tagWithDigest
-					continue
-				}
-				oktetoLog.Infof("image '%s' not found, building it", buildOpts.Tag)
+			tagWithDigest, err := build.OptimizeBuildWithDigest(svcName, buildOpts)
+			if err != nil {
+				return err
 			}
+			if tagWithDigest != "" {
+				oktetoLog.Debugf("skipping build: image '%s' found", buildOpts.Tag)
+				svcInfo.Image = tagWithDigest
+				continue
+			}
+			oktetoLog.Infof("image '%s' not found, building it", buildOpts.Tag)
 		}
 
 		volumesToInclude := build.GetVolumesToInclude(svcInfo.VolumeMounts)

@@ -207,8 +207,15 @@ func buildV2(manifest *model.Manifest, cmdOptions *build.BuildOptions, args []st
 		optsFromManifest := build.OptsFromManifest(service, buildInfo, cmdOptions)
 
 		// check if image is at registry and skip
-		if _, ok, _ := optsFromManifest.SkipBuild(service); ok {
-			continue
+		if okteto.IsPipeline() {
+			tagWithDigest, err := build.OptimizeBuildWithDigest(service, optsFromManifest)
+			if err != nil {
+				return err
+			}
+			if tagWithDigest != "" {
+				oktetoLog.Information("Skipping build for service '%s'", service)
+				continue
+			}
 		}
 
 		if err := buildV1(optsFromManifest, []string{optsFromManifest.Path}); err != nil {
@@ -223,6 +230,17 @@ func buildV2(manifest *model.Manifest, cmdOptions *build.BuildOptions, args []st
 			svcBuild.VolumesToInclude = volumesToInclude
 			svcBuild.Name = buildInfo.Name
 			options := build.OptsFromManifest(service, svcBuild, cmdOptions)
+
+			if okteto.IsPipeline() {
+				tagWithDigest, err := build.OptimizeBuildWithDigest(service, options)
+				if err != nil {
+					return err
+				}
+				if tagWithDigest != "" {
+					oktetoLog.Information("Skipping build for service '%s'", service)
+					continue
+				}
+			}
 			if err := buildV1(options, []string{options.Path}); err != nil {
 				return err
 			}

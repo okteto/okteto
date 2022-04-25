@@ -314,70 +314,56 @@ func OptsFromManifest(service string, manifestBuildInfo *model.BuildInfo, cmdBui
 	return overrideManifestBuildOptions(manifestBuildOptions, cmdBuildOptions)
 }
 
-// optimizedGlobalBuild returns if build should be optimized because the image is already at the global registry
-func (opts *BuildOptions) optimizedGlobalBuild() (string, bool, error) {
-	oktetoLog.Debugf("Applying global build optimization for image %s", opts.Tag)
+// optimizedGlobalBuild returns image with digest tag if found at the global registry
+func optimizedGlobalBuild(image string) (string, error) {
 
-	globalReference := opts.Tag
-	if registry.IsDevRegistry(opts.Tag) || registry.IsExtendedOktetoRegistry(opts.Tag) {
-		globalReference = registry.ReplaceTargetRepository(opts.Tag, okteto.GlobalRegistry, okteto.DefaultGlobalNamespace)
-
+	if registry.IsDevRegistry(image) || registry.IsExtendedOktetoRegistry(image) {
+		image = registry.ReplaceTargetRepository(image, okteto.GlobalRegistry, okteto.DefaultGlobalNamespace)
 	}
-	tagWithDigest, err := registry.GetImageTagWithDigest(globalReference)
+	tagWithDigest, err := registry.GetImageTagWithDigest(image)
 	if err != nil {
-		return opts.Tag, false, err
+		return "", err
 	}
-	oktetoLog.Debugf("skipping build: image %s is already built", opts.Tag)
-	opts.Tag = globalReference
-	return tagWithDigest, true, nil
+	return tagWithDigest, nil
 }
 
-// checkImageAtRegistry returns if build should be optimized because the image is already at the dev registry
-func (opts *BuildOptions) checkImageAtRegistry() (string, bool, error) {
-	oktetoLog.Debugf("Checking registry for image %s", opts.Tag)
-	tagWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
-	if err != nil {
-		return opts.Tag, false, err
-	}
-	oktetoLog.Debugf("skipping build: image %s is already built", opts.Tag)
-	return tagWithDigest, true, nil
-}
-
-// SkipBuild returns if build has to be skipped and the tag with digest if found at registry
-func (opts *BuildOptions) SkipBuild(service string) (string, bool, error) {
+// OptimizeBuildWithDigest returns the image with digest tag if found at global or dev okteto registry.
+// If image is not present at any global or dev registry will return empty string.
+// If err is different from NotFound, it will return err and empty string.
+func OptimizeBuildWithDigest(service string, opts *BuildOptions) (string, error) {
 	if opts.NoCache {
-		return "", false, nil
+		oktetoLog.Debug("skipping optimization: --no-cache option active")
+		return "", nil
 	}
 	if !registry.IsOktetoRegistry(opts.Tag) {
-		return "", false, nil
+		oktetoLog.Debug("skipping optimization: image tag is not at okteto registry")
+		return "", nil
 	}
-	envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
-	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
-	isPipeline := envGitCommit != "" && !isLocalEnvGitCommit
-	if !isPipeline {
-		return "", false, nil
-	}
-	oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
 
-	if tagWithDigest, ok, err := opts.optimizedGlobalBuild(); ok {
-		// global optimization has been applied and use global tag for deployment
-		oktetoLog.Debugf("Skipping '%s' build. Image already exists at Okteto Registry", service)
-		return tagWithDigest, true, nil
-	} else if err != nil && err != oktetoErrors.ErrNotFound {
-		// not applicated and error while checking - return err
-		return "", false, fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
-	} else if !ok {
-		// check dev registry
-		if tagWithDigest, ok, err := opts.checkImageAtRegistry(); ok {
-			oktetoLog.Debugf("Skipping '%s' build. Image already exists at Okteto Registry", service)
-			return tagWithDigest, true, nil
-		} else if err != nil && err == oktetoErrors.ErrNotFound {
-			// image not found - have to build
-			oktetoLog.Debug("image not found, building image")
-			return "", false, nil
-		}
+	oktetoLog.Debug("build optimization: check on global registry")
+
+	// first check global registry
+	tagWithDigest, err := optimizedGlobalBuild(opts.Tag)
+	if err != nil && err != oktetoErrors.ErrNotFound {
+		return "", fmt.Errorf("build optimization: check on global registry: %v", err)
 	}
-	return "", false, nil
+	if tagWithDigest != "" {
+		oktetoLog.Debugf("build optimization: image found at global registry: %s", opts.Tag)
+		return tagWithDigest, nil
+	}
+
+	// check dev registry if not found at global
+	oktetoLog.Debug("build optimization: check on dev registry")
+	tagWithDigest, err = registry.GetImageTagWithDigest(opts.Tag)
+	if err == oktetoErrors.ErrNotFound {
+		oktetoLog.Debugf("build optimization: image not found at dev registry: %s", opts.Tag)
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("build optimization: check on dev registry: %v", err)
+	}
+	oktetoLog.Debugf("build optimization: image found at dev registry: %s", opts.Tag)
+	return tagWithDigest, nil
 }
 
 // GetVolumesToInclude checks if the path exists, if it doesn't it skip it

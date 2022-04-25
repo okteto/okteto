@@ -262,7 +262,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
 	var buildServices []string
-	if deployOptions.Build {
+	if deployOptions.Build && !okteto.IsPipeline() {
 		oktetoLog.Debug("force build from manifest definition")
 		buildServices = deployOptions.Manifest.Build.GetServices()
 	} else {
@@ -630,7 +630,6 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 	oktetoLog.SetStage(fmt.Sprintf("Building service %s", service))
 	buildInfo := manifest.Build[service]
 	isStack := manifest.Type == model.StackType
-	oktetoLog.Information("Building image for service '%s'", service)
 	volumesToInclude := build.GetVolumesToInclude(buildInfo.VolumesToInclude)
 	if len(volumesToInclude) > 0 {
 		buildInfo.VolumesToInclude = nil
@@ -641,21 +640,24 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 	options := build.OptsFromManifest(service, buildInfo, nil)
 
 	var imageWithDigest string
-
-	if tagWithDigest, ok, err := options.SkipBuild(service); ok {
-		imageWithDigest = tagWithDigest
-		oktetoLog.Success("Image for service '%s' already built at registry: %s", service, imageWithDigest)
-	} else if err != nil && err != oktetoErrors.ErrNotFound {
-		return err
-	} else if !ok {
-		if err := build.Run(ctx, options); err != nil {
-			return err
-		}
-		imageWithDigest, err = registry.GetImageTagWithDigest(options.Tag)
+	if okteto.IsPipeline() {
+		tagWithDigest, err := build.OptimizeBuildWithDigest(service, options)
 		if err != nil {
 			return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
 		}
-		oktetoLog.Success("Image for service '%s' pushed to registry: %s", service, imageWithDigest)
+		imageWithDigest = tagWithDigest
+	}
+
+	if imageWithDigest == "" {
+		if err := build.Run(ctx, options); err != nil {
+			return err
+		}
+		if _, err := registry.GetImageTagWithDigest(options.Tag); err != nil {
+			return err
+		}
+		oktetoLog.Success("Image for service '%s' pushed to registry: %s", service, options.Tag)
+	} else {
+		oktetoLog.Success("Image for service '%s' already built at registry: %s", service, imageWithDigest)
 	}
 
 	if len(volumesToInclude) > 0 {
@@ -666,19 +668,27 @@ func runBuildAndSetEnvs(ctx context.Context, service string, manifest *model.Man
 		}
 		svcBuild.VolumesToInclude = volumesToInclude
 		options = build.OptsFromManifest(service, svcBuild, nil)
-		if tagWithDigest, ok, err := options.SkipBuild(service); ok {
-			imageWithDigest = tagWithDigest
-		} else if err != nil && err != oktetoErrors.ErrNotFound {
-			return err
-		} else {
+
+		var imageWithVolumesDigest string
+		if okteto.IsPipeline() {
+			tagWithDigest, err := build.OptimizeBuildWithDigest(service, options)
+			if err != nil {
+				return err
+			}
+			imageWithVolumesDigest = tagWithDigest
+		}
+
+		if imageWithVolumesDigest == "" {
 			if err := build.Run(ctx, options); err != nil {
 				return err
 			}
-			imageWithDigest, err = registry.GetImageTagWithDigest(options.Tag)
+			tagWithDigest, err := registry.GetImageTagWithDigest(options.Tag)
 			if err != nil {
 				return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
 			}
+			imageWithVolumesDigest = tagWithDigest
 		}
+		imageWithDigest = imageWithVolumesDigest
 	}
 	if err := SetManifestEnvVars(service, imageWithDigest); err != nil {
 		return err
@@ -819,18 +829,20 @@ func checkServicesToBuild(service string, manifest *model.Manifest, ch chan stri
 	}
 	opts := build.OptsFromManifest(service, buildInfo, nil)
 
-	if tagWithDigest, ok, err := opts.SkipBuild(service); ok {
-		if err := SetManifestEnvVars(service, tagWithDigest); err != nil {
-			return err
-		}
-		oktetoLog.Debugf("Skipping '%s' build. Image already exists at Okteto Registry", service)
-	} else if err != nil && err != oktetoErrors.ErrNotFound {
+	tagWithDigest, err := build.OptimizeBuildWithDigest(service, opts)
+	if err != nil {
 		return err
-	} else if !ok {
+	}
+	if tagWithDigest == "" {
 		oktetoLog.Debug("image not found, building image")
 		ch <- service
 		return nil
 	}
+	// skipping build - setting envs
+	if err := SetManifestEnvVars(service, tagWithDigest); err != nil {
+		return err
+	}
+	oktetoLog.Debugf("Skipping '%s' build. Image already exists at Okteto Registry", service)
 
 	if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 		stack := manifest.Deploy.ComposeSection.Stack
