@@ -197,17 +197,30 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 }
 
 func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
-	user, err := c.LoginController.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
+	err := AuthenticateToOktetoCluster(c, ctx, ctxOptions)
 	if err != nil {
 		return err
 	}
-	ctxOptions.Token = user.Token
-	okteto.Context().Token = user.Token
 
 	userContext, err := c.getUserContext(ctx)
 	if err != nil {
-		return err
+		if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name).Error() {
+			oktetoLog.Warning("Your token is invalid")
+			ctxOptions.Token = ""
+			err := AuthenticateToOktetoCluster(c, ctx, ctxOptions)
+			if err != nil {
+				return err
+			}
+
+			userContext, err = c.getUserContext(ctx)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
+
 	if ctxOptions.Namespace == "" {
 		ctxOptions.Namespace = userContext.User.Namespace
 	}
@@ -223,6 +236,18 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	setSecrets(userContext.Secrets)
 
 	os.Setenv(model.OktetoUserNameEnvVar, okteto.Context().Username)
+
+	return nil
+}
+
+func AuthenticateToOktetoCluster(c *ContextCommand, ctx context.Context, ctxOptions *ContextOptions) error {
+	user, err := c.LoginController.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
+	if err != nil {
+		return err
+	}
+
+	ctxOptions.Token = user.Token
+	okteto.Context().Token = user.Token
 
 	return nil
 }
