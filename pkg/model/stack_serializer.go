@@ -327,6 +327,9 @@ func unmarshalVolume(volume *VolumeTopLevel) (*VolumeSpec, error) {
 func getEndpointsFromPorts(services map[string]*ServiceRaw) EndpointSpec {
 	endpoints := make(EndpointSpec)
 	for svcName, svc := range services {
+		if v, ok := svc.Annotations[OktetoRuntimeComposeAnnotation]; !ok || v != "docker" {
+			continue
+		}
 		accessiblePorts := getAccessiblePorts(svc.Ports)
 		if len(accessiblePorts) >= 2 {
 			for _, p := range accessiblePorts {

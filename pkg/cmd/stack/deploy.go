@@ -46,15 +46,16 @@ import (
 
 // StackDeployOptions represents the different options available for stack commands
 type StackDeployOptions struct {
-	StackPaths       []string
-	Name             string
-	Namespace        string
-	ForceBuild       bool
-	Wait             bool
-	NoCache          bool
-	Timeout          time.Duration
-	ServicesToDeploy []string
-	Progress         string
+	StackPaths        []string
+	Name              string
+	Namespace         string
+	ForceBuild        bool
+	Wait              bool
+	NoCache           bool
+	Timeout           time.Duration
+	ServicesToDeploy  []string
+	Progress          string
+	HybridDevelopment bool
 }
 
 // Stack is the executor of stack commands
@@ -258,6 +259,9 @@ func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client k
 
 func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
 	for dependentSvc, condition := range stack.Services[svcName].DependsOn {
+		if v, ok := stack.Services[dependentSvc].Annotations[model.OktetoRuntimeComposeAnnotation]; ok && v == "docker" {
+			continue
+		}
 		if !isSvcReady(ctx, stack, dependentSvc, condition, client, config) {
 			oktetoLog.Infof("Service %s can not be deployed due to %s", svcName, dependentSvc)
 			return false
@@ -702,6 +706,9 @@ func addDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, optio
 	added := make([]string, 0)
 	for _, svcToDeploy := range options.ServicesToDeploy {
 		for dependentSvc := range s.Services[svcToDeploy].DependsOn {
+			if v, ok := s.Services[dependentSvc].Annotations[model.OktetoRuntimeComposeAnnotation]; ok && v == "docker" {
+				continue
+			}
 			if !isSvcToBeDeployed(options.ServicesToDeploy, dependentSvc) && !isSvcRunning(ctx, s.Services[dependentSvc], s.Namespace, dependentSvc, c) {
 				options.ServicesToDeploy = append(options.ServicesToDeploy, dependentSvc)
 				added = append(added, dependentSvc)

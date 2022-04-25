@@ -38,7 +38,7 @@ const (
 	//DefaultManifest default okteto manifest file
 	DefaultManifest   = "okteto.yml"
 	secondaryManifest = "okteto.yaml"
-	detachModePodName = "okteto-dev-env"
+	DetachModePodName = "okteto-dev-env"
 )
 
 func LoadManifestContext(devPath string) (*model.ContextResource, error) {
@@ -212,6 +212,20 @@ func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, erro
 
 	if manifest.Type == model.StackType {
 		for svcName, svc := range manifest.Deploy.ComposeSection.Stack.Services {
+			if svc.Annotations != nil {
+				if value, ok := svc.Annotations[model.OktetoRuntimeComposeAnnotation]; ok && value == "docker" {
+					for _, p := range svc.Ports {
+						if p.HostPort == 0 {
+							continue
+						}
+						dev.Reverse = append(dev.Reverse, model.Reverse{
+							Remote: int(p.ContainerPort),
+							Local:  int(p.HostPort),
+						})
+					}
+					continue
+				}
+			}
 			d, err := svc.ToDev(svcName)
 			if err != nil {
 				return nil, err
@@ -287,7 +301,7 @@ func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, erro
 			return nil, err
 		}
 	}
-	dev.Name = detachModePodName
+	dev.Name = DetachModePodName
 	dev.Image = &model.BuildInfo{Name: "busybox"}
 	dev.Namespace = okteto.Context().Namespace
 	dev.Context = okteto.Context().Name

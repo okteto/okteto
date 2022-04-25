@@ -163,6 +163,8 @@ const (
 	OktetoDivertServiceModificationAnnotation = "divert.okteto.com/modification"
 	//OktetoInjectTokenAnnotation annotation to inject the okteto token
 	OktetoInjectTokenAnnotation = "dev.okteto.com/inject-token"
+	//OktetoRuntimeComposeAnnotation annotation skips the compose service
+	OktetoRuntimeComposeAnnotation = "dev.okteto.com/runtime"
 
 	//OktetoInitContainer name of the okteto init container
 	OktetoInitContainer = "okteto-init"

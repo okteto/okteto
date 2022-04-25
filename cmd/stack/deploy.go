@@ -106,8 +106,14 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 
 	if len(options.ServicesToDeploy) == 0 {
 		definedSvcs := make([]string, 0)
-		for svcName := range s.Services {
-			definedSvcs = append(definedSvcs, svcName)
+		for svcName, svcInfo := range s.Services {
+			value, ok := svcInfo.Annotations[model.OktetoRuntimeComposeAnnotation]
+			if ok && value == "docker" {
+				options.HybridDevelopment = true
+			}
+			if !ok || value != "docker" {
+				definedSvcs = append(definedSvcs, svcName)
+			}
 		}
 		options.ServicesToDeploy = definedSvcs
 	}

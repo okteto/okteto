@@ -443,8 +443,12 @@ func setDeployOptionsValuesFromManifest(deployOptions *Options, cwd string) {
 
 		} else {
 			deployOptions.servicesToDeploy = []string{}
-			for service := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
-				deployOptions.servicesToDeploy = append(deployOptions.servicesToDeploy, service)
+			for service, svcInfo := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
+				if svcInfo.Annotations != nil {
+					if value, ok := svcInfo.Annotations[model.OktetoRuntimeComposeAnnotation]; !ok || value != "docker" {
+						deployOptions.servicesToDeploy = append(deployOptions.servicesToDeploy, service)
+					}
+				}
 			}
 		}
 	}

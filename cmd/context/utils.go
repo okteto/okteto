@@ -171,6 +171,10 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 		dev.Namespace = okteto.Context().Namespace
 		dev.Context = okteto.Context().Name
 	}
+	if m.Deploy != nil && m.Deploy.ComposeSection != nil && m.Deploy.ComposeSection.Stack != nil {
+		m.Deploy.ComposeSection.Stack.Namespace = m.Namespace
+		m.Deploy.ComposeSection.Stack.Context = m.Context
+	}
 
 	return m, nil
 }
