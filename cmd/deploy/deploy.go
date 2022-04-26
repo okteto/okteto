@@ -425,6 +425,7 @@ func setDeployOptionsValuesFromManifest(deployOptions *Options, cwd string) {
 			deployOptions.Name = deployOptions.Manifest.Name
 		} else {
 			deployOptions.Name = utils.InferName(cwd)
+			deployOptions.Manifest.Name = deployOptions.Name
 		}
 
 	} else {
