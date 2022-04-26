@@ -190,10 +190,10 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
 
-	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, &types.BuildOptions{})
+	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options)
 
 	// Check if the tag is already on global/dev registry and skip
-	if build.ShouldOptimizeBuild(buildOptions.Tag) && !buildOptions.BuildToGlobal {
+	if build.ShouldOptimizeBuild(buildOptions) {
 		tag, err := bc.optimizeBuild(buildOptions, svcName)
 		if err != nil {
 			return "", err
@@ -243,6 +243,17 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 		return "", err
 	}
 	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, &types.BuildOptions{})
+
+	if build.ShouldOptimizeBuild(buildOptions) {
+		tag, err := bc.optimizeBuild(buildOptions, svcName)
+		if err != nil {
+			return "", err
+		}
+		if tag != "" {
+			return tag, nil
+		}
+	}
+
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}

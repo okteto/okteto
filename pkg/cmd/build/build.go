@@ -337,12 +337,8 @@ func OptsFromManifest(service string, manifest *model.Manifest, o *types.BuildOp
 }
 
 // ShouldOptimizeBuild returns if optimization should be applied
-func ShouldOptimizeBuild(image string) bool {
-	envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
-	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
-	return registry.IsOktetoRegistry(image) &&
-		envGitCommit != "" &&
-		!isLocalEnvGitCommit
+func ShouldOptimizeBuild(options *types.BuildOptions) bool {
+	return okteto.IsPipeline() && registry.IsOktetoRegistry(options.Tag) && !options.NoCache && !options.BuildToGlobal
 }
 
 // GetVolumesToInclude checks if the path exists, if it doesn't it skip it

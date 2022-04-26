@@ -479,3 +479,9 @@ func (c *OktetoContext) ToViewer() *OktetoContextViewer {
 		Current:   Context().Name == c.Name,
 	}
 }
+
+func IsPipeline() bool {
+	envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
+	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
+	return envGitCommit != "" && !isLocalEnvGitCommit
+}
