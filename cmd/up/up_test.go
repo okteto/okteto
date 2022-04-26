@@ -202,6 +202,12 @@ func TestEnvVarIsNotAddedWhenHasBuiltInOktetoEnvVarsFormat(t *testing.T) {
 			upOptions:               &UpOptions{Envs: []string{"OKTETO_REGISTRY_URL=value"}},
 			expectedNumManifestEnvs: 2,
 		},
+		{
+			name:                    "Unable to set built-in okteto environment variable BUILDKIT_HOST",
+			dev:                     &model.Dev{},
+			upOptions:               &UpOptions{Envs: []string{"BUILDKIT_HOST=value"}},
+			expectedNumManifestEnvs: 2,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

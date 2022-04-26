@@ -409,7 +409,7 @@ func setEnvVarsFromCmd(dev *model.Dev, upOptions *UpOptions) error {
 		}
 
 		varNameToAdd, varValueToAdd := kv[0], kv[1]
-		if strings.HasPrefix(varNameToAdd, "OKTETO_") {
+		if strings.HasPrefix(varNameToAdd, "OKTETO_") || varNameToAdd == model.OktetoBuildkitHostURLEnvVar {
 			return oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD
 		}
 
