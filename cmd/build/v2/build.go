@@ -108,6 +108,20 @@ func (*OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOptio
 
 // Build builds the images defined by a manifest
 func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
+	if options.File != "" {
+		workdir := utils.GetWorkdirFromManifestPath(options.File)
+		if err := os.Chdir(workdir); err != nil {
+			return err
+		}
+		options.File = utils.GetManifestPathFromWorkdir(options.File, workdir)
+	}
+	if options.Manifest.Name == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		options.Manifest.Name = utils.InferName(wd)
+	}
 	toBuildSvcs := getToBuildSvcs(options.Manifest, options)
 	if err := validateOptions(options.Manifest, toBuildSvcs, options); err != nil {
 		if errors.Is(err, oktetoErrors.ErrNoServicesToBuildDefined) {
