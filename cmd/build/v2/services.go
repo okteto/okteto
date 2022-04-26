@@ -76,6 +76,12 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 			return err
 		} else if skipBuild {
 			oktetoLog.Debugf("Skipping '%s' build. Image already exists at Okteto Registry", service)
+			if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
+				stack := manifest.Deploy.ComposeSection.Stack
+				if svc, ok := stack.Services[service]; ok && svc.Image == "" {
+					stack.Services[service].Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(service, "-", "_")))
+				}
+			}
 			return nil
 		}
 	}
