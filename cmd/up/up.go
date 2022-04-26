@@ -409,6 +409,10 @@ func setEnvVarsFromCmd(dev *model.Dev, upOptions *UpOptions) error {
 		}
 
 		varNameToAdd, varValueToAdd := kv[0], kv[1]
+		if strings.HasPrefix(varNameToAdd, "OKTETO_") {
+			return oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD
+		}
+
 		expandedEnv, err := model.ExpandEnv(varValueToAdd, true)
 		if err != nil {
 			return err

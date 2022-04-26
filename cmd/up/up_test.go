@@ -15,6 +15,7 @@ package up
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -165,6 +166,48 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 
 			if tt.expectedNumManifestEnvs != len(tt.dev.Environment) {
 				t.Fatalf("error in setEnvVarsFromCmd; expected num variables in container %d but got %d", tt.expectedNumManifestEnvs, len(tt.dev.Environment))
+			}
+		})
+	}
+}
+
+func TestEnvVarIsNotAddedWhenHasBuiltInOktetoEnvVarsFormat(t *testing.T) {
+	var tests = []struct {
+		name                    string
+		dev                     *model.Dev
+		upOptions               *UpOptions
+		expectedNumManifestEnvs int
+	}{
+		{
+			name:                    "Unable to set built-in okteto environment variable OKTETO_NAMESPACE",
+			dev:                     &model.Dev{},
+			upOptions:               &UpOptions{Envs: []string{"OKTETO_NAMESPACE=value"}},
+			expectedNumManifestEnvs: 2,
+		},
+		{
+			name:                    "Unable to set built-in okteto environment variable OKTETO_GIT_BRANCH",
+			dev:                     &model.Dev{},
+			upOptions:               &UpOptions{Envs: []string{"OKTETO_GIT_BRANCH=value"}},
+			expectedNumManifestEnvs: 2,
+		},
+		{
+			name:                    "Unable to set built-in okteto environment variable OKTETO_GIT_COMMIT",
+			dev:                     &model.Dev{},
+			upOptions:               &UpOptions{Envs: []string{"OKTETO_GIT_COMMIT=value"}},
+			expectedNumManifestEnvs: 2,
+		},
+		{
+			name:                    "Unable to set built-in okteto environment variable OKTETO_REGISTRY_URL",
+			dev:                     &model.Dev{},
+			upOptions:               &UpOptions{Envs: []string{"OKTETO_REGISTRY_URL=value"}},
+			expectedNumManifestEnvs: 2,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := setEnvVarsFromCmd(tt.dev, tt.upOptions)
+			if !errors.Is(err, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD) {
+				t.Fatalf("expected error in setEnvVarsFromCmd: %s due to try to set a built-in okteto environment variable", err)
 			}
 		})
 	}
