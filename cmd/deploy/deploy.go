@@ -271,6 +271,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			EnableStages: true,
 			Manifest:     deployOptions.Manifest,
 		}
+		oktetoLog.Debug("force build from manifest definition")
 		if err := dc.Builder.Build(ctx, buildOptions); err != nil {
 			return err
 		}
