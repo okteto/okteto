@@ -227,7 +227,7 @@ func Up() *cobra.Command {
 
 			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
 				oktetoLog.Information("Development environment '%s' already deployed.", up.Manifest.Name)
-				oktetoLog.Information("To redeploy your development environment run 'okteto deploy' or 'okteto up %s --deploy'", up.Dev.Name)
+				oktetoLog.Information("To redeploy your development environment run 'okteto deploy' or 'okteto up [devName] --deploy'")
 			}
 
 			var dev *model.Dev
