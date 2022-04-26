@@ -123,7 +123,7 @@ func Up() *cobra.Command {
 				if err != nil {
 					return err
 				}
-			} else {
+			} else if err != nil {
 				return err
 			}
 			wd, err := os.Getwd()

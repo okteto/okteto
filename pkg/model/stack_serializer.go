@@ -246,11 +246,6 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.Namespace = stackRaw.Namespace
 	s.Context = stackRaw.Context
 
-	s.Endpoints = stackRaw.Endpoints
-
-	if len(s.Endpoints) == 0 {
-		s.Endpoints = getEndpointsFromPorts(stackRaw.Services)
-	}
 	s.Volumes = make(map[string]*VolumeSpec)
 	for volumeName, volume := range stackRaw.Volumes {
 		volumeSpec, err := unmarshalVolume(volume)
@@ -272,6 +267,12 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	s.Endpoints = stackRaw.Endpoints
+
+	if len(s.Endpoints) == 0 {
+		s.Endpoints = getEndpointsFromPorts(s.Services)
 	}
 
 	s.Warnings.NotSupportedFields = getNotSupportedFields(&stackRaw)
@@ -324,7 +325,7 @@ func unmarshalVolume(volume *VolumeTopLevel) (*VolumeSpec, error) {
 
 }
 
-func getEndpointsFromPorts(services map[string]*ServiceRaw) EndpointSpec {
+func getEndpointsFromPorts(services map[string]*Service) EndpointSpec {
 	endpoints := make(EndpointSpec)
 	for svcName, svc := range services {
 		if v, ok := svc.Annotations[OktetoRuntimeComposeAnnotation]; ok && v == "docker" {
@@ -349,8 +350,8 @@ func getEndpointsFromPorts(services map[string]*ServiceRaw) EndpointSpec {
 	return endpoints
 }
 
-func getAccessiblePorts(ports []PortRaw) []PortRaw {
-	accessiblePorts := make([]PortRaw, 0)
+func getAccessiblePorts(ports []Port) []Port {
+	accessiblePorts := make([]Port, 0)
 	for _, p := range ports {
 		if p.HostPort != 0 && !IsSkippablePort(p.ContainerPort) {
 			accessiblePorts = append(accessiblePorts, p)
@@ -565,7 +566,15 @@ func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
 func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, error) {
 	rawPorts = expandRangePorts(rawPorts)
 
-	if !public && len(getAccessiblePorts(rawPorts)) == 1 {
+	accessPorts := []Port{}
+	for _, p := range rawPorts {
+		accessPorts = append(accessPorts, Port{
+			HostPort:      p.HostPort,
+			ContainerPort: p.ContainerPort,
+			Protocol:      p.Protocol,
+		})
+	}
+	if !public && len(getAccessiblePorts(accessPorts)) == 1 {
 		public = true
 	}
 	if len(rawExpose) > 0 && len(rawPorts) == 0 {
