@@ -48,7 +48,7 @@ func deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy [service...]",
 		Short: "Deploy a compose",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			oktetoLog.Warning("'okteto stack deploy' is deprecated in favor of 'okteto deploy', and will be removed in version 2.2.0")
+			oktetoLog.Warning("'okteto stack deploy' is deprecated in favor of 'okteto deploy', and will be removed in a future version")
 			options.ServicesToDeploy = args
 
 			options.StackPaths = loadComposePaths(options.StackPaths)
