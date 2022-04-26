@@ -596,7 +596,7 @@ func Read(bytes []byte) (*Manifest, error) {
 	for _, d := range manifest.Dev {
 		if (d.Image.Context != "" || d.Image.Dockerfile != "") && !hasShownWarning {
 			hasShownWarning = true
-			oktetoLog.Yellow(`The 'image' extended syntax is deprecated and will be removed in version 2.2.0. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/manifest/#build"`)
+			oktetoLog.Yellow(`The 'image' extended syntax is deprecated and will be removed in a future version. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/manifest/#build"`)
 		}
 	}
 

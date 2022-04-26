@@ -58,7 +58,7 @@ func Push(ctx context.Context) *cobra.Command {
 		Args:   utils.MaximumNArgsAccepted(1, "https://www.okteto.com/docs/0.10/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-				oktetoLog.Warning("'okteto push' is deprecated in favor of 'okteto deploy', and will be removed in version 2.2.0")
+				oktetoLog.Warning("'okteto push' is deprecated in favor of 'okteto deploy', and will be removed in a future version")
 			}
 			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)
 			if err != nil {
@@ -112,7 +112,7 @@ func Push(ctx context.Context) *cobra.Command {
 			oktetoRegistryURL := okteto.Context().Registry
 
 			if pushOpts.AutoDeploy {
-				oktetoLog.Warning(`The 'deploy' flag is deprecated and will be removed in version 2.2.0.
+				oktetoLog.Warning(`The 'deploy' flag is deprecated and will be removed in a future version.
     Set the 'autocreate' field in your okteto manifest to get the same behavior.
     More information is available here: https://okteto.com/docs/reference/cli#up`)
 			}

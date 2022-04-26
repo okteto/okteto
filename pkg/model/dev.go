@@ -476,7 +476,7 @@ func (dev *Dev) SetDefaults() error {
 		dev.InitContainer.Image = OktetoBinImageTag
 	}
 	if dev.Healthchecks {
-		oktetoLog.Yellow("The use of 'healthchecks' field is deprecated and will be removed in version 2.2.0. Please use the field 'probes' instead.")
+		oktetoLog.Yellow("The use of 'healthchecks' field is deprecated and will be removed in a future version. Please use the field 'probes' instead.")
 		if dev.Probes == nil {
 			dev.Probes = &Probes{Liveness: true, Readiness: true, Startup: true}
 		}
@@ -1138,28 +1138,28 @@ func GetTimeout() (time.Duration, error) {
 
 func (dev *Dev) translateDeprecatedMetadataFields() error {
 	if len(dev.Labels) > 0 {
-		oktetoLog.Warning("The field 'labels' is deprecated and will be removed in version 2.2.0. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
+		oktetoLog.Warning("The field 'labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
 		for k, v := range dev.Labels {
 			dev.Selector[k] = v
 		}
 	}
 
 	if len(dev.Annotations) > 0 {
-		oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in version 2.2.0. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
+		oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in a future version. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
 		for k, v := range dev.Annotations {
 			dev.Metadata.Annotations[k] = v
 		}
 	}
 	for _, s := range dev.Services {
 		if len(s.Labels) > 0 {
-			oktetoLog.Warning("The field '%s.labels' is deprecated and will be removed in version 2.2.0. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
+			oktetoLog.Warning("The field '%s.labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
 			for k, v := range s.Labels {
 				s.Selector[k] = v
 			}
 		}
 
 		if len(s.Annotations) > 0 {
-			oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in version 2.2.0. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
+			oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in a future version. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
 			for k, v := range s.Annotations {
 				s.Metadata.Annotations[k] = v
 			}
