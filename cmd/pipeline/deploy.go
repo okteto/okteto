@@ -145,7 +145,7 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 	}
 
 	if opts.Filename != "" {
-		oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in version 2.2.0. Please consider using 'file' flag")
+		oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag")
 		if opts.File == "" {
 			opts.File = opts.Filename
 		} else {

@@ -37,7 +37,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 		Use:   "endpoints [service...]",
 		Short: "Show endpoints for a stack",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			oktetoLog.Warning("'okteto stack endpoints' is deprecated and will be removed in version 2.2.0")
+			oktetoLog.Warning("'okteto stack endpoints' is deprecated and will be removed in a future version")
 			s, err := contextCMD.LoadStackWithContext(ctx, name, namespace, stackPath)
 			if err != nil {
 				return err
