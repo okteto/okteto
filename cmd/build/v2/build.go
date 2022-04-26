@@ -242,7 +242,7 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	if err != nil {
 		return "", err
 	}
-	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, &types.BuildOptions{})
+	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options)
 
 	if build.ShouldOptimizeBuild(buildOptions) {
 		tag, err := bc.optimizeBuild(buildOptions, svcName)
