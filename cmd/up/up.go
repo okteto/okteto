@@ -29,7 +29,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/build"
 	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -769,7 +768,7 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 	defer sp.Stop()
 
 	for buildName, buildInfo := range m.Build {
-		opts := build.OptsFromManifest(buildName, buildInfo, &build.BuildOptions{})
+		opts := buildCMD.OptsFromManifest(buildName, buildInfo, &buildCMD.BuildOptions{})
 		imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
 		if err == oktetoErrors.ErrNotFound {
 			os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(buildName)), opts.Tag)
