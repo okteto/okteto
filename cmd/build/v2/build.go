@@ -233,7 +233,7 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
 
-	fromImage := buildSvcInfo.Image
+	fromImage := manifest.Build[svcName].Image
 	if options.Tag != "" {
 		fromImage = options.Tag
 	}

@@ -683,7 +683,9 @@ func (m *Manifest) setDefaults() error {
 			b.Context = b.Name
 			b.Name = ""
 		}
-		b.setBuildDefaults()
+		if !(b.Image != "" && len(b.VolumesToInclude) > 0 && b.Dockerfile == "") {
+			b.setBuildDefaults()
+		}
 	}
 	return nil
 }
@@ -781,14 +783,31 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 			m.Dev[svcName] = d
 		}
 
-		if svcInfo.Build == nil {
+		if svcInfo.Build == nil && len(svcInfo.VolumeMounts) == 0 {
 			continue
 		}
+
 		buildInfo := svcInfo.Build
-		if svcInfo.Image != "" {
-			buildInfo.Image = svcInfo.Image
+
+		switch {
+		case buildInfo != nil && len(svcInfo.VolumeMounts) > 0:
+			if svcInfo.Image != "" {
+				buildInfo.Image = svcInfo.Image
+			}
+			buildInfo.VolumesToInclude = svcInfo.VolumeMounts
+		case buildInfo != nil:
+			if svcInfo.Image != "" {
+				buildInfo.Image = svcInfo.Image
+			}
+		case len(svcInfo.VolumeMounts) >= 0:
+			buildInfo = &BuildInfo{
+				Image:            svcInfo.Image,
+				VolumesToInclude: svcInfo.VolumeMounts,
+			}
+		default:
+			oktetoLog.Infof("could not build service %s, due to not having Dockerfile defined or volumes to include", svcName)
 		}
-		buildInfo.VolumesToInclude = svcInfo.VolumeMounts
+
 		buildInfo.Context, err = filepath.Rel(cwd, buildInfo.Context)
 		if err != nil {
 			oktetoLog.Infof("can not make svc[%s].build.context relative to cwd", svcName)
