@@ -16,7 +16,6 @@ package stack
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -25,13 +24,11 @@ import (
 	"strings"
 
 	"github.com/compose-spec/godotenv"
+	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/cmd/build"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -60,11 +57,10 @@ const (
 )
 
 func translate(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
-	if err := translateStackEnvVars(ctx, s); err != nil {
+	if err := translateBuildImages(ctx, s, options); err != nil {
 		return err
 	}
-
-	return translateBuildImages(ctx, s, options)
+	return translateStackEnvVars(ctx, s)
 }
 
 func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
@@ -125,129 +121,32 @@ func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, f
 }
 
 func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
-	hasBuiltSomething := false
-	for svcName, svcInfo := range s.Services {
-		if svcInfo.Build == nil && len(svcInfo.VolumeMounts) == 0 {
-			continue
+	manifest := model.NewManifestFromStack(s)
+	builder := buildv2.NewBuilderFromScratch()
+	if options.ForceBuild {
+		buildOptions := &types.BuildOptions{
+			Manifest: manifest,
 		}
-		buildInfo := svcInfo.Build
-		if !okteto.IsOkteto() && buildInfo.Image == "" {
-			return fmt.Errorf("'build' and 'image' fields of service '%s' cannot be empty", svcName)
+		if err := builder.Build(ctx, buildOptions); err != nil {
+			return err
 		}
-		if buildInfo == nil {
-			buildInfo = &model.BuildInfo{
-				VolumesToInclude: svcInfo.VolumeMounts,
+	} else {
+		svcsToBuild, err := builder.GetServicesToBuild(ctx, manifest)
+		if err != nil {
+			return err
+		}
+		if len(svcsToBuild) != 0 {
+			buildOptions := &types.BuildOptions{
+				CommandArgs: svcsToBuild,
+				Manifest:    manifest,
 			}
-		} else {
-			buildInfo.Image = svcInfo.Image
-		}
-		opts := build.OptsFromManifest(svcName, buildInfo, &build.BuildOptions{})
-
-		if okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
-			buildInfo.Image = ""
-		}
-		if !options.ForceBuild {
-			if buildInfo != nil {
-				if build.ShouldOptimizeBuild(opts.Tag) {
-					oktetoLog.Debug("found OKTETO_GIT_COMMIT, optimizing the build flow")
-					if imageTagWithDigest := getGlobalTagWithDigest(opts.Tag); imageTagWithDigest != "" {
-						svcInfo.Image = imageTagWithDigest
-						continue
-					}
-				}
-				if imageTagWithDigest, err := registry.GetImageTagWithDigest(opts.Tag); err != oktetoErrors.ErrNotFound {
-					svcInfo.Image = imageTagWithDigest
-					continue
-				}
-				oktetoLog.Infof("image '%s' not found, building it", opts.Tag)
-			}
-		}
-
-		volumesToInclude := build.GetVolumesToInclude(svcInfo.VolumeMounts)
-		if buildInfo == nil || buildInfo.Dockerfile == "" && len(volumesToInclude) == 0 {
-			continue
-		}
-		if !hasBuiltSomething {
-			hasBuiltSomething = true
-			if okteto.Context().Builder != "" {
-				oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
-			} else {
-				oktetoLog.Information("Running your build in docker")
-			}
-		}
-
-		options := &build.BuildOptions{}
-		var imageTagWithDigest string
-		var err error
-		if buildInfo != nil && buildInfo.Dockerfile != "" {
-			oktetoLog.Information("Building image for service '%s'", svcName)
-
-			if len(volumesToInclude) > 0 {
-				buildInfo.VolumesToInclude = nil
-			}
-
-			options = build.OptsFromManifest(svcName, buildInfo, &build.BuildOptions{})
-			if err := build.Run(ctx, options); err != nil {
+			if err := builder.Build(ctx, buildOptions); err != nil {
 				return err
 			}
-			imageTagWithDigest, err = registry.GetImageTagWithDigest(options.Tag)
-			if err != nil {
-				return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
-			}
 		}
-
-		if len(volumesToInclude) > 0 {
-			oktetoLog.Information("Including volume hosts for service '%s'", svcName)
-			fromImage := options.Tag
-			if fromImage == "" {
-				fromImage = svcInfo.Image
-			}
-			svcBuild, err := registry.CreateDockerfileWithVolumeMounts(fromImage, volumesToInclude)
-			if err != nil {
-				return err
-			}
-			svcBuild.VolumesToInclude = volumesToInclude
-			options = build.OptsFromManifest(svcName, svcBuild, &build.BuildOptions{})
-			if err := build.Run(ctx, options); err != nil {
-				return err
-			}
-			imageTagWithDigest, err = registry.GetImageTagWithDigest(options.Tag)
-			if err != nil {
-				return fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
-			}
-		}
-		svcInfo.Image = imageTagWithDigest
-		oktetoLog.Success("Image for service '%s' pushed to registry: %s", svcName, imageTagWithDigest)
 	}
-
+	*s = *manifest.Deploy.ComposeSection.Stack
 	return nil
-}
-
-func getGlobalTagWithDigest(imageTag string) string {
-	globalReference := strings.Replace(imageTag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
-	imageWithDigest, err := registry.GetImageTagWithDigest(globalReference)
-	if errors.Is(err, oktetoErrors.ErrNotFound) {
-		oktetoLog.Debug("image not built at global registry, not running optimization for deployment")
-		return ""
-	}
-	if err != nil {
-		oktetoLog.Debugf("could not get image due to: %s", err)
-		return ""
-	}
-	return imageWithDigest
-}
-
-func getAccessibleVolumeMounts(stack *model.Stack, svcName string) []model.StackVolume {
-	accessibleVolumeMounts := make([]model.StackVolume, 0)
-	for _, volume := range stack.Services[svcName].VolumeMounts {
-		if _, err := os.Stat(volume.LocalPath); !os.IsNotExist(err) {
-			accessibleVolumeMounts = append(accessibleVolumeMounts, volume)
-		} else {
-			warning := fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. Could not find '%s'.", svcName, volume.LocalPath, volume.RemotePath, volume.LocalPath)
-			stack.Warnings.VolumeMountWarnings = append(stack.Warnings.VolumeMountWarnings, warning)
-		}
-	}
-	return accessibleVolumeMounts
 }
 
 func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
@@ -364,7 +263,7 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					InitContainers:                initContainers,
 					Affinity:                      translateAffinity(svc),
-					Volumes:                       translateVolumes(svcName, svc),
+					Volumes:                       translateVolumes(svc),
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -374,7 +273,7 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 							Env:             translateServiceEnvironment(svc),
 							Ports:           translateContainerPorts(svc),
 							SecurityContext: translateSecurityContext(svc),
-							VolumeMounts:    translateVolumeMounts(svcName, svc),
+							VolumeMounts:    translateVolumeMounts(svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
 							ReadinessProbe:  healthcheckProbe,
@@ -423,14 +322,14 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 							Env:             translateServiceEnvironment(svc),
 							Ports:           translateContainerPorts(svc),
 							SecurityContext: translateSecurityContext(svc),
-							VolumeMounts:    translateVolumeMounts(svcName, svc),
+							VolumeMounts:    translateVolumeMounts(svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
 							ReadinessProbe:  healthcheckProbe,
 							LivenessProbe:   healthcheckProbe,
 						},
 					},
-					Volumes: translateVolumes(svcName, svc),
+					Volumes: translateVolumes(svc),
 				},
 			},
 		},
@@ -551,7 +450,7 @@ func translateVolumeClaimTemplates(svcName string, s *model.Stack) []apiv1.Persi
 	return nil
 }
 
-func translateVolumes(svcName string, svc *model.Service) []apiv1.Volume {
+func translateVolumes(svc *model.Service) []apiv1.Volume {
 	volumes := make([]apiv1.Volume, 0)
 	for _, volume := range svc.Volumes {
 		name := getVolumeClaimName(&volume)
@@ -787,7 +686,7 @@ func translateServiceType(svc model.Service) apiv1.ServiceType {
 	return apiv1.ServiceTypeClusterIP
 }
 
-func translateVolumeMounts(svcName string, svc *model.Service) []apiv1.VolumeMount {
+func translateVolumeMounts(svc *model.Service) []apiv1.VolumeMount {
 	result := []apiv1.VolumeMount{}
 	for i, v := range svc.Volumes {
 		name := getVolumeClaimName(&v)

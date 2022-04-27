@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/moby/term"
+	buildv1 "github.com/okteto/okteto/cmd/build/v1"
+	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/manifest"
@@ -31,7 +33,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
-	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -43,6 +44,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
+	"github.com/okteto/okteto/pkg/types"
 
 	"github.com/spf13/cobra"
 )
@@ -404,6 +406,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		Proxy:              proxy,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
 		K8sClientProvider:  okteto.NewK8sClientProvider(),
+		Builder:            buildv2.NewBuilderFromScratch(),
 	}
 
 	return c.RunDeploy(ctx, &deploy.Options{
@@ -554,7 +557,24 @@ func (up *upContext) applyToApps(ctx context.Context) chan error {
 }
 
 func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
-	if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
+	dockerfile := up.Dev.Image.Dockerfile
+	image := up.Dev.Image.Name
+	args := up.Dev.Image.Args
+	context := up.Dev.Image.Context
+	target := up.Dev.Image.Target
+	cacheFrom := up.Dev.Image.CacheFrom
+	if v, ok := up.Manifest.Build[up.Dev.Name]; up.Manifest.IsV2 && ok {
+		dockerfile = v.Dockerfile
+		image = v.Image
+		args = v.Args
+		context = v.Context
+		target = v.Target
+		cacheFrom = v.CacheFrom
+		if image != "" {
+			up.Dev.EmptyImage = false
+		}
+	}
+	if _, err := os.Stat(dockerfile); err != nil {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
 			Hint: "Try creating a Dockerfile file or specify the 'context' and 'dockerfile' fields in your okteto manifest.",
@@ -562,35 +582,36 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 	}
 
 	oktetoRegistryURL := okteto.Context().Registry
-	if oktetoRegistryURL == "" && up.Dev.Autocreate && up.Dev.Image.Name == "" {
+	if oktetoRegistryURL == "" && up.Dev.Autocreate && image == "" {
 		return fmt.Errorf("no value for 'image' has been provided in your okteto manifest")
 	}
 
-	if up.Dev.Image.Name == "" {
+	if image == "" {
 		devContainer := apps.GetDevContainer(app.PodSpec(), up.Dev.Container)
 		if devContainer == nil {
 			return fmt.Errorf("container '%s' does not exist in deployment '%s'", up.Dev.Container, up.Dev.Name)
 		}
-		up.Dev.Image.Name = devContainer.Image
+		image = devContainer.Image
 	}
 
 	oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
 
-	imageTag := registry.GetImageTag(up.Dev.Image.Name, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
+	imageTag := registry.GetImageTag(image, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
 	oktetoLog.Infof("building dev image tag %s", imageTag)
 
-	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
+	buildArgs := model.SerializeBuildArgs(args)
 
-	buildOptions := &buildCMD.BuildOptions{
-		Path:       up.Dev.Image.Context,
-		File:       up.Dev.Image.Dockerfile,
+	buildOptions := &types.BuildOptions{
+		Path:       context,
+		File:       dockerfile,
 		Tag:        imageTag,
-		Target:     up.Dev.Image.Target,
-		CacheFrom:  up.Dev.Image.CacheFrom,
+		Target:     target,
+		CacheFrom:  cacheFrom,
 		BuildArgs:  buildArgs,
 		OutputMode: oktetoLog.TTYFormat,
 	}
-	if err := buildCMD.Run(ctx, buildOptions); err != nil {
+	builder := buildv1.NewBuilderFromScratch()
+	if err := builder.Build(ctx, buildOptions); err != nil {
 		return err
 	}
 	for _, s := range up.Dev.Services {
@@ -731,23 +752,28 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 	defer sp.Stop()
 
 	for buildName, buildInfo := range m.Build {
-		opts := build.OptsFromManifest(buildName, buildInfo, &build.BuildOptions{})
-		imageWithDigest, err := registry.GetImageTagWithDigest(opts.Tag)
-		if err == oktetoErrors.ErrNotFound {
-			os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(buildName)), opts.Tag)
-		} else if err != nil {
-			return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
-		} else {
-			if err := deploy.SetManifestEnvVars(buildName, imageWithDigest); err != nil {
+		opts := build.OptsFromBuildInfo(m.Name, buildName, buildInfo, &types.BuildOptions{})
+		imageWithDigest, err := registry.NewOktetoRegistry().GetImageTagWithDigest(opts.Tag)
+		if err == nil {
+			builder := buildv2.NewBuilderFromScratch()
+			builder.SetServiceEnvVars(buildName, imageWithDigest)
+		} else if errors.Is(err, oktetoErrors.ErrNotFound) {
+			sanitizedSvc := strings.ReplaceAll(buildName, "-", "_")
+			if err := os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(sanitizedSvc)), opts.Tag); err != nil {
 				return err
 			}
+		} else {
+			return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
 		}
 	}
 
 	var err error
-	if _, ok := m.Dev[devName]; ok && m.Dev[devName].Image != nil {
+	if value, ok := m.Dev[devName]; ok && value.Image != nil {
 		m.Dev[devName].Image.Name, err = model.ExpandEnv(m.Dev[devName].Image.Name, false)
+		if err != nil {
+			return err
+		}
 	}
 
-	return err
+	return nil
 }

@@ -84,7 +84,7 @@ func (up *upContext) activate() error {
 		return err
 	}
 
-	if _, err := registry.GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
+	if _, err := registry.NewOktetoRegistry().GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
 		oktetoLog.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
 		if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
 			return oktetoErrors.UserError{

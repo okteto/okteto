@@ -82,8 +82,8 @@ build:
 	})
 
 	t.Run("okteto build should build and push the image to registry", func(t *testing.T) {
-
-		if _, err := registry.GetImageTagWithDigest(expectedImageTag); err == nil {
+		reg := registry.NewOktetoRegistry()
+		if _, err := reg.GetImageTagWithDigest(expectedImageTag); err == nil {
 			t.Fatal("image is already at registry")
 		}
 
@@ -92,7 +92,7 @@ build:
 			t.Fatal(err)
 		}
 
-		if _, err := registry.GetImageTagWithDigest(expectedImageTag); err != nil {
+		if _, err := reg.GetImageTagWithDigest(expectedImageTag); err != nil {
 			t.Fatalf("image not pushed to registry: %v \nbuild output: %s", err, output)
 		}
 

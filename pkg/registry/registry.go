@@ -30,6 +30,14 @@ const (
 	dockerRegistry = "https://registry.hub.docker.com"
 )
 
+// OktetoRegistry runs the build of an image
+type OktetoRegistry struct{}
+
+// NewOktetoRegistry creates a okteto registry
+func NewOktetoRegistry() *OktetoRegistry {
+	return &OktetoRegistry{}
+}
+
 // ImageConfig is the struct of the information that can be inferred from an image
 type ImageConfig struct {
 	CMD          []string
@@ -38,7 +46,7 @@ type ImageConfig struct {
 }
 
 // GetImageTagWithDigest returns the image tag digest
-func GetImageTagWithDigest(imageTag string) (string, error) {
+func (*OktetoRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
 	reference := imageTag
 
 	if okteto.IsOkteto() {
@@ -183,7 +191,7 @@ func IsDevRegistry(tag string) bool {
 
 // IsOktetoRegistry returns if an image tag is pointing to the okteto registry
 func IsOktetoRegistry(tag string) bool {
-	return IsDevRegistry(tag) || IsGlobalRegistry(tag) || strings.HasPrefix(tag, okteto.Context().Registry)
+	return IsDevRegistry(tag) || IsGlobalRegistry(tag) || (okteto.IsOkteto() && strings.HasPrefix(tag, okteto.Context().Registry))
 }
 
 // replaceRegistry replaces the short registry url with the okteto registry url

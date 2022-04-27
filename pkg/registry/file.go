@@ -166,6 +166,7 @@ func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume)
 	}
 
 	build.Dockerfile = tmpFile.Name()
+	build.VolumesToInclude = volumes
 	return build, nil
 }
 
