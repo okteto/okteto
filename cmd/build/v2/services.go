@@ -49,6 +49,9 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 
 	if len(toBuild) == 0 {
 		oktetoLog.Information("Images were already built. To rebuild your images run 'okteto build' or 'okteto deploy --build'")
+		if err := manifest.ExpandEnvVars(); err != nil {
+			return nil, err
+		}
 		return nil, nil
 	}
 
