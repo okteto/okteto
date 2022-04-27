@@ -262,3 +262,75 @@ func TestInferFromStack(t *testing.T) {
 		})
 	}
 }
+
+func TestSetManifestDefaultsFromDev(t *testing.T) {
+	os.Setenv("my_key", "my_value")
+	tests := []struct {
+		name              string
+		currentManifest   *Manifest
+		expectedContext   string
+		expectedNamespace string
+	}{
+		{
+			name: "setting only manifest.Namespace",
+			currentManifest: &Manifest{
+				Dev: ManifestDevs{
+					"test": &Dev{
+						Namespace: "other-ns",
+					},
+				},
+			},
+			expectedContext:   "",
+			expectedNamespace: "other-ns",
+		},
+		{
+			name: "setting only manifest.Context",
+			currentManifest: &Manifest{
+				Dev: ManifestDevs{
+					"test": &Dev{
+						Context: "other-ctx",
+					},
+				},
+			},
+			expectedContext:   "other-ctx",
+			expectedNamespace: "",
+		},
+		{
+			name: "setting manifest.Context & manifest.Namespace",
+			currentManifest: &Manifest{
+				Dev: ManifestDevs{
+					"test": &Dev{
+						Context:   "other-ctx",
+						Namespace: "other-ns",
+					},
+				},
+			},
+			expectedContext:   "other-ctx",
+			expectedNamespace: "other-ns",
+		},
+		{
+			name: "not overwrite if manifest has more than one dev",
+			currentManifest: &Manifest{
+				Namespace: "test",
+				Context:   "test",
+				Dev: ManifestDevs{
+					"test": &Dev{
+						Context: "other-ctx",
+					},
+					"test-2": &Dev{
+						Context: "other-ctx",
+					},
+				},
+			},
+			expectedContext:   "test",
+			expectedNamespace: "test",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.currentManifest.SetManifestDefaultsFromDev()
+			assert.Equal(t, tt.expectedContext, tt.currentManifest.Context)
+			assert.Equal(t, tt.expectedNamespace, tt.currentManifest.Namespace)
+		})
+	}
+}

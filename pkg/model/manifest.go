@@ -293,6 +293,8 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		if devManifest.IsV2 {
 			return devManifest, nil
 		}
+		devManifest.SetManifestDefaultsFromDev()
+
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest unmarshalled successfully")
 	}
 
@@ -1056,4 +1058,16 @@ func (m *Manifest) IsDeployDefault() bool {
 		return true
 	}
 	return false
+}
+
+// SetManifestDefaultsFromDev sets context and namespace from the dev
+func (m *Manifest) SetManifestDefaultsFromDev() {
+	if len(m.Dev) == 1 {
+		for _, devInfo := range m.Dev {
+			m.Context = devInfo.Context
+			m.Namespace = devInfo.Namespace
+		}
+	} else {
+		oktetoLog.Infof("could not set context and manifest from dev section due to being '%d' devs declared", len(m.Dev))
+	}
 }
