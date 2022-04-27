@@ -313,10 +313,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
-	if err := deployOptions.Manifest.ExpandEnvVars(); err != nil {
-		return err
-	}
-
 	setDeployOptionsValuesFromManifest(deployOptions, cwd)
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
 	dc.Proxy.Start()

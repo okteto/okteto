@@ -260,6 +260,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		Tag:       b.Image,
 		File:      file,
 		BuildArgs: args,
+		NoCache:   o.NoCache,
 	}
 
 	outputMode := oktetoLog.GetOutputFormat()
