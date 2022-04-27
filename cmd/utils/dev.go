@@ -151,19 +151,27 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 	} else if len(manifest.Dev) == 1 {
 		for name, dev := range manifest.Dev {
 			if devName != "" && devName != name {
-				return nil, fmt.Errorf("dev '%s' doesn't exist", devName)
+				return nil, oktetoErrors.UserError{
+					E:    fmt.Errorf("development container '%s' doesn't exist", devName),
+					Hint: fmt.Sprintf("Available options are: [%s]", name),
+				}
 			}
 			return dev, nil
 		}
 	}
 
 	if devName != "" {
+		options := []string{}
 		for k := range manifest.Dev {
 			if k == devName {
 				return manifest.Dev[devName], nil
 			}
+			options = append(options, k)
 		}
-		return nil, fmt.Errorf("development container '%s' doesn't exist", devName)
+		return nil, oktetoErrors.UserError{
+			E:    fmt.Errorf("development container '%s' doesn't exist", devName),
+			Hint: fmt.Sprintf("Available options are: [%s]", strings.Join(options, ", ")),
+		}
 	}
 	devs := []string{}
 	for k := range manifest.Dev {
