@@ -24,7 +24,9 @@ import (
 )
 
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
-	up := upContext{}
+	up := upContext{
+		Options: &UpOptions{},
+	}
 	up.CommandResult = make(chan error, 1)
 	up.CommandResult <- nil
 	ctx := context.Background()
