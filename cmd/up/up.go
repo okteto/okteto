@@ -174,6 +174,62 @@ func Up() *cobra.Command {
 					}
 				}
 			}
+
+			up := &upContext{
+				Manifest:       oktetoManifest,
+				Dev:            nil,
+				Exit:           make(chan error, 1),
+				resetSyncthing: upOptions.Reset,
+				StartTime:      time.Now(),
+				Options:        upOptions,
+			}
+			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
+			if up.isTerm {
+				var err error
+				up.stateTerm, err = term.SaveState(up.inFd)
+				if err != nil {
+					oktetoLog.Infof("failed to save the state of the terminal: %s", err.Error())
+					return fmt.Errorf("failed to save the state of the terminal")
+				}
+				oktetoLog.Infof("Terminal: %v", up.stateTerm)
+			}
+			up.Client, up.RestConfig, err = okteto.GetK8sClient()
+			if err != nil {
+				return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
+			}
+
+			autocreateDev := true
+			if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
+				if !upOptions.Deploy {
+					oktetoLog.Information("Deploying development environment '%s'...", up.Manifest.Name)
+					oktetoLog.Information("To redeploy your development environment manually run 'okteto deploy' or 'okteto up --deploy'")
+				}
+				startTime := time.Now()
+				err := up.deployApp(ctx)
+				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
+					return err
+				}
+				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err && !upOptions.Detach {
+					autocreateDev = false
+				}
+				if err != nil {
+					analytics.TrackDeploy(analytics.TrackDeployMetadata{
+						Success:                err == nil,
+						IsOktetoRepo:           utils.IsOktetoRepo(),
+						Duration:               time.Since(startTime),
+						PipelineType:           up.Manifest.Type,
+						DeployType:             "automatic",
+						IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
+						HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
+						HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
+					})
+				}
+
+			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
+				oktetoLog.Information("Development environment '%s' already deployed.", up.Manifest.Name)
+				oktetoLog.Information("To redeploy your development environment run 'okteto deploy' or 'okteto up [devName] --deploy'")
+			}
+
 			var dev *model.Dev
 			if upOptions.Detach {
 				dev, err = utils.GetDevDetachMode(oktetoManifest, upOptions.Devs)
@@ -185,6 +241,10 @@ func Up() *cobra.Command {
 				if err != nil {
 					return err
 				}
+			}
+			up.Dev = dev
+			if !autocreateDev {
+				up.Dev.Autocreate = false
 			}
 
 			if err := setBuildEnvVars(oktetoManifest, dev.Name); err != nil {
@@ -227,60 +287,6 @@ func Up() *cobra.Command {
 
 			if _, ok := os.LookupEnv(model.OktetoAutoDeployEnvVar); ok {
 				upOptions.Deploy = true
-			}
-
-			up := &upContext{
-				Manifest:       oktetoManifest,
-				Dev:            dev,
-				Exit:           make(chan error, 1),
-				resetSyncthing: upOptions.Reset,
-				StartTime:      time.Now(),
-				Options:        upOptions,
-			}
-			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
-			if up.isTerm {
-				var err error
-				up.stateTerm, err = term.SaveState(up.inFd)
-				if err != nil {
-					oktetoLog.Infof("failed to save the state of the terminal: %s", err.Error())
-					return fmt.Errorf("failed to save the state of the terminal")
-				}
-				oktetoLog.Infof("Terminal: %v", up.stateTerm)
-			}
-			up.Client, up.RestConfig, err = okteto.GetK8sClient()
-			if err != nil {
-				return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
-			}
-
-			if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
-				if !upOptions.Deploy {
-					oktetoLog.Information("Deploying development environment '%s'...", up.Manifest.Name)
-					oktetoLog.Information("To redeploy your development environment manually run 'okteto deploy' or 'okteto up --deploy'")
-				}
-				startTime := time.Now()
-				err := up.deployApp(ctx)
-				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
-					return err
-				}
-				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err && !upOptions.Detach {
-					up.Dev.Autocreate = false
-				}
-				if err != nil {
-					analytics.TrackDeploy(analytics.TrackDeployMetadata{
-						Success:                err == nil,
-						IsOktetoRepo:           utils.IsOktetoRepo(),
-						Duration:               time.Since(startTime),
-						PipelineType:           up.Manifest.Type,
-						DeployType:             "automatic",
-						IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
-						HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
-						HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
-					})
-				}
-
-			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
-				oktetoLog.Information("Development environment '%s' already deployed.", up.Manifest.Name)
-				oktetoLog.Information("To redeploy your development environment run 'okteto deploy' or 'okteto up %s --deploy'", up.Dev.Name)
 			}
 
 			err = up.start()
