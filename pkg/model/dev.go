@@ -476,7 +476,7 @@ func (dev *Dev) SetDefaults() error {
 		dev.InitContainer.Image = OktetoBinImageTag
 	}
 	if dev.Healthchecks {
-		oktetoLog.Yellow("The use of 'healthchecks' field is deprecated and will be removed in version 2.2.0. Please use the field 'probes' instead.")
+		oktetoLog.Yellow("The use of 'healthchecks' field is deprecated and will be removed in a future version. Please use the field 'probes' instead.")
 		if dev.Probes == nil {
 			dev.Probes = &Probes{Liveness: true, Readiness: true, Startup: true}
 		}
@@ -554,12 +554,12 @@ func (dev *Dev) SetDefaults() error {
 	return nil
 }
 
-func (build *BuildInfo) setBuildDefaults() {
-	if build.Context == "" {
-		build.Context = "."
+func (b *BuildInfo) setBuildDefaults() {
+	if b.Context == "" {
+		b.Context = "."
 	}
-	if _, err := url.ParseRequestURI(build.Context); err != nil && build.Dockerfile == "" {
-		build.Dockerfile = "Dockerfile"
+	if _, err := url.ParseRequestURI(b.Context); err != nil && b.Dockerfile == "" {
+		b.Dockerfile = "Dockerfile"
 	}
 }
 
@@ -1138,28 +1138,28 @@ func GetTimeout() (time.Duration, error) {
 
 func (dev *Dev) translateDeprecatedMetadataFields() error {
 	if len(dev.Labels) > 0 {
-		oktetoLog.Warning("The field 'labels' is deprecated and will be removed in version 2.2.0. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
+		oktetoLog.Warning("The field 'labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
 		for k, v := range dev.Labels {
 			dev.Selector[k] = v
 		}
 	}
 
 	if len(dev.Annotations) > 0 {
-		oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in version 2.2.0. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
+		oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in a future version. Use the field 'metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)")
 		for k, v := range dev.Annotations {
 			dev.Metadata.Annotations[k] = v
 		}
 	}
 	for _, s := range dev.Services {
 		if len(s.Labels) > 0 {
-			oktetoLog.Warning("The field '%s.labels' is deprecated and will be removed in version 2.2.0. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
+			oktetoLog.Warning("The field '%s.labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
 			for k, v := range s.Labels {
 				s.Selector[k] = v
 			}
 		}
 
 		if len(s.Annotations) > 0 {
-			oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in version 2.2.0. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
+			oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in a future version. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
 			for k, v := range s.Annotations {
 				s.Metadata.Annotations[k] = v
 			}
@@ -1261,4 +1261,27 @@ func getLocalhost() string {
 		return PrivilegedLocalhost
 	}
 	return Localhost
+}
+
+// Copy clones the buildInfo without the pointers
+func (b *BuildInfo) Copy() *BuildInfo {
+	result := &BuildInfo{
+		Name:       b.Name,
+		Context:    b.Context,
+		Dockerfile: b.Dockerfile,
+		Target:     b.Target,
+		Image:      b.Image,
+	}
+	cacheFrom := []string{}
+	cacheFrom = append(cacheFrom, b.CacheFrom...)
+	result.CacheFrom = cacheFrom
+
+	args := Environment{}
+	args = append(args, b.Args...)
+	result.Args = args
+
+	volumesToMount := []StackVolume{}
+	volumesToMount = append(volumesToMount, b.VolumesToInclude...)
+	result.VolumesToInclude = volumesToMount
+	return result
 }

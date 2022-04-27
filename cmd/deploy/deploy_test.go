@@ -15,10 +15,7 @@ package deploy
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
@@ -416,82 +413,6 @@ func getManifestWithError(_ string) (*model.Manifest, error) {
 
 func getFakeManifest(_ string) (*model.Manifest, error) {
 	return fakeManifest, nil
-}
-
-func Test_SetManifestEnvVars(t *testing.T) {
-	tests := []struct {
-		name          string
-		service       string
-		reference     string
-		expRegistry   string
-		expRepository string
-		expImage      string
-		expTag        string
-	}{
-		{
-			name:          "setting-variables",
-			service:       "frontend",
-			reference:     "registry.url/namespace/frontend@sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
-			expRegistry:   "registry.url",
-			expRepository: "namespace/frontend",
-			expImage:      "registry.url/namespace/frontend@sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
-			expTag:        "sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
-		},
-		{
-			name:          "setting-variables-no-tag",
-			service:       "frontend",
-			reference:     "registry.url/namespace/frontend",
-			expRegistry:   "registry.url",
-			expRepository: "namespace/frontend",
-			expImage:      "registry.url/namespace/frontend",
-			expTag:        "latest",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			registryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", strings.ToUpper(tt.service))
-			imageEnv := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(tt.service))
-			repositoryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", strings.ToUpper(tt.service))
-			tagEnv := fmt.Sprintf("OKTETO_BUILD_%s_TAG", strings.ToUpper(tt.service))
-
-			envs := []string{registryEnv, imageEnv, repositoryEnv, tagEnv}
-			for _, e := range envs {
-				if err := os.Unsetenv(e); err != nil {
-					t.Errorf("error unsetting var %s", err.Error())
-				}
-			}
-			for _, e := range envs {
-				if v := os.Getenv(e); v != "" {
-					t.Errorf("env variable is already set [%v]", e)
-				}
-			}
-
-			SetManifestEnvVars(tt.service, tt.reference)
-
-			registryEnvValue := os.Getenv(registryEnv)
-			imageEnvValue := os.Getenv(imageEnv)
-			repositoryEnvValue := os.Getenv(repositoryEnv)
-			tagEnvValue := os.Getenv(tagEnv)
-
-			if registryEnvValue != tt.expRegistry {
-				t.Errorf("registry - expected %s , got %s", tt.expRegistry, registryEnvValue)
-			}
-			if imageEnvValue != tt.expImage {
-				t.Errorf("image - expected %s , got %s", tt.expImage, imageEnvValue)
-
-			}
-			if repositoryEnvValue != tt.expRepository {
-				t.Errorf("repository - expected %s , got %s", tt.expRepository, repositoryEnvValue)
-
-			}
-			if tagEnvValue != tt.expTag {
-				t.Errorf("tag - expected %s , got %s", tt.expTag, tagEnvValue)
-
-			}
-
-		})
-	}
 }
 
 func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {

@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/utils"
@@ -148,6 +149,22 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 		if opts.Context == "" {
 			manifest.Context = ""
 		}
+
+		if manifest.IsDeployDefault() && len(manifest.Build) == 1 {
+			if err := configureAutoCreateDev(manifest); err != nil {
+				return nil, err
+			}
+			manifest.Deploy = nil
+			if err := manifest.WriteToFile(opts.DevPath); err != nil {
+				return nil, err
+			}
+			oktetoLog.Success("Okteto manifest (%s) configured successfully", opts.DevPath)
+			if opts.ShowCTA {
+				oktetoLog.Information("Run 'okteto up' to activate your development container")
+			}
+			return manifest, nil
+		}
+
 		if err := manifest.WriteToFile(opts.DevPath); err != nil {
 			return nil, err
 		}
@@ -257,6 +274,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		Proxy:              proxy,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
+		Builder:            buildv2.NewBuilderFromScratch(),
 	}
 
 	err = c.RunDeploy(ctx, &deploy.Options{
@@ -546,4 +564,25 @@ func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
 		return &manifest, nil
 	}
 	return model.GetManifestV2(path)
+}
+
+func configureAutoCreateDev(manifest *model.Manifest) error {
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	language, err := GetLanguage("", wd)
+	if err != nil {
+		return err
+	}
+
+	dev, err := linguist.GetDevDefaults(language, wd, &registry.ImageConfig{})
+	if err != nil {
+		return err
+	}
+
+	dev.Autocreate = true
+	linguist.SetForwardDefaults(dev, language)
+	manifest.Dev[dev.Name] = dev
+	return nil
 }

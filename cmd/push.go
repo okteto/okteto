@@ -19,10 +19,10 @@ import (
 	"os"
 	"os/signal"
 
+	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/down"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 )
@@ -58,7 +59,7 @@ func Push(ctx context.Context) *cobra.Command {
 		Args:   utils.MaximumNArgsAccepted(1, "https://www.okteto.com/docs/0.10/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-				oktetoLog.Warning("'okteto push' is deprecated in favor of 'okteto deploy', and will be removed in version 2.2.0")
+				oktetoLog.Warning("'okteto push' is deprecated in favor of 'okteto deploy', and will be removed in a future version")
 			}
 			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)
 			if err != nil {
@@ -112,7 +113,7 @@ func Push(ctx context.Context) *cobra.Command {
 			oktetoRegistryURL := okteto.Context().Registry
 
 			if pushOpts.AutoDeploy {
-				oktetoLog.Warning(`The 'deploy' flag is deprecated and will be removed in version 2.2.0.
+				oktetoLog.Warning(`The 'deploy' flag is deprecated and will be removed in a future version.
     Set the 'autocreate' field in your okteto manifest to get the same behavior.
     More information is available here: https://okteto.com/docs/reference/cli#up`)
 			}
@@ -279,7 +280,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageFromApp, oktetoRegistr
 	oktetoLog.Infof("pushing with image tag %s", buildTag)
 
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)
-	buildOptions := &build.BuildOptions{
+	buildOptions := &types.BuildOptions{
 		Path:       dev.Push.Context,
 		File:       dev.Push.Dockerfile,
 		Tag:        buildTag,
@@ -289,7 +290,7 @@ func buildImage(ctx context.Context, dev *model.Dev, imageFromApp, oktetoRegistr
 		BuildArgs:  buildArgs,
 		OutputMode: pushOpts.Progress,
 	}
-	if err := build.Run(ctx, buildOptions); err != nil {
+	if err := buildv1.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
 

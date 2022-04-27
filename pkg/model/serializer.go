@@ -19,6 +19,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -391,6 +392,15 @@ func (s *Secret) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	parts := strings.Split(rawExpanded, ":")
+	if runtime.GOOS == "windows" {
+		if len(parts) >= 3 {
+			localPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
+			if filepath.IsAbs(localPath) {
+				parts = append([]string{localPath}, parts[2:]...)
+			}
+		}
+	}
+
 	if len(parts) < 2 || len(parts) > 3 {
 		return fmt.Errorf("secrets must follow the syntax 'LOCAL_PATH:REMOTE_PATH:MODE'")
 	}
@@ -498,7 +508,7 @@ func (v *Volume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.SplitN(raw, ":", 2)
 	if len(parts) == 2 {
-		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field and will be removed in version 2.2.0. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
+		oktetoLog.Yellow("The syntax '%s' is deprecated in the 'volumes' field and will be removed in a future version. Use the field 'sync' instead (%s)", raw, syncFieldDocsURL)
 		v.LocalPath, err = ExpandEnv(parts[0], true)
 		if err != nil {
 			return err

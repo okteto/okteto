@@ -149,6 +149,12 @@ var (
 
 	// ErrBuiltInOktetoEnvVarSetFromCMD is raised when user tries to set an okteto built-in environment variable
 	ErrBuiltInOktetoEnvVarSetFromCMD = errors.New("okteto built-in environment variable cannot be set from 'okteto up' command")
+
+	// ErrNoServicesToBuildDefined is raised when there are no services to build and buildV2 is called
+	ErrNoServicesToBuildDefined = errors.New("no services to build defined")
+
+	// ErrNoFlagAllowedOnSingleImageBuild is raised when the user tries to build a single image with flags
+	ErrNoFlagAllowedOnSingleImageBuild = errors.New("flags only allowed when building a single image with `okteto build [NAME]`")
 )
 
 // IsForbidden raised if the Okteto API returns 401

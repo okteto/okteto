@@ -56,7 +56,7 @@ func UpgradeAvailable() string {
 func GetLatestVersionFromGithub() (string, error) {
 	client := github.NewClient(nil)
 	ctx := context.Background()
-	releases, _, err := client.Repositories.ListReleases(ctx, "okteto", "okteto", &github.ListOptions{PerPage: 5})
+	releases, _, err := client.Repositories.ListReleases(ctx, "okteto", "okteto", &github.ListOptions{PerPage: 10})
 	if err != nil {
 		return "", fmt.Errorf("fail to get releases from github: %s", err)
 	}
