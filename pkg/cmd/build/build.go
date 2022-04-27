@@ -230,9 +230,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		tag := model.OktetoDefaultImageTag
 
 		envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
-		isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
-
-		if envGitCommit != "" && !isLocalEnvGitCommit {
+		if okteto.IsPipeline() {
 			params := strings.Join(args, "") + envGitCommit
 			tag = fmt.Sprintf("%x", sha256.Sum256([]byte(params)))
 		}
