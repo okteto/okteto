@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
+
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -59,6 +60,7 @@ type UpOptions struct {
 	K8sContext    string
 	DevName       string
 	Devs          []string
+	Envs          []string
 	Remote        int
 	Deploy        bool
 	Build         bool
@@ -312,6 +314,7 @@ func Up() *cobra.Command {
 	cmd.Flags().StringVarP(&upOptions.DevPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
+	cmd.Flags().StringArrayVarP(&upOptions.Envs, "env", "e", []string{}, "envs to add to the development container")
 	cmd.Flags().IntVarP(&upOptions.Remote, "remote", "r", 0, "configures remote execution on the specified port")
 	cmd.Flags().BoolVarP(&upOptions.Deploy, "deploy", "d", false, "Force execution of the commands in the 'deploy' section of the okteto manifest (defaults to 'false')")
 	cmd.Flags().BoolVarP(&upOptions.Build, "build", "", false, "build on-the-fly the dev image using the info provided by the 'build' okteto manifest field")
@@ -386,10 +389,55 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 		dev.LoadForcePull()
 	}
 
+	if len(upOptions.Envs) > 0 {
+		overridedEnvVars, err := getOverridedEnvVarsFromCmd(dev.Environment, upOptions.Envs)
+		if err != nil {
+			return err
+		} else {
+			dev.Environment = *overridedEnvVars
+		}
+	}
+
 	dev.Username = okteto.Context().Username
 	dev.RegistryURL = okteto.Context().Registry
 
 	return nil
+}
+
+func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVariables []string) (*model.Environment, error) {
+	envVarsToValues := make(map[string]string)
+	for _, manifestEnv := range manifestEnvVars {
+		envVarsToValues[manifestEnv.Name] = manifestEnv.Value
+	}
+
+	for _, v := range commandEnvVariables {
+		kv := strings.SplitN(v, "=", 2)
+		if len(kv) != 2 {
+			if kv[0] == "" {
+				return nil, fmt.Errorf("invalid variable value '%s': please review the accepted formats at https://www.okteto.com/docs/reference/manifest/#environment-string-optional ", v)
+			}
+			kv = append(kv, os.Getenv(kv[0]))
+		}
+
+		varNameToAdd, varValueToAdd := kv[0], kv[1]
+		if strings.HasPrefix(varNameToAdd, "OKTETO_") || varNameToAdd == model.OktetoBuildkitHostURLEnvVar {
+			return nil, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD
+		}
+
+		expandedEnv, err := model.ExpandEnv(varValueToAdd, true)
+		if err != nil {
+			return nil, err
+		}
+
+		envVarsToValues[varNameToAdd] = expandedEnv
+	}
+
+	overridedEnvVars := model.Environment{}
+	for k, v := range envVarsToValues {
+		overridedEnvVars = append(overridedEnvVars, model.EnvVar{Name: k, Value: v})
+	}
+
+	return &overridedEnvVars, nil
 }
 
 func (up *upContext) deployApp(ctx context.Context) error {

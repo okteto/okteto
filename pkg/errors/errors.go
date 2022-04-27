@@ -147,6 +147,9 @@ var (
 	// ErrGitHubNotVerifiedEmail is raised when github login has not a verified email
 	ErrGitHubNotVerifiedEmail = errors.New("github-not-verified-email")
 
+	// ErrBuiltInOktetoEnvVarSetFromCMD is raised when user tries to set an okteto built-in environment variable
+	ErrBuiltInOktetoEnvVarSetFromCMD = errors.New("okteto built-in environment variable cannot be set from 'okteto up' command")
+
 	// ErrNoServicesToBuildDefined is raised when there are no services to build and buildV2 is called
 	ErrNoServicesToBuildDefined = errors.New("no services to build defined")
 
