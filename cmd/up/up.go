@@ -381,8 +381,11 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 	}
 
 	if len(upOptions.Envs) > 0 {
-		if err := setEnvVarsFromCmd(dev, upOptions); err != nil {
+		overridedEnvVars, err := getOverridedEnvVarsFromCmd(dev.Environment, upOptions.Envs)
+		if err != nil {
 			return err
+		} else {
+			dev.Environment = *overridedEnvVars
 		}
 	}
 
@@ -392,39 +395,40 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 	return nil
 }
 
-func setEnvVarsFromCmd(dev *model.Dev, upOptions *UpOptions) error {
-	envVarsIndexFromManifest := make(map[string]int)
-	for i, manifestEnv := range dev.Environment {
-		envVarsIndexFromManifest[manifestEnv.Name] = i
+func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVariables []string) (*model.Environment, error) {
+	envVarsIndex := make(map[string]string)
+	for _, manifestEnv := range manifestEnvVars {
+		envVarsIndex[manifestEnv.Name] = manifestEnv.Value
 	}
 
-	for _, v := range upOptions.Envs {
+	for _, v := range commandEnvVariables {
 		kv := strings.SplitN(v, "=", 2)
 		if len(kv) != 2 {
 			if kv[0] == "" {
-				return fmt.Errorf("invalid variable value '%s': please review the accepted formats at https://www.okteto.com/docs/reference/manifest/#environment-string-optional ", v)
+				return nil, fmt.Errorf("invalid variable value '%s': please review the accepted formats at https://www.okteto.com/docs/reference/manifest/#environment-string-optional ", v)
 			}
 			kv = append(kv, os.Getenv(kv[0]))
 		}
 
 		varNameToAdd, varValueToAdd := kv[0], kv[1]
 		if strings.HasPrefix(varNameToAdd, "OKTETO_") || varNameToAdd == model.OktetoBuildkitHostURLEnvVar {
-			return oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD
+			return nil, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD
 		}
 
 		expandedEnv, err := model.ExpandEnv(varValueToAdd, true)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		if envvIndexManifest, ok := envVarsIndexFromManifest[varNameToAdd]; ok {
-			dev.Environment[envvIndexManifest].Value = expandedEnv
-		} else {
-			dev.Environment = append(dev.Environment, model.EnvVar{Name: varNameToAdd, Value: expandedEnv})
-		}
+		envVarsIndex[varNameToAdd] = expandedEnv
 	}
 
-	return nil
+	overridedEnvVars := model.Environment{}
+	for k, v := range envVarsIndex {
+		overridedEnvVars = append(overridedEnvVars, model.EnvVar{Name: k, Value: v})
+	}
+
+	return &overridedEnvVars, nil
 }
 
 func (up *upContext) deployApp(ctx context.Context) error {
