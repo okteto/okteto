@@ -57,11 +57,10 @@ const (
 )
 
 func translate(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
-	if err := translateStackEnvVars(ctx, s); err != nil {
+	if err := translateBuildImages(ctx, s, options); err != nil {
 		return err
 	}
-
-	return translateBuildImages(ctx, s, options)
+	return translateStackEnvVars(ctx, s)
 }
 
 func translateStackEnvVars(ctx context.Context, s *model.Stack) error {

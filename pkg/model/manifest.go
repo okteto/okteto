@@ -799,7 +799,7 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 			if svcInfo.Image != "" {
 				buildInfo.Image = svcInfo.Image
 			}
-		case len(svcInfo.VolumeMounts) >= 0:
+		case len(svcInfo.VolumeMounts) > 0:
 			buildInfo = &BuildInfo{
 				Image:            svcInfo.Image,
 				VolumesToInclude: svcInfo.VolumeMounts,
