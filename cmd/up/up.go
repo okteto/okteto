@@ -396,9 +396,9 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 }
 
 func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVariables []string) (*model.Environment, error) {
-	envVarsIndex := make(map[string]string)
+	envVarsToValues := make(map[string]string)
 	for _, manifestEnv := range manifestEnvVars {
-		envVarsIndex[manifestEnv.Name] = manifestEnv.Value
+		envVarsToValues[manifestEnv.Name] = manifestEnv.Value
 	}
 
 	for _, v := range commandEnvVariables {
@@ -420,11 +420,11 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVar
 			return nil, err
 		}
 
-		envVarsIndex[varNameToAdd] = expandedEnv
+		envVarsToValues[varNameToAdd] = expandedEnv
 	}
 
 	overridedEnvVars := model.Environment{}
-	for k, v := range envVarsIndex {
+	for k, v := range envVarsToValues {
 		overridedEnvVars = append(overridedEnvVars, model.EnvVar{Name: k, Value: v})
 	}
 
