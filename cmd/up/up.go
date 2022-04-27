@@ -598,6 +598,9 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 
 func (up *upContext) applyToApps(ctx context.Context) chan error {
 	result := make(chan error, 1)
+	if up.Options.DockerDesktop {
+		return result
+	}
 	for _, tr := range up.Translations {
 		go tr.App.Watch(ctx, result, up.Client)
 	}

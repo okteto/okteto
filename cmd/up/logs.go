@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/signal"
 	"regexp"
 	"text/template"
 	"time"
@@ -48,8 +47,6 @@ func (up *upContext) showDetachedLogs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 	go func() {
 		if err := stern.Run(ctx, c); err != nil {
@@ -59,9 +56,9 @@ func (up *upContext) showDetachedLogs(ctx context.Context) error {
 		}
 	}()
 	select {
-	case <-stop:
-		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		return oktetoErrors.ErrIntSig
+	case <-ctx.Done():
+		oktetoLog.Infof("showDetachedLogs context cancelled")
+		return ctx.Err()
 	case err := <-exit:
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
