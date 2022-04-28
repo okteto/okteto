@@ -197,17 +197,21 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 }
 
 func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *ContextOptions) error {
-	user, err := c.LoginController.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
+	var userContext *types.UserContext
+	userContext, err := getLoggedUserContext(ctx, c, ctxOptions)
 	if err != nil {
-		return err
+		if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name).Error() && ctxOptions.IsCtxCommand {
+			oktetoLog.Warning("Your token is invalid. Generating a new one...")
+			ctxOptions.Token = ""
+			userContext, err = getLoggedUserContext(ctx, c, ctxOptions)
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
 	}
-	ctxOptions.Token = user.Token
-	okteto.Context().Token = user.Token
 
-	userContext, err := c.getUserContext(ctx)
-	if err != nil {
-		return err
-	}
 	if ctxOptions.Namespace == "" {
 		ctxOptions.Namespace = userContext.User.Namespace
 	}
@@ -225,6 +229,24 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	os.Setenv(model.OktetoUserNameEnvVar, okteto.Context().Username)
 
 	return nil
+}
+
+func getLoggedUserContext(ctx context.Context, c *ContextCommand, ctxOptions *ContextOptions) (*types.UserContext, error) {
+	user, err := c.LoginController.AuthenticateToOktetoCluster(ctx, ctxOptions.Context, ctxOptions.Token)
+	if err != nil {
+		return nil, err
+	}
+
+	ctxOptions.Token = user.Token
+
+	okteto.Context().Token = user.Token
+
+	userContext, err := c.getUserContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return userContext, nil
 }
 
 func (*ContextCommand) initKubernetesContext(ctxOptions *ContextOptions) error {
@@ -267,7 +289,6 @@ func (c ContextCommand) getUserContext(ctx context.Context) (*types.UserContext,
 		userContext, err := client.User().GetContext(ctx)
 
 		if err != nil && oktetoErrors.IsForbidden(err) {
-			okteto.Context().Token = ""
 			if err := c.OktetoContextWriter.Write(); err != nil {
 				oktetoLog.Infof("error updating okteto contexts: %v", err)
 				return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())

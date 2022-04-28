@@ -114,17 +114,22 @@ func Up() *cobra.Command {
 			}
 			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
 			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
-			if err != nil && errors.Is(err, oktetoErrors.ErrManifestNotFound) {
-				if !utils.AskIfOktetoInit(upOptions.DevPath) {
+			if err != nil {
+				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
 					return err
 				}
+				if errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+					if !utils.AskIfOktetoInit(upOptions.DevPath) {
+						return err
+					}
 
-				if upOptions.DevPath == "" {
-					upOptions.DevPath = utils.DefaultManifest
-				}
-				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
-				if err != nil {
-					return err
+					if upOptions.DevPath == "" {
+						upOptions.DevPath = utils.DefaultManifest
+					}
+					oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
+					if err != nil {
+						return err
+					}
 				}
 			}
 			wd, err := os.Getwd()

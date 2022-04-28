@@ -127,6 +127,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 				options.ManifestPath = utils.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
 			}
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
+				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
+					return err
+				}
 				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: options.Namespace}); err != nil {
 					return err
 				}
