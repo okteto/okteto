@@ -65,6 +65,8 @@ type Options struct {
 	Build            bool
 	Dependencies     bool
 	servicesToDeploy []string
+	volumesToDeploy  []string
+	// endpointsToDeploy []string
 
 	Repository string
 	Branch     string
@@ -449,7 +451,7 @@ func setDeployOptionsValuesFromManifest(deployOptions *Options, cwd string) {
 
 			onlyDeployEndpointsFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints, servicesToDeploy)
 
-			onlyDeployVolumesFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack, servicesToDeploy)
+			deployOptions.volumesToDeploy = getVolumesToDeployFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack, servicesToDeploy)
 
 		} else {
 			deployOptions.servicesToDeploy = []string{}
@@ -505,25 +507,20 @@ func onlyDeployEndpointsFromServicesToDeploy(endpoints model.EndpointSpec, servi
 	}
 }
 
-func onlyDeployVolumesFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) {
-
-	volumesToDeploy := map[string]bool{}
+func getVolumesToDeployFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) []string {
+	volumesToDeploy := make([]string, len(servicesToDeploy))
 
 	for serviceName, serviceSpec := range stack.Services {
 		if servicesToDeploy[serviceName] {
 			for _, volume := range serviceSpec.Volumes {
 				if stack.Volumes[volume.LocalPath] != nil {
-					volumesToDeploy[volume.LocalPath] = true
+					volumesToDeploy = append(volumesToDeploy, volume.LocalPath)
 				}
 			}
 		}
 	}
 
-	for volume := range stack.Volumes {
-		if !volumesToDeploy[volume] {
-			delete(stack.Volumes, volume)
-		}
-	}
+	return volumesToDeploy
 }
 
 func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
@@ -610,6 +607,8 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 		Wait:             opts.Wait,
 		Timeout:          opts.Timeout,
 		ServicesToDeploy: opts.servicesToDeploy,
+		VolumesToDeploy:  opts.volumesToDeploy,
+		// EndpointsToDeploy: opts.endpointsToDeploy,
 	}
 
 	c, cfg, err := dc.K8sClientProvider.Provide(kubeconfig.Get([]string{dc.TempKubeconfigFile}))

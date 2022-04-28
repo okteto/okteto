@@ -54,7 +54,9 @@ type StackDeployOptions struct {
 	NoCache          bool
 	Timeout          time.Duration
 	ServicesToDeploy []string
-	Progress         string
+	VolumesToDeploy  []string
+	// EndpointsToDeploy model.EndpointSpec
+	Progress string
 }
 
 // Stack is the executor of stack commands
@@ -104,6 +106,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 	return err
 }
 
+//deploy deploys a stack to kubernetes
 func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *StackDeployOptions) error {
 	DisplayWarnings(s)
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying compose '%s'...", s.Name))
@@ -128,7 +131,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			}
 		}
 
-		for name := range s.Volumes {
+		for _, name := range options.VolumesToDeploy {
 			if err := deployVolume(ctx, name, s, c, spinner); err != nil {
 				exit <- err
 				return
@@ -145,6 +148,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
 			return
 		}
+		//for name := range options.EndpointsToDeploy {
 		for name := range s.Endpoints {
 			if err := deployIngress(ctx, name, s, iClient, spinner); err != nil {
 				exit <- err

@@ -607,9 +607,9 @@ func Test_onlyDeployVolumesFromServicesToDeploy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			onlyDeployVolumesFromServicesToDeploy(tt.args.stack, tt.args.servicesToDeploy)
+			result := getVolumesToDeployFromServicesToDeploy(tt.args.stack, tt.args.servicesToDeploy)
 			if !reflect.DeepEqual(tt.args.stack.Volumes, tt.expected) {
-				t.Errorf("expected %v, got %v", tt.expected, tt.args.stack.Volumes)
+				t.Errorf("expected %v, got %v", tt.expected, result)
 			}
 		})
 	}
