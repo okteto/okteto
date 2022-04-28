@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	"golang.org/x/sync/errgroup"
@@ -44,7 +45,7 @@ const (
 type buildWriter struct{}
 
 // getSolveOpt returns the buildkit solve options
-func getSolveOpt(buildOptions *BuildOptions) (*client.SolveOpt, error) {
+func getSolveOpt(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 	var localDirs map[string]string
 	var frontendAttrs map[string]string
 

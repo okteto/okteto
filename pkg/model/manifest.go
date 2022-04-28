@@ -172,6 +172,41 @@ func NewManifest() *Manifest {
 	}
 }
 
+// NewManifestFromStack creates a new manifest from a stack struct
+func NewManifestFromStack(stack *Stack) *Manifest {
+	stackPaths := ComposeInfoList{}
+	for _, path := range stack.Paths {
+		stackPaths = append(stackPaths, ComposeInfo{
+			File: path,
+		})
+	}
+	stackManifest := &Manifest{
+		Type:      StackType,
+		Name:      stack.Name,
+		Namespace: stack.Namespace,
+		Deploy: &DeployInfo{
+			ComposeSection: &ComposeSectionInfo{
+				ComposesInfo: stackPaths,
+				Stack:        stack,
+			},
+		},
+		Dev:   ManifestDevs{},
+		Build: ManifestBuild{},
+		IsV2:  true,
+	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		oktetoLog.Fail("Can not find cwd: %s", err)
+		return nil
+	}
+	stackManifest, err = stackManifest.InferFromStack(cwd)
+	if err != nil {
+		oktetoLog.Fail("Can not convert stack to Manifestv2: %s", err)
+		return nil
+	}
+	return stackManifest
+}
+
 // NewManifestFromDev creates a manifest from a dev
 func NewManifestFromDev(dev *Dev) *Manifest {
 	manifest := NewManifest()
@@ -648,7 +683,9 @@ func (m *Manifest) setDefaults() error {
 			b.Context = b.Name
 			b.Name = ""
 		}
-		b.setBuildDefaults()
+		if !(b.Image != "" && len(b.VolumesToInclude) > 0 && b.Dockerfile == "") {
+			b.setBuildDefaults()
+		}
 	}
 	return nil
 }
@@ -660,13 +697,13 @@ func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 }
 
 // ExpandEnvVars expands env vars to be set on the manifest
-func (manifest *Manifest) ExpandEnvVars() (*Manifest, error) {
+func (manifest *Manifest) ExpandEnvVars() error {
 	var err error
 	if manifest.Deploy != nil {
 		for idx, cmd := range manifest.Deploy.Commands {
 			cmd.Command, err = ExpandEnv(cmd.Command, true)
 			if err != nil {
-				return nil, errors.New("could not parse env vars")
+				return errors.New("could not parse env vars")
 			}
 			manifest.Deploy.Commands[idx] = cmd
 		}
@@ -677,16 +714,19 @@ func (manifest *Manifest) ExpandEnvVars() (*Manifest, error) {
 			}
 			s, err := LoadStack("", stackFiles, true)
 			if err != nil {
-				return nil, err
+				oktetoLog.Infof("Could not reload stack manifest: %s", err)
+				s = manifest.Deploy.ComposeSection.Stack
 			}
+			s.Namespace = manifest.Deploy.ComposeSection.Stack.Namespace
+			s.Context = manifest.Deploy.ComposeSection.Stack.Context
 			for svcName, svc := range s.Services {
-				if svc.Build == nil && len(svc.VolumeMounts) == 0 {
+				if _, ok := manifest.Build[svcName]; svc.Build == nil && len(svc.VolumeMounts) == 0 && !ok {
 					continue
 				}
 				tag := fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(svcName, "-", "_")))
 				expandedTag, err := ExpandEnv(tag, true)
 				if err != nil {
-					return nil, err
+					return err
 				}
 				if expandedTag != "" {
 					svc.Image = expandedTag
@@ -705,7 +745,7 @@ func (manifest *Manifest) ExpandEnvVars() (*Manifest, error) {
 			}
 			manifest, err = manifest.InferFromStack(cwd)
 			if err != nil {
-				return nil, err
+				return err
 			}
 		}
 	}
@@ -713,13 +753,13 @@ func (manifest *Manifest) ExpandEnvVars() (*Manifest, error) {
 		for idx, cmd := range manifest.Destroy {
 			cmd.Command, err = envsubst.String(cmd.Command)
 			if err != nil {
-				return nil, errors.New("could not parse env vars")
+				return errors.New("could not parse env vars")
 			}
 			manifest.Destroy[idx] = cmd
 		}
 	}
 
-	return manifest, nil
+	return nil
 }
 
 // Dependency represents a dependency object at the manifest
@@ -743,14 +783,31 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 			m.Dev[svcName] = d
 		}
 
-		if svcInfo.Build == nil {
+		if svcInfo.Build == nil && len(svcInfo.VolumeMounts) == 0 {
 			continue
 		}
+
 		buildInfo := svcInfo.Build
-		if svcInfo.Image != "" {
-			buildInfo.Image = svcInfo.Image
+
+		switch {
+		case buildInfo != nil && len(svcInfo.VolumeMounts) > 0:
+			if svcInfo.Image != "" {
+				buildInfo.Image = svcInfo.Image
+			}
+			buildInfo.VolumesToInclude = svcInfo.VolumeMounts
+		case buildInfo != nil:
+			if svcInfo.Image != "" {
+				buildInfo.Image = svcInfo.Image
+			}
+		case len(svcInfo.VolumeMounts) > 0:
+			buildInfo = &BuildInfo{
+				Image:            svcInfo.Image,
+				VolumesToInclude: svcInfo.VolumeMounts,
+			}
+		default:
+			oktetoLog.Infof("could not build service %s, due to not having Dockerfile defined or volumes to include", svcName)
 		}
-		buildInfo.VolumesToInclude = svcInfo.VolumeMounts
+
 		buildInfo.Context, err = filepath.Rel(cwd, buildInfo.Context)
 		if err != nil {
 			oktetoLog.Infof("can not make svc[%s].build.context relative to cwd", svcName)

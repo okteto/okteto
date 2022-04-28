@@ -29,28 +29,25 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
 )
 
-//BuildOptions define the options available for build
-type BuildOptions struct {
-	BuildArgs     []string
-	CacheFrom     []string
-	File          string
-	NoCache       bool
-	OutputMode    string
-	Path          string
-	Secrets       []string
-	Tag           string
-	Target        string
-	Namespace     string
-	BuildToGlobal bool
-	K8sContext    string
-	ExportCache   string
+// OktetoBuilderInterface runs the build of an image
+type OktetoBuilderInterface interface {
+	Run(ctx context.Context, buildOptions *types.BuildOptions) error
+}
+
+// OktetoBuilder runs the build of an image
+type OktetoBuilder struct{}
+
+// OktetoRegistryInterface checks if an image is at the registry
+type OktetoRegistryInterface interface {
+	GetImageTagWithDigest(imageTag string) (string, error)
 }
 
 // Run runs the build sequence
-func Run(ctx context.Context, buildOptions *BuildOptions) error {
+func (*OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
 	if okteto.Context().Builder == "" {
 		if err := buildWithDocker(ctx, buildOptions); err != nil {
@@ -79,7 +76,7 @@ func setOutputMode(outputMode string) string {
 
 }
 
-func buildWithOkteto(ctx context.Context, buildOptions *BuildOptions) error {
+func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) error {
 	oktetoLog.Infof("building your image on %s", okteto.Context().Builder)
 	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {
@@ -138,7 +135,7 @@ func buildWithOkteto(ctx context.Context, buildOptions *BuildOptions) error {
 	}
 
 	if err == nil && buildOptions.Tag != "" {
-		if _, err := registry.GetImageTagWithDigest(buildOptions.Tag); err != nil {
+		if _, err := registry.NewOktetoRegistry().GetImageTagWithDigest(buildOptions.Tag); err != nil {
 			oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
 	  %s,
 	  Retrying ...`, buildOptions.Tag, err.Error())
@@ -159,7 +156,7 @@ func buildWithOkteto(ctx context.Context, buildOptions *BuildOptions) error {
 }
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209
-func buildWithDocker(ctx context.Context, buildOptions *BuildOptions) error {
+func buildWithDocker(ctx context.Context, buildOptions *types.BuildOptions) error {
 
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -212,10 +209,19 @@ func translateDockerErr(err error) error {
 	return err
 }
 
-// OptsFromManifest returns the parsed options for the build from the manifest
-func OptsFromManifest(service string, b *model.BuildInfo, o *BuildOptions) *BuildOptions {
-	if b.Name == "" {
-		b.Name = os.Getenv(model.OktetoNameEnvVar)
+// OptsFromBuildInfo returns the parsed options for the build from the manifest
+func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions) *types.BuildOptions {
+	if o == nil {
+		o = &types.BuildOptions{}
+	}
+	if o.Target != "" {
+		b.Target = o.Target
+	}
+	if len(o.CacheFrom) != 0 {
+		b.CacheFrom = o.CacheFrom
+	}
+	if o.Tag != "" {
+		b.Image = o.Tag
 	}
 
 	args := model.SerializeBuildArgs(b.Args)
@@ -236,9 +242,9 @@ func OptsFromManifest(service string, b *model.BuildInfo, o *BuildOptions) *Buil
 		if o != nil && o.BuildToGlobal {
 			targetRegistry = okteto.GlobalRegistry
 		}
-		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, b.Name, service, tag)
+		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, tag)
 		if len(b.VolumesToInclude) > 0 {
-			b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, b.Name, service, model.OktetoImageTagWithVolumes)
+			b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoImageTagWithVolumes)
 		}
 
 	}
@@ -247,7 +253,71 @@ func OptsFromManifest(service string, b *model.BuildInfo, o *BuildOptions) *Buil
 	if !filepath.IsAbs(b.Dockerfile) && !model.FileExistsAndNotDir(file) {
 		file = filepath.Join(b.Context, b.Dockerfile)
 	}
-	opts := &BuildOptions{
+	opts := &types.BuildOptions{
+		CacheFrom: b.CacheFrom,
+		Target:    b.Target,
+		Path:      b.Context,
+		Tag:       b.Image,
+		File:      file,
+		BuildArgs: args,
+	}
+
+	outputMode := oktetoLog.GetOutputFormat()
+	if o != nil && o.OutputMode != "" {
+		outputMode = o.OutputMode
+	}
+	opts.OutputMode = setOutputMode(outputMode)
+
+	return opts
+}
+
+// OptsFromManifest returns the parsed options for the build from the manifest
+func OptsFromManifest(service string, manifest *model.Manifest, o *types.BuildOptions) *types.BuildOptions {
+	b := manifest.Build[service]
+	if o.Target != "" {
+		b.Target = o.Target
+	}
+	if len(o.CacheFrom) != 0 {
+		b.CacheFrom = o.CacheFrom
+	}
+	if o.Tag != "" {
+		b.Image = o.Tag
+	}
+
+	if manifest.Name == "" {
+		manifest.Name = os.Getenv(model.OktetoNameEnvVar)
+	}
+
+	args := model.SerializeBuildArgs(b.Args)
+
+	if okteto.Context().IsOkteto && b.Image == "" {
+		tag := model.OktetoDefaultImageTag
+
+		envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
+		isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
+
+		if envGitCommit != "" && !isLocalEnvGitCommit {
+			params := strings.Join(args, "") + envGitCommit
+			tag = fmt.Sprintf("%x", sha256.Sum256([]byte(params)))
+		}
+
+		// if flag --global, point to global registry
+		targetRegistry := okteto.DevRegistry
+		if o != nil && o.BuildToGlobal {
+			targetRegistry = okteto.GlobalRegistry
+		}
+		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifest.Name, service, tag)
+		if len(b.VolumesToInclude) > 0 {
+			b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifest.Name, service, model.OktetoImageTagWithVolumes)
+		}
+
+	}
+
+	file := b.Dockerfile
+	if !filepath.IsAbs(b.Dockerfile) && !model.FileExistsAndNotDir(file) {
+		file = filepath.Join(b.Context, b.Dockerfile)
+	}
+	opts := &types.BuildOptions{
 		CacheFrom:   b.CacheFrom,
 		Target:      b.Target,
 		Path:        b.Context,

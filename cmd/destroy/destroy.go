@@ -192,7 +192,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		}
 
 	}
-	manifest, err = manifest.ExpandEnvVars()
+	err = manifest.ExpandEnvVars()
 	if err != nil {
 		return err
 	}
