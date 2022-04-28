@@ -31,7 +31,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
-	buildCMD "github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -580,7 +579,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 
 	buildArgs := model.SerializeBuildArgs(up.Dev.Image.Args)
 
-	buildOptions := &buildCMD.BuildOptions{
+	buildOptions := &build.BuildOptions{
 		Path:       up.Dev.Image.Context,
 		File:       up.Dev.Image.Dockerfile,
 		Tag:        imageTag,
@@ -589,7 +588,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		BuildArgs:  buildArgs,
 		OutputMode: oktetoLog.TTYFormat,
 	}
-	if err := buildCMD.Run(ctx, buildOptions); err != nil {
+	if err := build.Run(ctx, buildOptions); err != nil {
 		return err
 	}
 	for _, s := range up.Dev.Services {
