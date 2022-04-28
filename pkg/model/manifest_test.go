@@ -328,7 +328,7 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.currentManifest.SetManifestDefaultsFromDev()
+			tt.currentManifest.setManifestDefaultsFromDev()
 			assert.Equal(t, tt.expectedContext, tt.currentManifest.Context)
 			assert.Equal(t, tt.expectedNamespace, tt.currentManifest.Namespace)
 		})

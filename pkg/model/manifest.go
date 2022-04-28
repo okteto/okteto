@@ -293,7 +293,6 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		if devManifest.IsV2 {
 			return devManifest, nil
 		}
-		devManifest.setManifestDefaultsFromDev()
 
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest unmarshalled successfully")
 	}
@@ -405,6 +404,8 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			}
 		}
 		return devManifest, nil
+	} else {
+		devManifest.setManifestDefaultsFromDev()
 	}
 	return devManifest, nil
 
