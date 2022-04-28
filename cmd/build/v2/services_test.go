@@ -86,3 +86,45 @@ func TestServicesNotInStack(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
 }
+
+func TestAllServicesAlreadyBuiltWithSubset(t *testing.T) {
+	fakeReg := test.NewFakeOktetoRegistry(nil)
+	bc := &OktetoBuilder{
+		Registry: fakeReg,
+	}
+	alreadyBuilt := []string{}
+	fakeReg.AddImageByName(alreadyBuilt...)
+	ctx := context.Background()
+	toBuild, err := bc.GetServicesToBuildFromSubset(ctx, fakeManifest, []string{"test-1"})
+	//should not throw error
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(toBuild))
+}
+
+func TestServicesNotAreAlreadyBuiltWithSubset(t *testing.T) {
+	fakeReg := test.NewFakeOktetoRegistry(nil)
+	bc := &OktetoBuilder{
+		Registry: fakeReg,
+	}
+	alreadyBuilt := []string{"test/test-1"}
+	fakeReg.AddImageByName(alreadyBuilt...)
+	ctx := context.Background()
+	toBuild, err := bc.GetServicesToBuildFromSubset(ctx, fakeManifest, []string{"test-1"})
+	//should not throw error
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(toBuild))
+}
+
+func TestNoServiceBuiltWithSubset(t *testing.T) {
+	fakeReg := test.NewFakeOktetoRegistry(nil)
+	bc := &OktetoBuilder{
+		Registry: fakeReg,
+	}
+	alreadyBuilt := []string{"test/test-1", "test/test-2"}
+	fakeReg.AddImageByName(alreadyBuilt...)
+	ctx := context.Background()
+	toBuild, err := bc.GetServicesToBuildFromSubset(ctx, fakeManifest, []string{"test-1"})
+	//should not throw error
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(toBuild))
+}

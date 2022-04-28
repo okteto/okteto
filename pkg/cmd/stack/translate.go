@@ -57,8 +57,10 @@ const (
 )
 
 func translate(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
-	if err := translateBuildImages(ctx, s, options); err != nil {
-		return err
+	if !options.InsidePipeline {
+		if err := translateBuildImages(ctx, s, options); err != nil {
+			return err
+		}
 	}
 	return translateStackEnvVars(ctx, s)
 }
@@ -125,16 +127,29 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 	builder := buildv2.NewBuilderFromScratch()
 	if options.ForceBuild {
 		buildOptions := &types.BuildOptions{
-			Manifest: manifest,
+			Manifest:    manifest,
+			CommandArgs: options.ServicesToDeploy,
 		}
 		if err := builder.Build(ctx, buildOptions); err != nil {
 			return err
 		}
 	} else {
-		svcsToBuild, err := builder.GetServicesToBuild(ctx, manifest)
-		if err != nil {
-			return err
+		var (
+			svcsToBuild []string
+			err         error
+		)
+		if len(options.ServicesToDeploy) == 0 {
+			svcsToBuild, err = builder.GetServicesToBuild(ctx, manifest)
+			if err != nil {
+				return err
+			}
+		} else {
+			svcsToBuild, err = builder.GetServicesToBuildFromSubset(ctx, manifest, options.ServicesToDeploy)
+			if err != nil {
+				return err
+			}
 		}
+
 		if len(svcsToBuild) != 0 {
 			buildOptions := &types.BuildOptions{
 				CommandArgs: svcsToBuild,

@@ -118,3 +118,24 @@ func (bc *OktetoBuilder) checkImageAtGlobalAndSetEnvs(service string, options *t
 	return true, nil
 
 }
+
+// GetServicesToBuildFromSubset returns the services it has to built because they are not already built from a subset of services
+func (bc *OktetoBuilder) GetServicesToBuildFromSubset(ctx context.Context, manifest *model.Manifest, subset []string) ([]string, error) {
+	for name := range manifest.Build {
+		needsBuild := false
+		for _, toBuildName := range subset {
+			if name == toBuildName {
+				needsBuild = true
+				break
+			}
+		}
+		if !needsBuild {
+			delete(manifest.Build, name)
+		}
+	}
+	svcsToBuild, err := bc.GetServicesToBuild(ctx, manifest)
+	if err != nil {
+		return []string{}, err
+	}
+	return svcsToBuild, err
+}

@@ -44,6 +44,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	giturls "github.com/whilp/git-urls"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -235,6 +236,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return fmt.Errorf("failed to get the current working directory: %w", err)
 	}
 
+	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
 	if err := addEnvVars(ctx, cwd); err != nil {
 		return err
 	}
@@ -256,7 +262,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
-	setDeployOptionsValuesFromManifest(deployOptions, cwd)
+	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
 
 	dc.Proxy.SetName(deployOptions.Name)
 	oktetoLog.SetStage("")
@@ -273,15 +279,25 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
 			Manifest:     deployOptions.Manifest,
+			CommandArgs:  deployOptions.servicesToDeploy,
 		}
 		oktetoLog.Debug("force build from manifest definition")
 		if err := dc.Builder.Build(ctx, buildOptions); err != nil {
 			return err
 		}
 	} else {
-		svcsToBuild, err := dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest)
-		if err != nil {
-			return err
+
+		var svcsToBuild []string
+		if len(deployOptions.servicesToDeploy) == 0 {
+			svcsToBuild, err = dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest)
+			if err != nil {
+				return err
+			}
+		} else {
+			svcsToBuild, err = dc.Builder.GetServicesToBuildFromSubset(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy)
+			if err != nil {
+				return err
+			}
 		}
 		if len(svcsToBuild) != 0 {
 			buildOptions := &types.BuildOptions{
@@ -316,7 +332,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
-	setDeployOptionsValuesFromManifest(deployOptions, cwd)
+	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
 	dc.Proxy.Start()
 
@@ -335,10 +351,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType {
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
-	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
-	if err != nil {
-		return err
-	}
+
 	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
 	if err != nil {
 		return err
@@ -416,7 +429,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	return err
 }
 
-func setDeployOptionsValuesFromManifest(deployOptions *Options, cwd string) {
+func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) {
 	if deployOptions.Manifest.Context == "" {
 		deployOptions.Manifest.Context = okteto.Context().Name
 	}
@@ -460,6 +473,7 @@ func setDeployOptionsValuesFromManifest(deployOptions *Options, cwd string) {
 				deployOptions.servicesToDeploy = append(deployOptions.servicesToDeploy, service)
 			}
 		}
+		deployOptions.servicesToDeploy = stack.AddDependentServicesIfNotPresent(ctx, deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy, c)
 	}
 
 	if len(deployOptions.servicesToDeploy) == 0 {
@@ -613,6 +627,7 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 		Wait:             opts.Wait,
 		Timeout:          opts.Timeout,
 		ServicesToDeploy: opts.servicesToDeploy,
+		InsidePipeline:   true,
 	}
 
 	c, cfg, err := dc.K8sClientProvider.Provide(kubeconfig.Get([]string{dc.TempKubeconfigFile}))
