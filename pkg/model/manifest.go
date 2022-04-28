@@ -293,7 +293,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		if devManifest.IsV2 {
 			return devManifest, nil
 		}
-		devManifest.SetManifestDefaultsFromDev()
+		devManifest.setManifestDefaultsFromDev()
 
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest unmarshalled successfully")
 	}
@@ -1060,8 +1060,8 @@ func (m *Manifest) IsDeployDefault() bool {
 	return false
 }
 
-// SetManifestDefaultsFromDev sets context and namespace from the dev
-func (m *Manifest) SetManifestDefaultsFromDev() {
+// setManifestDefaultsFromDev sets context and namespace from the dev
+func (m *Manifest) setManifestDefaultsFromDev() {
 	if len(m.Dev) == 1 {
 		for _, devInfo := range m.Dev {
 			m.Context = devInfo.Context
