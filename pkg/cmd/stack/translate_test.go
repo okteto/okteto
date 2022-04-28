@@ -1066,6 +1066,61 @@ func Test_translateService(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "translate svc private endpoints by private annotation",
+			stack: &model.Stack{
+				Name: "stackName",
+				Services: map[string]*model.Service{
+					"svcName": {
+						Labels: model.Labels{
+							"label1": "value1",
+							"label2": "value2",
+						},
+						Annotations: model.Annotations{
+							"annotation1": "value1",
+							"annotation2": "value2",
+						},
+						Ports: []model.Port{
+							{
+								HostPort:      6379,
+								ContainerPort: 6379,
+								Protocol:      apiv1.ProtocolTCP,
+							},
+						},
+					},
+				},
+			},
+			expected: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "svcName",
+					Labels: map[string]string{
+						"label1":                    "value1",
+						"label2":                    "value2",
+						model.StackNameLabel:        "stackName",
+						model.StackServiceNameLabel: "svcName",
+					},
+					Annotations: map[string]string{
+						"annotation1": "value1",
+						"annotation2": "value2",
+					},
+				},
+				Spec: apiv1.ServiceSpec{
+					Type: apiv1.ServiceTypeClusterIP,
+					Selector: map[string]string{
+						model.StackNameLabel:        "stackName",
+						model.StackServiceNameLabel: "svcName",
+					},
+					Ports: []apiv1.ServicePort{
+						{
+							Name:       "p-6379-6379-tcp",
+							Port:       6379,
+							TargetPort: intstr.IntOrString{IntVal: 6379},
+							Protocol:   apiv1.ProtocolTCP,
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

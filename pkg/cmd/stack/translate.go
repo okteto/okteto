@@ -765,10 +765,8 @@ func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 
 func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 	result := []apiv1.ServicePort{}
-	for _, p := range svc.Ports {
-		if model.IsSkippablePort(p.HostPort) {
-			continue
-		}
+	ports := getPortsToAddToSvc(svc.Ports)
+	for _, p := range ports {
 		if !isServicePortAdded(p.ContainerPort, result) {
 			result = append(
 				result,
@@ -793,6 +791,22 @@ func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 		}
 	}
 	return result
+}
+
+func getPortsToAddToSvc(ports []model.Port) []model.Port {
+	privatePorts := []model.Port{}
+	publicPorts := []model.Port{}
+	for _, p := range ports {
+		if model.IsSkippablePort(p.HostPort) {
+			privatePorts = append(privatePorts, p)
+		} else {
+			publicPorts = append(publicPorts, p)
+		}
+	}
+	if len(publicPorts) > 0 {
+		return publicPorts
+	}
+	return privatePorts
 }
 
 func isServicePortAdded(newPort int32, existentPorts []apiv1.ServicePort) bool {
