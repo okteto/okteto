@@ -307,14 +307,8 @@ func Test_createContext(t *testing.T) {
 	}
 }
 
-func TestAutoAuthWhenNotValidToken(t *testing.T) {
+func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 	ctx := context.Background()
-
-	ctxOptions := &ContextOptions{
-		IsOkteto: true,
-		Context:  "https://okteto.cloud.com",
-		Token:    "this is a token",
-	}
 
 	user := &types.User{
 		Token: "test",
@@ -328,10 +322,47 @@ func TestAutoAuthWhenNotValidToken(t *testing.T) {
 
 	ctxController := newFakeContextCommand(fakeOktetoClient, user, nil)
 
-	err := ctxController.initOktetoContext(ctx, ctxOptions)
-	if err != nil {
-		if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name).Error() {
-			t.Fatalf("Not expecting error but got: %s", err.Error())
-		}
+	var tests = []struct {
+		name                string
+		ctxOptions          *ContextOptions
+		user                *types.User
+		fakeOktetoClient    *client.FakeOktetoClient
+		isAutoAuthTriggered bool
+	}{
+		{
+			name: "okteto context triggers auto auth",
+			ctxOptions: &ContextOptions{
+				IsOkteto:     true,
+				Context:      "https://okteto.cloud.com",
+				Token:        "this is a invalid token",
+				IsCtxCommand: true,
+			},
+			user:                user,
+			fakeOktetoClient:    fakeOktetoClient,
+			isAutoAuthTriggered: true,
+		},
+		{
+			name: "non okteto context command gives unauthorized message",
+			ctxOptions: &ContextOptions{
+				IsOkteto:     true,
+				Context:      "https://okteto.cloud.com",
+				Token:        "this is a invalid token",
+				IsCtxCommand: false,
+			},
+			user:                user,
+			fakeOktetoClient:    fakeOktetoClient,
+			isAutoAuthTriggered: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ctxController.initOktetoContext(ctx, tt.ctxOptions)
+			if err != nil {
+				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name).Error() && tt.isAutoAuthTriggered {
+					t.Fatalf("Not expecting error but got: %s", err.Error())
+				}
+			}
+		})
 	}
 }
