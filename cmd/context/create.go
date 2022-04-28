@@ -200,7 +200,7 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	var userContext *types.UserContext
 	userContext, err := getLoggedUserContext(ctx, c, ctxOptions)
 	if err != nil {
-		if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name).Error() {
+		if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name).Error() && ctxOptions.IsCtxCommand {
 			oktetoLog.Warning("Your token is invalid. Generating a new one...")
 			ctxOptions.Token = ""
 			userContext, err = getLoggedUserContext(ctx, c, ctxOptions)
@@ -238,6 +238,7 @@ func getLoggedUserContext(ctx context.Context, c *ContextCommand, ctxOptions *Co
 	}
 
 	ctxOptions.Token = user.Token
+
 	okteto.Context().Token = user.Token
 
 	userContext, err := c.getUserContext(ctx)
@@ -288,7 +289,6 @@ func (c ContextCommand) getUserContext(ctx context.Context) (*types.UserContext,
 		userContext, err := client.User().GetContext(ctx)
 
 		if err != nil && oktetoErrors.IsForbidden(err) {
-			okteto.Context().Token = ""
 			if err := c.OktetoContextWriter.Write(); err != nil {
 				oktetoLog.Infof("error updating okteto contexts: %v", err)
 				return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
