@@ -249,6 +249,7 @@ workflows:
                 - master
                 - /.*(e2e)/
                 - /.*(integration)/
+                - /^release-\d+\.\d+$/
       - mock-release:
           context: GKE
           requires:
