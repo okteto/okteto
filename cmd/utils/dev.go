@@ -145,14 +145,15 @@ func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 	return nil, err
 }
 
+// GetDevFromManifest gets a dev from a manifest by
 func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
 	if len(manifest.Dev) == 0 {
-		return nil, fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
+		return nil, oktetoErrors.ErrManifestNoDevSection
 	} else if len(manifest.Dev) == 1 {
 		for name, dev := range manifest.Dev {
 			if devName != "" && devName != name {
 				return nil, oktetoErrors.UserError{
-					E:    fmt.Errorf("development container '%s' doesn't exist", devName),
+					E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
 					Hint: fmt.Sprintf("Available options are: [%s]", name),
 				}
 			}
@@ -169,7 +170,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 			options = append(options, k)
 		}
 		return nil, oktetoErrors.UserError{
-			E:    fmt.Errorf("development container '%s' doesn't exist", devName),
+			E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
 			Hint: fmt.Sprintf("Available options are: [%s]", strings.Join(options, ", ")),
 		}
 	}
