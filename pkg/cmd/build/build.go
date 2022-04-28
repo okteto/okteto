@@ -230,9 +230,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		tag := model.OktetoDefaultImageTag
 
 		envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
-		isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
-
-		if envGitCommit != "" && !isLocalEnvGitCommit {
+		if okteto.IsPipeline() {
 			params := strings.Join(args, "") + envGitCommit
 			tag = fmt.Sprintf("%x", sha256.Sum256([]byte(params)))
 		}
@@ -260,71 +258,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		Tag:       b.Image,
 		File:      file,
 		BuildArgs: args,
-	}
-
-	outputMode := oktetoLog.GetOutputFormat()
-	if o != nil && o.OutputMode != "" {
-		outputMode = o.OutputMode
-	}
-	opts.OutputMode = setOutputMode(outputMode)
-
-	return opts
-}
-
-// OptsFromManifest returns the parsed options for the build from the manifest
-func OptsFromManifest(service string, manifest *model.Manifest, o *types.BuildOptions) *types.BuildOptions {
-	b := manifest.Build[service]
-	if o.Target != "" {
-		b.Target = o.Target
-	}
-	if len(o.CacheFrom) != 0 {
-		b.CacheFrom = o.CacheFrom
-	}
-	if o.Tag != "" {
-		b.Image = o.Tag
-	}
-
-	if manifest.Name == "" {
-		manifest.Name = os.Getenv(model.OktetoNameEnvVar)
-	}
-
-	args := model.SerializeBuildArgs(b.Args)
-
-	if okteto.Context().IsOkteto && b.Image == "" {
-		tag := model.OktetoDefaultImageTag
-
-		envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
-		isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
-
-		if envGitCommit != "" && !isLocalEnvGitCommit {
-			params := strings.Join(args, "") + envGitCommit
-			tag = fmt.Sprintf("%x", sha256.Sum256([]byte(params)))
-		}
-
-		// if flag --global, point to global registry
-		targetRegistry := okteto.DevRegistry
-		if o != nil && o.BuildToGlobal {
-			targetRegistry = okteto.GlobalRegistry
-		}
-		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifest.Name, service, tag)
-		if len(b.VolumesToInclude) > 0 {
-			b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifest.Name, service, model.OktetoImageTagWithVolumes)
-		}
-
-	}
-
-	file := b.Dockerfile
-	if !filepath.IsAbs(b.Dockerfile) && !model.FileExistsAndNotDir(file) {
-		file = filepath.Join(b.Context, b.Dockerfile)
-	}
-	opts := &types.BuildOptions{
-		CacheFrom:   b.CacheFrom,
-		Target:      b.Target,
-		Path:        b.Context,
-		Tag:         b.Image,
-		File:        file,
-		BuildArgs:   args,
-		ExportCache: b.ExportCache,
+		NoCache:   o.NoCache,
 	}
 
 	outputMode := oktetoLog.GetOutputFormat()
@@ -337,12 +271,8 @@ func OptsFromManifest(service string, manifest *model.Manifest, o *types.BuildOp
 }
 
 // ShouldOptimizeBuild returns if optimization should be applied
-func ShouldOptimizeBuild(image string) bool {
-	envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
-	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
-	return registry.IsOktetoRegistry(image) &&
-		envGitCommit != "" &&
-		!isLocalEnvGitCommit
+func ShouldOptimizeBuild(options *types.BuildOptions) bool {
+	return okteto.IsPipeline() && registry.IsOktetoRegistry(options.Tag) && !options.NoCache && !options.BuildToGlobal
 }
 
 // GetVolumesToInclude checks if the path exists, if it doesn't it skip it

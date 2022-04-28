@@ -190,10 +190,10 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
 
-	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, &types.BuildOptions{})
+	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options)
 
 	// Check if the tag is already on global/dev registry and skip
-	if build.ShouldOptimizeBuild(buildOptions.Tag) && !buildOptions.BuildToGlobal {
+	if build.ShouldOptimizeBuild(buildOptions) {
 		tag, err := bc.optimizeBuild(buildOptions, svcName)
 		if err != nil {
 			return "", err
@@ -216,12 +216,12 @@ func (bc *OktetoBuilder) optimizeBuild(buildOptions *types.BuildOptions, svcName
 	oktetoLog.Debug("found optimizing the build flow")
 	globalReference := strings.Replace(buildOptions.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 	if _, err := bc.Registry.GetImageTagWithDigest(globalReference); err == nil {
-		oktetoLog.Debugf("Skipping '%s' build. Image already exists at the Okteto Registry", svcName)
+		oktetoLog.Debugf("Skipping '%s' build. Image already exists at the Okteto Global Registry: %s", svcName, globalReference)
 		return globalReference, nil
 	}
 	if registry.IsDevRegistry(buildOptions.Tag) {
 		if _, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag); err == nil {
-			oktetoLog.Debugf("skipping build: image %s is already built", buildOptions.Tag)
+			oktetoLog.Debugf("Skipping '%s' build: Image already exists at the Okteto Registry: %s", svcName, buildOptions.Tag)
 			return buildOptions.Tag, nil
 		}
 	}
@@ -242,7 +242,18 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	if err != nil {
 		return "", err
 	}
-	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, &types.BuildOptions{})
+	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options)
+
+	if build.ShouldOptimizeBuild(buildOptions) {
+		tag, err := bc.optimizeBuild(buildOptions, svcName)
+		if err != nil {
+			return "", err
+		}
+		if tag != "" {
+			return tag, nil
+		}
+	}
+
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
