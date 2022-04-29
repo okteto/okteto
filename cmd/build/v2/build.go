@@ -230,13 +230,12 @@ func (bc *OktetoBuilder) optimizeBuild(buildOptions *types.BuildOptions, svcName
 
 func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	oktetoLog.Information("Including volume hosts for service '%s'", svcName)
-	isStackManifest := manifest.Type == model.StackType
-	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
-
+	isStackManifest := (manifest.Type == model.StackType) || (manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil)
 	fromImage := manifest.Build[svcName].Image
 	if options.Tag != "" {
 		fromImage = options.Tag
 	}
+	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
 
 	svcBuild, err := registry.CreateDockerfileWithVolumeMounts(fromImage, buildSvcInfo.VolumesToInclude)
 	if err != nil {
@@ -285,7 +284,7 @@ func getBuildInfoWithoutVolumeMounts(buildInfo *model.BuildInfo, isStackManifest
 
 func getBuildInfoWithVolumeMounts(buildInfo *model.BuildInfo, isStackManifest bool) *model.BuildInfo {
 	result := buildInfo.Copy()
-	if isStackManifest && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
+	if isStackManifest && okteto.IsOkteto() {
 		result.Image = ""
 	}
 	result.VolumesToInclude = getAccessibleVolumeMounts(buildInfo)
