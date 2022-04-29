@@ -465,7 +465,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Volumes, svc.VolumeMounts = splitVolumesByType(serviceRaw.Volumes, stack)
 	for idx, volume := range svc.VolumeMounts {
 		if !isNamedVolumeDeclared(volume) {
-			return nil, fmt.Errorf("Named volume '%s' is used in service '%s' but no declaration was found in the volumes section.", volume.ToString(), svcName)
+			return nil, fmt.Errorf("named volume '%s' is used in service '%s' but no declaration was found in the volumes section", volume.ToString(), svcName)
 		}
 		volume.LocalPath, err = filepath.Abs(volume.LocalPath)
 		if err != nil {
@@ -645,6 +645,9 @@ func validatePort(newPort PortRaw, ports []Port) error {
 func isNamedVolumeDeclared(volume StackVolume) bool {
 	if volume.LocalPath != "" {
 		wd, err := os.Getwd()
+		if err != nil {
+			return true
+		}
 		relative := true
 		if filepath.IsAbs(volume.LocalPath) {
 			_, err = filepath.Rel(wd, volume.LocalPath)
