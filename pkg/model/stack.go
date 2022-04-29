@@ -219,6 +219,18 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	if err != nil {
 		return nil, err
 	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	defer os.Chdir(cwd)
+
+	stackWorkingDir := GetWorkdirFromManifestPath(stackPath)
+	if err := os.Chdir(stackWorkingDir); err != nil {
+		return nil, err
+	}
+	stackPath = GetManifestPathFromWorkdir(stackPath, stackWorkingDir)
+
 	s, err := ReadStack([]byte(expandedManifest), isCompose)
 	if err != nil {
 		return nil, err
@@ -395,6 +407,10 @@ func (s *Stack) Validate() error {
 		}
 	}
 
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
 	for name, svc := range s.Services {
 		if err := validateStackName(name); err != nil {
 			return fmt.Errorf("Invalid service name '%s': %s", name, err)
@@ -405,7 +421,7 @@ func (s *Stack) Validate() error {
 		}
 
 		for _, v := range svc.VolumeMounts {
-			if strings.HasPrefix(v.LocalPath, "/") {
+			if _, err := filepath.Rel(wd, v.LocalPath); err != nil {
 				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
