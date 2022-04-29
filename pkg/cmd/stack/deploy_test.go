@@ -497,7 +497,7 @@ func Test_AddSomeServices(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			options := &StackDeployOptions{ServicesToDeploy: tt.svcsToBeDeployed}
-			addDependentServicesIfNotPresent(ctx, tt.stack, options, fakeClient)
+			options.ServicesToDeploy = AddDependentServicesIfNotPresent(ctx, tt.stack, options.ServicesToDeploy, fakeClient)
 
 			if !reflect.DeepEqual(tt.expectedSvcsToBeDeployed, options.ServicesToDeploy) {
 				t.Errorf("Expected %v but got %v", tt.expectedSvcsToBeDeployed, options.ServicesToDeploy)

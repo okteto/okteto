@@ -29,13 +29,21 @@ import (
 )
 
 // GetServicesToBuild returns the services it has to built because they are not already built
-func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest) ([]string, error) {
+func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error) {
 	buildManifest := manifest.Build
+
+	svcToDeployMap := map[string]bool{}
+	for _, svc := range svcToDeploy {
+		svcToDeployMap[svc] = true
+	}
 
 	// check if images are at registry (global or dev) and set envs or send to build
 	toBuild := make(chan string, len(buildManifest))
 	g, _ := errgroup.WithContext(ctx)
 	for service := range buildManifest {
+		if _, ok := svcToDeployMap[service]; !ok {
+			continue
+		}
 		svc := service
 		g.Go(func() error {
 			return bc.checkServicesToBuild(svc, manifest, toBuild)

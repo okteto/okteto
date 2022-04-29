@@ -55,6 +55,7 @@ type StackDeployOptions struct {
 	Timeout          time.Duration
 	ServicesToDeploy []string
 	Progress         string
+	InsidePipeline   bool
 }
 
 // Stack is the executor of stack commands
@@ -728,7 +729,9 @@ func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *Stac
 	if err := validateDefinedServices(s, options.ServicesToDeploy); err != nil {
 		return err
 	}
-	addDependentServicesIfNotPresent(ctx, s, options, c)
+	if !options.InsidePipeline {
+		options.ServicesToDeploy = AddDependentServicesIfNotPresent(ctx, s, options.ServicesToDeploy, c)
+	}
 	return nil
 }
 
@@ -745,26 +748,51 @@ func validateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 	return nil
 }
 
-func addDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, options *StackDeployOptions, c kubernetes.Interface) {
-	added := make([]string, 0)
-	for _, svcToDeploy := range options.ServicesToDeploy {
+// AddDependentServicesIfNotPresent adds dependands services to deploy
+func AddDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, svcsToDeploy []string, c kubernetes.Interface) []string {
+	initialSvcsToDeploy := svcsToDeploy
+	svcsToDeployWithDependencies := addDependentServices(ctx, s, svcsToDeploy, c)
+	if len(initialSvcsToDeploy) != len(svcsToDeploy) {
+		added := getAddedSvcs(initialSvcsToDeploy, svcsToDeployWithDependencies)
+
+		oktetoLog.Warning("The following services need to be deployed because the services passed as arguments depend on them: [%s]", strings.Join(added, ", "))
+	}
+	return svcsToDeployWithDependencies
+}
+
+func addDependentServices(ctx context.Context, s *model.Stack, svcsToDeploy []string, c kubernetes.Interface) []string {
+	initialLength := len(svcsToDeploy)
+	svcsToDeploySet := map[string]bool{}
+	for _, svc := range svcsToDeploy {
+		svcsToDeploySet[svc] = true
+	}
+	for _, svcToDeploy := range svcsToDeploy {
 		for dependentSvc := range s.Services[svcToDeploy].DependsOn {
-			if !isSvcToBeDeployed(options.ServicesToDeploy, dependentSvc) && !isSvcRunning(ctx, s.Services[dependentSvc], s.Namespace, dependentSvc, c) {
-				options.ServicesToDeploy = append(options.ServicesToDeploy, dependentSvc)
-				added = append(added, dependentSvc)
+			if _, ok := svcsToDeploySet[dependentSvc]; ok {
+				continue
+			}
+			if !isSvcRunning(ctx, s.Services[dependentSvc], s.Namespace, dependentSvc, c) {
+				svcsToDeploy = append(svcsToDeploy, dependentSvc)
+				svcsToDeploySet[dependentSvc] = true
 			}
 		}
 	}
-	if len(added) > 0 {
-		oktetoLog.Warning("The following services need to be deployed because the services passed as arguments depend on them: [%s]", strings.Join(added, ", "))
+	if initialLength != len(svcsToDeploy) {
+		return addDependentServices(ctx, s, svcsToDeploy, c)
 	}
+	return svcsToDeploy
 }
 
-func isSvcToBeDeployed(servicesToDeploy []string, svcName string) bool {
-	for _, svcToBeDeployedName := range servicesToDeploy {
-		if svcName == svcToBeDeployedName {
-			return true
+func getAddedSvcs(initialSvcsToDeploy, svcsToDeployWithDependencies []string) []string {
+	initialSvcsToDeploySet := map[string]bool{}
+	for _, svc := range initialSvcsToDeploy {
+		initialSvcsToDeploySet[svc] = true
+	}
+	added := []string{}
+	for _, svcName := range svcsToDeployWithDependencies {
+		if _, ok := initialSvcsToDeploySet[svcName]; ok {
+			added = append(added, svcName)
 		}
 	}
-	return false
+	return added
 }
