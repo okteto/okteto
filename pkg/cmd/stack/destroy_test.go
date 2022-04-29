@@ -349,3 +349,52 @@ func Test_onlyDeployVolumesFromServicesToDeploy(t *testing.T) {
 		})
 	}
 }
+
+func Test_onlyDeployEndpointsFromServicesToDeploy(t *testing.T) {
+	type args struct {
+		endpoints        model.EndpointSpec
+		servicesToDeploy map[string]bool
+	}
+	tests := []struct {
+		name     string
+		args     args
+		expected []string
+	}{
+		{
+			name: "multiple endpoints",
+			args: args{
+				endpoints: model.EndpointSpec{
+					"manifest": {
+						Rules: []model.EndpointRule{
+							{Service: "a"},
+							{Service: "b"},
+						},
+					},
+				},
+				servicesToDeploy: map[string]bool{
+					"a": true,
+				},
+			},
+			expected: []string{"manifest"},
+		},
+		{
+			name: "no endpoints",
+			args: args{
+				endpoints: model.EndpointSpec{},
+				servicesToDeploy: map[string]bool{
+					"manifest": true,
+				},
+			},
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getEndpointsToDeployFromServicesToDeploy(tt.args.endpoints, tt.args.servicesToDeploy)
+			if !reflect.DeepEqual(tt.args.endpoints, tt.expected) {
+				t.Errorf("expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}

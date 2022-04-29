@@ -134,9 +134,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			servicesToDeploySet[service] = true
 		}
 
-		volumesToDeploy := getVolumesToDeployFromServicesToDeploy(s, servicesToDeploySet)
-
-		for _, name := range volumesToDeploy {
+		for _, name := range getVolumesToDeployFromServicesToDeploy(s, servicesToDeploySet) {
 			if err := deployVolume(ctx, name, s, c, spinner); err != nil {
 				exit <- err
 				return
@@ -153,8 +151,8 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
 			return
 		}
-		//TODO: bring endpointsToDeploy logic
-		for name := range s.Endpoints {
+
+		for _, name := range getEndpointsToDeployFromServicesToDeploy(s.Endpoints, servicesToDeploySet) {
 			if err := deployIngress(ctx, name, s, iClient, spinner); err != nil {
 				exit <- err
 				return
@@ -204,6 +202,24 @@ func getVolumesToDeployFromServicesToDeploy(stack *model.Stack, servicesToDeploy
 	}
 
 	return volumesToDeploy
+}
+
+func getEndpointsToDeployFromServicesToDeploy(endpoints model.EndpointSpec, servicesToDeploy map[string]bool) []string {
+	endpointsToDeploySet := map[string]bool{}
+	for _, spec := range endpoints {
+		for _, rule := range spec.Rules {
+			if servicesToDeploy[rule.Service] {
+				endpointsToDeploySet[rule.Service] = true
+			}
+		}
+	}
+
+	endpointsToDeploy := make([]string, len(endpointsToDeploySet))
+	for name := range endpointsToDeploySet {
+		endpointsToDeploy = append(endpointsToDeploy, name)
+	}
+
+	return endpointsToDeploy
 }
 
 func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, spinner *utils.Spinner, options *StackDeployOptions) error {

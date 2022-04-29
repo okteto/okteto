@@ -441,15 +441,7 @@ func setDeployOptionsValuesFromManifest(deployOptions *Options, cwd string) {
 	if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
 
 		mergeServicesToDeployFromOptionsAndManifest(deployOptions)
-		if len(deployOptions.servicesToDeploy) > 0 {
-			servicesToDeploy := map[string]bool{}
-			for _, service := range deployOptions.servicesToDeploy {
-				servicesToDeploy[service] = true
-			}
-
-			onlyDeployEndpointsFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints, servicesToDeploy)
-
-		} else {
+		if len(deployOptions.servicesToDeploy) == 0 {
 			deployOptions.servicesToDeploy = []string{}
 			for service := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
 				deployOptions.servicesToDeploy = append(deployOptions.servicesToDeploy, service)
@@ -487,19 +479,6 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 	if len(deployOptions.servicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
 		deployOptions.servicesToDeploy = manifestDeclaredServicesToDeploy
-	}
-}
-
-func onlyDeployEndpointsFromServicesToDeploy(endpoints model.EndpointSpec, servicesToDeploy map[string]bool) {
-	for key, spec := range endpoints {
-		newRules := []model.EndpointRule{}
-		for _, rule := range spec.Rules {
-			if servicesToDeploy[rule.Service] {
-				newRules = append(newRules, rule)
-			}
-		}
-		spec.Rules = newRules
-		endpoints[key] = spec
 	}
 }
 
