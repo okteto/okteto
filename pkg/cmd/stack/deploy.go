@@ -724,7 +724,7 @@ func addDependentServices(ctx context.Context, s *model.Stack, svcsToDeploy []st
 			if _, ok := svcsToDeploySet[dependentSvc]; ok {
 				continue
 			}
-			if !isSvcToBeDeployed(svcsToDeploy, dependentSvc) && !isSvcRunning(ctx, s.Services[dependentSvc], s.Namespace, dependentSvc, c) {
+			if !isSvcRunning(ctx, s.Services[dependentSvc], s.Namespace, dependentSvc, c) {
 				svcsToDeploy = append(svcsToDeploy, dependentSvc)
 				svcsToDeploySet[dependentSvc] = true
 			}
@@ -748,13 +748,4 @@ func getAddedSvcs(initialSvcsToDeploy, svcsToDeployWithDependencies []string) []
 		}
 	}
 	return added
-}
-
-func isSvcToBeDeployed(servicesToDeploy []string, svcName string) bool {
-	for _, svcToBeDeployedName := range servicesToDeploy {
-		if svcName == svcToBeDeployedName {
-			return true
-		}
-	}
-	return false
 }
