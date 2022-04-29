@@ -860,8 +860,7 @@ func Test_validateCommandArgs(t *testing.T) {
 func Test_validateVolumesUnmarshalling(t *testing.T) {
 	wd, _ := os.Getwd()
 	relativePathExpanded := filepath.Join(wd, "test_volume_relative_path_found")
-	tempDir, _ := os.MkdirTemp("", "")
-	tempFile, _ := os.CreateTemp("", "")
+	relativePathExpandedFile := filepath.Join(wd, "test-file")
 	tests := []struct {
 		name                 string
 		manifest             []byte
@@ -871,12 +870,12 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 		expectedError        bool
 	}{
 		{
-			name:     "volume-absolute-path",
-			manifest: []byte(fmt.Sprintf("services:\n  app:\n    volumes: \n    - %s:/var/lib/redpanda/data\n    image: okteto/vote:1\n", tempDir)),
-			create:   false,
+			name:     "volume-relative-path-found",
+			manifest: []byte("services:\n  app:\n    volumes: \n    - test_volume_relative_path_found:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			create:   true,
 			expectedVolumesMount: []StackVolume{
 				{
-					LocalPath:  tempDir,
+					LocalPath:  relativePathExpanded,
 					RemotePath: "/var/lib/redpanda/data",
 				},
 			},
@@ -884,9 +883,9 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 			expectedError:   false,
 		},
 		{
-			name:     "volume-relative-path-found",
-			manifest: []byte("services:\n  app:\n    volumes: \n    - test_volume_relative_path_found:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
-			create:   true,
+			name:     "volume-absolute-path",
+			manifest: []byte(fmt.Sprintf("services:\n  app:\n    volumes: \n    - %s:/var/lib/redpanda/data\n    image: okteto/vote:1\n", relativePathExpanded)),
+			create:   false,
 			expectedVolumesMount: []StackVolume{
 				{
 					LocalPath:  relativePathExpanded,
@@ -917,11 +916,11 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 		},
 		{
 			name:     "absolute path",
-			manifest: []byte(fmt.Sprintf("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - %s:/var/run/docker.sock", tempFile.Name())),
+			manifest: []byte(fmt.Sprintf("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - %s:/var/run/docker.sock", relativePathExpandedFile)),
 			create:   false,
 			expectedVolumesMount: []StackVolume{
 				{
-					LocalPath:  tempFile.Name(),
+					LocalPath:  relativePathExpandedFile,
 					RemotePath: "/var/run/docker.sock",
 				},
 			},
@@ -968,6 +967,8 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 					t.Fatal(err)
 				}
 				defer os.RemoveAll("test_volume_relative_path_found")
+				file, err := os.Create("test-file")
+				defer os.Remove(file.Name())
 			}
 			stack, err := ReadStack(tt.manifest, true)
 			if err != nil && !tt.expectedError {

@@ -645,20 +645,20 @@ func validatePort(newPort PortRaw, ports []Port) error {
 func isNamedVolumeDeclared(volume StackVolume) bool {
 	if volume.LocalPath != "" {
 		wd, err := os.Getwd()
-		if err != nil {
-			if strings.HasPrefix(volume.LocalPath, "/") {
-				return true
-			}
-			if strings.HasPrefix(volume.LocalPath, "./") {
-				return true
-			}
-			if FileExists(volume.LocalPath) {
-				return true
-			}
-		} else {
-			if _, err := filepath.Rel(wd, volume.LocalPath); err != nil {
-				return false
-			}
+		relative := true
+		if filepath.IsAbs(volume.LocalPath) {
+			_, err = filepath.Rel(wd, volume.LocalPath)
+			relative = err == nil
+		}
+
+		if strings.HasPrefix(volume.LocalPath, "/") && relative {
+			return true
+		}
+		if strings.HasPrefix(volume.LocalPath, "./") && relative {
+			return true
+		}
+		if FileExists(volume.LocalPath) && relative {
+			return true
 		}
 	}
 	return false
