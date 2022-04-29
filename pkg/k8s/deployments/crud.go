@@ -126,8 +126,8 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 		return nil, oktetoErrors.ErrNotFound
 	}
 	validDeployments := []*appsv1.Deployment{}
-	for i, d := range dList.Items {
-		if d.Labels[model.DevCloneLabel] == "" {
+	for i := range dList.Items {
+		if dList.Items[i].Labels[model.DevCloneLabel] == "" {
 			validDeployments = append(validDeployments, &dList.Items[i])
 		}
 	}
