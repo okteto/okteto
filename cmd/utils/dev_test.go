@@ -259,6 +259,68 @@ func Test_CheckIfRegularFile(t *testing.T) {
 	}
 }
 
+func Test_GetDevFromManifest(t *testing.T) {
+	wrongDevName := "not-test"
+	tests := []struct {
+		name     string
+		manifest *model.Manifest
+		devName  string
+		dev      *model.Dev
+		err      error
+	}{
+		{
+			name:     "manifest has no dev section",
+			manifest: &model.Manifest{},
+			devName:  "",
+			dev:      nil,
+			err:      oktetoErrors.ErrManifestNoDevSection,
+		},
+		{
+			name: "manifest has one dev section but not the one the user added",
+			manifest: &model.Manifest{
+				Dev: model.ManifestDevs{
+					"test": &model.Dev{},
+				},
+			},
+			devName: wrongDevName,
+			dev:     nil,
+			err:     fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, wrongDevName),
+		},
+		{
+			name: "manifest has several dev section user introduces wrong one",
+			manifest: &model.Manifest{
+				Dev: model.ManifestDevs{
+					"test":   &model.Dev{},
+					"test-2": &model.Dev{},
+				},
+			},
+			devName: wrongDevName,
+			dev:     nil,
+			err:     fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, wrongDevName),
+		},
+		{
+			name: "manifest has several dev section user introduces correct one",
+			manifest: &model.Manifest{
+				Dev: model.ManifestDevs{
+					"test":   &model.Dev{},
+					"test-2": &model.Dev{},
+				},
+			},
+			devName: "test",
+			dev:     &model.Dev{},
+			err:     nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dev, err := GetDevFromManifest(tt.manifest, tt.devName)
+			assert.Equal(t, tt.dev, dev)
+			if tt.err != nil {
+				assert.Equal(t, tt.err.Error(), err.Error())
+			}
+		})
+	}
+}
 func Test_GetDevDetach(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "sync")
 	if err != nil {
