@@ -189,16 +189,21 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 func getVolumesToDeployFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) []string {
 
-	volumesToDeploy := make([]string, len(servicesToDeploy))
+	volumesToDeploySet := map[string]bool{}
 
 	for serviceName, serviceSpec := range stack.Services {
 		if servicesToDeploy[serviceName] {
 			for _, volume := range serviceSpec.Volumes {
 				if stack.Volumes[volume.LocalPath] != nil {
-					volumesToDeploy = append(volumesToDeploy, volume.LocalPath)
+					volumesToDeploySet[volume.LocalPath] = true
 				}
 			}
 		}
+	}
+
+	volumesToDeploy := []string{}
+	for name := range volumesToDeploySet {
+		volumesToDeploy = append(volumesToDeploy, name)
 	}
 
 	return volumesToDeploy
@@ -206,15 +211,15 @@ func getVolumesToDeployFromServicesToDeploy(stack *model.Stack, servicesToDeploy
 
 func getEndpointsToDeployFromServicesToDeploy(endpoints model.EndpointSpec, servicesToDeploy map[string]bool) []string {
 	endpointsToDeploySet := map[string]bool{}
-	for _, spec := range endpoints {
+	for name, spec := range endpoints {
 		for _, rule := range spec.Rules {
 			if servicesToDeploy[rule.Service] {
-				endpointsToDeploySet[rule.Service] = true
+				endpointsToDeploySet[name] = true
 			}
 		}
 	}
 
-	endpointsToDeploy := make([]string, len(endpointsToDeploySet))
+	endpointsToDeploy := []string{}
 	for name := range endpointsToDeploySet {
 		endpointsToDeploy = append(endpointsToDeploy, name)
 	}

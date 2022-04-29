@@ -505,3 +505,120 @@ func Test_AddSomeServices(t *testing.T) {
 		})
 	}
 }
+
+func Test_getVolumesToDeployFromServicesToDeploy(t *testing.T) {
+	type args struct {
+		stack            *model.Stack
+		servicesToDeploy map[string]bool
+	}
+	tests := []struct {
+		name     string
+		args     args
+		expected []string
+	}{
+		{
+			name: "should return volumes from services to deploy",
+			args: args{
+				servicesToDeploy: map[string]bool{
+					"service b":  true,
+					"service bc": true,
+				},
+				stack: &model.Stack{
+					Services: map[string]*model.Service{
+						"service ab": {
+							Volumes: []model.StackVolume{
+								{
+									LocalPath: "volume a",
+								},
+								{
+									LocalPath: "volume b",
+								},
+							},
+						},
+						"service b": {
+							Volumes: []model.StackVolume{
+								{
+									LocalPath: "volume b",
+								},
+							},
+						},
+						"service bc": {
+							Volumes: []model.StackVolume{
+								{
+									LocalPath: "volume b",
+								},
+								{
+									LocalPath: "volume c",
+								},
+							},
+						},
+					},
+					Volumes: map[string]*model.VolumeSpec{
+						"volume a": {},
+						"volume b": {},
+						"volume c": {},
+					},
+				},
+			},
+			expected: []string{"volume b", "volume c"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getVolumesToDeployFromServicesToDeploy(tt.args.stack, tt.args.servicesToDeploy)
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func Test_getEndpointsToDeployFromServicesToDeploy(t *testing.T) {
+	type args struct {
+		endpoints        model.EndpointSpec
+		servicesToDeploy map[string]bool
+	}
+	tests := []struct {
+		name     string
+		args     args
+		expected []string
+	}{
+		{
+			name: "multiple endpoints",
+			args: args{
+				endpoints: model.EndpointSpec{
+					"manifest": {
+						Rules: []model.EndpointRule{
+							{Service: "a"},
+							{Service: "b"},
+						},
+					},
+				},
+				servicesToDeploy: map[string]bool{
+					"a": true,
+				},
+			},
+			expected: []string{"manifest"},
+		},
+		{
+			name: "no endpoints",
+			args: args{
+				endpoints: model.EndpointSpec{},
+				servicesToDeploy: map[string]bool{
+					"manifest": true,
+				},
+			},
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getEndpointsToDeployFromServicesToDeploy(tt.args.endpoints, tt.args.servicesToDeploy)
+			if !reflect.DeepEqual(result, tt.expected) {
+				t.Errorf("expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
