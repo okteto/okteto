@@ -105,11 +105,11 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 	analytics.TrackStackWarnings(s.Warnings.NotSupportedFields)
 
 	if len(options.ServicesToDeploy) == 0 {
-		definedSvcs := make([]string, 0)
-		for svcName := range s.Services {
-			definedSvcs = append(definedSvcs, svcName)
+		definedServices := make([]string, len(s.Services))
+		for serviceName := range s.Services {
+			definedServices = append(definedServices, serviceName)
 		}
-		options.ServicesToDeploy = definedSvcs
+		options.ServicesToDeploy = definedServices
 	}
 
 	stackDeployer := &stack.Stack{

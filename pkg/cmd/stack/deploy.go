@@ -104,6 +104,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 	return err
 }
 
+//deploy deploys a stack to kubernetes
 func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *StackDeployOptions) error {
 	DisplayWarnings(s)
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying compose '%s'...", s.Name))
@@ -128,7 +129,12 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			}
 		}
 
-		for name := range s.Volumes {
+		servicesToDeploySet := map[string]bool{}
+		for _, service := range options.ServicesToDeploy {
+			servicesToDeploySet[service] = true
+		}
+
+		for _, name := range getVolumesToDeployFromServicesToDeploy(s, servicesToDeploySet) {
 			if err := deployVolume(ctx, name, s, c, spinner); err != nil {
 				exit <- err
 				return
@@ -145,7 +151,8 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
 			return
 		}
-		for name := range s.Endpoints {
+
+		for _, name := range getEndpointsToDeployFromServicesToDeploy(s.Endpoints, servicesToDeploySet) {
 			if err := deployIngress(ctx, name, s, iClient, spinner); err != nil {
 				exit <- err
 				return
@@ -178,6 +185,46 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		}
 	}
 	return nil
+}
+
+func getVolumesToDeployFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) []string {
+
+	volumesToDeploySet := map[string]bool{}
+
+	for serviceName, serviceSpec := range stack.Services {
+		if servicesToDeploy[serviceName] {
+			for _, volume := range serviceSpec.Volumes {
+				if stack.Volumes[volume.LocalPath] != nil {
+					volumesToDeploySet[volume.LocalPath] = true
+				}
+			}
+		}
+	}
+
+	volumesToDeploy := []string{}
+	for name := range volumesToDeploySet {
+		volumesToDeploy = append(volumesToDeploy, name)
+	}
+
+	return volumesToDeploy
+}
+
+func getEndpointsToDeployFromServicesToDeploy(endpoints model.EndpointSpec, servicesToDeploy map[string]bool) []string {
+	endpointsToDeploySet := map[string]bool{}
+	for name, spec := range endpoints {
+		for _, rule := range spec.Rules {
+			if servicesToDeploy[rule.Service] {
+				endpointsToDeploySet[name] = true
+			}
+		}
+	}
+
+	endpointsToDeploy := []string{}
+	for name := range endpointsToDeploySet {
+		endpointsToDeploy = append(endpointsToDeploy, name)
+	}
+
+	return endpointsToDeploy
 }
 
 func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, spinner *utils.Spinner, options *StackDeployOptions) error {

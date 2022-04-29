@@ -444,17 +444,7 @@ func setDeployOptionsValuesFromManifest(deployOptions *Options, cwd string) {
 	if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
 
 		mergeServicesToDeployFromOptionsAndManifest(deployOptions)
-		if len(deployOptions.servicesToDeploy) > 0 {
-			servicesToDeploy := map[string]bool{}
-			for _, service := range deployOptions.servicesToDeploy {
-				servicesToDeploy[service] = true
-			}
-
-			onlyDeployEndpointsFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints, servicesToDeploy)
-
-			onlyDeployVolumesFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack, servicesToDeploy)
-
-		} else {
+		if len(deployOptions.servicesToDeploy) == 0 {
 			deployOptions.servicesToDeploy = []string{}
 			for service := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
 				deployOptions.servicesToDeploy = append(deployOptions.servicesToDeploy, service)
@@ -492,40 +482,6 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 	if len(deployOptions.servicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
 		deployOptions.servicesToDeploy = manifestDeclaredServicesToDeploy
-	}
-}
-
-func onlyDeployEndpointsFromServicesToDeploy(endpoints model.EndpointSpec, servicesToDeploy map[string]bool) {
-	for key, spec := range endpoints {
-		newRules := []model.EndpointRule{}
-		for _, rule := range spec.Rules {
-			if servicesToDeploy[rule.Service] {
-				newRules = append(newRules, rule)
-			}
-		}
-		spec.Rules = newRules
-		endpoints[key] = spec
-	}
-}
-
-func onlyDeployVolumesFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) {
-
-	volumesToDeploy := map[string]bool{}
-
-	for serviceName, serviceSpec := range stack.Services {
-		if servicesToDeploy[serviceName] {
-			for _, volume := range serviceSpec.Volumes {
-				if stack.Volumes[volume.LocalPath] != nil {
-					volumesToDeploy[volume.LocalPath] = true
-				}
-			}
-		}
-	}
-
-	for volume := range stack.Volumes {
-		if !volumesToDeploy[volume] {
-			delete(stack.Volumes, volume)
-		}
 	}
 }
 
