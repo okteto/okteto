@@ -465,7 +465,8 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 			}
 		}
 		if len(deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo) > 0 {
-			deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo[0].ServicesToDeploy = stack.AddDependentServicesIfNotPresent(ctx, deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy, c)
+			deployOptions.servicesToDeploy = stack.AddDependentServicesIfNotPresent(ctx, deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy, c)
+			deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo[0].ServicesToDeploy = deployOptions.servicesToDeploy
 		}
 	}
 
