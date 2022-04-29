@@ -232,31 +232,6 @@ func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Inte
 	return d.Status.ReadyReplicas > 0
 }
 
-func TranslateDivert(username string, d *appsv1.Deployment) *appsv1.Deployment {
-	name := model.DivertName(d.Name, username)
-	result := d.DeepCopy()
-	result.UID = ""
-	result.Name = name
-	if result.Annotations == nil {
-		result.Annotations = map[string]string{}
-	}
-	result.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoUpCmd
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if d.Labels != nil && d.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = d.Labels[model.DeployedByLabel]
-	}
-	result.Spec.Selector = &metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			model.OktetoDivertLabel: username,
-		},
-	}
-	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel: username,
-	}
-	result.ResourceVersion = ""
-	return result
-}
-
 // PatchAnnotations patches the deployment annotations
 func PatchAnnotations(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) error {
 	payload := []patchAnnotations{

@@ -1343,13 +1343,6 @@ func Test_validateForExtraFields(t *testing.T) {
                    default: 3m
                    resources: 5m`,
 		},
-		{
-			name: "divert",
-			value: `divert:
-                   ingress: api
-                   service: api
-                   port: 8080`,
-		},
 	}
 
 	for _, tt := range tests {

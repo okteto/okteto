@@ -230,28 +230,6 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 	return fmt.Errorf(strings.TrimSpace(errorToReturn))
 }
 
-func TranslateDivert(username string, sfs *appsv1.StatefulSet) *appsv1.StatefulSet {
-	name := model.DivertName(sfs.Name, username)
-	result := sfs.DeepCopy()
-	result.UID = ""
-	result.Name = name
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if sfs.Labels != nil && sfs.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = sfs.Labels[model.DeployedByLabel]
-	}
-	result.Spec.Selector = &metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			model.OktetoDivertLabel: username,
-		},
-	}
-	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel: username,
-	}
-
-	result.ResourceVersion = ""
-	return result
-}
-
 // PatchAnnotations patches the statefulset annotations
 func PatchAnnotations(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) error {
 	payload := []patchAnnotations{

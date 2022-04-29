@@ -476,10 +476,6 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
     More information is available here: https://okteto.com/docs/reference/cli/#up`,
 		}
 	}
-	if dev.Divert != nil {
-		dev.Name = model.DivertName(dev.Name, okteto.GetSanitizedUsername())
-		return app.Divert(okteto.GetSanitizedUsername()), false, nil
-	}
 	return app, false, nil
 }
 
