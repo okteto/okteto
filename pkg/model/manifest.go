@@ -224,6 +224,15 @@ type DeployInfo struct {
 	Commands       []DeployCommand     `json:"commands,omitempty" yaml:"commands,omitempty"`
 	ComposeSection *ComposeSectionInfo `json:"compose,omitempty" yaml:"compose,omitempty"`
 	Endpoints      EndpointSpec        `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
+	Divert         *DivertDeploy       `json:"divert,omitempty" yaml:"divert,omitempty"`
+}
+
+// DivertDeploy represents information about the deploy divert configuration
+type DivertDeploy struct {
+	Namespace  string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Service    string `json:"service,omitempty" yaml:"service,omitempty"`
+	Port       int    `json:"port,omitempty" yaml:"port,omitempty"`
+	Deployment string `json:"deployment,omitempty" yaml:"deployment,omitempty"`
 }
 
 // ComposeSectionInfo represents information about compose file
@@ -641,8 +650,38 @@ func Read(bytes []byte) (*Manifest, error) {
 	if err := manifest.setDefaults(); err != nil {
 		return nil, err
 	}
+
+	if err := manifest.validate(); err != nil {
+		return nil, err
+	}
 	manifest.Manifest = bytes
 	return manifest, nil
+}
+
+func (m *Manifest) validate() error {
+	if err := m.validateDivert(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *Manifest) validateDivert() error {
+	if m.Deploy == nil {
+		return nil
+	}
+	if m.Deploy.Divert == nil {
+		return nil
+	}
+	if m.Deploy.Divert.Namespace == "" {
+		return fmt.Errorf("the field 'deploy.divert.namespace' is mandatory")
+	}
+	if m.Deploy.Divert.Service == "" {
+		return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
+	}
+	if m.Deploy.Divert.Deployment == "" {
+		return fmt.Errorf("the field 'deploy.divert.deployment' is mandatory")
+	}
+	return nil
 }
 
 func (m *Manifest) setDefaults() error {

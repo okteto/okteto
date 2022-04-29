@@ -37,6 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -44,6 +45,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	giturls "github.com/whilp/git-urls"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -86,6 +88,7 @@ type proxyInterface interface {
 	GetPort() int
 	GetToken() string
 	SetName(name string)
+	SetDivert(divertedNamespace string)
 }
 
 // DeployCommand defines the config for deploying an app
@@ -265,6 +268,15 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
 
 	dc.Proxy.SetName(deployOptions.Name)
+	// don't divert if current namespace is the diverted namespace
+	if deployOptions.Manifest.Deploy.Divert != nil {
+		if !okteto.IsOkteto() {
+			return fmt.Errorf("'deploy.divert' is only supported in clusters managed by Okteto")
+		}
+		if deployOptions.Manifest.Deploy.Divert.Namespace != deployOptions.Manifest.Namespace {
+			dc.Proxy.SetDivert(deployOptions.Manifest.Deploy.Divert.Namespace)
+		}
+	}
 	oktetoLog.SetStage("")
 
 	dc.PipelineType = deployOptions.Manifest.Type
@@ -379,6 +391,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.SetStage("")
 
 	if err != nil {
+		if err.Error() == "interrupt signal received" {
+			return nil
+		}
 		err = oktetoErrors.UserError{
 			E:    err,
 			Hint: "Update the 'deploy' section of your okteto manifest and try again",
@@ -490,8 +505,8 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 }
 
 func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
-	stopCmds := make(chan os.Signal, 1)
-	signal.Notify(stopCmds, os.Interrupt)
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 	go func() {
 		for _, command := range opts.Manifest.Deploy.Commands {
@@ -504,63 +519,41 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 			}
 			oktetoLog.SetStage("")
 		}
+
+		if opts.Manifest.Deploy.ComposeSection != nil {
+			if err := dc.deployStack(ctx, opts); err != nil {
+				exit <- err
+				return
+			}
+		}
+
+		if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
+			if err := dc.deployDivert(ctx, opts); err != nil {
+				exit <- err
+				return
+			}
+			oktetoLog.Success("Divert from '%s' successfully configured", opts.Manifest.Deploy.Divert.Namespace)
+		}
+
 		exit <- nil
 	}()
-	shouldExit := false
-	for {
-		select {
-		case <-stopCmds:
-			oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-			sp := utils.NewSpinner("Shutting down...")
-			sp.Start()
-			defer sp.Stop()
-			dc.Executor.CleanUp(errors.New("interrupt signal received"))
-			return oktetoErrors.ErrIntSig
-		case err := <-exit:
-			if err != nil {
-				return err
-			}
-			shouldExit = true
-		}
-		if shouldExit {
-			break
-		}
-	}
 
-	stopCompose := make(chan os.Signal, 1)
-	signal.Notify(stopCompose, os.Interrupt)
-	exitCompose := make(chan error, 1)
-
-	go func() {
-		if opts.Manifest.Deploy.ComposeSection != nil {
-			oktetoLog.SetStage("Deploying compose")
-			err := dc.deployStack(ctx, opts)
-			exitCompose <- err
-			return
-		}
-		exitCompose <- nil
-	}()
-	shouldExit = false
-	for {
-		select {
-		case <-stopCmds:
-			os.Unsetenv(model.OktetoDisableSpinnerEnvVar)
-			oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-			return oktetoErrors.ErrIntSig
-		case err := <-exitCompose:
-			if err != nil {
-				return fmt.Errorf("Error deploying compose: %w", err)
-			}
-			shouldExit = true
-		}
-		if shouldExit {
-			break
-		}
+	select {
+	case <-stop:
+		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+		sp := utils.NewSpinner("Shutting down...")
+		sp.Start()
+		defer sp.Stop()
+		dc.Executor.CleanUp(errors.New("interrupt signal received"))
+		return oktetoErrors.ErrIntSig
+	case err := <-exit:
+		return err
 	}
-	return nil
 }
 
 func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
+	oktetoLog.SetStage("Deploying compose")
+	defer oktetoLog.SetStage("")
 	composeSectionInfo := opts.Manifest.Deploy.ComposeSection
 	composeSectionInfo.Stack.Namespace = okteto.Context().Namespace
 	var composeFiles []string
@@ -585,8 +578,40 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 		Config:         cfg,
 		IsInsideDeploy: true,
 	}
-	oktetoLog.Information("Deploying compose")
 	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
+}
+
+func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error {
+	oktetoLog.SetStage("Divert configuration")
+	defer oktetoLog.SetStage("")
+
+	sp := utils.NewSpinner(fmt.Sprintf("Diverting namespace %s...", opts.Manifest.Deploy.Divert.Namespace))
+	sp.Start()
+	defer sp.Stop()
+
+	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
+	result, err := c.NetworkingV1().Ingresses(opts.Manifest.Deploy.Divert.Namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, in := range result.Items {
+		select {
+		case <-ctx.Done():
+			oktetoLog.Infof("deployDivert context cancelled")
+			return ctx.Err()
+		default:
+			sp.Update(fmt.Sprintf("Diverting ingress %s/%s...", in.Namespace, in.Name))
+			if err := diverts.DivertIngress(ctx, opts.Manifest, &in, c); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (dc *DeployCommand) cleanUp(ctx context.Context) {

@@ -330,4 +330,7 @@ const (
 
 	// OktetoImageTagWithVolumes is the tag assigned to an image with volume mounts
 	OktetoImageTagWithVolumes = "okteto-with-volume-mounts"
+
+	//OktetoDivertedFromLabel represents an object is diverted from another one
+	OktetoDivertedFromLabel = "dev.okteto.com/divert-from"
 )
