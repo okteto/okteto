@@ -704,24 +704,13 @@ func validateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 // AddDependentServicesIfNotPresent adds dependands services to deploy
 func AddDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, svcsToDeploy []string, c kubernetes.Interface) []string {
 	initialSvcsToDeploy := svcsToDeploy
-	svcsToDeploy = addDependentServices(ctx, s, svcsToDeploy, c)
+	svcsToDeployWithDependencies := addDependentServices(ctx, s, svcsToDeploy, c)
 	if len(initialSvcsToDeploy) != len(svcsToDeploy) {
-		added := []string{}
-		for _, svcName := range svcsToDeploy {
-			found := false
-			for _, svcNameInitial := range initialSvcsToDeploy {
-				if svcNameInitial == svcName {
-					found = true
-					break
-				}
-			}
-			if !found {
-				added = append(added, svcName)
-			}
-		}
+		added := getAddedSvcs(initialSvcsToDeploy, svcsToDeployWithDependencies)
+
 		oktetoLog.Warning("The following services need to be deployed because the services passed as arguments depend on them: [%s]", strings.Join(added, ", "))
 	}
-	return svcsToDeploy
+	return svcsToDeployWithDependencies
 }
 
 func addDependentServices(ctx context.Context, s *model.Stack, svcsToDeploy []string, c kubernetes.Interface) []string {
@@ -737,6 +726,23 @@ func addDependentServices(ctx context.Context, s *model.Stack, svcsToDeploy []st
 		return addDependentServices(ctx, s, svcsToDeploy, c)
 	}
 	return svcsToDeploy
+}
+
+func getAddedSvcs(initialSvcsToDeploy, svcsToDeployWithDependencies []string) []string {
+	added := []string{}
+	for _, svcName := range svcsToDeployWithDependencies {
+		found := false
+		for _, svcNameInitial := range initialSvcsToDeploy {
+			if svcNameInitial == svcName {
+				found = true
+				break
+			}
+		}
+		if !found {
+			added = append(added, svcName)
+		}
+	}
+	return added
 }
 
 func isSvcToBeDeployed(servicesToDeploy []string, svcName string) bool {
