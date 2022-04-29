@@ -459,10 +459,6 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 			deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo[0].ServicesToDeploy = deployOptions.servicesToDeploy
 		}
 	}
-
-	if len(deployOptions.servicesToDeploy) == 0 {
-		deployOptions.servicesToDeploy = []string{deployOptions.Name}
-	}
 }
 
 func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
