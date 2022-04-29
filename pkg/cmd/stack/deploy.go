@@ -54,9 +54,7 @@ type StackDeployOptions struct {
 	NoCache          bool
 	Timeout          time.Duration
 	ServicesToDeploy []string
-	VolumesToDeploy  []string
-	// EndpointsToDeploy model.EndpointSpec
-	Progress string
+	Progress         string
 }
 
 // Stack is the executor of stack commands
@@ -131,7 +129,14 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			}
 		}
 
-		for _, name := range options.VolumesToDeploy {
+		servicesToDeploySet := map[string]bool{}
+		for _, service := range options.ServicesToDeploy {
+			servicesToDeploySet[service] = true
+		}
+
+		volumesToDeploy := getVolumesToDeployFromServicesToDeploy(s, servicesToDeploySet)
+
+		for _, name := range volumesToDeploy {
 			if err := deployVolume(ctx, name, s, c, spinner); err != nil {
 				exit <- err
 				return
@@ -148,7 +153,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
 			return
 		}
-		//for name := range options.EndpointsToDeploy {
+		//TODO: bring endpointsToDeploy logic
 		for name := range s.Endpoints {
 			if err := deployIngress(ctx, name, s, iClient, spinner); err != nil {
 				exit <- err
@@ -182,6 +187,23 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		}
 	}
 	return nil
+}
+
+func getVolumesToDeployFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) []string {
+
+	volumesToDeploy := make([]string, len(servicesToDeploy))
+
+	for serviceName, serviceSpec := range stack.Services {
+		if servicesToDeploy[serviceName] {
+			for _, volume := range serviceSpec.Volumes {
+				if stack.Volumes[volume.LocalPath] != nil {
+					volumesToDeploy = append(volumesToDeploy, volume.LocalPath)
+				}
+			}
+		}
+	}
+
+	return volumesToDeploy
 }
 
 func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, spinner *utils.Spinner, options *StackDeployOptions) error {

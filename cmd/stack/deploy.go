@@ -112,22 +112,6 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 		options.ServicesToDeploy = definedServices
 	}
 
-	if len(options.VolumesToDeploy) == 0 {
-		definedVolumes := make([]string, len(s.Volumes))
-		for volumeName := range s.Volumes {
-			definedVolumes = append(definedVolumes, volumeName)
-		}
-		options.VolumesToDeploy = definedVolumes
-	}
-
-	// if len(options.EndpointsToDeploy) == 0 {
-	// 	definedEndpoints := make([]string, len(s.Endpoints))
-	// 	for endpointName := range s.Endpoints {
-	// 		definedEndpoints = append(definedEndpoints, endpointName)
-	// 	}
-	// 	options.EndpointsToDeploy = definedEndpoints
-	// }
-
 	stackDeployer := &stack.Stack{
 		K8sClient: c.K8sClient,
 		Config:    c.Config,

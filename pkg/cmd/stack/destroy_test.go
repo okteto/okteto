@@ -15,6 +15,7 @@ package stack
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -273,6 +274,77 @@ func Test_destroyJobs(t *testing.T) {
 			}
 			if len(jobsList) != tt.expectedDeployments {
 				t.Fatal("Not destroyed correctly")
+			}
+		})
+	}
+}
+
+func Test_onlyDeployVolumesFromServicesToDeploy(t *testing.T) {
+	type args struct {
+		stack            *model.Stack
+		servicesToDeploy map[string]bool
+	}
+	tests := []struct {
+		name     string
+		args     args
+		expected map[string]*model.VolumeSpec
+	}{
+		{
+			name: "multiple volumes",
+			args: args{
+				servicesToDeploy: map[string]bool{
+					"service b":  true,
+					"service bc": true,
+				},
+				stack: &model.Stack{
+					Services: map[string]*model.Service{
+						"service ab": {
+							Volumes: []model.StackVolume{
+								{
+									LocalPath: "volume a",
+								},
+								{
+									LocalPath: "volume b",
+								},
+							},
+						},
+						"service b": {
+							Volumes: []model.StackVolume{
+								{
+									LocalPath: "volume b",
+								},
+							},
+						},
+						"service bc": {
+							Volumes: []model.StackVolume{
+								{
+									LocalPath: "volume b",
+								},
+								{
+									LocalPath: "volume c",
+								},
+							},
+						},
+					},
+					Volumes: map[string]*model.VolumeSpec{
+						"volume a": {},
+						"volume b": {},
+						"volume c": {},
+					},
+				},
+			},
+			expected: map[string]*model.VolumeSpec{
+				"volume b": {},
+				"volume c": {},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getVolumesToDeployFromServicesToDeploy(tt.args.stack, tt.args.servicesToDeploy)
+			if !reflect.DeepEqual(tt.args.stack.Volumes, tt.expected) {
+				t.Errorf("expected %v, got %v", tt.expected, result)
 			}
 		})
 	}
