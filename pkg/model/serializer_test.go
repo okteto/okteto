@@ -1827,47 +1827,6 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 			},
 			isErrorExpected: true,
 		},
-		{
-			name: "divert",
-			deployInfoManifest: []byte(`divert:
-  from:
-    namespace: staging
-    ingress: movies
-    service: frontend
-    deployment: frontend
-  to:
-    service: frontend`),
-			expected: &DeployInfo{
-				Commands: []DeployCommand{},
-			},
-			isErrorExpected: true,
-		},
-		{
-			name: "all together",
-			deployInfoManifest: []byte(`commands:
-- kubectl apply -f manifest.yml
-divert:
-  from:
-    namespace: staging
-    ingress: movies
-    service: frontend
-    deployment: frontend
-  to:
-    service: frontend
-compose:
-  manifest: ./docker-compose.yml
-  endpoints:
-  - path: /
-    service: frontend
-    port: 80
-  - path: /api
-    service: api
-    port: 8080`),
-			expected: &DeployInfo{
-				Commands: []DeployCommand{},
-			},
-			isErrorExpected: true,
-		},
 	}
 
 	for _, tt := range tests {

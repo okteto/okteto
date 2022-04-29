@@ -84,7 +84,6 @@ type Dev struct {
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	InitFromImage        bool                  `json:"initFromImage,omitempty" yaml:"initFromImage,omitempty"`
 	Timeout              Timeout               `json:"timeout,omitempty" yaml:"timeout,omitempty"`
-	Divert               *Divert               `json:"divert,omitempty" yaml:"divert,omitempty"`
 	NodeSelector         map[string]string     `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	Affinity             *Affinity             `json:"affinity,omitempty" yaml:"affinity,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
@@ -235,13 +234,6 @@ type Probes struct {
 type Lifecycle struct {
 	PostStart bool `json:"postStart,omitempty" yaml:"postStart,omitempty"`
 	PostStop  bool `json:"postStop,omitempty" yaml:"postStop,omitempty"`
-}
-
-// Divert defines how to divert a given service
-type Divert struct {
-	Ingress string `yaml:"ingress,omitempty"`
-	Service string `yaml:"service,omitempty"`
-	Port    int    `yaml:"port,omitempty"`
 }
 
 // ResourceList is a set of (resource name, quantity) pairs.
@@ -1239,16 +1231,8 @@ func (service *Dev) validateForExtraFields() error {
 	if service.Timeout != (Timeout{}) {
 		return fmt.Errorf(errorMessage, "timeout")
 	}
-	if service.Divert != nil {
-		return fmt.Errorf(errorMessage, "divert")
-	}
 
 	return nil
-}
-
-// DivertName returns the name of the diverted version of a given resource
-func DivertName(name, username string) string {
-	return fmt.Sprintf("%s-%s", name, username)
 }
 
 // DevCloneName returns the name of the mirrored version of a given resource

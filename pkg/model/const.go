@@ -157,10 +157,6 @@ const (
 	OktetoSyncAnnotation = "dev.okteto.com/sync"
 	//OktetoStignoreAnnotation indicates the hash of the stignore files to force redeployment
 	OktetoStignoreAnnotation = "dev.okteto.com/stignore"
-	//OktetoDivertLabel indicates the object is a diverted version
-	OktetoDivertLabel = "dev.okteto.com/divert"
-	//OktetoDivertServiceModificationAnnotation indicates the service modification done by diverting a service
-	OktetoDivertServiceModificationAnnotation = "divert.okteto.com/modification"
 	//OktetoInjectTokenAnnotation annotation to inject the okteto token
 	OktetoInjectTokenAnnotation = "dev.okteto.com/inject-token"
 

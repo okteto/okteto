@@ -43,6 +43,4 @@ type App interface {
 	Deploy(ctx context.Context, c kubernetes.Interface) error
 	PatchAnnotations(ctx context.Context, c kubernetes.Interface) error
 	Destroy(ctx context.Context, c kubernetes.Interface) error
-
-	Divert(username string) App
 }

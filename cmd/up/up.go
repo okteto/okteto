@@ -38,7 +38,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/diverts"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -480,15 +479,6 @@ func (up *upContext) getManifest(path string) (*model.Manifest, error) {
 	return model.GetManifestV2(path)
 }
 func (up *upContext) start() error {
-
-	ctx := context.Background()
-
-	if up.Dev.Divert != nil {
-		if err := diverts.Create(ctx, up.Dev, up.Client); err != nil {
-			return err
-		}
-	}
-
 	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
 		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
 		return fmt.Errorf("couldn't create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)
@@ -771,7 +761,7 @@ func (up *upContext) shutdown() {
 
 }
 
-func printDisplayContext(dev *model.Dev, divertURL string) {
+func printDisplayContext(dev *model.Dev) {
 	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(dev.Context)))
 	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), dev.Namespace))
 	oktetoLog.Println(fmt.Sprintf("    %s      %s", oktetoLog.BlueString("Name:"), dev.Name))
@@ -797,10 +787,6 @@ func printDisplayContext(dev *model.Dev, divertURL string) {
 		for i := 1; i < len(dev.Reverse); i++ {
 			oktetoLog.Println(fmt.Sprintf("               %d <- %d", dev.Reverse[i].Local, dev.Reverse[i].Remote))
 		}
-	}
-
-	if divertURL != "" {
-		oktetoLog.Println(fmt.Sprintf("    %s       %s", oktetoLog.BlueString("URL:"), divertURL))
 	}
 	oktetoLog.Println()
 }

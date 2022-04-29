@@ -51,5 +51,4 @@ type Deployment struct {
 type Endpoint struct {
 	URL     string `json:"url"`
 	Private bool   `json:"private"`
-	Divert  bool   `json:"divert"`
 }
