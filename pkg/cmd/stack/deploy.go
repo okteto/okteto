@@ -715,10 +715,18 @@ func AddDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, svcsT
 
 func addDependentServices(ctx context.Context, s *model.Stack, svcsToDeploy []string, c kubernetes.Interface) []string {
 	initialLength := len(svcsToDeploy)
+	svcsToDeploySet := map[string]bool{}
+	for _, svc := range svcsToDeploy {
+		svcsToDeploySet[svc] = true
+	}
 	for _, svcToDeploy := range svcsToDeploy {
 		for dependentSvc := range s.Services[svcToDeploy].DependsOn {
+			if _, ok := svcsToDeploySet[dependentSvc]; ok {
+				continue
+			}
 			if !isSvcToBeDeployed(svcsToDeploy, dependentSvc) && !isSvcRunning(ctx, s.Services[dependentSvc], s.Namespace, dependentSvc, c) {
 				svcsToDeploy = append(svcsToDeploy, dependentSvc)
+				svcsToDeploySet[dependentSvc] = true
 			}
 		}
 	}
@@ -729,16 +737,13 @@ func addDependentServices(ctx context.Context, s *model.Stack, svcsToDeploy []st
 }
 
 func getAddedSvcs(initialSvcsToDeploy, svcsToDeployWithDependencies []string) []string {
+	initialSvcsToDeploySet := map[string]bool{}
+	for _, svc := range initialSvcsToDeploy {
+		initialSvcsToDeploySet[svc] = true
+	}
 	added := []string{}
 	for _, svcName := range svcsToDeployWithDependencies {
-		found := false
-		for _, svcNameInitial := range initialSvcsToDeploy {
-			if svcNameInitial == svcName {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if _, ok := initialSvcsToDeploySet[svcName]; ok {
 			added = append(added, svcName)
 		}
 	}
