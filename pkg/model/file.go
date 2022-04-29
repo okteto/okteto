@@ -11,23 +11,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package model
 
-import (
-	"path/filepath"
+import "path/filepath"
 
-	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
-)
-
-// InferName infers the application name from the folder received as parameter
-func InferName(cwd string) string {
-	repo, err := model.GetRepositoryURL(cwd)
-	if err != nil {
-		oktetoLog.Info("inferring name from folder")
-		return filepath.Base(cwd)
+// GetWorkdirFromManifestPath sets the path
+func GetWorkdirFromManifestPath(manifestPath string) string {
+	dir := filepath.Dir(manifestPath)
+	if filepath.Base(dir) == ".okteto" {
+		dir = filepath.Dir(dir)
 	}
+	return dir
+}
 
-	oktetoLog.Info("inferring name from git repository URL")
-	return model.TranslateURLToName(repo)
+// GetManifestPathFromWorkdir returns the path from a workdir
+func GetManifestPathFromWorkdir(manifestPath, workdir string) string {
+	mPath, err := filepath.Rel(workdir, manifestPath)
+	if err != nil {
+		return ""
+	}
+	return mPath
 }
