@@ -63,7 +63,7 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 }
 
 func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
-	buildInfo := manifest.Build[service]
+	buildInfo := manifest.Build[service].Copy()
 	isStack := manifest.Type == model.StackType
 	if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
 		buildInfo.Image = ""
