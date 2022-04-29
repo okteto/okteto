@@ -53,11 +53,11 @@ func deploy(ctx context.Context) *cobra.Command {
 
 			options.StackPaths = loadComposePaths(options.StackPaths)
 			if len(options.StackPaths) == 1 {
-				workdir := utils.GetWorkdirFromManifestPath(options.StackPaths[0])
+				workdir := model.GetWorkdirFromManifestPath(options.StackPaths[0])
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
-				options.StackPaths[0] = utils.GetManifestPathFromWorkdir(options.StackPaths[0], workdir)
+				options.StackPaths[0] = model.GetManifestPathFromWorkdir(options.StackPaths[0], workdir)
 			}
 			s, err := contextCMD.LoadStackWithContext(ctx, options.Name, options.Namespace, options.StackPaths)
 			if err != nil {

@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -462,10 +463,15 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	}
 
 	svc.Volumes, svc.VolumeMounts = splitVolumesByType(serviceRaw.Volumes, stack)
-	for _, volume := range svc.VolumeMounts {
+	for idx, volume := range svc.VolumeMounts {
 		if !isNamedVolumeDeclared(volume) {
 			return nil, fmt.Errorf("Named volume '%s' is used in service '%s' but no declaration was found in the volumes section.", volume.ToString(), svcName)
 		}
+		volume.LocalPath, err = filepath.Abs(volume.LocalPath)
+		if err != nil {
+			return nil, err
+		}
+		svc.VolumeMounts[idx] = volume
 	}
 
 	svc.Workdir = serviceRaw.Workdir

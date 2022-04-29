@@ -95,11 +95,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if options.ManifestPath != "" {
-				workdir := utils.GetWorkdirFromManifestPath(options.ManifestPath)
+				workdir := model.GetWorkdirFromManifestPath(options.ManifestPath)
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
-				options.ManifestPath = utils.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
+				options.ManifestPath = model.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
 			}
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
 				return err

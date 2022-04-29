@@ -482,8 +482,8 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 			Build: ManifestBuild{},
 		}
 		return chartManifest, nil
-
 	}
+
 	if manifestPath := getManifestsPath(cwd); manifestPath != "" {
 		oktetoLog.Infof("Found kubernetes manifests")
 		manifestPath, err := filepath.Rel(cwd, manifestPath)
@@ -808,6 +808,16 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 			oktetoLog.Infof("could not build service %s, due to not having Dockerfile defined or volumes to include", svcName)
 		}
 
+		for idx, volume := range buildInfo.VolumesToInclude {
+			volume.LocalPath, err = filepath.Rel(buildInfo.Context, volume.LocalPath)
+			if err != nil {
+				volume.LocalPath, err = filepath.Rel(cwd, volume.LocalPath)
+				if err != nil {
+					oktetoLog.Info("can not find svc[%s].build.volumes to include relative to svc[%s].build.context", svcName, svcName)
+				}
+			}
+			buildInfo.VolumesToInclude[idx] = volume
+		}
 		buildInfo.Context, err = filepath.Rel(cwd, buildInfo.Context)
 		if err != nil {
 			oktetoLog.Infof("can not make svc[%s].build.context relative to cwd", svcName)

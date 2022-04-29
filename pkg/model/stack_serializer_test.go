@@ -16,6 +16,7 @@ package model
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -857,6 +858,8 @@ func Test_validateCommandArgs(t *testing.T) {
 }
 
 func Test_validateVolumesUnmarshalling(t *testing.T) {
+	wd, _ := os.Getwd()
+	relativePathExpanded := filepath.Join(wd, "test_volume_relative_path_found")
 	tests := []struct {
 		name                 string
 		manifest             []byte
@@ -865,6 +868,32 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 		expectedVolumesMount []StackVolume
 		expectedError        bool
 	}{
+		{
+			name:     "volume-absolute-path",
+			manifest: []byte("services:\n  app:\n    volumes: \n    - /var/lib/redpanda:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			create:   false,
+			expectedVolumesMount: []StackVolume{
+				{
+					LocalPath:  "/var/lib/redpanda",
+					RemotePath: "/var/lib/redpanda/data",
+				},
+			},
+			expectedVolumes: []StackVolume{},
+			expectedError:   false,
+		},
+		{
+			name:     "volume-relative-path-found",
+			manifest: []byte("services:\n  app:\n    volumes: \n    - test_volume_relative_path_found:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			create:   true,
+			expectedVolumesMount: []StackVolume{
+				{
+					LocalPath:  relativePathExpanded,
+					RemotePath: "/var/lib/redpanda/data",
+				},
+			},
+			expectedVolumes: []StackVolume{},
+			expectedError:   false,
+		},
 		{
 			name:     "correct-volume",
 			manifest: []byte("services:\n  app:\n    volumes: \n    - redpanda:/var/lib/redpanda/data\n    image: okteto/vote:1\nvolumes:\n  redpanda:\n"),
@@ -885,19 +914,6 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 			expectedError: true,
 		},
 		{
-			name:     "volume-absolute-path",
-			manifest: []byte("services:\n  app:\n    volumes: \n    - /var/lib/redpanda/:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
-			create:   false,
-			expectedVolumesMount: []StackVolume{
-				{
-					LocalPath:  "/var/lib/redpanda/",
-					RemotePath: "/var/lib/redpanda/data",
-				},
-			},
-			expectedVolumes: []StackVolume{},
-			expectedError:   false,
-		},
-		{
 			name:     "absolute path",
 			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock"),
 			create:   false,
@@ -905,19 +921,6 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 				{
 					LocalPath:  "/var/run/docker.sock",
 					RemotePath: "/var/run/docker.sock",
-				},
-			},
-			expectedVolumes: []StackVolume{},
-			expectedError:   false,
-		},
-		{
-			name:     "volume-relative-path-found",
-			manifest: []byte("services:\n  app:\n    volumes: \n    - test_volume_relative_path_found:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
-			create:   true,
-			expectedVolumesMount: []StackVolume{
-				{
-					LocalPath:  "test_volume_relative_path_found",
-					RemotePath: "/var/lib/redpanda/data",
 				},
 			},
 			expectedVolumes: []StackVolume{},
@@ -968,12 +971,8 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 			if err != nil && !tt.expectedError {
 				t.Fatal(err)
 			} else if err == nil && !tt.expectedError {
-				if !reflect.DeepEqual(stack.Services["app"].Volumes, tt.expectedVolumes) {
-					t.Fatalf("Wrong volume section. Expected %v but got %v", stack.Services["app"].Volumes, tt.expectedVolumes)
-				}
-				if !reflect.DeepEqual(stack.Services["app"].VolumeMounts, tt.expectedVolumesMount) {
-					t.Fatalf("Wrong volume mount section. Expected %v but got %v", stack.Services["app"].VolumeMounts, tt.expectedVolumesMount)
-				}
+				assert.Equal(t, stack.Services["app"].Volumes, tt.expectedVolumes)
+				assert.Equal(t, stack.Services["app"].VolumeMounts, tt.expectedVolumesMount)
 			}
 		})
 	}

@@ -121,11 +121,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(model.OktetoSkipConfigCredentialsUpdate, "false")
 			if options.ManifestPath != "" {
-				workdir := utils.GetWorkdirFromManifestPath(options.ManifestPath)
+				workdir := model.GetWorkdirFromManifestPath(options.ManifestPath)
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
-				options.ManifestPath = utils.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
+				options.ManifestPath = model.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
 			}
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {

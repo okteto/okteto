@@ -109,11 +109,11 @@ func (*OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOptio
 // Build builds the images defined by a manifest
 func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
 	if options.File != "" {
-		workdir := utils.GetWorkdirFromManifestPath(options.File)
+		workdir := model.GetWorkdirFromManifestPath(options.File)
 		if err := os.Chdir(workdir); err != nil {
 			return err
 		}
-		options.File = utils.GetManifestPathFromWorkdir(options.File, workdir)
+		options.File = model.GetManifestPathFromWorkdir(options.File, workdir)
 	}
 	if options.Manifest.Name == "" {
 		wd, err := os.Getwd()
@@ -230,13 +230,12 @@ func (bc *OktetoBuilder) optimizeBuild(buildOptions *types.BuildOptions, svcName
 
 func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	oktetoLog.Information("Including volume hosts for service '%s'", svcName)
-	isStackManifest := manifest.Type == model.StackType
-	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
-
+	isStackManifest := (manifest.Type == model.StackType) || (manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil)
 	fromImage := manifest.Build[svcName].Image
 	if options.Tag != "" {
 		fromImage = options.Tag
 	}
+	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
 
 	svcBuild, err := registry.CreateDockerfileWithVolumeMounts(fromImage, buildSvcInfo.VolumesToInclude)
 	if err != nil {
@@ -285,7 +284,7 @@ func getBuildInfoWithoutVolumeMounts(buildInfo *model.BuildInfo, isStackManifest
 
 func getBuildInfoWithVolumeMounts(buildInfo *model.BuildInfo, isStackManifest bool) *model.BuildInfo {
 	result := buildInfo.Copy()
-	if isStackManifest && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
+	if isStackManifest && okteto.IsOkteto() {
 		result.Image = ""
 	}
 	result.VolumesToInclude = getAccessibleVolumeMounts(buildInfo)
