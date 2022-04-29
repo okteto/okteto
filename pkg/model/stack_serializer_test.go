@@ -860,6 +860,8 @@ func Test_validateCommandArgs(t *testing.T) {
 func Test_validateVolumesUnmarshalling(t *testing.T) {
 	wd, _ := os.Getwd()
 	relativePathExpanded := filepath.Join(wd, "test_volume_relative_path_found")
+	pandaAbsolute := filepath.Clean("/var/lib/redpanda")
+	dockerdaemonPath := filepath.Clean("/var/run/docker.sock")
 	tests := []struct {
 		name                 string
 		manifest             []byte
@@ -870,11 +872,11 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 	}{
 		{
 			name:     "volume-absolute-path",
-			manifest: []byte("services:\n  app:\n    volumes: \n    - /var/lib/redpanda:/var/lib/redpanda/data\n    image: okteto/vote:1\n"),
+			manifest: []byte(fmt.Sprintf("services:\n  app:\n    volumes: \n    - %s:/var/lib/redpanda/data\n    image: okteto/vote:1\n", pandaAbsolute)),
 			create:   false,
 			expectedVolumesMount: []StackVolume{
 				{
-					LocalPath:  "/var/lib/redpanda",
+					LocalPath:  pandaAbsolute,
 					RemotePath: "/var/lib/redpanda/data",
 				},
 			},
@@ -915,11 +917,11 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 		},
 		{
 			name:     "absolute path",
-			manifest: []byte("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - /var/run/docker.sock:/var/run/docker.sock"),
+			manifest: []byte(fmt.Sprintf("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - %s:/var/run/docker.sock", dockerdaemonPath)),
 			create:   false,
 			expectedVolumesMount: []StackVolume{
 				{
-					LocalPath:  "/var/run/docker.sock",
+					LocalPath:  dockerdaemonPath,
 					RemotePath: "/var/run/docker.sock",
 				},
 			},
