@@ -134,20 +134,9 @@ func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDep
 			return err
 		}
 	} else {
-		var (
-			svcsToBuild []string
-			err         error
-		)
-		if len(options.ServicesToDeploy) == 0 {
-			svcsToBuild, err = builder.GetServicesToBuild(ctx, manifest)
-			if err != nil {
-				return err
-			}
-		} else {
-			svcsToBuild, err = builder.GetServicesToBuildFromSubset(ctx, manifest, options.ServicesToDeploy)
-			if err != nil {
-				return err
-			}
+		svcsToBuild, err := builder.GetServicesToBuild(ctx, manifest, options.ServicesToDeploy)
+		if err != nil {
+			return err
 		}
 
 		if len(svcsToBuild) != 0 {

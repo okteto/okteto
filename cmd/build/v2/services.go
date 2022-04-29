@@ -29,13 +29,21 @@ import (
 )
 
 // GetServicesToBuild returns the services it has to built because they are not already built
-func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest) ([]string, error) {
+func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error) {
 	buildManifest := manifest.Build
+
+	svcToDeployMap := map[string]bool{}
+	for _, svc := range svcToDeploy {
+		svcToDeployMap[svc] = true
+	}
 
 	// check if images are at registry (global or dev) and set envs or send to build
 	toBuild := make(chan string, len(buildManifest))
 	g, _ := errgroup.WithContext(ctx)
 	for service := range buildManifest {
+		if _, ok := svcToDeployMap[service]; !ok {
+			continue
+		}
 		svc := service
 		g.Go(func() error {
 			return bc.checkServicesToBuild(svc, manifest, toBuild)
@@ -117,25 +125,4 @@ func (bc *OktetoBuilder) checkImageAtGlobalAndSetEnvs(service string, options *t
 	oktetoLog.Debug("image already built at global registry, running optimization for deployment")
 	return true, nil
 
-}
-
-// GetServicesToBuildFromSubset returns the services it has to built because they are not already built from a subset of services
-func (bc *OktetoBuilder) GetServicesToBuildFromSubset(ctx context.Context, manifest *model.Manifest, subset []string) ([]string, error) {
-	for name := range manifest.Build {
-		needsBuild := false
-		for _, toBuildName := range subset {
-			if name == toBuildName {
-				needsBuild = true
-				break
-			}
-		}
-		if !needsBuild {
-			delete(manifest.Build, name)
-		}
-	}
-	svcsToBuild, err := bc.GetServicesToBuild(ctx, manifest)
-	if err != nil {
-		return []string{}, err
-	}
-	return svcsToBuild, err
 }

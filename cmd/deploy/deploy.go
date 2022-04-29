@@ -286,18 +286,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return err
 		}
 	} else {
-
-		var svcsToBuild []string
-		if len(deployOptions.servicesToDeploy) == 0 {
-			svcsToBuild, err = dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest)
-			if err != nil {
-				return err
-			}
-		} else {
-			svcsToBuild, err = dc.Builder.GetServicesToBuildFromSubset(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy)
-			if err != nil {
-				return err
-			}
+		svcsToBuild, err := dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy)
+		if err != nil {
+			return err
 		}
 		if len(svcsToBuild) != 0 {
 			buildOptions := &types.BuildOptions{
