@@ -126,8 +126,8 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 		return nil, oktetoErrors.ErrNotFound
 	}
 	validDeployments := []*appsv1.Deployment{}
-	for i, d := range dList.Items {
-		if d.Labels[model.DevCloneLabel] == "" {
+	for i := range dList.Items {
+		if dList.Items[i].Labels[model.DevCloneLabel] == "" {
 			validDeployments = append(validDeployments, &dList.Items[i])
 		}
 	}
@@ -230,31 +230,6 @@ func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Inte
 		return false
 	}
 	return d.Status.ReadyReplicas > 0
-}
-
-func TranslateDivert(username string, d *appsv1.Deployment) *appsv1.Deployment {
-	name := model.DivertName(d.Name, username)
-	result := d.DeepCopy()
-	result.UID = ""
-	result.Name = name
-	if result.Annotations == nil {
-		result.Annotations = map[string]string{}
-	}
-	result.Annotations[model.OktetoAutoCreateAnnotation] = model.OktetoUpCmd
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if d.Labels != nil && d.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = d.Labels[model.DeployedByLabel]
-	}
-	result.Spec.Selector = &metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			model.OktetoDivertLabel: username,
-		},
-	}
-	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel: username,
-	}
-	result.ResourceVersion = ""
-	return result
 }
 
 // PatchAnnotations patches the deployment annotations

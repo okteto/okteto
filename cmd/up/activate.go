@@ -25,7 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/ingressesv1"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	"github.com/okteto/okteto/pkg/k8s/services"
@@ -174,18 +173,7 @@ func (up *upContext) activate() error {
 			}
 
 		}
-		divertURL := ""
-		if up.Dev.Divert != nil {
-			username := okteto.GetSanitizedUsername()
-			name := model.DivertName(up.Dev.Divert.Ingress, username)
-			i, err := ingressesv1.Get(ctx, name, up.Dev.Namespace, up.Client)
-			if err != nil {
-				oktetoLog.Errorf("error getting diverted ingress %s: %s", name, err.Error())
-			} else if len(i.Spec.Rules) > 0 {
-				divertURL = i.Spec.Rules[0].Host
-			}
-		}
-		printDisplayContext(up.Dev, divertURL)
+		printDisplayContext(up.Dev)
 		durationActivateUp := time.Since(up.StartTime)
 		analytics.TrackDurationActivateUp(durationActivateUp)
 		if up.Options.Detach {

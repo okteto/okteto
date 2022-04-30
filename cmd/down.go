@@ -27,7 +27,6 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -104,13 +103,6 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		if err != nil {
 			exit <- err
 			return
-		}
-
-		if dev.Divert != nil {
-			if err := diverts.Delete(ctx, dev, c); err != nil {
-				exit <- err
-				return
-			}
 		}
 
 		spinner.Stop()
