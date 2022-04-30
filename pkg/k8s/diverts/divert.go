@@ -55,7 +55,7 @@ func DivertIngress(ctx context.Context, m *model.Manifest, fromIn *networkingv1.
 }
 
 func divertService(ctx context.Context, m *model.Manifest, name string, c kubernetes.Interface) error {
-	fromS, err := c.CoreV1().Services(m.Deploy.Divert.Namespace).Get(ctx, name, metav1.GetOptions{})
+	from, err := c.CoreV1().Services(m.Deploy.Divert.Namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if oktetoErrors.IsNotFound(err) {
 			oktetoLog.Infof("service %s not found: %s", name)
@@ -68,7 +68,7 @@ func divertService(ctx context.Context, m *model.Manifest, name string, c kubern
 		if !oktetoErrors.IsNotFound(err) {
 			return err
 		}
-		s = translateService(m, fromS, "")
+		s = translateService(m, from, "")
 		if _, err := c.CoreV1().Services(m.Namespace).Create(ctx, s, metav1.CreateOptions{}); err != nil {
 			return err
 		}
@@ -79,7 +79,7 @@ func divertService(ctx context.Context, m *model.Manifest, name string, c kubern
 		return nil
 	}
 
-	s = translateService(m, fromS, s.ResourceVersion)
+	s = translateService(m, from, s.ResourceVersion)
 	if _, err := c.CoreV1().Services(m.Namespace).Update(ctx, s, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func divertService(ctx context.Context, m *model.Manifest, name string, c kubern
 }
 
 func divertEndpoints(ctx context.Context, m *model.Manifest, name string, c kubernetes.Interface) error {
-	fromE, err := c.CoreV1().Endpoints(m.Deploy.Divert.Namespace).Get(ctx, name, metav1.GetOptions{})
+	from, err := c.CoreV1().Endpoints(m.Deploy.Divert.Namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if oktetoErrors.IsNotFound(err) {
 			oktetoLog.Infof("endpoint %s not found: %s", name)
@@ -100,14 +100,14 @@ func divertEndpoints(ctx context.Context, m *model.Manifest, name string, c kube
 		if !oktetoErrors.IsNotFound(err) {
 			return err
 		}
-		e = translateEndpoints(m, fromE, "")
+		e = translateEndpoints(m, from, "")
 		_, err := c.CoreV1().Endpoints(m.Namespace).Create(ctx, e, metav1.CreateOptions{})
 		return err
 	}
 	if e.Annotations[model.OktetoAutoCreateAnnotation] != "true" {
 		return nil
 	}
-	e = translateEndpoints(m, fromE, e.ResourceVersion)
+	e = translateEndpoints(m, from, e.ResourceVersion)
 	_, err = c.CoreV1().Endpoints(m.Namespace).Update(ctx, e, metav1.UpdateOptions{})
 	return err
 }
