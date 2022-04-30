@@ -599,14 +599,14 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 		return err
 	}
 
-	for _, in := range result.Items {
+	for i := range result.Items {
 		select {
 		case <-ctx.Done():
 			oktetoLog.Infof("deployDivert context cancelled")
 			return ctx.Err()
 		default:
-			sp.Update(fmt.Sprintf("Diverting ingress %s/%s...", in.Namespace, in.Name))
-			if err := diverts.DivertIngress(ctx, opts.Manifest, &in, c); err != nil {
+			sp.Update(fmt.Sprintf("Diverting ingress %s/%s...", result.Items[i].Namespace, result.Items[i].Name))
+			if err := diverts.DivertIngress(ctx, opts.Manifest, &result.Items[i], c); err != nil {
 				return err
 			}
 		}

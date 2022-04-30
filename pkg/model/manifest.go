@@ -659,10 +659,7 @@ func Read(bytes []byte) (*Manifest, error) {
 }
 
 func (m *Manifest) validate() error {
-	if err := m.validateDivert(); err != nil {
-		return err
-	}
-	return nil
+	return m.validateDivert()
 }
 
 func (m *Manifest) validateDivert() error {
