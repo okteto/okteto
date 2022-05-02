@@ -514,7 +514,7 @@ func Test_getVolumesToDeployFromServicesToDeploy(t *testing.T) {
 	tests := []struct {
 		name     string
 		args     args
-		expected []string
+		expected map[string]bool
 	}{
 		{
 			name: "should return volumes from services to deploy",
@@ -560,14 +560,18 @@ func Test_getVolumesToDeployFromServicesToDeploy(t *testing.T) {
 					},
 				},
 			},
-			expected: []string{"volume b", "volume c"},
+			expected: map[string]bool{"volume b": true, "volume c": true},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := getVolumesToDeployFromServicesToDeploy(tt.args.stack, tt.args.servicesToDeploy)
-			if !reflect.DeepEqual(result, tt.expected) {
+			resultSet := make(map[string]bool, len(result))
+			for _, v := range result {
+				resultSet[v] = true
+			}
+			if !reflect.DeepEqual(resultSet, tt.expected) {
 				t.Errorf("expected %v, got %v", tt.expected, result)
 			}
 		})
@@ -582,7 +586,7 @@ func Test_getEndpointsToDeployFromServicesToDeploy(t *testing.T) {
 	tests := []struct {
 		name     string
 		args     args
-		expected []string
+		expected map[string]bool
 	}{
 		{
 			name: "multiple endpoints",
@@ -599,7 +603,7 @@ func Test_getEndpointsToDeployFromServicesToDeploy(t *testing.T) {
 					"a": true,
 				},
 			},
-			expected: []string{"manifest"},
+			expected: map[string]bool{"manifest": true},
 		},
 		{
 			name: "no endpoints",
@@ -609,14 +613,18 @@ func Test_getEndpointsToDeployFromServicesToDeploy(t *testing.T) {
 					"manifest": true,
 				},
 			},
-			expected: []string{},
+			expected: map[string]bool{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := getEndpointsToDeployFromServicesToDeploy(tt.args.endpoints, tt.args.servicesToDeploy)
-			if !reflect.DeepEqual(result, tt.expected) {
+			resultSet := make(map[string]bool, len(result))
+			for _, v := range result {
+				resultSet[v] = true
+			}
+			if !reflect.DeepEqual(resultSet, tt.expected) {
 				t.Errorf("expected %v, got %v", tt.expected, result)
 			}
 		})
