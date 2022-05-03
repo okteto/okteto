@@ -917,7 +917,7 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 		{
 			name:     "absolute path",
 			manifest: []byte(fmt.Sprintf("services:\n  app:\n    image: okteto/vote:1\n    volumes:\n      - %s:/var/run/docker.sock", relativePathExpandedFile)),
-			create:   false,
+			create:   true,
 			expectedVolumesMount: []StackVolume{
 				{
 					LocalPath:  relativePathExpandedFile,

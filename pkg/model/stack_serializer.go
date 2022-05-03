@@ -1152,9 +1152,12 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if len(parts) == 2 {
 		v.LocalPath = parts[0]
 		v.RemotePath = parts[1]
-	} else {
+	} else if len(parts) == 1 {
 		v.RemotePath = parts[0]
+	} else {
+		return fmt.Errorf("Syntax error volumes should be 'local_path:remote_path' or 'remote_path'")
 	}
+
 	return nil
 }
 
