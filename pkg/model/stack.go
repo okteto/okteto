@@ -358,6 +358,10 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 func (svc *Service) IgnoreSyncVolumes(s *Stack) {
 	notIgnoredVolumes := make([]StackVolume, 0)
 	for _, volume := range svc.VolumeMounts {
+		if svc.Build == nil && FileExists(volume.LocalPath) {
+			notIgnoredVolumes = append(notIgnoredVolumes, volume)
+			continue
+		}
 		if !strings.HasPrefix(volume.LocalPath, "/") {
 			notIgnoredVolumes = append(notIgnoredVolumes, volume)
 		}
@@ -421,6 +425,9 @@ func (s *Stack) Validate() error {
 		}
 
 		for _, v := range svc.VolumeMounts {
+			if svc.Build == nil && FileExists(v.LocalPath) {
+				continue
+			}
 			if _, err := filepath.Rel(wd, v.LocalPath); err != nil {
 				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/#up", name, v.LocalPath, v.RemotePath))
 			}
