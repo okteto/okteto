@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -646,7 +647,7 @@ func isNamedVolumeDeclared(volume StackVolume) bool {
 	if volume.LocalPath != "" {
 		wd, err := os.Getwd()
 		if err != nil {
-			return true
+			return false
 		}
 		relative := true
 		if filepath.IsAbs(volume.LocalPath) {
@@ -1138,7 +1139,16 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	parts := strings.SplitN(raw, ":", 2)
+	parts := strings.Split(raw, ":")
+	if runtime.GOOS == "windows" {
+		if len(parts) >= 3 {
+			localPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
+			if filepath.IsAbs(localPath) {
+				parts = append([]string{localPath}, parts[2:]...)
+			}
+		}
+	}
+
 	if len(parts) == 2 {
 		v.LocalPath = parts[0]
 		v.RemotePath = parts[1]
