@@ -22,6 +22,23 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
+const (
+	env = `A=hello
+# comment
+OKTETO_TEST=
+
+B=$B
+
+C=3
+
+D="4
+5 $B
+\"6\"
+'7'"
+E=word -notword`
+	envOverride = "A=1"
+)
+
 func Test_ReadStack(t *testing.T) {
 	manifest := []byte(`name: voting-app
 services:
@@ -1130,5 +1147,74 @@ func Test_getStackName(t *testing.T) {
 			}
 		})
 
+	}
+}
+
+func Test_translateEnvVars(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", ".env")
+	if err != nil {
+		t.Fatalf("failed to create dynamic env file: %s", err.Error())
+	}
+	if err := os.WriteFile(tmpFile.Name(), []byte(env), 0600); err != nil {
+		t.Fatalf("failed to write env file: %s", err.Error())
+	}
+	defer os.RemoveAll(tmpFile.Name())
+
+	tmpFile2, err := os.CreateTemp("", ".env")
+	if err != nil {
+		t.Fatalf("failed to create dynamic env file: %s", err.Error())
+	}
+	if err := os.WriteFile(tmpFile2.Name(), []byte(envOverride), 0600); err != nil {
+		t.Fatalf("failed to write env file: %s", err.Error())
+	}
+	defer os.RemoveAll(tmpFile2.Name())
+
+	os.Setenv("B", "2")
+	os.Setenv("ENV_PATH", tmpFile.Name())
+	os.Setenv("ENV_PATH2", tmpFile2.Name())
+	os.Setenv("OKTETO_TEST", "myvalue")
+	stack := &Stack{
+		Name: "name",
+		Services: map[string]*Service{
+			"1": {
+				Image:    "image",
+				EnvFiles: []string{"${ENV_PATH}", "${ENV_PATH2}"},
+				Environment: []EnvVar{
+					{
+						Name:  "C",
+						Value: "original",
+					},
+				},
+			},
+		},
+	}
+	if err := loadEnvFiles(stack.Services["1"], "1"); err != nil {
+		t.Fatal("error should not be returned")
+	}
+	if stack.Services["1"].Image != "image" {
+		t.Errorf("Wrong image: %s", stack.Services["1"].Image)
+	}
+	if len(stack.Services["1"].Environment) != 6 {
+		t.Errorf("Wrong environment: %v", stack.Services["1"].Environment)
+	}
+	for _, e := range stack.Services["1"].Environment {
+		if e.Name == "A" && e.Value != "1" {
+			t.Errorf("Wrong environment variable A: %s", e.Value)
+		}
+		if e.Name == "B" && e.Value != "2" {
+			t.Errorf("Wrong environment variable B: %s", e.Value)
+		}
+		if e.Name == "C" && e.Value != "original" {
+			t.Errorf("Wrong environment variable C: %s", e.Value)
+		}
+		if e.Name == "D" && e.Value != "4\n5 2\n\"6\"\n'7'" {
+			t.Errorf("Wrong environment variable D: %s", e.Value)
+		}
+		if e.Name == "E" && e.Value != "word -notword" {
+			t.Errorf("Wrong environment variable E: %s", e.Value)
+		}
+		if e.Name == "OKTETO_TEST" && e.Value != "myvalue" {
+			t.Errorf("Wrong environment variable OKTETO_TEST: %s", e.Value)
+		}
 	}
 }

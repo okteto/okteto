@@ -19,9 +19,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/compose-spec/godotenv"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
@@ -251,7 +253,7 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 		return nil, err
 	}
 
-	for _, svc := range s.Services {
+	for svcName, svc := range s.Services {
 		if svc.Build == nil {
 			continue
 		}
@@ -261,6 +263,9 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 		} else {
 			svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
 			svc.Build.Dockerfile = loadAbsPath(svc.Build.Context, svc.Build.Dockerfile)
+		}
+		if err := loadEnvFiles(svc, svcName); err != nil {
+			return nil, err
 		}
 		copy(svc.Build.VolumesToInclude, svc.Volumes)
 	}
@@ -777,4 +782,59 @@ func getOverrideFile(stackPath string) (*Stack, error) {
 		return stack, nil
 	}
 	return nil, fmt.Errorf("override file not found")
+}
+
+func loadEnvFiles(svc *Service, svcName string) error {
+	for i := len(svc.EnvFiles) - 1; i >= 0; i-- {
+		envFilepath := svc.EnvFiles[i]
+		if err := setEnvironmentFromFile(svc, envFilepath); err != nil {
+			if filepath.Base(envFilepath) == ".env" {
+				oktetoLog.Warning("Skipping '.env' file from %s service", svcName)
+				continue
+			}
+			return err
+		}
+	}
+	sort.SliceStable(svc.Environment, func(i, j int) bool {
+		return strings.Compare(svc.Environment[i].Name, svc.Environment[j].Name) < 0
+	})
+	svc.EnvFiles = nil
+	return nil
+}
+
+func setEnvironmentFromFile(svc *Service, filename string) error {
+	var err error
+	filename, err = ExpandEnv(filename, true)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
+	if err != nil {
+		return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
+	}
+
+	for _, e := range svc.Environment {
+		delete(envMap, e.Name)
+	}
+
+	for name, value := range envMap {
+		if value == "" {
+			value = os.Getenv(name)
+		}
+		if value != "" {
+			svc.Environment = append(
+				svc.Environment,
+				EnvVar{Name: name, Value: value},
+			)
+		}
+	}
+
+	return nil
 }

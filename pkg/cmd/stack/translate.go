@@ -17,16 +17,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"os"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/compose-spec/godotenv"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/cmd/utils"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
@@ -56,73 +52,7 @@ const (
 	pvcName = "pvc"
 )
 
-func translate(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
-	if !options.InsidePipeline {
-		if err := translateBuildImages(ctx, s, options); err != nil {
-			return err
-		}
-	}
-	return translateStackEnvVars(ctx, s)
-}
-
-func translateStackEnvVars(ctx context.Context, s *model.Stack) error {
-	for svcName, svc := range s.Services {
-		for i := len(svc.EnvFiles) - 1; i >= 0; i-- {
-			envFilepath := svc.EnvFiles[i]
-			if err := translateServiceEnvFile(ctx, svc, svcName, envFilepath); err != nil {
-				if filepath.Base(envFilepath) == ".env" {
-					oktetoLog.Warning("Skipping '.env' file from %s service", svcName)
-					continue
-				}
-				return err
-			}
-		}
-		sort.SliceStable(svc.Environment, func(i, j int) bool {
-			return strings.Compare(svc.Environment[i].Name, svc.Environment[j].Name) < 0
-		})
-		svc.EnvFiles = nil
-	}
-	return nil
-}
-
-func translateServiceEnvFile(ctx context.Context, svc *model.Service, svcName, filename string) error {
-	var err error
-	filename, err = model.ExpandEnv(filename, true)
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
-	if err != nil {
-		return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
-	}
-
-	for _, e := range svc.Environment {
-		delete(envMap, e.Name)
-	}
-
-	for name, value := range envMap {
-		if value == "" {
-			value = os.Getenv(name)
-		}
-		if value != "" {
-			svc.Environment = append(
-				svc.Environment,
-				model.EnvVar{Name: name, Value: value},
-			)
-		}
-	}
-
-	return nil
-}
-
-func translateBuildImages(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
+func buildStackImages(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
 	manifest := model.NewManifestFromStack(s)
 	builder := buildv2.NewBuilderFromScratch()
 	if options.ForceBuild {
