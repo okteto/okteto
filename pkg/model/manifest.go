@@ -809,13 +809,14 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 		}
 
 		for idx, volume := range buildInfo.VolumesToInclude {
-			volume.LocalPath, err = filepath.Rel(buildInfo.Context, volume.LocalPath)
+			localPath, err := filepath.Rel(buildInfo.Context, volume.LocalPath)
 			if err != nil {
-				volume.LocalPath, err = filepath.Rel(cwd, volume.LocalPath)
+				localPath, err = filepath.Rel(cwd, volume.LocalPath)
 				if err != nil {
 					oktetoLog.Info("can not find svc[%s].build.volumes to include relative to svc[%s].build.context", svcName, svcName)
 				}
 			}
+			volume.LocalPath = localPath
 			buildInfo.VolumesToInclude[idx] = volume
 		}
 		buildInfo.Context, err = filepath.Rel(cwd, buildInfo.Context)
