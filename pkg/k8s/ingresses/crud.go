@@ -168,3 +168,27 @@ func (iClient *Client) GetEndpointsBySelector(ctx context.Context, namespace, la
 	}
 	return result, nil
 }
+
+// GetName gets the name of the ingress
+func (i Ingress) GetName() string {
+	if i.V1 != nil {
+		return i.V1.Name
+	}
+	return i.V1Beta1.Name
+}
+
+// GetNamespace gets the namespace of the ingress
+func (i Ingress) GetNamespace() string {
+	if i.V1 != nil {
+		return i.V1.Namespace
+	}
+	return i.V1Beta1.Namespace
+}
+
+// GetLabels gets the labels of the ingress
+func (i Ingress) GetLabels() map[string]string {
+	if i.V1 != nil {
+		return i.V1.Labels
+	}
+	return i.V1Beta1.Labels
+}

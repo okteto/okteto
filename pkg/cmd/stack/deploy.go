@@ -118,6 +118,12 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 		addHiddenExposedPortsToStack(s, options)
 
+		iClient, err := ingresses.GetClient(ctx, c)
+		if err != nil {
+			exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
+			return
+		}
+
 		for _, name := range options.ServicesToDeploy {
 			if len(s.Services[name].Ports) > 0 {
 				svcK8s := translateService(name, s)
@@ -125,6 +131,19 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 					exit <- err
 					return
 				}
+				ingressPorts := getSvcPublicPorts(name, s)
+				for _, ingressPort := range ingressPorts {
+					ingressName := name
+					if len(ingressPorts) > 1 {
+						ingressName = fmt.Sprintf("%s-%d", name, ingressPort.ContainerPort)
+					}
+					svcIngress := translateSvcIngress(ingressName, name, ingressPort.ContainerPort, s)
+					if err := deployIngress(ctx, svcIngress, iClient, spinner); err != nil {
+						exit <- err
+						return
+					}
+				}
+
 			}
 		}
 
@@ -140,13 +159,12 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			return
 		}
 
-		iClient, err := ingresses.GetClient(ctx, c)
-		if err != nil {
-			exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
-			return
-		}
 		for name := range s.Endpoints {
-			if err := deployIngress(ctx, name, s, iClient, spinner); err != nil {
+			ingressK8s := &ingresses.Ingress{
+				V1:      translateEndpointIngressV1(name, s),
+				V1Beta1: translateEndpointIngressV1Beta1(name, s),
+			}
+			if err := deployIngress(ctx, ingressK8s, iClient, spinner); err != nil {
 				exit <- err
 				return
 			}
@@ -556,42 +574,38 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 	return nil
 }
 
-func deployIngress(ctx context.Context, ingressName string, s *model.Stack, c *ingresses.Client, spinner *utils.Spinner) error {
-	iModel := &ingresses.Ingress{
-		V1:      translateIngressV1(ingressName, s),
-		V1Beta1: translateIngressV1Beta1(ingressName, s),
-	}
-	old, err := c.Get(ctx, ingressName, s.Namespace)
+func deployIngress(ctx context.Context, ingress *ingresses.Ingress, c *ingresses.Client, spinner *utils.Spinner) error {
+	old, err := c.Get(ctx, ingress.GetName(), ingress.GetNamespace())
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
-			return fmt.Errorf("error getting ingress '%s': %s", ingressName, err.Error())
+			return fmt.Errorf("error getting ingress '%s': %s", ingress.GetName(), err.Error())
 		}
-		if err := c.Create(ctx, iModel); err != nil {
+		if err := c.Create(ctx, ingress); err != nil {
 			return err
 		}
 		spinner.Stop()
-		oktetoLog.Success("Endpoint '%s' created", ingressName)
+		oktetoLog.Success("Endpoint '%s' created", ingress.GetName())
 		spinner.Start()
 		return nil
 	}
 
 	if old.GetLabels()[model.StackNameLabel] == "" {
-		oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", ingressName)
+		oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", ingress.GetName())
 		return nil
 	}
 
-	if old.GetLabels()[model.StackNameLabel] != s.Name {
+	if old.GetLabels()[model.StackNameLabel] != ingress.GetLabels()[model.StackNameLabel] {
 		spinner.Stop()
-		oktetoLog.Warning("skipping creation of endpoint '%s' due to name collision with endpoint in stack '%s'", ingressName, old.GetLabels()[model.StackNameLabel])
+		oktetoLog.Warning("skipping creation of endpoint '%s' due to name collision with endpoint in stack '%s'", ingress.GetName(), old.GetLabels()[model.StackNameLabel])
 		spinner.Start()
 		return nil
 	}
 
-	if err := c.Update(ctx, iModel); err != nil {
+	if err := c.Update(ctx, ingress); err != nil {
 		return err
 	}
 	spinner.Stop()
-	oktetoLog.Success("Endpoint '%s' updated", ingressName)
+	oktetoLog.Success("Endpoint '%s' updated", ingress.GetName())
 	spinner.Start()
 	return nil
 }

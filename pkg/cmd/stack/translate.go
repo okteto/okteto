@@ -26,6 +26,7 @@ import (
 	"github.com/compose-spec/godotenv"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
@@ -470,12 +471,6 @@ func translateVolumes(svc *model.Service) []apiv1.Volume {
 func translateService(svcName string, s *model.Stack) *apiv1.Service {
 	svc := s.Services[svcName]
 	annotations := translateAnnotations(svc)
-	if s.Services[svcName].Public && annotations[model.OktetoAutoIngressAnnotation] == "" {
-		annotations[model.OktetoAutoIngressAnnotation] = "true"
-		if annotations[model.OktetoPrivateSvcAnnotation] == "true" {
-			annotations[model.OktetoAutoIngressAnnotation] = "private"
-		}
-	}
 	return &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -485,20 +480,126 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 		},
 		Spec: apiv1.ServiceSpec{
 			Selector: translateLabelSelector(svcName, s),
-			Type:     translateServiceType(*svc),
+			Type:     apiv1.ServiceTypeClusterIP,
 			Ports:    translateServicePorts(*svc),
 		},
 	}
 }
 
-func translateIngressV1(ingressName string, s *model.Stack) *networkingv1.Ingress {
+func getSvcPublicPorts(svcName string, s *model.Stack) []model.Port {
+	result := []model.Port{}
+	for _, p := range s.Services[svcName].Ports {
+		if !model.IsSkippablePort(p.ContainerPort) && p.HostPort != 0 {
+			result = append(result, p)
+		}
+	}
+	return result
+}
+
+func translateSvcIngress(ingressName, svcIngress string, svcPort int32, s *model.Stack) *ingresses.Ingress {
+	return &ingresses.Ingress{
+		V1:      translateServiceIngressV1(ingressName, svcIngress, svcPort, s),
+		V1Beta1: translateServiceIngressV1Beta1(ingressName, svcIngress, svcPort, s),
+	}
+}
+
+func translateServiceIngressV1(ingressName, svcIngress string, svcPort int32, s *model.Stack) *networkingv1.Ingress {
+	pathType := networkingv1.PathTypeImplementationSpecific
+	return &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        ingressName,
+			Namespace:   s.Namespace,
+			Labels:      translateServiceIngressLabels(svcIngress, s),
+			Annotations: translateServiceIngressAnnotations(svcIngress, s),
+		},
+		Spec: networkingv1.IngressSpec{
+			Rules: []networkingv1.IngressRule{
+				{
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{
+								{
+									Path:     "/",
+									PathType: &pathType,
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: svcIngress,
+											Port: networkingv1.ServiceBackendPort{
+												Number: svcPort,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+}
+
+func translateServiceIngressV1Beta1(ingressName, svcIngress string, svcPort int32, s *model.Stack) *networkingv1beta1.Ingress {
+	return &networkingv1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        ingressName,
+			Namespace:   s.Namespace,
+			Labels:      translateServiceIngressLabels(svcIngress, s),
+			Annotations: translateServiceIngressAnnotations(svcIngress, s),
+		},
+		Spec: networkingv1beta1.IngressSpec{
+			Rules: []networkingv1beta1.IngressRule{
+				{
+					IngressRuleValue: networkingv1beta1.IngressRuleValue{
+						HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+							Paths: []networkingv1beta1.HTTPIngressPath{
+								{
+									Path: "/",
+									Backend: networkingv1beta1.IngressBackend{
+										ServiceName: svcIngress,
+										ServicePort: intstr.IntOrString{IntVal: svcPort},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func translateServiceIngressAnnotations(svcName string, s *model.Stack) map[string]string {
+	svc := s.Services[svcName]
+	annotations := model.Annotations{model.OktetoIngressAutoGenerateHost: "true"}
+	if svc.Annotations != nil {
+		for k := range svc.Annotations {
+			annotations[k] = svc.Annotations[k]
+		}
+	}
+	return annotations
+}
+
+func translateServiceIngressLabels(svcName string, s *model.Stack) map[string]string {
+	svc := s.Services[svcName]
+	labels := map[string]string{
+		model.StackNameLabel: s.Name,
+	}
+	for k := range svc.Labels {
+		labels[k] = svc.Labels[k]
+	}
+
+	return labels
+}
+func translateEndpointIngressV1(ingressName string, s *model.Stack) *networkingv1.Ingress {
 	endpoints := s.Endpoints[ingressName]
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        ingressName,
 			Namespace:   s.Namespace,
-			Labels:      translateIngressLabels(ingressName, s),
-			Annotations: translateIngressAnnotations(ingressName, s),
+			Labels:      translateEndpointIngressLabels(ingressName, s),
+			Annotations: translateEndpointIngressAnnotations(ingressName, s),
 		},
 		Spec: networkingv1.IngressSpec{
 			Rules: []networkingv1.IngressRule{
@@ -514,14 +615,14 @@ func translateIngressV1(ingressName string, s *model.Stack) *networkingv1.Ingres
 	}
 }
 
-func translateIngressV1Beta1(ingressName string, s *model.Stack) *networkingv1beta1.Ingress {
+func translateEndpointIngressV1Beta1(ingressName string, s *model.Stack) *networkingv1beta1.Ingress {
 	endpoints := s.Endpoints[ingressName]
 	return &networkingv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        ingressName,
 			Namespace:   s.Namespace,
-			Labels:      translateIngressLabels(ingressName, s),
-			Annotations: translateIngressAnnotations(ingressName, s),
+			Labels:      translateEndpointIngressLabels(ingressName, s),
+			Annotations: translateEndpointIngressAnnotations(ingressName, s),
 		},
 		Spec: networkingv1beta1.IngressSpec{
 			Rules: []networkingv1beta1.IngressRule{
@@ -573,7 +674,7 @@ func translateEndpointsV1Beta1(endpoints model.Endpoint) []networkingv1beta1.HTT
 	return paths
 }
 
-func translateIngressAnnotations(endpointName string, s *model.Stack) map[string]string {
+func translateEndpointIngressAnnotations(endpointName string, s *model.Stack) map[string]string {
 	endpoint := s.Endpoints[endpointName]
 	annotations := model.Annotations{model.OktetoIngressAutoGenerateHost: "true"}
 	for k := range endpoint.Annotations {
@@ -582,7 +683,7 @@ func translateIngressAnnotations(endpointName string, s *model.Stack) map[string
 	return annotations
 }
 
-func translateIngressLabels(endpointName string, s *model.Stack) map[string]string {
+func translateEndpointIngressLabels(endpointName string, s *model.Stack) map[string]string {
 	endpoint := s.Endpoints[endpointName]
 	labels := map[string]string{
 		model.StackNameLabel:         s.Name,
@@ -765,8 +866,7 @@ func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 
 func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 	result := []apiv1.ServicePort{}
-	ports := getPortsToAddToSvc(svc.Ports)
-	for _, p := range ports {
+	for _, p := range svc.Ports {
 		if !isServicePortAdded(p.ContainerPort, result) {
 			result = append(
 				result,
@@ -791,22 +891,6 @@ func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 		}
 	}
 	return result
-}
-
-func getPortsToAddToSvc(ports []model.Port) []model.Port {
-	privatePorts := []model.Port{}
-	publicPorts := []model.Port{}
-	for _, p := range ports {
-		if model.IsSkippablePort(p.HostPort) {
-			privatePorts = append(privatePorts, p)
-		} else {
-			publicPorts = append(publicPorts, p)
-		}
-	}
-	if len(publicPorts) > 0 {
-		return publicPorts
-	}
-	return privatePorts
 }
 
 func isServicePortAdded(newPort int32, existentPorts []apiv1.ServicePort) bool {
