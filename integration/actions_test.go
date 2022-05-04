@@ -165,7 +165,9 @@ func TestBuildActionPipeline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s %s: %s", command, strings.Join(args, " "), string(o))
 	}
-
+	if err := executeDeleteNamespaceAction(ctx, namespace); err != nil {
+		t.Fatalf("Delete namespace action failed: %s", err.Error())
+	}
 }
 
 func TestNamespaceActionsPipeline(t *testing.T) {
