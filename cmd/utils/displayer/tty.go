@@ -93,7 +93,7 @@ func (d *ttyDisplayer) Display(command string) {
 				case <-d.commandContext.Done():
 				default:
 					line := d.stderrScanner.Text()
-					oktetoLog.FWarning(os.Stdout, line)
+					oktetoLog.Println(line)
 					continue
 				}
 				break
