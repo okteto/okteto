@@ -355,10 +355,21 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	return s, nil
 }
 
-func (svc *Service) IgnoreSyncVolumes(s *Stack) {
+func (svc *Service) ignoreSyncVolumes(s *Stack) {
 	notIgnoredVolumes := make([]StackVolume, 0)
+	wd, err := os.Getwd()
+	if err != nil {
+		oktetoLog.Info("could not get wd to ignore secrets")
+	}
 	for _, volume := range svc.VolumeMounts {
-		if svc.Build == nil && FileExists(volume.LocalPath) {
+		if filepath.IsAbs(volume.LocalPath) {
+			relPath, err := filepath.Rel(wd, volume.LocalPath)
+			if err != nil {
+				oktetoLog.Infof("could not get rel: %s", err)
+			}
+			volume.LocalPath = relPath
+		}
+		if FileExists(volume.LocalPath) {
 			notIgnoredVolumes = append(notIgnoredVolumes, volume)
 			continue
 		}
@@ -435,7 +446,7 @@ func (s *Stack) Validate() error {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))
 			}
 		}
-		svc.IgnoreSyncVolumes(s)
+		svc.ignoreSyncVolumes(s)
 	}
 	return validateDependsOn(s)
 }
