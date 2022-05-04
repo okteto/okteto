@@ -77,6 +77,9 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 		buildInfo.Image = ""
 	}
 	opts := build.OptsFromBuildInfo(manifest.Name, service, buildInfo, &types.BuildOptions{})
+	if opts.Tag == "" {
+		return fmt.Errorf("error getting the image name for the service '%s' using a k8s cluster not managed by Okteto. You need to specify the name of the image ", service)
+	}
 
 	if build.ShouldOptimizeBuild(opts) {
 		oktetoLog.Debug("tag detected, optimizing sha")
