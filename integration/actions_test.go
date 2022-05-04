@@ -447,7 +447,7 @@ func executeDeployPipelineAction(ctx context.Context, namespace string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, pipelinePath)
 	actionFolder := strings.Split(pipelinePath, "/")[1]
 	log.Printf("cloning pipeline repository: %s", actionRepo)
-	err := cloneGitRepo(ctx, actionRepo)
+	err := cloneGitRepoWithBranch(ctx, actionRepo, "master")
 	if err != nil {
 		return err
 	}
