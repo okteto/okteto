@@ -65,7 +65,6 @@ type UpOptions struct {
 	Build         bool
 	ForcePull     bool
 	Reset         bool
-	Detach        bool
 	DockerDesktop bool
 }
 
@@ -222,7 +221,7 @@ func Up() *cobra.Command {
 				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
 					return err
 				}
-				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err && !upOptions.Detach {
+				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err && !upOptions.DockerDesktop {
 					autocreateDev = false
 				}
 				if err != nil {
@@ -244,7 +243,7 @@ func Up() *cobra.Command {
 			}
 
 			var dev *model.Dev
-			if upOptions.Detach {
+			if upOptions.DockerDesktop {
 				dev, err = utils.GetDevDetachMode(oktetoManifest, upOptions.Devs)
 				if err != nil {
 					return err
@@ -331,7 +330,6 @@ func Up() *cobra.Command {
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().MarkHidden("pull")
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
-	cmd.Flags().BoolVarP(&upOptions.Detach, "detach", "", false, "activate one more development containers in detached mode")
 	cmd.Flags().BoolVarP(&upOptions.DockerDesktop, "docker-desktop", "", false, "if the command is executed from the Docker Desktop extension")
 	cmd.Flags().MarkHidden("docker-desktop")
 	return cmd
@@ -339,7 +337,7 @@ func Up() *cobra.Command {
 
 // AddArgs sets the args as options and return err if it's not compatible
 func (o *UpOptions) AddArgs(cmd *cobra.Command, args []string) error {
-	if o.Detach {
+	if o.DockerDesktop {
 		o.Devs = args
 	} else {
 		maxV1Args := 1
