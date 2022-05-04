@@ -891,7 +891,7 @@ func Test_translateService(t *testing.T) {
 					},
 				},
 				Spec: apiv1.ServiceSpec{
-					Type: apiv1.ServiceTypeLoadBalancer,
+					Type: apiv1.ServiceTypeClusterIP,
 					Selector: map[string]string{
 						model.StackNameLabel:        "stackName",
 						model.StackServiceNameLabel: "svcName",
@@ -964,7 +964,7 @@ func Test_translateService(t *testing.T) {
 					},
 				},
 				Spec: apiv1.ServiceSpec{
-					Type: apiv1.ServiceTypeLoadBalancer,
+					Type: apiv1.ServiceTypeClusterIP,
 					Selector: map[string]string{
 						model.StackNameLabel:        "stackName",
 						model.StackServiceNameLabel: "svcName",
@@ -1031,14 +1031,13 @@ func Test_translateService(t *testing.T) {
 						model.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
-						"annotation1":                     "value1",
-						"annotation2":                     "value2",
-						model.OktetoAutoIngressAnnotation: "private",
-						model.OktetoPrivateSvcAnnotation:  "true",
+						"annotation1":                    "value1",
+						"annotation2":                    "value2",
+						model.OktetoPrivateSvcAnnotation: "true",
 					},
 				},
 				Spec: apiv1.ServiceSpec{
-					Type: apiv1.ServiceTypeLoadBalancer,
+					Type: apiv1.ServiceTypeClusterIP,
 					Selector: map[string]string{
 						model.StackNameLabel:        "stackName",
 						model.StackServiceNameLabel: "svcName",
@@ -1132,6 +1131,70 @@ func Test_translateService(t *testing.T) {
 
 }
 
+func Test_translateServiceIngress(t *testing.T) {
+	s := &model.Stack{
+		Name: "stackName",
+		Services: map[string]*model.Service{
+			"svc1": {
+				Labels:      model.Labels{"label1": "value1"},
+				Annotations: model.Annotations{"annotation1": "value1"},
+				Image:       "image",
+				Ports: []model.Port{
+					{
+						HostPort:      8080,
+						ContainerPort: 8080,
+					},
+					{
+						HostPort:      80,
+						ContainerPort: 80,
+					},
+				},
+			},
+		},
+	}
+	result := translateServiceIngressV1("svc1-8080", "svc1", 8080, s)
+	if result.Name != "svc1-8080" {
+		t.Errorf("Wrong service name: '%s'", result.Name)
+	}
+
+	annotations := map[string]string{
+		model.OktetoIngressAutoGenerateHost: "true",
+		"annotation1":                       "value1",
+	}
+
+	if !reflect.DeepEqual(result.Annotations, annotations) {
+		t.Errorf("Wrong service annotations: '%s'", result.Annotations)
+	}
+
+	pathType := networkingv1.PathTypeImplementationSpecific
+	paths := []networkingv1.HTTPIngressPath{
+		{
+			Path:     "/",
+			PathType: &pathType,
+			Backend: networkingv1.IngressBackend{
+				Service: &networkingv1.IngressServiceBackend{
+					Name: "svc1",
+					Port: networkingv1.ServiceBackendPort{
+						Number: 8080,
+					},
+				},
+			},
+		},
+	}
+
+	if !reflect.DeepEqual(result.Spec.Rules[0].HTTP.Paths, paths) {
+		t.Errorf("Wrong ingress: '%v'", result.Spec.Rules[0].HTTP.Paths)
+	}
+
+	labels := map[string]string{
+		model.StackNameLabel: "stackName",
+		"label1":             "value1",
+	}
+	if !reflect.DeepEqual(result.Labels, labels) {
+		t.Errorf("Wrong labels: '%s'", result.Labels)
+	}
+}
+
 func Test_translateEndpointsV1(t *testing.T) {
 	s := &model.Stack{
 		Name: "stackName",
@@ -1152,7 +1215,7 @@ func Test_translateEndpointsV1(t *testing.T) {
 			},
 		},
 	}
-	result := translateIngressV1("endpoint1", s)
+	result := translateEndpointIngressV1("endpoint1", s)
 	if result.Name != "endpoint1" {
 		t.Errorf("Wrong service name: '%s'", result.Name)
 	}
@@ -1216,7 +1279,7 @@ func Test_translateEndpointsV1Beta1(t *testing.T) {
 			},
 		},
 	}
-	result := translateIngressV1Beta1("endpoint1", s)
+	result := translateEndpointIngressV1Beta1("endpoint1", s)
 	if result.Name != "endpoint1" {
 		t.Errorf("Wrong service name: '%s'", result.Name)
 	}
