@@ -145,25 +145,34 @@ func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 	return nil, err
 }
 
+// GetDevFromManifest gets a dev from a manifest by
 func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
 	if len(manifest.Dev) == 0 {
-		return nil, fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
+		return nil, oktetoErrors.ErrManifestNoDevSection
 	} else if len(manifest.Dev) == 1 {
 		for name, dev := range manifest.Dev {
 			if devName != "" && devName != name {
-				return nil, fmt.Errorf("dev '%s' doesn't exist", devName)
+				return nil, oktetoErrors.UserError{
+					E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
+					Hint: fmt.Sprintf("Available options are: [%s]", name),
+				}
 			}
 			return dev, nil
 		}
 	}
 
 	if devName != "" {
+		options := []string{}
 		for k := range manifest.Dev {
 			if k == devName {
 				return manifest.Dev[devName], nil
 			}
+			options = append(options, k)
 		}
-		return nil, fmt.Errorf("development container '%s' doesn't exist", devName)
+		return nil, oktetoErrors.UserError{
+			E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
+			Hint: fmt.Sprintf("Available options are: [%s]", strings.Join(options, ", ")),
+		}
 	}
 	devs := []string{}
 	for k := range manifest.Dev {
@@ -466,10 +475,6 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
     Or set the 'autocreate' field in your okteto manifest if you want to create a standalone development container
     More information is available here: https://okteto.com/docs/reference/cli/#up`,
 		}
-	}
-	if dev.Divert != nil {
-		dev.Name = model.DivertName(dev.Name, okteto.GetSanitizedUsername())
-		return app.Divert(okteto.GetSanitizedUsername()), false, nil
 	}
 	return app, false, nil
 }

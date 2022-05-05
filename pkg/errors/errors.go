@@ -155,6 +155,12 @@ var (
 
 	// ErrNoFlagAllowedOnSingleImageBuild is raised when the user tries to build a single image with flags
 	ErrNoFlagAllowedOnSingleImageBuild = errors.New("flags only allowed when building a single image with `okteto build [NAME]`")
+
+	// ErrManifestNoDevSection is raised when the manifest doesn't have a dev section and the user tries to access it
+	ErrManifestNoDevSection = errors.New("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
+
+	// ErrDevContainerNotExists is raised when the dev container doesn't exist on dev section
+	ErrDevContainerNotExists = "development container '%s' doesn't exist"
 )
 
 // IsForbidden raised if the Okteto API returns 401

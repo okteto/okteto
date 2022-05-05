@@ -55,6 +55,7 @@ type StackDeployOptions struct {
 	Timeout          time.Duration
 	ServicesToDeploy []string
 	Progress         string
+	InsidePipeline   bool
 }
 
 // Stack is the executor of stack commands
@@ -74,8 +75,10 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 		return err
 	}
 
-	if err := translate(ctx, s, options); err != nil {
-		return err
+	if !options.InsidePipeline {
+		if err := buildStackImages(ctx, s, options); err != nil {
+			return err
+		}
 	}
 
 	cfg := translateConfigMap(s)
@@ -104,6 +107,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 	return err
 }
 
+//deploy deploys a stack to kubernetes
 func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *StackDeployOptions) error {
 	DisplayWarnings(s)
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying compose '%s'...", s.Name))
@@ -147,7 +151,12 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			}
 		}
 
-		for name := range s.Volumes {
+		servicesToDeploySet := map[string]bool{}
+		for _, service := range options.ServicesToDeploy {
+			servicesToDeploySet[service] = true
+		}
+
+		for _, name := range getVolumesToDeployFromServicesToDeploy(s, servicesToDeploySet) {
 			if err := deployVolume(ctx, name, s, c, spinner); err != nil {
 				exit <- err
 				return
@@ -159,7 +168,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			return
 		}
 
-		for name := range s.Endpoints {
+		for _, name := range getEndpointsToDeployFromServicesToDeploy(s.Endpoints, servicesToDeploySet) {
 			ingressK8s := &ingresses.Ingress{
 				V1:      translateEndpointIngressV1(name, s),
 				V1Beta1: translateEndpointIngressV1Beta1(name, s),
@@ -196,6 +205,46 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		}
 	}
 	return nil
+}
+
+func getVolumesToDeployFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) []string {
+
+	volumesToDeploySet := map[string]bool{}
+
+	for serviceName, serviceSpec := range stack.Services {
+		if servicesToDeploy[serviceName] {
+			for _, volume := range serviceSpec.Volumes {
+				if stack.Volumes[volume.LocalPath] != nil {
+					volumesToDeploySet[volume.LocalPath] = true
+				}
+			}
+		}
+	}
+
+	volumesToDeploy := []string{}
+	for name := range volumesToDeploySet {
+		volumesToDeploy = append(volumesToDeploy, name)
+	}
+
+	return volumesToDeploy
+}
+
+func getEndpointsToDeployFromServicesToDeploy(endpoints model.EndpointSpec, servicesToDeploy map[string]bool) []string {
+	endpointsToDeploySet := map[string]bool{}
+	for name, spec := range endpoints {
+		for _, rule := range spec.Rules {
+			if servicesToDeploy[rule.Service] {
+				endpointsToDeploySet[name] = true
+			}
+		}
+	}
+
+	endpointsToDeploy := []string{}
+	for name := range endpointsToDeploySet {
+		endpointsToDeploy = append(endpointsToDeploy, name)
+	}
+
+	return endpointsToDeploy
 }
 
 func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, spinner *utils.Spinner, options *StackDeployOptions) error {
@@ -695,7 +744,9 @@ func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *Stac
 	if err := validateDefinedServices(s, options.ServicesToDeploy); err != nil {
 		return err
 	}
-	addDependentServicesIfNotPresent(ctx, s, options, c)
+	if !options.InsidePipeline {
+		options.ServicesToDeploy = AddDependentServicesIfNotPresent(ctx, s, options.ServicesToDeploy, c)
+	}
 	return nil
 }
 
@@ -712,26 +763,51 @@ func validateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 	return nil
 }
 
-func addDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, options *StackDeployOptions, c kubernetes.Interface) {
-	added := make([]string, 0)
-	for _, svcToDeploy := range options.ServicesToDeploy {
+// AddDependentServicesIfNotPresent adds dependands services to deploy
+func AddDependentServicesIfNotPresent(ctx context.Context, s *model.Stack, svcsToDeploy []string, c kubernetes.Interface) []string {
+	initialSvcsToDeploy := svcsToDeploy
+	svcsToDeployWithDependencies := addDependentServices(ctx, s, svcsToDeploy, c)
+	if len(initialSvcsToDeploy) != len(svcsToDeploy) {
+		added := getAddedSvcs(initialSvcsToDeploy, svcsToDeployWithDependencies)
+
+		oktetoLog.Warning("The following services need to be deployed because the services passed as arguments depend on them: [%s]", strings.Join(added, ", "))
+	}
+	return svcsToDeployWithDependencies
+}
+
+func addDependentServices(ctx context.Context, s *model.Stack, svcsToDeploy []string, c kubernetes.Interface) []string {
+	initialLength := len(svcsToDeploy)
+	svcsToDeploySet := map[string]bool{}
+	for _, svc := range svcsToDeploy {
+		svcsToDeploySet[svc] = true
+	}
+	for _, svcToDeploy := range svcsToDeploy {
 		for dependentSvc := range s.Services[svcToDeploy].DependsOn {
-			if !isSvcToBeDeployed(options.ServicesToDeploy, dependentSvc) && !isSvcRunning(ctx, s.Services[dependentSvc], s.Namespace, dependentSvc, c) {
-				options.ServicesToDeploy = append(options.ServicesToDeploy, dependentSvc)
-				added = append(added, dependentSvc)
+			if _, ok := svcsToDeploySet[dependentSvc]; ok {
+				continue
+			}
+			if !isSvcRunning(ctx, s.Services[dependentSvc], s.Namespace, dependentSvc, c) {
+				svcsToDeploy = append(svcsToDeploy, dependentSvc)
+				svcsToDeploySet[dependentSvc] = true
 			}
 		}
 	}
-	if len(added) > 0 {
-		oktetoLog.Warning("The following services need to be deployed because the services passed as arguments depend on them: [%s]", strings.Join(added, ", "))
+	if initialLength != len(svcsToDeploy) {
+		return addDependentServices(ctx, s, svcsToDeploy, c)
 	}
+	return svcsToDeploy
 }
 
-func isSvcToBeDeployed(servicesToDeploy []string, svcName string) bool {
-	for _, svcToBeDeployedName := range servicesToDeploy {
-		if svcName == svcToBeDeployedName {
-			return true
+func getAddedSvcs(initialSvcsToDeploy, svcsToDeployWithDependencies []string) []string {
+	initialSvcsToDeploySet := map[string]bool{}
+	for _, svc := range initialSvcsToDeploy {
+		initialSvcsToDeploySet[svc] = true
+	}
+	added := []string{}
+	for _, svcName := range svcsToDeployWithDependencies {
+		if _, ok := initialSvcsToDeploySet[svcName]; ok {
+			added = append(added, svcName)
 		}
 	}
-	return false
+	return added
 }

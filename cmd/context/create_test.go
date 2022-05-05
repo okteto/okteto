@@ -15,11 +15,13 @@ package context
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -288,7 +290,7 @@ func Test_createContext(t *testing.T) {
 
 			fakeOktetoClient := &client.FakeOktetoClient{
 				Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-				Users:     client.NewFakeUsersClient(tt.user, nil),
+				Users:     client.NewFakeUsersClient(tt.user),
 				Preview:   client.NewFakePreviewClient(nil, nil),
 			}
 
@@ -301,6 +303,66 @@ func Test_createContext(t *testing.T) {
 				t.Fatal("Not thrown error")
 			}
 			assert.Equal(t, tt.ctxOptions.Context, okteto.CurrentStore.CurrentContext)
+		})
+	}
+}
+
+func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
+	ctx := context.Background()
+
+	user := &types.User{
+		Token: "test",
+	}
+
+	fakeOktetoClient := &client.FakeOktetoClient{
+		Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
+		Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+		Preview:   client.NewFakePreviewClient(nil, nil),
+	}
+
+	ctxController := newFakeContextCommand(fakeOktetoClient, user, nil)
+
+	var tests = []struct {
+		name                string
+		ctxOptions          *ContextOptions
+		user                *types.User
+		fakeOktetoClient    *client.FakeOktetoClient
+		isAutoAuthTriggered bool
+	}{
+		{
+			name: "okteto context triggers auto auth",
+			ctxOptions: &ContextOptions{
+				IsOkteto:     true,
+				Context:      "https://okteto.cloud.com",
+				Token:        "this is a invalid token",
+				IsCtxCommand: true,
+			},
+			user:                user,
+			fakeOktetoClient:    fakeOktetoClient,
+			isAutoAuthTriggered: true,
+		},
+		{
+			name: "non okteto context command gives unauthorized message",
+			ctxOptions: &ContextOptions{
+				IsOkteto:     true,
+				Context:      "https://okteto.cloud.com",
+				Token:        "this is a invalid token",
+				IsCtxCommand: false,
+			},
+			user:                user,
+			fakeOktetoClient:    fakeOktetoClient,
+			isAutoAuthTriggered: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ctxController.initOktetoContext(ctx, tt.ctxOptions)
+			if err != nil {
+				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name).Error() && tt.isAutoAuthTriggered {
+					t.Fatalf("Not expecting error but got: %s", err.Error())
+				}
+			}
 		})
 	}
 }

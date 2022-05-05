@@ -27,7 +27,6 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -42,6 +41,7 @@ func Down() *cobra.Command {
 	var namespace string
 	var k8sContext string
 	var rm bool
+	var all bool
 
 	cmd := &cobra.Command{
 		Use:   "down [svc]",
@@ -52,15 +52,22 @@ func Down() *cobra.Command {
 
 			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
 			if devPath != "" {
-				workdir := utils.GetWorkdirFromManifestPath(devPath)
+				workdir := model.GetWorkdirFromManifestPath(devPath)
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
-				devPath = utils.GetManifestPathFromWorkdir(devPath, workdir)
+				devPath = model.GetManifestPathFromWorkdir(devPath, workdir)
 			}
 			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				return err
+			}
+
+			if all {
+				err := allDown(ctx, manifest, rm)
+				if err != nil {
+					return err
+				}
 			}
 
 			devName := ""
@@ -85,9 +92,25 @@ func Down() *cobra.Command {
 
 	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&rm, "volumes", "v", false, "remove persistent volume")
+	cmd.Flags().BoolVarP(&all, "all", "A", false, "deactivate all running dev containers")
 	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the down command is executed")
 	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the down command is executed")
 	return cmd
+}
+
+func allDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
+	if len(manifest.Dev) == 0 {
+		return fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
+	}
+	for _, dev := range manifest.Dev {
+		if err := runDown(ctx, dev, rm); err != nil {
+			analytics.TrackDown(false)
+			err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+			return err
+		}
+	}
+	analytics.TrackDown(true)
+	return nil
 }
 
 func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
@@ -104,13 +127,6 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		if err != nil {
 			exit <- err
 			return
-		}
-
-		if dev.Divert != nil {
-			if err := diverts.Delete(ctx, dev, c); err != nil {
-				exit <- err
-				return
-			}
 		}
 
 		spinner.Stop()

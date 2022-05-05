@@ -109,11 +109,11 @@ func (*OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOptio
 // Build builds the images defined by a manifest
 func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
 	if options.File != "" {
-		workdir := utils.GetWorkdirFromManifestPath(options.File)
+		workdir := model.GetWorkdirFromManifestPath(options.File)
 		if err := os.Chdir(workdir); err != nil {
 			return err
 		}
-		options.File = utils.GetManifestPathFromWorkdir(options.File, workdir)
+		options.File = model.GetManifestPathFromWorkdir(options.File, workdir)
 	}
 	if options.Manifest.Name == "" {
 		wd, err := os.Getwd()
@@ -190,10 +190,10 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
 
-	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, &types.BuildOptions{})
+	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options)
 
 	// Check if the tag is already on global/dev registry and skip
-	if build.ShouldOptimizeBuild(buildOptions.Tag) && !buildOptions.BuildToGlobal {
+	if build.ShouldOptimizeBuild(buildOptions) {
 		tag, err := bc.optimizeBuild(buildOptions, svcName)
 		if err != nil {
 			return "", err
@@ -216,12 +216,12 @@ func (bc *OktetoBuilder) optimizeBuild(buildOptions *types.BuildOptions, svcName
 	oktetoLog.Debug("found optimizing the build flow")
 	globalReference := strings.Replace(buildOptions.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
 	if _, err := bc.Registry.GetImageTagWithDigest(globalReference); err == nil {
-		oktetoLog.Debugf("Skipping '%s' build. Image already exists at the Okteto Registry", svcName)
+		oktetoLog.Debugf("Skipping '%s' build. Image already exists at the Okteto Global Registry: %s", svcName, globalReference)
 		return globalReference, nil
 	}
 	if registry.IsDevRegistry(buildOptions.Tag) {
 		if _, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag); err == nil {
-			oktetoLog.Debugf("skipping build: image %s is already built", buildOptions.Tag)
+			oktetoLog.Debugf("Skipping '%s' build: Image already exists at the Okteto Registry: %s", svcName, buildOptions.Tag)
 			return buildOptions.Tag, nil
 		}
 	}
@@ -230,19 +230,29 @@ func (bc *OktetoBuilder) optimizeBuild(buildOptions *types.BuildOptions, svcName
 
 func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
 	oktetoLog.Information("Including volume hosts for service '%s'", svcName)
-	isStackManifest := manifest.Type == model.StackType
-	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
-
+	isStackManifest := (manifest.Type == model.StackType) || (manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil)
 	fromImage := manifest.Build[svcName].Image
 	if options.Tag != "" {
 		fromImage = options.Tag
 	}
+	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
 
 	svcBuild, err := registry.CreateDockerfileWithVolumeMounts(fromImage, buildSvcInfo.VolumesToInclude)
 	if err != nil {
 		return "", err
 	}
-	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, &types.BuildOptions{})
+	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options)
+
+	if build.ShouldOptimizeBuild(buildOptions) {
+		tag, err := bc.optimizeBuild(buildOptions, svcName)
+		if err != nil {
+			return "", err
+		}
+		if tag != "" {
+			return tag, nil
+		}
+	}
+
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
@@ -274,7 +284,7 @@ func getBuildInfoWithoutVolumeMounts(buildInfo *model.BuildInfo, isStackManifest
 
 func getBuildInfoWithVolumeMounts(buildInfo *model.BuildInfo, isStackManifest bool) *model.BuildInfo {
 	result := buildInfo.Copy()
-	if isStackManifest && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
+	if isStackManifest && okteto.IsOkteto() {
 		result.Image = ""
 	}
 	result.VolumesToInclude = getAccessibleVolumeMounts(buildInfo)
@@ -292,10 +302,15 @@ func getAccessibleVolumeMounts(buildInfo *model.BuildInfo) []model.StackVolume {
 }
 
 func getToBuildSvcs(manifest *model.Manifest, options *types.BuildOptions) []string {
-	if len(options.CommandArgs) != 0 {
-		return options.CommandArgs
-	}
 	toBuild := []string{}
+	if len(options.CommandArgs) != 0 {
+		for _, svc := range options.CommandArgs {
+			if _, ok := manifest.Build[svc]; ok {
+				toBuild = append(toBuild, svc)
+			}
+		}
+		return toBuild
+	}
 	for svcName := range manifest.Build {
 		toBuild = append(toBuild, svcName)
 	}

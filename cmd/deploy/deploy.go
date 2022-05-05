@@ -44,6 +44,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	giturls "github.com/whilp/git-urls"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -120,13 +121,16 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(model.OktetoSkipConfigCredentialsUpdate, "false")
 			if options.ManifestPath != "" {
-				workdir := utils.GetWorkdirFromManifestPath(options.ManifestPath)
+				workdir := model.GetWorkdirFromManifestPath(options.ManifestPath)
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
-				options.ManifestPath = utils.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
+				options.ManifestPath = model.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
 			}
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
+				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
+					return err
+				}
 				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: options.Namespace}); err != nil {
 					return err
 				}
@@ -232,6 +236,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return fmt.Errorf("failed to get the current working directory: %w", err)
 	}
 
+	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
 	if err := addEnvVars(ctx, cwd); err != nil {
 		return err
 	}
@@ -253,7 +262,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
-	setDeployOptionsValuesFromManifest(deployOptions, cwd)
+	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
 
 	dc.Proxy.SetName(deployOptions.Name)
 	oktetoLog.SetStage("")
@@ -264,32 +273,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	if deployOptions.Dependencies && !okteto.IsOkteto() {
 		return fmt.Errorf("'dependencies' is only available in clusters managed by Okteto")
-	}
-
-	if deployOptions.Build {
-		buildOptions := &types.BuildOptions{
-			EnableStages: true,
-			Manifest:     deployOptions.Manifest,
-		}
-		oktetoLog.Debug("force build from manifest definition")
-		if err := dc.Builder.Build(ctx, buildOptions); err != nil {
-			return err
-		}
-	} else {
-		svcsToBuild, err := dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest)
-		if err != nil {
-			return err
-		}
-		if len(svcsToBuild) != 0 {
-			buildOptions := &types.BuildOptions{
-				CommandArgs:  svcsToBuild,
-				EnableStages: true,
-				Manifest:     deployOptions.Manifest,
-			}
-			if err := dc.Builder.Build(ctx, buildOptions); err != nil {
-				return err
-			}
-		}
 	}
 
 	for depName, dep := range deployOptions.Manifest.Dependencies {
@@ -313,7 +296,34 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
-	setDeployOptionsValuesFromManifest(deployOptions, cwd)
+	if deployOptions.Build {
+		buildOptions := &types.BuildOptions{
+			EnableStages: true,
+			Manifest:     deployOptions.Manifest,
+			CommandArgs:  deployOptions.servicesToDeploy,
+		}
+		oktetoLog.Debug("force build from manifest definition")
+		if err := dc.Builder.Build(ctx, buildOptions); err != nil {
+			return err
+		}
+	} else {
+		svcsToBuild, err := dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy)
+		if err != nil {
+			return err
+		}
+		if len(svcsToBuild) != 0 {
+			buildOptions := &types.BuildOptions{
+				CommandArgs:  svcsToBuild,
+				EnableStages: true,
+				Manifest:     deployOptions.Manifest,
+			}
+			if err := dc.Builder.Build(ctx, buildOptions); err != nil {
+				return err
+			}
+		}
+	}
+
+	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
 	dc.Proxy.Start()
 
@@ -332,10 +342,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType {
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
-	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
-	if err != nil {
-		return err
-	}
+
 	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
 	if err != nil {
 		return err
@@ -413,7 +420,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	return err
 }
 
-func setDeployOptionsValuesFromManifest(deployOptions *Options, cwd string) {
+func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) {
 	if deployOptions.Manifest.Context == "" {
 		deployOptions.Manifest.Context = okteto.Context().Name
 	}
@@ -441,26 +448,16 @@ func setDeployOptionsValuesFromManifest(deployOptions *Options, cwd string) {
 	if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
 
 		mergeServicesToDeployFromOptionsAndManifest(deployOptions)
-		if len(deployOptions.servicesToDeploy) > 0 {
-			servicesToDeploy := map[string]bool{}
-			for _, service := range deployOptions.servicesToDeploy {
-				servicesToDeploy[service] = true
-			}
-
-			onlyDeployEndpointsFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack.Endpoints, servicesToDeploy)
-
-			onlyDeployVolumesFromServicesToDeploy(deployOptions.Manifest.Deploy.ComposeSection.Stack, servicesToDeploy)
-
-		} else {
+		if len(deployOptions.servicesToDeploy) == 0 {
 			deployOptions.servicesToDeploy = []string{}
 			for service := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
 				deployOptions.servicesToDeploy = append(deployOptions.servicesToDeploy, service)
 			}
 		}
-	}
-
-	if len(deployOptions.servicesToDeploy) == 0 {
-		deployOptions.servicesToDeploy = []string{deployOptions.Name}
+		if len(deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo) > 0 {
+			deployOptions.servicesToDeploy = stack.AddDependentServicesIfNotPresent(ctx, deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy, c)
+			deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo[0].ServicesToDeploy = deployOptions.servicesToDeploy
+		}
 	}
 }
 
@@ -489,40 +486,6 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 	if len(deployOptions.servicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
 		deployOptions.servicesToDeploy = manifestDeclaredServicesToDeploy
-	}
-}
-
-func onlyDeployEndpointsFromServicesToDeploy(endpoints model.EndpointSpec, servicesToDeploy map[string]bool) {
-	for key, spec := range endpoints {
-		newRules := []model.EndpointRule{}
-		for _, rule := range spec.Rules {
-			if servicesToDeploy[rule.Service] {
-				newRules = append(newRules, rule)
-			}
-		}
-		spec.Rules = newRules
-		endpoints[key] = spec
-	}
-}
-
-func onlyDeployVolumesFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) {
-
-	volumesToDeploy := map[string]bool{}
-
-	for serviceName, serviceSpec := range stack.Services {
-		if servicesToDeploy[serviceName] {
-			for _, volume := range serviceSpec.Volumes {
-				if stack.Volumes[volume.LocalPath] != nil {
-					volumesToDeploy[volume.LocalPath] = true
-				}
-			}
-		}
-	}
-
-	for volume := range stack.Volumes {
-		if !volumesToDeploy[volume] {
-			delete(stack.Volumes, volume)
-		}
 	}
 }
 
@@ -610,6 +573,7 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 		Wait:             opts.Wait,
 		Timeout:          opts.Timeout,
 		ServicesToDeploy: opts.servicesToDeploy,
+		InsidePipeline:   true,
 	}
 
 	c, cfg, err := dc.K8sClientProvider.Provide(kubeconfig.Get([]string{dc.TempKubeconfigFile}))

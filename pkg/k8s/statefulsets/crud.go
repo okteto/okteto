@@ -137,8 +137,8 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 		return nil, oktetoErrors.ErrNotFound
 	}
 	validStatefulsets := []*appsv1.StatefulSet{}
-	for i, sfs := range sfsList.Items {
-		if sfs.Labels[model.DevCloneLabel] == "" {
+	for i := range sfsList.Items {
+		if sfsList.Items[i].Labels[model.DevCloneLabel] == "" {
 			validStatefulsets = append(validStatefulsets, &sfsList.Items[i])
 		}
 	}
@@ -228,28 +228,6 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 		errorToReturn += fmt.Sprintf("The value of resources.limits.memory in your okteto manifest (%s) exceeds the maximum memory limit per pod (%s). ", manifestMemory, maximumMemoryPerPod)
 	}
 	return fmt.Errorf(strings.TrimSpace(errorToReturn))
-}
-
-func TranslateDivert(username string, sfs *appsv1.StatefulSet) *appsv1.StatefulSet {
-	name := model.DivertName(sfs.Name, username)
-	result := sfs.DeepCopy()
-	result.UID = ""
-	result.Name = name
-	result.Labels = map[string]string{model.OktetoDivertLabel: username}
-	if sfs.Labels != nil && sfs.Labels[model.DeployedByLabel] != "" {
-		result.Labels[model.DeployedByLabel] = sfs.Labels[model.DeployedByLabel]
-	}
-	result.Spec.Selector = &metav1.LabelSelector{
-		MatchLabels: map[string]string{
-			model.OktetoDivertLabel: username,
-		},
-	}
-	result.Spec.Template.Labels = map[string]string{
-		model.OktetoDivertLabel: username,
-	}
-
-	result.ResourceVersion = ""
-	return result
 }
 
 // PatchAnnotations patches the statefulset annotations

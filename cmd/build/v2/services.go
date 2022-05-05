@@ -29,13 +29,14 @@ import (
 )
 
 // GetServicesToBuild returns the services it has to built because they are not already built
-func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest) ([]string, error) {
+func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error) {
 	buildManifest := manifest.Build
 
 	// check if images are at registry (global or dev) and set envs or send to build
 	toBuild := make(chan string, len(buildManifest))
 	g, _ := errgroup.WithContext(ctx)
 	for service := range buildManifest {
+
 		svc := service
 		g.Go(func() error {
 			return bc.checkServicesToBuild(svc, manifest, toBuild)
@@ -55,22 +56,32 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 		return nil, nil
 	}
 
+	svcToDeployMap := map[string]bool{}
+	for _, svc := range svcToDeploy {
+		svcToDeployMap[svc] = true
+	}
 	svcsToBuildList := []string{}
 	for svc := range toBuild {
+		if _, ok := svcToDeployMap[svc]; len(svcToDeploy) > 0 && !ok {
+			continue
+		}
 		svcsToBuildList = append(svcsToBuildList, svc)
 	}
 	return svcsToBuildList, nil
 }
 
 func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
-	buildInfo := manifest.Build[service]
+	buildInfo := manifest.Build[service].Copy()
 	isStack := manifest.Type == model.StackType
 	if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
 		buildInfo.Image = ""
 	}
 	opts := build.OptsFromBuildInfo(manifest.Name, service, buildInfo, &types.BuildOptions{})
+	if opts.Tag == "" {
+		return fmt.Errorf("error getting the image name for the service '%s'. Please specify the full name of the image when using a Kubernetes namespace not managed by Okteto", service)
+	}
 
-	if build.ShouldOptimizeBuild(opts.Tag) {
+	if build.ShouldOptimizeBuild(opts) {
 		oktetoLog.Debug("tag detected, optimizing sha")
 		if skipBuild, err := bc.checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
 			return err

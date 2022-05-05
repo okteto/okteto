@@ -19,9 +19,11 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/compose-spec/godotenv"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
@@ -219,6 +221,18 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	if err != nil {
 		return nil, err
 	}
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	defer os.Chdir(cwd)
+
+	stackWorkingDir := GetWorkdirFromManifestPath(stackPath)
+	if err := os.Chdir(stackWorkingDir); err != nil {
+		return nil, err
+	}
+	stackPath = GetManifestPathFromWorkdir(stackPath, stackWorkingDir)
+
 	s, err := ReadStack([]byte(expandedManifest), isCompose)
 	if err != nil {
 		return nil, err
@@ -239,7 +253,7 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 		return nil, err
 	}
 
-	for _, svc := range s.Services {
+	for svcName, svc := range s.Services {
 		if svc.Build == nil {
 			continue
 		}
@@ -249,6 +263,9 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 		} else {
 			svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
 			svc.Build.Dockerfile = loadAbsPath(svc.Build.Context, svc.Build.Dockerfile)
+		}
+		if err := loadEnvFiles(svc, svcName); err != nil {
+			return nil, err
 		}
 		copy(svc.Build.VolumesToInclude, svc.Volumes)
 	}
@@ -343,9 +360,24 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	return s, nil
 }
 
-func (svc *Service) IgnoreSyncVolumes(s *Stack) {
+func (svc *Service) ignoreSyncVolumes(s *Stack) {
 	notIgnoredVolumes := make([]StackVolume, 0)
+	wd, err := os.Getwd()
+	if err != nil {
+		oktetoLog.Info("could not get wd to ignore secrets")
+	}
 	for _, volume := range svc.VolumeMounts {
+		if filepath.IsAbs(volume.LocalPath) {
+			relPath, err := filepath.Rel(wd, volume.LocalPath)
+			if err != nil {
+				oktetoLog.Infof("could not get rel: %s", err)
+			}
+			volume.LocalPath = relPath
+		}
+		if FileExists(volume.LocalPath) {
+			notIgnoredVolumes = append(notIgnoredVolumes, volume)
+			continue
+		}
 		if !strings.HasPrefix(volume.LocalPath, "/") {
 			notIgnoredVolumes = append(notIgnoredVolumes, volume)
 		}
@@ -395,6 +427,10 @@ func (s *Stack) Validate() error {
 		}
 	}
 
+	wd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
 	for name, svc := range s.Services {
 		if err := validateStackName(name); err != nil {
 			return fmt.Errorf("Invalid service name '%s': %s", name, err)
@@ -405,14 +441,17 @@ func (s *Stack) Validate() error {
 		}
 
 		for _, v := range svc.VolumeMounts {
-			if strings.HasPrefix(v.LocalPath, "/") {
+			if svc.Build == nil && FileExists(v.LocalPath) {
+				continue
+			}
+			if _, err := filepath.Rel(wd, v.LocalPath); err != nil {
 				s.Warnings.VolumeMountWarnings = append(s.Warnings.VolumeMountWarnings, fmt.Sprintf("[%s]: volume '%s:%s' will be ignored. You can synchronize code to your containers using 'okteto up'. More information available here: https://okteto.com/docs/reference/cli/#up", name, v.LocalPath, v.RemotePath))
 			}
 			if !strings.HasPrefix(v.RemotePath, "/") {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))
 			}
 		}
-		svc.IgnoreSyncVolumes(s)
+		svc.ignoreSyncVolumes(s)
 	}
 	return validateDependsOn(s)
 }
@@ -761,4 +800,59 @@ func getOverrideFile(stackPath string) (*Stack, error) {
 		return stack, nil
 	}
 	return nil, fmt.Errorf("override file not found")
+}
+
+func loadEnvFiles(svc *Service, svcName string) error {
+	for i := len(svc.EnvFiles) - 1; i >= 0; i-- {
+		envFilepath := svc.EnvFiles[i]
+		if err := setEnvironmentFromFile(svc, envFilepath); err != nil {
+			if filepath.Base(envFilepath) == ".env" {
+				oktetoLog.Warning("Skipping '.env' file from %s service", svcName)
+				continue
+			}
+			return err
+		}
+	}
+	sort.SliceStable(svc.Environment, func(i, j int) bool {
+		return strings.Compare(svc.Environment[i].Name, svc.Environment[j].Name) < 0
+	})
+	svc.EnvFiles = nil
+	return nil
+}
+
+func setEnvironmentFromFile(svc *Service, filename string) error {
+	var err error
+	filename, err = ExpandEnv(filename, true)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
+	if err != nil {
+		return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
+	}
+
+	for _, e := range svc.Environment {
+		delete(envMap, e.Name)
+	}
+
+	for name, value := range envMap {
+		if value == "" {
+			value = os.Getenv(name)
+		}
+		if value != "" {
+			svc.Environment = append(
+				svc.Environment,
+				EnvVar{Name: name, Value: value},
+			)
+		}
+	}
+
+	return nil
 }

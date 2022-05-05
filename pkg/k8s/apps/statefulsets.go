@@ -191,7 +191,3 @@ func (i *StatefulSetApp) PatchAnnotations(ctx context.Context, c kubernetes.Inte
 func (i *StatefulSetApp) Destroy(ctx context.Context, c kubernetes.Interface) error {
 	return statefulsets.Destroy(ctx, i.sfs.Name, i.sfs.Namespace, c)
 }
-
-func (i *StatefulSetApp) Divert(username string) App {
-	return &StatefulSetApp{sfs: statefulsets.TranslateDivert(username, i.sfs)}
-}

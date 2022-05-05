@@ -38,7 +38,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/diverts"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -66,7 +65,6 @@ type UpOptions struct {
 	Build         bool
 	ForcePull     bool
 	Reset         bool
-	Detach        bool
 	DockerDesktop bool
 }
 
@@ -106,15 +104,23 @@ func Up() *cobra.Command {
 			ctx := context.Background()
 
 			if upOptions.DevPath != "" {
-				workdir := utils.GetWorkdirFromManifestPath(upOptions.DevPath)
+				workdir := model.GetWorkdirFromManifestPath(upOptions.DevPath)
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
-				upOptions.DevPath = utils.GetManifestPathFromWorkdir(upOptions.DevPath, workdir)
+				upOptions.DevPath = model.GetManifestPathFromWorkdir(upOptions.DevPath, workdir)
 			}
 			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
 			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
-			if err != nil && errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+			if err != nil {
+				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
+					return err
+				}
+
+				if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+					return err
+				}
+
 				if !utils.AskIfOktetoInit(upOptions.DevPath) {
 					return err
 				}
@@ -126,6 +132,8 @@ func Up() *cobra.Command {
 				if err != nil {
 					return err
 				}
+			} else if err != nil {
+				return err
 			}
 			wd, err := os.Getwd()
 			if err != nil {
@@ -213,7 +221,7 @@ func Up() *cobra.Command {
 				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
 					return err
 				}
-				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err && !upOptions.Detach {
+				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err && !upOptions.DockerDesktop {
 					autocreateDev = false
 				}
 				if err != nil {
@@ -235,7 +243,7 @@ func Up() *cobra.Command {
 			}
 
 			var dev *model.Dev
-			if upOptions.Detach {
+			if upOptions.DockerDesktop {
 				dev, err = utils.GetDevDetachMode(oktetoManifest, upOptions.Devs)
 				if err != nil {
 					return err
@@ -322,7 +330,6 @@ func Up() *cobra.Command {
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().MarkHidden("pull")
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
-	cmd.Flags().BoolVarP(&upOptions.Detach, "detach", "", false, "activate one more development containers in detached mode")
 	cmd.Flags().BoolVarP(&upOptions.DockerDesktop, "docker-desktop", "", false, "if the command is executed from the Docker Desktop extension")
 	cmd.Flags().MarkHidden("docker-desktop")
 	return cmd
@@ -330,7 +337,7 @@ func Up() *cobra.Command {
 
 // AddArgs sets the args as options and return err if it's not compatible
 func (o *UpOptions) AddArgs(cmd *cobra.Command, args []string) error {
-	if o.Detach {
+	if o.DockerDesktop {
 		o.Devs = args
 	} else {
 		maxV1Args := 1
@@ -471,15 +478,8 @@ func (up *upContext) getManifest(path string) (*model.Manifest, error) {
 	}
 	return model.GetManifestV2(path)
 }
+
 func (up *upContext) start() error {
-
-	ctx := context.Background()
-
-	if up.Dev.Divert != nil {
-		if err := diverts.Create(ctx, up.Dev, up.Client); err != nil {
-			return err
-		}
-	}
 
 	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
 		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
@@ -763,7 +763,7 @@ func (up *upContext) shutdown() {
 
 }
 
-func printDisplayContext(dev *model.Dev, divertURL string) {
+func printDisplayContext(dev *model.Dev) {
 	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(dev.Context)))
 	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), dev.Namespace))
 	oktetoLog.Println(fmt.Sprintf("    %s      %s", oktetoLog.BlueString("Name:"), dev.Name))
@@ -791,9 +791,6 @@ func printDisplayContext(dev *model.Dev, divertURL string) {
 		}
 	}
 
-	if divertURL != "" {
-		oktetoLog.Println(fmt.Sprintf("    %s       %s", oktetoLog.BlueString("URL:"), divertURL))
-	}
 	oktetoLog.Println()
 }
 

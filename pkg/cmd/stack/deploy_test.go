@@ -497,10 +497,135 @@ func Test_AddSomeServices(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			options := &StackDeployOptions{ServicesToDeploy: tt.svcsToBeDeployed}
-			addDependentServicesIfNotPresent(ctx, tt.stack, options, fakeClient)
+			options.ServicesToDeploy = AddDependentServicesIfNotPresent(ctx, tt.stack, options.ServicesToDeploy, fakeClient)
 
 			if !reflect.DeepEqual(tt.expectedSvcsToBeDeployed, options.ServicesToDeploy) {
 				t.Errorf("Expected %v but got %v", tt.expectedSvcsToBeDeployed, options.ServicesToDeploy)
+			}
+		})
+	}
+}
+
+func Test_getVolumesToDeployFromServicesToDeploy(t *testing.T) {
+	type args struct {
+		stack            *model.Stack
+		servicesToDeploy map[string]bool
+	}
+	tests := []struct {
+		name     string
+		args     args
+		expected map[string]bool
+	}{
+		{
+			name: "should return volumes from services to deploy",
+			args: args{
+				servicesToDeploy: map[string]bool{
+					"service b":  true,
+					"service bc": true,
+				},
+				stack: &model.Stack{
+					Services: map[string]*model.Service{
+						"service ab": {
+							Volumes: []model.StackVolume{
+								{
+									LocalPath: "volume a",
+								},
+								{
+									LocalPath: "volume b",
+								},
+							},
+						},
+						"service b": {
+							Volumes: []model.StackVolume{
+								{
+									LocalPath: "volume b",
+								},
+							},
+						},
+						"service bc": {
+							Volumes: []model.StackVolume{
+								{
+									LocalPath: "volume b",
+								},
+								{
+									LocalPath: "volume c",
+								},
+							},
+						},
+					},
+					Volumes: map[string]*model.VolumeSpec{
+						"volume a": {},
+						"volume b": {},
+						"volume c": {},
+					},
+				},
+			},
+			expected: map[string]bool{"volume b": true, "volume c": true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getVolumesToDeployFromServicesToDeploy(tt.args.stack, tt.args.servicesToDeploy)
+			resultSet := make(map[string]bool, len(result))
+			for _, v := range result {
+				resultSet[v] = true
+			}
+			if !reflect.DeepEqual(resultSet, tt.expected) {
+				t.Errorf("expected %v, got %v", tt.expected, result)
+			}
+		})
+	}
+}
+
+func Test_getEndpointsToDeployFromServicesToDeploy(t *testing.T) {
+	type args struct {
+		endpoints        model.EndpointSpec
+		servicesToDeploy map[string]bool
+	}
+	tests := []struct {
+		name     string
+		args     args
+		expected map[string]bool
+	}{
+		{
+			name: "multiple endpoints",
+			args: args{
+				endpoints: model.EndpointSpec{
+					"manifest": {
+						Rules: []model.EndpointRule{
+							{Service: "a"},
+							{Service: "b"},
+						},
+					},
+				},
+				servicesToDeploy: map[string]bool{
+					"a": true,
+				},
+			},
+			expected: map[string]bool{"manifest": true},
+		},
+		{
+			name: "no endpoints",
+			args: args{
+				endpoints: model.EndpointSpec{},
+				servicesToDeploy: map[string]bool{
+					"manifest": true,
+				},
+			},
+			expected: map[string]bool{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getEndpointsToDeployFromServicesToDeploy(tt.args.endpoints, tt.args.servicesToDeploy)
+			resultSet := make(map[string]bool, len(result))
+			for _, v := range result {
+				resultSet[v] = true
+			}
+			if !reflect.DeepEqual(resultSet, tt.expected) {
+				t.Errorf("expected %v, got %v", tt.expected, result)
 			}
 		})
 	}

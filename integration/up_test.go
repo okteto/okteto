@@ -184,8 +184,6 @@ persistentVolume:
 environment:
   VAR: value2
 `
-	divertGitRepo              = "git@github.com:okteto/catalog.git"
-	divertGitFolder            = "catalog"
 	microservicesComposeRepo   = "https://github.com/okteto/microservices-demo-compose"
 	microservicesComposeFolder = "microservices-demo-compose"
 )
@@ -584,91 +582,6 @@ func TestUpStatefulset(t *testing.T) {
 
 }
 
-func TestDivert(t *testing.T) {
-	tName := fmt.Sprintf("Test")
-	ctx := context.Background()
-	oktetoPath, err := getOktetoPath(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := exec.LookPath(kubectlBinary); err != nil {
-		t.Fatalf("kubectl is not in the path: %s", err)
-	}
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
-	namespace := fmt.Sprintf("%s-%s", name, user)
-	log.Printf("running %s \n", tName)
-	startNamespace := getCurrentNamespace()
-	defer changeToNamespace(ctx, oktetoPath, startNamespace)
-
-	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
-		t.Fatal(err)
-	}
-
-	log.Printf("created namespace %s \n", namespace)
-
-	if err := cloneGitRepo(ctx, divertGitRepo); err != nil {
-		t.Fatal(err)
-	}
-	defer deleteGitRepo(ctx, divertGitFolder)
-
-	log.Printf("cloned repo %s \n", divertGitRepo)
-
-	defer deleteGitRepo(ctx, pushGitFolder)
-
-	if err := oktetoPipeline(ctx, oktetoPath, divertGitRepo, divertGitFolder); err != nil {
-		t.Fatal(err)
-	}
-
-	log.Printf("pipeline using %s \n", divertGitRepo)
-
-	waitForDeployment(ctx, namespace, "health-checker", 1, 300)
-
-	if err := modifyDivertApp(); err != nil {
-		t.Fatal(err)
-	}
-
-	var wg sync.WaitGroup
-	upErrorChannel := make(chan error, 1)
-	p, err := up(ctx, &wg, namespace, fmt.Sprintf("health-checker-%s", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, upErrorChannel)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	divertedSvcName := fmt.Sprintf("health-checker-%s-okteto", user)
-	waitForDeployment(ctx, namespace, divertedSvcName, 2, 300)
-
-	defer showUpLogs(name, namespace, t)
-
-	apiSvc := "catalog-chart"
-	originalContent, err := getContent(fmt.Sprintf("https://%s-%s.%s/data", apiSvc, namespace, appsSubdomain), 300, upErrorChannel)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := waitForDivertedContent(originalContent, namespace, apiSvc, upErrorChannel, 300); err != nil {
-
-		t.Fatal("Contents are the same")
-	}
-
-	if err := down(ctx, namespace, fmt.Sprintf("health-checker-%s", user), filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), oktetoPath, false, true); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := checkIfUpFinished(ctx, p.Pid); err != nil {
-		t.Error(err)
-	}
-
-	_, err = getDeployment(ctx, namespace, fmt.Sprintf("health-checker-%s", user))
-	if err == nil {
-		t.Fatalf("'dev' deployment not deleted after 'okteto stack destroy'")
-	}
-
-	if err := deleteNamespace(ctx, oktetoPath, namespace); err != nil {
-		log.Printf("failed to delete namespace %s: %s\n", namespace, err)
-	}
-}
-
 func TestUpAutocreate(t *testing.T) {
 	tName := fmt.Sprintf("TestAutocreate-%s-%s", runtime.GOOS, mode)
 	ctx := context.Background()
@@ -880,32 +793,6 @@ func oktetoPipeline(ctx context.Context, oktetoPath, repo, folder string) error 
 	return nil
 }
 
-func modifyDivertApp() error {
-
-	input, err := os.ReadFile(filepath.Join(divertGitFolder, "health-checker", "cmd", "main.go"))
-	if err != nil {
-		return err
-	}
-
-	output := bytes.Replace(input, []byte("&health.SimpleHealthClient"), []byte("&health.AdvancedHealthClient"), 1)
-
-	if err = os.WriteFile(filepath.Join(divertGitFolder, "health-checker", "cmd", "main.go"), output, 0666); err != nil {
-		return err
-	}
-
-	input, err = os.ReadFile(filepath.Join(divertGitFolder, "health-checker", "okteto.yml"))
-	if err != nil {
-		return err
-	}
-
-	output = bytes.Replace(input, []byte("command: bash"), []byte("command: go run cmd/main.go"), 1)
-
-	if err = os.WriteFile(filepath.Join(divertGitFolder, "health-checker", "okteto.yml"), output, 0666); err != nil {
-		return err
-	}
-	return nil
-}
-
 func showUpLogs(name, namespace string, t *testing.T) {
 	if !t.Failed() {
 		return
@@ -915,21 +802,6 @@ func showUpLogs(name, namespace string, t *testing.T) {
 	if err == nil {
 		fmt.Println("up logs:", string(logBytes))
 	}
-}
-
-func waitForDivertedContent(originalContent, namespace, apiSvc string, upErrorChannel chan error, timeout int) error {
-	for i := 0; i < timeout; i++ {
-		apiDivertedSvc := fmt.Sprintf("%s-%s", apiSvc, user)
-		divertedContent, err := getContent(fmt.Sprintf("https://%s-%s.%s/data", apiDivertedSvc, namespace, appsSubdomain), 3, upErrorChannel)
-		if err != nil {
-			continue
-		}
-
-		if originalContent != divertedContent {
-			return nil
-		}
-	}
-	return fmt.Errorf("Content was not diverted")
 }
 
 func waitForDeployment(ctx context.Context, namespace, name string, revision, timeout int) error {
