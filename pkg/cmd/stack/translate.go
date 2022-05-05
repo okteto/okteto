@@ -866,7 +866,10 @@ func translateContainerPorts(svc *model.Service) []apiv1.ContainerPort {
 
 func translateServicePorts(svc model.Service) []apiv1.ServicePort {
 	result := []apiv1.ServicePort{}
-	ports := getPortsToAddToSvc(svc.Ports)
+	ports := svc.Ports
+	if svc.Public {
+		ports = getPortsToAddToSvc(svc.Ports)
+	}
 	for _, p := range ports {
 		if !isServicePortAdded(p.ContainerPort, result) {
 			result = append(
