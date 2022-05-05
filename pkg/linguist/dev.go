@@ -14,6 +14,8 @@
 package linguist
 
 import (
+	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -307,6 +309,18 @@ func GetDevDefaults(language, workdir string, imageConfig *registry.ImageConfig)
 	if imageConfig.Workdir == "" || imageConfig.Workdir == "/" {
 		imageConfig.Workdir = vals.path
 	}
+
+	if filepath.IsAbs(workdir) {
+		wd, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		workdir, err = filepath.Rel(wd, workdir)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	dev := &model.Dev{
 		Image: &model.BuildInfo{
 			Name: vals.image,
