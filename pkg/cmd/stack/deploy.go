@@ -75,8 +75,10 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 		return err
 	}
 
-	if err := translate(ctx, s, options); err != nil {
-		return err
+	if !options.InsidePipeline {
+		if err := buildStackImages(ctx, s, options); err != nil {
+			return err
+		}
 	}
 
 	cfg := translateConfigMap(s)
