@@ -376,6 +376,23 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 	if err != nil {
 		return nil, err
 	}
+
+	if manifest.Namespace == "" {
+		manifest.Namespace = okteto.Context().Namespace
+	}
+	if manifest.Context == "" {
+		manifest.Context = okteto.Context().Name
+	}
+	manifest.IsV2 = true
+	for devName, d := range manifest.Dev {
+		if err := d.SetDefaults(); err != nil {
+			return nil, err
+		}
+		d.Name = devName
+		d.Namespace = manifest.Namespace
+		d.Context = manifest.Context
+	}
+
 	return manifest, nil
 }
 
