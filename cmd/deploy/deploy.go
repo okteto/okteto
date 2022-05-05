@@ -15,7 +15,6 @@ package deploy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -391,7 +390,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.SetStage("")
 
 	if err != nil {
-		if err.Error() == "interrupt signal received" {
+		if err == oktetoErrors.ErrIntSig {
 			return nil
 		}
 		err = oktetoErrors.UserError{
@@ -544,7 +543,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		sp := utils.NewSpinner("Shutting down...")
 		sp.Start()
 		defer sp.Stop()
-		dc.Executor.CleanUp(errors.New("interrupt signal received"))
+		dc.Executor.CleanUp(oktetoErrors.ErrIntSig)
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		return err
