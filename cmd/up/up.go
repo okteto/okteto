@@ -54,18 +54,17 @@ const ReconnectingMessage = "Trying to reconnect to your cluster. File synchroni
 
 // UpOptions represents the options available on up command
 type UpOptions struct {
-	DevPath       string
-	Namespace     string
-	K8sContext    string
-	DevName       string
-	Devs          []string
-	Envs          []string
-	Remote        int
-	Deploy        bool
-	Build         bool
-	ForcePull     bool
-	Reset         bool
-	DockerDesktop bool
+	DevPath    string
+	Namespace  string
+	K8sContext string
+	DevName    string
+	Devs       []string
+	Envs       []string
+	Remote     int
+	Deploy     bool
+	Build      bool
+	ForcePull  bool
+	Reset      bool
 }
 
 // Up starts a development container
@@ -83,10 +82,7 @@ func Up() *cobra.Command {
 			if err := upOptions.AddArgs(cmd, args); err != nil {
 				return err
 			}
-			if upOptions.DockerDesktop {
-				os.Setenv(model.OktetoOriginEnvVar, model.OktetoDockerDesktopOrigin)
-				os.Setenv(model.OktetoAutogenerateStignoreEnvVar, "true")
-			}
+
 			u := utils.UpgradeAvailable()
 			if len(u) > 0 {
 				warningFolder := filepath.Join(config.GetOktetoHome(), ".warnings")
@@ -221,7 +217,7 @@ func Up() *cobra.Command {
 				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
 					return err
 				}
-				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err && !upOptions.DockerDesktop {
+				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
 					autocreateDev = false
 				}
 				if err != nil {
@@ -242,18 +238,11 @@ func Up() *cobra.Command {
 				oktetoLog.Information("To redeploy your development environment run 'okteto deploy' or 'okteto up [devName] --deploy'")
 			}
 
-			var dev *model.Dev
-			if upOptions.DockerDesktop {
-				dev, err = utils.GetDevDetachMode(oktetoManifest, upOptions.Devs)
-				if err != nil {
-					return err
-				}
-			} else {
-				dev, err = utils.GetDevFromManifest(oktetoManifest, upOptions.DevName)
-				if err != nil {
-					return err
-				}
+			dev, err := utils.GetDevFromManifest(oktetoManifest, upOptions.DevName)
+			if err != nil {
+				return err
 			}
+
 			up.Dev = dev
 			if !autocreateDev {
 				up.Dev.Autocreate = false
@@ -330,28 +319,24 @@ func Up() *cobra.Command {
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().MarkHidden("pull")
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
-	cmd.Flags().BoolVarP(&upOptions.DockerDesktop, "docker-desktop", "", false, "if the command is executed from the Docker Desktop extension")
-	cmd.Flags().MarkHidden("docker-desktop")
 	return cmd
 }
 
 // AddArgs sets the args as options and return err if it's not compatible
 func (o *UpOptions) AddArgs(cmd *cobra.Command, args []string) error {
-	if o.DockerDesktop {
-		o.Devs = args
-	} else {
-		maxV1Args := 1
-		docsURL := "https://okteto.com/docs/reference/cli/#up"
-		if len(args) > maxV1Args {
-			cmd.Help()
-			return oktetoErrors.UserError{
-				E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), maxV1Args, len(args)),
-				Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
-			}
-		} else if len(args) == 1 {
-			o.DevName = args[0]
+
+	maxV1Args := 1
+	docsURL := "https://okteto.com/docs/reference/cli/#up"
+	if len(args) > maxV1Args {
+		cmd.Help()
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), maxV1Args, len(args)),
+			Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
 		}
+	} else if len(args) == 1 {
+		o.DevName = args[0]
 	}
+
 	return nil
 }
 
@@ -598,9 +583,6 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 
 func (up *upContext) applyToApps(ctx context.Context) chan error {
 	result := make(chan error, 1)
-	if up.Options.DockerDesktop {
-		return result
-	}
 	for _, tr := range up.Translations {
 		go tr.App.Watch(ctx, result, up.Client)
 	}

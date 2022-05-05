@@ -21,10 +21,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"text/template"
-
-	"github.com/okteto/okteto/pkg/model"
 )
 
 // Handler handles the authentication using a browser
@@ -59,11 +56,6 @@ func (h *Handler) handle() http.Handler {
 			Meta:    "http-equiv=\"Content-type\" content=\"text/html; charset=utf-8\"",
 			Origin:  "the Okteto CLI",
 			Message: "Close this window and go back to your terminal",
-		}
-		if os.Getenv(model.OktetoOriginEnvVar) == model.OktetoDockerDesktopOrigin {
-			data.Meta = "http-equiv=\"refresh\" content=\"1; url = docker-desktop://dashboard/open\""
-			data.Origin = "Docker Desktop"
-			data.Message = "Close this window and go back to Docker Desktop"
 		}
 
 		htmlTemplate := template.Must(template.New("response").Parse(loginHTMLTemplate))
