@@ -147,7 +147,6 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		if err != nil {
 			return err
 		}
-		oktetoLog.Success("Image for service '%s' pushed to registry: %s", svcToBuild, imageTag)
 		bc.SetServiceEnvVars(svcToBuild, imageTag)
 	}
 	if options.EnableStages {

@@ -14,6 +14,7 @@
 package model
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -80,6 +81,75 @@ devs:
 				assert.Equal(t, tt.expectedCommand, m.Deploy.Commands[0].Command)
 			}
 
+		})
+	}
+}
+
+func Test_validateDivert(t *testing.T) {
+	tests := []struct {
+		name        string
+		divert      DivertDeploy
+		expectedErr error
+	}{
+		{
+			name: "divert-ok-with-port",
+			divert: DivertDeploy{
+				Namespace:  "namespace",
+				Service:    "service",
+				Port:       8080,
+				Deployment: "deployment",
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "divert-ok-without-port",
+			divert: DivertDeploy{
+				Namespace:  "namespace",
+				Service:    "service",
+				Deployment: "deployment",
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "divert-ko-without-namespace",
+			divert: DivertDeploy{
+				Namespace:  "",
+				Service:    "service",
+				Port:       8080,
+				Deployment: "deployment",
+			},
+			expectedErr: fmt.Errorf("the field 'deploy.divert.namespace' is mandatory"),
+		},
+		{
+			name: "divert-ko-without-service",
+			divert: DivertDeploy{
+				Namespace:  "namespace",
+				Service:    "",
+				Port:       8080,
+				Deployment: "deployment",
+			},
+			expectedErr: fmt.Errorf("the field 'deploy.divert.service' is mandatory"),
+		},
+		{
+			name: "divert-ko-without-deployment",
+			divert: DivertDeploy{
+				Namespace:  "namespace",
+				Service:    "service",
+				Port:       8080,
+				Deployment: "",
+			},
+			expectedErr: fmt.Errorf("the field 'deploy.divert.deployment' is mandatory"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &Manifest{
+				Deploy: &DeployInfo{
+					Divert: &tt.divert,
+				},
+			}
+			assert.Equal(t, m.validateDivert(), tt.expectedErr)
 		})
 	}
 }

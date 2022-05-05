@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,8 +30,14 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/k8s/labels"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 )
 
@@ -47,7 +54,8 @@ type Proxy struct {
 }
 
 type proxyHandler struct {
-	Name string
+	Name              string
+	DivertedNamespace string
 }
 
 //NewProxy creates a new proxy
@@ -153,6 +161,11 @@ func (p *Proxy) SetName(name string) {
 	p.proxyHandler.SetName(name)
 }
 
+// SetDivert sets the namespace used for divert
+func (p *Proxy) SetDivert(divertedNamespace string) {
+	p.proxyHandler.SetDivert(divertedNamespace)
+}
+
 func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config) (http.Handler, error) {
 	// By default we don't disable HTTP/2
 	trans, err := newProtocolTransport(clusterConfig, false)
@@ -217,7 +230,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 				return
 			}
 
-			b, err = translateBody(b, ph.Name)
+			b, err = ph.translateBody(b)
 			if err != nil {
 				oktetoLog.Info(err)
 				rw.WriteHeader(500)
@@ -239,4 +252,207 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 
 func (ph *proxyHandler) SetName(name string) {
 	ph.Name = name
+}
+
+func (ph *proxyHandler) SetDivert(divertedNamespace string) {
+	ph.DivertedNamespace = divertedNamespace
+}
+
+func (ph *proxyHandler) translateBody(b []byte) ([]byte, error) {
+	var body map[string]json.RawMessage
+	if err := json.Unmarshal(b, &body); err != nil {
+		return nil, fmt.Errorf("could not unmarshal request: %s", err)
+	}
+
+	if err := ph.translateMetadata(body); err != nil {
+		return nil, err
+	}
+
+	var typeMeta metav1.TypeMeta
+	if err := json.Unmarshal(b, &typeMeta); err != nil {
+		return nil, fmt.Errorf("could not process resource's type: %s", err)
+	}
+
+	switch typeMeta.Kind {
+	case "Deployment":
+		if err := ph.translateDeploymentSpec(body); err != nil {
+			return nil, err
+		}
+	case "StatefulSet":
+		if err := ph.translateStatefulSetSpec(body); err != nil {
+			return nil, err
+		}
+	case "Job":
+		if err := ph.translateJobSpec(body); err != nil {
+			return nil, err
+		}
+	case "CronJob":
+		if err := ph.translateCronJobSpec(body); err != nil {
+			return nil, err
+		}
+	case "DaemonSet":
+		if err := ph.translateDaemonSetSpec(body); err != nil {
+			return nil, err
+		}
+	case "ReplicationController":
+		if err := ph.translateReplicationControllerSpec(body); err != nil {
+			return nil, err
+		}
+	case "ReplicaSet":
+		if err := ph.translateReplicaSetSpec(body); err != nil {
+			return nil, err
+		}
+	}
+
+	return json.Marshal(body)
+}
+
+func (ph *proxyHandler) translateMetadata(body map[string]json.RawMessage) error {
+	m, ok := body["metadata"]
+	if !ok {
+		return fmt.Errorf("request body doesn't have metadata field")
+	}
+
+	var metadata metav1.ObjectMeta
+	if err := json.Unmarshal(m, &metadata); err != nil {
+		return fmt.Errorf("could not process resource's metadata: %s", err)
+	}
+
+	labels.SetInMetadata(&metadata, model.DeployedByLabel, ph.Name)
+
+	if metadata.Annotations == nil {
+		metadata.Annotations = map[string]string{}
+	}
+	if utils.IsOktetoRepo() {
+		metadata.Annotations[model.OktetoSampleAnnotation] = "true"
+	}
+
+	metadataAsByte, err := json.Marshal(metadata)
+	if err != nil {
+		return fmt.Errorf("could not process resource's metadata: %s", err)
+	}
+
+	body["metadata"] = metadataAsByte
+
+	return nil
+}
+
+func (ph *proxyHandler) translateDeploymentSpec(body map[string]json.RawMessage) error {
+	var spec appsv1.DeploymentSpec
+	if err := json.Unmarshal(body["spec"], &spec); err != nil {
+		return fmt.Errorf("could not process deployment spec: %s", err)
+	}
+	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
+	ph.applyDivert(&spec.Template.Spec)
+	specAsByte, err := json.Marshal(spec)
+	if err != nil {
+		return fmt.Errorf("could not process deployment's spec: %s", err)
+	}
+	body["spec"] = specAsByte
+	return nil
+}
+
+func (ph *proxyHandler) translateStatefulSetSpec(body map[string]json.RawMessage) error {
+	var spec appsv1.StatefulSetSpec
+	if err := json.Unmarshal(body["spec"], &spec); err != nil {
+		return fmt.Errorf("could not process statefulset spec: %s", err)
+	}
+	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
+	ph.applyDivert(&spec.Template.Spec)
+	specAsByte, err := json.Marshal(spec)
+	if err != nil {
+		return fmt.Errorf("could not process statefulset's spec: %s", err)
+	}
+	body["spec"] = specAsByte
+	return nil
+}
+
+func (ph *proxyHandler) translateJobSpec(body map[string]json.RawMessage) error {
+	var spec batchv1.JobSpec
+	if err := json.Unmarshal(body["spec"], &spec); err != nil {
+		return fmt.Errorf("could not process job spec: %s", err)
+	}
+	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
+	ph.applyDivert(&spec.Template.Spec)
+	specAsByte, err := json.Marshal(spec)
+	if err != nil {
+		return fmt.Errorf("could not process job's spec: %s", err)
+	}
+	body["spec"] = specAsByte
+	return nil
+}
+
+func (ph *proxyHandler) translateCronJobSpec(body map[string]json.RawMessage) error {
+	var spec batchv1.CronJobSpec
+	if err := json.Unmarshal(body["spec"], &spec); err != nil {
+		return fmt.Errorf("could not process cronjob spec: %s", err)
+	}
+	labels.SetInMetadata(&spec.JobTemplate.Spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
+	ph.applyDivert(&spec.JobTemplate.Spec.Template.Spec)
+	specAsByte, err := json.Marshal(spec)
+	if err != nil {
+		return fmt.Errorf("could not process cronjob's spec: %s", err)
+	}
+	body["spec"] = specAsByte
+	return nil
+}
+
+func (ph *proxyHandler) translateDaemonSetSpec(body map[string]json.RawMessage) error {
+	var spec appsv1.DaemonSetSpec
+	if err := json.Unmarshal(body["spec"], &spec); err != nil {
+		return fmt.Errorf("could not process daemonset spec: %s", err)
+	}
+	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
+	ph.applyDivert(&spec.Template.Spec)
+	specAsByte, err := json.Marshal(spec)
+	if err != nil {
+		return fmt.Errorf("could not process daemonset's spec: %s", err)
+	}
+	body["spec"] = specAsByte
+	return nil
+}
+
+func (ph *proxyHandler) translateReplicationControllerSpec(body map[string]json.RawMessage) error {
+	var spec apiv1.ReplicationControllerSpec
+	if err := json.Unmarshal(body["spec"], &spec); err != nil {
+		return fmt.Errorf("could not process replicationcontroller spec: %s", err)
+	}
+	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
+	ph.applyDivert(&spec.Template.Spec)
+	specAsByte, err := json.Marshal(spec)
+	if err != nil {
+		return fmt.Errorf("could not process replicationcontroller's spec: %s", err)
+	}
+	body["spec"] = specAsByte
+	return nil
+}
+
+func (ph *proxyHandler) translateReplicaSetSpec(body map[string]json.RawMessage) error {
+	var spec appsv1.ReplicaSetSpec
+	if err := json.Unmarshal(body["spec"], &spec); err != nil {
+		return fmt.Errorf("could not process replicaset spec: %s", err)
+	}
+	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
+	ph.applyDivert(&spec.Template.Spec)
+	specAsByte, err := json.Marshal(spec)
+	if err != nil {
+		return fmt.Errorf("could not process replicaset's spec: %s", err)
+	}
+	body["spec"] = specAsByte
+	return nil
+}
+
+func (ph *proxyHandler) applyDivert(podSpec *apiv1.PodSpec) {
+	if ph.DivertedNamespace == "" {
+		return
+	}
+	if podSpec.DNSConfig == nil {
+		podSpec.DNSConfig = &apiv1.PodDNSConfig{}
+	}
+	if podSpec.DNSConfig.Searches == nil {
+		podSpec.DNSConfig.Searches = []string{}
+	}
+	searches := []string{fmt.Sprintf("%s.svc.cluster.local", ph.DivertedNamespace)}
+	searches = append(searches, podSpec.DNSConfig.Searches...)
+	podSpec.DNSConfig.Searches = searches
 }

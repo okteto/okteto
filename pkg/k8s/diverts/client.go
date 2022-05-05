@@ -50,7 +50,7 @@ func NewForConfig(cfg *rest.Config) (*DivertV1Client, error) {
 
 }
 
-func GetClient() (*DivertV1Client, error) {
+func getDivertClient() (*DivertV1Client, error) {
 	octx := okteto.Context()
 	clientConfig := clientcmd.NewDefaultClientConfig(*octx.Cfg, nil)
 
