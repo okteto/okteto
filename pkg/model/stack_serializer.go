@@ -250,9 +250,6 @@ func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	s.Endpoints = stackRaw.Endpoints
 
-	if len(s.Endpoints) == 0 {
-		s.Endpoints = getEndpointsFromPorts(stackRaw.Services)
-	}
 	s.Volumes = make(map[string]*VolumeSpec)
 	for volumeName, volume := range stackRaw.Volumes {
 		volumeSpec, err := unmarshalVolume(volume)

@@ -220,8 +220,24 @@ func destroyIngresses(ctx context.Context, spinner *utils.Spinner, s *model.Stac
 	if err != nil {
 		return err
 	}
+	publicSvcsMap := map[string]bool{}
+	for svcName, svcInfo := range s.Services {
+		if len(svcInfo.Ports) > 0 {
+			ingressPorts := getSvcPublicPorts(svcName, s)
+			if len(ingressPorts) == 1 {
+				publicSvcsMap[svcName] = true
+			} else if len(ingressPorts) > 1 {
+				for _, p := range ingressPorts {
+					publicSvcsMap[fmt.Sprintf("%s-%d", svcName, p.ContainerPort)] = true
+				}
+			}
+		}
+	}
 	for i := range iList {
 		if _, ok := s.Endpoints[iList[i].GetName()]; ok {
+			continue
+		}
+		if _, ok := publicSvcsMap[iList[i].GetName()]; ok {
 			continue
 		}
 		if iList[i].GetLabels()[model.StackEndpointNameLabel] == "" {
