@@ -78,7 +78,7 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 	}
 	opts := build.OptsFromBuildInfo(manifest.Name, service, buildInfo, &types.BuildOptions{})
 	if opts.Tag == "" {
-		return fmt.Errorf("error getting the image name for the service '%s' using a k8s cluster not managed by Okteto. You need to specify the name of the image ", service)
+		return fmt.Errorf("error getting the image name for the service '%s'. Please specify the full name of the image when using a Kubernetes namespace not managed by Okteto", service)
 	}
 
 	if build.ShouldOptimizeBuild(opts) {
