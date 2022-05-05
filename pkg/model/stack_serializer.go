@@ -18,6 +18,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -465,7 +466,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Volumes, svc.VolumeMounts = splitVolumesByType(serviceRaw.Volumes, stack)
 	for idx, volume := range svc.VolumeMounts {
 		if !isNamedVolumeDeclared(volume) {
-			return nil, fmt.Errorf("Named volume '%s' is used in service '%s' but no declaration was found in the volumes section.", volume.ToString(), svcName)
+			return nil, fmt.Errorf("named volume '%s' is used in service '%s' but no declaration was found in the volumes section", volume.ToString(), svcName)
 		}
 		volume.LocalPath, err = filepath.Abs(volume.LocalPath)
 		if err != nil {
@@ -644,13 +645,23 @@ func validatePort(newPort PortRaw, ports []Port) error {
 
 func isNamedVolumeDeclared(volume StackVolume) bool {
 	if volume.LocalPath != "" {
-		if strings.HasPrefix(volume.LocalPath, "/") {
+		wd, err := os.Getwd()
+		if err != nil {
+			return false
+		}
+		relative := true
+		if filepath.IsAbs(volume.LocalPath) {
+			_, err = filepath.Rel(wd, volume.LocalPath)
+			relative = err == nil
+		}
+
+		if strings.HasPrefix(volume.LocalPath, "/") && relative {
 			return true
 		}
-		if strings.HasPrefix(volume.LocalPath, "./") {
+		if strings.HasPrefix(volume.LocalPath, "./") && relative {
 			return true
 		}
-		if FileExists(volume.LocalPath) {
+		if FileExists(volume.LocalPath) && relative {
 			return true
 		}
 	}
@@ -1128,13 +1139,25 @@ func (v *StackVolume) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	parts := strings.SplitN(raw, ":", 2)
+	parts := strings.Split(raw, ":")
+	if runtime.GOOS == "windows" {
+		if len(parts) >= 3 {
+			localPath := fmt.Sprintf("%s:%s", parts[0], parts[1])
+			if filepath.IsAbs(localPath) {
+				parts = append([]string{localPath}, parts[2:]...)
+			}
+		}
+	}
+
 	if len(parts) == 2 {
 		v.LocalPath = parts[0]
 		v.RemotePath = parts[1]
-	} else {
+	} else if len(parts) == 1 {
 		v.RemotePath = parts[0]
+	} else {
+		return fmt.Errorf("Syntax error volumes should be 'local_path:remote_path' or 'remote_path'")
 	}
+
 	return nil
 }
 

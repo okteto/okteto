@@ -293,6 +293,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		if devManifest.IsV2 {
 			return devManifest, nil
 		}
+
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest unmarshalled successfully")
 	}
 
@@ -403,6 +404,8 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			}
 		}
 		return devManifest, nil
+	} else {
+		devManifest.setManifestDefaultsFromDev()
 	}
 	return devManifest, nil
 
@@ -819,6 +822,7 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 					}
 				}
 			}
+			volume.LocalPath = localPath
 			buildInfo.VolumesToInclude[idx] = volume
 		}
 		buildInfo.Context, err = filepath.Rel(cwd, buildInfo.Context)
@@ -1069,4 +1073,16 @@ func (m *Manifest) IsDeployDefault() bool {
 		return true
 	}
 	return false
+}
+
+// setManifestDefaultsFromDev sets context and namespace from the dev
+func (m *Manifest) setManifestDefaultsFromDev() {
+	if len(m.Dev) == 1 {
+		for _, devInfo := range m.Dev {
+			m.Context = devInfo.Context
+			m.Namespace = devInfo.Namespace
+		}
+	} else {
+		oktetoLog.Infof("could not set context and manifest from dev section due to being '%d' devs declared", len(m.Dev))
+	}
 }

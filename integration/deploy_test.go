@@ -62,7 +62,7 @@ func TestDeployDestroy(t *testing.T) {
 
 		log.Printf("created namespace %s \n", namespace)
 
-		if err := cloneGitRepo(ctx, moviesRepoURL); err != nil {
+		if err := cloneGitRepoWithBranch(ctx, moviesRepoURL, "master"); err != nil {
 			t.Fatal(err)
 		}
 

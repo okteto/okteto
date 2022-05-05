@@ -275,6 +275,27 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return fmt.Errorf("'dependencies' is only available in clusters managed by Okteto")
 	}
 
+	for depName, dep := range deployOptions.Manifest.Dependencies {
+		oktetoLog.Information("Deploying dependency '%s'", depName)
+		dep.Variables = append(dep.Variables, model.EnvVar{
+			Name:  "OKTETO_ORIGIN",
+			Value: "okteto-deploy",
+		})
+		pipOpts := &pipelineCMD.DeployOptions{
+			Name:         depName,
+			Repository:   dep.Repository,
+			Branch:       dep.Branch,
+			File:         dep.ManifestPath,
+			Variables:    model.SerializeBuildArgs(dep.Variables),
+			Wait:         dep.Wait,
+			Timeout:      deployOptions.Timeout,
+			SkipIfExists: !deployOptions.Dependencies,
+		}
+		if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+			return err
+		}
+	}
+
 	if deployOptions.Build {
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
@@ -299,27 +320,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			if err := dc.Builder.Build(ctx, buildOptions); err != nil {
 				return err
 			}
-		}
-	}
-
-	for depName, dep := range deployOptions.Manifest.Dependencies {
-		oktetoLog.Information("Deploying dependency '%s'", depName)
-		dep.Variables = append(dep.Variables, model.EnvVar{
-			Name:  "OKTETO_ORIGIN",
-			Value: "okteto-deploy",
-		})
-		pipOpts := &pipelineCMD.DeployOptions{
-			Name:         depName,
-			Repository:   dep.Repository,
-			Branch:       dep.Branch,
-			File:         dep.ManifestPath,
-			Variables:    model.SerializeBuildArgs(dep.Variables),
-			Wait:         dep.Wait,
-			Timeout:      deployOptions.Timeout,
-			SkipIfExists: !deployOptions.Dependencies,
-		}
-		if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
-			return err
 		}
 	}
 
@@ -458,10 +458,6 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 			deployOptions.servicesToDeploy = stack.AddDependentServicesIfNotPresent(ctx, deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy, c)
 			deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo[0].ServicesToDeploy = deployOptions.servicesToDeploy
 		}
-	}
-
-	if len(deployOptions.servicesToDeploy) == 0 {
-		deployOptions.servicesToDeploy = []string{deployOptions.Name}
 	}
 }
 

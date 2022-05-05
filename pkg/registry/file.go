@@ -162,7 +162,7 @@ func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume)
 
 	_, _ = datawriter.Write([]byte(fmt.Sprintf("FROM %s\n", image)))
 	for _, volume := range volumes {
-		_, _ = datawriter.Write([]byte(fmt.Sprintf("COPY %s %s\n", volume.LocalPath, volume.RemotePath)))
+		_, _ = datawriter.Write([]byte(fmt.Sprintf("COPY %s %s\n", filepath.ToSlash(volume.LocalPath), volume.RemotePath)))
 	}
 
 	build.Dockerfile = tmpFile.Name()
