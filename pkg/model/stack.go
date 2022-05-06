@@ -14,6 +14,7 @@
 package model
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"net/url"
@@ -27,6 +28,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
+	yaml3 "gopkg.in/yaml.v3"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )
@@ -210,6 +212,51 @@ const (
 	DependsOnServiceCompleted DependsOnCondition = "service_completed_successfully"
 )
 
+func expandEnvScalarNode(node yaml3.Node) (yaml3.Node, error) {
+	if node.Kind == yaml3.ScalarNode {
+		expandValue, err := ExpandEnv(node.Value, true)
+		if err != nil {
+			return node, err
+		}
+		node.Value = expandValue
+		return node, nil
+	}
+	newNode := node
+	for indx, subNode := range node.Content {
+		expandedNode, err := expandEnvScalarNode(*subNode)
+		if err != nil {
+			return node, err
+		}
+		newNode.Content[indx] = &expandedNode
+	}
+	return newNode, nil
+}
+
+func ExpandEnvsManifest(file []byte) ([]byte, error) {
+
+	doc := yaml3.Node{}
+	if err := yaml3.Unmarshal(file, &doc); err != nil {
+		return nil, err
+	}
+	doc = *doc.Content[0]
+
+	expandedDoc, err := expandEnvScalarNode(doc)
+	if err != nil {
+		return nil, err
+	}
+
+	buffer := bytes.NewBuffer(nil)
+	encoder := yaml3.NewEncoder(buffer)
+	encoder.SetIndent(2)
+
+	err = encoder.Encode(expandedDoc)
+	if err != nil {
+		return nil, err
+	}
+	return buffer.Bytes(), nil
+
+}
+
 // GetStackFromPath returns an okteto stack object from a given file
 func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	b, err := os.ReadFile(stackPath)
@@ -217,7 +264,7 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 		return nil, err
 	}
 
-	expandedManifest, err := ExpandEnv(string(b), true)
+	expandedManifest, err := ExpandEnvsManifest(b)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +280,7 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	}
 	stackPath = GetManifestPathFromWorkdir(stackPath, stackWorkingDir)
 
-	s, err := ReadStack([]byte(expandedManifest), isCompose)
+	s, err := ReadStack(expandedManifest, isCompose)
 	if err != nil {
 		return nil, err
 	}
