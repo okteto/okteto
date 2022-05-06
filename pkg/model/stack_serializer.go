@@ -92,6 +92,7 @@ type ServiceRaw struct {
 	Replicas           *int32          `yaml:"replicas"`
 	Resources          *StackResources `yaml:"resources,omitempty"`
 	IsDeployedOnDocker bool            `yaml:"x-docker,omitempty"`
+	IsDeployedOnOkteto bool            `yaml:"x-okteto,omitempty"`
 
 	BlkioConfig       *WarningType `yaml:"blkio_config,omitempty"`
 	CpuPercent        *WarningType `yaml:"cpu_percent,omitempty"`
@@ -372,6 +373,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc.Build = serviceRaw.Build
 
 	svc.IsDeployedOnDocker = serviceRaw.IsDeployedOnDocker
+	svc.IsDeployedOnOkteto = serviceRaw.IsDeployedOnOkteto
 
 	svc.CapAdd = serviceRaw.CapAdd
 	if len(serviceRaw.CapAddSneakCase) > 0 {

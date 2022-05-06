@@ -38,7 +38,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/services"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -496,12 +495,7 @@ func (up *upContext) getManifest(path string) (*model.Manifest, error) {
 }
 
 func (up *upContext) start() error {
-	ctx := context.Background()
-	if up.Options.DockerDesktop {
-		if err := up.createRedirectionServices(ctx); err != nil {
-			return err
-		}
-	}
+
 	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
 		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
 		return fmt.Errorf("couldn't create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)
@@ -844,24 +838,5 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 		}
 	}
 
-	return nil
-}
-
-func (up *upContext) createRedirectionServices(ctx context.Context) error {
-	if up.Manifest.Type != model.StackType {
-		return nil
-	}
-	stack := up.Manifest.Deploy.ComposeSection.Stack
-	for svcName, svcInfo := range stack.Services {
-		if len(svcInfo.Ports) == 0 {
-			continue
-		}
-		if svcInfo.IsDeployedOnDocker {
-			svc := translateService(svcName, stack)
-			if err := services.Deploy(ctx, svc, up.Client); err != nil {
-				return err
-			}
-		}
-	}
 	return nil
 }

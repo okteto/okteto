@@ -94,6 +94,7 @@ type Service struct {
 	Replicas           int32           `yaml:"replicas,omitempty"`
 	Resources          *StackResources `yaml:"resources,omitempty"`
 	IsDeployedOnDocker bool            `yaml:"x-docker,omitempty"`
+	IsDeployedOnOkteto bool            `yaml:"x-okteto,omitempty"`
 	VolumeMounts       []StackVolume   `yaml:"-"`
 }
 
