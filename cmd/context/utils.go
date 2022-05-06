@@ -135,13 +135,13 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 	var manifest *model.Manifest
 	manifest, err := model.GetManifestV1(opts.Filename)
 	if err != nil {
-		if errors.Is(err, oktetoErrors.ErrManifestNotFound) {
-			manifest, err = model.GetManifestV2(opts.Filename)
-			if err != nil {
-				return nil, err
-			}
+		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+			return nil, err
 		}
-		return nil, err
+		manifest, err = model.GetManifestV2(opts.Filename)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	ctxResource := model.GetContextResourceFromManifest(manifest)
