@@ -66,7 +66,7 @@ jobs:
           name: Integration tests
           environment:
             OKTETO_SKIP_CLEANUP: 'true'
-          command: go test -run ^TestUpCompose$ github.com/okteto/okteto/integration -tags='actions common integration' -v
+          command: make integration
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
