@@ -95,8 +95,8 @@ func (tr *Translation) translate() error {
 			TranslateOktetoBinVolumeMounts(devContainer)
 			TranslateOktetoInitBinContainer(rule, tr.DevApp.PodSpec())
 			TranslateOktetoBinVolume(tr.DevApp.PodSpec())
+			TranslateOktetoInitFromImageContainer(tr.DevApp.PodSpec(), rule)
 		}
-		TranslateOktetoInitFromImageContainer(tr.DevApp.PodSpec(), rule)
 	}
 	return nil
 }
