@@ -151,6 +151,8 @@ const (
 	OktetoURLAnnotation = "dev.okteto.com/url"
 	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
+	//OktetoHideFromUIAnnotation indicates if the deployment was auto generatted by okteto up with docker desktop flag
+	OktetoHideFromUIAnnotation = "dev.okteto.com/hide-from-ui"
 	//OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
 	OktetoRestartAnnotation = "dev.okteto.com/restart"
 	//OktetoSyncAnnotation indicates the hash of the sync folders to force redeployment
