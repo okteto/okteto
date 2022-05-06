@@ -212,7 +212,7 @@ const (
 	DependsOnServiceCompleted DependsOnCondition = "service_completed_successfully"
 )
 
-func expandEnvScalarNode(node yaml3.Node) (yaml3.Node, error) {
+func expandEnvScalarNode(node *yaml3.Node) (*yaml3.Node, error) {
 	if node.Kind == yaml3.ScalarNode {
 		expandValue, err := ExpandEnv(node.Value, true)
 		if err != nil {
@@ -221,15 +221,14 @@ func expandEnvScalarNode(node yaml3.Node) (yaml3.Node, error) {
 		node.Value = expandValue
 		return node, nil
 	}
-	newNode := node
 	for indx, subNode := range node.Content {
-		expandedNode, err := expandEnvScalarNode(*subNode)
+		expandedNode, err := expandEnvScalarNode(subNode)
 		if err != nil {
 			return node, err
 		}
-		newNode.Content[indx] = &expandedNode
+		node.Content[indx] = expandedNode
 	}
-	return newNode, nil
+	return node, nil
 }
 
 func ExpandEnvsManifest(file []byte) ([]byte, error) {
@@ -238,9 +237,8 @@ func ExpandEnvsManifest(file []byte) ([]byte, error) {
 	if err := yaml3.Unmarshal(file, &doc); err != nil {
 		return nil, err
 	}
-	doc = *doc.Content[0]
 
-	expandedDoc, err := expandEnvScalarNode(doc)
+	expandedDoc, err := expandEnvScalarNode(doc.Content[0])
 	if err != nil {
 		return nil, err
 	}
