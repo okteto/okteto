@@ -738,7 +738,7 @@ func TestUpCompose(t *testing.T) {
 		t.Fatalf("Expected to have two ports for endpoints for svc 'vote' but got %d", len(svc.Spec.Ports))
 	}
 
-	ingress, err := getIngress(ctx, namespace, "vote")
+	ingress, err := getIngress(ctx, namespace, "okteto-vote")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -754,9 +754,9 @@ func TestUpCompose(t *testing.T) {
 			}
 		}
 	}
-	time.Sleep(5 * time.Second)
+
 	port := "5005"
-	ln, err := net.Listen("tcp", "0.0.0.0:"+port)
+	ln, err := net.Listen("tcp", "localhost:"+port)
 
 	if err == nil {
 		_ = ln.Close()
