@@ -739,13 +739,6 @@ func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 func (manifest *Manifest) ExpandEnvVars() error {
 	var err error
 	if manifest.Deploy != nil {
-		for idx, cmd := range manifest.Deploy.Commands {
-			cmd.Command, err = ExpandEnv(cmd.Command, true)
-			if err != nil {
-				return errors.New("could not parse env vars")
-			}
-			manifest.Deploy.Commands[idx] = cmd
-		}
 		if manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 			var stackFiles []string
 			for _, composeInfo := range manifest.Deploy.ComposeSection.ComposesInfo {
