@@ -738,7 +738,7 @@ func TestUpCompose(t *testing.T) {
 		t.Fatalf("Expected to have two ports for endpoints for svc 'vote' but got %d", len(svc.Spec.Ports))
 	}
 
-	ingress, err := getIngress(ctx, namespace, "okteto-vote")
+	ingress, err := getIngress(ctx, namespace, "vote")
 	if err != nil {
 		t.Fatal(err)
 	}
