@@ -734,11 +734,11 @@ func TestUpCompose(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(svc.Spec.Ports) != 1 {
-		t.Fatalf("Expected to have only one endpoint for svc 'vote' but got %d", len(svc.Spec.Ports))
+	if len(svc.Spec.Ports) != 2 {
+		t.Fatalf("Expected to have two ports for endpoints for svc 'vote' but got %d", len(svc.Spec.Ports))
 	}
 
-	ingress, err := getIngress(ctx, namespace, "okteto-vote")
+	ingress, err := getIngress(ctx, namespace, "vote")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -753,9 +753,6 @@ func TestUpCompose(t *testing.T) {
 				t.Fatal("Didn't expect a debugger to have an endpoint")
 			}
 		}
-	}
-	if len(svc.Spec.Ports) != 1 {
-		t.Fatalf("Expected to have only one endpoint for svc 'vote' but got %d", len(svc.Spec.Ports))
 	}
 
 	port := "5005"
