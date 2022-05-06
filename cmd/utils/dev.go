@@ -222,15 +222,6 @@ func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, erro
 	if manifest.Type == model.StackType {
 		for svcName, svc := range manifest.Deploy.ComposeSection.Stack.Services {
 			if svc.IsDeployedOnDocker {
-				for _, p := range svc.Ports {
-					if p.HostPort == 0 {
-						continue
-					}
-					dev.Reverse = append(dev.Reverse, model.Reverse{
-						Remote: int(p.ContainerPort),
-						Local:  int(p.HostPort),
-					})
-				}
 				continue
 			}
 			d, err := svc.ToDev(svcName)
@@ -312,6 +303,7 @@ func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, erro
 	dev.Image = &model.BuildInfo{Name: "busybox"}
 	dev.Namespace = okteto.Context().Namespace
 	dev.Context = okteto.Context().Name
+	dev.Metadata.Annotations[model.OktetoHideFromUIAnnotation] = "true"
 
 	return dev, nil
 }
