@@ -325,6 +325,9 @@ func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client k
 
 func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
 	for dependentSvc, condition := range stack.Services[svcName].DependsOn {
+		if stack.Services[dependentSvc].IsDeployedOnDocker {
+			continue
+		}
 		if !isSvcReady(ctx, stack, dependentSvc, condition, client, config) {
 			oktetoLog.Infof("Service %s can not be deployed due to %s", svcName, dependentSvc)
 			return false
@@ -783,6 +786,9 @@ func addDependentServices(ctx context.Context, s *model.Stack, svcsToDeploy []st
 	}
 	for _, svcToDeploy := range svcsToDeploy {
 		for dependentSvc := range s.Services[svcToDeploy].DependsOn {
+			if s.Services[dependentSvc].IsDeployedOnDocker {
+				continue
+			}
 			if _, ok := svcsToDeploySet[dependentSvc]; ok {
 				continue
 			}

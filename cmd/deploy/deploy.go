@@ -458,14 +458,15 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
 		}
 	}
-
 	if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
 
 		mergeServicesToDeployFromOptionsAndManifest(deployOptions)
 		if len(deployOptions.servicesToDeploy) == 0 {
 			deployOptions.servicesToDeploy = []string{}
-			for service := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
-				deployOptions.servicesToDeploy = append(deployOptions.servicesToDeploy, service)
+			for service, svcInfo := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
+				if !svcInfo.IsDeployedOnDocker {
+					deployOptions.servicesToDeploy = append(deployOptions.servicesToDeploy, service)
+				}
 			}
 		}
 		if len(deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo) > 0 {

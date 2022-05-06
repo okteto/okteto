@@ -90,11 +90,11 @@ type Service struct {
 	Healtcheck      *HealthCheck          `yaml:"healthcheck,omitempty"`
 	User            *StackSecurityContext `yaml:"user,omitempty"`
 
-	Public    bool            `yaml:"public,omitempty"`
-	Replicas  int32           `yaml:"replicas,omitempty"`
-	Resources *StackResources `yaml:"resources,omitempty"`
-
-	VolumeMounts []StackVolume `yaml:"-"`
+	Public             bool            `yaml:"public,omitempty"`
+	Replicas           int32           `yaml:"replicas,omitempty"`
+	Resources          *StackResources `yaml:"resources,omitempty"`
+	IsDeployedOnDocker bool            `yaml:"x-docker,omitempty"`
+	VolumeMounts       []StackVolume   `yaml:"-"`
 }
 
 // StackSecurityContext defines which user and group use

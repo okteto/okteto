@@ -386,7 +386,7 @@ func Test_GetDevDetach(t *testing.T) {
 				},
 			},
 			want: &model.Dev{
-				Name:        detachModePodName,
+				Name:        DetachModePodName,
 				Namespace:   okteto.Context().Namespace,
 				Context:     okteto.Context().Name,
 				Autocreate:  true,
@@ -513,7 +513,7 @@ func Test_GetDevDetach(t *testing.T) {
 				},
 			},
 			want: &model.Dev{
-				Name:        detachModePodName,
+				Name:        DetachModePodName,
 				Namespace:   okteto.Context().Namespace,
 				Context:     okteto.Context().Name,
 				Autocreate:  true,
@@ -620,7 +620,7 @@ func Test_GetDevDetach(t *testing.T) {
 				},
 			},
 			want: &model.Dev{
-				Name:        detachModePodName,
+				Name:        DetachModePodName,
 				Namespace:   okteto.Context().Namespace,
 				Context:     okteto.Context().Name,
 				Autocreate:  true,
@@ -748,7 +748,7 @@ func Test_GetDevDetach(t *testing.T) {
 				},
 			},
 			want: &model.Dev{
-				Name:        detachModePodName,
+				Name:        DetachModePodName,
 				Namespace:   okteto.Context().Namespace,
 				Context:     okteto.Context().Name,
 				Autocreate:  true,
