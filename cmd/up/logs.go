@@ -43,7 +43,7 @@ func (up *upContext) showDetachedLogs(ctx context.Context) error {
 	}
 	defer os.Remove(tmpKubeconfig)
 
-	c, err := getSternConfig(tmpKubeconfig)
+	c, err := getSternConfig(tmpKubeconfig, fmt.Sprintf("dev.okteto.com/deployed-by=%s", up.Manifest.Name))
 	if err != nil {
 		return err
 	}
@@ -78,8 +78,8 @@ func createTempKubeconfig(name string) (string, error) {
 	return destKubeconfigFile, nil
 }
 
-func getSternConfig(kubeconfigPath string) (*stern.Config, error) {
-	labelSelector, err := labels.Parse("detached.dev.okteto.com")
+func getSternConfig(kubeconfigPath, labelSelectorString string) (*stern.Config, error) {
+	labelSelector, err := labels.Parse(labelSelectorString)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse selector as label selector: %s", err.Error())
 	}

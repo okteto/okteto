@@ -142,7 +142,7 @@ func Up() *cobra.Command {
 			}
 			os.Setenv(model.OktetoNameEnvVar, oktetoManifest.Name)
 
-			if len(oktetoManifest.Dev) == 0 {
+			if len(oktetoManifest.Dev) == 0 && !upOptions.DockerDesktop {
 				oktetoLog.Warning("okteto manifest has no 'dev' section.")
 				answer, err := utils.AskYesNo("Do you want to configure okteto manifest now? [y/n]")
 				if err != nil {
