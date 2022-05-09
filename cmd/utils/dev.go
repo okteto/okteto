@@ -367,9 +367,6 @@ func AskForOptions(options []string, label string) (string, error) {
 
 //AskIfOktetoInit asks if okteto init should be executed
 func AskIfOktetoInit(devPath string) bool {
-	if devPath == "" {
-		devPath = DefaultManifest
-	}
 	result, err := AskYesNo(fmt.Sprintf("okteto manifest (%s) doesn't exist, do you want to create it? [y/n] ", devPath))
 	if err != nil {
 		return false
