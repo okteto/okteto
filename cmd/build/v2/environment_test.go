@@ -108,58 +108,6 @@ func Test_SetServiceEnvVars(t *testing.T) {
 	}
 }
 
-func TestExpandCommandVariables(t *testing.T) {
-	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
-
-	registry := test.NewFakeOktetoRegistry(nil)
-	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &OktetoBuilder{
-		Builder:   builder,
-		Registry:  registry,
-		V1Builder: buildv1.NewBuilder(builder, registry),
-	}
-	manifest := &model.Manifest{
-		Name: "test",
-		Build: model.ManifestBuild{
-			"test": &model.BuildInfo{
-				Image: "nginx",
-				VolumesToInclude: []model.StackVolume{
-					{
-						LocalPath:  "test",
-						RemotePath: "test",
-					},
-				},
-			},
-		},
-		Deploy: &model.DeployInfo{
-			Commands: []model.DeployCommand{
-				{
-					Command: "${OKTETO_BUILD_TEST_IMAGE}",
-				},
-			},
-		},
-	}
-	err := bc.Build(ctx, &types.BuildOptions{
-		Manifest: manifest,
-	})
-
-	// error from the build
-	assert.NoError(t, err)
-
-	// Not substituted by empty string
-	assert.NotEmpty(t, manifest.Deploy.Commands[0].Command)
-	assert.NotEqual(t, manifest.Deploy.Commands[0].Command, "${OKTETO_BUILD_TEST_IMAGE}")
-}
-
 func TestExpandStackVariables(t *testing.T) {
 	ctx := context.Background()
 	okteto.CurrentStore = &okteto.OktetoContextStore{

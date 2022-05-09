@@ -47,7 +47,7 @@ deploy:
 devs:
   - api/okteto.yml
   - frontend/okteto.yml`),
-			expectedCommand: "okteto build -t okteto.dev/api:dev api",
+			expectedCommand: "okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT} api",
 		},
 		{
 			name: "expand envs on command without env var set",
@@ -60,7 +60,7 @@ deploy:
 devs:
   - api/okteto.yml
   - frontend/okteto.yml`),
-			expectedCommand: "okteto build -t okteto.dev/api:dev api",
+			expectedCommand: "okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT:=dev} api",
 		},
 	}
 
