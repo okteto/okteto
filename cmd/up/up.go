@@ -121,10 +121,6 @@ func Up() *cobra.Command {
 					return err
 				}
 
-				if upOptions.DockerDesktop {
-					return err
-				}
-
 				if !utils.AskIfOktetoInit(upOptions.DevPath) {
 					return err
 				}
@@ -146,13 +142,7 @@ func Up() *cobra.Command {
 			}
 			os.Setenv(model.OktetoNameEnvVar, oktetoManifest.Name)
 
-			if len(oktetoManifest.Dev) == 0 {
-				if upOptions.DockerDesktop {
-					return oktetoErrors.UserError{
-						E:    errors.New("compose file doesn't have volume to synchronize"),
-						Hint: "Add volumes mounts to your services syncrhonizing your local",
-					}
-				}
+			if len(oktetoManifest.Dev) == 0 && !upOptions.DockerDesktop {
 				oktetoLog.Warning("okteto manifest has no 'dev' section.")
 				answer, err := utils.AskYesNo("Do you want to configure okteto manifest now? [y/n]")
 				if err != nil {
