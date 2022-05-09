@@ -121,13 +121,14 @@ func Up() *cobra.Command {
 					return err
 				}
 
+				if upOptions.DevPath == "" {
+					upOptions.DevPath = utils.DefaultManifest
+				}
+
 				if !utils.AskIfOktetoInit(upOptions.DevPath) {
 					return err
 				}
 
-				if upOptions.DevPath == "" {
-					upOptions.DevPath = utils.DefaultManifest
-				}
 				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
 				if err != nil {
 					return err
