@@ -254,6 +254,9 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	}
 
 	for svcName, svc := range s.Services {
+		if err := loadEnvFiles(svc, svcName); err != nil {
+			return nil, err
+		}
 		if svc.Build == nil {
 			continue
 		}
@@ -263,9 +266,6 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 		} else {
 			svc.Build.Context = loadAbsPath(stackDir, svc.Build.Context)
 			svc.Build.Dockerfile = loadAbsPath(svc.Build.Context, svc.Build.Dockerfile)
-		}
-		if err := loadEnvFiles(svc, svcName); err != nil {
-			return nil, err
 		}
 		copy(svc.Build.VolumesToInclude, svc.Volumes)
 	}
@@ -846,12 +846,10 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 		if value == "" {
 			value = os.Getenv(name)
 		}
-		if value != "" {
-			svc.Environment = append(
-				svc.Environment,
-				EnvVar{Name: name, Value: value},
-			)
-		}
+		svc.Environment = append(
+			svc.Environment,
+			EnvVar{Name: name, Value: value},
+		)
 	}
 
 	return nil
