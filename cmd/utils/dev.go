@@ -230,9 +230,6 @@ func GetDevDetachMode(manifest *model.Manifest, devs []string) (*model.Dev, erro
 			}
 			for _, forward := range d.Forward {
 				localPort := forward.Local
-				if !model.IsPortAvailable(dev.Interface, forward.Local) {
-					return nil, fmt.Errorf("local port %d is already in-use in your local machine", forward.Local)
-				}
 				dev.Forward = append(dev.Forward, model.Forward{
 					Local:       localPort,
 					Remote:      forward.Remote,
