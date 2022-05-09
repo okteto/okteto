@@ -36,38 +36,6 @@ import (
 
 var tempKubeConfigTemplate = "%s/.okteto/kubeconfig-%s"
 
-func (up *upContext) showStackLogs(ctx context.Context) error {
-	tmpKubeconfig, err := createTempKubeconfig(up.Manifest.Name)
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmpKubeconfig)
-
-	c, err := getSternConfig(tmpKubeconfig, fmt.Sprintf("dev.okteto.com/deployed-by=%s", up.Manifest.Name))
-	if err != nil {
-		return err
-	}
-	exit := make(chan error, 1)
-	go func() {
-		if err := stern.Run(ctx, c); err != nil {
-			exit <- oktetoErrors.UserError{
-				E: fmt.Errorf("failed to get logs: %w", err),
-			}
-		}
-	}()
-	select {
-	case <-ctx.Done():
-		oktetoLog.Infof("showDetachedLogs context cancelled")
-		return ctx.Err()
-	case err := <-exit:
-		if err != nil {
-			oktetoLog.Infof("exit signal received due to error: %s", err)
-			return err
-		}
-	}
-	return nil
-}
-
 func (up *upContext) showDetachedLogs(ctx context.Context) error {
 	tmpKubeconfig, err := createTempKubeconfig(up.Manifest.Name)
 	if err != nil {
@@ -75,7 +43,7 @@ func (up *upContext) showDetachedLogs(ctx context.Context) error {
 	}
 	defer os.Remove(tmpKubeconfig)
 
-	c, err := getSternConfig(tmpKubeconfig, "detached.dev.okteto.com")
+	c, err := getSternConfig(tmpKubeconfig, fmt.Sprintf("dev.okteto.com/deployed-by=%s", up.Manifest.Name))
 	if err != nil {
 		return err
 	}

@@ -177,9 +177,6 @@ func (up *upContext) activate() error {
 		durationActivateUp := time.Since(up.StartTime)
 		analytics.TrackDurationActivateUp(durationActivateUp)
 		if up.Options.DockerDesktop {
-			if len(up.Manifest.Dev) == 0 {
-				up.CommandResult <- up.showStackLogs(ctx)
-			}
 			up.CommandResult <- up.showDetachedLogs(ctx)
 		} else {
 			up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
