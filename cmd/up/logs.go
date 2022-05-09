@@ -43,7 +43,7 @@ func (up *upContext) showStackLogs(ctx context.Context) error {
 	}
 	defer os.Remove(tmpKubeconfig)
 
-	c, err := getSternConfig(tmpKubeconfig, fmt.Sprintf("stack.okteto.com/name=%s", up.Manifest.Name))
+	c, err := getSternConfig(tmpKubeconfig, fmt.Sprintf("dev.okteto.com/deployed-by=%s", up.Manifest.Name))
 	if err != nil {
 		return err
 	}
