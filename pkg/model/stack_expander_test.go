@@ -25,12 +25,14 @@ services:
         args:
             - $CUSTOM_ENV
             - CUSTOM2_ENV=$CUSTOM_ENV
+            - EMPTY
         ports:
             - 8080:8080
         environment:
             FLASK_ENV: development
             CUSTOM_ENV: $CUSTOM_ENV
             $CUSTOM2_ENV:
+            EMPTY:
         volumes:
             - ./vote:/src
 
@@ -51,12 +53,14 @@ volumes:
     args:
       - CUSTOM_ENV=MYVALUE
       - CUSTOM2_ENV=MYVALUE
+      - EMPTY
     ports:
       - 8080:8080
     environment:
       FLASK_ENV: development
       CUSTOM_ENV: MYVALUE
       CUSTOM2_ENV:
+      EMPTY:
     volumes:
       - ./vote:/src
   redis:
