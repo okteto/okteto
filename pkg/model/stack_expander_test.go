@@ -70,6 +70,67 @@ volumes:
 `,
 			expectedError: false,
 		},
+		{
+			name: "multiline envs",
+			file: []byte(`
+services:
+    myservice:
+        build:
+            context: vote
+        args:
+            - $CUSTOM_ENV
+            - CUSTOM2_ENV=$CUSTOM_ENV
+        ports:
+            - 8080:8080
+        environment:
+            FLASK_ENV: development
+            CUSTOM_ENV: $CUSTOM_ENV
+            $CUSTOM2_ENV:
+        volumes:
+            - ./myservice:/src
+
+    redis:
+        image: redis
+        ports:
+            - 6379
+        volumes:
+            - redis:/data
+
+volumes:
+    redis:`),
+			envValue: "my first line\nmy second line",
+			expectedStack: `services:
+  myservice:
+    build:
+      context: vote
+    args:
+      - |-
+        CUSTOM_ENV=my first line
+        my second line
+      - |-
+        CUSTOM2_ENV=my first line
+        my second line
+    ports:
+      - 8080:8080
+    environment:
+      FLASK_ENV: development
+      CUSTOM_ENV: |-
+        my first line
+        my second line
+      CUSTOM2_ENV:
+    volumes:
+      - ./myservice:/src
+  redis:
+    image: redis
+    ports:
+      - 6379
+    volumes:
+      - redis:/data
+volumes:
+  redis:
+`,
+			expectedError: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -87,6 +148,7 @@ volumes:
 
 			assert.Equal(t, tt.expectedStack, string(result))
 
+			os.Unsetenv("CUSTOM_ENV")
 		})
 	}
 }
