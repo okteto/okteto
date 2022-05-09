@@ -26,6 +26,7 @@ const (
 	env = `A=hello
 # comment
 OKTETO_TEST=
+EMPTY_VAR=
 
 B=$B
 
@@ -190,6 +191,7 @@ services:
     environment:
       - OPTION_A=Cats
       - OPTION_B=Dogs
+      - EMPTY_VAR=
     ports:
       - 80
     replicas: 2
@@ -1194,7 +1196,7 @@ func Test_translateEnvVars(t *testing.T) {
 	if stack.Services["1"].Image != "image" {
 		t.Errorf("Wrong image: %s", stack.Services["1"].Image)
 	}
-	if len(stack.Services["1"].Environment) != 6 {
+	if len(stack.Services["1"].Environment) != 7 {
 		t.Errorf("Wrong environment: %v", stack.Services["1"].Environment)
 	}
 	for _, e := range stack.Services["1"].Environment {
@@ -1215,6 +1217,9 @@ func Test_translateEnvVars(t *testing.T) {
 		}
 		if e.Name == "OKTETO_TEST" && e.Value != "myvalue" {
 			t.Errorf("Wrong environment variable OKTETO_TEST: %s", e.Value)
+		}
+		if e.Name == "EMPTY_VAR" && e.Value != "" {
+			t.Errorf("Wrong environment variable EMPTY_VAR: %s", e.Value)
 		}
 	}
 }
