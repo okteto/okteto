@@ -281,7 +281,7 @@ func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
 	return nil, oktetoErrors.ErrManifestNotFound
 }
 
-func getManifestFromDevFilePath(cwd string, manifestPath string) (*Manifest, error) {
+func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
 	if manifestPath != "" && !filepath.IsAbs(manifestPath) {
 		manifestPath = filepath.Join(cwd, manifestPath)
 	}
