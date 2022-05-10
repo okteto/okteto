@@ -263,39 +263,12 @@ func NewDeployInfo() *DeployInfo {
 	}
 }
 
-//GetManifestV1 gets a manifest from a path or search for the files to generate it
-func GetManifestV1(manifestPath string) (*Manifest, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-	if manifestPath != "" && !filepath.IsAbs(manifestPath) {
-		manifestPath = filepath.Join(cwd, manifestPath)
-	}
-	if manifestPath != "" && FileExistsAndNotDir(manifestPath) {
-		manifest, err := getManifestFromFile(cwd, manifestPath)
-		if err != nil {
-			return nil, err
-		}
-		path := ""
-		if filepath.IsAbs(manifestPath) {
-			path, err = filepath.Rel(cwd, manifestPath)
-			if err != nil {
-				oktetoLog.Debugf("could not detect relative path to %s: %s", manifestPath, err)
-			}
-		}
-		manifest.Filename = path
-		return manifest, nil
-	} else if manifestPath != "" && pathExistsAndDir(manifestPath) {
-		cwd = manifestPath
-	}
-
-	var devManifest *Manifest
+func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
 	if oktetoPath := getFilePath(cwd, oktetoFiles); oktetoPath != "" {
 		oktetoLog.Infof("Found okteto file")
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto manifest on %s", oktetoPath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling manifest...")
-		devManifest, err = getManifestFromFile(cwd, oktetoPath)
+		devManifest, err := getManifestFromFile(cwd, oktetoPath)
 		if err != nil {
 			return nil, err
 		}
@@ -308,12 +281,7 @@ func GetManifestV1(manifestPath string) (*Manifest, error) {
 	return nil, oktetoErrors.ErrManifestNotFound
 }
 
-//GetManifestV2 gets a manifest from a path or search for the files to generate it
-func GetManifestV2(manifestPath string) (*Manifest, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
+func getManifestFromDevFilePath(cwd string, manifestPath string) (*Manifest, error) {
 	if manifestPath != "" && !filepath.IsAbs(manifestPath) {
 		manifestPath = filepath.Join(cwd, manifestPath)
 	}
@@ -331,24 +299,68 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		}
 		manifest.Filename = path
 		return manifest, nil
-	} else if manifestPath != "" && pathExistsAndDir(manifestPath) {
+	}
+
+	return nil, nil
+}
+
+//GetManifestV1 gets a manifest from a path or search for the files to generate it
+func GetManifestV1(manifestPath string) (*Manifest, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	manifest, err := getManifestFromDevFilePath(cwd, manifestPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if manifest != nil {
+		return manifest, nil
+	}
+
+	if manifestPath != "" && pathExistsAndDir(manifestPath) {
 		cwd = manifestPath
 	}
 
-	var devManifest *Manifest
-	if oktetoPath := getFilePath(cwd, oktetoFiles); oktetoPath != "" {
-		oktetoLog.Infof("Found okteto file")
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto manifest on %s", oktetoPath)
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling manifest...")
-		devManifest, err = getManifestFromFile(cwd, oktetoPath)
-		if err != nil {
+	manifest, err = getManifestFromOktetoFile(cwd)
+	if err != nil {
+		return nil, err
+	}
+
+	return manifest, nil
+}
+
+//GetManifestV2 gets a manifest from a path or search for the files to generate it
+func GetManifestV2(manifestPath string) (*Manifest, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+
+	manifest, err := getManifestFromDevFilePath(cwd, manifestPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if manifest != nil {
+		return manifest, nil
+	}
+
+	if manifestPath != "" && pathExistsAndDir(manifestPath) {
+		cwd = manifestPath
+	}
+
+	manifest, err = getManifestFromOktetoFile(cwd)
+	if err != nil {
+		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
 			return nil, err
 		}
-		if devManifest.IsV2 {
-			return devManifest, nil
-		}
+	}
 
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest unmarshalled successfully")
+	if manifest != nil && manifest.IsV2 {
+		return nil, nil
 	}
 
 	inferredManifest, err := GetInferredManifest(cwd)
@@ -361,15 +373,15 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 			if err != nil {
 				return nil, err
 			}
-			if devManifest != nil && devManifest.Deploy != nil && devManifest.Deploy.Endpoints != nil {
-				inferredManifest.Deploy.ComposeSection.Stack.Endpoints = devManifest.Deploy.Endpoints
+			if manifest != nil && manifest.Deploy != nil && manifest.Deploy.Endpoints != nil {
+				inferredManifest.Deploy.ComposeSection.Stack.Endpoints = manifest.Deploy.Endpoints
 			}
 			if inferredManifest.Deploy.ComposeSection.Stack.Name != "" {
 				inferredManifest.Name = inferredManifest.Deploy.ComposeSection.Stack.Name
 			}
 		}
-		if devManifest != nil {
-			inferredManifest.mergeWithOktetoManifest(devManifest)
+		if manifest != nil {
+			inferredManifest.mergeWithOktetoManifest(manifest)
 		}
 
 		if len(inferredManifest.Manifest) == 0 {
@@ -382,9 +394,9 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		return inferredManifest, nil
 	}
 
-	if devManifest != nil {
-		devManifest.Type = OktetoType
-		devManifest.Deploy = &DeployInfo{
+	if manifest != nil {
+		manifest.Type = OktetoType
+		manifest.Deploy = &DeployInfo{
 			Commands: []DeployCommand{
 				{
 					Name:    "okteto push",
@@ -392,7 +404,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 				},
 			},
 		}
-		return devManifest, nil
+		return manifest, nil
 	}
 	return nil, oktetoErrors.ErrManifestNotFound
 }
