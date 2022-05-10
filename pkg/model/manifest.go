@@ -1013,7 +1013,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 		}
 	}
 
-	doc = m.reorderDocFields(doc)
+	m.reorderDocFields(&doc)
 
 	buffer := bytes.NewBuffer(nil)
 	encoder := yaml3.NewEncoder(buffer)
@@ -1032,7 +1032,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 }
 
 // reorderDocFields orders the manifest to be: name -> build -> deploy -> dependencies -> dev
-func (*Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
+func (*Manifest) reorderDocFields(doc *yaml3.Node) {
 	contentCopy := []*yaml3.Node{}
 	nodes := []int{}
 	nameDefinitionIdx := getDocIdx(doc.Content, "name")
@@ -1118,7 +1118,6 @@ func (*Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
 		}
 	}
 	doc.Content = contentCopy
-	return doc
 }
 
 func getDocIdxWithPrior(contents []*yaml3.Node, value string) int {
