@@ -30,6 +30,7 @@ type BuildOptions struct {
 	BuildToGlobal bool
 	K8sContext    string
 	ExportCache   string
+	AutogenTag    bool
 	// CommandArgs comes from the user input on the command
 	CommandArgs  []string
 	EnableStages bool
