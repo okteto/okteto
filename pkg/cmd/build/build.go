@@ -227,6 +227,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	args := model.SerializeBuildArgs(b.Args)
 
 	if okteto.Context().IsOkteto && b.Image == "" {
+		o.AutogenTag = true
 		tag := model.OktetoDefaultImageTag
 
 		envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
@@ -252,13 +253,14 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		file = filepath.Join(b.Context, b.Dockerfile)
 	}
 	opts := &types.BuildOptions{
-		CacheFrom: b.CacheFrom,
-		Target:    b.Target,
-		Path:      b.Context,
-		Tag:       b.Image,
-		File:      file,
-		BuildArgs: args,
-		NoCache:   o.NoCache,
+		CacheFrom:  b.CacheFrom,
+		Target:     b.Target,
+		Path:       b.Context,
+		Tag:        b.Image,
+		File:       file,
+		BuildArgs:  args,
+		NoCache:    o.NoCache,
+		AutogenTag: o.AutogenTag,
 	}
 
 	outputMode := oktetoLog.GetOutputFormat()
@@ -272,7 +274,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 // ShouldOptimizeBuild returns if optimization should be applied
 func ShouldOptimizeBuild(options *types.BuildOptions) bool {
-	return okteto.IsPipeline() && registry.IsOktetoRegistry(options.Tag) && !options.NoCache && !options.BuildToGlobal
+	return options.AutogenTag && okteto.IsPipeline() && registry.IsOktetoRegistry(options.Tag) && !options.NoCache && !options.BuildToGlobal
 }
 
 // GetVolumesToInclude checks if the path exists, if it doesn't it skip it
