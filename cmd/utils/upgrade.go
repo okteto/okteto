@@ -75,6 +75,10 @@ func ShouldNotify(latest, current *semver.Version) bool {
 		return false
 	}
 
+	if latest.Prerelease() != "" {
+		return false
+	}
+
 	// check if it's a minor or major change, we don't notify on patch
 	if latest.Major() > current.Major() {
 		return true
