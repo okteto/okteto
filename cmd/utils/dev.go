@@ -38,7 +38,6 @@ const (
 	//DefaultManifest default okteto manifest file
 	DefaultManifest   = "okteto.yml"
 	secondaryManifest = "okteto.yaml"
-	detachModePodName = "okteto-dev-env"
 )
 
 func LoadManifestContext(devPath string) (*model.ContextResource, error) {
