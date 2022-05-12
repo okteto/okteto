@@ -217,7 +217,7 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 		return nil, err
 	}
 
-	expandedManifest, err := ExpandEnv(string(b), true)
+	expandedManifest, err := ExpandStackEnvs(b)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	}
 	stackPath = GetManifestPathFromWorkdir(stackPath, stackWorkingDir)
 
-	s, err := ReadStack([]byte(expandedManifest), isCompose)
+	s, err := ReadStack(expandedManifest, isCompose)
 	if err != nil {
 		return nil, err
 	}
