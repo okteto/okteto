@@ -9,7 +9,9 @@ import (
 )
 
 func expandEnvScalarNode(node *yaml3.Node) (*yaml3.Node, error) {
+	// depeding on the kind of node
 	switch node.Kind {
+	// when is a ScalarNode, replace its value with the ENV replaced
 	case yaml3.ScalarNode:
 		expandValue, err := ExpandEnv(node.Value, true)
 		if err != nil {
@@ -17,6 +19,7 @@ func expandEnvScalarNode(node *yaml3.Node) (*yaml3.Node, error) {
 		}
 		node.Value = expandValue
 		return node, nil
+	// when is a Sequence and starts with $ can be a list of envs, so transform the list to key=value format
 	case yaml3.SequenceNode:
 		for indx, subNode := range node.Content {
 			if strings.HasPrefix(subNode.Value, "$") {
@@ -25,6 +28,7 @@ func expandEnvScalarNode(node *yaml3.Node) (*yaml3.Node, error) {
 				node.Content[indx].Value = fmt.Sprintf("%s=%s", key, value)
 			}
 		}
+	// when MappingNode and only the ENV, transform the node by adding a ScalarNode so there is key and value nodes for the map
 	case yaml3.MappingNode:
 		for indx, subNode := range node.Content {
 			value := subNode.Value
