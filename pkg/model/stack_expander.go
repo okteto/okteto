@@ -9,7 +9,6 @@ import (
 )
 
 func expandEnvScalarNode(node *yaml3.Node) (*yaml3.Node, error) {
-	// depeding on the kind of node
 	switch node.Kind {
 	// when is a ScalarNode, replace its value with the ENV replaced
 	case yaml3.ScalarNode:
