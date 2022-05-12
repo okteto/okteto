@@ -175,7 +175,7 @@ func TestDeploySubsetService(t *testing.T) {
 		}
 
 		if pvcList.Items[0].ObjectMeta.Labels[model.StackServiceNameLabel] != "postgresql" {
-			t.Fatal("no persisten volume claim created for 'postgresql' service")
+			t.Fatal("no persistent volume claim created for 'postgresql' service")
 		}
 
 		reg := registry.NewOktetoRegistry()
