@@ -1,0 +1,14 @@
+changelog:
+  exclude:
+    labels:
+      - release/internal
+  categories:
+    - title: Breaking Change
+      labels:
+        - release/breaking-change
+    - title: New Feature
+      labels:
+        - release/new-feature
+    - title: Bug Fix
+      labels:
+        - release/bug-fix

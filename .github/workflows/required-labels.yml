@@ -1,0 +1,14 @@
+name: "Pull Request Labels"
+on:
+  pull_request:
+    types: [opened, labeled, unlabeled, synchronize]
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: mheap/github-action-required-labels@v1
+        with:
+          mode: exactly
+          count: 1
+          # yamllint disable-line rule:line-length
+          labels: "release/internal, release/bug-fix, release/new-feature, release/breaking-change"

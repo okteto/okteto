@@ -18,9 +18,9 @@ import (
 	"runtime"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/release"
 	"github.com/spf13/cobra"
 )
 
@@ -54,7 +54,7 @@ func UpdateDeprecated() *cobra.Command {
 
 //isUpdateAvailable checks if there is a new version available
 func isUpdateAvailable(currentVersion *semver.Version) bool {
-	v, err := utils.GetLatestVersionFromGithub()
+	v, err := release.GetLatestVersion()
 	if err != nil {
 		oktetoLog.Infof("failed to get latest version from github: %s", err)
 		return false
