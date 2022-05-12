@@ -360,7 +360,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	}
 
 	if manifest != nil && manifest.IsV2 {
-		return nil, nil
+		return manifest, nil
 	}
 
 	inferredManifest, err := GetInferredManifest(cwd)
