@@ -241,6 +241,7 @@ func waitUntilRunning(ctx context.Context, name string, action *types.Action, ti
 			return
 		}
 
+		spinner.Update("Waiting for containers to be healthy...")
 		exit <- waitForResourcesToBeRunning(ctx, name, timeout)
 	}()
 
@@ -310,11 +311,8 @@ func deprecatedWaitToBeDeployed(ctx context.Context, name string, timeout time.D
 }
 
 func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.Duration) error {
-	areAllRunning := false
-
 	ticker := time.NewTicker(5 * time.Second)
 	to := time.NewTicker(timeout)
-	errorsMap := make(map[string]int)
 
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
@@ -329,19 +327,17 @@ func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.
 			if err != nil {
 				return err
 			}
-			areAllRunning = true
-			for name, status := range resourceStatus {
-				if status != "running" {
-					areAllRunning = false
-				}
+			allRunning := true
+			for _, status := range resourceStatus {
 				if status == "error" {
-					errorsMap[name] = 1
+					return fmt.Errorf("repository '%s' deployed with errors", name)
+				}
+				if status != "running" {
+					allRunning = false
+					break
 				}
 			}
-			if len(errorsMap) > 0 {
-				return fmt.Errorf("repository '%s' deployed with errors", name)
-			}
-			if areAllRunning {
+			if allRunning {
 				return nil
 			}
 		}

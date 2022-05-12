@@ -509,20 +509,20 @@ func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name strin
 }
 
 func (c *OktetoClient) GetResourcesStatusFromPipeline(ctx context.Context, name string) (map[string]string, error) {
-	pipeline, err := c.GetPipelineByName(ctx, name)
-	if err != nil {
-		return nil, err
-	}
-
 	var queryStruct struct {
 		Space struct {
 			Deployments []struct {
-				Name       graphql.String
+				ID         graphql.String
 				Status     graphql.String
 				DeployedBy graphql.String
 			}
 			Statefulsets []struct {
-				Name       graphql.String
+				ID         graphql.String
+				Status     graphql.String
+				DeployedBy graphql.String
+			}
+			Jobs []struct {
+				ID         graphql.String
 				Status     graphql.String
 				DeployedBy graphql.String
 			}
@@ -532,22 +532,25 @@ func (c *OktetoClient) GetResourcesStatusFromPipeline(ctx context.Context, name 
 		"id": graphql.String(Context().Namespace),
 	}
 
-	err = query(ctx, &queryStruct, variables, c.client)
-	if err != nil {
+	if err := query(ctx, &queryStruct, variables, c.client); err != nil {
 		return nil, err
 	}
 
 	status := make(map[string]string)
 	for _, d := range queryStruct.Space.Deployments {
-		if string(d.DeployedBy) == pipeline.ID {
-			status[string(d.Name)] = string(d.Status)
+		if string(d.DeployedBy) == name {
+			status[string(d.ID)] = string(d.Status)
 
 		}
 	}
-
 	for _, sfs := range queryStruct.Space.Statefulsets {
-		if string(sfs.DeployedBy) == pipeline.ID {
-			status[string(sfs.Name)] = string(sfs.Status)
+		if string(sfs.DeployedBy) == name {
+			status[string(sfs.ID)] = string(sfs.Status)
+		}
+	}
+	for _, j := range queryStruct.Space.Jobs {
+		if string(j.DeployedBy) == name {
+			status[string(j.ID)] = string(j.Status)
 		}
 	}
 	return status, nil
