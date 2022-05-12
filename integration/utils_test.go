@@ -29,6 +29,7 @@ import (
 	"testing"
 	"text/template"
 
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -150,6 +151,15 @@ func getIngress(ctx context.Context, ns, name string) (*networkingv1.Ingress, er
 	return client.NetworkingV1().Ingresses(ns).Get(ctx, name, metav1.GetOptions{})
 }
 
+func getVolumes(ctx context.Context, ns string) (*corev1.PersistentVolumeClaimList, error) {
+	client, _, err := K8sClient()
+	if err != nil {
+		return nil, err
+	}
+
+	return client.CoreV1().PersistentVolumeClaims(ns).List(ctx, metav1.ListOptions{})
+}
+
 func getConfigmap(ctx context.Context, ns, name string) (*corev1.ConfigMap, error) {
 	client, _, err := K8sClient()
 	if err != nil {
@@ -157,6 +167,24 @@ func getConfigmap(ctx context.Context, ns, name string) (*corev1.ConfigMap, erro
 	}
 
 	return client.CoreV1().ConfigMaps(ns).Get(ctx, name, metav1.GetOptions{})
+}
+
+func getEndpoints(ctx context.Context, ns string, selector string) ([]string, error) {
+	c, _, err := K8sClient()
+	if err != nil {
+		return nil, err
+	}
+	iClient, err := ingresses.GetClient(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+
+	endpointList, err := iClient.GetEndpointsBySelector(ctx, ns, selector)
+	if err != nil {
+		return nil, err
+	}
+
+	return endpointList, nil
 }
 
 func writeDeployment(template *template.Template, name, path string) error {
