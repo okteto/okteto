@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -130,12 +131,20 @@ func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextRe
 }
 
 func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.Manifest, error) {
-	m, err := model.GetManifestV2(opts.Filename)
+
+	var manifest *model.Manifest
+	manifest, err := model.GetManifestV1(opts.Filename)
 	if err != nil {
-		return nil, err
+		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+			return nil, err
+		}
+		manifest, err = model.GetManifestV2(opts.Filename)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	ctxResource := model.GetContextResourceFromManifest(m)
+	ctxResource := model.GetContextResourceFromManifest(manifest)
 	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
 		return nil, err
 	}
@@ -156,14 +165,22 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 	}
 
 	// We need to read it again to propagate secrets env vars
-	m, err = model.GetManifestV2(opts.Filename)
-	if err != nil {
-		return nil, err
+	if manifest.IsV2 {
+		manifest, err = model.GetManifestV2(opts.Filename)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		manifest, err = model.GetManifestV1(opts.Filename)
+		if err != nil {
+			return nil, err
+		}
 	}
-	m.Namespace = okteto.Context().Namespace
-	m.Context = okteto.Context().Name
 
-	for _, dev := range m.Dev {
+	manifest.Namespace = okteto.Context().Namespace
+	manifest.Context = okteto.Context().Name
+
+	for _, dev := range manifest.Dev {
 		if err := utils.LoadManifestRc(dev); err != nil {
 			return nil, err
 		}
@@ -172,7 +189,7 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 		dev.Context = okteto.Context().Name
 	}
 
-	return m, nil
+	return manifest, nil
 }
 
 func LoadStackWithContext(ctx context.Context, name, namespace string, stackPaths []string) (*model.Stack, error) {
