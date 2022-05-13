@@ -140,7 +140,7 @@ func TestDeploySubsetService(t *testing.T) {
 
 		log.Printf("created namespace %s \n", namespace)
 
-		if err := cloneGitRepoWithBranch(ctx, votingAppRepoURL, "adrian/update-docker-compose-file"); err != nil {
+		if err := cloneGitRepoWithBranch(ctx, votingAppRepoURL, "main"); err != nil {
 			t.Fatal(err)
 		}
 		log.Printf("cloned repo %s \n", votingAppRepo)
