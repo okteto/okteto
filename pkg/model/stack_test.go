@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -41,6 +42,7 @@ E=word -notword`
 )
 
 func Test_ReadStack(t *testing.T) {
+	t.Setenv("PWD", "hello")
 	manifest := []byte(`name: voting-app
 services:
   vote:
@@ -51,6 +53,7 @@ services:
     environment:
       - OPTION_A=Cats
       - OPTION_B=Dogs
+      - PWD=$PWD
     ports:
       - 80
     replicas: 2
@@ -104,13 +107,15 @@ services:
 	if s.Services["vote"].Replicas != 2 {
 		t.Errorf("'vote.deploy.replicas' was not parsed: %+v", s)
 	}
-	if len(s.Services["vote"].Environment) != 2 {
+	if len(s.Services["vote"].Environment) != 3 {
 		t.Errorf("'vote.env' was not parsed: %+v", s)
 	}
 	for _, env := range s.Services["vote"].Environment {
 		if env.Name == "OPTION_A" && env.Value == "Cats" {
 			continue
 		} else if env.Name == "OPTION_B" && env.Value == "Dogs" {
+			continue
+		} else if env.Name == "PWD" && env.Value == "hello" {
 			continue
 		} else {
 			t.Errorf("'vote.env' was not parsed correctly: %+v", s.Services["vote"].Environment)
@@ -178,9 +183,11 @@ services:
 	if memory.Cmp(resource.MustParse("128Mi")) != 0 {
 		t.Errorf("'vote.resources.memory' was not parsed: %+v", s)
 	}
+	assert.Equal(t, manifest, s.Manifest)
 }
 
 func Test_ReadStackCompose(t *testing.T) {
+	t.Setenv("PWD", "hello")
 	manifest := []byte(`name: voting-app
 services:
   vote:
@@ -192,6 +199,7 @@ services:
       - OPTION_A=Cats
       - OPTION_B=Dogs
       - EMPTY_VAR=
+      - $PWD
     ports:
       - 80
     replicas: 2
@@ -247,13 +255,15 @@ services:
 	if s.Services["vote"].Replicas != 2 {
 		t.Errorf("'vote.deploy.replicas' was not parsed: %+v", s)
 	}
-	if len(s.Services["vote"].Environment) != 2 {
+	if len(s.Services["vote"].Environment) != 3 {
 		t.Errorf("'vote.env' was not parsed: %+v", s)
 	}
 	for _, env := range s.Services["vote"].Environment {
 		if env.Name == "OPTION_A" && env.Value == "Cats" {
 			continue
 		} else if env.Name == "OPTION_B" && env.Value == "Dogs" {
+			continue
+		} else if env.Name == "PWD" && env.Value == "hello" {
 			continue
 		} else {
 			t.Errorf("'vote.env' was not parsed correctly: %+v", s.Services["vote"].Environment)
@@ -332,6 +342,7 @@ services:
 	if memory.Cmp(resource.MustParse("128Mi")) != 0 {
 		t.Errorf("'vote.resources.memory' was not parsed: %+v", s)
 	}
+	assert.Equal(t, string(manifest), string(s.Manifest))
 }
 
 func TestStack_validate(t *testing.T) {

@@ -217,10 +217,6 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 		return nil, err
 	}
 
-	expandedManifest, err := ExpandStackEnvs(b)
-	if err != nil {
-		return nil, err
-	}
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -233,7 +229,7 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	}
 	stackPath = GetManifestPathFromWorkdir(stackPath, stackWorkingDir)
 
-	s, err := ReadStack(expandedManifest, isCompose)
+	s, err := ReadStack(b, isCompose)
 	if err != nil {
 		return nil, err
 	}
@@ -308,8 +304,12 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 		Manifest:  bytes,
 		IsCompose: isCompose,
 	}
+	expandedManifest, err := ExpandStackEnvs(bytes)
+	if err != nil {
+		return nil, err
+	}
 
-	if err := yaml.UnmarshalStrict(bytes, s); err != nil {
+	if err := yaml.UnmarshalStrict(expandedManifest, s); err != nil {
 		if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 			var sb strings.Builder
 			_, _ = sb.WriteString("Invalid compose manifest:\n")
