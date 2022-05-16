@@ -507,26 +507,6 @@ services:
 				},
 			},
 		},
-		InitContainers: []apiv1.Container{
-			{
-				Name:            OktetoInitVolumeContainerName,
-				Image:           "worker:latest",
-				ImagePullPolicy: apiv1.PullIfNotPresent,
-				Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /src/. /init-volume/1 || true)"},
-				SecurityContext: &apiv1.SecurityContext{
-					RunAsUser:  pointer.Int64(0),
-					RunAsGroup: pointer.Int64(0),
-				},
-				VolumeMounts: []apiv1.VolumeMount{
-					{
-						Name:      dev1.GetVolumeName(),
-						ReadOnly:  false,
-						MountPath: "/init-volume/1",
-						SubPath:   "src/worker",
-					},
-				},
-			},
-		},
 		Containers: []apiv1.Container{
 			{
 				Name:            "dev",
@@ -1603,26 +1583,6 @@ services:
 					PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
 						ClaimName: dev1.GetVolumeName(),
 						ReadOnly:  false,
-					},
-				},
-			},
-		},
-		InitContainers: []apiv1.Container{
-			{
-				Name:            OktetoInitVolumeContainerName,
-				Image:           "worker:latest",
-				ImagePullPolicy: apiv1.PullIfNotPresent,
-				Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /src/. /init-volume/1 || true)"},
-				SecurityContext: &apiv1.SecurityContext{
-					RunAsUser:  pointer.Int64(0),
-					RunAsGroup: pointer.Int64(0),
-				},
-				VolumeMounts: []apiv1.VolumeMount{
-					{
-						Name:      dev1.GetVolumeName(),
-						ReadOnly:  false,
-						MountPath: "/init-volume/1",
-						SubPath:   "src/worker",
 					},
 				},
 			},
