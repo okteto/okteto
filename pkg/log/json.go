@@ -29,8 +29,9 @@ const (
 
 //JSONWriter writes into a JSON terminal
 type JSONWriter struct {
-	out  *logrus.Logger
-	file *logrus.Entry
+	out              *logrus.Logger
+	file             *logrus.Entry
+	hasAlreadyFailed bool
 }
 
 type jsonMessage struct {
@@ -195,6 +196,9 @@ func (w *JSONWriter) Hint(format string, args ...interface{}) {
 // Fail prints a message with the error symbol first, and the text in red
 func (w *JSONWriter) Fail(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
+	if w.hasAlreadyFailed {
+		return
+	}
 	msg := fmt.Sprintf("%s %s", errorSymbol, fmt.Sprintf(format, args...))
 	if msg != "" {
 		if log.stage == "" {
@@ -206,7 +210,7 @@ func (w *JSONWriter) Fail(format string, args ...interface{}) {
 			log.buf.WriteString("\n")
 			fmt.Fprintln(w.out.Out, msg)
 		}
-
+		w.hasAlreadyFailed = true
 	}
 }
 
@@ -286,6 +290,9 @@ func convertToJSON(level, stage, message string) string {
 // AddToBuffer logs into the buffer and writes to stdout if its a json writer
 func (w *JSONWriter) AddToBuffer(level, format string, a ...interface{}) {
 	msg := fmt.Sprintf(format, a...)
+	if level == ErrorLevel {
+		w.hasAlreadyFailed = true
+	}
 	msg = convertToJSON(level, log.stage, msg)
 	if msg != "" {
 		log.buf.WriteString(msg)
