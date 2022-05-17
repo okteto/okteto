@@ -160,26 +160,45 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 			return err
 		}
 	}
-	if ctxOptions.IsOkteto && ctxOptions.Save {
-		okClient, err := c.OktetoClientProvider.Provide()
-		if err != nil {
-			return err
+
+	if ctxOptions.Save {
+		hasAccess := false
+		if ctxOptions.IsOkteto {
+			okClient, err := c.OktetoClientProvider.Provide()
+			if err != nil {
+				return err
+			}
+			hasOktetoClientAccess, err := utils.HasAccessToOktetoClusterNamespace(ctx, ctxOptions.Namespace, okClient)
+			if err != nil {
+				return err
+			}
+
+			hasAccess = hasOktetoClientAccess
+		} else {
+			k8sClient, _, err := c.K8sClientProvider.Provide(okteto.Context().Cfg)
+			if err != nil {
+				return err
+			}
+
+			hasK8sClientAccess, err := utils.HasAccessToNamespace(ctx, ctxOptions.Namespace, k8sClient)
+			if err != nil {
+				return err
+			}
+
+			hasAccess = hasK8sClientAccess
 		}
-		hasAccess, err := utils.HasAccessToNamespace(ctx, ctxOptions.Namespace, okClient)
-		if err != nil {
-			return err
-		}
+
 		if !hasAccess {
 			return oktetoErrors.UserError{E: fmt.Errorf("namespace '%s' not found on context '%s'", ctxOptions.Namespace, ctxOptions.Context),
 				Hint: "Please verify that the namespace exists and that you have access to it.",
 			}
 		}
-	}
-	if ctxOptions.Save {
+
 		if err := c.OktetoContextWriter.Write(); err != nil {
 			return err
 		}
 	}
+
 	if created && ctxOptions.IsOkteto {
 		oktetoLog.Success("Context '%s' created", okteto.RemoveSchema(ctxOptions.Context))
 	}
