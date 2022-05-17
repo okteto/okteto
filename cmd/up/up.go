@@ -42,6 +42,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/release"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/okteto/okteto/pkg/types"
@@ -87,12 +88,12 @@ func Up() *cobra.Command {
 				os.Setenv(model.OktetoOriginEnvVar, model.OktetoDockerDesktopOrigin)
 				os.Setenv(model.OktetoAutogenerateStignoreEnvVar, "true")
 			}
-			u := utils.UpgradeAvailable()
+			u := release.UpgradeAvailable()
 			if len(u) > 0 {
 				warningFolder := filepath.Join(config.GetOktetoHome(), ".warnings")
 				if utils.GetWarningState(warningFolder, "version") != u {
 					oktetoLog.Yellow("Okteto %s is available. To upgrade:", u)
-					oktetoLog.Yellow("    %s", utils.GetUpgradeCommand())
+					oktetoLog.Yellow("    %s", release.GetUpgradeCommand())
 					if err := utils.SetWarningState(warningFolder, "version", u); err != nil {
 						oktetoLog.Infof("failed to set warning version state: %s", err.Error())
 					}

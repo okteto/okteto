@@ -45,6 +45,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/release"
 	"github.com/okteto/okteto/pkg/syncthing"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -191,7 +192,7 @@ environment:
 var mode string
 
 func TestGetVersion(t *testing.T) {
-	v, err := utils.GetLatestVersionFromGithub()
+	v, err := release.GetLatestVersionFromGithub()
 	if err != nil {
 		t.Fatal(err)
 	}

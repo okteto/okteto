@@ -132,6 +132,7 @@ func main() {
 	root.AddCommand(stack.Stack(ctx))
 	root.AddCommand(cmd.Push(ctx))
 	root.AddCommand(pipeline.Pipeline(ctx))
+	root.AddCommand(cmd.Channel())
 
 	err := root.Execute()
 

@@ -11,12 +11,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package release
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"net/http"
 	"runtime"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-github/github"
@@ -30,11 +33,24 @@ func UpgradeAvailable() string {
 		return ""
 	}
 
+	vv, err := GetLatestVersion()
+	if err != nil {
+		oktetoLog.Infof("failed to get latest version: %s", err)
+		return ""
+	}
+
+	fmt.Println("new version:", vv)
+	if true {
+		oktetoLog.Fatalf("Boom")
+	}
+
 	v, err := GetLatestVersionFromGithub()
 	if err != nil {
 		oktetoLog.Infof("failed to get latest version from github: %s", err)
 		return ""
 	}
+
+	fmt.Println("latest github version: ", v)
 
 	if len(v) > 0 {
 		latest, err := semver.NewVersion(v)
@@ -50,6 +66,35 @@ func UpgradeAvailable() string {
 	}
 
 	return ""
+}
+
+func GetLatestVersion() (string, error) {
+	c := http.Client{
+		Timeout: 5 * time.Second,
+	}
+	uri, err := getDownloadsRoot()
+	if err != nil {
+		return "", err
+	}
+	uri += "/versions"
+	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return "", err
+	}
+	oktetoLog.Debugf("starting GET request to: %s", uri)
+	resp, err := c.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	scanner := bufio.NewScanner(resp.Body)
+	var v string
+	for scanner.Scan() {
+		v = scanner.Text()
+	}
+
+	return v, scanner.Err()
 }
 
 // GetLatestVersionFromGithub returns the latest okteto version from GitHub
@@ -97,4 +142,17 @@ func GetUpgradeCommand() string {
 	}
 
 	return `curl https://get.okteto.com -sSfL | sh`
+}
+
+func getDownloadsRoot() (string, error) {
+	channel, err := GetReleaseChannel()
+	if err != nil {
+		return "", err
+	}
+	u := fmt.Sprintf("%s/cli", downloadsUrl)
+	if channel != "" {
+		u += "/" + channel
+	}
+
+	return u, nil
 }

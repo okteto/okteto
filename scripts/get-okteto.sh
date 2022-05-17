@@ -12,16 +12,16 @@
                 command -v "$@" >/dev/null 2>&1
         }
 
-        latestURL=https://github.com/okteto/okteto/releases/latest/download
+        bin_file=
 
         case "$OS" in
         darwin)
                 case "$ARCH" in
                 x86_64)
-                        URL=${latestURL}/okteto-Darwin-x86_64
+                        bin_file=okteto-Darwin-x86_64
                         ;;
                 arm64)
-                        URL=${latestURL}/okteto-Darwin-arm64
+                        bin_file=okteto-Darwin-arm64
                         ;;
                 *)
                         printf '\033[31m> The architecture (%s) is not supported by this installation script.\n\033[0m' "$ARCH"
@@ -32,16 +32,16 @@
         linux)
                 case "$ARCH" in
                 x86_64)
-                        URL=${latestURL}/okteto-Linux-x86_64
+                        bin_file=okteto-Linux-x86_64
                         ;;
                 amd64)
-                        URL=${latestURL}/okteto-Linux-x86_64
+                        bin_file=okteto-Linux-x86_64
                         ;;
                 armv8*)
-                        URL=${latestURL}/okteto-Linux-arm64
+                        bin_file=okteto-Linux-arm64
                         ;;
                 aarch64)
-                        URL=${latestURL}/okteto-Linux-arm64
+                        bin_file=okteto-Linux-arm64
                         ;;
                 *)
                         printf '\033[31m> The architecture (%s) is not supported by this installation script.\n\033[0m' "$ARCH"
@@ -70,7 +70,19 @@
                 fi
         fi
 
+        download_uri="https://downloads.okteto.com/cli"
+        channel=$(cat ${OKTETO_HOME:-$HOME/.okteto}/channel 2> /dev/null)
+        if [ $channel = "beta" ] || [ $channel = "dev" ] ; then
+          printf '> Using Release Channel: %s\n' $channel
+          download_uri="${download_uri}/$channel"
+        fi
+
+        version=$(curl -fsSL $download_uri/versions | tail -n1)
+        printf '> Current Version: %s\n' $version
+
+        URL="$download_uri/$version/$bin_file"
         printf '> Downloading %s\n' "$URL"
+
         download_path=$(mktemp)
         curl -fSL "$URL" -o "$download_path"
         chmod +x "$download_path"
