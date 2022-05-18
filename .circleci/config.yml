@@ -297,7 +297,7 @@ workflows:
       - build-image:
           requires:
             - build
-          pre-step:
+          pre-steps:
             - run: IMAGE_TAG=$CIRCLE_SHA1
           filters:
             branches:
