@@ -56,18 +56,12 @@ func HasAccessToOktetoClusterNamespace(ctx context.Context, namespace string, ok
 }
 
 func HasAccessToNamespace(ctx context.Context, namespace string, k8sClient kubernetes.Interface) (bool, error) {
-	nList, err := k8sClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	_, err := k8sClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
 
-	for i := range nList.Items {
-		if nList.Items[i].Name == namespace {
-			return true, nil
-		}
-	}
-
-	return false, nil
+	return true, nil
 }
 
 // LoadBoolean loads a boolean environment variable and returns it value
