@@ -173,9 +173,6 @@ jobs:
   build-image:
     docker:
       - image: okteto/golang-ci:1.17.3
-        auth:
-          username: $DOCKER_USER
-          password: $DOCKER_PASS
      parameters:
        tag:
          type: env_var_name
@@ -189,6 +186,7 @@ jobs:
           command: |
             echo "$IMAGE_TAG"
             echo "export DOCKER_BUILDKIT=1"
+            echo "echo \"\$DOCKER_PASS\" | docker login --username \$DOCKER_USER --password-stdin"
             echo "docker build -t okteto/okteto:<< parameters.tag >> --build-arg VERSION_STRING=<< parameters.tag >> ."
             echo "docker push okteto/okteto:<< parameters.tag >>"
 
