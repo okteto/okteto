@@ -173,10 +173,10 @@ jobs:
   build-image:
     docker:
       - image: okteto/golang-ci:1.17.3
-     parameters:
-       tag:
-         type: env_var_name
-         default: IMAGE_TAG
+    parameters:
+      tag:
+        type: env_var_name
+        default: IMAGE_TAG
     steps:
       - checkout
       - setup_remote_docker:
