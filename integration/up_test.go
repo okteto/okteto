@@ -192,7 +192,7 @@ environment:
 var mode string
 
 func TestGetVersion(t *testing.T) {
-	v, err := release.GetLatestVersionFromGithub()
+	v, err := release.GetLatestVersion()
 	if err != nil {
 		t.Fatal(err)
 	}
