@@ -54,7 +54,7 @@ func UpdateDeprecated() *cobra.Command {
 
 //isUpdateAvailable checks if there is a new version available
 func isUpdateAvailable(currentVersion *semver.Version) bool {
-	v, err := release.GetLatestVersionFromGithub()
+	v, err := release.GetLatestVersion()
 	if err != nil {
 		oktetoLog.Infof("failed to get latest version from github: %s", err)
 		return false
