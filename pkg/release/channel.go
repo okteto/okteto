@@ -26,6 +26,7 @@ const downloadsUrl = "https://downloads.okteto.com"
 
 const releaseChannelDev = "dev"
 const releaseChannelBeta = "beta"
+const releaseChannelStable = "stable"
 
 // GetReleaseChannel returns the release channel for the current installation.
 // It does so by reading the $HOME/.okteto/channel file
@@ -36,7 +37,11 @@ func GetReleaseChannel() (string, error) {
 	if err != nil && !os.IsNotExist(err) {
 		return "", err
 	}
-	return strings.TrimSuffix(string(b), "\n"), nil
+	s := strings.TrimSuffix(string(b), "\n")
+	if s == "" {
+		s = releaseChannelStable
+	}
+	return s, nil
 }
 
 // UpdateReleaseChannel updates the release channel for the current installation
@@ -46,7 +51,7 @@ func UpdateReleaseChannel(v string) error {
 	switch {
 	case v == "":
 		return os.Remove(filename)
-	case v == releaseChannelBeta || v == releaseChannelDev:
+	case v == releaseChannelBeta || v == releaseChannelDev || v == releaseChannelStable:
 		if err := os.WriteFile(filename, []byte(v+"\n"), 0644); err != nil {
 			return err
 		}

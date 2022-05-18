@@ -7,6 +7,30 @@ aliases:
 version: 2.1
 orbs:
   win: circleci/windows@2.1.0
+
+commands:
+  downloads-okteto-com:
+    parameters:
+      channel:
+        default: "stable"
+        type: enum
+        enum: ["stable", "beta", "dev"]
+    steps:
+      - run: ls ./artifacts
+      - run: ls ./artifacts/bin
+      - run:
+          name: Upload release binaries
+          command: |
+            echo "gsutil -m rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/<<parameters.channel>>/${CIRCLE_TAG}"
+            echo "gsutil -m rsync -r gs://downloads.okteto.com/cli/<<parameters.channel>>/${CIRCLE_TAG}/ gs://downloads.okteto.com/cli/<<parameters.channel>>/"
+      - run:
+          name: Update channel versions
+          command: |
+            echo "gsutil cat gs://downloads.okteto.com/cli/<<parameters.channel>>/versions > ./artifacts/bin/versions"
+            echo "echo ${CIRCLE_TAG} >> ./artifacts/bin/versions"
+            echo "gsutil -m -h \"Cache-Control: no-store\" -h \"Content-Type: text\" cp ./artifacts/bin/versions gs://downloads.okteto.com/cli/<<parameters.channel>>/versions"
+
+
 jobs:
   build:
     docker:
@@ -145,6 +169,39 @@ jobs:
             - C:\Go\pkg
       - store_artifacts:
           path: C:\Users\circleci\.okteto
+  
+  build-image:
+    docker:
+      - image: okteto/golang-ci:1.17.3
+        auth:
+          username: $DOCKER_USER
+          password: $DOCKER_PASS
+     parameters:
+       tag:
+         type: env_var_name
+         default: IMAGE_TAG
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: '19.03.8'
+      - run:
+          name: Publish Docker container
+          command: |
+            echo "$IMAGE_TAG"
+            echo "export DOCKER_BUILDKIT=1"
+            echo "docker build -t okteto/okteto:<< parameters.tag >> --build-arg VERSION_STRING=<< parameters.tag >> ."
+            echo "docker push okteto/okteto:<< parameters.tag >>"
+
+  release-beta:
+    steps:
+      - attach_workspace:
+          at: ./artifacts
+      - run: *init-gcloud
+      - downloads-okteto-com:
+          channel: beta
+      
+
+
   release:
     docker:
       - image: okteto/golang-ci:1.17.3
@@ -232,8 +289,27 @@ jobs:
           command: |
             gsutil -m rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/master
 
+
 workflows:
   version: 2
+  testing-release:
+    jobs:
+      - build-image:
+          requires:
+            - build
+          pre-step:
+            - run: IMAGE_TAG=$CIRCLE_SHA1
+          filters:
+            branches:
+              only: fran/release-tooling
+      - release-beta:
+          context: GKE
+          requires:
+            - build
+          filters:
+            branches:
+              only: fran/release-tooling
+
   build-release:
     jobs:
       - build:
