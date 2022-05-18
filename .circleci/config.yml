@@ -294,6 +294,10 @@ workflows:
   version: 2
   testing-release:
     jobs:
+      - build:
+          filters:
+            branches:
+              only: fran/release-tooling
       - build-image:
           requires:
             - build
