@@ -314,61 +314,61 @@ workflows:
             branches:
               only: fran/release-tooling
 
-  build-release:
-    jobs:
-      - build:
-          filters:
-            tags:
-              only: /.*/
-      - integration:
-          requires:
-            - build
-          filters:
-            branches:
-              only:
-                - master
-                - /.*(e2e)/
-                - /.*(integration)/
-                - /^release-\d+\.\d+$/
-      - mock-release:
-          context: GKE
-          requires:
-            - build
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: master
-      - release-master:
-          context: GKE
-          requires:
-            - integration
-          filters:
-            branches:
-              only: master
-      - release:
-          context: GKE
-          requires:
-            - build
-          filters:
-            tags:
-              only: /^\d+\.\d+\.\d+$/
-            branches:
-              ignore: /.*/
-      - release-candidate:
-          context: GKE
-          requires:
-            - build
-          filters:
-            tags:
-              only: /^\d+\.\d+\.\d+-rc\.\d+$/
-            branches:
-              ignore: /.*/
-      - windows-unit:
-          requires:
-            - build
-          filters:
-            branches:
-              only:
-                - master
-                - /.*(windows|win)/
+  # build-release:
+  #   jobs:
+  #     - build:
+  #         filters:
+  #           tags:
+  #             only: /.*/
+  #     - integration:
+  #         requires:
+  #           - build
+  #         filters:
+  #           branches:
+  #             only:
+  #               - master
+  #               - /.*(e2e)/
+  #               - /.*(integration)/
+  #               - /^release-\d+\.\d+$/
+  #     - mock-release:
+  #         context: GKE
+  #         requires:
+  #           - build
+  #         filters:
+  #           tags:
+  #             only: /.*/
+  #           branches:
+  #             ignore: master
+  #     - release-master:
+  #         context: GKE
+  #         requires:
+  #           - integration
+  #         filters:
+  #           branches:
+  #             only: master
+  #     - release:
+  #         context: GKE
+  #         requires:
+  #           - build
+  #         filters:
+  #           tags:
+  #             only: /^\d+\.\d+\.\d+$/
+  #           branches:
+  #             ignore: /.*/
+  #     - release-candidate:
+  #         context: GKE
+  #         requires:
+  #           - build
+  #         filters:
+  #           tags:
+  #             only: /^\d+\.\d+\.\d+-rc\.\d+$/
+  #           branches:
+  #             ignore: /.*/
+  #     - windows-unit:
+  #         requires:
+  #           - build
+  #         filters:
+  #           branches:
+  #             only:
+  #               - master
+  #               - /.*(windows|win)/
