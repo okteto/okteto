@@ -182,13 +182,23 @@ jobs:
       - setup_remote_docker:
           version: '19.03.8'
       - run:
+          name: Tag or Branch
+          command: |
+              if [[ -z "<< pipeline.git.branch >>" ]]; then
+                echo "export IMAGE_TAG=<< pipeline.git.tag >>" >> $BASH_ENV
+              elif [ << pipeline.git.branch >> = "master" ] || [ << pipeline.git.branch >> = "main" ]; then
+                echo "export IMAGE_TAG=latest" >> $BASH_ENV
+              else
+                echo "export IMAGE_TAG=<< pipeline.git.branch >>" >> $BASH_ENV
+              fi
+      - run:
           name: Publish Docker container
           command: |
-            echo "$IMAGE_TAG"
+            echo "tag -> ${<< parameters.tag >>}"
             echo "export DOCKER_BUILDKIT=1"
             echo "echo \"\$DOCKER_PASS\" | docker login --username \$DOCKER_USER --password-stdin"
-            echo "docker build -t okteto/okteto:<< parameters.tag >> --build-arg VERSION_STRING=<< parameters.tag >> ."
-            echo "docker push okteto/okteto:<< parameters.tag >>"
+            echo "docker build -t okteto/okteto:${<< parameters.tag >>} --build-arg VERSION_STRING=${<< parameters.tag >>} ."
+            echo "docker push okteto/okteto:${<< parameters.tag >>}"
 
   release-beta:
     docker:
@@ -301,8 +311,6 @@ workflows:
       - build-image:
           requires:
             - build
-          pre-steps:
-            - run: IMAGE_TAG=$CIRCLE_SHA1
           filters:
             branches:
               only: fran/release-tooling
