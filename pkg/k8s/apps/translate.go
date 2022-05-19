@@ -528,10 +528,10 @@ func TranslateOktetoInitFromImageContainer(spec *apiv1.PodSpec, rule *model.Tran
 			},
 		)
 		mounPath := path.Join(v.MountPath, ".")
-		completedCommand := "echo initialization completed."
-		command = fmt.Sprintf("%s && ( [ \"$(ls -A /init-volume/%d)\" ] || cp -R %s/. /init-volume/%d || true) && %s", command, iVolume, mounPath, iVolume, completedCommand)
+		command = fmt.Sprintf("%s && ( [ \"$(ls -A /init-volume/%d)\" ] || cp -R %s/. /init-volume/%d || true)", command, iVolume, mounPath, iVolume)
 		iVolume++
 	}
+	command = fmt.Sprintf("%s && echo initialization completed.", command)
 
 	shOpts := "-c"
 	if oktetoLog.GetLevel() == oktetoLog.DebugLevel {
