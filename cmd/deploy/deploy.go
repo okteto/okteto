@@ -112,10 +112,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy [service...]",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := validateOptionVars(options.Variables); err != nil {
-				return err
-			}
-			if err := setOptionVarsAsEnvs(options.Variables); err != nil {
+			if err := setEnvVars(options.Variables); err != nil {
 				return err
 			}
 

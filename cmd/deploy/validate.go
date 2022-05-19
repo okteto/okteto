@@ -19,23 +19,26 @@ import (
 	"strings"
 )
 
-func validateOptionVars(variables []string) error {
+type envKeyValue struct {
+	key   string
+	value string
+}
+
+func setEnvVars(variables []string) error {
+	var varsToSet []envKeyValue
 	for _, v := range variables {
 		kv := strings.SplitN(v, "=", 2)
 		if len(kv) != 2 {
 			return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
 		}
-		if err := os.Setenv(kv[0], kv[1]); err != nil {
-			return err
-		}
+		varsToSet = append(varsToSet, envKeyValue{
+			key:   kv[0],
+			value: kv[1],
+		})
 	}
-	return nil
-}
 
-func setOptionVarsAsEnvs(variables []string) error {
-	for _, v := range variables {
-		kv := strings.SplitN(v, "=", 2)
-		if err := os.Setenv(kv[0], kv[1]); err != nil {
+	for _, each := range varsToSet {
+		if err := os.Setenv(each.key, each.value); err != nil {
 			return err
 		}
 	}
