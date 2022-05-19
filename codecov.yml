@@ -1,0 +1,3 @@
+comment:                  # this is a top-level key
+  layout: "diff, files"
+  behavior: default
