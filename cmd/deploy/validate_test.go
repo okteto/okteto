@@ -14,37 +14,80 @@
 package deploy
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_ValidateVars(t *testing.T) {
-
+func Test_setEnvVars(t *testing.T) {
 	var tests = []struct {
-		name        string
-		variables   []string
-		expectedErr bool
+		name            string
+		variables       []string
+		expectedErr     bool
+		expectedEnvVars []envKeyValue
 	}{
 		{
-			name:        "correct assingnament",
+			name:        "correct seperator",
 			variables:   []string{"NAME=test"},
 			expectedErr: false,
+			expectedEnvVars: []envKeyValue{
+				{
+					key:   "Name",
+					value: "test",
+				},
+			},
 		},
 		{
-			name:        "bas assingnament",
-			variables:   []string{"NAME:test"},
-			expectedErr: true,
+			name:            "bad seperator",
+			variables:       []string{"NAME:test"},
+			expectedErr:     true,
+			expectedEnvVars: []envKeyValue{},
+		},
+		{
+			name:            "bad count",
+			variables:       []string{"=foo"},
+			expectedErr:     true,
+			expectedEnvVars: []envKeyValue{},
+		},
+		{
+			name:            "one bad",
+			variables:       []string{"first=one", "second=two", "third:three"},
+			expectedErr:     true,
+			expectedEnvVars: []envKeyValue{},
+		},
+		{
+			name:        "multiples",
+			variables:   []string{"first=one", "second=two", "third=three"},
+			expectedErr: false,
+			expectedEnvVars: []envKeyValue{
+				{
+					key:   "first",
+					value: "one",
+				},
+				{
+					key:   "second",
+					value: "two",
+				},
+				{
+					key:   "third",
+					value: "three",
+				},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateOptionVars(tt.variables)
+			t.Parallel()
+			err := setEnvVars(tt.variables)
 			if tt.expectedErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
+				for _, each := range tt.expectedEnvVars {
+					assert.Equal(t, each.value, os.Getenv(each.key))
+				}
 			}
 		})
 	}

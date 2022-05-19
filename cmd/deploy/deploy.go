@@ -107,114 +107,15 @@ type DeployCommand struct {
 //Deploy deploys the okteto manifest
 func Deploy(ctx context.Context) *cobra.Command {
 	options := &Options{}
+	runner := commandRunner{
+		options: options,
+		ctx:     ctx,
+	}
 
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := validateOptionVars(options.Variables); err != nil {
-				return err
-			}
-			if err := setOptionVarsAsEnvs(options.Variables); err != nil {
-				return err
-			}
-
-			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
-			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
-			os.Setenv(model.OktetoSkipConfigCredentialsUpdate, "false")
-			if options.ManifestPath != "" {
-				workdir := model.GetWorkdirFromManifestPath(options.ManifestPath)
-				if err := os.Chdir(workdir); err != nil {
-					return err
-				}
-				options.ManifestPath = model.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
-			}
-			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
-				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
-					return err
-				}
-				if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: options.Namespace}); err != nil {
-					return err
-				}
-			}
-
-			if okteto.IsOkteto() {
-				create, err := utils.ShouldCreateNamespace(ctx, okteto.Context().Namespace)
-				if err != nil {
-					return err
-				}
-				if create {
-					nsCmd, err := namespace.NewCommand()
-					if err != nil {
-						return err
-					}
-					nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.Context().Namespace})
-				}
-			}
-
-			cwd, err := os.Getwd()
-			if err != nil {
-				return fmt.Errorf("failed to get the current working directory: %w", err)
-			}
-			name := options.Name
-			if options.Name == "" {
-				name = utils.InferName(cwd)
-				if err != nil {
-					return fmt.Errorf("could not infer environment name")
-				}
-			}
-
-			options.ShowCTA = oktetoLog.IsInteractive()
-			options.servicesToDeploy = args
-
-			kubeconfig := NewKubeConfig()
-
-			proxy, err := NewProxy(kubeconfig)
-			if err != nil {
-				oktetoLog.Infof("could not configure local proxy: %s", err)
-				return err
-			}
-
-			c := &DeployCommand{
-				GetManifest:        model.GetManifestV2,
-				Kubeconfig:         kubeconfig,
-				Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat()),
-				Proxy:              proxy,
-				TempKubeconfigFile: GetTempKubeConfigFile(name),
-				K8sClientProvider:  okteto.NewK8sClientProvider(),
-				Builder:            buildv2.NewBuilderFromScratch(),
-			}
-			startTime := time.Now()
-			err = c.RunDeploy(ctx, options)
-
-			deployType := "custom"
-			hasDependencySection := false
-			hasBuildSection := false
-			if options.Manifest != nil {
-				if options.Manifest.IsV2 &&
-					options.Manifest.Deploy != nil &&
-					options.Manifest.Deploy.ComposeSection != nil &&
-					options.Manifest.Deploy.ComposeSection.ComposesInfo != nil {
-					deployType = "compose"
-				}
-
-				hasDependencySection = options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0
-				hasBuildSection = options.Manifest.IsV2 && len(options.Manifest.Build) > 0
-			}
-
-			analytics.TrackDeploy(analytics.TrackDeployMetadata{
-				Success:                err == nil,
-				IsOktetoRepo:           utils.IsOktetoRepo(),
-				Duration:               time.Since(startTime),
-				PipelineType:           c.PipelineType,
-				DeployType:             deployType,
-				IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
-				HasDependenciesSection: hasDependencySection,
-				HasBuildSection:        hasBuildSection,
-			})
-
-			return err
-		},
+		RunE:  runner.deployCommand,
 	}
 
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
@@ -229,6 +130,113 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 
 	return cmd
+}
+
+type commandRunner struct {
+	options *Options
+	ctx     context.Context
+}
+
+func (r commandRunner) deployCommand(cmd *cobra.Command, args []string) error {
+	if err := setEnvVars(r.options.Variables); err != nil {
+		return err
+	}
+
+	// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
+	// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
+	os.Setenv(model.OktetoSkipConfigCredentialsUpdate, "false")
+	if r.options.ManifestPath != "" {
+		workdir := model.GetWorkdirFromManifestPath(r.options.ManifestPath)
+		if err := os.Chdir(workdir); err != nil {
+			return err
+		}
+		r.options.ManifestPath = model.GetManifestPathFromWorkdir(r.options.ManifestPath, workdir)
+	}
+	if err := contextCMD.LoadManifestV2WithContext(r.ctx, r.options.Namespace, r.options.K8sContext, r.options.ManifestPath); err != nil {
+		if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
+			return err
+		}
+		if err := contextCMD.NewContextCommand().Run(r.ctx, &contextCMD.ContextOptions{Namespace: r.options.Namespace}); err != nil {
+			return err
+		}
+	}
+
+	if okteto.IsOkteto() {
+		create, err := utils.ShouldCreateNamespace(r.ctx, okteto.Context().Namespace)
+		if err != nil {
+			return err
+		}
+		if create {
+			nsCmd, err := namespace.NewCommand()
+			if err != nil {
+				return err
+			}
+			nsCmd.Create(r.ctx, &namespace.CreateOptions{Namespace: okteto.Context().Namespace})
+		}
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
+	name := r.options.Name
+	if r.options.Name == "" {
+		name = utils.InferName(cwd)
+		if err != nil {
+			return fmt.Errorf("could not infer environment name")
+		}
+	}
+
+	r.options.ShowCTA = oktetoLog.IsInteractive()
+	r.options.servicesToDeploy = args
+
+	kubeconfig := NewKubeConfig()
+
+	proxy, err := NewProxy(kubeconfig)
+	if err != nil {
+		oktetoLog.Infof("could not configure local proxy: %s", err)
+		return err
+	}
+
+	c := &DeployCommand{
+		GetManifest:        model.GetManifestV2,
+		Kubeconfig:         kubeconfig,
+		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat()),
+		Proxy:              proxy,
+		TempKubeconfigFile: GetTempKubeConfigFile(name),
+		K8sClientProvider:  okteto.NewK8sClientProvider(),
+		Builder:            buildv2.NewBuilderFromScratch(),
+	}
+	startTime := time.Now()
+	err = c.RunDeploy(r.ctx, r.options)
+
+	deployType := "custom"
+	hasDependencySection := false
+	hasBuildSection := false
+	if r.options.Manifest != nil {
+		if r.options.Manifest.IsV2 &&
+			r.options.Manifest.Deploy != nil &&
+			r.options.Manifest.Deploy.ComposeSection != nil &&
+			r.options.Manifest.Deploy.ComposeSection.ComposesInfo != nil {
+			deployType = "compose"
+		}
+
+		hasDependencySection = r.options.Manifest.IsV2 && len(r.options.Manifest.Dependencies) > 0
+		hasBuildSection = r.options.Manifest.IsV2 && len(r.options.Manifest.Build) > 0
+	}
+
+	analytics.TrackDeploy(analytics.TrackDeployMetadata{
+		Success:                err == nil,
+		IsOktetoRepo:           utils.IsOktetoRepo(),
+		Duration:               time.Since(startTime),
+		PipelineType:           c.PipelineType,
+		DeployType:             deployType,
+		IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
+		HasDependenciesSection: hasDependencySection,
+		HasBuildSection:        hasBuildSection,
+	})
+
+	return err
 }
 
 // RunDeploy runs the deploy sequence
