@@ -8,14 +8,22 @@ version: 2.1
 orbs:
   win: circleci/windows@2.1.0
 
+executors:
+  golang-ci:
+    docker:
+      - image: okteto/golang-ci:1.17.3
+
 commands:
-  downloads-okteto-com:
+  rel:
     parameters:
       channel:
         default: "stable"
         type: enum
         enum: ["stable", "beta", "dev"]
     steps:
+      - attach_workspace:
+          at: ./artifacts
+      - run: *init-gcloud
       - run: ls ./artifacts
       - run: ls ./artifacts/bin
       - run:
@@ -201,15 +209,20 @@ jobs:
             echo "docker push okteto/okteto:${<< parameters.tag >>}"
 
   release-beta:
-    docker:
-      - image: okteto/golang-ci:1.17.3
+    executor: golang-ci
     steps:
-      - attach_workspace:
-          at: ./artifacts
-      - run: *init-gcloud
-      - downloads-okteto-com:
+      - rel:
           channel: beta
-      
+  release-dev:
+    executor: golang-ci
+    steps:
+      - rel:
+          channel: dev
+  release-stable:
+    executor: golang-ci
+    steps:
+      - rel:
+          channel: stable
 
 
   release:
@@ -300,6 +313,7 @@ jobs:
             gsutil -m rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/master
 
 
+
 workflows:
   version: 2
   testing-release:
@@ -315,6 +329,20 @@ workflows:
             branches:
               only: fran/release-tooling
       - release-beta:
+          context: GKE
+          requires:
+            - build
+          filters:
+            branches:
+              only: fran/release-tooling
+      - release-dev:
+          context: GKE
+          requires:
+            - build
+          filters:
+            branches:
+              only: fran/release-tooling
+      - release-stable:
           context: GKE
           requires:
             - build
