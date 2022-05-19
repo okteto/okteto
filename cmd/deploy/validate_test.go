@@ -28,7 +28,7 @@ func Test_setEnvVars(t *testing.T) {
 		expectedEnvVars []envKeyValue
 	}{
 		{
-			name:        "correct seperator",
+			name:        "correct separator",
 			variables:   []string{"NAME=test"},
 			expectedErr: false,
 			expectedEnvVars: []envKeyValue{
@@ -39,7 +39,7 @@ func Test_setEnvVars(t *testing.T) {
 			},
 		},
 		{
-			name:            "bad seperator",
+			name:            "bad separator",
 			variables:       []string{"NAME:test"},
 			expectedErr:     true,
 			expectedEnvVars: []envKeyValue{},
