@@ -555,6 +555,17 @@ func (b *BuildInfo) setBuildDefaults() {
 	}
 }
 
+func (b *BuildInfo) setDockerfileDefaults() {
+	if b.Context == "" {
+		return
+	}
+	if b.Dockerfile == "" {
+		b.Dockerfile = filepath.Join(b.Context, "Dockerfile")
+
+		return
+	}
+}
+
 func (dev *Dev) setRunAsUserDefaults(main *Dev) {
 	if !main.PersistentVolumeEnabled() {
 		return

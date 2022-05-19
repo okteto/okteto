@@ -722,6 +722,8 @@ func (m *Manifest) setDefaults() error {
 			b.Context = b.Name
 			b.Name = ""
 		}
+		b.setDockerfileDefaults()
+
 		if !(b.Image != "" && len(b.VolumesToInclude) > 0 && b.Dockerfile == "") {
 			b.setBuildDefaults()
 		}
