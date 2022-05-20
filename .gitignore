@@ -8,4 +8,5 @@ cli
 .syncthing*
 bin/*
 coverage.txt
+coverage.html
 dist
