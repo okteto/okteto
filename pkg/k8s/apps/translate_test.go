@@ -244,7 +244,7 @@ services:
 				Name:            OktetoInitVolumeContainerName,
 				Image:           "web:latest",
 				ImagePullPolicy: apiv1.PullIfNotPresent,
-				Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true)"},
+				Command:         []string{"sh", "-c", "echo initializing... && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true) && echo initialization completed."},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  &runAsUser,
 					RunAsGroup: &runAsGroup,
@@ -1338,7 +1338,7 @@ services:
 				Name:            OktetoInitVolumeContainerName,
 				Image:           "web:latest",
 				ImagePullPolicy: apiv1.PullIfNotPresent,
-				Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true)"},
+				Command:         []string{"sh", "-c", "echo initializing... && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true) && echo initialization completed."},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  &runAsUser,
 					RunAsGroup: &runAsGroup,
