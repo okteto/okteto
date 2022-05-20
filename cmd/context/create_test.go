@@ -394,7 +394,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 		expectedAccess bool
 	}{
 		{
-			name: "non okteto context command gives unauthorized message",
+			name: "okteto client can access to namespace",
 			ctxOptions: &ContextOptions{
 				IsOkteto:  true,
 				Namespace: "test",
@@ -402,7 +402,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			expectedAccess: true,
 		},
 		{
-			name: "non okteto context command gives unauthorized message",
+			name: "okteto client cannot access to namespace",
 			ctxOptions: &ContextOptions{
 				IsOkteto:  true,
 				Namespace: "non-ccessible-ns",
@@ -410,7 +410,7 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			expectedAccess: false,
 		},
 		{
-			name: "non okteto context command gives unauthorized message",
+			name: "non okteto client can access to namespace",
 			ctxOptions: &ContextOptions{
 				IsOkteto:  false,
 				Namespace: "test",
@@ -431,10 +431,10 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			}
 			hasAccess, err := hasAccessToNamespace(ctx, &currentCtxCommand, tt.ctxOptions)
 			if err != nil && !strings.Contains(err.Error(), "not found") {
-				t.Fatalf("Not expecting error but got: %s", err.Error())
+				t.Fatalf("not expecting error but got: %s", err.Error())
 			}
 			if hasAccess != tt.expectedAccess {
-				t.Fatalf("hasAccessToNamespace() expected %t but got: %t", tt.expectedAccess, hasAccess)
+				t.Fatalf("%s fail. expected %t but got: %t", tt.name, tt.expectedAccess, hasAccess)
 			}
 		})
 	}
