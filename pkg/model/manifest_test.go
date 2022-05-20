@@ -404,3 +404,148 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 		})
 	}
 }
+
+func TestSetManifestBuildDefaults(t *testing.T) {
+	tests := []struct {
+		name             string
+		currentManifest  *Manifest
+		expectedManifest *Manifest
+	}{
+		{
+			name: "name filled, context empty, dockerfile empty",
+			currentManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Name: "name",
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Context:    "name",
+						Name:       "",
+						Dockerfile: "name/Dockerfile",
+					},
+				},
+			},
+		},
+		{
+			name: "context filled, dockerfile empty",
+			currentManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Context: "context",
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Context:    "context",
+						Dockerfile: "context/Dockerfile",
+					},
+				},
+			},
+		},
+		{
+			name: "context filled, dockerfile filled",
+			currentManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Context:    "context",
+						Dockerfile: "dockerfile",
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Context:    "context",
+						Dockerfile: "dockerfile",
+					},
+				},
+			},
+		},
+		{
+			name: "context, name and dockerfile empty, with image empty",
+			currentManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Context:    ".",
+						Dockerfile: "Dockerfile",
+					},
+				},
+			},
+		},
+		{
+			name: "context, name and dockerfile empty, with image filled",
+			currentManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Image: "image",
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Image:      "image",
+						Context:    ".",
+						Dockerfile: "Dockerfile",
+					},
+				},
+			},
+		},
+		{
+			name: "context, name and dockerfile empty, with volumes",
+			currentManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						VolumesToInclude: []StackVolume{{LocalPath: "lp", RemotePath: "rp"}},
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						VolumesToInclude: []StackVolume{{LocalPath: "lp", RemotePath: "rp"}},
+						Context:          ".",
+						Dockerfile:       "Dockerfile",
+					},
+				},
+			},
+		},
+		{
+			name: "context, name and dockerfile empty, with volumes and image",
+			currentManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Image:            "image",
+						VolumesToInclude: []StackVolume{{LocalPath: "lp", RemotePath: "rp"}},
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Image:            "image",
+						VolumesToInclude: []StackVolume{{LocalPath: "lp", RemotePath: "rp"}},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.currentManifest.setDefaults()
+			assert.Equal(t, tt.expectedManifest, tt.currentManifest)
+		})
+	}
+}
