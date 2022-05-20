@@ -27,6 +27,16 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// HasAccessToK8sClusterNamespace checks if the user has access to a namespace
+var HasAccessToK8sClusterNamespace = func(ctx context.Context, namespace string, k8sClient kubernetes.Interface) (bool, error) {
+	_, err := k8sClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 // HasAccessToOktetoClusterNamespace checks if the user has access to a namespace/preview
 func HasAccessToOktetoClusterNamespace(ctx context.Context, namespace string, oktetoClient types.OktetoInterface) (bool, error) {
 
@@ -53,15 +63,6 @@ func HasAccessToOktetoClusterNamespace(ctx context.Context, namespace string, ok
 	}
 
 	return false, nil
-}
-
-func HasAccessToNamespace(ctx context.Context, namespace string, k8sClient kubernetes.Interface) (bool, error) {
-	_, err := k8sClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
-	if err != nil {
-		return false, err
-	}
-
-	return true, nil
 }
 
 // LoadBoolean loads a boolean environment variable and returns it value
