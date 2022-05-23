@@ -20,7 +20,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -31,7 +30,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
 )
 
 func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User, fakeObjects []runtime.Object) *ContextCommand {
@@ -382,11 +380,13 @@ func TestCheckAccessToNamespace(t *testing.T) {
 		Preview:   client.NewFakePreviewClient(nil, nil),
 	}
 
-	fakeCtxCommand := newFakeContextCommand(fakeOktetoClient, user, nil)
-
-	utils.HasAccessToK8sClusterNamespace = func(ctx context.Context, namespace string, k8sClient kubernetes.Interface) (bool, error) {
-		return true, nil
-	}
+	fakeCtxCommand := newFakeContextCommand(fakeOktetoClient, user, []runtime.Object{
+		&corev1.Namespace{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test",
+			},
+		},
+	})
 
 	var tests = []struct {
 		name           string
@@ -417,6 +417,14 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			},
 			expectedAccess: true,
 		},
+		{
+			name: "non okteto client cannot access to namespace",
+			ctxOptions: &ContextOptions{
+				IsOkteto:  false,
+				Namespace: "test",
+			},
+			expectedAccess: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -427,6 +435,9 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			if tt.ctxOptions.IsOkteto {
 				currentCtxCommand.K8sClientProvider = nil
 			} else {
+				if !tt.expectedAccess {
+					currentCtxCommand = *newFakeContextCommand(fakeOktetoClient, user, []runtime.Object{})
+				}
 				currentCtxCommand.OktetoClientProvider = nil
 			}
 			hasAccess, err := hasAccessToNamespace(ctx, &currentCtxCommand, tt.ctxOptions)

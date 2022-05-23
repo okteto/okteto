@@ -28,7 +28,7 @@ import (
 )
 
 // HasAccessToK8sClusterNamespace checks if the user has access to a namespace
-var HasAccessToK8sClusterNamespace = func(ctx context.Context, namespace string, k8sClient kubernetes.Interface) (bool, error) {
+func HasAccessToK8sClusterNamespace(ctx context.Context, namespace string, k8sClient kubernetes.Interface) (bool, error) {
 	_, err := k8sClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 	if err != nil {
 		return false, err
