@@ -15,6 +15,7 @@ package build
 
 import (
 	"context"
+	"strings"
 
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -53,7 +54,11 @@ func Build(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bc := NewBuildCommand()
 
-			manifest, isBuildV2 := bc.getManifestAndBuildVersion(options)
+			manifest, isBuildV2, err := bc.getManifestAndBuildVersion(options)
+			if err != nil {
+				return err
+			}
+
 			options.CommandArgs = args
 			options.Manifest = manifest
 
@@ -80,16 +85,21 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (bc *Command) getManifestAndBuildVersion(options *types.BuildOptions) (*model.Manifest, bool) {
+func (bc *Command) getManifestAndBuildVersion(options *types.BuildOptions) (*model.Manifest, bool, error) {
 	manifest, errManifest := bc.GetManifest(options.File)
-	if errManifest != nil {
-		oktetoLog.Debug("error getting manifest v2 from file %s: %v. Fallback to build v1", options.File, errManifest)
-	}
 
 	isBuildV2 := errManifest == nil &&
 		manifest.IsV2 &&
 		len(manifest.Build) != 0
-	return manifest, isBuildV2
+
+	if errManifest != nil {
+		if strings.HasPrefix(errManifest.Error(), "invalid manifest") {
+			return manifest, isBuildV2, errManifest
+		}
+
+		oktetoLog.Warning("error getting manifest v2 from file %s: %v. Fallback to build v1", options.File, errManifest)
+	}
+	return manifest, isBuildV2, nil
 }
 
 func (bc *Command) getBuilder(isBuildV2 bool) Builder {
