@@ -540,6 +540,31 @@ func TestSetManifestBuildDefaults(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "context, name, dockerfile, image and volumes filled",
+			currentManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Image:            "image",
+						VolumesToInclude: []StackVolume{{LocalPath: "lp", RemotePath: "rp"}},
+						Name:             "name",
+						Context:          "context",
+						Dockerfile:       "Dockerfile",
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{
+						Image:            "image",
+						VolumesToInclude: []StackVolume{{LocalPath: "lp", RemotePath: "rp"}},
+						Name:             "",
+						Context:          "name",
+						Dockerfile:       "Dockerfile",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
