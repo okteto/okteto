@@ -14,6 +14,7 @@
 package build
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -37,6 +38,10 @@ func getManifestWithError(_ string) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
+func getManifestWithInvalidManifestError(_ string) (*model.Manifest, error) {
+	return nil, errors.New("invalid manifest")
+}
+
 func getFakeManifest(_ string) (*model.Manifest, error) {
 	return fakeManifest, nil
 }
@@ -46,7 +51,8 @@ func TestBuildIsManifestV2(t *testing.T) {
 		GetManifest: getFakeManifest,
 	}
 
-	manifest, isV2 := bc.getManifestAndBuildVersion(&types.BuildOptions{})
+	manifest, isV2, err := bc.getManifestAndBuildVersion(&types.BuildOptions{})
+	assert.Nil(t, err)
 	assert.True(t, isV2)
 	assert.Equal(t, manifest, fakeManifest)
 }
@@ -56,7 +62,19 @@ func TestBuildIsDockerfile(t *testing.T) {
 		GetManifest: getManifestWithError,
 	}
 
-	manifest, isV2 := bc.getManifestAndBuildVersion(&types.BuildOptions{})
+	manifest, isV2, err := bc.getManifestAndBuildVersion(&types.BuildOptions{})
+	assert.Nil(t, err)
 	assert.False(t, isV2)
 	assert.Nil(t, manifest, fakeManifest)
+}
+
+func TestBuildErrIfInvalidManifest(t *testing.T) {
+	bc := &Command{
+		GetManifest: getManifestWithInvalidManifestError,
+	}
+
+	manifest, isV2, err := bc.getManifestAndBuildVersion(&types.BuildOptions{})
+	assert.NotNil(t, err)
+	assert.False(t, isV2)
+	assert.Nil(t, manifest)
 }
