@@ -181,6 +181,43 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			},
 		},
 		{
+			name:        "all-values-no-image-is-okteto-pipeline-with-volumes",
+			serviceName: "service",
+			buildInfo: &model.BuildInfo{
+				Context:    "service",
+				Dockerfile: "CustomDockerfile",
+				Target:     "build",
+				CacheFrom:  []string{"cache-image"},
+				Args: model.Environment{
+					{
+						Name:  "arg1",
+						Value: "value1",
+					},
+				},
+				VolumesToInclude: []model.StackVolume{
+					{
+						LocalPath:  "a",
+						RemotePath: "b",
+					},
+				},
+			},
+			initialOpts: &types.BuildOptions{
+				OutputMode: "tty",
+			},
+			isOkteto:       true,
+			okGitCommitEnv: "1235466",
+			expected: &types.BuildOptions{
+				OutputMode: oktetoLog.TTYFormat,
+				Tag:        "okteto.dev/movies-service:d5dd474fa99b0680c11f8098f06e408187bbcc5cc4a657fd0acabb117898a246",
+				File:       filepath.Join("service", "CustomDockerfile"),
+				Target:     "build",
+				Path:       "service",
+				CacheFrom:  []string{"cache-image"},
+				BuildArgs:  []string{"arg1=value1"},
+				AutogenTag: true,
+			},
+		},
+		{
 			name:        "all-values-image",
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
