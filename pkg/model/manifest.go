@@ -693,14 +693,15 @@ func Read(bytes []byte) (*Manifest, error) {
 				}
 
 				_, _ = sb.WriteString(fmt.Sprintf("    See %s for details", "https://okteto.com/docs/reference/manifest/"))
-				return nil, errors.New(sb.String())
+				return nil, oktetoErrors.UserError{E: errors.New(sb.String())}
 			}
 
 			msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid manifest:", 1)
 			msg = strings.TrimSuffix(msg, "in type model.Manifest")
-			return nil, errors.New(msg)
+			return nil, oktetoErrors.UserError{E: errors.New(msg)}
 		}
 	}
+
 	hasShownWarning := false
 	for _, d := range manifest.Dev {
 		if (d.Image.Context != "" || d.Image.Dockerfile != "") && !hasShownWarning {

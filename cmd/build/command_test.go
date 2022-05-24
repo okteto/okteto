@@ -14,9 +14,9 @@
 package build
 
 import (
-	"errors"
 	"testing"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -39,11 +39,91 @@ func getManifestWithError(_ string) (*model.Manifest, error) {
 }
 
 func getManifestWithInvalidManifestError(_ string) (*model.Manifest, error) {
-	return nil, errors.New("invalid manifest")
+	return nil, oktetoErrors.ErrInvalidManifest
 }
 
 func getFakeManifest(_ string) (*model.Manifest, error) {
 	return fakeManifest, nil
+}
+
+func TestIsBuildV2(t *testing.T) {
+	tests := []struct {
+		name           string
+		manifest       *model.Manifest
+		expectedAnswer bool
+	}{
+		{
+			name:           "nil manifest is not build v2",
+			manifest:       nil,
+			expectedAnswer: false,
+		},
+		{
+			name: "manifest v1 is build v1",
+			manifest: &model.Manifest{
+				IsV2: false,
+			},
+			expectedAnswer: false,
+		},
+		{
+			name: "manifest v2 with no build section is build v1",
+			manifest: &model.Manifest{
+				IsV2:  true,
+				Build: model.ManifestBuild{},
+			},
+			expectedAnswer: false,
+		},
+		{
+			name: "manifest v1 with build section is build v1",
+			manifest: &model.Manifest{
+				IsV2: false,
+				Build: model.ManifestBuild{
+					"test-1": &model.BuildInfo{
+						Image: "test/test-1",
+					},
+					"test-2": &model.BuildInfo{
+						Image: "test/test-2",
+					},
+				},
+			},
+			expectedAnswer: false,
+		},
+		{
+			name: "manifest v1 with build section is build v1",
+			manifest: &model.Manifest{
+				IsV2: false,
+				Build: model.ManifestBuild{
+					"test-1": &model.BuildInfo{
+						Image: "test/test-1",
+					},
+					"test-2": &model.BuildInfo{
+						Image: "test/test-2",
+					},
+				},
+			},
+			expectedAnswer: false,
+		},
+		{
+			name: "manifest v2 with build section is build v2",
+			manifest: &model.Manifest{
+				IsV2: true,
+				Build: model.ManifestBuild{
+					"test-1": &model.BuildInfo{
+						Image: "test/test-1",
+					},
+					"test-2": &model.BuildInfo{
+						Image: "test/test-2",
+					},
+				},
+			},
+			expectedAnswer: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			answer := isBuildV2(tt.manifest)
+			assert.Equal(t, answer, tt.expectedAnswer)
+		})
+	}
 }
 
 func TestBuildIsManifestV2(t *testing.T) {
@@ -51,21 +131,19 @@ func TestBuildIsManifestV2(t *testing.T) {
 		GetManifest: getFakeManifest,
 	}
 
-	manifest, isV2, err := bc.getManifestAndBuildVersion(&types.BuildOptions{})
+	manifest, err := bc.getManifest(&types.BuildOptions{})
 	assert.Nil(t, err)
-	assert.True(t, isV2)
 	assert.Equal(t, manifest, fakeManifest)
 }
 
-func TestBuildIsDockerfile(t *testing.T) {
+func TestBuildFromDockerfile(t *testing.T) {
 	bc := &Command{
 		GetManifest: getManifestWithError,
 	}
 
-	manifest, isV2, err := bc.getManifestAndBuildVersion(&types.BuildOptions{})
+	manifest, err := bc.getManifest(&types.BuildOptions{})
 	assert.Nil(t, err)
-	assert.False(t, isV2)
-	assert.Nil(t, manifest, fakeManifest)
+	assert.Nil(t, manifest)
 }
 
 func TestBuildErrIfInvalidManifest(t *testing.T) {
@@ -73,8 +151,7 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 		GetManifest: getManifestWithInvalidManifestError,
 	}
 
-	manifest, isV2, err := bc.getManifestAndBuildVersion(&types.BuildOptions{})
+	manifest, err := bc.getManifest(&types.BuildOptions{})
 	assert.NotNil(t, err)
-	assert.False(t, isV2)
 	assert.Nil(t, manifest)
 }

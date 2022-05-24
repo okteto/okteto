@@ -15,11 +15,12 @@ package build
 
 import (
 	"context"
-	"strings"
+	"errors"
 
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/registry"
@@ -54,15 +55,18 @@ func Build(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			bc := NewBuildCommand()
 
-			manifest, isBuildV2, err := bc.getManifestAndBuildVersion(options)
+			manifest, err := bc.getManifest(options)
 			if err != nil {
 				return err
 			}
 
-			options.CommandArgs = args
-			options.Manifest = manifest
+			var builder Builder
+			if isBuildV2(manifest) {
+				builder = buildv2.NewBuilder(bc.Builder, bc.Registry)
+			} else {
+				builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
+			}
 
-			builder := bc.getBuilder(isBuildV2)
 			if err := builder.LoadContext(ctx, options); err != nil {
 				return err
 			}
@@ -85,26 +89,23 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (bc *Command) getManifestAndBuildVersion(options *types.BuildOptions) (*model.Manifest, bool, error) {
-	manifest, errManifest := bc.GetManifest(options.File)
-
-	isBuildV2 := errManifest == nil &&
-		manifest.IsV2 &&
-		len(manifest.Build) != 0
-
-	if errManifest != nil {
-		if strings.HasPrefix(errManifest.Error(), "invalid manifest") {
-			return manifest, isBuildV2, errManifest
+func (bc *Command) getManifest(options *types.BuildOptions) (*model.Manifest, error) {
+	manifest, err := bc.GetManifest(options.File)
+	if err != nil {
+		if errors.Is(err, oktetoErrors.ErrInvalidManifest) {
+			return nil, err
 		}
 
-		oktetoLog.Warning("error getting manifest v2 from file %s: %v. Fallback to build v1", options.File, errManifest)
+		oktetoLog.Warning("error getting manifest v2 from file %s: %v. Fallback to build v1", options.File, err)
 	}
-	return manifest, isBuildV2, nil
+
+	return manifest, nil
 }
 
-func (bc *Command) getBuilder(isBuildV2 bool) Builder {
-	if isBuildV2 {
-		return buildv2.NewBuilder(bc.Builder, bc.Registry)
+func isBuildV2(m *model.Manifest) bool {
+	if m == nil {
+		return false
 	}
-	return buildv1.NewBuilder(bc.Builder, bc.Registry)
+
+	return m.IsV2 && len(m.Build) != 0
 }

@@ -37,6 +37,11 @@ type CommandError struct {
 }
 
 // Error returns the error message
+func (e UserError) Is(target error) bool {
+	return strings.HasPrefix(e.Error(), target.Error())
+}
+
+// Error returns the error message
 func (u CommandError) Error() string {
 	return fmt.Sprintf("%s: %s", u.E.Error(), strings.ToLower(u.Reason.Error()))
 }
@@ -161,6 +166,9 @@ var (
 
 	// ErrDevContainerNotExists is raised when the dev container doesn't exist on dev section
 	ErrDevContainerNotExists = "development container '%s' doesn't exist"
+
+	//ErrInvalidManifest is raised when cannot unmarshal manifest properly
+	ErrInvalidManifest = fmt.Errorf("invalid manifest")
 )
 
 // IsForbidden raised if the Okteto API returns 401
