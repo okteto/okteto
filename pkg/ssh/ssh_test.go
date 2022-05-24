@@ -23,10 +23,7 @@ import (
 )
 
 func Test_addOnEmpty(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 
 	if err := os.RemoveAll(dir); err != nil {
 		t.Fatal(err)
@@ -225,16 +222,7 @@ func Test_removeHost(t *testing.T) {
 }
 
 func TestGetPort(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.RemoveAll(dir)
-
-	if err := os.Setenv(model.OktetoHomeEnvVar, dir); err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 
 	defer os.Unsetenv(model.OktetoHomeEnvVar)
 

@@ -41,13 +41,9 @@ func TestWriteToNewFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	d, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 
-	defer os.RemoveAll(d)
-	path := filepath.Join(d, "config")
+	path := filepath.Join(dir, "config")
 
 	if err := config.writeToFilepath(path); err != nil {
 		t.Fatal(err)

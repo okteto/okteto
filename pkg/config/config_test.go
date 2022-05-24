@@ -27,14 +27,7 @@ func TestGetUserHomeDir(t *testing.T) {
 		t.Fatal("got an empty home value")
 	}
 
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		os.RemoveAll(dir)
-		os.Unsetenv(model.OktetoHomeEnvVar)
-	}()
+	dir := t.TempDir()
 
 	os.Setenv(model.OktetoHomeEnvVar, dir)
 	home = GetUserHomeDir()
@@ -115,14 +108,7 @@ func Test_homedirWindows(t *testing.T) {
 }
 
 func TestGetOktetoHome(t *testing.T) {
-	dir, err := os.MkdirTemp("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		os.RemoveAll(dir)
-		os.Unsetenv(model.OktetoFolderEnvVar)
-	}()
+	dir := t.TempDir()
 
 	os.Setenv(model.OktetoFolderEnvVar, dir)
 
@@ -133,11 +119,7 @@ func TestGetOktetoHome(t *testing.T) {
 }
 
 func TestGetAppHome(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	os.Setenv(model.OktetoFolderEnvVar, dir)
 

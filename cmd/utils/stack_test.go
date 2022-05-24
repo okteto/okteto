@@ -39,10 +39,7 @@ const (
 )
 
 func Test_multipleStack(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
 
 	path, err := createFile(dir, "docker-compose.yml", firstStack)
@@ -107,10 +104,7 @@ func Test_multipleStack(t *testing.T) {
 }
 
 func Test_overrideFileStack(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
 
 	path, err := createFile(dir, "docker-compose.yml", firstStack)

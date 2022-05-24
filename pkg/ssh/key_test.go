@@ -22,18 +22,7 @@ import (
 )
 
 func TestKeyExists(t *testing.T) {
-
-	dir, err := os.MkdirTemp("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer func() {
-		os.RemoveAll(dir)
-		os.Unsetenv(model.OktetoFolderEnvVar)
-	}()
-
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+	dir := t.TempDir()
 
 	if KeyExists() {
 		t.Error("keys shouldn't exist in an empty directory")
@@ -58,15 +47,7 @@ func TestKeyExists(t *testing.T) {
 }
 
 func TestGenerateKeys(t *testing.T) {
-	dir, err := os.MkdirTemp("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer func() {
-		os.RemoveAll(dir)
-		os.Unsetenv(model.OktetoFolderEnvVar)
-	}()
+	dir := t.TempDir()
 
 	os.Setenv(model.OktetoFolderEnvVar, dir)
 	public, private := getKeyPaths()

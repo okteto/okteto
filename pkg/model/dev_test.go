@@ -715,11 +715,7 @@ func Test_validate(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
-	dir, err := os.MkdirTemp("/tmp", "okteto-secret-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(dir)
+	dir := t.TempDir()
 
 	tests := []struct {
 		name      string
