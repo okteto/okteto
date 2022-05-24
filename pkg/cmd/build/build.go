@@ -232,7 +232,11 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 		envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
 		if okteto.IsPipeline() {
-			params := strings.Join(args, "") + envGitCommit
+			params := ""
+			if len(b.VolumesToInclude) > 0 {
+				params = model.OktetoImageTagWithVolumes
+			}
+			params += strings.Join(args, "") + envGitCommit
 			tag = fmt.Sprintf("%x", sha256.Sum256([]byte(params)))
 		}
 
@@ -242,7 +246,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 			targetRegistry = okteto.GlobalRegistry
 		}
 		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, tag)
-		if len(b.VolumesToInclude) > 0 {
+		if !okteto.IsPipeline() && len(b.VolumesToInclude) > 0 {
 			b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoImageTagWithVolumes)
 		}
 
