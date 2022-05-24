@@ -14,7 +14,6 @@
 package config
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
@@ -29,7 +28,7 @@ func TestGetUserHomeDir(t *testing.T) {
 
 	dir := t.TempDir()
 
-	os.Setenv(model.OktetoHomeEnvVar, dir)
+	t.Setenv(model.OktetoHomeEnvVar, dir)
 	home = GetUserHomeDir()
 	if home != dir {
 		t.Fatalf("OKTETO_HOME override failed, got %s instead of %s", home, dir)
@@ -74,25 +73,8 @@ func Test_homedirWindows(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			home := os.Getenv(model.HomeEnvVar)
-			up := os.Getenv(model.UserProfileEnvVar)
-			hp := os.Getenv(model.HomePathEnvVar)
-			hd := os.Getenv(model.HomeDriveEnvVar)
-
-			os.Unsetenv(model.HomeEnvVar)
-			os.Unsetenv(model.UserProfileEnvVar)
-			os.Unsetenv(model.HomePathEnvVar)
-			os.Unsetenv(model.HomeDriveEnvVar)
-
-			defer func() {
-				os.Setenv(model.HomeEnvVar, home)
-				os.Setenv(model.UserProfileEnvVar, up)
-				os.Setenv(model.HomePathEnvVar, hp)
-				os.Setenv(model.HomeDriveEnvVar, hd)
-			}()
-
 			for k, v := range tt.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
 
 			got, err := homedirWindows()
@@ -110,7 +92,7 @@ func Test_homedirWindows(t *testing.T) {
 func TestGetOktetoHome(t *testing.T) {
 	dir := t.TempDir()
 
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+	t.Setenv(model.OktetoFolderEnvVar, dir)
 
 	got := GetOktetoHome()
 	if got != dir {
@@ -121,7 +103,7 @@ func TestGetOktetoHome(t *testing.T) {
 func TestGetAppHome(t *testing.T) {
 	dir := t.TempDir()
 
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+	t.Setenv(model.OktetoFolderEnvVar, dir)
 
 	got := GetAppHome("ns", "dp")
 	expected := filepath.Join(dir, "ns", "dp")

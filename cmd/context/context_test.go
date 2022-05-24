@@ -75,6 +75,7 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 
 func createDeprecatedToken(t *testing.T, url string) (string, error) {
 	dir := t.TempDir()
+	t.Setenv(model.OktetoFolderEnvVar, dir)
 	token := &okteto.Token{
 		URL:       url,
 		Buildkit:  "buildkit",

@@ -15,7 +15,6 @@ package syncthing
 
 import (
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
 	"testing"
@@ -191,22 +190,9 @@ func TestGetMinimumVersion(t *testing.T) {
 		},
 	}
 
-	env := os.Getenv(model.SyncthingVersionEnvVar)
-	if err := os.Setenv(model.SyncthingVersionEnvVar, ""); err != nil {
-		t.Fatal(err)
-	}
-
-	defer func() {
-		if err := os.Setenv(model.SyncthingVersionEnvVar, env); err != nil {
-			t.Fatal(err)
-		}
-	}()
-
 	for _, tt := range tests {
 		t.Run(tt.version, func(t *testing.T) {
-			if err := os.Setenv(model.SyncthingVersionEnvVar, tt.version); err != nil {
-				t.Fatal(err)
-			}
+			t.Setenv(model.SyncthingVersionEnvVar, tt.version)
 			got := GetMinimumVersion()
 			if got.String() != tt.expected {
 				t.Errorf("got %s, expected %s", got.String(), tt.expected)

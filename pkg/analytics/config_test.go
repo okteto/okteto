@@ -1,7 +1,6 @@
 package analytics
 
 import (
-	"os"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -50,7 +49,7 @@ func Test_Get(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
 
-			os.Setenv(model.OktetoFolderEnvVar, dir)
+			t.Setenv(model.OktetoFolderEnvVar, dir)
 
 			if !tt.currentAnalytics {
 				currentAnalytics = nil

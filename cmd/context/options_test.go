@@ -246,7 +246,7 @@ func Test_initFromEnvVars(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for k, v := range tt.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
 			tt.in.initFromEnvVars()
 			if !reflect.DeepEqual(tt.in, tt.want) {
