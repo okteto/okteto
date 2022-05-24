@@ -182,42 +182,9 @@ func waitUntilDestroyed(ctx context.Context, name string, action *types.Action, 
 }
 
 func waitToBeDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
-	if action == nil {
-		return deprecatedWaitToBeDestroyed(ctx, name, timeout)
-	}
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return err
 	}
 	return oktetoClient.WaitForActionToFinish(ctx, name, action.Name, timeout)
-}
-
-//TODO: remove when all users are in Okteto Enterprise >= 0.10.0
-func deprecatedWaitToBeDestroyed(ctx context.Context, name string, timeout time.Duration) error {
-
-	t := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(timeout)
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-
-	for {
-		select {
-		case <-to.C:
-			return fmt.Errorf("'%s' destroy didn't finish after %s", name, timeout.String())
-		case <-t.C:
-			p, err := oktetoClient.GetPipelineByName(ctx, name)
-			if err != nil {
-				if oktetoErrors.IsNotFound(err) || oktetoErrors.IsNotExist(err) {
-					return nil
-				}
-				return fmt.Errorf("failed to get repository '%s': %s", name, err)
-			}
-
-			if p.Status == "error" {
-				return fmt.Errorf("repository '%s' failed", name)
-			}
-		}
-	}
 }

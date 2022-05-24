@@ -260,54 +260,11 @@ func waitUntilRunning(ctx context.Context, name string, action *types.Action, ti
 }
 
 func waitToBeDeployed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
-	if action == nil {
-		return deprecatedWaitToBeDeployed(ctx, name, timeout)
-	}
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return err
 	}
 	return oktetoClient.WaitForActionToFinish(ctx, name, action.Name, timeout)
-}
-
-//TODO: remove when all users are in Okteto Enterprise >= 0.10.0
-func deprecatedWaitToBeDeployed(ctx context.Context, name string, timeout time.Duration) error {
-
-	t := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(timeout)
-	attempts := 0
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-
-	for {
-		select {
-		case <-to.C:
-			return fmt.Errorf("'%s' deploy didn't finish after %s", name, timeout.String())
-		case <-t.C:
-			p, err := oktetoClient.GetPipelineByName(ctx, name)
-			if err != nil {
-				if oktetoErrors.IsNotFound(err) || oktetoErrors.IsNotExist(err) {
-					return nil
-				}
-
-				return fmt.Errorf("failed to get repository '%s': %s", name, err)
-			}
-
-			switch p.Status {
-			case "deployed", "running":
-				return nil
-			case "error":
-				attempts++
-				if attempts > 30 {
-					return fmt.Errorf("repository '%s' failed", name)
-				}
-			default:
-				oktetoLog.Infof("repository '%s' is '%s'", name, p.Status)
-			}
-		}
-	}
 }
 
 func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.Duration) error {
