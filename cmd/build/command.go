@@ -53,18 +53,12 @@ func Build(ctx context.Context) *cobra.Command {
 		Use:   "build [service...]",
 		Short: "Build and push the images defined in the 'build' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			options.CommandArgs = args
 			bc := NewBuildCommand()
 
-			manifest, err := bc.getManifest(options)
+			builder, err := bc.getBuilder(options)
 			if err != nil {
 				return err
-			}
-
-			var builder Builder
-			if isBuildV2(manifest) {
-				builder = buildv2.NewBuilder(bc.Builder, bc.Registry)
-			} else {
-				builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
 			}
 
 			if err := builder.LoadContext(ctx, options); err != nil {
@@ -89,7 +83,9 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (bc *Command) getManifest(options *types.BuildOptions) (*model.Manifest, error) {
+func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
+	var builder Builder
+
 	manifest, err := bc.GetManifest(options.File)
 	if err != nil {
 		if errors.Is(err, oktetoErrors.ErrInvalidManifest) {
@@ -97,15 +93,19 @@ func (bc *Command) getManifest(options *types.BuildOptions) (*model.Manifest, er
 		}
 
 		oktetoLog.Warning("error getting manifest v2 from file %s: %v. Fallback to build v1", options.File, err)
+		builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
+	} else {
+		if isBuildV2(manifest) {
+			builder = buildv2.NewBuilder(bc.Builder, bc.Registry)
+		} else {
+			builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
+		}
 	}
+	options.Manifest = manifest
 
-	return manifest, nil
+	return builder, nil
 }
 
 func isBuildV2(m *model.Manifest) bool {
-	if m == nil {
-		return false
-	}
-
 	return m.IsV2 && len(m.Build) != 0
 }

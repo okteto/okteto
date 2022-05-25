@@ -14,6 +14,7 @@
 package build
 
 import (
+	"reflect"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -22,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var fakeManifest *model.Manifest = &model.Manifest{
+var fakeManifestV2 *model.Manifest = &model.Manifest{
 	Build: model.ManifestBuild{
 		"test-1": &model.BuildInfo{
 			Image: "test/test-1",
@@ -42,8 +43,14 @@ func getManifestWithInvalidManifestError(_ string) (*model.Manifest, error) {
 	return nil, oktetoErrors.ErrInvalidManifest
 }
 
-func getFakeManifest(_ string) (*model.Manifest, error) {
-	return fakeManifest, nil
+func getFakeManifestV1(_ string) (*model.Manifest, error) {
+	manifestV1 := *fakeManifestV2
+	manifestV1.IsV2 = false
+	return &manifestV1, nil
+}
+
+func getFakeManifestV2(_ string) (*model.Manifest, error) {
+	return fakeManifestV2, nil
 }
 
 func TestIsBuildV2(t *testing.T) {
@@ -52,11 +59,6 @@ func TestIsBuildV2(t *testing.T) {
 		manifest       *model.Manifest
 		expectedAnswer bool
 	}{
-		{
-			name:           "nil manifest is not build v2",
-			manifest:       nil,
-			expectedAnswer: false,
-		},
 		{
 			name: "manifest v1 is build v1",
 			manifest: &model.Manifest{
@@ -129,12 +131,12 @@ func TestIsBuildV2(t *testing.T) {
 
 func TestBuildIsManifestV2(t *testing.T) {
 	bc := &Command{
-		GetManifest: getFakeManifest,
+		GetManifest: getFakeManifestV2,
 	}
 
-	manifest, err := bc.getManifest(&types.BuildOptions{})
+	manifest, err := bc.GetManifest("")
 	assert.Nil(t, err)
-	assert.Equal(t, manifest, fakeManifest)
+	assert.Equal(t, manifest, fakeManifestV2)
 }
 
 func TestBuildFromDockerfile(t *testing.T) {
@@ -142,8 +144,8 @@ func TestBuildFromDockerfile(t *testing.T) {
 		GetManifest: getManifestWithError,
 	}
 
-	manifest, err := bc.getManifest(&types.BuildOptions{})
-	assert.Nil(t, err)
+	manifest, err := bc.GetManifest("")
+	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
 
@@ -152,7 +154,79 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 		GetManifest: getManifestWithInvalidManifestError,
 	}
 
-	manifest, err := bc.getManifest(&types.BuildOptions{})
+	manifest, err := bc.GetManifest("")
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
+}
+
+func TestBuilderIsProperlyGenerated(t *testing.T) {
+	tests := []struct {
+		name              string
+		buildCommand      *Command
+		expectedError     bool
+		isBuildV2Expected bool
+	}{
+		{
+			name: "Builder error. Invalid manifest",
+			buildCommand: &Command{
+				GetManifest: getManifestWithInvalidManifestError,
+			},
+			expectedError:     true,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "BuilderV2 called.",
+			buildCommand: &Command{
+				GetManifest: getFakeManifestV2,
+			},
+			expectedError:     false,
+			isBuildV2Expected: true,
+		},
+		{
+			name: "Manifest valid but BuilderV1 fallback.",
+			buildCommand: &Command{
+				GetManifest: getFakeManifestV1,
+			},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Manifest error. BuilderV1 fallback.",
+			buildCommand: &Command{
+				GetManifest: getManifestWithError,
+			},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+	}
+
+	options := &types.BuildOptions{}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			builder, err := tt.buildCommand.getBuilder(options)
+			if err != nil && !tt.expectedError {
+				t.Errorf("getBuilder() fail on '%s'. Expected nil error, got %s", tt.name, err.Error())
+			}
+
+			if builder == nil {
+				if !tt.expectedError {
+					t.Errorf("getBuilder() fail on '%s'. Expected builder, got nil", tt.name)
+				}
+			} else {
+				metaBuildValue := reflect.ValueOf(builder).Elem()
+				field := metaBuildValue.FieldByName("V1Builder")
+				if tt.isBuildV2Expected {
+					if field == (reflect.Value{}) {
+						t.Errorf("getBuilder() fail on '%s'. Expected builder v2, got builder v1", tt.name)
+					}
+				} else {
+					if field != (reflect.Value{}) {
+						t.Errorf("getBuilder() fail on '%s'. Expected builder v1, got builder v2", tt.name)
+					}
+				}
+			}
+		})
+	}
+
 }
