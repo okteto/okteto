@@ -422,9 +422,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 					oktetoLog.Information("Run 'okteto up' to activate your development container")
 				}
 			}
-			if err := pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy, c); err != nil {
-				oktetoLog.Warning("could not add dev annotations due to: %s", err.Error())
-			}
+			pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, c)
 		}
 		data.Status = pipeline.DeployedStatus
 	}

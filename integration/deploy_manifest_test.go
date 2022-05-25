@@ -68,7 +68,11 @@ build:
   app:
     context: .
 deploy:
-  - helm upgrade --install hello-world chart --set app.image=${OKTETO_BUILD_APP_IMAGE}`
+  - helm upgrade --install hello-world chart --set app.image=${OKTETO_BUILD_APP_IMAGE}
+dev:
+  test:
+    autocreate: true
+    image: ubuntu`
 
 		chartContent = `
 apiVersion: v2
