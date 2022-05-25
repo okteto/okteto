@@ -14,9 +14,10 @@
 package build
 
 import (
-	"reflect"
 	"testing"
 
+	buildV1 "github.com/okteto/okteto/cmd/build/v1"
+	buildV2 "github.com/okteto/okteto/cmd/build/v2"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
@@ -214,15 +215,15 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 					t.Errorf("getBuilder() fail on '%s'. Expected builder, got nil", tt.name)
 				}
 			} else {
-				metaBuildValue := reflect.ValueOf(builder).Elem()
-				field := metaBuildValue.FieldByName("V1Builder")
-				if tt.isBuildV2Expected {
-					if field == (reflect.Value{}) {
-						t.Errorf("getBuilder() fail on '%s'. Expected builder v2, got builder v1", tt.name)
+				switch builder.(type) {
+				case *buildV1.OktetoBuilder:
+					if tt.isBuildV2Expected {
+						t.Errorf("getBuilder() fail on '%s'. Expected builderv2, got builderv1", tt.name)
 					}
-				} else {
-					if field != (reflect.Value{}) {
-						t.Errorf("getBuilder() fail on '%s'. Expected builder v1, got builder v2", tt.name)
+				case *buildV2.OktetoBuilder:
+					if !tt.isBuildV2Expected {
+						t.Errorf("getBuilder() fail on '%s'. Expected builderv1, got builderv2", tt.name)
+
 					}
 				}
 			}
