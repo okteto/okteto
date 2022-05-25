@@ -275,6 +275,7 @@ func AddKubernetesContext(name, namespace, buildkitURL string) {
 		Name:      name,
 		Namespace: namespace,
 		Builder:   buildkitURL,
+		Analytics: true,
 	}
 	CurrentStore.CurrentContext = name
 }
