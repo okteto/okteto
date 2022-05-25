@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
@@ -66,9 +65,6 @@ func (c *namespaceClient) List(ctx context.Context) ([]types.Namespace, error) {
 
 	err := query(ctx, &queryStruct, nil, c.client)
 	if err != nil {
-		if strings.Contains(err.Error(), "Cannot query field \"status\" on type \"Space\"") {
-			return c.deprecatedListNamespaces(ctx)
-		}
 		return nil, err
 	}
 
@@ -77,35 +73,6 @@ func (c *namespaceClient) List(ctx context.Context) ([]types.Namespace, error) {
 		result = append(result, types.Namespace{
 			ID:     string(space.Id),
 			Status: string(space.Status),
-		})
-	}
-
-	return result, nil
-}
-
-// TODO: remove when all users are in OktetoEnterprise >= 10.6
-func (c *namespaceClient) deprecatedListNamespaces(ctx context.Context) ([]types.Namespace, error) {
-	var queryStruct struct {
-		Spaces []struct {
-			Id       graphql.String
-			Sleeping graphql.Boolean
-		} `graphql:"spaces"`
-	}
-
-	err := query(ctx, &queryStruct, nil, c.client)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]types.Namespace, 0)
-	for _, space := range queryStruct.Spaces {
-		status := "Active"
-		if space.Sleeping {
-			status = "Sleeping"
-		}
-		result = append(result, types.Namespace{
-			ID:     string(space.Id),
-			Status: status,
 		})
 	}
 
