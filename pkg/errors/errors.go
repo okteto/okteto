@@ -30,15 +30,19 @@ func (u UserError) Error() string {
 	return u.E.Error()
 }
 
+// InvalidManifestError is meant for errors caused by an invalid manifest
+type InvalidManifestError struct {
+	Msg string
+}
+
+func (e *InvalidManifestError) Error() string {
+	return e.Msg
+}
+
 // CommandError is meant for errors displayed to the user. It can include a message and a hint
 type CommandError struct {
 	E      error
 	Reason error
-}
-
-// Error returns the error message
-func (e UserError) Is(target error) bool {
-	return e.E == target
 }
 
 // Error returns the error message

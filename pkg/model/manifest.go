@@ -626,7 +626,9 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 
 	manifest, err := Read(b)
 	if err != nil {
-		return nil, err
+		return nil, &oktetoErrors.InvalidManifestError{
+			Msg: fmt.Sprintf("%s:\n%s", oktetoErrors.ErrInvalidManifest.Error(), err.Error()),
+		}
 	}
 
 	for _, dev := range manifest.Dev {
@@ -684,20 +686,21 @@ func Read(bytes []byte) (*Manifest, error) {
 		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
 			if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 				var sb strings.Builder
+				//_, _ = sb.WriteString("Invalid manifest:\n")
 				l := strings.Split(err.Error(), "\n")
 				for i := 1; i < len(l); i++ {
 					e := strings.TrimSuffix(l[i], "in type model.Manifest")
 					e = strings.TrimSpace(e)
-					_, _ = sb.WriteString(fmt.Sprintf("- %s\n", e))
+					_, _ = sb.WriteString(fmt.Sprintf("    - %s\n", e))
 				}
 
 				_, _ = sb.WriteString(fmt.Sprintf("    See %s for details", "https://okteto.com/docs/reference/manifest/"))
-				return nil, oktetoErrors.UserError{E: oktetoErrors.ErrInvalidManifest, Hint: sb.String()}
+				return nil, errors.New(sb.String())
 			}
 
-			msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", fmt.Sprintf("%s:", oktetoErrors.ErrInvalidManifest.Error()), 1)
-			msg = strings.TrimSuffix(msg, "in type model.Manifest")
-			return nil, oktetoErrors.UserError{E: oktetoErrors.ErrInvalidManifest, Hint: msg}
+			//msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", fmt.Sprintf("%s:", oktetoErrors.ErrInvalidManifest.Error()), 1)
+			msg := strings.TrimSuffix(err.Error(), "in type model.Manifest")
+			return nil, errors.New(msg)
 		}
 	}
 
