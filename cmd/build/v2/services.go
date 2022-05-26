@@ -101,21 +101,3 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 	}
 	return nil
 }
-
-func (bc *OktetoBuilder) checkImageAtGlobalAndSetEnvs(service string, options *types.BuildOptions) (bool, error) {
-	globalReference := strings.Replace(options.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
-
-	imageWithDigest, err := bc.Registry.GetImageTagWithDigest(globalReference)
-	if err == oktetoErrors.ErrNotFound {
-		oktetoLog.Debug("image not built at global registry, not running optimization for deployment")
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-
-	bc.SetServiceEnvVars(service, imageWithDigest)
-	oktetoLog.Debug("image already built at global registry, running optimization for deployment")
-	return true, nil
-
-}

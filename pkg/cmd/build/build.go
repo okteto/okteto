@@ -15,7 +15,6 @@ package build
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -258,11 +257,6 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	opts.OutputMode = setOutputMode(outputMode)
 
 	return opts
-}
-
-// ShouldOptimizeBuild returns if optimization should be applied
-func ShouldOptimizeBuild(options *types.BuildOptions) bool {
-	return options.AutogenTag && okteto.IsPipeline() && registry.IsOktetoRegistry(options.Tag) && !options.NoCache && !options.BuildToGlobal
 }
 
 // GetVolumesToInclude checks if the path exists, if it doesn't it skip it
