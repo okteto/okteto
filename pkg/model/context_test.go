@@ -43,7 +43,7 @@ func Test_GetContextResource(t *testing.T) {
 			defer os.RemoveAll(tmpFile.Name())
 
 			for k, v := range tt.env {
-				t.Setenv(k, v)
+				os.Setenv(k, v)
 			}
 			result, err := GetContextResource(tmpFile.Name())
 			if err != nil {

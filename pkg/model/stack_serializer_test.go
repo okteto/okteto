@@ -1587,7 +1587,10 @@ func Test_Environment(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("OKTETO_ENVTEST", "myvalue")
+
+			if err := os.Setenv("OKTETO_ENVTEST", "myvalue"); err != nil {
+				t.Fatal(err)
+			}
 
 			s, err := ReadStack(tt.manifest, false)
 			if err != nil {

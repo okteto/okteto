@@ -119,7 +119,11 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	dir := t.TempDir()
+	dir, err := os.MkdirTemp("", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
@@ -165,8 +169,14 @@ func TestTwoStepsBuild(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	dir, err := createDockerfile(t)
+	dir, err := os.MkdirTemp("", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	dir, err = createDockerfile()
 	assert.NoError(t, err)
+	defer os.RemoveAll(dir)
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
@@ -217,8 +227,9 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	dir, err := createDockerfile(t)
+	dir, err := createDockerfile()
 	assert.NoError(t, err)
+	defer os.RemoveAll(dir)
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
@@ -260,8 +271,9 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	dir, err := createDockerfile(t)
+	dir, err := createDockerfile()
 	assert.NoError(t, err)
+	defer os.RemoveAll(dir)
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
@@ -305,8 +317,9 @@ func TestBuildWithStack(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	dir, err := createDockerfile(t)
+	dir, err := createDockerfile()
 	assert.NoError(t, err)
+	defer os.RemoveAll(dir)
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
@@ -357,10 +370,13 @@ func Test_getAccessibleVolumeMounts(t *testing.T) {
 	assert.Len(t, volumes, 1)
 }
 
-func createDockerfile(t *testing.T) (string, error) {
-	dir := t.TempDir()
+func createDockerfile() (string, error) {
+	dir, err := os.MkdirTemp("", "build")
+	if err != nil {
+		return "", err
+	}
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
-	err := os.WriteFile(dockerfilePath, []byte("Hello"), 0755)
+	err = os.WriteFile(dockerfilePath, []byte("Hello"), 0755)
 	if err != nil {
 		return "", err
 	}

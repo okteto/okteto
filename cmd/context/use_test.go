@@ -56,7 +56,8 @@ func Test_setSecrets(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for k, v := range tt.envs {
-				t.Setenv(k, v)
+				err := os.Setenv(k, v)
+				assert.NoError(t, err)
 			}
 			setSecrets(tt.secrets)
 			assert.Equal(t, expectedValue, os.Getenv(key))

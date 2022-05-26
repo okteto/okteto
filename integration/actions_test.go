@@ -134,7 +134,10 @@ func TestBuildActionPipeline(t *testing.T) {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
 
-	dir := t.TempDir()
+	dir, err := os.MkdirTemp("", "")
+	if err != nil {
+		t.Fatal(err)
+	}
 	log.Printf("created tempdir: %s", dir)
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
 	dockerfileContent := []byte("FROM alpine")
@@ -327,7 +330,10 @@ func TestStacksActions(t *testing.T) {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
 
-	dir := t.TempDir()
+	dir, err := os.MkdirTemp("", namespace)
+	if err != nil {
+		t.Fatal(err)
+	}
 	log.Printf("created tempdir: %s", dir)
 	filePath := filepath.Join(dir, "okteto-stack.yaml")
 	if err := os.WriteFile(filePath, []byte(stackFile), 0644); err != nil {

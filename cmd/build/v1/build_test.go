@@ -44,7 +44,7 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 		Builder:  builder,
 		Registry: registry,
 	}
-	dir, err := createDockerfile(t)
+	dir, err := createDockerfile()
 	assert.NoError(t, err)
 
 	tag := "okteto.dev/test"
@@ -78,8 +78,9 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 		Builder:  builder,
 		Registry: registry,
 	}
-	dir, err := createDockerfile(t)
+	dir, err := createDockerfile()
 	assert.NoError(t, err)
+	defer os.RemoveAll(dir)
 
 	tag := "okteto.dev/test"
 	options := &types.BuildOptions{
@@ -112,8 +113,9 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 		Builder:  builder,
 		Registry: registry,
 	}
-	dir, err := createDockerfile(t)
+	dir, err := createDockerfile()
 	assert.NoError(t, err)
+	defer os.RemoveAll(dir)
 
 	options := &types.BuildOptions{
 		CommandArgs: []string{dir},
@@ -127,10 +129,13 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 	assert.Empty(t, image)
 }
 
-func createDockerfile(t *testing.T) (string, error) {
-	dir := t.TempDir()
+func createDockerfile() (string, error) {
+	dir, err := os.MkdirTemp("", "build")
+	if err != nil {
+		return "", err
+	}
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
-	err := os.WriteFile(dockerfilePath, []byte("Hello"), 0755)
+	err = os.WriteFile(dockerfilePath, []byte("Hello"), 0755)
 	if err != nil {
 		return "", err
 	}

@@ -14,6 +14,7 @@
 package syncthing
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -22,8 +23,16 @@ import (
 
 func TestGetFiles(t *testing.T) {
 
-	dir := t.TempDir()
-	t.Setenv(model.OktetoFolderEnvVar, dir)
+	dir, err := os.MkdirTemp("", t.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		os.RemoveAll(dir)
+		os.Unsetenv(model.OktetoFolderEnvVar)
+	}()
+
+	os.Setenv(model.OktetoFolderEnvVar, dir)
 	log := GetLogFile("test", "application")
 	expected := filepath.Join(dir, "test", "application", "syncthing.log")
 

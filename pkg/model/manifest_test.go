@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -66,7 +67,7 @@ devs:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for k, v := range tt.envs {
-				t.Setenv(k, v)
+				os.Setenv(k, v)
 			}
 			m, err := Read(tt.manifest)
 			assert.NoError(t, err)
@@ -333,7 +334,7 @@ func TestInferFromStack(t *testing.T) {
 }
 
 func TestSetManifestDefaultsFromDev(t *testing.T) {
-	t.Setenv("my_key", "my_value")
+	os.Setenv("my_key", "my_value")
 	tests := []struct {
 		name              string
 		currentManifest   *Manifest
