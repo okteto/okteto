@@ -92,7 +92,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 			return nil, err
 		}
 
-		oktetoLog.Warning("error getting manifest v2 from file %s: %v. Fallback to build v1", options.File, err)
+		oktetoLog.Info("The manifest %s is not v2 compatible, falling back to building as a v1 manifest: %v", options.File, err)
 		builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
 	} else {
 		if isBuildV2(manifest) {
