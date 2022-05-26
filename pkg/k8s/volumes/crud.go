@@ -20,7 +20,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/errors"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -59,7 +58,7 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, 
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	pvc := translate(dev)
 	k8Volume, err := vClient.Get(ctx, pvc.Name, metav1.GetOptions{})
-	if err != nil && !errors.IsNotFound(err) {
+	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return fmt.Errorf("error getting kubernetes volume claim: %s", err)
 	}
 	if k8Volume.Name == "" {
