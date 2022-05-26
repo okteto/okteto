@@ -59,7 +59,7 @@ func Test_addKubernetesContext(t *testing.T) {
 			wantStore: &okteto.OktetoContextStore{
 				CurrentContext: "context",
 				Contexts: map[string]*okteto.OktetoContext{
-					"context": {Name: "context", Namespace: "n-ctx", Analytics: true},
+					"context": {Name: "context", Namespace: "n-ctx"},
 				},
 			},
 			wantError: false,
@@ -77,7 +77,7 @@ func Test_addKubernetesContext(t *testing.T) {
 			wantStore: &okteto.OktetoContextStore{
 				CurrentContext: "context",
 				Contexts: map[string]*okteto.OktetoContext{
-					"context": {Name: "context", Namespace: "n-cfg", Analytics: true},
+					"context": {Name: "context", Namespace: "n-cfg"},
 				},
 			},
 			wantError: false,
@@ -95,7 +95,7 @@ func Test_addKubernetesContext(t *testing.T) {
 			wantStore: &okteto.OktetoContextStore{
 				CurrentContext: "context",
 				Contexts: map[string]*okteto.OktetoContext{
-					"context": {Name: "context", Namespace: "default", Analytics: true},
+					"context": {Name: "context", Namespace: "default"},
 				},
 			},
 			wantError: false,

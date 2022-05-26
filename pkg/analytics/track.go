@@ -359,15 +359,9 @@ func track(event string, success bool, props map[string]interface{}) {
 		return
 	}
 
-	if !okteto.IsContextInitialized() {
-		oktetoLog.Info("failed to send analytics: okteto context not initialized")
+	if !okteto.IsContextInitialized() || (!okteto.Context().Analytics && !okteto.IsOktetoCloud()) {
 		return
 	}
-
-	if disabledByOktetoAdmin() {
-		return
-	}
-
 	// skip events from nested okteto deploys and manifest dependencies
 	origin := config.GetDeployOrigin()
 	if origin == "okteto-deploy" {
@@ -412,11 +406,4 @@ func track(event string, success bool, props map[string]interface{}) {
 	if err := mixpanelClient.Track(getTrackID(), event, e); err != nil {
 		oktetoLog.Infof("Failed to send analytics: %s", err)
 	}
-}
-
-func disabledByOktetoAdmin() bool {
-	if okteto.IsOktetoCloud() {
-		return false
-	}
-	return !okteto.Context().Analytics
 }
