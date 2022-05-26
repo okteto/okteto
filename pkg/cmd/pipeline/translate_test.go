@@ -17,9 +17,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -74,38 +72,4 @@ func Test_translateConfigMap(t *testing.T) {
 			assert.Equal(t, cfg.Data[statusField], tt.status)
 		})
 	}
-}
-
-func Test_AddDevAnnotations(t *testing.T) {
-	ctx := context.Background()
-	d := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "deployment",
-			Namespace:   "namespace",
-			Labels:      map[string]string{},
-			Annotations: map[string]string{},
-		},
-	}
-	fakeClient := fake.NewSimpleClientset(d)
-	t.Setenv(model.GithubRepositoryEnvVar, "git-repo")
-	manifest := &model.Manifest{
-		Namespace: "namespace",
-		Dev: model.ManifestDevs{
-			"deployment": &model.Dev{
-				Name: "deployment",
-			},
-			"autocreate": &model.Dev{
-				Autocreate: true,
-			},
-		},
-	}
-	AddDevAnnotations(ctx, manifest, fakeClient)
-	d, _ = fakeClient.AppsV1().Deployments("namespace").Get(ctx, "deployment", metav1.GetOptions{})
-	assert.Equal(t,
-		d.Annotations,
-		map[string]string{
-			model.OktetoRepositoryAnnotation: "git-repo",
-			model.OktetoDevNameAnnotation:    "deployment",
-		},
-	)
 }
