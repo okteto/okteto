@@ -94,3 +94,54 @@ func Test_getTrackID(t *testing.T) {
 		})
 	}
 }
+
+func Test_disabledInOktetoCluster(t *testing.T) {
+	var tests = []struct {
+		name         string
+		contextStore *okteto.OktetoContextStore
+		expected     bool
+	}{
+		{
+			name: "cloud-always-enabled",
+			contextStore: &okteto.OktetoContextStore{
+				Contexts:       map[string]*okteto.OktetoContext{okteto.CloudURL: {Name: okteto.CloudURL, IsOkteto: true, Analytics: false}},
+				CurrentContext: okteto.CloudURL,
+			},
+			expected: false,
+		},
+		{
+			name: "vanilla-always-enabled",
+			contextStore: &okteto.OktetoContextStore{
+				Contexts:       map[string]*okteto.OktetoContext{"minikube": {Name: "minikube", IsOkteto: false, Analytics: true}},
+				CurrentContext: "minikube",
+			},
+			expected: false,
+		},
+		{
+			name: "admin-enabled",
+			contextStore: &okteto.OktetoContextStore{
+				Contexts:       map[string]*okteto.OktetoContext{"oe": {Name: "oe", IsOkteto: true, Analytics: true}},
+				CurrentContext: "oe",
+			},
+			expected: false,
+		},
+		{
+			name: "admin-disabled",
+			contextStore: &okteto.OktetoContextStore{
+				Contexts:       map[string]*okteto.OktetoContext{"oe": {Name: "oe", IsOkteto: true, Analytics: false}},
+				CurrentContext: "oe",
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			okteto.CurrentStore = tt.contextStore
+			result := disabledByOktetoAdmin()
+			if result != tt.expected {
+				t.Fatalf("test %s, expected %t result %t", tt.name, tt.expected, result)
+			}
+		})
+	}
+}
