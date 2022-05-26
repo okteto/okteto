@@ -41,13 +41,8 @@ func TestMain(m *testing.M) {
 }
 
 func TestRun(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 	ctx := context.Background()
-
-	defer os.RemoveAll(dir)
 
 	p := filepath.Join(dir, fmt.Sprintf("okteto-%s", uuid.New().String()))
 
@@ -108,10 +103,7 @@ func TestRun(t *testing.T) {
 }
 
 func TestRunJustCreateNecessaryFields(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 	ctx := context.Background()
 
 	defer os.RemoveAll(dir)

@@ -66,13 +66,9 @@ func Test_getTrackID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir, err := os.MkdirTemp("", "")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(dir)
+			dir := t.TempDir()
 
-			os.Setenv(model.OktetoHomeEnvVar, dir)
+			t.Setenv(model.OktetoHomeEnvVar, dir)
 
 			a := get()
 			a.MachineID = tt.machineID

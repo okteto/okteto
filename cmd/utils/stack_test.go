@@ -39,10 +39,7 @@ const (
 )
 
 func Test_multipleStack(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
 
 	path, err := createFile(dir, "docker-compose.yml", firstStack)
@@ -85,7 +82,7 @@ func Test_multipleStack(t *testing.T) {
 		t.Fatalf("Expected %v but got %v", svcResult.Image, svc.Image)
 	}
 
-	os.Setenv("OKTETO_BUILD_APP_IMAGE", "test")
+	t.Setenv("OKTETO_BUILD_APP_IMAGE", "test")
 	svcResult.Image = "test"
 
 	stack, err = model.LoadStack("", paths, true)
@@ -107,10 +104,8 @@ func Test_multipleStack(t *testing.T) {
 }
 
 func Test_overrideFileStack(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
+	t.Setenv("OKTETO_BUILD_APP_IMAGE", "test")
 	log.Printf("created tempdir: %s", dir)
 
 	path, err := createFile(dir, "docker-compose.yml", firstStack)

@@ -253,10 +253,7 @@ func TestUpDeployments(t *testing.T) {
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
-	dir, err := os.MkdirTemp("", tName)
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 	defer os.RemoveAll(dir)
 
 	log.Printf("created tempdir: %s", dir)
@@ -440,10 +437,7 @@ func TestUpStatefulset(t *testing.T) {
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
-	dir, err := os.MkdirTemp("", tName)
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
 
 	sfsPath := filepath.Join(dir, "statefulset.yaml")
@@ -597,10 +591,7 @@ func TestUpAutocreate(t *testing.T) {
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
-	dir, err := os.MkdirTemp("", tName)
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
 
 	contentPath := filepath.Join(dir, "index.html")

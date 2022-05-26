@@ -69,20 +69,15 @@ func TestProcessDirectory(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmp, err := os.MkdirTemp("", "")
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			defer os.RemoveAll(tmp)
+			dir := t.TempDir()
 
 			for _, f := range tt.files {
-				if _, err := os.Create(filepath.Join(tmp, f)); err != nil {
+				if _, err := os.Create(filepath.Join(dir, f)); err != nil {
 					t.Fatal(err)
 				}
 			}
 
-			got, err := ProcessDirectory(tmp)
+			got, err := ProcessDirectory(dir)
 
 			if err != nil {
 				t.Fatal(err)
