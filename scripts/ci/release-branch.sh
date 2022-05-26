@@ -30,10 +30,10 @@ CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 BASE_TAG=$(echo $CURRENT_BRANCH | cut -d- -f2)
 
 # stable_regex is a semver version regex for the stable channel
-stable_regex='^\d+\.\d+\.\d+$'
+stable_regex='^v\d+\.\d+\.\d+$'
 
 # beta_regex is a semver version regex for the beta channel
-beta_regex='^\d+\.\d+\.\d+-beta\.[0-9]+$'
+beta_regex='^v\d+\.\d+\.\d+-beta\.[0-9]+$'
 
 # ROOT_MINOR_TAG is the oldest relevent tag we should be able to reach from this
 # release branch
@@ -97,6 +97,6 @@ fi
 echo "Creating and pushing tag ${NEXT_TAG} to remote repository"
 git config user.name "okteto"
 git config user.email "ci@okteto.com"
-git tag "${NEXT_TAG}" -a -m "Okteto CLI ${NEXT_TAG}"
-git push origin "${NEXT_TAG}"
+git tag "v${NEXT_TAG}" -a -m "Okteto CLI ${NEXT_TAG}"
+git push origin "v${NEXT_TAG}"
 )}

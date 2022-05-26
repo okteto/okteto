@@ -4,8 +4,8 @@ aliases:
     echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
     gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
     gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
-  - &release-regex /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
-  - &release-branch-regex /^release-\d+\.\d+$/
+  - &release-regex /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
+  - &release-branch-regex /^lts-\d+\.\d+$/
 version: 2.1
 orbs:
   win: circleci/windows@2.1.0
@@ -13,7 +13,7 @@ orbs:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:1.17.10
+      - image: okteto/golang-ci:fa034da0041b9592e7178eccb8a858601c761338
 
 jobs:
   build:
@@ -253,13 +253,13 @@ workflows:
 
   release-branch: # TODO: extend this to master to release dev channel
     jobs:
-      - test-integration:
-          filters:
-            branches:
-              only: *release-branch-regex
+      # - test-integration:
+      #     filters:
+      #       branches:
+      #         only: *release-branch-regex
       - release-branch:
-          requires:
-            - test-integration
+          # requires:
+          #   - test-integration
           filters:
             branches:
               only: *release-branch-regex
@@ -272,30 +272,30 @@ workflows:
               ignore: /.*/
             tags:
               only: *release-regex
-      - push-image:
-          requires:
-            - build
-          filters:
-            branches:
-              ignore: /.*/
-            tags:
-              only: *release-regex
+      # - push-image:
+      #     requires:
+      #       - build
+      #     filters:
+      #       branches:
+      #         ignore: /.*/
+      #       tags:
+      #         only: *release-regex
       - release:
           context: GKE
           requires:
             - build
-            - push-image
+            # - push-image
           filters:
             branches:
               ignore: /.*/
             tags:
               only: *release-regex
-      - release-external:
-          context: GKE
-          requires:
-            - release
-          filters:
-            branches:
-              ignore: /.*/
-            tags:
-              only: /^\d+\.\d+\.\d+$/
+      # - release-external:
+      #     context: GKE
+      #     requires:
+      #       - release
+      #     filters:
+      #       branches:
+      #         ignore: /.*/
+      #       tags:
+      #         only: /^\d+\.\d+\.\d+$/

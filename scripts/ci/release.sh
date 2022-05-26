@@ -182,7 +182,7 @@ if [ "${preferred_channel}" = "beta" ] || [ "${preferred_channel}" = "dev" ]; th
 fi
 
 echo "Using ghr version: $(ghr -version)"
-ghr \
+echo "ghr \
   -u ${REPO_OWNER} \
   -n "${name}" \
   -r ${REPO_NAME} \
@@ -192,7 +192,7 @@ ghr \
   -replace \
   -prerelease=${prerelease} \
   ${RELEASE_TAG} \
-  ${BIN_PATH}
+  ${BIN_PATH}"
 
 echo "Created Github release: '${name}'"
 
