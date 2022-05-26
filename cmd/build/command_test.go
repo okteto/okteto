@@ -41,7 +41,9 @@ func getManifestWithError(_ string) (*model.Manifest, error) {
 }
 
 func getManifestWithInvalidManifestError(_ string) (*model.Manifest, error) {
-	return nil, oktetoErrors.ErrInvalidManifest
+	return nil, &oktetoErrors.InvalidManifestError{
+		Msg: oktetoErrors.ErrInvalidManifest.Error(),
+	}
 }
 
 func getFakeManifestV1(_ string) (*model.Manifest, error) {
@@ -204,10 +206,14 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 	options := &types.BuildOptions{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 			builder, err := tt.buildCommand.getBuilder(options)
 			if err != nil && !tt.expectedError {
 				t.Errorf("getBuilder() fail on '%s'. Expected nil error, got %s", tt.name, err.Error())
+			}
+
+			if err == nil && tt.expectedError {
+				t.Errorf("getBuilder() fail on '%s'. Expected error, got nil", tt.name)
 			}
 
 			if builder == nil {
