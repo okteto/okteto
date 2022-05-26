@@ -81,18 +81,8 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 		return fmt.Errorf("error getting the image name for the service '%s'. Please specify the full name of the image when using a Kubernetes namespace not managed by Okteto", service)
 	}
 
-	if build.ShouldOptimizeBuild(opts) {
-		oktetoLog.Debug("tag detected, optimizing sha")
-		if skipBuild, err := bc.checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
-			return err
-		} else if skipBuild {
-			oktetoLog.Debugf("Skipping '%s' build. Image already exists at Okteto Registry", service)
-			return nil
-		}
-	}
-
 	imageWithDigest, err := bc.Registry.GetImageTagWithDigest(opts.Tag)
-	if err == oktetoErrors.ErrNotFound {
+	if oktetoErrors.IsNotFound(err) {
 		oktetoLog.Debug("image not found, building image")
 		ch <- service
 		return nil
