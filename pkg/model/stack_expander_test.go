@@ -1,6 +1,7 @@
 package model
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -139,8 +140,9 @@ volumes:
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("CUSTOM_ENV", tt.envValue)
-
+			if err := os.Setenv("CUSTOM_ENV", tt.envValue); err != nil {
+				t.Fatal(err)
+			}
 			result, err := ExpandStackEnvs(tt.file)
 			if err != nil && !tt.expectedError {
 				t.Fatalf("expected no error, but got error: %v", err)
@@ -150,6 +152,7 @@ volumes:
 
 			assert.Equal(t, tt.expectedStack, string(result))
 
+			os.Unsetenv("CUSTOM_ENV")
 		})
 	}
 }

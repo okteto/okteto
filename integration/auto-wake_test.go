@@ -49,7 +49,10 @@ func TestAutoWake(t *testing.T) {
 	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
-	dir := t.TempDir()
+	dir, err := os.MkdirTemp("", tName)
+	if err != nil {
+		t.Fatal(err)
+	}
 	log.Printf("created tempdir: %s", dir)
 
 	dPath := filepath.Join(dir, "deployment.yaml")

@@ -15,6 +15,7 @@ package stack
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"testing"
 
@@ -92,7 +93,7 @@ func Test_loadPath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(model.ComposeFileEnvVar, tt.composeEnvVar)
+			os.Setenv(model.ComposeFileEnvVar, tt.composeEnvVar)
 			result := loadComposePaths(tt.stackPath)
 			assert.Equal(t, tt.expected, result)
 		})

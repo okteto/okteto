@@ -325,7 +325,7 @@ services:
 				devName = "n1"
 			}
 
-			t.Setenv("value", tt.value)
+			os.Setenv("value", tt.value)
 			manifest, err := Read(manifestBytes)
 			if err != nil {
 				t.Fatal(err)
@@ -375,7 +375,7 @@ func Test_loadSelector(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dev := &Dev{Selector: tt.selector}
-			t.Setenv("value", tt.value)
+			os.Setenv("value", tt.value)
 			if err := dev.loadSelector(); err != nil {
 				t.Fatalf("couldn't load selector")
 			}
@@ -468,7 +468,7 @@ services:
 `, tt.image))
 			}
 
-			t.Setenv("tag", tt.tagValue)
+			os.Setenv("tag", tt.tagValue)
 			manifest, err := Read(manifestBytes)
 			if err != nil {
 				t.Fatal(err)
@@ -715,7 +715,11 @@ func Test_validate(t *testing.T) {
 	}
 	defer os.Remove(file.Name())
 
-	dir := t.TempDir()
+	dir, err := os.MkdirTemp("/tmp", "okteto-secret-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(dir)
 
 	tests := []struct {
 		name      string
@@ -1027,7 +1031,7 @@ func TestPersistentVolumeEnabled(t *testing.T) {
 }
 
 func Test_ExpandEnv(t *testing.T) {
-	t.Setenv("BAR", "bar")
+	os.Setenv("BAR", "bar")
 	tests := []struct {
 		name   string
 		value  string
@@ -1075,10 +1079,13 @@ func TestGetTimeout(t *testing.T) {
 		{name: "bad env var", wantErr: true, env: "bad value"},
 	}
 
+	original := os.Getenv(OktetoTimeoutEnvVar)
+	defer os.Setenv(OktetoTimeoutEnvVar, original)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.env != "" {
-				t.Setenv(OktetoTimeoutEnvVar, tt.env)
+				os.Setenv(OktetoTimeoutEnvVar, tt.env)
 			}
 			got, err := GetTimeout()
 			if (err != nil) != tt.wantErr {
@@ -1132,7 +1139,7 @@ func Test_loadEnvFile(t *testing.T) {
 			}
 
 			for k, v := range tt.existing {
-				t.Setenv(k, v)
+				os.Setenv(k, v)
 			}
 
 			if err := godotenv.Load(); err != nil {
@@ -1499,7 +1506,7 @@ func Test_expandEnvFiles(t *testing.T) {
 
 			tt.dev.EnvFiles = EnvFiles{file.Name()}
 
-			t.Setenv("OKTETO_TEST", "myvalue")
+			os.Setenv("OKTETO_TEST", "myvalue")
 
 			if _, err = file.Write(tt.envs); err != nil {
 				t.Fatal("Failed to write to temporary file", err)

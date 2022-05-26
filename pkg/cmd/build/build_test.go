@@ -1,6 +1,7 @@
 package build
 
 import (
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -250,6 +251,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			os.Unsetenv(model.OktetoGitCommitEnvVar)
 			okteto.CurrentStore = &okteto.OktetoContextStore{
 				Contexts: map[string]*okteto.OktetoContext{
 					"test": {
@@ -265,7 +267,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 					tt.serviceName: tt.buildInfo,
 				},
 			}
-			t.Setenv(model.OktetoGitCommitEnvVar, tt.okGitCommitEnv)
+			os.Setenv(model.OktetoGitCommitEnvVar, tt.okGitCommitEnv)
 			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts)
 			assert.Equal(t, tt.expected, result)
 		})
