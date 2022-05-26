@@ -16,14 +16,15 @@ package volumes
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/errors"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -48,29 +49,33 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 
 // CreateForDev deploys the volume claim for a given development container
 func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, devPath string) error {
+	if okteto.IsOktetoCloud() && dev.PersistentVolumeStorageClass() != "" {
+		return fmt.Errorf(
+			"persistentVolume.storageClass: '%s' cannot be used at Cloud, please remove this from your dev manifest and try again",
+			dev.PersistentVolumeStorageClass(),
+		)
+	}
+
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	pvc := translate(dev)
 	k8Volume, err := vClient.Get(ctx, pvc.Name, metav1.GetOptions{})
-	if err != nil && !strings.Contains(err.Error(), "not found") {
+	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("error getting kubernetes volume claim: %s", err)
 	}
 	if k8Volume.Name == "" {
 		oktetoLog.Infof("creating volume claim '%s'", pvc.Name)
-		_, err = vClient.Create(ctx, pvc, metav1.CreateOptions{})
-		if err != nil {
+		if _, err = vClient.Create(ctx, pvc, metav1.CreateOptions{}); err != nil {
 			return fmt.Errorf("error creating kubernetes volume claim: %s", err)
 		}
 	} else {
+		oktetoLog.Infof("updating volume claim '%s'", pvc.Name)
+		// update pvc StorageClassName and VolumeName from the one that already exists
+		pvc.Spec.StorageClassName = k8Volume.Spec.StorageClassName
+		pvc.Spec.VolumeName = k8Volume.Spec.VolumeName
 		if err := checkPVCValues(pvc, dev, devPath); err != nil {
 			return err
 		}
-		oktetoLog.Infof("updating volume claim '%s'", pvc.Name)
-		if pvc.Spec.StorageClassName == nil {
-			pvc.Spec.StorageClassName = k8Volume.Spec.StorageClassName
-		}
-		pvc.Spec.VolumeName = k8Volume.Spec.VolumeName
-		_, err = vClient.Update(ctx, pvc, metav1.UpdateOptions{})
-		if err != nil {
+		if _, err = vClient.Update(ctx, pvc, metav1.UpdateOptions{}); err != nil {
 			return fmt.Errorf("error updating kubernetes volume claim: %s", err)
 		}
 	}
