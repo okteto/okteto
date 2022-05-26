@@ -38,7 +38,7 @@ type CommandError struct {
 
 // Error returns the error message
 func (e UserError) Is(target error) bool {
-	return strings.HasPrefix(e.Error(), target.Error())
+	return e.E == target
 }
 
 // Error returns the error message
