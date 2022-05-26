@@ -15,12 +15,15 @@ package model
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"testing"
 	"time"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -406,171 +409,204 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 }
 
 func TestSetManifestBuildDefaults(t *testing.T) {
+	buildName := "frontend"
+	mockDir := "mockDir"
+
+	dir := t.TempDir()
+	log.Printf("created tempdir: %s", dir)
+
+	// defer al pwd de antes
+	os.Chdir(dir)
+
+	err := os.Mkdir(buildName, os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = os.Mkdir(mockDir, os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log.Printf("created context dir: %s", fmt.Sprintf("%s/%s", dir, buildName))
+
 	tests := []struct {
-		name             string
-		currentManifest  *Manifest
-		expectedManifest *Manifest
+		name              string
+		currentManifest   ManifestBuild
+		expectedManifest  ManifestBuild
+		dockerfileCreated string
+		expectedError     bool
 	}{
 		{
-			name: "name filled, context empty, dockerfile empty",
-			currentManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Name: "name",
-					},
+			name: "Manifest: all empty / Paths: Dockerfile relative to context",
+			currentManifest: ManifestBuild{
+				"test1": &BuildInfo{},
+			},
+			expectedManifest: ManifestBuild{
+				"test1": &BuildInfo{
+					Context:    ".",
+					Dockerfile: "Dockerfile",
 				},
 			},
-			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Context:    "name",
-						Name:       "",
-						Dockerfile: "name/Dockerfile",
-					},
-				},
-			},
+			dockerfileCreated: "Dockerfile",
+			expectedError:     false,
 		},
 		{
-			name: "context filled, dockerfile empty",
-			currentManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Context: "context",
-					},
+			name: "Manifest: all empty / Paths: Dockerfile NOT relative to context",
+			currentManifest: ManifestBuild{
+				"test2": &BuildInfo{},
+			},
+			expectedManifest: ManifestBuild{
+				"test2": &BuildInfo{
+					Context:    ".",
+					Dockerfile: "Dockerfile",
 				},
 			},
-			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Context:    "context",
-						Dockerfile: "context/Dockerfile",
-					},
-				},
-			},
+			dockerfileCreated: filepath.Join(mockDir, "test2.Dockerfile"),
+			expectedError:     true,
 		},
 		{
-			name: "context filled, dockerfile filled",
-			currentManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Context:    "context",
-						Dockerfile: "dockerfile",
-					},
+			name: "Manifest: Context empty / Paths: Dockerfile relative to context",
+			currentManifest: ManifestBuild{
+				"test3": &BuildInfo{
+					Dockerfile: "test3.Dockerfile",
 				},
 			},
-			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Context:    "context",
-						Dockerfile: "dockerfile",
-					},
+			expectedManifest: ManifestBuild{
+				"test3": &BuildInfo{
+					Context:    ".",
+					Dockerfile: "test3.Dockerfile",
 				},
 			},
+			dockerfileCreated: "test3.Dockerfile",
+			expectedError:     false,
 		},
 		{
-			name: "context, name and dockerfile empty, with image empty",
-			currentManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{},
+			name: "Manifest: Context empty / Paths: Dockerfile NOT relative to context",
+			currentManifest: ManifestBuild{
+				"test4": &BuildInfo{
+					Dockerfile: "test4.Dockerfile",
 				},
 			},
-			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Context:    ".",
-						Dockerfile: "Dockerfile",
-					},
+			expectedManifest: ManifestBuild{
+				"test4": &BuildInfo{
+					Context:    ".",
+					Dockerfile: "test4.Dockerfile",
 				},
 			},
+			dockerfileCreated: filepath.Join(mockDir, "test4.Dockerfile"),
+			expectedError:     true,
 		},
 		{
-			name: "context, name and dockerfile empty, with image filled",
-			currentManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Image: "image",
-					},
+			name: "Manifest: Dockerfile empty / Paths: Dockerfile relative to context",
+			currentManifest: ManifestBuild{
+				"test5": &BuildInfo{
+					Context: buildName,
 				},
 			},
-			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Image:      "image",
-						Context:    ".",
-						Dockerfile: "Dockerfile",
-					},
+			expectedManifest: ManifestBuild{
+				"test5": &BuildInfo{
+					Context:    buildName,
+					Dockerfile: filepath.Join(buildName, "Dockerfile"),
 				},
 			},
+			dockerfileCreated: filepath.Join(buildName, "Dockerfile"),
+			expectedError:     false,
 		},
 		{
-			name: "context, name and dockerfile empty, with volumes",
-			currentManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						VolumesToInclude: []StackVolume{{LocalPath: "lp", RemotePath: "rp"}},
-					},
+			name: "Manifest: Dockerfile empty / Paths: Dockerfile NOT relative to context",
+			currentManifest: ManifestBuild{
+				"test6": &BuildInfo{
+					Context: buildName,
 				},
 			},
-			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						VolumesToInclude: []StackVolume{{LocalPath: "lp", RemotePath: "rp"}},
-						Context:          ".",
-						Dockerfile:       "Dockerfile",
-					},
+			expectedManifest: ManifestBuild{
+				"test6": &BuildInfo{
+					Context:    buildName,
+					Dockerfile: "Dockerfile",
 				},
 			},
+			dockerfileCreated: filepath.Join(mockDir, "test6.Dockerfile"),
+			expectedError:     true,
 		},
 		{
-			name: "context, name and dockerfile empty, with volumes and image",
-			currentManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Image:            "image",
-						VolumesToInclude: []StackVolume{{LocalPath: "lp", RemotePath: "rp"}},
-					},
+			name: "Manifest: Context and Dockerfile filled / Paths: Dockerfile relative to context",
+			currentManifest: ManifestBuild{
+				"test7": &BuildInfo{
+					Context:    buildName,
+					Dockerfile: "test7.Dockerfile",
 				},
 			},
-			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Image:            "image",
-						VolumesToInclude: []StackVolume{{LocalPath: "lp", RemotePath: "rp"}},
-					},
+			expectedManifest: ManifestBuild{
+				"test7": &BuildInfo{
+					Context:    buildName,
+					Dockerfile: filepath.Join(buildName, "test7.Dockerfile"),
 				},
 			},
+			dockerfileCreated: filepath.Join(buildName, "test7.Dockerfile"),
+			expectedError:     false,
 		},
 		{
-			name: "context, name, dockerfile, image and volumes filled",
-			currentManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Image:            "image",
-						VolumesToInclude: []StackVolume{{LocalPath: "lp", RemotePath: "rp"}},
-						Name:             "name",
-						Context:          "context",
-						Dockerfile:       "Dockerfile",
-					},
+			name: "Manifest: Context and Dockerfile filled / Paths: Dockerfile NOT relative to context",
+			currentManifest: ManifestBuild{
+				"test8": &BuildInfo{
+					Context:    buildName,
+					Dockerfile: "test8.Dockerfile",
 				},
 			},
-			expectedManifest: &Manifest{
-				Build: ManifestBuild{
-					"test": &BuildInfo{
-						Image:            "image",
-						VolumesToInclude: []StackVolume{{LocalPath: "lp", RemotePath: "rp"}},
-						Name:             "",
-						Context:          "name",
-						Dockerfile:       "Dockerfile",
-					},
+			expectedManifest: ManifestBuild{
+				"test8": &BuildInfo{
+					Context:    buildName,
+					Dockerfile: "test8.Dockerfile",
 				},
 			},
+			dockerfileCreated: "test8.Dockerfile",
+			expectedError:     true,
 		},
 	}
 
 	for _, tt := range tests {
+
 		t.Run(tt.name, func(t *testing.T) {
-			tt.currentManifest.setDefaults()
+
+			if tt.dockerfileCreated != "" {
+				defer removeFile(tt.dockerfileCreated)
+				// create test dockerfile
+				_, err := os.Create(tt.dockerfileCreated)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				log.Printf("created docker file: %s", tt.dockerfileCreated)
+			}
+
+			buildKey := reflect.ValueOf(tt.currentManifest).MapKeys()[0].String()
+			errManifest := tt.currentManifest[buildKey].setBuildDefaults()
+
+			if errManifest != nil {
+				oktetoLog.Warning(fmt.Sprintf("Build '%s': %s", buildKey, errManifest.Error()))
+			}
+
+			if errManifest != nil && !tt.expectedError {
+				t.Fatal(err)
+			}
+
+			if errManifest == nil && tt.expectedError {
+				t.Fatal("error not thrown")
+			}
+
 			assert.Equal(t, tt.expectedManifest, tt.currentManifest)
+
 		})
 	}
+}
+
+func removeFile(s string) error {
+	// rm context and dockerfile
+	err := os.Remove(s)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

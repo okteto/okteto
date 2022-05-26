@@ -717,15 +717,15 @@ func (m *Manifest) setDefaults() error {
 		}
 	}
 
-	for _, b := range m.Build {
+	for k, b := range m.Build {
 		if b.Name != "" {
 			b.Context = b.Name
 			b.Name = ""
 		}
-		b.setDockerfileDefaults()
 
-		if !(b.Image != "" && len(b.VolumesToInclude) > 0 && b.Dockerfile == "") {
-			b.setBuildDefaults()
+		err := b.setBuildDefaults()
+		if err != nil {
+			oktetoLog.Warning(fmt.Sprintf("Build '%s': %s", k, err.Error()))
 		}
 	}
 	return nil

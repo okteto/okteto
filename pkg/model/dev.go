@@ -546,24 +546,29 @@ func (dev *Dev) SetDefaults() error {
 	return nil
 }
 
-func (b *BuildInfo) setBuildDefaults() {
+func (b *BuildInfo) setBuildDefaults() error {
 	if b.Context == "" {
 		b.Context = "."
 	}
-	if _, err := url.ParseRequestURI(b.Context); err != nil && b.Dockerfile == "" {
+
+	if b.Dockerfile == "" {
 		b.Dockerfile = "Dockerfile"
 	}
-}
 
-func (b *BuildInfo) setDockerfileDefaults() {
-	if b.Context == "" {
-		return
+	if filepath.IsAbs(b.Dockerfile) {
+		return nil
 	}
-	if b.Dockerfile == "" {
-		b.Dockerfile = filepath.Join(b.Context, "Dockerfile")
 
-		return
+	file := filepath.Join(b.Context, b.Dockerfile)
+	if !FileExistsAndNotDir(file) {
+		// if we can't find the Dockerfile we leave it as it is in the manifest, and the next build/push/deploy operation will find ir or return error
+		// for example in "." but in any other directory the user has it
+		return fmt.Errorf("Dockerfile '%s' is not in a relative path to context '%s'", b.Dockerfile, b.Context)
 	}
+
+	// if we find Dockerfile in context path, update the field to use it later where it really is
+	b.Dockerfile = file
+	return nil
 }
 
 func (dev *Dev) setRunAsUserDefaults(main *Dev) {

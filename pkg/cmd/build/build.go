@@ -18,7 +18,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/docker/docker/api/types/versions"
@@ -249,9 +248,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	}
 
 	file := b.Dockerfile
-	if !filepath.IsAbs(b.Dockerfile) && !model.FileExistsAndNotDir(file) {
-		file = filepath.Join(b.Context, b.Dockerfile)
-	}
+
 	opts := &types.BuildOptions{
 		CacheFrom:  b.CacheFrom,
 		Target:     b.Target,
