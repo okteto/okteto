@@ -172,7 +172,7 @@ var (
 	ErrDevContainerNotExists = "development container '%s' doesn't exist"
 
 	//ErrInvalidManifest is raised when cannot unmarshal manifest properly
-	ErrInvalidManifest = fmt.Errorf("invalid manifest")
+	ErrInvalidManifest = "invalid manifest"
 )
 
 // IsForbidden raised if the Okteto API returns 401

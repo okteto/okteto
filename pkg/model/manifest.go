@@ -627,7 +627,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 	manifest, err := Read(b)
 	if err != nil {
 		return nil, &oktetoErrors.InvalidManifestError{
-			Msg: fmt.Sprintf("%s:\n%s", oktetoErrors.ErrInvalidManifest.Error(), err.Error()),
+			Msg: fmt.Sprintf("%s:\n%s", oktetoErrors.ErrInvalidManifest, err.Error()),
 		}
 	}
 
