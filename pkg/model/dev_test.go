@@ -482,7 +482,7 @@ services:
 			}
 
 			if img.Name != tt.want {
-				t.Errorf("got: '%s', expected: '%s'", img, tt.want)
+				t.Errorf("got: '%s', expected: '%s'", img.Name, tt.want)
 			}
 		})
 	}

@@ -2,7 +2,6 @@ package build
 
 import (
 	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -172,7 +171,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
-				File:       filepath.Join("service", "CustomDockerfile"),
+				File:       "CustomDockerfile",
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
@@ -203,7 +202,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/mycustomimage:dev",
-				File:       filepath.Join("service", "CustomDockerfile"),
+				File:       "CustomDockerfile",
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},

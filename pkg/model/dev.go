@@ -116,15 +116,16 @@ type Args struct {
 
 // BuildInfo represents the build info to generate an image
 type BuildInfo struct {
-	Name             string        `yaml:"name,omitempty"`
-	Context          string        `yaml:"context,omitempty"`
-	Dockerfile       string        `yaml:"dockerfile,omitempty"`
-	CacheFrom        []string      `yaml:"cache_from,omitempty"`
-	Target           string        `yaml:"target,omitempty"`
-	Args             Environment   `yaml:"args,omitempty"`
-	Image            string        `yaml:"image,omitempty"`
-	VolumesToInclude []StackVolume `yaml:"-"`
-	ExportCache      string        `yaml:"export_cache,omitempty"`
+	Name              string        `yaml:"name,omitempty"`
+	Context           string        `yaml:"context,omitempty"`
+	Dockerfile        string        `yaml:"dockerfile,omitempty"`
+	dockerFileUpdated bool          `yaml:"-"`
+	CacheFrom         []string      `yaml:"cache_from,omitempty"`
+	Target            string        `yaml:"target,omitempty"`
+	Args              Environment   `yaml:"args,omitempty"`
+	Image             string        `yaml:"image,omitempty"`
+	VolumesToInclude  []StackVolume `yaml:"-"`
+	ExportCache       string        `yaml:"export_cache,omitempty"`
 }
 
 // Volume represents a volume in the development container
@@ -547,11 +548,15 @@ func (dev *Dev) SetDefaults() error {
 }
 
 func (b *BuildInfo) setBuildDefaults() error {
+	if b.dockerFileUpdated {
+		return nil
+	}
+
 	if b.Context == "" {
 		b.Context = "."
 	}
 
-	if b.Dockerfile == "" {
+	if _, err := url.ParseRequestURI(b.Context); err != nil && b.Dockerfile == "" {
 		b.Dockerfile = "Dockerfile"
 	}
 
@@ -568,6 +573,7 @@ func (b *BuildInfo) setBuildDefaults() error {
 
 	// if we find Dockerfile in context path, update the field to use it later where it really is
 	b.Dockerfile = file
+	b.dockerFileUpdated = true
 	return nil
 }
 

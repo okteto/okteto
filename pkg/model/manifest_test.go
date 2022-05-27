@@ -412,11 +412,16 @@ func TestSetManifestBuildDefaults(t *testing.T) {
 	buildName := "frontend"
 	mockDir := "mockDir"
 
+	originalWd, errwd := os.Getwd()
+	if errwd != nil {
+		t.Fatal(errwd)
+	}
+
 	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
 
-	// defer al pwd de antes
 	os.Chdir(dir)
+	defer os.Chdir(originalWd)
 
 	err := os.Mkdir(buildName, os.ModePerm)
 	if err != nil {
@@ -428,7 +433,7 @@ func TestSetManifestBuildDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	log.Printf("created context dir: %s", fmt.Sprintf("%s/%s", dir, buildName))
+	log.Printf("created context dir: %s", filepath.Join(dir, buildName))
 
 	tests := []struct {
 		name              string
@@ -444,8 +449,9 @@ func TestSetManifestBuildDefaults(t *testing.T) {
 			},
 			expectedManifest: ManifestBuild{
 				"test1": &BuildInfo{
-					Context:    ".",
-					Dockerfile: "Dockerfile",
+					Context:           ".",
+					Dockerfile:        "Dockerfile",
+					dockerFileUpdated: true,
 				},
 			},
 			dockerfileCreated: "Dockerfile",
@@ -474,8 +480,9 @@ func TestSetManifestBuildDefaults(t *testing.T) {
 			},
 			expectedManifest: ManifestBuild{
 				"test3": &BuildInfo{
-					Context:    ".",
-					Dockerfile: "test3.Dockerfile",
+					Context:           ".",
+					Dockerfile:        "test3.Dockerfile",
+					dockerFileUpdated: true,
 				},
 			},
 			dockerfileCreated: "test3.Dockerfile",
@@ -506,8 +513,9 @@ func TestSetManifestBuildDefaults(t *testing.T) {
 			},
 			expectedManifest: ManifestBuild{
 				"test5": &BuildInfo{
-					Context:    buildName,
-					Dockerfile: filepath.Join(buildName, "Dockerfile"),
+					Context:           buildName,
+					Dockerfile:        filepath.Join(buildName, "Dockerfile"),
+					dockerFileUpdated: true,
 				},
 			},
 			dockerfileCreated: filepath.Join(buildName, "Dockerfile"),
@@ -539,8 +547,9 @@ func TestSetManifestBuildDefaults(t *testing.T) {
 			},
 			expectedManifest: ManifestBuild{
 				"test7": &BuildInfo{
-					Context:    buildName,
-					Dockerfile: filepath.Join(buildName, "test7.Dockerfile"),
+					Context:           buildName,
+					Dockerfile:        filepath.Join(buildName, "test7.Dockerfile"),
+					dockerFileUpdated: true,
 				},
 			},
 			dockerfileCreated: filepath.Join(buildName, "test7.Dockerfile"),
