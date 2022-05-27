@@ -66,9 +66,7 @@ func TestApplyPipeline(t *testing.T) {
 
 	namespace := getTestNamespace()
 	oktetoPath, err := integration.GetOktetoPath()
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, integration.RunOktetoKubeconfig(oktetoPath))
@@ -90,7 +88,7 @@ func executeApply(namespace string) error {
 		return err
 	}
 
-	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, applyPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, applyPath)
 	actionFolder := strings.Split(applyPath, "/")[1]
 	log.Printf("cloning apply repository: %s", actionRepo)
 	err = integration.CloneGitRepo(actionRepo)

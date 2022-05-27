@@ -60,7 +60,7 @@ func TestStacksActions(t *testing.T) {
 
 func executeDeployStackAction(namespace, filePath string) error {
 
-	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, deployStackPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, deployStackPath)
 	actionFolder := strings.Split(deployStackPath, "/")[1]
 	log.Printf("cloning pipeline repository: %s", actionRepo)
 	err := integration.CloneGitRepo(actionRepo)
@@ -85,7 +85,7 @@ func executeDeployStackAction(namespace, filePath string) error {
 }
 
 func executeDestroyStackAction(namespace, filePath string) error {
-	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, destroyStackPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, destroyStackPath)
 	actionFolder := strings.Split(destroyStackPath, "/")[1]
 	log.Printf("cloning destroy path repository: %s", actionRepo)
 	if err := integration.CloneGitRepo(actionRepo); err != nil {

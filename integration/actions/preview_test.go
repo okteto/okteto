@@ -47,7 +47,7 @@ func executeDeployPreviewAction(namespace string) error {
 	if err != nil {
 		return err
 	}
-	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, deployPreviewPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, deployPreviewPath)
 	actionFolder := strings.Split(deployPreviewPath, "/")[1]
 	log.Printf("cloning destroy path repository: %s", actionRepo)
 	if err := integration.CloneGitRepo(actionRepo); err != nil {
@@ -58,7 +58,7 @@ func executeDeployPreviewAction(namespace string) error {
 
 	log.Printf("Deploying preview %s", namespace)
 	command := oktetoPath
-	args := []string{"preview", "deploy", namespace, "--scope", "personal", "--branch", "master", "--repository", fmt.Sprintf("%s/%s", githubUrl, pipelineRepo), "--wait"}
+	args := []string{"preview", "deploy", namespace, "--scope", "personal", "--branch", "master", "--repository", fmt.Sprintf("%s/%s", githubHTTPSURL, pipelineRepo), "--wait"}
 	cmd := exec.Command(command, args...)
 	cmd.Env = os.Environ()
 	o, err := cmd.CombinedOutput()
@@ -71,7 +71,7 @@ func executeDeployPreviewAction(namespace string) error {
 }
 
 func executeDestroyPreviewAction(namespace string) error {
-	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, destroyPreviewPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, destroyPreviewPath)
 	actionFolder := strings.Split(destroyPreviewPath, "/")[1]
 	log.Printf("cloning destroy path repository: %s", actionRepo)
 	if err := integration.CloneGitRepo(actionRepo); err != nil {

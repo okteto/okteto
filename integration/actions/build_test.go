@@ -58,7 +58,7 @@ func createDockerfile(t *testing.T) (string, error) {
 
 func executeBuildCommand(namespace, dockerfile string) error {
 	actionFolder := strings.Split(buildPath, "/")[1]
-	if err := integration.CloneGitRepo(fmt.Sprintf("%s%s.git", githubHttpsUrl, buildPath)); err != nil {
+	if err := integration.CloneGitRepo(fmt.Sprintf("%s%s.git", githubHTTPSURL, buildPath)); err != nil {
 		return err
 	}
 	defer integration.DeleteGitRepo(actionFolder)

@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	githubHttpsUrl = "https://github.com/"
+	githubHTTPSURL = "https://github.com/"
 )
 
 var (

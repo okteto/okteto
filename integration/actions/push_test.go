@@ -53,7 +53,7 @@ func executePushAction(t *testing.T, namespace string) error {
 	if err != nil {
 		return err
 	}
-	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, pushPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, pushPath)
 	actionFolder := strings.Split(pushPath, "/")[1]
 	log.Printf("cloning push repository: %s", actionRepo)
 	err = integration.CloneGitRepo(actionRepo)

@@ -35,7 +35,7 @@ const (
 	deployPipelinePath  = "okteto/pipeline"
 	destroyPipelinePath = "okteto/destroy-pipeline"
 
-	githubUrl = "https://github.com"
+	githubURL = "https://github.com"
 
 	pipelineRepo    = "okteto/movies"
 	pipelineRepoURL = "git@github.com:okteto/movies.git"
@@ -54,7 +54,7 @@ func TestPipelineActions(t *testing.T) {
 }
 
 func executeDeployPipelineAction(t *testing.T, namespace string) error {
-	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, deployPipelinePath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, deployPipelinePath)
 	actionFolder := strings.Split(deployPipelinePath, "/")[1]
 	log.Printf("cloning pipeline repository: %s", actionRepo)
 	err := integration.CloneGitRepoWithBranch(actionRepo, "master")
@@ -66,7 +66,7 @@ func executeDeployPipelineAction(t *testing.T, namespace string) error {
 
 	t.Setenv(model.GithubRepositoryEnvVar, pipelineRepo)
 	t.Setenv(model.GithubRefEnvVar, "master")
-	t.Setenv(model.GithubServerURLEnvVar, githubUrl)
+	t.Setenv(model.GithubServerURLEnvVar, githubHTTPSURL)
 
 	log.Printf("deploying pipeline %s", namespace)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
@@ -93,7 +93,7 @@ func executeDeployPipelineAction(t *testing.T, namespace string) error {
 }
 
 func executeDestroyPipelineAction(namespace string) error {
-	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, destroyPipelinePath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, destroyPipelinePath)
 	actionFolder := strings.Split(destroyPipelinePath, "/")[1]
 	log.Printf("cloning destroy pipeline repository: %s", actionRepo)
 	if err := integration.CloneGitRepo(actionRepo); err != nil {

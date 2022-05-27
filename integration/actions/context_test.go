@@ -57,7 +57,7 @@ func executeContextAction() error {
 		token = okteto.Context().Token
 	}
 
-	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, contextPath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, contextPath)
 	actionFolder := strings.Split(contextPath, "/")[1]
 	log.Printf("cloning build action repository: %s", actionRepo)
 	if err := integration.CloneGitRepo(actionRepo); err != nil {

@@ -49,7 +49,7 @@ func TestNamespaceActionsPipeline(t *testing.T) {
 
 func executeCreateNamespaceAction(namespace string) error {
 	okteto.CurrentStore = nil
-	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, createNamespacePath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, createNamespacePath)
 	actionFolder := strings.Split(createNamespacePath, "/")[1]
 	log.Printf("cloning create namespace repository: %s", actionRepo)
 	if err := integration.CloneGitRepo(actionRepo); err != nil {
@@ -80,7 +80,7 @@ func executeCreateNamespaceAction(namespace string) error {
 
 func executeChangeNamespaceAction(namespace string) error {
 	okteto.CurrentStore = nil
-	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, namespacePath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, namespacePath)
 	actionFolder := strings.Split(namespacePath, "/")[1]
 	log.Printf("cloning changing namespace repository: %s", actionRepo)
 	if err := integration.CloneGitRepo(actionRepo); err != nil {
@@ -108,7 +108,7 @@ func executeChangeNamespaceAction(namespace string) error {
 }
 
 func executeDeleteNamespaceAction(namespace string) error {
-	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, deleteNamespacePath)
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, deleteNamespacePath)
 	actionFolder := strings.Split(deleteNamespacePath, "/")[1]
 	log.Printf("cloning changing namespace repository: %s", actionRepo)
 	if err := integration.CloneGitRepo(actionRepo); err != nil {
