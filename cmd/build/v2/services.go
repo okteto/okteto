@@ -81,18 +81,8 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 		return fmt.Errorf("error getting the image name for the service '%s'. Please specify the full name of the image when using a Kubernetes namespace not managed by Okteto", service)
 	}
 
-	if build.ShouldOptimizeBuild(opts) {
-		oktetoLog.Debug("tag detected, optimizing sha")
-		if skipBuild, err := bc.checkImageAtGlobalAndSetEnvs(service, opts); err != nil {
-			return err
-		} else if skipBuild {
-			oktetoLog.Debugf("Skipping '%s' build. Image already exists at Okteto Registry", service)
-			return nil
-		}
-	}
-
 	imageWithDigest, err := bc.Registry.GetImageTagWithDigest(opts.Tag)
-	if err == oktetoErrors.ErrNotFound {
+	if oktetoErrors.IsNotFound(err) {
 		oktetoLog.Debug("image not found, building image")
 		ch <- service
 		return nil
@@ -110,22 +100,4 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 		}
 	}
 	return nil
-}
-
-func (bc *OktetoBuilder) checkImageAtGlobalAndSetEnvs(service string, options *types.BuildOptions) (bool, error) {
-	globalReference := strings.Replace(options.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
-
-	imageWithDigest, err := bc.Registry.GetImageTagWithDigest(globalReference)
-	if err == oktetoErrors.ErrNotFound {
-		oktetoLog.Debug("image not built at global registry, not running optimization for deployment")
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-
-	bc.SetServiceEnvVars(service, imageWithDigest)
-	oktetoLog.Debug("image already built at global registry, running optimization for deployment")
-	return true, nil
-
 }

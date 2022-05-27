@@ -319,9 +319,6 @@ const (
 	// OktetoAutogenerateStignoreEnvVar skips the autogenerate stignore dialog and creates the default one
 	OktetoAutogenerateStignoreEnvVar = "OKTETO_AUTOGENERATE_STIGNORE"
 
-	// OktetoGitCommitPrefix prefix added to OKTETO_GIT_COMMIT when inferred by cli
-	OktetoGitCommitPrefix = "dev"
-
 	// OktetoDefaultImageTag default tag assigned to image to build
 	OktetoDefaultImageTag = "okteto"
 
