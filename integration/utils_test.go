@@ -37,10 +37,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type deployment struct {
-	Name string
-}
-
 var (
 	user          = ""
 	kubectlBinary = "kubectl"
@@ -64,39 +60,6 @@ func TestMain(m *testing.M) {
 	}
 
 	os.Exit(m.Run())
-}
-
-func cloneGitRepo(ctx context.Context, name string) error {
-	log.Printf("cloning git repo %s", name)
-	cmd := exec.Command("git", "clone", name)
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("cloning git repo %s failed: %s - %s", name, string(o), err)
-	}
-	log.Printf("clone git repo %s success", name)
-	return nil
-}
-
-func cloneGitRepoWithBranch(ctx context.Context, name, branch string) error {
-	log.Printf("cloning git repo %s", name)
-	cmd := exec.Command("git", "clone", "--branch", branch, name)
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("cloning git repo %s failed: %s - %s", name, string(o), err)
-	}
-	log.Printf("clone git repo %s success", name)
-	return nil
-}
-
-func deleteGitRepo(ctx context.Context, path string) error {
-	log.Printf("delete git repo %s", path)
-	err := os.RemoveAll(path)
-	if err != nil {
-		return fmt.Errorf("delete git repo %s failed: %w", path, err)
-	}
-
-	log.Printf("deleted git repo %s", path)
-	return nil
 }
 
 func getOktetoPath(ctx context.Context) (string, error) {
