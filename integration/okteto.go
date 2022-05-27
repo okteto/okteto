@@ -19,9 +19,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -89,6 +93,58 @@ func RunOktetoCreateNamespace(oktetoPath, namespace string) error {
 		return err
 	}
 	return nil
+}
+
+// RunOktetoNamespace runs okteto namespace command
+func RunOktetoNamespace(oktetoPath, namespace string) error {
+	okteto.CurrentStore = nil
+	log.Printf("changing to namespace %s", namespace)
+	args := []string{"namespace", namespace, "-l", "debug"}
+	cmd := exec.Command(oktetoPath, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
+	}
+
+	log.Printf("namespace output: \n%s\n", string(o))
+
+	n := okteto.Context().Namespace
+	if namespace != n {
+		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
+	}
+	args = []string{"kubeconfig"}
+	cmd = exec.Command(oktetoPath, args...)
+	cmd.Env = os.Environ()
+	o, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
+	}
+
+	return nil
+}
+
+// RunOktetoDeleteNamespace runs okteto namespace delete
+func RunOktetoDeleteNamespace(oktetoPath, namespace string) error {
+	log.Printf("okteto delete namespace %s", namespace)
+	deleteCMD := exec.Command(oktetoPath, "namespace", "delete", namespace)
+	deleteCMD.Env = os.Environ()
+	o, err := deleteCMD.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
+	}
+	return nil
+}
+
+// GetTestNamespace returns the name for a namespace
+func GetTestNamespace(prefix, user string) string {
+	namespace := fmt.Sprintf("%s-%s-%d-%s", prefix, runtime.GOOS, time.Now().Unix(), user)
+	return strings.ToLower(namespace)
+}
+
+// GetCurrentNamespace returns the current namespace of the kubeconfig path
+func GetCurrentNamespace() string {
+	return kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
 }
 
 // SkipIfWindows skips a tests if is on a windows environment
