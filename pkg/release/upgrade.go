@@ -11,15 +11,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package release
 
 import (
-	"context"
+	"bufio"
 	"fmt"
+	"net/http"
 	"runtime"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/google/go-github/github"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
@@ -30,9 +31,9 @@ func UpgradeAvailable() string {
 		return ""
 	}
 
-	v, err := GetLatestVersionFromGithub()
+	v, err := GetLatestVersion()
 	if err != nil {
-		oktetoLog.Infof("failed to get latest version from github: %s", err)
+		oktetoLog.Infof("failed to get latest version: %s", err)
 		return ""
 	}
 
@@ -52,22 +53,34 @@ func UpgradeAvailable() string {
 	return ""
 }
 
-// GetLatestVersionFromGithub returns the latest okteto version from GitHub
-func GetLatestVersionFromGithub() (string, error) {
-	client := github.NewClient(nil)
-	ctx := context.Background()
-	releases, _, err := client.Repositories.ListReleases(ctx, "okteto", "okteto", &github.ListOptions{PerPage: 10})
+func GetLatestVersion() (string, error) {
+	c := http.Client{
+		Timeout: 5 * time.Second,
+	}
+	channel, err := GetReleaseChannel()
 	if err != nil {
-		return "", fmt.Errorf("fail to get releases from github: %s", err)
+		oktetoLog.Debugf("failed to get local release channel: %v. Using stable channel", err)
+		channel = releaseChannelStable
+	}
+	uri := fmt.Sprintf("%s/cli/%s/versions", downloadsUrl, channel)
+	req, err := http.NewRequest("GET", uri, nil)
+	if err != nil {
+		return "", err
+	}
+	oktetoLog.Debugf("starting GET request to: %s", uri)
+	resp, err := c.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	scanner := bufio.NewScanner(resp.Body)
+	var v string
+	for scanner.Scan() {
+		v = scanner.Text()
 	}
 
-	for _, r := range releases {
-		if !r.GetPrerelease() && !r.GetDraft() {
-			return r.GetTagName(), nil
-		}
-	}
-
-	return "", fmt.Errorf("failed to find latest release")
+	return v, scanner.Err()
 }
 
 func ShouldNotify(latest, current *semver.Version) bool {

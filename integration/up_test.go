@@ -38,13 +38,13 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	ps "github.com/mitchellh/go-ps"
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/release"
 	"github.com/okteto/okteto/pkg/syncthing"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -191,7 +191,7 @@ environment:
 var mode string
 
 func TestGetVersion(t *testing.T) {
-	v, err := utils.GetLatestVersionFromGithub()
+	v, err := release.GetLatestVersion()
 	if err != nil {
 		t.Fatal(err)
 	}
