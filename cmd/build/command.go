@@ -88,8 +88,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 
 	manifest, err := bc.GetManifest(options.File)
 	if err != nil {
-		var invalidManifestErr *oktetoErrors.InvalidManifestError
-		if errors.As(err, &invalidManifestErr) {
+		if errors.Is(err, oktetoErrors.ErrInvalidManifest) {
 			return nil, err
 		}
 

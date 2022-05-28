@@ -41,9 +41,7 @@ func getManifestWithError(_ string) (*model.Manifest, error) {
 }
 
 func getManifestWithInvalidManifestError(_ string) (*model.Manifest, error) {
-	return nil, &oktetoErrors.InvalidManifestError{
-		Msg: oktetoErrors.ErrInvalidManifest,
-	}
+	return nil, oktetoErrors.ErrInvalidManifest
 }
 
 func getFakeManifestV1(_ string) (*model.Manifest, error) {
