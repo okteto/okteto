@@ -36,10 +36,10 @@ const (
 	stackFile = `
 name: test
 services:
-app:
-image: nginx
-ports:
-  - 8080:80
+  app:
+    image: nginx
+    ports:
+    - 8080:80
 `
 )
 
@@ -63,9 +63,11 @@ func executeDeployStackAction(namespace, filePath string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, deployStackPath)
 	actionFolder := strings.Split(deployStackPath, "/")[1]
 	log.Printf("cloning pipeline repository: %s", actionRepo)
-	err := integration.CloneGitRepo(actionRepo)
-	if err != nil {
-		return err
+	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
+		if err := integration.CloneGitRepo(actionRepo); err != nil {
+			return err
+		}
+		log.Printf("cloned repo %s main branch\n", actionRepo)
 	}
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer integration.DeleteGitRepo(actionFolder)
@@ -88,8 +90,11 @@ func executeDestroyStackAction(namespace, filePath string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, destroyStackPath)
 	actionFolder := strings.Split(destroyStackPath, "/")[1]
 	log.Printf("cloning destroy path repository: %s", actionRepo)
-	if err := integration.CloneGitRepo(actionRepo); err != nil {
-		return err
+	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
+		if err := integration.CloneGitRepo(actionRepo); err != nil {
+			return err
+		}
+		log.Printf("cloned repo %s main branch\n", actionRepo)
 	}
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer integration.DeleteGitRepo(actionFolder)

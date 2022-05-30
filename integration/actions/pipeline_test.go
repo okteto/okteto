@@ -57,9 +57,11 @@ func executeDeployPipelineAction(t *testing.T, namespace string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, deployPipelinePath)
 	actionFolder := strings.Split(deployPipelinePath, "/")[1]
 	log.Printf("cloning pipeline repository: %s", actionRepo)
-	err := integration.CloneGitRepoWithBranch(actionRepo, "master")
-	if err != nil {
-		return err
+	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
+		if err := integration.CloneGitRepo(actionRepo); err != nil {
+			return err
+		}
+		log.Printf("cloned repo %s main branch\n", actionRepo)
 	}
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer integration.DeleteGitRepo(actionFolder)

@@ -52,10 +52,13 @@ func executeCreateNamespaceAction(namespace string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, createNamespacePath)
 	actionFolder := strings.Split(createNamespacePath, "/")[1]
 	log.Printf("cloning create namespace repository: %s", actionRepo)
-	if err := integration.CloneGitRepo(actionRepo); err != nil {
-		return err
+	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
+		if err := integration.CloneGitRepo(actionRepo); err != nil {
+			return err
+		}
+		log.Printf("cloned repo %s main branch\n", actionRepo)
 	}
-	log.Printf("cloned repo %s \n", actionRepo)
+
 	defer integration.DeleteGitRepo(actionFolder)
 
 	log.Printf("creating namespace %s", namespace)
@@ -83,8 +86,11 @@ func executeChangeNamespaceAction(namespace string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, namespacePath)
 	actionFolder := strings.Split(namespacePath, "/")[1]
 	log.Printf("cloning changing namespace repository: %s", actionRepo)
-	if err := integration.CloneGitRepo(actionRepo); err != nil {
-		return err
+	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
+		if err := integration.CloneGitRepo(actionRepo); err != nil {
+			return err
+		}
+		log.Printf("cloned repo %s main branch\n", actionRepo)
 	}
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer integration.DeleteGitRepo(actionFolder)
@@ -111,8 +117,11 @@ func executeDeleteNamespaceAction(namespace string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, deleteNamespacePath)
 	actionFolder := strings.Split(deleteNamespacePath, "/")[1]
 	log.Printf("cloning changing namespace repository: %s", actionRepo)
-	if err := integration.CloneGitRepo(actionRepo); err != nil {
-		return err
+	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
+		if err := integration.CloneGitRepo(actionRepo); err != nil {
+			return err
+		}
+		log.Printf("cloned repo %s main branch\n", actionRepo)
 	}
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer integration.DeleteGitRepo(actionFolder)

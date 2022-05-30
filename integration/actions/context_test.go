@@ -60,8 +60,11 @@ func executeContextAction() error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, contextPath)
 	actionFolder := strings.Split(contextPath, "/")[1]
 	log.Printf("cloning build action repository: %s", actionRepo)
-	if err := integration.CloneGitRepo(actionRepo); err != nil {
-		return err
+	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
+		if err := integration.CloneGitRepo(actionRepo); err != nil {
+			return err
+		}
+		log.Printf("cloned repo %s main branch\n", actionRepo)
 	}
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer integration.DeleteGitRepo(actionFolder)

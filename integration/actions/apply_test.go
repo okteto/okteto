@@ -28,6 +28,7 @@ import (
 	"text/template"
 
 	"github.com/okteto/okteto/integration"
+	"github.com/okteto/okteto/integration/commands"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -69,7 +70,7 @@ func TestApplyPipeline(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
-	assert.NoError(t, integration.RunOktetoKubeconfig(oktetoPath))
+	assert.NoError(t, commands.RunOktetoKubeconfig(oktetoPath))
 	assert.NoError(t, executeApply(namespace))
 	assert.NoError(t, executeDeleteNamespaceAction(namespace))
 }
@@ -91,9 +92,11 @@ func executeApply(namespace string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, applyPath)
 	actionFolder := strings.Split(applyPath, "/")[1]
 	log.Printf("cloning apply repository: %s", actionRepo)
-	err = integration.CloneGitRepo(actionRepo)
-	if err != nil {
-		return err
+	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
+		if err := integration.CloneGitRepo(actionRepo); err != nil {
+			return err
+		}
+		log.Printf("cloned repo %s main branch\n", actionRepo)
 	}
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer integration.DeleteGitRepo(actionFolder)

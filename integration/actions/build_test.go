@@ -53,13 +53,17 @@ func createDockerfile(t *testing.T) (string, error) {
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
 		return "", err
 	}
-	return dir, nil
+	return dockerfilePath, nil
 }
 
 func executeBuildCommand(namespace, dockerfile string) error {
 	actionFolder := strings.Split(buildPath, "/")[1]
-	if err := integration.CloneGitRepo(fmt.Sprintf("%s%s.git", githubHTTPSURL, buildPath)); err != nil {
-		return err
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, buildPath)
+	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
+		if err := integration.CloneGitRepo(actionRepo); err != nil {
+			return err
+		}
+		log.Printf("cloned repo %s main branch\n", actionRepo)
 	}
 	defer integration.DeleteGitRepo(actionFolder)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)

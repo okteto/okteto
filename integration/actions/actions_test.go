@@ -19,17 +19,21 @@ package actions
 import (
 	"log"
 	"os"
+	"regexp"
 	"runtime"
 	"testing"
 
+	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/pkg/model"
 )
 
 const (
 	githubHTTPSURL = "https://github.com/"
+	versionRegex   = `\d+\.\d+\.\d+`
 )
 
 var (
+	oktetoVersion = ""
 	user          = ""
 	kubectlBinary = "kubectl"
 	appsSubdomain = "cloud.okteto.net"
@@ -51,5 +55,13 @@ func TestMain(m *testing.M) {
 		kubectlBinary = "kubectl.exe"
 	}
 
+	versionOutput, err := integration.RunOktetoVersion("okteto")
+	if err != nil {
+		log.Println("okteto binary not found")
+		os.Exit(1)
+	}
+	r, _ := regexp.Compile(versionRegex)
+
+	oktetoVersion = r.FindString(versionOutput)
 	os.Exit(m.Run())
 }
