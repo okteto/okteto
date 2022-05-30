@@ -19,7 +19,9 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/alessio/shellescape"
@@ -156,6 +158,23 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	go func() {
 		if _, err := io.Copy(errW, stderr); err != nil {
 			oktetoLog.Infof("error while writing to stdOut: %s", err)
+		}
+	}()
+
+	resize := make(chan os.Signal)
+	signal.Notify(resize, syscall.SIGWINCH)
+
+	go func() {
+		for {
+			select {
+			case <-resize:
+				width, height, err := term.GetSize(int(os.Stdout.Fd()))
+				oktetoLog.Infof("terminal width %d height %d", width, height)
+				if err != nil {
+					oktetoLog.Infof("request for terminal size failed: %s", err)
+				}
+				session.WindowChange(height, width)
+			}
 		}
 	}()
 
