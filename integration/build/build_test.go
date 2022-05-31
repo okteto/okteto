@@ -85,6 +85,8 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
+// TestBuildCommandV1 tests the following scenario:
+// - building having a dockerfile
 func TestBuildCommandV1(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
@@ -108,6 +110,8 @@ func TestBuildCommandV1(t *testing.T) {
 	require.True(t, isImageBuilt(expectedImage))
 }
 
+// TestBuildCommandV2 tests the following scenario:
+// - building having a manifest v2 with build section
 func TestBuildCommandV2(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
@@ -135,6 +139,9 @@ func TestBuildCommandV2(t *testing.T) {
 	require.True(t, isImageBuilt(expectedApiImage))
 }
 
+// TestBuildCommandV2OnlyOneService tests the following scenario:
+// - building having a manifest v2 with build section
+// - okteto build with a service as argument
 func TestBuildCommandV2OnlyOneService(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
@@ -159,6 +166,9 @@ func TestBuildCommandV2OnlyOneService(t *testing.T) {
 	require.True(t, isImageBuilt(expectedImage))
 }
 
+// TestBuildCommandV2SpecifyingServices tests the following scenario:
+// - building having a manifest v2 with build section
+// - okteto build with several service as argument
 func TestBuildCommandV2SpecifyingServices(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
@@ -187,6 +197,9 @@ func TestBuildCommandV2SpecifyingServices(t *testing.T) {
 	require.True(t, isImageBuilt(expectedApiImage))
 }
 
+// TestBuildCommandV2VolumeMounts tests the following scenario:
+// - building having a compose file
+// - building an image that needs to mount local volumes
 func TestBuildCommandV2VolumeMounts(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))

@@ -50,6 +50,10 @@ integration-actions:
 integration-build:
 	go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 15m
 
+.PHONY: integration-deploy
+integration-deploy:
+	go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 15m
+
 .PHONY: build
 build:
 	$(BUILDCOMMAND) -o ${BINDIR}/okteto
