@@ -1,7 +1,6 @@
 package build
 
 import (
-	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -69,22 +68,21 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		Contexts: map[string]*okteto.OktetoContext{
 			"test": {
 				Namespace: "test",
-				Registry:  "this.is.my.okteto.registry",
+				Registry:  "registry.okteto",
 			},
 		},
 		CurrentContext: "test",
 	}
 	tests := []struct {
-		name           string
-		serviceName    string
-		buildInfo      *model.BuildInfo
-		okGitCommitEnv string
-		isOkteto       bool
-		initialOpts    *types.BuildOptions
-		expected       *types.BuildOptions
+		name        string
+		serviceName string
+		buildInfo   *model.BuildInfo
+		isOkteto    bool
+		initialOpts *types.BuildOptions
+		expected    *types.BuildOptions
 	}{
 		{
-			name:        "empty-values-is-okteto",
+			name:        "is-okteto-empty-buildInfo",
 			serviceName: "service",
 			buildInfo:   &model.BuildInfo{},
 			isOkteto:    true,
@@ -92,56 +90,10 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
 				BuildArgs:  []string{},
-				AutogenTag: true,
 			},
 		},
 		{
-			name:           "empty-values-is-okteto-local",
-			serviceName:    "service",
-			buildInfo:      &model.BuildInfo{},
-			okGitCommitEnv: "dev1235466",
-			isOkteto:       true,
-			expected: &types.BuildOptions{
-				Tag:        "okteto.dev/movies-service:okteto",
-				OutputMode: oktetoLog.TTYFormat,
-				BuildArgs:  []string{},
-				AutogenTag: true,
-			},
-		},
-		{
-			name:           "empty-values-is-okteto-pipeline",
-			serviceName:    "service",
-			buildInfo:      &model.BuildInfo{},
-			okGitCommitEnv: "1235466",
-			isOkteto:       true,
-			expected: &types.BuildOptions{
-				OutputMode: oktetoLog.TTYFormat,
-				Tag:        "okteto.dev/movies-service:114921fe985b5f874c8d312b0a098959da6d119209c9d1e42a89c4309569692d",
-				BuildArgs:  []string{},
-				AutogenTag: true,
-			},
-		},
-		{
-			name:        "empty-values-is-okteto-pipeline-withArgs",
-			serviceName: "service",
-			buildInfo: &model.BuildInfo{
-				Args: model.Environment{
-					{
-						Name:  "arg1",
-						Value: "value1",
-					},
-				}},
-			okGitCommitEnv: "1235466",
-			isOkteto:       true,
-			expected: &types.BuildOptions{
-				OutputMode: oktetoLog.TTYFormat,
-				Tag:        "okteto.dev/movies-service:c0776074a88fa37835b1dfa67365b6a6b08b11c4cf49a9d42524ea9797959e58",
-				BuildArgs:  []string{"arg1=value1"},
-				AutogenTag: true,
-			},
-		},
-		{
-			name:        "empty-values-is-not-okteto",
+			name:        "not-okteto-empty-buildInfo",
 			serviceName: "service",
 			buildInfo:   &model.BuildInfo{},
 			isOkteto:    false,
@@ -151,7 +103,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			},
 		},
 		{
-			name:        "all-values-no-image",
+			name:        "is-okteto-missing-image-buildInfo",
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
 				Context:    "service",
@@ -177,11 +129,10 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
 				BuildArgs:  []string{"arg1=value1"},
-				AutogenTag: true,
 			},
 		},
 		{
-			name:        "all-values-no-image-is-okteto-pipeline-with-volumes",
+			name:        "is-okteto-missing-image-buildInfo-with-volumes",
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
 				Context:    "service",
@@ -204,21 +155,19 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			initialOpts: &types.BuildOptions{
 				OutputMode: "tty",
 			},
-			isOkteto:       true,
-			okGitCommitEnv: "1235466",
+			isOkteto: true,
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
-				Tag:        "okteto.dev/movies-service:d5dd474fa99b0680c11f8098f06e408187bbcc5cc4a657fd0acabb117898a246",
+				Tag:        "okteto.dev/movies-service:okteto-with-volume-mounts",
 				File:       filepath.Join("service", "CustomDockerfile"),
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
 				BuildArgs:  []string{"arg1=value1"},
-				AutogenTag: true,
 			},
 		},
 		{
-			name:        "all-values-image",
+			name:        "is-okteto-has-image-buildInfo",
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
 				Image:      "okteto.dev/mycustomimage:dev",
@@ -245,13 +194,11 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
 				BuildArgs:  []string{"arg1=value1"},
-				AutogenTag: false,
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			os.Unsetenv(model.OktetoGitCommitEnvVar)
 			okteto.CurrentStore = &okteto.OktetoContextStore{
 				Contexts: map[string]*okteto.OktetoContext{
 					"test": {
@@ -267,7 +214,6 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 					tt.serviceName: tt.buildInfo,
 				},
 			}
-			os.Setenv(model.OktetoGitCommitEnvVar, tt.okGitCommitEnv)
 			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts)
 			assert.Equal(t, tt.expected, result)
 		})

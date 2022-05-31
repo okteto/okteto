@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -191,16 +190,6 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 
 	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options)
 
-	// Check if the tag is already on global/dev registry and skip
-	if build.ShouldOptimizeBuild(buildOptions) {
-		tag, err := bc.optimizeBuild(buildOptions, svcName)
-		if err != nil {
-			return "", err
-		}
-		if tag != "" {
-			return tag, nil
-		}
-	}
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
 	}
@@ -209,22 +198,6 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		return "", fmt.Errorf("error accessing image at registry %s: %v", options.Tag, err)
 	}
 	return imageTagWithDigest, nil
-}
-
-func (bc *OktetoBuilder) optimizeBuild(buildOptions *types.BuildOptions, svcName string) (string, error) {
-	oktetoLog.Debug("found optimizing the build flow")
-	globalReference := strings.Replace(buildOptions.Tag, okteto.DevRegistry, okteto.GlobalRegistry, 1)
-	if _, err := bc.Registry.GetImageTagWithDigest(globalReference); err == nil {
-		oktetoLog.Debugf("Skipping '%s' build. Image already exists at the Okteto Global Registry: %s", svcName, globalReference)
-		return globalReference, nil
-	}
-	if registry.IsDevRegistry(buildOptions.Tag) {
-		if _, err := bc.Registry.GetImageTagWithDigest(buildOptions.Tag); err == nil {
-			oktetoLog.Debugf("Skipping '%s' build: Image already exists at the Okteto Registry: %s", svcName, buildOptions.Tag)
-			return buildOptions.Tag, nil
-		}
-	}
-	return "", nil
 }
 
 func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
@@ -241,16 +214,6 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 		return "", err
 	}
 	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options)
-
-	if build.ShouldOptimizeBuild(buildOptions) {
-		tag, err := bc.optimizeBuild(buildOptions, svcName)
-		if err != nil {
-			return "", err
-		}
-		if tag != "" {
-			return tag, nil
-		}
-	}
 
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
