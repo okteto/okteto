@@ -45,6 +45,8 @@ var (
 	KubernetesType Archetype = "kubernetes"
 	// ChartType represents a k8s manifest type
 	ChartType Archetype = "chart"
+
+	warnServices = make(map[string]bool)
 )
 
 const (
@@ -724,8 +726,9 @@ func (m *Manifest) setDefaults() error {
 		}
 
 		err := b.setBuildDefaults()
-		if err != nil {
+		if err != nil && !warnServices[k] {
 			oktetoLog.Warning(fmt.Sprintf("Build '%s': %s", k, err.Error()))
+			warnServices[k] = true
 		}
 	}
 	return nil
@@ -918,11 +921,11 @@ func (m *Manifest) WriteToFile(filePath string) error {
 	if err != nil {
 		return err
 	}
-	doc := yaml3.Node{}
+	doc := &yaml3.Node{}
 	if err := yaml3.Unmarshal(b, &doc); err != nil {
 		return err
 	}
-	doc = *doc.Content[0]
+	*doc = *doc.Content[0]
 	currentSection := ""
 	for idx, section := range doc.Content {
 		switch section.Value {
@@ -969,7 +972,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 }
 
 // reorderDocFields orders the manifest to be: name -> build -> deploy -> dependencies -> dev
-func (*Manifest) reorderDocFields(doc yaml3.Node) yaml3.Node {
+func (*Manifest) reorderDocFields(doc *yaml3.Node) *yaml3.Node {
 	contentCopy := []*yaml3.Node{}
 	nodes := []int{}
 	nameDefinitionIdx := getDocIdx(doc.Content, "name")
