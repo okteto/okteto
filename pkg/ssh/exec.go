@@ -20,6 +20,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -161,22 +162,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		}
 	}()
 
-	resize := make(chan os.Signal)
-	signal.Notify(resize, syscall.SIGWINCH)
-
-	go func() {
-		for {
-			select {
-			case <-resize:
-				width, height, err := term.GetSize(int(os.Stdout.Fd()))
-				oktetoLog.Infof("terminal width %d height %d", width, height)
-				if err != nil {
-					oktetoLog.Infof("request for terminal size failed: %s", err)
-				}
-				session.WindowChange(height, width)
-			}
-		}
-	}()
+	resizeWindow(session)
 
 	cmd := shellescape.QuoteCommand(command)
 	oktetoLog.Infof("executing command over ssh: '%s'", cmd)
@@ -217,4 +203,42 @@ func dial(ctx context.Context, network, addr string, config *ssh.ClientConfig) (
 		return nil, err
 	}
 	return ssh.NewClient(c, chans, reqs), nil
+}
+
+func resizeWindow(session *ssh.Session) {
+	if runtime.GOOS == "windows" {
+		go func() {
+			prevWSize, err := dockerterm.GetWinsize(os.Stdout.Fd())
+			if err != nil {
+				oktetoLog.Infof("request for terminal size failed: %s", err)
+			}
+			for {
+				time.Sleep(time.Millisecond * 250)
+				ws, err := dockerterm.GetWinsize(os.Stdout.Fd())
+				if err != nil {
+					oktetoLog.Infof("request for terminal size failed: %s", err)
+				}
+				if prevWSize.Height != ws.Height || prevWSize.Width != ws.Width {
+					if err := dockerterm.SetWinsize(os.Stdout.Fd(), ws); err != nil {
+						oktetoLog.Infof("request for terminal resize failed: %s", err)
+					}
+				}
+				prevWSize = ws
+			}
+		}()
+
+	} else {
+		resize := make(chan os.Signal, 1)
+		signal.Notify(resize, syscall.SIGWINCH)
+		go func() {
+			for range resize {
+				width, height, err := term.GetSize(int(os.Stdout.Fd()))
+				oktetoLog.Infof("terminal width %d height %d", width, height)
+				if err != nil {
+					oktetoLog.Infof("request for terminal size failed: %s", err)
+				}
+				session.WindowChange(height, width)
+			}
+		}()
+	}
 }
