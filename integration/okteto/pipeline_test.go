@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deploy
+package okteto
 
 import (
 	"fmt"
@@ -25,29 +25,33 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestDeployPipelineFromK8s tests the following scenario:
-// - Deploying a pipeline manifest locally from a k8s file
-// - The endpoints generated are accessible
-func TestDeployPipelineFromK8s(t *testing.T) {
+const (
+	githubHTTPSURL = "https://github.com"
+	pipelineRepo   = "okteto/movies"
+)
+
+func TestPipelineCommand(t *testing.T) {
+	integration.SkipIfNotOktetoCluster(t)
+
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
-
-	dir := t.TempDir()
-	require.NoError(t, createK8sManifest(dir))
 
 	testNamespace := integration.GetTestNamespace("TestDeploy", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
-	deployOptions := &commands.DeployOptions{
-		Workdir: dir,
+	previewOptions := &commands.DeployPipelineOptions{
+		Namespace:  testNamespace,
+		Repository: fmt.Sprintf("%s/%s", githubHTTPSURL, pipelineRepo),
+		Wait:       true,
 	}
-	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
-	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
+	require.NoError(t, commands.RunOktetoDeployPipeline(oktetoPath, previewOptions))
 
-	destroyOptions := &commands.DestroyOptions{
-		Workdir: dir,
+	contentURL := fmt.Sprintf("https://movies-%s.%s/api", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
+
+	previewDestroyOptions := &commands.DestroyPipelineOptions{
+		Namespace: testNamespace,
 	}
-	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+	require.NoError(t, commands.RunOktetoPipelineDestroy(oktetoPath, previewDestroyOptions))
 }

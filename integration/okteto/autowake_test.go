@@ -14,14 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deploy
+package okteto
 
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -179,7 +177,7 @@ func TestAutoWakeFromURL(t *testing.T) {
 
 	// Test endpoint is working
 	autowakeURL := fmt.Sprintf("https://autowake-deployment-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, getContentFromURL(autowakeURL, timeout))
+	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 	require.True(t, areNamespaceResourcesAwake(testNamespace, timeout))
 
 	// Sleep namespace
@@ -187,7 +185,7 @@ func TestAutoWakeFromURL(t *testing.T) {
 	require.True(t, areNamespaceResourcesSleeping(testNamespace, timeout))
 
 	// Wake resources from url
-	require.NotEmpty(t, getContentFromURL(autowakeURL, timeout))
+	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 	require.True(t, areNamespaceResourcesAwake(testNamespace, timeout))
 
 }
@@ -225,12 +223,12 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 	require.True(t, areNamespaceResourcesSleeping(testNamespace, timeout))
 
 	// Wake up from okteto up
-	upCommand, err := commands.RunOktetoUp(testNamespace, "autowake", filepath.Join(dir, oktetoManifestName), oktetoPath)
+	upCommand, err := commands.RunOktetoUp(testNamespace, "autowake", filepath.Join(dir, "okteto.yml"), oktetoPath)
 	require.NoError(t, err)
 
 	require.True(t, areNamespaceResourcesAwake(testNamespace, timeout))
 
-	require.NoError(t, commands.RunOktetoDown(testNamespace, "autowake", filepath.Join(dir, oktetoManifestName), oktetoPath))
+	require.NoError(t, commands.RunOktetoDown(testNamespace, "autowake", filepath.Join(dir, "okteto.yml"), oktetoPath))
 	require.True(t, commands.HasUpCommandFinished(upCommand.Pid.Pid))
 }
 
@@ -276,44 +274,6 @@ func writeStIgnore(dir string) error {
 		return err
 	}
 	return nil
-}
-
-func getContentFromURL(url string, timeout time.Duration) string {
-	ticker := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(timeout)
-	retry := 0
-	for {
-		retry++
-		select {
-		case <-to.C:
-			log.Printf("endpoint %s didn't respond", url)
-			return ""
-		case <-ticker.C:
-			r, err := http.Get(url)
-			if err != nil {
-				if retry%10 == 0 {
-					log.Printf("called %s, got %s, retrying", url, err)
-				}
-				continue
-			}
-
-			defer r.Body.Close()
-			if r.StatusCode != 200 {
-				if retry%10 == 0 {
-					log.Printf("called %s, got status %d, retrying", url, r.StatusCode)
-				}
-				continue
-			}
-
-			body, err := io.ReadAll(r.Body)
-			if err != nil {
-				log.Printf("could not read body: %s", err)
-				return ""
-			}
-
-			return string(body)
-		}
-	}
 }
 
 func sleepNamespace(namespace string) error {

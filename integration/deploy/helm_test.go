@@ -107,7 +107,7 @@ func TestDeployPipelineFromHelm(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, getContentFromURL(autowakeURL, timeout))
+	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir: dir,

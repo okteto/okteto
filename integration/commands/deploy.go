@@ -21,8 +21,12 @@ import (
 
 // DeployOptions defines the options that can be added to a deploy command
 type DeployOptions struct {
-	Workdir      string
-	ManifestPath string
+	Workdir          string
+	ManifestPath     string
+	Build            bool
+	LogLevel         string
+	LogOutput        string
+	ServicesToDeploy []string
 }
 
 // DestroyOptions defines the options that can be added to a deploy command
@@ -33,14 +37,8 @@ type DestroyOptions struct {
 
 // RunOktetoDeploy runs an okteto deploy command
 func RunOktetoDeploy(oktetoPath string, deployOptions *DeployOptions) error {
-	log.Printf("okteto deploy %s", oktetoPath)
-	cmd := exec.Command(oktetoPath, "deploy")
-	if deployOptions.Workdir != "" {
-		cmd.Dir = deployOptions.Workdir
-	}
-	if deployOptions.ManifestPath != "" {
-		cmd.Args = append(cmd.Args, "-f", deployOptions.ManifestPath)
-	}
+	cmd := getDeployCmd(oktetoPath, deployOptions)
+	log.Printf("Running '%s'", cmd.String())
 
 	o, err := cmd.CombinedOutput()
 	if err != nil {
@@ -48,6 +46,18 @@ func RunOktetoDeploy(oktetoPath string, deployOptions *DeployOptions) error {
 	}
 	log.Printf("okteto deploy success")
 	return nil
+}
+
+// RunOktetoDeployAndGetOutput runs an okteto deploy command and returns the output
+func RunOktetoDeployAndGetOutput(oktetoPath string, deployOptions *DeployOptions) (string, error) {
+	cmd := getDeployCmd(oktetoPath, deployOptions)
+	log.Printf("Running '%s'", cmd.String())
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return string(o), fmt.Errorf("okteto deploy failed: %s - %s", string(o), err)
+	}
+	log.Printf("okteto deploy success")
+	return string(o), nil
 }
 
 // RunOktetoDestroy runs an okteto destroy command
@@ -67,4 +77,27 @@ func RunOktetoDestroy(oktetoPath string, destroyOptions *DestroyOptions) error {
 	}
 	log.Printf("okteto destroy success")
 	return nil
+}
+
+func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
+	cmd := exec.Command(oktetoPath, "deploy")
+	if deployOptions.Workdir != "" {
+		cmd.Dir = deployOptions.Workdir
+	}
+	if len(deployOptions.ServicesToDeploy) > 0 {
+		cmd.Args = append(cmd.Args, deployOptions.ServicesToDeploy...)
+	}
+	if deployOptions.ManifestPath != "" {
+		cmd.Args = append(cmd.Args, "-f", deployOptions.ManifestPath)
+	}
+	if deployOptions.Build {
+		cmd.Args = append(cmd.Args, "--build")
+	}
+	if deployOptions.LogLevel != "" {
+		cmd.Args = append(cmd.Args, "--log-level", deployOptions.LogLevel)
+	}
+	if deployOptions.LogOutput != "" {
+		cmd.Args = append(cmd.Args, "--log-output", deployOptions.LogOutput)
+	}
+	return cmd
 }

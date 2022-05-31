@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	githubHTTPSURL = "https://github.com/"
+	githubHTTPSURL = "https://github.com"
 	versionRegex   = `\d+\.\d+\.\d+`
 )
 

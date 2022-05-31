@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deploy
+package okteto
 
 import (
 	"log"
@@ -22,7 +22,6 @@ import (
 	"os/exec"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
@@ -33,55 +32,6 @@ var (
 	user          = ""
 	kubectlBinary = "kubectl"
 	appsSubdomain = "cloud.okteto.net"
-)
-
-const (
-	timeout             = 300 * time.Second
-	k8sManifestName     = "k8s.yml"
-	k8sManifestTemplate = `
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: e2etest
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: e2etest
-  template:
-    metadata:
-      labels:
-        app: e2etest
-    spec:
-      terminationGracePeriodSeconds: 1
-      containers:
-      - name: test
-        image: python:alpine
-        ports:
-        - containerPort: 8080
-        workingDir: /usr/src/app
-        env:
-          - name: VAR
-            value: value1
-        command:
-            - sh
-            - -c
-            - "echo -n $VAR > var.html && python -m http.server 8080"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: e2etest
-  annotations:
-    dev.okteto.com/auto-ingress: "true"
-spec:
-  type: ClusterIP
-  ports:
-  - name: e2etest
-    port: 8080
-  selector:
-    app: e2etest
-`
 )
 
 func TestMain(m *testing.M) {

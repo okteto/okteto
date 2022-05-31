@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/stretchr/testify/require"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -88,13 +89,51 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 
 	// Test that the secret injection has gone correctly
 	autowakeURL := fmt.Sprintf("https://nginx-%s.%s/var.html", testNamespace, appsSubdomain)
-	require.Equal(t, getContentFromURL(autowakeURL, timeout), "rabbitmq")
+	require.Equal(t, integration.GetContentFromURL(autowakeURL, timeout), "rabbitmq")
 
 	// Test that the nginx image has been created correctly
 	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx")
 	require.NoError(t, err)
 	nginxImageDev := fmt.Sprintf("okteto.dev/%s-nginx:okteto-with-volume-mounts", filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
+
+	// Test that the nginx image has been created correctly
+	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app")
+	require.NoError(t, err)
+	appImageDev := fmt.Sprintf("okteto.dev/%s-app:okteto", filepath.Base(dir))
+	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+}
+
+// TestDeployPipelineFromCompose tests the following scenario:
+// - Deploying a pipeline manifest locally from a compose file
+// - The endpoints generated are accessible
+// - Depends on
+// - Test secret injection
+func TestDeployPipelineFromComposeOnlyOneSvc(t *testing.T) {
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	require.NoError(t, createComposeScenario(dir))
+
+	testNamespace := integration.GetTestNamespace("TestDeploy", user)
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:          dir,
+		ServicesToDeploy: []string{"app"},
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	// Test that the nginx image has been created correctly
+	_, err = integration.GetDeployment(context.Background(), testNamespace, "nginx")
+	require.True(t, k8sErrors.IsNotFound(err))
 
 	// Test that the nginx image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app")

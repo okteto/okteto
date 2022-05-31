@@ -17,13 +17,17 @@
 package deploy
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/stretchr/testify/require"
 )
 
@@ -60,7 +64,7 @@ func TestDeployOktetoManifest(t *testing.T) {
 
 	// Test that endpoint works
 	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, getContentFromURL(autowakeURL, timeout))
+	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 
 	// Test that image has been built
 	appImageDev := fmt.Sprintf("okteto.dev/%s-app:okteto", filepath.Base(dir))
@@ -70,7 +74,68 @@ func TestDeployOktetoManifest(t *testing.T) {
 		Workdir: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+}
 
+// TestDeployOktetoManifest tests the following scenario:
+// - Deploying a okteto manifest locally
+// - The endpoints generated are accessible
+// - Images are only build if
+func TestRedeployOktetoManifestForImages(t *testing.T) {
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	require.NoError(t, createOktetoManifest(dir))
+	require.NoError(t, createAppDockerfile(dir))
+	require.NoError(t, createK8sManifest(dir))
+
+	testNamespace := integration.GetTestNamespace("TestDeploy", user)
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+
+	// Test that image is not built before running okteto deploy
+	appImageDev := fmt.Sprintf("okteto.dev/%s-app:okteto", filepath.Base(dir))
+	require.False(t, isImageBuilt(appImageDev))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir: dir,
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	// Test that image is built after running okteto deploy
+	require.True(t, isImageBuilt(appImageDev))
+
+	// Test that endpoint works
+	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
+
+	deployOptions.LogLevel = "debug"
+	// Test redeploy is not building any image
+	output, err := commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
+	require.NoError(t, err)
+
+	err = expectImageFoundSkippingBuild(output)
+	require.NoError(t, err, err)
+
+	// Test redeploy with build flag builds the image
+	deployOptions.Build = true
+	output, err = commands.RunOktetoDeployAndGetOutput(oktetoPath, deployOptions)
+	require.NoError(t, err)
+
+	require.NoError(t, expectForceBuild(output))
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+}
+
+func isImageBuilt(image string) bool {
+	reg := registry.NewOktetoRegistry()
+	if _, err := reg.GetImageTagWithDigest(image); err == nil {
+		return true
+	}
+	return false
 }
 
 func createOktetoManifest(dir string) error {
@@ -78,6 +143,21 @@ func createOktetoManifest(dir string) error {
 	dockerfileContent := []byte(oktetoManifestContent)
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
 		return err
+	}
+	return nil
+}
+
+func expectImageFoundSkippingBuild(output string) error {
+	if ok := strings.Contains(output, "Skipping build for image for service"); !ok {
+		log.Print(output)
+		return errors.New("expected image found, skipping build")
+	}
+	return nil
+}
+
+func expectForceBuild(output string) error {
+	if ok := strings.Contains(output, "force build from manifest definition"); !ok {
+		return errors.New("expected force build from manifest definition")
 	}
 	return nil
 }
