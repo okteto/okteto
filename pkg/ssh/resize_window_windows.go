@@ -3,6 +3,15 @@
 
 package ssh
 
+import (
+	"os"
+	"time"
+
+	dockerterm "github.com/moby/term"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"golang.org/x/crypto/ssh"
+)
+
 func resizeWindow(session *ssh.Session) {
 	go func() {
 		prevWSize, err := dockerterm.GetWinsize(os.Stdout.Fd())
