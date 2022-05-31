@@ -23,7 +23,9 @@ func resizeWindow(session *ssh.Session) {
 			if err != nil {
 				oktetoLog.Infof("request for terminal size failed: %s", err)
 			}
-			session.WindowChange(height, width)
+			if err := session.WindowChange(height, width); err != nil {
+				oktetoLog.Infof("request for terminal resize failed: %s", err)
+			}
 		}
 	}()
 }
