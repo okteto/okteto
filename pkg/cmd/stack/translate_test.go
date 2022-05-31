@@ -1517,3 +1517,88 @@ func Test_translateAffinity(t *testing.T) {
 		})
 	}
 }
+
+func TestGetSvcPublicPorts(t *testing.T) {
+	tests := []struct {
+		name           string
+		svcName        string
+		stack          *model.Stack
+		expectedLength int
+	}{
+		{
+			name:    "one public port",
+			svcName: "test",
+			stack: &model.Stack{
+				Services: map[string]*model.Service{
+					"test": {
+						Ports: []model.Port{
+							{
+								HostPort:      80,
+								ContainerPort: 80,
+							},
+						},
+					},
+				},
+			},
+			expectedLength: 1,
+		},
+		{
+			name:    "one private port",
+			svcName: "test",
+			stack: &model.Stack{
+				Services: map[string]*model.Service{
+					"test": {
+						Ports: []model.Port{
+							{
+								ContainerPort: 80,
+							},
+						},
+					},
+				},
+			},
+			expectedLength: 0,
+		},
+		{
+			name:    "one public port with public field",
+			svcName: "test",
+			stack: &model.Stack{
+				Services: map[string]*model.Service{
+					"test": {
+						Public: true,
+						Ports: []model.Port{
+							{
+								ContainerPort: 80,
+							},
+						},
+					},
+				},
+			},
+			expectedLength: 1,
+		},
+		{
+			name:    "one public port",
+			svcName: "test",
+			stack: &model.Stack{
+				Services: map[string]*model.Service{
+					"test": {
+						Public: true,
+						Ports: []model.Port{
+							{
+								HostPort:      80,
+								ContainerPort: 80,
+							},
+						},
+					},
+				},
+			},
+			expectedLength: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ports := getSvcPublicPorts(tt.svcName, tt.stack)
+			assert.Len(t, ports, tt.expectedLength)
+		})
+	}
+}
