@@ -22,7 +22,7 @@ require (
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/uuid v1.3.0
-	github.com/hashicorp/go-getter v1.5.11
+	github.com/hashicorp/go-getter v1.6.1
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/manifoldco/promptui v0.8.0
@@ -221,7 +221,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.0.0-RC1 // indirect
 	go.opentelemetry.io/otel/trace v1.0.0-RC1 // indirect
 	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
+	golang.org/x/sys v0.0.0-20220517195934-5e4e11fc645e // indirect
 )
 
 replace (
