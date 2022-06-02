@@ -711,13 +711,6 @@ func getAnnotations() map[string]string {
 	return annotations
 }
 
-func translateServiceType(svc model.Service) apiv1.ServiceType {
-	if svc.Public {
-		return apiv1.ServiceTypeLoadBalancer
-	}
-	return apiv1.ServiceTypeClusterIP
-}
-
 func translateVolumeMounts(svc *model.Service) []apiv1.VolumeMount {
 	result := []apiv1.VolumeMount{}
 	for i, v := range svc.Volumes {
