@@ -266,6 +266,26 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
 
+	data := &pipeline.CfgData{
+		Name:       deployOptions.Name,
+		Namespace:  deployOptions.Manifest.Namespace,
+		Repository: os.Getenv(model.GithubRepositoryEnvVar),
+		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
+		Filename:   deployOptions.Manifest.Filename,
+		Status:     pipeline.ProgressingStatus,
+		Manifest:   deployOptions.Manifest.Manifest,
+		Icon:       deployOptions.Manifest.Icon,
+	}
+
+	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType {
+		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
+	}
+
+	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
+	if err != nil {
+		return err
+	}
+
 	dc.Proxy.SetName(deployOptions.Name)
 	// don't divert if current namespace is the diverted namespace
 	if deployOptions.Manifest.Deploy.Divert != nil {
@@ -307,6 +327,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
+	var errBuild error
 	if deployOptions.Build {
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
@@ -314,24 +335,26 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			CommandArgs:  deployOptions.servicesToDeploy,
 		}
 		oktetoLog.Debug("force build from manifest definition")
-		if err := dc.Builder.Build(ctx, buildOptions); err != nil {
-			return err
-		}
+		errBuild = dc.Builder.Build(ctx, buildOptions)
 	} else {
-		svcsToBuild, err := dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy)
-		if err != nil {
-			return err
-		}
-		if len(svcsToBuild) != 0 {
+		svcsToBuild, errBuild := dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy)
+		if len(svcsToBuild) != 0 && errBuild != nil {
 			buildOptions := &types.BuildOptions{
 				CommandArgs:  svcsToBuild,
 				EnableStages: true,
 				Manifest:     deployOptions.Manifest,
 			}
-			if err := dc.Builder.Build(ctx, buildOptions); err != nil {
-				return err
-			}
+			errBuild = dc.Builder.Build(ctx, buildOptions)
 		}
+	}
+
+	if errBuild != nil {
+		data.Status = pipeline.ErrorStatus
+		if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
+			return err
+		}
+
+		return errBuild
 	}
 
 	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
@@ -339,25 +362,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	dc.Proxy.Start()
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deploying '%s'...", deployOptions.Name)
-	data := &pipeline.CfgData{
-		Name:       deployOptions.Name,
-		Namespace:  deployOptions.Manifest.Namespace,
-		Repository: os.Getenv(model.GithubRepositoryEnvVar),
-		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
-		Filename:   deployOptions.Manifest.Filename,
-		Status:     pipeline.ProgressingStatus,
-		Manifest:   deployOptions.Manifest.Manifest,
-		Icon:       deployOptions.Manifest.Icon,
-	}
-
-	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType {
-		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
-	}
-
-	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
-	if err != nil {
-		return err
-	}
 
 	defer dc.cleanUp(ctx)
 
