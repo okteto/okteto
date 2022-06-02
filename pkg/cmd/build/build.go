@@ -251,7 +251,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	}
 
 	outputMode := oktetoLog.GetOutputFormat()
-	if o != nil && o.OutputMode != "" {
+	if o.OutputMode != "" {
 		outputMode = o.OutputMode
 	}
 	opts.OutputMode = setOutputMode(outputMode)
