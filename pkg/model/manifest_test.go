@@ -404,3 +404,45 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 		})
 	}
 }
+
+func TestIsEmptyManifestFile(t *testing.T) {
+	tests := []struct {
+		name           string
+		rawContent     []byte
+		expectedAnswer bool
+	}{
+		{
+			name:           "empty manifest with only blank space",
+			rawContent:     []byte("  "),
+			expectedAnswer: true,
+		},
+		{
+			name:           "empty manifest with only escape character",
+			rawContent:     []byte("  \n"),
+			expectedAnswer: true,
+		},
+		{
+			name:           "empty manifest with only tab character",
+			rawContent:     []byte("  \t"),
+			expectedAnswer: true,
+		},
+		{
+			name:           "no empty manifest",
+			rawContent:     []byte("  a"),
+			expectedAnswer: false,
+		},
+		{
+			name:           "nil manifest content",
+			rawContent:     []byte(nil),
+			expectedAnswer: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			isEmptyManifestFile := isEmptyManifestFile(tt.rawContent)
+			if isEmptyManifestFile != tt.expectedAnswer {
+				t.Fatalf("isEmptyManifestFile() fail '%s': expected result %t, got %t", tt.name, tt.expectedAnswer, isEmptyManifestFile)
+			}
+		})
+	}
+}

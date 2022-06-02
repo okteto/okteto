@@ -164,6 +164,9 @@ var (
 
 	//ErrInvalidManifest is raised when cannot unmarshal manifest properly
 	ErrInvalidManifest = errors.New("invalid manifest")
+
+	//ErrEmptyManifest is raised when cannot detected content to read in manifest
+	ErrEmptyManifest = errors.New("no content detected for okteto.yml file")
 )
 
 // IsForbidden raised if the Okteto API returns 401
