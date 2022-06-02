@@ -93,6 +93,7 @@ func Test_GetValidNameFromFolder(t *testing.T) {
 		{name: "invalid symbols", folder: "getting_$#started", expected: "getting-started"},
 		{name: "current folder", folder: ".", expected: "model"},
 		{name: "parent folder", folder: "..", expected: "pkg"},
+		{name: "okteto folder", folder: ".okteto", expected: "model"},
 	}
 
 	for _, tt := range tests {
