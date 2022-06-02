@@ -867,6 +867,9 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 	}
 	defer os.RemoveAll("test_volume_relative_path_found")
 	file, err := os.Create("test-file")
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer os.Remove(file.Name())
 	tests := []struct {
 		name                 string
