@@ -416,6 +416,10 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 	devManifest, err := getOktetoManifest(manifestPath)
 	if err != nil {
+		if errors.Is(err, oktetoErrors.ErrInvalidManifest) {
+			return nil, err
+		}
+
 		oktetoLog.Info("devManifest err, fallback to stack unmarshall")
 		stackManifest := &Manifest{
 			Type: StackType,
@@ -621,12 +625,19 @@ func inferHelmTags(path string) string {
 func getOktetoManifest(devPath string) (*Manifest, error) {
 	b, err := os.ReadFile(devPath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, oktetoErrors.ErrManifestNotFound
+		}
 		return nil, err
+	}
+
+	if isEmptyManifestFile(b) {
+		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, oktetoErrors.ErrEmptyManifest)
 	}
 
 	manifest, err := Read(b)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, err.Error())
 	}
 
 	for _, dev := range manifest.Dev {
@@ -643,6 +654,13 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 	}
 
 	return manifest, nil
+}
+
+func isEmptyManifestFile(bytes []byte) bool {
+	if bytes == nil || strings.TrimSpace(string(bytes)) == "" {
+		return true
+	}
+	return false
 }
 
 func getFilePath(cwd string, files []string) string {
@@ -684,7 +702,6 @@ func Read(bytes []byte) (*Manifest, error) {
 		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
 			if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 				var sb strings.Builder
-				_, _ = sb.WriteString("Invalid manifest:\n")
 				l := strings.Split(err.Error(), "\n")
 				for i := 1; i < len(l); i++ {
 					e := strings.TrimSuffix(l[i], "in type model.Manifest")
@@ -693,14 +710,14 @@ func Read(bytes []byte) (*Manifest, error) {
 				}
 
 				_, _ = sb.WriteString(fmt.Sprintf("    See %s for details", "https://okteto.com/docs/reference/manifest/"))
-				return nil, errors.New(sb.String())
+				return nil, fmt.Errorf("\n%s", sb.String())
 			}
 
-			msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid manifest:", 1)
-			msg = strings.TrimSuffix(msg, "in type model.Manifest")
-			return nil, errors.New(msg)
+			msg := strings.TrimSuffix(err.Error(), "in type model.Manifest")
+			return nil, fmt.Errorf("\n%s", msg)
 		}
 	}
+
 	hasShownWarning := false
 	for _, d := range manifest.Dev {
 		if (d.Image.Context != "" || d.Image.Dockerfile != "") && !hasShownWarning {
