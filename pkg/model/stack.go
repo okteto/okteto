@@ -90,6 +90,7 @@ type Service struct {
 	Healtcheck      *HealthCheck          `yaml:"healthcheck,omitempty"`
 	User            *StackSecurityContext `yaml:"user,omitempty"`
 
+	// Fields only for okteto stacks
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas,omitempty"`
 	Resources *StackResources `yaml:"resources,omitempty"`
