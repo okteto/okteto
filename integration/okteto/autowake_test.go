@@ -223,12 +223,23 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 	require.True(t, areNamespaceResourcesSleeping(testNamespace, timeout))
 
 	// Wake up from okteto up
-	upCommand, err := commands.RunOktetoUp(testNamespace, "autowake", filepath.Join(dir, "okteto.yml"), oktetoPath)
+	upOptions := &commands.UpOptions{
+		Name:         "autowake",
+		Namespace:    testNamespace,
+		Workdir:      dir,
+		ManifestPath: filepath.Join(dir, "okteto.yml"),
+	}
+	upCommand, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
 
 	require.True(t, areNamespaceResourcesAwake(testNamespace, timeout))
 
-	require.NoError(t, commands.RunOktetoDown(testNamespace, "autowake", filepath.Join(dir, "okteto.yml"), oktetoPath))
+	downOpts := &commands.DownOptions{
+		Namespace:    testNamespace,
+		ManifestPath: filepath.Join(dir, "okteto.yml"),
+		Workdir:      dir,
+	}
+	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 	require.True(t, commands.HasUpCommandFinished(upCommand.Pid.Pid))
 }
 

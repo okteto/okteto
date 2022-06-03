@@ -1,3 +1,6 @@
+//go:build integration
+// +build integration
+
 // Copyright 2022 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,26 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package integration
+package okteto
 
 import (
-	"os"
-	"text/template"
+	"testing"
+
+	"github.com/Masterminds/semver/v3"
+	"github.com/okteto/okteto/cmd/utils"
 )
 
-type deployment struct {
-	Name string
-}
-
-func WriteDeployment(template *template.Template, name, path string) error {
-	dFile, err := os.Create(path)
+func TestGetVersion(t *testing.T) {
+	v, err := utils.GetLatestVersionFromGithub()
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 
-	if err := template.Execute(dFile, deployment{Name: name}); err != nil {
-		return err
+	_, err = semver.NewVersion(v)
+	if err != nil {
+		t.Fatal(err)
 	}
-	defer dFile.Close()
-	return nil
 }

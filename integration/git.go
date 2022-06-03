@@ -34,7 +34,7 @@ func CloneGitRepo(url string) error {
 
 // CloneGitRepoWithBranch clones a repo by its URL in an specific branch
 func CloneGitRepoWithBranch(url, branch string) error {
-	log.Printf("cloning git repo %s", url)
+	log.Printf("cloning git repo %s on branch %s", url, branch)
 	cmd := exec.Command("git", "clone", "--branch", branch, url)
 	o, err := cmd.CombinedOutput()
 	if err != nil {

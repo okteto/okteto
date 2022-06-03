@@ -15,7 +15,6 @@ package commands
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -28,6 +27,15 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 )
 
+// UpOptions has the options for okteto up command
+type UpOptions struct {
+	Name         string
+	Namespace    string
+	ManifestPath string
+	Workdir      string
+	Deploy       bool
+}
+
 // UpCommandProcessResult has the information about the command process
 type UpCommandProcessResult struct {
 	WaitGroup sync.WaitGroup
@@ -36,29 +44,87 @@ type UpCommandProcessResult struct {
 }
 
 // RunOktetoUp runs an okteto up command
-func RunOktetoUp(namespace, name, manifestPath, oktetoPath string) (*UpCommandProcessResult, error) {
+func RunOktetoUp(oktetoPath string, upOptions *UpOptions) (*UpCommandProcessResult, error) {
 	var wg sync.WaitGroup
 	upErrorChannel := make(chan error, 1)
-	pid, err := up(context.Background(), &wg, namespace, name, manifestPath, oktetoPath, upErrorChannel)
-	if err != nil {
+
+	cmd := getUpCmd(oktetoPath, upOptions)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+
+	log.Printf("Running up command: %s", cmd.String())
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("okteto up failed to start: %s", err)
+	}
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		if err := cmd.Wait(); err != nil {
+			if err != nil {
+				log.Printf("okteto up exited: %s.\nOutput:\n%s", err, out.String())
+				upErrorChannel <- fmt.Errorf("Okteto up exited before completion")
+			}
+		}
+	}()
+
+	if err := waitForReady(upOptions.Namespace, upOptions.Name, upErrorChannel); err != nil {
 		return nil, err
 	}
+
 	return &UpCommandProcessResult{
 		WaitGroup: wg,
 		ErrorChan: upErrorChannel,
-		Pid:       pid,
+		Pid:       cmd.Process,
 	}, nil
 }
 
+func getUpCmd(oktetoPath string, upOptions *UpOptions) *exec.Cmd {
+
+	cmd := exec.Command(oktetoPath, "up")
+	cmd.Env = os.Environ()
+	if upOptions.ManifestPath != "" {
+		cmd.Args = append(cmd.Args, "-f", upOptions.ManifestPath)
+	}
+	if upOptions.Namespace != "" {
+		cmd.Args = append(cmd.Args, "-n", upOptions.Namespace)
+	}
+	if upOptions.Workdir != "" {
+		cmd.Dir = upOptions.Workdir
+	}
+	if upOptions.Deploy {
+		cmd.Args = append(cmd.Args, "--deploy")
+	}
+	return cmd
+}
+
+// DownOptions has the options for okteto down command
+type DownOptions struct {
+	Namespace    string
+	ManifestPath string
+	Workdir      string
+}
+
 // RunOktetoDown runs an okteto down command
-func RunOktetoDown(namespace, name, manifestPath, oktetoPath string) error {
-	downCMD := exec.Command(oktetoPath, "down", "-n", namespace, "-f", manifestPath, "-v")
+func RunOktetoDown(oktetoPath string, downOpts *DownOptions) error {
+	downCMD := exec.Command(oktetoPath, "down", "-v")
+	if downOpts.ManifestPath != "" {
+		downCMD.Args = append(downCMD.Args, "-f", downOpts.ManifestPath)
+	}
+	if downOpts.Namespace != "" {
+		downCMD.Args = append(downCMD.Args, "-n", downOpts.Namespace)
+	}
+	if downOpts.Workdir != "" {
+		downCMD.Dir = downOpts.Workdir
+	}
 	downCMD.Env = os.Environ()
 	o, err := downCMD.CombinedOutput()
 
 	log.Printf("okteto down output:\n%s", string(o))
 	if err != nil {
-		m, _ := os.ReadFile(manifestPath)
+		m, _ := os.ReadFile(downOpts.ManifestPath)
 		log.Printf("manifest: \n%s\n", string(m))
 		return fmt.Errorf("okteto down failed: %s", err)
 	}
@@ -92,32 +158,6 @@ func HasUpCommandFinished(pid int) bool {
 	}
 }
 
-func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, oktetoPath string, upErrorChannel chan error) (*os.Process, error) {
-	var out bytes.Buffer
-	cmd := exec.Command(oktetoPath, "up", "-n", namespace, "-f", manifestPath)
-	cmd.Env = os.Environ()
-	cmd.Stdout = &out
-	cmd.Stderr = &out
-	log.Printf("up command: %s", cmd.String())
-	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("okteto up failed to start: %s", err)
-	}
-
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-		if err := cmd.Wait(); err != nil {
-			if err != nil {
-				log.Printf("okteto up exited: %s.\nOutput:\n%s", err, out.String())
-				upErrorChannel <- fmt.Errorf("Okteto up exited before completion")
-			}
-		}
-	}()
-
-	return cmd.Process, waitForReady(namespace, name, upErrorChannel)
-}
-
 func waitForReady(namespace, name string, upErrorChannel chan error) error {
 	log.Println("waiting for okteto up to be ready")
 
@@ -125,14 +165,20 @@ func waitForReady(namespace, name string, upErrorChannel chan error) error {
 
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(300 * time.Second)
+	retry := 0
 	for {
 		select {
+		case <-upErrorChannel:
+			return fmt.Errorf("okteto up failed")
 		case <-to.C:
 			return fmt.Errorf("development container was never ready")
 		case <-ticker.C:
+			retry++
 			c, err := os.ReadFile(state)
 			if err != nil {
-				log.Printf("failed to read state file %s: %s", state, err)
+				if retry%10 == 0 {
+					log.Printf("failed to read state file %s: %s", state, err)
+				}
 				if !os.IsNotExist(err) {
 					return err
 				}
@@ -144,8 +190,11 @@ func waitForReady(namespace, name string, upErrorChannel chan error) error {
 				return nil
 			} else if string(c) == "failed" {
 				return fmt.Errorf("development container failed")
+			} else {
+				if retry%10 == 0 {
+					log.Printf("okteto up is: %s", c)
+				}
 			}
-
 		}
 	}
 

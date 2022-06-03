@@ -15,7 +15,9 @@ package integration
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -46,7 +48,16 @@ func GetOktetoPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	output, err := RunOktetoVersion(oktetoPath)
+	if err != nil {
+		return "", fmt.Errorf("okteto version failed: %s - %s", string(output), err)
+	}
+	log.Println(output)
+	return oktetoPath, nil
+}
 
+// RunOktetoVersion runs okteto version given an oktetoPath
+func RunOktetoVersion(oktetoPath string) (string, error) {
 	cmd := exec.Command(oktetoPath, "version")
 	cmd.Env = os.Environ()
 
@@ -54,84 +65,16 @@ func GetOktetoPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("okteto version failed: %s - %s", string(o), err)
 	}
-
-	log.Println(string(o))
-	return oktetoPath, nil
+	return string(o), nil
 }
 
-// RunOktetoKubeconfig runs okteto kubeconfig command
-func RunOktetoKubeconfig(oktetoPath string) error {
-	args := []string{"kubeconfig"}
-	cmd := exec.Command(oktetoPath, args...)
+// RunKubectlApply runs kubectl apply command
+func RunKubectlApply(kubectlBinary, namespace, filePath string) error {
+	cmd := exec.Command(kubectlBinary, "apply", "-n", namespace, "-f", filePath)
 	cmd.Env = os.Environ()
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
-	}
-	return nil
-}
 
-// RunOktetoCreateNamespace runs okteto namespace create
-func RunOktetoCreateNamespace(oktetoPath, namespace string) error {
-	okteto.CurrentStore = nil
-	log.Printf("creating namespace %s", namespace)
-	args := []string{"namespace", "create", namespace, "-l", "debug"}
-	cmd := exec.Command(oktetoPath, args...)
-	cmd.Env = os.Environ()
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
-	}
-
-	log.Printf("create namespace output: \n%s\n", string(o))
-
-	n := okteto.Context().Namespace
-	if namespace != n {
-		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
-	}
-	if err := RunOktetoKubeconfig(oktetoPath); err != nil {
-		return err
-	}
-	return nil
-}
-
-// RunOktetoNamespace runs okteto namespace command
-func RunOktetoNamespace(oktetoPath, namespace string) error {
-	okteto.CurrentStore = nil
-	log.Printf("changing to namespace %s", namespace)
-	args := []string{"namespace", namespace, "-l", "debug"}
-	cmd := exec.Command(oktetoPath, args...)
-	cmd.Env = os.Environ()
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
-	}
-
-	log.Printf("namespace output: \n%s\n", string(o))
-
-	n := okteto.Context().Namespace
-	if namespace != n {
-		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
-	}
-	args = []string{"kubeconfig"}
-	cmd = exec.Command(oktetoPath, args...)
-	cmd.Env = os.Environ()
-	o, err = cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
-	}
-
-	return nil
-}
-
-// RunOktetoDeleteNamespace runs okteto namespace delete
-func RunOktetoDeleteNamespace(oktetoPath, namespace string) error {
-	log.Printf("okteto delete namespace %s", namespace)
-	deleteCMD := exec.Command(oktetoPath, "namespace", "delete", namespace)
-	deleteCMD.Env = os.Environ()
-	o, err := deleteCMD.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)
+	if o, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("kubectl apply failed: %s", string(o))
 	}
 	return nil
 }
@@ -147,9 +90,55 @@ func GetCurrentNamespace() string {
 	return kubeconfig.CurrentNamespace(config.GetKubeconfigPath())
 }
 
+// GetContentFromURL returns the content of the url
+func GetContentFromURL(url string, timeout time.Duration) string {
+	ticker := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(timeout)
+	retry := 0
+	for {
+		retry++
+		select {
+		case <-to.C:
+			log.Printf("endpoint %s didn't respond", url)
+			return ""
+		case <-ticker.C:
+			r, err := http.Get(url)
+			if err != nil {
+				if retry%10 == 0 {
+					log.Printf("called %s, got %s, retrying", url, err)
+				}
+				continue
+			}
+
+			defer r.Body.Close()
+			if r.StatusCode != 200 {
+				if retry%10 == 0 {
+					log.Printf("called %s, got status %d, retrying", url, r.StatusCode)
+				}
+				continue
+			}
+
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				log.Printf("could not read body: %s", err)
+				return ""
+			}
+
+			return string(body)
+		}
+	}
+}
+
 // SkipIfWindows skips a tests if is on a windows environment
 func SkipIfWindows(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("Skipping testing in CI environment")
+	}
+}
+
+// SkipIfNotOktetoCluster skips a tests if is not on an okteto cluster
+func SkipIfNotOktetoCluster(t *testing.T) {
+	if !okteto.Context().IsOkteto {
+		t.Skip("Skipping because is not on an okteto cluster")
 	}
 }

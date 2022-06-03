@@ -62,6 +62,10 @@ var (
 	actionManifestTemplate = template.Must(template.New("deployment").Parse(deploymentManifestFormat))
 )
 
+type deployment struct {
+	Name string
+}
+
 func TestApplyPipeline(t *testing.T) {
 	integration.SkipIfWindows(t)
 
@@ -85,7 +89,7 @@ func executeApply(namespace string) error {
 	defer os.RemoveAll(dir)
 
 	dPath := filepath.Join(dir, "deployment.yaml")
-	if err := integration.WriteDeployment(actionManifestTemplate, namespace, dPath); err != nil {
+	if err := writeDeployment(actionManifestTemplate, namespace, dPath); err != nil {
 		return err
 	}
 
@@ -116,5 +120,18 @@ func executeApply(namespace string) error {
 	if err != nil || d == nil {
 		return fmt.Errorf("Could not get deployment %s", namespace)
 	}
+	return nil
+}
+
+func writeDeployment(template *template.Template, name, path string) error {
+	dFile, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	if err := template.Execute(dFile, deployment{Name: name}); err != nil {
+		return err
+	}
+	defer dFile.Close()
 	return nil
 }
