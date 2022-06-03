@@ -227,11 +227,13 @@ func (c *OktetoClient) User() types.UserInterface {
 	return c.user
 }
 
+//nolint:unused
 type traceTransport struct {
 	Writer    io.Writer
 	Transport http.RoundTripper
 }
 
+//nolint:unused
 func (t *traceTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	var u http.RoundTripper
 	if t.Transport != nil {
