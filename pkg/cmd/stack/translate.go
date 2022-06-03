@@ -420,7 +420,7 @@ func translateService(svcName string, s *model.Stack) *apiv1.Service {
 func getSvcPublicPorts(svcName string, s *model.Stack) []model.Port {
 	result := []model.Port{}
 	for _, p := range s.Services[svcName].Ports {
-		if !model.IsSkippablePort(p.ContainerPort) && (p.HostPort != 0 || s.Services[svcName].Public) {
+		if !model.IsSkippablePort(p.ContainerPort) && p.HostPort != 0 {
 			result = append(result, p)
 		}
 	}

@@ -1568,6 +1568,7 @@ func TestGetSvcPublicPorts(t *testing.T) {
 						Ports: []model.Port{
 							{
 								ContainerPort: 80,
+								HostPort:      80,
 							},
 						},
 					},
