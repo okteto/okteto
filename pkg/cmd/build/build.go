@@ -226,7 +226,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	if okteto.Context().IsOkteto && b.Image == "" {
 		// if flag --global, point to global registry
 		targetRegistry := okteto.DevRegistry
-		if o != nil && o.BuildToGlobal {
+		if o.BuildToGlobal {
 			targetRegistry = okteto.GlobalRegistry
 		}
 		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoDefaultImageTag)
