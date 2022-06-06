@@ -30,6 +30,7 @@ type ForwardManager struct {
 	localInterface  string
 	remoteInterface string
 	forwards        map[int]*forward
+	globalForwards  map[int]*forward
 	reverses        map[int]*reverse
 	ctx             context.Context
 	sshAddr         string
@@ -45,6 +46,7 @@ func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInter
 		localInterface:  localInterface,
 		remoteInterface: remoteInterface,
 		forwards:        make(map[int]*forward),
+		globalForwards:  make(map[int]*forward),
 		reverses:        make(map[int]*reverse),
 		sshAddr:         sshAddr,
 		pf:              pf,
@@ -59,6 +61,10 @@ func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 
 	if _, ok := fm.forwards[localPort]; ok {
 		return fmt.Errorf("port %d is listed multiple times, please check your forwards configuration", localPort)
+	}
+
+	if _, ok := fm.globalForwards[localPort]; ok {
+		return fmt.Errorf("port %d is listed multiple times, please check your global forwards configuration", localPort)
 	}
 
 	if !checkAvailable {
@@ -77,7 +83,9 @@ func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 				return fmt.Errorf("local port %d is privileged. Try running \"sudo setcap 'cap_net_bind_service=+ep' /usr/local/bin/okteto\" and try again", localPort)
 			}
 		}
-		return fmt.Errorf("local port %d is already in-use in your local machine", localPort)
+
+		return fmt.Errorf("local port %d is already in-use in your local machine: %w", localPort, oktetoErrors.ErrPortAlreadyAllocated)
+		//return fmt.Errorf("local port %d is already in-use in your local machine", localPort)
 	}
 
 	return nil
@@ -86,17 +94,22 @@ func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 // Add initializes a remote forward
 func (fm *ForwardManager) Add(f model.Forward) error {
 
+	forwardsToUpdate := fm.forwards
+	if f.IsGlobal {
+		forwardsToUpdate = fm.globalForwards
+	}
+
 	if err := fm.canAdd(f.Local, true); err != nil {
 		return err
 	}
 
-	fm.forwards[f.Local] = &forward{
+	forwardsToUpdate[f.Local] = &forward{
 		localAddress:  fmt.Sprintf("%s:%d", fm.localInterface, f.Local),
 		remoteAddress: fmt.Sprintf("%s:%d", fm.remoteInterface, f.Remote),
 	}
 
 	if f.Service {
-		fm.forwards[f.Local].remoteAddress = fmt.Sprintf("%s:%d", f.ServiceName, f.Remote)
+		forwardsToUpdate[f.Local].remoteAddress = fmt.Sprintf("%s:%d", f.ServiceName, f.Remote)
 	}
 
 	return nil
@@ -154,7 +167,6 @@ func (fm *ForwardManager) Start(devPod, namespace string) error {
 	for _, ff := range fm.forwards {
 		ff.pool = fm.pool
 		go ff.start(fm.ctx)
-
 	}
 
 	for _, rt := range fm.reverses {
@@ -186,4 +198,13 @@ func (fm *ForwardManager) TransformLabelsToServiceName(f model.Forward) (model.F
 	}
 	f.ServiceName = serviceName
 	return f, nil
+}
+
+func (fm *ForwardManager) StartGlobalForwarding(podToForward, namespace string) error {
+	for _, gf := range fm.globalForwards {
+		gf.pool = fm.pool
+		go gf.start(fm.ctx)
+	}
+
+	return nil
 }

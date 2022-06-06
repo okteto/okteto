@@ -55,52 +55,97 @@ func Test_waitUntilExitOrInterrupt(t *testing.T) {
 func Test_printDisplayContext(t *testing.T) {
 	var tests = []struct {
 		name string
-		dev  *model.Dev
+		up   *upContext
 	}{
 		{
 			name: "basic",
-			dev: &model.Dev{
-				Name:      "dev",
-				Namespace: "namespace",
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []model.Forward{},
+				},
 			},
 		},
 		{
 			name: "single-forward",
-			dev: &model.Dev{
-				Name:      "dev",
-				Namespace: "namespace",
-				Forward:   []model.Forward{{Local: 1000, Remote: 1000}},
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+					Forward:   []model.Forward{{Local: 1000, Remote: 1000}},
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []model.Forward{},
+				},
 			},
 		},
 		{
 			name: "multiple-forward",
-			dev: &model.Dev{
-				Name:      "dev",
-				Namespace: "namespace",
-				Forward:   []model.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+					Forward:   []model.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []model.Forward{
+						{
+							Local:  8080,
+							Remote: 8080,
+						},
+						{
+							Local:       8080,
+							Remote:      8080,
+							ServiceName: "api",
+						},
+					},
+				},
 			},
 		},
 		{
 			name: "single-reverse",
-			dev: &model.Dev{
-				Name:      "dev",
-				Namespace: "namespace",
-				Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}},
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+					Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}},
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []model.Forward{},
+				},
 			},
 		},
 		{
 			name: "multiple-reverse",
-			dev: &model.Dev{
-				Name:      "dev",
-				Namespace: "namespace",
-				Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+					Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []model.Forward{
+						{
+							Local:  8080,
+							Remote: 8080,
+						},
+						{
+							Local:       8080,
+							Remote:      8080,
+							ServiceName: "api",
+						},
+					},
+				},
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			printDisplayContext(tt.dev)
+			printDisplayContext(tt.up)
 		})
 	}
 

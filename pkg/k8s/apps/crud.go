@@ -27,7 +27,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (App, error) {
+func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (App, error) {
 	d, err := deployments.GetByDev(ctx, dev, namespace, c)
 
 	if err == nil {
@@ -46,6 +46,30 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 		return nil, err
 	}
 	return &StatefulSetApp{sfs: sfs}, nil
+}
+
+// Get returns the dev pod for an app and loops until it success
+func Get(ctx context.Context, namespace string, appName string, c kubernetes.Interface) (App, error) {
+	d, err := deployments.Get(ctx, appName, namespace, c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err == nil {
+		return &DeploymentApp{d: d}, nil
+	}
+
+	if d == nil {
+		sfs, err := statefulsets.Get(ctx, appName, namespace, c)
+		if err != nil {
+			return &StatefulSetApp{sfs: sfs}, nil
+		}
+		if sfs == nil {
+			return nil, fmt.Errorf("no resources founded with name '%s'", appName)
+		}
+	}
+
+	return nil, nil
 }
 
 //IsDevModeOn returns if a statefulset is in devmode
@@ -132,7 +156,7 @@ func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c
 
 func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, result map[string]*Translation, c kubernetes.Interface) error {
 	for _, s := range dev.Services {
-		app, err := Get(ctx, s, dev.Namespace, c)
+		app, err := GetByDev(ctx, s, dev.Namespace, c)
 		if err != nil {
 			return err
 		}

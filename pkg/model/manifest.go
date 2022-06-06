@@ -137,15 +137,16 @@ var (
 
 // Manifest represents an okteto manifest
 type Manifest struct {
-	Name         string               `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace    string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context      string               `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon         string               `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy       *DeployInfo          `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev          ManifestDevs         `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy      []DeployCommand      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build        ManifestBuild        `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies ManifestDependencies `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Name          string               `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace     string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context       string               `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon          string               `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy        *DeployInfo          `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev           ManifestDevs         `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy       []DeployCommand      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build         ManifestBuild        `json:"build,omitempty" yaml:"build,omitempty"`
+	Dependencies  ManifestDependencies `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	GlobalForward []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
 
 	Type     Archetype `json:"-" yaml:"-"`
 	Filename string    `yaml:"-"`
@@ -165,10 +166,11 @@ type ManifestDependencies map[string]*Dependency
 // NewManifest creates a new empty manifest
 func NewManifest() *Manifest {
 	return &Manifest{
-		Dev:          map[string]*Dev{},
-		Build:        map[string]*BuildInfo{},
-		Dependencies: map[string]*Dependency{},
-		Deploy:       &DeployInfo{},
+		Dev:           map[string]*Dev{},
+		Build:         map[string]*BuildInfo{},
+		Dependencies:  map[string]*Dependency{},
+		Deploy:        &DeployInfo{},
+		GlobalForward: []Forward{},
 	}
 }
 
@@ -272,6 +274,7 @@ func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
+		devManifest.Filename = oktetoPath
 
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v1 unmarshalled successfully")
 

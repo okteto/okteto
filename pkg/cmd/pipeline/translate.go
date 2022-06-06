@@ -234,7 +234,7 @@ func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernet
 		if dev.Autocreate {
 			continue
 		}
-		app, err := apps.Get(ctx, dev, manifest.Namespace, c)
+		app, err := apps.GetByDev(ctx, dev, manifest.Namespace, c)
 		if err != nil {
 			oktetoLog.Infof("could not add %s dev annotations due to: %s", devName, err.Error())
 			continue

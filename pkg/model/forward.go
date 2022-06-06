@@ -28,6 +28,8 @@ type Forward struct {
 	Service     bool              `json:"-" yaml:"-"`
 	ServiceName string            `json:"name" yaml:"name"`
 	Labels      map[string]string `json:"labels" yaml:"labels"`
+	IsGlobal    bool              `json:"-" yaml:"-"`
+	IsAdded     bool              `json:"-" yaml:"-"`
 }
 
 type ForwardRaw struct {

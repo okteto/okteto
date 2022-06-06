@@ -118,6 +118,11 @@ func (p *PortForwardManager) Add(f model.Forward) error {
 	return nil
 }
 
+// StartGlobalForwarding is not implemented
+func (p *PortForwardManager) StartGlobalForwarding(_, _ string) error {
+	return fmt.Errorf("not implemented")
+}
+
 // AddReverse is not implemented
 func (p *PortForwardManager) AddReverse(_ model.Reverse) error {
 	return fmt.Errorf("not implemented")

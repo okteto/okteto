@@ -15,9 +15,13 @@ package up
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/forward"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -60,7 +64,17 @@ func (up *upContext) forwards(ctx context.Context) error {
 		return err
 	}
 
-	return up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
+	err := up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
+	if err != nil {
+		return err
+	}
+
+	if isNeededGlobalForwarder(up.Manifest.GlobalForward) {
+		up.GlobalForwarderStatus = make(chan error, 1)
+		go up.setGlobalForwardsIfRequiredLoop(ctx)
+	}
+
+	return nil
 }
 
 func (up *upContext) sshForwards(ctx context.Context) error {
@@ -105,5 +119,110 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return fmt.Errorf("failed to add entry to your SSH config file")
 	}
 
-	return up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
+	err := up.Forwarder.Start(up.Pod.Name, up.Dev.Namespace)
+	if err != nil {
+		return err
+	}
+
+	if isNeededGlobalForwarder(up.Manifest.GlobalForward) {
+		up.GlobalForwarderStatus = make(chan error, 1)
+		go up.setGlobalForwardsIfRequiredLoop(ctx)
+	}
+
+	return nil
+}
+
+func (up *upContext) setGlobalForwardsIfRequiredLoop(ctx context.Context) {
+	ticker := time.NewTicker(time.Second)
+
+	appDevName := fmt.Sprintf(model.OktetoVolumeNameTemplate, up.Dev.Name)
+	sshRemoteService, err := apps.Get(ctx, up.Dev.Namespace, appDevName, up.Client)
+	if err != nil {
+		up.GlobalForwarderStatus <- err
+		return
+	}
+
+	pod, err := sshRemoteService.GetRunningPod(ctx, up.Client)
+	if err != nil {
+		up.GlobalForwarderStatus <- err
+		return
+	}
+	for {
+		if !isNeededGlobalForwarder(up.Manifest.GlobalForward) {
+			return
+		}
+
+		select {
+		case <-ticker.C:
+			err := addGlobalForwards(up)
+			if err != nil {
+				if errors.Is(err, oktetoErrors.ErrPortAlreadyAllocated) {
+					err = up.Forwarder.StartGlobalForwarding(pod.Name, up.Dev.Namespace)
+					if err != nil {
+						up.GlobalForwarderStatus <- err
+						return
+					}
+					continue
+				}
+				up.GlobalForwarderStatus <- err
+				return
+			}
+
+			err = up.Forwarder.StartGlobalForwarding(pod.Name, up.Dev.Namespace)
+			if err != nil {
+				up.GlobalForwarderStatus <- err
+				return
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func isNeededGlobalForwarder(globalForwards []model.Forward) bool {
+	for _, f := range globalForwards {
+		if f.IsAdded == false {
+			return true
+		}
+	}
+
+	return false
+}
+
+func addGlobalForwards(up *upContext) error {
+	var addErr error
+	for idx, f := range up.Manifest.GlobalForward {
+		if f.IsAdded {
+			continue
+		}
+
+		up.Manifest.GlobalForward[idx].IsGlobal = true
+
+		if f.Labels != nil {
+			forwardWithServiceName, err := up.Forwarder.TransformLabelsToServiceName(f)
+			if err != nil {
+				return err
+			}
+			up.Manifest.GlobalForward[idx] = forwardWithServiceName
+			f = forwardWithServiceName
+		}
+
+		f.IsGlobal = true
+		err := up.Forwarder.Add(f)
+		if err != nil {
+			if !errors.Is(err, oktetoErrors.ErrPortAlreadyAllocated) {
+				return err
+			}
+
+			addErr = err
+		} else {
+			up.Manifest.GlobalForward[idx].IsAdded = true
+		}
+	}
+
+	if addErr != nil {
+		return addErr
+	}
+
+	return nil
 }

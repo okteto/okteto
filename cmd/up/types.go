@@ -29,30 +29,31 @@ import (
 
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
-	Cancel            context.CancelFunc
-	ShutdownCompleted chan bool
-	Manifest          *model.Manifest
-	Dev               *model.Dev
-	Translations      map[string]*apps.Translation
-	isRetry           bool
-	Client            *kubernetes.Clientset
-	RestConfig        *rest.Config
-	Pod               *apiv1.Pod
-	Forwarder         forwarder
-	Disconnect        chan error
-	CommandResult     chan error
-	Exit              chan error
-	Sy                *syncthing.Syncthing
-	cleaned           chan string
-	hardTerminate     chan error
-	success           bool
-	resetSyncthing    bool
-	inFd              uintptr
-	isTerm            bool
-	stateTerm         *term.State
-	spinner           *utils.Spinner
-	StartTime         time.Time
-	Options           *UpOptions
+	Cancel                context.CancelFunc
+	ShutdownCompleted     chan bool
+	Manifest              *model.Manifest
+	Dev                   *model.Dev
+	Translations          map[string]*apps.Translation
+	isRetry               bool
+	Client                *kubernetes.Clientset
+	RestConfig            *rest.Config
+	Pod                   *apiv1.Pod
+	Forwarder             forwarder
+	Disconnect            chan error
+	GlobalForwarderStatus chan error
+	CommandResult         chan error
+	Exit                  chan error
+	Sy                    *syncthing.Syncthing
+	cleaned               chan string
+	hardTerminate         chan error
+	success               bool
+	resetSyncthing        bool
+	inFd                  uintptr
+	isTerm                bool
+	stateTerm             *term.State
+	spinner               *utils.Spinner
+	StartTime             time.Time
+	Options               *UpOptions
 }
 
 // Forwarder is an interface for the port-forwarding features
@@ -60,6 +61,7 @@ type forwarder interface {
 	Add(model.Forward) error
 	AddReverse(model.Reverse) error
 	Start(string, string) error
+	StartGlobalForwarding(string, string) error
 	Stop()
 	TransformLabelsToServiceName(model.Forward) (model.Forward, error)
 }
