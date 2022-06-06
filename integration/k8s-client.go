@@ -175,7 +175,7 @@ func WaitForDeployment(kubectlBinary, namespace, name string, revision int, time
 }
 
 // WaitForStatefulset waits until a sfs is rollout correctly
-func WaitForStatefulset(kubectlBinary, namespace, name string,timeout time.Duration) error {
+func WaitForStatefulset(kubectlBinary, namespace, name string, timeout time.Duration) error {
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	for {
@@ -227,7 +227,7 @@ func DestroyPod(ctx context.Context, ns, labelSelector string) error {
 			metav1.DeleteOptions{GracePeriodSeconds: &zero},
 		)
 		if err != nil {
-			return fmt.Errorf("error deleting pod %s: %s", pods.Items[idx]Name, err.Error())
+			return fmt.Errorf("error deleting pod %s: %s", pods.Items[idx].Name, err.Error())
 		}
 	}
 
