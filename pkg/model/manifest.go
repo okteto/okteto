@@ -639,7 +639,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 	manifest, err := Read(b)
 	if err != nil {
 		if errors.Is(err, oktetoErrors.ErrNotManifestContentDetected) {
-			return nil, oktetoErrors.ErrNotManifestContentDetected
+			return nil, err
 		}
 		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, err.Error())
 	}
