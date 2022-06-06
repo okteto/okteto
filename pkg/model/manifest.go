@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -416,7 +417,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 	devManifest, err := getOktetoManifest(manifestPath)
 	if err != nil {
-		if errors.Is(err, oktetoErrors.ErrInvalidManifest) {
+		if errors.Is(err, oktetoErrors.ErrInvalidManifest) || errors.Is(err, oktetoErrors.ErrNotManifestContentDetected) {
 			return nil, err
 		}
 
@@ -637,6 +638,9 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 
 	manifest, err := Read(b)
 	if err != nil {
+		if errors.Is(err, oktetoErrors.ErrNotManifestContentDetected) {
+			return nil, oktetoErrors.ErrNotManifestContentDetected
+		}
 		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, err.Error())
 	}
 
@@ -700,6 +704,13 @@ func Read(bytes []byte) (*Manifest, error) {
 	manifest := NewManifest()
 	if bytes != nil {
 		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
+			if err := yaml.Unmarshal(bytes, manifest); err != nil {
+				return nil, oktetoErrors.ErrNotManifestContentDetected
+			}
+			if reflect.DeepEqual(manifest, NewManifest()) {
+				return nil, oktetoErrors.ErrNotManifestContentDetected
+			}
+
 			if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 				var sb strings.Builder
 				l := strings.Split(err.Error(), "\n")
