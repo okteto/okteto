@@ -169,7 +169,7 @@ var (
 	ErrEmptyManifest = errors.New("no content detected for okteto.yml file")
 
 	//ErrNotManifestContentDetected is raised when cannot load any field accepted by okteto manifest doc
-	ErrNotManifestContentDetected = errors.New("could't detect okteto manifest content")
+	ErrNotManifestContentDetected = errors.New("couldn't detect okteto manifest content")
 )
 
 // IsForbidden raised if the Okteto API returns 401
