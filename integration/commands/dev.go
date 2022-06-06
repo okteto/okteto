@@ -38,7 +38,7 @@ type UpOptions struct {
 
 // UpCommandProcessResult has the information about the command process
 type UpCommandProcessResult struct {
-	WaitGroup sync.WaitGroup
+	WaitGroup *sync.WaitGroup
 	ErrorChan chan error
 	Pid       *os.Process
 }
@@ -75,7 +75,7 @@ func RunOktetoUp(oktetoPath string, upOptions *UpOptions) (*UpCommandProcessResu
 	}
 
 	return &UpCommandProcessResult{
-		WaitGroup: wg,
+		WaitGroup: &wg,
 		ErrorChan: upErrorChannel,
 		Pid:       cmd.Process,
 	}, nil
@@ -190,10 +190,8 @@ func waitForReady(namespace, name string, upErrorChannel chan error) error {
 				return nil
 			} else if string(c) == "failed" {
 				return fmt.Errorf("development container failed")
-			} else {
-				if retry%10 == 0 {
-					log.Printf("okteto up is: %s", c)
-				}
+			} else if retry%10 == 0 {
+				log.Printf("okteto up is: %s", c)
 			}
 		}
 	}

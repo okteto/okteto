@@ -41,10 +41,7 @@ func RunOktetoCreateNamespace(oktetoPath, namespace string) error {
 	if namespace != n {
 		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
 	}
-	if err := RunOktetoKubeconfig(oktetoPath); err != nil {
-		return err
-	}
-	return nil
+	return RunOktetoKubeconfig(oktetoPath)
 }
 
 // RunOktetoNamespace runs okteto namespace command

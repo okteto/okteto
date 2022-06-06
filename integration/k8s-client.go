@@ -154,7 +154,7 @@ func WaitForDeployment(kubectlBinary, namespace, name string, revision int, time
 			}
 
 			if strings.Contains(output, "is different from the running revision") {
-				r := regexp.MustCompile("\\(\\d+\\)")
+				r := regexp.MustCompile(`\(\d+\)`)
 				matches := r.FindAllString(output, -1)
 				if len(matches) == 2 {
 					desiredVersion := strings.ReplaceAll(strings.ReplaceAll(matches[0], "(", ""), ")", "")
@@ -175,7 +175,7 @@ func WaitForDeployment(kubectlBinary, namespace, name string, revision int, time
 }
 
 // WaitForStatefulset waits until a sfs is rollout correctly
-func WaitForStatefulset(kubectlBinary, namespace, name string, revision int, timeout time.Duration) error {
+func WaitForStatefulset(kubectlBinary, namespace, name string,timeout time.Duration) error {
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	for {
@@ -219,15 +219,15 @@ func DestroyPod(ctx context.Context, ns, labelSelector string) error {
 	if len(pods.Items) == 0 {
 		return fmt.Errorf("not detected any pod")
 	}
-	for _, p := range pods.Items {
-		log.Printf("destroying pod %s", p.Name)
+	for idx := range pods.Items {
+		log.Printf("destroying pod %s", pods.Items[idx].Name)
 		err := c.CoreV1().Pods(ns).Delete(
 			ctx,
-			p.Name,
+			pods.Items[idx].Name,
 			metav1.DeleteOptions{GracePeriodSeconds: &zero},
 		)
 		if err != nil {
-			return fmt.Errorf("error deleting pod %s: %s", p.Name, err.Error())
+			return fmt.Errorf("error deleting pod %s: %s", pods.Items[idx]Name, err.Error())
 		}
 	}
 

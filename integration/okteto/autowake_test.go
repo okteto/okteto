@@ -173,7 +173,7 @@ func TestAutoWakeFromURL(t *testing.T) {
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, "autowake", 1, timeout))
 
 	require.NoError(t, integration.RunKubectlApply(kubectlBinary, testNamespace, filepath.Join(dir, sfsManifestName)))
-	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "autowake", 1, timeout))
+	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "autowake", timeout))
 
 	// Test endpoint is working
 	autowakeURL := fmt.Sprintf("https://autowake-deployment-%s.%s", testNamespace, appsSubdomain)
@@ -216,7 +216,7 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, "autowake", 1, timeout))
 
 	require.NoError(t, integration.RunKubectlApply(kubectlBinary, testNamespace, filepath.Join(dir, sfsManifestName)))
-	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "autowake", 1, timeout))
+	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "autowake", timeout))
 
 	// Sleep namespace
 	require.NoError(t, sleepNamespace(testNamespace))

@@ -124,7 +124,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), "venv"))
 
 	require.NoError(t, integration.RunKubectlApply(kubectlBinary, testNamespace, filepath.Join(dir, "sfs.yml")))
-	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "e2etest", 1, timeout))
+	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "e2etest", timeout))
 
 	originalStatefulSet, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest")
 	require.NoError(t, err)
@@ -138,7 +138,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
 
-	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, model.DevCloneName("e2etest"), 1, timeout))
+	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, model.DevCloneName("e2etest"), timeout))
 
 	varLocalEndpoint := "http://localhost:8080/var.html"
 	indexLocalEndpoint := "http://localhost:8080/index.html"
@@ -212,7 +212,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), "venv"))
 
 	require.NoError(t, integration.RunKubectlApply(kubectlBinary, testNamespace, filepath.Join(dir, "sfs.yml")))
-	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "e2etest", 1, timeout))
+	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "e2etest", timeout))
 
 	originalStatefulSet, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest")
 	require.NoError(t, err)
@@ -226,7 +226,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
 
-	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, model.DevCloneName("e2etest"), 1, timeout))
+	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, model.DevCloneName("e2etest"), timeout))
 
 	varLocalEndpoint := "http://localhost:8080/var.html"
 	indexLocalEndpoint := "http://localhost:8080/index.html"
