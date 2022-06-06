@@ -14,6 +14,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -21,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -442,6 +444,54 @@ func TestIsEmptyManifestFile(t *testing.T) {
 			isEmptyManifestFile := isEmptyManifestFile(tt.rawContent)
 			if isEmptyManifestFile != tt.expectedAnswer {
 				t.Fatalf("isEmptyManifestFile() fail '%s': expected result %t, got %t", tt.name, tt.expectedAnswer, isEmptyManifestFile)
+			}
+		})
+	}
+}
+
+func TestNoOktetoFileDetected(t *testing.T) {
+	tests := []struct {
+		name        string
+		rawContent  []byte
+		expectedErr bool
+		isInvalid   bool
+	}{
+		{
+			name:        "Dockerfile build file",
+			rawContent:  []byte("FROM alpine\nRUN echo hello okteto"),
+			expectedErr: true,
+			isInvalid:   false,
+		},
+		{
+			name:        "okteto manifest build file",
+			rawContent:  []byte("deploy:\n - echo hello okteto"),
+			expectedErr: false,
+			isInvalid:   false,
+		},
+		{
+			name:        "invalid okteto manifest build file",
+			rawContent:  []byte("build:\n todo-list"),
+			expectedErr: true,
+			isInvalid:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := Read(tt.rawContent)
+			if err != nil && !tt.expectedErr {
+				t.Fatalf("Read() fail '%s': not expected error but got %t", tt.name, err)
+			}
+
+			if err == nil && tt.expectedErr {
+				t.Fatalf("Read() fail '%s': expected error but got nil", tt.name)
+			}
+
+			if err != nil && tt.expectedErr {
+				if !tt.isInvalid {
+					if !errors.Is(err, oktetoErrors.ErrNotManifestContentDetected) {
+						t.Fatalf("Read() fail '%s': expected result %t, got %t", tt.name, oktetoErrors.ErrNotManifestContentDetected, err)
+					}
+				}
 			}
 		})
 	}
