@@ -45,7 +45,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	var connection *ssh.Client
 	t := time.NewTicker(100 * time.Millisecond)
 	for i := 0; i < 100; i++ {
-		connection, err = dial(ctx, "tcp", fmt.Sprintf("%s:%d", iface, remotePort), sshConfig)
+		connection, err = dial(ctx, "tcp", net.JoinHostPort(iface, fmt.Sprintf("%d", remotePort)), sshConfig)
 		if err == nil {
 			break
 		}
@@ -158,6 +158,8 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 			oktetoLog.Infof("error while writing to stdOut: %s", err)
 		}
 	}()
+
+	resizeWindow(session)
 
 	cmd := shellescape.QuoteCommand(command)
 	oktetoLog.Infof("executing command over ssh: '%s'", cmd)

@@ -566,6 +566,11 @@ func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
 func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, error) {
 	rawPorts = expandRangePorts(rawPorts)
 
+	// If public is set at this point it means that it comes from an okteto stacks and it's true
+	if public {
+		rawPorts = translateOktetoStacksPortsIntoComposeSyntax(rawPorts)
+	}
+
 	if !public && len(getAccessiblePorts(rawPorts)) == 1 {
 		public = true
 	}
@@ -595,6 +600,25 @@ func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, erro
 		}
 	}
 	return public, ports, nil
+}
+
+// translateOktetoStacksPortsIntoComposeSyntax translates okteto stack port syntax into compose ports syntax
+// We need this translation because we are using the same serializer for okteto stacks and docker compose syntax
+// Otherwise we don't know which ports should create an endpoint and which ones not
+// Example 1:
+// Stacks syntax  -> Compose syntax
+// ports:         | ports:
+//   - 5000       |   - 5000:5000
+//   - 3000       |   - 3000:3000
+// public: true   |
+func translateOktetoStacksPortsIntoComposeSyntax(ports []PortRaw) []PortRaw {
+	for idx, p := range ports {
+		if p.HostPort == 0 {
+			p.HostPort = p.ContainerPort
+		}
+		ports[idx] = p
+	}
+	return ports
 }
 
 func expandRangePorts(ports []PortRaw) []PortRaw {

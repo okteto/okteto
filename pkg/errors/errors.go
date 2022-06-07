@@ -161,6 +161,15 @@ var (
 
 	// ErrDevContainerNotExists is raised when the dev container doesn't exist on dev section
 	ErrDevContainerNotExists = "development container '%s' doesn't exist"
+
+	//ErrInvalidManifest is raised when cannot unmarshal manifest properly
+	ErrInvalidManifest = errors.New("invalid manifest")
+
+	//ErrEmptyManifest is raised when cannot detected content to read in manifest
+	ErrEmptyManifest = errors.New("no content detected for okteto.yml file")
+
+	//ErrNotManifestContentDetected is raised when cannot load any field accepted by okteto manifest doc
+	ErrNotManifestContentDetected = errors.New("couldn't detect okteto manifest content")
 )
 
 // IsForbidden raised if the Okteto API returns 401
