@@ -1,7 +1,7 @@
 package up
 
 import (
-	"crypto/md5"
+	"crypto/sha512"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -48,7 +48,7 @@ func Test_addStignoreSecrets(t *testing.T) {
 			expectedTransformedStignoreContent: `(?d).ignore
 `,
 			expectedAnnotation: model.Annotations{
-				model.OktetoStignoreAnnotation: fmt.Sprintf("%x", md5.Sum([]byte(`
+				model.OktetoStignoreAnnotation: fmt.Sprintf("%x", sha512.Sum512([]byte(`
 .ignore`))),
 			},
 		},
