@@ -58,6 +58,7 @@ const (
       timeout: 5m
       retries: 5
       start_period: 30s`
+
 	stacksTemplate = `services:
   app:
     build: app
