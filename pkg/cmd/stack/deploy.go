@@ -488,10 +488,13 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		if old.Labels[model.StackNameLabel] == "" {
 			return false, fmt.Errorf("skipping deploy of deployment '%s' due to name collision with pre-existing deployment", svcName)
 		}
-		if old.Labels[model.StackNameLabel] != s.Name {
+		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
 			return false, fmt.Errorf("skipping deploy of deployment '%s' due to name collision with deployment in stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
+			if old.Labels[model.StackNameLabel] == "okteto" {
+				d.Labels[model.DeployedByLabel] = s.Name
+			}
 			d.Labels[model.DeployedByLabel] = v
 		}
 	}
@@ -500,7 +503,12 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		if isNewDeployment {
 			return false, fmt.Errorf("error creating deployment of service '%s': %s", svcName, err.Error())
 		}
-		return false, fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
+		if err := deployments.Destroy(ctx, old.Name, old.Namespace, c); err != nil {
+			return false, fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
+		}
+		if _, err := deployments.Deploy(ctx, d, c); err != nil {
+			return false, fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
+		}
 	}
 
 	return isNewDeployment, nil
@@ -522,11 +530,14 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 	if old.Labels[model.StackNameLabel] == "" {
 		return false, fmt.Errorf("skipping deploy of statefulset '%s' due to name collision with pre-existing statefulset", svcName)
 	}
-	if old.Labels[model.StackNameLabel] != s.Name {
+	if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
 		return false, fmt.Errorf("skipping deploy of statefulset '%s' due to name collision with statefulset in stack '%s'", svcName, old.Labels[model.StackNameLabel])
 	}
 	if v, ok := old.Labels[model.DeployedByLabel]; ok {
 		sfs.Labels[model.DeployedByLabel] = v
+		if old.Labels[model.StackNameLabel] == "okteto" {
+			sfs.Labels[model.DeployedByLabel] = s.Name
+		}
 	}
 	if _, err := statefulsets.Deploy(ctx, sfs, c); err != nil {
 		if !strings.Contains(err.Error(), "Forbidden: updates to statefulset spec") {
@@ -592,7 +603,7 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 			spinner.Start()
 			return nil
 		}
-		if old.Labels[model.StackNameLabel] != s.Name {
+		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
 			spinner.Stop()
 			oktetoLog.Warning("skipping creation of volume '%s' due to name collision with volume in stack '%s'", pvc.Name, old.Labels[model.StackNameLabel])
 			spinner.Start()
