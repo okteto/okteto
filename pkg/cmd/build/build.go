@@ -18,6 +18,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/docker/docker/api/types/versions"
@@ -30,6 +31,11 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
+)
+
+const (
+	warningDockerfilePath   string = "Build '%s': Dockerfile '%s' is not in a relative path to context '%s'"
+	doubleDockerfileWarning string = "Build '%s': 2 Dockerfiles found in root and context path, using '%s/%s"
 )
 
 // OktetoBuilderInterface runs the build of an image
@@ -247,7 +253,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 	}
 
-	file := b.Dockerfile
+	file := extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
 
 	opts := &types.BuildOptions{
 		CacheFrom:  b.CacheFrom,
@@ -267,6 +273,24 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	opts.OutputMode = setOutputMode(outputMode)
 
 	return opts
+}
+
+func extractFromContextAndDockerfile(context, dockerfile, svcName string) string {
+	if filepath.IsAbs(dockerfile) {
+		return dockerfile
+	}
+
+	joinPath := filepath.Join(context, dockerfile)
+	if !model.FileExistsAndNotDir(joinPath) {
+		oktetoLog.Warning(fmt.Sprintf(warningDockerfilePath, svcName, dockerfile, context))
+		return dockerfile
+	}
+
+	if model.FileExistsAndNotDir(dockerfile) {
+		oktetoLog.Warning(fmt.Sprintf(doubleDockerfileWarning, svcName, context, dockerfile))
+	}
+
+	return joinPath
 }
 
 // ShouldOptimizeBuild returns if optimization should be applied

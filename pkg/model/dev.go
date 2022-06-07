@@ -116,16 +116,15 @@ type Args struct {
 
 // BuildInfo represents the build info to generate an image
 type BuildInfo struct {
-	Name              string        `yaml:"name,omitempty"`
-	Context           string        `yaml:"context,omitempty"`
-	Dockerfile        string        `yaml:"dockerfile,omitempty"`
-	dockerFileUpdated bool          `yaml:"-"`
-	CacheFrom         []string      `yaml:"cache_from,omitempty"`
-	Target            string        `yaml:"target,omitempty"`
-	Args              Environment   `yaml:"args,omitempty"`
-	Image             string        `yaml:"image,omitempty"`
-	VolumesToInclude  []StackVolume `yaml:"-"`
-	ExportCache       string        `yaml:"export_cache,omitempty"`
+	Name             string        `yaml:"name,omitempty"`
+	Context          string        `yaml:"context,omitempty"`
+	Dockerfile       string        `yaml:"dockerfile,omitempty"`
+	CacheFrom        []string      `yaml:"cache_from,omitempty"`
+	Target           string        `yaml:"target,omitempty"`
+	Args             Environment   `yaml:"args,omitempty"`
+	Image            string        `yaml:"image,omitempty"`
+	VolumesToInclude []StackVolume `yaml:"-"`
+	ExportCache      string        `yaml:"export_cache,omitempty"`
 }
 
 // Volume represents a volume in the development container
@@ -547,11 +546,7 @@ func (dev *Dev) SetDefaults() error {
 	return nil
 }
 
-func (b *BuildInfo) setBuildDefaults() error {
-	if b.dockerFileUpdated {
-		return nil
-	}
-
+func (b *BuildInfo) setBuildDefaults() {
 	if b.Context == "" {
 		b.Context = "."
 	}
@@ -560,21 +555,6 @@ func (b *BuildInfo) setBuildDefaults() error {
 		b.Dockerfile = "Dockerfile"
 	}
 
-	if filepath.IsAbs(b.Dockerfile) {
-		return nil
-	}
-
-	file := filepath.Join(b.Context, b.Dockerfile)
-	if !FileExistsAndNotDir(file) {
-		// if we can't find the Dockerfile we leave it as it is in the manifest, and the next build/push/deploy operation will find ir or return error
-		// for example in "." but in any other directory the user has it
-		return fmt.Errorf("Dockerfile '%s' is not in a relative path to context '%s'", b.Dockerfile, b.Context)
-	}
-
-	// if we find Dockerfile in context path, update the field to use it later where it really is
-	b.Dockerfile = file
-	b.dockerFileUpdated = true
-	return nil
 }
 
 func (dev *Dev) setRunAsUserDefaults(main *Dev) {

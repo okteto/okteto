@@ -45,8 +45,6 @@ var (
 	KubernetesType Archetype = "kubernetes"
 	// ChartType represents a k8s manifest type
 	ChartType Archetype = "chart"
-
-	warnServices = make(map[string]bool)
 )
 
 const (
@@ -719,18 +717,15 @@ func (m *Manifest) setDefaults() error {
 		}
 	}
 
-	for k, b := range m.Build {
+	for _, b := range m.Build {
 		if b.Name != "" {
 			b.Context = b.Name
 			b.Name = ""
 		}
 
-		err := b.setBuildDefaults()
-		if err != nil && !warnServices[k] {
-			oktetoLog.Warning(fmt.Sprintf("Build '%s': %s", k, err.Error()))
-			warnServices[k] = true
-		}
+		b.setBuildDefaults()
 	}
+
 	return nil
 }
 
@@ -863,7 +858,8 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 		if err != nil {
 			oktetoLog.Infof("can not make svc[%s].build.context relative to cwd", svcName)
 		}
-		buildInfo.Dockerfile, err = filepath.Rel(cwd, buildInfo.Dockerfile)
+		contextAbs := filepath.Join(cwd, buildInfo.Context)
+		buildInfo.Dockerfile, err = filepath.Rel(contextAbs, buildInfo.Dockerfile)
 		if err != nil {
 			oktetoLog.Infof("can not make svc[%s].build.dockerfile relative to cwd", svcName)
 		}

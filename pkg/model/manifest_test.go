@@ -15,15 +15,12 @@ package model
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"testing"
 	"time"
 
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -158,6 +155,7 @@ func Test_validateDivert(t *testing.T) {
 }
 
 func TestInferFromStack(t *testing.T) {
+	dirtest := "/stack/dir/"
 	devInterface := PrivilegedLocalhost
 	if runtime.GOOS == "windows" {
 		devInterface = Localhost
@@ -166,9 +164,9 @@ func TestInferFromStack(t *testing.T) {
 		Services: map[string]*Service{
 			"test": {
 				Build: &BuildInfo{
-					Name:       "test",
+					Name:       "",
 					Context:    "test",
-					Dockerfile: filepath.Join("test", "Dockerfile"),
+					Dockerfile: "Dockerfile",
 				},
 				Ports: []Port{
 					{
@@ -191,7 +189,23 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &BuildInfo{
+										Name:       "test",
+										Context:    filepath.Join(dirtest, "test"),
+										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -199,7 +213,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{
 					"test": &BuildInfo{
 						Context:    "test",
-						Dockerfile: filepath.Join("test", "Dockerfile"),
+						Dockerfile: "Dockerfile",
 					},
 				},
 				Dev: ManifestDevs{},
@@ -222,7 +236,23 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &BuildInfo{
+										Name:       "test",
+										Context:    filepath.Join(dirtest, "test"),
+										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -236,7 +266,23 @@ func TestInferFromStack(t *testing.T) {
 				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &BuildInfo{
+										Name:       "test",
+										Context:    "test",
+										Dockerfile: "Dockerfile",
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -253,7 +299,23 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &BuildInfo{
+										Name:       "test",
+										Context:    "test",
+										Dockerfile: "Dockerfile",
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -261,7 +323,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{
 					"test": &BuildInfo{
 						Context:    "test",
-						Dockerfile: filepath.Join("test", "Dockerfile"),
+						Dockerfile: "Dockerfile",
 					},
 				},
 				Dev: ManifestDevs{
@@ -324,7 +386,7 @@ func TestInferFromStack(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := tt.currentManifest.InferFromStack("")
+			result, err := tt.currentManifest.InferFromStack(filepath.Clean(dirtest))
 			if result != nil {
 				for _, d := range result.Dev {
 					d.parentSyncFolder = ""
@@ -408,169 +470,51 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 	}
 }
 
-func TestSetManifestBuildDefaults(t *testing.T) {
-	buildName := "frontend"
-	mockDir := "mockDir"
-
-	originalWd, errwd := os.Getwd()
-	if errwd != nil {
-		t.Fatal(errwd)
-	}
-
-	dir := t.TempDir()
-	log.Printf("created tempdir: %s", dir)
-
-	os.Chdir(dir)
-	defer os.Chdir(originalWd)
-
-	err := os.Mkdir(buildName, os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	err = os.Mkdir(mockDir, os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	log.Printf("created context dir: %s", filepath.Join(dir, buildName))
+func TestSetBuildDefaults(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		currentManifest   ManifestBuild
-		expectedManifest  ManifestBuild
-		dockerfileCreated string
-		expectedError     bool
+		currentBuildInfo  BuildInfo
+		expectedBuildInfo BuildInfo
 	}{
 		{
-			name: "Manifest: all empty / Paths: Dockerfile relative to context",
-			currentManifest: ManifestBuild{
-				"test1": &BuildInfo{},
+			name:             "all empty",
+			currentBuildInfo: BuildInfo{},
+			expectedBuildInfo: BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
 			},
-			expectedManifest: ManifestBuild{
-				"test1": &BuildInfo{
-					Context:           ".",
-					Dockerfile:        "Dockerfile",
-					dockerFileUpdated: true,
-				},
-			},
-			dockerfileCreated: "Dockerfile",
-			expectedError:     false,
 		},
 		{
-			name: "Manifest: all empty / Paths: Dockerfile NOT relative to context",
-			currentManifest: ManifestBuild{
-				"test2": &BuildInfo{},
+			name: "context empty",
+			currentBuildInfo: BuildInfo{
+				Dockerfile: "Dockerfile",
 			},
-			expectedManifest: ManifestBuild{
-				"test2": &BuildInfo{
-					Context:    ".",
-					Dockerfile: "Dockerfile",
-				},
+			expectedBuildInfo: BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
 			},
-			dockerfileCreated: filepath.Join(mockDir, "test2.Dockerfile"),
-			expectedError:     true,
 		},
 		{
-			name: "Manifest: Context empty / Paths: Dockerfile relative to context",
-			currentManifest: ManifestBuild{
-				"test3": &BuildInfo{
-					Dockerfile: "test3.Dockerfile",
-				},
+			name: "dockerfile empty",
+			currentBuildInfo: BuildInfo{
+				Context: "buildName",
 			},
-			expectedManifest: ManifestBuild{
-				"test3": &BuildInfo{
-					Context:           ".",
-					Dockerfile:        "test3.Dockerfile",
-					dockerFileUpdated: true,
-				},
+			expectedBuildInfo: BuildInfo{
+				Context:    "buildName",
+				Dockerfile: "Dockerfile",
 			},
-			dockerfileCreated: "test3.Dockerfile",
-			expectedError:     false,
 		},
 		{
-			name: "Manifest: Context empty / Paths: Dockerfile NOT relative to context",
-			currentManifest: ManifestBuild{
-				"test4": &BuildInfo{
-					Dockerfile: "test4.Dockerfile",
-				},
+			name: "context and Dockerfile filled",
+			currentBuildInfo: BuildInfo{
+				Context:    "buildName",
+				Dockerfile: "Dockerfile",
 			},
-			expectedManifest: ManifestBuild{
-				"test4": &BuildInfo{
-					Context:    ".",
-					Dockerfile: "test4.Dockerfile",
-				},
+			expectedBuildInfo: BuildInfo{
+				Context:    "buildName",
+				Dockerfile: "Dockerfile",
 			},
-			dockerfileCreated: filepath.Join(mockDir, "test4.Dockerfile"),
-			expectedError:     true,
-		},
-		{
-			name: "Manifest: Dockerfile empty / Paths: Dockerfile relative to context",
-			currentManifest: ManifestBuild{
-				"test5": &BuildInfo{
-					Context: buildName,
-				},
-			},
-			expectedManifest: ManifestBuild{
-				"test5": &BuildInfo{
-					Context:           buildName,
-					Dockerfile:        filepath.Join(buildName, "Dockerfile"),
-					dockerFileUpdated: true,
-				},
-			},
-			dockerfileCreated: filepath.Join(buildName, "Dockerfile"),
-			expectedError:     false,
-		},
-		{
-			name: "Manifest: Dockerfile empty / Paths: Dockerfile NOT relative to context",
-			currentManifest: ManifestBuild{
-				"test6": &BuildInfo{
-					Context: buildName,
-				},
-			},
-			expectedManifest: ManifestBuild{
-				"test6": &BuildInfo{
-					Context:    buildName,
-					Dockerfile: "Dockerfile",
-				},
-			},
-			dockerfileCreated: filepath.Join(mockDir, "test6.Dockerfile"),
-			expectedError:     true,
-		},
-		{
-			name: "Manifest: Context and Dockerfile filled / Paths: Dockerfile relative to context",
-			currentManifest: ManifestBuild{
-				"test7": &BuildInfo{
-					Context:    buildName,
-					Dockerfile: "test7.Dockerfile",
-				},
-			},
-			expectedManifest: ManifestBuild{
-				"test7": &BuildInfo{
-					Context:           buildName,
-					Dockerfile:        filepath.Join(buildName, "test7.Dockerfile"),
-					dockerFileUpdated: true,
-				},
-			},
-			dockerfileCreated: filepath.Join(buildName, "test7.Dockerfile"),
-			expectedError:     false,
-		},
-		{
-			name: "Manifest: Context and Dockerfile filled / Paths: Dockerfile NOT relative to context",
-			currentManifest: ManifestBuild{
-				"test8": &BuildInfo{
-					Context:    buildName,
-					Dockerfile: "test8.Dockerfile",
-				},
-			},
-			expectedManifest: ManifestBuild{
-				"test8": &BuildInfo{
-					Context:    buildName,
-					Dockerfile: "test8.Dockerfile",
-				},
-			},
-			dockerfileCreated: "test8.Dockerfile",
-			expectedError:     true,
 		},
 	}
 
@@ -578,44 +522,10 @@ func TestSetManifestBuildDefaults(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 
-			if tt.dockerfileCreated != "" {
-				defer removeFile(tt.dockerfileCreated)
-				// create test dockerfile
-				_, err := os.Create(tt.dockerfileCreated)
-				if err != nil {
-					t.Fatal(err)
-				}
+			tt.currentBuildInfo.setBuildDefaults()
 
-				log.Printf("created docker file: %s", tt.dockerfileCreated)
-			}
-
-			buildKey := reflect.ValueOf(tt.currentManifest).MapKeys()[0].String()
-			errManifest := tt.currentManifest[buildKey].setBuildDefaults()
-
-			if errManifest != nil {
-				oktetoLog.Warning(fmt.Sprintf("Build '%s': %s", buildKey, errManifest.Error()))
-			}
-
-			if errManifest != nil && !tt.expectedError {
-				t.Fatal(err)
-			}
-
-			if errManifest == nil && tt.expectedError {
-				t.Fatal("error not thrown")
-			}
-
-			assert.Equal(t, tt.expectedManifest, tt.currentManifest)
+			assert.Equal(t, tt.expectedBuildInfo, tt.currentBuildInfo)
 
 		})
 	}
-}
-
-func removeFile(s string) error {
-	// rm context and dockerfile
-	err := os.Remove(s)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
