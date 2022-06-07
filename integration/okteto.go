@@ -131,8 +131,8 @@ func GetContentFromURL(url string, timeout time.Duration) string {
 
 // SkipIfWindows skips a tests if is on a windows environment
 func SkipIfWindows(t *testing.T) {
-	if os.Getenv("CI") != "" {
-		t.Skip("Skipping testing in CI environment")
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping testing in windows CI environment")
 	}
 }
 
