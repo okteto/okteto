@@ -28,10 +28,10 @@ import (
 )
 
 var (
-	pipelineDeployPipelineManifestName = "okteto-pipeline.yml"
+	pipelineDeployPipelineManifestName = "okteto-pipeline-inside.yml"
 	pipelineDeployPipelineManifest     = `
 deploy:
-  - %s deploy -f okteto-pipeline.yml
+  - %s deploy -f okteto-pipeline.yml --name=test
   - kubectl get pods`
 
 	pipelineManifestName = "okteto-pipeline.yml"
@@ -86,7 +86,8 @@ func TestDeployPipelineManifestInsidePipeline(t *testing.T) {
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
 	deployOptions := &commands.DeployOptions{
-		Workdir: dir,
+		Workdir:      dir,
+		ManifestPath: pipelineDeployPipelineManifestName,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)

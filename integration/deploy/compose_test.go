@@ -35,7 +35,7 @@ const (
 	composeTemplate = `services:
   app:
     build: app
-    entrypoint: echo -n $RABBITMQ_PASS > var.html && python -m http.server 8080
+    entrypoint: python -m http.server 8080
     ports:
       - 8080
       - 8913
@@ -62,7 +62,7 @@ const (
 	stacksTemplate = `services:
   app:
     build: app
-    command: echo -n $RABBITMQ_PASS > var.html && python -m http.server 8080
+    command: python -m http.server 8080
     ports:
     - 8080
     environment:
@@ -118,10 +118,6 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 		Workdir: dir,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
-
-	// Test that the secret injection has gone correctly
-	autowakeURL := fmt.Sprintf("https://nginx-%s.%s/var.html", testNamespace, appsSubdomain)
-	require.Equal(t, integration.GetContentFromURL(autowakeURL, timeout), "rabbitmq")
 
 	// Test that the nginx image has been created correctly
 	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx")
@@ -214,10 +210,6 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 		Workdir: dir,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
-
-	// Test that the secret injection has gone correctly
-	autowakeURL := fmt.Sprintf("https://nginx-%s.%s/var.html", testNamespace, appsSubdomain)
-	require.Equal(t, "rabbitmq", integration.GetContentFromURL(autowakeURL, timeout))
 
 	// Test that the nginx image has been created correctly
 	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx")

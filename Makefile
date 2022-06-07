@@ -44,15 +44,15 @@ integration:
 
 .PHONY: integration-actions
 integration-actions:
-	go test github.com/okteto/okteto/integration/actions -tags="actions" --count=1 -v -timeout 15m
+	go test github.com/okteto/okteto/integration/actions -tags="actions" --count=1 -v -timeout 10m
 
 .PHONY: integration-build
 integration-build:
-	go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 15m
+	go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
 
 .PHONY: integration-deploy
 integration-deploy:
-	go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 15m
+	go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
 
 .PHONY: integration-okteto
 integration-okteto:
