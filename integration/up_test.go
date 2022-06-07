@@ -64,9 +64,11 @@ var (
 )
 
 const (
-	indexEndpoint    = "http://localhost:8080/index.html"
-	varEndpoint      = "http://localhost:8080/var.html"
-	deploymentFormat = `
+	microservicesDemoFolder = "microservices-demo"
+	microservicesDemoRepo   = "https://github.com/okteto/microservices-demo"
+	indexEndpoint           = "http://localhost:8080/index.html"
+	varEndpoint             = "http://localhost:8080/var.html"
+	deploymentFormat        = `
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -183,6 +185,68 @@ persistentVolume:
   enabled: false
 environment:
   VAR: value2
+`
+
+	globalForwardManifest = `
+icon: https://github.com/okteto/microservices-demo/raw/main/vote-icon.png
+
+build:
+ result:
+  context: result
+ vote:
+  context: vote
+ worker:
+  context: worker
+ dev:
+  context: worker
+  target: dev
+
+deploy:
+ - helm repo add bitnami https://charts.bitnami.com/bitnami
+ - helm upgrade --install postgresql bitnami/postgresql -f postgresql/values.yml --version 10.16.2
+ - helm upgrade --install kafka bitnami/kafka -f kafka/values.yml --version 14.5.0
+ - helm upgrade --install vote vote/chart --set image=${OKTETO_BUILD_VOTE_IMAGE}
+ - helm upgrade --install result result/chart --set image=${OKTETO_BUILD_RESULT_IMAGE}
+ - helm upgrade --install worker worker/chart --set image=${OKTETO_BUILD_WORKER_IMAGE}
+
+
+forward:
+ - localPort: 5432
+   remotePort: 5432
+   name: postgresql
+ - 8080:vote:8080
+ - 8085:result:80
+
+dev: 
+ vote:
+  command: mvn spring-boot:run
+  sync:
+   - ./vote:/app
+  forward:
+   - 5005:5005
+  persistentVolume:
+   enabled: false
+
+ result:
+  command: nodemon server.js
+  sync:
+   - ./result:/app
+  persistentVolume:
+   enabled: false
+
+ worker:
+  image: ${OKTETO_BUILD_DEV_IMAGE}
+  command: bash
+  securityContext:
+   capabilities:
+    add: 
+     - SYS_PTRACE
+  sync:
+   - ./worker:/app
+  forward:
+   - 2345:2345
+  persistentVolume:
+   enabled: false	
 `
 	microservicesComposeRepo   = "https://github.com/okteto/microservices-demo-compose"
 	microservicesComposeFolder = "microservices-demo-compose"
@@ -777,6 +841,94 @@ func TestUpCompose(t *testing.T) {
 
 }
 
+func TestUpGlobalForwarding(t *testing.T) {
+	tName := fmt.Sprintf("TestUpGlobalForwarding-%s", runtime.GOOS)
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	namespace := fmt.Sprintf("%s-%s", name, user)
+	ctx := context.Background()
+	oktetoPath, err := getOktetoPath(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	startNamespace := getCurrentNamespace()
+	defer changeToNamespace(ctx, oktetoPath, startNamespace)
+	if err := createNamespace(ctx, oktetoPath, namespace); err != nil {
+		t.Fatal(err)
+	}
+	defer deleteNamespace(ctx, oktetoPath, namespace)
+
+	log.Printf("created namespace %s \n", namespace)
+
+	if err := cloneGitRepoWithBranch(ctx, microservicesDemoRepo, "main"); err != nil {
+		t.Fatal(err)
+	}
+	defer deleteGitRepo(ctx, microservicesDemoFolder)
+
+	manifestPath := "microservices-demo/okteto.yml"
+
+	err = os.Remove(manifestPath)
+	if err != nil {
+		log.Println(err)
+	}
+
+	if err := os.WriteFile(manifestPath, []byte(globalForwardManifest), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	log.Printf("cloned repo %s \n", microservicesDemoFolder)
+
+	var wgUpVoteSvc sync.WaitGroup
+	upErrorChannel := make(chan error, 1)
+	_, err = upSvc(ctx, &wgUpVoteSvc, namespace, "vote", manifestPath, oktetoPath, upErrorChannel)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = getContent("http://localhost:8080/", 300, nil)
+	if err != nil {
+		t.Fatalf("failed to get app content: %s", err)
+	}
+
+	_, err = getContent("http://localhost:8085/", 300, nil)
+	if err != nil {
+		t.Fatalf("failed to get app content: %s", err)
+	}
+
+	var wgUpResultSvc sync.WaitGroup
+	_, err = upSvc(ctx, &wgUpResultSvc, namespace, "result", manifestPath, oktetoPath, upErrorChannel)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = getContent("http://localhost:8080/", 300, nil)
+	if err != nil {
+		t.Fatalf("failed to get app content: %s", err)
+	}
+
+	_, err = getContent("http://localhost:8085/", 300, nil)
+	if err != nil {
+		t.Fatalf("failed to get app content: %s", err)
+	}
+
+	if err := downSvc(ctx, "vote", microservicesDemoFolder, oktetoPath); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = getContent("http://localhost:8080/", 300, nil)
+	if err != nil {
+		t.Fatalf("failed to get app content: %s", err)
+	}
+
+	_, err = getContent("http://localhost:8085/", 300, nil)
+	if err != nil {
+		t.Fatalf("failed to get app content: %s", err)
+	}
+
+	if err := oktetoDestroy(ctx, oktetoPath, microservicesDemoFolder); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func oktetoPipeline(ctx context.Context, oktetoPath, repo, folder string) error {
 	log.Printf("okteto pipeline --wait")
 	cmd := exec.Command(oktetoPath, "pipeline", "deploy", "--wait")
@@ -1185,6 +1337,32 @@ func downSvc(ctx context.Context, name, folder, oktetoPath string) error {
 	}
 
 	return nil
+}
+
+func upSvc(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, oktetoPath string, upErrorChannel chan error) (*os.Process, error) {
+	var out bytes.Buffer
+	cmd := exec.Command(oktetoPath, "up", name, "-n", namespace, "-f", manifestPath)
+	cmd.Env = os.Environ()
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+	log.Printf("up command: %s", cmd.String())
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("okteto up failed to start: %s", err)
+	}
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		if err := cmd.Wait(); err != nil {
+			if err != nil {
+				log.Printf("okteto up exited: %s.\nOutput:\n%s", err, out.String())
+				upErrorChannel <- fmt.Errorf("Okteto up exited before completion")
+			}
+		}
+	}()
+
+	return cmd.Process, waitForReady(namespace, name, upErrorChannel)
 }
 
 func up(ctx context.Context, wg *sync.WaitGroup, namespace, name, manifestPath, oktetoPath string, upErrorChannel chan error) (*os.Process, error) {
