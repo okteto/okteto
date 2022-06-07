@@ -42,7 +42,7 @@ var (
 )
 
 func Test_translateWithVolumes(t *testing.T) {
-	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
+	file, err := os.CreateTemp("", "okteto-secret-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1143,7 +1143,7 @@ environment:
 }
 
 func Test_translateSfsWithVolumes(t *testing.T) {
-	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
+	file, err := os.CreateTemp("", "okteto-secret-test")
 	if err != nil {
 		t.Fatal(err)
 	}
