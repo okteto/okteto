@@ -7,6 +7,45 @@ aliases:
 version: 2.1
 orbs:
   win: circleci/windows@2.1.0
+commands:
+  integration-actions:
+    steps:
+      - run:
+          name: Run actions integration tests
+          command: make integration-actions
+
+  integration-build:
+    steps:
+      - run:
+          name: Run build integration tests
+          command: make integration-build
+
+  integration-deploy:
+    steps:
+      - run:
+          name: Run deploy integration tests
+          command: make integration-deploy
+
+  integration-up:
+    steps:
+      - run:
+          name: Run up integration tests
+          command: make integration-up
+          environment:
+            OKTETO_SKIP_CLEANUP: 'true'
+
+  integration-okteto:
+    steps:
+      - run:
+          name: Run okteto integration tests
+          command: make integration-okteto
+
+  integration-deprecated:
+    steps:
+      - run:
+          name: Run deprecated integration tests
+          command: make integration-deprecated
+
 jobs:
   build:
     docker:
@@ -62,11 +101,12 @@ jobs:
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
             /usr/local/bin/okteto login --token ${API_TOKEN}
-      - run:
-          name: Integration tests
-          environment:
-            OKTETO_SKIP_CLEANUP: 'true'
-          command: make integration
+      - integration-actions:
+      - integration-build:
+      - integration-deploy:
+      - integration-up:
+      - integration-okteto:
+      - integration-deprecated:
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
