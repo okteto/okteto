@@ -36,22 +36,23 @@ func TestPipelineCommand(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestDeploy", user)
+	testNamespace := integration.GetTestNamespace("TestPipeline", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
-	previewOptions := &commands.DeployPipelineOptions{
+	pipelineOptions := &commands.DeployPipelineOptions{
 		Namespace:  testNamespace,
 		Repository: fmt.Sprintf("%s/%s", githubHTTPSURL, pipelineRepo),
 		Wait:       true,
 	}
-	require.NoError(t, commands.RunOktetoDeployPipeline(oktetoPath, previewOptions))
+	require.NoError(t, commands.RunOktetoDeployPipeline(oktetoPath, pipelineOptions))
 
-	contentURL := fmt.Sprintf("https://movies-%s.%s/api", testNamespace, appsSubdomain)
+	contentURL := fmt.Sprintf("https://movies-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
 
-	previewDestroyOptions := &commands.DestroyPipelineOptions{
+	pipelineDestroyOptions := &commands.DestroyPipelineOptions{
 		Namespace: testNamespace,
+		Name:      "movies",
 	}
-	require.NoError(t, commands.RunOktetoPipelineDestroy(oktetoPath, previewDestroyOptions))
+	require.NoError(t, commands.RunOktetoPipelineDestroy(oktetoPath, pipelineDestroyOptions))
 }

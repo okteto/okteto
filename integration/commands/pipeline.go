@@ -33,6 +33,7 @@ type DeployPipelineOptions struct {
 type DestroyPipelineOptions struct {
 	Workdir   string
 	Namespace string
+	Name      string
 }
 
 // RunOktetoDeployPipeline runs an okteto deploy command
@@ -44,8 +45,6 @@ func RunOktetoDeployPipeline(oktetoPath string, deployOptions *DeployPipelineOpt
 
 	if deployOptions.Branch != "" {
 		cmd.Args = append(cmd.Args, "--branch", deployOptions.Branch)
-	} else {
-		cmd.Args = append(cmd.Args, "--branch", "master")
 	}
 	if deployOptions.Repository != "" {
 		cmd.Args = append(cmd.Args, "--repository", deployOptions.Repository)
@@ -58,6 +57,7 @@ func RunOktetoDeployPipeline(oktetoPath string, deployOptions *DeployPipelineOpt
 	log.Printf("Running '%s'", cmd.String())
 	o, err := cmd.CombinedOutput()
 	if err != nil {
+		log.Printf("%s: %s", cmd.String(), string(o))
 		return fmt.Errorf("%s: %s", cmd.String(), string(o))
 	}
 	return nil
@@ -69,6 +69,9 @@ func RunOktetoPipelineDestroy(oktetoPath string, destroyOptions *DestroyPipeline
 	cmd := exec.Command(oktetoPath, "pipeline", "destroy")
 	if destroyOptions.Workdir != "" {
 		cmd.Dir = destroyOptions.Workdir
+	}
+	if destroyOptions.Name != "" {
+		cmd.Args = append(cmd.Args, "--name", destroyOptions.Name)
 	}
 
 	o, err := cmd.CombinedOutput()

@@ -31,7 +31,7 @@ func TestPreviewCommand(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestDeploy", user)
+	testNamespace := integration.GetTestNamespace("TestPreview", user)
 
 	previewOptions := &commands.DeployPreviewOptions{
 		Namespace:  testNamespace,
@@ -40,7 +40,7 @@ func TestPreviewCommand(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDeployPreview(oktetoPath, previewOptions))
 
-	contentURL := fmt.Sprintf("https://movies-%s.%s/api", testNamespace, appsSubdomain)
+	contentURL := fmt.Sprintf("https://movies-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
 
 	previewDestroyOptions := &commands.DestroyPreviewOptions{
