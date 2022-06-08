@@ -44,6 +44,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	giturls "github.com/whilp/git-urls"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -323,6 +324,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			SkipIfExists: !deployOptions.Dependencies,
 		}
 		if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); err != nil {
+				return errStatus
+			}
+
 			return err
 		}
 	}
@@ -349,8 +354,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	if errBuild != nil {
-		data.Status = pipeline.ErrorStatus
-		if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
+		if err := updateConfigMapStatus(ctx, cfg, c, data, errBuild); err != nil {
 			return err
 		}
 
@@ -434,6 +438,16 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 	return err
+}
+
+func updateConfigMapStatus(ctx context.Context, cfg *v1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, err error) error {
+	oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, err.Error())
+	data.Status = pipeline.ErrorStatus
+	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) {
