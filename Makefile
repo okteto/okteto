@@ -60,7 +60,7 @@ integration-okteto:
 
 .PHONY: integration-up
 integration-up:
-	go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 30m
+	go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
 
 .PHONY: integration-deprecated
 integration-deprecated:
