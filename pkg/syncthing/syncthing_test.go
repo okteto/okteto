@@ -22,13 +22,8 @@ import (
 )
 
 func TestGetFiles(t *testing.T) {
-
-	dir, err := os.MkdirTemp("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 	defer func() {
-		os.RemoveAll(dir)
 		os.Unsetenv(model.OktetoFolderEnvVar)
 	}()
 

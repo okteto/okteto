@@ -134,10 +134,7 @@ func TestBuildActionPipeline(t *testing.T) {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
 
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
 	dockerfileContent := []byte("FROM alpine")
