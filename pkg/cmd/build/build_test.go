@@ -241,7 +241,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 	}
 }
 
-func TestOptsFromBuildInfo(t *testing.T) {
+func TestExtractFromContextAndDockerfile(t *testing.T) {
 	buildName := "frontendTest"
 	mockDir := "mockDir"
 
