@@ -164,6 +164,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 	sfs, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest")
 	require.NoError(t, err)
 	sfs.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
+	originalStatefulSet.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	require.NoError(t, integration.UpdateStatefulset(context.Background(), testNamespace, sfs))
 	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
 
@@ -174,7 +175,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))
 
 	// Test destroy pod reconnection
-	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "app=autocreate"))
+	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "app=e2etest"))
 	destroyPodContent := fmt.Sprintf("%s-destroy-pod", testNamespace)
 	require.NoError(t, writeFile(indexPath, destroyPodContent))
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, destroyPodContent, timeout, upResult.ErrorChan))
@@ -252,6 +253,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 	sfs, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest")
 	require.NoError(t, err)
 	sfs.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
+	originalStatefulSet.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	require.NoError(t, integration.UpdateStatefulset(context.Background(), testNamespace, sfs))
 	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
 
@@ -262,7 +264,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))
 
 	// Test destroy pod reconnection
-	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "app=autocreate"))
+	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "app=e2etest"))
 	destroyPodContent := fmt.Sprintf("%s-destroy-pod", testNamespace)
 	require.NoError(t, writeFile(indexPath, destroyPodContent))
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, destroyPodContent, timeout, upResult.ErrorChan))
@@ -282,7 +284,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 }
 
 func compareStatefulSet(ctx context.Context, deployment *appsv1.StatefulSet) error {
-	after, err := integration.GetDeployment(ctx, deployment.GetNamespace(), deployment.GetName())
+	after, err := integration.GetStatefulset(ctx, deployment.GetNamespace(), deployment.GetName())
 	if err != nil {
 		return err
 	}

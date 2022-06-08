@@ -166,6 +166,7 @@ func TestUpDeploymentV1(t *testing.T) {
 	d.ResourceVersion = ""
 	require.NoError(t, err)
 	d.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
+	originalDeployment.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	require.NoError(t, integration.UpdateDeployment(context.Background(), testNamespace, d))
 	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
 
@@ -255,6 +256,7 @@ func TestUpDeploymentV2(t *testing.T) {
 	d.ResourceVersion = ""
 	require.NoError(t, err)
 	d.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
+	originalDeployment.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	require.NoError(t, integration.UpdateDeployment(context.Background(), testNamespace, d))
 	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
 
