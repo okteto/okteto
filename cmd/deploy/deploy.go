@@ -44,7 +44,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	giturls "github.com/whilp/git-urls"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -324,7 +324,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			SkipIfExists: !deployOptions.Dependencies,
 		}
 		if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
-			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); err != nil {
+			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); errStatus != nil {
 				return errStatus
 			}
 
@@ -332,7 +332,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
-	var errBuild error
 	if deployOptions.Build {
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
@@ -340,25 +339,29 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			CommandArgs:  deployOptions.servicesToDeploy,
 		}
 		oktetoLog.Debug("force build from manifest definition")
-		errBuild = dc.Builder.Build(ctx, buildOptions)
+		if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
+			if err := updateConfigMapStatus(ctx, cfg, c, data, errBuild); err != nil {
+				return err
+			}
+
+			return errBuild
+		}
 	} else {
 		svcsToBuild, errBuild := dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy)
-		if len(svcsToBuild) != 0 && errBuild != nil {
+		if len(svcsToBuild) != 0 && errBuild == nil {
 			buildOptions := &types.BuildOptions{
 				CommandArgs:  svcsToBuild,
 				EnableStages: true,
 				Manifest:     deployOptions.Manifest,
 			}
-			errBuild = dc.Builder.Build(ctx, buildOptions)
-		}
-	}
+			if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
+				if err := updateConfigMapStatus(ctx, cfg, c, data, errBuild); err != nil {
+					return err
+				}
 
-	if errBuild != nil {
-		if err := updateConfigMapStatus(ctx, cfg, c, data, errBuild); err != nil {
-			return err
+				return errBuild
+			}
 		}
-
-		return errBuild
 	}
 
 	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
@@ -440,7 +443,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	return err
 }
 
-func updateConfigMapStatus(ctx context.Context, cfg *v1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, err error) error {
+func updateConfigMapStatus(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, err error) error {
 	oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, err.Error())
 	data.Status = pipeline.ErrorStatus
 	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
