@@ -51,6 +51,11 @@ func TestWriteToNewFile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(func() {
+		if err := f.Close(); err != nil {
+			t.Fatal(err)
+		}
+	})
 
 	_, err = parse(f)
 	if err != nil {

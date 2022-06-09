@@ -72,9 +72,15 @@ func TestProcessDirectory(t *testing.T) {
 			tmp := t.TempDir()
 
 			for _, f := range tt.files {
-				if _, err := os.Create(filepath.Join(tmp, f)); err != nil {
+				file, err := os.Create(filepath.Join(tmp, f))
+				if err != nil {
 					t.Fatal(err)
 				}
+				t.Cleanup(func() {
+					if err := file.Close(); err != nil {
+						t.Fatal(err)
+					}
+				})
 			}
 
 			got, err := ProcessDirectory(tmp)
