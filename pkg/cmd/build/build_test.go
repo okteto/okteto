@@ -251,7 +251,6 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	log.Printf("created tempdir: %s", dir)
 
 	os.Chdir(dir)
 	defer os.Chdir(originalWd)
