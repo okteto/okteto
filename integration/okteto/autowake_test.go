@@ -350,6 +350,7 @@ func areNamespaceResourcesAwake(namespace string, timeout time.Duration) bool {
 			log.Printf("Resources not awake")
 			return false
 		case <-ticker.C:
+			retry++
 			dList, err := integration.GetDeploymentList(context.Background(), namespace)
 			if err != nil {
 				if retry%10 == 0 {

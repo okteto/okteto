@@ -36,6 +36,7 @@ func TestPreviewCommand(t *testing.T) {
 	previewOptions := &commands.DeployPreviewOptions{
 		Namespace:  testNamespace,
 		Repository: fmt.Sprintf("%s/%s", githubHTTPSURL, pipelineRepo),
+		Branch:     "cli-e2e",
 		Wait:       true,
 	}
 	require.NoError(t, commands.RunOktetoDeployPreview(oktetoPath, previewOptions))

@@ -73,10 +73,10 @@ spec:
 `
 )
 
-// TestDeployPipelineFromK8s tests the following scenario:
+// TestDeployDevEnvFromK8s tests the following scenario:
 // - Deploying a pipeline manifest locally from a k8s file
 // - The endpoints generated are accessible
-func TestDeployPipelineFromK8s(t *testing.T) {
+func TestDeployDevEnvFromK8s(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 

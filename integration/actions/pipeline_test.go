@@ -67,7 +67,7 @@ func executeDeployPipelineAction(t *testing.T, namespace string) error {
 	defer integration.DeleteGitRepo(actionFolder)
 
 	t.Setenv(model.GithubRepositoryEnvVar, pipelineRepo)
-	t.Setenv(model.GithubRefEnvVar, "master")
+	t.Setenv(model.GithubRefEnvVar, "cli-e2e")
 	t.Setenv(model.GithubServerURLEnvVar, githubHTTPSURL)
 
 	log.Printf("deploying pipeline %s", namespace)
