@@ -187,7 +187,7 @@ func TestAutoWakeFromURL(t *testing.T) {
 
 	// Wake resources from url
 	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
-	require.True(t, areNamespaceResourcesAwake(testNamespace, timeout))
+	require.NoError(t, waitUntilUpdatedContent(autowakeURL, "test", timeout))
 
 }
 
