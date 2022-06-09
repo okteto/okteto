@@ -56,6 +56,10 @@ You can also use `okteto` with [Okteto Cloud](https://okteto.com/), a **Kubernet
 
 We created a [few guides to help you get started](https://github.com/okteto/samples) with `okteto` and your favorite programming language.
 
+### Releases
+
+Okteto is released into three channels: stable, beta, and dev. By default when okteto is installed the stable channel is used. If you need to access features not yet widely available you can install from the beta or dev channel. More info in the [release documentation](docs/RELEASE.md).
+
 ## Useful links
 
 - [Getting started](https://www.okteto.com/docs/getting-started/#installing-okteto-cli)
