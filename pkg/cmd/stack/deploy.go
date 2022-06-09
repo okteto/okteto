@@ -499,16 +499,20 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		}
 	}
 
-	if _, err := deployments.Deploy(ctx, d, c); err != nil {
-		if isNewDeployment {
-			return false, fmt.Errorf("error creating deployment of service '%s': %s", svcName, err.Error())
-		}
+	if !isNewDeployment && old.Labels[model.StackNameLabel] == "okteto" {
 		if err := deployments.Destroy(ctx, old.Name, old.Namespace, c); err != nil {
 			return false, fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
 		}
 		if _, err := deployments.Deploy(ctx, d, c); err != nil {
 			return false, fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
 		}
+	}
+
+	if _, err := deployments.Deploy(ctx, d, c); err != nil {
+		if isNewDeployment {
+			return false, fmt.Errorf("error creating deployment of service '%s': %s", svcName, err.Error())
+		}
+		return false, fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
 	}
 
 	return isNewDeployment, nil
