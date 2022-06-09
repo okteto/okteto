@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -63,7 +64,7 @@ spec:
         command:
             - sh
             - -c
-            - "echo -n $VAR > var.html && python -m http.server 8080"
+            - "echo test > index.html && python -m http.server 8080"
 ---
 apiVersion: v1
 kind: Service
@@ -110,7 +111,7 @@ spec:
         command:
             - sh
             - -c
-            - "echo -n $VAR > var.html && python -m http.server 8080"
+            - "echo test > index.html && python -m http.server 8080"
 ---
 apiVersion: v1
 kind: Service
@@ -177,7 +178,7 @@ func TestAutoWakeFromURL(t *testing.T) {
 
 	// Test endpoint is working
 	autowakeURL := fmt.Sprintf("https://autowake-deployment-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
+	require.NoError(t, waitUntilUpdatedContent(autowakeURL, "test", timeout))
 	require.True(t, areNamespaceResourcesAwake(testNamespace, timeout))
 
 	// Sleep namespace
@@ -395,6 +396,32 @@ func areNamespaceResourcesAwake(namespace string, timeout time.Duration) bool {
 				continue
 			}
 			return true
+		}
+	}
+}
+
+func waitUntilUpdatedContent(url, expectedContent string, timeout time.Duration) error {
+	ticker := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(timeout)
+	contentTimeout := 5 * time.Second
+	retry := 0
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("%s without updating %s to %s", timeout.String(), url, expectedContent)
+		case <-ticker.C:
+			retry++
+			content := integration.GetContentFromURL(url, contentTimeout)
+			if content == "" {
+				continue
+			}
+			if !strings.Contains(content, expectedContent) {
+				if retry%10 == 0 {
+					log.Printf("expected updated content to be %s, got %s\n", expectedContent, content)
+				}
+				continue
+			}
+			return nil
 		}
 	}
 }
