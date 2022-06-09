@@ -488,6 +488,11 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		if old.Labels[model.StackNameLabel] == "" {
 			return false, fmt.Errorf("skipping deploy of deployment '%s' due to name collision with pre-existing deployment", svcName)
 		}
+		// PR 2742 https://github.com/okteto/okteto/pull/2742
+		// we are introducing this check for the old stack label as we resolved the bug
+		// when the stack is under an .okteto folder, this was the name for the dev environment
+		// for those users which will have a dev environment deployed with old version
+		// when re-deploying we switch the name for the enviroment and we have to move the resources to the new name
 		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
 			return false, fmt.Errorf("skipping deploy of deployment '%s' due to name collision with deployment in stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
