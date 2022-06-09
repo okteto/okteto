@@ -155,7 +155,7 @@ func Test_validateDivert(t *testing.T) {
 }
 
 func TestInferFromStack(t *testing.T) {
-	dirtest := "/stack/dir/"
+	dirtest := filepath.Clean("/stack/dir/")
 	devInterface := PrivilegedLocalhost
 	if runtime.GOOS == "windows" {
 		devInterface = Localhost
