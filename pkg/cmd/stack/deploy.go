@@ -492,10 +492,10 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 			return false, fmt.Errorf("skipping deploy of deployment '%s' due to name collision with deployment in stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
+			d.Labels[model.DeployedByLabel] = v
 			if old.Labels[model.StackNameLabel] == "okteto" {
 				d.Labels[model.DeployedByLabel] = s.Name
 			}
-			d.Labels[model.DeployedByLabel] = v
 		}
 	}
 
