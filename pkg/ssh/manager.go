@@ -200,7 +200,7 @@ func (fm *ForwardManager) TransformLabelsToServiceName(f model.Forward) (model.F
 	return f, nil
 }
 
-func (fm *ForwardManager) StartGlobalForwarding(podToForward, namespace string) error {
+func (fm *ForwardManager) StartGlobalForwarding() error {
 	for _, gf := range fm.globalForwards {
 		gf.pool = fm.pool
 		go gf.start(fm.ctx)

@@ -21,7 +21,6 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/forward"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -135,18 +134,6 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 func (up *upContext) setGlobalForwardsIfRequiredLoop(ctx context.Context) {
 	ticker := time.NewTicker(time.Second)
 
-	appDevName := fmt.Sprintf(model.OktetoVolumeNameTemplate, up.Dev.Name)
-	sshRemoteService, err := apps.Get(ctx, up.Dev.Namespace, appDevName, up.Client)
-	if err != nil {
-		up.GlobalForwarderStatus <- err
-		return
-	}
-
-	pod, err := sshRemoteService.GetRunningPod(ctx, up.Client)
-	if err != nil {
-		up.GlobalForwarderStatus <- err
-		return
-	}
 	for {
 		if !isNeededGlobalForwarder(up.Manifest.GlobalForward) {
 			return
@@ -157,7 +144,7 @@ func (up *upContext) setGlobalForwardsIfRequiredLoop(ctx context.Context) {
 			err := addGlobalForwards(up)
 			if err != nil {
 				if errors.Is(err, oktetoErrors.ErrPortAlreadyAllocated) {
-					err = up.Forwarder.StartGlobalForwarding(pod.Name, up.Dev.Namespace)
+					err = up.Forwarder.StartGlobalForwarding()
 					if err != nil {
 						up.GlobalForwarderStatus <- err
 						return
@@ -168,7 +155,7 @@ func (up *upContext) setGlobalForwardsIfRequiredLoop(ctx context.Context) {
 				return
 			}
 
-			err = up.Forwarder.StartGlobalForwarding(pod.Name, up.Dev.Namespace)
+			err = up.Forwarder.StartGlobalForwarding()
 			if err != nil {
 				up.GlobalForwarderStatus <- err
 				return
@@ -181,7 +168,7 @@ func (up *upContext) setGlobalForwardsIfRequiredLoop(ctx context.Context) {
 
 func isNeededGlobalForwarder(globalForwards []model.Forward) bool {
 	for _, f := range globalForwards {
-		if f.IsAdded == false {
+		if !f.IsAdded {
 			return true
 		}
 	}

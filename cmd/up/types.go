@@ -61,7 +61,7 @@ type forwarder interface {
 	Add(model.Forward) error
 	AddReverse(model.Reverse) error
 	Start(string, string) error
-	StartGlobalForwarding(string, string) error
+	StartGlobalForwarding() error
 	Stop()
 	TransformLabelsToServiceName(model.Forward) (model.Forward, error)
 }

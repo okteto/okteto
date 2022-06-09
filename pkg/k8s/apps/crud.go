@@ -49,7 +49,7 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 }
 
 // Get returns the dev pod for an app and loops until it success
-func Get(ctx context.Context, namespace string, appName string, c kubernetes.Interface) (App, error) {
+func Get(ctx context.Context, namespace, appName string, c kubernetes.Interface) (App, error) {
 	d, err := deployments.Get(ctx, appName, namespace, c)
 	if err != nil {
 		return nil, err

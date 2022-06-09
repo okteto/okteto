@@ -987,10 +987,10 @@ func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	result := ManifestDevs{}
-	for k, v := range devs {
-		dev := Dev(v)
+	for i := range devs {
+		dev := Dev(devs[i])
 		devPointer := &dev
-		result[k] = devPointer
+		result[i] = devPointer
 	}
 	*d = result
 	return nil
