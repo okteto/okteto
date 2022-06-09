@@ -87,10 +87,12 @@
 
         printf '> Using Release Channel: %s\n' ${channel}
 
-        version=$(curl -fsSL $download_uri/$channel/versions | tail -n1)
-        printf '> Current Version: %s\n' "$version"
+        if [ -z "$OKTETO_VERSION" ]; then
+                OKTETO_VERSION=$(curl -fsSL $download_uri/$channel/versions | tail -n1)
+        fi
+        printf '> Using Version: %s\n' "$OKTETO_VERSION"
 
-        URL="$download_uri/$channel/$version/$bin_file"
+        URL="$download_uri/$channel/$OKTETO_VERSION/$bin_file"
         printf '> Downloading %s\n' "$URL"
         download_path=$(mktemp)
         curl -fSL "$URL" -o "$download_path"
