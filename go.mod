@@ -209,6 +209,7 @@ require sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
 
 require (
 	github.com/Sirupsen/logrus v0.0.0-00010101000000-000000000000 // indirect
+	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/creack/pty v1.1.17 // indirect
 	github.com/docker/libnetwork v0.5.6 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect

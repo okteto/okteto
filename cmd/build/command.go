@@ -14,9 +14,13 @@
 package build
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"os"
 
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
@@ -88,7 +92,8 @@ func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 
 	manifest, err := bc.GetManifest(options.File)
 	if err != nil {
-		if errors.Is(err, oktetoErrors.ErrInvalidManifest) {
+
+		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
 			return nil, err
 		}
 
@@ -108,4 +113,19 @@ func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 
 func isBuildV2(m *model.Manifest) bool {
 	return m.IsV2 && len(m.Build) != 0
+}
+
+func validateDockerfile(file string) error {
+	dat, err := os.ReadFile(file)
+	if err != nil {
+		return err
+	}
+
+	parsedDockerfile, err := parser.Parse(bytes.NewBuffer(dat))
+	if err != nil {
+		return err
+	}
+
+	_, _, err = instructions.Parse(parsedDockerfile.AST)
+	return err
 }
