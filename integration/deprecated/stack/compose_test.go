@@ -117,10 +117,6 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoStackDeploy(oktetoPath, deployOptions))
 
-	// Test that the secret injection has gone correctly
-	autowakeURL := fmt.Sprintf("https://nginx-%s.%s/var.html", testNamespace, appsSubdomain)
-	require.Equal(t, integration.GetContentFromURL(autowakeURL, timeout), "rabbitmq")
-
 	// Test that the nginx image has been created correctly
 	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx")
 	require.NoError(t, err)
@@ -174,10 +170,6 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 		Workdir: dir,
 	}
 	require.NoError(t, commands.RunOktetoStackDeploy(oktetoPath, deployOptions))
-
-	// Test that the secret injection has gone correctly
-	autowakeURL := fmt.Sprintf("https://nginx-%s.%s/var.html", testNamespace, appsSubdomain)
-	require.Equal(t, "rabbitmq", integration.GetContentFromURL(autowakeURL, timeout))
 
 	// Test that the nginx image has been created correctly
 	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx")
