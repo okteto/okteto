@@ -44,6 +44,7 @@ func CopyFile(from, to string) error {
 	if err != nil {
 		return err
 	}
+	defer fromFile.Close()
 
 	// skipcq GSC-G302 syncthing is a binary so it needs exec permissions
 	toFile, err := os.OpenFile(to, os.O_RDWR|os.O_CREATE, 0700)

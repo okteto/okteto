@@ -48,13 +48,7 @@ func Test_Get(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir, err := os.MkdirTemp("", "")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer func() {
-				os.RemoveAll(dir)
-			}()
+			dir := t.TempDir()
 
 			os.Setenv(model.OktetoFolderEnvVar, dir)
 
