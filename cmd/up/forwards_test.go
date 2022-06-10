@@ -6,17 +6,18 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/ssh"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGlobalForwarderStartsWhenRequired(t *testing.T) {
 	var tests = []struct {
-		name           string
-		manifestInfo   []model.Forward
-		expectedAnswer bool
+		name             string
+		globalFwdSection []model.Forward
+		expectedAnswer   bool
 	}{
 		{
 			name: "is needed global forwarding",
-			manifestInfo: []model.Forward{
+			globalFwdSection: []model.Forward{
 				{
 					Local:  8080,
 					Remote: 8080,
@@ -25,17 +26,17 @@ func TestGlobalForwarderStartsWhenRequired(t *testing.T) {
 			expectedAnswer: true,
 		},
 		{
-			name:           "not needed global forwarding",
-			manifestInfo:   []model.Forward{},
-			expectedAnswer: false,
+			name:             "not needed global forwarding",
+			globalFwdSection: []model.Forward{},
+			expectedAnswer:   false,
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			answer := isNeededGlobalForwarder(tt.manifestInfo)
-			if answer != tt.expectedAnswer {
-				t.Fatalf("isNeededGlobalForwarder() '%s' fail: expexted %t, got %t", tt.name, tt.expectedAnswer, answer)
-			}
+			t.Parallel()
+			answer := isNeededGlobalForwarder(tt.globalFwdSection)
+			assert.Equal(t, answer, tt.expectedAnswer)
 		})
 	}
 }
@@ -44,10 +45,9 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 	f := ssh.NewForwardManager(context.Background(), ":8080", "0.0.0.0", "0.0.0.0", nil, "test")
 
 	var tests = []struct {
-		name          string
-		upContext     *upContext
-		expectedErr   bool
-		expectedAdded []model.Forward
+		name        string
+		upContext   *upContext
+		expectedErr bool
 	}{
 		{
 			name: "add one global forwarder",
@@ -98,14 +98,14 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			err := addGlobalForwards(tt.upContext)
-			if err != nil && !tt.expectedErr {
-				t.Fatalf("addGlobalForwards() '%s' fail: not expected err but got: %s", tt.name, err.Error())
-			}
-
-			if err == nil && tt.expectedErr {
-				t.Fatalf("addGlobalForwards() '%s' fail: expected err but got 'nil'", tt.name)
+			if !tt.expectedErr {
+				assert.Nil(t, err)
+			} else {
+				assert.NotNil(t, err)
 			}
 		})
 	}
