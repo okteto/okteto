@@ -511,6 +511,7 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		if _, err := deployments.Deploy(ctx, d, c); err != nil {
 			return false, fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
 		}
+		return isNewDeployment, nil
 	}
 
 	if _, err := deployments.Deploy(ctx, d, c); err != nil {
@@ -574,7 +575,7 @@ func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes
 		if old.Labels[model.StackNameLabel] == "" {
 			return false, fmt.Errorf("skipping deploy of job '%s' due to name collision with pre-existing job", svcName)
 		}
-		if old.Labels[model.StackNameLabel] != s.Name {
+		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
 			return false, fmt.Errorf("skipping deploy of job '%s' due to name collision with job in stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 	}
