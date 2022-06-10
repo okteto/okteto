@@ -255,6 +255,8 @@ workflows:
           filters:
             branches:
               only: *release-branch-regex
+          requires:
+            - build
       - release-branch:
           requires:
             - build
