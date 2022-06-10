@@ -167,7 +167,7 @@
                 if [ "${chan}" = "dev" ]; then
                         # SC2002: Useless cat. Consider 'cmd < file | ..' or 'cmd file | ..' instead
                         # shellcheck disable=SC2002
-                        cat "$version_temp_file" >"${BIN_PATH}/versions"
+                        cat "$version_temp_file" | awk '!seen[$0]++' >"${BIN_PATH}/versions"
                 else
                         # remove duplicated versions and sort the list
                         # SC2002: Useless cat. Consider 'cmd < file | ..' or 'cmd file | ..' instead

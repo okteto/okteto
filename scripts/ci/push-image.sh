@@ -16,15 +16,8 @@
         RELEASE_TAG="${1}"
 
         if [ -z "$RELEASE_TAG" ]; then
-                branch=$(git rev-parse --abbrev-ref HEAD)
                 commit=$(git rev-parse --short HEAD)
-                if [ "$branch" = "master" ]; then
-                        RELEASE_TAG="latest"
-                elif [ "$branch" = "main" ]; then
-                        RELEASE_TAG="main"
-                else
-                        RELEASE_TAG="$commit"
-                fi
+                RELEASE_TAG="$commit"
         fi
 
         name="okteto/okteto:${RELEASE_TAG}"
