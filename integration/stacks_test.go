@@ -47,7 +47,7 @@ func TestStacks(t *testing.T) {
 	}
 
 	tName := fmt.Sprintf("TestStacks-%s", runtime.GOOS)
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().UnixMilli()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 	t.Run(tName, func(t *testing.T) {
 		log.Printf("running %s \n", tName)
@@ -160,7 +160,7 @@ func TestCompose(t *testing.T) {
 	}
 
 	tName := fmt.Sprintf("TestStacks-%s", runtime.GOOS)
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().UnixMilli()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
 	startNamespace := getCurrentNamespace()
