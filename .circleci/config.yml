@@ -51,7 +51,9 @@ jobs:
     executor: golang-ci
     resource_class: large
     environment:
+      OKTETO_URL: https://staging.okteto.dev/
       OKTETO_USER: cindylopez
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.net
     steps:
       - checkout
       - restore_cache:
@@ -69,7 +71,7 @@ jobs:
             curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
-            /usr/local/bin/okteto login --token ${API_TOKEN}
+            /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
       - run:
           name: Integration tests
           environment:
@@ -234,6 +236,14 @@ workflows:
               only:
                 - master
                 - /.*(windows|win)/
+      - test-integration:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(e2e)/
       - test-release:
           context: GKE
           requires:

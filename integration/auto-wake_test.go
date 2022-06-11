@@ -46,7 +46,7 @@ func TestAutoWake(t *testing.T) {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
 
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().UnixMilli()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
 	dir, err := os.MkdirTemp("", tName)
