@@ -109,9 +109,7 @@ jobs:
   test-windows:
     executor: win/default
     environment:
-      OKTETO_URL: https://staging.okteto.dev/
       OKTETO_USER: cindylopez
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.net
     steps:
       - checkout
       - run:
@@ -136,6 +134,8 @@ jobs:
           at: .\artifacts
       - run:
           name: Prepare env
+          environment:
+            OKTETO_URL: https://staging.okteto.dev/
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
@@ -143,6 +143,8 @@ jobs:
       - run:
           name: Integration tests
           environment:
+            OKTETO_URL: https://staging.okteto.dev/
+            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
             OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
             OKTETO_SKIP_CLEANUP: 'true'
           command: |
