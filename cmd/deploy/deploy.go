@@ -282,7 +282,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
-	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
+	cfg, err := getConfigMapFromData(ctx, data, c)
 	if err != nil {
 		return err
 	}
@@ -348,12 +348,20 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	} else {
 		svcsToBuild, errBuild := dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy)
-		if len(svcsToBuild) != 0 && errBuild == nil {
+		if errBuild != nil {
+			if err := updateConfigMapStatus(ctx, cfg, c, data, errBuild); err != nil {
+				return err
+			}
+
+			return errBuild
+		}
+		if len(svcsToBuild) != 0 {
 			buildOptions := &types.BuildOptions{
 				CommandArgs:  svcsToBuild,
 				EnableStages: true,
 				Manifest:     deployOptions.Manifest,
 			}
+
 			if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
 				if err := updateConfigMapStatus(ctx, cfg, c, data, errBuild); err != nil {
 					return err
@@ -437,10 +445,13 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 		data.Status = pipeline.DeployedStatus
 	}
-	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
-		return err
-	}
-	return err
+
+	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
+}
+
+func getConfigMapFromData(ctx context.Context, data *pipeline.CfgData, c kubernetes.Interface) (*corev1.ConfigMap, error) {
+	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
+	return cfg, err
 }
 
 func updateConfigMapStatus(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, err error) error {

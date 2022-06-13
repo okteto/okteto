@@ -149,6 +149,70 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 	assert.False(t, p.started)
 }
 
+func TestGetConfigMapFromData(t *testing.T) {
+	manifest := []byte(`icon: https://apps.okteto.com/movies/icon.png
+deploy:
+    - okteto build -t okteto.dev/api:${OKTETO_GIT_COMMIT} api
+    - okteto build -t okteto.dev/frontend:${OKTETO_GIT_COMMIT} frontend
+    - helm upgrade --install movies chart --set tag=${OKTETO_GIT_COMMIT}
+devs:
+    - api/okteto.yml
+    - frontend/okteto.yml`)
+
+	data := &pipeline.CfgData{
+		Name:       "Name",
+		Namespace:  "Namespace",
+		Repository: "https://github.com/okteto/movies",
+		Branch:     "master",
+		Filename:   "Filename",
+		Status:     "progressing",
+		Manifest:   manifest,
+		Icon:       "https://apps.okteto.com/movies/icon.png",
+	}
+
+	p := &fakeProxy{}
+	e := &fakeExecutor{
+		err: assert.AnError,
+	}
+	dc := &DeployCommand{
+		GetManifest:       getFakeManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(),
+	}
+
+	ctx := context.Background()
+
+	fakeClient, _, err := dc.K8sClientProvider.Provide(clientcmdapi.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+
+	expectedCfg := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "okteto-git-Name",
+			Namespace: "Namespace",
+			Labels:    map[string]string{"dev.okteto.com/git-deploy": "true"},
+		},
+		Data: map[string]string{
+			"actionName": "cli",
+			"branch":     "master",
+			"filename":   "Filename",
+			"icon":       "https://apps.okteto.com/movies/icon.png",
+			"name":       "Name",
+			"output":     "",
+			"repository": "https://github.com/okteto/movies",
+			"status":     "progressing",
+			"yaml":       "aWNvbjogaHR0cHM6Ly9hcHBzLm9rdGV0by5jb20vbW92aWVzL2ljb24ucG5nCmRlcGxveToKICAgIC0gb2t0ZXRvIGJ1aWxkIC10IG9rdGV0by5kZXYvYXBpOiR7T0tURVRPX0dJVF9DT01NSVR9IGFwaQogICAgLSBva3RldG8gYnVpbGQgLXQgb2t0ZXRvLmRldi9mcm9udGVuZDoke09LVEVUT19HSVRfQ09NTUlUfSBmcm9udGVuZAogICAgLSBoZWxtIHVwZ3JhZGUgLS1pbnN0YWxsIG1vdmllcyBjaGFydCAtLXNldCB0YWc9JHtPS1RFVE9fR0lUX0NPTU1JVH0KZGV2czoKICAgIC0gYXBpL29rdGV0by55bWwKICAgIC0gZnJvbnRlbmQvb2t0ZXRvLnltbA==",
+		},
+	}
+
+	currentCfg, err := getConfigMapFromData(ctx, data, fakeClient)
+
+	assert.Equal(t, expectedCfg, currentCfg)
+}
+
 func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	p := &fakeProxy{}
 	e := &fakeExecutor{}
