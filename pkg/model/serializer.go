@@ -697,7 +697,7 @@ type manifestRaw struct {
 	Destroy       []DeployCommand      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         ManifestBuild        `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  ManifestDependencies `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
+	GlobalForward []GlobalForward      `json:"forward,omitempty" yaml:"forward,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
 }

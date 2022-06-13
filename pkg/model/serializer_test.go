@@ -1242,7 +1242,7 @@ sync:
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Dependencies:  map[string]*Dependency{},
-				GlobalForward: []Forward{},
+				GlobalForward: []GlobalForward{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1324,7 +1324,7 @@ services:
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Dependencies:  map[string]*Dependency{},
-				GlobalForward: []Forward{},
+				GlobalForward: []GlobalForward{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",

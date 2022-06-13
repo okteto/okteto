@@ -771,18 +771,10 @@ func printDisplayContext(up *upContext) {
 	if len(up.Manifest.GlobalForward) > 0 {
 		anyGlobalForward = true
 
-		if up.Manifest.GlobalForward[0].Service {
-			oktetoLog.Println(fmt.Sprintf("    %s   %d -> %s:%d", oktetoLog.BlueString("Forward:"), up.Manifest.GlobalForward[0].Local, up.Manifest.GlobalForward[0].ServiceName, up.Manifest.GlobalForward[0].Remote))
-		} else {
-			oktetoLog.Println(fmt.Sprintf("    %s   %d -> %d", oktetoLog.BlueString("Forward:"), up.Manifest.GlobalForward[0].Local, up.Manifest.GlobalForward[0].Remote))
-		}
+		oktetoLog.Println(fmt.Sprintf("    %s   %d -> %s:%d", oktetoLog.BlueString("Forward:"), up.Manifest.GlobalForward[0].Local, up.Manifest.GlobalForward[0].ServiceName, up.Manifest.GlobalForward[0].Remote))
 
 		for i := 1; i < len(up.Manifest.GlobalForward); i++ {
-			if up.Manifest.GlobalForward[i].Service {
-				oktetoLog.Println(fmt.Sprintf("               %d -> %s:%d", up.Manifest.GlobalForward[i].Local, up.Manifest.GlobalForward[i].ServiceName, up.Manifest.GlobalForward[i].Remote))
-				continue
-			}
-			oktetoLog.Println(fmt.Sprintf("               %d -> %d", up.Manifest.GlobalForward[i].Local, up.Manifest.GlobalForward[i].Remote))
+			oktetoLog.Println(fmt.Sprintf("               %d -> %s:%d", up.Manifest.GlobalForward[i].Local, up.Manifest.GlobalForward[i].ServiceName, up.Manifest.GlobalForward[i].Remote))
 		}
 	}
 

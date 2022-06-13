@@ -143,14 +143,6 @@ func (up *upContext) setGlobalForwardsIfRequiredLoop(ctx context.Context) {
 		case <-ticker.C:
 			err := addGlobalForwards(up)
 			if err != nil {
-				if errors.Is(err, oktetoErrors.ErrPortAlreadyAllocated) {
-					err = up.Forwarder.StartGlobalForwarding()
-					if err != nil {
-						up.GlobalForwarderStatus <- err
-						return
-					}
-					continue
-				}
 				up.GlobalForwarderStatus <- err
 				return
 			}
@@ -166,7 +158,7 @@ func (up *upContext) setGlobalForwardsIfRequiredLoop(ctx context.Context) {
 	}
 }
 
-func isNeededGlobalForwarder(globalForwards []model.Forward) bool {
+func isNeededGlobalForwarder(globalForwards []model.GlobalForward) bool {
 	for _, f := range globalForwards {
 		if !f.IsAdded {
 			return true
@@ -177,38 +169,37 @@ func isNeededGlobalForwarder(globalForwards []model.Forward) bool {
 }
 
 func addGlobalForwards(up *upContext) error {
-	var addErr error
-	for idx, f := range up.Manifest.GlobalForward {
-		if f.IsAdded {
+	for idx, gf := range up.Manifest.GlobalForward {
+		if gf.IsAdded {
 			continue
 		}
 
-		up.Manifest.GlobalForward[idx].IsGlobal = true
+		f := model.Forward{
+			Local:       gf.Local,
+			Remote:      gf.Remote,
+			Service:     true,
+			IsGlobal:    true,
+			ServiceName: gf.ServiceName,
+			Labels:      gf.Labels,
+		}
 
-		if f.Labels != nil {
+		if gf.Labels != nil {
 			forwardWithServiceName, err := up.Forwarder.TransformLabelsToServiceName(f)
 			if err != nil {
 				return err
 			}
-			up.Manifest.GlobalForward[idx] = forwardWithServiceName
+			up.Manifest.GlobalForward[idx].ServiceName = forwardWithServiceName.ServiceName
 			f = forwardWithServiceName
 		}
 
-		f.IsGlobal = true
 		err := up.Forwarder.Add(f)
 		if err != nil {
 			if !errors.Is(err, oktetoErrors.ErrPortAlreadyAllocated) {
 				return err
 			}
-
-			addErr = err
 		} else {
 			up.Manifest.GlobalForward[idx].IsAdded = true
 		}
-	}
-
-	if addErr != nil {
-		return addErr
 	}
 
 	return nil

@@ -146,7 +146,7 @@ type Manifest struct {
 	Destroy       []DeployCommand      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         ManifestBuild        `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  ManifestDependencies `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []Forward            `json:"forward,omitempty" yaml:"forward,omitempty"`
+	GlobalForward []GlobalForward      `json:"forward,omitempty" yaml:"forward,omitempty"`
 
 	Type     Archetype `json:"-" yaml:"-"`
 	Filename string    `yaml:"-"`
@@ -170,7 +170,7 @@ func NewManifest() *Manifest {
 		Build:         map[string]*BuildInfo{},
 		Dependencies:  map[string]*Dependency{},
 		Deploy:        &DeployInfo{},
-		GlobalForward: []Forward{},
+		GlobalForward: []GlobalForward{},
 	}
 }
 

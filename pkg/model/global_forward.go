@@ -19,114 +19,82 @@ import (
 	"strings"
 )
 
-const malformedPortForward = "Wrong port-forward syntax '%s', must be of the form 'localPort:remotePort' or 'localPort:serviceName:remotePort'"
+const malformedGlobalForward = "Wrong global forward syntax '%s', must be of the form 'localPort:serviceName:remotePort'"
 
 // Forward represents a port forwarding definition
-type Forward struct {
+type GlobalForward struct {
 	Local       int               `json:"localPort" yaml:"localPort"`
 	Remote      int               `json:"remotePort" yaml:"remotePort"`
-	Service     bool              `json:"-" yaml:"-"`
 	ServiceName string            `json:"name" yaml:"name"`
 	Labels      map[string]string `json:"labels" yaml:"labels"`
-	IsGlobal    bool              `json:"-" yaml:"-"`
+	IsAdded     bool              `json:"-" yaml:"-"`
 }
 
-type ForwardRaw struct {
+type GlobalForwardRaw struct {
 	Local       int               `json:"localPort" yaml:"localPort"`
 	Remote      int               `json:"remotePort" yaml:"remotePort"`
-	Service     bool              `json:"-" yaml:"-"`
 	ServiceName string            `json:"name" yaml:"name"`
 	Labels      map[string]string `json:"labels" yaml:"labels"`
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg for port forwards.
 // It supports the following options:
-// - int:int
 // - int:serviceName:int
 // Anything else will result in an error
-func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (gf *GlobalForward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
 	err := unmarshal(&raw)
 	if err != nil {
-		return f.UnmarshalExtendedForm(unmarshal)
+		return gf.UnmarshalExtendedForm(unmarshal)
 	}
 
 	parts := strings.Split(raw, ":")
-	if len(parts) < 2 || len(parts) > 3 {
-		return fmt.Errorf(malformedPortForward, raw)
+	if len(parts) != 3 {
+		return fmt.Errorf(malformedGlobalForward, raw)
 	}
+
+	gf.ServiceName = parts[1]
 
 	localPort, err := strconv.Atoi(parts[0])
 	if err != nil {
 		return fmt.Errorf("Cannot convert local port '%s' in port-forward '%s'", parts[0], raw)
 	}
-	f.Local = localPort
+	gf.Local = localPort
 
-	if len(parts) == 2 {
-		p, err := strconv.Atoi(parts[1])
-		if err != nil {
-			return fmt.Errorf(malformedPortForward, raw)
-		}
-
-		f.Remote = p
-		return nil
-	}
-
-	f.Service = true
-	f.ServiceName = parts[1]
-	p, err := strconv.Atoi(parts[2])
+	remotePort, err := strconv.Atoi(parts[2])
 	if err != nil {
-		return fmt.Errorf(malformedPortForward, raw)
+		return fmt.Errorf("Cannot convert local port '%s' in port-forward '%s'", parts[0], raw)
 	}
+	gf.Remote = remotePort
 
-	f.Remote = p
 	return nil
 }
 
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
-func (f Forward) MarshalYAML() (interface{}, error) {
-	return f.String(), nil
+func (gf GlobalForward) MarshalYAML() (interface{}, error) {
+	return gf.String(), nil
 }
 
-func (f Forward) String() string {
-	if f.Service {
-		return fmt.Sprintf("%d:%s:%d", f.Local, f.ServiceName, f.Remote)
-	}
-
-	return fmt.Sprintf("%d:%d", f.Local, f.Remote)
+func (gf GlobalForward) String() string {
+	return fmt.Sprintf("%d:%s:%d", gf.Local, gf.ServiceName, gf.Remote)
 }
 
-func (f *Forward) less(c *Forward) bool {
-	if !f.Service && !c.Service {
-		return f.Local < c.Local
-	}
-
-	// a non-service always goes first
-	if !f.Service && c.Service {
-		return true
-	}
-
-	if f.Service && !c.Service {
-		return false
-	}
-
-	return f.Local < c.Local
+func (gf *GlobalForward) less(c *GlobalForward) bool {
+	return gf.Local < c.Local
 }
 
-func (f *Forward) UnmarshalExtendedForm(unmarshal func(interface{}) error) error {
-	var rawForward ForwardRaw
-	err := unmarshal(&rawForward)
+func (gf *GlobalForward) UnmarshalExtendedForm(unmarshal func(interface{}) error) error {
+	var rawGlobalForward GlobalForwardRaw
+	err := unmarshal(&rawGlobalForward)
 	if err != nil {
 		return err
 	}
-	f.Local = rawForward.Local
-	f.Remote = rawForward.Remote
-	f.ServiceName = rawForward.ServiceName
-	f.Labels = rawForward.Labels
-	if len(rawForward.Labels) != 0 || rawForward.ServiceName != "" {
-		f.Service = true
-	}
-	if f.Labels != nil && f.ServiceName != "" {
+	gf.Local = rawGlobalForward.Local
+	gf.Remote = rawGlobalForward.Remote
+	gf.ServiceName = rawGlobalForward.ServiceName
+	gf.Labels = rawGlobalForward.Labels
+
+	if gf.Labels != nil && gf.ServiceName != "" {
 		return fmt.Errorf("Can not use ServiceName and Labels to specify the service.\nUse either the service name or labels to get the service to expose.")
 	}
 	return nil

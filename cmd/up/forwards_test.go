@@ -12,12 +12,12 @@ import (
 func TestGlobalForwarderStartsWhenRequired(t *testing.T) {
 	var tests = []struct {
 		name             string
-		globalFwdSection []model.Forward
+		globalFwdSection []model.GlobalForward
 		expectedAnswer   bool
 	}{
 		{
 			name: "is needed global forwarding",
-			globalFwdSection: []model.Forward{
+			globalFwdSection: []model.GlobalForward{
 				{
 					Local:  8080,
 					Remote: 8080,
@@ -27,7 +27,7 @@ func TestGlobalForwarderStartsWhenRequired(t *testing.T) {
 		},
 		{
 			name:             "not needed global forwarding",
-			globalFwdSection: []model.Forward{},
+			globalFwdSection: []model.GlobalForward{},
 			expectedAnswer:   false,
 		},
 	}
@@ -53,7 +53,7 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 			name: "add one global forwarder",
 			upContext: &upContext{
 				Manifest: &model.Manifest{
-					GlobalForward: []model.Forward{
+					GlobalForward: []model.GlobalForward{
 						{
 							Local:  8080,
 							Remote: 8080,
@@ -68,10 +68,9 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 			name: "add two global forwarder",
 			upContext: &upContext{
 				Manifest: &model.Manifest{
-					GlobalForward: []model.Forward{
+					GlobalForward: []model.GlobalForward{
 						{
 							Local:       8081,
-							Service:     true,
 							ServiceName: "api",
 							Remote:      8080,
 						},
@@ -89,7 +88,7 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 			name: "add none global forwarder",
 			upContext: &upContext{
 				Manifest: &model.Manifest{
-					GlobalForward: []model.Forward{},
+					GlobalForward: []model.GlobalForward{},
 				},
 				Forwarder: f,
 			},

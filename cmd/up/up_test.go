@@ -65,7 +65,7 @@ func Test_printDisplayContext(t *testing.T) {
 					Namespace: "namespace",
 				},
 				Manifest: &model.Manifest{
-					GlobalForward: []model.Forward{},
+					GlobalForward: []model.GlobalForward{},
 				},
 			},
 		},
@@ -78,7 +78,7 @@ func Test_printDisplayContext(t *testing.T) {
 					Forward:   []model.Forward{{Local: 1000, Remote: 1000}},
 				},
 				Manifest: &model.Manifest{
-					GlobalForward: []model.Forward{},
+					GlobalForward: []model.GlobalForward{},
 				},
 			},
 		},
@@ -91,7 +91,7 @@ func Test_printDisplayContext(t *testing.T) {
 					Forward:   []model.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
 				},
 				Manifest: &model.Manifest{
-					GlobalForward: []model.Forward{
+					GlobalForward: []model.GlobalForward{
 						{
 							Local:  8080,
 							Remote: 8080,
@@ -114,12 +114,12 @@ func Test_printDisplayContext(t *testing.T) {
 					Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}},
 				},
 				Manifest: &model.Manifest{
-					GlobalForward: []model.Forward{},
+					GlobalForward: []model.GlobalForward{},
 				},
 			},
 		},
 		{
-			name: "multiple-reverse",
+			name: "multiple-reverse+global-forward",
 			up: &upContext{
 				Dev: &model.Dev{
 					Name:      "dev",
@@ -127,7 +127,7 @@ func Test_printDisplayContext(t *testing.T) {
 					Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
 				},
 				Manifest: &model.Manifest{
-					GlobalForward: []model.Forward{
+					GlobalForward: []model.GlobalForward{
 						{
 							Local:  8080,
 							Remote: 8080,
@@ -136,6 +136,47 @@ func Test_printDisplayContext(t *testing.T) {
 							Local:       8080,
 							Remote:      8080,
 							ServiceName: "api",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "global-forward",
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []model.GlobalForward{
+						{
+							Local:       8080,
+							Remote:      8080,
+							ServiceName: "api",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple-global-forward",
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []model.GlobalForward{
+						{
+							Local:       8080,
+							Remote:      8080,
+							ServiceName: "api",
+						},
+						{
+							Local:       27017,
+							Remote:      27017,
+							ServiceName: "mongodb",
 						},
 					},
 				},
