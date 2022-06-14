@@ -404,3 +404,81 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 		})
 	}
 }
+
+func TestGetManifestFromFile(t *testing.T) {
+	tests := []struct {
+		name          string
+		manifestBytes []byte
+		composeBytes  []byte
+		expectedErr   bool
+	}{
+		{
+			name:          "OktetoManifest does not exist and compose manifest is correct",
+			manifestBytes: nil,
+			composeBytes: []byte(`services:
+  test:
+    image: test`),
+			expectedErr: false,
+		},
+		{
+			name:          "OktetoManifest not contains any content and compose manifest does not exists",
+			manifestBytes: []byte(``),
+			composeBytes:  nil,
+			expectedErr:   true,
+		},
+		{
+			name:          "OktetoManifest is invalid and compose manifest does not exists",
+			manifestBytes: []byte(`asdasa: asda`),
+			composeBytes:  nil,
+			expectedErr:   true,
+		},
+		{
+			name: "OktetoManifestV2 is ok",
+			manifestBytes: []byte(`dev:
+  api:
+    sync:
+    - .:/usr`),
+			composeBytes: nil,
+			expectedErr:  false,
+		},
+		{
+			name: "OktetoManifestV1 is ok",
+			manifestBytes: []byte(`name: test
+sync:
+- .:/usr`),
+			composeBytes: nil,
+			expectedErr:  false,
+		},
+		{
+			name:          "OktetoManifest and compose manifest does not exists",
+			manifestBytes: nil,
+			composeBytes:  nil,
+			expectedErr:   true,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			file := ""
+			if tt.manifestBytes != nil {
+				file = filepath.Join(dir, "okteto.yml")
+				assert.NoError(t, os.WriteFile(filepath.Join(dir, "okteto.yml"), tt.manifestBytes, 0644))
+			}
+			if tt.composeBytes != nil {
+				if file == "" {
+					file = filepath.Join(dir, "docker-compose.yml")
+				}
+				assert.NoError(t, os.WriteFile(filepath.Join(dir, "docker-compose.yml"), tt.composeBytes, 0644))
+			}
+			_, err := getManifestFromFile(dir, file)
+
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
+		})
+	}
+}

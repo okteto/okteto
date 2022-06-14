@@ -14,11 +14,17 @@
 package build
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"os"
 
+	"github.com/moby/buildkit/frontend/dockerfile/instructions"
+	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/registry"
@@ -51,13 +57,14 @@ func Build(ctx context.Context) *cobra.Command {
 		Use:   "build [service...]",
 		Short: "Build and push the images defined in the 'build' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			options.CommandArgs = args
 			bc := NewBuildCommand()
 
-			manifest, isBuildV2 := bc.getManifestAndBuildVersion(options)
-			options.CommandArgs = args
-			options.Manifest = manifest
+			builder, err := bc.getBuilder(options)
+			if err != nil {
+				return err
+			}
 
-			builder := bc.getBuilder(isBuildV2)
 			if err := builder.LoadContext(ctx, options); err != nil {
 				return err
 			}
@@ -80,21 +87,45 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (bc *Command) getManifestAndBuildVersion(options *types.BuildOptions) (*model.Manifest, bool) {
-	manifest, errManifest := bc.GetManifest(options.File)
-	if errManifest != nil {
-		oktetoLog.Debug("error getting manifest v2 from file %s: %v. Fallback to build v1", options.File, errManifest)
-	}
+func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
+	var builder Builder
 
-	isBuildV2 := errManifest == nil &&
-		manifest.IsV2 &&
-		len(manifest.Build) != 0
-	return manifest, isBuildV2
+	manifest, err := bc.GetManifest(options.File)
+	if err != nil {
+
+		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
+			return nil, err
+		}
+
+		oktetoLog.Infof("The manifest %s is not v2 compatible, falling back to building as a v1 manifest: %v", options.File, err)
+		builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
+	} else {
+		if isBuildV2(manifest) {
+			builder = buildv2.NewBuilder(bc.Builder, bc.Registry)
+		} else {
+			builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
+		}
+	}
+	options.Manifest = manifest
+
+	return builder, nil
 }
 
-func (bc *Command) getBuilder(isBuildV2 bool) Builder {
-	if isBuildV2 {
-		return buildv2.NewBuilder(bc.Builder, bc.Registry)
+func isBuildV2(m *model.Manifest) bool {
+	return m.IsV2 && len(m.Build) != 0
+}
+
+func validateDockerfile(file string) error {
+	dat, err := os.ReadFile(file)
+	if err != nil {
+		return err
 	}
-	return buildv1.NewBuilder(bc.Builder, bc.Registry)
+
+	parsedDockerfile, err := parser.Parse(bytes.NewBuffer(dat))
+	if err != nil {
+		return err
+	}
+
+	_, _, err = instructions.Parse(parsedDockerfile.AST)
+	return err
 }

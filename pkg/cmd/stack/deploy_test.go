@@ -115,6 +115,152 @@ func Test_deploySvc(t *testing.T) {
 	}
 }
 
+func Test_reDeploySvc(t *testing.T) {
+	ctx := context.Background()
+	oldJobSucceeded := &batchv1.Job{ObjectMeta: metav1.ObjectMeta{
+		Name:      "serviceName",
+		Namespace: "test",
+		Labels: map[string]string{
+			model.StackNameLabel:  "okteto",
+			model.DeployedByLabel: "okteto",
+		},
+	},
+		Status: batchv1.JobStatus{
+			Succeeded: 1,
+		},
+	}
+	oldSfs := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{
+		Name:      "serviceName",
+		Namespace: "test",
+		Labels: map[string]string{
+			model.StackNameLabel:  "okteto",
+			model.DeployedByLabel: "okteto",
+		},
+	},
+		Status: appsv1.StatefulSetStatus{
+			ReadyReplicas: 1,
+		},
+	}
+	oldDep := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+		Name:      "serviceName",
+		Namespace: "test",
+		Labels: map[string]string{
+			model.StackNameLabel:  "okteto",
+			model.DeployedByLabel: "okteto",
+		},
+	},
+		Status: appsv1.DeploymentStatus{
+			ReadyReplicas: 1,
+		},
+	}
+	fakeClient := fake.NewSimpleClientset(oldJobSucceeded, oldSfs, oldDep)
+	var tests = []struct {
+		name      string
+		component string
+		stack     *model.Stack
+		svcName   string
+	}{
+		{
+			name:      "redeploy deployment",
+			component: "deployment",
+			svcName:   "serviceName",
+			stack: &model.Stack{
+				Namespace: "test",
+				Name:      "testName",
+				Services: map[string]*model.Service{
+					"serviceName": {
+						Image:         "test_image",
+						RestartPolicy: corev1.RestartPolicyAlways,
+					},
+				},
+			},
+		},
+		{
+			name:      "redeploy sfs",
+			svcName:   "serviceName",
+			component: "sfs",
+			stack: &model.Stack{
+				Namespace: "test",
+				Name:      "testName",
+				Services: map[string]*model.Service{
+					"serviceName": {
+						Image:         "test_image",
+						RestartPolicy: corev1.RestartPolicyAlways,
+						Volumes: []model.StackVolume{
+							{
+								LocalPath:  "a",
+								RemotePath: "b",
+							},
+						},
+					},
+				},
+				Volumes: map[string]*model.VolumeSpec{
+					"a": {},
+				},
+			},
+		},
+		{
+			name:      "redeploy job",
+			svcName:   "serviceName",
+			component: "job",
+			stack: &model.Stack{
+				Namespace: "test",
+				Name:      "testName",
+				Services: map[string]*model.Service{
+					"serviceName": {
+						Image:         "test_image",
+						RestartPolicy: corev1.RestartPolicyNever,
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spinner := utils.NewSpinner("testing")
+			err := deploySvc(ctx, tt.stack, tt.svcName, fakeClient, spinner)
+			if err != nil {
+				t.Fatal("Not re-deployed correctly")
+			}
+
+			if tt.component == "deployment" {
+				d, err := fakeClient.AppsV1().Deployments(tt.stack.Namespace).Get(ctx, tt.svcName, metav1.GetOptions{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if d.Labels[model.StackNameLabel] != tt.stack.Name {
+					t.Fatal()
+				}
+				if d.Labels[model.DeployedByLabel] != tt.stack.Name {
+					t.Fatal()
+				}
+			}
+			if tt.component == "sfs" {
+				sfs, err := fakeClient.AppsV1().StatefulSets(tt.stack.Namespace).Get(ctx, tt.svcName, metav1.GetOptions{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if sfs.Labels[model.StackNameLabel] != tt.stack.Name {
+					t.Fatal()
+				}
+				if sfs.Labels[model.DeployedByLabel] != tt.stack.Name {
+					t.Fatal()
+				}
+
+			}
+			if tt.component == "job" {
+				job, err := fakeClient.BatchV1().Jobs(tt.stack.Namespace).Get(ctx, tt.svcName, metav1.GetOptions{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if job.Labels[model.StackNameLabel] != tt.stack.Name {
+					t.Fatal()
+				}
+			}
+		})
+	}
+}
 func Test_deployDeployment(t *testing.T) {
 	ctx := context.Background()
 	stack := &model.Stack{

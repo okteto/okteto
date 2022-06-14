@@ -142,7 +142,7 @@ func executeDeleteNamespaceAction(namespace string) error {
 
 func getTestNamespace() string {
 	tName := fmt.Sprintf("TestAction-%s", runtime.GOOS)
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().UnixMilli()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 	return namespace
 }

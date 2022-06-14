@@ -90,6 +90,7 @@ type Service struct {
 	Healtcheck      *HealthCheck          `yaml:"healthcheck,omitempty"`
 	User            *StackSecurityContext `yaml:"user,omitempty"`
 
+	// Fields only for okteto stacks
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas,omitempty"`
 	Resources *StackResources `yaml:"resources,omitempty"`
@@ -215,6 +216,10 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	b, err := os.ReadFile(stackPath)
 	if err != nil {
 		return nil, err
+	}
+
+	if isEmptyManifestFile(b) {
+		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, oktetoErrors.ErrEmptyManifest)
 	}
 
 	cwd, err := os.Getwd()

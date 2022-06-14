@@ -1853,3 +1853,84 @@ func Test_UnmarshalStackUser(t *testing.T) {
 		})
 	}
 }
+
+func Test_TranslateOktetoStackPortsToComposePorts(t *testing.T) {
+	tests := []struct {
+		name     string
+		ports    []PortRaw
+		expected []PortRaw
+	}{
+		{
+			name: "containerPort only",
+			ports: []PortRaw{
+				{
+					ContainerPort: 8080,
+				},
+				{
+					ContainerPort: 3000,
+				},
+			},
+			expected: []PortRaw{
+				{
+					ContainerPort: 8080,
+					HostPort:      8080,
+				},
+				{
+					ContainerPort: 3000,
+					HostPort:      3000,
+				},
+			},
+		},
+		{
+			name: "hostPort:containerPort only",
+			ports: []PortRaw{
+				{
+					ContainerPort: 8080,
+					HostPort:      8081,
+				},
+				{
+					ContainerPort: 3000,
+					HostPort:      2345,
+				},
+			},
+			expected: []PortRaw{
+				{
+					ContainerPort: 8080,
+					HostPort:      8081,
+				},
+				{
+					ContainerPort: 3000,
+					HostPort:      2345,
+				},
+			},
+		},
+		{
+			name: "hostPort:containerPort and containerPort",
+			ports: []PortRaw{
+				{
+					ContainerPort: 8080,
+				},
+				{
+					ContainerPort: 3000,
+					HostPort:      2345,
+				},
+			},
+			expected: []PortRaw{
+				{
+					ContainerPort: 8080,
+					HostPort:      8080,
+				},
+				{
+					ContainerPort: 3000,
+					HostPort:      2345,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := translateOktetoStacksPortsIntoComposeSyntax(tt.ports)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

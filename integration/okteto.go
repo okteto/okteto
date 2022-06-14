@@ -81,7 +81,7 @@ func RunKubectlApply(kubectlBinary, namespace, filePath string) error {
 
 // GetTestNamespace returns the name for a namespace
 func GetTestNamespace(prefix, user string) string {
-	namespace := fmt.Sprintf("%s-%s-%d-%s", prefix, runtime.GOOS, time.Now().Unix(), user)
+	namespace := fmt.Sprintf("%s-%s-%d-%s", prefix, runtime.GOOS, time.Now().UnixMilli(), user)
 	return strings.ToLower(namespace)
 }
 

@@ -45,6 +45,11 @@ type ImageConfig struct {
 	ExposedPorts []int
 }
 
+type ImageMetadata struct {
+	Image string
+	Ports []model.Port
+}
+
 // GetImageTagWithDigest returns the image tag digest
 func (*OktetoRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
 	reference := imageTag
@@ -85,21 +90,27 @@ func ExpandOktetoDevRegistry(tag string) string {
 }
 
 // GetImageConfigFromImage gets information from the image
-func GetImageConfigFromImage(image string) (*ImageConfig, error) {
+func GetImageConfigFromImage(imageRef string) (*ImageConfig, error) {
 	imageConfig := &ImageConfig{
 		CMD:          []string{},
 		ExposedPorts: []int{},
 	}
 
-	image = ExpandOktetoDevRegistry(image)
-	image = ExpandOktetoGlobalRegistry(image)
+	imageRef = ExpandOktetoDevRegistry(imageRef)
+	imageRef = ExpandOktetoGlobalRegistry(imageRef)
 
-	config, err := configForReference(image)
+	image, err := imageForReference(imageRef)
 	if err != nil {
 		return nil, err
 	}
-	if config.ExposedPorts != nil {
-		for port := range config.ExposedPorts {
+
+	configFile, err := image.ConfigFile()
+	if err != nil {
+		return nil, err
+	}
+
+	if configFile.Config.ExposedPorts != nil {
+		for port := range configFile.Config.ExposedPorts {
 			if strings.Contains(port, "/") {
 				port = port[:strings.Index(port, "/")]
 				portInt, err := strconv.Atoi(port)
@@ -111,12 +122,12 @@ func GetImageConfigFromImage(image string) (*ImageConfig, error) {
 			}
 		}
 	}
-	if config.WorkingDir != "" {
-		imageConfig.Workdir = config.WorkingDir
+	if configFile.Config.WorkingDir != "" {
+		imageConfig.Workdir = configFile.Config.WorkingDir
 	}
 
-	if len(config.Cmd) > 0 {
-		imageConfig.CMD = config.Cmd
+	if len(configFile.Config.Cmd) > 0 {
+		imageConfig.CMD = configFile.Config.Cmd
 	}
 	return imageConfig, nil
 }
@@ -141,30 +152,48 @@ func GetRegistryAndRepo(tag string) (string, string) {
 	return registryTag, imageTag
 }
 
-// GetHiddenExposePorts returns the ports exposed at the image
-func GetHiddenExposePorts(image string) []model.Port {
-	exposedPorts := make([]model.Port, 0)
+// GetImageMetadata returns the ports exposed at the image
+func GetImageMetadata(imageRef string) *ImageMetadata {
+	result := &ImageMetadata{}
+	result.Image = imageRef
+	result.Ports = make([]model.Port, 0)
 
-	image = ExpandOktetoDevRegistry(image)
-	image = ExpandOktetoGlobalRegistry(image)
+	imageRef = ExpandOktetoDevRegistry(imageRef)
+	imageRef = ExpandOktetoGlobalRegistry(imageRef)
 
-	config, err := configForReference(image)
+	image, err := imageForReference(imageRef)
 	if err != nil {
-		return exposedPorts
+		oktetoLog.Debugf("error in GetImageMetadata.imageForReference: %s", err.Error())
+		return result
 	}
-	if config.ExposedPorts != nil {
-		for port := range config.ExposedPorts {
+
+	digest, err := image.Digest()
+	if err != nil {
+		oktetoLog.Debugf("error in GetImageMetadata.Digest: %s", err.Error())
+		return result
+	}
+	registry, tag := GetRegistryAndRepo(imageRef)
+	repository, _ := GetRepoNameAndTag(tag)
+	result.Image = fmt.Sprintf("%s/%s@%s", registry, repository, digest.String())
+
+	configFile, err := image.ConfigFile()
+	if err != nil {
+		oktetoLog.Debugf("error in GetImageMetadata.ConfigFile: %s", err.Error())
+		return result
+	}
+	if configFile.Config.ExposedPorts != nil {
+		for port := range configFile.Config.ExposedPorts {
 			if strings.Contains(port, "/") {
 				port = port[:strings.Index(port, "/")]
 				portInt, err := strconv.Atoi(port)
 				if err != nil {
 					continue
 				}
-				exposedPorts = append(exposedPorts, model.Port{ContainerPort: int32(portInt), Protocol: v1.ProtocolTCP})
+				result.Ports = append(result.Ports, model.Port{ContainerPort: int32(portInt), Protocol: v1.ProtocolTCP})
 			}
 		}
 	}
-	return exposedPorts
+	return result
 }
 
 func getRegistryURL(image string) string {
