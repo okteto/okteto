@@ -152,13 +152,21 @@ jobs:
       - store_artifacts:
           path: C:\Users\circleci\.okteto
 
-  push-image:
+  push-image-tag:
     executor: golang-ci
     steps:
       - checkout
       - setup_remote_docker:
           version: '19.03.8'
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG"
+
+  push-image-latest:
+    executor: golang-ci
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: '19.03.8'
+      - run: ./scripts/ci/push-image.sh latest
 
   release-external:
     executor: golang-ci
@@ -236,7 +244,7 @@ workflows:
               ignore:
                 - master
                 - *release-branch-regex
-      - push-image:
+      - push-image-latest:
           requires:
             - build
           filters:
@@ -272,14 +280,14 @@ workflows:
         - equal: ["release-dev", << pipeline.schedule.name >>]
     jobs:
       - build
-      - push-image:
+      - push-image-tag:
           requires:
             - build
       - release:
           context: GKE
           requires:
             - build
-            - push-image
+            - push-image-tag
 
   release:
     when:
@@ -293,12 +301,12 @@ workflows:
             tags:
               only:
                 - *release-regex
-      - push-image:
+      - push-image-tag:
           requires:
             - build
           filters:
             branches:
-              only: master
+              ignore: /.*/
             tags:
               only:
                 - *release-regex
@@ -306,7 +314,6 @@ workflows:
           context: GKE
           requires:
             - build
-            - push-image
           filters:
             branches:
               ignore: /.*/
