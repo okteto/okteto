@@ -31,7 +31,7 @@ var (
 	pipelineDeployPipelineManifestName = "okteto-pipeline-inside.yml"
 	pipelineDeployPipelineManifest     = `
 deploy:
-  - %s deploy -f okteto-pipeline.yml --name=test
+  - %s deploy -f okteto-pipeline.yml --name=test --namespace=%s
   - kubectl get pods`
 
 	pipelineManifestName = "okteto-pipeline.yml"
@@ -45,6 +45,7 @@ deploy:
 // - Deploying a pipeline manifest locally
 // - The endpoints generated are accessible
 func TestDeployPipelineManifest(t *testing.T) {
+	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
@@ -52,61 +53,66 @@ func TestDeployPipelineManifest(t *testing.T) {
 	require.NoError(t, createPipelineManifest(dir))
 	require.NoError(t, createK8sManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeploy", user)
+	testNamespace := integration.GetTestNamespace("TestDeployPipeline", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
 	deployOptions := &commands.DeployOptions{
-		Workdir: dir,
+		Workdir:   dir,
+		Namespace: testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
-		Workdir: dir,
+		Workdir:   dir,
+		Namespace: testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 
 }
 
-// TestDeployPipelineManifest tests the following scenario:
+// TestDeployPipelineManifestInsidePipeline tests the following scenario:
 // - Deploying a pipeline manifest locally that runs another pipeline manifest
 // - The endpoints generated are accessible
 func TestDeployPipelineManifestInsidePipeline(t *testing.T) {
+	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
-
-	dir := t.TempDir()
-	require.NoError(t, createPipelineInsidePipelineManifest(dir, oktetoPath))
-	require.NoError(t, createK8sManifest(dir))
 
 	testNamespace := integration.GetTestNamespace("TestDeploy", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+
+	dir := t.TempDir()
+	require.NoError(t, createPipelineInsidePipelineManifest(dir, oktetoPath, testNamespace))
+	require.NoError(t, createK8sManifest(dir))
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:      dir,
 		ManifestPath: pipelineDeployPipelineManifestName,
+		Namespace:    testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
-		Workdir: dir,
+		Workdir:   dir,
+		Namespace: testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 }
 
-func createPipelineInsidePipelineManifest(dir, oktetoPath string) error {
+func createPipelineInsidePipelineManifest(dir, oktetoPath, namespace string) error {
 	dockerfilePath := filepath.Join(dir, pipelineManifestName)
 	dockerfileContent := []byte(pipelineManifest)
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
 		return err
 	}
 	dockerfilePath = filepath.Join(dir, pipelineDeployPipelineManifestName)
-	dockerfileContent = []byte(fmt.Sprintf(pipelineDeployPipelineManifest, oktetoPath))
+	dockerfileContent = []byte(fmt.Sprintf(pipelineDeployPipelineManifest, oktetoPath, namespace))
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
 		return err
 	}

@@ -92,25 +92,28 @@ spec:
 // - Deploying a pipeline manifest locally from a helm chart
 // - The endpoints generated are accessible
 func TestDeployPipelineFromHelm(t *testing.T) {
+	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
 	dir := t.TempDir()
 	require.NoError(t, createHelmChart(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeploy", user)
+	testNamespace := integration.GetTestNamespace("TestDeployHelm", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
 	deployOptions := &commands.DeployOptions{
-		Workdir: dir,
+		Workdir:   dir,
+		Namespace: testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
-		Workdir: dir,
+		Workdir:   dir,
+		Namespace: testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 }

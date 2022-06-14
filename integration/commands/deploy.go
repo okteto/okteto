@@ -27,12 +27,14 @@ type DeployOptions struct {
 	LogLevel         string
 	LogOutput        string
 	ServicesToDeploy []string
+	Namespace        string
 }
 
 // DestroyOptions defines the options that can be added to a deploy command
 type DestroyOptions struct {
 	Workdir      string
 	ManifestPath string
+	Namespace    string
 }
 
 // RunOktetoDeploy runs an okteto deploy command
@@ -70,6 +72,9 @@ func RunOktetoDestroy(oktetoPath string, destroyOptions *DestroyOptions) error {
 	if destroyOptions.ManifestPath != "" {
 		cmd.Args = append(cmd.Args, "-f", destroyOptions.ManifestPath)
 	}
+	if destroyOptions.Namespace != "" {
+		cmd.Args = append(cmd.Args, "--namespace", destroyOptions.Namespace)
+	}
 
 	o, err := cmd.CombinedOutput()
 	if err != nil {
@@ -95,6 +100,9 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 	}
 	if deployOptions.LogLevel != "" {
 		cmd.Args = append(cmd.Args, "--log-level", deployOptions.LogLevel)
+	}
+	if deployOptions.Namespace != "" {
+		cmd.Args = append(cmd.Args, "--namespace", deployOptions.Namespace)
 	}
 	if deployOptions.LogOutput != "" {
 		cmd.Args = append(cmd.Args, "--log-output", deployOptions.LogOutput)

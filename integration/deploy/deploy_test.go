@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,6 +34,8 @@ var (
 	user          = ""
 	kubectlBinary = "kubectl"
 	appsSubdomain = "cloud.okteto.net"
+
+	registryMutex sync.Mutex
 )
 
 const (
