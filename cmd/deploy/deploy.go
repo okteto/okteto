@@ -282,11 +282,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
-	cfg, err := getConfigMapFromData(ctx, data, c)
-	if err != nil {
-		return err
-	}
-
 	dc.Proxy.SetName(deployOptions.Name)
 	// don't divert if current namespace is the diverted namespace
 	if deployOptions.Manifest.Deploy.Divert != nil {
@@ -305,6 +300,15 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	if deployOptions.Dependencies && !okteto.IsOkteto() {
 		return fmt.Errorf("'dependencies' is only available in clusters managed by Okteto")
+	}
+
+	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
+	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
+	dc.Proxy.Start()
+
+	cfg, err := getConfigMapFromData(ctx, data, c)
+	if err != nil {
+		return err
 	}
 
 	for depName, dep := range deployOptions.Manifest.Dependencies {
@@ -371,10 +375,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			}
 		}
 	}
-
-	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
-	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
-	dc.Proxy.Start()
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deploying '%s'...", deployOptions.Name)
 
@@ -446,12 +446,15 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Status = pipeline.DeployedStatus
 	}
 
-	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
+	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
+		return err
+	}
+
+	return err
 }
 
 func getConfigMapFromData(ctx context.Context, data *pipeline.CfgData, c kubernetes.Interface) (*corev1.ConfigMap, error) {
-	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
-	return cfg, err
+	return pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
 }
 
 func updateConfigMapStatus(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, err error) error {
