@@ -37,11 +37,7 @@ func RunOktetoCreateNamespace(oktetoPath, namespace string) error {
 
 	log.Printf("create namespace output: \n%s\n", string(o))
 
-	n := okteto.Context().Namespace
-	if namespace != n {
-		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
-	}
-	return RunOktetoKubeconfig(oktetoPath)
+	return nil
 }
 
 // RunOktetoNamespace runs okteto namespace command

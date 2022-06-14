@@ -88,13 +88,14 @@ func TestMain(m *testing.M) {
 // TestBuildCommandV1 tests the following scenario:
 // - building having a dockerfile
 func TestBuildCommandV1(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
 
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestBuild", user)
+	testNamespace := integration.GetTestNamespace("TestBuildV1", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
@@ -105,6 +106,7 @@ func TestBuildCommandV1(t *testing.T) {
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, dockerfileName),
 		Tag:          "okteto.dev/test:okteto",
+		Namespace:    testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedImage))
@@ -113,6 +115,7 @@ func TestBuildCommandV1(t *testing.T) {
 // TestBuildCommandV2 tests the following scenario:
 // - building having a manifest v2 with build section
 func TestBuildCommandV2(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
 	require.NoError(t, createManifestV2(dir))
@@ -120,7 +123,7 @@ func TestBuildCommandV2(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestBuild", user)
+	testNamespace := integration.GetTestNamespace("TestBuildV2", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
@@ -133,6 +136,7 @@ func TestBuildCommandV2(t *testing.T) {
 	options := &commands.BuildOptions{
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, manifestName),
+		Namespace:    testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedAppImage))
@@ -143,6 +147,7 @@ func TestBuildCommandV2(t *testing.T) {
 // - building having a manifest v2 with build section
 // - okteto build with a service as argument
 func TestBuildCommandV2OnlyOneService(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
 	require.NoError(t, createManifestV2(dir))
@@ -150,7 +155,7 @@ func TestBuildCommandV2OnlyOneService(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestBuild", user)
+	testNamespace := integration.GetTestNamespace("TestPartialBuildV2", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
@@ -161,6 +166,7 @@ func TestBuildCommandV2OnlyOneService(t *testing.T) {
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, manifestName),
 		SvcsToBuild:  []string{"app"},
+		Namespace:    testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedImage))
@@ -170,6 +176,7 @@ func TestBuildCommandV2OnlyOneService(t *testing.T) {
 // - building having a manifest v2 with build section
 // - okteto build with several service as argument
 func TestBuildCommandV2SpecifyingServices(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
 	require.NoError(t, createManifestV2(dir))
@@ -177,7 +184,7 @@ func TestBuildCommandV2SpecifyingServices(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestBuild", user)
+	testNamespace := integration.GetTestNamespace("TestCompleteBuildV2", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
@@ -191,6 +198,7 @@ func TestBuildCommandV2SpecifyingServices(t *testing.T) {
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, manifestName),
 		SvcsToBuild:  []string{"app", "api"},
+		Namespace:    testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedAppImage))
@@ -201,6 +209,7 @@ func TestBuildCommandV2SpecifyingServices(t *testing.T) {
 // - building having a compose file
 // - building an image that needs to mount local volumes
 func TestBuildCommandV2VolumeMounts(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
 	require.NoError(t, createCompose(dir))
@@ -208,7 +217,7 @@ func TestBuildCommandV2VolumeMounts(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestBuild", user)
+	testNamespace := integration.GetTestNamespace("TestBuildVolumesV2", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
@@ -219,7 +228,8 @@ func TestBuildCommandV2VolumeMounts(t *testing.T) {
 	require.False(t, isImageBuilt(expectedImageWithVolumes))
 
 	options := &commands.BuildOptions{
-		Workdir: dir,
+		Workdir:   dir,
+		Namespace: testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedBuildImage), "%s not found", expectedBuildImage)

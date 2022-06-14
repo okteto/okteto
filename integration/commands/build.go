@@ -24,6 +24,7 @@ type BuildOptions struct {
 	ManifestPath string
 	SvcsToBuild  []string
 	Tag          string
+	Namespace    string
 }
 
 // RunOktetoBuild runs an okteto build command
@@ -38,6 +39,9 @@ func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
 	}
 	if buildOptions.Workdir != "" {
 		cmd.Dir = buildOptions.Workdir
+	}
+	if buildOptions.Namespace != "" {
+		cmd.Args = append(cmd.Args, "--namespace", buildOptions.Namespace)
 	}
 	if len(buildOptions.SvcsToBuild) > 0 {
 		cmd.Args = append(cmd.Args, buildOptions.SvcsToBuild...)
