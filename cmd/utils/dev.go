@@ -350,7 +350,7 @@ func GetDownCommand(devPath string) string {
 }
 
 func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry bool) (apps.App, bool, error) {
-	app, err := apps.GetByDev(ctx, dev, dev.Namespace, c)
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
 			return nil, false, err
@@ -382,10 +382,10 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 func doesAutocreateAppExist(ctx context.Context, dev *model.Dev, c kubernetes.Interface) bool {
 	autocreateDev := *dev
 	autocreateDev.Name = model.DevCloneName(dev.Name)
-	_, err := apps.GetByDev(ctx, &autocreateDev, dev.Namespace, c)
+	_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		oktetoLog.Infof("getApp autocreate k8s error, retrying...")
-		_, err := apps.GetByDev(ctx, &autocreateDev, dev.Namespace, c)
+		_, err := apps.Get(ctx, &autocreateDev, dev.Namespace, c)
 		return err == nil
 	}
 	return err == nil

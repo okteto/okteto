@@ -148,7 +148,7 @@ func Push(ctx context.Context) *cobra.Command {
 
 func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, pushOpts *pushOptions, c *kubernetes.Clientset) error {
 	exists := true
-	app, err := apps.GetByDev(ctx, dev, dev.Namespace, c)
+	app, err := apps.Get(ctx, dev, dev.Namespace, c)
 
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {

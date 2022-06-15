@@ -106,7 +106,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	devName := dev.Name
 	var devApp apps.App
 	if !dev.Autocreate {
-		app, err := apps.GetByDev(ctx, dev, dev.Namespace, c)
+		app, err := apps.Get(ctx, dev, dev.Namespace, c)
 		if err != nil {
 			return err
 		}
@@ -134,7 +134,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		devApp = app.DevClone()
 	} else {
 		dev.Name = model.DevCloneName(dev.Name)
-		devApp, err = apps.GetByDev(ctx, dev, dev.Namespace, c)
+		devApp, err = apps.Get(ctx, dev, dev.Namespace, c)
 		if err != nil {
 			return err
 		}
