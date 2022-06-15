@@ -62,7 +62,7 @@ jobs:
       - checkout
       - run:
           name: Build all binaries
-          command: env VERSION_STRING=$CIRCLE_TAG make -j 4 build-all
+          command: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
       - run:
           name: Add version string
           command: env VERSION_STRING=$CIRCLE_TAG make latest

@@ -96,7 +96,7 @@ func checkStignoreIsOnRemote(namespace, manifestPath, oktetoPath string) error {
 	return nil
 }
 
-func killLocalSyncthing() error {
+func killLocalSyncthing(upPid int) error {
 	processes, err := ps.Processes()
 	if err != nil {
 		return fmt.Errorf("fail to list processes: %s", err.Error())
@@ -108,8 +108,10 @@ func killLocalSyncthing() error {
 				log.Printf("fail to find process %d : %s", p.Pid(), err)
 				continue
 			}
-			if err := pr.Kill(); err != nil {
-				log.Printf("fail to kill process %d : %s", p.Pid(), err)
+			if upPid == p.PPid() {
+				if err := pr.Kill(); err != nil {
+					log.Printf("fail to kill process %d : %s", p.Pid(), err)
+				}
 			}
 		}
 	}

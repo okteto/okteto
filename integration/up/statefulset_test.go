@@ -44,7 +44,7 @@ workdir: /usr/src/app
 sync:
 - .:/usr/src/app
 forward:
-- 8080:8080
+- 8085:8080
 `
 	statefulsetManifestV2 = `
 dev:
@@ -58,7 +58,7 @@ dev:
     sync:
     - .:/usr/src/app
     forward:
-    - 8080:8080
+    - 8086:8080
 `
 	k8sSfsManifestTemplate = `apiVersion: apps/v1
 kind: StatefulSet
@@ -106,12 +106,13 @@ spec:
 )
 
 func TestUpStatefulsetV1(t *testing.T) {
+	t.Parallel()
 	// Prepare environment
 	dir := t.TempDir()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpStatefulset", user)
+	testNamespace := integration.GetTestNamespace("TestUpStatefulsetV1", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
@@ -140,8 +141,8 @@ func TestUpStatefulsetV1(t *testing.T) {
 
 	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, model.DevCloneName("e2etest"), timeout))
 
-	varLocalEndpoint := "http://localhost:8080/var.html"
-	indexLocalEndpoint := "http://localhost:8080/index.html"
+	varLocalEndpoint := "http://localhost:8085/var.html"
+	indexLocalEndpoint := "http://localhost:8085/index.html"
 	indexRemoteEndpoint := fmt.Sprintf("https://e2etest-%s.%s/index.html", testNamespace, appsSubdomain)
 
 	// Test that environment variable is injected correctly
@@ -169,7 +170,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
 
 	// Test kill syncthing reconnection
-	require.NoError(t, killLocalSyncthing())
+	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
 	localSyncthingKilledContent := fmt.Sprintf("%s-kill-syncthing", testNamespace)
 	require.NoError(t, writeFile(indexPath, localSyncthingKilledContent))
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))
@@ -195,6 +196,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 }
 
 func TestUpStatefulsetV2(t *testing.T) {
+	t.Parallel()
 	// Prepare environment
 	dir := t.TempDir()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -229,8 +231,8 @@ func TestUpStatefulsetV2(t *testing.T) {
 
 	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, model.DevCloneName("e2etest"), timeout))
 
-	varLocalEndpoint := "http://localhost:8080/var.html"
-	indexLocalEndpoint := "http://localhost:8080/index.html"
+	varLocalEndpoint := "http://localhost:8086/var.html"
+	indexLocalEndpoint := "http://localhost:8086/index.html"
 	indexRemoteEndpoint := fmt.Sprintf("https://e2etest-%s.%s/index.html", testNamespace, appsSubdomain)
 
 	// Test that environment variable is injected correctly
@@ -258,7 +260,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
 
 	// Test kill syncthing reconnection
-	require.NoError(t, killLocalSyncthing())
+	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
 	localSyncthingKilledContent := fmt.Sprintf("%s-kill-syncthing", testNamespace)
 	require.NoError(t, writeFile(indexPath, localSyncthingKilledContent))
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))

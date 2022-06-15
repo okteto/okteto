@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/stretchr/testify/require"
 )
@@ -49,6 +50,7 @@ dev:
 )
 
 func TestUpWithDeploy(t *testing.T) {
+	t.Parallel()
 	// Prepare environment
 	dir := t.TempDir()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -81,7 +83,7 @@ func TestUpWithDeploy(t *testing.T) {
 	// Test that the app image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, model.DevCloneName("e2etest"))
 	require.NoError(t, err)
-	appImageDev := "okteto.dev/test:1.0.0"
+	appImageDev := fmt.Sprintf("%s/%s/test:1.0.0", okteto.Context().Registry, testNamespace)
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
 	indexRemoteEndpoint := fmt.Sprintf("https://e2etest-%s.%s/index.html", testNamespace, appsSubdomain)
@@ -95,7 +97,7 @@ func TestUpWithDeploy(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexRemoteEndpoint, localupdatedContent, timeout, upResult.ErrorChan))
 
 	// Test kill syncthing reconnection
-	require.NoError(t, killLocalSyncthing())
+	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
 	localSyncthingKilledContent := fmt.Sprintf("%s-kill-syncthing", testNamespace)
 	require.NoError(t, writeFile(indexPath, localSyncthingKilledContent))
 	require.NoError(t, waitUntilUpdatedContent(indexRemoteEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))

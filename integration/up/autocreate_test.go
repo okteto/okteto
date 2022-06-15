@@ -60,18 +60,19 @@ dev:
     sync:
     - .:/usr/src/app
     forward:
-    - 8080:8080
+    - 8081:8080
     autocreate: true
 `
 )
 
 func TestUpAutocreate(t *testing.T) {
+	t.Parallel()
 	// Prepare environment
 	dir := t.TempDir()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpAutocreate", user)
+	testNamespace := integration.GetTestNamespace("TestUpAutocreateV1", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
@@ -114,7 +115,7 @@ func TestUpAutocreate(t *testing.T) {
 	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath))
 
 	// Test kill syncthing reconnection
-	require.NoError(t, killLocalSyncthing())
+	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
 	localSyncthingKilledContent := fmt.Sprintf("%s-kill-syncthing", testNamespace)
 	require.NoError(t, writeFile(indexPath, localSyncthingKilledContent))
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))
@@ -137,12 +138,13 @@ func TestUpAutocreate(t *testing.T) {
 }
 
 func TestUpAutocreateV2(t *testing.T) {
+	t.Parallel()
 	// Prepare environment
 	dir := t.TempDir()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
-	testNamespace := integration.GetTestNamespace("TestUpAutocreate", user)
+	testNamespace := integration.GetTestNamespace("TestUpAutocreateV2", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
@@ -164,12 +166,12 @@ func TestUpAutocreateV2(t *testing.T) {
 
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, model.DevCloneName("autocreate"), 1, timeout))
 
-	varLocalEndpoint := "http://localhost:8080/var.html"
-	indexLocalEndpoint := "http://localhost:8080/index.html"
+	varLocalEndpoint := "http://localhost:8081/var.html"
+	indexLocalEndpoint := "http://localhost:8081/index.html"
 	indexRemoteEndpoint := fmt.Sprintf("https://autocreate-%s.%s/index.html", testNamespace, appsSubdomain)
 
 	// Test that environment variable is injected correctly
-	require.Equal(t, integration.GetContentFromURL(varLocalEndpoint, timeout), "value1")
+	require.NoError(t, waitUntilUpdatedContent(varLocalEndpoint, "value1", timeout, upResult.ErrorChan))
 
 	// Test that the same content is on the remote and on local endpoint
 	require.NotEmpty(t, integration.GetContentFromURL(indexLocalEndpoint, timeout))
@@ -185,7 +187,7 @@ func TestUpAutocreateV2(t *testing.T) {
 	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath))
 
 	// Test kill syncthing reconnection
-	require.NoError(t, killLocalSyncthing())
+	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
 	localSyncthingKilledContent := fmt.Sprintf("%s-kill-syncthing", testNamespace)
 	require.NoError(t, writeFile(indexPath, localSyncthingKilledContent))
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))

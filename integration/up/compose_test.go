@@ -70,6 +70,7 @@ const (
 )
 
 func TestUpCompose(t *testing.T) {
+	t.Parallel()
 	// Prepare environment
 	dir := t.TempDir()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -89,7 +90,8 @@ func TestUpCompose(t *testing.T) {
 	require.NoError(t, createNginxDir(dir))
 
 	deployOptions := &commands.DeployOptions{
-		Workdir: dir,
+		Workdir:   dir,
+		Namespace: testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -121,7 +123,7 @@ func TestUpCompose(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexRemoteEndpoint, localupdatedContent, timeout, upResult.ErrorChan))
 
 	// Test kill syncthing reconnection
-	require.NoError(t, killLocalSyncthing())
+	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
 	localSyncthingKilledContent := fmt.Sprintf("%s-kill-syncthing", testNamespace)
 	require.NoError(t, writeFile(indexPath, localSyncthingKilledContent))
 	require.NoError(t, waitUntilUpdatedContent(indexRemoteEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))
