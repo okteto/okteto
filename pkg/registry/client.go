@@ -14,10 +14,13 @@
 package registry
 
 import (
+	"crypto/tls"
+
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
@@ -25,6 +28,13 @@ import (
 func clientOptions(ref name.Reference) remote.Option {
 	registry := ref.Context().RegistryStr()
 	oktetoLog.Debugf("calling registry %s", registry)
+
+	if tlsVersion, ok := config.GetTLSVersion(); ok {
+		remote.DefaultTransport.TLSClientConfig = &tls.Config{
+			MaxVersion: tlsVersion,
+			MinVersion: tlsVersion,
+		}
+	}
 
 	okRegistry := okteto.Context().Registry
 	if okRegistry == registry {

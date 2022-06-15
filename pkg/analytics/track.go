@@ -14,6 +14,7 @@
 package analytics
 
 import (
+	"crypto/tls"
 	"net"
 	"net/http"
 	"os"
@@ -76,6 +77,14 @@ var (
 )
 
 func init() {
+	var tlsClientConfig *tls.Config
+	if tlsVersion, ok := config.GetTLSVersion(); ok {
+		tlsClientConfig = &tls.Config{
+			MaxVersion: tlsVersion,
+			MinVersion: tlsVersion,
+		}
+	}
+
 	c := &http.Client{
 		Timeout: time.Second * 5,
 		Transport: &http.Transport{
@@ -83,6 +92,7 @@ func init() {
 				Timeout: 5 * time.Second,
 			}).Dial,
 			TLSHandshakeTimeout: 5 * time.Second,
+			TLSClientConfig:     tlsClientConfig,
 		},
 	}
 
