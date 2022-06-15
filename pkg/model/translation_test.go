@@ -464,7 +464,7 @@ func TestVolumeMounts(t *testing.T) {
 		expected VolumeMount
 	}{
 		{
-			name: "default",
+			name: "relative path with abs path",
 			manifest: &Dev{
 				Name:  "test",
 				Image: &BuildInfo{},
@@ -483,7 +483,7 @@ func TestVolumeMounts(t *testing.T) {
 			},
 		},
 		{
-			name: "default",
+			name: "relative path",
 			manifest: &Dev{
 				Name:  "test",
 				Image: &BuildInfo{},
@@ -499,6 +499,25 @@ func TestVolumeMounts(t *testing.T) {
 			expected: VolumeMount{
 				MountPath: "/usr/src",
 				SubPath:   "src/api",
+			},
+		},
+		{
+			name: "non relative path",
+			manifest: &Dev{
+				Name:  "test",
+				Image: &BuildInfo{},
+				Sync: Sync{
+					Folders: []SyncFolder{
+						{
+							LocalPath:  filepath.Clean("/usr/src/app"),
+							RemotePath: "/usr/src",
+						},
+					},
+				},
+			},
+			expected: VolumeMount{
+				MountPath: "/usr/src",
+				SubPath:   "src/app",
 			},
 		},
 	}

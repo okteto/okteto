@@ -991,7 +991,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			subpath := v.RemotePath
 			if filepath.IsAbs(subpath) {
 				subpath, err = filepath.Rel(wd, v.RemotePath)
-				if err != nil {
+				if err != nil || strings.HasPrefix(subpath, "..") {
 					oktetoLog.Info("could not retrieve subpath")
 					subpath = filepath.Base(v.RemotePath)
 				}
@@ -1009,7 +1009,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			subpath := sync.LocalPath
 			if filepath.IsAbs(subpath) {
 				subpath, err = filepath.Rel(wd, sync.LocalPath)
-				if err != nil {
+				if err != nil || strings.HasPrefix(subpath, "..") {
 					oktetoLog.Info("could not retrieve subpath")
 					subpath = filepath.Base(sync.LocalPath)
 				}
