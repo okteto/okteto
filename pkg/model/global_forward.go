@@ -53,7 +53,12 @@ func (gf *GlobalForward) UnmarshalYAML(unmarshal func(interface{}) error) error 
 		return fmt.Errorf(malformedGlobalForward, raw)
 	}
 
-	gf.ServiceName = parts[1]
+	svcName := parts[1]
+	if svcName == "" {
+		return fmt.Errorf("service name cannnot be empty")
+	}
+
+	gf.ServiceName = svcName
 
 	localPort, err := strconv.Atoi(parts[0])
 	if err != nil {
@@ -95,7 +100,12 @@ func (gf *GlobalForward) UnmarshalExtendedForm(unmarshal func(interface{}) error
 	gf.Labels = rawGlobalForward.Labels
 
 	if gf.Labels != nil && gf.ServiceName != "" {
-		return fmt.Errorf("Can not use ServiceName and Labels to specify the service.\nUse either the service name or labels to get the service to expose.")
+		return fmt.Errorf("Can not use both ServiceName and Labels to select the service.\nUse either the service name or labels to select the service to be exposed.")
 	}
+
+	if gf.Labels == nil && gf.ServiceName == "" {
+		return fmt.Errorf("You need to specify either ServiceName or labels to select the service.")
+	}
+
 	return nil
 }

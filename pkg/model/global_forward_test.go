@@ -68,6 +68,11 @@ func TestGlobalForward_UnmarshalYAML(t *testing.T) {
 			expectErr: true,
 		},
 		{
+			name:      "name of service not specified",
+			data:      "8080::9090",
+			expectErr: true,
+		},
+		{
 			name:      "equal",
 			data:      "8080:8080",
 			expectErr: true,
