@@ -984,13 +984,12 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 
 	if main.PersistentVolumeEnabled() {
 		for _, v := range dev.Volumes {
-			subpath := getSubPathFromLocalPath(v.RemotePath)
 			rule.Volumes = append(
 				rule.Volumes,
 				VolumeMount{
 					Name:      main.GetVolumeName(),
 					MountPath: v.RemotePath,
-					SubPath:   getDataSubPath(subpath),
+					SubPath:   getDataSubPath(v.RemotePath),
 				},
 			)
 		}
@@ -1021,7 +1020,6 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 
 	return rule
 }
-
 func getSubPathFromLocalPath(localPath string) string {
 	wd, err := os.Getwd()
 	if err != nil {
