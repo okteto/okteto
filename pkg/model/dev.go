@@ -983,7 +983,19 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 	}
 
 	if main.PersistentVolumeEnabled() {
+		wd, err := os.Getwd()
+		if err != nil {
+			oktetoLog.Info("could not retrieve working directory")
+		}
 		for _, v := range dev.Volumes {
+			subpath := v.RemotePath
+			if filepath.IsAbs(subpath) {
+				subpath, err = filepath.Rel(wd, v.RemotePath)
+				if err != nil {
+					oktetoLog.Info("could not retrieve subpath")
+					subpath = filepath.Base(v.RemotePath)
+				}
+			}
 			rule.Volumes = append(
 				rule.Volumes,
 				VolumeMount{
@@ -994,12 +1006,21 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			)
 		}
 		for _, sync := range dev.Sync.Folders {
+			subpath := sync.LocalPath
+			if filepath.IsAbs(subpath) {
+				subpath, err = filepath.Rel(wd, sync.LocalPath)
+				if err != nil {
+					oktetoLog.Info("could not retrieve subpath")
+					subpath = filepath.Base(sync.LocalPath)
+				}
+			}
+
 			rule.Volumes = append(
 				rule.Volumes,
 				VolumeMount{
 					Name:      main.GetVolumeName(),
 					MountPath: sync.RemotePath,
-					SubPath:   main.getSourceSubPath(sync.LocalPath),
+					SubPath:   main.getSourceSubPath(subpath),
 				},
 			)
 		}
