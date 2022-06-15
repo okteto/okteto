@@ -378,7 +378,7 @@ workflows:
       - run-unit-test:
           filters:
             branches:
-              ignore: *release-branch-regex
+              ignore: *release-regex
             tags:
               ignore: /.*/
       - push-image-tag:
