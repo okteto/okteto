@@ -329,9 +329,9 @@ workflows:
       - run-unit-test:
           filters:
             branches:
-              ignore: *release-branch-regex
-            tags:
               ignore: /.*/
+            tags:
+              ignore: *release-branch-regex
       - test-integration:
           filters:
             branches:
@@ -378,9 +378,9 @@ workflows:
       - run-unit-test:
           filters:
             branches:
-              ignore: *release-regex
-            tags:
               ignore: /.*/
+            tags:
+              ignore: *release-regex
       - push-image-tag:
           requires:
             - build-binaries
