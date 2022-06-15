@@ -329,6 +329,7 @@ workflows:
           context: GKE
           requires:
             - build
+            - push-image-tag
           filters:
             branches:
               ignore: /.*/
