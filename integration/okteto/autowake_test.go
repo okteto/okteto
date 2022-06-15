@@ -161,6 +161,7 @@ func TestAutoWakeFromURL(t *testing.T) {
 
 	testNamespace := integration.GetTestNamespace("TestAutoWake", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
 	// Prepare test environment
@@ -204,6 +205,7 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 
 	testNamespace := integration.GetTestNamespace("TestAutoWake", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
 	// Prepare test environment
