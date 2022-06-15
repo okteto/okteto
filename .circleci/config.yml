@@ -55,33 +55,44 @@ executors:
       - image: okteto/golang-ci:1.17.10
 
 jobs:
-  build:
+  build-binaries:
     executor: golang-ci
     resource_class: large
     steps:
       - checkout
       - run:
+          name: Build all binaries
+          command: env VERSION_STRING=$CIRCLE_TAG make -j 4 build-all
+      - run:
+          name: Add version string
+          command: env VERSION_STRING=$CIRCLE_TAG make latest
+      - persist_to_workspace:
+          root: .
+          paths:
+            - bin
+      - store_artifacts:
+          path: bin
+          destination: binaries
+  run-unit-test:
+    executor: golang-ci
+    steps:
+      - checkout
+      - run:
+          name: Check go.mod and go.sum
           command: go mod tidy && git diff --exit-code go.sum > /dev/null
+      - run:
+          name: Compile integration tests
+          command: make build-integration
       - run:
           name: Test
           command: |
             make test
             bash <(curl -s https://codecov.io/bash)
-      - run: make build-integration
-      - run: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
-      - run: env VERSION_STRING=$CIRCLE_TAG make latest
-      - persist_to_workspace:
-          root: .
-          paths:
-            - bin
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
             - /go/pkg
-      - store_artifacts:
-          path: bin
-          destination: binaries
       - store_artifacts:
           path: coverage.txt
           destination: coverage.txt
@@ -261,7 +272,13 @@ workflows:
       not:
         equal: [scheduled_pipeline, << pipeline.trigger_source >>]
     jobs:
-      - build:
+      - build-binaries:
+          filters:
+            branches:
+              ignore: *release-branch-regex
+            tags:
+              ignore: /.*/
+      - run-unit-test:
           filters:
             branches:
               ignore: *release-branch-regex
@@ -269,7 +286,7 @@ workflows:
               ignore: /.*/
       - test-windows:
           requires:
-            - build
+            - build-binaries
           filters:
             branches:
               only:
@@ -277,7 +294,7 @@ workflows:
                 - /.*(windows|win)/
       - test-integration:
           requires:
-            - build
+            - build-binaries
           filters:
             branches:
               only:
@@ -286,7 +303,7 @@ workflows:
       - test-release:
           context: GKE
           requires:
-            - build
+            - build-binaries
           filters:
             tags:
               ignore: /.*/
@@ -296,17 +313,23 @@ workflows:
                 - *release-branch-regex
       - push-image-latest:
           requires:
-            - build
+            - build-binaries
           filters:
             branches:
               only: master
 
   release-branch:
     jobs:
-      - build:
+      - build-binaries:
           filters:
             branches:
               only: *release-branch-regex
+            tags:
+              ignore: /.*/
+      - run-unit-test:
+          filters:
+            branches:
+              ignore: *release-branch-regex
             tags:
               ignore: /.*/
       - test-integration:
@@ -314,10 +337,10 @@ workflows:
             branches:
               only: *release-branch-regex
           requires:
-            - build
+            - build-binaries
       - release-branch:
           requires:
-            - build
+            - build-binaries
             - test-integration
           filters:
             branches:
@@ -329,14 +352,15 @@ workflows:
         - equal: [scheduled_pipeline, << pipeline.trigger_source >>]
         - equal: ["release-dev", << pipeline.schedule.name >>]
     jobs:
-      - build
+      - build-binaries
+      - run-unit-test
       - push-image-tag:
           requires:
-            - build
+            - build-binaries
       - release:
           context: GKE
           requires:
-            - build
+            - build-binaries
             - push-image-tag
 
   release:
@@ -344,16 +368,22 @@ workflows:
       not:
         equal: [scheduled_pipeline, << pipeline.trigger_source >>]
     jobs:
-      - build:
+      - build-binaries:
           filters:
             branches:
               ignore: /.*/
             tags:
               only:
                 - *release-regex
+      - run-unit-test:
+          filters:
+            branches:
+              ignore: *release-branch-regex
+            tags:
+              ignore: /.*/
       - push-image-tag:
           requires:
-            - build
+            - build-binaries
           filters:
             branches:
               ignore: /.*/
@@ -363,7 +393,7 @@ workflows:
       - release:
           context: GKE
           requires:
-            - build
+            - build-binaries
           filters:
             branches:
               ignore: /.*/
