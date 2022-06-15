@@ -27,7 +27,7 @@ import (
 
 func TestPreviewCommand(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
-
+	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 

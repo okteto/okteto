@@ -41,7 +41,9 @@ func TestDownloadSyncthing(t *testing.T) {
 	ctx := context.Background()
 	m := syncthing.GetMinimumVersion()
 	for _, tt := range tests {
+		tt := tt
 		t.Run(fmt.Sprintf("%s-%s", tt.os, tt.arch), func(t *testing.T) {
+			t.Parallel()
 			u, err := syncthing.GetDownloadURL(tt.os, tt.arch, m.String())
 			req, err := http.NewRequest("GET", u, nil)
 			if err != nil {

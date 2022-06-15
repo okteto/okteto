@@ -24,6 +24,7 @@ import (
 )
 
 func TestGetVersion(t *testing.T) {
+	t.Parallel()
 	v, err := utils.GetLatestVersionFromGithub()
 	if err != nil {
 		t.Fatal(err)

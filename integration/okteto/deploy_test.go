@@ -70,6 +70,7 @@ const (
 
 func TestDeployOutput(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
@@ -81,7 +82,8 @@ func TestDeployOutput(t *testing.T) {
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
 	deployOptions := &commands.DeployOptions{
-		Workdir: dir,
+		Workdir:   dir,
+		Namespace: testNamespace,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
