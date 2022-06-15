@@ -14,6 +14,7 @@
 package config
 
 import (
+	"crypto/tls"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -279,4 +280,21 @@ func GetDeployOrigin() (src string) {
 
 func RunningInInstaller() bool {
 	return os.Getenv(model.OktetoInInstaller) == "true"
+}
+
+// GetTLSVersion returns the tls.Version uint16 if the OKTETO_TLS_VERSION env is set
+func GetTLSVersion() (uint16, bool) {
+	tlsVersionEnv, ok := os.LookupEnv("OKTETO_TLS_VERSION")
+	if !ok {
+		return 0, false
+	}
+
+	switch tlsVersionEnv {
+	case "1.2":
+		return tls.VersionTLS12, true
+	case "1.3":
+		return tls.VersionTLS13, true
+	}
+
+	return 0, false
 }

@@ -14,6 +14,7 @@
 package config
 
 import (
+	"crypto/tls"
 	"os"
 	"path/filepath"
 	"testing"
@@ -133,5 +134,59 @@ func TestGetAppHome(t *testing.T) {
 	expected := filepath.Join(dir, "ns", "dp")
 	if got != expected {
 		t.Errorf("expected %s, got %s", expected, got)
+	}
+}
+
+func Test_GetTLSVersion(t *testing.T) {
+	tests := []struct {
+		name          string
+		envValue      string
+		expectedValue uint16
+		expectedOk    bool
+	}{
+		{
+			name:          "env does not exist",
+			expectedValue: 0,
+			expectedOk:    false,
+		},
+		{
+			name:          "env has invalid value",
+			envValue:      "not valid",
+			expectedValue: 0,
+			expectedOk:    false,
+		},
+		{
+			name:          "env has valid value TLS12",
+			envValue:      "1.2",
+			expectedValue: tls.VersionTLS12,
+			expectedOk:    true,
+		},
+		{
+			name:          "env has valid value TLS12",
+			envValue:      "1.3",
+			expectedValue: tls.VersionTLS13,
+			expectedOk:    true,
+		},
+	}
+
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+
+			if tt.envValue != "" {
+				t.Setenv("OKTETO_TLS_VERSION", tt.envValue)
+			}
+
+			value, ok := GetTLSVersion()
+			if tt.expectedOk && !ok {
+				t.Fatal("expected value to exist, but not")
+			}
+
+			if tt.expectedOk && tt.expectedValue != value {
+				t.Fatalf("expected value to be %v, but got %v", tt.expectedValue, value)
+			}
+
+		})
+
 	}
 }
