@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -130,15 +129,11 @@ func getDataSubPath(path string) string {
 }
 
 func (dev *Dev) getSourceSubPath(path string) string {
-	path = path[len(filepath.VolumeName(path)):]
+	sourceSubPath := path[len(filepath.VolumeName(path)):]
 	if dev.parentSyncFolder == "" {
-		var err error
-		dev.parentSyncFolder, err = os.Getwd()
-		if err != nil {
-			oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
-		}
+		dev.parentSyncFolder = "."
 	}
-	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(path))
+	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(sourceSubPath))
 	if err != nil || strings.HasPrefix(rel, "..") {
 		if err != nil {
 			oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
