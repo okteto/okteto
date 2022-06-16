@@ -394,6 +394,7 @@ workflows:
           context: GKE
           requires:
             - build-binaries
+            - push-image-tag
           filters:
             branches:
               ignore: /.*/
