@@ -306,7 +306,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	cfg, _ := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
 
 	expectedCfg := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

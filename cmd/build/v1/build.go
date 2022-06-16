@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
-	"github.com/okteto/okteto/pkg/errors"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -119,7 +118,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	}
 
 	if err := utils.CheckIfRegularFile(options.File); err != nil {
-		return fmt.Errorf("%s: %s", errors.InvalidDockerfile, err.Error())
+		return fmt.Errorf("%s: %s", oktetoErrors.InvalidDockerfile, err.Error())
 	}
 
 	buildMsg := "Building the image"
