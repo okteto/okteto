@@ -312,6 +312,8 @@ workflows:
             tags:
               ignore: /.*/
       - run-windows-test:
+          requires:
+            - build-binaries
           filters:
             branches:
               only:
