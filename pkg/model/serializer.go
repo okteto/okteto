@@ -27,6 +27,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/forward"
 	giturls "github.com/whilp/git-urls"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -688,16 +689,16 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Name          string               `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace     string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context       string               `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon          string               `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy        *DeployInfo          `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev           ManifestDevs         `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy       []DeployCommand      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build         ManifestBuild        `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies  ManifestDependencies `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []GlobalForward      `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Name          string                  `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace     string                  `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context       string                  `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon          string                  `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy        *DeployInfo             `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev           ManifestDevs            `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy       []DeployCommand         `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build         ManifestBuild           `json:"build,omitempty" yaml:"build,omitempty"`
+	Dependencies  ManifestDependencies    `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
 }

@@ -23,6 +23,7 @@ import (
 	k8sforward "github.com/okteto/okteto/pkg/k8s/forward"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	forwardModel "github.com/okteto/okteto/pkg/model/forward"
 )
 
 // ForwardManager handles the lifecycle of all the forwards
@@ -92,7 +93,7 @@ func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 }
 
 // Add initializes a remote forward
-func (fm *ForwardManager) Add(f model.Forward) error {
+func (fm *ForwardManager) Add(f forwardModel.Forward) error {
 
 	forwardsToUpdate := fm.forwards
 	if f.IsGlobal {
@@ -191,7 +192,7 @@ func (fm *ForwardManager) Stop() {
 	oktetoLog.Info("stopped SSH forward manager")
 }
 
-func (fm *ForwardManager) TransformLabelsToServiceName(f model.Forward) (model.Forward, error) {
+func (fm *ForwardManager) TransformLabelsToServiceName(f forwardModel.Forward) (forwardModel.Forward, error) {
 	serviceName, err := fm.pf.GetServiceNameByLabel(fm.namespace, f.Labels)
 	if err != nil {
 		return f, err

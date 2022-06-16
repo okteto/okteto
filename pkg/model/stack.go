@@ -26,6 +26,7 @@ import (
 	"github.com/compose-spec/godotenv"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/forward"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -391,7 +392,7 @@ func (svc *Service) ToDev(svcName string) (*Dev, error) {
 	d := NewDev()
 	for _, p := range svc.Ports {
 		if p.HostPort != 0 {
-			d.Forward = append(d.Forward, Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
+			d.Forward = append(d.Forward, forward.Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
 		}
 	}
 	for _, v := range svc.VolumeMounts {

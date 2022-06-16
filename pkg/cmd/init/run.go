@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
@@ -200,7 +201,7 @@ func setForwardsFromPod(ctx context.Context, dev *model.Dev, pod *apiv1.Pod, c *
 		seenPorts[localPort] = true
 		dev.Forward = append(
 			dev.Forward,
-			model.Forward{
+			forward.Forward{
 				Local:  localPort,
 				Remote: port,
 			},

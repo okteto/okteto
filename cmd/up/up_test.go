@@ -21,6 +21,7 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 )
 
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
@@ -65,7 +66,7 @@ func Test_printDisplayContext(t *testing.T) {
 					Namespace: "namespace",
 				},
 				Manifest: &model.Manifest{
-					GlobalForward: []model.GlobalForward{},
+					GlobalForward: []forward.GlobalForward{},
 				},
 			},
 		},
@@ -75,10 +76,10 @@ func Test_printDisplayContext(t *testing.T) {
 				Dev: &model.Dev{
 					Name:      "dev",
 					Namespace: "namespace",
-					Forward:   []model.Forward{{Local: 1000, Remote: 1000}},
+					Forward:   []forward.Forward{{Local: 1000, Remote: 1000}},
 				},
 				Manifest: &model.Manifest{
-					GlobalForward: []model.GlobalForward{},
+					GlobalForward: []forward.GlobalForward{},
 				},
 			},
 		},
@@ -88,10 +89,10 @@ func Test_printDisplayContext(t *testing.T) {
 				Dev: &model.Dev{
 					Name:      "dev",
 					Namespace: "namespace",
-					Forward:   []model.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+					Forward:   []forward.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
 				},
 				Manifest: &model.Manifest{
-					GlobalForward: []model.GlobalForward{
+					GlobalForward: []forward.GlobalForward{
 						{
 							Local:  8080,
 							Remote: 8080,
@@ -114,7 +115,7 @@ func Test_printDisplayContext(t *testing.T) {
 					Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}},
 				},
 				Manifest: &model.Manifest{
-					GlobalForward: []model.GlobalForward{},
+					GlobalForward: []forward.GlobalForward{},
 				},
 			},
 		},
@@ -127,7 +128,7 @@ func Test_printDisplayContext(t *testing.T) {
 					Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
 				},
 				Manifest: &model.Manifest{
-					GlobalForward: []model.GlobalForward{
+					GlobalForward: []forward.GlobalForward{
 						{
 							Local:  8080,
 							Remote: 8080,
@@ -149,7 +150,7 @@ func Test_printDisplayContext(t *testing.T) {
 					Namespace: "namespace",
 				},
 				Manifest: &model.Manifest{
-					GlobalForward: []model.GlobalForward{
+					GlobalForward: []forward.GlobalForward{
 						{
 							Local:       8080,
 							Remote:      8080,
@@ -167,7 +168,7 @@ func Test_printDisplayContext(t *testing.T) {
 					Namespace: "namespace",
 				},
 				Manifest: &model.Manifest{
-					GlobalForward: []model.GlobalForward{
+					GlobalForward: []forward.GlobalForward{
 						{
 							Local:       8080,
 							Remote:      8080,

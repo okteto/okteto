@@ -25,6 +25,7 @@ import (
 	"github.com/a8m/envsubst"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/forward"
 	yaml "gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
 )
@@ -137,16 +138,16 @@ var (
 
 // Manifest represents an okteto manifest
 type Manifest struct {
-	Name          string               `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace     string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context       string               `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon          string               `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy        *DeployInfo          `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev           ManifestDevs         `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy       []DeployCommand      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build         ManifestBuild        `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies  ManifestDependencies `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []GlobalForward      `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Name          string                  `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace     string                  `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context       string                  `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon          string                  `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy        *DeployInfo             `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev           ManifestDevs            `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy       []DeployCommand         `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build         ManifestBuild           `json:"build,omitempty" yaml:"build,omitempty"`
+	Dependencies  ManifestDependencies    `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
 
 	Type     Archetype `json:"-" yaml:"-"`
 	Filename string    `yaml:"-"`
@@ -170,7 +171,7 @@ func NewManifest() *Manifest {
 		Build:         map[string]*BuildInfo{},
 		Dependencies:  map[string]*Dependency{},
 		Deploy:        &DeployInfo{},
-		GlobalForward: []GlobalForward{},
+		GlobalForward: []forward.GlobalForward{},
 	}
 }
 
@@ -787,7 +788,7 @@ func (m *Manifest) setDefaults() error {
 			return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
 		}
 		sort.SliceStable(d.Forward, func(i, j int) bool {
-			return d.Forward[i].less(&d.Forward[j])
+			return d.Forward[i].Less(&d.Forward[j])
 		})
 
 		sort.SliceStable(d.Reverse, func(i, j int) bool {

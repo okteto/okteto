@@ -28,7 +28,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/forward"
+	forwardK8s "github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -37,6 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -447,7 +448,7 @@ func isSvcHealthy(ctx context.Context, stack *model.Stack, svcName string, clien
 }
 
 func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
-	forwarder := forward.NewPortForwardManager(ctx, model.Localhost, config, client, stack.Namespace)
+	forwarder := forwardK8s.NewPortForwardManager(ctx, model.Localhost, config, client, stack.Namespace)
 	podName := getPodName(ctx, stack, svcName, client)
 	if podName == "" {
 		return false
@@ -459,7 +460,7 @@ func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.St
 			continue
 		}
 		portsToTest = append(portsToTest, port)
-		if err := forwarder.Add(model.Forward{Local: port, Remote: int(p.ContainerPort)}); err != nil {
+		if err := forwarder.Add(forward.Forward{Local: port, Remote: int(p.ContainerPort)}); err != nil {
 			continue
 		}
 	}

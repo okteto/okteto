@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/stretchr/testify/assert"
 )
@@ -12,12 +13,12 @@ import (
 func TestGlobalForwarderStartsWhenRequired(t *testing.T) {
 	var tests = []struct {
 		name             string
-		globalFwdSection []model.GlobalForward
+		globalFwdSection []forward.GlobalForward
 		expectedAnswer   bool
 	}{
 		{
 			name: "is needed global forwarding",
-			globalFwdSection: []model.GlobalForward{
+			globalFwdSection: []forward.GlobalForward{
 				{
 					Local:  8080,
 					Remote: 8080,
@@ -27,7 +28,7 @@ func TestGlobalForwarderStartsWhenRequired(t *testing.T) {
 		},
 		{
 			name:             "not needed global forwarding",
-			globalFwdSection: []model.GlobalForward{},
+			globalFwdSection: []forward.GlobalForward{},
 			expectedAnswer:   false,
 		},
 	}
@@ -53,7 +54,7 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 			name: "add one global forwarder",
 			upContext: &upContext{
 				Manifest: &model.Manifest{
-					GlobalForward: []model.GlobalForward{
+					GlobalForward: []forward.GlobalForward{
 						{
 							Local:  8080,
 							Remote: 8080,
@@ -68,7 +69,7 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 			name: "add two global forwarder",
 			upContext: &upContext{
 				Manifest: &model.Manifest{
-					GlobalForward: []model.GlobalForward{
+					GlobalForward: []forward.GlobalForward{
 						{
 							Local:       8081,
 							ServiceName: "api",
@@ -88,7 +89,7 @@ func TestGlobalForwarderAddsProperlyPortsToForward(t *testing.T) {
 			name: "add none global forwarder",
 			upContext: &upContext{
 				Manifest: &model.Manifest{
-					GlobalForward: []model.GlobalForward{},
+					GlobalForward: []forward.GlobalForward{},
 				},
 				Forwarder: f,
 			},
