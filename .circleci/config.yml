@@ -120,7 +120,6 @@ jobs:
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
              /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
-
       - integration-okteto
       - integration-deprecated
       - integration-actions
@@ -157,10 +156,8 @@ jobs:
             export DOCKER_BUILDKIT=1
             docker build -t okteto --build-arg VERSION_STRING=$CIRCLE_SHA1 .
 
-  test-windows:
+  run-windows-unit-test:
     executor: win/default
-    environment:
-      OKTETO_USER: cindylopez
     steps:
       - checkout
       - run:
@@ -175,6 +172,20 @@ jobs:
             go mod download
             go version
             go test ./...
+      - save_cache:
+          key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+          paths:
+            - C:\Users\circleci\AppData\Local\go-build
+            - C:\Users\circleci\go\pkg
+            - C:\Go\pkg
+  run-windows-e2e-test:
+    executor: win/default
+    environment:
+      OKTETO_USER: cindylopez
+      OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+      OKTETO_SKIP_CLEANUP: 'true'
+    steps:
+      - checkout
       - run:
           name: Upgrade kubectl
           command: choco install kubernetes-cli
@@ -189,19 +200,11 @@ jobs:
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
             & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_TOKEN
-      - run:
-          name: Integration tests
-          environment:
-            OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
-            OKTETO_SKIP_CLEANUP: 'true'
-          command: |
-            go test github.com/okteto/okteto/integration -tags="common integration actions" --count=1 -v -timeout 1h
-      - save_cache:
-          key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
-          paths:
-            - C:\Users\circleci\AppData\Local\go-build
-            - C:\Users\circleci\go\pkg
-            - C:\Go\pkg
+      - integration-okteto
+      - integration-deprecated
+      - integration-build
+      - integration-deploy
+      - integration-up
       - store_artifacts:
           path: C:\Users\circleci\.okteto
 
@@ -284,7 +287,13 @@ workflows:
               ignore: *release-branch-regex
             tags:
               ignore: /.*/
-      - test-windows:
+      - run-windows-unit-test:
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(windows|win)/
+      - run-windows-e2e-test:
           requires:
             - build-binaries
           filters:
