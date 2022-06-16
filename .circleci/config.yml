@@ -205,9 +205,6 @@ jobs:
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
             & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_STAGING_TOKEN
       - run:
-          name: Run actions integration tests
-          command: go test github.com/okteto/okteto/integration/okteto -tags="integration" --count=1 -v -timeout 30m
-      - run:
           name: Run deprecated integration tests
           command: go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m && go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
       - run:
