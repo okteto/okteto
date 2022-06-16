@@ -202,9 +202,9 @@ build:
   target: dev
 
 deploy:
- - helm repo add bitnami https://charts.bitnami.com/bitnami
- - helm upgrade --install postgresql bitnami/postgresql -f postgresql/values.yml --version 10.16.2
- - helm upgrade --install kafka bitnami/kafka -f kafka/values.yml --version 14.5.0
+ - helm repo add bitnami https://charts.bitnami.com/bitnami && helm repo update
+ - helm upgrade --install postgresql bitnami/postgresql -f postgresql/values.yml --version 11.6.2
+ - helm upgrade --install kafka bitnami/kafka --version 17.1.0 -f kafka/values.yml
  - helm upgrade --install vote vote/chart --set image=${OKTETO_BUILD_VOTE_IMAGE}
  - helm upgrade --install result result/chart --set image=${OKTETO_BUILD_RESULT_IMAGE}
  - helm upgrade --install worker worker/chart --set image=${OKTETO_BUILD_WORKER_IMAGE}
