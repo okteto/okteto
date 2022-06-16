@@ -40,6 +40,7 @@ var errorManifest *model.Manifest = &model.Manifest{
 	Build: model.ManifestBuild{
 		"service1": &model.BuildInfo{
 			Dockerfile: "Dockerfile",
+			Image:      "testImage",
 		},
 	},
 	Deploy: &model.DeployInfo{
@@ -311,7 +312,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	expectedCfg := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "okteto-git-testErr",
-			Namespace: "mnevadom",
+			Namespace: okteto.Context().Namespace,
 			Labels:    map[string]string{"dev.okteto.com/git-deploy": "true"},
 		},
 		Data: map[string]string{
@@ -330,7 +331,6 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	expectedCfg.Data["output"] = cfg.Data["output"]
 
 	assert.True(t, strings.Contains(oktetoLog.GetOutputBuffer().String(), errors.InvalidDockerfile))
-
 	assert.Equal(t, expectedCfg, cfg)
 }
 
