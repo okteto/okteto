@@ -16,11 +16,15 @@ package deploy
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 
+	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
@@ -30,6 +34,23 @@ import (
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+var errorManifest *model.Manifest = &model.Manifest{
+	Name: "testManifest",
+	Build: model.ManifestBuild{
+		"service1": &model.BuildInfo{
+			Dockerfile: "Dockerfile",
+		},
+	},
+	Deploy: &model.DeployInfo{
+		Commands: []model.DeployCommand{
+			{
+				Name:    "printenv",
+				Command: "printenv",
+			},
+		},
+	},
+}
 
 var fakeManifest *model.Manifest = &model.Manifest{
 	Deploy: &model.DeployInfo{
@@ -209,6 +230,9 @@ devs:
 	}
 
 	currentCfg, err := getConfigMapFromData(ctx, data, fakeClient)
+	if err != nil {
+		t.Fatal("error trying to get configmap from data object")
+	}
 
 	assert.Equal(t, expectedCfg, currentCfg)
 }
@@ -245,6 +269,69 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	assert.Len(t, e.executed, 0)
 	// Proxy wasn't started
 	assert.False(t, p.started)
+}
+
+func TestCreateConfigMapWithBuildError(t *testing.T) {
+	p := &fakeProxy{}
+	e := &fakeExecutor{
+		err: assert.AnError,
+	}
+	opts := &Options{
+		Name:         "testErr",
+		ManifestPath: "",
+		Variables:    []string{},
+		Build:        true,
+	}
+
+	registry := test.NewFakeOktetoRegistry(nil)
+	builder := test.NewFakeOktetoBuilder(registry)
+
+	c := &DeployCommand{
+		GetManifest:       getErrorManifest,
+		Proxy:             p,
+		Executor:          e,
+		Kubeconfig:        &fakeKubeConfig{},
+		K8sClientProvider: test.NewFakeK8sProvider(),
+		Builder:           buildv2.NewBuilder(builder, registry),
+	}
+
+	ctx := context.Background()
+
+	err := c.RunDeploy(ctx, opts)
+
+	// we should get a build error because Dockerfile does not exist
+	assert.Error(t, err)
+
+	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+
+	expectedCfg := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "okteto-git-testErr",
+			Namespace: "mnevadom",
+			Labels:    map[string]string{"dev.okteto.com/git-deploy": "true"},
+		},
+		Data: map[string]string{
+			"actionName": "cli",
+			"name":       "testErr",
+			"output":     "",
+			"status":     "error",
+			"branch":     "",
+			"filename":   "",
+			"icon":       "",
+			"repository": "",
+			"yaml":       "",
+		},
+	}
+
+	expectedCfg.Data["output"] = cfg.Data["output"]
+
+	assert.True(t, strings.Contains(oktetoLog.GetOutputBuffer().String(), errors.InvalidDockerfile))
+
+	assert.Equal(t, expectedCfg, cfg)
 }
 
 func TestDeployWithErrorExecutingCommands(t *testing.T) {
@@ -479,6 +566,10 @@ func getManifestWithError(_ string) (*model.Manifest, error) {
 
 func getFakeManifest(_ string) (*model.Manifest, error) {
 	return fakeManifest, nil
+}
+
+func getErrorManifest(_ string) (*model.Manifest, error) {
+	return errorManifest, nil
 }
 
 func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
