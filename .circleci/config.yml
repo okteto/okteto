@@ -156,8 +156,14 @@ jobs:
             export DOCKER_BUILDKIT=1
             docker build -t okteto --build-arg VERSION_STRING=$CIRCLE_SHA1 .
 
-  run-windows-unit-test:
+  run-windows-test:
     executor: win/default
+    environment:
+      OKTETO_USER: cindylopez
+      OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+      OKTETO_SKIP_CLEANUP: 'true'
+      OKTETO_URL: https://staging.okteto.dev/
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.net
     steps:
       - checkout
       - run:
@@ -172,22 +178,6 @@ jobs:
             go mod download
             go version
             go test ./...
-      - save_cache:
-          key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
-          paths:
-            - C:\Users\circleci\AppData\Local\go-build
-            - C:\Users\circleci\go\pkg
-            - C:\Go\pkg
-  run-windows-e2e-test:
-    executor: win/default
-    environment:
-      OKTETO_USER: cindylopez
-      OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
-      OKTETO_SKIP_CLEANUP: 'true'
-      OKTETO_URL: https://staging.okteto.dev/
-      OKTETO_APPS_SUBDOMAIN: staging.okteto.net
-    steps:
-      - checkout
       - run:
           name: Upgrade kubectl
           command: choco install kubernetes-cli
@@ -196,9 +186,6 @@ jobs:
           command: choco install kubernetes-helm
       - attach_workspace:
           at: .\artifacts
-      - restore_cache:
-          keys:
-            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
       - run:
           name: Prepare env
           command: |
@@ -221,6 +208,13 @@ jobs:
           command: go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
       - store_artifacts:
           path: C:\Users\circleci\.okteto
+
+      - save_cache:
+          key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+          paths:
+            - C:\Users\circleci\AppData\Local\go-build
+            - C:\Users\circleci\go\pkg
+            - C:\Go\pkg
 
   push-image-tag:
     executor: golang-ci
@@ -301,15 +295,7 @@ workflows:
               ignore: *release-branch-regex
             tags:
               ignore: /.*/
-      - run-windows-unit-test:
-          filters:
-            branches:
-              only:
-                - master
-                - /.*(windows|win)/
-      - run-windows-e2e-test:
-          requires:
-            - build-binaries
+      - run-windows-test:
           filters:
             branches:
               only:
