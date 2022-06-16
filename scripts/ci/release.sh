@@ -168,7 +168,7 @@
                 if [ "${chan}" = "dev" ]; then
                         awk '!seen[$0]++' "$version_file_tmp" >"${version_file}"
                 else
-                        awk '!seen[$0]++' "$version_file_tmp" | okteto-ci-utils semver-sort >"${version_file}"
+                        awk '!seen[$0]++' "$version_file_tmp" | perl -pe 's/\-(?=beta)/~/' | sort -V | perl -pe 's/~/-/' >"${version_file}"
                 fi
 
                 echo "Added ${tag} to the version list"
