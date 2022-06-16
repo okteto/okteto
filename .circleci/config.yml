@@ -125,7 +125,8 @@ jobs:
       - integration-actions
       - integration-build
       - integration-deploy
-      - integration-up   - save_cache:
+      - integration-up
+      - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
