@@ -994,13 +994,12 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 			)
 		}
 		for _, sync := range dev.Sync.Folders {
-			subpath := getSubPathFromLocalPath(sync.LocalPath)
 			rule.Volumes = append(
 				rule.Volumes,
 				VolumeMount{
 					Name:      main.GetVolumeName(),
 					MountPath: sync.RemotePath,
-					SubPath:   main.getSourceSubPath(subpath),
+					SubPath:   main.getSourceSubPath(sync.LocalPath),
 				},
 			)
 		}
@@ -1019,21 +1018,6 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 	}
 
 	return rule
-}
-func getSubPathFromLocalPath(localPath string) string {
-	wd, err := os.Getwd()
-	if err != nil {
-		oktetoLog.Info("could not retrieve working directory")
-	}
-	subpath := localPath
-	if filepath.IsAbs(subpath) {
-		subpath, err = filepath.Rel(wd, localPath)
-		if err != nil || strings.HasPrefix(subpath, "..") {
-			oktetoLog.Info("could not retrieve subpath")
-			subpath = filepath.Base(localPath)
-		}
-	}
-	return subpath
 }
 
 func enableHistoryVolume(rule *TranslationRule, main *Dev) {
