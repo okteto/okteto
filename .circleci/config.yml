@@ -195,6 +195,9 @@ jobs:
           command: choco install kubernetes-helm
       - attach_workspace:
           at: .\artifacts
+      - restore_cache:
+          keys:
+            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
       - run:
           name: Prepare env
           command: |
