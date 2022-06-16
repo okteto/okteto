@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -130,14 +131,28 @@ func getDataSubPath(path string) string {
 
 func (dev *Dev) getSourceSubPath(path string) string {
 	path = path[len(filepath.VolumeName(path)):]
-	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(path))
-	if err != nil {
-		oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
-		p, err := filepath.Abs(path)
+	if dev.parentSyncFolder == "" {
+		var err error
+		dev.parentSyncFolder, err = os.Getwd()
 		if err != nil {
 			oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
 		}
-		return filepath.ToSlash(p)
+	}
+	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(path))
+	if err != nil || strings.HasPrefix(rel, "..") {
+		if err != nil {
+			oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
+		}
+		if filepath.IsAbs(path) {
+			oktetoLog.Info("could not retrieve subpath")
+			path = filepath.Base(path)
+		} else {
+			p, err := filepath.Abs(path)
+			if err != nil {
+				oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
+			}
+			return filepath.ToSlash(p)
+		}
 	}
 	return filepath.ToSlash(filepath.Join(SourceCodeSubPath, filepath.ToSlash(rel)))
 }
