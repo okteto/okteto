@@ -120,22 +120,12 @@ jobs:
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
              /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
-      - run:
-          name: Run actions integration tests
-          command: go test github.com/okteto/okteto/integration/okteto -tags="integration" --count=1 -v -timeout 30m
-      - run:
-          name: Run deprecated integration tests
-          command: go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m && go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
-      - run:
-          name: Run build integration tests
-          command: go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
-      - run:
-          name: Run deploy integration tests
-          command: go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
-      - run:
-          name: Run up integration tests
-          command: go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
-      - save_cache:
+      - integration-okteto
+      - integration-deprecated
+      - integration-actions
+      - integration-build
+      - integration-deploy
+      - integration-up   - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
@@ -209,11 +199,21 @@ jobs:
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
             & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_TOKEN
-      - integration-okteto
-      - integration-deprecated
-      - integration-build
-      - integration-deploy
-      - integration-up
+      - run:
+          name: Run actions integration tests
+          command: go test github.com/okteto/okteto/integration/okteto -tags="integration" --count=1 -v -timeout 30m
+      - run:
+          name: Run deprecated integration tests
+          command: go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m && go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
+      - run:
+          name: Run build integration tests
+          command: go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
+      - run:
+          name: Run deploy integration tests
+          command: go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
+      - run:
+          name: Run up integration tests
+          command: go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
       - store_artifacts:
           path: C:\Users\circleci\.okteto
 
