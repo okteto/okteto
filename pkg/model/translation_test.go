@@ -15,9 +15,7 @@ package model
 
 import (
 	"bytes"
-	"os"
 	"path"
-	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -449,85 +447,6 @@ func TestSSHServerPortTranslationRule(t *testing.T) {
 		rule := test.manifest.ToTranslationRule(test.manifest, false)
 		if e, a := test.expected, rule.Environment; !reflect.DeepEqual(e, a) {
 			t.Errorf("expected environment:\n%#v\ngot:\n%#v", e, a)
-		}
-	}
-}
-
-func TestVolumeMounts(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal("could not detect wd")
-	}
-	tests := []struct {
-		name     string
-		manifest *Dev
-		expected VolumeMount
-	}{
-		{
-			name: "relative path with abs path",
-			manifest: &Dev{
-				Name:  "test",
-				Image: &BuildInfo{},
-				Sync: Sync{
-					Folders: []SyncFolder{
-						{
-							LocalPath:  filepath.Join(wd, "api"),
-							RemotePath: "/usr/src",
-						},
-					},
-				},
-			},
-			expected: VolumeMount{
-				MountPath: "/usr/src",
-				SubPath:   "src/api",
-			},
-		},
-		{
-			name: "relative path",
-			manifest: &Dev{
-				Name:  "test",
-				Image: &BuildInfo{},
-				Sync: Sync{
-					Folders: []SyncFolder{
-						{
-							LocalPath:  "api",
-							RemotePath: "/usr/src",
-						},
-					},
-				},
-			},
-			expected: VolumeMount{
-				MountPath: "/usr/src",
-				SubPath:   "src/api",
-			},
-		},
-		{
-			name: "non relative path",
-			manifest: &Dev{
-				Name:  "test",
-				Image: &BuildInfo{},
-				Sync: Sync{
-					Folders: []SyncFolder{
-						{
-							LocalPath:  filepath.Clean("/usr/src/app"),
-							RemotePath: "/usr/src",
-						},
-					},
-				},
-			},
-			expected: VolumeMount{
-				MountPath: "/usr/src",
-				SubPath:   "src/app",
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Logf("test: %s", test.name)
-		rule := test.manifest.ToTranslationRule(test.manifest, false)
-		for _, v := range rule.Volumes {
-			if v.MountPath == test.expected.MountPath {
-				assert.Equal(t, test.expected.SubPath, v.SubPath)
-			}
 		}
 	}
 }
