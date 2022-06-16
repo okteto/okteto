@@ -184,6 +184,8 @@ jobs:
           at: .\artifacts
       - run:
           name: Prepare env
+          environment:
+            - OKTETO_URL: https://staging.okteto.dev/
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
