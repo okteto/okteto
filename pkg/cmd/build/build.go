@@ -280,11 +280,6 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 	return joinPath
 }
 
-// ShouldOptimizeBuild returns if optimization should be applied
-func ShouldOptimizeBuild(options *types.BuildOptions) bool {
-	return options.AutogenTag && okteto.IsPipeline() && registry.IsOktetoRegistry(options.Tag) && !options.NoCache && !options.BuildToGlobal
-}
-
 // GetVolumesToInclude checks if the path exists, if it doesn't it skip it
 func GetVolumesToInclude(volumesToInclude []model.StackVolume) []model.StackVolume {
 	result := []model.StackVolume{}
