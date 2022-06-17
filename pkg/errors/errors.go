@@ -41,6 +41,11 @@ func (u CommandError) Error() string {
 	return fmt.Sprintf("%s: %s", u.E.Error(), strings.ToLower(u.Reason.Error()))
 }
 
+const (
+	//InvalidDockerfile text error
+	InvalidDockerfile = "invalid Dockerfile"
+)
+
 var (
 	// ErrCommandFailed is raised when the command execution failed
 	ErrCommandFailed = errors.New("command execution failed")

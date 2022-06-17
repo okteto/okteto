@@ -118,7 +118,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	}
 
 	if err := utils.CheckIfRegularFile(options.File); err != nil {
-		return fmt.Errorf("invalid Dockerfile: %s", err.Error())
+		return fmt.Errorf("%s: %s", oktetoErrors.InvalidDockerfile, err.Error())
 	}
 
 	buildMsg := "Building the image"
