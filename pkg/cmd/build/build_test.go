@@ -1,7 +1,6 @@
 package build
 
 import (
-
 	"bytes"
 	"fmt"
 	"log"
@@ -79,6 +78,32 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
+
+	serviceContext := "service"
+	serviceDockerfile := "CustomDockerfile"
+
+	originalWd, errwd := os.Getwd()
+	if errwd != nil {
+		t.Fatal(errwd)
+	}
+
+	dir := t.TempDir()
+
+	os.Chdir(dir)
+	defer os.Chdir(originalWd)
+
+	err := os.Mkdir(serviceContext, os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	df := filepath.Join(serviceContext, serviceDockerfile)
+	defer removeFile(df)
+	_, errCreate := os.Create(df)
+	if errCreate != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		name        string
 		serviceName string
@@ -112,8 +137,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			name:        "is-okteto-missing-image-buildInfo",
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
-				Context:    "service",
-				Dockerfile: "CustomDockerfile",
+				Context:    serviceContext,
+				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
 				Args: model.Environment{
@@ -130,7 +155,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
-				File:       filepath.Join("service", "CustomDockerfile"),
+				File:       filepath.Join(serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
@@ -141,8 +166,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			name:        "is-okteto-missing-image-buildInfo-with-volumes",
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
-				Context:    "service",
-				Dockerfile: "CustomDockerfile",
+				Context:    serviceContext,
+				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
 				Args: model.Environment{
@@ -164,8 +189,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			isOkteto: true,
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
-				Tag:        "okteto.dev/movies-service:okteto",
-				File:       "CustomDockerfile",
+				Tag:        "okteto.dev/movies-service:okteto-with-volume-mounts",
+				File:       filepath.Join(serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
@@ -177,8 +202,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
 				Image:      "okteto.dev/mycustomimage:dev",
-				Context:    "service",
-				Dockerfile: "CustomDockerfile",
+				Context:    serviceContext,
+				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
 				Args: model.Environment{
@@ -195,7 +220,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/mycustomimage:dev",
-				File:       "CustomDockerfile",
+				File:       filepath.Join(serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
