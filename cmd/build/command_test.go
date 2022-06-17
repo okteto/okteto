@@ -14,14 +14,19 @@
 package build
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
+	buildV1 "github.com/okteto/okteto/cmd/build/v1"
+	buildV2 "github.com/okteto/okteto/cmd/build/v2"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
-var fakeManifest *model.Manifest = &model.Manifest{
+var fakeManifestV2 *model.Manifest = &model.Manifest{
 	Build: model.ManifestBuild{
 		"test-1": &model.BuildInfo{
 			Image: "test/test-1",
@@ -37,26 +42,242 @@ func getManifestWithError(_ string) (*model.Manifest, error) {
 	return nil, assert.AnError
 }
 
-func getFakeManifest(_ string) (*model.Manifest, error) {
-	return fakeManifest, nil
+func getManifestWithInvalidManifestError(_ string) (*model.Manifest, error) {
+	return nil, oktetoErrors.ErrInvalidManifest
+}
+
+func getFakeManifestV1(_ string) (*model.Manifest, error) {
+	manifestV1 := *fakeManifestV2
+	manifestV1.IsV2 = false
+	return &manifestV1, nil
+}
+
+func getFakeManifestV2(_ string) (*model.Manifest, error) {
+	return fakeManifestV2, nil
+}
+
+func TestIsBuildV2(t *testing.T) {
+	tests := []struct {
+		name           string
+		manifest       *model.Manifest
+		expectedAnswer bool
+	}{
+		{
+			name: "manifest v1 is build v1",
+			manifest: &model.Manifest{
+				IsV2: false,
+			},
+			expectedAnswer: false,
+		},
+		{
+			name: "manifest v2 with no build section is build v1",
+			manifest: &model.Manifest{
+				IsV2:  true,
+				Build: model.ManifestBuild{},
+			},
+			expectedAnswer: false,
+		},
+		{
+			name: "manifest v1 with build section is build v1",
+			manifest: &model.Manifest{
+				IsV2: false,
+				Build: model.ManifestBuild{
+					"test-1": &model.BuildInfo{
+						Image: "test/test-1",
+					},
+					"test-2": &model.BuildInfo{
+						Image: "test/test-2",
+					},
+				},
+			},
+			expectedAnswer: false,
+		},
+		{
+			name: "manifest v1 with build section is build v1",
+			manifest: &model.Manifest{
+				IsV2: false,
+				Build: model.ManifestBuild{
+					"test-1": &model.BuildInfo{
+						Image: "test/test-1",
+					},
+					"test-2": &model.BuildInfo{
+						Image: "test/test-2",
+					},
+				},
+			},
+			expectedAnswer: false,
+		},
+		{
+			name: "manifest v2 with build section is build v2",
+			manifest: &model.Manifest{
+				IsV2: true,
+				Build: model.ManifestBuild{
+					"test-1": &model.BuildInfo{
+						Image: "test/test-1",
+					},
+					"test-2": &model.BuildInfo{
+						Image: "test/test-2",
+					},
+				},
+			},
+			expectedAnswer: true,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			answer := isBuildV2(tt.manifest)
+			assert.Equal(t, answer, tt.expectedAnswer)
+		})
+	}
 }
 
 func TestBuildIsManifestV2(t *testing.T) {
 	bc := &Command{
-		GetManifest: getFakeManifest,
+		GetManifest: getFakeManifestV2,
 	}
 
-	manifest, isV2 := bc.getManifestAndBuildVersion(&types.BuildOptions{})
-	assert.True(t, isV2)
-	assert.Equal(t, manifest, fakeManifest)
+	manifest, err := bc.GetManifest("")
+	assert.Nil(t, err)
+	assert.Equal(t, manifest, fakeManifestV2)
 }
 
-func TestBuildIsDockerfile(t *testing.T) {
+func TestBuildFromDockerfile(t *testing.T) {
 	bc := &Command{
 		GetManifest: getManifestWithError,
 	}
 
-	manifest, isV2 := bc.getManifestAndBuildVersion(&types.BuildOptions{})
-	assert.False(t, isV2)
-	assert.Nil(t, manifest, fakeManifest)
+	manifest, err := bc.GetManifest("")
+	assert.NotNil(t, err)
+	assert.Nil(t, manifest)
+}
+
+func TestBuildErrIfInvalidManifest(t *testing.T) {
+	bc := &Command{
+		GetManifest: getManifestWithInvalidManifestError,
+	}
+
+	manifest, err := bc.GetManifest("")
+	assert.NotNil(t, err)
+	assert.Nil(t, manifest)
+}
+
+func TestBuilderIsProperlyGenerated(t *testing.T) {
+	dir := t.TempDir()
+	malformedDockerfile := filepath.Join(dir, "malformedDockerfile")
+	dockerfile := filepath.Join(dir, "Dockerfile")
+	assert.NoError(t, os.WriteFile(dockerfile, []byte(`FROM alpine`), 0644))
+	assert.NoError(t, os.WriteFile(malformedDockerfile, []byte(`FROM alpine`), 0644))
+	tests := []struct {
+		name              string
+		buildCommand      *Command
+		expectedError     bool
+		isBuildV2Expected bool
+		options           *types.BuildOptions
+	}{
+		{
+			name: "Manifest error fallback to v1",
+			buildCommand: &Command{
+				GetManifest: getManifestWithInvalidManifestError,
+			},
+			options:           &types.BuildOptions{},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Manifest error",
+			buildCommand: &Command{
+				GetManifest: getManifestWithInvalidManifestError,
+			},
+			options: &types.BuildOptions{
+				File: "okteto.yml",
+			},
+			expectedError:     true,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Builder error. Dockerfile malformed",
+			buildCommand: &Command{
+				GetManifest: getManifestWithInvalidManifestError,
+			},
+			options: &types.BuildOptions{
+				File: malformedDockerfile,
+			},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Builder error. Invalid manifest/Dockerfile correct",
+			buildCommand: &Command{
+				GetManifest: getManifestWithInvalidManifestError,
+			},
+			options: &types.BuildOptions{
+				File: dockerfile,
+			},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "BuilderV2 called.",
+			buildCommand: &Command{
+				GetManifest: getFakeManifestV2,
+			},
+			options:           &types.BuildOptions{},
+			expectedError:     false,
+			isBuildV2Expected: true,
+		},
+		{
+			name: "Manifest valid but BuilderV1 fallback.",
+			buildCommand: &Command{
+				GetManifest: getFakeManifestV1,
+			},
+			options:           &types.BuildOptions{},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Manifest error. BuilderV1 fallback.",
+			buildCommand: &Command{
+				GetManifest: getManifestWithError,
+			},
+			options:           &types.BuildOptions{},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			builder, err := tt.buildCommand.getBuilder(tt.options)
+			if err != nil && !tt.expectedError {
+				t.Errorf("getBuilder() fail on '%s'. Expected nil error, got %s", tt.name, err.Error())
+			}
+
+			if err == nil && tt.expectedError {
+				t.Errorf("getBuilder() fail on '%s'. Expected error, got nil", tt.name)
+			}
+
+			if builder == nil {
+				if !tt.expectedError {
+					t.Errorf("getBuilder() fail on '%s'. Expected builder, got nil", tt.name)
+				}
+			} else {
+				switch builder.(type) {
+				case *buildV1.OktetoBuilder:
+					if tt.isBuildV2Expected {
+						t.Errorf("getBuilder() fail on '%s'. Expected builderv2, got builderv1", tt.name)
+					}
+				case *buildV2.OktetoBuilder:
+					if !tt.isBuildV2Expected {
+						t.Errorf("getBuilder() fail on '%s'. Expected builderv1, got builderv2", tt.name)
+
+					}
+				}
+			}
+		})
+	}
+
 }

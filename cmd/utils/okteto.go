@@ -23,10 +23,22 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
-// HasAccessToNamespace checks if the user has access to a namespace/preview
-func HasAccessToNamespace(ctx context.Context, namespace string, oktetoClient types.OktetoInterface) (bool, error) {
+// HasAccessToK8sClusterNamespace checks if the user has access to a namespace
+func HasAccessToK8sClusterNamespace(ctx context.Context, namespace string, k8sClient kubernetes.Interface) (bool, error) {
+	_, err := k8sClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// HasAccessToOktetoClusterNamespace checks if the user has access to a namespace/preview
+func HasAccessToOktetoClusterNamespace(ctx context.Context, namespace string, oktetoClient types.OktetoInterface) (bool, error) {
 
 	nList, err := oktetoClient.Namespaces().List(ctx)
 	if err != nil {
@@ -74,7 +86,7 @@ func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	hasAccess, err := HasAccessToNamespace(ctx, ns, c)
+	hasAccess, err := HasAccessToOktetoClusterNamespace(ctx, ns, c)
 	if err != nil {
 		return false, err
 	}

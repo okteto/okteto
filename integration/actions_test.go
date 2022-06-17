@@ -134,10 +134,7 @@ func TestBuildActionPipeline(t *testing.T) {
 		t.Fatalf("Create namespace action failed: %s", err.Error())
 	}
 
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
 	dockerfileContent := []byte("FROM alpine")
@@ -354,7 +351,7 @@ func TestStacksActions(t *testing.T) {
 
 func getTestNamespace() string {
 	tName := fmt.Sprintf("TestAction-%s", runtime.GOOS)
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().UnixMilli()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 	return namespace
 }

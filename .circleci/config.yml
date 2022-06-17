@@ -4,16 +4,24 @@ aliases:
     echo $GCLOUD_SERVICE_KEY | gcloud auth activate-service-account --key-file=-
     gcloud --quiet config set project ${GOOGLE_PROJECT_ID}
     gcloud --quiet config set compute/zone ${GOOGLE_COMPUTE_ZONE}
+  # standard semver regex as defined in: https://semver.org/
+  - &release-regex /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
+  - &release-branch-regex /^release-\d+\.\d+$/
 version: 2.1
 orbs:
   win: circleci/windows@2.1.0
+
+executors:
+  golang-ci:
+    docker:
+      - image: okteto/golang-ci:1.17.10
+
 jobs:
   build:
-    docker:
-      - image: okteto/golang-ci:1.17.3
+    executor: golang-ci
+    resource_class: large
     steps:
       - checkout
-
       - run:
           command: go mod tidy && git diff --exit-code go.sum > /dev/null
       - run:
@@ -39,11 +47,12 @@ jobs:
       - store_artifacts:
           path: coverage.txt
           destination: coverage.txt
-  integration:
+  test-integration:
+    executor: golang-ci
     environment:
+      OKTETO_URL: https://staging.okteto.dev/
       OKTETO_USER: cindylopez
-    docker:
-      - image: okteto/golang-ci:1.17.3
+      OKTETO_APPS_SUBDOMAIN: staging.okteto.net
     steps:
       - checkout
       - restore_cache:
@@ -61,7 +70,7 @@ jobs:
             curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
-            /usr/local/bin/okteto login --token ${API_TOKEN}
+            /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
       - run:
           name: Integration tests
           environment:
@@ -74,9 +83,8 @@ jobs:
             - /go/pkg
       - store_artifacts:
           path: /root/.okteto
-  mock-release:
-    docker:
-      - image: okteto/golang-ci:1.17.3
+  test-release:
+    executor: golang-ci
     steps:
       - checkout
       - attach_workspace:
@@ -98,10 +106,10 @@ jobs:
             export DOCKER_BUILDKIT=1
             docker build -t okteto --build-arg VERSION_STRING=$CIRCLE_SHA1 .
 
-  windows-unit:
+  test-windows:
+    executor: win/default
     environment:
       OKTETO_USER: cindylopez
-    executor: win/default
     steps:
       - checkout
       - run:
@@ -145,33 +153,32 @@ jobs:
             - C:\Go\pkg
       - store_artifacts:
           path: C:\Users\circleci\.okteto
-  release:
-    docker:
-      - image: okteto/golang-ci:1.17.3
+
+  push-image-tag:
+    executor: golang-ci
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: '19.03.8'
+      - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG"
+
+  push-image-latest:
+    executor: golang-ci
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: '19.03.8'
+      - run: ./scripts/ci/push-image.sh latest
+
+  release-external:
+    executor: golang-ci
     steps:
       - checkout
       - attach_workspace:
           at: ./artifacts
       - run: *init-gcloud
-      - run:
-          name: Upload release binaries
-          command: |
-            gsutil -m rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/${CIRCLE_TAG}
-            gsutil -m rsync -r gs://downloads.okteto.com/cli/${CIRCLE_TAG}/ gs://downloads.okteto.com/cli/
       - setup_remote_docker:
           version: '19.03.8'
-      - run:
-          name: Publish Docker container
-          command: |
-            export DOCKER_BUILDKIT=1
-            echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
-            docker build -t okteto/okteto:${CIRCLE_TAG} --build-arg VERSION_STRING=$CIRCLE_TAG .
-            docker push okteto/okteto:${CIRCLE_TAG}
-      - run:
-          name: Publish Release on GitHub
-          command: |
-            go get -u github.com/tcnksm/ghr
-            ghr -u ${CIRCLE_PROJECT_USERNAME} -n "Okteto CLI ${CIRCLE_TAG}" -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -replace $CIRCLE_TAG  ./artifacts/bin/
       - add_ssh_keys:
           fingerprints:
             - f7:81:9f:b4:31:3a:4d:46:ce:cf:54:a2:70:46:5a:df
@@ -185,106 +192,42 @@ jobs:
             git push git@github.com:okteto/homebrew-cli.git master
       - deploy:
           name: Auto-update-actions
-          command: |
-            go get -u github.com/tcnksm/ghr
-            ./scripts/update_actions.sh $CIRCLE_TAG
-  release-candidate:
-    docker:
-      - image: okteto/golang-ci:1.17.3
+          command: ./scripts/update_actions.sh $CIRCLE_TAG
+
+  release:
+    executor: golang-ci
     steps:
       - checkout
       - attach_workspace:
           at: ./artifacts
       - run: *init-gcloud
-      - setup_remote_docker:
-          version: '19.03.8'
-      - run:
-          name: Publish Docker container
-          command: |
-            export DOCKER_BUILDKIT=1
-            echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
-            docker build -t okteto/okteto:${CIRCLE_TAG} --build-arg VERSION_STRING=$CIRCLE_TAG .
-            docker push okteto/okteto:${CIRCLE_TAG}
-      - run:
-          name: Publish Prerelease on GitHub
-          command: |
-            go get -u github.com/tcnksm/ghr
-            ghr -u ${CIRCLE_PROJECT_USERNAME} -n "Okteto CLI ${CIRCLE_TAG}" -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -token $GITHUB_TOKEN -prerelease -replace $CIRCLE_TAG ./artifacts/bin/
-  release-master:
-    docker:
-      - image: okteto/golang-ci:1.17.3
+      - run: ./scripts/ci/release.sh
+
+  release-branch:
+    executor: golang-ci
     steps:
       - checkout
-      - setup_remote_docker:
-          version: '19.03.8'
-      - run:
-          name: Publish Docker container
-          command: |
-            export DOCKER_BUILDKIT=1
-            echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
-            docker build -t okteto/okteto:latest --build-arg VERSION_STRING=$CIRCLE_SHA1 .
-            docker push okteto/okteto:latest
-      - attach_workspace:
-          at: ./artifacts
-      - run: *init-gcloud
-      - run:
-          name: Upload latest binaries
-          command: |
-            gsutil -m rsync -r ./artifacts/bin gs://downloads.okteto.com/cli/master
+      - add_ssh_keys:
+          fingerprints:
+            - a1:66:22:e1:67:66:fb:d6:3b:a2:7a:6c:d9:9a:46:ba
+      - run: ./scripts/ci/release-branch.sh
+
 
 workflows:
   version: 2
-  build-release:
+
+  test:
+    when:
+      not:
+        equal: [scheduled_pipeline, << pipeline.trigger_source >>]
     jobs:
       - build:
           filters:
+            branches:
+              ignore: *release-branch-regex
             tags:
-              only: /.*/
-      - integration:
-          requires:
-            - build
-          filters:
-            branches:
-              only:
-                - master
-                - /.*(e2e)/
-                - /.*(integration)/
-                - /^release-\d+\.\d+$/
-      - mock-release:
-          context: GKE
-          requires:
-            - build
-          filters:
-            tags:
-              only: /.*/
-            branches:
-              ignore: master
-      - release-master:
-          context: GKE
-          requires:
-            - integration
-          filters:
-            branches:
-              only: master
-      - release:
-          context: GKE
-          requires:
-            - build
-          filters:
-            tags:
-              only: /^\d+\.\d+\.\d+$/
-            branches:
               ignore: /.*/
-      - release-candidate:
-          context: GKE
-          requires:
-            - build
-          filters:
-            tags:
-              only: /^\d+\.\d+\.\d+-rc\.\d+$/
-            branches:
-              ignore: /.*/
-      - windows-unit:
+      - test-windows:
           requires:
             - build
           filters:
@@ -292,3 +235,108 @@ workflows:
               only:
                 - master
                 - /.*(windows|win)/
+      - test-integration:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - master
+                - /.*(e2e)/
+      - test-release:
+          context: GKE
+          requires:
+            - build
+          filters:
+            tags:
+              ignore: /.*/
+            branches:
+              ignore:
+                - master
+                - *release-branch-regex
+      - push-image-latest:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
+
+  release-branch:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only: *release-branch-regex
+            tags:
+              ignore: /.*/
+      - test-integration:
+          filters:
+            branches:
+              only: *release-branch-regex
+          requires:
+            - build
+      - release-branch:
+          requires:
+            - build
+            - test-integration
+          filters:
+            branches:
+              only: *release-branch-regex
+
+  release-dev:
+    when:
+      and:
+        - equal: [scheduled_pipeline, << pipeline.trigger_source >>]
+        - equal: ["release-dev", << pipeline.schedule.name >>]
+    jobs:
+      - build
+      - push-image-tag:
+          requires:
+            - build
+      - release:
+          context: GKE
+          requires:
+            - build
+            - push-image-tag
+
+  release:
+    when:
+      not:
+        equal: [scheduled_pipeline, << pipeline.trigger_source >>]
+    jobs:
+      - build:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - *release-regex
+      - push-image-tag:
+          requires:
+            - build
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - *release-regex
+      - release:
+          context: GKE
+          requires:
+            - build
+            - push-image-tag
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only:
+                - *release-regex
+      - release-external:
+          context: GKE
+          requires:
+            - release
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^\d+\.\d+\.\d+$/

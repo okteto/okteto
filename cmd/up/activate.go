@@ -83,6 +83,7 @@ func (up *upContext) activate() error {
 		return err
 	}
 
+	buildDevImage := false
 	if _, err := registry.NewOktetoRegistry().GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
 		oktetoLog.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
 		if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
@@ -91,10 +92,10 @@ func (up *upContext) activate() error {
 				Hint: "Please update your build section and try again",
 			}
 		}
-		up.Options.Build = true
+		buildDevImage = true
 	}
 
-	if !up.isRetry && up.Options.Build {
+	if !up.isRetry && buildDevImage {
 		if err := up.buildDevImage(ctx, app); err != nil {
 			return fmt.Errorf("error building dev image: %s", err)
 		}
@@ -176,11 +177,7 @@ func (up *upContext) activate() error {
 		printDisplayContext(up.Dev)
 		durationActivateUp := time.Since(up.StartTime)
 		analytics.TrackDurationActivateUp(durationActivateUp)
-		if up.Options.DockerDesktop {
-			up.CommandResult <- up.showDetachedLogs(ctx)
-		} else {
-			up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
-		}
+		up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
 	}()
 
 	prevError := up.waitUntilExitOrInterruptOrApply(ctx)

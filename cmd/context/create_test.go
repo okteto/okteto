@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
@@ -362,6 +363,89 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name).Error() && tt.isAutoAuthTriggered {
 					t.Fatalf("Not expecting error but got: %s", err.Error())
 				}
+			}
+		})
+	}
+}
+
+func TestCheckAccessToNamespace(t *testing.T) {
+	ctx := context.Background()
+	user := &types.User{
+		Token: "test",
+	}
+
+	fakeOktetoClient := &client.FakeOktetoClient{
+		Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
+		Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+		Preview:   client.NewFakePreviewClient(nil, nil),
+	}
+
+	fakeCtxCommand := newFakeContextCommand(fakeOktetoClient, user, []runtime.Object{
+		&corev1.Namespace{
+			ObjectMeta: v1.ObjectMeta{
+				Name: "test",
+			},
+		},
+	})
+
+	var tests = []struct {
+		name           string
+		ctxOptions     *ContextOptions
+		expectedAccess bool
+	}{
+		{
+			name: "okteto client can access to namespace",
+			ctxOptions: &ContextOptions{
+				IsOkteto:  true,
+				Namespace: "test",
+			},
+			expectedAccess: true,
+		},
+		{
+			name: "okteto client cannot access to namespace",
+			ctxOptions: &ContextOptions{
+				IsOkteto:  true,
+				Namespace: "non-ccessible-ns",
+			},
+			expectedAccess: false,
+		},
+		{
+			name: "non okteto client can access to namespace",
+			ctxOptions: &ContextOptions{
+				IsOkteto:  false,
+				Namespace: "test",
+			},
+			expectedAccess: true,
+		},
+		{
+			name: "non okteto client cannot access to namespace",
+			ctxOptions: &ContextOptions{
+				IsOkteto:  false,
+				Namespace: "test",
+			},
+			expectedAccess: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			currentCtxCommand := *fakeCtxCommand
+			if tt.ctxOptions.IsOkteto {
+				currentCtxCommand.K8sClientProvider = nil
+			} else {
+				if !tt.expectedAccess {
+					currentCtxCommand = *newFakeContextCommand(fakeOktetoClient, user, []runtime.Object{})
+				}
+				currentCtxCommand.OktetoClientProvider = nil
+			}
+			hasAccess, err := hasAccessToNamespace(ctx, &currentCtxCommand, tt.ctxOptions)
+			if err != nil && !strings.Contains(err.Error(), "not found") {
+				t.Fatalf("not expecting error but got: %s", err.Error())
+			}
+			if hasAccess != tt.expectedAccess {
+				t.Fatalf("%s fail. expected %t but got: %t", tt.name, tt.expectedAccess, hasAccess)
 			}
 		})
 	}

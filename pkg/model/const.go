@@ -239,13 +239,10 @@ const (
 	// OktetoOriginEnvVar defines where is executing okteto
 	OktetoOriginEnvVar = "OKTETO_ORIGIN"
 
-	// OktetoDockerDesktopOrigin indicates the origin of the command is the Docker Desktop extension
-	OktetoDockerDesktopOrigin = "docker-desktop"
-
 	// OktetoFolderEnvVar defines the path of okteto folder
 	OktetoFolderEnvVar = "OKTETO_FOLDER"
 
-	// OktetoFolderEnvVar defines the path of okteto folder
+	// OktetoHomeEnvVar defines the path of okteto folder
 	OktetoHomeEnvVar = "OKTETO_HOME"
 
 	// OktetoExecuteSSHEnvVar defines if the command should be executed through ssh
@@ -321,9 +318,6 @@ const (
 
 	// OktetoAutogenerateStignoreEnvVar skips the autogenerate stignore dialog and creates the default one
 	OktetoAutogenerateStignoreEnvVar = "OKTETO_AUTOGENERATE_STIGNORE"
-
-	// OktetoGitCommitPrefix prefix added to OKTETO_GIT_COMMIT when inferred by cli
-	OktetoGitCommitPrefix = "dev"
 
 	// OktetoDefaultImageTag default tag assigned to image to build
 	OktetoDefaultImageTag = "okteto"

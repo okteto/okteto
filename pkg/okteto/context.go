@@ -275,6 +275,7 @@ func AddKubernetesContext(name, namespace, buildkitURL string) {
 		Name:      name,
 		Namespace: namespace,
 		Builder:   buildkitURL,
+		Analytics: true,
 	}
 	CurrentStore.CurrentContext = name
 }
@@ -478,10 +479,4 @@ func (c *OktetoContext) ToViewer() *OktetoContextViewer {
 		Registry:  registry,
 		Current:   Context().Name == c.Name,
 	}
-}
-
-func IsPipeline() bool {
-	envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
-	isLocalEnvGitCommit := strings.HasPrefix(envGitCommit, model.OktetoGitCommitPrefix)
-	return envGitCommit != "" && !isLocalEnvGitCommit
 }

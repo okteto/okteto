@@ -44,7 +44,7 @@ The end result is that the remote cluster is seen by your IDE and tools as a loc
 
 ## Getting started
 
-All you need to get started is to [install the Okteto CLI](https://www.okteto.com/docs/getting-started/installation/) and have access to a Kubernetes cluster.
+All you need to get started is to [install the Okteto CLI](https://www.okteto.com/docs/getting-started/#installing-okteto-cli) and have access to a Kubernetes cluster.
 
 You can also use `okteto` with [Okteto Cloud](https://okteto.com/), a **Kubernetes Namespace as a Service** platform where you can deploy your Kubernetes applications and development containers for free.
 
@@ -55,6 +55,10 @@ You can also use `okteto` with [Okteto Cloud](https://okteto.com/), a **Kubernet
 - Run `okteto up` to deploy your development container.
 
 We created a [few guides to help you get started](https://github.com/okteto/samples) with `okteto` and your favorite programming language.
+
+### Releases
+
+Okteto is released into three channels: stable, beta, and dev. By default when okteto is installed the stable channel is used. If you need to access features not yet widely available you can install from the beta or dev channel. More info in the [release documentation](docs/RELEASE.md).
 
 ## Useful links
 

@@ -15,7 +15,6 @@ package build
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -229,24 +228,13 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		b.Image = o.Tag
 	}
 
-	args := model.SerializeBuildArgs(b.Args)
-
 	if okteto.Context().IsOkteto && b.Image == "" {
-		o.AutogenTag = true
-		tag := model.OktetoDefaultImageTag
-
-		envGitCommit := os.Getenv(model.OktetoGitCommitEnvVar)
-		if okteto.IsPipeline() {
-			params := strings.Join(args, "") + envGitCommit
-			tag = fmt.Sprintf("%x", sha256.Sum256([]byte(params)))
-		}
-
 		// if flag --global, point to global registry
 		targetRegistry := okteto.DevRegistry
 		if o != nil && o.BuildToGlobal {
 			targetRegistry = okteto.GlobalRegistry
 		}
-		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, tag)
+		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoDefaultImageTag)
 		if len(b.VolumesToInclude) > 0 {
 			b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoImageTagWithVolumes)
 		}
@@ -256,14 +244,13 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	file := extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
 
 	opts := &types.BuildOptions{
-		CacheFrom:  b.CacheFrom,
-		Target:     b.Target,
-		Path:       b.Context,
-		Tag:        b.Image,
-		File:       file,
-		BuildArgs:  args,
-		NoCache:    o.NoCache,
-		AutogenTag: o.AutogenTag,
+		CacheFrom: b.CacheFrom,
+		Target:    b.Target,
+		Path:      b.Context,
+		Tag:       b.Image,
+		File:      file,
+		BuildArgs: model.SerializeBuildArgs(b.Args),
+		NoCache:   o.NoCache,
 	}
 
 	outputMode := oktetoLog.GetOutputFormat()

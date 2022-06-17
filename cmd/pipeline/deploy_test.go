@@ -14,7 +14,6 @@
 package pipeline
 
 import (
-	"os"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
@@ -69,11 +68,7 @@ func Test_getRepositoryURL(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir, err := os.MkdirTemp("", "")
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer os.RemoveAll(dir)
+			dir := t.TempDir()
 
 			if _, err := model.GetRepositoryURL(dir); err == nil {
 

@@ -57,3 +57,8 @@ build-integration:
 .PHONY: dep
 dep:
 	go mod tidy
+
+.PHONY: codecov
+codecov:
+	go test -coverprofile=coverage.txt ./...
+	go tool cover -html=coverage.txt -o coverage.html

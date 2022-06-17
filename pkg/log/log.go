@@ -59,6 +59,8 @@ var (
 	WarningLevel = "warn"
 	// ErrorLevel is the json level for error
 	ErrorLevel = "error"
+
+	DebugLevel = "debug"
 )
 
 type logger struct {
@@ -129,6 +131,12 @@ func SetLevel(level string) {
 	if err == nil {
 		log.out.SetLevel(l)
 	}
+}
+
+// GetLevel gets the level of the main logger
+func GetLevel() string {
+	l := log.out.Level
+	return l.String()
 }
 
 // GetOutputFormat returns the output format of the command

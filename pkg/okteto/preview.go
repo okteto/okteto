@@ -100,9 +100,6 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 		}
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
-			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"Preview\"") {
-				return c.deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
-			}
 			return nil, translatePreviewAPIErr(err, name)
 		}
 		previewResponse.Action = &types.Action{
@@ -140,9 +137,6 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 		}
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
-			if strings.Contains(err.Error(), "Cannot query field \"job\" on type \"Preview\"") {
-				return c.deprecatedDeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
-			}
 			return nil, translatePreviewAPIErr(err, name)
 		}
 		previewResponse.Action = &types.Action{
@@ -155,64 +149,6 @@ func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repositor
 		}
 	}
 	return previewResponse, nil
-}
-
-//TODO: remove when all users are in Okteto Enterprise >= 0.10.0
-func (c *OktetoClient) deprecatedDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
-
-	previewEnv := &types.PreviewResponse{}
-
-	if len(variables) > 0 {
-		var mutation struct {
-			Preview struct {
-				Id graphql.String
-			} `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename)"`
-		}
-
-		variablesVariable := make([]InputVariable, 0)
-		for _, v := range variables {
-			variablesVariable = append(variablesVariable, InputVariable{
-				Name:  graphql.String(v.Name),
-				Value: graphql.String(v.Value),
-			})
-		}
-		variables := map[string]interface{}{
-			"name":       graphql.String(name),
-			"scope":      PreviewScope(scope),
-			"repository": graphql.String(repository),
-			"branch":     graphql.String(branch),
-			"sourceURL":  graphql.String(sourceUrl),
-			"variables":  variablesVariable,
-			"filename":   graphql.String(filename),
-		}
-		err := mutate(ctx, &mutation, variables, c.client)
-		if err != nil {
-			return nil, translatePreviewAPIErr(err, name)
-		}
-		previewEnv.Preview = &types.Preview{ID: string(mutation.Preview.Id)}
-	} else {
-		var mutation struct {
-			Preview struct {
-				Id graphql.String
-			} `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, filename: $filename)"`
-		}
-
-		variables := map[string]interface{}{
-			"name":       graphql.String(name),
-			"scope":      PreviewScope(scope),
-			"repository": graphql.String(repository),
-			"branch":     graphql.String(branch),
-			"sourceURL":  graphql.String(sourceUrl),
-			"filename":   graphql.String(filename),
-		}
-		err := mutate(ctx, &mutation, variables, c.client)
-		if err != nil {
-			return nil, translatePreviewAPIErr(err, name)
-		}
-		previewEnv.Preview = &types.Preview{ID: string(mutation.Preview.Id)}
-	}
-
-	return previewEnv, nil
 }
 
 // DestroyPreview destroy a preview environment
@@ -339,11 +275,15 @@ func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previe
 	var queryStruct struct {
 		Preview struct {
 			Deployments []struct {
-				Name   graphql.String
+				ID     graphql.String
 				Status graphql.String
 			}
 			Statefulsets []struct {
-				Name   graphql.String
+				ID     graphql.String
+				Status graphql.String
+			}
+			Jobs []struct {
+				ID     graphql.String
 				Status graphql.String
 			}
 		} `graphql:"preview(id: $id)"`
@@ -358,13 +298,14 @@ func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previe
 	}
 
 	status := make(map[string]string)
-
 	for _, d := range queryStruct.Preview.Deployments {
-		status[string(d.Name)] = string(d.Status)
+		status[string(d.ID)] = string(d.Status)
 	}
-
 	for _, sfs := range queryStruct.Preview.Statefulsets {
-		status[string(sfs.Name)] = string(sfs.Status)
+		status[string(sfs.ID)] = string(sfs.Status)
+	}
+	for _, j := range queryStruct.Preview.Jobs {
+		status[string(j.ID)] = string(j.Status)
 	}
 	return status, nil
 }

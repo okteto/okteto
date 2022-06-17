@@ -90,6 +90,7 @@ type Service struct {
 	Healtcheck      *HealthCheck          `yaml:"healthcheck,omitempty"`
 	User            *StackSecurityContext `yaml:"user,omitempty"`
 
+	// Fields only for okteto stacks
 	Public    bool            `yaml:"public,omitempty"`
 	Replicas  int32           `yaml:"replicas,omitempty"`
 	Resources *StackResources `yaml:"resources,omitempty"`
@@ -217,10 +218,10 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 		return nil, err
 	}
 
-	expandedManifest, err := ExpandEnv(string(b), true)
-	if err != nil {
-		return nil, err
+	if isEmptyManifestFile(b) {
+		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, oktetoErrors.ErrEmptyManifest)
 	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -233,7 +234,7 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	}
 	stackPath = GetManifestPathFromWorkdir(stackPath, stackWorkingDir)
 
-	s, err := ReadStack([]byte(expandedManifest), isCompose)
+	s, err := ReadStack(b, isCompose)
 	if err != nil {
 		return nil, err
 	}
@@ -308,8 +309,12 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 		Manifest:  bytes,
 		IsCompose: isCompose,
 	}
+	expandedManifest, err := ExpandStackEnvs(bytes)
+	if err != nil {
+		return nil, err
+	}
 
-	if err := yaml.UnmarshalStrict(bytes, s); err != nil {
+	if err := yaml.UnmarshalStrict(expandedManifest, s); err != nil {
 		if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 			var sb strings.Builder
 			_, _ = sb.WriteString("Invalid compose manifest:\n")

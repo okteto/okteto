@@ -42,7 +42,7 @@ var (
 )
 
 func Test_translateWithVolumes(t *testing.T) {
-	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
+	file, err := os.CreateTemp("", "okteto-secret-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,7 +244,7 @@ services:
 				Name:            OktetoInitVolumeContainerName,
 				Image:           "web:latest",
 				ImagePullPolicy: apiv1.PullIfNotPresent,
-				Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true)"},
+				Command:         []string{"sh", "-c", "echo initializing... && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true) && echo initialization completed."},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  &runAsUser,
 					RunAsGroup: &runAsGroup,
@@ -503,26 +503,6 @@ services:
 					PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
 						ClaimName: dev1.GetVolumeName(),
 						ReadOnly:  false,
-					},
-				},
-			},
-		},
-		InitContainers: []apiv1.Container{
-			{
-				Name:            OktetoInitVolumeContainerName,
-				Image:           "worker:latest",
-				ImagePullPolicy: apiv1.PullIfNotPresent,
-				Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /src/. /init-volume/1 || true)"},
-				SecurityContext: &apiv1.SecurityContext{
-					RunAsUser:  pointer.Int64(0),
-					RunAsGroup: pointer.Int64(0),
-				},
-				VolumeMounts: []apiv1.VolumeMount{
-					{
-						Name:      dev1.GetVolumeName(),
-						ReadOnly:  false,
-						MountPath: "/init-volume/1",
-						SubPath:   "src/worker",
 					},
 				},
 			},
@@ -1163,7 +1143,7 @@ environment:
 }
 
 func Test_translateSfsWithVolumes(t *testing.T) {
-	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
+	file, err := os.CreateTemp("", "okteto-secret-test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1358,7 +1338,7 @@ services:
 				Name:            OktetoInitVolumeContainerName,
 				Image:           "web:latest",
 				ImagePullPolicy: apiv1.PullIfNotPresent,
-				Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true)"},
+				Command:         []string{"sh", "-c", "echo initializing... && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /go/pkg/. /init-volume/1 || true) && ( [ \"$(ls -A /init-volume/2)\" ] || cp -R /root/.cache/go-build/. /init-volume/2 || true) && ( [ \"$(ls -A /init-volume/3)\" ] || cp -R /app/. /init-volume/3 || true) && ( [ \"$(ls -A /init-volume/4)\" ] || cp -R /path/. /init-volume/4 || true) && echo initialization completed."},
 				SecurityContext: &apiv1.SecurityContext{
 					RunAsUser:  &runAsUser,
 					RunAsGroup: &runAsGroup,
@@ -1603,26 +1583,6 @@ services:
 					PersistentVolumeClaim: &apiv1.PersistentVolumeClaimVolumeSource{
 						ClaimName: dev1.GetVolumeName(),
 						ReadOnly:  false,
-					},
-				},
-			},
-		},
-		InitContainers: []apiv1.Container{
-			{
-				Name:            OktetoInitVolumeContainerName,
-				Image:           "worker:latest",
-				ImagePullPolicy: apiv1.PullIfNotPresent,
-				Command:         []string{"sh", "-cx", "echo initializing && ( [ \"$(ls -A /init-volume/1)\" ] || cp -R /src/. /init-volume/1 || true)"},
-				SecurityContext: &apiv1.SecurityContext{
-					RunAsUser:  pointer.Int64(0),
-					RunAsGroup: pointer.Int64(0),
-				},
-				VolumeMounts: []apiv1.VolumeMount{
-					{
-						Name:      dev1.GetVolumeName(),
-						ReadOnly:  false,
-						MountPath: "/init-volume/1",
-						SubPath:   "src/worker",
 					},
 				},
 			},

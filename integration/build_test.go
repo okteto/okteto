@@ -49,7 +49,7 @@ build:
 	)
 
 	var (
-		testID           = strings.ToLower(fmt.Sprintf("TestBuildCommand-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testID           = strings.ToLower(fmt.Sprintf("TestBuildCommand-%s-%d", runtime.GOOS, time.Now().UnixMilli()))
 		testNamespace    = fmt.Sprintf("%s-%s", testID, user)
 		originNamespace  = getCurrentNamespace()
 		expectedImageTag = fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, repoDir)

@@ -22,7 +22,7 @@ require (
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/uuid v1.3.0
-	github.com/hashicorp/go-getter v1.5.11
+	github.com/hashicorp/go-getter v1.6.1
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/manifoldco/promptui v0.8.0
@@ -209,11 +209,11 @@ require sigs.k8s.io/json v0.0.0-20211020170558-c049b76a60c6 // indirect
 
 require (
 	github.com/Sirupsen/logrus v0.0.0-00010101000000-000000000000 // indirect
+	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/creack/pty v1.1.17 // indirect
 	github.com/docker/libnetwork v0.5.6 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/rancher/wrangler v0.7.3-0.20210224225730-5ed69efb6ab9 // indirect
-	github.com/stern/stern v1.21.0
 	github.com/tonistiigi/vt100 v0.0.0-20210615222946-8066bb97264f // indirect
 	go.opentelemetry.io/contrib v0.21.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.21.0 // indirect
@@ -222,7 +222,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.0.0-RC1 // indirect
 	go.opentelemetry.io/otel/trace v1.0.0-RC1 // indirect
 	go.opentelemetry.io/proto/otlp v0.9.0 // indirect
-	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
+	golang.org/x/sys v0.0.0-20220517195934-5e4e11fc645e // indirect
 )
 
 replace (

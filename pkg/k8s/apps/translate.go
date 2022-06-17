@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,8 +96,8 @@ func (tr *Translation) translate() error {
 			TranslateOktetoBinVolumeMounts(devContainer)
 			TranslateOktetoInitBinContainer(rule, tr.DevApp.PodSpec())
 			TranslateOktetoBinVolume(tr.DevApp.PodSpec())
+			TranslateOktetoInitFromImageContainer(tr.DevApp.PodSpec(), rule)
 		}
-		TranslateOktetoInitFromImageContainer(tr.DevApp.PodSpec(), rule)
 	}
 	return nil
 }
@@ -512,7 +513,7 @@ func TranslateOktetoInitFromImageContainer(spec *apiv1.PodSpec, rule *model.Tran
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		VolumeMounts:    []apiv1.VolumeMount{},
 	}
-	command := "echo initializing"
+	command := "echo initializing..."
 	iVolume := 1
 	for _, v := range rule.Volumes {
 		if !strings.HasPrefix(v.SubPath, model.SourceCodeSubPath) && !strings.HasPrefix(v.SubPath, model.DataSubPath) {
@@ -530,8 +531,13 @@ func TranslateOktetoInitFromImageContainer(spec *apiv1.PodSpec, rule *model.Tran
 		command = fmt.Sprintf("%s && ( [ \"$(ls -A /init-volume/%d)\" ] || cp -R %s/. /init-volume/%d || true)", command, iVolume, mounPath, iVolume)
 		iVolume++
 	}
+	command = fmt.Sprintf("%s && echo initialization completed.", command)
 
-	c.Command = []string{"sh", "-cx", command}
+	shOpts := "-c"
+	if oktetoLog.GetLevel() == oktetoLog.DebugLevel {
+		shOpts = shOpts + "x"
+	}
+	c.Command = []string{"sh", shOpts, command}
 	translateInitResources(c, rule.InitContainer.Resources)
 	TranslateContainerSecurityContext(c, rule.SecurityContext)
 	spec.InitContainers = append(spec.InitContainers, *c)

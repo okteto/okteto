@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 
 	"os"
@@ -114,7 +113,7 @@ spec:
 	)
 
 	var (
-		testID          = strings.ToLower(fmt.Sprintf("DeployFromManifest-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testID          = strings.ToLower(fmt.Sprintf("DeployFromManifest-%s-%d", runtime.GOOS, time.Now().UnixMilli()))
 		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
 		expectedImage   = fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, repoDir)
 		originNamespace = getCurrentNamespace()
@@ -159,8 +158,9 @@ spec:
 		deleteNamespace(ctx, oktetoPath, testNamespace)
 		deleteGitRepo(ctx, repoDir)
 	})
+
 	reg := registry.NewOktetoRegistry()
-	t.Run("okteto deploy should build images if not exists at registry", func(t *testing.T) {
+	t.Run("okteto deploy should build images if they aren't already built", func(t *testing.T) {
 
 		output, err := runOktetoDeploy(oktetoPath, repoDir)
 		if err != nil {
@@ -232,7 +232,7 @@ spec:
 
 	})
 
-	t.Run("okteto deploy --build should force the build an image does not change if no code changes", func(t *testing.T) {
+	t.Run("okteto deploy --build should force the build of all images", func(t *testing.T) {
 
 		imageWithDigest, err := reg.GetImageTagWithDigest(expectedImage)
 		if err != nil {
@@ -268,60 +268,6 @@ spec:
 
 	})
 
-	t.Run("okteto deploy --build should force the build an image change if code changes", func(t *testing.T) {
-		imageWithDigest, err := reg.GetImageTagWithDigest(expectedImage)
-		if err != nil {
-			t.Fatalf("image is not at registry: %v", err)
-		}
-		originalSHA := strings.SplitN(imageWithDigest, "@", 2)[1]
-
-		mainFile := filepath.Join(cwd, repoDir, "main.go")
-		mainFileContent, err := ioutil.ReadFile(mainFile)
-		if err != nil {
-			t.Fatal(err)
-		}
-		updatedMainFileContent := strings.Replace(string(mainFileContent), "Hello", "Bye", 1)
-		if err := writeFile(filepath.Join(cwd, repoDir), "main.go", updatedMainFileContent); err != nil {
-			t.Fatal(err)
-		}
-
-		output, err := runOktetoDeployForceBuild(oktetoPath, repoDir)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		newImageWithDigest, err := reg.GetImageTagWithDigest(expectedImage)
-		if err != nil {
-			t.Fatalf("image is not at registry: %v", err)
-		}
-		newSHA := strings.SplitN(newImageWithDigest, "@", 2)[1]
-
-		if originalSHA == newSHA {
-			t.Fatal("image has not been updated")
-		}
-
-		d, err := getDeployment(ctx, testNamespace, releaseName)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		if err := expectDeployment(ctx, d, []string{newImageWithDigest}, 2); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := expectForceBuild(output); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := expectHelm(output, releaseName, testNamespace, 4); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := expectEnvSetting(output, testNamespace, repoDir, newSHA); err != nil {
-			t.Fatal(err)
-		}
-
-	})
 }
 
 func runOktetoDeploy(oktetoPath, repoDir string) (string, error) {
@@ -448,7 +394,7 @@ func TestDeployOutput(t *testing.T) {
 	repoDir := "voting-app"
 
 	var (
-		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().UnixMilli()))
 		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
 		originNamespace = getCurrentNamespace()
 	)
@@ -520,7 +466,7 @@ func TestDeployAndUpEnvVars(t *testing.T) {
 	repoDir := "movies"
 	branch := "pchico83/manifest-v2"
 	var (
-		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().UnixMilli()))
 		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
 		originNamespace = getCurrentNamespace()
 	)
