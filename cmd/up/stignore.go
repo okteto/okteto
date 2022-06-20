@@ -80,9 +80,6 @@ func addStignoreSecrets(dev *model.Dev) error {
 			if strings.HasPrefix(line, "#") {
 				continue
 			}
-			if strings.HasPrefix(line, "!") {
-				continue
-			}
 
 			_, err = writer.WriteString(fmt.Sprintf("(?d)%s\n", line))
 			if err != nil {
