@@ -45,6 +45,7 @@ deploy:
 // - Deploying a pipeline manifest locally
 // - The endpoints generated are accessible
 func TestDeployPipelineManifest(t *testing.T) {
+	integration.SkipIfWindows(t)
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
