@@ -204,7 +204,7 @@ func Up() *cobra.Command {
 				return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
 			}
 
-			forceNotAutocreateDev := false
+			forceAutocreateDev := true
 			if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
 				if !upOptions.Deploy {
 					oktetoLog.Information("Deploying development environment '%s'...", up.Manifest.Name)
@@ -217,7 +217,7 @@ func Up() *cobra.Command {
 				}
 				// when manifest has no deploy commands, prevent autocreate dev
 				if errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployCommands) {
-					forceNotAutocreateDev = true
+					forceAutocreateDev = false
 				}
 				if err != nil {
 					analytics.TrackDeploy(analytics.TrackDeployMetadata{
@@ -243,7 +243,7 @@ func Up() *cobra.Command {
 			}
 
 			up.Dev = dev
-			if forceNotAutocreateDev {
+			if !forceAutocreateDev {
 				up.Dev.Autocreate = false
 			}
 
