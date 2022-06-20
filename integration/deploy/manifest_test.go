@@ -100,7 +100,7 @@ func TestRedeployOktetoManifestForImages(t *testing.T) {
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
 	// Test that image is not built before running okteto deploy
-	appImageDev := fmt.Sprintf("okteto.dev/%s-app:okteto", filepath.Base(dir))
+	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(appImageDev))
 
 	deployOptions := &commands.DeployOptions{

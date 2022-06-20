@@ -26,6 +26,7 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/stretchr/testify/require"
 )
@@ -126,7 +127,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	// Test that the nginx image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app")
 	require.NoError(t, err)
-	appImageDev := fmt.Sprintf("okteto.dev/%s-app:okteto", filepath.Base(dir))
+	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
 	// Test that the k8s services has been created correctly
@@ -180,7 +181,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	// Test that the nginx image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app")
 	require.NoError(t, err)
-	appImageDev := fmt.Sprintf("okteto.dev/%s-app:okteto", filepath.Base(dir))
+	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
 	destroyOptions := &commands.StackDestroyOptions{
