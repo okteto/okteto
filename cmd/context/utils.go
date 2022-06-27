@@ -187,7 +187,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 		if name == "" {
 			return nil, err
 		}
-		ctxResource = contextresource.NewContextResource()
+		ctxResource = &contextresource.ContextResource{}
 	}
 
 	if err := ctxResource.UpdateNamespace(namespace); err != nil {
