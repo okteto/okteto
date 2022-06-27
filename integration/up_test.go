@@ -189,7 +189,6 @@ environment:
 
 	globalForwardManifest = `
 icon: https://github.com/okteto/microservices-demo/raw/main/vote-icon.png
-
 build:
  result:
   context: result
@@ -200,7 +199,6 @@ build:
  dev:
   context: worker
   target: dev
-
 deploy:
  - helm repo add bitnami https://charts.bitnami.com/bitnami && helm repo update
  - helm upgrade --install postgresql bitnami/postgresql -f postgresql/values.yml --version 11.6.2
@@ -208,15 +206,12 @@ deploy:
  - helm upgrade --install vote vote/chart --set image=${OKTETO_BUILD_VOTE_IMAGE}
  - helm upgrade --install result result/chart --set image=${OKTETO_BUILD_RESULT_IMAGE}
  - helm upgrade --install worker worker/chart --set image=${OKTETO_BUILD_WORKER_IMAGE}
-
-
 forward:
  - localPort: 5432
    remotePort: 5432
    name: postgresql
  - 8080:vote:8080
  - 8085:result:80
-
 dev: 
  vote:
   command: mvn spring-boot:run
@@ -226,14 +221,12 @@ dev:
    - 5005:5005
   persistentVolume:
    enabled: false
-
  result:
   command: nodemon server.js
   sync:
    - ./result:/app
   persistentVolume:
    enabled: false
-
  worker:
   image: ${OKTETO_BUILD_DEV_IMAGE}
   command: bash
