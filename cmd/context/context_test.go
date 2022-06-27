@@ -54,7 +54,7 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tokenPath, err := createDeprecatedToken(tt.tokenUrl)
+			tokenPath, err := createDeprecatedToken(t, tt.tokenUrl)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -73,12 +73,8 @@ func Test_initFromDeprecatedToken(t *testing.T) {
 	}
 }
 
-func createDeprecatedToken(url string) (string, error) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		return "", err
-	}
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+func createDeprecatedToken(t *testing.T, url string) (string, error) {
+	t.Setenv(model.OktetoFolderEnvVar, t.TempDir())
 	token := &okteto.Token{
 		URL:       url,
 		Buildkit:  "buildkit",

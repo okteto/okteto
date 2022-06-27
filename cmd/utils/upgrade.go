@@ -75,6 +75,8 @@ func ShouldNotify(latest, current *semver.Version) bool {
 		return false
 	}
 
+	// TODO: Remove once we pull latest version from downloads.okteto.com
+	// and not github. Tracked by: https://github.com/okteto/okteto/issues/2775
 	if latest.Prerelease() != "" {
 		return false
 	}

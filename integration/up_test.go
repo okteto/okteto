@@ -314,7 +314,7 @@ func TestUpDeployments(t *testing.T) {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
 
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().UnixMilli()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
 	dir, err := os.MkdirTemp("", tName)
@@ -501,7 +501,7 @@ func TestUpStatefulset(t *testing.T) {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
 
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().UnixMilli()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
 	dir, err := os.MkdirTemp("", tName)
@@ -658,7 +658,7 @@ func TestUpAutocreate(t *testing.T) {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
 
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().UnixMilli()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 
 	dir, err := os.MkdirTemp("", tName)
@@ -765,7 +765,7 @@ func TestUpCompose(t *testing.T) {
 	if _, err := exec.LookPath(kubectlBinary); err != nil {
 		t.Fatalf("kubectl is not in the path: %s", err)
 	}
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().UnixMilli()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 	log.Printf("running %s \n", tName)
 	startNamespace := getCurrentNamespace()

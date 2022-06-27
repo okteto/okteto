@@ -57,7 +57,7 @@ func TestDeployDestroy(t *testing.T) {
 		t.Fatal(err)
 	}
 	tName := fmt.Sprintf("TestDeploy-%s", runtime.GOOS)
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().UnixMilli()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 	t.Run(tName, func(t *testing.T) {
 		log.Printf("running %s \n", tName)
@@ -124,7 +124,7 @@ func TestDeploySubsetService(t *testing.T) {
 	}
 
 	tName := fmt.Sprintf("TestDeploySubsetService-%s", runtime.GOOS)
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
+	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().UnixMilli()))
 	namespace := fmt.Sprintf("%s-%s", name, user)
 	desiredDeployments := []string{"vote", "kafka", "zookeeper"}
 	svcToAvoidDeploy := []string{"worker", "result"}

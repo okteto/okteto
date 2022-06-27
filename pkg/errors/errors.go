@@ -41,6 +41,11 @@ func (u CommandError) Error() string {
 	return fmt.Sprintf("%s: %s", u.E.Error(), strings.ToLower(u.Reason.Error()))
 }
 
+const (
+	//InvalidDockerfile text error
+	InvalidDockerfile = "invalid Dockerfile"
+)
+
 var (
 	// ErrCommandFailed is raised when the command execution failed
 	ErrCommandFailed = errors.New("command execution failed")
@@ -170,6 +175,9 @@ var (
 
 	// ErrPortAlreadyAllocated is raised when port is allocated by other process
 	ErrPortAlreadyAllocated = errors.New("port is already allocated")
+
+	//ErrNotManifestContentDetected is raised when cannot load any field accepted by okteto manifest doc
+	ErrNotManifestContentDetected = errors.New("couldn't detect okteto manifest content")
 )
 
 // IsForbidden raised if the Okteto API returns 401

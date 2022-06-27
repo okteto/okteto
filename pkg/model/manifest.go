@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -420,10 +421,6 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 	devManifest, err := getOktetoManifest(manifestPath)
 	if err != nil {
-		if errors.Is(err, oktetoErrors.ErrInvalidManifest) {
-			return nil, err
-		}
-
 		oktetoLog.Info("devManifest err, fallback to stack unmarshall")
 		stackManifest := &Manifest{
 			Type: StackType,
@@ -445,7 +442,9 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			composeFiles = append(composeFiles, composeInfo.File)
 		}
 		s, stackErr := LoadStack("", composeFiles, false)
-		//We should return the error returned by the devManifest instead of the stack
+
+		// We failed to load a stack file and a manifest file, so we need to return
+		// only the original manifest error
 		if stackErr != nil {
 			return nil, err
 		}
@@ -641,6 +640,9 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 
 	manifest, err := Read(b)
 	if err != nil {
+		if errors.Is(err, oktetoErrors.ErrNotManifestContentDetected) {
+			return nil, err
+		}
 		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, err.Error())
 	}
 
@@ -704,6 +706,12 @@ func Read(bytes []byte) (*Manifest, error) {
 	manifest := NewManifest()
 	if bytes != nil {
 		if err := yaml.UnmarshalStrict(bytes, manifest); err != nil {
+			if err := yaml.Unmarshal(bytes, manifest); err == nil {
+				if reflect.DeepEqual(manifest, NewManifest()) {
+					return nil, oktetoErrors.ErrNotManifestContentDetected
+				}
+			}
+
 			if strings.HasPrefix(err.Error(), "yaml: unmarshal errors:") {
 				var sb strings.Builder
 				l := strings.Split(err.Error(), "\n")

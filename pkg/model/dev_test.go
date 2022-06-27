@@ -710,17 +710,13 @@ func Test_LoadForcePull(t *testing.T) {
 }
 
 func Test_validate(t *testing.T) {
-	file, err := os.CreateTemp("/tmp", "okteto-secret-test")
+	file, err := os.CreateTemp("", "okteto-secret-test")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(file.Name())
 
-	dir, err := os.MkdirTemp("/tmp", "okteto-secret-test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(dir)
+	dir := t.TempDir()
 
 	tests := []struct {
 		name      string

@@ -113,7 +113,7 @@ spec:
 	)
 
 	var (
-		testID          = strings.ToLower(fmt.Sprintf("DeployFromManifest-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testID          = strings.ToLower(fmt.Sprintf("DeployFromManifest-%s-%d", runtime.GOOS, time.Now().UnixMilli()))
 		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
 		expectedImage   = fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, repoDir)
 		originNamespace = getCurrentNamespace()
@@ -394,7 +394,7 @@ func TestDeployOutput(t *testing.T) {
 	repoDir := "voting-app"
 
 	var (
-		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().UnixMilli()))
 		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
 		originNamespace = getCurrentNamespace()
 	)
@@ -466,7 +466,7 @@ func TestDeployAndUpEnvVars(t *testing.T) {
 	repoDir := "movies"
 	branch := "pchico83/manifest-v2"
 	var (
-		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().Unix()))
+		testID          = strings.ToLower(fmt.Sprintf("TestDeployOutput-%s-%d", runtime.GOOS, time.Now().UnixMilli()))
 		testNamespace   = fmt.Sprintf("%s-%s", testID, user)
 		originNamespace = getCurrentNamespace()
 	)

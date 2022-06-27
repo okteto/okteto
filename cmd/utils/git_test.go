@@ -27,11 +27,7 @@ import (
 )
 
 func Test_getBranch(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	r, err := git.PlainInit(dir, false)
 	if err != nil {

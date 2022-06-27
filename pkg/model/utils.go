@@ -44,6 +44,7 @@ func CopyFile(from, to string) error {
 	if err != nil {
 		return err
 	}
+	defer fromFile.Close()
 
 	// skipcq GSC-G302 syncthing is a binary so it needs exec permissions
 	toFile, err := os.OpenFile(to, os.O_RDWR|os.O_CREATE, 0700)
@@ -67,6 +68,10 @@ func GetValidNameFromFolder(folder string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error inferring name: %s", err)
 	}
+	if folder == ".okteto" {
+		dir = filepath.Dir(dir)
+	}
+
 	name := filepath.Base(dir)
 	name = strings.ToLower(name)
 	name = ValidKubeNameRegex.ReplaceAllString(name, "-")
