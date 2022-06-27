@@ -173,6 +173,9 @@ var (
 	//ErrEmptyManifest is raised when cannot detected content to read in manifest
 	ErrEmptyManifest = errors.New("no content detected for okteto.yml file")
 
+	// ErrPortAlreadyAllocated is raised when port is allocated by other process
+	ErrPortAlreadyAllocated = errors.New("port is already allocated")
+
 	//ErrNotManifestContentDetected is raised when cannot load any field accepted by okteto manifest doc
 	ErrNotManifestContentDetected = errors.New("couldn't detect okteto manifest content")
 )

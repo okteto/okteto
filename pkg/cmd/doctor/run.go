@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/syncthing"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -165,7 +166,7 @@ func generateManifestFile(devPath string) (string, error) {
 		Push:        &model.BuildInfo{},
 		Environment: make([]model.EnvVar, 0),
 		Secrets:     make([]model.Secret, 0),
-		Forward:     make([]model.Forward, 0),
+		Forward:     make([]forward.Forward, 0),
 		Volumes:     make([]model.Volume, 0),
 		Sync: model.Sync{
 			Folders: make([]model.SyncFolder, 0),

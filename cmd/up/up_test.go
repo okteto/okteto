@@ -21,6 +21,7 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 )
 
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
@@ -55,52 +56,138 @@ func Test_waitUntilExitOrInterrupt(t *testing.T) {
 func Test_printDisplayContext(t *testing.T) {
 	var tests = []struct {
 		name string
-		dev  *model.Dev
+		up   *upContext
 	}{
 		{
 			name: "basic",
-			dev: &model.Dev{
-				Name:      "dev",
-				Namespace: "namespace",
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []forward.GlobalForward{},
+				},
 			},
 		},
 		{
 			name: "single-forward",
-			dev: &model.Dev{
-				Name:      "dev",
-				Namespace: "namespace",
-				Forward:   []model.Forward{{Local: 1000, Remote: 1000}},
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+					Forward:   []forward.Forward{{Local: 1000, Remote: 1000}},
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []forward.GlobalForward{},
+				},
 			},
 		},
 		{
 			name: "multiple-forward",
-			dev: &model.Dev{
-				Name:      "dev",
-				Namespace: "namespace",
-				Forward:   []model.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+					Forward:   []forward.Forward{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []forward.GlobalForward{
+						{
+							Local:  8080,
+							Remote: 8080,
+						},
+						{
+							Local:       8080,
+							Remote:      8080,
+							ServiceName: "api",
+						},
+					},
+				},
 			},
 		},
 		{
 			name: "single-reverse",
-			dev: &model.Dev{
-				Name:      "dev",
-				Namespace: "namespace",
-				Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}},
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+					Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}},
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []forward.GlobalForward{},
+				},
 			},
 		},
 		{
-			name: "multiple-reverse",
-			dev: &model.Dev{
-				Name:      "dev",
-				Namespace: "namespace",
-				Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+			name: "multiple-reverse+global-forward",
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+					Reverse:   []model.Reverse{{Local: 1000, Remote: 1000}, {Local: 2000, Remote: 2000}},
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []forward.GlobalForward{
+						{
+							Local:  8080,
+							Remote: 8080,
+						},
+						{
+							Local:       8080,
+							Remote:      8080,
+							ServiceName: "api",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "global-forward",
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []forward.GlobalForward{
+						{
+							Local:       8080,
+							Remote:      8080,
+							ServiceName: "api",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple-global-forward",
+			up: &upContext{
+				Dev: &model.Dev{
+					Name:      "dev",
+					Namespace: "namespace",
+				},
+				Manifest: &model.Manifest{
+					GlobalForward: []forward.GlobalForward{
+						{
+							Local:       8080,
+							Remote:      8080,
+							ServiceName: "api",
+						},
+						{
+							Local:       27017,
+							Remote:      27017,
+							ServiceName: "mongodb",
+						},
+					},
+				},
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			printDisplayContext(tt.dev)
+			printDisplayContext(tt.up)
 		})
 	}
 

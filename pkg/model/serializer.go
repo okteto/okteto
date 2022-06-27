@@ -27,6 +27,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/forward"
 	giturls "github.com/whilp/git-urls"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -688,15 +689,16 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Name         string               `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace    string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context      string               `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon         string               `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy       *DeployInfo          `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev          ManifestDevs         `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy      []DeployCommand      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build        ManifestBuild        `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies ManifestDependencies `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Name          string                  `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace     string                  `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context       string                  `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon          string                  `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy        *DeployInfo             `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev           ManifestDevs            `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy       []DeployCommand         `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build         ManifestBuild           `json:"build,omitempty" yaml:"build,omitempty"`
+	Dependencies  ManifestDependencies    `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
 }
@@ -798,6 +800,7 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	d.IsV2 = true
 	d.Dependencies = manifest.Dependencies
 	d.Name = manifest.Name
+	d.GlobalForward = manifest.GlobalForward
 	return nil
 }
 
@@ -985,10 +988,10 @@ func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	result := ManifestDevs{}
-	for k, v := range devs {
-		dev := Dev(v)
+	for i := range devs {
+		dev := Dev(devs[i])
 		devPointer := &dev
-		result[k] = devPointer
+		result[i] = devPointer
 	}
 	*d = result
 	return nil
