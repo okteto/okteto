@@ -123,8 +123,12 @@ func GetContentFromURL(url string, timeout time.Duration) string {
 				log.Printf("could not read body: %s", err)
 				return ""
 			}
+			content := string(body)
+			if content == "" {
+				continue
+			}
 
-			return string(body)
+			return content
 		}
 	}
 }
