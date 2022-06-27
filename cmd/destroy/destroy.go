@@ -101,7 +101,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				}
 				options.ManifestPath = model.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
 			}
-			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
+			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
 				return err
 			}
 

@@ -25,6 +25,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/contextresource"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -62,7 +63,7 @@ func destroy(ctx context.Context) *cobra.Command {
 
 //ExecuteDestroyPipeline executes destroy pipeline given a set of options
 func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
-	ctxResource := &model.ContextResource{}
+	ctxResource := &contextresource.ContextResource{}
 	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
 		return err
 	}

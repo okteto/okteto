@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/contextresource"
 	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
 )
@@ -40,16 +41,16 @@ const (
 	secondaryManifest = "okteto.yaml"
 )
 
-func LoadManifestContext(devPath string) (*model.ContextResource, error) {
+func LoadManifestContext(devPath string) (*contextresource.ContextResource, error) {
 	if !model.FileExists(devPath) {
 		if devPath == DefaultManifest {
 			if model.FileExists(secondaryManifest) {
-				return model.GetContextResource(secondaryManifest)
+				return contextresource.Get(secondaryManifest)
 			}
 		}
 		return nil, fmt.Errorf("'%s' does not exist. Generate it by executing 'okteto init'", devPath)
 	}
-	return model.GetContextResource(devPath)
+	return contextresource.Get(devPath)
 }
 
 //LoadManifest loads an okteto manifest checking "yml" and "yaml"

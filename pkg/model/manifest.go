@@ -80,59 +80,6 @@ const (
 )
 
 var (
-	pipelineFiles = []string{
-		"okteto-pipeline.yml",
-		"okteto-pipeline.yaml",
-		"okteto-pipelines.yml",
-		"okteto-pipelines.yaml",
-		".okteto/okteto-pipeline.yml",
-		".okteto/okteto-pipeline.yaml",
-		".okteto/okteto-pipelines.yml",
-		".okteto/okteto-pipelines.yaml",
-	}
-	stackFiles = []string{
-		"okteto-stack.yml",
-		"okteto-stack.yaml",
-		"stack.yml",
-		"stack.yaml",
-		".okteto/okteto-stack.yml",
-		".okteto/okteto-stack.yaml",
-		".okteto/stack.yml",
-		".okteto/stack.yaml",
-
-		"okteto-compose.yml",
-		"okteto-compose.yaml",
-		".okteto/okteto-compose.yml",
-		".okteto/okteto-compose.yaml",
-
-		"docker-compose.yml",
-		"docker-compose.yaml",
-		".okteto/docker-compose.yml",
-		".okteto/docker-compose.yaml",
-	}
-	oktetoFiles = []string{
-		"okteto.yml",
-		"okteto.yaml",
-		".okteto/okteto.yml",
-		".okteto/okteto.yaml",
-	}
-	chartsSubPath = []string{
-		"chart",
-		"charts",
-		"helm/chart",
-		"helm/charts",
-	}
-	manifestSubPath = []string{
-		"manifests",
-		"manifests.yml",
-		"manifests.yaml",
-		"kubernetes",
-		"kubernetes.yml",
-		"kubernetes.yaml",
-		"k8s",
-		"k8s.yml",
-		"k8s.yaml",
-	}
 	priorityOrder = []string{"dev", "dependencies", "deploy", "build", "name"}
 )
 
@@ -265,7 +212,7 @@ func NewDeployInfo() *DeployInfo {
 }
 
 func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
-	if oktetoPath := getFilePath(cwd, oktetoFiles); oktetoPath != "" {
+	if oktetoPath := getFilePath(cwd, OktetoManifestFiles); oktetoPath != "" {
 		oktetoLog.Infof("Found okteto file")
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto manifest on %s", oktetoPath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling manifest...")
@@ -489,7 +436,7 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 
 // GetInferredManifest infers the manifest from a directory
 func GetInferredManifest(cwd string) (*Manifest, error) {
-	if pipelinePath := getFilePath(cwd, pipelineFiles); pipelinePath != "" {
+	if pipelinePath := getFilePath(cwd, PipelineFiles); pipelinePath != "" {
 		oktetoLog.Infof("Found pipeline")
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto pipeline manifest on %s", pipelinePath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling pipeline manifest...")
@@ -502,7 +449,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		return pipelineManifest, nil
 	}
 
-	if stackPath := getFilePath(cwd, stackFiles); stackPath != "" {
+	if stackPath := getFilePath(cwd, ComposeFiles); stackPath != "" {
 		oktetoLog.Infof("Found okteto compose")
 		stackPath, err := filepath.Rel(cwd, stackPath)
 		if err != nil {
@@ -679,7 +626,7 @@ func getFilePath(cwd string, files []string) string {
 
 func getChartPath(cwd string) string {
 	// Files will be checked in the order defined in the list
-	for _, name := range chartsSubPath {
+	for _, name := range HelmChartsSubPaths {
 		path := filepath.Join(cwd, name, "Chart.yaml")
 		if FileExists(path) {
 			return filepath.Dir(path)
@@ -690,7 +637,7 @@ func getChartPath(cwd string) string {
 
 func getManifestsPath(cwd string) string {
 	// Files will be checked in the order defined in the list
-	for _, name := range manifestSubPath {
+	for _, name := range OktetoManifestFiles {
 		path := filepath.Join(cwd, name)
 		if FileExists(path) {
 			return path

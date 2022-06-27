@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/services"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/contextresource"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
@@ -64,7 +65,7 @@ func Push(ctx context.Context) *cobra.Command {
 			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)
 			if err != nil {
 				if oktetoErrors.IsNotExist(err) && len(pushOpts.AppName) > 0 {
-					ctxResource = &model.ContextResource{}
+					ctxResource = &contextresource.ContextResource{}
 				} else {
 					return err
 				}

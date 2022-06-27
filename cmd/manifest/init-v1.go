@@ -30,6 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/contextresource"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,7 +46,7 @@ const (
 func InitV1(opts *InitOpts) error {
 	ctx := context.Background()
 
-	ctxResource := &model.ContextResource{}
+	ctxResource := &contextresource.ContextResource{}
 	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
 		return err
 	}

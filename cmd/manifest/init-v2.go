@@ -35,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/contextresource"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
@@ -73,7 +74,7 @@ func Init() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
-			ctxResource := &model.ContextResource{}
+			ctxResource := &contextresource.ContextResource{}
 			if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
 				return err
 			}

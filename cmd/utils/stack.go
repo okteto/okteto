@@ -22,6 +22,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/contextresource"
 )
 
 var (
@@ -45,15 +46,15 @@ var (
 )
 
 //LoadStackContext loads the namespace and context of an okteto stack manifest
-func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
-	ctxResource := &model.ContextResource{}
+func LoadStackContext(stackPaths []string) (*contextresource.ContextResource, error) {
+	ctxResource := &contextresource.ContextResource{}
 	found := false
 	var err error
 	if len(stackPaths) == 0 {
 		for _, possibleStackManifest := range possibleStackManifests {
 			manifestPath := filepath.Join(possibleStackManifest...)
 			if model.FileExists(manifestPath) {
-				ctxResource, err = model.GetContextResource(manifestPath)
+				ctxResource, err = contextresource.Get(manifestPath)
 				if err != nil {
 					return nil, err
 				}
@@ -72,7 +73,7 @@ func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
 		if !model.FileExists(stackPath) {
 			return nil, fmt.Errorf("'%s' does not exist", stackPath)
 		}
-		thisCtxResource, err := model.GetContextResource(stackPath)
+		thisCtxResource, err := contextresource.Get(stackPath)
 		if err != nil {
 			return nil, err
 		}
