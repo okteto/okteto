@@ -212,7 +212,7 @@ forward:
    name: postgresql
  - 8080:vote:8080
  - 8085:result:80
-dev: 
+dev:
  vote:
   command: mvn spring-boot:run
   sync:
@@ -232,14 +232,14 @@ dev:
   command: bash
   securityContext:
    capabilities:
-    add: 
+    add:
      - SYS_PTRACE
   sync:
    - ./worker:/app
   forward:
    - 2345:2345
   persistentVolume:
-   enabled: false	
+   enabled: false
 `
 	microservicesComposeRepo   = "https://github.com/okteto/microservices-demo-compose"
 	microservicesComposeFolder = "microservices-demo-compose"
