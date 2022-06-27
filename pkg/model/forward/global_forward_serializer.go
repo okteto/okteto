@@ -24,7 +24,7 @@ func (gf *GlobalForward) UnmarshalYAML(unmarshal func(interface{}) error) error 
 
 	svcName := parts[1]
 	if svcName == "" {
-		return fmt.Errorf("service name cannnot be empty")
+		return fmt.Errorf("service name cannot be empty")
 	}
 
 	gf.ServiceName = svcName
