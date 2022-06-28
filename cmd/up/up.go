@@ -204,7 +204,7 @@ func Up() *cobra.Command {
 				return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
 			}
 
-			autocreateDev := true
+			forceAutocreateDev := true
 			if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
 				if !upOptions.Deploy {
 					oktetoLog.Information("Deploying development environment '%s'...", up.Manifest.Name)
@@ -215,8 +215,9 @@ func Up() *cobra.Command {
 				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
 					return err
 				}
-				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
-					autocreateDev = false
+				// when manifest has no deploy commands, prevent autocreate dev
+				if errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployCommands) {
+					forceAutocreateDev = false
 				}
 				if err != nil {
 					analytics.TrackDeploy(analytics.TrackDeployMetadata{
@@ -242,7 +243,7 @@ func Up() *cobra.Command {
 			}
 
 			up.Dev = dev
-			if !autocreateDev {
+			if !forceAutocreateDev {
 				up.Dev.Autocreate = false
 			}
 
@@ -587,6 +588,10 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 			}
 			return err
 
+		case err := <-up.GlobalForwarderStatus:
+			oktetoLog.Infof("exiting by error in global forward checker: %v", err)
+			return err
+
 		case err := <-up.applyToApps(ctx):
 			oktetoLog.Infof("exiting by applyToAppsChan: %v", err)
 			return err
@@ -758,31 +763,47 @@ func (up *upContext) shutdown() {
 
 }
 
-func printDisplayContext(dev *model.Dev) {
-	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(dev.Context)))
-	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), dev.Namespace))
-	oktetoLog.Println(fmt.Sprintf("    %s      %s", oktetoLog.BlueString("Name:"), dev.Name))
+func printDisplayContext(up *upContext) {
+	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(up.Dev.Context)))
+	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), up.Dev.Namespace))
+	oktetoLog.Println(fmt.Sprintf("    %s      %s", oktetoLog.BlueString("Name:"), up.Dev.Name))
 
-	if len(dev.Forward) > 0 {
-		if dev.Forward[0].Service {
-			oktetoLog.Println(fmt.Sprintf("    %s   %d -> %s:%d", oktetoLog.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].ServiceName, dev.Forward[0].Remote))
-		} else {
-			oktetoLog.Println(fmt.Sprintf("    %s   %d -> %d", oktetoLog.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
-		}
+	anyGlobalForward := false
+	if len(up.Manifest.GlobalForward) > 0 {
+		anyGlobalForward = true
 
-		for i := 1; i < len(dev.Forward); i++ {
-			if dev.Forward[i].Service {
-				oktetoLog.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
-				continue
-			}
-			oktetoLog.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
+		oktetoLog.Println(fmt.Sprintf("    %s   %d -> %s:%d", oktetoLog.BlueString("Forward:"), up.Manifest.GlobalForward[0].Local, up.Manifest.GlobalForward[0].ServiceName, up.Manifest.GlobalForward[0].Remote))
+
+		for i := 1; i < len(up.Manifest.GlobalForward); i++ {
+			oktetoLog.Println(fmt.Sprintf("               %d -> %s:%d", up.Manifest.GlobalForward[i].Local, up.Manifest.GlobalForward[i].ServiceName, up.Manifest.GlobalForward[i].Remote))
 		}
 	}
 
-	if len(dev.Reverse) > 0 {
-		oktetoLog.Println(fmt.Sprintf("    %s   %d <- %d", oktetoLog.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
-		for i := 1; i < len(dev.Reverse); i++ {
-			oktetoLog.Println(fmt.Sprintf("               %d <- %d", dev.Reverse[i].Local, dev.Reverse[i].Remote))
+	if len(up.Dev.Forward) > 0 {
+
+		fromIdxToShowWithoutForwardLabel := 0
+		if !anyGlobalForward {
+			fromIdxToShowWithoutForwardLabel = 1
+			if up.Dev.Forward[0].Service {
+				oktetoLog.Println(fmt.Sprintf("    %s   %d -> %s:%d", oktetoLog.BlueString("Forward:"), up.Dev.Forward[0].Local, up.Dev.Forward[0].ServiceName, up.Dev.Forward[0].Remote))
+			} else {
+				oktetoLog.Println(fmt.Sprintf("    %s   %d -> %d", oktetoLog.BlueString("Forward:"), up.Dev.Forward[0].Local, up.Dev.Forward[0].Remote))
+			}
+		}
+
+		for i := fromIdxToShowWithoutForwardLabel; i < len(up.Dev.Forward); i++ {
+			if up.Dev.Forward[i].Service {
+				oktetoLog.Println(fmt.Sprintf("               %d -> %s:%d", up.Dev.Forward[i].Local, up.Dev.Forward[i].ServiceName, up.Dev.Forward[i].Remote))
+				continue
+			}
+			oktetoLog.Println(fmt.Sprintf("               %d -> %d", up.Dev.Forward[i].Local, up.Dev.Forward[i].Remote))
+		}
+	}
+
+	if len(up.Dev.Reverse) > 0 {
+		oktetoLog.Println(fmt.Sprintf("    %s   %d <- %d", oktetoLog.BlueString("Reverse:"), up.Dev.Reverse[0].Local, up.Dev.Reverse[0].Remote))
+		for i := 1; i < len(up.Dev.Reverse); i++ {
+			oktetoLog.Println(fmt.Sprintf("               %d <- %d", up.Dev.Reverse[i].Local, up.Dev.Reverse[i].Remote))
 		}
 	}
 

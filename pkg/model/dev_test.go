@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/compose-spec/godotenv"
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -159,7 +160,7 @@ func Test_LoadManifestDefaults(t *testing.T) {
 		name                string
 		manifest            []byte
 		expectedEnvironment Environment
-		expectedForward     []Forward
+		expectedForward     []forward.Forward
 	}{
 		{
 			"long script",
@@ -167,7 +168,7 @@ func Test_LoadManifestDefaults(t *testing.T) {
 container: core
 workdir: /app`),
 			Environment{},
-			[]Forward{},
+			[]forward.Forward{},
 		},
 		{
 			"basic script",
@@ -175,7 +176,7 @@ workdir: /app`),
 container: core
 workdir: /app`),
 			Environment{},
-			[]Forward{},
+			[]forward.Forward{},
 		},
 		{
 			"env vars",
@@ -189,7 +190,7 @@ environment:
 				{Name: "ENV", Value: "production"},
 				{Name: "name", Value: "test-node"},
 			},
-			[]Forward{},
+			[]forward.Forward{},
 		},
 		{
 			"forward",
@@ -200,7 +201,7 @@ forward:
   - 9000:8000
   - 9001:8001`),
 			Environment{},
-			[]Forward{
+			[]forward.Forward{
 				{Local: 9000, Remote: 8000, Service: false, ServiceName: ""},
 				{Local: 9001, Remote: 8001, Service: false, ServiceName: ""},
 			},

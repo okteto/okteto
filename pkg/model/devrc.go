@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/forward"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -17,7 +18,7 @@ type DevRC struct {
 	Context              string                `json:"context,omitempty" yaml:"context,omitempty"`
 	Command              Command               `json:"command,omitempty" yaml:"command,omitempty"`
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Forward              []forward.Forward     `json:"forward,omitempty" yaml:"forward,omitempty"`
 	InitContainer        InitContainer         `json:"initContainer,omitempty" yaml:"initContainer,omitempty"`
 	Labels               Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Metadata             *Metadata             `json:"metadata,omitempty" yaml:"metadata,omitempty"`
@@ -114,7 +115,7 @@ func MergeDevWithDevRc(dev *Dev, devRc *DevRC) {
 
 	}
 	sort.SliceStable(dev.Forward, func(i, j int) bool {
-		return dev.Forward[i].less(&dev.Forward[j])
+		return dev.Forward[i].Less(&dev.Forward[j])
 	})
 
 	if devRc.InitContainer.Image != "" {
@@ -213,7 +214,7 @@ func getEnvVarIdx(environment Environment, envVar EnvVar) int {
 	return idx
 }
 
-func getForwardPortIdx(forwardList []Forward, forward Forward) int {
+func getForwardPortIdx(forwardList []forward.Forward, forward forward.Forward) int {
 	idx := -1
 	for aux, fwd := range forwardList {
 		if fwd.Remote == forward.Remote {
