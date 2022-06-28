@@ -105,7 +105,7 @@ var (
 	ErrDevPodDeleted = fmt.Errorf("development container has been removed")
 
 	// ErrDivertNotSupported raised if the divert feature is not supported in the current cluster
-	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in namespaces managed by Okteto")
+	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in clusters that have Okteto installed")
 
 	// ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
 	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available on Okteto Cloud or Okteto Enterprise")

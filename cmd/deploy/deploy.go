@@ -35,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/errors"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -286,7 +287,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	// don't divert if current namespace is the diverted namespace
 	if deployOptions.Manifest.Deploy.Divert != nil {
 		if !okteto.IsOkteto() {
-			return fmt.Errorf("'deploy.divert' is only supported in clusters managed by Okteto")
+			return errors.ErrDivertNotSupported
 		}
 		if deployOptions.Manifest.Deploy.Divert.Namespace != deployOptions.Manifest.Namespace {
 			dc.Proxy.SetDivert(deployOptions.Manifest.Deploy.Divert.Namespace)
@@ -299,7 +300,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
 	if deployOptions.Dependencies && !okteto.IsOkteto() {
-		return fmt.Errorf("'dependencies' is only available in clusters managed by Okteto")
+		return fmt.Errorf("'dependencies' is only supported in clusters that have Okteto installed")
 	}
 
 	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
