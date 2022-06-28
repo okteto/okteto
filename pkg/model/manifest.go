@@ -810,7 +810,9 @@ func (m *Manifest) setDefaults() error {
 			b.Name = ""
 		}
 
-		b.setBuildDefaults()
+		if !(b.Image != "" && len(b.VolumesToInclude) > 0 && b.Dockerfile == "") {
+			b.setBuildDefaults()
+		}
 	}
 
 	return nil
