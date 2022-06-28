@@ -71,20 +71,19 @@ func addStignoreSecrets(dev *model.Dev) error {
 			}
 
 			line := strings.TrimSpace(string(bytes))
-			if line == "" {
-				continue
-			}
-			if strings.Contains(line, "(?d)") {
-				continue
-			}
-			if strings.HasPrefix(line, "#") {
-				continue
-			}
-			if strings.HasPrefix(line, "!") {
+			// ignore local lines that are empty, comments or includes more files
+			// TODO: support remote #include https://github.com/okteto/okteto/issues/2832
+			if strings.Compare(line, "") == 0 || strings.HasPrefix(line, "//") || strings.HasPrefix(line, "#") {
 				continue
 			}
 
-			_, err = writer.WriteString(fmt.Sprintf("(?d)%s\n", line))
+			// transform line by adding (?d) unless the line starts with ! or already has (?d)
+			if !strings.HasPrefix(line, "!") && !strings.Contains(line, "(?d)") {
+				line = fmt.Sprintf("(?d)%s", line)
+			}
+
+			// write new line at remote .stignore
+			_, err = writer.WriteString(fmt.Sprintf("%s\n", line))
 			if err != nil {
 				return err
 			}

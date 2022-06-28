@@ -44,12 +44,23 @@ func Test_addStignoreSecrets(t *testing.T) {
 			stignoreContent: `.ignore
 #include file
 (?d) folder
-!exclude`,
+!exclude
+// this comment should be excluded
+(?i)!case
+*`,
 			expectedTransformedStignoreContent: `(?d).ignore
+(?d) folder
+!exclude
+(?d)(?i)!case
+(?d)*
 `,
 			expectedAnnotation: model.Annotations{
 				model.OktetoStignoreAnnotation: fmt.Sprintf("%x", sha512.Sum512([]byte(`
-.ignore`))),
+(?d).ignore
+(?d) folder
+!exclude
+(?d)(?i)!case
+(?d)*`))),
 			},
 		},
 	}
