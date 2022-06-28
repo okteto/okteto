@@ -30,7 +30,14 @@ for repo in "${actionsRepos[@]}"; do
         git clone git@github.com:okteto/"$repo".git
         pushd "$repo"
         git checkout "$VERSION"
-        ghr -token "$GITHUB_TOKEN" -delete "latest"
+        ghr \
+                -debug \
+                -name "latest@${VERSION}" \
+                -token "$GITHUB_TOKEN" \
+                -recreate \
+                -replace \
+                -commitish "$(git rev-parse main)" \
+                latest
         popd
         rm -rf "$repo"
 done
