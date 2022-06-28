@@ -155,6 +155,7 @@ func Test_validateDivert(t *testing.T) {
 }
 
 func TestInferFromStack(t *testing.T) {
+	dirtest := filepath.Clean("/stack/dir/")
 	devInterface := PrivilegedLocalhost
 	if runtime.GOOS == "windows" {
 		devInterface = Localhost
@@ -163,9 +164,9 @@ func TestInferFromStack(t *testing.T) {
 		Services: map[string]*Service{
 			"test": {
 				Build: &BuildInfo{
-					Name:       "test",
+					Name:       "",
 					Context:    "test",
-					Dockerfile: filepath.Join("test", "Dockerfile"),
+					Dockerfile: "Dockerfile",
 				},
 				Ports: []Port{
 					{
@@ -188,7 +189,23 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &BuildInfo{
+										Name:       "test",
+										Context:    filepath.Join(dirtest, "test"),
+										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -196,7 +213,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{
 					"test": &BuildInfo{
 						Context:    "test",
-						Dockerfile: filepath.Join("test", "Dockerfile"),
+						Dockerfile: "Dockerfile",
 					},
 				},
 				Dev: ManifestDevs{},
@@ -219,7 +236,23 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &BuildInfo{
+										Name:       "test",
+										Context:    filepath.Join(dirtest, "test"),
+										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -233,7 +266,23 @@ func TestInferFromStack(t *testing.T) {
 				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &BuildInfo{
+										Name:       "test",
+										Context:    "test",
+										Dockerfile: "Dockerfile",
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -250,7 +299,23 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &BuildInfo{
+										Name:       "test",
+										Context:    "test",
+										Dockerfile: "Dockerfile",
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -258,7 +323,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{
 					"test": &BuildInfo{
 						Context:    "test",
-						Dockerfile: filepath.Join("test", "Dockerfile"),
+						Dockerfile: "Dockerfile",
 					},
 				},
 				Dev: ManifestDevs{
@@ -321,7 +386,7 @@ func TestInferFromStack(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := tt.currentManifest.InferFromStack("")
+			result, err := tt.currentManifest.InferFromStack(filepath.Clean(dirtest))
 			if result != nil {
 				for _, d := range result.Dev {
 					d.parentSyncFolder = ""
@@ -401,6 +466,65 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 			tt.currentManifest.setManifestDefaultsFromDev()
 			assert.Equal(t, tt.expectedContext, tt.currentManifest.Context)
 			assert.Equal(t, tt.expectedNamespace, tt.currentManifest.Namespace)
+		})
+	}
+}
+
+func TestSetBuildDefaults(t *testing.T) {
+
+	tests := []struct {
+		name              string
+		currentBuildInfo  BuildInfo
+		expectedBuildInfo BuildInfo
+	}{
+		{
+			name:             "all empty",
+			currentBuildInfo: BuildInfo{},
+			expectedBuildInfo: BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
+		},
+		{
+			name: "context empty",
+			currentBuildInfo: BuildInfo{
+				Dockerfile: "Dockerfile",
+			},
+			expectedBuildInfo: BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
+		},
+		{
+			name: "dockerfile empty",
+			currentBuildInfo: BuildInfo{
+				Context: "buildName",
+			},
+			expectedBuildInfo: BuildInfo{
+				Context:    "buildName",
+				Dockerfile: "Dockerfile",
+			},
+		},
+		{
+			name: "context and Dockerfile filled",
+			currentBuildInfo: BuildInfo{
+				Context:    "buildName",
+				Dockerfile: "Dockerfile",
+			},
+			expectedBuildInfo: BuildInfo{
+				Context:    "buildName",
+				Dockerfile: "Dockerfile",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+
+			tt.currentBuildInfo.setBuildDefaults()
+
+			assert.Equal(t, tt.expectedBuildInfo, tt.currentBuildInfo)
 		})
 	}
 }

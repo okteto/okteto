@@ -1,8 +1,13 @@
 package build
 
 import (
+	"bytes"
+	"fmt"
+	"log"
+	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -73,6 +78,32 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
+
+	serviceContext := "service"
+	serviceDockerfile := "CustomDockerfile"
+
+	originalWd, errwd := os.Getwd()
+	if errwd != nil {
+		t.Fatal(errwd)
+	}
+
+	dir := t.TempDir()
+
+	os.Chdir(dir)
+	defer os.Chdir(originalWd)
+
+	err := os.Mkdir(serviceContext, os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	df := filepath.Join(serviceContext, serviceDockerfile)
+	defer removeFile(df)
+	_, errCreate := os.Create(df)
+	if errCreate != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		name        string
 		serviceName string
@@ -106,8 +137,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			name:        "is-okteto-missing-image-buildInfo",
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
-				Context:    "service",
-				Dockerfile: "CustomDockerfile",
+				Context:    serviceContext,
+				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
 				Args: model.Environment{
@@ -124,7 +155,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
-				File:       filepath.Join("service", "CustomDockerfile"),
+				File:       filepath.Join(serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
@@ -135,8 +166,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			name:        "is-okteto-missing-image-buildInfo-with-volumes",
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
-				Context:    "service",
-				Dockerfile: "CustomDockerfile",
+				Context:    serviceContext,
+				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
 				Args: model.Environment{
@@ -159,7 +190,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto-with-volume-mounts",
-				File:       filepath.Join("service", "CustomDockerfile"),
+				File:       filepath.Join(serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
@@ -171,8 +202,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			serviceName: "service",
 			buildInfo: &model.BuildInfo{
 				Image:      "okteto.dev/mycustomimage:dev",
-				Context:    "service",
-				Dockerfile: "CustomDockerfile",
+				Context:    serviceContext,
+				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
 				Args: model.Environment{
@@ -189,7 +220,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/mycustomimage:dev",
-				File:       filepath.Join("service", "CustomDockerfile"),
+				File:       filepath.Join(serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
@@ -218,4 +249,127 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestExtractFromContextAndDockerfile(t *testing.T) {
+	buildName := "frontendTest"
+	mockDir := "mockDir"
+
+	originalWd, errwd := os.Getwd()
+	if errwd != nil {
+		t.Fatal(errwd)
+	}
+
+	dir := t.TempDir()
+
+	os.Chdir(dir)
+	defer os.Chdir(originalWd)
+
+	err := os.Mkdir(buildName, os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = os.Mkdir(mockDir, os.ModePerm)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	contextPath := filepath.Join(dir, buildName)
+	log.Printf("created context dir: %s", contextPath)
+
+	tests := []struct {
+		name               string
+		svcName            string
+		dockerfile         string
+		fileExpected       string
+		dockerfilesCreated []string
+		expectedError      string
+	}{
+		{
+			name:               "dockerfile is abs path",
+			svcName:            "t1",
+			dockerfile:         filepath.Join(contextPath, "Dockerfile"),
+			fileExpected:       filepath.Join(contextPath, "Dockerfile"),
+			dockerfilesCreated: nil,
+			expectedError:      "",
+		},
+		{
+			name:               "dockerfile is NOT relative to context",
+			svcName:            "t2",
+			dockerfile:         "Dockerfile",
+			fileExpected:       "Dockerfile",
+			dockerfilesCreated: []string{"Dockerfile"},
+			expectedError:      fmt.Sprintf(warningDockerfilePath, "t2", "Dockerfile", buildName),
+		},
+		{
+			name:               "dockerfile in root and dockerfile in context path",
+			svcName:            "t3",
+			dockerfile:         "Dockerfile",
+			fileExpected:       filepath.Join(buildName, "Dockerfile"),
+			dockerfilesCreated: []string{"Dockerfile", filepath.Join(buildName, "Dockerfile")},
+			expectedError:      fmt.Sprintf(doubleDockerfileWarning, "t3", buildName, "Dockerfile"),
+		},
+		{
+			name:               "dockerfile is relative to context",
+			svcName:            "t4",
+			dockerfile:         "Dockerfile",
+			fileExpected:       filepath.Join(buildName, "Dockerfile"),
+			dockerfilesCreated: []string{filepath.Join(buildName, "Dockerfile")},
+			expectedError:      "",
+		},
+	}
+
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+
+			if tt.dockerfilesCreated != nil {
+				for _, df := range tt.dockerfilesCreated {
+					defer removeFile(df)
+					_, err := os.Create(df)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					log.Printf("created docker file: %s", df)
+				}
+			}
+
+			var buf bytes.Buffer
+			oktetoLog.SetOutput(&buf)
+
+			defer func() {
+				oktetoLog.SetOutput(os.Stderr)
+			}()
+
+			file := extractFromContextAndDockerfile(buildName, tt.dockerfile, tt.svcName)
+			warningErr := strings.TrimSuffix(buf.String(), "\n")
+
+			if warningErr != "" && tt.expectedError == "" {
+				t.Fatalf("Got error but wasn't expecting any: %s", warningErr)
+			}
+
+			if warningErr == "" && tt.expectedError != "" {
+				t.Fatal("error expected not thrown")
+			}
+
+			if warningErr != "" && tt.expectedError != "" && !strings.Contains(warningErr, tt.expectedError) {
+				t.Fatalf("Error expected '%s', does not match error thrown: '%s'", tt.expectedError, warningErr)
+			}
+
+			assert.Equal(t, tt.fileExpected, file)
+
+		})
+	}
+}
+
+func removeFile(s string) error {
+	// rm context and dockerfile
+	err := os.Remove(s)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

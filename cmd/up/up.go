@@ -820,7 +820,9 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 		imageWithDigest, err := registry.NewOktetoRegistry().GetImageTagWithDigest(opts.Tag)
 		if err == nil {
 			builder := buildv2.NewBuilderFromScratch()
+			sp.Stop()
 			builder.SetServiceEnvVars(buildName, imageWithDigest)
+			sp.Start()
 		} else if errors.Is(err, oktetoErrors.ErrNotFound) {
 			sanitizedSvc := strings.ReplaceAll(buildName, "-", "_")
 			if err := os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(sanitizedSvc)), opts.Tag); err != nil {

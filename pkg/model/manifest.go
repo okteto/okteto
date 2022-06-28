@@ -813,10 +813,12 @@ func (m *Manifest) setDefaults() error {
 			b.Context = b.Name
 			b.Name = ""
 		}
+
 		if !(b.Image != "" && len(b.VolumesToInclude) > 0 && b.Dockerfile == "") {
 			b.setBuildDefaults()
 		}
 	}
+
 	return nil
 }
 
@@ -949,7 +951,8 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 		if err != nil {
 			oktetoLog.Infof("can not make svc[%s].build.context relative to cwd", svcName)
 		}
-		buildInfo.Dockerfile, err = filepath.Rel(cwd, buildInfo.Dockerfile)
+		contextAbs := filepath.Join(cwd, buildInfo.Context)
+		buildInfo.Dockerfile, err = filepath.Rel(contextAbs, buildInfo.Dockerfile)
 		if err != nil {
 			oktetoLog.Infof("can not make svc[%s].build.dockerfile relative to cwd", svcName)
 		}

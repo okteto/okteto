@@ -551,9 +551,11 @@ func (b *BuildInfo) setBuildDefaults() {
 	if b.Context == "" {
 		b.Context = "."
 	}
+
 	if _, err := url.ParseRequestURI(b.Context); err != nil && b.Dockerfile == "" {
 		b.Dockerfile = "Dockerfile"
 	}
+
 }
 
 func (dev *Dev) setRunAsUserDefaults(main *Dev) {
