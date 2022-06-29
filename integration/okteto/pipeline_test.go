@@ -27,7 +27,7 @@ import (
 
 const (
 	githubHTTPSURL = "https://github.com"
-	pipelineRepo   = "okteto/movies"
+	pipelineRepo   = "okteto/movies-with-compose"
 )
 
 func TestPipelineCommand(t *testing.T) {
