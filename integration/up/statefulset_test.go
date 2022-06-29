@@ -116,6 +116,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
@@ -140,6 +141,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, "okteto.yml"),
 		OktetoHome:   dir,
+		Token:        token,
 	}
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
@@ -191,6 +193,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 		Namespace:    testNamespace,
 		ManifestPath: upOptions.ManifestPath,
 		Workdir:      dir,
+		Token:        token,
 	}
 	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 
@@ -211,6 +214,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
@@ -235,6 +239,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, "okteto.yml"),
 		OktetoHome:   dir,
+		Token:        token,
 	}
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
@@ -286,6 +291,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 		Namespace:    testNamespace,
 		ManifestPath: upOptions.ManifestPath,
 		Workdir:      dir,
+		Token:        token,
 	}
 	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 

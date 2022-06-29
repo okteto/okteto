@@ -41,6 +41,7 @@ func TestPipelineCommand(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	// defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
@@ -51,6 +52,7 @@ func TestPipelineCommand(t *testing.T) {
 		Branch:     "cli-e2e",
 		Wait:       true,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoDeployPipeline(oktetoPath, pipelineOptions))
 
@@ -61,6 +63,7 @@ func TestPipelineCommand(t *testing.T) {
 		Namespace:  testNamespace,
 		Name:       "movies",
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoPipelineDestroy(oktetoPath, pipelineDestroyOptions))
 }

@@ -39,6 +39,7 @@ func TestPreviewCommand(t *testing.T) {
 		Branch:     "cli-e2e",
 		Wait:       true,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoDeployPreview(oktetoPath, previewOptions))
 
@@ -48,6 +49,7 @@ func TestPreviewCommand(t *testing.T) {
 	previewDestroyOptions := &commands.DestroyPreviewOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoPreviewDestroy(oktetoPath, previewDestroyOptions))
 }

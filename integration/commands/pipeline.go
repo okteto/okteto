@@ -30,6 +30,7 @@ type DeployPipelineOptions struct {
 	Repository string
 	Wait       bool
 	OktetoHome string
+	Token      string
 }
 
 // DestroyPipelineOptions defines the options that can be added to a deploy command
@@ -38,6 +39,7 @@ type DestroyPipelineOptions struct {
 	Namespace  string
 	Name       string
 	OktetoHome string
+	Token      string
 }
 
 // RunOktetoDeployPipeline runs an okteto deploy command
@@ -65,6 +67,9 @@ func RunOktetoDeployPipeline(oktetoPath string, deployOptions *DeployPipelineOpt
 	if deployOptions.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
 	}
+	if deployOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, deployOptions.Token))
+	}
 	log.Printf("Running '%s'", cmd.String())
 	o, err := cmd.CombinedOutput()
 	if err != nil {
@@ -91,6 +96,9 @@ func RunOktetoPipelineDestroy(oktetoPath string, destroyOptions *DestroyPipeline
 
 	if destroyOptions.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, destroyOptions.OktetoHome))
+	}
+	if destroyOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, destroyOptions.Token))
 	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {

@@ -163,6 +163,7 @@ func TestAutoWakeFromURL(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
@@ -211,6 +212,7 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
@@ -240,6 +242,7 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, "okteto.yml"),
 		OktetoHome:   dir,
+		Token:        token,
 	}
 	upCommand, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
@@ -250,6 +253,7 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 		Namespace:    testNamespace,
 		ManifestPath: filepath.Join(dir, "okteto.yml"),
 		Workdir:      dir,
+		Token:        token,
 	}
 	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 	require.True(t, commands.HasUpCommandFinished(upCommand.Pid.Pid))

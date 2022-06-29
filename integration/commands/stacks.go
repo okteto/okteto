@@ -28,6 +28,7 @@ type StackDeployOptions struct {
 	ManifestPath string
 	Build        bool
 	OktetoHome   string
+	Token        string
 }
 
 // StackDestroyOptions defines the options that can be added to a deploy command
@@ -35,6 +36,7 @@ type StackDestroyOptions struct {
 	Workdir      string
 	ManifestPath string
 	OktetoHome   string
+	Token        string
 }
 
 // RunOktetoStackDeploy runs an okteto deploy command
@@ -56,6 +58,9 @@ func RunOktetoStackDeploy(oktetoPath string, deployOptions *StackDeployOptions) 
 
 	if deployOptions.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
+	}
+	if deployOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, deployOptions.Token))
 	}
 
 	log.Printf("Running '%s'", cmd.String())
@@ -84,6 +89,9 @@ func RunOktetoStackDestroy(oktetoPath string, deployOptions *StackDestroyOptions
 
 	if deployOptions.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
+	}
+	if deployOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, deployOptions.Token))
 	}
 	log.Printf("Running '%s'", cmd.String())
 

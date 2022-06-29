@@ -28,6 +28,7 @@ type ExecOptions struct {
 	ManifestPath string
 	Command      string
 	OktetoHome   string
+	Token        string
 }
 
 // RunExecCommand runs an exec command
@@ -51,6 +52,9 @@ func RunExecCommand(oktetoPath string, execOptions *ExecOptions) (string, error)
 
 	if execOptions.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, execOptions.OktetoHome))
+	}
+	if execOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, execOptions.Token))
 	}
 	log.Printf("Running exec command: %s", cmd.String())
 	bytes, err := cmd.CombinedOutput()

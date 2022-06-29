@@ -24,12 +24,14 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 var (
 	user          = ""
 	kubectlBinary = "kubectl"
 	appsSubdomain = "cloud.okteto.net"
+	token         = ""
 )
 
 func TestMain(m *testing.M) {
@@ -51,7 +53,7 @@ func TestMain(m *testing.M) {
 		log.Printf("kubectl is not in the path: %s", err)
 		os.Exit(1)
 	}
-
+	token = okteto.Context().Token
 	exitCode := m.Run()
 
 	os.Exit(exitCode)

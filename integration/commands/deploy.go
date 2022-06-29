@@ -32,6 +32,7 @@ type DeployOptions struct {
 	ServicesToDeploy []string
 	Namespace        string
 	OktetoHome       string
+	Token            string
 }
 
 // DestroyOptions defines the options that can be added to a deploy command
@@ -40,6 +41,7 @@ type DestroyOptions struct {
 	ManifestPath string
 	Namespace    string
 	OktetoHome   string
+	Token        string
 }
 
 // RunOktetoDeploy runs an okteto deploy command
@@ -87,7 +89,9 @@ func RunOktetoDestroy(oktetoPath string, destroyOptions *DestroyOptions) error {
 	if destroyOptions.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, destroyOptions.OktetoHome))
 	}
-
+	if destroyOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, destroyOptions.Token))
+	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto deploy failed: %s - %s", string(o), err)
@@ -125,6 +129,9 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 
 	if deployOptions.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
+	}
+	if deployOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, deployOptions.Token))
 	}
 	return cmd
 }

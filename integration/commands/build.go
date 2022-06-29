@@ -29,6 +29,7 @@ type BuildOptions struct {
 	Tag          string
 	Namespace    string
 	OktetoHome   string
+	Token        string
 }
 
 // RunOktetoBuild runs an okteto build command
@@ -57,6 +58,9 @@ func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
 
 	if buildOptions.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, buildOptions.OktetoHome))
+	}
+	if buildOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, buildOptions.Token))
 	}
 
 	o, err := cmd.CombinedOutput()

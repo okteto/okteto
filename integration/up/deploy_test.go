@@ -60,6 +60,7 @@ func TestUpWithDeploy(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
@@ -79,6 +80,7 @@ func TestUpWithDeploy(t *testing.T) {
 		Workdir:    dir,
 		Deploy:     true,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
@@ -117,6 +119,7 @@ func TestUpWithDeploy(t *testing.T) {
 	downOpts := &commands.DownOptions{
 		Namespace: testNamespace,
 		Workdir:   dir,
+		Token:     token,
 	}
 	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 

@@ -30,11 +30,13 @@ import (
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
 )
 
 var (
 	user          = ""
+	token         = ""
 	kubectlBinary = "kubectl"
 	appsSubdomain = "cloud.okteto.net"
 )
@@ -74,6 +76,7 @@ func TestMain(m *testing.M) {
 	if runtime.GOOS == "windows" {
 		kubectlBinary = "kubectl.exe"
 	}
+	token = okteto.Context().Token
 	if _, err := exec.LookPath(kubectlBinary); err != nil {
 		log.Printf("kubectl is not in the path: %s", err)
 		os.Exit(1)
@@ -92,6 +95,7 @@ func TestPush(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)

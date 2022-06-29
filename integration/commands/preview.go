@@ -31,6 +31,7 @@ type DeployPreviewOptions struct {
 	Repository string
 	Wait       bool
 	OktetoHome string
+	Token      string
 }
 
 // DestroyPreviewOptions defines the options that can be added to a deploy command
@@ -38,6 +39,7 @@ type DestroyPreviewOptions struct {
 	Workdir    string
 	Namespace  string
 	OktetoHome string
+	Token      string
 }
 
 // RunOktetoDeployPreview runs an okteto deploy command
@@ -71,6 +73,10 @@ func RunOktetoDeployPreview(oktetoPath string, deployOptions *DeployPreviewOptio
 	if deployOptions.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
 	}
+	if deployOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, deployOptions.Token))
+	}
+
 	log.Printf("Running '%s'", cmd.String())
 	o, err := cmd.CombinedOutput()
 	if err != nil {
@@ -92,6 +98,9 @@ func RunOktetoPreviewDestroy(oktetoPath string, destroyOptions *DestroyPreviewOp
 
 	if destroyOptions.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, destroyOptions.OktetoHome))
+	}
+	if destroyOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, destroyOptions.Token))
 	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {

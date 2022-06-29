@@ -21,19 +21,18 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 var (
 	user          = ""
 	kubectlBinary = "kubectl"
 	appsSubdomain = "cloud.okteto.net"
-
-	registryMutex sync.Mutex
+	token         = ""
 )
 
 const (
@@ -60,6 +59,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	token = okteto.Context().Token
 	exitCode := m.Run()
 
 	os.Exit(exitCode)

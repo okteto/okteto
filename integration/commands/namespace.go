@@ -28,6 +28,7 @@ import (
 type NamespaceOptions struct {
 	Namespace  string
 	OktetoHome string
+	Token      string
 }
 
 // RunOktetoCreateNamespace runs okteto namespace create
@@ -41,6 +42,9 @@ func RunOktetoCreateNamespace(oktetoPath string, namespaceOpts *NamespaceOptions
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
 	}
 
+	if namespaceOpts.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, namespaceOpts.Token))
+	}
 	if namespaceOpts.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
 	}
@@ -68,6 +72,9 @@ func RunOktetoNamespace(oktetoPath string, namespaceOpts *NamespaceOptions) erro
 
 	if namespaceOpts.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
+	}
+	if namespaceOpts.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, namespaceOpts.Token))
 	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {
@@ -99,6 +106,9 @@ func RunOktetoDeleteNamespace(oktetoPath string, namespaceOpts *NamespaceOptions
 	deleteCMD.Env = os.Environ()
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
 		deleteCMD.Env = append(deleteCMD.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+	if namespaceOpts.Token != "" {
+		deleteCMD.Env = append(deleteCMD.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, namespaceOpts.Token))
 	}
 
 	if namespaceOpts.OktetoHome != "" {

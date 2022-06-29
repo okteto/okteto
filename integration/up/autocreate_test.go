@@ -76,6 +76,7 @@ func TestUpAutocreate(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
@@ -93,6 +94,7 @@ func TestUpAutocreate(t *testing.T) {
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, "okteto.yml"),
 		OktetoHome:   dir,
+		Token:        token,
 	}
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
@@ -136,6 +138,7 @@ func TestUpAutocreate(t *testing.T) {
 		Namespace:    testNamespace,
 		ManifestPath: upOptions.ManifestPath,
 		Workdir:      dir,
+		Token:        token,
 	}
 	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 
@@ -153,6 +156,7 @@ func TestUpAutocreateV2(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
@@ -170,6 +174,7 @@ func TestUpAutocreateV2(t *testing.T) {
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, "okteto.yml"),
 		OktetoHome:   dir,
+		Token:        token,
 	}
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
@@ -213,6 +218,7 @@ func TestUpAutocreateV2(t *testing.T) {
 		Namespace:    testNamespace,
 		ManifestPath: upOptions.ManifestPath,
 		Workdir:      dir,
+		Token:        token,
 	}
 	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 

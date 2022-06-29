@@ -36,6 +36,7 @@ var (
 	user          = ""
 	kubectlBinary = "kubectl"
 	appsSubdomain = "cloud.okteto.net"
+	token         = ""
 )
 
 const (
@@ -76,6 +77,7 @@ func TestMain(m *testing.M) {
 		kubectlBinary = "kubectl.exe"
 	}
 
+	token = okteto.Context().Token
 	exitCode := m.Run()
 
 	os.Exit(exitCode)
@@ -95,6 +97,7 @@ func TestBuildCommandV1(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
@@ -107,6 +110,8 @@ func TestBuildCommandV1(t *testing.T) {
 		ManifestPath: filepath.Join(dir, dockerfileName),
 		Tag:          "okteto.dev/test:okteto",
 		Namespace:    testNamespace,
+		Token:        token,
+		OktetoHome:   dir,
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedImage))
@@ -127,6 +132,7 @@ func TestBuildCommandV2(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
@@ -141,6 +147,8 @@ func TestBuildCommandV2(t *testing.T) {
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, manifestName),
 		Namespace:    testNamespace,
+		Token:        token,
+		OktetoHome:   dir,
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedAppImage))
@@ -163,6 +171,7 @@ func TestBuildCommandV2OnlyOneService(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
@@ -175,6 +184,8 @@ func TestBuildCommandV2OnlyOneService(t *testing.T) {
 		ManifestPath: filepath.Join(dir, manifestName),
 		SvcsToBuild:  []string{"app"},
 		Namespace:    testNamespace,
+		Token:        token,
+		OktetoHome:   dir,
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedImage))
@@ -196,6 +207,7 @@ func TestBuildCommandV2SpecifyingServices(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
@@ -211,6 +223,8 @@ func TestBuildCommandV2SpecifyingServices(t *testing.T) {
 		ManifestPath: filepath.Join(dir, manifestName),
 		SvcsToBuild:  []string{"app", "api"},
 		Namespace:    testNamespace,
+		Token:        token,
+		OktetoHome:   dir,
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedAppImage))
@@ -233,6 +247,7 @@ func TestBuildCommandV2VolumeMounts(t *testing.T) {
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
@@ -244,8 +259,10 @@ func TestBuildCommandV2VolumeMounts(t *testing.T) {
 	require.False(t, isImageBuilt(expectedImageWithVolumes))
 
 	options := &commands.BuildOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		Token:      token,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedBuildImage), "%s not found", expectedBuildImage)

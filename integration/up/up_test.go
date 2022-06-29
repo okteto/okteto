@@ -31,10 +31,12 @@ import (
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 var (
 	user            = ""
+	token           = ""
 	kubectlBinary   = "kubectl"
 	appsSubdomain   = "cloud.okteto.net"
 	ErrUpNotRunning = errors.New("Up command is no longer running")
@@ -63,7 +65,7 @@ func TestMain(m *testing.M) {
 		log.Printf("kubectl is not in the path: %s", err)
 		os.Exit(1)
 	}
-
+	token = okteto.Context().Token
 	exitCode := m.Run()
 	os.Exit(exitCode)
 }
@@ -81,6 +83,7 @@ func checkStignoreIsOnRemote(namespace, manifestPath, oktetoPath, dir string) er
 		ManifestPath: manifestPath,
 		Command:      "cat .stignore | grep '(?d)venv'",
 		OktetoHome:   dir,
+		Token:        token,
 	}
 	output, err := commands.RunExecCommand(oktetoPath, opts)
 	if err != nil {

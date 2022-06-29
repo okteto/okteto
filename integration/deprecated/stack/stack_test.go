@@ -25,11 +25,13 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 var (
 	timeout       = 300 * time.Second
 	user          = ""
+	token         = ""
 	kubectlBinary = "kubectl"
 	appsSubdomain = "cloud.okteto.net"
 )
@@ -53,7 +55,7 @@ func TestMain(m *testing.M) {
 		log.Printf("kubectl is not in the path: %s", err)
 		os.Exit(1)
 	}
-
+	token = okteto.Context().Token
 	exitCode := m.Run()
 
 	os.Exit(exitCode)

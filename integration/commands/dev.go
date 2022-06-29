@@ -36,6 +36,7 @@ type UpOptions struct {
 	Workdir      string
 	Deploy       bool
 	OktetoHome   string
+	Token        string
 }
 
 // UpCommandProcessResult has the information about the command process
@@ -106,6 +107,9 @@ func getUpCmd(oktetoPath string, upOptions *UpOptions) *exec.Cmd {
 	if upOptions.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, upOptions.OktetoHome))
 	}
+	if upOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, upOptions.Token))
+	}
 	return cmd
 }
 
@@ -115,6 +119,7 @@ type DownOptions struct {
 	ManifestPath string
 	Workdir      string
 	OktetoHome   string
+	Token        string
 }
 
 // RunOktetoDown runs an okteto down command
@@ -132,7 +137,9 @@ func RunOktetoDown(oktetoPath string, downOpts *DownOptions) error {
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
 		downCMD.Env = append(downCMD.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
 	}
-
+	if downOpts.Token != "" {
+		downCMD.Env = append(downCMD.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, downOpts.Token))
+	}
 	if downOpts.OktetoHome != "" {
 		downCMD.Env = append(downCMD.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, downOpts.OktetoHome))
 	}
