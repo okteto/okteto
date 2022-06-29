@@ -130,7 +130,11 @@ func TestUpDeploymentV1(t *testing.T) {
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), deploymentManifestV1))
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), "venv"))
 
-	require.NoError(t, integration.RunKubectlApply(kubectlBinary, testNamespace, filepath.Join(dir, "deployment.yml")))
+	kubectlOpts := &commands.KubectlOptions{
+		Namespace: testNamespace,
+		File:      filepath.Join(dir, "deployment.yml"),
+	}
+	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, "e2etest", 1, timeout))
 
 	originalDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest")
@@ -229,7 +233,11 @@ func TestUpDeploymentV2(t *testing.T) {
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), deploymentManifestV2))
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), "venv"))
 
-	require.NoError(t, integration.RunKubectlApply(kubectlBinary, testNamespace, filepath.Join(dir, "deployment.yml")))
+	kubectlOpts := &commands.KubectlOptions{
+		Namespace: testNamespace,
+		File:      filepath.Join(dir, "deployment.yml"),
+	}
+	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, "e2etest", 1, timeout))
 
 	originalDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest")

@@ -28,6 +28,7 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
@@ -176,10 +177,20 @@ func TestAutoWakeFromURL(t *testing.T) {
 	require.NoError(t, writeOktetoManifest(dir))
 	require.NoError(t, writeStIgnore(dir))
 
-	require.NoError(t, integration.RunKubectlApply(kubectlBinary, testNamespace, filepath.Join(dir, deploymentManifestName)))
+	kubectlOpts := &commands.KubectlOptions{
+		Namespace:  testNamespace,
+		File:       filepath.Join(dir, deploymentManifestName),
+		ConfigFile: filepath.Join(config.GetUserHomeDir(), ".kube", "config"),
+	}
+	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, "autowake", 1, timeout))
 
-	require.NoError(t, integration.RunKubectlApply(kubectlBinary, testNamespace, filepath.Join(dir, sfsManifestName)))
+	kubectlOpts = &commands.KubectlOptions{
+		Namespace:  testNamespace,
+		File:       filepath.Join(dir, sfsManifestName),
+		ConfigFile: filepath.Join(config.GetUserHomeDir(), ".kube", "config"),
+	}
+	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
 	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "autowake", timeout))
 
 	// Test endpoint is working
@@ -225,10 +236,20 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 	require.NoError(t, writeOktetoManifest(dir))
 	require.NoError(t, writeStIgnore(dir))
 
-	require.NoError(t, integration.RunKubectlApply(kubectlBinary, testNamespace, filepath.Join(dir, deploymentManifestName)))
+	kubectlOpts := &commands.KubectlOptions{
+		Namespace:  testNamespace,
+		File:       filepath.Join(dir, deploymentManifestName),
+		ConfigFile: filepath.Join(config.GetUserHomeDir(), ".kube", "config"),
+	}
+	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, "autowake", 1, timeout))
 
-	require.NoError(t, integration.RunKubectlApply(kubectlBinary, testNamespace, filepath.Join(dir, sfsManifestName)))
+	kubectlOpts = &commands.KubectlOptions{
+		Namespace:  testNamespace,
+		File:       filepath.Join(dir, sfsManifestName),
+		ConfigFile: filepath.Join(config.GetUserHomeDir(), ".kube", "config"),
+	}
+	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
 	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "autowake", timeout))
 
 	// Sleep namespace

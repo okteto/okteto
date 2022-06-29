@@ -68,17 +68,6 @@ func RunOktetoVersion(oktetoPath string) (string, error) {
 	return string(o), nil
 }
 
-// RunKubectlApply runs kubectl apply command
-func RunKubectlApply(kubectlBinary, namespace, filePath string) error {
-	cmd := exec.Command(kubectlBinary, "apply", "-n", namespace, "-f", filePath)
-	cmd.Env = os.Environ()
-
-	if o, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("kubectl apply failed: %s", string(o))
-	}
-	return nil
-}
-
 // GetTestNamespace returns the name for a namespace
 func GetTestNamespace(prefix, user string) string {
 	namespace := fmt.Sprintf("%s-%s-%d-%s", prefix, runtime.GOOS, time.Now().UnixMilli(), user)
