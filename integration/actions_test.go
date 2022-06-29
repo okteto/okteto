@@ -444,14 +444,14 @@ func executeDeployPipelineAction(ctx context.Context, namespace string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, pipelinePath)
 	actionFolder := strings.Split(pipelinePath, "/")[1]
 	log.Printf("cloning pipeline repository: %s", actionRepo)
-	err := cloneGitRepoWithBranch(ctx, actionRepo, "master")
+	err := cloneGitRepoWithBranch(ctx, actionRepo, "main")
 	if err != nil {
 		return err
 	}
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer deleteGitRepo(ctx, actionFolder)
 	os.Setenv(model.GithubRepositoryEnvVar, pipelineRepo)
-	os.Setenv(model.GithubRefEnvVar, "master")
+	os.Setenv(model.GithubRefEnvVar, "main")
 	os.Setenv(model.GithubServerURLEnvVar, githubUrl)
 
 	log.Printf("deploying pipeline %s", namespace)
@@ -753,7 +753,7 @@ func executeDeployPreviewAction(ctx context.Context, namespace string) error {
 
 	log.Printf("Deploying preview %s", namespace)
 	command := oktetoPath
-	args := []string{"preview", "deploy", namespace, "--scope", "personal", "--branch", "master", "--repository", fmt.Sprintf("%s/%s", githubUrl, pipelineRepo), "--wait"}
+	args := []string{"preview", "deploy", namespace, "--scope", "personal", "--branch", "main", "--repository", fmt.Sprintf("%s/%s", githubUrl, pipelineRepo), "--wait"}
 	cmd := exec.Command(command, args...)
 	cmd.Env = os.Environ()
 	o, err := cmd.CombinedOutput()
