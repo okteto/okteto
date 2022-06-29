@@ -99,7 +99,11 @@ func TestUpAutocreate(t *testing.T) {
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
 
-	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, model.DevCloneName("autocreate"), 1, timeout))
+	kubectlOpts := &commands.KubectlOptions{
+		Namespace: testNamespace,
+		Name:      model.DevCloneName("autocreate"),
+	}
+	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
 	varLocalEndpoint := "http://localhost:8080/var.html"
 	indexLocalEndpoint := "http://localhost:8080/index.html"
@@ -179,7 +183,11 @@ func TestUpAutocreateV2(t *testing.T) {
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
 
-	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, model.DevCloneName("autocreate"), 1, timeout))
+	kubectlOpts := &commands.KubectlOptions{
+		Namespace: testNamespace,
+		Name:      model.DevCloneName("autocreate"),
+	}
+	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
 	varLocalEndpoint := "http://localhost:8081/var.html"
 	indexLocalEndpoint := "http://localhost:8081/index.html"

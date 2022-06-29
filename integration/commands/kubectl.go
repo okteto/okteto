@@ -23,6 +23,7 @@ import (
 type KubectlOptions struct {
 	Workdir    string
 	Namespace  string
+	Name       string
 	File       string
 	ConfigFile string
 }
@@ -44,4 +45,44 @@ func RunKubectlApply(kubectlBinary string, kubectlOpts *KubectlOptions) error {
 		return fmt.Errorf("kubectl apply failed: %s", string(o))
 	}
 	return nil
+}
+
+// RunKubectlRolloutDeployment runs kubectl rollout command
+func RunKubectlRolloutDeployment(kubectlBinary string, kubectlOpts *KubectlOptions, revision int) (string, error) {
+	args := []string{"--namespace", kubectlOpts.Namespace, "rollout", "status", "deployment", kubectlOpts.Name, "--revision", fmt.Sprintf("%d", revision)}
+	cmd := exec.Command(kubectlBinary, args...)
+	if kubectlOpts.ConfigFile != "" {
+		cmd.Args = append(cmd.Args, "--kubeconfig", kubectlOpts.ConfigFile)
+	}
+	if kubectlOpts.Workdir != "" {
+		cmd.Dir = kubectlOpts.Workdir
+	}
+
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("kubectl apply failed: %s", string(o))
+	}
+	return string(o), nil
+}
+
+// RunKubectlRolloutStatefulset runs kubectl rollout command
+func RunKubectlRolloutStatefulset(kubectlBinary string, kubectlOpts *KubectlOptions) (string, error) {
+	args := []string{"--namespace", kubectlOpts.Namespace, "rollout", "status", "statefulset", kubectlOpts.Name}
+	cmd := exec.Command(kubectlBinary, args...)
+	cmd.Env = os.Environ()
+
+	if kubectlOpts.ConfigFile != "" {
+		cmd.Args = append(cmd.Args, "--kubeconfig", kubectlOpts.ConfigFile)
+	}
+	if kubectlOpts.Workdir != "" {
+		cmd.Dir = kubectlOpts.Workdir
+	}
+
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("kubectl apply failed: %s", string(o))
+	}
+	return string(o), nil
 }

@@ -185,17 +185,19 @@ func TestAutoWakeFromURL(t *testing.T) {
 		Namespace:  testNamespace,
 		File:       filepath.Join(dir, deploymentManifestName),
 		ConfigFile: filepath.Join(dir, ".kube", "config"),
+		Name:       "autowake",
 	}
 	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
-	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, "autowake", 1, timeout))
+	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
 	kubectlOpts = &commands.KubectlOptions{
 		Namespace:  testNamespace,
 		File:       filepath.Join(dir, sfsManifestName),
 		ConfigFile: filepath.Join(dir, ".kube", "config"),
+		Name:       "autowake",
 	}
 	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
-	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "autowake", timeout))
+	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, kubectlOpts, timeout))
 
 	// Test endpoint is working
 	autowakeURL := fmt.Sprintf("https://autowake-deployment-%s.%s", testNamespace, appsSubdomain)
@@ -246,17 +248,19 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 		Namespace:  testNamespace,
 		File:       filepath.Join(dir, deploymentManifestName),
 		ConfigFile: filepath.Join(dir, ".kube", "config"),
+		Name:       "autowake",
 	}
 	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
-	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, "autowake", 1, timeout))
+	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
 	kubectlOpts = &commands.KubectlOptions{
 		Namespace:  testNamespace,
 		File:       filepath.Join(dir, sfsManifestName),
 		ConfigFile: filepath.Join(dir, ".kube", "config"),
+		Name:       "autowake",
 	}
 	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
-	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "autowake", timeout))
+	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, kubectlOpts, timeout))
 
 	// Sleep namespace
 	require.NoError(t, sleepNamespace(testNamespace))

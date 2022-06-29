@@ -138,9 +138,10 @@ func TestUpStatefulsetV1(t *testing.T) {
 	kubectlOpts := &commands.KubectlOptions{
 		Namespace: testNamespace,
 		File:      filepath.Join(dir, "deployment.yml"),
+		Name:      "e2etest",
 	}
 	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
-	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "e2etest", timeout))
+	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, kubectlOpts, timeout))
 
 	originalStatefulSet, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest", c)
 	require.NoError(t, err)
@@ -156,7 +157,12 @@ func TestUpStatefulsetV1(t *testing.T) {
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
 
-	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, model.DevCloneName("e2etest"), timeout))
+	kubectlOpts = &commands.KubectlOptions{
+		Namespace: testNamespace,
+		File:      filepath.Join(dir, "deployment.yml"),
+		Name:      model.DevCloneName("e2etest"),
+	}
+	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, kubectlOpts, timeout))
 
 	varLocalEndpoint := "http://localhost:8085/var.html"
 	indexLocalEndpoint := "http://localhost:8085/index.html"
@@ -243,9 +249,10 @@ func TestUpStatefulsetV2(t *testing.T) {
 	kubectlOpts := &commands.KubectlOptions{
 		Namespace: testNamespace,
 		File:      filepath.Join(dir, "deployment.yml"),
+		Name:      "e2etest",
 	}
 	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
-	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "e2etest", timeout))
+	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, kubectlOpts, timeout))
 
 	originalStatefulSet, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest", c)
 	require.NoError(t, err)
@@ -261,7 +268,12 @@ func TestUpStatefulsetV2(t *testing.T) {
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
 
-	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, model.DevCloneName("e2etest"), timeout))
+	kubectlOpts = &commands.KubectlOptions{
+		Namespace: testNamespace,
+		File:      filepath.Join(dir, "deployment.yml"),
+		Name:      model.DevCloneName("e2etest"),
+	}
+	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, kubectlOpts, timeout))
 
 	varLocalEndpoint := "http://localhost:8086/var.html"
 	indexLocalEndpoint := "http://localhost:8086/index.html"

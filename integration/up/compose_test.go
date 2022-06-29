@@ -119,7 +119,11 @@ func TestUpCompose(t *testing.T) {
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
 
-	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, model.DevCloneName("app"), 1, timeout))
+	kubectlOpts := &commands.KubectlOptions{
+		Namespace: testNamespace,
+		Name:      model.DevCloneName("app"),
+	}
+	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
 	varRemoteEndpoint := fmt.Sprintf("https://nginx-%s.%s/var.html", testNamespace, appsSubdomain)
 	indexRemoteEndpoint := fmt.Sprintf("https://nginx-%s.%s/index.html", testNamespace, appsSubdomain)

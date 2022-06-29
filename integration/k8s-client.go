@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
-	"os/exec"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -94,22 +93,17 @@ func GetStatefulsetList(ctx context.Context, ns string, client kubernetes.Interf
 }
 
 // WaitForDeployment waits until a deployment is rollout correctly
-func WaitForDeployment(kubectlBinary, namespace, name string, revision int, timeout time.Duration) error {
+func WaitForDeployment(kubectlBinary string, kubectlOpts *commands.KubectlOptions, revision int, timeout time.Duration) error {
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	retry := 0
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("%s didn't rollout after %s", name, timeout.String())
+			return fmt.Errorf("%s didn't rollout after %s", kubectlOpts.Name, timeout.String())
 		case <-ticker.C:
-			args := []string{"--namespace", namespace, "rollout", "status", "deployment", name, "--revision", fmt.Sprintf("%d", revision)}
-			cmd := exec.Command(kubectlBinary, args...)
-			cmd.Env = os.Environ()
-			o, _ := cmd.CombinedOutput()
-			output := string(o)
+			output, _ := commands.RunKubectlRolloutDeployment(kubectlBinary, kubectlOpts, revision)
 			if retry%10 == 0 {
-				log.Printf("waitForDeployment command: %s", cmd.String())
 				log.Printf("waitForDeployment output: %s", output)
 			}
 
@@ -135,20 +129,15 @@ func WaitForDeployment(kubectlBinary, namespace, name string, revision int, time
 }
 
 // WaitForStatefulset waits until a sfs is rollout correctly
-func WaitForStatefulset(kubectlBinary, namespace, name string, timeout time.Duration) error {
+func WaitForStatefulset(kubectlBinary string, kubectlOpts *commands.KubectlOptions, timeout time.Duration) error {
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("%s didn't rollout after %s", name, timeout.String())
+			return fmt.Errorf("%s didn't rollout after %s", kubectlOpts, timeout.String())
 		case <-ticker.C:
-			args := []string{"--namespace", namespace, "rollout", "status", "statefulset", name}
-			cmd := exec.Command(kubectlBinary, args...)
-			cmd.Env = os.Environ()
-			o, _ := cmd.CombinedOutput()
-			log.Printf("waitForStatefulset command: %s", cmd.String())
-			output := string(o)
+			output, _ := commands.RunKubectlRolloutStatefulset(kubectlBinary, kubectlOpts)
 			log.Printf("waitForStatefulset output: %s", output)
 
 			if strings.Contains(output, "is different from the running revision") {
