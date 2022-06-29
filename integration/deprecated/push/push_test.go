@@ -29,6 +29,7 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
@@ -99,6 +100,9 @@ func TestPush(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	require.NoError(t, createDockerfile(dir))
 	require.NoError(t, createOktetoManifest(dir))
@@ -109,7 +113,7 @@ func TestPush(t *testing.T) {
 	endpoint := fmt.Sprintf("https://push-test-%s.%s/index.html", testNamespace, appsSubdomain)
 	require.NoError(t, waitUntilUpdatedContent(endpoint, dockerfile, timeout))
 
-	d, err := integration.GetDeployment(context.Background(), testNamespace, "push-test")
+	d, err := integration.GetDeployment(context.Background(), testNamespace, "push-test", c)
 	require.NoError(t, err)
 
 	imageName := fmt.Sprintf("registry.%s/%s/push-test:okteto", appsSubdomain, testNamespace)

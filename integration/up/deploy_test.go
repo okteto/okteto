@@ -25,6 +25,7 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
@@ -64,6 +65,9 @@ func TestUpWithDeploy(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -88,7 +92,7 @@ func TestUpWithDeploy(t *testing.T) {
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, model.DevCloneName("e2etest"), 1, timeout))
 
 	// Test that the app image has been created correctly
-	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, model.DevCloneName("e2etest"))
+	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, model.DevCloneName("e2etest"), c)
 	require.NoError(t, err)
 	appImageDev := fmt.Sprintf("%s/%s/test:1.0.0", okteto.Context().Registry, testNamespace)
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)

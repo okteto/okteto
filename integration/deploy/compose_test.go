@@ -26,6 +26,7 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/stretchr/testify/require"
@@ -120,6 +121,9 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -130,25 +134,25 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	// Test that the nginx image has been created correctly
-	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx")
+	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx", c)
 	require.NoError(t, err)
 	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto-with-volume-mounts", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
 
 	// Test that the nginx image has been created correctly
-	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app")
+	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
 	// Test that the k8s services has been created correctly
-	appService, err := integration.GetService(context.Background(), testNamespace, "app")
+	appService, err := integration.GetService(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	require.Len(t, appService.Spec.Ports, 3)
 	for _, p := range appService.Spec.Ports {
 		require.Contains(t, []int32{8080, 8913, 2931}, p.Port)
 	}
-	nginxService, err := integration.GetService(context.Background(), testNamespace, "nginx")
+	nginxService, err := integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.NoError(t, err)
 	require.Len(t, nginxService.Spec.Ports, 2)
 	for _, p := range nginxService.Spec.Ports {
@@ -184,6 +188,9 @@ func TestDeployPipelineFromComposeOnlyOneSvc(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:          dir,
@@ -195,11 +202,11 @@ func TestDeployPipelineFromComposeOnlyOneSvc(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	// Test that the nginx image has been created correctly
-	_, err = integration.GetDeployment(context.Background(), testNamespace, "nginx")
+	_, err = integration.GetDeployment(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
 
 	// Test that the nginx image has been created correctly
-	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app")
+	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
@@ -234,6 +241,9 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -244,14 +254,14 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	// Test that the nginx image has been created correctly
-	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx")
+	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx", c)
 	require.NoError(t, err)
 
 	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto-with-volume-mounts", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
 
 	// Test that the nginx image has been created correctly
-	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app")
+	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 
 	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))

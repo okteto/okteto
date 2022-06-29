@@ -25,9 +25,12 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/client-go/kubernetes"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -121,6 +124,9 @@ func TestUpDeploymentV1(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -137,7 +143,7 @@ func TestUpDeploymentV1(t *testing.T) {
 	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, "e2etest", 1, timeout))
 
-	originalDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest")
+	originalDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest", c)
 	require.NoError(t, err)
 
 	upOptions := &commands.UpOptions{
@@ -174,12 +180,12 @@ func TestUpDeploymentV1(t *testing.T) {
 	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
 
 	// Test modify deployment gets updated
-	d, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest")
+	d, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest", c)
 	d.ResourceVersion = ""
 	require.NoError(t, err)
 	d.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	originalDeployment.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
-	require.NoError(t, integration.UpdateDeployment(context.Background(), testNamespace, d))
+	require.NoError(t, integration.UpdateDeployment(context.Background(), testNamespace, d, c))
 	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
 
 	// Test kill syncthing reconnection
@@ -206,7 +212,7 @@ func TestUpDeploymentV1(t *testing.T) {
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
 
 	// Test that original hasn't change
-	require.NoError(t, compareDeployment(context.Background(), originalDeployment))
+	require.NoError(t, compareDeployment(context.Background(), originalDeployment, c))
 }
 
 func TestUpDeploymentV2(t *testing.T) {
@@ -224,6 +230,9 @@ func TestUpDeploymentV2(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -240,7 +249,7 @@ func TestUpDeploymentV2(t *testing.T) {
 	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, testNamespace, "e2etest", 1, timeout))
 
-	originalDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest")
+	originalDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest", c)
 	require.NoError(t, err)
 
 	upOptions := &commands.UpOptions{
@@ -277,12 +286,12 @@ func TestUpDeploymentV2(t *testing.T) {
 	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
 
 	// Test modify deployment gets updated
-	d, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest")
+	d, err := integration.GetDeployment(context.Background(), testNamespace, "e2etest", c)
 	d.ResourceVersion = ""
 	require.NoError(t, err)
 	d.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	originalDeployment.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
-	require.NoError(t, integration.UpdateDeployment(context.Background(), testNamespace, d))
+	require.NoError(t, integration.UpdateDeployment(context.Background(), testNamespace, d, c))
 	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
 
 	// Test kill syncthing reconnection
@@ -309,11 +318,11 @@ func TestUpDeploymentV2(t *testing.T) {
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
 
 	// Test that original hasn't change
-	require.NoError(t, compareDeployment(context.Background(), originalDeployment))
+	require.NoError(t, compareDeployment(context.Background(), originalDeployment, c))
 }
 
-func compareDeployment(ctx context.Context, deployment *appsv1.Deployment) error {
-	after, err := integration.GetDeployment(ctx, deployment.GetNamespace(), deployment.GetName())
+func compareDeployment(ctx context.Context, deployment *appsv1.Deployment, c kubernetes.Interface) error {
+	after, err := integration.GetDeployment(ctx, deployment.GetNamespace(), deployment.GetName(), c)
 	if err != nil {
 		return err
 	}

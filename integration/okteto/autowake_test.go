@@ -28,9 +28,11 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -168,6 +170,8 @@ func TestAutoWakeFromURL(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	// Prepare test environment
@@ -196,11 +200,11 @@ func TestAutoWakeFromURL(t *testing.T) {
 	// Test endpoint is working
 	autowakeURL := fmt.Sprintf("https://autowake-deployment-%s.%s", testNamespace, appsSubdomain)
 	require.NoError(t, waitUntilUpdatedContent(autowakeURL, "test", timeout))
-	require.True(t, areNamespaceResourcesAwake(testNamespace, timeout))
+	require.True(t, areNamespaceResourcesAwake(testNamespace, timeout, c))
 
 	// Sleep namespace
 	require.NoError(t, sleepNamespace(testNamespace))
-	require.True(t, areNamespaceResourcesSleeping(testNamespace, timeout))
+	require.True(t, areNamespaceResourcesSleeping(testNamespace, timeout, c))
 
 	// Wake resources from url
 	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
@@ -228,6 +232,8 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	// Prepare test environment
@@ -236,7 +242,6 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 	require.NoError(t, writeIndexHTML(dir))
 	require.NoError(t, writeOktetoManifest(dir))
 	require.NoError(t, writeStIgnore(dir))
-
 	kubectlOpts := &commands.KubectlOptions{
 		Namespace:  testNamespace,
 		File:       filepath.Join(dir, deploymentManifestName),
@@ -255,7 +260,7 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 
 	// Sleep namespace
 	require.NoError(t, sleepNamespace(testNamespace))
-	require.True(t, areNamespaceResourcesSleeping(testNamespace, timeout))
+	require.True(t, areNamespaceResourcesSleeping(testNamespace, timeout, c))
 
 	// Wake up from okteto up
 	upOptions := &commands.UpOptions{
@@ -269,7 +274,7 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 	upCommand, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
 
-	require.True(t, areNamespaceResourcesAwake(testNamespace, timeout))
+	require.True(t, areNamespaceResourcesAwake(testNamespace, timeout, c))
 
 	downOpts := &commands.DownOptions{
 		Namespace:    testNamespace,
@@ -336,7 +341,7 @@ func sleepNamespace(namespace string) error {
 	return nil
 }
 
-func areNamespaceResourcesSleeping(namespace string, timeout time.Duration) bool {
+func areNamespaceResourcesSleeping(namespace string, timeout time.Duration, c kubernetes.Interface) bool {
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	retry := 0
@@ -346,7 +351,7 @@ func areNamespaceResourcesSleeping(namespace string, timeout time.Duration) bool
 			log.Printf("Resources not sleeping")
 			return false
 		case <-ticker.C:
-			d, err := integration.GetDeployment(context.Background(), namespace, "autowake")
+			d, err := integration.GetDeployment(context.Background(), namespace, "autowake", c)
 			if err != nil {
 				if retry%10 == 0 {
 					log.Printf("error getting deployment: %s", err.Error())
@@ -360,7 +365,7 @@ func areNamespaceResourcesSleeping(namespace string, timeout time.Duration) bool
 				}
 				continue
 			}
-			sfs, err := integration.GetStatefulset(context.Background(), namespace, "autowake")
+			sfs, err := integration.GetStatefulset(context.Background(), namespace, "autowake", c)
 			if err != nil {
 				if retry%10 == 0 {
 					log.Printf("error getting sfs: %s", err.Error())
@@ -378,7 +383,7 @@ func areNamespaceResourcesSleeping(namespace string, timeout time.Duration) bool
 	}
 }
 
-func areNamespaceResourcesAwake(namespace string, timeout time.Duration) bool {
+func areNamespaceResourcesAwake(namespace string, timeout time.Duration, c kubernetes.Interface) bool {
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	retry := 0
@@ -389,7 +394,7 @@ func areNamespaceResourcesAwake(namespace string, timeout time.Duration) bool {
 			return false
 		case <-ticker.C:
 			retry++
-			dList, err := integration.GetDeploymentList(context.Background(), namespace)
+			dList, err := integration.GetDeploymentList(context.Background(), namespace, c)
 			if err != nil {
 				if retry%10 == 0 {
 					log.Printf("error getting deployments: %s", err.Error())
@@ -412,7 +417,7 @@ func areNamespaceResourcesAwake(namespace string, timeout time.Duration) bool {
 				continue
 			}
 
-			sfsList, err := integration.GetStatefulsetList(context.Background(), namespace)
+			sfsList, err := integration.GetStatefulsetList(context.Background(), namespace, c)
 			if err != nil {
 				if retry%10 == 0 {
 					log.Printf("error getting sfs: %s", err.Error())

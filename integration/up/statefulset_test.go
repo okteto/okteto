@@ -25,9 +25,12 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/client-go/kubernetes"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -120,6 +123,9 @@ func TestUpStatefulsetV1(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -136,7 +142,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
 	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "e2etest", timeout))
 
-	originalStatefulSet, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest")
+	originalStatefulSet, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest", c)
 	require.NoError(t, err)
 
 	upOptions := &commands.UpOptions{
@@ -173,11 +179,11 @@ func TestUpStatefulsetV1(t *testing.T) {
 	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
 
 	// Test modify statefulset gets updated
-	sfs, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest")
+	sfs, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest", c)
 	require.NoError(t, err)
 	sfs.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	originalStatefulSet.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
-	require.NoError(t, integration.UpdateStatefulset(context.Background(), testNamespace, sfs))
+	require.NoError(t, integration.UpdateStatefulset(context.Background(), testNamespace, sfs, c))
 	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
 
 	// Test kill syncthing reconnection
@@ -204,7 +210,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
 
 	// Test that original hasn't change
-	require.NoError(t, compareStatefulSet(context.Background(), originalStatefulSet))
+	require.NoError(t, compareStatefulSet(context.Background(), originalStatefulSet, c))
 }
 
 func TestUpStatefulsetV2(t *testing.T) {
@@ -222,6 +228,9 @@ func TestUpStatefulsetV2(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -238,7 +247,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 	require.NoError(t, commands.RunKubectlApply(kubectlBinary, kubectlOpts))
 	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, testNamespace, "e2etest", timeout))
 
-	originalStatefulSet, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest")
+	originalStatefulSet, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest", c)
 	require.NoError(t, err)
 
 	upOptions := &commands.UpOptions{
@@ -275,11 +284,11 @@ func TestUpStatefulsetV2(t *testing.T) {
 	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
 
 	// Test modify statefulset gets updated
-	sfs, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest")
+	sfs, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest", c)
 	require.NoError(t, err)
 	sfs.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	originalStatefulSet.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
-	require.NoError(t, integration.UpdateStatefulset(context.Background(), testNamespace, sfs))
+	require.NoError(t, integration.UpdateStatefulset(context.Background(), testNamespace, sfs, c))
 	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
 
 	// Test kill syncthing reconnection
@@ -306,11 +315,11 @@ func TestUpStatefulsetV2(t *testing.T) {
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
 
 	// Test that original hasn't change
-	require.NoError(t, compareStatefulSet(context.Background(), originalStatefulSet))
+	require.NoError(t, compareStatefulSet(context.Background(), originalStatefulSet, c))
 }
 
-func compareStatefulSet(ctx context.Context, deployment *appsv1.StatefulSet) error {
-	after, err := integration.GetStatefulset(ctx, deployment.GetNamespace(), deployment.GetName())
+func compareStatefulSet(ctx context.Context, deployment *appsv1.StatefulSet, c kubernetes.Interface) error {
+	after, err := integration.GetStatefulset(ctx, deployment.GetNamespace(), deployment.GetName(), c)
 	if err != nil {
 		return err
 	}

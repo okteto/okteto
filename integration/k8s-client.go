@@ -50,44 +50,24 @@ func getClientConfig(kubeconfigPaths []string, kubeContext string) clientcmd.Cli
 }
 
 // GetService returns a service given a namespace and a name
-func GetService(ctx context.Context, ns, name string) (*corev1.Service, error) {
-	client, _, err := K8sClient()
-	if err != nil {
-		return nil, err
-	}
-
+func GetService(ctx context.Context, ns, name string, client kubernetes.Interface) (*corev1.Service, error) {
 	return client.CoreV1().Services(ns).Get(ctx, name, metav1.GetOptions{})
 }
 
 // GetDeployment returns a deployment given a namespace and name
-func GetDeployment(ctx context.Context, ns, name string) (*appsv1.Deployment, error) {
-	client, _, err := K8sClient()
-	if err != nil {
-		return nil, err
-	}
-
+func GetDeployment(ctx context.Context, ns, name string, client kubernetes.Interface) (*appsv1.Deployment, error) {
 	return client.AppsV1().Deployments(ns).Get(ctx, name, metav1.GetOptions{})
 }
 
 // UpdateDeployment updates a current deployment
-func UpdateDeployment(ctx context.Context, ns string, d *appsv1.Deployment) error {
-	client, _, err := K8sClient()
-	if err != nil {
-		return err
-	}
-
-	_, err = client.AppsV1().Deployments(ns).Update(ctx, d, metav1.UpdateOptions{})
+func UpdateDeployment(ctx context.Context, ns string, d *appsv1.Deployment, client kubernetes.Interface) error {
+	_, err := client.AppsV1().Deployments(ns).Update(ctx, d, metav1.UpdateOptions{})
 	return err
 }
 
 // UpdateStatefulset updates a statefulset
-func UpdateStatefulset(ctx context.Context, ns string, sfs *appsv1.StatefulSet) error {
-	client, _, err := K8sClient()
-	if err != nil {
-		return err
-	}
-
-	_, err = client.AppsV1().StatefulSets(ns).Update(ctx, sfs, metav1.UpdateOptions{})
+func UpdateStatefulset(ctx context.Context, ns string, sfs *appsv1.StatefulSet, client kubernetes.Interface) error {
+	_, err := client.AppsV1().StatefulSets(ns).Update(ctx, sfs, metav1.UpdateOptions{})
 	return err
 }
 
@@ -97,33 +77,18 @@ func GetConfigmap(ctx context.Context, ns, name string, client kubernetes.Interf
 }
 
 // GetDeploymentList returns all deployments given a namespace
-func GetDeploymentList(ctx context.Context, ns string) ([]appsv1.Deployment, error) {
-	client, _, err := K8sClient()
-	if err != nil {
-		return nil, err
-	}
-
+func GetDeploymentList(ctx context.Context, ns string, client kubernetes.Interface) ([]appsv1.Deployment, error) {
 	dList, err := client.AppsV1().Deployments(ns).List(ctx, metav1.ListOptions{})
 	return dList.Items, err
 }
 
 // GetStatefulset returns a sfs given a namespace and name
-func GetStatefulset(ctx context.Context, ns, name string) (*appsv1.StatefulSet, error) {
-	client, _, err := K8sClient()
-	if err != nil {
-		return nil, err
-	}
-
+func GetStatefulset(ctx context.Context, ns, name string, client kubernetes.Interface) (*appsv1.StatefulSet, error) {
 	return client.AppsV1().StatefulSets(ns).Get(ctx, name, metav1.GetOptions{})
 }
 
 // GetStatefulsetList returns all sfs given a namespace
-func GetStatefulsetList(ctx context.Context, ns string) ([]appsv1.StatefulSet, error) {
-	client, _, err := K8sClient()
-	if err != nil {
-		return nil, err
-	}
-
+func GetStatefulsetList(ctx context.Context, ns string, client kubernetes.Interface) ([]appsv1.StatefulSet, error) {
 	sfsList, err := client.AppsV1().StatefulSets(ns).List(ctx, metav1.ListOptions{})
 	return sfsList.Items, err
 }

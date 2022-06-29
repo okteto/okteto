@@ -29,6 +29,8 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -115,8 +117,12 @@ func executeApply(namespace string) error {
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
 	}
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{""}))
+	if err != nil {
+		return err
+	}
 
-	d, err := integration.GetDeployment(context.Background(), namespace, namespace)
+	d, err := integration.GetDeployment(context.Background(), namespace, namespace, c)
 	if err != nil || d == nil {
 		return fmt.Errorf("Could not get deployment %s", namespace)
 	}

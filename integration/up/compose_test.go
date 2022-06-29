@@ -26,7 +26,9 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
 )
 
@@ -100,9 +102,11 @@ func TestUpCompose(t *testing.T) {
 		OktetoHome: dir,
 		Token:      token,
 	}
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
-	originalDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app")
+	originalDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 
 	upOptions := &commands.UpOptions{
@@ -154,7 +158,7 @@ func TestUpCompose(t *testing.T) {
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
 
 	// Test that original hasn't change
-	require.NoError(t, compareDeployment(context.Background(), originalDeployment))
+	require.NoError(t, compareDeployment(context.Background(), originalDeployment, c))
 }
 
 func createAppDockerfile(dir string) error {
