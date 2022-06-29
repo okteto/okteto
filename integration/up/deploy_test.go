@@ -57,8 +57,12 @@ func TestUpWithDeploy(t *testing.T) {
 	require.NoError(t, err)
 
 	testNamespace := integration.GetTestNamespace("TestUpWithDeploy", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -70,10 +74,11 @@ func TestUpWithDeploy(t *testing.T) {
 	require.NoError(t, createAppDockerfile(dir))
 
 	upOptions := &commands.UpOptions{
-		Name:      "e2etest",
-		Namespace: testNamespace,
-		Workdir:   dir,
-		Deploy:    true,
+		Name:       "e2etest",
+		Namespace:  testNamespace,
+		Workdir:    dir,
+		Deploy:     true,
+		OktetoHome: dir,
 	}
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)

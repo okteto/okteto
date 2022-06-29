@@ -15,7 +15,10 @@ package commands
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
+
+	"github.com/okteto/okteto/pkg/model"
 )
 
 // BuildOptions defines the options that can be added to a build command
@@ -25,6 +28,7 @@ type BuildOptions struct {
 	SvcsToBuild  []string
 	Tag          string
 	Namespace    string
+	OktetoHome   string
 }
 
 // RunOktetoBuild runs an okteto build command
@@ -45,6 +49,14 @@ func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
 	}
 	if len(buildOptions.SvcsToBuild) > 0 {
 		cmd.Args = append(cmd.Args, buildOptions.SvcsToBuild...)
+	}
+
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if buildOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, buildOptions.OktetoHome))
 	}
 
 	o, err := cmd.CombinedOutput()

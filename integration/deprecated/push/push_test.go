@@ -79,12 +79,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	originalNamespace := integration.GetCurrentNamespace()
-
 	exitCode := m.Run()
-
-	oktetoPath, _ := integration.GetOktetoPath()
-	commands.RunOktetoNamespace(oktetoPath, originalNamespace)
 	os.Exit(exitCode)
 }
 
@@ -94,8 +89,12 @@ func TestPush(t *testing.T) {
 	dir := t.TempDir()
 
 	testNamespace := integration.GetTestNamespace("TestPush", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	require.NoError(t, createDockerfile(dir))
 	require.NoError(t, createOktetoManifest(dir))

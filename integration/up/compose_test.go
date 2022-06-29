@@ -77,8 +77,12 @@ func TestUpCompose(t *testing.T) {
 	require.NoError(t, err)
 
 	testNamespace := integration.GetTestNamespace("TestUpCompose", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -90,8 +94,9 @@ func TestUpCompose(t *testing.T) {
 	require.NoError(t, createNginxDir(dir))
 
 	deployOptions := &commands.DeployOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -99,9 +104,10 @@ func TestUpCompose(t *testing.T) {
 	require.NoError(t, err)
 
 	upOptions := &commands.UpOptions{
-		Name:      "app",
-		Namespace: testNamespace,
-		Workdir:   dir,
+		Name:       "app",
+		Namespace:  testNamespace,
+		Workdir:    dir,
+		OktetoHome: dir,
 	}
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)

@@ -18,6 +18,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+
+	"github.com/okteto/okteto/pkg/model"
 )
 
 // DeployPreviewOptions defines the options that can be added to a deploy command
@@ -28,12 +30,14 @@ type DeployPreviewOptions struct {
 	Branch     string
 	Repository string
 	Wait       bool
+	OktetoHome string
 }
 
 // DestroyPreviewOptions defines the options that can be added to a deploy command
 type DestroyPreviewOptions struct {
-	Workdir   string
-	Namespace string
+	Workdir    string
+	Namespace  string
+	OktetoHome string
 }
 
 // RunOktetoDeployPreview runs an okteto deploy command
@@ -60,6 +64,13 @@ func RunOktetoDeployPreview(oktetoPath string, deployOptions *DeployPreviewOptio
 	}
 
 	cmd.Env = os.Environ()
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if deployOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
+	}
 	log.Printf("Running '%s'", cmd.String())
 	o, err := cmd.CombinedOutput()
 	if err != nil {
@@ -75,7 +86,13 @@ func RunOktetoPreviewDestroy(oktetoPath string, destroyOptions *DestroyPreviewOp
 	if destroyOptions.Workdir != "" {
 		cmd.Dir = destroyOptions.Workdir
 	}
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
 
+	if destroyOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, destroyOptions.OktetoHome))
+	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto deploy failed: %s - %s", string(o), err)

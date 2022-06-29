@@ -16,7 +16,10 @@ package commands
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+
+	"github.com/okteto/okteto/pkg/model"
 )
 
 // DeployOptions defines the options that can be added to a deploy command
@@ -28,6 +31,7 @@ type DeployOptions struct {
 	LogOutput        string
 	ServicesToDeploy []string
 	Namespace        string
+	OktetoHome       string
 }
 
 // DestroyOptions defines the options that can be added to a deploy command
@@ -35,6 +39,7 @@ type DestroyOptions struct {
 	Workdir      string
 	ManifestPath string
 	Namespace    string
+	OktetoHome   string
 }
 
 // RunOktetoDeploy runs an okteto deploy command
@@ -75,6 +80,13 @@ func RunOktetoDestroy(oktetoPath string, destroyOptions *DestroyOptions) error {
 	if destroyOptions.Namespace != "" {
 		cmd.Args = append(cmd.Args, "--namespace", destroyOptions.Namespace)
 	}
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if destroyOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, destroyOptions.OktetoHome))
+	}
 
 	o, err := cmd.CombinedOutput()
 	if err != nil {
@@ -106,6 +118,13 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 	}
 	if deployOptions.LogOutput != "" {
 		cmd.Args = append(cmd.Args, "--log-output", deployOptions.LogOutput)
+	}
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if deployOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
 	}
 	return cmd
 }

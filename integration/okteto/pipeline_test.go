@@ -36,8 +36,13 @@ func TestPipelineCommand(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
 
+	dir := t.TempDir()
 	testNamespace := integration.GetTestNamespace("TestPipeline", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	// defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
 	pipelineOptions := &commands.DeployPipelineOptions{
@@ -45,6 +50,7 @@ func TestPipelineCommand(t *testing.T) {
 		Repository: fmt.Sprintf("%s/%s", githubHTTPSURL, pipelineRepo),
 		Branch:     "cli-e2e",
 		Wait:       true,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDeployPipeline(oktetoPath, pipelineOptions))
 
@@ -52,8 +58,9 @@ func TestPipelineCommand(t *testing.T) {
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
 
 	pipelineDestroyOptions := &commands.DestroyPipelineOptions{
-		Namespace: testNamespace,
-		Name:      "movies",
+		Namespace:  testNamespace,
+		Name:       "movies",
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoPipelineDestroy(oktetoPath, pipelineDestroyOptions))
 }

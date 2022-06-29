@@ -113,12 +113,17 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	require.NoError(t, createComposeScenario(dir))
 
 	testNamespace := integration.GetTestNamespace("TestDeployCompose", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	deployOptions := &commands.DeployOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -149,8 +154,9 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	}
 
 	destroyOptions := &commands.DestroyOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 }
@@ -169,13 +175,18 @@ func TestDeployPipelineFromComposeOnlyOneSvc(t *testing.T) {
 	require.NoError(t, createComposeScenario(dir))
 
 	testNamespace := integration.GetTestNamespace("TestDeployPartialCompose", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:          dir,
 		ServicesToDeploy: []string{"app"},
 		Namespace:        testNamespace,
+		OktetoHome:       dir,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -190,8 +201,9 @@ func TestDeployPipelineFromComposeOnlyOneSvc(t *testing.T) {
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
 	destroyOptions := &commands.DestroyOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 }
@@ -211,12 +223,17 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	require.NoError(t, createStacksScenario(dir))
 
 	testNamespace := integration.GetTestNamespace("TestDeployStacks", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	deployOptions := &commands.DeployOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -235,8 +252,9 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
 	destroyOptions := &commands.DestroyOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 }

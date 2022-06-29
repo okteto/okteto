@@ -54,20 +54,25 @@ func TestDeployPipelineManifest(t *testing.T) {
 	require.NoError(t, createK8sManifest(dir))
 
 	testNamespace := integration.GetTestNamespace("TestDeployPipeline", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace: testNamespace,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	deployOptions := &commands.DeployOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 
@@ -81,12 +86,16 @@ func TestDeployPipelineManifestInsidePipeline(t *testing.T) {
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
+	dir := t.TempDir()
 
 	testNamespace := integration.GetTestNamespace("TestDeploy", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
-	dir := t.TempDir()
 	require.NoError(t, createPipelineInsidePipelineManifest(dir, oktetoPath, testNamespace))
 	require.NoError(t, createK8sManifest(dir))
 
@@ -94,14 +103,16 @@ func TestDeployPipelineManifestInsidePipeline(t *testing.T) {
 		Workdir:      dir,
 		ManifestPath: pipelineDeployPipelineManifestName,
 		Namespace:    testNamespace,
+		OktetoHome:   dir,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 }

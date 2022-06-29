@@ -85,20 +85,26 @@ func TestDeployDevEnvFromK8s(t *testing.T) {
 	require.NoError(t, createK8sManifest(dir))
 
 	testNamespace := integration.GetTestNamespace("TestDeployK8sFile", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	deployOptions := &commands.DeployOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 }

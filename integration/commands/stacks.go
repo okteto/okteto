@@ -16,7 +16,10 @@ package commands
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+
+	"github.com/okteto/okteto/pkg/model"
 )
 
 // StackDeployOptions defines the options that can be added to a deploy command
@@ -24,12 +27,14 @@ type StackDeployOptions struct {
 	Workdir      string
 	ManifestPath string
 	Build        bool
+	OktetoHome   string
 }
 
 // StackDestroyOptions defines the options that can be added to a deploy command
 type StackDestroyOptions struct {
 	Workdir      string
 	ManifestPath string
+	OktetoHome   string
 }
 
 // RunOktetoStackDeploy runs an okteto deploy command
@@ -43,6 +48,14 @@ func RunOktetoStackDeploy(oktetoPath string, deployOptions *StackDeployOptions) 
 	}
 	if deployOptions.ManifestPath != "" {
 		cmd.Args = append(cmd.Args, "-f", deployOptions.ManifestPath)
+	}
+
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if deployOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
 	}
 
 	log.Printf("Running '%s'", cmd.String())
@@ -65,6 +78,13 @@ func RunOktetoStackDestroy(oktetoPath string, deployOptions *StackDestroyOptions
 		cmd.Args = append(cmd.Args, "-f", deployOptions.ManifestPath)
 	}
 
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if deployOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
+	}
 	log.Printf("Running '%s'", cmd.String())
 
 	o, err := cmd.CombinedOutput()

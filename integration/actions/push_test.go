@@ -43,7 +43,7 @@ func TestPushAction(t *testing.T) {
 	}
 
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
-	assert.NoError(t, commands.RunOktetoKubeconfig(oktetoPath))
+	assert.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, ""))
 	assert.NoError(t, executeApply(namespace))
 	assert.NoError(t, executePushAction(t, namespace))
 	assert.NoError(t, executeDeleteNamespaceAction(namespace))

@@ -113,8 +113,12 @@ func TestUpStatefulsetV1(t *testing.T) {
 	require.NoError(t, err)
 
 	testNamespace := integration.GetTestNamespace("TestUpStatefulsetV1", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -135,6 +139,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 		Namespace:    testNamespace,
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, "okteto.yml"),
+		OktetoHome:   dir,
 	}
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
@@ -159,7 +164,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localupdatedContent, timeout, upResult.ErrorChan))
 
 	// Test that stignore has been created
-	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath))
+	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
 
 	// Test modify statefulset gets updated
 	sfs, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest")
@@ -203,8 +208,12 @@ func TestUpStatefulsetV2(t *testing.T) {
 	require.NoError(t, err)
 
 	testNamespace := integration.GetTestNamespace("TestUpStatefulsetV2", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -225,6 +234,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 		Namespace:    testNamespace,
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, "okteto.yml"),
+		OktetoHome:   dir,
 	}
 	upResult, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)
@@ -249,7 +259,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localupdatedContent, timeout, upResult.ErrorChan))
 
 	// Test that stignore has been created
-	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath))
+	require.NoError(t, checkStignoreIsOnRemote(testNamespace, filepath.Join(dir, "okteto.yml"), oktetoPath, dir))
 
 	// Test modify statefulset gets updated
 	sfs, err := integration.GetStatefulset(context.Background(), testNamespace, "e2etest")

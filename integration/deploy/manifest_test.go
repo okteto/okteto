@@ -56,12 +56,17 @@ func TestDeployOktetoManifest(t *testing.T) {
 	require.NoError(t, createK8sManifest(dir))
 
 	testNamespace := integration.GetTestNamespace("TestDeployManifestV2", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	deployOptions := &commands.DeployOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -75,8 +80,9 @@ func TestDeployOktetoManifest(t *testing.T) {
 	require.NotEmpty(t, getImageWithSHA(appImageDev))
 
 	destroyOptions := &commands.DestroyOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 }
@@ -96,16 +102,21 @@ func TestRedeployOktetoManifestForImages(t *testing.T) {
 	require.NoError(t, createK8sManifest(dir))
 
 	testNamespace := integration.GetTestNamespace("TestReDeploy", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	// Test that image is not built before running okteto deploy
 	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.False(t, isImageBuilt(appImageDev))
 
 	deployOptions := &commands.DeployOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -132,8 +143,9 @@ func TestRedeployOktetoManifestForImages(t *testing.T) {
 	require.NoError(t, expectForceBuild(output))
 
 	destroyOptions := &commands.DestroyOptions{
-		Workdir:   dir,
-		Namespace: testNamespace,
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 }

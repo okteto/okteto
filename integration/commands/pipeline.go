@@ -18,6 +18,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+
+	"github.com/okteto/okteto/pkg/model"
 )
 
 // DeployPipelineOptions defines the options that can be added to a deploy command
@@ -27,13 +29,15 @@ type DeployPipelineOptions struct {
 	Branch     string
 	Repository string
 	Wait       bool
+	OktetoHome string
 }
 
 // DestroyPipelineOptions defines the options that can be added to a deploy command
 type DestroyPipelineOptions struct {
-	Workdir   string
-	Namespace string
-	Name      string
+	Workdir    string
+	Namespace  string
+	Name       string
+	OktetoHome string
 }
 
 // RunOktetoDeployPipeline runs an okteto deploy command
@@ -54,6 +58,13 @@ func RunOktetoDeployPipeline(oktetoPath string, deployOptions *DeployPipelineOpt
 	}
 
 	cmd.Env = os.Environ()
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if deployOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
+	}
 	log.Printf("Running '%s'", cmd.String())
 	o, err := cmd.CombinedOutput()
 	if err != nil {
@@ -74,6 +85,13 @@ func RunOktetoPipelineDestroy(oktetoPath string, destroyOptions *DestroyPipeline
 		cmd.Args = append(cmd.Args, "--name", destroyOptions.Name)
 	}
 
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if destroyOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, destroyOptions.OktetoHome))
+	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto deploy failed: %s - %s", string(o), err)

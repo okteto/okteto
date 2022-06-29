@@ -25,6 +25,7 @@ import (
 
 	ps "github.com/mitchellh/go-ps"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/model"
 )
 
 // UpOptions has the options for okteto up command
@@ -34,6 +35,7 @@ type UpOptions struct {
 	ManifestPath string
 	Workdir      string
 	Deploy       bool
+	OktetoHome   string
 }
 
 // UpCommandProcessResult has the information about the command process
@@ -97,6 +99,13 @@ func getUpCmd(oktetoPath string, upOptions *UpOptions) *exec.Cmd {
 	if upOptions.Deploy {
 		cmd.Args = append(cmd.Args, "--deploy")
 	}
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if upOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, upOptions.OktetoHome))
+	}
 	return cmd
 }
 
@@ -105,6 +114,7 @@ type DownOptions struct {
 	Namespace    string
 	ManifestPath string
 	Workdir      string
+	OktetoHome   string
 }
 
 // RunOktetoDown runs an okteto down command
@@ -118,6 +128,13 @@ func RunOktetoDown(oktetoPath string, downOpts *DownOptions) error {
 	}
 	if downOpts.Workdir != "" {
 		downCMD.Dir = downOpts.Workdir
+	}
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		downCMD.Env = append(downCMD.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if downOpts.OktetoHome != "" {
+		downCMD.Env = append(downCMD.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, downOpts.OktetoHome))
 	}
 	downCMD.Env = os.Environ()
 	o, err := downCMD.CombinedOutput()

@@ -18,6 +18,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+
+	"github.com/okteto/okteto/pkg/model"
 )
 
 // ExecOptions are the options to add to an exec command
@@ -25,6 +27,7 @@ type ExecOptions struct {
 	Namespace    string
 	ManifestPath string
 	Command      string
+	OktetoHome   string
 }
 
 // RunExecCommand runs an exec command
@@ -41,6 +44,13 @@ func RunExecCommand(oktetoPath string, execOptions *ExecOptions) (string, error)
 
 	if execOptions.Command != "" {
 		cmd.Args = append(cmd.Args, "--", execOptions.Command)
+	}
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if execOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, execOptions.OktetoHome))
 	}
 	log.Printf("Running exec command: %s", cmd.String())
 	bytes, err := cmd.CombinedOutput()

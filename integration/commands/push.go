@@ -16,7 +16,10 @@ package commands
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+
+	"github.com/okteto/okteto/pkg/model"
 )
 
 // RunOktetoPush runs an okteto push command
@@ -24,6 +27,10 @@ func RunOktetoPush(oktetoPath, workdir string) error {
 	cmd := exec.Command(oktetoPath, "push")
 	if workdir != "" {
 		cmd.Dir = workdir
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, workdir))
+	}
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
 	}
 
 	log.Printf("Running '%s'", cmd.String())

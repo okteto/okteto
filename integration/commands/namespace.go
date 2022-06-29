@@ -20,16 +20,30 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
+// NamespaceOptions defines the options that can be added to a build command
+type NamespaceOptions struct {
+	Namespace  string
+	OktetoHome string
+}
+
 // RunOktetoCreateNamespace runs okteto namespace create
-func RunOktetoCreateNamespace(oktetoPath, namespace string) error {
+func RunOktetoCreateNamespace(oktetoPath string, namespaceOpts *NamespaceOptions) error {
 	okteto.CurrentStore = nil
-	log.Printf("creating namespace %s", namespace)
-	args := []string{"namespace", "create", namespace, "-l", "debug"}
+	log.Printf("creating namespace %s", namespaceOpts.Namespace)
+	args := []string{"namespace", "create", namespaceOpts.Namespace, "-l", "debug"}
 	cmd := exec.Command(oktetoPath, args...)
 	cmd.Env = os.Environ()
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if namespaceOpts.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
+	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
@@ -41,12 +55,20 @@ func RunOktetoCreateNamespace(oktetoPath, namespace string) error {
 }
 
 // RunOktetoNamespace runs okteto namespace command
-func RunOktetoNamespace(oktetoPath, namespace string) error {
+func RunOktetoNamespace(oktetoPath string, namespaceOpts *NamespaceOptions) error {
 	okteto.CurrentStore = nil
-	log.Printf("changing to namespace %s", namespace)
-	args := []string{"namespace", namespace, "-l", "debug"}
+	log.Printf("changing to namespace %s", namespaceOpts.Namespace)
+	args := []string{"namespace", namespaceOpts.Namespace, "-l", "debug"}
 	cmd := exec.Command(oktetoPath, args...)
+
 	cmd.Env = os.Environ()
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if namespaceOpts.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
+	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
@@ -55,8 +77,8 @@ func RunOktetoNamespace(oktetoPath, namespace string) error {
 	log.Printf("namespace output: \n%s\n", string(o))
 
 	n := okteto.Context().Namespace
-	if namespace != n {
-		return fmt.Errorf("current namespace is %s, expected %s", n, namespace)
+	if namespaceOpts.Namespace != n {
+		return fmt.Errorf("current namespace is %s, expected %s", n, namespaceOpts.Namespace)
 	}
 	args = []string{"kubeconfig"}
 	cmd = exec.Command(oktetoPath, args...)
@@ -70,10 +92,18 @@ func RunOktetoNamespace(oktetoPath, namespace string) error {
 }
 
 // RunOktetoDeleteNamespace runs okteto namespace delete
-func RunOktetoDeleteNamespace(oktetoPath, namespace string) error {
-	log.Printf("okteto delete namespace %s", namespace)
-	deleteCMD := exec.Command(oktetoPath, "namespace", "delete", namespace)
+func RunOktetoDeleteNamespace(oktetoPath string, namespaceOpts *NamespaceOptions) error {
+	log.Printf("okteto delete namespace %s", namespaceOpts.Namespace)
+	deleteCMD := exec.Command(oktetoPath, "namespace", "delete", namespaceOpts.Namespace)
+
 	deleteCMD.Env = os.Environ()
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		deleteCMD.Env = append(deleteCMD.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if namespaceOpts.OktetoHome != "" {
+		deleteCMD.Env = append(deleteCMD.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
+	}
 	o, err := deleteCMD.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("okteto delete namespace failed: %s - %s", string(o), err)

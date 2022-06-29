@@ -64,12 +64,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	originalNamespace := integration.GetCurrentNamespace()
-
 	exitCode := m.Run()
-
-	oktetoPath, _ := integration.GetOktetoPath()
-	commands.RunOktetoNamespace(oktetoPath, originalNamespace)
 	os.Exit(exitCode)
 }
 
@@ -80,11 +75,12 @@ func writeFile(filepath, content string) error {
 	return nil
 }
 
-func checkStignoreIsOnRemote(namespace, manifestPath, oktetoPath string) error {
+func checkStignoreIsOnRemote(namespace, manifestPath, oktetoPath, dir string) error {
 	opts := &commands.ExecOptions{
 		Namespace:    namespace,
 		ManifestPath: manifestPath,
 		Command:      "cat .stignore | grep '(?d)venv'",
+		OktetoHome:   dir,
 	}
 	output, err := commands.RunExecCommand(oktetoPath, opts)
 	if err != nil {

@@ -25,8 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/okteto/okteto/integration"
-	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -62,11 +60,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	originalNamespace := integration.GetCurrentNamespace()
-
 	exitCode := m.Run()
 
-	oktetoPath, _ := integration.GetOktetoPath()
-	commands.RunOktetoNamespace(oktetoPath, originalNamespace)
 	os.Exit(exitCode)
 }

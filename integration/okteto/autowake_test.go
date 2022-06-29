@@ -160,9 +160,13 @@ func TestAutoWakeFromURL(t *testing.T) {
 	require.NoError(t, err)
 
 	testNamespace := integration.GetTestNamespace("TestAutoWake", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	// Prepare test environment
 	require.NoError(t, writeDeployment(dir))
@@ -204,9 +208,13 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 	require.NoError(t, err)
 
 	testNamespace := integration.GetTestNamespace("TestAutoWake", user)
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 
 	// Prepare test environment
 	require.NoError(t, writeDeployment(dir))
@@ -231,6 +239,7 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 		Namespace:    testNamespace,
 		Workdir:      dir,
 		ManifestPath: filepath.Join(dir, "okteto.yml"),
+		OktetoHome:   dir,
 	}
 	upCommand, err := commands.RunOktetoUp(oktetoPath, upOptions)
 	require.NoError(t, err)

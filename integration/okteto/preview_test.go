@@ -32,12 +32,13 @@ func TestPreviewCommand(t *testing.T) {
 	require.NoError(t, err)
 
 	testNamespace := integration.GetTestNamespace("TestPreview", user)
-
+	dir := t.TempDir()
 	previewOptions := &commands.DeployPreviewOptions{
 		Namespace:  testNamespace,
 		Repository: fmt.Sprintf("%s/%s", githubHTTPSURL, pipelineRepo),
 		Branch:     "cli-e2e",
 		Wait:       true,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDeployPreview(oktetoPath, previewOptions))
 
@@ -45,7 +46,8 @@ func TestPreviewCommand(t *testing.T) {
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
 
 	previewDestroyOptions := &commands.DestroyPreviewOptions{
-		Namespace: testNamespace,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoPreviewDestroy(oktetoPath, previewDestroyOptions))
 }

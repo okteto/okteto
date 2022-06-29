@@ -18,13 +18,22 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+
+	"github.com/okteto/okteto/pkg/model"
 )
 
 // RunOktetoKubeconfig runs okteto kubeconfig command
-func RunOktetoKubeconfig(oktetoPath string) error {
+func RunOktetoKubeconfig(oktetoPath, oktetoHome string) error {
 	args := []string{"kubeconfig"}
 	cmd := exec.Command(oktetoPath, args...)
 	cmd.Env = os.Environ()
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if oktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, oktetoHome))
+	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
