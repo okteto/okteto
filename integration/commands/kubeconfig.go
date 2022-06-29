@@ -38,5 +38,6 @@ func RunOktetoKubeconfig(oktetoPath, oktetoHome string) error {
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
 	}
+	fmt.Printf("kubeconfig output: %s", o)
 	return nil
 }
