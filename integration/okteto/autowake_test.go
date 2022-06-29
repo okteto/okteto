@@ -154,6 +154,7 @@ persistentVolume:
 func TestAutoWakeFromURL(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
 
+	t.Parallel()
 	// Prepare environment
 	dir := t.TempDir()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -213,6 +214,7 @@ func TestAutoWakeFromURL(t *testing.T) {
 func TestAutoWakeFromRunningUp(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
 
+	t.Parallel()
 	// Prepare environment
 	dir := t.TempDir()
 	oktetoPath, err := integration.GetOktetoPath()

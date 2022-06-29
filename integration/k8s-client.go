@@ -92,12 +92,7 @@ func UpdateStatefulset(ctx context.Context, ns string, sfs *appsv1.StatefulSet) 
 }
 
 // GetConfigmap returns a configmap given name and namespace
-func GetConfigmap(ctx context.Context, ns, name string) (*corev1.ConfigMap, error) {
-	client, _, err := K8sClient()
-	if err != nil {
-		return nil, err
-	}
-
+func GetConfigmap(ctx context.Context, ns, name string, client kubernetes.Interface) (*corev1.ConfigMap, error) {
 	return client.CoreV1().ConfigMaps(ns).Get(ctx, name, metav1.GetOptions{})
 }
 
