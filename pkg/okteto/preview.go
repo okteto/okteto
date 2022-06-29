@@ -276,14 +276,17 @@ func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previe
 		Preview struct {
 			Deployments []struct {
 				ID     graphql.String
+				Name   graphql.String
 				Status graphql.String
 			}
 			Statefulsets []struct {
 				ID     graphql.String
+				Name   graphql.String
 				Status graphql.String
 			}
 			Jobs []struct {
 				ID     graphql.String
+				Name   graphql.String
 				Status graphql.String
 			}
 		} `graphql:"preview(id: $id)"`
@@ -299,13 +302,16 @@ func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previe
 
 	status := make(map[string]string)
 	for _, d := range queryStruct.Preview.Deployments {
-		status[string(d.ID)] = string(d.Status)
+		resourceName := fmt.Sprintf("deployment/%s", d.Name)
+		status[resourceName] = string(d.Status)
 	}
 	for _, sfs := range queryStruct.Preview.Statefulsets {
-		status[string(sfs.ID)] = string(sfs.Status)
+		resourceName := fmt.Sprintf("statefulset/%s", sfs.Name)
+		status[resourceName] = string(sfs.Status)
 	}
 	for _, j := range queryStruct.Preview.Jobs {
-		status[string(j.ID)] = string(j.Status)
+		resourceName := fmt.Sprintf("job/%s", j.Name)
+		status[resourceName] = string(j.Status)
 	}
 	return status, nil
 }

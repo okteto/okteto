@@ -378,16 +378,19 @@ func (c *OktetoClient) GetResourcesStatusFromPipeline(ctx context.Context, name 
 		Space struct {
 			Deployments []struct {
 				ID         graphql.String
+				Name       graphql.String
 				Status     graphql.String
 				DeployedBy graphql.String
 			}
 			Statefulsets []struct {
 				ID         graphql.String
+				Name       graphql.String
 				Status     graphql.String
 				DeployedBy graphql.String
 			}
 			Jobs []struct {
 				ID         graphql.String
+				Name       graphql.String
 				Status     graphql.String
 				DeployedBy graphql.String
 			}
@@ -404,18 +407,21 @@ func (c *OktetoClient) GetResourcesStatusFromPipeline(ctx context.Context, name 
 	status := make(map[string]string)
 	for _, d := range queryStruct.Space.Deployments {
 		if string(d.DeployedBy) == name {
-			status[string(d.ID)] = string(d.Status)
+			resourceName := fmt.Sprintf("deployment/%s", d.Name)
+			status[resourceName] = string(d.Status)
 
 		}
 	}
 	for _, sfs := range queryStruct.Space.Statefulsets {
 		if string(sfs.DeployedBy) == name {
-			status[string(sfs.ID)] = string(sfs.Status)
+			resourceName := fmt.Sprintf("statefulset/%s", sfs.Name)
+			status[resourceName] = string(sfs.Status)
 		}
 	}
 	for _, j := range queryStruct.Space.Jobs {
 		if string(j.DeployedBy) == name {
-			status[string(j.ID)] = string(j.Status)
+			resourceName := fmt.Sprintf("job/%s", j.Name)
+			status[resourceName] = string(j.Status)
 		}
 	}
 	return status, nil
