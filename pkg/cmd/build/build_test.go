@@ -98,11 +98,17 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 	}
 
 	df := filepath.Join(serviceContext, serviceDockerfile)
-	defer removeFile(df)
-	_, errCreate := os.Create(df)
+	dockerfile, errCreate := os.Create(df)
 	if errCreate != nil {
 		t.Fatal(err)
 	}
+
+	t.Cleanup(func() {
+		if err := dockerfile.Close(); err != nil {
+			t.Fatal(err)
+		}
+		removeFile(df)
+	})
 
 	tests := []struct {
 		name        string
@@ -327,12 +333,16 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			if tt.dockerfilesCreated != nil {
 				for _, df := range tt.dockerfilesCreated {
 					defer removeFile(df)
-					_, err := os.Create(df)
+					dfFile, err := os.Create(df)
 					if err != nil {
 						t.Fatal(err)
 					}
 
 					log.Printf("created docker file: %s", df)
+
+					if err := dfFile.Close(); err != nil {
+						t.Fatal(err)
+					}
 				}
 			}
 
@@ -359,6 +369,12 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.fileExpected, file)
+
+			if tt.dockerfilesCreated != nil {
+				for _, df := range tt.dockerfilesCreated {
+					removeFile(df)
+				}
+			}
 
 		})
 	}
