@@ -27,7 +27,7 @@ import (
 
 const (
 	githubHTTPSURL = "https://github.com"
-	pipelineRepo   = "okteto/movies-with-compose"
+	pipelineRepo   = "okteto/movies"
 )
 
 func TestPipelineCommand(t *testing.T) {
@@ -38,7 +38,7 @@ func TestPipelineCommand(t *testing.T) {
 
 	testNamespace := integration.GetTestNamespace("TestPipeline", user)
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, testNamespace))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
+	// defer commands.RunOktetoDeleteNamespace(oktetoPath, testNamespace)
 
 	pipelineOptions := &commands.DeployPipelineOptions{
 		Namespace:  testNamespace,
