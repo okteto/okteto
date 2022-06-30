@@ -19,6 +19,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 func Test_getRepositoryURL(t *testing.T) {
@@ -102,6 +103,58 @@ func Test_getRepositoryURL(t *testing.T) {
 
 			if url != tt.expect {
 				t.Errorf("expected '%s', got '%s", tt.expect, url)
+			}
+		})
+	}
+}
+
+func TestCheckAllResourcesRunning(t *testing.T) {
+
+	var tests = []struct {
+		name           string
+		resourceStatus map[string]string
+		expectError    bool
+		expectResult   bool
+	}{
+		{
+			name: "all-running",
+			resourceStatus: map[string]string{
+				"1": okteto.RunningStatus,
+				"2": okteto.CompletedStatus,
+			},
+			expectError:  false,
+			expectResult: true,
+		},
+		{
+			name: "progressing",
+			resourceStatus: map[string]string{
+				"1": okteto.RunningStatus,
+				"2": okteto.CompletedStatus,
+				"3": okteto.ProgressingStatus,
+			},
+			expectError:  false,
+			expectResult: false,
+		},
+		{
+			name: "error",
+			resourceStatus: map[string]string{
+				"1": okteto.RunningStatus,
+				"2": okteto.CompletedStatus,
+				"3": okteto.ProgressingStatus,
+				"4": okteto.ErrorStatus,
+			},
+			expectError:  true,
+			expectResult: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := CheckAllResourcesRunning(tt.name, tt.resourceStatus)
+			if tt.expectError && err == nil || !tt.expectError && err != nil {
+				t.Errorf("expected error '%t', got '%v", tt.expectError, err)
+			}
+			if tt.expectResult != result {
+				t.Errorf("expected result '%t', got '%t", tt.expectResult, result)
 			}
 		})
 	}
