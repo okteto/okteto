@@ -111,7 +111,6 @@ func executeApply(namespace string) error {
 	args := []string{dPath, namespace}
 
 	cmd := exec.Command(command, args...)
-	cmd.Env = os.Environ()
 
 	log.Printf("Command: %s", cmd.String())
 	o, err := cmd.CombinedOutput()
