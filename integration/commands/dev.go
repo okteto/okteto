@@ -24,7 +24,6 @@ import (
 	"time"
 
 	ps "github.com/mitchellh/go-ps"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -73,7 +72,7 @@ func RunOktetoUp(oktetoPath string, upOptions *UpOptions) (*UpCommandProcessResu
 		}
 	}()
 
-	if err := waitForReady(upOptions.Namespace, upOptions.Name, upErrorChannel); err != nil {
+	if err := waitForReady(upOptions.Namespace, upOptions.Name, upOptions.OktetoHome, upErrorChannel); err != nil {
 		return nil, err
 	}
 
@@ -182,10 +181,10 @@ func HasUpCommandFinished(pid int) bool {
 	}
 }
 
-func waitForReady(namespace, name string, upErrorChannel chan error) error {
+func waitForReady(namespace, name, oktetoHome string, upErrorChannel chan error) error {
 	log.Println("waiting for okteto up to be ready")
 
-	state := path.Join(config.GetOktetoHome(), namespace, name, "okteto.state")
+	state := path.Join(oktetoHome, namespace, name, "okteto.state")
 
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(300 * time.Second)
