@@ -106,6 +106,7 @@ EXPOSE 2931`
 func TestDeployPipelineFromCompose(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
+	t.Parallel()
 
 	dir := t.TempDir()
 	require.NoError(t, createComposeScenario(dir))
@@ -132,7 +133,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	// Test that the nginx image has been created correctly
 	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx", c)
 	require.NoError(t, err)
-	nginxImageDev := fmt.Sprintf("okteto.dev/%s-nginx:okteto-with-volume-mounts", filepath.Base(dir))
+	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto-with-volume-mounts", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
 
 	// Test that the nginx image has been created correctly
@@ -171,6 +172,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
+	t.Parallel()
 
 	dir := t.TempDir()
 	require.NoError(t, createStacksScenario(dir))
@@ -197,7 +199,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	// Test that the nginx image has been created correctly
 	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx", c)
 	require.NoError(t, err)
-	nginxImageDev := fmt.Sprintf("okteto.dev/%s-nginx:okteto-with-volume-mounts", filepath.Base(dir))
+	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto-with-volume-mounts", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
 
 	// Test that the nginx image has been created correctly
