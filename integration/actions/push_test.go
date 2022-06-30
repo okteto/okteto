@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -28,6 +27,7 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
@@ -73,7 +73,9 @@ func executePushAction(t *testing.T, namespace string) error {
 	args := []string{namespace, namespace, "", filepath.Dir(dockerfile)}
 
 	cmd := exec.Command(command, args...)
-	cmd.Env = os.Environ()
+	kubepath := config.GetKubeconfigPath()[0]
+	log.Printf("Using kubeconfig: '%s'", kubepath)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG=%s", kubepath))
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
