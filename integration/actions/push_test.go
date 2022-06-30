@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -30,7 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const pushPath = "okteto/push"
@@ -44,11 +45,11 @@ func TestPushAction(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assert.NoError(t, executeCreateNamespaceAction(namespace))
-	assert.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, ""))
-	assert.NoError(t, executeApply(namespace))
-	assert.NoError(t, executePushAction(t, namespace))
-	assert.NoError(t, executeDeleteNamespaceAction(namespace))
+	require.NoError(t, executeCreateNamespaceAction(namespace))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, ""))
+	require.NoError(t, executeApply(namespace))
+	require.NoError(t, executePushAction(t, namespace))
+	require.NoError(t, executeDeleteNamespaceAction(namespace))
 }
 
 func executePushAction(t *testing.T, namespace string) error {
@@ -75,6 +76,7 @@ func executePushAction(t *testing.T, namespace string) error {
 	cmd := exec.Command(command, args...)
 	kubepath := config.GetKubeconfigPath()[0]
 	log.Printf("Using kubeconfig: '%s'", kubepath)
+	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG=%s", kubepath))
 	o, err := cmd.CombinedOutput()
 	if err != nil {
