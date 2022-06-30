@@ -70,7 +70,7 @@ func RunOktetoVersion(oktetoPath string) (string, error) {
 
 // GetTestNamespace returns the name for a namespace
 func GetTestNamespace(prefix, user string) string {
-	namespace := fmt.Sprintf("%s-%s-%d-%s", prefix, runtime.GOOS, time.Now().UnixMilli(), user)
+	namespace := fmt.Sprintf("%s-%s-%d-%s", prefix, runtime.GOOS, time.Now().Unix(), user)
 	return strings.ToLower(namespace)
 }
 
