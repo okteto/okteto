@@ -54,8 +54,17 @@ const ReconnectingMessage = "Trying to reconnect to your cluster. File synchroni
 
 // UpOptions represents the options available on up command
 type UpOptions struct {
+	OriginalManifestPath string
 	ManifestPath         string
 	Namespace            string
+	K8sContext           string
+	DevName              string
+	Devs                 []string
+	Envs                 []string
+	Remote               int
+	Deploy               bool
+	ForcePull            bool
+	Reset                bool
 }
 
 // Up starts a development container
@@ -91,7 +100,20 @@ func Up() *cobra.Command {
 			ctx := context.Background()
 
 			if upOptions.ManifestPath != "" {
-				workdir := model.GetWorkdirFromManifestPath(upOptions.DevPath)
+				// we need to store the original manifest path as relative path before switching the cwd
+				upOptions.OriginalManifestPath = upOptions.ManifestPath
+				if filepath.IsAbs(upOptions.ManifestPath) {
+					cwd, err := os.Getwd()
+					if err != nil {
+						return err
+					}
+					relativeOriginalManifestPath, err := filepath.Rel(cwd, upOptions.ManifestPath)
+					if err != nil {
+						return err
+					}
+					upOptions.OriginalManifestPath = relativeOriginalManifestPath
+				}
+				workdir := model.GetWorkdirFromManifestPath(upOptions.ManifestPath)
 				if err := os.Chdir(workdir); err != nil {
 					return err
 				}
@@ -462,10 +484,11 @@ func (up *upContext) deployApp(ctx context.Context) error {
 	}
 
 	return c.RunDeploy(ctx, &deploy.Options{
-		Name:         up.Manifest.Name,
-		ManifestPath: up.Manifest.Filename,
-		Timeout:      5 * time.Minute,
-		Build:        false,
+		Name:                 up.Manifest.Name,
+		OriginalManifestPath: up.Options.OriginalManifestPath,
+		ManifestPath:         up.Options.ManifestPath,
+		Timeout:              5 * time.Minute,
+		Build:                false,
 	})
 }
 
@@ -711,7 +734,7 @@ func (up *upContext) getInsufficientSpaceError(err error) error {
 			E: err,
 			Hint: fmt.Sprintf(`Okteto volume is full.
     Increase your persistent volume size, run '%s' and try 'okteto up' again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.ManifestPath)),
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.OriginalManifestPath)),
 		}
 	}
 	return oktetoErrors.UserError{
