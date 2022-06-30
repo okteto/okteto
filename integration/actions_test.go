@@ -262,6 +262,31 @@ func TestPipelineActions(t *testing.T) {
 	}
 }
 
+func TestPipelineActionsWithCompose(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
+
+	ctx := context.Background()
+	namespace := getTestNamespace()
+
+	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
+		t.Fatalf("Create namespace action failed: %s", err.Error())
+	}
+
+	if err := executeDeployWithComposePipelineAction(ctx, namespace); err != nil {
+		t.Fatalf("Deploy pipeline action failed: %s", err.Error())
+	}
+	if err := executeDestroyPipelineAction(ctx, namespace); err != nil {
+		t.Fatalf("destroy pipeline action failed: %s", err.Error())
+	}
+
+	if err := executeDeleteNamespaceAction(ctx, namespace); err != nil {
+		t.Fatalf("Delete namespace action failed: %s", err.Error())
+	}
+}
+
 func TestPreviewActions(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("this test is not required for windows e2e tests")
@@ -452,6 +477,44 @@ func executeDeployPipelineAction(ctx context.Context, namespace string) error {
 	defer deleteGitRepo(ctx, actionFolder)
 	os.Setenv(model.GithubRepositoryEnvVar, pipelineRepo)
 	os.Setenv(model.GithubRefEnvVar, "master")
+	os.Setenv(model.GithubServerURLEnvVar, githubUrl)
+
+	log.Printf("deploying pipeline %s", namespace)
+	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
+	args := []string{"movies", namespace}
+
+	cmd := exec.Command(command, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
+	}
+	log.Printf("Deploy pipeline output: \n%s\n", string(o))
+
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	okteto.Context().Namespace = namespace
+	pipeline, err := oktetoClient.GetPipelineByName(ctx, "movies")
+	if err != nil || pipeline == nil {
+		return fmt.Errorf("Could not get deployment %s", namespace)
+	}
+	return nil
+}
+
+func executeDeployWithComposePipelineAction(ctx context.Context, namespace string) error {
+	actionRepo := fmt.Sprintf("%s%s.git", githubHttpsUrl, pipelinePath)
+	actionFolder := strings.Split(pipelinePath, "/")[1]
+	log.Printf("cloning pipeline repository: %s", actionRepo)
+	err := cloneGitRepoWithBranch(ctx, actionRepo, "master")
+	if err != nil {
+		return err
+	}
+	log.Printf("cloned repo %s \n", actionRepo)
+	defer deleteGitRepo(ctx, actionFolder)
+	os.Setenv(model.GithubRepositoryEnvVar, "okteto/movies-with-compose")
+	os.Setenv(model.GithubRefEnvVar, "main")
 	os.Setenv(model.GithubServerURLEnvVar, githubUrl)
 
 	log.Printf("deploying pipeline %s", namespace)

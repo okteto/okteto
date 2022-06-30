@@ -26,6 +26,10 @@ import (
 const (
 	// Maximum number of characters allowed in a namespace name
 	MAX_ALLOWED_CHARS = 63
+	RunningStatus     = "running"
+	CompletedStatus   = "completed"
+	ProgressingStatus = "progressing"
+	ErrorStatus       = "error"
 )
 
 type namespaceClient struct {

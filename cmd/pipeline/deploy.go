@@ -284,19 +284,27 @@ func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.
 			if err != nil {
 				return err
 			}
-			allRunning := true
-			for _, status := range resourceStatus {
-				if status == "error" {
-					return fmt.Errorf("repository '%s' deployed with errors", name)
-				}
-				if status != "running" {
-					allRunning = false
-					break
-				}
+			allRunning, err := CheckAllResourcesRunning(name, resourceStatus)
+			if err != nil {
+				return err
 			}
 			if allRunning {
 				return nil
 			}
 		}
 	}
+}
+
+func CheckAllResourcesRunning(name string, resourceStatus map[string]string) (bool, error) {
+	allRunning := true
+	for _, status := range resourceStatus {
+		if status == okteto.ErrorStatus {
+			return false, fmt.Errorf("repository '%s' deployed with errors", name)
+		}
+		if status != okteto.RunningStatus && status != okteto.CompletedStatus {
+			allRunning = false
+		}
+
+	}
+	return allRunning, nil
 }
