@@ -28,7 +28,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/model/contextresource"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -77,7 +76,7 @@ func deploy(ctx context.Context) *cobra.Command {
 
 //ExecuteDeployPipeline executes deploy pipeline given a set of options
 func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
-	ctxResource := &contextresource.ContextResource{}
+	ctxResource := &model.ContextResource{}
 	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
 		return err
 	}

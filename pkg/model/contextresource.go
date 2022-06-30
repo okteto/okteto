@@ -11,14 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package contextresource
+package model
 
 import (
 	"os"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -28,9 +27,9 @@ type ContextResource struct {
 	Namespace string
 }
 
-// Get returns a ContextResource object from a given file
-func Get(path string) (*ContextResource, error) {
-	if !model.FileExistsAndNotDir(path) {
+// GetContextResource returns a ContextResource object from a given file
+func GetContextResource(path string) (*ContextResource, error) {
+	if !FileExistsAndNotDir(path) {
 		var err error
 		path, err = inferContextResourceFile()
 		if err != nil {
@@ -83,16 +82,16 @@ func inferContextResourceFile() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if oktetoPath := model.GetFilePathFromWdAndFiles(cwd, model.OktetoManifestFiles); oktetoPath != "" {
+	if oktetoPath := GetFilePathFromWdAndFiles(cwd, OktetoManifestFiles); oktetoPath != "" {
 		oktetoLog.Infof("context will load from %s", oktetoPath)
 		return oktetoPath, nil
 	}
-	if pipelinePath := model.GetFilePathFromWdAndFiles(cwd, model.PipelineFiles); pipelinePath != "" {
+	if pipelinePath := GetFilePathFromWdAndFiles(cwd, PipelineFiles); pipelinePath != "" {
 		oktetoLog.Infof("context will load from %s", pipelinePath)
 		return pipelinePath, nil
 	}
 
-	if stackPath := model.GetFilePathFromWdAndFiles(cwd, model.ComposeFiles); stackPath != "" {
+	if stackPath := GetFilePathFromWdAndFiles(cwd, ComposeFiles); stackPath != "" {
 		oktetoLog.Infof("context will load from %s", stackPath)
 		return stackPath, nil
 	}

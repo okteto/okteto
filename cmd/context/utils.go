@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/model/contextresource"
 	"github.com/okteto/okteto/pkg/okteto"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -113,7 +112,7 @@ func isValidCluster(cluster string) bool {
 	return false
 }
 
-func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *contextresource.ContextResource) error {
+func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextResource) error {
 	if cfg == nil {
 		return fmt.Errorf(oktetoErrors.ErrKubernetesContextNotFound, ctxResource.Context, config.GetKubeconfigPath())
 	}
@@ -132,7 +131,7 @@ func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *contextresource
 
 // LoadManifestWithContext loads context and then loads a manifest
 func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.Manifest, error) {
-	ctxResource, err := contextresource.Get(opts.Filename)
+	ctxResource, err := model.GetContextResource(opts.Filename)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +186,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 		if name == "" {
 			return nil, err
 		}
-		ctxResource = &contextresource.ContextResource{}
+		ctxResource = &model.ContextResource{}
 	}
 
 	if err := ctxResource.UpdateNamespace(namespace); err != nil {
@@ -221,7 +220,7 @@ func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string
 		Namespace: namespace,
 		Show:      true,
 	}
-	ctxResource, err := contextresource.Get(path)
+	ctxResource, err := model.GetContextResource(path)
 	if err != nil {
 		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
 			return err

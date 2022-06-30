@@ -26,7 +26,6 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/model/contextresource"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -58,7 +57,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			ctxResource, err := utils.LoadManifestContext(options.ManifestPath)
 			if err != nil {
 				if oktetoErrors.IsNotExist(err) {
-					ctxResource = &contextresource.ContextResource{}
+					ctxResource = &model.ContextResource{}
 				}
 			}
 

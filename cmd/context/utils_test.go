@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/model/contextresource"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -29,14 +28,14 @@ func Test_addKubernetesContext(t *testing.T) {
 	var tests = []struct {
 		name         string
 		cfg          *clientcmdapi.Config
-		ctxResource  *contextresource.ContextResource
+		ctxResource  *model.ContextResource
 		currentStore *okteto.OktetoContextStore
 		wantStore    *okteto.OktetoContextStore
 		wantError    bool
 	}{
 		{
 			name:        "nil-cfg",
-			ctxResource: &contextresource.ContextResource{Context: "context"},
+			ctxResource: &model.ContextResource{Context: "context"},
 			wantError:   true,
 		},
 		{
@@ -44,7 +43,7 @@ func Test_addKubernetesContext(t *testing.T) {
 			cfg: &clientcmdapi.Config{
 				Contexts: map[string]*clientcmdapi.Context{},
 			},
-			ctxResource: &contextresource.ContextResource{Context: "context"},
+			ctxResource: &model.ContextResource{Context: "context"},
 			wantError:   true,
 		},
 		{
@@ -52,7 +51,7 @@ func Test_addKubernetesContext(t *testing.T) {
 			cfg: &clientcmdapi.Config{
 				Contexts: map[string]*clientcmdapi.Context{"context": {Namespace: "n-cfg"}},
 			},
-			ctxResource: &contextresource.ContextResource{Context: "context", Namespace: "n-ctx"},
+			ctxResource: &model.ContextResource{Context: "context", Namespace: "n-ctx"},
 			currentStore: &okteto.OktetoContextStore{
 				CurrentContext: "",
 				Contexts:       map[string]*okteto.OktetoContext{},
@@ -70,7 +69,7 @@ func Test_addKubernetesContext(t *testing.T) {
 			cfg: &clientcmdapi.Config{
 				Contexts: map[string]*clientcmdapi.Context{"context": {Namespace: "n-cfg"}},
 			},
-			ctxResource: &contextresource.ContextResource{Context: "context"},
+			ctxResource: &model.ContextResource{Context: "context"},
 			currentStore: &okteto.OktetoContextStore{
 				CurrentContext: "",
 				Contexts:       map[string]*okteto.OktetoContext{},
@@ -88,7 +87,7 @@ func Test_addKubernetesContext(t *testing.T) {
 			cfg: &clientcmdapi.Config{
 				Contexts: map[string]*clientcmdapi.Context{"context": {}},
 			},
-			ctxResource: &contextresource.ContextResource{Context: "context"},
+			ctxResource: &model.ContextResource{Context: "context"},
 			currentStore: &okteto.OktetoContextStore{
 				CurrentContext: "",
 				Contexts:       map[string]*okteto.OktetoContext{},
