@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 
 	"strings"
 
@@ -63,14 +64,15 @@ type secretHandler interface {
 
 // Options destroy commands options
 type Options struct {
-	ManifestPath        string
-	Name                string
-	Variables           []string
-	Namespace           string
-	DestroyVolumes      bool
-	DestroyDependencies bool
-	ForceDestroy        bool
-	K8sContext          string
+	OriginalManifestPath string
+	ManifestPath         string
+	Name                 string
+	Variables            []string
+	Namespace            string
+	DestroyVolumes       bool
+	DestroyDependencies  bool
+	ForceDestroy         bool
+	K8sContext           string
 }
 
 type destroyCommand struct {
@@ -95,6 +97,20 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if options.ManifestPath != "" {
+				// we need to store the original manifest path as relative path before switching the cwd
+				options.OriginalManifestPath = options.ManifestPath
+				if filepath.IsAbs(options.ManifestPath) {
+					cwd, err := os.Getwd()
+					if err != nil {
+						return err
+					}
+					relativeOriginalManifestPath, err := filepath.Rel(cwd, options.ManifestPath)
+					if err != nil {
+						return err
+					}
+					options.OriginalManifestPath = relativeOriginalManifestPath
+				}
+
 				workdir := model.GetWorkdirFromManifestPath(options.ManifestPath)
 				if err := os.Chdir(workdir); err != nil {
 					return err
@@ -220,7 +236,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		Name:      opts.Name,
 		Namespace: namespace,
 		Status:    pipeline.DestroyingStatus,
-		Filename:  manifest.Filename,
+		Filename:  opts.OriginalManifestPath,
 	}
 	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
 	if err != nil {
