@@ -154,7 +154,6 @@ type Manifest struct {
 	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
 
 	Type     Archetype `json:"-" yaml:"-"`
-	Filename string    `yaml:"-"`
 	Manifest []byte    `json:"-" yaml:"-"`
 	IsV2     bool      `json:"-" yaml:"-"`
 }
@@ -279,7 +278,6 @@ func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		devManifest.Filename = oktetoPath
 
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v1 unmarshalled successfully")
 
@@ -298,14 +296,6 @@ func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		path := ""
-		if filepath.IsAbs(manifestPath) {
-			path, err = filepath.Rel(cwd, manifestPath)
-			if err != nil {
-				oktetoLog.Debugf("could not detect relative path to %s: %s", manifestPath, err)
-			}
-		}
-		manifest.Filename = path
 		return manifest, nil
 	}
 
