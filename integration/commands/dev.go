@@ -184,7 +184,7 @@ func HasUpCommandFinished(pid int) bool {
 func waitForReady(namespace, name, oktetoHome string, upErrorChannel chan error) error {
 	log.Println("waiting for okteto up to be ready")
 
-	state := path.Join(oktetoHome, namespace, name, "okteto.state")
+	state := path.Join(oktetoHome, ".okteto", namespace, name, "okteto.state")
 
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(300 * time.Second)
