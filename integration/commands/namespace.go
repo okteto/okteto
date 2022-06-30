@@ -48,6 +48,8 @@ func RunOktetoCreateNamespace(oktetoPath string, namespaceOpts *NamespaceOptions
 	if namespaceOpts.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
 	}
+
+	log.Printf("Running: %s\n", cmd.String())
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", oktetoPath, strings.Join(args, " "), string(o))
