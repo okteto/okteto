@@ -76,8 +76,8 @@ func TestApplyPipeline(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	assert.NoError(t, err)
 
-	assert.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, ""))
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
+	assert.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, ""))
 	assert.NoError(t, executeApply(namespace))
 	assert.NoError(t, executeDeleteNamespaceAction(namespace))
 }
