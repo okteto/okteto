@@ -75,8 +75,8 @@ func TestApplyPipeline(t *testing.T) {
 	oktetoPath, err := integration.GetOktetoPath()
 	assert.NoError(t, err)
 
-	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, ""))
+	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, executeApply(namespace))
 	assert.NoError(t, executeDeleteNamespaceAction(namespace))
 }
@@ -107,12 +107,13 @@ func executeApply(namespace string) error {
 	log.Printf("cloned repo %s \n", actionRepo)
 	defer integration.DeleteGitRepo(actionFolder)
 
-	log.Printf("creating namespace %s", namespace)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
 	args := []string{dPath, namespace}
 
 	cmd := exec.Command(command, args...)
 	cmd.Env = os.Environ()
+
+	log.Printf("Command: %s", cmd.String())
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
