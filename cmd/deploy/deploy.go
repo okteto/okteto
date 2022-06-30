@@ -20,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"time"
@@ -60,15 +61,16 @@ var tempKubeConfigTemplate = "%s/.okteto/kubeconfig-%s-%d"
 
 // Options options for deploy command
 type Options struct {
-	ManifestPath     string
-	Name             string
-	Namespace        string
-	K8sContext       string
-	Variables        []string
-	Manifest         *model.Manifest
-	Build            bool
-	Dependencies     bool
-	servicesToDeploy []string
+	OriginalManifestPath string
+	ManifestPath         string
+	Name                 string
+	Namespace            string
+	K8sContext           string
+	Variables            []string
+	Manifest             *model.Manifest
+	Build                bool
+	Dependencies         bool
+	servicesToDeploy     []string
 
 	Repository string
 	Branch     string
@@ -125,6 +127,19 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(model.OktetoSkipConfigCredentialsUpdate, "false")
 			if options.ManifestPath != "" {
+				// we need to store the original manifest path as relative path before switching the cwd
+				options.OriginalManifestPath = options.ManifestPath
+				if filepath.IsAbs(options.ManifestPath) {
+					cwd, err := os.Getwd()
+					if err != nil {
+						return err
+					}
+					relativeOriginalManifestPath, err := filepath.Rel(cwd, options.ManifestPath)
+					if err != nil {
+						return err
+					}
+					options.OriginalManifestPath = relativeOriginalManifestPath
+				}
 				workdir := model.GetWorkdirFromManifestPath(options.ManifestPath)
 				if err := os.Chdir(workdir); err != nil {
 					return err
@@ -273,7 +288,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		Namespace:  deployOptions.Manifest.Namespace,
 		Repository: os.Getenv(model.GithubRepositoryEnvVar),
 		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
-		Filename:   deployOptions.Manifest.Filename,
+		Filename:   deployOptions.OriginalManifestPath,
 		Status:     pipeline.ProgressingStatus,
 		Manifest:   deployOptions.Manifest.Manifest,
 		Icon:       deployOptions.Manifest.Icon,
