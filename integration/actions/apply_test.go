@@ -29,7 +29,6 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
@@ -77,7 +76,7 @@ func TestApplyPipeline(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
-	assert.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, config.GetKubeconfigPath()[0]))
+	assert.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, ""))
 	assert.NoError(t, executeApply(namespace))
 	assert.NoError(t, executeDeleteNamespaceAction(namespace))
 }
