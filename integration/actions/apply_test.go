@@ -31,7 +31,6 @@ import (
 	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 )
@@ -113,7 +112,7 @@ func executeApply(namespace string) error {
 	args := []string{dPath, namespace}
 
 	cmd := exec.Command(command, args...)
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.KubeConfigEnvVar, config.GetKubeconfigPath()[0]))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("KUBE_CONFIG_PATH=%s", config.GetKubeconfigPath()[0]))
 	log.Printf("Command: %s", cmd.String())
 	o, err := cmd.CombinedOutput()
 	if err != nil {
