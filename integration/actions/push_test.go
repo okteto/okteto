@@ -81,7 +81,7 @@ func executePushAction(t *testing.T, namespace string) error {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
 	}
 
-	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{""}))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{kubepath}))
 	if err != nil {
 		return err
 	}

@@ -118,12 +118,11 @@ func executeApply(namespace string) error {
 		log.Printf("could not get kubepath: %s", err)
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG=%s", kubepath))
-	log.Printf("Command: %s", cmd.String())
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
 	}
-	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{""}))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{kubepath}))
 	if err != nil {
 		return err
 	}
