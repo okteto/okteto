@@ -64,15 +64,19 @@ type secretHandler interface {
 
 // Options destroy commands options
 type Options struct {
-	OriginalManifestPath string
-	ManifestPath         string
-	Name                 string
-	Variables            []string
-	Namespace            string
-	DestroyVolumes       bool
-	DestroyDependencies  bool
-	ForceDestroy         bool
-	K8sContext           string
+	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
+	// This is stored at the configmap as filename to redeploy from the ui.
+	ManifestPathFlag string
+	// ManifestPath is the patah to the manifest used though the command execution.
+	// This might change its value during execution
+	ManifestPath        string
+	Name                string
+	Variables           []string
+	Namespace           string
+	DestroyVolumes      bool
+	DestroyDependencies bool
+	ForceDestroy        bool
+	K8sContext          string
 }
 
 type destroyCommand struct {
@@ -98,17 +102,17 @@ func Destroy(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if options.ManifestPath != "" {
 				// we need to store the original manifest path as relative path before switching the cwd
-				options.OriginalManifestPath = options.ManifestPath
+				options.ManifestPathFlag = options.ManifestPath
 				if filepath.IsAbs(options.ManifestPath) {
 					cwd, err := os.Getwd()
 					if err != nil {
 						return err
 					}
-					relativeOriginalManifestPath, err := filepath.Rel(cwd, options.ManifestPath)
+					relativeManifestPathFlag, err := filepath.Rel(cwd, options.ManifestPath)
 					if err != nil {
 						return err
 					}
-					options.OriginalManifestPath = relativeOriginalManifestPath
+					options.ManifestPathFlag = relativeManifestPathFlag
 				}
 
 				workdir := model.GetWorkdirFromManifestPath(options.ManifestPath)
@@ -236,7 +240,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		Name:      opts.Name,
 		Namespace: namespace,
 		Status:    pipeline.DestroyingStatus,
-		Filename:  opts.OriginalManifestPath,
+		Filename:  opts.ManifestPathFlag,
 	}
 	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
 	if err != nil {
