@@ -262,6 +262,31 @@ func TestPipelineActions(t *testing.T) {
 	}
 }
 
+func TestPipelineActionsWithCompose(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("this test is not required for windows e2e tests")
+		return
+	}
+
+	ctx := context.Background()
+	namespace := getTestNamespace()
+
+	if err := executeCreateNamespaceAction(ctx, namespace); err != nil {
+		t.Fatalf("Create namespace action failed: %s", err.Error())
+	}
+
+	if err := executeDeployWithComposePipelineAction(ctx, namespace); err != nil {
+		t.Fatalf("Deploy pipeline action failed: %s", err.Error())
+	}
+	if err := executeDestroyPipelineAction(ctx, namespace); err != nil {
+		t.Fatalf("destroy pipeline action failed: %s", err.Error())
+	}
+
+	if err := executeDeleteNamespaceAction(ctx, namespace); err != nil {
+		t.Fatalf("Delete namespace action failed: %s", err.Error())
+	}
+}
+
 func TestPreviewActions(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("this test is not required for windows e2e tests")
