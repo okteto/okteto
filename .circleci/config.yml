@@ -49,6 +49,7 @@ jobs:
           destination: coverage.txt
   test-integration:
     executor: golang-ci
+    resource_class: large
     environment:
       OKTETO_URL: https://staging.okteto.dev/
       OKTETO_USER: cindylopez
