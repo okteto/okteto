@@ -124,6 +124,7 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 	if deployOptions.LogOutput != "" {
 		cmd.Args = append(cmd.Args, "--log-output", deployOptions.LogOutput)
 	}
+	cmd.Env = os.Environ()
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
 	}
