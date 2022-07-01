@@ -137,7 +137,7 @@ func TestUpStatefulsetV1(t *testing.T) {
 
 	kubectlOpts := &commands.KubectlOptions{
 		Namespace:  testNamespace,
-		File:       filepath.Join(dir, "deployment.yml"),
+		File:       filepath.Join(dir, "sfs.yml"),
 		Name:       "e2etest",
 		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
@@ -159,9 +159,10 @@ func TestUpStatefulsetV1(t *testing.T) {
 	require.NoError(t, err)
 
 	kubectlOpts = &commands.KubectlOptions{
-		Namespace: testNamespace,
-		File:      filepath.Join(dir, "deployment.yml"),
-		Name:      model.DevCloneName("e2etest"),
+		Namespace:  testNamespace,
+		File:       filepath.Join(dir, "sfs.yml"),
+		Name:       model.DevCloneName("e2etest"),
+		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
 	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, kubectlOpts, timeout))
 
@@ -249,7 +250,7 @@ func TestUpStatefulsetV2(t *testing.T) {
 
 	kubectlOpts := &commands.KubectlOptions{
 		Namespace:  testNamespace,
-		File:       filepath.Join(dir, "deployment.yml"),
+		File:       filepath.Join(dir, "sfs.yml"),
 		Name:       "e2etest",
 		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
@@ -271,9 +272,10 @@ func TestUpStatefulsetV2(t *testing.T) {
 	require.NoError(t, err)
 
 	kubectlOpts = &commands.KubectlOptions{
-		Namespace: testNamespace,
-		File:      filepath.Join(dir, "deployment.yml"),
-		Name:      model.DevCloneName("e2etest"),
+		Namespace:  testNamespace,
+		File:       filepath.Join(dir, "sfs.yml"),
+		Name:       model.DevCloneName("e2etest"),
+		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
 	require.NoError(t, integration.WaitForStatefulset(kubectlBinary, kubectlOpts, timeout))
 

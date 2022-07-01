@@ -160,9 +160,10 @@ func TestUpDeploymentV1(t *testing.T) {
 	require.NoError(t, err)
 
 	kubectlOpts = &commands.KubectlOptions{
-		Namespace: testNamespace,
-		File:      filepath.Join(dir, "deployment.yml"),
-		Name:      model.DevCloneName("e2etest"),
+		Namespace:  testNamespace,
+		File:       filepath.Join(dir, "deployment.yml"),
+		Name:       model.DevCloneName("e2etest"),
+		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
@@ -273,9 +274,10 @@ func TestUpDeploymentV2(t *testing.T) {
 	require.NoError(t, err)
 
 	kubectlOpts = &commands.KubectlOptions{
-		Namespace: testNamespace,
-		File:      filepath.Join(dir, "deployment.yml"),
-		Name:      model.DevCloneName("e2etest"),
+		Namespace:  testNamespace,
+		File:       filepath.Join(dir, "deployment.yml"),
+		Name:       model.DevCloneName("e2etest"),
+		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
