@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
-	"github.com/okteto/okteto/pkg/log"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -299,7 +298,7 @@ func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.
 func CheckAllResourcesRunning(name string, resourceStatus map[string]string) (bool, error) {
 	allRunning := true
 	for resourceID, status := range resourceStatus {
-		log.Infof("Resource %s is %s", resourceID, status)
+		oktetoLog.Infof("Resource %s is %s", resourceID, status)
 		if status == okteto.ErrorStatus {
 			return false, fmt.Errorf("repository '%s' deployed with errors", name)
 		}
