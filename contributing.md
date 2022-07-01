@@ -76,6 +76,22 @@ git push origin <branch-name>
 
 Once you do that and visit the repository, you should see a button on the GitHub UI prompting you to make a PR.
 
+##### Pull Request Labels
+
+In order to assist the team in generating quality release notes, all PRs must have the appropriate labels based on the scope of the change. One of the following labels must be applied to Pull Requests:
+
+![Release Labels](docs/release-labels.png)
+
+The `release/internal` label indicates that the change is associated with contents in the repo that are not associated with any code release. This would include udpates to docs or tests in the repo which are not included in the release binaries.
+
+If a pull request includes a new feature that does not affect existing feature sets then you'd add the `release/new-feature` label.
+
+Pull requests containing bug fixes should have the `release/bug-fix` label.
+
+Any change that breaks, or significantly alters, current behavior should be labeled with `release/breaking-change`.
+
+If a pull request does not have one of these labels checks will fail and PR merging will be blocked. If you're unsure which label to apply you are still more than welcome to open the PR and a team member can help identify the correct label during the review process.
+
 ## Development Guide
 
 Okteto is developed using the [Go](https://golang.org/) programming language. The current version of Go being used is [v1.17](https://go.dev/doc/go1.17). It uses go modules for dependency management.
