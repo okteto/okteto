@@ -1515,3 +1515,48 @@ func Test_expandEnvFiles(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildInfo_GetDockerfilePath(t *testing.T) {
+	tests := []struct {
+		name       string
+		context    string
+		dockerfile string
+		want       string
+	}{
+		{
+			name:       "empty",
+			context:    "",
+			dockerfile: "",
+			want:       "",
+		},
+		{
+			name:       "default",
+			context:    "",
+			dockerfile: "Dockerfile",
+			want:       "Dockerfile",
+		},
+		{
+			name:       "with-context",
+			context:    "api",
+			dockerfile: "Dockerfile",
+			want:       "api/Dockerfile",
+		},
+		{
+			name:       "with-context-and-non-dockerfile",
+			context:    "api",
+			dockerfile: "Dockerfile.dev",
+			want:       "api/Dockerfile.dev",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := &BuildInfo{
+				Context:    tt.context,
+				Dockerfile: tt.dockerfile,
+			}
+			if got := b.GetDockerfilePath(); got != tt.want {
+				t.Errorf("BuildInfo.GetDockerfilePath() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -87,7 +86,7 @@ func (up *upContext) activate() error {
 	buildDevImage := false
 	if _, err := registry.NewOktetoRegistry().GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
 		oktetoLog.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
-		path := filepath.Join(up.Dev.Image.Context, up.Dev.Image.Dockerfile)
+		path := up.Dev.Image.GetDockerfilePath()
 		if _, err := os.Stat(path); err != nil {
 			return oktetoErrors.UserError{
 				E:    fmt.Errorf("the image '%s' doesn't exist and Dockerfile '%s' is not accessible", up.Dev.Image.Name, path),

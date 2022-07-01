@@ -651,8 +651,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 		}
 	}
 
-	path := filepath.Join(context, dockerfile)
-	if _, err := os.Stat(path); err != nil {
+	if _, err := os.Stat(up.Dev.Image.GetDockerfilePath()); err != nil {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
 			Hint: "Try creating a Dockerfile file or specify the 'context' and 'dockerfile' fields in your okteto manifest.",

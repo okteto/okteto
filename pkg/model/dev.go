@@ -128,6 +128,11 @@ type BuildInfo struct {
 	ExportCache      string        `yaml:"export_cache,omitempty"`
 }
 
+// Returns the path to the Dockerfile
+func (b *BuildInfo) GetDockerfilePath() string {
+	return filepath.Join(b.Context, b.Dockerfile)
+}
+
 // Volume represents a volume in the development container
 type Volume struct {
 	LocalPath  string
