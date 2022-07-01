@@ -27,10 +27,19 @@ const (
 	// Maximum number of characters allowed in a namespace name
 	MAX_ALLOWED_CHARS = 63
 	RunningStatus     = "running"
+	NotRunningStatus  = "not-running"
 	CompletedStatus   = "completed"
+	PullingStatus     = "pulling"
 	ProgressingStatus = "progressing"
+	BootingStatus     = "booting"
 	ErrorStatus       = "error"
 )
+
+var TransitionStatus = map[string]bool{
+	BootingStatus:     true,
+	ProgressingStatus: true,
+	PullingStatus:     true,
+}
 
 type namespaceClient struct {
 	client *graphql.Client
