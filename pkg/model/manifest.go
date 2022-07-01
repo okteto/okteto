@@ -124,6 +124,9 @@ var (
 		"helm/charts",
 	}
 	manifestSubPath = []string{
+		"manifest",
+		"manifest.yml",
+		"manifest.yaml",
 		"manifests",
 		"manifests.yml",
 		"manifests.yaml",
