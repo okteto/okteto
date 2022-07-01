@@ -104,24 +104,24 @@ func Up() *cobra.Command {
 			ctx := context.Background()
 
 			if upOptions.ManifestPath != "" {
-				// we need to store the original manifest path as relative path before switching the cwd
-				upOptions.ManifestPathFlag = upOptions.ManifestPath
-				if filepath.IsAbs(upOptions.ManifestPath) {
-					cwd, err := os.Getwd()
-					if err != nil {
-						return err
-					}
-					relativeManifestPathFlag, err := filepath.Rel(cwd, upOptions.ManifestPath)
-					if err != nil {
-						return err
-					}
-					upOptions.ManifestPathFlag = relativeManifestPathFlag
+				// if path is absolute, its transformed to rel from root
+				initialCWD, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("failed to get the current working directory: %w", err)
 				}
-				workdir := model.GetWorkdirFromManifestPath(upOptions.ManifestPath)
-				if err := os.Chdir(workdir); err != nil {
+				manifestPathFlag, err := model.GetPathFromCWD(initialCWD, upOptions.ManifestPath)
+				if err != nil {
 					return err
 				}
-				upOptions.ManifestPath = model.GetManifestPathFromWorkdir(upOptions.ManifestPath, workdir)
+				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
+				upOptions.ManifestPathFlag = manifestPathFlag
+
+				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
+				uptManifestPath, err := model.UpdateCWDtoManifestPath(upOptions.ManifestPath)
+				if err != nil {
+					return err
+				}
+				upOptions.ManifestPath = uptManifestPath
 			}
 			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.ManifestPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
 			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)

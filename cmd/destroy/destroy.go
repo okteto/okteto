@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 
 	"strings"
 
@@ -101,25 +100,24 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if options.ManifestPath != "" {
-				// we need to store the original manifest path as relative path before switching the cwd
-				options.ManifestPathFlag = options.ManifestPath
-				if filepath.IsAbs(options.ManifestPath) {
-					cwd, err := os.Getwd()
-					if err != nil {
-						return err
-					}
-					relativeManifestPathFlag, err := filepath.Rel(cwd, options.ManifestPath)
-					if err != nil {
-						return err
-					}
-					options.ManifestPathFlag = relativeManifestPathFlag
+				// if path is absolute, its transformed to rel from root
+				initialCWD, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("failed to get the current working directory: %w", err)
 				}
-
-				workdir := model.GetWorkdirFromManifestPath(options.ManifestPath)
-				if err := os.Chdir(workdir); err != nil {
+				manifestPathFlag, err := model.GetPathFromCWD(initialCWD, options.ManifestPath)
+				if err != nil {
 					return err
 				}
-				options.ManifestPath = model.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
+				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
+				options.ManifestPathFlag = manifestPathFlag
+
+				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
+				uptManifestPath, err := model.UpdateCWDtoManifestPath(options.ManifestPath)
+				if err != nil {
+					return err
+				}
+				options.ManifestPath = uptManifestPath
 			}
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
 				return err
