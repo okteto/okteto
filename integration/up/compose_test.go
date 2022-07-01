@@ -93,7 +93,7 @@ func TestUpCompose(t *testing.T) {
 	log.Printf("original 'index.html' content: %s", testNamespace)
 
 	require.NoError(t, writeFile(filepath.Join(dir, "docker-compose.yml"), composeTemplate))
-	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), "venv"))
+	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 	require.NoError(t, createAppDockerfile(dir))
 	require.NoError(t, createNginxDir(dir))
 

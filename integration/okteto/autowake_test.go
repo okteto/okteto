@@ -147,7 +147,9 @@ persistentVolume:
 	indexHTMLName = "index.html"
 
 	stignoreName    = ".stignore"
-	stignoreContent = "venv"
+	stignoreContent = `venv
+.okteto
+.kube`
 )
 
 // TestAutoWakeFromURL tests the following scenario:

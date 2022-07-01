@@ -43,7 +43,10 @@ var (
 )
 
 const (
-	timeout = 300 * time.Second
+	timeout         = 300 * time.Second
+	stignoreContent = `venv
+.okteto
+.kube`
 )
 
 func TestMain(m *testing.M) {

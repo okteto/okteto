@@ -41,7 +41,7 @@ dev:
     command:
     - sh
     - -c
-    - "echo -n svc1 > index.html && python -m http.server 8080"
+    - echo svc1 > index.html && python -m http.server 8080
     sync:
     - .:/app
   svc2:
@@ -49,7 +49,7 @@ dev:
     command:
     - sh
     - -c
-    - "echo -n svc2 > index.html && python -m http.server 8080"
+    - echo svc2 > index.html && python -m http.server 8080
     sync:
     - .:/app
   svc3:
@@ -57,29 +57,35 @@ dev:
     command:
     - sh
     - -c
-    - "echo -n svc3 > index.html && python -m http.server 8080"
+    - echo svc3 > index.html && python -m http.server 8080
     sync:
     - .:/app
 `
 	globalForwardCompose = `services:
   svc1:
     image: python:alpine
+    ports:
+    - 8080
     command:
     - sh
     - -c
-    - "echo -n svc1 > index.html && python -m http.server 8080"
+    - echo svc1 > index.html && python -m http.server 8080
   svc2:
     image: python:alpine
+    ports:
+    - 8080
     command:
     - sh
     - -c
-    - "echo -n svc2 > index.html && python -m http.server 8080"
+    - echo svc2 > index.html && python -m http.server 8080
   svc3:
     image: python:alpine
+    ports:
+    - 8080
     command:
     - sh
     - -c
-   - "echo -n svc3 > index.html && python -m http.server 8080"
+    - echo svc3 > index.html && python -m http.server 8080
 `
 )
 
@@ -102,7 +108,7 @@ func TestUpGlobalForwarding(t *testing.T) {
 
 	require.NoError(t, writeFile(filepath.Join(dir, "docker-compose.yml"), globalForwardCompose))
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), globalForwardManifest))
-	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), "venv"))
+	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 
 	up1Options := &commands.UpOptions{
 		Name:       "svc1",
@@ -138,7 +144,7 @@ func TestUpGlobalForwarding(t *testing.T) {
 	up2Result, err := commands.RunOktetoUp(oktetoPath, up2Options)
 	require.NoError(t, err)
 
-	require.False(t, commands.HasUpCommandFinished(up1Result.Pid.Pid))
+	require.False(t, commands.HasUpCommandFinished(up1Result.Pid.Pid), "Up1 output: %s", up1Result.Output)
 
 	// Test that all endpoints continue being up and working
 	require.Equal(t, integration.GetContentFromURL(svc1LocalEndpoint, timeout), "svc1")

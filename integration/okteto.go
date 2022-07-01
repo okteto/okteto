@@ -112,7 +112,7 @@ func GetContentFromURL(url string, timeout time.Duration) string {
 				log.Printf("could not read body: %s", err)
 				return ""
 			}
-			content := string(body)
+			content := strings.TrimSpace(string(body))
 			if content == "" {
 				if retry%10 == 0 {
 					log.Printf("called %s, got empty content", url)

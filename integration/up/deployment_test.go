@@ -134,7 +134,7 @@ func TestUpDeploymentV1(t *testing.T) {
 
 	require.NoError(t, writeFile(filepath.Join(dir, "deployment.yml"), k8sManifestTemplate))
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), deploymentManifestV1))
-	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), "venv"))
+	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 
 	kubectlOpts := &commands.KubectlOptions{
 		Namespace:  testNamespace,
@@ -248,7 +248,7 @@ func TestUpDeploymentV2(t *testing.T) {
 
 	require.NoError(t, writeFile(filepath.Join(dir, "deployment.yml"), k8sManifestTemplate))
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), deploymentManifestV2))
-	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), "venv"))
+	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 
 	kubectlOpts := &commands.KubectlOptions{
 		Namespace:  testNamespace,

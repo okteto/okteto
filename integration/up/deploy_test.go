@@ -75,7 +75,7 @@ func TestUpWithDeploy(t *testing.T) {
 
 	require.NoError(t, writeFile(filepath.Join(dir, "deployment.yaml"), k8sManifestTemplate))
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), oktetoManifestV2Deploy))
-	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), "venv"))
+	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 	require.NoError(t, createAppDockerfile(dir))
 
 	upOptions := &commands.UpOptions{

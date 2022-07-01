@@ -44,6 +44,7 @@ type UpCommandProcessResult struct {
 	WaitGroup *sync.WaitGroup
 	ErrorChan chan error
 	Pid       *os.Process
+	Output    bytes.Buffer
 }
 
 // RunOktetoUp runs an okteto up command
@@ -81,6 +82,7 @@ func RunOktetoUp(oktetoPath string, upOptions *UpOptions) (*UpCommandProcessResu
 		WaitGroup: &wg,
 		ErrorChan: upErrorChannel,
 		Pid:       cmd.Process,
+		Output:    out,
 	}, nil
 }
 

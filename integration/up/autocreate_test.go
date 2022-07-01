@@ -91,7 +91,7 @@ func TestUpAutocreate(t *testing.T) {
 	log.Printf("original 'index.html' content: %s", testNamespace)
 
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), autocreateManifest))
-	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), "venv"))
+	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 
 	upOptions := &commands.UpOptions{
 		Name:         "autocreate",
@@ -179,7 +179,7 @@ func TestUpAutocreateV2(t *testing.T) {
 	log.Printf("original 'index.html' content: %s", testNamespace)
 
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), autocreateManifestV2))
-	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), "venv"))
+	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 
 	upOptions := &commands.UpOptions{
 		Name:         "autocreate",
