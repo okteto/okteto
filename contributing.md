@@ -82,7 +82,7 @@ In order to assist the team in generating quality release notes, all PRs must ha
 
 ![Release Labels](docs/release-labels.png)
 
-The `release/internal` label indicates that the change is associated with contents in the repo that are not associated with any code release. This would include udpates to docs or tests in the repo which are not included in the release binaries.
+The `release/internal` label indicates that the change is associated with contents in the repo that are not associated with any code release. This would include updates to docs or tests in the repo which are not included in the release binaries.
 
 If a pull request includes a new feature that does not affect existing feature sets then you'd add the `release/new-feature` label.
 
