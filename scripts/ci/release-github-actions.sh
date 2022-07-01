@@ -97,8 +97,9 @@
                         exit 0
                 fi
 
-                sed -i '' -E 's_FROM\ okteto\/okteto\:latest_FROM\ okteto\/okteto\:'"$RELEASE_TAG"'_' Dockerfile
-                sed -i '' -E 's_FROM\ okteto\/okteto\:[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*_FROM\ okteto\/okteto\:'"$RELEASE_TAG"'_' Dockerfile
+                # NOTE: these sed commands will not work in OS X and will require `brew install gnu-sed` and updating the PATH
+                sed -i -E 's_FROM\ okteto\/okteto\:latest_FROM\ okteto\/okteto\:'"$RELEASE_TAG"'_' Dockerfile
+                sed -i -E 's_FROM\ okteto\/okteto\:[[:digit:]]*\.[[:digit:]]*\.[[:digit:]]*_FROM\ okteto\/okteto\:'"$RELEASE_TAG"'_' Dockerfile
                 git add Dockerfile
                 git commit -m "release ${RELEASE_TAG}"
 
@@ -126,7 +127,7 @@
                                 -token "$GITHUB_TOKEN" \
                                 -recreate \
                                 -replace \
-                                -commitish "$(git rev-parse main)" \
+                                -commitish "$(git rev-parse "${RELEASE_TAG}")" \
                                 latest
                 fi
 
