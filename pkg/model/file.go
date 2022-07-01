@@ -36,18 +36,6 @@ func GetManifestPathFromWorkdir(manifestPath, workdir string) string {
 	return mPath
 }
 
-func GetPathFromCWD(cwd string, path string) (string, error) {
-	if path == "" || !filepath.IsAbs(path) {
-		return path, nil
-	}
-
-	relativeManifestPathFlag, err := filepath.Rel(cwd, path)
-	if err != nil {
-		return "", err
-	}
-	return relativeManifestPathFlag, nil
-}
-
 func UpdateCWDtoManifestPath(manifestPath string) (string, error) {
 	workdir := GetWorkdirFromManifestPath(manifestPath)
 	if err := os.Chdir(workdir); err != nil {

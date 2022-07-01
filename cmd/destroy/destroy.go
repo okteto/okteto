@@ -38,6 +38,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -105,7 +106,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("failed to get the current working directory: %w", err)
 				}
-				manifestPathFlag, err := model.GetPathFromCWD(initialCWD, options.ManifestPath)
+				manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
 				if err != nil {
 					return err
 				}

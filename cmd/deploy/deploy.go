@@ -42,6 +42,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	giturls "github.com/whilp/git-urls"
@@ -135,7 +136,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("failed to get the current working directory: %w", err)
 				}
-				manifestPathFlag, err := model.GetPathFromCWD(initialCWD, options.ManifestPath)
+				manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
 				if err != nil {
 					return err
 				}
