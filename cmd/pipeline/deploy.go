@@ -302,10 +302,9 @@ func CheckAllResourcesRunning(name string, resourceStatus map[string]string) (bo
 		if status == okteto.ErrorStatus {
 			return false, fmt.Errorf("repository '%s' deployed with errors", name)
 		}
-		if status != okteto.RunningStatus && status != okteto.CompletedStatus {
+		if okteto.TransitionStatus[status] {
 			allRunning = false
 		}
-
 	}
 	return allRunning, nil
 }
