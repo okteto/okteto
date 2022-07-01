@@ -292,11 +292,7 @@ func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
 		manifestPath = filepath.Join(cwd, manifestPath)
 	}
 	if manifestPath != "" && FileExistsAndNotDir(manifestPath) {
-		manifest, err := getManifestFromFile(cwd, manifestPath)
-		if err != nil {
-			return nil, err
-		}
-		return manifest, nil
+		return getManifestFromFile(cwd, manifestPath)
 	}
 
 	return nil, oktetoErrors.ErrManifestNotFound
