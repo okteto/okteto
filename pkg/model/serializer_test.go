@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
@@ -1110,7 +1111,7 @@ dev:
 								},
 							},
 						},
-						Forward:         []Forward{},
+						Forward:         []forward.Forward{},
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
@@ -1175,7 +1176,7 @@ dev:
 								},
 							},
 						},
-						Forward:         []Forward{},
+						Forward:         []forward.Forward{},
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
@@ -1239,9 +1240,10 @@ dev:
 sync:
   - app:/app`),
 			expected: &Manifest{
-				Build:        map[string]*BuildInfo{},
-				Deploy:       &DeployInfo{},
-				Dependencies: map[string]*Dependency{},
+				Build:         map[string]*BuildInfo{},
+				Deploy:        &DeployInfo{},
+				Dependencies:  map[string]*Dependency{},
+				GlobalForward: []forward.GlobalForward{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1255,7 +1257,7 @@ sync:
 								},
 							},
 						},
-						Forward:         []Forward{},
+						Forward:         []forward.Forward{},
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
@@ -1320,9 +1322,10 @@ sync:
 services:
   - name: svc`),
 			expected: &Manifest{
-				Build:        map[string]*BuildInfo{},
-				Deploy:       &DeployInfo{},
-				Dependencies: map[string]*Dependency{},
+				Build:         map[string]*BuildInfo{},
+				Deploy:        &DeployInfo{},
+				Dependencies:  map[string]*Dependency{},
+				GlobalForward: []forward.GlobalForward{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1336,7 +1339,7 @@ services:
 								},
 							},
 						},
-						Forward:         []Forward{},
+						Forward:         []forward.Forward{},
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
@@ -1401,7 +1404,7 @@ services:
 								Sync: Sync{
 									RescanInterval: 300,
 								},
-								Forward:  []Forward{},
+								Forward:  []forward.Forward{},
 								Reverse:  []Reverse{},
 								Services: []*Dev{},
 								Metadata: &Metadata{
@@ -1465,7 +1468,7 @@ dev:
 								},
 							},
 						},
-						Forward:         []Forward{},
+						Forward:         []forward.Forward{},
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
@@ -1550,7 +1553,7 @@ dev:
 								},
 							},
 						},
-						Forward:         []Forward{},
+						Forward:         []forward.Forward{},
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,
@@ -1615,7 +1618,7 @@ dev:
 								},
 							},
 						},
-						Forward:         []Forward{},
+						Forward:         []forward.Forward{},
 						Selector:        Selector{},
 						EmptyImage:      true,
 						ImagePullPolicy: v1.PullAlways,

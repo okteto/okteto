@@ -1,34 +1,10 @@
-// Copyright 2022 The Okteto Authors
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-package model
+package forward
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
 )
-
-const malformedPortForward = "Wrong port-forward syntax '%s', must be of the form 'localPort:remotePort' or 'localPort:serviceName:remotePort'"
-
-// Forward represents a port forwarding definition
-type Forward struct {
-	Local       int               `json:"localPort" yaml:"localPort"`
-	Remote      int               `json:"remotePort" yaml:"remotePort"`
-	Service     bool              `json:"-" yaml:"-"`
-	ServiceName string            `json:"name" yaml:"name"`
-	Labels      map[string]string `json:"labels" yaml:"labels"`
-}
 
 type ForwardRaw struct {
 	Local       int               `json:"localPort" yaml:"localPort"`
@@ -52,7 +28,7 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	parts := strings.Split(raw, ":")
 	if len(parts) < 2 || len(parts) > 3 {
-		return fmt.Errorf(malformedPortForward, raw)
+		return fmt.Errorf(MalformedPortForward, raw)
 	}
 
 	localPort, err := strconv.Atoi(parts[0])
@@ -64,7 +40,7 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if len(parts) == 2 {
 		p, err := strconv.Atoi(parts[1])
 		if err != nil {
-			return fmt.Errorf(malformedPortForward, raw)
+			return fmt.Errorf(MalformedPortForward, raw)
 		}
 
 		f.Remote = p
@@ -75,7 +51,7 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	f.ServiceName = parts[1]
 	p, err := strconv.Atoi(parts[2])
 	if err != nil {
-		return fmt.Errorf(malformedPortForward, raw)
+		return fmt.Errorf(MalformedPortForward, raw)
 	}
 
 	f.Remote = p
@@ -85,31 +61,6 @@ func (f *Forward) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (f Forward) MarshalYAML() (interface{}, error) {
 	return f.String(), nil
-}
-
-func (f Forward) String() string {
-	if f.Service {
-		return fmt.Sprintf("%d:%s:%d", f.Local, f.ServiceName, f.Remote)
-	}
-
-	return fmt.Sprintf("%d:%d", f.Local, f.Remote)
-}
-
-func (f *Forward) less(c *Forward) bool {
-	if !f.Service && !c.Service {
-		return f.Local < c.Local
-	}
-
-	// a non-service always goes first
-	if !f.Service && c.Service {
-		return true
-	}
-
-	if f.Service && !c.Service {
-		return false
-	}
-
-	return f.Local < c.Local
 }
 
 func (f *Forward) UnmarshalExtendedForm(unmarshal func(interface{}) error) error {

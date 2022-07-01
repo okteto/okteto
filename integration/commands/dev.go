@@ -31,6 +31,7 @@ import (
 type UpOptions struct {
 	Name         string
 	Namespace    string
+	Service      string
 	ManifestPath string
 	Workdir      string
 	Deploy       bool
@@ -84,7 +85,6 @@ func RunOktetoUp(oktetoPath string, upOptions *UpOptions) (*UpCommandProcessResu
 }
 
 func getUpCmd(oktetoPath string, upOptions *UpOptions) *exec.Cmd {
-
 	cmd := exec.Command(oktetoPath, "up")
 	cmd.Env = os.Environ()
 	if upOptions.ManifestPath != "" {
@@ -95,6 +95,9 @@ func getUpCmd(oktetoPath string, upOptions *UpOptions) *exec.Cmd {
 	}
 	if upOptions.Workdir != "" {
 		cmd.Dir = upOptions.Workdir
+	}
+	if upOptions.Service != "" {
+		cmd.Args = append(cmd.Args, upOptions.Service)
 	}
 	if upOptions.Deploy {
 		cmd.Args = append(cmd.Args, "--deploy")
@@ -109,6 +112,7 @@ func getUpCmd(oktetoPath string, upOptions *UpOptions) *exec.Cmd {
 	if upOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, upOptions.Token))
 	}
+
 	return cmd
 }
 
@@ -119,6 +123,7 @@ type DownOptions struct {
 	Workdir      string
 	OktetoHome   string
 	Token        string
+	Service      string
 }
 
 // RunOktetoDown runs an okteto down command

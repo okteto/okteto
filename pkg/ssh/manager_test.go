@@ -25,6 +25,7 @@ import (
 	"github.com/gliderlabs/ssh"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	forwardModel "github.com/okteto/okteto/pkg/model/forward"
 )
 
 type testHTTPHandler struct {
@@ -147,7 +148,7 @@ func startServers(fm *ForwardManager) error {
 			return err
 		}
 
-		if err := fm.Add(model.Forward{Local: local, Remote: remote}); err != nil {
+		if err := fm.Add(forwardModel.Forward{Local: local, Remote: remote}); err != nil {
 			return err
 		}
 
@@ -323,19 +324,19 @@ func (fm *ForwardManager) waitForwardsDisconnected() error {
 func TestAdd(t *testing.T) {
 
 	pf := NewForwardManager(context.Background(), "0.0.0.0:22000", "0.0.0.0", "0.0.0.0", nil, "")
-	if err := pf.Add(model.Forward{Local: 10010, Remote: 1010}); err != nil {
+	if err := pf.Add(forwardModel.Forward{Local: 10010, Remote: 1010}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := pf.Add(model.Forward{Local: 10011, Remote: 1011}); err != nil {
+	if err := pf.Add(forwardModel.Forward{Local: 10011, Remote: 1011}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := pf.Add(model.Forward{Local: 10010, Remote: 1011}); err == nil {
+	if err := pf.Add(forwardModel.Forward{Local: 10010, Remote: 1011}); err == nil {
 		t.Fatal("duplicated local port didn't return an error")
 	}
 
-	if err := pf.Add(model.Forward{Local: 10012, Remote: 15123, Service: true, ServiceName: "svc"}); err != nil {
+	if err := pf.Add(forwardModel.Forward{Local: 10012, Remote: 15123, Service: true, ServiceName: "svc"}); err != nil {
 		t.Fatal(err)
 	}
 

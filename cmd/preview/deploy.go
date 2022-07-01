@@ -23,6 +23,7 @@ import (
 
 	"github.com/docker/docker/pkg/namesgenerator"
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -264,15 +265,9 @@ func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.
 			if err != nil {
 				return err
 			}
-			allRunning := true
-			for _, status := range resourceStatus {
-				if status == "error" {
-					return fmt.Errorf("preview environment '%s' deployed with resource errors", name)
-				}
-				if status != "running" {
-					allRunning = false
-					break
-				}
+			allRunning, err := pipeline.CheckAllResourcesRunning(name, resourceStatus)
+			if err != nil {
+				return err
 			}
 			if allRunning {
 				return nil

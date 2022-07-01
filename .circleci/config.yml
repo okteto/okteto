@@ -98,6 +98,7 @@ jobs:
           destination: coverage.txt
   test-integration:
     executor: golang-ci
+    resource_class: large
     environment:
       OKTETO_URL: https://staging.okteto.dev/
       OKTETO_USER: cindylopez
@@ -273,7 +274,7 @@ jobs:
             git push git@github.com:okteto/homebrew-cli.git master
       - deploy:
           name: Auto-update-actions
-          command: ./scripts/update_actions.sh $CIRCLE_TAG
+          command: ./scripts/ci/release-github-actions.sh $CIRCLE_TAG
 
   release:
     executor: golang-ci

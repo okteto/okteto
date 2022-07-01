@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
+	"github.com/okteto/okteto/pkg/model/forward"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 )
@@ -898,7 +899,7 @@ func getPortAndProtocol(portString, originalPortString string) (string, apiv1.Pr
 func getPortWithMapping(p *PortRaw, portString string) error {
 	localToContainer := strings.Split(portString, ":")
 	if len(localToContainer) > 3 {
-		return fmt.Errorf(malformedPortForward, portString)
+		return fmt.Errorf(forward.MalformedPortForward, portString)
 	}
 
 	containerPortString := localToContainer[len(localToContainer)-1]

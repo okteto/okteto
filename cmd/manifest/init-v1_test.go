@@ -73,7 +73,7 @@ func TestRun(t *testing.T) {
 	}
 
 	if dev.Image.Name != "okteto/golang:1" {
-		t.Errorf("got %s, expected %s", dev.Image, "okteto/golang:1")
+		t.Errorf("got %s, expected %s", dev.Image.Name, "okteto/golang:1")
 	}
 
 	opts = &InitOpts{
@@ -98,7 +98,7 @@ func TestRun(t *testing.T) {
 	}
 
 	if dev.Image.Name != "okteto/ruby:2" {
-		t.Errorf("got %s, expected %s", dev.Image, "okteto/ruby:2")
+		t.Errorf("got %s, expected %s", dev.Image.Name, "okteto/ruby:2")
 	}
 }
 

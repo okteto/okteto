@@ -26,6 +26,7 @@ import (
 	"github.com/a8m/envsubst"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/forward"
 	yaml "gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
 )
@@ -138,15 +139,16 @@ var (
 
 // Manifest represents an okteto manifest
 type Manifest struct {
-	Name         string               `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace    string               `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context      string               `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon         string               `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy       *DeployInfo          `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev          ManifestDevs         `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy      []DeployCommand      `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build        ManifestBuild        `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies ManifestDependencies `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	Name          string                  `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace     string                  `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context       string                  `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon          string                  `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy        *DeployInfo             `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev           ManifestDevs            `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy       []DeployCommand         `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build         ManifestBuild           `json:"build,omitempty" yaml:"build,omitempty"`
+	Dependencies  ManifestDependencies    `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
 
 	Type     Archetype `json:"-" yaml:"-"`
 	Filename string    `yaml:"-"`
@@ -166,10 +168,11 @@ type ManifestDependencies map[string]*Dependency
 // NewManifest creates a new empty manifest
 func NewManifest() *Manifest {
 	return &Manifest{
-		Dev:          map[string]*Dev{},
-		Build:        map[string]*BuildInfo{},
-		Dependencies: map[string]*Dependency{},
-		Deploy:       &DeployInfo{},
+		Dev:           map[string]*Dev{},
+		Build:         map[string]*BuildInfo{},
+		Dependencies:  map[string]*Dependency{},
+		Deploy:        &DeployInfo{},
+		GlobalForward: []forward.GlobalForward{},
 	}
 }
 
@@ -273,6 +276,7 @@ func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
+		devManifest.Filename = oktetoPath
 
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v1 unmarshalled successfully")
 
@@ -792,7 +796,7 @@ func (m *Manifest) setDefaults() error {
 			return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
 		}
 		sort.SliceStable(d.Forward, func(i, j int) bool {
-			return d.Forward[i].less(&d.Forward[j])
+			return d.Forward[i].Less(&d.Forward[j])
 		})
 
 		sort.SliceStable(d.Reverse, func(i, j int) bool {
@@ -809,10 +813,12 @@ func (m *Manifest) setDefaults() error {
 			b.Context = b.Name
 			b.Name = ""
 		}
+
 		if !(b.Image != "" && len(b.VolumesToInclude) > 0 && b.Dockerfile == "") {
 			b.setBuildDefaults()
 		}
 	}
+
 	return nil
 }
 
@@ -945,7 +951,8 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 		if err != nil {
 			oktetoLog.Infof("can not make svc[%s].build.context relative to cwd", svcName)
 		}
-		buildInfo.Dockerfile, err = filepath.Rel(cwd, buildInfo.Dockerfile)
+		contextAbs := filepath.Join(cwd, buildInfo.Context)
+		buildInfo.Dockerfile, err = filepath.Rel(contextAbs, buildInfo.Dockerfile)
 		if err != nil {
 			oktetoLog.Infof("can not make svc[%s].build.dockerfile relative to cwd", svcName)
 		}
