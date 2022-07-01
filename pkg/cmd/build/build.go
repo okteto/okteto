@@ -273,7 +273,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 		return dockerfile
 	}
 
-	if model.FileExistsAndNotDir(dockerfile) {
+	if joinPath != dockerfile && model.FileExistsAndNotDir(dockerfile) {
 		oktetoLog.Warning(fmt.Sprintf(doubleDockerfileWarning, svcName, context, dockerfile))
 	}
 
