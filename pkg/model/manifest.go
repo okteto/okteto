@@ -124,9 +124,6 @@ var (
 		"helm/charts",
 	}
 	manifestSubPath = []string{
-		"manifest",
-		"manifest.yml",
-		"manifest.yaml",
 		"manifests",
 		"manifests.yml",
 		"manifests.yaml",
@@ -136,6 +133,9 @@ var (
 		"k8s",
 		"k8s.yml",
 		"k8s.yaml",
+		"manifest",
+		"manifest.yml",
+		"manifest.yaml",
 	}
 	priorityOrder = []string{"dev", "dependencies", "deploy", "build", "name"}
 )
