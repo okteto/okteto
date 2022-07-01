@@ -83,6 +83,7 @@ func RunOktetoDestroy(oktetoPath string, destroyOptions *DestroyOptions) error {
 	if destroyOptions.Namespace != "" {
 		cmd.Args = append(cmd.Args, "--namespace", destroyOptions.Namespace)
 	}
+	cmd.Env = os.Environ()
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
 	}
