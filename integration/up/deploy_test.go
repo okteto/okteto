@@ -119,7 +119,7 @@ func TestUpWithDeploy(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexRemoteEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))
 
 	// Test destroy pod reconnection
-	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "app=e2etest"))
+	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "app=e2etest", c))
 	destroyPodContent := fmt.Sprintf("%s-destroy-pod", testNamespace)
 	require.NoError(t, writeFile(indexPath, destroyPodContent))
 	require.NoError(t, waitUntilUpdatedContent(indexRemoteEndpoint, destroyPodContent, timeout, upResult.ErrorChan))

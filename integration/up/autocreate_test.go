@@ -25,7 +25,9 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
 )
 
@@ -81,6 +83,8 @@ func TestUpAutocreate(t *testing.T) {
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -134,7 +138,7 @@ func TestUpAutocreate(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))
 
 	// Test destroy pod reconnection
-	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "app=autocreate"))
+	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "app=autocreate", c))
 	destroyPodContent := fmt.Sprintf("%s-destroy-pod", testNamespace)
 	require.NoError(t, writeFile(indexPath, destroyPodContent))
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, destroyPodContent, timeout, upResult.ErrorChan))
@@ -167,6 +171,8 @@ func TestUpAutocreateV2(t *testing.T) {
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -220,7 +226,7 @@ func TestUpAutocreateV2(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))
 
 	// Test destroy pod reconnection
-	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "app=autocreate"))
+	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "app=autocreate", c))
 	destroyPodContent := fmt.Sprintf("%s-destroy-pod", testNamespace)
 	require.NoError(t, writeFile(indexPath, destroyPodContent))
 	require.NoError(t, waitUntilUpdatedContent(indexLocalEndpoint, destroyPodContent, timeout, upResult.ErrorChan))

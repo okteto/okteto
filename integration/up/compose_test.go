@@ -148,7 +148,7 @@ func TestUpCompose(t *testing.T) {
 	require.NoError(t, waitUntilUpdatedContent(indexRemoteEndpoint, localSyncthingKilledContent, timeout, upResult.ErrorChan))
 
 	// Test destroy pod reconnection
-	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "stack.okteto.com/service=app"))
+	require.NoError(t, integration.DestroyPod(context.Background(), testNamespace, "stack.okteto.com/service=app", c))
 	destroyPodContent := fmt.Sprintf("%s-destroy-pod", testNamespace)
 	require.NoError(t, writeFile(indexPath, destroyPodContent))
 	require.NoError(t, waitUntilUpdatedContent(indexRemoteEndpoint, destroyPodContent, timeout, upResult.ErrorChan))

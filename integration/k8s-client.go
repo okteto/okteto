@@ -153,12 +153,8 @@ func WaitForStatefulset(kubectlBinary string, kubectlOpts *commands.KubectlOptio
 }
 
 // DestroyPod returns a deployment given a namespace and name
-func DestroyPod(ctx context.Context, ns, labelSelector string) error {
+func DestroyPod(ctx context.Context, ns, labelSelector string, c kubernetes.Interface) error {
 	log.Printf("destroying pods with label selector: %s", labelSelector)
-	c, _, err := K8sClient()
-	if err != nil {
-		return err
-	}
 
 	pods, err := c.CoreV1().Pods(ns).List(context.Background(), metav1.ListOptions{LabelSelector: labelSelector})
 	if err != nil {
