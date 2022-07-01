@@ -80,6 +80,7 @@ func TestUpAutocreate(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -100,8 +101,9 @@ func TestUpAutocreate(t *testing.T) {
 	require.NoError(t, err)
 
 	kubectlOpts := &commands.KubectlOptions{
-		Namespace: testNamespace,
-		Name:      model.DevCloneName("autocreate"),
+		Namespace:  testNamespace,
+		Name:       model.DevCloneName("autocreate"),
+		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
@@ -164,6 +166,7 @@ func TestUpAutocreateV2(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
 	indexPath := filepath.Join(dir, "index.html")
 	require.NoError(t, writeFile(indexPath, testNamespace))
@@ -184,8 +187,9 @@ func TestUpAutocreateV2(t *testing.T) {
 	require.NoError(t, err)
 
 	kubectlOpts := &commands.KubectlOptions{
-		Namespace: testNamespace,
-		Name:      model.DevCloneName("autocreate"),
+		Namespace:  testNamespace,
+		Name:       model.DevCloneName("autocreate"),
+		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 

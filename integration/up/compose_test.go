@@ -121,8 +121,9 @@ func TestUpCompose(t *testing.T) {
 	require.NoError(t, err)
 
 	kubectlOpts := &commands.KubectlOptions{
-		Namespace: testNamespace,
-		Name:      model.DevCloneName("app"),
+		Namespace:  testNamespace,
+		Name:       model.DevCloneName("app"),
+		ConfigFile: filepath.Join(dir, ".kube", "config"),
 	}
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
