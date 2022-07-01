@@ -149,6 +149,9 @@ func RunOktetoDown(oktetoPath string, downOpts *DownOptions) error {
 	if downOpts.OktetoHome != "" {
 		downCMD.Env = append(downCMD.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, downOpts.OktetoHome))
 	}
+	if downOpts.Service != "" {
+		downCMD.Args = append(downCMD.Args, downOpts.Service)
+	}
 	downCMD.Env = os.Environ()
 	o, err := downCMD.CombinedOutput()
 
@@ -166,7 +169,7 @@ func RunOktetoDown(oktetoPath string, downOpts *DownOptions) error {
 func HasUpCommandFinished(pid int) bool {
 	var err error
 	ticker := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(30 * time.Second)
+	to := time.NewTicker(15 * time.Second)
 	for {
 		select {
 		case <-to.C:

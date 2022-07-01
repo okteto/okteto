@@ -139,7 +139,6 @@ func TestUpGlobalForwarding(t *testing.T) {
 		OktetoHome: dir,
 		Token:      token,
 		Service:    "svc2",
-		Deploy:     true,
 	}
 	up2Result, err := commands.RunOktetoUp(oktetoPath, up2Options)
 	require.NoError(t, err)
@@ -177,7 +176,7 @@ func TestUpGlobalForwarding(t *testing.T) {
 	require.True(t, commands.HasUpCommandFinished(up2Result.Pid.Pid))
 
 	// Test that all endpoints are down
-	require.Equal(t, integration.GetContentFromURL(svc1LocalEndpoint, 5*time.Second), "")
+	require.Equal(t, integration.GetContentFromURL(svc1LocalEndpoint, 20*time.Second), "")
 	require.Equal(t, integration.GetContentFromURL(svc2LocalEndpoint, 5*time.Second), "")
 	require.Equal(t, integration.GetContentFromURL(svc3LocalEndpoint, 5*time.Second), "")
 }
