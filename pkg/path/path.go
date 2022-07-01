@@ -2,7 +2,8 @@ package path
 
 import "path/filepath"
 
-func GetRelativePathFromCWD(cwd string, path string) (string, error) {
+// GetRelativePathFromCWD returns the relative path from the cwd
+func GetRelativePathFromCWD(cwd, path string) (string, error) {
 	if path == "" || !filepath.IsAbs(path) {
 		return path, nil
 	}
