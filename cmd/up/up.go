@@ -218,7 +218,7 @@ func Up() *cobra.Command {
 				startTime := time.Now()
 				err := up.deployApp(ctx)
 
-				// tracking deploy either its been successfull or not
+				// tracking deploy either its been successful or not
 				analytics.TrackDeploy(analytics.TrackDeployMetadata{
 					Success:                err == nil,
 					IsOktetoRepo:           utils.IsOktetoRepo(),
