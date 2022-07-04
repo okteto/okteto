@@ -204,34 +204,36 @@ func Up() *cobra.Command {
 				return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
 			}
 
-			forceAutocreateDev := true
-			if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
+			// if manifest v1 - either set autocreate: true or pass --deploy (okteto forces autocreate: true)
+			// if manifest v2 - either set autocreate: true or pass --deploy with a deploy section at the manifest
+			forceAutocreate := false
+			if upOptions.Deploy && !up.Manifest.IsV2 {
+				// the autocreate property is forced to be true
+				forceAutocreate = true
+			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
 				if !upOptions.Deploy {
 					oktetoLog.Information("Deploying development environment '%s'...", up.Manifest.Name)
 					oktetoLog.Information("To redeploy your development environment manually run 'okteto deploy' or 'okteto up --deploy'")
 				}
 				startTime := time.Now()
 				err := up.deployApp(ctx)
+
+				// tracking deploy either its been successfull or not
+				analytics.TrackDeploy(analytics.TrackDeployMetadata{
+					Success:                err == nil,
+					IsOktetoRepo:           utils.IsOktetoRepo(),
+					Duration:               time.Since(startTime),
+					PipelineType:           up.Manifest.Type,
+					DeployType:             "automatic",
+					IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
+					HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
+					HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
+					Err:                    err,
+				})
+
+				// only allow error.ErrManifestFoundButNoDeployCommands to go forward - autocreate property will deploy the app
 				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployCommands) {
 					return err
-				}
-
-				// we have to force to override the autocreate value to FALSE if the error is NOT having a manifest with empty deploy section
-				// deploy section is required when using --deploy flag and autocreate is set to false at the dev
-				if !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployCommands) {
-					forceAutocreateDev = false
-				}
-				if err != nil {
-					analytics.TrackDeploy(analytics.TrackDeployMetadata{
-						Success:                err == nil,
-						IsOktetoRepo:           utils.IsOktetoRepo(),
-						Duration:               time.Since(startTime),
-						PipelineType:           up.Manifest.Type,
-						DeployType:             "automatic",
-						IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
-						HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
-						HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
-					})
 				}
 
 			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
@@ -245,8 +247,10 @@ func Up() *cobra.Command {
 			}
 
 			up.Dev = dev
-			if !forceAutocreateDev {
-				up.Dev.Autocreate = false
+			if forceAutocreate {
+				// update autocreate property if needed to be forced
+				oktetoLog.Info("Setting Autocreate to true because manifest v1 and flag --deploy")
+				up.Dev.Autocreate = true
 			}
 
 			if err := setBuildEnvVars(oktetoManifest, dev.Name); err != nil {
