@@ -53,6 +53,17 @@ func TestPipelineActions(t *testing.T) {
 	assert.NoError(t, executeDeleteNamespaceAction(namespace))
 }
 
+func TestPipelineActionsWithCompose(t *testing.T) {
+	integration.SkipIfWindows(t)
+
+	namespace := getTestNamespace()
+	assert.NoError(t, executeCreateNamespaceAction(namespace))
+	assert.NoError(t, executeDeployWithComposePipelineAction(namespace))
+	assert.NoError(t, executeDestroyPipelineAction(namespace))
+	assert.NoError(t, executeDeleteNamespaceAction(namespace))
+
+}
+
 func executeDeployPipelineAction(t *testing.T, namespace string) error {
 	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, deployPipelinePath)
 	actionFolder := strings.Split(deployPipelinePath, "/")[1]
@@ -69,6 +80,47 @@ func executeDeployPipelineAction(t *testing.T, namespace string) error {
 	t.Setenv(model.GithubRepositoryEnvVar, pipelineRepo)
 	t.Setenv(model.GithubRefEnvVar, "cli-e2e")
 	t.Setenv(model.GithubServerURLEnvVar, githubHTTPSURL)
+
+	log.Printf("deploying pipeline %s", namespace)
+	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
+	args := []string{"movies", namespace}
+
+	cmd := exec.Command(command, args...)
+	cmd.Env = os.Environ()
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
+	}
+	log.Printf("Deploy pipeline output: \n%s\n", string(o))
+
+	oktetoClient, err := okteto.NewOktetoClient()
+	if err != nil {
+		return err
+	}
+	okteto.Context().Namespace = namespace
+	pipeline, err := oktetoClient.GetPipelineByName(context.Background(), "movies")
+	if err != nil || pipeline == nil {
+		return fmt.Errorf("Could not get deployment %s", namespace)
+	}
+	return nil
+}
+
+func executeDeployWithComposePipelineAction(namespace string) error {
+	actionRepo := fmt.Sprintf("%s%s.git", githubHTTPSURL, deployPipelinePath)
+	actionFolder := strings.Split(deployPipelinePath, "/")[1]
+	log.Printf("cloning pipeline repository: %s", actionRepo)
+	if err := integration.CloneGitRepoWithBranch(actionRepo, oktetoVersion); err != nil {
+		if err := integration.CloneGitRepo(actionRepo); err != nil {
+			return err
+		}
+		log.Printf("cloned repo %s main branch\n", actionRepo)
+	}
+	log.Printf("cloned repo %s \n", actionRepo)
+	defer integration.DeleteGitRepo(actionFolder)
+
+	os.Setenv(model.GithubRepositoryEnvVar, "okteto/movies-with-compose")
+	os.Setenv(model.GithubRefEnvVar, "main")
+	os.Setenv(model.GithubServerURLEnvVar, githubHTTPSURL)
 
 	log.Printf("deploying pipeline %s", namespace)
 	command := fmt.Sprintf("%s/entrypoint.sh", actionFolder)
