@@ -212,11 +212,13 @@ func Up() *cobra.Command {
 				}
 				startTime := time.Now()
 				err := up.deployApp(ctx)
-				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
+				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployCommands) {
 					return err
 				}
-				// when manifest has no deploy commands, prevent autocreate dev
-				if errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployCommands) {
+
+				// we have to force to override the autocreate value to FALSE if the error is NOT having a manifest with empty deploy section
+				// deploy section is required when using --deploy flag and autocreate is set to false at the dev
+				if !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployCommands) {
 					forceAutocreateDev = false
 				}
 				if err != nil {
