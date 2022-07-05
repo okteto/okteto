@@ -133,23 +133,25 @@ func (dev *Dev) getSourceSubPath(path string) string {
 	if dev.parentSyncFolder == "" {
 		dev.parentSyncFolder = "."
 	}
-	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(sourceSubPath))
-	if err != nil || strings.HasPrefix(rel, "..") {
-		if err != nil {
-			oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
-		}
-		if filepath.IsAbs(path) {
-			oktetoLog.Info("could not retrieve subpath")
-			path = filepath.Base(path)
-		} else {
-			p, err := filepath.Abs(path)
+	if filepath.IsAbs(sourceSubPath) {
+		rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(sourceSubPath))
+		if err != nil || strings.HasPrefix(rel, "..") {
 			if err != nil {
 				oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
 			}
-			return filepath.ToSlash(p)
+			if filepath.IsAbs(path) {
+				oktetoLog.Info("could not retrieve subpath")
+				path = filepath.Base(path)
+			} else {
+				p, err := filepath.Abs(path)
+				if err != nil {
+					oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
+				}
+				return filepath.ToSlash(p)
+			}
 		}
 	}
-	return filepath.ToSlash(filepath.Join(SourceCodeSubPath, filepath.ToSlash(rel)))
+	return filepath.ToSlash(filepath.Join(SourceCodeSubPath, filepath.ToSlash(sourceSubPath)))
 }
 
 // PersistentVolumeEnabled returns true if persistent volumes are enabled for dev
