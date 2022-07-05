@@ -1,0 +1,338 @@
+# Okteto CLI code review comments
+
+- [Okteto CLI code review comments](#okteto-cli-code-review-comments)
+  - [What to look for in a code review?](#what-to-look-for-in-a-code-review)
+    - [Code review checklist](#code-review-checklist)
+    - [PR Description](#pr-description)
+    - [PR comments](#pr-comments)
+    - [Tests](#tests)
+      - [Unit tests](#unit-tests)
+      - [E2E tests](#e2e-tests)
+    - [Logs](#logs)
+    - [New dependencies](#new-dependencies)
+    - [Analytics](#analytics)
+  - [Common smell codes](#common-smell-codes)
+    - [Errors](#errors)
+      - [Don't Panic](#dont-panic)
+      - [Discarded errors](#discarded-errors)
+      - [Adding context](#adding-context)
+      - [Indent Error Flow](#indent-error-flow)
+    - [Naming convention](#naming-convention)
+      - [Variable Names](#variable-names)
+      - [Receiver's name](#receivers-name)
+      - [Be consistent](#be-consistent)
+    - [Other smell codes](#other-smell-codes)
+      - [Search for an element](#search-for-an-element)
+
+## What to look for in a code review?
+
+### Code review checklist
+
+Here is a summary of the things every reviewer should be aware of while doing a CLI code review:
+
+- [ ] Does the PR has unit tests/e2e tests that covers all the scenarios?
+  *We should look forward to have all scenarios covered.*
+- [ ] Does the PR description explain what it does/solve?
+  *In the future we may need to know why the PR was created and what issues it solved, so this should be made clear in the description of the PR.*
+- [ ] Does it affects other services (actions/vscode plugin/pipeline/graphql/json logs)?
+  *It can affect other services that are not the CLI itself and break scenarios that are not contempled on the CLI repository, so we need to bear in mind all those services when reviewing a PR*
+- [ ] Does it needs to add analytics?
+  *We need to add analytics to know the adoption of new features and how the users use the product*
+- [ ] Has the code any smell code?
+  *we should develop clean code so that if a new developer starts working on the project, he/she can understand the code as soon as possibleWe need to develop clean code so when a new developer starts working on the CLI*
+
+### PR Description
+
+The description of the pull request should state what issue it solves (or explain if there is no associated issue) and how it is solved.
+
+If required, the author could be asked to provide screenshots or videos explaining what was wrong and how it was fixed.
+
+### PR comments
+
+Comments are the basis of all pull requests. In these the reviewers will ask questions about the code, ask for changes, split pull requests into several, discuss what is the best approach to improve the CLI code.
+
+A respectful tone will be used adding whenever necessary documentation to reinforce the comments made.
+
+### Tests
+
+All new features or bug fixes should have at least unit tests that cover the use case. If for any reason unit tests cannot be created, at least one e2e test should be created to prove that the new functionality works correctly.
+
+Tests should fail with helpful messages saying what was wrong, with what inputs, what was actually got, and what was expected. Assume that the person debugging your failing test is not you, and is not your team.
+
+#### Unit tests
+
+The code should be testable by unit functions, which means that each function should perform an action and this action should be testable.
+
+Only one test will be created per function in which it will be tested by table driven tests with test names descriptive enough for any user to know what it does just by reading the name of the test. For example:
+
+```golang
+func Test_FunctionName(t *testing.T) {
+    var tests = []struct {
+        name         string
+        resource     Resource
+        expectedErr  bool
+    }{
+        {
+            name:        "when resource is nil then error",
+            resource:    nil,
+            expectedErr: true,
+        },
+        {
+            name:        "when resource is not valid then error",
+            resource:    MalformedResource{},
+            expectedErr: true,
+        },
+        {
+            name:        "when resource is valid then no error",
+            resource:    CorrectResource{},
+            expectedErr: false,
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            t.Setenv("ENV_REQUIRED_FOR_TEST", "testValue")
+            testDir := t.TempDir()
+            err := functionName(testDir)
+            if tt.expectedErr {
+                assert.Error(t, err)
+            } else {
+                assert.NoError(t, err)
+            }
+        })
+    }
+}
+```
+
+If the test has many use cases, it will be grouped in several tests per result, for example:
+
+```golang
+func Test_FunctionNameThenErr(t *testing.T) {
+    var tests = []struct {
+        name         string
+        resource     Resource
+        expectedErr  bool
+    }{
+        {
+            name:        "when resource is nil then error",
+            resource:    nil,
+        },
+        {
+            name:        "when resource is not valid then error",
+            resource:    MalformedResource{},
+        },
+        {
+            name:        "when resource is not valid because of X",
+            resource:    MalformedResource{},
+        },
+        {
+            name:        "when resource fails because of proxy",
+            resource:    MalformedResource{},
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            t.Setenv("ENV_REQUIRED_FOR_TEST", "testValue")
+            testDir := t.TempDir()
+            err := functionName(testDir)
+            if tt.expectedErr {
+                assert.Error(t, err)
+            } else {
+                assert.NoError(t, err)
+            }
+        })
+    }
+}
+func Test_FunctionNameThenNoErr(t *testing.T) {
+    var tests = []struct {
+        name         string
+        resource     Resource
+    }{
+        {
+            name:        "when resource is type 1",
+            resource:    CorrectResource1{},
+        },
+        {
+            name:        "when resource is type 1 and has x feature",
+            resource:    CorrectResource1{
+                FeatureX: true,
+            },
+        },
+        {
+            name:        "when resource is type 2",
+            resource:    CorrectResource2{},
+        },
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            t.Setenv("ENV_REQUIRED_FOR_TEST", "testValue")
+            testDir := t.TempDir()
+            err := functionName(testDir)
+            if tt.expectedErr {
+                assert.Error(t, err)
+            } else {
+                assert.NoError(t, err)
+            }
+        })
+    }
+}
+```
+
+Each test should create its own scenario, eliminating and leaving the state of the machine in the same state as it was at the start of the test.
+
+Also,
+
+#### E2E tests
+
+Each command should have its own set of end to end tests to prove that the main functionality works correctly. An e2e test should be added to a new feature if it adds a new use case or breaks an existing use case.
+
+**New tests will be launched in parallel to the existing ones in order to speed up the CI process.**
+
+See how to run e2e tests to run e2e tests locally
+
+### Logs
+
+Logs are an important part of the CLI because if a user has a problem, we will have to review the file generated by okteto doctor, so these logs can be used as a tool to help us identify the problem.
+
+Through these you should be able to follow the execution of the okteto command without problems, so they should be as concise as possible. Errors not returned to the user must be logged without exception as this is the only trace we could have when looking for a problem.
+
+### New dependencies
+
+It is ok to add new dependencies, as long as we know the reason why they are added and the implications of adding a dependency ( when they update it, check if it has any vulnerability). So if a PR imports a new dependency, we need to agree that is really necessary to add it.
+
+### Analytics
+
+With each release we fix bugs, release new features and the only way to see how all these changes are adopted is by analyzing the data collected by the users, so we should collect as much useful data as possible to see how many people use new features, if the percentage of bugs per user and command is decreasing...
+
+Usually new properties will be added to existing events, but if there is a new functionality and we need to track a new event, for example this is how a new command analytics could look like:
+
+```json
+{
+    "execution time": "5m",
+    "error": nil,
+    "use-of-X-flag": true,
+    "use-of-Y-flag": false,
+}
+```
+
+## Common smell codes
+
+### Errors
+
+See [http://golang.org/doc/effective_go.html#errors](http://golang.org/doc/effective_go.html#errors)
+
+#### Don't Panic
+
+Don't use panic for normal error handling. Use error and multiple return values.
+
+#### Discarded errors
+
+Do not discard errors using `_` variables. If a function returns an error, check it to make sure the function succeeded. Handle the error, return it, or, in truly exceptional situations, log it as soon as it happens.
+
+#### Adding context
+
+Adding context before you return the error can be helpful, instead of just returning the error. This allows developers to understand what the program was trying to do when it entered the error state making it much easier to debug.
+For example:
+
+```golang
+// Wrap the error
+return nil, fmt.Errorf("get cache %s: %w", f.Name, err)
+
+// Just add context
+return nil, fmt.Errorf("saving cache %s: %v", f.Name, err)
+```
+
+A few things to keep in mind when adding context:
+
+- Decide if you want to expose the underlying error to the caller. If so, use %w, if not, you can use %v.
+- Don’t use words like failed, error, didn't. As it’s an error, the user already knows that something failed and this might lead to having strings like failed xx failed xx failed xx. Explain what failed instead.
+- Error strings should not be capitalized or end with punctuation or a newline. You can use `golint` to check for this.
+
+#### Indent Error Flow
+
+Try to keep the normal code path at a minimal indentation, and indent the error handling, dealing with it first. This improves the readability of the code by permitting visually scanning the normal path quickly. For instance, don't write:
+
+```golang
+if err != nil {
+    // error handling
+} else {
+    // normal code
+}
+
+```
+
+Instead, write:
+
+```golang
+if err != nil {
+    // error handling
+    return // or continue, etc.
+}
+// normal code
+```
+
+If the if statement has an initialization statement that, such as:
+
+```golang
+if x, err := f(); err != nil {
+    // error handling
+    return
+} else {
+    // use x
+}
+```
+
+then this may require moving the short variable declaration to its own line:
+
+```golang
+x, err := f()
+if err != nil {
+    // error handling
+    return
+}
+// use x
+```
+
+### Naming convention
+
+#### Variable Names
+
+Variable names in Go should be short rather than long. This is especially true for local variables with limited scope. Prefer c to lineCount. Prefer i to sliceIndex.
+
+The basic rule: the further from its declaration that a name is used, the more descriptive the name must be. For a method receiver, one or two letters is sufficient. Common variables such as loop indices and readers can be a single letter (i, r). More unusual things and global variables need more descriptive names.
+
+#### Receiver's name
+
+The name of a method's receiver should be a reflection of its identity; often a one or two letter abbreviation of its type suffices (such as "c" or "cl" for "Client"). Don't use generic names such as "me", "this" or "self", identifiers typical of object-oriented languages that place more emphasis on methods as opposed to functions. The name need not be as descriptive as a that of a method argument, as its role is obvious and serves no documentary purpose. It can be very short as it will appear on almost every line of every method of the type; familiarity admits brevity.
+
+#### Be consistent
+
+If you call the receiver "c" in one method, don't call it "cl" in another.
+
+### Other smell codes
+
+#### Search for an element
+
+If it is necessary to search several times if an element is found in another list, it is best to create a map where the key is something that identifies the element. For example:
+
+```golang
+portsToAdd := []int{8080, 5005, 3000, 8081, 9001, 9000}
+newPortsComingFromDockerfile := []int{3000, 1234}
+
+// Create map with all the ports:
+alreadyAddedPorts := map[int]bool{}
+for _, p := range portsToAdd{
+    alreadyAddedPorts[p] = true
+}
+
+for _, p := range newPortsComingFromDockerfile{
+    // Check if it's already added
+    if _, ok := alreadyAddedPorts[p]; ok {
+        // port is already added
+    } else {
+        // port is missing in the list
+    }
+}
+```
