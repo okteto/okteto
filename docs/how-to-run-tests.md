@@ -7,7 +7,6 @@ On this document we will cover how to run unit tests and e2e tests locally
     - [Requirements:](#requirements)
     - [Run all unit tests](#run-all-unit-tests)
     - [Run package tests](#run-package-tests)
-    - [Run package tests](#run-package-tests-1)
     - [Run specific test](#run-specific-test)
   - [How to run e2e tests locally?](#how-to-run-e2e-tests-locally)
     - [Requirements:](#requirements-1)
@@ -28,16 +27,6 @@ You can run all tests by running the following command:
 
 ``` bash
 make test
-```
-
-### Run package tests
-
-You can run all tests by running the following command:
-
-``` bash
-go test packageName
-# for example
-go test github.com/okteto/okteto/cmd/deploy
 ```
 
 ### Run package tests
