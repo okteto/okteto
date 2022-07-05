@@ -179,17 +179,13 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 			statusField:   data.Status,
 			repoField:     data.Repository,
 			branchField:   data.Branch,
-			filenameField: data.Filename,
+			filenameField: "",
 			yamlField:     base64.StdEncoding.EncodeToString(data.Manifest),
 			iconField:     data.Icon,
 		},
 	}
 	if data.Repository != "" {
-		cmap.Data[repoField] = data.Repository
-	}
-
-	if data.Branch != "" {
-		cmap.Data[branchField] = data.Branch
+		cmap.Data[filenameField] = data.Filename
 	}
 
 	output := oktetoLog.GetOutputBuffer()
@@ -209,11 +205,14 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 	cmap.ObjectMeta.Labels[model.GitDeployLabel] = "true"
 	cmap.Data[nameField] = data.Name
 	cmap.Data[statusField] = data.Status
-	cmap.Data[filenameField] = data.Filename
 	cmap.Data[yamlField] = base64.StdEncoding.EncodeToString(data.Manifest)
 	cmap.Data[iconField] = data.Icon
 	cmap.Data[actionNameField] = actionName
 	if data.Repository != "" {
+		// the filename at the cfgmap is used by the installer to re-deploy the app from the ui
+		// this parameter is just saved if a repository is being detected
+		// when repository is empty - the filename should not be saved and redeploys should be done from cli
+		cmap.Data[filenameField] = data.Filename
 		cmap.Data[repoField] = data.Repository
 	}
 
