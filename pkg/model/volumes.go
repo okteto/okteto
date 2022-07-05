@@ -133,8 +133,8 @@ func (dev *Dev) getSourceSubPath(path string) string {
 	if dev.parentSyncFolder == "" {
 		dev.parentSyncFolder = "."
 	}
+	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(sourceSubPath))
 	if filepath.IsAbs(sourceSubPath) {
-		rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(sourceSubPath))
 		if err != nil || strings.HasPrefix(rel, "..") {
 			if err != nil {
 				oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
@@ -151,7 +151,7 @@ func (dev *Dev) getSourceSubPath(path string) string {
 			}
 		}
 	}
-	return filepath.ToSlash(filepath.Join(SourceCodeSubPath, filepath.ToSlash(sourceSubPath)))
+	return filepath.ToSlash(filepath.Join(SourceCodeSubPath, filepath.ToSlash(rel)))
 }
 
 // PersistentVolumeEnabled returns true if persistent volumes are enabled for dev
