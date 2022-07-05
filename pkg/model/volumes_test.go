@@ -17,9 +17,6 @@ import (
 	"reflect"
 	"runtime"
 	"testing"
-
-	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/sirupsen/logrus"
 )
 
 func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
@@ -502,7 +499,6 @@ func Test_getDataSubPath(t *testing.T) {
 }
 
 func Test_getSourceSubPath(t *testing.T) {
-	oktetoLog.Init(logrus.DebugLevel)
 	var tests = []struct {
 		name   string
 		dev    *Dev
@@ -551,27 +547,6 @@ func Test_getSourceSubPath(t *testing.T) {
 			path:   "c:\\code\\func",
 			goos:   "windows",
 			result: "src/func",
-		},
-		{
-			name:   "windows-non-relative",
-			dev:    &Dev{parentSyncFolder: "/code"},
-			path:   "c:\\test\\func",
-			goos:   "windows",
-			result: "test/func",
-		},
-		{
-			name:   "linux-non-relative",
-			dev:    &Dev{parentSyncFolder: "/code"},
-			path:   "/test/func",
-			goos:   "linux",
-			result: "test/func",
-		},
-		{
-			name:   "darwin-non-relative",
-			dev:    &Dev{parentSyncFolder: "/code"},
-			path:   "/test/func",
-			goos:   "darwin",
-			result: "test/func",
 		},
 	}
 
