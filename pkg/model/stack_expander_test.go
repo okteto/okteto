@@ -26,6 +26,8 @@ services:
             - $CUSTOM_ENV
             - CUSTOM2_ENV=$CUSTOM_ENV
             - EMPTY
+            - ${ENV:-dev}
+            - ${ENV}
         ports:
             - 8080:8080
         environment:
@@ -35,6 +37,9 @@ services:
             EMPTY:
         volumes:
             - ./vote:/src
+            - $CUSTOM_ENV:/src
+            - ${CUSTOM_ENV}:/src
+            - ${ENV:-dev}:/src
 
     redis:
         image: redis
@@ -54,6 +59,8 @@ volumes:
       - CUSTOM_ENV=MYVALUE
       - CUSTOM2_ENV=MYVALUE
       - EMPTY
+      - ENV=dev
+      - ENV=
     ports:
       - 8080:8080
     environment:
@@ -63,6 +70,9 @@ volumes:
       EMPTY:
     volumes:
       - ./vote:/src
+      - MYVALUE:/src
+      - MYVALUE:/src
+      - dev:/src
   redis:
     image: redis
     ports:

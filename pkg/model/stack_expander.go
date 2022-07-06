@@ -8,6 +8,42 @@ import (
 	yaml3 "gopkg.in/yaml.v3"
 )
 
+func isMapString(value string) bool {
+	colonSplit := strings.SplitN(value, ":", 3)
+	switch len(colonSplit) {
+	case 2:
+		indxColon := strings.Index(value, ":")
+		indxRightCurlyBracket := strings.Index(value, "}")
+		return indxColon > indxRightCurlyBracket
+	case 3:
+		return true
+	}
+	return false
+}
+func isCurlyEnv(value string) bool {
+	return strings.HasPrefix(value, "{") && strings.HasSuffix(value, "}")
+}
+func hasEnvDefaultValue(value string) (int, bool) {
+	return strings.Index(value, ":-"), strings.Contains(value, ":-")
+}
+
+func isEnvStringKey(value string) (string, bool) {
+	if !strings.HasPrefix(value, "$") {
+		return "", false
+	}
+	if isMapString(value) {
+		return "", false
+	}
+	key := strings.TrimPrefix(value, "$")
+	if isCurlyEnv(key) {
+		key = strings.TrimPrefix(strings.TrimSuffix(key, "}"), "{")
+		if indx, ok := hasEnvDefaultValue(key); ok {
+			key = key[:indx]
+		}
+	}
+	return key, true
+}
+
 func expandEnvScalarNode(node *yaml3.Node) (*yaml3.Node, error) {
 	switch node.Kind {
 	// when is a ScalarNode, replace its value with the ENV replaced
@@ -21,9 +57,8 @@ func expandEnvScalarNode(node *yaml3.Node) (*yaml3.Node, error) {
 	// when is a Sequence and starts with $ can be a list of envs, so transform the list to key=value format
 	case yaml3.SequenceNode:
 		for indx, subNode := range node.Content {
-			if strings.HasPrefix(subNode.Value, "$") {
+			if key, ok := isEnvStringKey(subNode.Value); ok {
 				value := subNode.Value
-				key := strings.TrimSuffix(strings.TrimPrefix(value, "$"), "=")
 				node.Content[indx].Value = fmt.Sprintf("%s=%s", key, value)
 			}
 		}
