@@ -13,7 +13,10 @@
 
 package model
 
-import "path/filepath"
+import (
+	"os"
+	"path/filepath"
+)
 
 // GetWorkdirFromManifestPath sets the path
 func GetWorkdirFromManifestPath(manifestPath string) string {
@@ -31,4 +34,13 @@ func GetManifestPathFromWorkdir(manifestPath, workdir string) string {
 		return ""
 	}
 	return mPath
+}
+
+func UpdateCWDtoManifestPath(manifestPath string) (string, error) {
+	workdir := GetWorkdirFromManifestPath(manifestPath)
+	if err := os.Chdir(workdir); err != nil {
+		return "", err
+	}
+	updatedManifestPath := GetManifestPathFromWorkdir(manifestPath, workdir)
+	return updatedManifestPath, nil
 }

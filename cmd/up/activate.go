@@ -227,7 +227,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	}
 
 	if up.Dev.PersistentVolumeEnabled() {
-		if err := volumes.CreateForDev(ctx, up.Dev, up.Client, up.Options.DevPath); err != nil {
+		if err := volumes.CreateForDev(ctx, up.Dev, up.Client, up.Options.ManifestPath); err != nil {
 			return err
 		}
 	}

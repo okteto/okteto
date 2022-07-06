@@ -149,7 +149,6 @@ type Manifest struct {
 	Dependencies ManifestDependencies `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 
 	Type     Archetype `json:"-" yaml:"-"`
-	Filename string    `yaml:"-"`
 	Manifest []byte    `json:"-" yaml:"-"`
 	IsV2     bool      `json:"-" yaml:"-"`
 }
@@ -287,19 +286,7 @@ func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
 		manifestPath = filepath.Join(cwd, manifestPath)
 	}
 	if manifestPath != "" && FileExistsAndNotDir(manifestPath) {
-		manifest, err := getManifestFromFile(cwd, manifestPath)
-		if err != nil {
-			return nil, err
-		}
-		path := ""
-		if filepath.IsAbs(manifestPath) {
-			path, err = filepath.Rel(cwd, manifestPath)
-			if err != nil {
-				oktetoLog.Debugf("could not detect relative path to %s: %s", manifestPath, err)
-			}
-		}
-		manifest.Filename = path
-		return manifest, nil
+		return getManifestFromFile(cwd, manifestPath)
 	}
 
 	return nil, oktetoErrors.ErrManifestNotFound
