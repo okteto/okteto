@@ -40,11 +40,31 @@ test:
 
 .PHONY: integration
 integration:
-	go test github.com/okteto/okteto/integration -tags="common integration actions" --count=1 -v -timeout 1h
+	go test github.com/okteto/okteto/integration/... -tags="common integration actions" --count=1 -v -timeout 1h
 
 .PHONY: integration-actions
 integration-actions:
-	go test github.com/okteto/okteto/integration -tags="common actions" --count=1 -v -timeout 15m
+	go test github.com/okteto/okteto/integration/actions -tags="actions" --count=1 -v -timeout 10m
+
+.PHONY: integration-build
+integration-build:
+	go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
+
+.PHONY: integration-deploy
+integration-deploy:
+	go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
+
+.PHONY: integration-okteto
+integration-okteto:
+	go test github.com/okteto/okteto/integration/okteto -tags="integration" --count=1 -v -timeout 30m
+
+.PHONY: integration-up
+integration-up:
+	go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
+
+.PHONY: integration-deprecated
+integration-deprecated:
+	go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m && go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
 
 .PHONY: build
 build:
