@@ -198,7 +198,7 @@ It is ok to add new dependencies, as long as we know the reason why they are add
 
 ### Analytics
 
-With each release we fix bugs, release new features and the only way to see how all these changes are adopted is by analyzing the data collected by the users, so we should collect as much useful data as possible to see how many people use new features, if the percentage of bugs per user and command is decreasing...
+With each release we fix bugs, release new features and the only way to see how all these changes are adopted is by analyzing the data collected by the users, so we should collect as much useful data as possible to see how many people use new features, if the percentage of bugs per user and command is decreasing.
 
 Usually new properties will be added to existing events, but if there is a new functionality and we need to track a new event, for example this is how a new command analytics could look like:
 
