@@ -57,7 +57,7 @@ func Test_GetContextResource(t *testing.T) {
 			for k, v := range tt.env {
 				os.Setenv(k, v)
 			}
-			result, err := Get(tmpFile.Name())
+			result, err := GetContextResource(tmpFile.Name())
 			if err != nil {
 				t.Fatalf("error reading manifest: %v", err)
 			}
