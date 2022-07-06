@@ -101,8 +101,10 @@ func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 		return nil
 	}
 
-	if err := waitUntilDestroyed(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
-		return err
+	if resp != nil {
+		if err := waitUntilDestroyed(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
+			return err
+		}
 	}
 
 	oktetoLog.Success("Repository '%s' successfully destroyed", opts.Name)
