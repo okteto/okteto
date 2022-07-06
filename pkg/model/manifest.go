@@ -212,7 +212,7 @@ func NewDeployInfo() *DeployInfo {
 }
 
 func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
-	if oktetoPath := getFilePath(cwd, OktetoManifestFiles); oktetoPath != "" {
+	if oktetoPath := getFilePath(cwd, oktetoManifestFiles); oktetoPath != "" {
 		oktetoLog.Infof("Found okteto file")
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto manifest on %s", oktetoPath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling manifest...")
@@ -436,7 +436,7 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 
 // GetInferredManifest infers the manifest from a directory
 func GetInferredManifest(cwd string) (*Manifest, error) {
-	if pipelinePath := getFilePath(cwd, PipelineFiles); pipelinePath != "" {
+	if pipelinePath := getFilePath(cwd, pipelineFiles); pipelinePath != "" {
 		oktetoLog.Infof("Found pipeline")
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found okteto pipeline manifest on %s", pipelinePath)
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Unmarshalling pipeline manifest...")
@@ -449,7 +449,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		return pipelineManifest, nil
 	}
 
-	if stackPath := getFilePath(cwd, ComposeFiles); stackPath != "" {
+	if stackPath := getFilePath(cwd, composeFiles); stackPath != "" {
 		oktetoLog.Infof("Found okteto compose")
 		stackPath, err := filepath.Rel(cwd, stackPath)
 		if err != nil {
@@ -626,7 +626,7 @@ func getFilePath(cwd string, files []string) string {
 
 func getChartPath(cwd string) string {
 	// Files will be checked in the order defined in the list
-	for _, name := range HelmChartsSubPaths {
+	for _, name := range helmChartsSubPaths {
 		path := filepath.Join(cwd, name, "Chart.yaml")
 		if FileExists(path) {
 			return filepath.Dir(path)
@@ -637,7 +637,7 @@ func getChartPath(cwd string) string {
 
 func getManifestsPath(cwd string) string {
 	// Files will be checked in the order defined in the list
-	for _, name := range OktetoManifestFiles {
+	for _, name := range oktetoManifestFiles {
 		path := filepath.Join(cwd, name)
 		if FileExists(path) {
 			return path

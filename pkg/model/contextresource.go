@@ -82,16 +82,16 @@ func inferContextResourceFile() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if oktetoPath := GetFilePathFromWdAndFiles(cwd, OktetoManifestFiles); oktetoPath != "" {
+	if oktetoPath := GetFilePathFromWdAndFiles(cwd, oktetoManifestFiles); oktetoPath != "" {
 		oktetoLog.Infof("context will load from %s", oktetoPath)
 		return oktetoPath, nil
 	}
-	if pipelinePath := GetFilePathFromWdAndFiles(cwd, PipelineFiles); pipelinePath != "" {
+	if pipelinePath := GetFilePathFromWdAndFiles(cwd, pipelineFiles); pipelinePath != "" {
 		oktetoLog.Infof("context will load from %s", pipelinePath)
 		return pipelinePath, nil
 	}
 
-	if stackPath := GetFilePathFromWdAndFiles(cwd, ComposeFiles); stackPath != "" {
+	if stackPath := GetFilePathFromWdAndFiles(cwd, composeFiles); stackPath != "" {
 		oktetoLog.Infof("context will load from %s", stackPath)
 		return stackPath, nil
 	}
