@@ -340,7 +340,8 @@ func (ph *proxyHandler) translateMetadata(body map[string]json.RawMessage) error
 func (ph *proxyHandler) translateDeploymentSpec(body map[string]json.RawMessage) error {
 	var spec appsv1.DeploymentSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
-		return fmt.Errorf("could not process deployment spec: %s", err)
+		oktetoLog.Info(err)
+		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
 	ph.applyDivert(&spec.Template.Spec)
@@ -355,7 +356,8 @@ func (ph *proxyHandler) translateDeploymentSpec(body map[string]json.RawMessage)
 func (ph *proxyHandler) translateStatefulSetSpec(body map[string]json.RawMessage) error {
 	var spec appsv1.StatefulSetSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
-		return fmt.Errorf("could not process statefulset spec: %s", err)
+		oktetoLog.Info(err)
+		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
 	ph.applyDivert(&spec.Template.Spec)
@@ -370,7 +372,8 @@ func (ph *proxyHandler) translateStatefulSetSpec(body map[string]json.RawMessage
 func (ph *proxyHandler) translateJobSpec(body map[string]json.RawMessage) error {
 	var spec batchv1.JobSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
-		return fmt.Errorf("could not process job spec: %s", err)
+		oktetoLog.Info(err)
+		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
 	ph.applyDivert(&spec.Template.Spec)
@@ -385,7 +388,8 @@ func (ph *proxyHandler) translateJobSpec(body map[string]json.RawMessage) error 
 func (ph *proxyHandler) translateCronJobSpec(body map[string]json.RawMessage) error {
 	var spec batchv1.CronJobSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
-		return fmt.Errorf("could not process cronjob spec: %s", err)
+		oktetoLog.Info(err)
+		return nil
 	}
 	labels.SetInMetadata(&spec.JobTemplate.Spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
 	ph.applyDivert(&spec.JobTemplate.Spec.Template.Spec)
@@ -400,7 +404,8 @@ func (ph *proxyHandler) translateCronJobSpec(body map[string]json.RawMessage) er
 func (ph *proxyHandler) translateDaemonSetSpec(body map[string]json.RawMessage) error {
 	var spec appsv1.DaemonSetSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
-		return fmt.Errorf("could not process daemonset spec: %s", err)
+		oktetoLog.Info(err)
+		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
 	ph.applyDivert(&spec.Template.Spec)
@@ -415,7 +420,8 @@ func (ph *proxyHandler) translateDaemonSetSpec(body map[string]json.RawMessage) 
 func (ph *proxyHandler) translateReplicationControllerSpec(body map[string]json.RawMessage) error {
 	var spec apiv1.ReplicationControllerSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
-		return fmt.Errorf("could not process replicationcontroller spec: %s", err)
+		oktetoLog.Info(err)
+		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
 	ph.applyDivert(&spec.Template.Spec)
@@ -430,7 +436,8 @@ func (ph *proxyHandler) translateReplicationControllerSpec(body map[string]json.
 func (ph *proxyHandler) translateReplicaSetSpec(body map[string]json.RawMessage) error {
 	var spec appsv1.ReplicaSetSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
-		return fmt.Errorf("could not process replicaset spec: %s", err)
+		oktetoLog.Info(err)
+		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
 	ph.applyDivert(&spec.Template.Spec)
