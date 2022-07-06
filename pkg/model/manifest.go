@@ -1039,7 +1039,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 				if subsection.Kind != yaml3.ScalarNode {
 					continue
 				}
-				serviceName := strings.ToUpper(subsection.Value)
+				serviceName := strings.ToUpper(strings.ReplaceAll(subsection.Value, "-", "_"))
 				subsection.HeadComment = fmt.Sprintf(buildSvcEnvVars, serviceName, serviceName, serviceName, serviceName)
 			}
 		}
