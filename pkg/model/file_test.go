@@ -86,7 +86,7 @@ func Test_GetManifestPathFromWorkdir(t *testing.T) {
 			name:         "inside .okteto folder",
 			path:         filepath.Join(".okteto", "okteto.yml"),
 			workdir:      ".",
-			expectedPath: ".okteto/okteto.yml",
+			expectedPath: filepath.Join(".okteto", "okteto.yml"),
 		},
 		{
 			name:         "one path ahead",
@@ -110,13 +110,13 @@ func Test_GetManifestPathFromWorkdir(t *testing.T) {
 			name:         "full path on .okteto",
 			path:         filepath.Join("/usr", ".okteto", "okteto.yml"),
 			workdir:      "/usr",
-			expectedPath: ".okteto/okteto.yml",
+			expectedPath: filepath.Join(".okteto", "okteto.yml"),
 		},
 		{
 			name:         "relative path with more than two paths ahead",
 			path:         filepath.Join("~", "app", ".okteto", "okteto.yml"),
 			workdir:      "~/app",
-			expectedPath: ".okteto/okteto.yml",
+			expectedPath: filepath.Join(".okteto", "okteto.yml"),
 		},
 	}
 
@@ -139,7 +139,7 @@ func Test_UpdateCWDtoManifestPath(t *testing.T) {
 		{
 			name:         "inside .okteto folder",
 			path:         filepath.Join(root, ".okteto", "okteto.yml"),
-			expectedPath: ".okteto/okteto.yml",
+			expectedPath: filepath.Join(".okteto", "okteto.yml"),
 		},
 		{
 			name:         "one path ahead",
@@ -154,7 +154,7 @@ func Test_UpdateCWDtoManifestPath(t *testing.T) {
 		{
 			name:         "full path on .okteto",
 			path:         filepath.Join(root, "usr", ".okteto", "okteto.yml"),
-			expectedPath: ".okteto/okteto.yml",
+			expectedPath: filepath.Join(".okteto", "okteto.yml"),
 		},
 	}
 

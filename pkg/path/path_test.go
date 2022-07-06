@@ -20,7 +20,7 @@ func Test_GetRelativePathFromCWD(t *testing.T) {
 			name:         "inside .okteto folder",
 			path:         filepath.Join(root, ".okteto", "okteto.yml"),
 			cwd:          root,
-			expectedPath: ".okteto/okteto.yml",
+			expectedPath: filepath.Join(".okteto", "okteto.yml"),
 		},
 		{
 			name:         "one path ahead - cwd is folder",
@@ -32,13 +32,13 @@ func Test_GetRelativePathFromCWD(t *testing.T) {
 			name:         "one path ahead - cwd is root",
 			path:         filepath.Join(root, "test", "okteto.yml"),
 			cwd:          root,
-			expectedPath: "test/okteto.yml",
+			expectedPath: filepath.Join("test", "okteto.yml"),
 		},
 		{
 			name:         "one path ahead not abs - cwd is root",
-			path:         "test/okteto.yml",
+			path:         filepath.Join("test", "okteto.yml"),
 			cwd:          root,
-			expectedPath: "test/okteto.yml",
+			expectedPath: filepath.Join("test", "okteto.yml"),
 		},
 	}
 
