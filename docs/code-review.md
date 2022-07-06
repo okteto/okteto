@@ -11,7 +11,7 @@
     - [Logs](#logs)
     - [New dependencies](#new-dependencies)
     - [Analytics](#analytics)
-  - [Common smell codes](#common-smell-codes)
+  - [Common anti patterns](#common-anti-patterns)
     - [Errors](#errors)
       - [Don't Panic](#dont-panic)
       - [Discarded errors](#discarded-errors)
@@ -21,7 +21,6 @@
       - [Variable Names](#variable-names)
       - [Receiver's name](#receivers-name)
       - [Be consistent](#be-consistent)
-    - [Other smell codes](#other-smell-codes)
       - [Search for an element](#search-for-an-element)
 
 ## What to look for in a code review?
@@ -30,16 +29,16 @@
 
 Here is a summary of the things every reviewer should be aware of while doing a CLI code review:
 
-- [ ] Does the PR has unit tests/e2e tests that covers all the scenarios?
+- [ ] Does the PR have unit tests/e2e tests that covers all the scenarios?
   *We should look forward to have all scenarios covered.*
-- [ ] Does the PR description explain what it does/solve?
+- [ ] Does the PR description explain what it does/solves?
   *In the future we may need to know why the PR was created and what issues it solved, so this should be made clear in the description of the PR.*
-- [ ] Does it affects other services (actions/vscode plugin/pipeline/graphql/json logs)?
-  *It can affect other services that are not the CLI itself and break scenarios that are not contempled on the CLI repository, so we need to bear in mind all those services when reviewing a PR*
-- [ ] Does it needs to add analytics?
+- [ ] Does it affect other services (actions/vscode plugin/pipeline/graphql/json logs)?
+  *It can affect other services that are not the CLI itself and break scenarios that are not contemplated on the CLI repository, so we need to bear in mind all those services when reviewing a PR*
+- [ ] Does it need to add analytics?
   *We need to add analytics to know the adoption of new features and how the users use the product*
-- [ ] Has the code any smell code?
-  *we should develop clean code so that if a new developer starts working on the project, he/she can understand the code as soon as possibleWe need to develop clean code so when a new developer starts working on the CLI*
+- [ ] Are there any code smells?
+  we should develop clean code so that if a new developer starts working on the project, he/she can understand the code as soon as possible*
 
 ### PR Description
 
@@ -182,15 +181,10 @@ func Test_FunctionNameThenNoErr(t *testing.T) {
 
 Each test should create its own scenario, eliminating and leaving the state of the machine in the same state as it was at the start of the test.
 
-Also,
-
 #### E2E tests
 
 Each command should have its own set of end to end tests to prove that the main functionality works correctly. An e2e test should be added to a new feature if it adds a new use case or breaks an existing use case.
-
-**New tests will be launched in parallel to the existing ones in order to speed up the CI process.**
-
-See how to run e2e tests to run e2e tests locally
+**In order to speed up the CI process, all tests are executed in parallel including any new tests**
 
 ### Logs
 
@@ -217,11 +211,11 @@ Usually new properties will be added to existing events, but if there is a new f
 }
 ```
 
-## Common smell codes
+## Common anti patterns
 
 ### Errors
 
-See [http://golang.org/doc/effective_go.html#errors](http://golang.org/doc/effective_go.html#errors)
+Handling errors. Make sure to always follow Go error handling [best practices](http://golang.org/doc/effective_go.html#errors)
 
 #### Don't Panic
 
@@ -310,8 +304,6 @@ The name of a method's receiver should be a reflection of its identity; often a 
 #### Be consistent
 
 If you call the receiver "c" in one method, don't call it "cl" in another.
-
-### Other smell codes
 
 #### Search for an element
 
