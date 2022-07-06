@@ -56,7 +56,27 @@ func deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploy an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/cli/#deploy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ExecuteDeployPipeline(ctx, opts)
+			ctxResource := &model.ContextResource{}
+			if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
+				return err
+			}
+
+			ctxOptions := &contextCMD.ContextOptions{
+				Namespace: ctxResource.Namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+				return err
+			}
+
+			if !okteto.IsOkteto() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
+			}
+
+			pipelineCmd, err := NewCommand()
+			if err != nil {
+				return err
+			}
+			return pipelineCmd.ExecuteDeployPipeline(ctx, opts)
 		},
 	}
 
@@ -75,22 +95,7 @@ func deploy(ctx context.Context) *cobra.Command {
 }
 
 //ExecuteDeployPipeline executes deploy pipeline given a set of options
-func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
-	ctxResource := &model.ContextResource{}
-	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
-		return err
-	}
-
-	ctxOptions := &contextCMD.ContextOptions{
-		Namespace: ctxResource.Namespace,
-	}
-	if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
-		return err
-	}
-
-	if !okteto.IsOkteto() {
-		return oktetoErrors.ErrContextIsNotOktetoCluster
-	}
+func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -153,7 +158,7 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 		}
 	}
 
-	resp, err := deployPipeline(ctx, opts)
+	resp, err := pc.deployPipeline(ctx, opts)
 	if err != nil {
 		return err
 	}
@@ -163,7 +168,7 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 		return nil
 	}
 
-	if err := waitUntilRunning(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
+	if err := pc.waitUntilRunning(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
 		return err
 	}
 
@@ -171,7 +176,7 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 	return nil
 }
 
-func deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployResponse, error) {
+func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployResponse, error) {
 	spinner := utils.NewSpinner(fmt.Sprintf("Deploying repository '%s'...", opts.Name))
 	spinner.Start()
 	defer spinner.Stop()
@@ -182,10 +187,6 @@ func deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployR
 
 	var err error
 	var resp *types.GitDeployResponse
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return nil, err
-	}
 
 	go func() {
 		varList := []types.Variable{}
@@ -203,7 +204,7 @@ func deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployR
 		namespace := okteto.Context().Namespace
 		oktetoLog.Infof("deploy pipeline %s defined on file='%s' repository=%s branch=%s on namespace=%s", opts.Name, opts.File, opts.Repository, opts.Branch, namespace)
 
-		resp, err = oktetoClient.DeployPipeline(ctx, opts.Name, opts.Repository, opts.Branch, opts.File, varList)
+		resp, err = pc.okClient.Pipeline().DeployPipeline(ctx, opts.Name, opts.Repository, opts.Branch, opts.File, varList)
 		exit <- err
 	}()
 
@@ -225,7 +226,7 @@ func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
 
-func waitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
+func (pc *Command) waitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
 	spinner := utils.NewSpinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", name))
 	spinner.Start()
 	defer spinner.Stop()
@@ -236,14 +237,14 @@ func waitUntilRunning(ctx context.Context, name string, action *types.Action, ti
 
 	go func() {
 
-		err := waitToBeDeployed(ctx, name, action, timeout)
+		err := pc.waitToBeDeployed(ctx, name, action, timeout)
 		if err != nil {
 			exit <- err
 			return
 		}
 
 		spinner.Update("Waiting for containers to be healthy...")
-		exit <- waitForResourcesToBeRunning(ctx, name, timeout)
+		exit <- pc.waitForResourcesToBeRunning(ctx, name, timeout)
 	}()
 
 	select {
@@ -260,28 +261,21 @@ func waitUntilRunning(ctx context.Context, name string, action *types.Action, ti
 	return nil
 }
 
-func waitToBeDeployed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-	return oktetoClient.WaitForActionToFinish(ctx, name, action.Name, timeout)
+func (pc *Command) waitToBeDeployed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
+
+	return pc.okClient.Pipeline().WaitForActionToFinish(ctx, name, action.Name, timeout)
 }
 
-func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.Duration) error {
-	ticker := time.NewTicker(5 * time.Second)
+func (pc *Command) waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.Duration) error {
+	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
 	for {
 		select {
 		case <-to.C:
 			return fmt.Errorf("'%s' deploy didn't finish after %s", name, timeout.String())
 		case <-ticker.C:
-			resourceStatus, err := oktetoClient.GetResourcesStatusFromPipeline(ctx, name)
+			resourceStatus, err := pc.okClient.Pipeline().GetResourcesStatusFromPipeline(ctx, name)
 			if err != nil {
 				return err
 			}

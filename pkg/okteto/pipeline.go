@@ -27,8 +27,16 @@ import (
 	giturls "github.com/whilp/git-urls"
 )
 
+type pipelineClient struct {
+	client *graphql.Client
+}
+
+func newPipelineClient(client *graphql.Client) *pipelineClient {
+	return &pipelineClient{client: client}
+}
+
 // DeployPipeline creates a pipeline
-func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, branch, filename string, variables []types.Variable) (*types.GitDeployResponse, error) {
+func (c *pipelineClient) DeployPipeline(ctx context.Context, name, repository, branch, filename string, variables []types.Variable) (*types.GitDeployResponse, error) {
 	origin := config.GetDeployOrigin()
 
 	gitDeployResponse := &types.GitDeployResponse{}
@@ -146,7 +154,7 @@ func (c *OktetoClient) DeployPipeline(ctx context.Context, name, repository, bra
 }
 
 // GetPipelineByName gets a pipeline given its name
-func (c *OktetoClient) GetPipelineByName(ctx context.Context, name string) (*types.GitDeploy, error) {
+func (c *pipelineClient) GetPipelineByName(ctx context.Context, name string) (*types.GitDeploy, error) {
 	var queryStruct struct {
 		Space struct {
 			GitDeploys []struct {
@@ -177,7 +185,7 @@ func (c *OktetoClient) GetPipelineByName(ctx context.Context, name string) (*typ
 }
 
 // GetPipelineByRepository gets a pipeline given its repo url
-func (c *OktetoClient) GetPipelineByRepository(ctx context.Context, repository string) (*types.GitDeployResponse, error) {
+func (c *pipelineClient) GetPipelineByRepository(ctx context.Context, repository string) (*types.GitDeployResponse, error) {
 	var queryStruct struct {
 		Pipeline struct {
 			GitDeploys []struct {
@@ -233,7 +241,7 @@ func AreSameRepository(repoA, repoB string) bool {
 }
 
 // DestroyPipeline destroys a pipeline
-func (c *OktetoClient) DestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
+func (c *pipelineClient) DestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
 	oktetoLog.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
 	gitDeployResponse := &types.GitDeployResponse{}
 	if destroyVolumes {
@@ -321,7 +329,7 @@ func (c *OktetoClient) DestroyPipeline(ctx context.Context, name string, destroy
 	return gitDeployResponse, nil
 }
 
-func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
+func (c *pipelineClient) deprecatedDestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
 	oktetoLog.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
 	gitDeployResponse := &types.GitDeployResponse{}
 	if destroyVolumes {
@@ -374,7 +382,7 @@ func (c *OktetoClient) deprecatedDestroyPipeline(ctx context.Context, name strin
 	return gitDeployResponse, nil
 }
 
-func (c *OktetoClient) GetResourcesStatusFromPipeline(ctx context.Context, name string) (map[string]string, error) {
+func (c *pipelineClient) GetResourcesStatusFromPipeline(ctx context.Context, name string) (map[string]string, error) {
 	var queryStruct struct {
 		Space struct {
 			Deployments []struct {

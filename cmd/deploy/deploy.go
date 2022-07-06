@@ -328,7 +328,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			Timeout:      deployOptions.Timeout,
 			SkipIfExists: !deployOptions.Dependencies,
 		}
-		if err := pipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+		pc, err := pipelineCMD.NewCommand()
+		if err != nil {
+			return err
+		}
+		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
 			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); errStatus != nil {
 				return errStatus
 			}
