@@ -163,9 +163,12 @@ func ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 		return nil
 	}
 
-	if err := waitUntilRunning(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
-		return err
+	if resp != nil {
+		if err := waitUntilRunning(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
+			return err
+		}
 	}
+
 	oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
 	return nil
 }
