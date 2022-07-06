@@ -176,7 +176,6 @@ dependencies:
 				Icon:     "",
 				Dev:      model.ManifestDevs{},
 				Type:     model.OktetoManifestType,
-				Filename: "",
 				Dependencies: model.ManifestDependencies{
 					"one": &model.Dependency{
 						Repository: "https://repo.url",
@@ -211,7 +210,6 @@ dependencies:
 			if tt.expectedErr {
 				assert.NotNil(t, err)
 			} else {
-				m.Filename = ""
 				m.Manifest = nil
 				assert.EqualValues(t, tt.expectedManifest, m)
 			}
