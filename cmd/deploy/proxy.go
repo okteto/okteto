@@ -261,7 +261,8 @@ func (ph *proxyHandler) SetDivert(divertedNamespace string) {
 func (ph *proxyHandler) translateBody(b []byte) ([]byte, error) {
 	var body map[string]json.RawMessage
 	if err := json.Unmarshal(b, &body); err != nil {
-		return nil, fmt.Errorf("could not unmarshal request: %s", err)
+		oktetoLog.Infof("error unmarshalling resource body on proxy: %s", err.Error())
+		return nil, nil
 	}
 
 	if err := ph.translateMetadata(body); err != nil {
@@ -270,7 +271,8 @@ func (ph *proxyHandler) translateBody(b []byte) ([]byte, error) {
 
 	var typeMeta metav1.TypeMeta
 	if err := json.Unmarshal(b, &typeMeta); err != nil {
-		return nil, fmt.Errorf("could not process resource's type: %s", err)
+		oktetoLog.Infof("error unmarshalling typemeta on proxy: %s", err.Error())
+		return nil, nil
 	}
 
 	switch typeMeta.Kind {
@@ -315,7 +317,8 @@ func (ph *proxyHandler) translateMetadata(body map[string]json.RawMessage) error
 
 	var metadata metav1.ObjectMeta
 	if err := json.Unmarshal(m, &metadata); err != nil {
-		return fmt.Errorf("could not process resource's metadata: %s", err)
+		oktetoLog.Infof("error unmarshalling objectmeta on proxy: %s", err.Error())
+		return nil
 	}
 
 	labels.SetInMetadata(&metadata, model.DeployedByLabel, ph.Name)
