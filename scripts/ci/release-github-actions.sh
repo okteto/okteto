@@ -127,7 +127,7 @@
                                 -token "$GITHUB_TOKEN" \
                                 -recreate \
                                 -replace \
-                                -commitish "$(git rev-parse "${RELEASE_TAG}")" \
+                                -commitish "$(git rev-parse "${LTS_BRANCH}")" \
                                 latest
                 fi
 
