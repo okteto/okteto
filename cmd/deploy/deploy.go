@@ -439,7 +439,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 				}
 			}
 			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-				if err := dc.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name}); err != nil {
+				if err := dc.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: deployOptions.Manifest.Namespace}); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
 				}
 			}
