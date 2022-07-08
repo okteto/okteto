@@ -64,8 +64,9 @@ func TestGetContextResourcePathWhenExists(t *testing.T) {
 			wd := t.TempDir()
 			for _, fileToCreate := range tt.filesToCreate {
 				fullpath := filepath.Join(wd, fileToCreate)
-				_, err := os.Create(fullpath)
+				f, err := os.Create(fullpath)
 				assert.NoError(t, err)
+				defer f.Close()
 			}
 			result, err := GetContextResourcePath(wd)
 			assert.NoError(t, err)

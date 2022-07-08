@@ -25,8 +25,9 @@ func TestGetK8sManifestFileWhenExists(t *testing.T) {
 
 	wd := t.TempDir()
 	fullpath := filepath.Join(wd, "k8s.yml")
-	_, err := os.Create(fullpath)
+	f, err := os.Create(fullpath)
 	assert.NoError(t, err)
+	defer f.Close()
 
 	result, err := GetK8sManifestPath(wd)
 	assert.NoError(t, err)
