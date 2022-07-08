@@ -26,6 +26,7 @@ var (
 		{"okteto-pipeline.yaml"},
 		{"okteto-pipelines.yml"},
 		{"okteto-pipelines.yaml"},
+
 		{".okteto", "okteto-pipeline.yml"},
 		{".okteto", "okteto-pipeline.yaml"},
 		{".okteto", "okteto-pipelines.yml"},

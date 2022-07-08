@@ -31,6 +31,9 @@ var (
 		"k8s",
 		"k8s.yml",
 		"k8s.yaml",
+		"manifest",
+		"manifest.yml",
+		"manifest.yaml",
 	}
 )
 

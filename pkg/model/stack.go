@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/forward"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -203,6 +204,10 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 		return nil, err
 	}
 
+	if isEmptyManifestFile(b) {
+		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, oktetoErrors.ErrEmptyManifest)
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, err
@@ -376,7 +381,7 @@ func (svc *Service) ToDev(svcName string) (*Dev, error) {
 	d := NewDev()
 	for _, p := range svc.Ports {
 		if p.HostPort != 0 {
-			d.Forward = append(d.Forward, Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
+			d.Forward = append(d.Forward, forward.Forward{Local: int(p.HostPort), Remote: int(p.ContainerPort)})
 		}
 	}
 	for _, v := range svc.VolumeMounts {

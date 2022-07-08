@@ -56,27 +56,15 @@ func digestForReference(reference string) (string, error) {
 	return img.Digest.String(), nil
 }
 
-func configForReference(reference string) (v1.Config, error) {
+func imageForReference(reference string) (v1.Image, error) {
 	ref, err := name.ParseReference(reference)
 	if err != nil {
-		return v1.Config{}, err
+		return nil, err
 	}
 
 	options := clientOptions(ref)
 
-	img, err := remote.Image(ref, options)
-	if err != nil {
-		oktetoLog.Debugf("error getting image from remote")
-		return v1.Config{}, err
-	}
-
-	configFile, err := img.ConfigFile()
-	if err != nil {
-		oktetoLog.Debugf("error getting image config from remote")
-		return v1.Config{}, err
-	}
-
-	return configFile.Config, nil
+	return remote.Image(ref, options)
 }
 
 // GetReferecenceEnvs returns the values to setup the image environment variables

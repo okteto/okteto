@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/syncthing"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -29,37 +30,39 @@ import (
 
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
-	Cancel            context.CancelFunc
-	ShutdownCompleted chan bool
-	Manifest          *model.Manifest
-	Dev               *model.Dev
-	Translations      map[string]*apps.Translation
-	isRetry           bool
-	Client            *kubernetes.Clientset
-	RestConfig        *rest.Config
-	Pod               *apiv1.Pod
-	Forwarder         forwarder
-	Disconnect        chan error
-	CommandResult     chan error
-	Exit              chan error
-	Sy                *syncthing.Syncthing
-	cleaned           chan string
-	hardTerminate     chan error
-	success           bool
-	resetSyncthing    bool
-	inFd              uintptr
-	isTerm            bool
-	stateTerm         *term.State
-	spinner           *utils.Spinner
-	StartTime         time.Time
-	Options           *UpOptions
+	Cancel                context.CancelFunc
+	ShutdownCompleted     chan bool
+	Manifest              *model.Manifest
+	Dev                   *model.Dev
+	Translations          map[string]*apps.Translation
+	isRetry               bool
+	Client                *kubernetes.Clientset
+	RestConfig            *rest.Config
+	Pod                   *apiv1.Pod
+	Forwarder             forwarder
+	Disconnect            chan error
+	GlobalForwarderStatus chan error
+	CommandResult         chan error
+	Exit                  chan error
+	Sy                    *syncthing.Syncthing
+	cleaned               chan string
+	hardTerminate         chan error
+	success               bool
+	resetSyncthing        bool
+	inFd                  uintptr
+	isTerm                bool
+	stateTerm             *term.State
+	spinner               *utils.Spinner
+	StartTime             time.Time
+	Options               *UpOptions
 }
 
 // Forwarder is an interface for the port-forwarding features
 type forwarder interface {
-	Add(model.Forward) error
+	Add(forward.Forward) error
 	AddReverse(model.Reverse) error
 	Start(string, string) error
+	StartGlobalForwarding() error
 	Stop()
-	TransformLabelsToServiceName(model.Forward) (model.Forward, error)
+	TransformLabelsToServiceName(forward.Forward) (forward.Forward, error)
 }

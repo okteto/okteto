@@ -31,6 +31,7 @@ import (
 	"github.com/google/uuid"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model/forward"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -39,7 +40,7 @@ import (
 
 var (
 	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.3.7"
+	OktetoBinImageTag = "okteto/bin:1.4.0"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -75,7 +76,7 @@ type Dev struct {
 	ExternalVolumes      []ExternalVolume   `json:"externalVolumes,omitempty" yaml:"externalVolumes,omitempty"`
 	Sync                 Sync               `json:"sync,omitempty" yaml:"sync,omitempty"`
 	parentSyncFolder     string
-	Forward              []Forward             `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Forward              []forward.Forward     `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Reverse              []Reverse             `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	Interface            string                `json:"interface,omitempty" yaml:"interface,omitempty"`
 	Resources            ResourceRequirements  `json:"resources,omitempty" yaml:"resources,omitempty"`
@@ -290,7 +291,7 @@ func NewDev() *Dev {
 		Push:        &BuildInfo{},
 		Environment: make(Environment, 0),
 		Secrets:     make([]Secret, 0),
-		Forward:     make([]Forward, 0),
+		Forward:     make([]forward.Forward, 0),
 		Volumes:     make([]Volume, 0),
 		Sync: Sync{
 			Folders: make([]SyncFolder, 0),
@@ -432,7 +433,7 @@ func (dev *Dev) SetDefaults() error {
 	}
 	if len(dev.Forward) > 0 {
 		sort.SliceStable(dev.Forward, func(i, j int) bool {
-			return dev.Forward[i].less(&dev.Forward[j])
+			return dev.Forward[i].Less(&dev.Forward[j])
 		})
 	}
 	if dev.Image == nil {
@@ -529,7 +530,7 @@ func (dev *Dev) SetDefaults() error {
 		s.Namespace = ""
 		s.Context = ""
 		s.setRunAsUserDefaults(dev)
-		s.Forward = make([]Forward, 0)
+		s.Forward = make([]forward.Forward, 0)
 		s.Reverse = make([]Reverse, 0)
 		s.Secrets = make([]Secret, 0)
 		s.Services = make([]*Dev, 0)
@@ -550,9 +551,11 @@ func (b *BuildInfo) setBuildDefaults() {
 	if b.Context == "" {
 		b.Context = "."
 	}
+
 	if _, err := url.ParseRequestURI(b.Context); err != nil && b.Dockerfile == "" {
 		b.Dockerfile = "Dockerfile"
 	}
+
 }
 
 func (dev *Dev) setRunAsUserDefaults(main *Dev) {

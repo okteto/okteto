@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 )
 
 func TestDiscardReverseIfCollision(t *testing.T) {
@@ -29,7 +30,7 @@ func TestDiscardReverseIfCollision(t *testing.T) {
 		{
 			name: "no collision",
 			devInput: &model.Dev{
-				Forward: []model.Forward{
+				Forward: []forward.Forward{
 					{
 						Local:  8000,
 						Remote: 8000,
@@ -43,7 +44,7 @@ func TestDiscardReverseIfCollision(t *testing.T) {
 				},
 			},
 			devOutput: &model.Dev{
-				Forward: []model.Forward{
+				Forward: []forward.Forward{
 					{
 						Local:  8000,
 						Remote: 8000,
@@ -60,7 +61,7 @@ func TestDiscardReverseIfCollision(t *testing.T) {
 		{
 			name: "collision",
 			devInput: &model.Dev{
-				Forward: []model.Forward{
+				Forward: []forward.Forward{
 					{
 						Local:  8000,
 						Remote: 8000,
@@ -74,7 +75,7 @@ func TestDiscardReverseIfCollision(t *testing.T) {
 				},
 			},
 			devOutput: &model.Dev{
-				Forward: []model.Forward{
+				Forward: []forward.Forward{
 					{
 						Local:  8000,
 						Remote: 8000,

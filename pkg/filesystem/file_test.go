@@ -20,12 +20,7 @@ import (
 )
 
 func TestCopyFile(t *testing.T) {
-	dir, err := os.MkdirTemp("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	from := filepath.Join(dir, "from")
 	to := filepath.Join(dir, "to")
@@ -59,12 +54,7 @@ func TestCopyFile(t *testing.T) {
 }
 
 func TestFileExists(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	p := filepath.Join(dir, "exists")
 	if FileExists(p) {

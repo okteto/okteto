@@ -41,6 +41,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -54,16 +55,21 @@ const ReconnectingMessage = "Trying to reconnect to your cluster. File synchroni
 
 // UpOptions represents the options available on up command
 type UpOptions struct {
-	DevPath    string
-	Namespace  string
-	K8sContext string
-	DevName    string
-	Devs       []string
-	Envs       []string
-	Remote     int
-	Deploy     bool
-	ForcePull  bool
-	Reset      bool
+	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
+	// This is stored at the configmap as filename to redeploy from the ui.
+	ManifestPathFlag string
+	// ManifestPath is the patah to the manifest used though the command execution.
+	// This might change its value during execution
+	ManifestPath string
+	Namespace    string
+	K8sContext   string
+	DevName      string
+	Devs         []string
+	Envs         []string
+	Remote       int
+	Deploy       bool
+	ForcePull    bool
+	Reset        bool
 }
 
 // Up starts a development container
@@ -98,14 +104,27 @@ func Up() *cobra.Command {
 
 			ctx := context.Background()
 
-			if upOptions.DevPath != "" {
-				workdir := model.GetWorkdirFromManifestPath(upOptions.DevPath)
-				if err := os.Chdir(workdir); err != nil {
+			if upOptions.ManifestPath != "" {
+				// if path is absolute, its transformed to rel from root
+				initialCWD, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("failed to get the current working directory: %w", err)
+				}
+				manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, upOptions.ManifestPath)
+				if err != nil {
 					return err
 				}
-				upOptions.DevPath = model.GetManifestPathFromWorkdir(upOptions.DevPath, workdir)
+				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
+				upOptions.ManifestPathFlag = manifestPathFlag
+
+				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
+				uptManifestPath, err := model.UpdateCWDtoManifestPath(upOptions.ManifestPath)
+				if err != nil {
+					return err
+				}
+				upOptions.ManifestPath = uptManifestPath
 			}
-			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
+			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.ManifestPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
 			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
@@ -116,15 +135,15 @@ func Up() *cobra.Command {
 					return err
 				}
 
-				if upOptions.DevPath == "" {
-					upOptions.DevPath = utils.DefaultManifest
+				if upOptions.ManifestPath == "" {
+					upOptions.ManifestPath = utils.DefaultManifest
 				}
 
-				if !utils.AskIfOktetoInit(upOptions.DevPath) {
+				if !utils.AskIfOktetoInit(upOptions.ManifestPath) {
 					return err
 				}
 
-				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
+				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.ManifestPath)
 				if err != nil {
 					return err
 				}
@@ -148,11 +167,11 @@ func Up() *cobra.Command {
 					mc := &manifest.ManifestCommand{
 						K8sClientProvider: okteto.NewK8sClientProvider(),
 					}
-					if upOptions.DevPath == "" {
-						upOptions.DevPath = utils.DefaultManifest
+					if upOptions.ManifestPath == "" {
+						upOptions.ManifestPath = utils.DefaultManifest
 					}
 					oktetoManifest, err = mc.RunInitV2(ctx, &manifest.InitOpts{
-						DevPath:          upOptions.DevPath,
+						DevPath:          upOptions.ManifestPath,
 						Namespace:        upOptions.Namespace,
 						Context:          upOptions.K8sContext,
 						ShowCTA:          false,
@@ -204,31 +223,36 @@ func Up() *cobra.Command {
 				return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
 			}
 
-			autocreateDev := true
-			if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
+			// if manifest v1 - either set autocreate: true or pass --deploy (okteto forces autocreate: true)
+			// if manifest v2 - either set autocreate: true or pass --deploy with a deploy section at the manifest
+			forceAutocreate := false
+			if upOptions.Deploy && !up.Manifest.IsV2 {
+				// the autocreate property is forced to be true
+				forceAutocreate = true
+			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
 				if !upOptions.Deploy {
 					oktetoLog.Information("Deploying development environment '%s'...", up.Manifest.Name)
 					oktetoLog.Information("To redeploy your development environment manually run 'okteto deploy' or 'okteto up --deploy'")
 				}
 				startTime := time.Now()
 				err := up.deployApp(ctx)
-				if err != nil && oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
+
+				// tracking deploy either its been successful or not
+				analytics.TrackDeploy(analytics.TrackDeployMetadata{
+					Success:                err == nil,
+					IsOktetoRepo:           utils.IsOktetoRepo(),
+					Duration:               time.Since(startTime),
+					PipelineType:           up.Manifest.Type,
+					DeployType:             "automatic",
+					IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
+					HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
+					HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
+					Err:                    err,
+				})
+
+				// only allow error.ErrManifestFoundButNoDeployCommands to go forward - autocreate property will deploy the app
+				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployCommands) {
 					return err
-				}
-				if oktetoErrors.ErrManifestFoundButNoDeployCommands != err {
-					autocreateDev = false
-				}
-				if err != nil {
-					analytics.TrackDeploy(analytics.TrackDeployMetadata{
-						Success:                err == nil,
-						IsOktetoRepo:           utils.IsOktetoRepo(),
-						Duration:               time.Since(startTime),
-						PipelineType:           up.Manifest.Type,
-						DeployType:             "automatic",
-						IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
-						HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
-						HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
-					})
 				}
 
 			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
@@ -242,8 +266,10 @@ func Up() *cobra.Command {
 			}
 
 			up.Dev = dev
-			if !autocreateDev {
-				up.Dev.Autocreate = false
+			if forceAutocreate {
+				// update autocreate property if needed to be forced
+				oktetoLog.Info("Setting Autocreate to true because manifest v1 and flag --deploy")
+				up.Dev.Autocreate = true
 			}
 
 			if err := setBuildEnvVars(oktetoManifest, dev.Name); err != nil {
@@ -306,7 +332,7 @@ func Up() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&upOptions.DevPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVarP(&upOptions.ManifestPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().StringArrayVarP(&upOptions.Envs, "env", "e", []string{}, "envs to add to the development container")
@@ -463,10 +489,11 @@ func (up *upContext) deployApp(ctx context.Context) error {
 	}
 
 	return c.RunDeploy(ctx, &deploy.Options{
-		Name:         up.Manifest.Name,
-		ManifestPath: up.Manifest.Filename,
-		Timeout:      5 * time.Minute,
-		Build:        false,
+		Name:             up.Manifest.Name,
+		ManifestPathFlag: up.Options.ManifestPathFlag,
+		ManifestPath:     up.Options.ManifestPath,
+		Timeout:          5 * time.Minute,
+		Build:            false,
 	})
 }
 
@@ -585,6 +612,10 @@ func (up *upContext) waitUntilExitOrInterruptOrApply(ctx context.Context) error 
 			if err == oktetoErrors.ErrInsufficientSpace {
 				return up.getInsufficientSpaceError(err)
 			}
+			return err
+
+		case err := <-up.GlobalForwarderStatus:
+			oktetoLog.Infof("exiting by error in global forward checker: %v", err)
 			return err
 
 		case err := <-up.applyToApps(ctx):
@@ -708,7 +739,7 @@ func (up *upContext) getInsufficientSpaceError(err error) error {
 			E: err,
 			Hint: fmt.Sprintf(`Okteto volume is full.
     Increase your persistent volume size, run '%s' and try 'okteto up' again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.DevPath)),
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.ManifestPathFlag)),
 		}
 	}
 	return oktetoErrors.UserError{
@@ -758,31 +789,47 @@ func (up *upContext) shutdown() {
 
 }
 
-func printDisplayContext(dev *model.Dev) {
-	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(dev.Context)))
-	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), dev.Namespace))
-	oktetoLog.Println(fmt.Sprintf("    %s      %s", oktetoLog.BlueString("Name:"), dev.Name))
+func printDisplayContext(up *upContext) {
+	oktetoLog.Println(fmt.Sprintf("    %s   %s", oktetoLog.BlueString("Context:"), okteto.RemoveSchema(up.Dev.Context)))
+	oktetoLog.Println(fmt.Sprintf("    %s %s", oktetoLog.BlueString("Namespace:"), up.Dev.Namespace))
+	oktetoLog.Println(fmt.Sprintf("    %s      %s", oktetoLog.BlueString("Name:"), up.Dev.Name))
 
-	if len(dev.Forward) > 0 {
-		if dev.Forward[0].Service {
-			oktetoLog.Println(fmt.Sprintf("    %s   %d -> %s:%d", oktetoLog.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].ServiceName, dev.Forward[0].Remote))
-		} else {
-			oktetoLog.Println(fmt.Sprintf("    %s   %d -> %d", oktetoLog.BlueString("Forward:"), dev.Forward[0].Local, dev.Forward[0].Remote))
-		}
+	anyGlobalForward := false
+	if len(up.Manifest.GlobalForward) > 0 {
+		anyGlobalForward = true
 
-		for i := 1; i < len(dev.Forward); i++ {
-			if dev.Forward[i].Service {
-				oktetoLog.Println(fmt.Sprintf("               %d -> %s:%d", dev.Forward[i].Local, dev.Forward[i].ServiceName, dev.Forward[i].Remote))
-				continue
-			}
-			oktetoLog.Println(fmt.Sprintf("               %d -> %d", dev.Forward[i].Local, dev.Forward[i].Remote))
+		oktetoLog.Println(fmt.Sprintf("    %s   %d -> %s:%d", oktetoLog.BlueString("Forward:"), up.Manifest.GlobalForward[0].Local, up.Manifest.GlobalForward[0].ServiceName, up.Manifest.GlobalForward[0].Remote))
+
+		for i := 1; i < len(up.Manifest.GlobalForward); i++ {
+			oktetoLog.Println(fmt.Sprintf("               %d -> %s:%d", up.Manifest.GlobalForward[i].Local, up.Manifest.GlobalForward[i].ServiceName, up.Manifest.GlobalForward[i].Remote))
 		}
 	}
 
-	if len(dev.Reverse) > 0 {
-		oktetoLog.Println(fmt.Sprintf("    %s   %d <- %d", oktetoLog.BlueString("Reverse:"), dev.Reverse[0].Local, dev.Reverse[0].Remote))
-		for i := 1; i < len(dev.Reverse); i++ {
-			oktetoLog.Println(fmt.Sprintf("               %d <- %d", dev.Reverse[i].Local, dev.Reverse[i].Remote))
+	if len(up.Dev.Forward) > 0 {
+
+		fromIdxToShowWithoutForwardLabel := 0
+		if !anyGlobalForward {
+			fromIdxToShowWithoutForwardLabel = 1
+			if up.Dev.Forward[0].Service {
+				oktetoLog.Println(fmt.Sprintf("    %s   %d -> %s:%d", oktetoLog.BlueString("Forward:"), up.Dev.Forward[0].Local, up.Dev.Forward[0].ServiceName, up.Dev.Forward[0].Remote))
+			} else {
+				oktetoLog.Println(fmt.Sprintf("    %s   %d -> %d", oktetoLog.BlueString("Forward:"), up.Dev.Forward[0].Local, up.Dev.Forward[0].Remote))
+			}
+		}
+
+		for i := fromIdxToShowWithoutForwardLabel; i < len(up.Dev.Forward); i++ {
+			if up.Dev.Forward[i].Service {
+				oktetoLog.Println(fmt.Sprintf("               %d -> %s:%d", up.Dev.Forward[i].Local, up.Dev.Forward[i].ServiceName, up.Dev.Forward[i].Remote))
+				continue
+			}
+			oktetoLog.Println(fmt.Sprintf("               %d -> %d", up.Dev.Forward[i].Local, up.Dev.Forward[i].Remote))
+		}
+	}
+
+	if len(up.Dev.Reverse) > 0 {
+		oktetoLog.Println(fmt.Sprintf("    %s   %d <- %d", oktetoLog.BlueString("Reverse:"), up.Dev.Reverse[0].Local, up.Dev.Reverse[0].Remote))
+		for i := 1; i < len(up.Dev.Reverse); i++ {
+			oktetoLog.Println(fmt.Sprintf("               %d <- %d", up.Dev.Reverse[i].Local, up.Dev.Reverse[i].Remote))
 		}
 	}
 
@@ -799,7 +846,9 @@ func setBuildEnvVars(m *model.Manifest, devName string) error {
 		imageWithDigest, err := registry.NewOktetoRegistry().GetImageTagWithDigest(opts.Tag)
 		if err == nil {
 			builder := buildv2.NewBuilderFromScratch()
+			sp.Stop()
 			builder.SetServiceEnvVars(buildName, imageWithDigest)
+			sp.Start()
 		} else if errors.Is(err, oktetoErrors.ErrNotFound) {
 			sanitizedSvc := strings.ReplaceAll(buildName, "-", "_")
 			if err := os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(sanitizedSvc)), opts.Tag); err != nil {

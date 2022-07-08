@@ -29,6 +29,10 @@ func GetValidNameFromFolder(folder string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error inferring name: %s", err)
 	}
+	if folder == ".okteto" {
+		dir = filepath.Dir(dir)
+	}
+
 	name := filepath.Base(dir)
 	name = strings.ToLower(name)
 	name = ValidKubeNameRegex.ReplaceAllString(name, "-")

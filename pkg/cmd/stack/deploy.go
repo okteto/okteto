@@ -28,7 +28,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/forward"
+	forwardK8s "github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -37,6 +37,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -120,7 +121,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 	go func() {
 
-		addHiddenExposedPortsToStack(s, options)
+		addImageMetadataToStack(s, options)
 
 		iClient, err := ingresses.GetClient(ctx, c)
 		if err != nil {
@@ -447,7 +448,7 @@ func isSvcHealthy(ctx context.Context, stack *model.Stack, svcName string, clien
 }
 
 func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
-	forwarder := forward.NewPortForwardManager(ctx, model.Localhost, config, client, stack.Namespace)
+	forwarder := forwardK8s.NewPortForwardManager(ctx, model.Localhost, config, client, stack.Namespace)
 	podName := getPodName(ctx, stack, svcName, client)
 	if podName == "" {
 		return false
@@ -459,7 +460,7 @@ func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.St
 			continue
 		}
 		portsToTest = append(portsToTest, port)
-		if err := forwarder.Add(model.Forward{Local: port, Remote: int(p.ContainerPort)}); err != nil {
+		if err := forwarder.Add(forward.Forward{Local: port, Remote: int(p.ContainerPort)}); err != nil {
 			continue
 		}
 	}
@@ -488,12 +489,30 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		if old.Labels[model.StackNameLabel] == "" {
 			return false, fmt.Errorf("skipping deploy of deployment '%s' due to name collision with pre-existing deployment", svcName)
 		}
-		if old.Labels[model.StackNameLabel] != s.Name {
+		// PR 2742 https://github.com/okteto/okteto/pull/2742
+		// we are introducing this check for the old stack label as we resolved the bug
+		// when the stack is under an .okteto folder, this was the name for the dev environment
+		// for those users which will have a dev environment deployed with old version
+		// when re-deploying we switch the name for the environment and we have to move the resources to the new name
+		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
 			return false, fmt.Errorf("skipping deploy of deployment '%s' due to name collision with deployment in stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
 			d.Labels[model.DeployedByLabel] = v
+			if old.Labels[model.StackNameLabel] == "okteto" {
+				d.Labels[model.DeployedByLabel] = s.Name
+			}
 		}
+	}
+
+	if !isNewDeployment && old.Labels[model.StackNameLabel] == "okteto" {
+		if err := deployments.Destroy(ctx, old.Name, old.Namespace, c); err != nil {
+			return false, fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
+		}
+		if _, err := deployments.Deploy(ctx, d, c); err != nil {
+			return false, fmt.Errorf("error updating deployment of service '%s': %s", svcName, err.Error())
+		}
+		return isNewDeployment, nil
 	}
 
 	if _, err := deployments.Deploy(ctx, d, c); err != nil {
@@ -522,11 +541,14 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 	if old.Labels[model.StackNameLabel] == "" {
 		return false, fmt.Errorf("skipping deploy of statefulset '%s' due to name collision with pre-existing statefulset", svcName)
 	}
-	if old.Labels[model.StackNameLabel] != s.Name {
+	if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
 		return false, fmt.Errorf("skipping deploy of statefulset '%s' due to name collision with statefulset in stack '%s'", svcName, old.Labels[model.StackNameLabel])
 	}
 	if v, ok := old.Labels[model.DeployedByLabel]; ok {
 		sfs.Labels[model.DeployedByLabel] = v
+		if old.Labels[model.StackNameLabel] == "okteto" {
+			sfs.Labels[model.DeployedByLabel] = s.Name
+		}
 	}
 	if _, err := statefulsets.Deploy(ctx, sfs, c); err != nil {
 		if !strings.Contains(err.Error(), "Forbidden: updates to statefulset spec") {
@@ -554,7 +576,7 @@ func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes
 		if old.Labels[model.StackNameLabel] == "" {
 			return false, fmt.Errorf("skipping deploy of job '%s' due to name collision with pre-existing job", svcName)
 		}
-		if old.Labels[model.StackNameLabel] != s.Name {
+		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
 			return false, fmt.Errorf("skipping deploy of job '%s' due to name collision with job in stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 	}
@@ -592,7 +614,7 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 			spinner.Start()
 			return nil
 		}
-		if old.Labels[model.StackNameLabel] != s.Name {
+		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
 			spinner.Stop()
 			oktetoLog.Warning("skipping creation of volume '%s' due to name collision with volume in stack '%s'", pvc.Name, old.Labels[model.StackNameLabel])
 			spinner.Start()
@@ -721,18 +743,21 @@ func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	}
 }
 
-func addHiddenExposedPortsToStack(s *model.Stack, options *StackDeployOptions) {
+func addImageMetadataToStack(s *model.Stack, options *StackDeployOptions) {
 	for _, svcName := range options.ServicesToDeploy {
 		svc := s.Services[svcName]
-		addHiddenExposedPortsToSvc(svc)
+		addImageMetadataToSvc(svc)
 	}
 
 }
 
-func addHiddenExposedPortsToSvc(svc *model.Service) {
+func addImageMetadataToSvc(svc *model.Service) {
 	if svc.Image != "" {
-		exposedPorts := registry.GetHiddenExposePorts(svc.Image)
-		for _, port := range exposedPorts {
+		imageMetadata := registry.GetImageMetadata(svc.Image)
+		if registry.IsOktetoRegistry(svc.Image) {
+			svc.Image = imageMetadata.Image
+		}
+		for _, port := range imageMetadata.Ports {
 			if !model.IsAlreadyAdded(port, svc.Ports) {
 				svc.Ports = append(svc.Ports, port)
 			}

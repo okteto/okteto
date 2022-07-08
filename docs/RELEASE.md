@@ -52,7 +52,7 @@ The okteto cli is available to install from the following installation methods:
     # replace stable with (beta or dev) for other channels
     curl -fSL https://downloads.okteto.com/cli/stable/okteto-$(uname)-$(uname -m) -o ./okteto
     chmod +x ./okteto
-    mv ./okteto -f /usr/local/bin
+    mv -f ./okteto /usr/local/bin
     ```
 
     You could also download and install a specific version:
@@ -73,7 +73,13 @@ The okteto cli is available to install from the following installation methods:
 
     This is effectively using the direct download above to install the latest binary from the stable release. Currently, this method only supports the stable channel.
 
-    Although the above command is safe to run, we advise users to first inspect the content of the script to understand what we are executing under the hood.
+    If, for whatever reason, a different versions is needed you can set the OKTETO_VERSION environment variable:
+
+    ```bash
+    curl https://get.okteto.com -sSfL | OKTETO_VERSION=2.2.2 sh
+    ```
+
+    Although the install script command is safe to run, we advise users to first inspect its contents to understand what we are executing under the hood.
 
 - **Brew**
 

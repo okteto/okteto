@@ -14,7 +14,6 @@
 package model
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -22,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -157,6 +155,7 @@ func Test_validateDivert(t *testing.T) {
 }
 
 func TestInferFromStack(t *testing.T) {
+	dirtest := filepath.Clean("/stack/dir/")
 	devInterface := PrivilegedLocalhost
 	if runtime.GOOS == "windows" {
 		devInterface = Localhost
@@ -165,9 +164,9 @@ func TestInferFromStack(t *testing.T) {
 		Services: map[string]*Service{
 			"test": {
 				Build: &BuildInfo{
-					Name:       "test",
+					Name:       "",
 					Context:    "test",
-					Dockerfile: filepath.Join("test", "Dockerfile"),
+					Dockerfile: "Dockerfile",
 				},
 				Ports: []Port{
 					{
@@ -190,7 +189,23 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &BuildInfo{
+										Name:       "test",
+										Context:    filepath.Join(dirtest, "test"),
+										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -198,7 +213,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{
 					"test": &BuildInfo{
 						Context:    "test",
-						Dockerfile: filepath.Join("test", "Dockerfile"),
+						Dockerfile: "Dockerfile",
 					},
 				},
 				Dev: ManifestDevs{},
@@ -221,7 +236,23 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &BuildInfo{
+										Name:       "test",
+										Context:    filepath.Join(dirtest, "test"),
+										Dockerfile: filepath.Join(filepath.Join(dirtest, "test"), "Dockerfile"),
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -235,7 +266,23 @@ func TestInferFromStack(t *testing.T) {
 				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &BuildInfo{
+										Name:       "test",
+										Context:    "test",
+										Dockerfile: "Dockerfile",
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -252,7 +299,23 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
 					ComposeSection: &ComposeSectionInfo{
-						Stack: stack,
+						Stack: &Stack{
+							Services: map[string]*Service{
+								"test": {
+									Build: &BuildInfo{
+										Name:       "test",
+										Context:    "test",
+										Dockerfile: "Dockerfile",
+									},
+									Ports: []Port{
+										{
+											HostPort:      8080,
+											ContainerPort: 8080,
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},
@@ -260,7 +323,7 @@ func TestInferFromStack(t *testing.T) {
 				Build: ManifestBuild{
 					"test": &BuildInfo{
 						Context:    "test",
-						Dockerfile: filepath.Join("test", "Dockerfile"),
+						Dockerfile: "Dockerfile",
 					},
 				},
 				Dev: ManifestDevs{
@@ -323,7 +386,7 @@ func TestInferFromStack(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := tt.currentManifest.InferFromStack("")
+			result, err := tt.currentManifest.InferFromStack(filepath.Clean(dirtest))
 			if result != nil {
 				for _, d := range result.Dev {
 					d.parentSyncFolder = ""
@@ -407,92 +470,139 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 	}
 }
 
-func TestIsEmptyManifestFile(t *testing.T) {
+func TestSetBuildDefaults(t *testing.T) {
+
 	tests := []struct {
-		name           string
-		rawContent     []byte
-		expectedAnswer bool
+		name              string
+		currentBuildInfo  BuildInfo
+		expectedBuildInfo BuildInfo
 	}{
 		{
-			name:           "empty manifest with only blank space",
-			rawContent:     []byte("  "),
-			expectedAnswer: true,
+			name:             "all empty",
+			currentBuildInfo: BuildInfo{},
+			expectedBuildInfo: BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
 		},
 		{
-			name:           "empty manifest with only escape character",
-			rawContent:     []byte("  \n"),
-			expectedAnswer: true,
+			name: "context empty",
+			currentBuildInfo: BuildInfo{
+				Dockerfile: "Dockerfile",
+			},
+			expectedBuildInfo: BuildInfo{
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
 		},
 		{
-			name:           "empty manifest with only tab character",
-			rawContent:     []byte("  \t"),
-			expectedAnswer: true,
+			name: "dockerfile empty",
+			currentBuildInfo: BuildInfo{
+				Context: "buildName",
+			},
+			expectedBuildInfo: BuildInfo{
+				Context:    "buildName",
+				Dockerfile: "Dockerfile",
+			},
 		},
 		{
-			name:           "no empty manifest",
-			rawContent:     []byte("  a"),
-			expectedAnswer: false,
-		},
-		{
-			name:           "nil manifest content",
-			rawContent:     []byte(nil),
-			expectedAnswer: true,
+			name: "context and Dockerfile filled",
+			currentBuildInfo: BuildInfo{
+				Context:    "buildName",
+				Dockerfile: "Dockerfile",
+			},
+			expectedBuildInfo: BuildInfo{
+				Context:    "buildName",
+				Dockerfile: "Dockerfile",
+			},
 		},
 	}
+
 	for _, tt := range tests {
+
 		t.Run(tt.name, func(t *testing.T) {
-			isEmptyManifestFile := isEmptyManifestFile(tt.rawContent)
-			if isEmptyManifestFile != tt.expectedAnswer {
-				t.Fatalf("isEmptyManifestFile() fail '%s': expected result %t, got %t", tt.name, tt.expectedAnswer, isEmptyManifestFile)
-			}
+
+			tt.currentBuildInfo.setBuildDefaults()
+
+			assert.Equal(t, tt.expectedBuildInfo, tt.currentBuildInfo)
 		})
 	}
 }
 
-func TestNoOktetoFileDetected(t *testing.T) {
+func TestGetManifestFromFile(t *testing.T) {
 	tests := []struct {
-		name        string
-		rawContent  []byte
-		expectedErr bool
-		isInvalid   bool
+		name          string
+		manifestBytes []byte
+		composeBytes  []byte
+		expectedErr   bool
 	}{
 		{
-			name:        "Dockerfile build file",
-			rawContent:  []byte("FROM alpine\nRUN echo hello okteto"),
-			expectedErr: true,
-			isInvalid:   false,
-		},
-		{
-			name:        "okteto manifest build file",
-			rawContent:  []byte("deploy:\n - echo hello okteto"),
+			name:          "OktetoManifest does not exist and compose manifest is correct",
+			manifestBytes: nil,
+			composeBytes: []byte(`services:
+  test:
+    image: test`),
 			expectedErr: false,
-			isInvalid:   false,
 		},
 		{
-			name:        "invalid okteto manifest build file",
-			rawContent:  []byte("build:\n todo-list"),
-			expectedErr: true,
-			isInvalid:   true,
+			name:          "OktetoManifest not contains any content and compose manifest does not exists",
+			manifestBytes: []byte(``),
+			composeBytes:  nil,
+			expectedErr:   true,
+		},
+		{
+			name:          "OktetoManifest is invalid and compose manifest does not exists",
+			manifestBytes: []byte(`asdasa: asda`),
+			composeBytes:  nil,
+			expectedErr:   true,
+		},
+		{
+			name: "OktetoManifestV2 is ok",
+			manifestBytes: []byte(`dev:
+  api:
+    sync:
+    - .:/usr`),
+			composeBytes: nil,
+			expectedErr:  false,
+		},
+		{
+			name: "OktetoManifestV1 is ok",
+			manifestBytes: []byte(`name: test
+sync:
+- .:/usr`),
+			composeBytes: nil,
+			expectedErr:  false,
+		},
+		{
+			name:          "OktetoManifest and compose manifest does not exists",
+			manifestBytes: nil,
+			composeBytes:  nil,
+			expectedErr:   true,
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Read(tt.rawContent)
-			if err != nil && !tt.expectedErr {
-				t.Fatalf("Read() fail '%s': not expected error but got %t", tt.name, err)
+			dir := t.TempDir()
+			file := ""
+			if tt.manifestBytes != nil {
+				file = filepath.Join(dir, "okteto.yml")
+				assert.NoError(t, os.WriteFile(filepath.Join(dir, "okteto.yml"), tt.manifestBytes, 0644))
 			}
-
-			if err == nil && tt.expectedErr {
-				t.Fatalf("Read() fail '%s': expected error but got nil", tt.name)
-			}
-
-			if err != nil && tt.expectedErr {
-				if !tt.isInvalid {
-					if !errors.Is(err, oktetoErrors.ErrNotManifestContentDetected) {
-						t.Fatalf("Read() fail '%s': expected result %t, got %t", tt.name, oktetoErrors.ErrNotManifestContentDetected, err)
-					}
+			if tt.composeBytes != nil {
+				if file == "" {
+					file = filepath.Join(dir, "docker-compose.yml")
 				}
+				assert.NoError(t, os.WriteFile(filepath.Join(dir, "docker-compose.yml"), tt.composeBytes, 0644))
 			}
+			_, err := getManifestFromFile(dir, file)
+
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+
 		})
 	}
 }

@@ -20,24 +20,25 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 )
 
 func TestAdd(t *testing.T) {
 
 	pf := NewPortForwardManager(context.Background(), model.Localhost, nil, nil, "")
-	if err := pf.Add(model.Forward{Local: 10100, Remote: 1010}); err != nil {
+	if err := pf.Add(forward.Forward{Local: 10100, Remote: 1010}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := pf.Add(model.Forward{Local: 10110, Remote: 1011}); err != nil {
+	if err := pf.Add(forward.Forward{Local: 10110, Remote: 1011}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := pf.Add(model.Forward{Local: 10100, Remote: 1011}); err == nil {
+	if err := pf.Add(forward.Forward{Local: 10100, Remote: 1011}); err == nil {
 		t.Fatal("duplicated local port didn't return an error")
 	}
 
-	if err := pf.Add(model.Forward{Local: 10120, Remote: 0, Service: true, ServiceName: "svc"}); err != nil {
+	if err := pf.Add(forward.Forward{Local: 10120, Remote: 0, Service: true, ServiceName: "svc"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -149,12 +150,12 @@ func Test_active_closeReady(t *testing.T) {
 func Test_getServicePorts(t *testing.T) {
 	tests := []struct {
 		name     string
-		forwards map[int]model.Forward
+		forwards map[int]forward.Forward
 		expected []string
 	}{
 		{
 			name: "services-with-port",
-			forwards: map[int]model.Forward{
+			forwards: map[int]forward.Forward{
 				80:   {Local: 80, Remote: 8090},
 				8080: {Local: 8080, Remote: 8090, ServiceName: "svc", Service: true},
 				22:   {Local: 22000, Remote: 22},
@@ -163,7 +164,7 @@ func Test_getServicePorts(t *testing.T) {
 		},
 		{
 			name: "services-with-multiple-ports",
-			forwards: map[int]model.Forward{
+			forwards: map[int]forward.Forward{
 				80:   {Local: 80, Remote: 8090},
 				8080: {Local: 8080, Remote: 8090, ServiceName: "svc", Service: true},
 				22:   {Local: 22000, Remote: 22},

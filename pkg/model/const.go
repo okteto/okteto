@@ -113,6 +113,8 @@ const (
 	Deployment = "Deployment"
 	//StatefulSet k8s statefulset kind
 	StatefulSet = "StatefulSet"
+	//Job k8s job kind
+	Job = "job"
 
 	//Localhost localhost
 	Localhost = "localhost"

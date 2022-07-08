@@ -32,6 +32,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	warningDockerfilePath   string = "Build '%s': Dockerfile '%s' is not in a relative path to context '%s'"
+	doubleDockerfileWarning string = "Build '%s': Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'"
+)
+
 // OktetoBuilderInterface runs the build of an image
 type OktetoBuilderInterface interface {
 	Run(ctx context.Context, buildOptions *types.BuildOptions) error
@@ -236,10 +241,8 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 	}
 
-	file := b.Dockerfile
-	if !filepath.IsAbs(b.Dockerfile) && !model.FileExistsAndNotDir(file) {
-		file = filepath.Join(b.Context, b.Dockerfile)
-	}
+	file := extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
+
 	opts := &types.BuildOptions{
 		CacheFrom: b.CacheFrom,
 		Target:    b.Target,
@@ -257,6 +260,24 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	opts.OutputMode = setOutputMode(outputMode)
 
 	return opts
+}
+
+func extractFromContextAndDockerfile(context, dockerfile, svcName string) string {
+	if filepath.IsAbs(dockerfile) {
+		return dockerfile
+	}
+
+	joinPath := filepath.Join(context, dockerfile)
+	if !model.FileExistsAndNotDir(joinPath) {
+		oktetoLog.Warning(fmt.Sprintf(warningDockerfilePath, svcName, dockerfile, context))
+		return dockerfile
+	}
+
+	if joinPath != dockerfile && model.FileExistsAndNotDir(dockerfile) {
+		oktetoLog.Warning(fmt.Sprintf(doubleDockerfileWarning, svcName, context, dockerfile))
+	}
+
+	return joinPath
 }
 
 // GetVolumesToInclude checks if the path exists, if it doesn't it skip it

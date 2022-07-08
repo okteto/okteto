@@ -14,6 +14,8 @@
 package build
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	buildV1 "github.com/okteto/okteto/cmd/build/v1"
@@ -162,18 +164,58 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 }
 
 func TestBuilderIsProperlyGenerated(t *testing.T) {
+	dir := t.TempDir()
+	malformedDockerfile := filepath.Join(dir, "malformedDockerfile")
+	dockerfile := filepath.Join(dir, "Dockerfile")
+	assert.NoError(t, os.WriteFile(dockerfile, []byte(`FROM alpine`), 0644))
+	assert.NoError(t, os.WriteFile(malformedDockerfile, []byte(`FROM alpine`), 0644))
 	tests := []struct {
 		name              string
 		buildCommand      *Command
 		expectedError     bool
 		isBuildV2Expected bool
+		options           *types.BuildOptions
 	}{
 		{
-			name: "Builder error. Invalid manifest",
+			name: "Manifest error fallback to v1",
 			buildCommand: &Command{
 				GetManifest: getManifestWithInvalidManifestError,
 			},
+			options:           &types.BuildOptions{},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Manifest error",
+			buildCommand: &Command{
+				GetManifest: getManifestWithInvalidManifestError,
+			},
+			options: &types.BuildOptions{
+				File: "okteto.yml",
+			},
 			expectedError:     true,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Builder error. Dockerfile malformed",
+			buildCommand: &Command{
+				GetManifest: getManifestWithInvalidManifestError,
+			},
+			options: &types.BuildOptions{
+				File: malformedDockerfile,
+			},
+			expectedError:     false,
+			isBuildV2Expected: false,
+		},
+		{
+			name: "Builder error. Invalid manifest/Dockerfile correct",
+			buildCommand: &Command{
+				GetManifest: getManifestWithInvalidManifestError,
+			},
+			options: &types.BuildOptions{
+				File: dockerfile,
+			},
+			expectedError:     false,
 			isBuildV2Expected: false,
 		},
 		{
@@ -181,6 +223,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			buildCommand: &Command{
 				GetManifest: getFakeManifestV2,
 			},
+			options:           &types.BuildOptions{},
 			expectedError:     false,
 			isBuildV2Expected: true,
 		},
@@ -189,6 +232,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			buildCommand: &Command{
 				GetManifest: getFakeManifestV1,
 			},
+			options:           &types.BuildOptions{},
 			expectedError:     false,
 			isBuildV2Expected: false,
 		},
@@ -197,17 +241,17 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			buildCommand: &Command{
 				GetManifest: getManifestWithError,
 			},
+			options:           &types.BuildOptions{},
 			expectedError:     false,
 			isBuildV2Expected: false,
 		},
 	}
 
-	options := &types.BuildOptions{}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			builder, err := tt.buildCommand.getBuilder(options)
+			builder, err := tt.buildCommand.getBuilder(tt.options)
 			if err != nil && !tt.expectedError {
 				t.Errorf("getBuilder() fail on '%s'. Expected nil error, got %s", tt.name, err.Error())
 			}

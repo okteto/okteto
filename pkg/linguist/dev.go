@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
@@ -31,7 +32,7 @@ type languageDefault struct {
 	command         []string
 	environment     []model.EnvVar
 	volumes         []model.Volume
-	forward         []model.Forward
+	forward         []forward.Forward
 	reverse         []model.Reverse
 	remote          int
 	securityContext *model.SecurityContext
@@ -55,23 +56,23 @@ const (
 
 var (
 	languageDefaults map[string]languageDefault
-	forwardDefaults  map[string][]model.Forward
+	forwardDefaults  map[string][]forward.Forward
 )
 
 func init() {
 	languageDefaults = make(map[string]languageDefault)
-	forwardDefaults = make(map[string][]model.Forward)
+	forwardDefaults = make(map[string][]forward.Forward)
 	languageDefaults[Javascript] = languageDefault{
 		image:   "okteto/node:14",
 		path:    "/usr/src/app",
-		command: []string{"bash"}, forward: []model.Forward{
+		command: []string{"bash"}, forward: []forward.Forward{
 			{
 				Local:  9229,
 				Remote: 9229,
 			},
 		},
 	}
-	forwardDefaults[Javascript] = []model.Forward{
+	forwardDefaults[Javascript] = []forward.Forward{
 		{
 			Local:  3000,
 			Remote: 3000,
@@ -87,7 +88,7 @@ func init() {
 				Add: []apiv1.Capability{"SYS_PTRACE"},
 			},
 		},
-		forward: []model.Forward{
+		forward: []forward.Forward{
 			{
 				Local:  2345,
 				Remote: 2345,
@@ -102,7 +103,7 @@ func init() {
 			},
 		},
 	}
-	forwardDefaults[golang] = []model.Forward{
+	forwardDefaults[golang] = []forward.Forward{
 		{
 			Local:  8080,
 			Remote: 8080,
@@ -122,7 +123,7 @@ func init() {
 			},
 		},
 	}
-	forwardDefaults[Rust] = []model.Forward{
+	forwardDefaults[Rust] = []forward.Forward{
 		{
 			Local:  8080,
 			Remote: 8080,
@@ -145,7 +146,7 @@ func init() {
 			},
 		},
 	}
-	forwardDefaults[Python] = []model.Forward{
+	forwardDefaults[Python] = []forward.Forward{
 		{
 			Local:  8080,
 			Remote: 8080,
@@ -156,7 +157,7 @@ func init() {
 		image:   "okteto/gradle:6.5",
 		path:    "/usr/src/app",
 		command: []string{"bash"},
-		forward: []model.Forward{
+		forward: []forward.Forward{
 			{
 				Local:  5005,
 				Remote: 5005,
@@ -168,7 +169,7 @@ func init() {
 			},
 		},
 	}
-	forwardDefaults[Gradle] = []model.Forward{
+	forwardDefaults[Gradle] = []forward.Forward{
 		{
 			Local:  8080,
 			Remote: 8080,
@@ -179,7 +180,7 @@ func init() {
 		image:   "okteto/maven:3",
 		path:    "/usr/src/app",
 		command: []string{"bash"},
-		forward: []model.Forward{
+		forward: []forward.Forward{
 			{
 				Local:  5005,
 				Remote: 5005,
@@ -191,7 +192,7 @@ func init() {
 			},
 		},
 	}
-	forwardDefaults[Maven] = []model.Forward{
+	forwardDefaults[Maven] = []forward.Forward{
 		{
 			Local:  8080,
 			Remote: 8080,
@@ -202,7 +203,7 @@ func init() {
 		image:   "okteto/ruby:2",
 		path:    "/usr/src/app",
 		command: []string{"bash"},
-		forward: []model.Forward{
+		forward: []forward.Forward{
 			{
 				Local:  1234,
 				Remote: 1234,
@@ -214,7 +215,7 @@ func init() {
 			},
 		},
 	}
-	forwardDefaults[Ruby] = []model.Forward{
+	forwardDefaults[Ruby] = []forward.Forward{
 		{
 			Local:  8080,
 			Remote: 8080,
@@ -239,10 +240,10 @@ func init() {
 				Value: "0",
 			},
 		},
-		forward: []model.Forward{},
+		forward: []forward.Forward{},
 		remote:  22000,
 	}
-	forwardDefaults[Csharp] = []model.Forward{
+	forwardDefaults[Csharp] = []forward.Forward{
 		{
 			Local:  5000,
 			Remote: 5000,
@@ -265,7 +266,7 @@ func init() {
 			},
 		},
 	}
-	forwardDefaults[Php] = []model.Forward{
+	forwardDefaults[Php] = []forward.Forward{
 		{
 			Local:  8080,
 			Remote: 8080,
@@ -276,9 +277,9 @@ func init() {
 		image:   model.DefaultImage,
 		path:    "/usr/src/app",
 		command: []string{"bash"},
-		forward: []model.Forward{},
+		forward: []forward.Forward{},
 	}
-	forwardDefaults[Unrecognized] = []model.Forward{
+	forwardDefaults[Unrecognized] = []forward.Forward{
 		{
 			Local:  8080,
 			Remote: 8080,
@@ -360,7 +361,7 @@ func SetForwardDefaults(dev *model.Dev, language string) {
 	language = NormalizeLanguage(language)
 	vals := forwardDefaults[language]
 	if dev.Forward == nil {
-		dev.Forward = []model.Forward{}
+		dev.Forward = []forward.Forward{}
 	}
 	dev.Forward = append(dev.Forward, vals...)
 }
