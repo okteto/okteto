@@ -84,9 +84,9 @@ func Down() *cobra.Command {
 					return err
 				}
 
-				analytics.TrackDown(true)
 			}
 
+			analytics.TrackDown(true)
 			return nil
 		},
 	}
