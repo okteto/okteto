@@ -170,6 +170,8 @@ var (
 
 	//ErrNotManifestContentDetected is raised when cannot load any field accepted by okteto manifest doc
 	ErrNotManifestContentDetected = errors.New("couldn't detect okteto manifest content")
+
+	ErrCouldNotInferAnyManifest = errors.New("couldn't detect any manifest (okteto manifest, pipeline, compose, helm chart, k8s manifest)")
 )
 
 // IsForbidden raised if the Okteto API returns 401

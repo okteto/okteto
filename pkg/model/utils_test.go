@@ -14,71 +14,8 @@
 package model
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 )
-
-func TestCopyFile(t *testing.T) {
-	dir, err := os.MkdirTemp("", t.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.RemoveAll(dir)
-
-	from := filepath.Join(dir, "from")
-	to := filepath.Join(dir, "to")
-
-	if err := CopyFile(from, to); err == nil {
-		t.Error("failed to return error for missing file")
-	}
-
-	content := []byte("hello-world")
-	if err := os.WriteFile(from, content, 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := CopyFile(from, to); err != nil {
-		t.Fatalf("failed to copy from %s to %s: %s", from, to, err)
-	}
-
-	copied, err := os.ReadFile(to)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if string(content) != string(copied) {
-		t.Fatalf("got %s, expected %s", string(content), string(copied))
-	}
-
-	if err := CopyFile(from, to); err != nil {
-		t.Fatalf("failed to overwrite from %s to %s: %s", from, to, err)
-	}
-
-}
-
-func TestFileExists(t *testing.T) {
-	dir, err := os.MkdirTemp("", "")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.RemoveAll(dir)
-
-	p := filepath.Join(dir, "exists")
-	if FileExists(p) {
-		t.Errorf("fail to detect non-existing file")
-	}
-
-	if err := os.WriteFile(p, []byte("hello-world"), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	if !FileExists(p) {
-		t.Errorf("fail to detect existing file")
-	}
-}
 
 func Test_GetValidNameFromFolder(t *testing.T) {
 	var tests = []struct {

@@ -16,8 +16,8 @@ package model
 import (
 	"os"
 
+	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -30,8 +30,11 @@ type ContextResource struct {
 // GetContextResource returns a ContextResource object from a given file
 func GetContextResource(path string) (*ContextResource, error) {
 	if !FileExistsAndNotDir(path) {
-		var err error
-		path, err = inferContextResourceFile()
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		path, err = discovery.GetContextResourcePath(cwd)
 		if err != nil {
 			return nil, err
 		}
@@ -75,25 +78,4 @@ func (c *ContextResource) UpdateNamespace(okNs string) error {
 
 	c.Namespace = okNs
 	return nil
-}
-
-func inferContextResourceFile() (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-	if oktetoPath := GetFilePathFromWdAndFiles(cwd, oktetoManifestFiles); oktetoPath != "" {
-		oktetoLog.Infof("context will load from %s", oktetoPath)
-		return oktetoPath, nil
-	}
-	if pipelinePath := GetFilePathFromWdAndFiles(cwd, pipelineFiles); pipelinePath != "" {
-		oktetoLog.Infof("context will load from %s", pipelinePath)
-		return pipelinePath, nil
-	}
-
-	if stackPath := GetFilePathFromWdAndFiles(cwd, composeFiles); stackPath != "" {
-		oktetoLog.Infof("context will load from %s", stackPath)
-		return stackPath, nil
-	}
-	return "", oktetoErrors.ErrManifestNotFound
 }

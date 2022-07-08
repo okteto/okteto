@@ -16,60 +16,36 @@ package utils
 import (
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
+	"os"
 	"strings"
 
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/discovery"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
-var (
-	//DefaultStackManifest default okteto stack manifest file
-	possibleStackManifests = [][]string{
-		{"okteto-stack.yml"},
-		{"okteto-stack.yaml"},
-		{"stack.yml"},
-		{"stack.yaml"},
-		{".okteto", "okteto-stack.yml"},
-		{".okteto", "okteto-stack.yaml"},
-		{"okteto-compose.yml"},
-		{"okteto-compose.yaml"},
-		{".okteto", "okteto-compose.yml"},
-		{".okteto", "okteto-compose.yaml"},
-		{"docker-compose.yml"},
-		{"docker-compose.yaml"},
-		{".okteto", "docker-compose.yml"},
-		{".okteto", "docker-compose.yaml"},
-	}
-)
+var ()
 
 //LoadStackContext loads the namespace and context of an okteto stack manifest
 func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
 	ctxResource := &model.ContextResource{}
-	found := false
-	var err error
 	if len(stackPaths) == 0 {
-		for _, possibleStackManifest := range possibleStackManifests {
-			manifestPath := filepath.Join(possibleStackManifest...)
-			if model.FileExists(manifestPath) {
-				ctxResource, err = model.GetContextResource(manifestPath)
-				if err != nil {
-					return nil, err
-				}
-				found = true
-				break
-			}
+		dir, err := os.Getwd()
+		if err != nil {
+			return nil, err
 		}
-		if !found {
-			return nil, oktetoErrors.UserError{
-				E:    fmt.Errorf("could not detect any compose"),
-				Hint: "If you have a compose file, use the flag '--file' to point to your compose file",
-			}
+		composePath, err := discovery.GetComposePath(dir)
+		if err != nil {
+			return nil, err
+		}
+		ctxResource, err = model.GetContextResource(composePath)
+		if err != nil {
+			return nil, err
 		}
 	}
 	for _, stackPath := range stackPaths {
-		if !model.FileExists(stackPath) {
+		if !filesystem.FileExists(stackPath) {
 			return nil, fmt.Errorf("'%s' does not exist", stackPath)
 		}
 		thisCtxResource, err := model.GetContextResource(stackPath)

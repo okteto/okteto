@@ -24,6 +24,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	getter "github.com/hashicorp/go-getter"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
@@ -89,13 +90,13 @@ func Install(p getter.ProgressTracker) error {
 		return fmt.Errorf("failed to set permissions to %s: %s", b, err)
 	}
 
-	if model.FileExists(i) {
+	if filesystem.FileExists(i) {
 		if err := os.Remove(i); err != nil {
 			oktetoLog.Infof("failed to delete %s, will try to overwrite: %s", i, err)
 		}
 	}
 
-	if err := model.CopyFile(b, i); err != nil {
+	if err := filesystem.CopyFile(b, i); err != nil {
 		return fmt.Errorf("failed to write %s: %s", i, err)
 	}
 

@@ -11,54 +11,51 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package filesystem
 
 import (
+	"io"
 	"os"
 	"path/filepath"
+
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-var (
-
-	// ComposeFiles represents the possible names an okteto compose can have
-	ComposeFiles = []string{
-		"okteto-stack.yml",
-		"okteto-stack.yaml",
-		"stack.yml",
-		"stack.yaml",
-		".okteto/okteto-stack.yml",
-		".okteto/okteto-stack.yaml",
-		".okteto/stack.yml",
-		".okteto/stack.yaml",
-
-		"okteto-compose.yml",
-		"okteto-compose.yaml",
-		".okteto/okteto-compose.yml",
-		".okteto/okteto-compose.yaml",
-
-		"docker-compose.yml",
-		"docker-compose.yaml",
-		".okteto/docker-compose.yml",
-		".okteto/docker-compose.yaml",
+// FileExists return true if the file exists
+func FileExists(name string) bool {
+	_, err := os.Stat(name)
+	if os.IsNotExist(err) {
+		return false
 	}
-)
 
-// GetWorkdirFromManifestPath sets the path
-func GetWorkdirFromManifestPath(manifestPath string) string {
-	dir := filepath.Dir(manifestPath)
-	if filepath.Base(dir) == ".okteto" {
-		dir = filepath.Dir(dir)
+	if err != nil {
+		oktetoLog.Infof("failed to check if %s exists: %s", name, err)
 	}
-	return dir
+
+	return true
 }
 
-// GetManifestPathFromWorkdir returns the path from a workdir
-func GetManifestPathFromWorkdir(manifestPath, workdir string) string {
-	mPath, err := filepath.Rel(workdir, manifestPath)
+// CopyFile copies a binary between from and to
+func CopyFile(from, to string) error {
+	fromFile, err := os.Open(from)
 	if err != nil {
-		return ""
+		return err
 	}
-	return mPath
+
+	// skipcq GSC-G302 syncthing is a binary so it needs exec permissions
+	toFile, err := os.OpenFile(to, os.O_RDWR|os.O_CREATE, 0700)
+	if err != nil {
+		return err
+	}
+
+	defer toFile.Close()
+
+	_, err = io.Copy(toFile, fromFile)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // FileExistsAndNotDir checks if the file exists and its not a dir

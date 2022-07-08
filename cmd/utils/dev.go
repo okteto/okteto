@@ -26,6 +26,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -42,9 +43,9 @@ const (
 
 // LoadManifestContext loads the contextresource from a file
 func LoadManifestContext(devPath string) (*model.ContextResource, error) {
-	if !model.FileExists(devPath) {
+	if !filesystem.FileExists(devPath) {
 		if devPath == DefaultManifest {
-			if model.FileExists(secondaryManifest) {
+			if filesystem.FileExists(secondaryManifest) {
 				return model.GetContextResource(secondaryManifest)
 			}
 		}
@@ -55,9 +56,9 @@ func LoadManifestContext(devPath string) (*model.ContextResource, error) {
 
 //LoadManifest loads an okteto manifest checking "yml" and "yaml"
 func LoadManifest(devPath string) (*model.Manifest, error) {
-	if !model.FileExists(devPath) {
+	if !filesystem.FileExists(devPath) {
 		if devPath == DefaultManifest {
-			if model.FileExists(secondaryManifest) {
+			if filesystem.FileExists(secondaryManifest) {
 				return LoadManifest(secondaryManifest)
 			}
 		}
@@ -102,12 +103,12 @@ func LoadManifestRc(dev *model.Dev) error {
 	secondaryDevRcPath := filepath.Join(config.GetOktetoHome(), "okteto.yaml")
 	var devRc *model.DevRC
 	var err error
-	if model.FileExists(defaultDevRcPath) {
+	if filesystem.FileExists(defaultDevRcPath) {
 		devRc, err = model.GetRc(defaultDevRcPath)
 		if err != nil {
 			return fmt.Errorf("error while reading %s file: %s", defaultDevRcPath, err.Error())
 		}
-	} else if model.FileExists(secondaryDevRcPath) {
+	} else if filesystem.FileExists(secondaryDevRcPath) {
 		devRc, err = model.GetRc(secondaryDevRcPath)
 		if err != nil {
 			return fmt.Errorf("error while reading %s file: %s", defaultDevRcPath, err.Error())

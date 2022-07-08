@@ -24,7 +24,8 @@ import (
 	"time"
 
 	"github.com/compose-spec/godotenv"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/discovery"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
@@ -34,22 +35,6 @@ import (
 var (
 	errBadStackName = "must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character"
 	//DefaultStackManifest default okteto stack manifest file
-	possibleStackManifests = [][]string{
-		{"okteto-stack.yml"},
-		{"okteto-stack.yaml"},
-		{"stack.yml"},
-		{"stack.yaml"},
-		{".okteto", "okteto-stack.yml"},
-		{".okteto", "okteto-stack.yaml"},
-		{"okteto-compose.yml"},
-		{"okteto-compose.yaml"},
-		{".okteto", "okteto-compose.yml"},
-		{".okteto", "okteto-compose.yaml"},
-		{"docker-compose.yml"},
-		{"docker-compose.yaml"},
-		{".okteto", "docker-compose.yml"},
-		{".okteto", "docker-compose.yaml"},
-	}
 	deprecatedManifests = []string{"stack.yml", "stack.yaml"}
 )
 
@@ -375,7 +360,7 @@ func (svc *Service) ignoreSyncVolumes(s *Stack) {
 			}
 			volume.LocalPath = relPath
 		}
-		if FileExists(volume.LocalPath) {
+		if filesystem.FileExists(volume.LocalPath) {
 			notIgnoredVolumes = append(notIgnoredVolumes, volume)
 			continue
 		}
@@ -442,7 +427,7 @@ func (s *Stack) Validate() error {
 		}
 
 		for _, v := range svc.VolumeMounts {
-			if svc.Build == nil && FileExists(v.LocalPath) {
+			if svc.Build == nil && filesystem.FileExists(v.LocalPath) {
 				continue
 			}
 			if _, err := filepath.Rel(wd, v.LocalPath); err != nil {
@@ -707,7 +692,11 @@ func LoadStack(name string, stackPaths []string, validate bool) (*Stack, error) 
 	var resultStack *Stack
 
 	if len(stackPaths) == 0 {
-		stack, err := inferStack(name)
+		dir, err := os.Getwd()
+		if err != nil {
+			return nil, err
+		}
+		stack, err := inferStack(dir, name)
 		if err != nil {
 			return nil, err
 		}
@@ -715,7 +704,7 @@ func LoadStack(name string, stackPaths []string, validate bool) (*Stack, error) 
 
 	} else {
 		for _, stackPath := range stackPaths {
-			if FileExists(stackPath) {
+			if filesystem.FileExists(stackPath) {
 				stack, err := getStack(name, stackPath)
 				if err != nil {
 					return nil, err
@@ -736,22 +725,12 @@ func LoadStack(name string, stackPaths []string, validate bool) (*Stack, error) 
 	return resultStack, nil
 }
 
-func inferStack(name string) (*Stack, error) {
-	for _, possibleStackManifest := range possibleStackManifests {
-		manifestPath := filepath.Join(possibleStackManifest...)
-		if FileExists(manifestPath) {
-			stack, err := getStack(name, manifestPath)
-			if err != nil {
-				return nil, err
-			}
-
-			return stack, nil
-		}
+func inferStack(wd, name string) (*Stack, error) {
+	composePath, err := discovery.GetComposePath(wd)
+	if err != nil {
+		return nil, err
 	}
-	return nil, oktetoErrors.UserError{
-		E:    fmt.Errorf("could not detect any compose file"),
-		Hint: "If you have a compose file, use the flag '--file' to point to your compose file",
-	}
+	return getStack(name, composePath)
 }
 
 func getStack(name, manifestPath string) (*Stack, error) {
@@ -790,7 +769,7 @@ func getOverrideFile(stackPath string) (*Stack, error) {
 	fileName := strings.TrimSuffix(stackPath, extension)
 	overridePath := fmt.Sprintf("%s.override%s", fileName, extension)
 	var isCompose bool
-	if FileExists(stackPath) {
+	if filesystem.FileExists(stackPath) {
 		if isPathAComposeFile(stackPath) {
 			isCompose = true
 		}

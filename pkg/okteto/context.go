@@ -26,6 +26,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -83,7 +84,7 @@ type OktetoContextViewer struct {
 // InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context
 // this function is to make "okteto context" transparent to current Okteto Enterprise users, but it can be removed when people upgrade
 func InitContextWithDeprecatedToken() {
-	if !model.FileExists(config.GetTokenPathDeprecated()) {
+	if !filesystem.FileExists(config.GetTokenPathDeprecated()) {
 		return
 	}
 
