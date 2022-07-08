@@ -21,7 +21,7 @@ func isMapString(value string) bool {
 	return false
 }
 func isCurlyEnv(value string) bool {
-	return strings.HasPrefix(value, "{") && strings.HasSuffix(value, "}")
+	return strings.HasPrefix(value, "${") && strings.HasSuffix(value, "}")
 }
 func hasEnvDefaultValue(value string) (int, bool) {
 	return strings.Index(value, ":-"), strings.Contains(value, ":-")
@@ -34,14 +34,17 @@ func isEnvStringKey(value string) (string, bool) {
 	if isMapString(value) {
 		return "", false
 	}
-	key := strings.TrimPrefix(value, "$")
-	if isCurlyEnv(key) {
-		key = strings.TrimPrefix(strings.TrimSuffix(key, "}"), "{")
+
+	key := value
+	if ok := isCurlyEnv(value); ok {
+		key = strings.TrimPrefix(strings.TrimSuffix(key, "}"), "${")
 		if indx, ok := hasEnvDefaultValue(key); ok {
 			key = key[:indx]
 		}
+		return key, true
 	}
-	return key, true
+
+	return strings.TrimPrefix(key, "$"), true
 }
 
 func expandEnvScalarNode(node *yaml3.Node) (*yaml3.Node, error) {
