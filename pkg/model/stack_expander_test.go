@@ -22,12 +22,12 @@ services:
     myservice:
         build:
             context: vote
-        args:
-            - $CUSTOM_ENV
-            - CUSTOM2_ENV=$CUSTOM_ENV
-            - EMPTY
-            - ${ENV:-dev}
-            - ${ENV}
+            args:
+                - $CUSTOM_ENV
+                - CUSTOM2_ENV=$CUSTOM_ENV
+                - EMPTY
+                - ${ENV:-dev}
+                - ${ENV}
         ports:
             - 8080:8080
         environment:
@@ -55,18 +55,18 @@ volumes:
   myservice:
     build:
       context: vote
-    args:
-      - CUSTOM_ENV=MYVALUE
-      - CUSTOM2_ENV=MYVALUE
-      - EMPTY
-      - ENV=dev
-      - ENV=
+      args:
+        - MYVALUE
+        - CUSTOM2_ENV=MYVALUE
+        - EMPTY
+        - dev
+        - ""
     ports:
       - 8080:8080
     environment:
       FLASK_ENV: development
       CUSTOM_ENV: MYVALUE
-      CUSTOM2_ENV:
+      "":
       EMPTY:
     volumes:
       - ./vote:/src
@@ -91,9 +91,9 @@ services:
     myservice:
         build:
             context: vote
-        args:
-            - $CUSTOM_ENV
-            - CUSTOM2_ENV=$CUSTOM_ENV
+            args:
+                - $CUSTOM_ENV
+                - CUSTOM2_ENV=$CUSTOM_ENV
         ports:
             - 8080:8080
         environment:
@@ -117,13 +117,13 @@ volumes:
   myservice:
     build:
       context: vote
-    args:
-      - |-
-        CUSTOM_ENV=my first line
-        my second line
-      - |-
-        CUSTOM2_ENV=my first line
-        my second line
+      args:
+        - |-
+          my first line
+          my second line
+        - |-
+          CUSTOM2_ENV=my first line
+          my second line
     ports:
       - 8080:8080
     environment:
@@ -131,7 +131,7 @@ volumes:
       CUSTOM_ENV: |-
         my first line
         my second line
-      CUSTOM2_ENV:
+      "":
     volumes:
       - ./myservice:/src
   redis:
