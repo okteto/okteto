@@ -68,24 +68,25 @@ func Down() *cobra.Command {
 				if err != nil {
 					return err
 				}
+			} else {
+				devName := ""
+				if len(args) == 1 {
+					devName = args[0]
+				}
+				dev, err := utils.GetDevFromManifest(manifest, devName)
+				if err != nil {
+					return err
+				}
+
+				if err := runDown(ctx, dev, rm); err != nil {
+					analytics.TrackDown(false)
+					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+					return err
+				}
+
+				analytics.TrackDown(true)
 			}
 
-			devName := ""
-			if len(args) == 1 {
-				devName = args[0]
-			}
-			dev, err := utils.GetDevFromManifest(manifest, devName)
-			if err != nil {
-				return err
-			}
-
-			if err := runDown(ctx, dev, rm); err != nil {
-				analytics.TrackDown(false)
-				err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
-				return err
-			}
-
-			analytics.TrackDown(true)
 			return nil
 		},
 	}
@@ -156,7 +157,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		}
 
 		spinner.Stop()
-		oktetoLog.Success("Development container deactivated")
+		oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
 
 		if !rm {
 			exit <- nil
