@@ -96,6 +96,24 @@ jobs:
       - store_artifacts:
           path: coverage.txt
           destination: coverage.txt
+  run-windows-unit-test:
+    executor: win/default
+    environment:
+      OKTETO_USER: cindylopez
+    steps:
+      - checkout
+      - run:
+          name: Upgrade Golang
+          command: choco upgrade golang --version 1.17
+      - restore_cache:
+          keys:
+            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+      - run:
+          name: Run unit tests
+          command: |
+            go mod download
+            go version
+            go test ./...
   test-integration:
     executor: golang-ci
     resource_class: large
@@ -157,7 +175,7 @@ jobs:
             export DOCKER_BUILDKIT=1
             docker build -t okteto --build-arg VERSION_STRING=$CIRCLE_SHA1 .
 
-  run-windows-test:
+  run-windows-e2e-test:
     executor: win/default
     environment:
       OKTETO_USER: cindylopez
@@ -315,7 +333,13 @@ workflows:
               ignore: *release-branch-regex
             tags:
               ignore: /.*/
-      - run-windows-test:
+      - run-windows-unit-test:
+          filters:
+            branches:
+              ignore: *release-branch-regex
+            tags:
+              ignore: /.*/
+      - run-windows-e2e-test:
           requires:
             - build-binaries
           filters:
@@ -363,6 +387,12 @@ workflows:
               ignore: /.*/
             tags:
               ignore: *release-branch-regex
+      - run-windows-unit-test:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              ignore: *release-branch-regex
       - test-integration:
           filters:
             branches:
@@ -385,6 +415,7 @@ workflows:
     jobs:
       - build-binaries
       - run-unit-test
+      - run-windows-unit-test
       - push-image-tag:
           requires:
             - build-binaries
@@ -407,6 +438,12 @@ workflows:
               only:
                 - *release-regex
       - run-unit-test:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              ignore: *release-regex
+      - run-windows-unit-test:
           filters:
             branches:
               ignore: /.*/
