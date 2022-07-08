@@ -59,7 +59,7 @@ func TestGetComposePathWhenExists(t *testing.T) {
 			wd := t.TempDir()
 			for _, fileToCreate := range tt.filesToCreate {
 				fullpath := filepath.Join(wd, fileToCreate)
-				assert.NoError(t, os.MkdirAll(filepath.Dir(fullpath), 0770))
+				assert.NoError(t, os.MkdirAll(filepath.Dir(fullpath), 0750))
 				f, err := os.Create(fullpath)
 				assert.NoError(t, err)
 				defer f.Close()

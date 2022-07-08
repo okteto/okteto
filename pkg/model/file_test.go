@@ -45,12 +45,12 @@ func TestGetWorkdirFromManifest(t *testing.T) {
 		},
 		{
 			name:         "full path",
-			path:         filepath.Join("/usr", "okteto.yml"),
+			path:         filepath.Clean("/usr/okteto.yml"),
 			expectedPath: filepath.Clean("/usr"),
 		},
 		{
 			name:         "full path on .okteto",
-			path:         filepath.Join("/usr", ".okteto", "okteto.yml"),
+			path:         filepath.Clean("/usr/.okteto/okteto.yml"),
 			expectedPath: filepath.Clean("/usr"),
 		},
 		{
@@ -108,7 +108,7 @@ func Test_GetManifestPathFromWorkdir(t *testing.T) {
 		},
 		{
 			name:         "full path on .okteto",
-			path:         filepath.Join("/usr", ".okteto", "okteto.yml"),
+			path:         filepath.Clean("/usr/.okteto/okteto.yml"),
 			workdir:      "/usr",
 			expectedPath: filepath.Join(".okteto", "okteto.yml"),
 		},

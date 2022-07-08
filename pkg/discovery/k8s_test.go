@@ -38,7 +38,7 @@ func TestGetK8sManifestFileWhenExists(t *testing.T) {
 func TestGetK8sManifestFolderWhenExists(t *testing.T) {
 	wd := t.TempDir()
 	fullpath := filepath.Join(wd, "manifests")
-	assert.NoError(t, os.MkdirAll(filepath.Dir(fullpath), 0770))
+	assert.NoError(t, os.MkdirAll(filepath.Dir(fullpath), 0750))
 	f, err := os.Create(fullpath)
 	assert.NoError(t, err)
 	defer f.Close()

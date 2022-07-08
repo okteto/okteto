@@ -14,6 +14,7 @@
 package filesystem
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"testing"
@@ -43,7 +44,7 @@ func TestCopyFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if string(content) != string(copied) {
+	if !bytes.Equal(content, copied) {
 		t.Fatalf("got %s, expected %s", string(content), string(copied))
 	}
 

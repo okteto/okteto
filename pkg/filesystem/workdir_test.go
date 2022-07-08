@@ -49,7 +49,7 @@ func TestGetWorkdirFromManifest(t *testing.T) {
 		},
 		{
 			name:         "full path on .okteto",
-			path:         filepath.Join("/usr", ".okteto", "okteto.yml"),
+			path:         filepath.Clean("/usr/.okteto/okteto.yml"),
 			expectedPath: filepath.Clean("/usr"),
 		},
 		{
