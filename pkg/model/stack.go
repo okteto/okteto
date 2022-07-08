@@ -25,6 +25,7 @@ import (
 
 	"github.com/compose-spec/godotenv"
 	"github.com/okteto/okteto/pkg/discovery"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"

@@ -18,6 +18,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	yaml "gopkg.in/yaml.v3"
 )
 
@@ -29,7 +30,7 @@ type ContextResource struct {
 
 // GetContextResource returns a ContextResource object from a given file
 func GetContextResource(path string) (*ContextResource, error) {
-	if !FileExistsAndNotDir(path) {
+	if !filesystem.FileExistsAndNotDir(path) {
 		cwd, err := os.Getwd()
 		if err != nil {
 			return nil, err
