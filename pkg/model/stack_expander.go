@@ -2,49 +2,9 @@ package model
 
 import (
 	"bytes"
-	"strings"
 
 	yaml3 "gopkg.in/yaml.v3"
 )
-
-func isMapString(value string) bool {
-	colonSplit := strings.SplitN(value, ":", 3)
-	switch len(colonSplit) {
-	case 2:
-		indxColon := strings.Index(value, ":")
-		indxRightCurlyBracket := strings.Index(value, "}")
-		return indxColon > indxRightCurlyBracket
-	case 3:
-		return true
-	}
-	return false
-}
-func isCurlyEnv(value string) bool {
-	return strings.HasPrefix(value, "${") && strings.HasSuffix(value, "}")
-}
-func hasEnvDefaultValue(value string) (int, bool) {
-	return strings.Index(value, ":-"), strings.Contains(value, ":-")
-}
-
-func isEnvStringKey(value string) (string, bool) {
-	if !strings.HasPrefix(value, "$") {
-		return "", false
-	}
-	if isMapString(value) {
-		return "", false
-	}
-
-	key := value
-	if ok := isCurlyEnv(value); ok {
-		key = strings.TrimPrefix(strings.TrimSuffix(key, "}"), "${")
-		if indx, ok := hasEnvDefaultValue(key); ok {
-			key = key[:indx]
-		}
-		return key, true
-	}
-
-	return strings.TrimPrefix(key, "$"), true
-}
 
 func expandEnvScalarNode(node *yaml3.Node) (*yaml3.Node, error) {
 	if node.Kind == yaml3.ScalarNode {
