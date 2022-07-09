@@ -34,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -94,9 +95,9 @@ func NewProxy(kubeconfig *KubeConfig) (*Proxy, error) {
 	s := &http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
 		Handler:      handler,
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		ReadTimeout:  okteto.GetKubernetesTimeout() * time.Second,
+		WriteTimeout: okteto.GetKubernetesTimeout() * time.Second,
+		IdleTimeout:  okteto.GetKubernetesTimeout() * time.Second,
 		TLSConfig: &tls.Config{
 			Certificates: []tls.Certificate{cert},
 
