@@ -8,6 +8,7 @@
     - [Tests](#tests)
       - [Unit tests](#unit-tests)
       - [E2E tests](#e2e-tests)
+    - [How to know if my PR affects other services?](#how-to-know-if-my-pr-affects-other-services)
     - [Logs](#logs)
     - [New dependencies](#new-dependencies)
     - [Analytics](#analytics)
@@ -30,7 +31,7 @@
 Here is a summary of the things every reviewer should be aware of while doing a CLI code review:
 
 - [ ] Does the PR have unit tests/e2e tests that cover all the scenarios?
-  *We should look forward to having all scenarios_ covered.*
+  *We should look forward to having all scenarios covered.*
 - [ ] Does the PR description explain what it does/solves?
   *In the future, we may need to know why the PR was created and what issues it solved, so this should be made clear in the description of the PR.*
 - [ ] Does it affect other services (actions/vscode plugin/pipeline/graphql/json logs)?
@@ -42,7 +43,7 @@ Here is a summary of the things every reviewer should be aware of while doing a 
 
 ### PR Description
 
-The description of the pull request should state what issue it solves (or explain if there is no associated issue) and how it is solved.
+The description of the pull request should state what issue it solves (linking the issue on the PR) and how it is solved.
 
 If required, the author could be asked to provide screenshots or videos explaining what was wrong and how it was fixed.
 
@@ -65,7 +66,7 @@ The code should be testable by unit functions, which means that each function sh
 When creating unit tests, try to use table-driven tests when the same result is expected (the function must return an error) for different inputs. Table-driven tests allow us to create a boilerplate in which we define the name of the test (explanation of what it does), the test inputs and the output to be returned. For example:
 
 ```golang
-func Test_FunctionNameWithNoError(t *testing.T) {
+func Test_FunctionNameWithError(t *testing.T) {
     var tests = []struct {
         name         string
         resource     Resource
@@ -78,10 +79,6 @@ func Test_FunctionNameWithNoError(t *testing.T) {
             name:        "when resource is not valid then error",
             resource:    MalformedResource{},
         },
-        {
-            name:        "when resource is valid then no error",
-            resource:    CorrectResource{},
-        },
     }
 
     for _, tt := range tests {
@@ -89,12 +86,12 @@ func Test_FunctionNameWithNoError(t *testing.T) {
             t.Setenv("ENV_REQUIRED_FOR_TEST", "testValue")
             testDir := t.TempDir()
             err := functionName(testDir)
-            assert.NoError(t, err)
+            assert.Error(t, err)
         })
     }
 }
 
-func Test_FunctionNameWithError(t *testing.T) {
+func Test_FunctionNameThenNoError(t *testing.T) {
     t.Setenv("ENV_REQUIRED_FOR_TEST", "testValue")
     testDir := t.TempDir()
     err := functionName(MalformedResource{})
@@ -134,11 +131,7 @@ func Test_FunctionNameThenErr(t *testing.T) {
             t.Setenv("ENV_REQUIRED_FOR_TEST", "testValue")
             testDir := t.TempDir()
             err := functionName(testDir)
-            if tt.expectedErr {
-                assert.Error(t, err)
-            } else {
-                assert.NoError(t, err)
-            }
+            assert.Error(t, err)
         })
     }
 }
@@ -168,11 +161,7 @@ func Test_FunctionNameThenNoErr(t *testing.T) {
             t.Setenv("ENV_REQUIRED_FOR_TEST", "testValue")
             testDir := t.TempDir()
             err := functionName(testDir)
-            if tt.expectedErr {
-                assert.Error(t, err)
-            } else {
-                assert.NoError(t, err)
-            }
+            assert.NoError(t, err)
         })
     }
 }
@@ -185,6 +174,24 @@ Each test should create its scenario, eliminating and leaving the state of the m
 Each command should have its own set of end-to-end tests to prove that the main functionality works correctly. An e2e test should be added to a new feature if it adds a new use case or breaks an existing use case.
 
 In order to speed up the CI process, all tests are executed in parallel including any new tests
+
+### How to know if my PR affects other services?
+
+- `deploy/destroy` command: This command has the most dependencies, as it is used by all other services:
+
+  - The information stored on the configmap is used on the UI to show information like structured logs, repository information or to execute actions like redeploying or destroying the application.
+
+  - The logs that are written in the buffer(`JSON`) will be the ones stored in the configmap, to later show them in the UI.
+
+  - The following actions directly or indirectly use this command: [preview deploy](https://github.com/okteto/deploy-preview)/[pipeline deploy](https://github.com/okteto/pipeline)/[destroy pipeline](https://github.com/okteto/destroy-pipeline)/[preview destroy](https://github.com/okteto/destroy-preview)
+
+  - Changes on this command can affect other commands like `preview` or `pipeline`
+
+- `up/down` command: It's mostly used on the `vscode` and `docker extension`
+
+- `stack` command: This command is used by `okteto deploy` command.
+
+- Changes on `graphql` calls: You have to check that your changes should work also with the previous `okteto chart` version.
 
 ### Logs
 
