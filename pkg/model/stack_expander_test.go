@@ -1,13 +1,13 @@
 package model
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func Test_ExpandStackEnvs(t *testing.T) {
+	t.Setenv("ENV2", "bye")
 	tests := []struct {
 		name          string
 		file          []byte
@@ -23,18 +23,16 @@ services:
         build:
             context: vote
             args:
-                - $CUSTOM_ENV
+                - ENV=hello
                 - CUSTOM2_ENV=$CUSTOM_ENV
-                - EMPTY
-                - ${ENV:-dev}
-                - ${ENV}
+                - EMPTY=
+                - ENV2=
         ports:
             - 8080:8080
         environment:
             FLASK_ENV: development
             CUSTOM_ENV: $CUSTOM_ENV
-            $CUSTOM2_ENV:
-            EMPTY:
+            ENV:
         volumes:
             - ./vote:/src
             - $CUSTOM_ENV:/src
@@ -56,18 +54,16 @@ volumes:
     build:
       context: vote
       args:
-        - MYVALUE
+        - ENV=hello
         - CUSTOM2_ENV=MYVALUE
-        - EMPTY
-        - dev
-        - ""
+        - EMPTY=
+        - ENV2=
     ports:
       - 8080:8080
     environment:
       FLASK_ENV: development
       CUSTOM_ENV: MYVALUE
-      "":
-      EMPTY:
+      ENV:
     volumes:
       - ./vote:/src
       - MYVALUE:/src
@@ -92,14 +88,13 @@ services:
         build:
             context: vote
             args:
-                - $CUSTOM_ENV
                 - CUSTOM2_ENV=$CUSTOM_ENV
         ports:
             - 8080:8080
         environment:
             FLASK_ENV: development
             CUSTOM_ENV: $CUSTOM_ENV
-            $CUSTOM2_ENV:
+            CUSTOM2_ENV:
         volumes:
             - ./myservice:/src
 
@@ -119,9 +114,6 @@ volumes:
       context: vote
       args:
         - |-
-          my first line
-          my second line
-        - |-
           CUSTOM2_ENV=my first line
           my second line
     ports:
@@ -131,7 +123,7 @@ volumes:
       CUSTOM_ENV: |-
         my first line
         my second line
-      "":
+      CUSTOM2_ENV:
     volumes:
       - ./myservice:/src
   redis:
@@ -150,9 +142,7 @@ volumes:
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
-			if err := os.Setenv("CUSTOM_ENV", tt.envValue); err != nil {
-				t.Fatal(err)
-			}
+			t.Setenv("CUSTOM_ENV", tt.envValue)
 			result, err := ExpandStackEnvs(tt.file)
 			if err != nil && !tt.expectedError {
 				t.Fatalf("expected no error, but got error: %v", err)
@@ -162,7 +152,6 @@ volumes:
 
 			assert.Equal(t, tt.expectedStack, string(result))
 
-			os.Unsetenv("CUSTOM_ENV")
 		})
 	}
 }

@@ -199,7 +199,7 @@ services:
       - OPTION_A=Cats
       - OPTION_B=Dogs
       - EMPTY_VAR=
-      - $PWD
+      - PWD
     ports:
       - 80
     replicas: 2
@@ -221,7 +221,8 @@ services:
     entrypoint: e
     command: c
     volumes:
-      - /var/lib/postgresql/data`)
+      - /var/lib/postgresql/data
+      - $PWD/src`)
 	s, err := ReadStack(manifest, true)
 	if err != nil {
 		t.Fatal(err)
@@ -325,11 +326,14 @@ services:
 		t.Errorf("'db.command' was not parsed: %+v", s.Services["db"].Command.Values)
 	}
 
-	if len(s.Services["db"].Volumes) != 1 {
+	if len(s.Services["db"].Volumes) != 2 {
 		t.Errorf("'db.volumes' was not parsed: %+v", s)
 	}
 	if s.Services["db"].Volumes[0].RemotePath != "/var/lib/postgresql/data" {
 		t.Errorf("'db.volumes[0]' was not parsed: %+v", s)
+	}
+	if s.Services["db"].Volumes[1].RemotePath != "hello/src" {
+		t.Errorf("'db.volumes[1]' was not parsed: %+v", s)
 	}
 	storage = s.Services["db"].Resources.Requests.Storage.Size.Value
 	if storage.Cmp(resource.MustParse("1Gi")) != 0 {
