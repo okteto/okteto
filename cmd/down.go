@@ -103,20 +103,42 @@ func allDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
 	if len(manifest.Dev) == 0 {
 		return fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
 	}
+
+	isAnyDev := false
 	for _, dev := range manifest.Dev {
+		c, _, err := okteto.GetK8sClient()
+		if err != nil {
+			return err
+		}
+
+		app, _, err := utils.GetApp(ctx, dev, c, false)
+		if err != nil {
+			if !oktetoErrors.IsNotFound(err) {
+				return err
+			}
+		} else {
+			if apps.IsDevModeOn(app) {
+				isAnyDev = true
+			}
+		}
+
 		if err := runDown(ctx, dev, rm); err != nil {
 			analytics.TrackDown(false)
 			err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 			return err
 		}
 	}
+
+	if !isAnyDev {
+		oktetoLog.Information("You do not have any dev environment activated")
+	}
+
 	analytics.TrackDown(true)
 	return nil
 }
 
 func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
-	spinner := utils.NewSpinner("Deactivating your development container...")
-	spinner.Start()
+	spinner := utils.NewSpinner(fmt.Sprintf("Deactivating '%s' development container...", dev.Name))
 	defer spinner.Stop()
 
 	stop := make(chan os.Signal, 1)
@@ -130,8 +152,6 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			return
 		}
 
-		spinner.Stop()
-
 		app, _, err := utils.GetApp(ctx, dev, c, false)
 		if err != nil {
 			if !oktetoErrors.IsNotFound(err) {
@@ -143,7 +163,12 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		if dev.Autocreate {
 			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
 		}
-		spinner.Start()
+
+		isDevModeOn := false
+		if apps.IsDevModeOn(app) {
+			isDevModeOn = true
+			spinner.Start()
+		}
 
 		trMap, err := apps.GetTranslations(ctx, dev, app, false, c)
 		if err != nil {
@@ -157,7 +182,9 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		}
 
 		spinner.Stop()
-		oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
+		if isDevModeOn {
+			oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
+		}
 
 		if !rm {
 			exit <- nil
