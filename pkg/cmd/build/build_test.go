@@ -289,6 +289,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 		svcName            string
 		dockerfile         string
 		fileExpected       string
+		optionalContext    string
 		dockerfilesCreated []string
 		expectedError      string
 	}{
@@ -324,6 +325,15 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			dockerfilesCreated: []string{filepath.Join(buildName, "Dockerfile")},
 			expectedError:      "",
 		},
+		{
+			name:               "one dockerfile in root no warning",
+			svcName:            "t5",
+			dockerfile:         "Dockerfile",
+			fileExpected:       "Dockerfile",
+			optionalContext:    ".",
+			dockerfilesCreated: []string{"Dockerfile"},
+			expectedError:      "",
+		},
 	}
 
 	for _, tt := range tests {
@@ -353,7 +363,12 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 				oktetoLog.SetOutput(os.Stderr)
 			}()
 
-			file := extractFromContextAndDockerfile(buildName, tt.dockerfile, tt.svcName)
+			contextTest := buildName
+			if tt.optionalContext != "" {
+				contextTest = tt.optionalContext
+			}
+
+			file := extractFromContextAndDockerfile(contextTest, tt.dockerfile, tt.svcName)
 			warningErr := strings.TrimSuffix(buf.String(), "\n")
 
 			if warningErr != "" && tt.expectedError == "" {

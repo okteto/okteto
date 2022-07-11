@@ -415,7 +415,6 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 		},
 		Dev:      model.ManifestDevs{},
 		Build:    model.ManifestBuild{},
-		Filename: composePath,
 		IsV2:     true,
 	}
 	cwd, err := os.Getwd()

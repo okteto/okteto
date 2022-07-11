@@ -52,7 +52,7 @@ The okteto cli is available to install from the following installation methods:
     # replace stable with (beta or dev) for other channels
     curl -fSL https://downloads.okteto.com/cli/stable/okteto-$(uname)-$(uname -m) -o ./okteto
     chmod +x ./okteto
-    mv ./okteto -f /usr/local/bin
+    mv -f ./okteto /usr/local/bin
     ```
 
     You could also download and install a specific version:

@@ -10,6 +10,44 @@ aliases:
 version: 2.1
 orbs:
   win: circleci/windows@2.1.0
+commands:
+  integration-actions:
+    steps:
+      - run:
+          name: Run actions integration tests
+          command: make integration-actions
+
+  integration-build:
+    steps:
+      - run:
+          name: Run build integration tests
+          command: make integration-build
+
+  integration-deploy:
+    steps:
+      - run:
+          name: Run deploy integration tests
+          command: make integration-deploy
+
+  integration-up:
+    steps:
+      - run:
+          name: Run up integration tests
+          command: make integration-up
+          environment:
+            OKTETO_SKIP_CLEANUP: 'true'
+
+  integration-okteto:
+    steps:
+      - run:
+          name: Run okteto integration tests
+          command: make integration-okteto
+
+  integration-deprecated:
+    steps:
+      - run:
+          name: Run deprecated integration tests
+          command: make integration-deprecated
 
 executors:
   golang-ci:
@@ -17,36 +55,65 @@ executors:
       - image: okteto/golang-ci:1.17.10
 
 jobs:
-  build:
+  build-binaries:
     executor: golang-ci
     resource_class: large
     steps:
       - checkout
       - run:
+          name: Build all binaries
+          command: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
+      - run:
+          name: Add version string
+          command: env VERSION_STRING=$CIRCLE_TAG make latest
+      - persist_to_workspace:
+          root: .
+          paths:
+            - bin
+      - store_artifacts:
+          path: bin
+          destination: binaries
+  run-unit-test:
+    executor: golang-ci
+    steps:
+      - checkout
+      - run:
+          name: Check go.mod and go.sum
           command: go mod tidy && git diff --exit-code go.sum > /dev/null
+      - run:
+          name: Compile integration tests
+          command: make build-integration
       - run:
           name: Test
           command: |
             make test
             bash <(curl -s https://codecov.io/bash)
-      - run: make build-integration
-      - run: env VERSION_STRING=$CIRCLE_TAG make -j 3 build-all
-      - run: env VERSION_STRING=$CIRCLE_TAG make latest
-      - persist_to_workspace:
-          root: .
-          paths:
-            - bin
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
             - ~/.cache/go-build
             - /go/pkg
       - store_artifacts:
-          path: bin
-          destination: binaries
-      - store_artifacts:
           path: coverage.txt
           destination: coverage.txt
+  run-windows-unit-test:
+    executor: win/default
+    environment:
+      OKTETO_USER: cindylopez
+    steps:
+      - checkout
+      - run:
+          name: Upgrade Golang
+          command: choco upgrade golang --version 1.17
+      - restore_cache:
+          keys:
+            - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
+      - run:
+          name: Run unit tests
+          command: |
+            go mod download
+            go version
+            go test ./...
   test-integration:
     executor: golang-ci
     resource_class: large
@@ -71,12 +138,13 @@ jobs:
             curl -L "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
-            /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
-      - run:
-          name: Integration tests
-          environment:
-            OKTETO_SKIP_CLEANUP: 'true'
-          command: make integration
+             /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
+      - integration-deploy
+      - integration-up
+      - integration-actions
+      - integration-okteto
+      - integration-deprecated
+      - integration-build
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
@@ -107,7 +175,7 @@ jobs:
             export DOCKER_BUILDKIT=1
             docker build -t okteto --build-arg VERSION_STRING=$CIRCLE_SHA1 .
 
-  test-windows:
+  run-windows-e2e-test:
     executor: win/default
     environment:
       OKTETO_USER: cindylopez
@@ -120,7 +188,7 @@ jobs:
           keys:
             - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
       - run:
-          name: Test
+          name: Run unit tests
           command: |
             go mod download
             go version
@@ -136,28 +204,55 @@ jobs:
       - run:
           name: Prepare env
           environment:
-            OKTETO_URL: https://staging.okteto.dev/
+            - OKTETO_URL: https://staging.okteto.dev/
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
             & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_STAGING_TOKEN
+            & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' kubeconfig
       - run:
-          name: Integration tests
+          name: Run deprecated integration tests
           environment:
-            OKTETO_URL: https://staging.okteto.dev/
-            OKTETO_APPS_SUBDOMAIN: staging.okteto.net
-            OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
-            OKTETO_SKIP_CLEANUP: 'true'
+            - OKTETO_URL: https://staging.okteto.dev/
+            - OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+            - OKTETO_SKIP_CLEANUP: 'true'
+            - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
-            go test github.com/okteto/okteto/integration -tags="common integration actions" --count=1 -v -timeout 1h
+            go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m
+            go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
+      - run:
+          name: Run build integration tests
+          environment:
+            - OKTETO_URL: https://staging.okteto.dev/
+            - OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+            - OKTETO_SKIP_CLEANUP: 'true'
+            - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+          command: go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
+      - run:
+          name: Run deploy integration tests
+          environment:
+            - OKTETO_URL: https://staging.okteto.dev/
+            - OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+            - OKTETO_SKIP_CLEANUP: 'true'
+            - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+          command: go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
+      - run:
+          name: Run up integration tests
+          environment:
+            - OKTETO_URL: https://staging.okteto.dev/
+            - OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+            - OKTETO_SKIP_CLEANUP: 'true'
+            - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
+          command: go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
+      - store_artifacts:
+          path: C:\Users\circleci\.okteto
+
       - save_cache:
           key: v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
           paths:
             - C:\Users\circleci\AppData\Local\go-build
             - C:\Users\circleci\go\pkg
             - C:\Go\pkg
-      - store_artifacts:
-          path: C:\Users\circleci\.okteto
 
   push-image-tag:
     executor: golang-ci
@@ -226,15 +321,27 @@ workflows:
       not:
         equal: [scheduled_pipeline, << pipeline.trigger_source >>]
     jobs:
-      - build:
+      - build-binaries:
           filters:
             branches:
               ignore: *release-branch-regex
             tags:
               ignore: /.*/
-      - test-windows:
+      - run-unit-test:
+          filters:
+            branches:
+              ignore: *release-branch-regex
+            tags:
+              ignore: /.*/
+      - run-windows-unit-test:
+          filters:
+            branches:
+              ignore: *release-branch-regex
+            tags:
+              ignore: /.*/
+      - run-windows-e2e-test:
           requires:
-            - build
+            - build-binaries
           filters:
             branches:
               only:
@@ -242,7 +349,7 @@ workflows:
                 - /.*(windows|win)/
       - test-integration:
           requires:
-            - build
+            - build-binaries
           filters:
             branches:
               only:
@@ -251,7 +358,7 @@ workflows:
       - test-release:
           context: GKE
           requires:
-            - build
+            - build-binaries
           filters:
             tags:
               ignore: /.*/
@@ -261,28 +368,40 @@ workflows:
                 - *release-branch-regex
       - push-image-latest:
           requires:
-            - build
+            - build-binaries
           filters:
             branches:
               only: master
 
   release-branch:
     jobs:
-      - build:
+      - build-binaries:
           filters:
             branches:
               only: *release-branch-regex
             tags:
               ignore: /.*/
+      - run-unit-test:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              ignore: *release-branch-regex
+      - run-windows-unit-test:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              ignore: *release-branch-regex
       - test-integration:
           filters:
             branches:
               only: *release-branch-regex
           requires:
-            - build
+            - build-binaries
       - release-branch:
           requires:
-            - build
+            - build-binaries
             - test-integration
           filters:
             branches:
@@ -294,14 +413,16 @@ workflows:
         - equal: [scheduled_pipeline, << pipeline.trigger_source >>]
         - equal: ["release-dev", << pipeline.schedule.name >>]
     jobs:
-      - build
+      - build-binaries
+      - run-unit-test
+      - run-windows-unit-test
       - push-image-tag:
           requires:
-            - build
+            - build-binaries
       - release:
           context: GKE
           requires:
-            - build
+            - build-binaries
             - push-image-tag
 
   release:
@@ -309,16 +430,28 @@ workflows:
       not:
         equal: [scheduled_pipeline, << pipeline.trigger_source >>]
     jobs:
-      - build:
+      - build-binaries:
           filters:
             branches:
               ignore: /.*/
             tags:
               only:
                 - *release-regex
+      - run-unit-test:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              ignore: *release-regex
+      - run-windows-unit-test:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              ignore: *release-regex
       - push-image-tag:
           requires:
-            - build
+            - build-binaries
           filters:
             branches:
               ignore: /.*/
@@ -328,7 +461,7 @@ workflows:
       - release:
           context: GKE
           requires:
-            - build
+            - build-binaries
             - push-image-tag
           filters:
             branches:
