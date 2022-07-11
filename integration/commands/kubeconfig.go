@@ -24,7 +24,7 @@ import (
 
 // RunOktetoKubeconfig runs okteto kubeconfig command
 func RunOktetoKubeconfig(oktetoPath, oktetoHome string) error {
-	args := []string{"kubeconfig"}
+	args := []string{"kubeconfig", "-l=debug"}
 	cmd := exec.Command(oktetoPath, args...)
 	cmd.Env = os.Environ()
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
