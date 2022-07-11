@@ -114,9 +114,7 @@ func GetContentFromURL(url string, timeout time.Duration) string {
 			}
 			content := strings.TrimSpace(string(body))
 			if content == "" {
-				if retry%10 == 0 {
-					log.Printf("called %s, got empty content", url)
-				}
+				log.Printf("called %s, got empty content", url)
 				continue
 			}
 
