@@ -110,7 +110,7 @@ func GetContentFromURL(url string, timeout time.Duration) string {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				log.Printf("could not read body: %s", err)
-				return ""
+				continue
 			}
 			content := strings.TrimSpace(string(body))
 			if content == "" {
