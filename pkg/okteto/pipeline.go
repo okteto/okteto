@@ -35,8 +35,8 @@ func newPipelineClient(client *graphql.Client) *pipelineClient {
 	return &pipelineClient{client: client}
 }
 
-// DeployPipeline creates a pipeline
-func (c *pipelineClient) DeployPipeline(ctx context.Context, name, repository, branch, filename string, variables []types.Variable) (*types.GitDeployResponse, error) {
+// Deploy creates a pipeline
+func (c *pipelineClient) Deploy(ctx context.Context, name, repository, branch, filename string, variables []types.Variable) (*types.GitDeployResponse, error) {
 	origin := config.GetDeployOrigin()
 
 	gitDeployResponse := &types.GitDeployResponse{}
@@ -153,8 +153,8 @@ func (c *pipelineClient) DeployPipeline(ctx context.Context, name, repository, b
 	return gitDeployResponse, nil
 }
 
-// GetPipelineByName gets a pipeline given its name
-func (c *pipelineClient) GetPipelineByName(ctx context.Context, name string) (*types.GitDeploy, error) {
+// GetByName gets a pipeline given its name
+func (c *pipelineClient) GetByName(ctx context.Context, name string) (*types.GitDeploy, error) {
 	var queryStruct struct {
 		Space struct {
 			GitDeploys []struct {
@@ -184,8 +184,8 @@ func (c *pipelineClient) GetPipelineByName(ctx context.Context, name string) (*t
 	return nil, oktetoErrors.ErrNotFound
 }
 
-// GetPipelineByRepository gets a pipeline given its repo url
-func (c *pipelineClient) GetPipelineByRepository(ctx context.Context, repository string) (*types.GitDeployResponse, error) {
+// GetByRepository gets a pipeline given its repo url
+func (c *pipelineClient) GetByRepository(ctx context.Context, repository string) (*types.GitDeployResponse, error) {
 	var queryStruct struct {
 		Pipeline struct {
 			GitDeploys []struct {
@@ -240,8 +240,8 @@ func AreSameRepository(repoA, repoB string) bool {
 	return repoPathA == repoPathB
 }
 
-// DestroyPipeline destroys a pipeline
-func (c *pipelineClient) DestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
+// Destroy destroys a pipeline
+func (c *pipelineClient) Destroy(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
 	oktetoLog.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
 	gitDeployResponse := &types.GitDeployResponse{}
 	if destroyVolumes {
@@ -269,7 +269,7 @@ func (c *pipelineClient) DestroyPipeline(ctx context.Context, name string, destr
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
-				return c.deprecatedDestroyPipeline(ctx, name, destroyVolumes)
+				return c.deprecatedDestroy(ctx, name, destroyVolumes)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
@@ -308,7 +308,7 @@ func (c *pipelineClient) DestroyPipeline(ctx context.Context, name string, destr
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
-				return c.deprecatedDestroyPipeline(ctx, name, destroyVolumes)
+				return c.deprecatedDestroy(ctx, name, destroyVolumes)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
@@ -329,7 +329,7 @@ func (c *pipelineClient) DestroyPipeline(ctx context.Context, name string, destr
 	return gitDeployResponse, nil
 }
 
-func (c *pipelineClient) deprecatedDestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
+func (c *pipelineClient) deprecatedDestroy(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
 	oktetoLog.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
 	gitDeployResponse := &types.GitDeployResponse{}
 	if destroyVolumes {
@@ -368,7 +368,7 @@ func (c *pipelineClient) deprecatedDestroyPipeline(ctx context.Context, name str
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
-				return c.deprecatedDestroyPipeline(ctx, name, destroyVolumes)
+				return c.deprecatedDestroy(ctx, name, destroyVolumes)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
@@ -382,7 +382,8 @@ func (c *pipelineClient) deprecatedDestroyPipeline(ctx context.Context, name str
 	return gitDeployResponse, nil
 }
 
-func (c *pipelineClient) GetResourcesStatusFromPipeline(ctx context.Context, name string) (map[string]string, error) {
+// GetResourcesStatus returns the status of deployments statefulsets and jobs
+func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name string) (map[string]string, error) {
 	var queryStruct struct {
 		Space struct {
 			Deployments []struct {

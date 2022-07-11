@@ -204,7 +204,7 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*ty
 		namespace := okteto.Context().Namespace
 		oktetoLog.Infof("deploy pipeline %s defined on file='%s' repository=%s branch=%s on namespace=%s", opts.Name, opts.File, opts.Repository, opts.Branch, namespace)
 
-		resp, err = pc.okClient.Pipeline().DeployPipeline(ctx, opts.Name, opts.Repository, opts.Branch, opts.File, varList)
+		resp, err = pc.okClient.Pipeline().Deploy(ctx, opts.Name, opts.Repository, opts.Branch, opts.File, varList)
 		exit <- err
 	}()
 
@@ -275,7 +275,7 @@ func (pc *Command) waitForResourcesToBeRunning(ctx context.Context, name string,
 		case <-to.C:
 			return fmt.Errorf("'%s' deploy didn't finish after %s", name, timeout.String())
 		case <-ticker.C:
-			resourceStatus, err := pc.okClient.Pipeline().GetResourcesStatusFromPipeline(ctx, name)
+			resourceStatus, err := pc.okClient.Pipeline().GetResourcesStatus(ctx, name)
 			if err != nil {
 				return err
 			}

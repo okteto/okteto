@@ -103,7 +103,9 @@ func (pc *Command) ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOpti
 		oktetoLog.Success("Repository '%s' scheduled for destruction", opts.Name)
 		return nil
 	}
-	if err == nil || !oktetoErrors.IsNotFound(err) {
+
+	// If error is not found we don't have to wait
+	if err == nil && resp != nil {
 		if err := pc.waitUntilDestroyed(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
 			return err
 		}
@@ -127,7 +129,7 @@ func (pc *Command) destroyPipeline(ctx context.Context, name string, destroyVolu
 	var resp *types.GitDeployResponse
 
 	go func() {
-		resp, err = pc.okClient.Pipeline().DestroyPipeline(ctx, name, destroyVolumes)
+		resp, err = pc.okClient.Pipeline().Destroy(ctx, name, destroyVolumes)
 		if err != nil {
 			exit <- fmt.Errorf("failed to destroy repository '%s': %w", name, err)
 			return

@@ -47,11 +47,11 @@ type PreviewInterface interface {
 
 // PipelineInterface represents the client that connects to the pipeline functions
 type PipelineInterface interface {
-	DeployPipeline(ctx context.Context, name, repository, branch, filename string, variables []Variable) (*GitDeployResponse, error)
+	Deploy(ctx context.Context, name, repository, branch, filename string, variables []Variable) (*GitDeployResponse, error)
 	WaitForActionToFinish(ctx context.Context, pipelineName, actionName string, timeout time.Duration) error
-	DestroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*GitDeployResponse, error)
-	GetResourcesStatusFromPipeline(ctx context.Context, name string) (map[string]string, error)
-	GetPipelineByName(ctx context.Context, name string) (*GitDeploy, error)
+	Destroy(ctx context.Context, name string, destroyVolumes bool) (*GitDeployResponse, error)
+	GetResourcesStatus(ctx context.Context, name string) (map[string]string, error)
+	GetByName(ctx context.Context, name string) (*GitDeploy, error)
 }
 
 // OktetoClientProvider provides an okteto client ready to use or fail

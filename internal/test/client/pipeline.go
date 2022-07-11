@@ -45,7 +45,7 @@ func NewFakePipelineClient(responses *FakePipelineResponses) *FakePipelineClient
 }
 
 // DeployPipeline deploys a fake pipeline
-func (fc *FakePipelineClient) DeployPipeline(_ context.Context, _, _, _, _ string, _ []types.Variable) (*types.GitDeployResponse, error) {
+func (fc *FakePipelineClient) Deploy(_ context.Context, _, _, _, _ string, _ []types.Variable) (*types.GitDeployResponse, error) {
 	return fc.responses.DeployResponse, fc.responses.DeployErr
 }
 
@@ -55,16 +55,16 @@ func (fc *FakePipelineClient) WaitForActionToFinish(_ context.Context, _, _ stri
 }
 
 // DestroyPipeline destroys a pipeline
-func (fc *FakePipelineClient) DestroyPipeline(_ context.Context, _ string, _ bool) (*types.GitDeployResponse, error) {
+func (fc *FakePipelineClient) Destroy(_ context.Context, _ string, _ bool) (*types.GitDeployResponse, error) {
 	return fc.responses.DestroyResponse, fc.responses.DestroyErr
 }
 
 // GetResourcesStatusFromPipeline gets the status of the resources from a pipeline name
-func (fc *FakePipelineClient) GetResourcesStatusFromPipeline(_ context.Context, _ string) (map[string]string, error) {
+func (fc *FakePipelineClient) GetResourcesStatus(_ context.Context, _ string) (map[string]string, error) {
 	return fc.responses.ResourcesMap, fc.responses.ResourceErr
 }
 
 // GetPipelineByName returns the name of the pipeline
-func (_ *FakePipelineClient) GetPipelineByName(_ context.Context, _ string) (*types.GitDeploy, error) {
+func (_ *FakePipelineClient) GetByName(_ context.Context, _ string) (*types.GitDeploy, error) {
 	return nil, nil
 }
