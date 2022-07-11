@@ -172,7 +172,7 @@ func TestUpDeploymentV1(t *testing.T) {
 	indexRemoteEndpoint := fmt.Sprintf("https://e2etest-%s.%s/index.html", testNamespace, appsSubdomain)
 
 	// Test that environment variable is injected correctly
-	require.Equal(t, integration.GetContentFromURL(varLocalEndpoint, timeout), "value1")
+	require.NoError(t, waitUntilUpdatedContent(varLocalEndpoint, "value1", timeout, upResult.ErrorChan))
 
 	// Test that the same content is on the remote and on local endpoint
 	require.NotEmpty(t, integration.GetContentFromURL(indexLocalEndpoint, timeout))
@@ -194,7 +194,7 @@ func TestUpDeploymentV1(t *testing.T) {
 	d.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	originalDeployment.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	require.NoError(t, integration.UpdateDeployment(context.Background(), testNamespace, d, c))
-	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
+	require.NoError(t, waitUntilUpdatedContent(varLocalEndpoint, "value2", timeout, upResult.ErrorChan))
 
 	// Test kill syncthing reconnection
 	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
@@ -286,7 +286,7 @@ func TestUpDeploymentV2(t *testing.T) {
 	indexRemoteEndpoint := fmt.Sprintf("https://e2etest-%s.%s/index.html", testNamespace, appsSubdomain)
 
 	// Test that environment variable is injected correctly
-	require.Equal(t, integration.GetContentFromURL(varLocalEndpoint, timeout), "value1")
+	require.NoError(t, waitUntilUpdatedContent(varLocalEndpoint, "value1", timeout, upResult.ErrorChan))
 
 	// Test that the same content is on the remote and on local endpoint
 	require.NotEmpty(t, integration.GetContentFromURL(indexLocalEndpoint, timeout))
@@ -308,7 +308,7 @@ func TestUpDeploymentV2(t *testing.T) {
 	d.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	originalDeployment.Spec.Template.Spec.Containers[0].Env[0].Value = "value2"
 	require.NoError(t, integration.UpdateDeployment(context.Background(), testNamespace, d, c))
-	require.Equal(t, "value2", integration.GetContentFromURL(varLocalEndpoint, timeout))
+	require.NoError(t, waitUntilUpdatedContent(varLocalEndpoint, "value2", timeout, upResult.ErrorChan))
 
 	// Test kill syncthing reconnection
 	require.NoError(t, killLocalSyncthing(upResult.Pid.Pid))
