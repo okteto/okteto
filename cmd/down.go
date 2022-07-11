@@ -113,19 +113,16 @@ func allDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
 
 		app, _, err := utils.GetApp(ctx, dev, c, false)
 		if err != nil {
-			if !oktetoErrors.IsNotFound(err) {
-				return err
-			}
-		} else {
-			if apps.IsDevModeOn(app) {
-				isAnyDev = true
-			}
+			return err
 		}
 
-		if err := runDown(ctx, dev, rm); err != nil {
-			analytics.TrackDown(false)
-			err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
-			return err
+		if apps.IsDevModeOn(app) {
+			isAnyDev = true
+			if err := runDown(ctx, dev, rm); err != nil {
+				analytics.TrackDown(false)
+				err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+				return err
+			}
 		}
 	}
 
