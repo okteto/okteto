@@ -25,8 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-var ()
-
 //LoadStackContext loads the namespace and context of an okteto stack manifest
 func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
 	ctxResource := &model.ContextResource{}

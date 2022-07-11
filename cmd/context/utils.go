@@ -153,7 +153,6 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 		return nil, err
 	}
 
-	// We need to read it again to propagate secrets env vars
 	manifest, err := model.GetManifestV1(opts.Filename)
 	if err != nil {
 		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {

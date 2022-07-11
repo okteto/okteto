@@ -35,8 +35,7 @@ import (
 )
 
 var (
-	errBadStackName = "must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character"
-	//DefaultStackManifest default okteto stack manifest file
+	errBadStackName     = "must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character"
 	deprecatedManifests = []string{"stack.yml", "stack.yaml"}
 )
 
