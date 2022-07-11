@@ -78,14 +78,27 @@ func Down() *cobra.Command {
 					return err
 				}
 
-				if err := runDown(ctx, dev, rm); err != nil {
-					analytics.TrackDown(false)
-					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+				c, _, err := okteto.GetK8sClient()
+				if err != nil {
 					return err
+				}
+
+				app, _, err := utils.GetApp(ctx, dev, c, false)
+				if err != nil {
+					return err
+				}
+
+				if apps.IsDevModeOn(app) {
+					if err := runDown(ctx, dev, rm); err != nil {
+						analytics.TrackDown(false)
+						err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+						return err
+					}
 				}
 
 			}
 
+			oktetoLog.Success("Success deactivating development containers")
 			analytics.TrackDown(true)
 			return nil
 		},
@@ -100,24 +113,27 @@ func Down() *cobra.Command {
 }
 
 func allDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
+	spinner := utils.NewSpinner("Deactivating your development containers...")
+	spinner.Start()
+	defer spinner.Stop()
+
 	if len(manifest.Dev) == 0 {
 		return fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
 	}
 
-	isAnyDev := false
-	for _, dev := range manifest.Dev {
-		c, _, err := okteto.GetK8sClient()
-		if err != nil {
-			return err
-		}
+	c, _, err := okteto.GetK8sClient()
+	if err != nil {
+		return err
+	}
 
+	for _, dev := range manifest.Dev {
 		app, _, err := utils.GetApp(ctx, dev, c, false)
 		if err != nil {
 			return err
 		}
 
 		if apps.IsDevModeOn(app) {
-			isAnyDev = true
+			spinner.Stop()
 			if err := runDown(ctx, dev, rm); err != nil {
 				analytics.TrackDown(false)
 				err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
@@ -126,16 +142,13 @@ func allDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
 		}
 	}
 
-	if !isAnyDev {
-		oktetoLog.Information("You do not have any dev environment activated")
-	}
-
 	analytics.TrackDown(true)
 	return nil
 }
 
 func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 	spinner := utils.NewSpinner(fmt.Sprintf("Deactivating '%s' development container...", dev.Name))
+	spinner.Start()
 	defer spinner.Stop()
 
 	stop := make(chan os.Signal, 1)
@@ -161,12 +174,6 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
 		}
 
-		isDevModeOn := false
-		if apps.IsDevModeOn(app) {
-			isDevModeOn = true
-			spinner.Start()
-		}
-
 		trMap, err := apps.GetTranslations(ctx, dev, app, false, c)
 		if err != nil {
 			exit <- err
@@ -179,16 +186,14 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		}
 
 		spinner.Stop()
-		if isDevModeOn {
-			oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
-		}
+		oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
 
 		if !rm {
 			exit <- nil
 			return
 		}
 
-		spinner.Update("Removing persistent volume...")
+		spinner.Update(fmt.Sprintf("Removing '%s' persistent volume...", dev.Name))
 		spinner.Start()
 		if err := removeVolume(ctx, dev); err != nil {
 			analytics.TrackDownVolumes(false)
@@ -196,7 +201,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			return
 		}
 		spinner.Stop()
-		oktetoLog.Success("Persistent volume removed")
+		oktetoLog.Success(fmt.Sprintf("Persistent volume '%s' removed", dev.Name))
 
 		if os.Getenv(model.OktetoSkipCleanupEnvVar) == "" {
 			if err := syncthing.RemoveFolder(dev); err != nil {
