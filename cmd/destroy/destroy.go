@@ -259,7 +259,11 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 				Name:           depName,
 				DestroyVolumes: opts.DestroyVolumes,
 			}
-			if err := pipelineCMD.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
+			pipelineCmd, err := pipelineCMD.NewCommand()
+			if err != nil {
+				return err
+			}
+			if err := pipelineCmd.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
 				return err
 			}
 		}

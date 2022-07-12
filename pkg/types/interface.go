@@ -13,18 +13,25 @@
 
 package types
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
+// OktetoInterface represents the client that connects to the backend to create API calls
 type OktetoInterface interface {
 	User() UserInterface
 	Namespaces() NamespaceInterface
 	Previews() PreviewInterface
+	Pipeline() PipelineInterface
 }
 
+// UserInterface represents the client that connects to the user functions
 type UserInterface interface {
 	GetContext(ctx context.Context) (*UserContext, error)
 }
 
+// NamespaceInterface represents the client that connects to the namespace functions
 type NamespaceInterface interface {
 	Create(ctx context.Context, namespace string) (string, error)
 	List(ctx context.Context) ([]Namespace, error)
@@ -33,10 +40,21 @@ type NamespaceInterface interface {
 	SleepNamespace(ctx context.Context, namespace string) error
 }
 
+// PreviewInterface represents the client that connects to the preview functions
 type PreviewInterface interface {
 	List(ctx context.Context) ([]Preview, error)
 }
 
+// PipelineInterface represents the client that connects to the pipeline functions
+type PipelineInterface interface {
+	Deploy(ctx context.Context, name, repository, branch, filename string, variables []Variable) (*GitDeployResponse, error)
+	WaitForActionToFinish(ctx context.Context, pipelineName, actionName string, timeout time.Duration) error
+	Destroy(ctx context.Context, name string, destroyVolumes bool) (*GitDeployResponse, error)
+	GetResourcesStatus(ctx context.Context, name string) (map[string]string, error)
+	GetByName(ctx context.Context, name string) (*GitDeploy, error)
+}
+
+// OktetoClientProvider provides an okteto client ready to use or fail
 type OktetoClientProvider interface {
 	Provide() (OktetoInterface, error)
 }

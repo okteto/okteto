@@ -17,8 +17,26 @@ import (
 	"context"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
+
+// Command has all the pipeline subcommands
+type Command struct {
+	okClient types.OktetoInterface
+}
+
+//NewCommand creates a namespace command to
+func NewCommand() (*Command, error) {
+	c, err := okteto.NewOktetoClient()
+	if err != nil {
+		return nil, err
+	}
+	return &Command{
+		okClient: c,
+	}, nil
+}
 
 //Pipeline pipeline management commands
 func Pipeline(ctx context.Context) *cobra.Command {

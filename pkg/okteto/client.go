@@ -39,6 +39,7 @@ type OktetoClient struct {
 	namespace types.NamespaceInterface
 	user      types.UserInterface
 	preview   types.PreviewInterface
+	pipeline  types.PipelineInterface
 }
 
 type OktetoClientProvider struct{}
@@ -110,6 +111,7 @@ func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*Okt
 	c.namespace = newNamespaceClient(c.client)
 	c.preview = newPreviewClient(c.client)
 	c.user = newUserClient(c.client)
+	c.pipeline = newPipelineClient(c.client)
 	return c, nil
 }
 
@@ -212,14 +214,19 @@ func mutate(ctx context.Context, mutation interface{}, variables map[string]inte
 	return nil
 }
 
-// Namespace retrieves the NamespaceClient
+// Namespaces retrieves the NamespaceClient
 func (c *OktetoClient) Namespaces() types.NamespaceInterface {
 	return c.namespace
 }
 
-// Namespace retrieves the NamespaceClient
+// Previews retrieves the Previews client
 func (c *OktetoClient) Previews() types.PreviewInterface {
 	return c.preview
+}
+
+// Pipeline retrieves the Pipeline client
+func (c *OktetoClient) Pipeline() types.PipelineInterface {
+	return c.pipeline
 }
 
 // User retrieves the UserClient

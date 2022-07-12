@@ -47,8 +47,27 @@ func destroy(ctx context.Context) *cobra.Command {
 		Short: "Destroy an okteto pipeline",
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/cli/#destroy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ExecuteDestroyPipeline(ctx, opts)
+			ctxResource := &model.ContextResource{}
+			if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
+				return err
+			}
 
+			ctxOptions := &contextCMD.ContextOptions{
+				Namespace: ctxResource.Namespace,
+			}
+			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+				return err
+			}
+
+			if !okteto.IsOkteto() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
+			}
+
+			pipelineCmd, err := NewCommand()
+			if err != nil {
+				return err
+			}
+			return pipelineCmd.ExecuteDestroyPipeline(ctx, opts)
 		},
 	}
 
@@ -61,23 +80,7 @@ func destroy(ctx context.Context) *cobra.Command {
 }
 
 //ExecuteDestroyPipeline executes destroy pipeline given a set of options
-func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
-	ctxResource := &model.ContextResource{}
-	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
-		return err
-	}
-
-	ctxOptions := &contextCMD.ContextOptions{
-		Namespace: ctxResource.Namespace,
-	}
-	if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
-		return err
-	}
-
-	if !okteto.IsOkteto() {
-		return oktetoErrors.ErrContextIsNotOktetoCluster
-	}
-
+func (pc *Command) ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 	if opts.Name == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
@@ -91,8 +94,8 @@ func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 		opts.Name = getPipelineName(repo)
 	}
 
-	resp, err := destroyPipeline(ctx, opts.Name, opts.DestroyVolumes)
-	if err != nil {
+	resp, err := pc.destroyPipeline(ctx, opts.Name, opts.DestroyVolumes)
+	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return err
 	}
 
@@ -101,8 +104,11 @@ func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 		return nil
 	}
 
-	if err := waitUntilDestroyed(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
-		return err
+	// If error is not found we don't have to wait
+	if err == nil && resp != nil {
+		if err := pc.waitUntilDestroyed(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
+			return err
+		}
 	}
 
 	oktetoLog.Success("Repository '%s' successfully destroyed", opts.Name)
@@ -110,7 +116,7 @@ func ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 	return nil
 }
 
-func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
+func (pc *Command) destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
 	spinner := utils.NewSpinner(fmt.Sprintf("Destroying repository '%s'...", name))
 	spinner.Start()
 	defer spinner.Stop()
@@ -122,19 +128,9 @@ func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*ty
 	var err error
 	var resp *types.GitDeployResponse
 
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return nil, err
-	}
-
 	go func() {
-		resp, err = oktetoClient.DestroyPipeline(ctx, name, destroyVolumes)
+		resp, err = pc.okClient.Pipeline().Destroy(ctx, name, destroyVolumes)
 		if err != nil {
-			if oktetoErrors.IsNotFound(err) {
-				oktetoLog.Infof("repository '%s' not found", name)
-				exit <- nil
-				return
-			}
 			exit <- fmt.Errorf("failed to destroy repository '%s': %w", name, err)
 			return
 		}
@@ -153,7 +149,7 @@ func destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*ty
 	return resp, nil
 }
 
-func waitUntilDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
+func (pc *Command) waitUntilDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
 	spinner := utils.NewSpinner(fmt.Sprintf("Waiting for the repository '%s' to be destroyed...", name))
 	spinner.Start()
 	defer spinner.Stop()
@@ -163,7 +159,7 @@ func waitUntilDestroyed(ctx context.Context, name string, action *types.Action, 
 	exit := make(chan error, 1)
 
 	go func() {
-		exit <- waitToBeDestroyed(ctx, name, action, timeout)
+		exit <- pc.waitToBeDestroyed(ctx, name, action, timeout)
 	}()
 
 	select {
@@ -181,10 +177,6 @@ func waitUntilDestroyed(ctx context.Context, name string, action *types.Action, 
 	return nil
 }
 
-func waitToBeDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-	return oktetoClient.WaitForActionToFinish(ctx, name, action.Name, timeout)
+func (pc *Command) waitToBeDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
+	return pc.okClient.Pipeline().WaitForActionToFinish(ctx, name, action.Name, timeout)
 }
