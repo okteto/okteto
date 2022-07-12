@@ -83,7 +83,7 @@ dev:
     sync:
     - .:/usr/src/app
     forward:
-    - 8081:8080
+    - 8012:8080
     autocreate: true
 `
 )
@@ -309,8 +309,8 @@ func TestUpAutocreateV2WithBuild(t *testing.T) {
 	}
 	require.NoError(t, integration.WaitForDeployment(kubectlBinary, kubectlOpts, 1, timeout))
 
-	varLocalEndpoint := "http://localhost:8081/var.html"
-	indexLocalEndpoint := "http://localhost:8081/index.html"
+	varLocalEndpoint := "http://localhost:8012/var.html"
+	indexLocalEndpoint := "http://localhost:8012/index.html"
 	indexRemoteEndpoint := fmt.Sprintf("https://autocreate-%s.%s/index.html", testNamespace, appsSubdomain)
 
 	// Test that environment variable is injected correctly
