@@ -27,7 +27,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/cmd/utils"
@@ -95,9 +94,9 @@ func NewProxy(kubeconfig *KubeConfig) (*Proxy, error) {
 	s := &http.Server{
 		Addr:         fmt.Sprintf(":%d", port),
 		Handler:      handler,
-		ReadTimeout:  okteto.GetKubernetesTimeout() * time.Second,
-		WriteTimeout: okteto.GetKubernetesTimeout() * time.Second,
-		IdleTimeout:  okteto.GetKubernetesTimeout() * time.Second,
+		ReadTimeout:  okteto.GetKubernetesTimeout(),
+		WriteTimeout: okteto.GetKubernetesTimeout(),
+		IdleTimeout:  okteto.GetKubernetesTimeout(),
 		TLSConfig: &tls.Config{
 			Certificates: []tls.Certificate{cert},
 
