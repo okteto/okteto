@@ -253,6 +253,9 @@ const (
 	// OktetoNameEnvVar defines if the command is running inside okteot
 	OktetoNameEnvVar = "OKTETO_NAME"
 
+	// OktetoSSHTimeoutEnvVar defines the timeout for ssh operations
+	OktetoSSHTimeoutEnvVar = "OKTETO_SSH_TIMEOUT"
+
 	// OktetoKubernetesTimeoutEnvVar defines the timeout for kubernetes operations
 	OktetoKubernetesTimeoutEnvVar = "OKTETO_KUBERNETES_TIMEOUT"
 

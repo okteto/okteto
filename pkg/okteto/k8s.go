@@ -47,7 +47,7 @@ func (*K8sClient) GetIngressClient(ctx context.Context) (*ingresses.Client, erro
 	return iClient, nil
 }
 
-func getKubernetesTimeout() time.Duration {
+func GetKubernetesTimeout() time.Duration {
 	tOnce.Do(func() {
 		timeout = 0 * time.Second
 		t, ok := os.LookupEnv(model.OktetoKubernetesTimeoutEnvVar)
@@ -77,7 +77,7 @@ func getK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config) (*kubernete
 	}
 	config.WarningHandler = rest.NoWarnings{}
 
-	config.Timeout = getKubernetesTimeout()
+	config.Timeout = GetKubernetesTimeout()
 
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -95,7 +95,7 @@ func getDynamicClient(clientAPIConfig *clientcmdapi.Config) (dynamic.Interface, 
 	}
 	config.WarningHandler = rest.NoWarnings{}
 
-	config.Timeout = getKubernetesTimeout()
+	config.Timeout = GetKubernetesTimeout()
 
 	dc, err := dynamic.NewForConfig(config)
 	if err != nil {
@@ -114,7 +114,7 @@ func getDiscoveryClient(clientAPIConfig *clientcmdapi.Config) (discovery.Discove
 	}
 	config.WarningHandler = rest.NoWarnings{}
 
-	config.Timeout = getKubernetesTimeout()
+	config.Timeout = GetKubernetesTimeout()
 
 	dc, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {

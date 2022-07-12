@@ -16,12 +16,17 @@ package ssh
 import (
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/ssh"
 )
 
 var clientConfig *ssh.ClientConfig
+var timeout time.Duration
+var tOnce sync.Once
 
 func getPrivateKey() (ssh.Signer, error) {
 	_, private := getKeyPaths()
@@ -36,6 +41,27 @@ func getPrivateKey() (ssh.Signer, error) {
 	}
 
 	return key, nil
+}
+
+func getOktetoSSHTimeout() time.Duration {
+	tOnce.Do(func() {
+		timeout = 10 * time.Second
+		t, ok := os.LookupEnv(model.OktetoSSHTimeoutEnvVar)
+		if !ok {
+			return
+		}
+
+		parsed, err := time.ParseDuration(t)
+		if err != nil {
+			oktetoLog.Infof("'%s' is not a valid duration, ignoring", t)
+			return
+		}
+
+		oktetoLog.Infof("OKTETO_SSH_TIMEOUT applied: '%s'", parsed.String())
+		timeout = parsed
+	})
+
+	return timeout
 }
 
 func getSSHClientConfig() (*ssh.ClientConfig, error) {
@@ -56,7 +82,7 @@ func getSSHClientConfig() (*ssh.ClientConfig, error) {
 		Auth: []ssh.AuthMethod{
 			ssh.PublicKeys(keys),
 		},
-		Timeout: 10 * time.Second,
+		Timeout: getOktetoSSHTimeout(),
 	}
 
 	return clientConfig, nil
