@@ -136,6 +136,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 					exit <- err
 					return
 				}
+				// When compose services have public ports we deploy the ingress for this endpoint
 				ingressPorts := getSvcPublicPorts(name, s)
 				for _, ingressPort := range ingressPorts {
 					ingressName := name
@@ -169,6 +170,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			return
 		}
 
+		// TODO: deprecate stack Endpoints and move this feature to the okteto manifest
 		for _, name := range getEndpointsToDeployFromServicesToDeploy(s.Endpoints, servicesToDeploySet) {
 			ingressK8s := &ingresses.Ingress{
 				V1:      translateEndpointIngressV1(name, s),

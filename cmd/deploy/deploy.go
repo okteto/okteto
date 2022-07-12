@@ -38,6 +38,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -576,6 +577,31 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 			}
 		}
 
+		if opts.Manifest.Deploy.Endpoints != nil {
+			if endpoint, ok := opts.Manifest.Deploy.Endpoints[""]; ok {
+				opts.Manifest.Deploy.Endpoints[opts.Name] = endpoint
+				delete(opts.Manifest.Deploy.Endpoints, "")
+			}
+			c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
+			if err != nil {
+				exit <- err
+				return
+			}
+			iClient, err := ingresses.GetClient(ctx, c)
+			if err != nil {
+				exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
+				return
+			}
+
+			ingressesToDeploy := model.TranslateEndpointsToIngress(opts.Manifest)
+			for _, ingress := range ingressesToDeploy {
+				if err := dc.deployIngress(ctx, ingress, iClient); err != nil {
+					exit <- err
+					return
+				}
+			}
+		}
+
 		if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
 			if err := dc.deployDivert(ctx, opts); err != nil {
 				exit <- err
@@ -605,6 +631,14 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 	defer oktetoLog.SetStage("")
 	composeSectionInfo := opts.Manifest.Deploy.ComposeSection
 	composeSectionInfo.Stack.Namespace = okteto.Context().Namespace
+
+	// When endpoints are defined in both compose and okteto manifest, okteto manifest ones are deployed instead
+	if len(opts.Manifest.Deploy.Endpoints) > 0 && len(composeSectionInfo.Stack.Endpoints) > 0 {
+		oktetoLog.Warning("Endpoints are defined in the stack and in the manifest. The endpoints defined in the manifest will be used.")
+		oktetoLog.Warning("Endpoints defined at the stack manifest will be deprecated")
+		composeSectionInfo.Stack.Endpoints = nil
+	}
+
 	var composeFiles []string
 	for _, composeInfo := range composeSectionInfo.ComposesInfo {
 		composeFiles = append(composeFiles, composeInfo.File)
@@ -660,6 +694,28 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 			}
 		}
 	}
+	return nil
+}
+
+func (dc *DeployCommand) deployIngress(ctx context.Context, ingress *ingresses.Ingress, c *ingresses.Client) error {
+	oktetoLog.SetStage("Endpoints configuration")
+	defer oktetoLog.SetStage("")
+
+	if _, err := c.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
+		if !oktetoErrors.IsNotFound(err) {
+			return fmt.Errorf("error getting ingress '%s': %s", ingress.GetName(), err.Error())
+		}
+		if err := c.Create(ctx, ingress); err != nil {
+			return err
+		}
+		oktetoLog.Success("Endpoint '%s' created", ingress.GetName())
+		return nil
+	}
+
+	if err := c.Update(ctx, ingress); err != nil {
+		return err
+	}
+	oktetoLog.Success("Endpoint '%s' updated", ingress.GetName())
 	return nil
 }
 
