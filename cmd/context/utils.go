@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -155,7 +156,7 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 
 	manifest, err := model.GetManifestV1(opts.Filename)
 	if err != nil {
-		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
 		}
 		manifest, err = model.GetManifestV2(opts.Filename)
