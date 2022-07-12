@@ -68,6 +68,8 @@ func Down() *cobra.Command {
 				if err != nil {
 					return err
 				}
+
+				oktetoLog.Success("All development containers are deactivated")
 			} else {
 				devName := ""
 				if len(args) == 1 {
@@ -94,11 +96,11 @@ func Down() *cobra.Command {
 						err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 						return err
 					}
+				} else {
+					oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
 				}
-
 			}
 
-			oktetoLog.Success("Success deactivating development containers")
 			analytics.TrackDown(true)
 			return nil
 		},
