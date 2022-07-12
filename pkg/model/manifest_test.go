@@ -26,6 +26,128 @@ import (
 	"k8s.io/utils/pointer"
 )
 
+func TestManifestExpandDevEnvs(t *testing.T) {
+	tests := []struct {
+		name             string
+		envs             map[string]string
+		manifest         *Manifest
+		expectedManifest *Manifest
+	}{
+		{
+			name: "autocreate without image but build section defined",
+			envs: map[string]string{
+				"OKTETO_BUILD_TEST_IMAGE": "test",
+			},
+			manifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"test": &Dev{
+						Autocreate: true,
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"test": &Dev{
+						Autocreate: true,
+						Image: &BuildInfo{
+							Name: "test",
+						},
+					},
+				},
+			},
+		},
+		{
+			name:             "nothing to expand",
+			manifest:         &Manifest{},
+			expectedManifest: &Manifest{},
+		},
+
+		{
+			name: "autocreate with image and build section defined",
+			envs: map[string]string{
+				"build":   "test",
+				"myImage": "test-2",
+			},
+			manifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"test": &Dev{
+						Autocreate: true,
+						Image: &BuildInfo{
+							Name: "${myImage}",
+						},
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"test": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"test": &Dev{
+						Autocreate: true,
+						Image: &BuildInfo{
+							Name: "test-2",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "autocreate with image",
+			envs: map[string]string{
+				"build": "test",
+			},
+			manifest: &Manifest{
+				Dev: ManifestDevs{
+					"test": &Dev{
+						Autocreate: true,
+						Image: &BuildInfo{
+							Name: "${build}",
+						},
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Dev: ManifestDevs{
+					"test": &Dev{
+						Autocreate: true,
+						Image: &BuildInfo{
+							Name: "test",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "expand image",
+			envs: map[string]string{
+				"build": "test",
+			},
+			manifest:         &Manifest{},
+			expectedManifest: &Manifest{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for k, v := range tt.envs {
+				os.Setenv(k, v)
+			}
+
+			err := tt.manifest.ExpandEnvVars()
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedManifest, tt.manifest)
+		})
+	}
+}
 func TestManifestExpandEnvs(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -77,7 +199,6 @@ devs:
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-
 				assert.Equal(t, tt.expectedCommand, m.Deploy.Commands[0].Command)
 			}
 
