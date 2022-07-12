@@ -271,7 +271,7 @@ func Up() *cobra.Command {
 				up.Dev.Autocreate = true
 			}
 
-			if err := setBuildEnvVars(ctx, oktetoManifest, dev.Name); err != nil {
+			if err := setBuildEnvVars(ctx, oktetoManifest); err != nil {
 				return err
 			}
 
@@ -835,7 +835,7 @@ func printDisplayContext(up *upContext) {
 	oktetoLog.Println()
 }
 
-func setBuildEnvVars(ctx context.Context, m *model.Manifest, devName string) error {
+func setBuildEnvVars(ctx context.Context, m *model.Manifest) error {
 	sp := utils.NewSpinner("Loading build env vars...")
 	sp.Start()
 

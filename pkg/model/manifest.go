@@ -881,6 +881,9 @@ func (manifest *Manifest) ExpandEnvVars() error {
 		}
 		if devInfo.Image != nil {
 			devInfo.Image.Name, err = ExpandEnv(devInfo.Image.Name, false)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
