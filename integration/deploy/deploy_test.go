@@ -59,7 +59,11 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	token = okteto.Context().Token
+	if v := os.Getenv(model.OktetoTokenEnvVar); v != "" {
+		token = v
+	} else {
+		token = okteto.Context().Token
+	}
 	exitCode := m.Run()
 
 	os.Exit(exitCode)

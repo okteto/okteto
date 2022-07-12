@@ -33,7 +33,6 @@ import (
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
 
-	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -272,7 +271,7 @@ func Up() *cobra.Command {
 				up.Dev.Autocreate = true
 			}
 
-			if err := setBuildEnvVars(oktetoManifest, dev.Name); err != nil {
+			if err := setBuildEnvVars(ctx, oktetoManifest, dev.Name); err != nil {
 				return err
 			}
 
@@ -836,36 +835,19 @@ func printDisplayContext(up *upContext) {
 	oktetoLog.Println()
 }
 
-func setBuildEnvVars(m *model.Manifest, devName string) error {
+func setBuildEnvVars(ctx context.Context, m *model.Manifest, devName string) error {
 	sp := utils.NewSpinner("Loading build env vars...")
 	sp.Start()
-	defer sp.Stop()
 
-	for buildName, buildInfo := range m.Build {
-		opts := build.OptsFromBuildInfo(m.Name, buildName, buildInfo, &types.BuildOptions{})
-		imageWithDigest, err := registry.NewOktetoRegistry().GetImageTagWithDigest(opts.Tag)
-		if err == nil {
-			builder := buildv2.NewBuilderFromScratch()
-			sp.Stop()
-			builder.SetServiceEnvVars(buildName, imageWithDigest)
-			sp.Start()
-		} else if errors.Is(err, oktetoErrors.ErrNotFound) {
-			sanitizedSvc := strings.ReplaceAll(buildName, "-", "_")
-			if err := os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(sanitizedSvc)), opts.Tag); err != nil {
-				return err
-			}
-		} else {
-			return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
-		}
+	builder := buildv2.NewBuilderFromScratch()
+	svcsToBuild, err := builder.GetServicesToBuild(ctx, m, []string{})
+	if err != nil {
+		return err
 	}
-
-	var err error
-	if value, ok := m.Dev[devName]; ok && value.Image != nil {
-		m.Dev[devName].Image.Name, err = model.ExpandEnv(m.Dev[devName].Image.Name, false)
-		if err != nil {
-			return err
-		}
+	buildOptions := &types.BuildOptions{
+		CommandArgs: svcsToBuild,
+		Manifest:    m,
 	}
-
-	return nil
+	sp.Stop()
+	return builder.Build(ctx, buildOptions)
 }
