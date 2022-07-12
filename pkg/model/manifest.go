@@ -296,7 +296,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 
 	manifest, err = getManifestFromOktetoFile(cwd)
 	if err != nil {
-		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
 		}
 	}
