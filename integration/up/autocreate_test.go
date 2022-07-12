@@ -287,7 +287,7 @@ func TestUpAutocreateV2WithBuild(t *testing.T) {
 	require.NoError(t, writeFile(indexPath, testNamespace))
 	log.Printf("original 'index.html' content: %s", testNamespace)
 
-	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), autocreateManifestV2))
+	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), autocreateManifestV2WithBuild))
 	require.NoError(t, writeFile(filepath.Join(dir, "Dockerfile"), "FROM python:alpine"))
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 	require.NoError(t, writeFile(filepath.Join(dir, ".dockerignore"), stignoreContent))
