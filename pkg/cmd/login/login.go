@@ -83,7 +83,7 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 	oktetoLog.Printf("You can also open a browser and navigate to the following address:\n")
 	oktetoLog.Println(authorizationURL)
 
-	return EndWithBrowser(ctx, h)
+	return EndWithBrowser(h)
 }
 
 // StartWithBrowser starts the authentication of the user with the IDP via a browser
@@ -112,7 +112,7 @@ func StartWithBrowser(ctx context.Context, u string) (*Handler, error) {
 	handler := &Handler{
 		baseURL:  url.String(),
 		port:     port,
-		ctx:      context.Background(),
+		ctx:      ctx,
 		state:    state,
 		errChan:  make(chan error, 2),
 		response: make(chan *types.User, 2),
@@ -123,7 +123,7 @@ func StartWithBrowser(ctx context.Context, u string) (*Handler, error) {
 }
 
 // EndWithBrowser finishes the browser based auth
-func EndWithBrowser(ctx context.Context, h *Handler) (*types.User, error) {
+func EndWithBrowser(h *Handler) (*types.User, error) {
 	go func() {
 		http.Handle("/authorization-code/callback", h.handle())
 		h.errChan <- http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", h.port), nil)
