@@ -4,7 +4,7 @@ import "html/template"
 
 var successTitle = `Okteto is ready!`
 
-var successIcon = `<svg class="illustration" xmlns="http://www.w3.org/2000/svg" width="346" height="244" viewBox="0 0 346 244">
+var successIcon = `<svg class="illustration" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 346 244">
 <g fill="none" fill-rule="evenodd">
   <path fill="#F0FDFD" d="M333 158.584C333 71.002 262.26 0 175 0S17 71.002 17 158.584c0 23.332 5.06 45.466 14.078 65.416h287.844C327.94 204.05 333 181.916 333 158.584"/>
   <path stroke="#1DA8B8" stroke-linecap="round" stroke-linejoin="round" d="M18 224h309M1 224h10M335 224h10"/>
