@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/okteto/okteto/pkg/cmd/login/html"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/html"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 )
@@ -48,7 +48,7 @@ func (h *Handler) handle() http.Handler {
 			return
 		}
 
-		ctx := context.Background()
+		ctx := r.Context()
 		u, err := okteto.Auth(ctx, code, h.baseURL)
 		if err != nil {
 			if err := html.ExecuteError(w, err); err != nil {
