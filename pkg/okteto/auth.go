@@ -54,6 +54,7 @@ func Auth(ctx context.Context, code, url string) (*types.User, error) {
 		if oktetoErrors.IsErrGitHubNotVerifiedEmail(err) {
 			return nil, fmt.Errorf("Your GitHub account doesn't have a verified primary email address. Please check your GitHub account email settings and try again")
 		}
+		// TODO: check new error - return message
 		return nil, fmt.Errorf("authentication error, please try again")
 	}
 
