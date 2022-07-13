@@ -38,7 +38,7 @@ Here is a summary of the things every reviewer should be aware of while doing a 
   *It can affect other services that are not the CLI itself and break scenarios that are not contemplated on the CLI repository, so we need to bear in mind all those services when reviewing a PR*
 - [ ] Does it need to add analytics?
   *We need to add analytics to know the adoption of new features and how the users use the product*
-- [ ] Does the code have any smell code?
+- [ ] Does the code have any code smells?
   we should develop clean code so that if a new developer starts working on the project, he/she can understand the code as soon as possible*
 
 ### PR Description
@@ -55,7 +55,7 @@ A respectful tone will be used when making comments and supporting documentation
 
 ### Tests
 
-All new features or bug fixes should have unit tests that cover the added code and the functionality it provides. When adding new features it is highly recommended that integration tests are also created and may be deemed required by a reviewer.
+All new features or bug fixes must have unit tests that cover the added code and the functionality it provides. When adding new features it is highly recommended that integration tests are also created and may be deemed required by a reviewer.
 
 Tests should fail with helpful messages saying what was wrong, what inputs were provided, the expected result, and the actual result received in testing. Assume that the person debugging your failing test is not you, and is potentially new to the entire project.
 
@@ -167,7 +167,7 @@ func Test_FunctionNameThenNoErr(t *testing.T) {
 }
 ```
 
-Each test should create its scenario, eliminating and leaving the state of the machine in the same state as it was at the start of the test.
+Each test should have the capability of running in isolation, eliminating and leaving the state of the machine in the same state as it was at the start of the test.
 
 #### E2E tests
 
@@ -179,9 +179,9 @@ In order to speed up the CI process, all tests are executed in parallel includin
 
 - `deploy/destroy` command: This command has the most dependencies, as it is used by all other services:
 
-  - The information stored on the configmap is used on the UI to show information like structured logs, repository information or to execute actions like redeploying or destroying the application.
+  - The information stored on the `configmap` is used on the UI to show information like structured logs, and repository information or to execute actions like redeploying or destroying the application.
 
-  - The logs that are written in the buffer(`JSON`) will be the ones stored in the configmap, to later show them in the UI.
+  - The logs that are written in the buffer(`JSON`) will be the ones stored in the `configmap`, to later show them in the UI.
 
   - The following actions directly or indirectly use this command: [preview deploy](https://github.com/okteto/deploy-preview)/[pipeline deploy](https://github.com/okteto/pipeline)/[destroy pipeline](https://github.com/okteto/destroy-pipeline)/[preview destroy](https://github.com/okteto/destroy-preview)
 
