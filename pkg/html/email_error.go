@@ -55,8 +55,8 @@ var emailErrorContent = `
   or try again with a different account.
 </h2>`
 
-func successData() TemplateData {
-	return TemplateData{
+func emailErrorData() *templateData {
+	return &templateData{
 		Content: template.HTML(emailErrorContent),
 		Title:   emailErrorTitle,
 		Icon:    template.HTML(emailErrorIcon),
