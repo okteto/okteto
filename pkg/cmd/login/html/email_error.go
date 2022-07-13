@@ -42,7 +42,7 @@ var emailErrorIcon = `
 </svg>`
 
 var emailErrorContent = `
-<h1>Business Email Required</h1>
+<h1 class="error">Business Email Required</h1>
 <h2>
   We try our best to keep Okteto open and accessible to everyone, but some
   email domains incur more spam than we can manage.

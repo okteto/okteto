@@ -38,9 +38,13 @@ var commonTemplate = `<!DOCTYPE html>
       h1 {
         font-size: 42px;
         font-weight: 400;
-        color: #d0021b;
+        color: #00D1CA;
         letter-spacing: -1.2px;
         margin: 32px 0 0;
+      }
+
+      h1.error {
+        color: #d0021b;
       }
 
       h2 {
