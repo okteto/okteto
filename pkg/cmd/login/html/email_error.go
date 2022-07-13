@@ -4,7 +4,7 @@ import "html/template"
 
 var emailErrorTitle = `Business Email Required`
 
-var emailErrorIcon = `
+var emailErrorIcon = template.HTML(`
 <svg
   class="illustration"
   fill="none"
@@ -39,9 +39,9 @@ var emailErrorIcon = `
       fill="#fff"
     />
   </g>
-</svg>`
+</svg>`)
 
-var emailErrorContent = `
+var emailErrorContent = template.HTML(`
 <h1 class="error">Business Email Required</h1>
 <h2>
   We try our best to keep Okteto open and accessible to everyone, but some
@@ -53,12 +53,12 @@ var emailErrorContent = `
     https://github.com/settings/emails
   </a>
   or try again with a different account.
-</h2>`
+</h2>`)
 
 func emailErrorData() *templateData {
 	return &templateData{
-		"Content": template.HTML(emailErrorContent),
+		"Content": emailErrorContent,
 		"Title":   emailErrorTitle,
-		"Icon":    template.HTML(emailErrorIcon),
+		"Icon":    emailErrorIcon,
 	}
 }

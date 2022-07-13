@@ -5,7 +5,7 @@ import "html/template"
 // TODO: replace this variables with the content for a general failure
 var failTitle = `Okteto is ready!`
 
-var failIcon = `<svg class="illustration" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 346 244">
+var failIcon = template.HTML(`<svg class="illustration" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 346 244">
 <g fill="none" fill-rule="evenodd">
   <path fill="#F0FDFD" d="M333 158.584C333 71.002 262.26 0 175 0S17 71.002 17 158.584c0 23.332 5.06 45.466 14.078 65.416h287.844C327.94 204.05 333 181.916 333 158.584"/>
   <path stroke="#1DA8B8" stroke-linecap="round" stroke-linejoin="round" d="M18 224h309M1 224h10M335 224h10"/>
@@ -26,16 +26,16 @@ var failIcon = `<svg class="illustration" xmlns="http://www.w3.org/2000/svg" vie
     <path stroke="#1CA8B8" stroke-linecap="round" stroke-linejoin="round" d="M249.411 106a9.238 9.238 0 0 1-6.486-2.633l-12.234-12.005a8.866 8.866 0 0 1 0-12.723c3.583-3.514 9.39-3.514 12.972 0l5.748 5.638 14.925-14.638c3.582-3.519 9.389-3.519 12.977 0a8.88 8.88 0 0 1 0 12.728l-21.415 21A9.23 9.23 0 0 1 249.41 106z"/>
   </g>
 </g>
-</svg>`
+</svg>`)
 
-var failContent = `<h1>You are now logged in!</h1>
+var failContent = template.HTML(`<h1>You are now logged in!</h1>
 <h2>Your session is now active in the Okteto CLI</h2>
-<h2>Close this window and go back to your terminal</h2>`
+<h2>Close this window and go back to your terminal</h2>`)
 
 func failData() *templateData {
 	return &templateData{
-		"Content": template.HTML(failContent),
+		"Content": failContent,
 		"Title":   failTitle,
-		"Icon":    template.HTML(failIcon),
+		"Icon":    failIcon,
 	}
 }
