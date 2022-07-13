@@ -56,6 +56,17 @@ func GetOktetoPath() (string, error) {
 	return oktetoPath, nil
 }
 
+//GetToken returns the token used to run tests
+func GetToken() string {
+	var token string
+	if v := os.Getenv(model.OktetoTokenEnvVar); v != "" {
+		token = v
+	} else {
+		token = okteto.Context().Token
+	}
+	return token
+}
+
 // RunOktetoVersion runs okteto version given an oktetoPath
 func RunOktetoVersion(oktetoPath string) (string, error) {
 	cmd := exec.Command(oktetoPath, "version")

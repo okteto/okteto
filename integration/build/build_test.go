@@ -76,12 +76,8 @@ func TestMain(m *testing.M) {
 	if runtime.GOOS == "windows" {
 		kubectlBinary = "kubectl.exe"
 	}
+	token = integration.GetToken()
 
-	if v := os.Getenv(model.OktetoTokenEnvVar); v != "" {
-		token = v
-	} else {
-		token = okteto.Context().Token
-	}
 	exitCode := m.Run()
 
 	os.Exit(exitCode)
