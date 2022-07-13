@@ -65,7 +65,10 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 		return nil, fmt.Errorf("couldn't start the login process, please try again")
 	}
 
-	authorizationURL := h.AuthorizationURL()
+	authorizationURL, err := h.AuthorizationURL()
+	if err != nil {
+		return nil, err
+	}
 	oktetoLog.Println("Authentication will continue in your default browser")
 	if err := open.Start(authorizationURL); err != nil {
 		if strings.Contains(err.Error(), "executable file not found in $PATH") {

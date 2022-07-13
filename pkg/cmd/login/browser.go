@@ -18,7 +18,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 
@@ -71,7 +70,7 @@ func (h *Handler) handle() http.Handler {
 }
 
 // AuthorizationURL returns the authorization URL used for login
-func (h *Handler) AuthorizationURL() string {
+func (h *Handler) AuthorizationURL() (string, error) {
 	redirectURL := fmt.Sprintf("http://127.0.0.1:%d/authorization-code/callback?state=%s", h.port, h.state)
 	params := url.Values{}
 	params.Add("state", h.state)
@@ -79,11 +78,11 @@ func (h *Handler) AuthorizationURL() string {
 
 	authorizationURL, err := url.Parse(fmt.Sprintf("%s/auth/authorization-code", h.baseURL))
 	if err != nil {
-		log.Fatalf("failed to build authorizationURL: %s", err)
+		return "", fmt.Errorf("failed to build authorizationURL: %v", err)
 	}
 
 	authorizationURL.RawQuery = params.Encode()
-	return authorizationURL.String()
+	return authorizationURL.String(), nil
 }
 
 func randToken() (string, error) {
