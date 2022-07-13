@@ -26,12 +26,11 @@ func ExecuteError(w http.ResponseWriter, err error) error {
 
 	switch {
 	case errors.IsErrGithubMissingBusinessEmail(err):
-		// TODO: use custom error template data
-		data = &templateData{}
+		data = emailErrorData()
 	default:
 		data = failData()
 	}
 
-	failTemplate := template.Must(template.New("fail-response").Parse(commonTemplate))
-	return failTemplate.Execute(w, &data)
+	errorTemplate := template.Must(template.New("fail-response").Parse(commonTemplate))
+	return errorTemplate.Execute(w, &data)
 }
