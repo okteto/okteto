@@ -2,43 +2,19 @@ package model
 
 import (
 	"bytes"
-	"fmt"
-	"strings"
 
 	yaml3 "gopkg.in/yaml.v3"
 )
 
 func expandEnvScalarNode(node *yaml3.Node) (*yaml3.Node, error) {
-	switch node.Kind {
-	// when is a ScalarNode, replace its value with the ENV replaced
-	case yaml3.ScalarNode:
+	if node.Kind == yaml3.ScalarNode {
+		// when is a ScalarNode, replace its value with the ENV replaced
 		expandValue, err := ExpandEnv(node.Value, true)
 		if err != nil {
 			return node, err
 		}
 		node.Value = expandValue
 		return node, nil
-	// when is a Sequence and starts with $ can be a list of envs, so transform the list to key=value format
-	case yaml3.SequenceNode:
-		for indx, subNode := range node.Content {
-			if strings.HasPrefix(subNode.Value, "$") {
-				value := subNode.Value
-				key := strings.TrimSuffix(strings.TrimPrefix(value, "$"), "=")
-				node.Content[indx].Value = fmt.Sprintf("%s=%s", key, value)
-			}
-		}
-	// when MappingNode and only the ENV, transform the node by adding a ScalarNode so there is key and value nodes for the map
-	case yaml3.MappingNode:
-		for indx, subNode := range node.Content {
-			value := subNode.Value
-			if indx%2 == 0 && strings.HasPrefix(value, "$") && node.Content[indx+1] != nil && node.Content[indx+1].Value == "" {
-				node.Content[indx].Value = strings.TrimPrefix(value, "$")
-				node.Content[indx+1] = &yaml3.Node{
-					Kind:  yaml3.ScalarNode,
-					Value: value,
-				}
-			}
-		}
 	}
 
 	for indx, subNode := range node.Content {
