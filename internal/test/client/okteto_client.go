@@ -33,21 +33,22 @@ func (p *FakeOktetoClientProvider) Provide() (types.OktetoInterface, error) {
 }
 
 type FakeOktetoClient struct {
-	Namespace types.NamespaceInterface
-	Users     types.UserInterface
-	Preview   types.PreviewInterface
+	Namespace      types.NamespaceInterface
+	Users          types.UserInterface
+	Preview        types.PreviewInterface
+	PipelineClient types.PipelineInterface
 }
 
 func NewFakeOktetoClient() *FakeOktetoClient {
 	return &FakeOktetoClient{}
 }
 
-// Namespace retrieves the NamespaceClient
+// Namespaces retrieves the NamespaceClient
 func (c *FakeOktetoClient) Namespaces() types.NamespaceInterface {
 	return c.Namespace
 }
 
-// Namespace retrieves the NamespaceClient
+// Previews retrieves the PreviewsClient
 func (c *FakeOktetoClient) Previews() types.PreviewInterface {
 	return c.Preview
 }
@@ -55,4 +56,9 @@ func (c *FakeOktetoClient) Previews() types.PreviewInterface {
 // User retrieves the UserClient
 func (c *FakeOktetoClient) User() types.UserInterface {
 	return c.Users
+}
+
+// Pipeline retrieves the PipelineClient
+func (c *FakeOktetoClient) Pipeline() types.PipelineInterface {
+	return c.PipelineClient
 }

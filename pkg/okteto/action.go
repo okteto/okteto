@@ -11,7 +11,7 @@ import (
 )
 
 // GetAction gets a installer job given its name
-func (c *OktetoClient) GetAction(ctx context.Context, name string) (*types.Action, error) {
+func (c *pipelineClient) GetAction(ctx context.Context, name string) (*types.Action, error) {
 	namespace := Context().Namespace
 	var queryStruct struct {
 		Action struct {
@@ -38,7 +38,7 @@ func (c *OktetoClient) GetAction(ctx context.Context, name string) (*types.Actio
 	return action, nil
 }
 
-func (c *OktetoClient) WaitForActionToFinish(ctx context.Context, pipelineName, actionName string, timeout time.Duration) error {
+func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName, actionName string, timeout time.Duration) error {
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 

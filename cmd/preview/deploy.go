@@ -244,7 +244,7 @@ func waitToBeDeployed(ctx context.Context, name string, a *types.Action, timeout
 	if err != nil {
 		return err
 	}
-	return oktetoClient.WaitForActionToFinish(ctx, name, a.Name, timeout)
+	return oktetoClient.Pipeline().WaitForActionToFinish(ctx, name, a.Name, timeout)
 }
 
 func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.Duration) error {

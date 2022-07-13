@@ -133,6 +133,9 @@ var (
 		"k8s",
 		"k8s.yml",
 		"k8s.yaml",
+		"manifest",
+		"manifest.yml",
+		"manifest.yaml",
 	}
 	priorityOrder = []string{"dev", "dependencies", "deploy", "build", "name"}
 )
@@ -151,7 +154,6 @@ type Manifest struct {
 	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
 
 	Type     Archetype `json:"-" yaml:"-"`
-	Filename string    `yaml:"-"`
 	Manifest []byte    `json:"-" yaml:"-"`
 	IsV2     bool      `json:"-" yaml:"-"`
 }
@@ -276,7 +278,6 @@ func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		devManifest.Filename = oktetoPath
 
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Okteto manifest v1 unmarshalled successfully")
 
@@ -291,19 +292,7 @@ func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
 		manifestPath = filepath.Join(cwd, manifestPath)
 	}
 	if manifestPath != "" && FileExistsAndNotDir(manifestPath) {
-		manifest, err := getManifestFromFile(cwd, manifestPath)
-		if err != nil {
-			return nil, err
-		}
-		path := ""
-		if filepath.IsAbs(manifestPath) {
-			path, err = filepath.Rel(cwd, manifestPath)
-			if err != nil {
-				oktetoLog.Debugf("could not detect relative path to %s: %s", manifestPath, err)
-			}
-		}
-		manifest.Filename = path
-		return manifest, nil
+		return getManifestFromFile(cwd, manifestPath)
 	}
 
 	return nil, oktetoErrors.ErrManifestNotFound
@@ -904,6 +893,8 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 			return nil, err
 		}
 
+		d.parentSyncFolder = cwd
+
 		if _, ok := m.Dev[svcName]; !ok && len(d.Sync.Folders) > 0 {
 			m.Dev[svcName] = d
 		}
@@ -1036,7 +1027,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 				if subsection.Kind != yaml3.ScalarNode {
 					continue
 				}
-				serviceName := strings.ToUpper(subsection.Value)
+				serviceName := strings.ToUpper(strings.ReplaceAll(subsection.Value, "-", "_"))
 				subsection.HeadComment = fmt.Sprintf(buildSvcEnvVars, serviceName, serviceName, serviceName, serviceName)
 			}
 		}

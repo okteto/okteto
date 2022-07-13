@@ -38,6 +38,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -63,6 +64,11 @@ type secretHandler interface {
 
 // Options destroy commands options
 type Options struct {
+	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
+	// This is stored at the configmap as filename to redeploy from the ui.
+	ManifestPathFlag string
+	// ManifestPath is the patah to the manifest used though the command execution.
+	// This might change its value during execution
 	ManifestPath        string
 	Name                string
 	Variables           []string
@@ -95,11 +101,24 @@ func Destroy(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#destroy"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if options.ManifestPath != "" {
-				workdir := model.GetWorkdirFromManifestPath(options.ManifestPath)
-				if err := os.Chdir(workdir); err != nil {
+				// if path is absolute, its transformed to rel from root
+				initialCWD, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("failed to get the current working directory: %w", err)
+				}
+				manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, options.ManifestPath)
+				if err != nil {
 					return err
 				}
-				options.ManifestPath = model.GetManifestPathFromWorkdir(options.ManifestPath, workdir)
+				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
+				options.ManifestPathFlag = manifestPathFlag
+
+				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
+				uptManifestPath, err := model.UpdateCWDtoManifestPath(options.ManifestPath)
+				if err != nil {
+					return err
+				}
+				options.ManifestPath = uptManifestPath
 			}
 			if err := contextCMD.LoadManifestV2WithContext(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
 				return err
@@ -220,7 +239,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		Name:      opts.Name,
 		Namespace: namespace,
 		Status:    pipeline.DestroyingStatus,
-		Filename:  manifest.Filename,
+		Filename:  opts.ManifestPathFlag,
 	}
 	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
 	if err != nil {
@@ -240,7 +259,11 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 				Name:           depName,
 				DestroyVolumes: opts.DestroyVolumes,
 			}
-			if err := pipelineCMD.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
+			pipelineCmd, err := pipelineCMD.NewCommand()
+			if err != nil {
+				return err
+			}
+			if err := pipelineCmd.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
 				return err
 			}
 		}

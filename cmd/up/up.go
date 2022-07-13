@@ -41,6 +41,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -54,16 +55,21 @@ const ReconnectingMessage = "Trying to reconnect to your cluster. File synchroni
 
 // UpOptions represents the options available on up command
 type UpOptions struct {
-	DevPath    string
-	Namespace  string
-	K8sContext string
-	DevName    string
-	Devs       []string
-	Envs       []string
-	Remote     int
-	Deploy     bool
-	ForcePull  bool
-	Reset      bool
+	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
+	// This is stored at the configmap as filename to redeploy from the ui.
+	ManifestPathFlag string
+	// ManifestPath is the patah to the manifest used though the command execution.
+	// This might change its value during execution
+	ManifestPath string
+	Namespace    string
+	K8sContext   string
+	DevName      string
+	Devs         []string
+	Envs         []string
+	Remote       int
+	Deploy       bool
+	ForcePull    bool
+	Reset        bool
 }
 
 // Up starts a development container
@@ -98,14 +104,27 @@ func Up() *cobra.Command {
 
 			ctx := context.Background()
 
-			if upOptions.DevPath != "" {
-				workdir := model.GetWorkdirFromManifestPath(upOptions.DevPath)
-				if err := os.Chdir(workdir); err != nil {
+			if upOptions.ManifestPath != "" {
+				// if path is absolute, its transformed to rel from root
+				initialCWD, err := os.Getwd()
+				if err != nil {
+					return fmt.Errorf("failed to get the current working directory: %w", err)
+				}
+				manifestPathFlag, err := oktetoPath.GetRelativePathFromCWD(initialCWD, upOptions.ManifestPath)
+				if err != nil {
 					return err
 				}
-				upOptions.DevPath = model.GetManifestPathFromWorkdir(upOptions.DevPath, workdir)
+				// as the installer uses root for executing the pipeline, we save the rel path from root as ManifestPathFlag option
+				upOptions.ManifestPathFlag = manifestPathFlag
+
+				// when the manifest path is set by the cmd flag, we are moving cwd so the cmd is executed from that dir
+				uptManifestPath, err := model.UpdateCWDtoManifestPath(upOptions.ManifestPath)
+				if err != nil {
+					return err
+				}
+				upOptions.ManifestPath = uptManifestPath
 			}
-			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.DevPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
+			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.ManifestPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
 			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
@@ -116,15 +135,15 @@ func Up() *cobra.Command {
 					return err
 				}
 
-				if upOptions.DevPath == "" {
-					upOptions.DevPath = utils.DefaultManifest
+				if upOptions.ManifestPath == "" {
+					upOptions.ManifestPath = utils.DefaultManifest
 				}
 
-				if !utils.AskIfOktetoInit(upOptions.DevPath) {
+				if !utils.AskIfOktetoInit(upOptions.ManifestPath) {
 					return err
 				}
 
-				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.DevPath)
+				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.ManifestPath)
 				if err != nil {
 					return err
 				}
@@ -148,11 +167,11 @@ func Up() *cobra.Command {
 					mc := &manifest.ManifestCommand{
 						K8sClientProvider: okteto.NewK8sClientProvider(),
 					}
-					if upOptions.DevPath == "" {
-						upOptions.DevPath = utils.DefaultManifest
+					if upOptions.ManifestPath == "" {
+						upOptions.ManifestPath = utils.DefaultManifest
 					}
 					oktetoManifest, err = mc.RunInitV2(ctx, &manifest.InitOpts{
-						DevPath:          upOptions.DevPath,
+						DevPath:          upOptions.ManifestPath,
 						Namespace:        upOptions.Namespace,
 						Context:          upOptions.K8sContext,
 						ShowCTA:          false,
@@ -313,7 +332,7 @@ func Up() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&upOptions.DevPath, "file", "f", "", "path to the manifest file")
+	cmd.Flags().StringVarP(&upOptions.ManifestPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().StringVarP(&upOptions.Namespace, "namespace", "n", "", "namespace where the up command is executed")
 	cmd.Flags().StringVarP(&upOptions.K8sContext, "context", "c", "", "context where the up command is executed")
 	cmd.Flags().StringArrayVarP(&upOptions.Envs, "env", "e", []string{}, "envs to add to the development container")
@@ -470,10 +489,11 @@ func (up *upContext) deployApp(ctx context.Context) error {
 	}
 
 	return c.RunDeploy(ctx, &deploy.Options{
-		Name:         up.Manifest.Name,
-		ManifestPath: up.Manifest.Filename,
-		Timeout:      5 * time.Minute,
-		Build:        false,
+		Name:             up.Manifest.Name,
+		ManifestPathFlag: up.Options.ManifestPathFlag,
+		ManifestPath:     up.Options.ManifestPath,
+		Timeout:          5 * time.Minute,
+		Build:            false,
 	})
 }
 
@@ -719,7 +739,7 @@ func (up *upContext) getInsufficientSpaceError(err error) error {
 			E: err,
 			Hint: fmt.Sprintf(`Okteto volume is full.
     Increase your persistent volume size, run '%s' and try 'okteto up' again.
-    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.DevPath)),
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.ManifestPathFlag)),
 		}
 	}
 	return oktetoErrors.UserError{
