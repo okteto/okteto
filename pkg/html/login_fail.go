@@ -30,12 +30,12 @@ var failIcon = `<svg class="illustration" xmlns="http://www.w3.org/2000/svg" wid
 
 var failContent = `<h1>You are now logged in!</h1>
 <h2>Your session is now active in the Okteto CLI</h2>
-<h2>"Close this window and go back to your terminal"</h2>`
+<h2>Close this window and go back to your terminal</h2>`
 
-func failData() TemplateData {
-	return TemplateData{
-		Content: template.HTML(successContent),
-		Title:   successTitle,
-		Icon:    template.HTML(successIcon),
+func failData() *templateData {
+	return &templateData{
+		Content: template.HTML(failContent),
+		Title:   failTitle,
+		Icon:    template.HTML(failIcon),
 	}
 }

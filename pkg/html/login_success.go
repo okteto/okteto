@@ -29,10 +29,10 @@ var successIcon = `<svg class="illustration" xmlns="http://www.w3.org/2000/svg" 
 
 var successContent = `<h1>You are now logged in!</h1>
 <h2>Your session is now active in the Okteto CLI</h2>
-<h2>"Close this window and go back to your terminal"</h2>`
+<h2>Close this window and go back to your terminal</h2>`
 
-func successData() TemplateData {
-	return TemplateData{
+func successData() *templateData {
+	return &templateData{
 		Content: template.HTML(successContent),
 		Title:   successTitle,
 		Icon:    template.HTML(successIcon),

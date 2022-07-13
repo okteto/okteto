@@ -3,10 +3,11 @@ package html
 import (
 	"html/template"
 	"net/http"
+
+	"github.com/okteto/okteto/pkg/errors"
 )
 
-// TemplateData represents the data merged into the html template
-type TemplateData struct {
+type templateData struct {
 	Icon    template.HTML
 	Title   string
 	Content template.HTML
@@ -21,8 +22,16 @@ func ExecuteSuccess(w http.ResponseWriter) error {
 
 // ExecuteError renders the login error page at the browser
 func ExecuteError(w http.ResponseWriter, err error) error {
-	// TODO: check if err is buisness email, render custom page for this error
-	data := failData()
+	var data *templateData
+
+	switch {
+	case errors.IsErrGithubMissingBusinessEmail(err):
+		// TODO: use custom error template data
+		data = &templateData{}
+	default:
+		data = failData()
+	}
+
 	failTemplate := template.Must(template.New("fail-response").Parse(commonTemplate))
 	return failTemplate.Execute(w, &data)
 }
