@@ -634,8 +634,8 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 
 	// When endpoints are defined in both compose and okteto manifest, okteto manifest ones are deployed instead
 	if len(opts.Manifest.Deploy.Endpoints) > 0 && len(composeSectionInfo.Stack.Endpoints) > 0 {
-		oktetoLog.Warning("Endpoints are defined in the stack and in the manifest. The endpoints defined in the manifest will be used.")
-		oktetoLog.Warning("Endpoints defined at the stack manifest will be deprecated")
+		oktetoLog.Warning("Endpoints are defined in the compose and in the manifest. The endpoints defined in the okteto manifest will be used.")
+		oktetoLog.Warning("Endpoints defined in the compose manifest will be deprecated")
 		composeSectionInfo.Stack.Endpoints = nil
 	}
 
