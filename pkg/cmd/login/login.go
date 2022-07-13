@@ -40,7 +40,7 @@ func NewLoginController() *LoginController {
 	return &LoginController{}
 }
 
-func (_ *LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*types.User, error) {
+func (l LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*types.User, error) {
 	if token == "" {
 		oktetoLog.Infof("authenticating with browser code")
 		user, err := WithBrowser(ctx, oktetoURL)
