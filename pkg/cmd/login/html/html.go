@@ -17,7 +17,7 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 type templateData map[string]interface{}
@@ -34,7 +34,7 @@ func ExecuteError(w http.ResponseWriter, err error) error {
 	var data *templateData
 
 	switch {
-	case errors.IsErrGithubMissingBusinessEmail(err):
+	case okteto.IsErrGithubMissingBusinessEmail(err):
 		data = emailErrorData()
 	default:
 		data = failData()

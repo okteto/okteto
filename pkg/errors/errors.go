@@ -178,9 +178,6 @@ var (
 
 	//ErrNotManifestContentDetected is raised when cannot load any field accepted by okteto manifest doc
 	ErrNotManifestContentDetected = errors.New("couldn't detect okteto manifest content")
-
-	//ErrGithubMissingBusinessEmail is raised when the user does not have a business email
-	ErrGithubMissingBusinessEmail = errors.New("github-missing-business-email")
 )
 
 // IsForbidden raised if the Okteto API returns 401
@@ -252,19 +249,4 @@ func IsClosedNetwork(err error) bool {
 
 func IsErrGitHubNotVerifiedEmail(err error) bool {
 	return err.Error() == ErrGitHubNotVerifiedEmail.Error()
-}
-
-// IsErrGithubMissingBusinessEmail returns true if the error is ErrGithubMissingBusinessEmail
-func IsErrGithubMissingBusinessEmail(err error) bool {
-	return err.Error() == ErrGithubMissingBusinessEmail.Error()
-}
-
-// TranslateAuthError returns a legible error text depending if is custom error
-func TranslateAuthError(err error) error {
-	switch {
-	case IsErrGithubMissingBusinessEmail(err):
-		return errors.New("Please add a business/work email to your Github account at https://github.com/settings/emails or try again with a different account")
-	default:
-		return err
-	}
 }
