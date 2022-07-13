@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"net/url"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/html"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -54,7 +55,8 @@ func (h *Handler) handle() http.Handler {
 				h.errChan <- err
 				return
 			}
-			h.errChan <- err
+			// we need to return a legible error for the CLI to display
+			h.errChan <- oktetoErrors.TranslateAuthError(err)
 			return
 		}
 		if err := html.ExecuteSuccess(w); err != nil {
