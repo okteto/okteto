@@ -57,8 +57,8 @@ var emailErrorContent = `
 
 func emailErrorData() *templateData {
 	return &templateData{
-		Content: template.HTML(emailErrorContent),
-		Title:   emailErrorTitle,
-		Icon:    template.HTML(emailErrorIcon),
+		"Content": template.HTML(emailErrorContent),
+		"Title":   emailErrorTitle,
+		"Icon":    template.HTML(emailErrorIcon),
 	}
 }

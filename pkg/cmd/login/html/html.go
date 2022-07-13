@@ -20,11 +20,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 )
 
-type templateData struct {
-	Icon    template.HTML
-	Title   string
-	Content template.HTML
-}
+type templateData map[string]interface{}
 
 // ExecuteSuccess renders the login success page at the browser
 func ExecuteSuccess(w http.ResponseWriter) error {

@@ -33,8 +33,8 @@ var successContent = `<h1>You are now logged in!</h1>
 
 func successData() *templateData {
 	return &templateData{
-		Content: template.HTML(successContent),
-		Title:   successTitle,
-		Icon:    template.HTML(successIcon),
+		"Content": template.HTML(successContent),
+		"Title":   successTitle,
+		"Icon":    template.HTML(successIcon),
 	}
 }

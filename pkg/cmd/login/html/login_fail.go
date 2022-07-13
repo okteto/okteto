@@ -34,8 +34,8 @@ var failContent = `<h1>You are now logged in!</h1>
 
 func failData() *templateData {
 	return &templateData{
-		Content: template.HTML(failContent),
-		Title:   failTitle,
-		Icon:    template.HTML(failIcon),
+		"Content": template.HTML(failContent),
+		"Title":   failTitle,
+		"Icon":    template.HTML(failIcon),
 	}
 }
