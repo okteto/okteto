@@ -68,21 +68,37 @@ func Down() *cobra.Command {
 				if err != nil {
 					return err
 				}
-			}
 
-			devName := ""
-			if len(args) == 1 {
-				devName = args[0]
-			}
-			dev, err := utils.GetDevFromManifest(manifest, devName)
-			if err != nil {
-				return err
-			}
+				oktetoLog.Success("All development containers are deactivated")
+				return nil
+			} else {
+				devName := ""
+				if len(args) == 1 {
+					devName = args[0]
+				}
+				dev, err := utils.GetDevFromManifest(manifest, devName)
+				if err != nil {
+					return err
+				}
 
-			if err := runDown(ctx, dev, rm); err != nil {
-				analytics.TrackDown(false)
-				err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
-				return err
+				c, _, err := okteto.GetK8sClient()
+				if err != nil {
+					return err
+				}
+
+				app, _, err := utils.GetApp(ctx, dev, c, false)
+				if err != nil {
+					return err
+				}
+
+				if apps.IsDevModeOn(app) {
+					if err := runDown(ctx, dev, rm); err != nil {
+						analytics.TrackDown(false)
+						return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+					}
+				} else {
+					oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
+				}
 			}
 
 			analytics.TrackDown(true)
@@ -99,22 +115,40 @@ func Down() *cobra.Command {
 }
 
 func allDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
+	spinner := utils.NewSpinner("Deactivating your development containers...")
+	spinner.Start()
+	defer spinner.Stop()
+
 	if len(manifest.Dev) == 0 {
 		return fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
 	}
+
+	c, _, err := okteto.GetK8sClient()
+	if err != nil {
+		return err
+	}
+
 	for _, dev := range manifest.Dev {
-		if err := runDown(ctx, dev, rm); err != nil {
-			analytics.TrackDown(false)
-			err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+		app, _, err := utils.GetApp(ctx, dev, c, false)
+		if err != nil {
 			return err
 		}
+
+		if apps.IsDevModeOn(app) {
+			spinner.Stop()
+			if err := runDown(ctx, dev, rm); err != nil {
+				analytics.TrackDown(false)
+				return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+			}
+		}
 	}
+
 	analytics.TrackDown(true)
 	return nil
 }
 
 func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
-	spinner := utils.NewSpinner("Deactivating your development container...")
+	spinner := utils.NewSpinner(fmt.Sprintf("Deactivating '%s' development container...", dev.Name))
 	spinner.Start()
 	defer spinner.Stop()
 
@@ -129,8 +163,6 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			return
 		}
 
-		spinner.Stop()
-
 		app, _, err := utils.GetApp(ctx, dev, c, false)
 		if err != nil {
 			if !oktetoErrors.IsNotFound(err) {
@@ -142,7 +174,6 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		if dev.Autocreate {
 			app = apps.NewDeploymentApp(deployments.Sandbox(dev))
 		}
-		spinner.Start()
 
 		trMap, err := apps.GetTranslations(ctx, dev, app, false, c)
 		if err != nil {
@@ -156,14 +187,14 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 		}
 
 		spinner.Stop()
-		oktetoLog.Success("Development container deactivated")
+		oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
 
 		if !rm {
 			exit <- nil
 			return
 		}
 
-		spinner.Update("Removing persistent volume...")
+		spinner.Update(fmt.Sprintf("Removing '%s' persistent volume...", dev.Name))
 		spinner.Start()
 		if err := removeVolume(ctx, dev); err != nil {
 			analytics.TrackDownVolumes(false)
@@ -171,7 +202,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			return
 		}
 		spinner.Stop()
-		oktetoLog.Success("Persistent volume removed")
+		oktetoLog.Success(fmt.Sprintf("Persistent volume '%s' removed", dev.Name))
 
 		if os.Getenv(model.OktetoSkipCleanupEnvVar) == "" {
 			if err := syncthing.RemoveFolder(dev); err != nil {
