@@ -23,39 +23,25 @@ func TranslateEndpoint(endpointName string, endpoint model.Endpoint, opts *Trans
 		endpointName = opts.Name
 	}
 	return &Ingress{
-		V1: &networkingv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        endpointName,
-				Namespace:   opts.Namespace,
-				Labels:      setLabels(endpoint, opts),
-				Annotations: setAnnotations(endpoint),
-			},
-			Spec: networkingv1.IngressSpec{
-				Rules: []networkingv1.IngressRule{
-					{
-						IngressRuleValue: networkingv1.IngressRuleValue{
-							HTTP: &networkingv1.HTTPIngressRuleValue{
-								Paths: translateEndpointRulesToPathsV1(endpoint),
-							},
-						},
-					},
-				},
-			},
+		V1:      translateEndpointIngressV1(endpointName, endpoint, opts),
+		V1Beta1: translateEndpointIngressV1Beta1(endpointName, endpoint, opts),
+	}
+}
+
+func translateEndpointIngressV1(ingressName string, endpoint model.Endpoint, opts *TranslateOptions) *networkingv1.Ingress {
+	return &networkingv1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        ingressName,
+			Namespace:   opts.Namespace,
+			Labels:      setLabels(endpoint, opts),
+			Annotations: setAnnotations(endpoint),
 		},
-		V1Beta1: &networkingv1beta1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        endpointName,
-				Namespace:   opts.Namespace,
-				Labels:      setLabels(endpoint, opts),
-				Annotations: setAnnotations(endpoint),
-			},
-			Spec: networkingv1beta1.IngressSpec{
-				Rules: []networkingv1beta1.IngressRule{
-					{
-						IngressRuleValue: networkingv1beta1.IngressRuleValue{
-							HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-								Paths: translateEndpointRulesToPathsV1Beta1(endpoint),
-							},
+		Spec: networkingv1.IngressSpec{
+			Rules: []networkingv1.IngressRule{
+				{
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: translateEndpointRulesToPathsV1(endpoint),
 						},
 					},
 				},
@@ -64,10 +50,26 @@ func TranslateEndpoint(endpointName string, endpoint model.Endpoint, opts *Trans
 	}
 }
 
-// TranslateService translates a at compose returns an ingress
-// TODO
-func TranslateService(endpoint model.Endpoint) *Ingress {
-	return &Ingress{}
+func translateEndpointIngressV1Beta1(ingressName string, endpoint model.Endpoint, opts *TranslateOptions) *networkingv1beta1.Ingress {
+	return &networkingv1beta1.Ingress{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        ingressName,
+			Namespace:   opts.Namespace,
+			Labels:      setLabels(endpoint, opts),
+			Annotations: setAnnotations(endpoint),
+		},
+		Spec: networkingv1beta1.IngressSpec{
+			Rules: []networkingv1beta1.IngressRule{
+				{
+					IngressRuleValue: networkingv1beta1.IngressRuleValue{
+						HTTP: &networkingv1beta1.HTTPIngressRuleValue{
+							Paths: translateEndpointRulesToPathsV1Beta1(endpoint),
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func setLabels(endpoint model.Endpoint, opts *TranslateOptions) map[string]string {
