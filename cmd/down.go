@@ -93,8 +93,7 @@ func Down() *cobra.Command {
 				if apps.IsDevModeOn(app) {
 					if err := runDown(ctx, dev, rm); err != nil {
 						analytics.TrackDown(false)
-						err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
-						return err
+						return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 					}
 				} else {
 					oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
@@ -138,8 +137,7 @@ func allDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
 			spinner.Stop()
 			if err := runDown(ctx, dev, rm); err != nil {
 				analytics.TrackDown(false)
-				err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
-				return err
+				return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 			}
 		}
 	}
