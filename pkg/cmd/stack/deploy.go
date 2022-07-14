@@ -130,67 +130,67 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		}
 
 		for _, serviceName := range options.ServicesToDeploy {
-			// for each service to deploy - check if there are public ports to deploy service
-			if len(s.Services[serviceName].Ports) > 0 {
-				svcK8s := translateService(serviceName, s)
-				if err := services.Deploy(ctx, svcK8s, c); err != nil {
+			if len(s.Services[serviceName].Ports) == 0 {
+				continue
+			}
+
+			svcK8s := translateService(serviceName, s)
+			if err := services.Deploy(ctx, svcK8s, c); err != nil {
+				exit <- err
+				return
+			}
+			// get the public ports from the compose service - this will be deployed into ingresses
+			ingressPortsToDeploy := getSvcPublicPorts(serviceName, s)
+			for _, ingressPort := range ingressPortsToDeploy {
+				ingressName := serviceName
+				// If more than one port, ingressName will have <serviceName>-<PORT>, each port will have an ingress
+				if len(ingressPortsToDeploy) > 1 {
+					ingressName = fmt.Sprintf("%s-%d", serviceName, ingressPort.ContainerPort)
+				}
+				translateOptions := &ingresses.TranslateOptions{
+					Name:      s.Name,
+					Namespace: s.Namespace,
+				}
+
+				// merge endpoint labels and stack specific labels
+				endpointLabels := map[string]string{
+					model.StackNameLabel:         s.Name,
+					model.StackEndpointNameLabel: ingressName,
+				}
+				for k, v := range s.Services[serviceName].Labels {
+					endpointLabels[k] = v
+				}
+
+				// parse an Endpoint model for this ingress
+				endpoint := model.Endpoint{
+					Labels:      endpointLabels,
+					Annotations: s.Services[serviceName].Annotations,
+					Rules: []model.EndpointRule{
+						{
+							Path:    "/",
+							Service: serviceName,
+							Port:    ingressPort.ContainerPort,
+						},
+					},
+				}
+
+				ingress := ingresses.TranslateEndpoint(ingressName, endpoint, translateOptions)
+
+				// check for labels collision in the case of a compose - before creation or update (deploy)
+				if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
+					if old.GetLabels()[model.StackNameLabel] == "" {
+						oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName())
+						continue
+					}
+					if old.GetLabels()[model.StackNameLabel] != ingress.GetLabels()[model.StackNameLabel] {
+						oktetoLog.Warning("skipping creation of endpoint '%s' due to name collision with endpoint in stack '%s'", ingress.GetName(), old.GetLabels()[model.StackNameLabel])
+						continue
+					}
+				}
+				if err := iClient.Deploy(ctx, ingress); err != nil {
 					exit <- err
 					return
 				}
-				// get the public ports from the compose service - this will be deployed into ingresses
-				ingressPortsToDeploy := getSvcPublicPorts(serviceName, s)
-				for _, ingressPort := range ingressPortsToDeploy {
-					ingressName := serviceName
-					// If more than one port, ingressName will have <serviceName>-<PORT>, each port will have an ingress
-					if len(ingressPortsToDeploy) > 1 {
-						ingressName = fmt.Sprintf("%s-%d", serviceName, ingressPort.ContainerPort)
-					}
-					translateOptions := &ingresses.TranslateOptions{
-						Name:      s.Name,
-						Namespace: s.Namespace,
-					}
-
-					// merge endpoint labels and stack specific labels
-					endpointLabels := map[string]string{
-						model.StackNameLabel:         s.Name,
-						model.StackEndpointNameLabel: ingressName,
-					}
-					for k, v := range s.Services[serviceName].Labels {
-						endpointLabels[k] = v
-					}
-
-					// parse an Endpoint model for this ingress
-					endpoint := model.Endpoint{
-						Labels:      endpointLabels,
-						Annotations: s.Services[serviceName].Annotations,
-						Rules: []model.EndpointRule{
-							{
-								Path:    "/",
-								Service: serviceName,
-								Port:    ingressPort.ContainerPort,
-							},
-						},
-					}
-
-					ingress := ingresses.TranslateEndpoint(ingressName, endpoint, translateOptions)
-
-					// check for labels collision in the case of a compose - before creation or update (deploy)
-					if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
-						if old.GetLabels()[model.StackNameLabel] == "" {
-							oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName())
-							continue
-						}
-						if old.GetLabels()[model.StackNameLabel] != ingress.GetLabels()[model.StackNameLabel] {
-							oktetoLog.Warning("skipping creation of endpoint '%s' due to name collision with endpoint in stack '%s'", ingress.GetName(), old.GetLabels()[model.StackNameLabel])
-							continue
-						}
-					}
-					if err := iClient.Deploy(ctx, ingress); err != nil {
-						exit <- err
-						return
-					}
-				}
-
 			}
 		}
 
