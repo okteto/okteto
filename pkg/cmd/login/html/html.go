@@ -25,7 +25,10 @@ type templateData map[string]interface{}
 // ExecuteSuccess renders the login success page at the browser
 func ExecuteSuccess(w http.ResponseWriter) error {
 	data := successData()
-	successTemplate := template.Must(template.New("success-response").Parse(commonTemplate))
+	successTemplate, err := template.New("success-response").Parse(commonTemplate)
+	if err != nil {
+		return err
+	}
 	return successTemplate.Execute(w, &data)
 }
 
@@ -40,6 +43,9 @@ func ExecuteError(w http.ResponseWriter, err error) error {
 		data = failData()
 	}
 
-	errorTemplate := template.Must(template.New("fail-response").Parse(commonTemplate))
+	errorTemplate, err := template.New("fail-response").Parse(commonTemplate)
+	if err != nil {
+		return err
+	}
 	return errorTemplate.Execute(w, &data)
 }
