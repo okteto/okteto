@@ -407,6 +407,9 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			}
 			devManifest.Deploy.ComposeSection.Stack = s
 			devManifest, err = devManifest.InferFromStack(cwd)
+			if devManifest.Deploy.Endpoints != nil {
+				s.Endpoints = devManifest.Deploy.Endpoints
+			}
 			if err != nil {
 				return nil, err
 			}
@@ -760,6 +763,12 @@ func (manifest *Manifest) ExpandEnvVars() error {
 				}
 			}
 			manifest.Deploy.ComposeSection.Stack = s
+			if len(manifest.Deploy.Endpoints) > 0 {
+				if len(manifest.Deploy.ComposeSection.Stack.Endpoints) > 0 {
+					oktetoLog.Warning("Endpoints are defined in the stack and in the manifest. The endpoints defined in the manifest will be used")
+				}
+				manifest.Deploy.ComposeSection.Stack.Endpoints = manifest.Deploy.Endpoints
+			}
 			cwd, err := os.Getwd()
 			if err != nil {
 				oktetoLog.Info("could not detect working directory")
