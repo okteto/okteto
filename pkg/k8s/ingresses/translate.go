@@ -12,13 +12,16 @@ import (
 // Translate Service to Ingress
 
 type TranslateOptions struct {
-	DeploymentName string
-	Namespace      string
-	IsCompose      bool
+	Name      string
+	Namespace string
+	IsCompose bool
 }
 
 // TranslateEndpoint translates the endpoints spec at compose or okteto manifest and returns an ingress
 func TranslateEndpoint(endpointName string, endpoint model.Endpoint, opts *TranslateOptions) *Ingress {
+	if endpointName == "" {
+		endpointName = opts.Name
+	}
 	return &Ingress{
 		V1: &networkingv1.Ingress{
 			ObjectMeta: metav1.ObjectMeta{
@@ -70,11 +73,11 @@ func TranslateService(endpoint model.Endpoint) *Ingress {
 func setLabels(endpoint model.Endpoint, opts *TranslateOptions) map[string]string {
 	// init with default label
 	labels := model.Labels{
-		model.DeployedByLabel: opts.DeploymentName,
+		model.DeployedByLabel: opts.Name,
 	}
 
 	if _, ok := labels[model.StackNameLabel]; !ok && opts.IsCompose {
-		labels[model.StackNameLabel] = opts.DeploymentName
+		labels[model.StackNameLabel] = opts.Name
 	}
 
 	// append labels from the endpoint spec
