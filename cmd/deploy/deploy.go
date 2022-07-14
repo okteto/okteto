@@ -597,7 +597,6 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 	translateOptions := &ingresses.TranslateOptions{
 		Namespace: opts.Manifest.Namespace,
 		Name:      opts.Manifest.Name,
-		IsCompose: opts.Manifest.Deploy.ComposeSection != nil,
 	}
 
 	for name, endpoint := range opts.Manifest.Deploy.Endpoints {

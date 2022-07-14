@@ -14,7 +14,6 @@ import (
 type TranslateOptions struct {
 	Name      string
 	Namespace string
-	IsCompose bool
 }
 
 // TranslateEndpoint translates the endpoints spec at compose or okteto manifest and returns an ingress
@@ -76,10 +75,6 @@ func setLabels(endpoint model.Endpoint, opts *TranslateOptions) map[string]strin
 	// init with default label
 	labels := model.Labels{
 		model.DeployedByLabel: opts.Name,
-	}
-
-	if _, ok := labels[model.StackNameLabel]; !ok && opts.IsCompose {
-		labels[model.StackNameLabel] = opts.Name
 	}
 
 	// append labels from the endpoint spec
