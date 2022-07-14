@@ -197,7 +197,7 @@ func (i Ingress) GetLabels() map[string]string {
 func (iClient *Client) Deploy(ctx context.Context, ingress *Ingress) error {
 	if _, err := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
 		if !oktetoErrors.IsNotFound(err) {
-			return fmt.Errorf("error getting ingress '%s': %s", ingress.GetName(), err.Error())
+			return fmt.Errorf("error getting ingress '%s': %v", ingress.GetName(), err)
 		}
 		if err := iClient.Create(ctx, ingress); err != nil {
 			return err
