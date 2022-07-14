@@ -16,6 +16,7 @@ package utils
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -37,6 +38,9 @@ const (
 	esc        = "\033["
 	showCursor = esc + "?25h"
 )
+
+// ErrInvalidOption is raised when the selector has an invalid option
+var ErrInvalidOption = errors.New("invalid option")
 
 // OktetoSelector represents the selector
 type OktetoSelector struct {
@@ -96,7 +100,7 @@ func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label, sel
 	optionSelected, isOkteto, err := prompt.Run(ctx)
 	if err != nil || !isValidOption(options, optionSelected) {
 		oktetoLog.Infof("invalid init option: %s", err)
-		return "", false, fmt.Errorf("invalid option")
+		return "", false, ErrInvalidOption
 	}
 
 	return optionSelected, isOkteto, nil

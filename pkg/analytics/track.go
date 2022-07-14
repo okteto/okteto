@@ -192,9 +192,18 @@ func TrackDurationActivateUp(durationActivateUp time.Duration) {
 	track(durationActivateUpEvent, true, props)
 }
 
+// TrackExecMetadata is the metadata added to execEvent
+type TrackExecMetadata struct {
+	FirstArgIsDev bool
+	Success       bool
+}
+
 // TrackExec sends a tracking event to mixpanel when the user runs the exec command
-func TrackExec(success bool) {
-	track(execEvent, success, nil)
+func TrackExec(m *TrackExecMetadata) {
+	props := map[string]interface{}{
+		"isFirstArgDev": m.FirstArgIsDev,
+	}
+	track(execEvent, m.Success, props)
 }
 
 // TrackDown sends a tracking event to mixpanel when the user deactivates a development container

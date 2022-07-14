@@ -727,3 +727,35 @@ sync:
 		})
 	}
 }
+
+func TestHasDev(t *testing.T) {
+	tests := []struct {
+		name       string
+		devSection ManifestDevs
+		devName    string
+		out        bool
+	}{
+		{
+			name: "devName is on dev section",
+			devSection: ManifestDevs{
+				"autocreate": &Dev{},
+			},
+			devName: "autocreate",
+			out:     true,
+		},
+		{
+			name: "devName is not on dev section",
+			devSection: ManifestDevs{
+				"autocreate": &Dev{},
+			},
+			devName: "autocreate",
+			out:     true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.devSection.HasDev(tt.devName)
+			assert.Equal(t, tt.out, result)
+		})
+	}
+}

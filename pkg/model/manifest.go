@@ -1129,3 +1129,9 @@ func (m *Manifest) setManifestDefaultsFromDev() {
 		oktetoLog.Infof("could not set context and manifest from dev section due to being '%d' devs declared", len(m.Dev))
 	}
 }
+
+// HasDev checks if manifestDevs has a dev name as key
+func (d ManifestDevs) HasDev(name string) bool {
+	_, ok := d[name]
+	return ok
+}
