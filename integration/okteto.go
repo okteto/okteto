@@ -81,7 +81,11 @@ func RunOktetoVersion(oktetoPath string) (string, error) {
 
 // GetTestNamespace returns the name for a namespace
 func GetTestNamespace(prefix, user string) string {
-	namespace := fmt.Sprintf("%s-%s-%d-%s", prefix, runtime.GOOS, time.Now().Unix(), user)
+	os := runtime.GOOS
+	if os == "windows" {
+		os = "win"
+	}
+	namespace := fmt.Sprintf("%s-%s-%d-%s", prefix, os, time.Now().Unix(), user)
 	return strings.ToLower(namespace)
 }
 
