@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -165,7 +166,7 @@ func (*ManifestCommand) RunInitV1(ctx context.Context, opts *InitOpts) error {
 	}
 	stignore := filepath.Join(devDir, stignoreFile)
 
-	if !model.FileExists(stignore) {
+	if !filesystem.FileExists(stignore) {
 		c := linguist.GetSTIgnore(opts.Language)
 		if err := os.WriteFile(stignore, c, 0600); err != nil {
 			oktetoLog.Infof("failed to write stignore file: %s", err)
@@ -329,7 +330,7 @@ func askForContainer(app apps.App) (string, error) {
 }
 
 func validateDevPath(devPath string, overwrite bool) error {
-	if !overwrite && model.FileExists(devPath) {
+	if !overwrite && filesystem.FileExists(devPath) {
 		return fmt.Errorf("%s already exists. Run this command again with the '--replace' flag to overwrite it", devPath)
 	}
 	return nil

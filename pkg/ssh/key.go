@@ -23,8 +23,8 @@ import (
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -37,14 +37,14 @@ const (
 // KeyExists returns true if the okteto key pair exists
 func KeyExists() bool {
 	public, private := getKeyPaths()
-	if !model.FileExists(public) {
+	if !filesystem.FileExists(public) {
 		oktetoLog.Infof("%s doesn't exist", public)
 		return false
 	}
 
 	oktetoLog.Infof("%s already present", public)
 
-	if !model.FileExists(private) {
+	if !filesystem.FileExists(private) {
 		oktetoLog.Infof("%s doesn't exist", private)
 		return false
 	}

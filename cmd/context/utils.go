@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -129,21 +130,12 @@ func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextRe
 	return nil
 }
 
+// LoadManifestWithContext loads context and then loads a manifest
 func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.Manifest, error) {
-
-	var manifest *model.Manifest
-	manifest, err := model.GetManifestV1(opts.Filename)
+	ctxResource, err := model.GetContextResource(opts.Filename)
 	if err != nil {
-		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
-			return nil, err
-		}
-		manifest, err = model.GetManifestV2(opts.Filename)
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
-
-	ctxResource := model.GetContextResourceFromManifest(manifest)
 	if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
 		return nil, err
 	}
@@ -162,14 +154,12 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 		return nil, err
 	}
 
-	// We need to read it again to propagate secrets env vars
-	if manifest.IsV2 {
-		manifest, err = model.GetManifestV2(opts.Filename)
-		if err != nil {
+	manifest, err := model.GetManifestV1(opts.Filename)
+	if err != nil {
+		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
 		}
-	} else {
-		manifest, err = model.GetManifestV1(opts.Filename)
+		manifest, err = model.GetManifestV2(opts.Filename)
 		if err != nil {
 			return nil, err
 		}
@@ -224,34 +214,31 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 	return s, nil
 }
 
-//LoadManifestV2WithContext initializes the okteto context taking into account command flags and manifest namespace/context fields
-func LoadManifestV2WithContext(ctx context.Context, namespace, k8sContext, path string) error {
+//LoadContextFromPath initializes the okteto context taking into account command flags and manifest namespace/context fields
+func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string) error {
 	ctxOptions := &ContextOptions{
 		Namespace: namespace,
 		Show:      true,
 	}
-
-	manifest, err := model.GetManifestV2(path)
+	ctxResource, err := model.GetContextResource(path)
 	if err != nil {
-		if err != oktetoErrors.ErrManifestNotFound {
+		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
 			return err
 		}
-	} else {
-		ctxResource := model.GetContextResourceFromManifest(manifest)
+	}
 
-		if err := ctxResource.UpdateNamespace(namespace); err != nil {
-			return err
-		}
+	if err := ctxResource.UpdateNamespace(namespace); err != nil {
+		return err
+	}
 
-		if err := ctxResource.UpdateContext(k8sContext); err != nil {
-			return err
-		}
+	if err := ctxResource.UpdateContext(k8sContext); err != nil {
+		return err
+	}
 
-		ctxOptions = &ContextOptions{
-			Context:   ctxResource.Context,
-			Namespace: ctxResource.Namespace,
-			Show:      true,
-		}
+	ctxOptions = &ContextOptions{
+		Context:   ctxResource.Context,
+		Namespace: ctxResource.Namespace,
+		Show:      true,
 	}
 
 	return NewContextCommand().Run(ctx, ctxOptions)

@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"gopkg.in/yaml.v2"
@@ -76,7 +77,7 @@ func GetBinaryFullPath() string {
 // GetOktetoHome returns the path of the okteto folder
 func GetOktetoHome() string {
 	if v, ok := os.LookupEnv(model.OktetoFolderEnvVar); ok {
-		if !model.FileExists(v) {
+		if !filesystem.FileExists(v) {
 			oktetoLog.Fatalf("OKTETO_FOLDER doesn't exist: %s", v)
 		}
 
@@ -180,7 +181,7 @@ func GetState(dev *model.Dev) (UpState, error) {
 // GetUserHomeDir returns the OS home dir
 func GetUserHomeDir() string {
 	if v, ok := os.LookupEnv(model.OktetoHomeEnvVar); ok {
-		if !model.FileExists(v) {
+		if !filesystem.FileExists(v) {
 			oktetoLog.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
 		}
 

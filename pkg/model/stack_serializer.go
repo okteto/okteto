@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/model/forward"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -683,7 +684,7 @@ func isNamedVolumeDeclared(volume StackVolume) bool {
 		if strings.HasPrefix(volume.LocalPath, "./") && relative {
 			return true
 		}
-		if FileExists(volume.LocalPath) && relative {
+		if filesystem.FileExists(volume.LocalPath) && relative {
 			return true
 		}
 	}

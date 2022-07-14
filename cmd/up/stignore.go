@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -37,7 +38,7 @@ func addStignoreSecrets(dev *model.Dev) error {
 	output := ""
 	for i, folder := range dev.Sync.Folders {
 		stignorePath := filepath.Join(folder.LocalPath, ".stignore")
-		if !model.FileExists(stignorePath) {
+		if !filesystem.FileExists(stignorePath) {
 			continue
 		}
 		infile, err := os.Open(stignorePath)
@@ -116,7 +117,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 	for _, folder := range dev.Sync.Folders {
 		stignorePath := filepath.Join(folder.LocalPath, ".stignore")
 		gitPath := filepath.Join(folder.LocalPath, ".git")
-		if !model.FileExists(stignorePath) {
+		if !filesystem.FileExists(stignorePath) {
 			if err := askIfCreateStignoreDefaults(folder.LocalPath, stignorePath); err != nil {
 				return err
 			}
@@ -124,7 +125,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 		}
 
 		oktetoLog.Infof("'.stignore' exists in folder '%s'", folder.LocalPath)
-		if !model.FileExists(gitPath) {
+		if !filesystem.FileExists(gitPath) {
 			continue
 		}
 

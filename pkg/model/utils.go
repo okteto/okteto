@@ -15,7 +15,6 @@ package model
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,44 +22,6 @@ import (
 	"github.com/go-git/go-git/v5"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
-
-// FileExists return true if the file exists
-func FileExists(name string) bool {
-	_, err := os.Stat(name)
-	if os.IsNotExist(err) {
-		return false
-	}
-
-	if err != nil {
-		oktetoLog.Infof("failed to check if %s exists: %s", name, err)
-	}
-
-	return true
-}
-
-// CopyFile copies a binary between from and to
-func CopyFile(from, to string) error {
-	fromFile, err := os.Open(from)
-	if err != nil {
-		return err
-	}
-	defer fromFile.Close()
-
-	// skipcq GSC-G302 syncthing is a binary so it needs exec permissions
-	toFile, err := os.OpenFile(to, os.O_RDWR|os.O_CREATE, 0700)
-	if err != nil {
-		return err
-	}
-
-	defer toFile.Close()
-
-	_, err = io.Copy(toFile, fromFile)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 // GetValidNameFromFolder returns a valid kubernetes name for a folder
 func GetValidNameFromFolder(folder string) (string, error) {
@@ -175,15 +136,6 @@ func dfs(s *Stack, svcName string, visited, stack map[string]bool) bool {
 	}
 	stack[svcName] = false
 	return false
-}
-
-// FileExistsAndNotDir checks if the file exists and its not a dir
-func FileExistsAndNotDir(filename string) bool {
-	info, err := os.Stat(filename)
-	if err != nil && os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
 }
 
 func pathExistsAndDir(path string) bool {

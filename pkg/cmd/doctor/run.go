@@ -25,6 +25,7 @@ import (
 	"github.com/mholt/archiver"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -89,11 +90,11 @@ func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clie
 	files = append(files, stignoreFilenames...)
 
 	appLogsPath := filepath.Join(config.GetAppHome(dev.Namespace, dev.Name), "okteto.log")
-	if model.FileExists(appLogsPath) {
+	if filesystem.FileExists(appLogsPath) {
 		files = append(files, appLogsPath)
 	}
 
-	if model.FileExists(syncthing.GetLogFile(dev.Namespace, dev.Name)) {
+	if filesystem.FileExists(syncthing.GetLogFile(dev.Namespace, dev.Name)) {
 		files = append(files, syncthing.GetLogFile(dev.Namespace, dev.Name))
 	}
 	if podPath != "" {

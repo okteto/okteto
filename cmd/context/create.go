@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/login"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -342,7 +343,7 @@ func (c ContextCommand) getUserContext(ctx context.Context) (*types.UserContext,
 }
 
 func (*ContextCommand) initEnvVars() {
-	if model.FileExists(".env") {
+	if filesystem.FileExists(".env") {
 		if err := godotenv.Load(); err != nil {
 			oktetoLog.Infof("error loading .env file: %s", err.Error())
 		}

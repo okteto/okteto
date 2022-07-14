@@ -24,6 +24,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -268,12 +269,12 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 	}
 
 	joinPath := filepath.Join(context, dockerfile)
-	if !model.FileExistsAndNotDir(joinPath) {
+	if !filesystem.FileExistsAndNotDir(joinPath) {
 		oktetoLog.Warning(fmt.Sprintf(warningDockerfilePath, svcName, dockerfile, context))
 		return dockerfile
 	}
 
-	if joinPath != dockerfile && model.FileExistsAndNotDir(dockerfile) {
+	if joinPath != dockerfile && filesystem.FileExistsAndNotDir(dockerfile) {
 		oktetoLog.Warning(fmt.Sprintf(doubleDockerfileWarning, svcName, context, dockerfile))
 	}
 
