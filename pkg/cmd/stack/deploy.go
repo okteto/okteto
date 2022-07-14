@@ -221,7 +221,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 				model.StackNameLabel:         s.Name,
 				model.StackEndpointNameLabel: serviceName,
 			}
-			for k, v := range s.Services[serviceName].Labels {
+			for k, v := range endpoint.Labels {
 				endpointLabels[k] = v
 			}
 			endpoint.Labels = endpointLabels
