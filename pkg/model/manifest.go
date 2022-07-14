@@ -789,6 +789,20 @@ func (manifest *Manifest) ExpandEnvVars() error {
 		}
 	}
 
+	for devName, devInfo := range manifest.Dev {
+		if _, ok := manifest.Build[devName]; ok && devInfo.Image == nil && devInfo.Autocreate {
+			devInfo.Image = &BuildInfo{
+				Name: fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(devName, "-", "_"))),
+			}
+		}
+		if devInfo.Image != nil {
+			devInfo.Image.Name, err = ExpandEnv(devInfo.Image.Name, false)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 

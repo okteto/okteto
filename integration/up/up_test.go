@@ -31,7 +31,6 @@ import (
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 )
 
 var (
@@ -68,7 +67,8 @@ func TestMain(m *testing.M) {
 		log.Printf("kubectl is not in the path: %s", err)
 		os.Exit(1)
 	}
-	token = okteto.Context().Token
+	token = integration.GetToken()
+
 	exitCode := m.Run()
 	os.Exit(exitCode)
 }

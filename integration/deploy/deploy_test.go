@@ -24,8 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 )
 
 var (
@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	token = okteto.Context().Token
+	token = integration.GetToken()
 	exitCode := m.Run()
 
 	os.Exit(exitCode)

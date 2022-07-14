@@ -77,7 +77,7 @@ func TestMain(m *testing.M) {
 	if runtime.GOOS == "windows" {
 		kubectlBinary = "kubectl.exe"
 	}
-	token = okteto.Context().Token
+	token = integration.GetToken()
 	if _, err := exec.LookPath(kubectlBinary); err != nil {
 		log.Printf("kubectl is not in the path: %s", err)
 		os.Exit(1)
