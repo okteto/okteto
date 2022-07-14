@@ -192,3 +192,23 @@ func (i Ingress) GetLabels() map[string]string {
 	}
 	return i.V1Beta1.Labels
 }
+
+// Deploy creates or updates an ingress
+func (iClient *Client) Deploy(ctx context.Context, ingress *Ingress) error {
+	if _, err := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
+		if !oktetoErrors.IsNotFound(err) {
+			return fmt.Errorf("error getting ingress '%s': %s", ingress.GetName(), err.Error())
+		}
+		if err := iClient.Create(ctx, ingress); err != nil {
+			return err
+		}
+		oktetoLog.Success("Endpoint '%s' created", ingress.GetName())
+		return nil
+	}
+
+	if err := iClient.Update(ctx, ingress); err != nil {
+		return err
+	}
+	oktetoLog.Success("Endpoint '%s' updated", ingress.GetName())
+	return nil
+}

@@ -478,27 +478,9 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 
 		// deploy endpoits if any
 		if opts.Manifest.Deploy.Endpoints != nil {
-			if endpoint, ok := opts.Manifest.Deploy.Endpoints[""]; ok {
-				opts.Manifest.Deploy.Endpoints[opts.Name] = endpoint
-				delete(opts.Manifest.Deploy.Endpoints, "")
-			}
-			c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
-			if err != nil {
+			if err := dc.deployEndpoints(ctx, opts); err != nil {
 				exit <- err
 				return
-			}
-			iClient, err := ingresses.GetClient(ctx, c)
-			if err != nil {
-				exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
-				return
-			}
-
-			ingressesToDeploy := model.TranslateEndpointsToIngress(opts.Manifest)
-			for _, ingress := range ingressesToDeploy {
-				if err := dc.deployIngress(ctx, ingress, iClient); err != nil {
-					exit <- err
-					return
-				}
 			}
 		}
 
@@ -598,25 +580,36 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 	return nil
 }
 
-func (dc *DeployCommand) deployIngress(ctx context.Context, ingress *ingresses.Ingress, c *ingresses.Client) error {
+func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) error {
 	oktetoLog.SetStage("Endpoints configuration")
 	defer oktetoLog.SetStage("")
 
-	if _, err := c.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
-		if !oktetoErrors.IsNotFound(err) {
-			return fmt.Errorf("error getting ingress '%s': %s", ingress.GetName(), err.Error())
-		}
-		if err := c.Create(ctx, ingress); err != nil {
-			return err
-		}
-		oktetoLog.Success("Endpoint '%s' created", ingress.GetName())
-		return nil
-	}
-
-	if err := c.Update(ctx, ingress); err != nil {
+	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
 		return err
 	}
-	oktetoLog.Success("Endpoint '%s' updated", ingress.GetName())
+
+	iClient, err := ingresses.GetClient(ctx, c)
+	if err != nil {
+		return fmt.Errorf("error getting ingress client: %s", err.Error())
+	}
+
+	translateOptions := &ingresses.TranslateOptions{
+		Namespace:      opts.Manifest.Namespace,
+		DeploymentName: opts.Manifest.Name,
+		IsCompose:      opts.Manifest.Deploy.ComposeSection != nil,
+	}
+
+	for name, endpoint := range opts.Manifest.Deploy.Endpoints {
+		if name == "" {
+			name = translateOptions.DeploymentName
+		}
+		ingress := ingresses.TranslateEndpoint(name, endpoint, translateOptions)
+		if err := iClient.Deploy(ctx, ingress); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

@@ -434,6 +434,7 @@ func translateSvcIngress(ingressName, svcIngress string, svcPort int32, s *model
 	}
 }
 
+// TODO: move to ingress
 func translateServiceIngressV1(ingressName, svcIngress string, svcPort int32, s *model.Stack) *networkingv1.Ingress {
 	pathType := networkingv1.PathTypeImplementationSpecific
 	return &networkingv1.Ingress{
