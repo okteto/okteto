@@ -77,7 +77,7 @@ func (h *Handler) AuthorizationURL() (string, error) {
 
 	authorizationURL, err := url.Parse(fmt.Sprintf("%s/auth/authorization-code", h.baseURL))
 	if err != nil {
-		return "", fmt.Errorf("failed to build authorizationURL: %v", err)
+		return "", fmt.Errorf("failed to build authorizationURL: %w", err)
 	}
 
 	authorizationURL.RawQuery = params.Encode()
