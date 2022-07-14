@@ -70,6 +70,7 @@ func Down() *cobra.Command {
 				}
 
 				oktetoLog.Success("All development containers are deactivated")
+				return nil
 			} else {
 				devName := ""
 				if len(args) == 1 {
