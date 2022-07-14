@@ -174,7 +174,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 					ingress := ingresses.TranslateEndpoint(ingressName, endpoint, translateOptions)
 
-					// check for labels colision in the case of a compose - before creation or update (deploy)
+					// check for labels collision in the case of a compose - before creation or update (deploy)
 					if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
 						if old.GetLabels()[model.StackNameLabel] == "" {
 							oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName())
@@ -231,7 +231,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 				Namespace: s.Namespace,
 			}
 			ingress := ingresses.TranslateEndpoint(serviceName, endpoint, translateOptions)
-			// check for labels colision in the case of a compose - before creation or update (deploy)
+			// check for labels collision in the case of a compose - before creation or update (deploy)
 			if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
 				if old.GetLabels()[model.StackNameLabel] == "" {
 					spinner.Stop()

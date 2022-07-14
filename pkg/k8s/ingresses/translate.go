@@ -85,7 +85,7 @@ func setLabels(endpoint model.Endpoint, opts *TranslateOptions) map[string]strin
 }
 
 func setAnnotations(endpoint model.Endpoint) map[string]string {
-	// init with defaul annotation
+	// init with default annotation
 	annotations := model.Annotations{
 		model.OktetoIngressAutoGenerateHost: "true",
 	}
