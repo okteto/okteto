@@ -279,7 +279,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 	oktetoLog.Debug("found okteto manifest")
-	if deployOptions.Manifest.Deploy == nil || (deployOptions.Manifest.Deploy.Commands == nil && deployOptions.Manifest.Deploy.ComposeSection == nil && deployOptions.Manifest.Deploy.Divert == nil) {
+
+	if deployOptions.Manifest.Deploy == nil {
 		return oktetoErrors.ErrManifestFoundButNoDeployCommands
 	}
 	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy.ComposeSection == nil {
