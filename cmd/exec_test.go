@@ -84,7 +84,7 @@ func TestGetDevFromArgs(t *testing.T) {
 	}
 }
 
-func TestXxx(t *testing.T) {
+func TestGetCommandFromArgs(t *testing.T) {
 	tests := []struct {
 		name         string
 		manifest     *model.Manifest

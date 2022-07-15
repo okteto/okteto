@@ -748,8 +748,8 @@ func TestHasDev(t *testing.T) {
 			devSection: ManifestDevs{
 				"autocreate": &Dev{},
 			},
-			devName: "autocreate",
-			out:     true,
+			devName: "not-autocreate",
+			out:     false,
 		},
 	}
 	for _, tt := range tests {
