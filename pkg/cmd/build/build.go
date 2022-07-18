@@ -274,7 +274,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 		return dockerfile
 	}
 
-	if joinPath != dockerfile && filesystem.FileExistsAndNotDir(dockerfile) {
+	if joinPath != filepath.Clean(dockerfile) && filesystem.FileExistsAndNotDir(dockerfile) {
 		oktetoLog.Warning(fmt.Sprintf(doubleDockerfileWarning, svcName, context, dockerfile))
 	}
 

@@ -334,6 +334,15 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			dockerfilesCreated: []string{"Dockerfile"},
 			expectedError:      "",
 		},
+		{
+			name:               "dockerfile in root, not showing 2 dockerfiles warning",
+			svcName:            "t6",
+			dockerfile:         "./Dockerfile",
+			fileExpected:       "Dockerfile",
+			optionalContext:    ".",
+			dockerfilesCreated: []string{"Dockerfile"},
+			expectedError:      "",
+		},
 	}
 
 	for _, tt := range tests {
