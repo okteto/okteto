@@ -29,8 +29,7 @@ const (
   </svg>`)
 
 	successContent = template.HTML(`<h1>You are now logged in!</h1>
-  <h2>Your session is now active in the Okteto CLI</h2>
-  <h2>Close this window and go back to your terminal</h2>`)
+  <h2>Your session is now active in the Okteto CLI.<br>Close this window and go back to your terminal</h2>`)
 )
 
 func successData() *templateData {
