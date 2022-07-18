@@ -54,6 +54,12 @@ func Auth(ctx context.Context, code, url string) (*types.User, error) {
 		if oktetoErrors.IsErrGitHubNotVerifiedEmail(err) {
 			return nil, fmt.Errorf("Your GitHub account doesn't have a verified primary email address. Please check your GitHub account email settings and try again")
 		}
+		// This error is sent at the mutation with Metadata. Our current client for GraphQL does not support this kind of errors,
+		// so the information regarding metada is lost here. Message is still comunicated so we can check the error
+		// https://github.com/okteto/okteto/issues/2926
+		if IsErrGithubMissingBusinessEmail(err) {
+			return nil, err
+		}
 		return nil, fmt.Errorf("authentication error, please try again")
 	}
 
