@@ -90,7 +90,6 @@ func TestGetCommandFromArgs(t *testing.T) {
 		manifest     *model.Manifest
 		args         []string
 		expectedArgs []string
-		expectedErr  error
 	}{
 		{
 			name: "first arg is on dev section",
@@ -101,7 +100,6 @@ func TestGetCommandFromArgs(t *testing.T) {
 			},
 			args:         []string{"autocreate", "sh"},
 			expectedArgs: []string{"sh"},
-			expectedErr:  nil,
 		},
 		{
 			name: "only one argument/same name as dev",
@@ -112,7 +110,6 @@ func TestGetCommandFromArgs(t *testing.T) {
 			},
 			args:         []string{"sh"},
 			expectedArgs: []string{"sh"},
-			expectedErr:  nil,
 		},
 		{
 			name: "several argument/first argument same name as dev",
@@ -123,7 +120,6 @@ func TestGetCommandFromArgs(t *testing.T) {
 			},
 			args:         []string{"sh", "autocreate"},
 			expectedArgs: []string{"autocreate"},
-			expectedErr:  nil,
 		},
 		{
 			name: "dev is not found ",
@@ -135,7 +131,6 @@ func TestGetCommandFromArgs(t *testing.T) {
 			},
 			args:         []string{"not-api", "autocreate"},
 			expectedArgs: []string{"not-api", "autocreate"},
-			expectedErr:  utils.ErrInvalidOption,
 		},
 	}
 	for _, tt := range tests {
