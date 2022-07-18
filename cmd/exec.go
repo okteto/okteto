@@ -35,11 +35,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// execFlags is the input of the user to exec command
+type execFlags struct {
+	manifestPath     string
+	namespace        string
+	k8sContext       string
+	commandToExecute []string
+}
+
 // Exec executes a command on the CND container
 func Exec() *cobra.Command {
-	var devPath string
-	var namespace string
-	var k8sContext string
+	execFlags := &execFlags{}
 
 	cmd := &cobra.Command{
 		Use:   "exec <command>",
@@ -48,20 +54,21 @@ func Exec() *cobra.Command {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			manifestOpts := contextCMD.ManifestOptions{Filename: devPath, Namespace: namespace, K8sContext: k8sContext}
+			manifestOpts := contextCMD.ManifestOptions{Filename: execFlags.manifestPath, Namespace: execFlags.namespace, K8sContext: execFlags.k8sContext}
 			manifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				return err
 			}
 
-			dev, err := utils.GetDevFromManifest(manifest, "")
+			dev, err := getDevFromArgs(manifest, args)
 			if err != nil {
 				return err
 			}
+			execFlags.commandToExecute = getCommandToRunFromArgs(manifest, args)
 
 			t := time.NewTicker(1 * time.Second)
 			iter := 0
-			err = executeExec(ctx, dev, args)
+			err = executeExec(ctx, dev, execFlags.commandToExecute)
 			for oktetoErrors.IsTransient(err) {
 				if iter == 0 {
 					oktetoLog.Yellow("Connection lost to your development container, reconnecting...")
@@ -69,10 +76,13 @@ func Exec() *cobra.Command {
 				iter++
 				iter = iter % 10
 				<-t.C
-				err = executeExec(ctx, dev, args)
+				err = executeExec(ctx, dev, execFlags.commandToExecute)
 			}
 
-			analytics.TrackExec(err == nil)
+			analytics.TrackExec(&analytics.TrackExecMetadata{
+				FirstArgIsDev: manifest.Dev.HasDev(args[0]),
+				Success:       err == nil,
+			})
 
 			if oktetoErrors.IsNotFound(err) {
 				return oktetoErrors.UserError{
@@ -86,14 +96,16 @@ func Exec() *cobra.Command {
 		Args: utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#exec"),
 	}
 
-	cmd.Flags().StringVarP(&devPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
-	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "namespace where the exec command is executed")
-	cmd.Flags().StringVarP(&k8sContext, "context", "c", "", "context where the exec command is executed")
+	cmd.Flags().StringVarP(&execFlags.manifestPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
+	cmd.Flags().StringVarP(&execFlags.namespace, "namespace", "n", "", "namespace where the exec command is executed")
+	cmd.Flags().StringVarP(&execFlags.k8sContext, "context", "c", "", "context where the exec command is executed")
 
 	return cmd
 }
 
 func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
+	sp := utils.NewSpinner("Preparing your container")
+	sp.Start()
 
 	wrapped := []string{"sh", "-c"}
 	wrapped = append(wrapped, args...)
@@ -166,9 +178,38 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		oktetoLog.Infof("executing remote command over SSH port %d", dev.RemotePort)
 
 		dev.LoadRemote(ssh.GetPublicKey())
-
+		sp.Stop()
 		return ssh.Exec(ctx, dev.Interface, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 	}
-
+	sp.Stop()
 	return exec.Exec(ctx, c, cfg, dev.Namespace, pod.Name, dev.Container, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
+}
+
+func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error) {
+	sp := utils.NewSpinner("Selecting dev manifest")
+	sp.Start()
+	defer sp.Stop()
+
+	var dev *model.Dev
+	var err error
+	if len(args) == 1 || !manifest.Dev.HasDev(args[0]) {
+		dev, err = utils.GetDevFromManifest(manifest, "")
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		sp.Stop()
+		dev, err = utils.GetDevFromManifest(manifest, args[0])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return dev, nil
+}
+
+func getCommandToRunFromArgs(manifest *model.Manifest, args []string) []string {
+	if len(args) > 1 && manifest.Dev.HasDev(args[0]) {
+		return args[1:]
+	}
+	return args
 }

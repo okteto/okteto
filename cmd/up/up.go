@@ -836,18 +836,17 @@ func printDisplayContext(up *upContext) {
 }
 
 func setBuildEnvVars(ctx context.Context, m *model.Manifest) error {
-	sp := utils.NewSpinner("Loading build env vars...")
-	sp.Start()
-
 	builder := buildv2.NewBuilderFromScratch()
 	svcsToBuild, err := builder.GetServicesToBuild(ctx, m, []string{})
 	if err != nil {
 		return err
 	}
+	if len(svcsToBuild) == 0 {
+		return nil
+	}
 	buildOptions := &types.BuildOptions{
 		CommandArgs: svcsToBuild,
 		Manifest:    m,
 	}
-	sp.Stop()
 	return builder.Build(ctx, buildOptions)
 }
