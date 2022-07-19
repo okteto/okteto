@@ -213,7 +213,7 @@
                 -H "Authorization: Bearer ${GITHUB_TOKEN}" \
                 -H "Accept: application/vnd.github.v3+json" \
                 -d "{\"tag_name\":\"$RELEASE_TAG\",\"previous_tag_name\":\"$previous_version\"}" \
-                "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/generate-notes" | jq .body)
+                "https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/generate-notes" | jq -r .body)
 
         printf "RELEASE NOTES:\n%s" "${notes}"
 
@@ -231,7 +231,7 @@
                 -r "${REPO_NAME}" \
                 -c "${RELEASE_COMMIT}" \
                 -token "${GITHUB_TOKEN}" \
-                -b "$(printf "${notes}")" \
+                -b "$(printf "%s" "${notes}")" \
                 -replace \
                 -prerelease="${prerelease}" \
                 "${RELEASE_TAG}" \
