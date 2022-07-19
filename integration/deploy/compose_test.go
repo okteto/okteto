@@ -101,13 +101,13 @@ EXPOSE 2931`
 	oktetoManifestV2WithCompose = `build:
   app:
     context: app
-    image: okteto.dev/api:okteto
+    image: okteto.dev/app:okteto
 deploy:
   compose: docker-compose.yml
 `
 	composeTemplateByManifest2 = `services:
 app:
-  image: okteto.dev/api:okteto
+  image: okteto.dev/app:okteto
   entrypoint: python -m http.server 8080
   ports:
 	- 8080
