@@ -231,7 +231,7 @@
                 -r "${REPO_NAME}" \
                 -c "${RELEASE_COMMIT}" \
                 -token "${GITHUB_TOKEN}" \
-                -b "${notes}" \
+                -b "$(printf "${notes}")" \
                 -replace \
                 -prerelease="${prerelease}" \
                 "${RELEASE_TAG}" \
