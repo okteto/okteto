@@ -30,6 +30,9 @@ func RunOktetoKubeconfig(oktetoPath, oktetoHome string) error {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
 	}
 
+	if v := os.Getenv(model.OktetoTokenEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, v))
+	}
 	if oktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, oktetoHome))
 	}
