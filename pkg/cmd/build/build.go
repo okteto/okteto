@@ -239,10 +239,12 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		if len(b.VolumesToInclude) > 0 {
 			b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoImageTagWithVolumes)
 		}
-
 	}
 
-	file := extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
+	file := ""
+	if b.Context != "" && b.Dockerfile != "" {
+		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
+	}
 
 	opts := &types.BuildOptions{
 		CacheFrom: b.CacheFrom,

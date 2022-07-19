@@ -64,3 +64,10 @@ func TestMain(m *testing.M) {
 
 	os.Exit(exitCode)
 }
+
+func writeFile(filepath, content string) error {
+	if err := os.WriteFile(filepath, []byte(content), 0644); err != nil {
+		return err
+	}
+	return nil
+}
