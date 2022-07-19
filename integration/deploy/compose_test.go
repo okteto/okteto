@@ -97,6 +97,40 @@ EXPOSE 2931`
     proxy_pass http://$FLASK_SERVER_ADDR;
   }
 }`
+
+	oktetoManifestV2WithCompose = `build:
+  app:
+    context: app
+    image: okteto.dev/app:okteto
+deploy:
+  compose: docker-compose.yml
+`
+	composeTemplateByManifest2 = `services:
+app:
+  image: okteto.dev/app:okteto
+  entrypoint: python -m http.server 8080
+  ports:
+	- 8080
+	- 8913
+nginx:
+  image: nginx
+  volumes:
+	- ./nginx/nginx.conf:/tmp/nginx.conf
+  entrypoint: /bin/bash -c "envsubst < /tmp/nginx.conf > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+  environment:
+	- FLASK_SERVER_ADDR=app:8080
+  ports:
+	- 81:80
+  depends_on:
+	app:
+	  condition: service_started
+  container_name: web-svc
+  healthcheck:
+	test: service nginx status || exit 1
+	interval: 45s
+	timeout: 5m
+	retries: 5
+	start_period: 30s`
 )
 
 // TestDeployPipelineFromCompose tests the following scenario:
@@ -273,6 +307,99 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+}
+
+// TestDeployPipelineFromCompose tests the following scenario:
+// - Deploying a compose manifest locally from an okteto manifestv2
+// - The
+// - Depends on
+// - Test secret injection
+// - Test that port from image is imported
+func TestDeployComposeFromOktetoManifest(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	require.NoError(t, createComposeScenario(dir))
+	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), oktetoManifestV2WithCompose))
+
+	testNamespace := integration.GetTestNamespace("TestDeployComposeByManifest", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	// Test that the nginx image has been created correctly
+	nginxDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "nginx", c)
+	require.NoError(t, err)
+	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto-with-volume-mounts", okteto.Context().Registry, testNamespace, filepath.Base(dir))
+	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
+
+	// Test that the nginx image has been created correctly
+	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
+	require.NoError(t, err)
+	appImageDev := fmt.Sprintf("%s/%s/app:okteto", okteto.Context().Registry, testNamespace)
+	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
+
+	// Test that the k8s services has been created correctly
+	appService, err := integration.GetService(context.Background(), testNamespace, "app", c)
+	require.NoError(t, err)
+	require.Len(t, appService.Spec.Ports, 3)
+	for _, p := range appService.Spec.Ports {
+		require.Contains(t, []int32{8080, 8913, 2931}, p.Port)
+	}
+	nginxService, err := integration.GetService(context.Background(), testNamespace, "nginx", c)
+	require.NoError(t, err)
+	require.Len(t, nginxService.Spec.Ports, 2)
+	for _, p := range nginxService.Spec.Ports {
+		require.Contains(t, []int32{80, 81}, p.Port)
+	}
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+}
+
+func createComposeScenarioByManifest(dir string) error {
+	if err := os.Mkdir(filepath.Join(dir, "nginx"), 0700); err != nil {
+		return err
+	}
+
+	nginxPath := filepath.Join(dir, "nginx", "nginx.conf")
+	nginxContent := []byte(nginxConf)
+	if err := os.WriteFile(nginxPath, nginxContent, 0644); err != nil {
+		return err
+	}
+
+	if err := createAppDockerfile(dir); err != nil {
+		return err
+	}
+
+	composePath := filepath.Join(dir, "docker-compose.yml")
+	composeContent := []byte(composeTemplateByManifest2)
+	if err := os.WriteFile(composePath, composeContent, 0644); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func createComposeScenario(dir string) error {

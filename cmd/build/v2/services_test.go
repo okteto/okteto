@@ -19,6 +19,7 @@ import (
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -127,4 +128,62 @@ func TestNoServiceBuiltWithSubset(t *testing.T) {
 	//should not throw error
 	assert.NoError(t, err)
 	assert.Equal(t, 0, len(toBuild))
+}
+
+func TestGetToBuildTag(t *testing.T) {
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
+	tests := []struct {
+		name         string
+		buildInfo    *model.BuildInfo
+		manifestName string
+		svcName      string
+		output       string
+	}{
+		{
+			name: "image is set",
+			buildInfo: &model.BuildInfo{
+				Image: "nginx",
+			},
+			output: "nginx",
+		},
+		{
+			name: "image inferred without volume mounts",
+			buildInfo: &model.BuildInfo{
+				Dockerfile: "Dockerfile",
+				Context:    ".",
+			},
+			manifestName: "test",
+			svcName:      "test",
+			output:       "okteto.dev/test-test:okteto",
+		},
+		{
+			name: "image inferred with volume mounts",
+			buildInfo: &model.BuildInfo{
+				Image: "nginx",
+				VolumesToInclude: []model.StackVolume{
+					{
+						LocalPath:  "",
+						RemotePath: "",
+					},
+				},
+			},
+			manifestName: "test",
+			svcName:      "test",
+			output:       "okteto.dev/test-test:okteto-with-volume-mounts",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getToBuildTag(tt.manifestName, tt.svcName, tt.buildInfo)
+			assert.Equal(t, tt.output, result)
+		})
+	}
 }

@@ -18,13 +18,11 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
-	"github.com/okteto/okteto/pkg/types"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -76,18 +74,18 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 	if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
 		buildInfo.Image = ""
 	}
-	opts := build.OptsFromBuildInfo(manifest.Name, service, buildInfo, &types.BuildOptions{})
-	if opts.Tag == "" {
+	tag := getToBuildTag(manifest.Name, service, buildInfo)
+	if tag == "" {
 		return fmt.Errorf("error getting the image name for the service '%s'. Please specify the full name of the image when using a cluster that doesn't have Okteto installed", service)
 	}
 
-	imageWithDigest, err := bc.Registry.GetImageTagWithDigest(opts.Tag)
+	imageWithDigest, err := bc.Registry.GetImageTagWithDigest(tag)
 	if oktetoErrors.IsNotFound(err) {
 		oktetoLog.Debug("image not found, building image")
 		ch <- service
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("error checking image at registry %s: %v", opts.Tag, err)
+		return fmt.Errorf("error checking image at registry %s: %v", tag, err)
 	}
 	oktetoLog.Debug("Skipping build for image for service")
 
@@ -100,4 +98,21 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 		}
 	}
 	return nil
+}
+
+func getToBuildTag(manifestName, svcName string, b *model.BuildInfo) string {
+	targetRegistry := okteto.DevRegistry
+	switch {
+	case shouldAddVolumeMounts(b) && !okteto.IsOkteto():
+		return ""
+	case (shouldBuildFromDockerfile(b) && shouldAddVolumeMounts(b)) || shouldAddVolumeMounts(b):
+		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoImageTagWithVolumes)
+	case shouldBuildFromDockerfile(b):
+		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoDefaultImageTag)
+	case b.Image != "":
+		return b.Image
+	default:
+		oktetoLog.Infof("could not build service %s, due to not having Dockerfile defined or volumes to include", svcName)
+	}
+	return ""
 }
