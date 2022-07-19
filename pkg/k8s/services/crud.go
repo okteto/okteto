@@ -39,7 +39,7 @@ func Deploy(ctx context.Context, s *apiv1.Service, c kubernetes.Interface) error
 		return fmt.Errorf("error getting kubernetes service: %s", err)
 	}
 
-	if old.Name == "" {
+	if old == nil || old.Name == "" {
 		oktetoLog.Infof("creating service '%s'", s.Name)
 		_, err = c.CoreV1().Services(s.Namespace).Create(ctx, s, metav1.CreateOptions{})
 		if err != nil {
@@ -64,6 +64,11 @@ func Deploy(ctx context.Context, s *apiv1.Service, c kubernetes.Interface) error
 // Get returns a kubernetes service by the name, or an error if it doesn't exist
 func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*apiv1.Service, error) {
 	return c.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+}
+
+// Update updates a k8s service
+func Update(ctx context.Context, namespace string, svc *apiv1.Service, c kubernetes.Interface) (*apiv1.Service, error) {
+	return c.CoreV1().Services(namespace).Update(ctx, svc, metav1.UpdateOptions{})
 }
 
 // List returns the list of services

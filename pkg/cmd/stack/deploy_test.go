@@ -20,12 +20,15 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -773,6 +776,94 @@ func Test_getEndpointsToDeployFromServicesToDeploy(t *testing.T) {
 			if !reflect.DeepEqual(resultSet, tt.expected) {
 				t.Errorf("expected %v, got %v", tt.expected, result)
 			}
+		})
+	}
+}
+
+func TestDeployK8sService(t *testing.T) {
+	tests := []struct {
+		name              string
+		k8sObjects        []runtime.Object
+		stack             *model.Stack
+		expectedNameLabel string
+	}{
+		{
+			name: "skip service",
+			k8sObjects: []runtime.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "ns",
+						Labels: map[string]string{
+							model.StackNameLabel: "hola",
+						},
+					},
+				},
+			},
+			stack: &model.Stack{
+				Namespace: "ns",
+				Name:      "test",
+				Services: map[string]*model.Service{
+					"test": {
+						Labels: map[string]string{
+							"ey": "a",
+						},
+					},
+				},
+			},
+			expectedNameLabel: "hola",
+		},
+		{
+			name: "update service",
+			k8sObjects: []runtime.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "ns",
+						Labels: map[string]string{
+							model.StackNameLabel: "test",
+						},
+					},
+				},
+			},
+			stack: &model.Stack{
+				Namespace: "ns",
+				Name:      "test",
+				Services: map[string]*model.Service{
+					"test": {
+						Labels: map[string]string{
+							"ey": "a",
+						},
+					},
+				},
+			},
+			expectedNameLabel: "test",
+		},
+		{
+			name:       "create new service",
+			k8sObjects: []runtime.Object{},
+			stack: &model.Stack{
+				Namespace: "ns",
+				Name:      "test",
+				Services: map[string]*model.Service{
+					"test": {
+						Labels: map[string]string{
+							"ey": "a",
+						},
+					},
+				},
+			},
+			expectedNameLabel: "test",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClient := fake.NewSimpleClientset(tt.k8sObjects...)
+			err := deployK8sService(context.Background(), "test", tt.stack, fakeClient, utils.NewSpinner(""))
+			assert.NoError(t, err)
+			svc, _ := services.Get(context.Background(), "test", "ns", fakeClient)
+			assert.Equal(t, svc.ObjectMeta.Labels[model.StackNameLabel], tt.expectedNameLabel)
 		})
 	}
 }

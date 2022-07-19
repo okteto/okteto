@@ -131,8 +131,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 		for _, name := range options.ServicesToDeploy {
 			if len(s.Services[name].Ports) > 0 {
-				svcK8s := translateService(name, s)
-				if err := services.Deploy(ctx, svcK8s, c); err != nil {
+				if err := deployK8sService(ctx, name, s, c, spinner); err != nil {
 					exit <- err
 					return
 				}
@@ -476,6 +475,43 @@ func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.St
 		return true
 	}
 	return false
+}
+
+func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface, spinner *utils.Spinner) error {
+	svcK8s := translateService(svcName, s)
+	old, err := services.Get(ctx, svcName, s.Namespace, c)
+	if err != nil {
+		if !oktetoErrors.IsNotFound(err) {
+			return fmt.Errorf("error getting ingress '%s': %w", svcName, err)
+		}
+		if err := services.Deploy(ctx, svcK8s, c); err != nil {
+			return err
+		}
+		spinner.Stop()
+		oktetoLog.Success("Endpoint '%s' created", svcName)
+		spinner.Start()
+		return nil
+	}
+
+	if old.GetLabels()[model.StackNameLabel] == "" {
+		oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", svcName)
+		return nil
+	}
+
+	if old.GetLabels()[model.StackNameLabel] != svcK8s.GetLabels()[model.StackNameLabel] {
+		spinner.Stop()
+		oktetoLog.Warning("skipping creation of kubernetes '%s' due to name collision with endpoint in stack '%s'", svcName, old.GetLabels()[model.StackNameLabel])
+		spinner.Start()
+		return nil
+	}
+
+	if _, err := services.Update(ctx, s.Namespace, svcK8s, c); err != nil {
+		return err
+	}
+	spinner.Stop()
+	oktetoLog.Success("Endpoint '%s' updated", svcName)
+	spinner.Start()
+	return nil
 }
 
 func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface, spinner *utils.Spinner) (bool, error) {
