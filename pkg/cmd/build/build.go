@@ -241,7 +241,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		}
 	}
 
-	file := ""
+	file := b.Dockerfile
 	if b.Context != "" && b.Dockerfile != "" {
 		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
 	}
