@@ -231,7 +231,7 @@ func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string
 		return err
 	}
 
-	ctxOptions = &ContextOptions{
+	ctxOptions := &ContextOptions{
 		Context:   ctxResource.Context,
 		Namespace: ctxResource.Namespace,
 		Show:      true,
