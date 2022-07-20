@@ -661,7 +661,9 @@ func deployIngress(ctx context.Context, ingress *ingresses.Ingress, c *ingresses
 	}
 
 	if old.GetLabels()[model.StackNameLabel] == "" {
-		oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", ingress.GetName())
+		spinner.Stop()
+		oktetoLog.Warning("skipping deploy of ingress %s due to name collision: the ingress '%s' was running before deploying your compose", ingress.GetName(), ingress.GetName())
+		spinner.Start()
 		return nil
 	}
 
