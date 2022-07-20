@@ -103,8 +103,8 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 func getToBuildTag(manifestName, svcName string, b *model.BuildInfo) string {
 	targetRegistry := okteto.DevRegistry
 	switch {
-	case shouldAddVolumeMounts(b) && !okteto.IsOkteto():
-		return ""
+	case !okteto.IsOkteto():
+		return b.Image
 	case (shouldBuildFromDockerfile(b) && shouldAddVolumeMounts(b)) || shouldAddVolumeMounts(b):
 		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoImageTagWithVolumes)
 	case shouldBuildFromDockerfile(b):
