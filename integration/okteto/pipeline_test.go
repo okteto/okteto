@@ -28,6 +28,7 @@ import (
 const (
 	githubHTTPSURL = "https://github.com"
 	pipelineRepo   = "okteto/movies"
+	pipelineBranch = "cli-e2e"
 )
 
 func TestPipelineCommand(t *testing.T) {
@@ -49,7 +50,7 @@ func TestPipelineCommand(t *testing.T) {
 	pipelineOptions := &commands.DeployPipelineOptions{
 		Namespace:  testNamespace,
 		Repository: fmt.Sprintf("%s/%s", githubHTTPSURL, pipelineRepo),
-		Branch:     "cli-e2e",
+		Branch:     pipelineBranch,
 		Wait:       true,
 		OktetoHome: dir,
 		Token:      token,
