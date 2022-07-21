@@ -363,6 +363,9 @@ func (ph *proxyHandler) translateStatefulSetSpec(body map[string]json.RawMessage
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
+	for _, pvc := range spec.VolumeClaimTemplates {
+		labels.SetInMetadata(&pvc.ObjectMeta, model.DeployedByLabel, ph.Name)
+	}
 	ph.applyDivert(&spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
@@ -453,6 +456,21 @@ func (ph *proxyHandler) translateReplicaSetSpec(body map[string]json.RawMessage)
 }
 
 func (ph *proxyHandler) applyDivert(podSpec *apiv1.PodSpec) {
+	if ph.DivertedNamespace == "" {
+		return
+	}
+	if podSpec.DNSConfig == nil {
+		podSpec.DNSConfig = &apiv1.PodDNSConfig{}
+	}
+	if podSpec.DNSConfig.Searches == nil {
+		podSpec.DNSConfig.Searches = []string{}
+	}
+	searches := []string{fmt.Sprintf("%s.svc.cluster.local", ph.DivertedNamespace)}
+	searches = append(searches, podSpec.DNSConfig.Searches...)
+	podSpec.DNSConfig.Searches = searches
+}
+
+func (ph *proxyHandler) translatePvcs(podSpec *apiv1.PodSpec) {
 	if ph.DivertedNamespace == "" {
 		return
 	}
