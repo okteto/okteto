@@ -36,7 +36,7 @@ func TestPreviewCommand(t *testing.T) {
 	previewOptions := &commands.DeployPreviewOptions{
 		Namespace:  testNamespace,
 		Repository: fmt.Sprintf("%s/%s", githubHTTPSURL, pipelineRepo),
-		Branch:     "cli-e2e",
+		Branch:     pipelineBranch,
 		Wait:       true,
 		OktetoHome: dir,
 		Token:      token,
@@ -44,6 +44,18 @@ func TestPreviewCommand(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeployPreview(oktetoPath, previewOptions))
 
 	contentURL := fmt.Sprintf("https://movies-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
+
+	//test `okteo pipeline deploy --wait` works in the context of a preview environment
+	pipelineOptions := &commands.DeployPipelineOptions{
+		Namespace:  testNamespace,
+		Repository: fmt.Sprintf("%s/%s", githubHTTPSURL, pipelineRepo),
+		Branch:     pipelineBranch,
+		Wait:       true,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoDeployPipeline(oktetoPath, pipelineOptions))
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
 
 	previewDestroyOptions := &commands.DestroyPreviewOptions{
