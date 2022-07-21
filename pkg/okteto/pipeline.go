@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/errors"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -412,7 +411,7 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name string) (m
 	}
 
 	if err := query(ctx, &queryStruct, variables, c.client); err != nil {
-		if errors.IsNotFound(err) {
+		if oktetoErrors.IsNotFound(err) {
 			okClient := OktetoClient{client: c.client}
 			return okClient.GetResourcesStatusFromPreview(ctx, Context().Namespace, name)
 		}
