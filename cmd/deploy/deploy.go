@@ -285,7 +285,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
-	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
+	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
+		return err
+	}
 
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
@@ -322,7 +324,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return fmt.Errorf("'dependencies' is only supported in clusters that have Okteto installed")
 	}
 
-	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
+	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
+		return err
+	}
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
 	dc.Proxy.Start()
 
@@ -484,7 +488,7 @@ func updateConfigMapStatus(ctx context.Context, cfg *corev1.ConfigMap, c kuberne
 	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
 }
 
-func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) {
+func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
 	if deployOptions.Manifest.Context == "" {
 		deployOptions.Manifest.Context = okteto.Context().Name
 	}
@@ -519,10 +523,14 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 			}
 		}
 		if len(deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo) > 0 {
+			if err := stack.ValidateDefinedServices(deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy); err != nil {
+				return err
+			}
 			deployOptions.servicesToDeploy = stack.AddDependentServicesIfNotPresent(ctx, deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy, c)
 			deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo[0].ServicesToDeploy = deployOptions.servicesToDeploy
 		}
 	}
+	return nil
 }
 
 func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
