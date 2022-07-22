@@ -424,7 +424,7 @@ func Test_ValidateDeploySomeServices(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateDefinedServices(tt.stack, tt.svcsToBeDeployed)
+			err := ValidateDefinedServices(tt.stack, tt.svcsToBeDeployed)
 			if err == nil && tt.expectedErr {
 				t.Fatal("Expected err but not thrown")
 			}
