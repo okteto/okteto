@@ -193,6 +193,10 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 		require.Contains(t, []int32{80, 81}, p.Port)
 	}
 
+	// Test endpoints are accesible
+	nginexURL := fmt.Sprintf("https://nginx-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
+
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
 		Namespace:  testNamespace,
@@ -294,12 +298,16 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	nginxImageDev := fmt.Sprintf("%s/%s/%s-nginx:okteto-with-volume-mounts", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(nginxImageDev), nginxDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	// Test that the nginx image has been created correctly
+	// Test that the app image has been created correctly
 	appDeployment, err := integration.GetDeployment(context.Background(), testNamespace, "app", c)
 	require.NoError(t, err)
 
 	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
+
+	// Test endpoints are accesible
+	nginexURL := fmt.Sprintf("https://nginx-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
@@ -311,7 +319,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 
 // TestDeployPipelineFromCompose tests the following scenario:
 // - Deploying a compose manifest locally from an okteto manifestv2
-// - The
+// - The endpoints generated are accessible
 // - Depends on
 // - Test secret injection
 // - Test that port from image is imported
@@ -324,7 +332,7 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 	require.NoError(t, createComposeScenario(dir))
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), oktetoManifestV2WithCompose))
 
-	testNamespace := integration.GetTestNamespace("TestDeployComposeByManifest", user)
+	testNamespace := integration.GetTestNamespace("TestDeployComposeManifest", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -369,6 +377,10 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 	for _, p := range nginxService.Spec.Ports {
 		require.Contains(t, []int32{80, 81}, p.Port)
 	}
+
+	// Test endpoints are accesible
+	nginexURL := fmt.Sprintf("https://nginx-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
