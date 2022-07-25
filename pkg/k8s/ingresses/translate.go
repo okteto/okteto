@@ -16,18 +16,18 @@ type TranslateOptions struct {
 	Namespace string
 }
 
-// TranslateEndpoint translates the endpoints spec at compose or okteto manifest and returns an ingress
-func TranslateEndpoint(endpointName string, endpoint model.Endpoint, opts *TranslateOptions) *Ingress {
+// Translate translates the endpoints spec at compose or okteto manifest and returns an ingress
+func Translate(endpointName string, endpoint model.Endpoint, opts *TranslateOptions) *Ingress {
 	if endpointName == "" {
 		endpointName = opts.Name
 	}
 	return &Ingress{
-		V1:      translateEndpointIngressV1(endpointName, endpoint, opts),
-		V1Beta1: translateEndpointIngressV1Beta1(endpointName, endpoint, opts),
+		V1:      translateV1(endpointName, endpoint, opts),
+		V1Beta1: translateV1Beta1(endpointName, endpoint, opts),
 	}
 }
 
-func translateEndpointIngressV1(ingressName string, endpoint model.Endpoint, opts *TranslateOptions) *networkingv1.Ingress {
+func translateV1(ingressName string, endpoint model.Endpoint, opts *TranslateOptions) *networkingv1.Ingress {
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        ingressName,
@@ -40,7 +40,7 @@ func translateEndpointIngressV1(ingressName string, endpoint model.Endpoint, opt
 				{
 					IngressRuleValue: networkingv1.IngressRuleValue{
 						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: translateEndpointRulesToPathsV1(endpoint),
+							Paths: translatePathsV1(endpoint),
 						},
 					},
 				},
@@ -49,7 +49,7 @@ func translateEndpointIngressV1(ingressName string, endpoint model.Endpoint, opt
 	}
 }
 
-func translateEndpointIngressV1Beta1(ingressName string, endpoint model.Endpoint, opts *TranslateOptions) *networkingv1beta1.Ingress {
+func translateV1Beta1(ingressName string, endpoint model.Endpoint, opts *TranslateOptions) *networkingv1beta1.Ingress {
 	return &networkingv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        ingressName,
@@ -62,7 +62,7 @@ func translateEndpointIngressV1Beta1(ingressName string, endpoint model.Endpoint
 				{
 					IngressRuleValue: networkingv1beta1.IngressRuleValue{
 						HTTP: &networkingv1beta1.HTTPIngressRuleValue{
-							Paths: translateEndpointRulesToPathsV1Beta1(endpoint),
+							Paths: translatePathsV1Beta1(endpoint),
 						},
 					},
 				},
@@ -95,7 +95,7 @@ func setAnnotations(endpoint model.Endpoint) map[string]string {
 	return annotations
 }
 
-func translateEndpointRulesToPathsV1(endpoint model.Endpoint) []networkingv1.HTTPIngressPath {
+func translatePathsV1(endpoint model.Endpoint) []networkingv1.HTTPIngressPath {
 	paths := make([]networkingv1.HTTPIngressPath, 0)
 	pathType := networkingv1.PathTypeImplementationSpecific
 	for _, rule := range endpoint.Rules {
@@ -116,7 +116,7 @@ func translateEndpointRulesToPathsV1(endpoint model.Endpoint) []networkingv1.HTT
 	return paths
 }
 
-func translateEndpointRulesToPathsV1Beta1(endpoint model.Endpoint) []networkingv1beta1.HTTPIngressPath {
+func translatePathsV1Beta1(endpoint model.Endpoint) []networkingv1beta1.HTTPIngressPath {
 	paths := make([]networkingv1beta1.HTTPIngressPath, 0)
 	for _, rule := range endpoint.Rules {
 		path := networkingv1beta1.HTTPIngressPath{

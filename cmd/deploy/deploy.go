@@ -593,7 +593,7 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 	}
 
 	for name, endpoint := range opts.Manifest.Deploy.Endpoints {
-		ingress := ingresses.TranslateEndpoint(name, endpoint, translateOptions)
+		ingress := ingresses.Translate(name, endpoint, translateOptions)
 		if err := iClient.Deploy(ctx, ingress); err != nil {
 			return err
 		}

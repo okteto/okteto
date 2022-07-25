@@ -174,7 +174,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 					},
 				}
 
-				ingress := ingresses.TranslateEndpoint(ingressName, endpoint, translateOptions)
+				ingress := ingresses.Translate(ingressName, endpoint, translateOptions)
 
 				// check for labels collision in the case of a compose - before creation or update (deploy)
 				if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
@@ -230,7 +230,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 				Name:      s.Name,
 				Namespace: s.Namespace,
 			}
-			ingress := ingresses.TranslateEndpoint(serviceName, endpoint, translateOptions)
+			ingress := ingresses.Translate(serviceName, endpoint, translateOptions)
 			// check for labels collision in the case of a compose - before creation or update (deploy)
 			if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
 				if old.GetLabels()[model.StackNameLabel] == "" {

@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func Test_translateEndpointIngressV1(t *testing.T) {
+func Test_translateV1(t *testing.T) {
 	pathType := networkingv1.PathTypeImplementationSpecific
 	tests := []struct {
 		name                       string
@@ -120,7 +120,7 @@ func Test_translateEndpointIngressV1(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := translateEndpointIngressV1(tt.endpointName, tt.endpointSpec[tt.endpointName], tt.opts)
+			result := translateV1(tt.endpointName, tt.endpointSpec[tt.endpointName], tt.opts)
 			if result.Name != "endpoint1" {
 				t.Errorf("Wrong ingress name: '%s'", result.Name)
 			}
@@ -138,7 +138,7 @@ func Test_translateEndpointIngressV1(t *testing.T) {
 	}
 }
 
-func Test_translateEndpointIngressV1BetaV1(t *testing.T) {
+func Test_translateV1BetaV1(t *testing.T) {
 	tests := []struct {
 		name                       string
 		endpointName               string
@@ -237,7 +237,7 @@ func Test_translateEndpointIngressV1BetaV1(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := translateEndpointIngressV1Beta1(tt.endpointName, tt.endpointSpec[tt.endpointName], tt.opts)
+			result := translateV1Beta1(tt.endpointName, tt.endpointSpec[tt.endpointName], tt.opts)
 			if result.Name != "endpoint1" {
 				t.Errorf("Wrong service name: '%s'", result.Name)
 			}
