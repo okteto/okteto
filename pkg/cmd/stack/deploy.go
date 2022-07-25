@@ -177,15 +177,8 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 				ingress := ingresses.Translate(ingressName, endpoint, translateOptions)
 
 				// check for labels collision in the case of a compose - before creation or update (deploy)
-				if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
-					if old.GetLabels()[model.StackNameLabel] == "" {
-						oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName())
-						continue
-					}
-					if old.GetLabels()[model.StackNameLabel] != ingress.GetLabels()[model.StackNameLabel] {
-						oktetoLog.Warning("skipping creation of endpoint '%s' due to name collision with endpoint in stack '%s'", ingress.GetName(), old.GetLabels()[model.StackNameLabel])
-						continue
-					}
+				if skipIngressDeployForStackNameLabel(ctx, iClient, ingress, spinner) {
+					continue
 				}
 				if err := iClient.Deploy(ctx, ingress); err != nil {
 					exit <- err
@@ -232,19 +225,8 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			}
 			ingress := ingresses.Translate(serviceName, endpoint, translateOptions)
 			// check for labels collision in the case of a compose - before creation or update (deploy)
-			if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
-				if old.GetLabels()[model.StackNameLabel] == "" {
-					spinner.Stop()
-					oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName())
-					spinner.Start()
-					continue
-				}
-				if old.GetLabels()[model.StackNameLabel] != ingress.GetLabels()[model.StackNameLabel] {
-					spinner.Stop()
-					oktetoLog.Warning("skipping creation of endpoint '%s' due to name collision with endpoint in stack '%s'", ingress.GetName(), old.GetLabels()[model.StackNameLabel])
-					spinner.Start()
-					continue
-				}
+			if skipIngressDeployForStackNameLabel(ctx, iClient, ingress, spinner) {
+				continue
 			}
 			if err := iClient.Deploy(ctx, ingress); err != nil {
 				exit <- err
@@ -278,6 +260,24 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		}
 	}
 	return nil
+}
+
+func skipIngressDeployForStackNameLabel(ctx context.Context, iClient *ingresses.Client, ingress *ingresses.Ingress, spinner *utils.Spinner) bool {
+	if old, err := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
+		if old.GetLabels()[model.StackNameLabel] == "" {
+			spinner.Stop()
+			oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName())
+			spinner.Start()
+			return true
+		}
+		if old.GetLabels()[model.StackNameLabel] != ingress.GetLabels()[model.StackNameLabel] {
+			spinner.Stop()
+			oktetoLog.Warning("skipping creation of endpoint '%s' due to name collision with endpoint in stack '%s'", ingress.GetName(), old.GetLabels()[model.StackNameLabel])
+			spinner.Start()
+			return true
+		}
+	}
+	return false
 }
 
 func getVolumesToDeployFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) []string {
