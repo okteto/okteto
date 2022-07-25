@@ -150,8 +150,8 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 				// create a new endpoint for this port ingress deployment
 				endpoint := model.Endpoint{
-					Labels:      s.Services[serviceName].Labels,
-					Annotations: s.Services[serviceName].Annotations,
+					Labels:      map[string]string{},
+					Annotations: map[string]string{},
 					Rules: []model.EndpointRule{
 						{
 							Path:    "/",
@@ -159,6 +159,13 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 							Port:    ingressPort.ContainerPort,
 						},
 					},
+				}
+				// override endpoints Labels and Annotations with Service if exists
+				if s.Services[serviceName].Labels != nil {
+					endpoint.Labels = s.Services[serviceName].Labels
+				}
+				if s.Services[serviceName].Annotations != nil {
+					endpoint.Annotations = s.Services[serviceName].Annotations
 				}
 				// add specific stack labels
 				if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
@@ -275,7 +282,8 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 }
 
 func skipIngressDeployForStackNameLabel(ctx context.Context, iClient *ingresses.Client, ingress *ingresses.Ingress, spinner *utils.Spinner) bool {
-	if old, err := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); err != nil {
+	// err is not checked here, we just want to check if the ingress already existis for this labels
+	if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); old != nil {
 		if old.GetLabels()[model.StackNameLabel] == "" {
 			spinner.Stop()
 			oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName())
