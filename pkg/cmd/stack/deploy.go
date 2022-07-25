@@ -147,23 +147,10 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 				if len(ingressPortsToDeploy) > 1 {
 					ingressName = fmt.Sprintf("%s-%d", serviceName, ingressPort.ContainerPort)
 				}
-				translateOptions := &ingresses.TranslateOptions{
-					Name:      s.Name,
-					Namespace: s.Namespace,
-				}
 
-				// merge endpoint labels and stack specific labels
-				endpointLabels := map[string]string{
-					model.StackNameLabel:         s.Name,
-					model.StackEndpointNameLabel: ingressName,
-				}
-				for k, v := range s.Services[serviceName].Labels {
-					endpointLabels[k] = v
-				}
-
-				// parse an Endpoint model for this ingress
+				// create a new endpoint for this port ingress deployment
 				endpoint := model.Endpoint{
-					Labels:      endpointLabels,
+					Labels:      s.Services[serviceName].Labels,
 					Annotations: s.Services[serviceName].Annotations,
 					Rules: []model.EndpointRule{
 						{
@@ -173,7 +160,18 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 						},
 					},
 				}
+				// add specific stack labels
+				if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
+					endpoint.Labels[model.StackNameLabel] = s.Name
+				}
+				if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
+					endpoint.Labels[model.StackEndpointNameLabel] = ingressName
+				}
 
+				translateOptions := &ingresses.TranslateOptions{
+					Name:      s.Name,
+					Namespace: s.Namespace,
+				}
 				ingress := ingresses.Translate(ingressName, endpoint, translateOptions)
 
 				// check for labels collision in the case of a compose - before creation or update (deploy)
@@ -209,15 +207,29 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		for _, serviceName := range getEndpointsToDeployFromServicesToDeploy(s.Endpoints, servicesToDeploySet) {
 			endpoint := s.Endpoints[serviceName]
 
-			// merge endpoint labels and stack specific labels
-			endpointLabels := map[string]string{
-				model.StackNameLabel:         s.Name,
-				model.StackEndpointNameLabel: serviceName,
+			// endpoint Labels overrides Service Labels
+			for k, v := range s.Services[serviceName].Labels {
+				if _, ok := endpoint.Labels[k]; !ok {
+					endpoint.Labels[k] = v
+				}
+				continue
 			}
-			for k, v := range endpoint.Labels {
-				endpointLabels[k] = v
+
+			// add specific stack labels
+			if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
+				endpoint.Labels[model.StackNameLabel] = s.Name
 			}
-			endpoint.Labels = endpointLabels
+			if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
+				endpoint.Labels[model.StackEndpointNameLabel] = serviceName
+			}
+
+			// endpoint Annotations overrides Service Annotations
+			for k, v := range s.Services[serviceName].Annotations {
+				if _, ok := endpoint.Annotations[k]; !ok {
+					endpoint.Annotations[k] = v
+				}
+				continue
+			}
 
 			translateOptions := &ingresses.TranslateOptions{
 				Name:      s.Name,
