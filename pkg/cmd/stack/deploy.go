@@ -160,13 +160,6 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 						},
 					},
 				}
-				// override endpoints Labels and Annotations with Service if exists
-				if s.Services[serviceName].Labels != nil {
-					endpoint.Labels = s.Services[serviceName].Labels
-				}
-				if s.Services[serviceName].Annotations != nil {
-					endpoint.Annotations = s.Services[serviceName].Annotations
-				}
 				// add specific stack labels
 				if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
 					endpoint.Labels[model.StackNameLabel] = s.Name
@@ -210,16 +203,16 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		}
 
 		// compose has capacity to deploy endpoints for its services
-		// each service gets an ingress when using the endpoints spec at compose
-		for _, serviceName := range getEndpointsToDeployFromServicesToDeploy(s.Endpoints, servicesToDeploySet) {
-			endpoint := s.Endpoints[serviceName]
-
-			// endpoint Labels overrides Service Labels
-			for k, v := range s.Services[serviceName].Labels {
-				if _, ok := endpoint.Labels[k]; !ok {
-					endpoint.Labels[k] = v
-				}
-				continue
+		// each endpoint gets an ingress when using the endpoints spec at compose
+		// the endpoint would have paths for services as defined at the spec
+		for _, endpointName := range getEndpointsToDeployFromServicesToDeploy(s.Endpoints, servicesToDeploySet) {
+			endpoint := s.Endpoints[endpointName]
+			// initialize the maps for Labels and Annotations if nil
+			if endpoint.Labels == nil {
+				endpoint.Labels = map[string]string{}
+			}
+			if endpoint.Annotations == nil {
+				endpoint.Annotations = map[string]string{}
 			}
 
 			// add specific stack labels
@@ -227,22 +220,14 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 				endpoint.Labels[model.StackNameLabel] = s.Name
 			}
 			if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
-				endpoint.Labels[model.StackEndpointNameLabel] = serviceName
-			}
-
-			// endpoint Annotations overrides Service Annotations
-			for k, v := range s.Services[serviceName].Annotations {
-				if _, ok := endpoint.Annotations[k]; !ok {
-					endpoint.Annotations[k] = v
-				}
-				continue
+				endpoint.Labels[model.StackEndpointNameLabel] = endpointName
 			}
 
 			translateOptions := &ingresses.TranslateOptions{
 				Name:      s.Name,
 				Namespace: s.Namespace,
 			}
-			ingress := ingresses.Translate(serviceName, endpoint, translateOptions)
+			ingress := ingresses.Translate(endpointName, endpoint, translateOptions)
 			// check for labels collision in the case of a compose - before creation or update (deploy)
 			if skipIngressDeployForStackNameLabel(ctx, iClient, ingress, spinner) {
 				continue
