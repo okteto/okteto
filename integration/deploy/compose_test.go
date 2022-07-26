@@ -193,7 +193,7 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 		require.Contains(t, []int32{80, 81}, p.Port)
 	}
 
-	// Test endpoints are accesible
+	// Test endpoints are accessible
 	nginexURL := fmt.Sprintf("https://nginx-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
 
@@ -305,7 +305,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
-	// Test endpoints are accesible
+	// Test endpoints are accessible
 	nginexURL := fmt.Sprintf("https://nginx-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
 
@@ -378,7 +378,7 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 		require.Contains(t, []int32{80, 81}, p.Port)
 	}
 
-	// Test endpoints are accesible
+	// Test endpoints are accessible
 	nginexURL := fmt.Sprintf("https://nginx-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
 

@@ -134,7 +134,7 @@ deploy:
 // Test_EndpointsFromOktetoManifest_InferredName tests the following scenario:
 // - Deploying a okteto manifest locally
 // - K8s Service manifest has auto-ingress, endpoints are automatically created when kubectl apply
-// - The endpoints declared at the manifest deploy section are accesible and have the inferred name from repo
+// - The endpoints declared at the manifest deploy section are accessible and have the inferred name from repo
 func Test_EndpointsFromOktetoManifest_InferredName(t *testing.T) {
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -191,7 +191,7 @@ func createEndpointsFromOktetoManifestInferredName(dir string) error {
 // Test_EndpointsFromOktetoManifest_Name tests the following scenario:
 // - Deploying a okteto manifest locally
 // - K8s Service manifest has auto-ingress, endpoints are automatically created when kubectl apply
-// - The endpoints declared at the manifest deploy section are accesible and have the specified name
+// - The endpoints declared at the manifest deploy section are accessible and have the specified name
 func Test_EndpointsFromOktetoManifest_Name(t *testing.T) {
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -274,7 +274,7 @@ func Test_EndpointsFromStackWith_InferredName(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
-	// Test endpoints are accesible
+	// Test endpoints are accessible
 	nginexURL := fmt.Sprintf("https://001-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
 
@@ -339,7 +339,7 @@ func Test_EndpointsFromStack_Name(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
-	// Test endpoints are accesible
+	// Test endpoints are accessible
 	nginexURL := fmt.Sprintf("https://myname-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
 
@@ -405,7 +405,7 @@ func Test_EndpointsFromStackAndManifest(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
-	// Test endpoints are accesible
+	// Test endpoints are accessible
 	nginexURL := fmt.Sprintf("https://manif-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
 
