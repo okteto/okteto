@@ -86,7 +86,7 @@ services:
       start_period: 30s`
 
 	stackWithEndpointsNameContent = `endpoints:
-  myname:  
+  myname:
     - path: /
       service: nginx
       port: 80
