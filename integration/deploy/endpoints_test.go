@@ -117,6 +117,18 @@ services:
       timeout: 5m
       retries: 5
       start_period: 30s`
+
+	oktetoManifestV2WithComposeWithEndpoints = `build:
+  app:
+    context: app
+    image: okteto.dev/app:okteto
+deploy:
+  compose: okteto-stack.yml
+  endpoints:
+      manif:
+        - path: /
+          service: nginx
+          port: 80`
 )
 
 // Test_EndpointsFromOktetoManifest_InferredName tests the following scenario:
@@ -361,4 +373,46 @@ func createStackWithEndpointsNameScenario(dir string) error {
 	}
 
 	return nil
+}
+
+// TestDeployPipelineFromCompose tests the following scenario:
+// - Deploying a compose manifest locally from an okteto manifestv2
+// - The endpoints generated are the ones at the manifest
+func Test_EndpointsFromStackAndManifest(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	require.NoError(t, createStackWithEndpointsNameScenario(dir))
+	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), oktetoManifestV2WithComposeWithEndpoints))
+
+	testNamespace := integration.GetTestNamespace("EndpointsStackAndManif", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	// Test endpoints are accesible
+	nginexURL := fmt.Sprintf("https://manif-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 }
