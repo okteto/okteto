@@ -267,7 +267,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 }
 
 func skipIngressDeployForStackNameLabel(ctx context.Context, iClient *ingresses.Client, ingress *ingresses.Ingress, spinner *utils.Spinner) bool {
-	// err is not checked here, we just want to check if the ingress already existis for this labels
+	// err is not checked here, we just want to check if the ingress already exists for this labels
 	if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); old != nil {
 		if old.GetLabels()[model.StackNameLabel] == "" {
 			spinner.Stop()

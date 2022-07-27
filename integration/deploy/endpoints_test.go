@@ -275,8 +275,8 @@ func Test_EndpointsFromStackWith_InferredName(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	// Test endpoints are accessible
-	nginexURL := fmt.Sprintf("https://001-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
+	nginxURL := fmt.Sprintf("https://001-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(nginxURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
@@ -340,8 +340,8 @@ func Test_EndpointsFromStack_Name(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	// Test endpoints are accessible
-	nginexURL := fmt.Sprintf("https://myname-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
+	nginxURL := fmt.Sprintf("https://myname-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(nginxURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
@@ -406,8 +406,8 @@ func Test_EndpointsFromStackAndManifest(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	// Test endpoints are accessible
-	nginexURL := fmt.Sprintf("https://manif-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
+	nginxURL := fmt.Sprintf("https://manif-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(nginxURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,

@@ -194,8 +194,8 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	}
 
 	// Test endpoints are accessible
-	nginexURL := fmt.Sprintf("https://nginx-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
+	nginxURL := fmt.Sprintf("https://nginx-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(nginxURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
@@ -306,8 +306,8 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	require.Equal(t, getImageWithSHA(appImageDev), appDeployment.Spec.Template.Spec.Containers[0].Image)
 
 	// Test endpoints are accessible
-	nginexURL := fmt.Sprintf("https://nginx-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
+	nginxURL := fmt.Sprintf("https://nginx-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(nginxURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
@@ -379,8 +379,8 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 	}
 
 	// Test endpoints are accessible
-	nginexURL := fmt.Sprintf("https://nginx-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, integration.GetContentFromURL(nginexURL, timeout))
+	nginxURL := fmt.Sprintf("https://nginx-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(nginxURL, timeout))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
