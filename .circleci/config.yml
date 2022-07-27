@@ -384,15 +384,15 @@ workflows:
       - run-unit-test:
           filters:
             branches:
-              ignore: /.*/
+              only: *release-branch-regex
             tags:
-              ignore: *release-branch-regex
+              ignore: /.*/
       - run-windows-unit-test:
           filters:
             branches:
-              ignore: /.*/
+              only: *release-branch-regex
             tags:
-              ignore: *release-branch-regex
+              ignore: /.*/
       - test-integration:
           filters:
             branches:
@@ -403,6 +403,8 @@ workflows:
           requires:
             - build-binaries
             - test-integration
+            - run-unit-test
+            - run-windows-unit-test
           filters:
             branches:
               only: *release-branch-regex
