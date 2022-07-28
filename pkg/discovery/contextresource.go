@@ -38,5 +38,11 @@ func GetContextResourcePath(wd string) (string, error) {
 		return composeManifestPath, nil
 	}
 
+	k8sManifestPath, err := GetK8sManifestPath(wd)
+	if err == nil {
+		oktetoLog.Infof("context will load from %s", k8sManifestPath)
+		return k8sManifestPath, nil
+	}
+
 	return "", ErrOktetoManifestNotFound
 }
