@@ -18,6 +18,7 @@ import (
 )
 
 // GetContextResourcePath returns the file that will load the context resource from
+// here we only include files which have context information - no k8s or helm files
 func GetContextResourcePath(wd string) (string, error) {
 
 	oktetoManifestPath, err := GetOktetoManifestPath(wd)
@@ -38,11 +39,5 @@ func GetContextResourcePath(wd string) (string, error) {
 		return composeManifestPath, nil
 	}
 
-	k8sManifestPath, err := GetK8sManifestPath(wd)
-	if err == nil {
-		oktetoLog.Infof("context will load from %s", k8sManifestPath)
-		return k8sManifestPath, nil
-	}
-	// ErrOktetoManifestNotFound belongs to the discovery module and is not the same as ErrManifestNotFound error set at okteto custom errors module
 	return "", ErrOktetoManifestNotFound
 }
