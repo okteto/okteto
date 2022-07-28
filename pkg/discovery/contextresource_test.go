@@ -57,11 +57,6 @@ func TestGetContextResourcePathWhenExists(t *testing.T) {
 			filesToCreate: []string{"docker-compose.yml", "okteto.yml"},
 			expected:      "okteto.yml",
 		},
-		{
-			name:          "k8s manifest file exists",
-			filesToCreate: []string{"k8s.yml"},
-			expected:      "k8s.yml",
-		},
 	}
 
 	for _, tt := range tests {
