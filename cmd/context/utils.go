@@ -222,7 +222,9 @@ func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string
 	}
 	ctxResource, err := model.GetContextResource(path)
 	if err != nil {
-		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+		// ErrOktetoManifestNotFound belongs to the discovery module and is not the same as ErrManifestNotFound error set at okteto custom errors module
+		// model.GetContextResource will only return discovery.ErrOktetoManifestNotFound in the event that no manifest is found
+		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return err
 		}
 	}

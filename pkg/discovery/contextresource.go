@@ -43,6 +43,6 @@ func GetContextResourcePath(wd string) (string, error) {
 		oktetoLog.Infof("context will load from %s", k8sManifestPath)
 		return k8sManifestPath, nil
 	}
-
+	// ErrOktetoManifestNotFound belongs to the discovery module and is not the same as ErrManifestNotFound error set at okteto custom errors module
 	return "", ErrOktetoManifestNotFound
 }
