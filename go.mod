@@ -228,7 +228,7 @@ require (
 replace (
 	github.com/Sirupsen/logrus => github.com/sirupsen/logrus v1.8.0
 	github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
-	github.com/moby/buildkit => github.com/okteto/buildkit v0.9.2-okteto2
+	github.com/moby/buildkit => github.com/okteto/buildkit v0.10.3-okteto1
 )
 
 // https://github.com/okteto/okteto/issues/2129
