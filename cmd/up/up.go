@@ -130,6 +130,7 @@ func Up() *cobra.Command {
 					return err
 				}
 
+				// here if discovery.ErrOktetoManifestNotFound will be returned as error
 				if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
 					return err
 				}
