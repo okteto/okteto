@@ -129,26 +129,59 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			return
 		}
 
-		for _, name := range options.ServicesToDeploy {
-			if len(s.Services[name].Ports) > 0 {
-				svcK8s := translateService(name, s)
-				if err := services.Deploy(ctx, svcK8s, c); err != nil {
+		for _, serviceName := range options.ServicesToDeploy {
+			if len(s.Services[serviceName].Ports) == 0 {
+				continue
+			}
+
+			svcK8s := translateService(serviceName, s)
+			if err := services.Deploy(ctx, svcK8s, c); err != nil {
+				exit <- err
+				return
+			}
+			// get the public ports from the compose service - this will be deployed into ingresses
+			ingressPortsToDeploy := getSvcPublicPorts(serviceName, s)
+			for _, ingressPort := range ingressPortsToDeploy {
+				ingressName := serviceName
+				// If more than one port, ingressName will have <serviceName>-<PORT>, each port will have an ingress
+				if len(ingressPortsToDeploy) > 1 {
+					ingressName = fmt.Sprintf("%s-%d", serviceName, ingressPort.ContainerPort)
+				}
+
+				// create a new endpoint for this port ingress deployment
+				endpoint := model.Endpoint{
+					Labels:      map[string]string{},
+					Annotations: map[string]string{},
+					Rules: []model.EndpointRule{
+						{
+							Path:    "/",
+							Service: serviceName,
+							Port:    ingressPort.ContainerPort,
+						},
+					},
+				}
+				// add specific stack labels
+				if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
+					endpoint.Labels[model.StackNameLabel] = s.Name
+				}
+				if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
+					endpoint.Labels[model.StackEndpointNameLabel] = ingressName
+				}
+
+				translateOptions := &ingresses.TranslateOptions{
+					Name:      s.Name,
+					Namespace: s.Namespace,
+				}
+				ingress := ingresses.Translate(ingressName, endpoint, translateOptions)
+
+				// check for labels collision in the case of a compose - before creation or update (deploy)
+				if skipIngressDeployForStackNameLabel(ctx, iClient, ingress, spinner) {
+					continue
+				}
+				if err := iClient.Deploy(ctx, ingress); err != nil {
 					exit <- err
 					return
 				}
-				ingressPorts := getSvcPublicPorts(name, s)
-				for _, ingressPort := range ingressPorts {
-					ingressName := name
-					if len(ingressPorts) > 1 {
-						ingressName = fmt.Sprintf("%s-%d", name, ingressPort.ContainerPort)
-					}
-					svcIngress := translateSvcIngress(ingressName, name, ingressPort.ContainerPort, s)
-					if err := deployIngress(ctx, svcIngress, iClient, spinner); err != nil {
-						exit <- err
-						return
-					}
-				}
-
 			}
 		}
 
@@ -169,12 +202,37 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			return
 		}
 
-		for _, name := range getEndpointsToDeployFromServicesToDeploy(s.Endpoints, servicesToDeploySet) {
-			ingressK8s := &ingresses.Ingress{
-				V1:      translateEndpointIngressV1(name, s),
-				V1Beta1: translateEndpointIngressV1Beta1(name, s),
+		// compose has capacity to deploy endpoints for its services
+		// each endpoint gets an ingress when using the endpoints spec at compose
+		// the endpoint would have paths for services as defined at the spec
+		for _, endpointName := range getEndpointsToDeployFromServicesToDeploy(s.Endpoints, servicesToDeploySet) {
+			endpoint := s.Endpoints[endpointName]
+			// initialize the maps for Labels and Annotations if nil
+			if endpoint.Labels == nil {
+				endpoint.Labels = map[string]string{}
 			}
-			if err := deployIngress(ctx, ingressK8s, iClient, spinner); err != nil {
+			if endpoint.Annotations == nil {
+				endpoint.Annotations = map[string]string{}
+			}
+
+			// add specific stack labels
+			if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
+				endpoint.Labels[model.StackNameLabel] = s.Name
+			}
+			if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
+				endpoint.Labels[model.StackEndpointNameLabel] = endpointName
+			}
+
+			translateOptions := &ingresses.TranslateOptions{
+				Name:      s.Name,
+				Namespace: s.Namespace,
+			}
+			ingress := ingresses.Translate(endpointName, endpoint, translateOptions)
+			// check for labels collision in the case of a compose - before creation or update (deploy)
+			if skipIngressDeployForStackNameLabel(ctx, iClient, ingress, spinner) {
+				continue
+			}
+			if err := iClient.Deploy(ctx, ingress); err != nil {
 				exit <- err
 				return
 			}
@@ -206,6 +264,25 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		}
 	}
 	return nil
+}
+
+func skipIngressDeployForStackNameLabel(ctx context.Context, iClient *ingresses.Client, ingress *ingresses.Ingress, spinner *utils.Spinner) bool {
+	// err is not checked here, we just want to check if the ingress already exists for this labels
+	if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); old != nil {
+		if old.GetLabels()[model.StackNameLabel] == "" {
+			spinner.Stop()
+			oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName())
+			spinner.Start()
+			return true
+		}
+		if old.GetLabels()[model.StackNameLabel] != ingress.GetLabels()[model.StackNameLabel] {
+			spinner.Stop()
+			oktetoLog.Warning("skipping creation of endpoint '%s' due to name collision with endpoint in stack '%s'", ingress.GetName(), old.GetLabels()[model.StackNameLabel])
+			spinner.Start()
+			return true
+		}
+	}
+	return false
 }
 
 func getVolumesToDeployFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) []string {
@@ -642,44 +719,6 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 		oktetoLog.Success("Volume '%s' updated", volumeName)
 		spinner.Start()
 	}
-	return nil
-}
-
-func deployIngress(ctx context.Context, ingress *ingresses.Ingress, c *ingresses.Client, spinner *utils.Spinner) error {
-	old, err := c.Get(ctx, ingress.GetName(), ingress.GetNamespace())
-	if err != nil {
-		if !oktetoErrors.IsNotFound(err) {
-			return fmt.Errorf("error getting ingress '%s': %s", ingress.GetName(), err.Error())
-		}
-		if err := c.Create(ctx, ingress); err != nil {
-			return err
-		}
-		spinner.Stop()
-		oktetoLog.Success("Endpoint '%s' created", ingress.GetName())
-		spinner.Start()
-		return nil
-	}
-
-	if old.GetLabels()[model.StackNameLabel] == "" {
-		spinner.Stop()
-		oktetoLog.Warning("skipping deploy of ingress %s due to name collision: the ingress '%s' was running before deploying your compose", ingress.GetName(), ingress.GetName())
-		spinner.Start()
-		return nil
-	}
-
-	if old.GetLabels()[model.StackNameLabel] != ingress.GetLabels()[model.StackNameLabel] {
-		spinner.Stop()
-		oktetoLog.Warning("skipping creation of endpoint '%s' due to name collision with endpoint in stack '%s'", ingress.GetName(), old.GetLabels()[model.StackNameLabel])
-		spinner.Start()
-		return nil
-	}
-
-	if err := c.Update(ctx, ingress); err != nil {
-		return err
-	}
-	spinner.Stop()
-	oktetoLog.Success("Endpoint '%s' updated", ingress.GetName())
-	spinner.Start()
 	return nil
 }
 
