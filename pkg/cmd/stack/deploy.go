@@ -777,6 +777,7 @@ func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *Stac
 	return nil
 }
 
+// ValidateDefinedServices checks that the services to deploy are in the compose file
 func ValidateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 	for _, svcToDeploy := range servicesToDeploy {
 		if _, ok := s.Services[svcToDeploy]; !ok {
