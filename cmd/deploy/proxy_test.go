@@ -34,7 +34,7 @@ func Test_TranslateInvalidResourceBody(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := ph.translateBody(tt.body)
+			_, err := ph.translateBody(tt.body, true)
 			assert.NoError(t, err)
 		})
 	}
@@ -45,7 +45,7 @@ func Test_TranslateInvalidResourceSpec(t *testing.T) {
 		"spec": []byte(`{"selector": "invalid value"}`),
 	}
 	assert.NoError(t, ph.translateDeploymentSpec(invalidResourceSpec))
-	assert.NoError(t, ph.translateStatefulSetSpec(invalidResourceSpec))
+	assert.NoError(t, ph.translateStatefulSetSpec(invalidResourceSpec, true))
 	assert.NoError(t, ph.translateReplicationControllerSpec(invalidResourceSpec))
 	assert.NoError(t, ph.translateReplicaSetSpec(invalidResourceSpec))
 	assert.NoError(t, ph.translateDaemonSetSpec(invalidResourceSpec))

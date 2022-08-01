@@ -230,7 +230,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 				return
 			}
 
-			b, err = ph.translateBody(b)
+			b, err = ph.translateBody(b, r.Method)
 			if err != nil {
 				oktetoLog.Info(err)
 				rw.WriteHeader(500)
@@ -258,7 +258,7 @@ func (ph *proxyHandler) SetDivert(divertedNamespace string) {
 	ph.DivertedNamespace = divertedNamespace
 }
 
-func (ph *proxyHandler) translateBody(b []byte) ([]byte, error) {
+func (ph *proxyHandler) translateBody(b []byte, method string) ([]byte, error) {
 	var body map[string]json.RawMessage
 	if err := json.Unmarshal(b, &body); err != nil {
 		oktetoLog.Infof("error unmarshalling resource body on proxy: %s", err.Error())
@@ -281,7 +281,7 @@ func (ph *proxyHandler) translateBody(b []byte) ([]byte, error) {
 			return nil, err
 		}
 	case "StatefulSet":
-		if err := ph.translateStatefulSetSpec(body); err != nil {
+		if err := ph.translateStatefulSetSpec(body, method); err != nil {
 			return nil, err
 		}
 	case "Job":
@@ -356,15 +356,17 @@ func (ph *proxyHandler) translateDeploymentSpec(body map[string]json.RawMessage)
 	return nil
 }
 
-func (ph *proxyHandler) translateStatefulSetSpec(body map[string]json.RawMessage) error {
+func (ph *proxyHandler) translateStatefulSetSpec(body map[string]json.RawMessage, method string) error {
 	var spec appsv1.StatefulSetSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		oktetoLog.Infof("error unmarshalling statefulset spec on proxy: %s", err.Error())
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	for _, pvc := range spec.VolumeClaimTemplates {
-		labels.SetInMetadata(&pvc.ObjectMeta, model.DeployedByLabel, ph.Name)
+	if method == "POST" {
+		for _, pvc := range spec.VolumeClaimTemplates {
+			labels.SetInMetadata(&pvc.ObjectMeta, model.DeployedByLabel, ph.Name)
+		}
 	}
 	ph.applyDivert(&spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
