@@ -406,10 +406,10 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 				return nil, err
 			}
 			devManifest.Deploy.ComposeSection.Stack = s
+			devManifest, err = devManifest.InferFromStack(cwd)
 			if devManifest.Deploy.Endpoints != nil {
 				s.Endpoints = devManifest.Deploy.Endpoints
 			}
-			devManifest, err = devManifest.InferFromStack(cwd)
 			if err != nil {
 				return nil, err
 			}

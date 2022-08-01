@@ -272,23 +272,26 @@ func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*t
 	return nil, oktetoErrors.ErrNotFound
 }
 
-func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previewName string) (map[string]string, error) {
+func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error) {
 	var queryStruct struct {
 		Preview struct {
 			Deployments []struct {
-				ID     graphql.String
-				Name   graphql.String
-				Status graphql.String
+				ID         graphql.String
+				Name       graphql.String
+				Status     graphql.String
+				DeployedBy graphql.String
 			}
 			Statefulsets []struct {
-				ID     graphql.String
-				Name   graphql.String
-				Status graphql.String
+				ID         graphql.String
+				Name       graphql.String
+				Status     graphql.String
+				DeployedBy graphql.String
 			}
 			Jobs []struct {
-				ID     graphql.String
-				Name   graphql.String
-				Status graphql.String
+				ID         graphql.String
+				Name       graphql.String
+				Status     graphql.String
+				DeployedBy graphql.String
 			}
 		} `graphql:"preview(id: $id)"`
 	}
@@ -303,16 +306,22 @@ func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previe
 
 	status := make(map[string]string)
 	for _, d := range queryStruct.Preview.Deployments {
-		resourceName := getResourceFullName(model.Deployment, string(d.Name))
-		status[resourceName] = string(d.Status)
+		if devName == "" || string(d.DeployedBy) == devName {
+			resourceName := getResourceFullName(model.Deployment, string(d.Name))
+			status[resourceName] = string(d.Status)
+		}
 	}
 	for _, sfs := range queryStruct.Preview.Statefulsets {
-		resourceName := getResourceFullName(model.StatefulSet, string(sfs.Name))
-		status[resourceName] = string(sfs.Status)
+		if devName == "" || string(sfs.DeployedBy) == devName {
+			resourceName := getResourceFullName(model.StatefulSet, string(sfs.Name))
+			status[resourceName] = string(sfs.Status)
+		}
 	}
 	for _, j := range queryStruct.Preview.Jobs {
-		resourceName := getResourceFullName(model.Job, string(j.Name))
-		status[resourceName] = string(j.Status)
+		if devName == "" || string(j.DeployedBy) == devName {
+			resourceName := getResourceFullName(model.Job, string(j.Name))
+			status[resourceName] = string(j.Status)
+		}
 	}
 	return status, nil
 }

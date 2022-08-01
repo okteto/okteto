@@ -261,7 +261,7 @@ func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.
 		case <-to.C:
 			return fmt.Errorf("preview environment '%s' didn't finish after %s", name, timeout.String())
 		case <-ticker.C:
-			resourceStatus, err := oktetoClient.GetResourcesStatusFromPreview(ctx, name)
+			resourceStatus, err := oktetoClient.GetResourcesStatusFromPreview(ctx, name, "")
 			if err != nil {
 				return err
 			}

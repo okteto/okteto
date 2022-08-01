@@ -86,9 +86,10 @@ func (up *upContext) activate() error {
 	buildDevImage := false
 	if _, err := registry.NewOktetoRegistry().GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
 		oktetoLog.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
-		if _, err := os.Stat(up.Dev.Image.Dockerfile); err != nil {
+		path := up.Dev.Image.GetDockerfilePath()
+		if _, err := os.Stat(path); err != nil {
 			return oktetoErrors.UserError{
-				E:    fmt.Errorf("the image '%s' doesn't exist and can't be build", up.Dev.Image.Name),
+				E:    fmt.Errorf("the image '%s' doesn't exist and Dockerfile '%s' is not accessible", up.Dev.Image.Name, path),
 				Hint: "Please update your build section and try again",
 			}
 		}

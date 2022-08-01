@@ -130,6 +130,7 @@ func Up() *cobra.Command {
 					return err
 				}
 
+				// here if discovery.ErrOktetoManifestNotFound will be returned as error
 				if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
 					return err
 				}
@@ -650,7 +651,8 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 			up.Dev.EmptyImage = false
 		}
 	}
-	if _, err := os.Stat(dockerfile); err != nil {
+
+	if _, err := os.Stat(up.Dev.Image.GetDockerfilePath()); err != nil {
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("'--build' argument given but there is no Dockerfile"),
 			Hint: "Try creating a Dockerfile file or specify the 'context' and 'dockerfile' fields in your okteto manifest.",

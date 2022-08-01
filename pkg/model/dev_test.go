@@ -16,6 +16,7 @@ package model
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -1512,6 +1513,64 @@ func Test_expandEnvFiles(t *testing.T) {
 				t.Fatal(err)
 			}
 			assert.Equal(t, tt.expected, tt.dev.Environment)
+		})
+	}
+}
+
+func TestBuildInfo_GetDockerfilePath(t *testing.T) {
+	dir := t.TempDir()
+
+	dockerfilePath := filepath.Join(dir, "Dockerfile")
+	dockerfiledevPath := filepath.Join(dir, "Dockerfile.dev")
+	assert.NoError(t, os.WriteFile(dockerfilePath, []byte(`FROM alpine`), 0644))
+	assert.NoError(t, os.WriteFile(dockerfiledevPath, []byte(`FROM alpine`), 0644))
+	tests := []struct {
+		name       string
+		context    string
+		dockerfile string
+		want       string
+	}{
+		{
+			name:       "with-context",
+			context:    dir,
+			dockerfile: "Dockerfile",
+			want:       filepath.Join(dir, "Dockerfile"),
+		},
+		{
+			name:       "with-context-and-non-dockerfile",
+			context:    dir,
+			dockerfile: "Dockerfile.dev",
+			want:       filepath.Join(dir, "Dockerfile.dev"),
+		},
+		{
+			name:       "empty",
+			context:    "",
+			dockerfile: "",
+			want:       "",
+		},
+		{
+			name:       "default",
+			context:    "",
+			dockerfile: "Dockerfile",
+			want:       "Dockerfile",
+		},
+
+		{
+			name:       "with-context-and-dockerfile-expanded",
+			context:    "api",
+			dockerfile: "api/Dockerfile.dev",
+			want:       "api/Dockerfile.dev",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := &BuildInfo{
+				Context:    tt.context,
+				Dockerfile: tt.dockerfile,
+			}
+			if got := b.GetDockerfilePath(); got != tt.want {
+				t.Errorf("BuildInfo.GetDockerfilePath() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
