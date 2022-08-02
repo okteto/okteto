@@ -73,7 +73,7 @@ func RunOktetoDeployAndGetOutput(oktetoPath string, deployOptions *DeployOptions
 // RunOktetoDestroy runs an okteto destroy command
 func RunOktetoDestroy(oktetoPath string, destroyOptions *DestroyOptions) error {
 	log.Printf("okteto destroy %s", oktetoPath)
-	cmd := exec.Command(oktetoPath, "deploy")
+	cmd := exec.Command(oktetoPath, "destroy")
 	if destroyOptions.Workdir != "" {
 		cmd.Dir = destroyOptions.Workdir
 	}

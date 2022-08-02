@@ -202,7 +202,11 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 		Namespace:  testNamespace,
 		OktetoHome: dir,
 	}
+
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	_, err = integration.GetService(context.Background(), testNamespace, "app", c)
+	require.True(t, k8sErrors.IsNotFound(err))
 }
 
 // TestDeployPipelineFromComposeOnlyOneSvc tests the following scenario:
@@ -254,7 +258,11 @@ func TestDeployPipelineFromComposeOnlyOneSvc(t *testing.T) {
 		Namespace:  testNamespace,
 		OktetoHome: dir,
 	}
+
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	_, err = integration.GetDeployment(context.Background(), testNamespace, "app", c)
+	require.True(t, k8sErrors.IsNotFound(err))
 }
 
 // TestDeployPipelineFromOktetoStacks tests the following scenario:
@@ -315,6 +323,9 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	_, err = integration.GetDeployment(context.Background(), testNamespace, "app", c)
+	require.True(t, k8sErrors.IsNotFound(err))
 }
 
 // TestDeployPipelineFromCompose tests the following scenario:
@@ -388,6 +399,9 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
+	require.True(t, k8sErrors.IsNotFound(err))
 }
 
 func createComposeScenarioByManifest(dir string) error {
