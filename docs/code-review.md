@@ -53,6 +53,10 @@ Comments are the basis of all pull requests. In comments, the reviewers will ask
 
 A respectful tone will be used when making comments and supporting documentation can be helpful for certain comments.
 
+## PR scope
+
+The logic introduced/modified in the pull request should be just enough to close the issue with the minimum acceptable quality. If during the implementation of the PR the developer encounters new issues not directly related to the current one, a new issue should be created. In this way, the developer is totally focused on solving the issue he is working on, we avoid possible confusion to the reviewers (with less context than the developer) and we can locate more clearly possible bugs introduced.
+
 ### Tests
 
 All new features or bug fixes must have unit tests that cover the added code and the functionality it provides. When adding new features it is highly recommended that integration tests are also created and may be deemed required by a reviewer.
