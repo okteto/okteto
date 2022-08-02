@@ -54,7 +54,7 @@ import (
 
 func init() {
 	oktetoLog.SetLevel("warn")
-	var b [8]byte
+	var b [16]byte
 	_, err := cryptoRand.Read(b[:])
 	seed := int64(binary.LittleEndian.Uint64(b[:]))
 	if err != nil {
