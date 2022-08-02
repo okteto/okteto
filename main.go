@@ -58,7 +58,7 @@ func init() {
 	_, err := cryptoRand.Read(b[:])
 	seed := int64(binary.LittleEndian.Uint64(b[:]))
 	if err != nil {
-		oktetoLog.Info("cannot seed math/rand package with cryptographically secure random number generator")
+		oktetoLog.Info("cannot use cryptoRead. Fallback to timestamp seed generator")
 		seed = time.Now().UnixNano()
 	}
 	rand.Seed(seed)
