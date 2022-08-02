@@ -15,6 +15,8 @@ package main
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"math/rand"
 	"os"
@@ -52,7 +54,14 @@ import (
 
 func init() {
 	oktetoLog.SetLevel("warn")
-	rand.Seed(time.Now().UnixNano())
+	var b [8]byte
+	_, err := cryptoRand.Read(b[:])
+	seed := int64(binary.LittleEndian.Uint64(b[:]))
+	if err != nil {
+		oktetoLog.Info("cannot seed math/rand package with cryptographically secure random number generator")
+		seed = time.Now().UnixNano()
+	}
+	rand.Seed(seed)
 
 	// override client-go error handlers to downgrade the "logging before flag.Parse" error
 	errorHandlers := []func(error){
