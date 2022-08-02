@@ -365,8 +365,8 @@ func (ph *proxyHandler) translateStatefulSetSpec(body map[string]json.RawMessage
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
 	if isCreation {
-		for _, pvc := range spec.VolumeClaimTemplates {
-			labels.SetInMetadata(&pvc.ObjectMeta, model.DeployedByLabel, ph.Name)
+		for idx := range spec.VolumeClaimTemplates {
+			labels.SetInMetadata(&spec.VolumeClaimTemplates[idx].ObjectMeta, model.DeployedByLabel, ph.Name)
 		}
 	}
 	ph.applyDivert(&spec.Template.Spec)
