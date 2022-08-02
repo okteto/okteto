@@ -807,7 +807,7 @@ func addImageMetadataToSvc(svc *model.Service) {
 }
 
 func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *StackDeployOptions, c kubernetes.Interface) error {
-	if err := validateDefinedServices(s, options.ServicesToDeploy); err != nil {
+	if err := ValidateDefinedServices(s, options.ServicesToDeploy); err != nil {
 		return err
 	}
 	if !options.InsidePipeline {
@@ -816,7 +816,8 @@ func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *Stac
 	return nil
 }
 
-func validateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
+// ValidateDefinedServices checks that the services to deploy are in the compose file
+func ValidateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 	for _, svcToDeploy := range servicesToDeploy {
 		if _, ok := s.Services[svcToDeploy]; !ok {
 			definedSvcs := make([]string, 0)

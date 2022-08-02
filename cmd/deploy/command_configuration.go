@@ -32,7 +32,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) {
+func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
 	if deployOptions.Manifest.Context == "" {
 		deployOptions.Manifest.Context = okteto.Context().Name
 	}
@@ -67,10 +67,14 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 			}
 		}
 		if len(deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo) > 0 {
+			if err := stack.ValidateDefinedServices(deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy); err != nil {
+				return err
+			}
 			deployOptions.servicesToDeploy = stack.AddDependentServicesIfNotPresent(ctx, deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy, c)
 			deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo[0].ServicesToDeploy = deployOptions.servicesToDeploy
 		}
 	}
+	return nil
 }
 
 func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {

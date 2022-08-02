@@ -271,7 +271,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
-	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
+	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
+		return err
+	}
 
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
@@ -304,7 +306,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
-	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
+	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
+		return err
+	}
 
 	// starting PROXY
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
