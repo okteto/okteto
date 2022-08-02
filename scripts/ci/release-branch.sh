@@ -72,35 +72,78 @@
         previous_stable=$(echo "${PREVIOUS_TAGS}" | grep -E "$stable_regex" || echo "")
         previous_beta=$(echo "${PREVIOUS_TAGS}" | grep -E "$beta_regex" || echo "")
 
-        echo "previous stable: $previous_stable"
-        echo "previous beta: $previous_beta"
-
         # If the latest tag we can reach belongs to a previous minor/major
         # version, it means that this is the first push to the branch so we create the
         # first beta
         if [ "$previous_stable" != "" ]; then
-                if [ "$(semver compare "${ROOT_MINOR_TAG}" "$previous_stable")" -eq "1" ]; then
-                        NEXT_TAG="${ROOT_MINOR_TAG}-beta.1"
-                        echo "Latest reachable tag from release branch ${CURRENT_BRANCH} is a stable release from a previous release (${previous_stable})"
-                        echo "Initializing beta for ${BASE_TAG} as ${NEXT_TAG}"
-                else
-                        NEXT_TAG="$(semver bump patch "${previous_stable}")-beta.1"
-                        echo "Previous tag is a stable release (${previous_stable})"
-                        echo "Creating the new beta for the patch: ${NEXT_TAG}"
-                fi
+                echo "Building from previous stable: $previous_stable"
 
-        # If the previous release is not a stable release, simply bump the beta prerelease
+                # make sure we are building within the bounds of patch/prerelease
+                diff="$(semver diff "${ROOT_MINOR_TAG}" "$previous_stable")"
+                case "$diff" in
+                # If the major or minor version differ, we must be ahead meaning
+                # this is first tag
+                major | minor)
+                        if [ "$(semver compare "${ROOT_MINOR_TAG}" "$previous_stable")" -eq "-1" ]; then
+                                echo "Cannot build tag. Latest reachable tag from release branch ${CURRENT_BRANCH} is bigger than ${ROOT_MINOR_TAG}"
+                                exit 1
+                        fi
+                        NEXT_TAG="${ROOT_MINOR_TAG}-beta.1"
+                        ;;
+
+                # normal bound of the release branch
+                prerelease | patch)
+                        if [ "$(semver compare "${ROOT_MINOR_TAG}" "$previous_stable")" -eq "1" ]; then
+                                NEXT_TAG="${ROOT_MINOR_TAG}-beta.1"
+                                echo "Latest reachable tag from release branch ${CURRENT_BRANCH} is a stable release from a previous release (${previous_stable})"
+                                echo "Initializing beta for ${BASE_TAG} as ${NEXT_TAG}"
+                        else
+                                NEXT_TAG="$(semver bump patch "${previous_stable}")-beta.1"
+                                echo "Previous tag is a stable release (${previous_stable})"
+                                echo "Creating the new beta for the patch: ${NEXT_TAG}"
+                        fi
+                        ;;
+                *)
+                        echo "Unknown diff: $diff"
+                        exit 1
+                        ;;
+                esac
+
         elif [ "$previous_beta" != "" ]; then
-                NEXT_TAG=$(semver bump prerel "${previous_beta}")
-                echo "Latest reachable tag from release branch ${CURRENT_BRANCH} is a prerelease (${previous_beta})"
-                echo "Bumping prerel to ${NEXT_TAG}"
+                echo "Building from previous beta: $previous_beta"
+                # make sure we are building within the bounds of patch/prerelease
+                diff="$(semver diff "${ROOT_MINOR_TAG}" "$previous_beta")"
+                case "$diff" in
+                # If the major or minor version differ, we must be ahead meaning
+                # this is first tag
+                major | minor)
+                        if [ "$(semver compare "${ROOT_MINOR_TAG}" "$previous_beta")" -eq "-1" ]; then
+                                echo "Cannot build tag. Latest reachable tag from release branch ${CURRENT_BRANCH} is bigger than ${ROOT_MINOR_TAG}"
+                                exit 1
+                        fi
+                        echo "Latest reachable tag from release branch ${CURRENT_BRANCH} is a prerelease from a previous MAJOR.MINOR (${previous_beta})"
+                        NEXT_TAG="${ROOT_MINOR_TAG}-beta.1"
+                        echo "Initializing ${NEXT_TAG}"
+                        ;;
+
+                # normal bound of the release branch
+                prerelease | patch)
+                        NEXT_TAG=$(semver bump prerel "${previous_beta}")
+                        echo "Latest reachable tag from release branch ${CURRENT_BRANCH} is a prerelease (${previous_beta})"
+                        echo "Bumping prerel to ${NEXT_TAG}"
+
+                        ;;
+                *)
+                        echo "Unknown diff: $diff"
+                        exit 1
+                        ;;
+                esac
 
         # this should never happen
         else
                 echo "Unclear what to build. Skipping release"
                 exit 1
         fi
-
         echo "Pushing tag ${NEXT_TAG} to remote repository"
         git config user.name "okteto"
         git config user.email "ci@okteto.com"

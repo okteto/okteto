@@ -16,11 +16,8 @@ package deploy
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
-	"reflect"
 	"strings"
 	"time"
 
@@ -34,10 +31,10 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -45,11 +42,7 @@ import (
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
-	giturls "github.com/whilp/git-urls"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 )
 
 const (
@@ -84,20 +77,6 @@ type Options struct {
 	ShowCTA bool
 }
 
-type kubeConfigHandler interface {
-	Read() (*rest.Config, error)
-	Modify(port int, sessionToken, destKubeconfigFile string) error
-}
-
-type proxyInterface interface {
-	Start()
-	Shutdown(ctx context.Context) error
-	GetPort() int
-	GetToken() string
-	SetName(name string)
-	SetDivert(divertedNamespace string)
-}
-
 // DeployCommand defines the config for deploying an app
 type DeployCommand struct {
 	GetManifest func(path string) (*model.Manifest, error)
@@ -120,6 +99,12 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy [service...]",
 		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
+
+			// validate cmd options
+			if options.Dependencies && !okteto.IsOkteto() {
+				return fmt.Errorf("'dependencies' is only supported in clusters that have Okteto installed")
+			}
+
 			if err := validateOptionVars(options.Variables); err != nil {
 				return err
 			}
@@ -278,6 +263,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 	oktetoLog.Debug("found okteto manifest")
+
 	if deployOptions.Manifest.Deploy == nil {
 		return oktetoErrors.ErrManifestFoundButNoDeployCommands
 	}
@@ -320,13 +306,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
-	if deployOptions.Dependencies && !okteto.IsOkteto() {
-		return fmt.Errorf("'dependencies' is only supported in clusters that have Okteto installed")
-	}
-
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
 	}
+
+	// starting PROXY
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
 	dc.Proxy.Start()
 
@@ -335,6 +319,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
+	// TODO: take this out to a new function deploy dependencies
 	for depName, dep := range deployOptions.Manifest.Dependencies {
 		oktetoLog.Information("Deploying dependency '%s'", depName)
 		dep.Variables = append(dep.Variables, model.EnvVar{
@@ -364,6 +349,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
+	// TODO: take this out to a new function build images
 	if deployOptions.Build {
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
@@ -469,103 +455,12 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	return err
 }
 
-func updateConfigMapStatusError(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, errMain error) error {
-	if err := updateConfigMapStatus(ctx, cfg, c, data, errMain); err != nil {
-		return err
-	}
-
-	return errMain
-}
-
-func getConfigMapFromData(ctx context.Context, data *pipeline.CfgData, c kubernetes.Interface) (*corev1.ConfigMap, error) {
-	return pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
-}
-
-func updateConfigMapStatus(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, err error) error {
-	oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, err.Error())
-	data.Status = pipeline.ErrorStatus
-
-	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
-}
-
-func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
-	if deployOptions.Manifest.Context == "" {
-		deployOptions.Manifest.Context = okteto.Context().Name
-	}
-	if deployOptions.Manifest.Namespace == "" {
-		deployOptions.Manifest.Namespace = okteto.Context().Namespace
-	}
-
-	if deployOptions.Name == "" {
-		if deployOptions.Manifest.Name != "" {
-			deployOptions.Name = deployOptions.Manifest.Name
-		} else {
-			deployOptions.Name = utils.InferName(cwd)
-			deployOptions.Manifest.Name = deployOptions.Name
-		}
-
-	} else {
-		if deployOptions.Manifest != nil {
-			deployOptions.Manifest.Name = deployOptions.Name
-		}
-		if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
-			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
-		}
-	}
-
-	if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
-
-		mergeServicesToDeployFromOptionsAndManifest(deployOptions)
-		if len(deployOptions.servicesToDeploy) == 0 {
-			deployOptions.servicesToDeploy = []string{}
-			for service := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
-				deployOptions.servicesToDeploy = append(deployOptions.servicesToDeploy, service)
-			}
-		}
-		if len(deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo) > 0 {
-			if err := stack.ValidateDefinedServices(deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy); err != nil {
-				return err
-			}
-			deployOptions.servicesToDeploy = stack.AddDependentServicesIfNotPresent(ctx, deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy, c)
-			deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo[0].ServicesToDeploy = deployOptions.servicesToDeploy
-		}
-	}
-	return nil
-}
-
-func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
-	var manifestDeclaredServicesToDeploy []string
-	for _, composeInfo := range deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo {
-		manifestDeclaredServicesToDeploy = append(manifestDeclaredServicesToDeploy, composeInfo.ServicesToDeploy...)
-	}
-
-	manifestDeclaredServicesToDeploySet := map[string]bool{}
-	for _, service := range manifestDeclaredServicesToDeploy {
-		manifestDeclaredServicesToDeploySet[service] = true
-	}
-
-	commandDeclaredServicesToDeploy := map[string]bool{}
-	for _, service := range deployOptions.servicesToDeploy {
-		commandDeclaredServicesToDeploy[service] = true
-	}
-
-	if reflect.DeepEqual(manifestDeclaredServicesToDeploySet, commandDeclaredServicesToDeploy) {
-		return
-	}
-
-	if len(deployOptions.servicesToDeploy) > 0 && len(manifestDeclaredServicesToDeploy) > 0 {
-		oktetoLog.Warning("overwriting manifest's `services to deploy` with command line arguments")
-	}
-	if len(deployOptions.servicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
-		deployOptions.servicesToDeploy = manifestDeclaredServicesToDeploy
-	}
-}
-
 func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 	go func() {
+		// deploy commands if any
 		for _, command := range opts.Manifest.Deploy.Commands {
 			oktetoLog.Information("Running %s", command.Name)
 			oktetoLog.SetStage(command.Name)
@@ -577,6 +472,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 			oktetoLog.SetStage("")
 		}
 
+		// deploy compose if any
 		if opts.Manifest.Deploy.ComposeSection != nil {
 			if err := dc.deployStack(ctx, opts); err != nil {
 				exit <- err
@@ -584,6 +480,15 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 			}
 		}
 
+		// deploy endpoits if any
+		if opts.Manifest.Deploy.Endpoints != nil {
+			if err := dc.deployEndpoints(ctx, opts); err != nil {
+				exit <- err
+				return
+			}
+		}
+
+		// deploy diver if any
 		if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
 			if err := dc.deployDivert(ctx, opts); err != nil {
 				exit <- err
@@ -613,6 +518,7 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 	defer oktetoLog.SetStage("")
 	composeSectionInfo := opts.Manifest.Deploy.ComposeSection
 	composeSectionInfo.Stack.Namespace = okteto.Context().Namespace
+
 	var composeFiles []string
 	for _, composeInfo := range composeSectionInfo.ComposesInfo {
 		composeFiles = append(composeFiles, composeInfo.File)
@@ -671,6 +577,35 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 	return nil
 }
 
+func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) error {
+	oktetoLog.SetStage("Endpoints configuration")
+	defer oktetoLog.SetStage("")
+
+	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
+	iClient, err := ingresses.GetClient(ctx, c)
+	if err != nil {
+		return fmt.Errorf("error getting ingress client: %s", err.Error())
+	}
+
+	translateOptions := &ingresses.TranslateOptions{
+		Namespace: opts.Manifest.Namespace,
+		Name:      opts.Manifest.Name,
+	}
+
+	for name, endpoint := range opts.Manifest.Deploy.Endpoints {
+		ingress := ingresses.Translate(name, endpoint, translateOptions)
+		if err := iClient.Deploy(ctx, ingress); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (dc *DeployCommand) cleanUp(ctx context.Context) {
 	oktetoLog.Debugf("removing temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
 	if err := os.Remove(dc.TempKubeconfigFile); err != nil {
@@ -681,91 +616,4 @@ func (dc *DeployCommand) cleanUp(ctx context.Context) {
 	if err := dc.Proxy.Shutdown(ctx); err != nil {
 		oktetoLog.Infof("could not stop local server: %s", err)
 	}
-}
-
-func newProtocolTransport(clusterConfig *rest.Config, disableHTTP2 bool) (http.RoundTripper, error) {
-	copiedConfig := &rest.Config{}
-	*copiedConfig = *clusterConfig
-
-	if disableHTTP2 {
-		// According to https://pkg.go.dev/k8s.io/client-go/rest#TLSClientConfig, this is the way to disable HTTP/2
-		copiedConfig.TLSClientConfig.NextProtos = []string{"http/1.1"}
-	}
-
-	return rest.TransportFor(copiedConfig)
-}
-
-func isSPDY(r *http.Request) bool {
-	return strings.HasPrefix(strings.ToLower(r.Header.Get(headerUpgrade)), "spdy/")
-}
-
-//GetTempKubeConfigFile returns a where the temp kubeConfigFile should be stored
-func GetTempKubeConfigFile(name string) string {
-	return fmt.Sprintf(tempKubeConfigTemplate, config.GetUserHomeDir(), name, time.Now().UnixMilli())
-}
-
-func addEnvVars(ctx context.Context, cwd string) error {
-	if os.Getenv(model.OktetoGitBranchEnvVar) == "" {
-		branch, err := utils.GetBranch(ctx, cwd)
-		if err != nil {
-			oktetoLog.Infof("could not retrieve branch name: %s", err)
-		}
-		os.Setenv(model.OktetoGitBranchEnvVar, branch)
-	}
-
-	if os.Getenv(model.GithubRepositoryEnvVar) == "" {
-		repo, err := model.GetRepositoryURL(cwd)
-		if err != nil {
-			oktetoLog.Infof("could not retrieve repo name: %s", err)
-		}
-
-		if repo != "" {
-			repoHTTPS, err := switchSSHRepoToHTTPS(repo)
-			if err != nil {
-				return err
-			}
-			repo = repoHTTPS.String()
-		}
-		os.Setenv(model.GithubRepositoryEnvVar, repo)
-	}
-
-	if os.Getenv(model.OktetoGitCommitEnvVar) == "" {
-		sha, err := utils.GetGitCommit(ctx, cwd)
-		if err != nil {
-			oktetoLog.Infof("could not retrieve sha: %s", err)
-		}
-		isClean, err := utils.IsCleanDirectory(ctx, cwd)
-		if err != nil {
-			oktetoLog.Infof("could not status: %s", err)
-		}
-		if !isClean {
-			sha = utils.GetRandomSHA(ctx, cwd)
-		}
-		os.Setenv(model.OktetoGitCommitEnvVar, sha)
-	}
-	if os.Getenv(model.OktetoRegistryURLEnvVar) == "" {
-		os.Setenv(model.OktetoRegistryURLEnvVar, okteto.Context().Registry)
-	}
-	if os.Getenv(model.OktetoBuildkitHostURLEnvVar) == "" {
-		os.Setenv(model.OktetoBuildkitHostURLEnvVar, okteto.Context().Builder)
-	}
-	return nil
-}
-
-func switchSSHRepoToHTTPS(repo string) (*url.URL, error) {
-	repoURL, err := giturls.Parse(repo)
-	if err != nil {
-		return nil, err
-	}
-	if repoURL.Scheme == "ssh" {
-		repoURL.Scheme = "https"
-		repoURL.User = nil
-		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
-		return repoURL, nil
-	}
-	if repoURL.Scheme == "https" {
-		return repoURL, nil
-	}
-
-	return nil, fmt.Errorf("could not detect repo protocol")
 }

@@ -45,10 +45,6 @@ const (
 	emailErrorContent = template.HTML(`
 <h1 class="error">Business Email Required</h1>
 <h2>
-  We try our best to keep Okteto open and accessible to everyone, but some
-  email domains incur more spam than we can manage.
-</h2>
-<h2>
   Please add a business/work email to your Github account at
   <a href="https://github.com/settings/emails" target="_blank">
     https://github.com/settings/emails

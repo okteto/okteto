@@ -41,6 +41,15 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+type proxyInterface interface {
+	Start()
+	Shutdown(ctx context.Context) error
+	GetPort() int
+	GetToken() string
+	SetName(name string)
+	SetDivert(divertedNamespace string)
+}
+
 type proxyConfig struct {
 	port  int
 	token string
@@ -465,4 +474,20 @@ func (ph *proxyHandler) applyDivert(podSpec *apiv1.PodSpec) {
 	searches := []string{fmt.Sprintf("%s.svc.cluster.local", ph.DivertedNamespace)}
 	searches = append(searches, podSpec.DNSConfig.Searches...)
 	podSpec.DNSConfig.Searches = searches
+}
+
+func newProtocolTransport(clusterConfig *rest.Config, disableHTTP2 bool) (http.RoundTripper, error) {
+	copiedConfig := &rest.Config{}
+	*copiedConfig = *clusterConfig
+
+	if disableHTTP2 {
+		// According to https://pkg.go.dev/k8s.io/client-go/rest#TLSClientConfig, this is the way to disable HTTP/2
+		copiedConfig.TLSClientConfig.NextProtos = []string{"http/1.1"}
+	}
+
+	return rest.TransportFor(copiedConfig)
+}
+
+func isSPDY(r *http.Request) bool {
+	return strings.HasPrefix(strings.ToLower(r.Header.Get(headerUpgrade)), "spdy/")
 }

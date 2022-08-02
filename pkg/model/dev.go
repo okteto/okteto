@@ -30,6 +30,7 @@ import (
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	yaml "gopkg.in/yaml.v2"
@@ -126,6 +127,25 @@ type BuildInfo struct {
 	Image            string        `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume `yaml:"-"`
 	ExportCache      string        `yaml:"export_cache,omitempty"`
+}
+
+// GetDockerfilePath returns the path to the Dockerfile
+func (b *BuildInfo) GetDockerfilePath() string {
+	if filepath.IsAbs(b.Dockerfile) {
+		return b.Dockerfile
+	}
+
+	joinPath := filepath.Join(b.Context, b.Dockerfile)
+	if !filesystem.FileExistsAndNotDir(joinPath) {
+		oktetoLog.Infof("Dockerfile '%s' is not in a relative path to context '%s'", b.Dockerfile, b.Context)
+		return b.Dockerfile
+	}
+
+	if joinPath != filepath.Clean(b.Dockerfile) && filesystem.FileExistsAndNotDir(b.Dockerfile) {
+		oktetoLog.Infof("Two Dockerfiles discovered in both the root and context path, defaulting to '%s/%s'", b.Context, b.Dockerfile)
+	}
+
+	return joinPath
 }
 
 // Volume represents a volume in the development container

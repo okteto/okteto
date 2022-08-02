@@ -15,13 +15,20 @@ package deploy
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
+
+type kubeConfigHandler interface {
+	Read() (*rest.Config, error)
+	Modify(port int, sessionToken, destKubeconfigFile string) error
+}
 
 //KubeConfig refers to a KubeConfig object
 type KubeConfig struct{}
@@ -75,4 +82,9 @@ func (*KubeConfig) GetCMDAPIConfig() (*clientcmdapi.Config, error) {
 	}
 
 	return okteto.Context().Cfg, nil
+}
+
+//GetTempKubeConfigFile returns a where the temp kubeConfigFile should be stored
+func GetTempKubeConfigFile(name string) string {
+	return fmt.Sprintf(tempKubeConfigTemplate, config.GetUserHomeDir(), name, time.Now().UnixMilli())
 }
