@@ -55,7 +55,9 @@ A respectful tone will be used when making comments and supporting documentation
 
 ### PR scope
 
-The logic introduced/modified in the pull request should be just enough to close the issue with the minimum acceptable quality. If during the implementation of the PR the developer encounters new issues not directly related to the current one, a new issue should be created. In this way, the developer is totally focused on solving the issue he is working on, we avoid possible confusion to the reviewers (with less context than the developer) and we can locate more clearly possible bugs introduced. If the developer is not completely sure whether it is necessary to create a new issue or not, he can open a discussion in the current issue/PR to know the opinion of other developers.
+The logic introduced/modified in the pull request should be just enough to close the issue with the minimum acceptable quality. If during the implementation of the PR the developer encounters new issues not directly related to the current one, a new issue should be created. In this way, the developer is totally focused on solving the issue he is working on, we avoid possible confusion to the reviewers (with less context than the developer) and we can locate more clearly possible bugs introduced. 
+
+If the developer is not completely sure whether it is necessary to create a new issue or not, he can open a discussion in the current issue/PR to know the opinion of other developers.
 
 ### Tests
 
