@@ -189,7 +189,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/src-d/go-oniguruma v1.1.0 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
-	github.com/tonistiigi/fsutil v0.0.0-20220115021204-b19f7f9cb274 // indirect
+	github.com/tonistiigi/fsutil v0.0.0-20220523203542-251a862f3927 // indirect
 	github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea // indirect
 	github.com/tonistiigi/vt100 v0.0.0-20210615222946-8066bb97264f // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect
@@ -234,4 +234,4 @@ replace (
 // https://github.com/okteto/okteto/issues/2129
 replace google.golang.org/grpc => google.golang.org/grpc v1.40.0
 
-replace github.com/docker/docker => github.com/docker/docker v20.10.17+incompatible
+// replace github.com/docker/docker => github.com/docker/docker v20.10.17+incompatible
