@@ -571,7 +571,7 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 	}
 
 	if old.GetLabels()[model.StackNameLabel] == "" {
-		oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", svcName)
+		oktetoLog.Warning("skipping deploy of kubernetes service %s due to name collision: the service '%s' was running before deploying your compose", svcName)
 		return nil
 	}
 
