@@ -61,6 +61,7 @@ The logic introduced/modified in the pull request should be just enough to close
 This approach can be summarized by the term **Minimum Viable Change (MVC)**. MVC means that each issue and pull request should contain the minimum amount of change/scope possible that is needed to address, in accordance to internal quality standards, the core need that was originally identified. Other needs, even if related to the original one, should be addressed in different issues and pull requests.
 
 If the developer decides to open a new issue from the current one or is not completely sure whether it is necessary to create a new issue or not, this must be commented in the original issue/PR.
+
 ### Tests
 
 All new features or bug fixes must have unit tests that cover the added code and the functionality it provides. When adding new features it is highly recommended that integration tests are also created and may be deemed required by a reviewer.
