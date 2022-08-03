@@ -151,7 +151,7 @@ func TestDeployPipelineManifestInsidePipeline(t *testing.T) {
 
 	// Check that the e2etest service is not running
 	_, err = integration.GetService(context.Background(), testNamespace, "e2etest", c)
-	require.NoError(t, err)
+	require.True(t, k8sErrors.IsNotFound(err))
 }
 
 func createPipelineInsidePipelineManifest(dir, oktetoPath, namespace string) error {
