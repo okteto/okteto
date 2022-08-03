@@ -177,7 +177,30 @@ To recap, the human/manual intervention for releasing is:
 
 - When you are ready to create a release candidate for a minor or major version, simply create a `release-MAJOR.MINOR` branch and push it. This will automatically create the first release candidate in the beta channel and will become available to download
 - To create a new release candidate simply open PRs against a release branch. Once merged it will be automatically created
-- To create a stable release create and push a tag from the release branch
+
+### Releasing Stable versions
+
+Releasing a stable version is a manual process and should be done from the `release-MAJOR.MINOR` branch **always**. It is simply re-tagging (promoting) the latest beta version into the stable versions.
+
+```bash
+$ git fetch --tags
+$ git checkout release-2.4
+$ git pull origin release-2.4
+$ git log --oneline -n 5 --abbrev-commit
+# 32a3cf31 (HEAD -> release-2.4, tag: 2.4.3-beta.1, origin/release-2.4) Fix github actions latest release (#2906) (#2907)
+# abaf67e5 (tag: 2.4.2-beta.2, tag: 2.4.2) fix configmap filename file path (#2864) (#2900)
+# 96dd8ea0 (tag: 2.4.2-beta.1) fix github actions release script (#2865)
+# 8db8f6de (tag: 2.4.1-beta.5, tag: 2.4.1) Handle jobs "completed" status properly for the "--wait" flag (#2862) (#2863)
+# 1cbda7c5 (tag: 2.4.1-beta.4) Run windows tests in staging (#2784) (#2859)
+
+$ git tag 2.4.3 2.4.3-beta.1
+$ git push origin 2.4.3
+```
+
+In this case we are promoting `2.4.3-beta.1` which points to `32a3cf31` to be the `2.4.3` stable release. Both tags **SHOULD** point to the same commit.
+
+Once the tag is pushed it will be automatically built and released by circleci
+
 
 ---
 
