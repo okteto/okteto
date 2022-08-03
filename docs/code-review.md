@@ -58,7 +58,7 @@ A respectful tone will be used when making comments and supporting documentation
 
 The logic introduced/modified in the pull request should be just enough to close the issue with the minimum acceptable quality. If during the implementation of the PR the developer encounters new issues not directly related to the current one, a new issue should be created. In this way, the developer is totally focused on solving the issue he is working on, we avoid possible confusion to the reviewers (with less context than the developer) and we can locate more clearly possible bugs introduced. 
 
-This approach can be summarized by the term **Minimum Viable Change (MVC)**. MVC means that each issue and pull request should contain the mimimum ammount of change/scope possible that is needed to address, in accordance to internal quality standards, the core need that was originally identified. Other needs, even if related to the original one, should be addressed in different issues and pull requests.
+This approach can be summarized by the term **Minimum Viable Change (MVC)**. MVC means that each issue and pull request should contain the minimum amount of change/scope possible that is needed to address, in accordance to internal quality standards, the core need that was originally identified. Other needs, even if related to the original one, should be addressed in different issues and pull requests.
 
 If the developer decides to open a new issue from the current one or is not completely sure whether it is necessary to create a new issue or not, this must be commented in the original issue/PR.
 ### Tests
