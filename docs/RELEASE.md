@@ -201,7 +201,6 @@ In this case we are promoting `2.4.3-beta.1` which points to `32a3cf31` to be th
 
 Once the tag is pushed it will be automatically built and released by circleci
 
-
 ---
 
 ## Backporting and Maintenance
