@@ -1,8 +1,8 @@
-# Okteto CLI tests
+# How to run tests guidelines
 
 On this document we will cover how to run unit tests and e2e tests locally
 
-- [Okteto CLI tests](#okteto-cli-tests)
+- [How to run tests guidelines](#how-to-run-tests-guidelines)
   - [How to run unit tests locally?](#how-to-run-unit-tests-locally)
     - [Requirements:](#requirements)
     - [Run all unit tests](#run-all-unit-tests)
