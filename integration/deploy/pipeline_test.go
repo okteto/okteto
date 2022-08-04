@@ -17,6 +17,7 @@
 package deploy
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -24,7 +25,10 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 var (
@@ -62,6 +66,8 @@ func TestDeployPipelineManifest(t *testing.T) {
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	deployOptions := &commands.DeployOptions{
 		Workdir:    dir,
@@ -80,6 +86,9 @@ func TestDeployPipelineManifest(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	_, err = integration.GetService(context.Background(), testNamespace, "e2etest", c)
+	require.True(t, k8sErrors.IsNotFound(err))
 
 }
 
@@ -102,6 +111,8 @@ func TestDeployPipelineManifestInsidePipeline(t *testing.T) {
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
 
 	require.NoError(t, createPipelineInsidePipelineManifest(dir, oktetoPath, testNamespace))
 	require.NoError(t, createK8sManifest(dir))
@@ -124,6 +135,23 @@ func TestDeployPipelineManifestInsidePipeline(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	// Check that the e2etest service is still running after destroying the outer pipeline
+	_, err = integration.GetService(context.Background(), testNamespace, "e2etest", c)
+	require.NoError(t, err)
+
+	destroyOptions = &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		Name:       "test",
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	// Check that the e2etest service is not running
+	_, err = integration.GetService(context.Background(), testNamespace, "e2etest", c)
+	require.True(t, k8sErrors.IsNotFound(err))
 }
 
 func createPipelineInsidePipelineManifest(dir, oktetoPath, namespace string) error {
