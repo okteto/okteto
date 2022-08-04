@@ -571,13 +571,13 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 	}
 
 	if old.GetLabels()[model.StackNameLabel] == "" {
-		oktetoLog.Warning("skipping deploy of kubernetes service %s due to name collision: the service '%s' was running before deploying your compose", svcName)
+		oktetoLog.Warning("skipping deploy of kubernetes service %s due to name collision: the service '%s' was running before deploying your compose", svcName, svcName)
 		return nil
 	}
 
 	if old.GetLabels()[model.StackNameLabel] != svcK8s.GetLabels()[model.StackNameLabel] {
 		spinner.Stop()
-		oktetoLog.Warning("skipping creation of kubernetes '%s' due to name collision with endpoint in stack '%s'", svcName, old.GetLabels()[model.StackNameLabel])
+		oktetoLog.Warning("skipping creation of kubernetes '%s' due to name collision with endpoint in compose '%s'", svcName, old.GetLabels()[model.StackNameLabel])
 		spinner.Start()
 		return nil
 	}
@@ -608,7 +608,7 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		// for those users which will have a dev environment deployed with old version
 		// when re-deploying we switch the name for the environment and we have to move the resources to the new name
 		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
-			return false, fmt.Errorf("skipping deploy of deployment '%s' due to name collision with deployment in stack '%s'", svcName, old.Labels[model.StackNameLabel])
+			return false, fmt.Errorf("skipping deploy of deployment '%s' due to name collision with deployment in compose '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
 			d.Labels[model.DeployedByLabel] = v
@@ -655,7 +655,7 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 		return false, fmt.Errorf("skipping deploy of statefulset '%s' due to name collision with pre-existing statefulset", svcName)
 	}
 	if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
-		return false, fmt.Errorf("skipping deploy of statefulset '%s' due to name collision with statefulset in stack '%s'", svcName, old.Labels[model.StackNameLabel])
+		return false, fmt.Errorf("skipping deploy of statefulset '%s' due to name collision with statefulset in compose '%s'", svcName, old.Labels[model.StackNameLabel])
 	}
 	if v, ok := old.Labels[model.DeployedByLabel]; ok {
 		sfs.Labels[model.DeployedByLabel] = v
