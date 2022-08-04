@@ -14,7 +14,6 @@ require (
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/cli v20.10.13+incompatible
 	github.com/docker/distribution v2.8.0+incompatible
-	github.com/docker/docker v20.10.7+incompatible
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/fatih/color v1.13.0
@@ -104,6 +103,7 @@ require (
 	github.com/containerd/containerd v1.6.3-0.20220401172941-5ff8fce1fcc6 // indirect
 	github.com/containerd/continuity v0.2.3-0.20220330195504-d132b287edc8 // indirect
 	github.com/containerd/typeurl v1.0.2 // indirect
+	github.com/creack/pty v1.1.17 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/docker-credential-helpers v0.6.4 // indirect
 	github.com/docker/go v1.5.1-1.0.20160303222718-d30aec9fd63c // indirect
@@ -183,6 +183,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/src-d/go-oniguruma v1.1.0 // indirect
 	github.com/tklauser/numcpus v0.3.0 // indirect
+	github.com/tonistiigi/fsutil v0.0.0-20220115021204-b19f7f9cb274 // indirect
 	github.com/tonistiigi/units v0.0.0-20180711220420-6950e57a87ea // indirect
 	github.com/tonistiigi/vt100 v0.0.0-20210615222946-8066bb97264f // indirect
 	github.com/toqueteos/trie v1.0.0 // indirect
@@ -219,18 +220,19 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
-require (
-	github.com/creack/pty v1.1.17 // indirect
-	github.com/moby/buildkit v0.8.1
-	github.com/tonistiigi/fsutil v0.0.0-20220115021204-b19f7f9cb274 // indirect
-)
-
 replace (
 	github.com/Sirupsen/logrus => github.com/sirupsen/logrus v1.8.0
 	github.com/moby/buildkit => github.com/okteto/buildkit v0.10.3-okteto1
 )
 
-// https://github.com/okteto/okteto/issues/2129
+require (
+	// https://github.com/okteto/okteto/issues/2129
+	github.com/docker/docker v20.10.7+incompatible
+	github.com/moby/buildkit v0.8.1
+)
+
 replace google.golang.org/grpc => google.golang.org/grpc v1.40.0
 
-replace github.com/docker/docker => github.com/docker/docker v20.10.3-0.20220802085308-074635002ef1+incompatible
+replace github.com/docker/docker => github.com/docker/docker v20.10.3-0.20220804090712-5c96365c9418+incompatible
+
+replace github.com/docker/cli => github.com/docker/cli v20.10.3-0.20220804091907-f52ac07b8263+incompatible

@@ -254,10 +254,12 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			}
 			go progressui.DisplaySolveStatus(context.TODO(), "", c, oktetoLog.GetOutputWriter(), ttyChannel)
 			// not using shared context to not disrupt display but let it finish reporting errors
-			return progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
+			_, err := progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
+			return err
 		}
 		// not using shared context to not disrupt display but let it finish reporting errors
-		return progressui.DisplaySolveStatus(context.TODO(), "", nil, oktetoLog.GetOutputWriter(), plainChannel)
+		_, err := progressui.DisplaySolveStatus(context.TODO(), "", nil, oktetoLog.GetOutputWriter(), plainChannel)
+		return err
 	})
 
 	return eg.Wait()

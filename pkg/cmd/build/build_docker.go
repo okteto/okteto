@@ -229,7 +229,8 @@ func displayStatus(out *os.File, eg *errgroup.Group, response dockerTypes.ImageB
 		}
 		// not using shared context to not disrupt display but let it finish reporting errors
 		eg.Go(func() error {
-			return progressui.DisplaySolveStatus(context.TODO(), "", c, out, displayCh)
+			_, err := progressui.DisplaySolveStatus(context.TODO(), "", c, out, displayCh)
+			return err
 		})
 		if s, ok := at.(interface {
 			SetLogger(progresswriter.Logger)
