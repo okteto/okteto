@@ -222,7 +222,7 @@ require (
 require (
 	github.com/creack/pty v1.1.17 // indirect
 	github.com/moby/buildkit v0.8.1
-	github.com/tonistiigi/fsutil v0.0.0-20220523203542-251a862f3927 // indirect
+	github.com/tonistiigi/fsutil v0.0.0-20220115021204-b19f7f9cb274 // indirect
 )
 
 replace (
