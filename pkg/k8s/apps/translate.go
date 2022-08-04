@@ -242,6 +242,10 @@ func TranslateResources(c *apiv1.Container, r model.ResourceRequirements) {
 		c.Resources.Requests[apiv1.ResourceCPU] = v
 	}
 
+	if v, ok := r.Requests[apiv1.ResourceEphemeralStorage]; ok {
+		c.Resources.Requests[apiv1.ResourceEphemeralStorage] = v
+	}
+
 	if v, ok := r.Requests[model.ResourceAMDGPU]; ok {
 		c.Resources.Requests[model.ResourceAMDGPU] = v
 	}
@@ -260,6 +264,10 @@ func TranslateResources(c *apiv1.Container, r model.ResourceRequirements) {
 
 	if v, ok := r.Limits[apiv1.ResourceCPU]; ok {
 		c.Resources.Limits[apiv1.ResourceCPU] = v
+	}
+
+	if v, ok := r.Limits[apiv1.ResourceEphemeralStorage]; ok {
+		c.Resources.Limits[apiv1.ResourceEphemeralStorage] = v
 	}
 
 	if v, ok := r.Limits[model.ResourceAMDGPU]; ok {

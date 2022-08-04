@@ -777,22 +777,26 @@ func Test_translateResources(t *testing.T) {
 				},
 				r: model.ResourceRequirements{
 					Limits: model.ResourceList{
-						apiv1.ResourceMemory: resource.MustParse("0.250Gi"),
-						apiv1.ResourceCPU:    resource.MustParse("0.125"),
+						apiv1.ResourceMemory:           resource.MustParse("0.250Gi"),
+						apiv1.ResourceCPU:              resource.MustParse("0.125"),
+						apiv1.ResourceEphemeralStorage: resource.MustParse("0.500Gi"),
 					},
 					Requests: model.ResourceList{
-						apiv1.ResourceMemory: resource.MustParse("2Gi"),
-						apiv1.ResourceCPU:    resource.MustParse("1"),
+						apiv1.ResourceMemory:           resource.MustParse("2Gi"),
+						apiv1.ResourceCPU:              resource.MustParse("1"),
+						apiv1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
 					},
 				},
 			},
 			expectedRequests: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceMemory: resource.MustParse("2Gi"),
-				apiv1.ResourceCPU:    resource.MustParse("1"),
+				apiv1.ResourceMemory:           resource.MustParse("2Gi"),
+				apiv1.ResourceCPU:              resource.MustParse("1"),
+				apiv1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
 			},
 			expectedLimits: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceMemory: resource.MustParse("0.250Gi"),
-				apiv1.ResourceCPU:    resource.MustParse("0.125"),
+				apiv1.ResourceMemory:           resource.MustParse("0.250Gi"),
+				apiv1.ResourceCPU:              resource.MustParse("0.125"),
+				apiv1.ResourceEphemeralStorage: resource.MustParse("0.500Gi"),
 			},
 		},
 		{
@@ -801,24 +805,28 @@ func Test_translateResources(t *testing.T) {
 				c: &apiv1.Container{
 					Resources: apiv1.ResourceRequirements{
 						Limits: map[apiv1.ResourceName]resource.Quantity{
-							apiv1.ResourceMemory: resource.MustParse("0.250Gi"),
-							apiv1.ResourceCPU:    resource.MustParse("0.125"),
+							apiv1.ResourceMemory:           resource.MustParse("0.250Gi"),
+							apiv1.ResourceCPU:              resource.MustParse("0.125"),
+							apiv1.ResourceEphemeralStorage: resource.MustParse("0.500Gi"),
 						},
 						Requests: map[apiv1.ResourceName]resource.Quantity{
-							apiv1.ResourceMemory: resource.MustParse("2Gi"),
-							apiv1.ResourceCPU:    resource.MustParse("1"),
+							apiv1.ResourceMemory:           resource.MustParse("2Gi"),
+							apiv1.ResourceCPU:              resource.MustParse("1"),
+							apiv1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
 						},
 					},
 				},
 				r: model.ResourceRequirements{},
 			},
 			expectedRequests: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceMemory: resource.MustParse("2Gi"),
-				apiv1.ResourceCPU:    resource.MustParse("1"),
+				apiv1.ResourceMemory:           resource.MustParse("2Gi"),
+				apiv1.ResourceCPU:              resource.MustParse("1"),
+				apiv1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
 			},
 			expectedLimits: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceMemory: resource.MustParse("0.250Gi"),
-				apiv1.ResourceCPU:    resource.MustParse("0.125"),
+				apiv1.ResourceMemory:           resource.MustParse("0.250Gi"),
+				apiv1.ResourceCPU:              resource.MustParse("0.125"),
+				apiv1.ResourceEphemeralStorage: resource.MustParse("0.500Gi"),
 			},
 		},
 		{
@@ -827,12 +835,14 @@ func Test_translateResources(t *testing.T) {
 				c: &apiv1.Container{
 					Resources: apiv1.ResourceRequirements{
 						Limits: map[apiv1.ResourceName]resource.Quantity{
-							apiv1.ResourceMemory: resource.MustParse("0.250Gi"),
-							apiv1.ResourceCPU:    resource.MustParse("0.125"),
+							apiv1.ResourceMemory:           resource.MustParse("0.250Gi"),
+							apiv1.ResourceCPU:              resource.MustParse("0.125"),
+							apiv1.ResourceEphemeralStorage: resource.MustParse("0.500Gi"),
 						},
 						Requests: map[apiv1.ResourceName]resource.Quantity{
-							apiv1.ResourceMemory: resource.MustParse("2Gi"),
-							apiv1.ResourceCPU:    resource.MustParse("1"),
+							apiv1.ResourceMemory:           resource.MustParse("2Gi"),
+							apiv1.ResourceCPU:              resource.MustParse("1"),
+							apiv1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
 						},
 					},
 				},
@@ -848,12 +858,14 @@ func Test_translateResources(t *testing.T) {
 				},
 			},
 			expectedRequests: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceMemory: resource.MustParse("4Gi"),
-				apiv1.ResourceCPU:    resource.MustParse("0.125"),
+				apiv1.ResourceMemory:           resource.MustParse("4Gi"),
+				apiv1.ResourceCPU:              resource.MustParse("0.125"),
+				apiv1.ResourceEphemeralStorage: resource.MustParse("5Gi"),
 			},
 			expectedLimits: map[apiv1.ResourceName]resource.Quantity{
-				apiv1.ResourceMemory: resource.MustParse("1Gi"),
-				apiv1.ResourceCPU:    resource.MustParse("2"),
+				apiv1.ResourceMemory:           resource.MustParse("1Gi"),
+				apiv1.ResourceCPU:              resource.MustParse("2"),
+				apiv1.ResourceEphemeralStorage: resource.MustParse("0.500Gi"),
 			},
 		},
 	}
@@ -875,6 +887,13 @@ func Test_translateResources(t *testing.T) {
 				t.Errorf("requests %s: expected %s, got %s", apiv1.ResourceCPU, b.String(), a.String())
 			}
 
+			a = tt.args.c.Resources.Requests[apiv1.ResourceEphemeralStorage]
+			b = tt.expectedRequests[apiv1.ResourceEphemeralStorage]
+
+			if a.Cmp(b) != 0 {
+				t.Errorf("requests %s: expected %s, got %s", apiv1.ResourceEphemeralStorage, b.String(), a.String())
+			}
+
 			a = tt.args.c.Resources.Limits[apiv1.ResourceMemory]
 			b = tt.expectedLimits[apiv1.ResourceMemory]
 
@@ -887,6 +906,13 @@ func Test_translateResources(t *testing.T) {
 
 			if a.Cmp(b) != 0 {
 				t.Errorf("limits %s: expected %s, got %s", apiv1.ResourceCPU, b.String(), a.String())
+			}
+
+			a = tt.args.c.Resources.Limits[apiv1.ResourceEphemeralStorage]
+			b = tt.expectedLimits[apiv1.ResourceEphemeralStorage]
+
+			if a.Cmp(b) != 0 {
+				t.Errorf("limits %s: expected %s, got %s", apiv1.ResourceEphemeralStorage, b.String(), a.String())
 			}
 		})
 	}
