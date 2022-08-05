@@ -19,7 +19,7 @@ Unit test will run against the code you have on your workspace
 
 ### Requirements:
 
-You don't need to have any special prerrequisite to run unit tests locally.
+You don't need to have any special prerequisite to run unit tests locally.
 
 ### Run all unit tests
 
