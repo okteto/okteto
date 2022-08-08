@@ -223,7 +223,7 @@ func TestReDeployPipelineFromCompose(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createComposeScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeployCompose", user)
+	testNamespace := integration.GetTestNamespace("TestReDeployCompose", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
