@@ -565,7 +565,7 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 			return err
 		}
 		spinner.Stop()
-		oktetoLog.Success("Endpoint '%s' created", svcName)
+		oktetoLog.Success("Kubernetes service '%s' created", svcName)
 		spinner.Start()
 		return nil
 	}
@@ -582,11 +582,12 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 		return nil
 	}
 
-	if _, err := services.Update(ctx, s.Namespace, svcK8s, c); err != nil {
+	svcK8s.ObjectMeta.ResourceVersion = old.ObjectMeta.ResourceVersion
+	if err := services.Deploy(ctx, svcK8s, c); err != nil {
 		return err
 	}
 	spinner.Stop()
-	oktetoLog.Success("Endpoint '%s' updated", svcName)
+	oktetoLog.Success("Kubernetes service '%s' updated", svcName)
 	spinner.Start()
 	return nil
 }
