@@ -559,7 +559,7 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 	old, err := services.Get(ctx, svcName, s.Namespace, c)
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
-			return fmt.Errorf("error getting ingress '%s': %w", svcName, err)
+			return fmt.Errorf("error getting service '%s': %w", svcName, err)
 		}
 		if err := services.Deploy(ctx, svcK8s, c); err != nil {
 			return err
