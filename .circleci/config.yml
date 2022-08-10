@@ -113,7 +113,7 @@ jobs:
           command: |
             go mod download
             go version
-            go test ./...
+            go test -race ./...
   test-integration:
     executor: golang-ci
     resource_class: large
