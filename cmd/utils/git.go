@@ -19,6 +19,7 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/transport"
@@ -27,7 +28,10 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-var isOktetoSample *bool
+var (
+	isOktetoSample *bool
+	mu             sync.Mutex
+)
 
 func GetBranch(ctx context.Context, path string) (string, error) {
 	repo, err := git.PlainOpen(path)
@@ -94,6 +98,9 @@ func GetRandomSHA(ctx context.Context, path string) string {
 }
 
 func IsOktetoRepo() bool {
+	mu.Lock()
+	defer mu.Unlock()
+
 	if isOktetoSample == nil {
 		path, err := os.Getwd()
 		if err != nil {
