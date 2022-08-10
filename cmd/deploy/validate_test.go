@@ -27,12 +27,12 @@ func Test_ValidateVars(t *testing.T) {
 		expectedErr bool
 	}{
 		{
-			name:        "correct assingnament",
+			name:        "correct assignment",
 			variables:   []string{"NAME=test"},
 			expectedErr: false,
 		},
 		{
-			name:        "bas assingnament",
+			name:        "bad assignment",
 			variables:   []string{"NAME:test"},
 			expectedErr: true,
 		},
