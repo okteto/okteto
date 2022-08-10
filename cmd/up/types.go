@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"github.com/moby/term"
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -52,7 +51,6 @@ type upContext struct {
 	inFd                  uintptr
 	isTerm                bool
 	stateTerm             *term.State
-	spinner               *utils.Spinner
 	StartTime             time.Time
 	Options               *UpOptions
 }

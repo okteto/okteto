@@ -17,7 +17,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -92,8 +91,7 @@ func Test_destroyDeployments(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			spinner := utils.NewSpinner("testing")
-			err := destroyDeployments(ctx, spinner, tt.stack, client)
+			err := destroyDeployments(ctx, tt.stack, client)
 			if err != nil {
 				t.Fatal("Not destroyed correctly")
 			}
@@ -183,8 +181,7 @@ func Test_destroyStatefulsets(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			spinner := utils.NewSpinner("testing")
-			err := destroyStatefulsets(ctx, spinner, tt.stack, client)
+			err := destroyStatefulsets(ctx, tt.stack, client)
 			if err != nil {
 				t.Fatal("Not destroyed correctly")
 			}
@@ -262,8 +259,7 @@ func Test_destroyJobs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			spinner := utils.NewSpinner("testing")
-			err := destroyJobs(ctx, spinner, tt.stack, client)
+			err := destroyJobs(ctx, tt.stack, client)
 			if err != nil {
 				t.Fatal("Not destroyed correctly")
 			}

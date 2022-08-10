@@ -115,9 +115,9 @@ func Down() *cobra.Command {
 }
 
 func allDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
-	spinner := utils.NewSpinner("Deactivating your development containers...")
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner("Deactivating your development containers...")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	if len(manifest.Dev) == 0 {
 		return fmt.Errorf("okteto manifest has no 'dev' section. Configure it with 'okteto init'")
@@ -135,7 +135,7 @@ func allDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
 		}
 
 		if apps.IsDevModeOn(app) {
-			spinner.Stop()
+			oktetoLog.StopSpinner()
 			if err := runDown(ctx, dev, rm); err != nil {
 				analytics.TrackDown(false)
 				return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
@@ -148,9 +148,9 @@ func allDown(ctx context.Context, manifest *model.Manifest, rm bool) error {
 }
 
 func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
-	spinner := utils.NewSpinner(fmt.Sprintf("Deactivating '%s' development container...", dev.Name))
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Deactivating '%s' development container...", dev.Name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -186,7 +186,6 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			return
 		}
 
-		spinner.Stop()
 		oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
 
 		if !rm {
@@ -194,14 +193,12 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			return
 		}
 
-		spinner.Update(fmt.Sprintf("Removing '%s' persistent volume...", dev.Name))
-		spinner.Start()
+		oktetoLog.Spinner(fmt.Sprintf("Removing '%s' persistent volume...", dev.Name))
 		if err := removeVolume(ctx, dev); err != nil {
 			analytics.TrackDownVolumes(false)
 			exit <- err
 			return
 		}
-		spinner.Stop()
 		oktetoLog.Success(fmt.Sprintf("Persistent volume '%s' removed", dev.Name))
 
 		if os.Getenv(model.OktetoSkipCleanupEnvVar) == "" {
@@ -217,7 +214,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		spinner.Stop()
+		oktetoLog.StopSpinner()
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {

@@ -132,10 +132,10 @@ func validateOutput(output string) error {
 }
 
 func (dc *DeployCommand) getEndpoints(ctx context.Context, opts *EndpointsOptions) ([]string, error) {
-	spinner := utils.NewSpinner("Retrieving endpoints...")
 	if opts.Output == "" {
-		spinner.Start()
-		defer spinner.Stop()
+		oktetoLog.Spinner("Retrieving endpoints...")
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
 	}
 
 	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
@@ -147,7 +147,7 @@ func (dc *DeployCommand) getEndpoints(ctx context.Context, opts *EndpointsOption
 	if err != nil {
 		return nil, err
 	}
-	spinner.Stop()
+
 	if len(eps) > 0 {
 		sort.Slice(eps, func(i, j int) bool {
 			return len(eps[i]) < len(eps[j])

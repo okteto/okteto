@@ -104,8 +104,9 @@ func Exec() *cobra.Command {
 }
 
 func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
-	sp := utils.NewSpinner("Preparing your container")
-	sp.Start()
+	oktetoLog.Spinner("Preparing your container")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	wrapped := []string{"sh", "-c"}
 	wrapped = append(wrapped, args...)
@@ -178,17 +179,17 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		oktetoLog.Infof("executing remote command over SSH port %d", dev.RemotePort)
 
 		dev.LoadRemote(ssh.GetPublicKey())
-		sp.Stop()
+		oktetoLog.StopSpinner()
 		return ssh.Exec(ctx, dev.Interface, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 	}
-	sp.Stop()
+	oktetoLog.StopSpinner()
 	return exec.Exec(ctx, c, cfg, dev.Namespace, pod.Name, dev.Container, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 }
 
 func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error) {
-	sp := utils.NewSpinner("Selecting dev manifest")
-	sp.Start()
-	defer sp.Stop()
+	oktetoLog.Spinner("Selecting dev manifest")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	var dev *model.Dev
 	var err error
@@ -198,7 +199,6 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 			return nil, err
 		}
 	} else {
-		sp.Stop()
 		dev, err = utils.GetDevFromManifest(manifest, args[0])
 		if err != nil {
 			return nil, err

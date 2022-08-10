@@ -317,8 +317,9 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 		}
 
 		suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(app.Kind()), app.ObjectMeta().Name)
-		spinner := utils.NewSpinner(suffix)
-		spinner.Start()
+		oktetoLog.Spinner(suffix)
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
 
 		path := getPathFromApp(wd, app.ObjectMeta().Name)
 
@@ -343,7 +344,6 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 		if err != nil {
 			oktetoLog.Infof("could not get defaults from app: %s", err.Error())
 		}
-		spinner.Stop()
 		oktetoLog.Success("Development container '%s' configured successfully", app.ObjectMeta().Name)
 		mc.manifest.Dev[app.ObjectMeta().Name] = dev
 	}
@@ -413,9 +413,9 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 				Stack: stack,
 			},
 		},
-		Dev:      model.ManifestDevs{},
-		Build:    model.ManifestBuild{},
-		IsV2:     true,
+		Dev:   model.ManifestDevs{},
+		Build: model.ManifestBuild{},
+		IsV2:  true,
 	}
 	cwd, err := os.Getwd()
 	if err != nil {
