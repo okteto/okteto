@@ -21,7 +21,7 @@ import (
 
 func validateOptionVars(variables []string) error {
 	for _, v := range variables {
-		kv := strings.SplitN(v, "=", 2)
+		kv := strings.Split(v, "=")
 		if len(kv) != 2 {
 			return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
 		}

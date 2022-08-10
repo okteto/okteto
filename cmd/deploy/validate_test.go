@@ -36,6 +36,11 @@ func Test_ValidateVars(t *testing.T) {
 			variables:   []string{"NAME:test"},
 			expectedErr: true,
 		},
+		{
+			name:        "too many equals",
+			variables:   []string{"too=many=equals"},
+			expectedErr: true,
+		},
 	}
 
 	for _, tt := range tests {
