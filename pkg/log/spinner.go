@@ -37,19 +37,24 @@ type spinnerLogger struct {
 // holdSpinner is used within the TTYWritter to pause the spinner to display the log
 // if the spinner is Active (running) it will stop
 func holdSpinner() {
-	if log.spinner.sp.Active() {
-		log.spinner.onHold = true
-		StopSpinner()
+	log.spinner.sp.Lock()
+	if !log.spinner.sp.Active() {
+		log.spinner.sp.Unlock()
+		return
 	}
+	log.spinner.sp.Unlock()
+	log.spinner.onHold = true
+	StopSpinner()
 }
 
 // unholdSpinner is used within the TTYWritter to restart the spinner after display the log.
 // If the spinner is onHold (previously Active) this will start the spinning running again
 func unholdSpinner() {
-	if log.spinner.onHold {
-		log.spinner.onHold = false
-		StartSpinner()
+	if !log.spinner.onHold {
+		return
 	}
+	log.spinner.onHold = false
+	StartSpinner()
 }
 
 // initSpinnerLog configures the spinner PreUpdate
@@ -75,11 +80,11 @@ func Spinner(text string) {
 // StartSpinner starts to run the spinner if enabled or Println if not
 func StartSpinner() {
 	if log.spinner.spinnerSupport {
+		log.spinner.sp.Lock()
 		if log.spinner.sp.FinalMSG == "" {
-			log.spinner.sp.Lock()
 			log.spinner.sp.FinalMSG = log.spinner.sp.Suffix
-			log.spinner.sp.Unlock()
 		}
+		log.spinner.sp.Unlock()
 		log.spinner.sp.Start()
 	} else {
 		Println(strings.TrimSpace(log.spinner.sp.Suffix))
