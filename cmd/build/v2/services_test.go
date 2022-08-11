@@ -179,6 +179,17 @@ func TestGetToBuildTag(t *testing.T) {
 			svcName:      "test",
 			output:       "okteto.dev/test-test:okteto-with-volume-mounts",
 		},
+		{
+			name: "image is set without volume mounts",
+			buildInfo: &model.BuildInfo{
+				Dockerfile: "Dockerfile",
+				Context:    ".",
+				Image:      "okteto.dev/test:test",
+			},
+			manifestName: "test",
+			svcName:      "test",
+			output:       "okteto.dev/test:test",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
