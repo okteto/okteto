@@ -107,7 +107,7 @@ func getToBuildTag(manifestName, svcName string, b *model.BuildInfo) string {
 		return b.Image
 	case (shouldBuildFromDockerfile(b) && shouldAddVolumeMounts(b)) || shouldAddVolumeMounts(b):
 		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoImageTagWithVolumes)
-	case shouldBuildFromDockerfile(b) && b.Image != "":
+	case b.Image != "" && shouldBuildFromDockerfile(b):
 		return b.Image
 	case shouldBuildFromDockerfile(b):
 		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoDefaultImageTag)
