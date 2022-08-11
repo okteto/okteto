@@ -97,7 +97,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
-		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
+		Short: "Execute locally the list of commands specified in the 'deploy' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			// validate cmd options
