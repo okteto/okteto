@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -520,7 +519,7 @@ func inferDeploySection(cwd string) (*model.DeployInfo, error) {
 }
 
 func inferDevsSection(cwd string) (model.ManifestDevs, error) {
-	files, err := ioutil.ReadDir(cwd)
+	files, err := os.ReadDir(cwd)
 	if err != nil {
 		return nil, err
 	}
