@@ -105,10 +105,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("'dependencies' is only supported in clusters that have Okteto installed")
 			}
 
-			if err := validateOptionVars(options.Variables); err != nil {
-				return err
-			}
-			if err := setOptionVarsAsEnvs(options.Variables); err != nil {
+			if err := validateAndSet(options.Variables, os.Setenv); err != nil {
 				return err
 			}
 

@@ -14,43 +14,61 @@
 package deploy
 
 import (
+	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_ValidateVars(t *testing.T) {
-
+func Test_validateAndSet(t *testing.T) {
 	var tests = []struct {
-		name        string
-		variables   []string
-		expectedErr bool
+		name          string
+		variables     []string
+		expectedError error
+		expectedEnvs  map[string]string
 	}{
 		{
-			name:        "correct assingnament",
-			variables:   []string{"NAME=test"},
-			expectedErr: false,
+			name:          "correct assingnament",
+			variables:     []string{"NAME=test"},
+			expectedError: nil,
+			expectedEnvs:  map[string]string{"NAME": "test"},
 		},
 		{
-			name:        "bas assingnament",
-			variables:   []string{"NAME:test"},
-			expectedErr: true,
+			name:          "bas assingnament",
+			variables:     []string{"NAME:test"},
+			expectedError: fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", "NAME:test"),
+			expectedEnvs:  map[string]string{},
 		},
 		{
-			name:        "too many equals",
-			variables:   []string{"too=many=equals"},
-			expectedErr: true,
+			name:          "more than 2 equals",
+			variables:     []string{"too=many=equals"},
+			expectedError: nil,
+			expectedEnvs:  map[string]string{"too": "many=equals"},
+		},
+		{
+			name: "multiple variables",
+			variables: []string{
+				"NAME=test",
+				"BASE64=something==",
+			},
+			expectedError: nil,
+			expectedEnvs:  map[string]string{"NAME": "test", "BASE64": "something=="},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateOptionVars(tt.variables)
-			if tt.expectedErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
+			envVarStorage := make(map[string]string)
+			setEnvStorage := func(key, value string) error {
+				envVarStorage[key] = value
+				return nil
 			}
+
+			err := validateAndSet(tt.variables, setEnvStorage)
+
+			assert.Equal(t, tt.expectedError, err)
+			assert.True(t, reflect.DeepEqual(tt.expectedEnvs, envVarStorage))
 		})
 	}
 }

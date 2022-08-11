@@ -19,9 +19,17 @@ import (
 	"strings"
 )
 
+func validateAndSet(variables []string, setEnv func(key, value string) error) error {
+
+	if err := validateOptionVars(variables); err != nil {
+		return err
+	}
+	return setOptionVarsAsEnvs(variables, setEnv)
+}
+
 func validateOptionVars(variables []string) error {
 	for _, v := range variables {
-		kv := strings.Split(v, "=")
+		kv := strings.SplitN(v, "=", 2)
 		if len(kv) != 2 {
 			return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
 		}
@@ -32,10 +40,10 @@ func validateOptionVars(variables []string) error {
 	return nil
 }
 
-func setOptionVarsAsEnvs(variables []string) error {
+func setOptionVarsAsEnvs(variables []string, setEnv func(key, value string) error) error {
 	for _, v := range variables {
 		kv := strings.SplitN(v, "=", 2)
-		if err := os.Setenv(kv[0], kv[1]); err != nil {
+		if err := setEnv(kv[0], kv[1]); err != nil {
 			return err
 		}
 	}
