@@ -227,6 +227,8 @@ func getPipelineName(repository string) string {
 
 func (pc *Command) waitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
 	oktetoLog.Spinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
