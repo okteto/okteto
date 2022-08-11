@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	v1 "k8s.io/api/apps/v1"
 )
 
 func (dc *DeployCommand) wait(ctx context.Context, opts *Options) error {
@@ -71,7 +72,9 @@ func (dc *DeployCommand) waitForResourcesToBeRunning(ctx context.Context, opts *
 				return err
 			}
 			areAllRunning := true
-			for _, d := range dList {
+			ds := make([]v1.Deployment, len(dList))
+			for i := range ds {
+				d := &ds[i]
 				if !deployments.IsRunning(ctx, opts.Manifest.Namespace, d.Name, c) {
 					areAllRunning = false
 				}
@@ -83,8 +86,10 @@ func (dc *DeployCommand) waitForResourcesToBeRunning(ctx context.Context, opts *
 			if err != nil {
 				return err
 			}
-			for _, sfs := range sfsList {
-				if !statefulsets.IsRunning(ctx, opts.Manifest.Namespace, sfs.Name, c) {
+			sfss := make([]v1.StatefulSet, len(sfsList))
+			for i := range sfss {
+				ss := &sfss[i]
+				if !statefulsets.IsRunning(ctx, opts.Manifest.Namespace, ss.Name, c) {
 					areAllRunning = false
 				}
 			}
