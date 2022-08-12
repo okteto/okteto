@@ -25,40 +25,53 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+type divertOptions struct {
+	name            string // manifest
+	namespace       string // manifest
+	divertNamespace string // divert
+	service         string // divert
+	deployment      string // divert
+	port            int    // divert
+}
+
+func NewDivertOptions(name, namespace, divertNamespace, service, deployment string, port int) divertOptions {
+	return divertOptions{
+		name:            name,
+		namespace:       namespace,
+		divertNamespace: divertNamespace,
+		service:         service,
+		deployment:      deployment,
+		port:            port,
+	}
+}
+
 //DivertIngress diverts the traffic of a given ingress
-func DivertIngress(ctx context.Context, m *model.Manifest, fromIn *networkingv1.Ingress, c kubernetes.Interface) error {
-	in, err := c.NetworkingV1().Ingresses(m.Namespace).Get(ctx, fromIn.Name, metav1.GetOptions{})
+func DivertIngress(ctx context.Context, d divertOptions, fromIn *networkingv1.Ingress, c kubernetes.Interface) error {
+	in, err := c.NetworkingV1().Ingresses(d.namespace).Get(ctx, fromIn.Name, metav1.GetOptions{})
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
 			return err
 		}
-		in = translateIngress(m.Name, m.Namespace, fromIn, "")
-		if _, err := c.NetworkingV1().Ingresses(m.Namespace).Create(ctx, in, metav1.CreateOptions{}); err != nil {
+		in = translateIngress(d.name, d.namespace, fromIn, "")
+		if _, err := c.NetworkingV1().Ingresses(d.namespace).Create(ctx, in, metav1.CreateOptions{}); err != nil {
 			return err
 		}
 	} else if in.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
-		in = translateIngress(m.Name, m.Namespace, fromIn, in.ResourceVersion)
+		in = translateIngress(d.name, d.namespace, fromIn, in.ResourceVersion)
 		in.ResourceVersion = ""
-		if _, err := c.NetworkingV1().Ingresses(m.Namespace).Update(ctx, in, metav1.UpdateOptions{}); err != nil {
+		if _, err := c.NetworkingV1().Ingresses(d.namespace).Update(ctx, in, metav1.UpdateOptions{}); err != nil {
 			return err
 		}
 	}
 
 	for _, rule := range in.Spec.Rules {
 		for _, path := range rule.IngressRuleValue.HTTP.Paths {
-			if err := divertService(ctx, m.Name, m.Namespace, m.Deploy.Divert.Namespace, path.Backend.Service.Name, c); err != nil {
+			if err := divertService(ctx, d.name, d.namespace, d.divertNamespace, path.Backend.Service.Name, c); err != nil {
 				return fmt.Errorf("error diverting ingress '%s' service '%s': %v", in.Name, path.Backend.Service.Name, err)
 			}
 		}
 	}
-	return createDivertCRD(ctx,
-		divertOptions{name: m.Name,
-			namespace:       m.Namespace,
-			divertNamespace: m.Deploy.Divert.Namespace,
-			service:         m.Deploy.Divert.Service,
-			port:            m.Deploy.Divert.Port,
-			deployment:      m.Deploy.Divert.Deployment},
-		fromIn)
+	return createDivertCRD(ctx, d, fromIn)
 }
 
 func divertService(ctx context.Context, manifestName, manifestNamespace, manifestDivertNamespace, name string, c kubernetes.Interface) error {

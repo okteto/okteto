@@ -91,15 +91,6 @@ func translateEndpoints(manifestName string, e *apiv1.Endpoints, resourceVersion
 	return result
 }
 
-type divertOptions struct {
-	name            string // manifest
-	namespace       string // manifest
-	divertNamespace string // divert
-	service         string // divert
-	port            int    // divert
-	deployment      string // divert
-}
-
 func translateDivertCRD(d divertOptions, in *networkingv1.Ingress) *Divert {
 	result := &Divert{
 		TypeMeta: metav1.TypeMeta{

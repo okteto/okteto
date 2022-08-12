@@ -570,7 +570,14 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options, manife
 			return ctx.Err()
 		default:
 			sp.Update(fmt.Sprintf("Diverting ingress %s/%s...", result.Items[i].Namespace, result.Items[i].Name))
-			if err := diverts.DivertIngress(ctx, manifest, &result.Items[i], c); err != nil {
+			if err := diverts.DivertIngress(ctx, diverts.NewDivertOptions(
+				manifest.Name,
+				manifest.Namespace,
+				manifest.Deploy.Divert.Namespace,
+				manifest.Deploy.Divert.Service,
+				manifest.Deploy.Divert.Deployment,
+				manifest.Deploy.Divert.Port),
+				&result.Items[i], c); err != nil {
 				return err
 			}
 		}
