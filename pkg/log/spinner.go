@@ -93,11 +93,11 @@ func StartSpinner() {
 
 // StopSpinner deletes FinalMSG and stops the running of the spinner
 func StopSpinner() {
+	log.spinner.sp.Lock()
 	if log.spinner.sp.FinalMSG != "" {
-		log.spinner.sp.Lock()
 		log.spinner.sp.FinalMSG = ""
-		log.spinner.sp.Unlock()
 	}
+	log.spinner.sp.Unlock()
 	if log.spinner.spinnerSupport {
 		log.spinner.sp.Stop()
 	}
