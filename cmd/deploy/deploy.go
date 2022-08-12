@@ -490,7 +490,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options, manifest *mo
 
 		// deploy diver if any
 		if manifest.Deploy.Divert != nil && manifest.Deploy.Divert.Namespace != manifest.Namespace {
-			if err := dc.deployDivert(ctx, opts, manifest); err != nil {
+			if err := dc.deployDivert(ctx, manifest); err != nil {
 				exit <- err
 				return
 			}
@@ -544,7 +544,7 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options, compose
 	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
 }
 
-func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options, manifest *model.Manifest) error {
+func (dc *DeployCommand) deployDivert(ctx context.Context, manifest *model.Manifest) error {
 	oktetoLog.SetStage("Divert configuration")
 	defer oktetoLog.SetStage("")
 

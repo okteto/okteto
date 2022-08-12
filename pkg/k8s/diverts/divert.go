@@ -25,6 +25,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// TODO: Better naming
 type divertOptions struct {
 	name            string // manifest
 	namespace       string // manifest
