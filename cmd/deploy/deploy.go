@@ -31,7 +31,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
-	"github.com/okteto/okteto/pkg/errors"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
@@ -292,7 +291,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	// don't divert if current namespace is the diverted namespace
 	if manifest.Deploy.Divert != nil {
 		if !okteto.IsOkteto() {
-			return manifest, errors.ErrDivertNotSupported
+			return manifest, oktetoErrors.ErrDivertNotSupported
 		}
 		if manifest.Deploy.Divert.Namespace != manifest.Namespace {
 			dc.Proxy.SetDivert(manifest.Deploy.Divert.Namespace) // USAGE OF MANIFEST
