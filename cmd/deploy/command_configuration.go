@@ -32,54 +32,54 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
-	if deployOptions.Manifest.Context == "" {
-		deployOptions.Manifest.Context = okteto.Context().Name
+func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, manifest *model.Manifest, cwd string, c kubernetes.Interface) error {
+	if manifest.Context == "" {
+		manifest.Context = okteto.Context().Name
 	}
-	if deployOptions.Manifest.Namespace == "" {
-		deployOptions.Manifest.Namespace = okteto.Context().Namespace
+	if manifest.Namespace == "" {
+		manifest.Namespace = okteto.Context().Namespace
 	}
 
 	if deployOptions.Name == "" {
-		if deployOptions.Manifest.Name != "" {
-			deployOptions.Name = deployOptions.Manifest.Name
+		if manifest.Name != "" {
+			deployOptions.Name = manifest.Name
 		} else {
 			deployOptions.Name = utils.InferName(cwd)
-			deployOptions.Manifest.Name = deployOptions.Name
+			manifest.Name = deployOptions.Name
 		}
 
 	} else {
-		if deployOptions.Manifest != nil {
-			deployOptions.Manifest.Name = deployOptions.Name
+		if manifest != nil {
+			manifest.Name = deployOptions.Name
 		}
-		if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
-			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
+		if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
+			manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
 		}
 	}
 
-	if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
+	if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 
-		mergeServicesToDeployFromOptionsAndManifest(deployOptions)
+		deployOptions.servicesToDeploy = mergeServicesToDeployFromOptionsAndManifest(deployOptions.servicesToDeploy, manifest.Deploy.ComposeSection.ComposesInfo)
 		if len(deployOptions.servicesToDeploy) == 0 {
 			deployOptions.servicesToDeploy = []string{}
-			for service := range deployOptions.Manifest.Deploy.ComposeSection.Stack.Services {
+			for service := range manifest.Deploy.ComposeSection.Stack.Services {
 				deployOptions.servicesToDeploy = append(deployOptions.servicesToDeploy, service)
 			}
 		}
-		if len(deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo) > 0 {
-			if err := stack.ValidateDefinedServices(deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy); err != nil {
+		if len(manifest.Deploy.ComposeSection.ComposesInfo) > 0 {
+			if err := stack.ValidateDefinedServices(manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy); err != nil {
 				return err
 			}
-			deployOptions.servicesToDeploy = stack.AddDependentServicesIfNotPresent(ctx, deployOptions.Manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy, c)
-			deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo[0].ServicesToDeploy = deployOptions.servicesToDeploy
+			deployOptions.servicesToDeploy = stack.AddDependentServicesIfNotPresent(ctx, manifest.Deploy.ComposeSection.Stack, deployOptions.servicesToDeploy, c)
+			manifest.Deploy.ComposeSection.ComposesInfo[0].ServicesToDeploy = deployOptions.servicesToDeploy
 		}
 	}
 	return nil
 }
 
-func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
+func mergeServicesToDeployFromOptionsAndManifest(servicesToDeployFromOptions []string, composesInfo model.ComposeInfoList) []string {
 	var manifestDeclaredServicesToDeploy []string
-	for _, composeInfo := range deployOptions.Manifest.Deploy.ComposeSection.ComposesInfo {
+	for _, composeInfo := range composesInfo {
 		manifestDeclaredServicesToDeploy = append(manifestDeclaredServicesToDeploy, composeInfo.ServicesToDeploy...)
 	}
 
@@ -89,20 +89,22 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 
 	commandDeclaredServicesToDeploy := map[string]bool{}
-	for _, service := range deployOptions.servicesToDeploy {
+	for _, service := range servicesToDeployFromOptions {
 		commandDeclaredServicesToDeploy[service] = true
 	}
 
 	if reflect.DeepEqual(manifestDeclaredServicesToDeploySet, commandDeclaredServicesToDeploy) {
-		return
+		return servicesToDeployFromOptions
 	}
 
-	if len(deployOptions.servicesToDeploy) > 0 && len(manifestDeclaredServicesToDeploy) > 0 {
+	if len(servicesToDeployFromOptions) > 0 && len(manifestDeclaredServicesToDeploy) > 0 {
 		oktetoLog.Warning("overwriting manifest's `services to deploy` with command line arguments")
 	}
-	if len(deployOptions.servicesToDeploy) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
-		deployOptions.servicesToDeploy = manifestDeclaredServicesToDeploy
+	if len(servicesToDeployFromOptions) == 0 && len(manifestDeclaredServicesToDeploy) > 0 {
+		return manifestDeclaredServicesToDeploy
 	}
+
+	return servicesToDeployFromOptions
 }
 
 func addEnvVars(ctx context.Context, cwd string) error {

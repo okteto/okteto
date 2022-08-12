@@ -29,7 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-func (dc *DeployCommand) wait(ctx context.Context, opts *Options) error {
+func (dc *DeployCommand) wait(ctx context.Context, opts *Options, manifestName, manifestNamespace string) error {
 	spinner := utils.NewSpinner(fmt.Sprintf("Waiting for %s to be deployed...", opts.Name))
 	spinner.Start()
 	defer spinner.Stop()
@@ -38,7 +38,7 @@ func (dc *DeployCommand) wait(ctx context.Context, opts *Options) error {
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 	go func() {
-		exit <- dc.waitForResourcesToBeRunning(ctx, opts)
+		exit <- dc.waitForResourcesToBeRunning(ctx, opts.Timeout, manifestName, manifestNamespace)
 	}()
 	select {
 	case <-stop:
@@ -54,9 +54,9 @@ func (dc *DeployCommand) wait(ctx context.Context, opts *Options) error {
 	return nil
 }
 
-func (dc *DeployCommand) waitForResourcesToBeRunning(ctx context.Context, opts *Options) error {
+func (dc *DeployCommand) waitForResourcesToBeRunning(ctx context.Context, timeout time.Duration, manifestName, manifestNamespace string) error {
 	ticker := time.NewTicker(5 * time.Second)
-	to := time.NewTicker(opts.Timeout)
+	to := time.NewTicker(timeout)
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
 		return err
@@ -65,27 +65,27 @@ func (dc *DeployCommand) waitForResourcesToBeRunning(ctx context.Context, opts *
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("'%s' deploy didn't finish after %s", opts.Manifest.Name, opts.Timeout.String())
+			return fmt.Errorf("'%s' deploy didn't finish after %s", manifestName, timeout.String())
 		case <-ticker.C:
-			dList, err := pipeline.ListDeployments(ctx, opts.Manifest.Name, opts.Manifest.Namespace, c)
+			dList, err := pipeline.ListDeployments(ctx, manifestName, manifestNamespace, c)
 			if err != nil {
 				return err
 			}
 			areAllRunning := true
 			for _, d := range dList {
-				if !deployments.IsRunning(ctx, opts.Manifest.Namespace, d.Name, c) {
+				if !deployments.IsRunning(ctx, manifestNamespace, d.Name, c) {
 					areAllRunning = false
 				}
 			}
 			if !areAllRunning {
 				continue
 			}
-			sfsList, err := pipeline.ListStatefulsets(ctx, opts.Manifest.Name, opts.Manifest.Namespace, c)
+			sfsList, err := pipeline.ListStatefulsets(ctx, manifestName, manifestNamespace, c)
 			if err != nil {
 				return err
 			}
 			for _, sfs := range sfsList {
-				if !statefulsets.IsRunning(ctx, opts.Manifest.Namespace, sfs.Name, c) {
+				if !statefulsets.IsRunning(ctx, manifestNamespace, sfs.Name, c) {
 					areAllRunning = false
 				}
 			}

@@ -277,17 +277,14 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		Builder:            buildv2.NewBuilderFromScratch(),
 	}
 
-	err = c.RunDeploy(ctx, &deploy.Options{
+	_, err = c.RunDeploy(ctx, &deploy.Options{
 		Name:         mc.manifest.Name,
 		ManifestPath: opts.DevPath,
 		Timeout:      5 * time.Minute,
 		Build:        false,
 		Wait:         false,
 	})
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespace string) error {
@@ -413,9 +410,9 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 				Stack: stack,
 			},
 		},
-		Dev:      model.ManifestDevs{},
-		Build:    model.ManifestBuild{},
-		IsV2:     true,
+		Dev:   model.ManifestDevs{},
+		Build: model.ManifestBuild{},
+		IsV2:  true,
 	}
 	cwd, err := os.Getwd()
 	if err != nil {

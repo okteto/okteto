@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func translateIngress(m *model.Manifest, in *networkingv1.Ingress, resourceVersion string) *networkingv1.Ingress {
+func translateIngress(name, namespace string, in *networkingv1.Ingress, resourceVersion string) *networkingv1.Ingress {
 	result := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            in.Name,
@@ -38,19 +38,19 @@ func translateIngress(m *model.Manifest, in *networkingv1.Ingress, resourceVersi
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
-	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, m.Name)
+	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, name)
 	for i := range result.Spec.Rules {
-		result.Spec.Rules[i].Host = strings.ReplaceAll(result.Spec.Rules[i].Host, in.Namespace, m.Namespace)
+		result.Spec.Rules[i].Host = strings.ReplaceAll(result.Spec.Rules[i].Host, in.Namespace, namespace)
 	}
 	for i := range result.Spec.TLS {
 		for j := range result.Spec.TLS[i].Hosts {
-			result.Spec.TLS[i].Hosts[j] = strings.ReplaceAll(result.Spec.TLS[i].Hosts[j], in.Namespace, m.Namespace)
+			result.Spec.TLS[i].Hosts[j] = strings.ReplaceAll(result.Spec.TLS[i].Hosts[j], in.Namespace, namespace)
 		}
 	}
 	return result
 }
 
-func translateService(m *model.Manifest, s *apiv1.Service, resourceVersion string) *apiv1.Service {
+func translateService(name string, s *apiv1.Service, resourceVersion string) *apiv1.Service {
 	result := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            s.Name,
@@ -60,7 +60,7 @@ func translateService(m *model.Manifest, s *apiv1.Service, resourceVersion strin
 		},
 		Spec: s.Spec,
 	}
-	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, m.Name)
+	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, name)
 	// create a headless service pointing to an endpoints object that resolves to pods in the diverted namespace
 	result.Spec.ClusterIP = apiv1.ClusterIPNone
 	result.Spec.ClusterIPs = nil
@@ -72,7 +72,7 @@ func translateService(m *model.Manifest, s *apiv1.Service, resourceVersion strin
 	return result
 }
 
-func translateEndpoints(m *model.Manifest, e *apiv1.Endpoints, resourceVersion string) *apiv1.Endpoints {
+func translateEndpoints(manifestName string, e *apiv1.Endpoints, resourceVersion string) *apiv1.Endpoints {
 	result := &apiv1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            e.Name,
@@ -82,7 +82,7 @@ func translateEndpoints(m *model.Manifest, e *apiv1.Endpoints, resourceVersion s
 		},
 		Subsets: e.Subsets,
 	}
-	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, m.Name)
+	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, manifestName)
 	labels.SetInMetadata(&result.ObjectMeta, model.OktetoDivertedFromLabel, string(e.UID))
 	if result.Annotations == nil {
 		result.Annotations = map[string]string{}

@@ -488,13 +488,15 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		Builder:            buildv2.NewBuilderFromScratch(),
 	}
 
-	return c.RunDeploy(ctx, &deploy.Options{
+	_, err = c.RunDeploy(ctx, &deploy.Options{
 		Name:             up.Manifest.Name,
 		ManifestPathFlag: up.Options.ManifestPathFlag,
 		ManifestPath:     up.Options.ManifestPath,
 		Timeout:          5 * time.Minute,
 		Build:            false,
 	})
+
+	return err
 }
 
 func (up *upContext) getManifest(path string) (*model.Manifest, error) {

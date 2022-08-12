@@ -64,7 +64,6 @@ type Options struct {
 	Namespace        string
 	K8sContext       string
 	Variables        []string
-	Manifest         *model.Manifest
 	Build            bool
 	Dependencies     bool
 	servicesToDeploy []string
@@ -188,20 +187,20 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Builder:            buildv2.NewBuilderFromScratch(),
 			}
 			startTime := time.Now()
-			err = c.RunDeploy(ctx, options)
+			manifest, err := c.RunDeploy(ctx, options)
 
 			deployType := "custom"
 			hasDependencySection := false
 			hasBuildSection := false
-			if options.Manifest != nil && options.Manifest.IsV2 {
-				if options.Manifest.Deploy != nil &&
-					options.Manifest.Deploy.ComposeSection != nil &&
-					options.Manifest.Deploy.ComposeSection.ComposesInfo != nil {
+			if manifest != nil && manifest.IsV2 {
+				if manifest.Deploy != nil &&
+					manifest.Deploy.ComposeSection != nil &&
+					manifest.Deploy.ComposeSection.ComposesInfo != nil {
 					deployType = "compose"
 				}
 
-				hasDependencySection = len(options.Manifest.Dependencies) > 0
-				hasBuildSection = len(options.Manifest.Build) > 0
+				hasDependencySection = len(manifest.Dependencies) > 0
+				hasBuildSection = len(manifest.Build) > 0
 			}
 
 			analytics.TrackDeploy(analytics.TrackDeployMetadata{
@@ -234,76 +233,76 @@ func Deploy(ctx context.Context) *cobra.Command {
 }
 
 // RunDeploy runs the deploy sequence
-func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
+func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) (*model.Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("failed to get the current working directory: %w", err)
+		return nil, fmt.Errorf("failed to get the current working directory: %w", err)
 	}
 
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := addEnvVars(ctx, cwd); err != nil {
-		return err
+		return nil, err
 	}
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
 	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
-		return err
+		return nil, err
 	}
 	oktetoLog.SetStage("Load manifest")
-	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
+	manifest, err := dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
-		return err
+		return manifest, err
 	}
 	oktetoLog.Debug("found okteto manifest")
 
-	if deployOptions.Manifest.Deploy == nil {
-		return oktetoErrors.ErrManifestFoundButNoDeployCommands
+	if manifest.Deploy == nil {
+		return manifest, oktetoErrors.ErrManifestFoundButNoDeployCommands
 	}
-	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy.ComposeSection == nil {
-		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
+	if len(deployOptions.servicesToDeploy) > 0 && manifest.Deploy.ComposeSection == nil {
+		return manifest, oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
-	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
-		return err
+	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, manifest, cwd, c); err != nil {
+		return manifest, err
 	}
 
 	data := &pipeline.CfgData{
 		Name:       deployOptions.Name,
-		Namespace:  deployOptions.Manifest.Namespace,
+		Namespace:  manifest.Namespace,
 		Repository: os.Getenv(model.GithubRepositoryEnvVar),
 		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
 		Filename:   deployOptions.ManifestPathFlag,
 		Status:     pipeline.ProgressingStatus,
-		Manifest:   deployOptions.Manifest.Manifest,
-		Icon:       deployOptions.Manifest.Icon,
+		Manifest:   manifest.Manifest,
+		Icon:       manifest.Icon,
 	}
 
-	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType {
-		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
+	if !manifest.IsV2 && manifest.Type == model.StackType {
+		data.Manifest = manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
 	dc.Proxy.SetName(deployOptions.Name)
 	// don't divert if current namespace is the diverted namespace
-	if deployOptions.Manifest.Deploy.Divert != nil {
+	if manifest.Deploy.Divert != nil {
 		if !okteto.IsOkteto() {
-			return errors.ErrDivertNotSupported
+			return manifest, errors.ErrDivertNotSupported
 		}
-		if deployOptions.Manifest.Deploy.Divert.Namespace != deployOptions.Manifest.Namespace {
-			dc.Proxy.SetDivert(deployOptions.Manifest.Deploy.Divert.Namespace)
+		if manifest.Deploy.Divert.Namespace != manifest.Namespace {
+			dc.Proxy.SetDivert(manifest.Deploy.Divert.Namespace)
 		}
 	}
 	oktetoLog.SetStage("")
 
-	dc.PipelineType = deployOptions.Manifest.Type
+	dc.PipelineType = manifest.Type
 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
-	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
-		return err
+	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, manifest, cwd, c); err != nil {
+		return manifest, err
 	}
 
 	// starting PROXY
@@ -312,11 +311,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	cfg, err := getConfigMapFromData(ctx, data, c)
 	if err != nil {
-		return err
+		return manifest, err
 	}
 
 	// TODO: take this out to a new function deploy dependencies
-	for depName, dep := range deployOptions.Manifest.Dependencies {
+	for depName, dep := range manifest.Dependencies {
 		oktetoLog.Information("Deploying dependency '%s'", depName)
 		dep.Variables = append(dep.Variables, model.EnvVar{
 			Name:  "OKTETO_ORIGIN",
@@ -334,14 +333,14 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 		pc, err := pipelineCMD.NewCommand()
 		if err != nil {
-			return err
+			return manifest, err
 		}
 		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
 			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); errStatus != nil {
-				return errStatus
+				return manifest, errStatus
 			}
 
-			return err
+			return manifest, err
 		}
 	}
 
@@ -349,27 +348,27 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if deployOptions.Build {
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
-			Manifest:     deployOptions.Manifest,
+			Manifest:     manifest,
 			CommandArgs:  deployOptions.servicesToDeploy,
 		}
 		oktetoLog.Debug("force build from manifest definition")
 		if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
-			return updateConfigMapStatusError(ctx, cfg, c, data, errBuild)
+			return manifest, updateConfigMapStatusError(ctx, cfg, c, data, errBuild)
 		}
 	} else {
-		svcsToBuild, errBuild := dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy)
+		svcsToBuild, errBuild := dc.Builder.GetServicesToBuild(ctx, manifest, deployOptions.servicesToDeploy)
 		if errBuild != nil {
-			return updateConfigMapStatusError(ctx, cfg, c, data, errBuild)
+			return manifest, updateConfigMapStatusError(ctx, cfg, c, data, errBuild)
 		}
 		if len(svcsToBuild) != 0 {
 			buildOptions := &types.BuildOptions{
 				CommandArgs:  svcsToBuild,
 				EnableStages: true,
-				Manifest:     deployOptions.Manifest,
+				Manifest:     manifest,
 			}
 
 			if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
-				return updateConfigMapStatusError(ctx, cfg, c, data, errBuild)
+				return manifest, updateConfigMapStatusError(ctx, cfg, c, data, errBuild)
 			}
 		}
 	}
@@ -400,7 +399,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
 	oktetoLog.EnableMasking()
-	err = dc.deploy(ctx, deployOptions)
+	err = dc.deploy(ctx, deployOptions, manifest)
 	oktetoLog.DisableMasking()
 	oktetoLog.SetStage("done")
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
@@ -408,7 +407,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	if err != nil {
 		if err == oktetoErrors.ErrIntSig {
-			return nil
+			return manifest, nil
 		}
 		err = oktetoErrors.UserError{
 			E:    err,
@@ -418,18 +417,18 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Status = pipeline.ErrorStatus
 	} else {
 		oktetoLog.SetStage("")
-		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
+		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, manifest.Namespace, c)
 		if err != nil {
-			return err
+			return manifest, err
 		}
 		if hasDeployed {
 			if deployOptions.Wait {
-				if err := dc.wait(ctx, deployOptions); err != nil {
-					return err
+				if err := dc.wait(ctx, deployOptions, manifest.Name, manifest.Namespace); err != nil {
+					return manifest, err
 				}
 			}
 			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-				if err := dc.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: deployOptions.Manifest.Namespace}); err != nil {
+				if err := dc.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: manifest.Namespace}); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
 				}
 			}
@@ -439,25 +438,25 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 					oktetoLog.Information("Run 'okteto up' to activate your development container")
 				}
 			}
-			pipeline.AddDevAnnotations(ctx, deployOptions.Manifest, c)
+			pipeline.AddDevAnnotations(ctx, manifest, c)
 		}
 		data.Status = pipeline.DeployedStatus
 	}
 
 	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
-		return err
+		return manifest, err
 	}
 
-	return err
+	return manifest, err
 }
 
-func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
+func (dc *DeployCommand) deploy(ctx context.Context, opts *Options, manifest *model.Manifest) error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 	go func() {
 		// deploy commands if any
-		for _, command := range opts.Manifest.Deploy.Commands {
+		for _, command := range manifest.Deploy.Commands {
 			oktetoLog.Information("Running %s", command.Name)
 			oktetoLog.SetStage(command.Name)
 			if err := dc.Executor.Execute(command, opts.Variables); err != nil {
@@ -469,28 +468,28 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		}
 
 		// deploy compose if any
-		if opts.Manifest.Deploy.ComposeSection != nil {
-			if err := dc.deployStack(ctx, opts); err != nil {
+		if manifest.Deploy.ComposeSection != nil {
+			if err := dc.deployStack(ctx, opts, manifest.Deploy.ComposeSection); err != nil {
 				exit <- err
 				return
 			}
 		}
 
 		// deploy endpoits if any
-		if opts.Manifest.Deploy.Endpoints != nil {
-			if err := dc.deployEndpoints(ctx, opts); err != nil {
+		if manifest.Deploy.Endpoints != nil {
+			if err := dc.deployEndpoints(ctx, manifest.Name, manifest.Namespace, manifest.Deploy.Endpoints); err != nil {
 				exit <- err
 				return
 			}
 		}
 
 		// deploy diver if any
-		if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
-			if err := dc.deployDivert(ctx, opts); err != nil {
+		if manifest.Deploy.Divert != nil && manifest.Deploy.Divert.Namespace != manifest.Namespace {
+			if err := dc.deployDivert(ctx, opts, manifest); err != nil {
 				exit <- err
 				return
 			}
-			oktetoLog.Success("Divert from '%s' successfully configured", opts.Manifest.Deploy.Divert.Namespace)
+			oktetoLog.Success("Divert from '%s' successfully configured", manifest.Deploy.Divert.Namespace)
 		}
 
 		exit <- nil
@@ -509,11 +508,11 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	}
 }
 
-func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
+func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options, composeSection *model.ComposeSectionInfo) error {
 	oktetoLog.SetStage("Deploying compose")
 	defer oktetoLog.SetStage("")
-	composeSectionInfo := opts.Manifest.Deploy.ComposeSection
-	composeSectionInfo.Stack.Namespace = okteto.Context().Namespace
+	composeSectionInfo := composeSection
+	composeSectionInfo.Stack.Namespace = okteto.Context().Namespace // TODO: stack is mixed with deploy, should be separated
 
 	var composeFiles []string
 	for _, composeInfo := range composeSectionInfo.ComposesInfo {
@@ -540,11 +539,11 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
 }
 
-func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error {
+func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options, manifest *model.Manifest) error {
 	oktetoLog.SetStage("Divert configuration")
 	defer oktetoLog.SetStage("")
 
-	sp := utils.NewSpinner(fmt.Sprintf("Diverting namespace %s...", opts.Manifest.Deploy.Divert.Namespace))
+	sp := utils.NewSpinner(fmt.Sprintf("Diverting namespace %s...", manifest.Deploy.Divert.Namespace))
 	sp.Start()
 	defer sp.Stop()
 
@@ -553,7 +552,7 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 		return err
 	}
 
-	result, err := c.NetworkingV1().Ingresses(opts.Manifest.Deploy.Divert.Namespace).List(ctx, metav1.ListOptions{})
+	result, err := c.NetworkingV1().Ingresses(manifest.Deploy.Divert.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -565,7 +564,7 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 			return ctx.Err()
 		default:
 			sp.Update(fmt.Sprintf("Diverting ingress %s/%s...", result.Items[i].Namespace, result.Items[i].Name))
-			if err := diverts.DivertIngress(ctx, opts.Manifest, &result.Items[i], c); err != nil {
+			if err := diverts.DivertIngress(ctx, manifest, &result.Items[i], c); err != nil {
 				return err
 			}
 		}
@@ -573,7 +572,7 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 	return nil
 }
 
-func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) error {
+func (dc *DeployCommand) deployEndpoints(ctx context.Context, name, namespace string, endpoints map[string]model.Endpoint) error {
 	oktetoLog.SetStage("Endpoints configuration")
 	defer oktetoLog.SetStage("")
 
@@ -588,12 +587,12 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 	}
 
 	translateOptions := &ingresses.TranslateOptions{
-		Namespace: opts.Manifest.Namespace,
-		Name:      opts.Manifest.Name,
+		Namespace: namespace,
+		Name:      name,
 	}
 
-	for name, endpoint := range opts.Manifest.Deploy.Endpoints {
-		ingress := ingresses.Translate(name, endpoint, translateOptions)
+	for endpointName, endpoint := range endpoints {
+		ingress := ingresses.Translate(endpointName, endpoint, translateOptions)
 		if err := iClient.Deploy(ctx, ingress); err != nil {
 			return err
 		}
