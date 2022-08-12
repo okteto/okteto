@@ -68,6 +68,8 @@ All new features or bug fixes must have unit tests that cover the added code and
 
 Tests should fail with helpful messages saying what was wrong, what inputs were provided, the expected result, and the actual result received in testing. Assume that the person debugging your failing test is not you, and is potentially new to the entire project.
 
+To run unit/e2e tests locally, please check our [How to run tests guidelines](how-to-run-tests.md)
+
 #### Unit tests
 
 The code should be testable by unit functions, which means that each function should perform an action and this action should be testable.
@@ -189,17 +191,11 @@ In order to speed up the CI process, all tests are executed in parallel includin
 - `deploy/destroy` command: This command has the most dependencies, as it is used by all other services:
 
   - The information stored on the `configmap` is used on the UI to show information like structured logs, and repository information or to execute actions like redeploying or destroying the application.
-
   - The logs that are written in the buffer(`JSON`) will be the ones stored in the `configmap`, to later show them in the UI.
-
   - The following actions directly or indirectly use this command: [preview deploy](https://github.com/okteto/deploy-preview)/[pipeline deploy](https://github.com/okteto/pipeline)/[destroy pipeline](https://github.com/okteto/destroy-pipeline)/[preview destroy](https://github.com/okteto/destroy-preview)
-
   - Changes on this command can affect other commands like `preview` or `pipeline`
-
 - `up/down` command: It's mostly used on the `vscode` and `docker extension`
-
 - `stack` command: This command is used by `okteto deploy` command.
-
 - Changes on `graphql` calls: You have to check that your changes should work also with the previous `okteto chart` version.
 
 ### Logs
