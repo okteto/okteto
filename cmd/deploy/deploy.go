@@ -253,6 +253,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return nil, err
 	}
 	oktetoLog.SetStage("Load manifest")
+	// TODO: See the usage of the manifest and come up with a custom struct that separates the "parsed yaml" from the "inferred options"
 	manifest, err := dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
 		return manifest, err
@@ -266,6 +267,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return manifest, oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
+	// Usage of manifest
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, manifest, cwd, c); err != nil {
 		return manifest, err
 	}
@@ -277,10 +279,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
 		Filename:   deployOptions.ManifestPathFlag,
 		Status:     pipeline.ProgressingStatus,
-		Manifest:   manifest.Manifest,
+		Manifest:   manifest.Manifest, // Usage of manifest
 		Icon:       manifest.Icon,
 	}
 
+	// USAGE OF MANIFEST
 	if !manifest.IsV2 && manifest.Type == model.StackType {
 		data.Manifest = manifest.Deploy.ComposeSection.Stack.Manifest
 	}
@@ -292,7 +295,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return manifest, errors.ErrDivertNotSupported
 		}
 		if manifest.Deploy.Divert.Namespace != manifest.Namespace {
-			dc.Proxy.SetDivert(manifest.Deploy.Divert.Namespace)
+			dc.Proxy.SetDivert(manifest.Deploy.Divert.Namespace) // USAGE OF MANIFEST
 		}
 	}
 	oktetoLog.SetStage("")
@@ -301,6 +304,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
 
+	// USAGE OF MANIFEST
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, manifest, cwd, c); err != nil {
 		return manifest, err
 	}
@@ -314,6 +318,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return manifest, err
 	}
 
+	// USAGE OF MANIFEST
 	// TODO: take this out to a new function deploy dependencies
 	for depName, dep := range manifest.Dependencies {
 		oktetoLog.Information("Deploying dependency '%s'", depName)
@@ -344,6 +349,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
+	// USAGE OF MANIFEST
 	// TODO: take this out to a new function build images
 	if deployOptions.Build {
 		buildOptions := &types.BuildOptions{
@@ -399,7 +405,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
 	oktetoLog.EnableMasking()
-	err = dc.deploy(ctx, deployOptions, manifest)
+	err = dc.deploy(ctx, deployOptions, manifest) // USAGE OF MANIFEST
 	oktetoLog.DisableMasking()
 	oktetoLog.SetStage("done")
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")

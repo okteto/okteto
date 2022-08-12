@@ -51,7 +51,14 @@ func DivertIngress(ctx context.Context, m *model.Manifest, fromIn *networkingv1.
 			}
 		}
 	}
-	return createDivertCRD(ctx, m, fromIn)
+	return createDivertCRD(ctx,
+		divertOptions{name: m.Name,
+			namespace:       m.Namespace,
+			divertNamespace: m.Deploy.Divert.Namespace,
+			service:         m.Deploy.Divert.Service,
+			port:            m.Deploy.Divert.Port,
+			deployment:      m.Deploy.Divert.Deployment},
+		fromIn)
 }
 
 func divertService(ctx context.Context, manifestName, manifestNamespace, manifestDivertNamespace, name string, c kubernetes.Interface) error {
@@ -112,22 +119,22 @@ func divertEndpoints(ctx context.Context, manifestName, manifestNamespace, manif
 	return err
 }
 
-func createDivertCRD(ctx context.Context, m *model.Manifest, in *networkingv1.Ingress) error {
+func createDivertCRD(ctx context.Context, d divertOptions, in *networkingv1.Ingress) error {
 	dClient, err := getDivertClient()
 	if err != nil {
 		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
 	}
 
-	divertCRD := translateDivertCRD(m, in)
+	divertCRD := translateDivertCRD(d, in)
 
-	old, err := dClient.Diverts(m.Namespace).Get(ctx, divertCRD.Name, metav1.GetOptions{})
+	old, err := dClient.Diverts(d.namespace).Get(ctx, divertCRD.Name, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return fmt.Errorf("error getting divert CRD '%s'': %s", divertCRD.Name, err)
 	}
 
 	if old.Name == "" {
 		oktetoLog.Infof("creating  divert CRD '%s'", divertCRD.Name)
-		_, err = dClient.Diverts(m.Namespace).Create(ctx, divertCRD)
+		_, err = dClient.Diverts(d.namespace).Create(ctx, divertCRD)
 		if err != nil {
 			return fmt.Errorf("error creating divert CRD '%s': %s", divertCRD.Name, err)
 		}
@@ -139,7 +146,7 @@ func createDivertCRD(ctx context.Context, m *model.Manifest, in *networkingv1.In
 		old.Labels = divertCRD.Labels
 		old.Spec = divertCRD.Spec
 		old.Status = DivertStatus{}
-		_, err = dClient.Diverts(m.Namespace).Update(ctx, old)
+		_, err = dClient.Diverts(d.namespace).Update(ctx, old)
 		if err != nil {
 			return fmt.Errorf("error updating divert CRD '%s': %s", divertCRD.Name, err)
 		}

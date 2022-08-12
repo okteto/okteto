@@ -91,37 +91,46 @@ func translateEndpoints(manifestName string, e *apiv1.Endpoints, resourceVersion
 	return result
 }
 
-func translateDivertCRD(m *model.Manifest, in *networkingv1.Ingress) *Divert {
+type divertOptions struct {
+	name            string // manifest
+	namespace       string // manifest
+	divertNamespace string // divert
+	service         string // divert
+	port            int    // divert
+	deployment      string // divert
+}
+
+func translateDivertCRD(d divertOptions, in *networkingv1.Ingress) *Divert {
 	result := &Divert{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Divert",
 			APIVersion: "weaver.okteto.com/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-%s", m.Name, in.Name),
-			Namespace:   m.Namespace,
-			Labels:      map[string]string{model.DeployedByLabel: m.Name},
+			Name:        fmt.Sprintf("%s-%s", d.name, in.Name),
+			Namespace:   d.namespace,
+			Labels:      map[string]string{model.DeployedByLabel: d.name},
 			Annotations: map[string]string{model.OktetoAutoCreateAnnotation: "true"},
 		},
 		Spec: DivertSpec{
 			Ingress: IngressDivertSpec{
 				Name:      in.Name,
-				Namespace: m.Namespace,
-				Value:     m.Namespace,
+				Namespace: d.namespace,
+				Value:     d.namespace,
 			},
 			FromService: ServiceDivertSpec{
-				Name:      m.Deploy.Divert.Service,
-				Namespace: m.Deploy.Divert.Namespace,
-				Port:      m.Deploy.Divert.Port,
+				Name:      d.service,
+				Namespace: d.divertNamespace,
+				Port:      d.port,
 			},
 			ToService: ServiceDivertSpec{
-				Name:      m.Deploy.Divert.Service,
-				Namespace: m.Namespace,
-				Port:      m.Deploy.Divert.Port,
+				Name:      d.service,
+				Namespace: d.namespace,
+				Port:      d.port,
 			},
 			Deployment: DeploymentDivertSpec{
-				Name:      m.Deploy.Divert.Deployment,
-				Namespace: m.Deploy.Divert.Namespace,
+				Name:      d.deployment,
+				Namespace: d.divertNamespace,
 			},
 		},
 	}

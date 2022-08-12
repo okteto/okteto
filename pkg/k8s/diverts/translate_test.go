@@ -274,18 +274,15 @@ func Test_translateEmptyEndpoints(t *testing.T) {
 }
 
 func Test_translateDivertCRD(t *testing.T) {
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace:  "staging",
-				Service:    "service",
-				Deployment: "deployment",
-				Port:       8080,
-			},
-		},
+	d := divertOptions{
+		name:            "test",
+		namespace:       "cindy",
+		divertNamespace: "staging",
+		service:         "service",
+		deployment:      "deployment",
+		port:            8080,
 	}
+
 	in := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "ingress",
@@ -325,6 +322,6 @@ func Test_translateDivertCRD(t *testing.T) {
 			},
 		},
 	}
-	result := translateDivertCRD(m, in)
+	result := translateDivertCRD(d, in)
 	assert.True(t, reflect.DeepEqual(result, expected))
 }
