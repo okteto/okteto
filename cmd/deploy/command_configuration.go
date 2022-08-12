@@ -40,22 +40,21 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 		manifest.Namespace = okteto.Context().Namespace
 	}
 
-	if deployOptions.Name == "" {
-		if manifest.Name != "" {
-			deployOptions.Name = manifest.Name
-		} else {
-			deployOptions.Name = utils.InferName(cwd)
-			manifest.Name = deployOptions.Name
-		}
-
-	} else {
-		if manifest != nil {
-			manifest.Name = deployOptions.Name
-		}
+	if deployOptions.Name != "" { // should we remove this and put this below the name check?
 		if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 			manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
 		}
 	}
+
+	name := deployOptions.Name
+	if name == "" {
+		name = manifest.Name
+	}
+	if name == "" {
+		name = utils.InferName(cwd)
+	}
+	deployOptions.Name = name
+	manifest.Name = name
 
 	if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 
