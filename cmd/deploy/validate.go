@@ -34,7 +34,7 @@ func validateAndSet(variables []string, setEnv func(key, value string) error) er
 func parse(variables []string) ([]envVar, error) {
 	result := []envVar{}
 	for _, v := range variables {
-		kv := strings.Split(v, "=")
+		kv := strings.SplitN(v, "=", 2)
 		if len(kv) != 2 {
 			return nil, fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
 		}

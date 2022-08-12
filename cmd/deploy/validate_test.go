@@ -29,13 +29,13 @@ func Test_validateAndSet(t *testing.T) {
 		expectedEnvs  map[string]string
 	}{
 		{
-			name:          "correct assingnament",
+			name:          "correct assingnment",
 			variables:     []string{"NAME=test"},
 			expectedError: nil,
 			expectedEnvs:  map[string]string{"NAME": "test"},
 		},
 		{
-			name:          "bas assingnament",
+			name:          "bad assingnment",
 			variables:     []string{"NAME:test"},
 			expectedError: fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", "NAME:test"),
 			expectedEnvs:  map[string]string{},
@@ -54,11 +54,6 @@ func Test_validateAndSet(t *testing.T) {
 			},
 			expectedError: nil,
 			expectedEnvs:  map[string]string{"NAME": "test", "BASE64": "something=="},
-		},
-		{
-			name:        "too many equals",
-			variables:   []string{"too=many=equals"},
-			expectedErr: true,
 		},
 	}
 
