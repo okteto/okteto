@@ -15,27 +15,37 @@ package deploy
 
 import (
 	"fmt"
-	"os"
 	"strings"
 )
 
-func validateOptionVars(variables []string) error {
+type envVar struct {
+	key   string
+	value string
+}
+
+func validateAndSet(variables []string, setEnv func(key, value string) error) error {
+	envVars, err := parse(variables)
+	if err != nil {
+		return err
+	}
+	return setOptionVarsAsEnvs(envVars, setEnv)
+}
+
+func parse(variables []string) ([]envVar, error) {
+	result := []envVar{}
 	for _, v := range variables {
 		kv := strings.SplitN(v, "=", 2)
 		if len(kv) != 2 {
-			return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
+			return nil, fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
 		}
-		if err := os.Setenv(kv[0], kv[1]); err != nil {
-			return err
-		}
+		result = append(result, envVar{key: kv[0], value: kv[1]})
 	}
-	return nil
+	return result, nil
 }
 
-func setOptionVarsAsEnvs(variables []string) error {
+func setOptionVarsAsEnvs(variables []envVar, setEnv func(key, value string) error) error {
 	for _, v := range variables {
-		kv := strings.SplitN(v, "=", 2)
-		if err := os.Setenv(kv[0], kv[1]); err != nil {
+		if err := setEnv(v.key, v.value); err != nil {
 			return err
 		}
 	}
