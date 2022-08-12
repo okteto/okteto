@@ -20,17 +20,17 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"k8s.io/utils/pointer"
 )
 
 var (
-	isOktetoSample *bool
-	muOktetoSample sync.Mutex
+	isOktetoSample     int64
+	isOktetoSampleOnce sync.Once
 )
 
 func GetBranch(ctx context.Context, path string) (string, error) {
@@ -98,26 +98,23 @@ func GetRandomSHA(ctx context.Context, path string) string {
 }
 
 func IsOktetoRepo() bool {
-	// adding mutex to avoid race condition at isOktetoSample
-	muOktetoSample.Lock()
-	defer muOktetoSample.Unlock()
-
-	if isOktetoSample == nil {
+	isOktetoSampleOnce.Do(func() {
 		path, err := os.Getwd()
 		if err != nil {
 			oktetoLog.Infof("failed to get the current working directory in IsOktetoRepo: %v", err)
-			isOktetoSample = pointer.BoolPtr(false)
-			return false
+			return
 		}
 		repoUrl, err := model.GetRepositoryURL(path)
 		if err != nil {
 			oktetoLog.Infof("failed to get repository url in IsOktetoRepo: %v", err)
-			isOktetoSample = pointer.BoolPtr(false)
-			return false
+			return
 		}
-		isOktetoSample = pointer.BoolPtr(isOktetoRepoFromURL(repoUrl))
-	}
-	return *isOktetoSample
+		if isOktetoRepoFromURL(repoUrl) {
+			atomic.StoreInt64(&isOktetoSample, 1)
+		}
+	})
+
+	return atomic.LoadInt64(&isOktetoSample) == 1
 }
 
 func isOktetoRepoFromURL(repoUrl string) bool {
