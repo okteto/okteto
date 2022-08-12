@@ -193,16 +193,15 @@ func Deploy(ctx context.Context) *cobra.Command {
 			deployType := "custom"
 			hasDependencySection := false
 			hasBuildSection := false
-			if options.Manifest != nil {
-				if options.Manifest.IsV2 &&
-					options.Manifest.Deploy != nil &&
+			if options.Manifest != nil && options.Manifest.IsV2 {
+				if options.Manifest.Deploy != nil &&
 					options.Manifest.Deploy.ComposeSection != nil &&
 					options.Manifest.Deploy.ComposeSection.ComposesInfo != nil {
 					deployType = "compose"
 				}
 
-				hasDependencySection = options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0
-				hasBuildSection = options.Manifest.IsV2 && len(options.Manifest.Build) > 0
+				hasDependencySection = len(options.Manifest.Dependencies) > 0
+				hasBuildSection = len(options.Manifest.Build) > 0
 			}
 
 			analytics.TrackDeploy(analytics.TrackDeployMetadata{
