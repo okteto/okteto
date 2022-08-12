@@ -855,12 +855,13 @@ func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *Stac
 
 // ValidateDefinedServices checks that the services to deploy are in the compose file
 func ValidateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
+	definedSvcs := make([]string, 0)
+	for svcName := range s.Services {
+		definedSvcs = append(definedSvcs, svcName)
+	}
+
 	for _, svcToDeploy := range servicesToDeploy {
 		if _, ok := s.Services[svcToDeploy]; !ok {
-			definedSvcs := make([]string, 0)
-			for svcName := range s.Services {
-				definedSvcs = append(definedSvcs, svcName)
-			}
 			return fmt.Errorf("service '%s' is not defined. Defined services are: [%s]", svcToDeploy, strings.Join(definedSvcs, ", "))
 		}
 	}

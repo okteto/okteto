@@ -40,7 +40,7 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 		manifest.Namespace = okteto.Context().Namespace
 	}
 
-	if deployOptions.Name != "" { // should we remove this and put this below the name check?
+	if deployOptions.Name != "" { // TODO: should we remove this if check, and put this below the name set?
 		if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 			manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
 		}
@@ -77,7 +77,7 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 }
 
 func mergeServicesToDeployFromOptionsAndManifest(servicesToDeployFromOptions []string, composesInfo model.ComposeInfoList) []string {
-	var manifestDeclaredServicesToDeploy []string
+	manifestDeclaredServicesToDeploy := []string{}
 	for _, composeInfo := range composesInfo {
 		manifestDeclaredServicesToDeploy = append(manifestDeclaredServicesToDeploy, composeInfo.ServicesToDeploy...)
 	}
