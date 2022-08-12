@@ -72,16 +72,16 @@ func Test_translateIngress(t *testing.T) {
 			},
 		},
 	}
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-			},
-		},
-	}
-	result := translateIngress(m, in, "")
+	// m := &model.Manifest{
+	// 	Name:      "test",
+	// 	Namespace: "cindy",
+	// 	Deploy: &model.DeployInfo{
+	// 		Divert: &model.DivertDeploy{
+	// 			Namespace: "staging",
+	// 		},
+	// 	},
+	// }
+	result := translateIngress("test", "cindy", in, "")
 	fmt.Println(result)
 	fmt.Println(expected)
 	assert.True(t, reflect.DeepEqual(result, expected))
@@ -114,16 +114,16 @@ func Test_translateEmptyIngress(t *testing.T) {
 			TLS:   []networkingv1.IngressTLS{},
 		},
 	}
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-			},
-		},
-	}
-	result := translateIngress(m, in, "version")
+	// m := &model.Manifest{
+	// 	Name:      "test",
+	// 	Namespace: "cindy",
+	// 	Deploy: &model.DeployInfo{
+	// 		Divert: &model.DivertDeploy{
+	// 			Namespace: "staging",
+	// 		},
+	// 	},
+	// }
+	result := translateIngress("test", "cindy", in, "version")
 	assert.True(t, reflect.DeepEqual(result, expected))
 }
 
@@ -173,16 +173,16 @@ func Test_translateService(t *testing.T) {
 			Selector:   nil,
 		},
 	}
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-			},
-		},
-	}
-	result := translateService(m, s, "")
+	// m := &model.Manifest{
+	// 	Name:      "test",
+	// 	Namespace: "cindy",
+	// 	Deploy: &model.DeployInfo{
+	// 		Divert: &model.DivertDeploy{
+	// 			Namespace: "staging",
+	// 		},
+	// 	},
+	// }
+	result := translateService("test", s, "")
 	assert.True(t, reflect.DeepEqual(result, expected))
 }
 
@@ -217,16 +217,16 @@ func Test_translateEmptyService(t *testing.T) {
 			Selector:   nil,
 		},
 	}
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-			},
-		},
-	}
-	result := translateService(m, s, "version")
+	// m := &model.Manifest{
+	// 	Name:      "test",
+	// 	Namespace: "cindy",
+	// 	Deploy: &model.DeployInfo{
+	// 		Divert: &model.DivertDeploy{
+	// 			Namespace: "staging",
+	// 		},
+	// 	},
+	// }
+	result := translateService("test", s, "version")
 	assert.True(t, reflect.DeepEqual(result, expected))
 }
 
@@ -271,16 +271,16 @@ func Test_translateEndpoints(t *testing.T) {
 			},
 		},
 	}
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-			},
-		},
-	}
-	result := translateEndpoints(m, e, "")
+	// m := &model.Manifest{
+	// 	Name:      "test",
+	// 	Namespace: "cindy",
+	// 	Deploy: &model.DeployInfo{
+	// 		Divert: &model.DivertDeploy{
+	// 			Namespace: "staging",
+	// 		},
+	// 	},
+	// }
+	result := translateEndpoints("test", e, "")
 	assert.True(t, reflect.DeepEqual(result, expected))
 }
 
@@ -305,16 +305,16 @@ func Test_translateEmptyEndpoints(t *testing.T) {
 			ResourceVersion: "version",
 		},
 	}
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-			},
-		},
-	}
-	result := translateEndpoints(m, e, "version")
+	// m := &model.Manifest{
+	// 	Name:      "test",
+	// 	Namespace: "cindy",
+	// 	Deploy: &model.DeployInfo{
+	// 		Divert: &model.DivertDeploy{
+	// 			Namespace: "staging",
+	// 		},
+	// 	},
+	// }
+	result := translateEndpoints("test", e, "version")
 	assert.True(t, reflect.DeepEqual(result, expected))
 }
 

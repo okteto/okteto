@@ -97,52 +97,30 @@ devs:
 func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
 	tests := []struct {
 		name             string
-		options          *Options
+		servicesToDeploy []string
+		composesInfo     []model.ComposeInfo
 		expectedServices []string
 	}{
 		{
-			name: "no manifest services to deploy",
-			options: &Options{
-				servicesToDeploy: []string{"a", "b"},
-				Manifest: &model.Manifest{
-					Deploy: &model.DeployInfo{
-						ComposeSection: &model.ComposeSectionInfo{
-							ComposesInfo: []model.ComposeInfo{},
-						},
-					},
-				},
-			},
+			name:             "no manifest services to deploy",
+			servicesToDeploy: []string{"a", "b"},
+			composesInfo:     []model.ComposeInfo{},
 			expectedServices: []string{"a", "b"},
 		},
 		{
-			name: "no options services to deploy",
-			options: &Options{
-				Manifest: &model.Manifest{
-					Deploy: &model.DeployInfo{
-						ComposeSection: &model.ComposeSectionInfo{
-							ComposesInfo: []model.ComposeInfo{
-								{ServicesToDeploy: []string{"a", "b"}},
-								{ServicesToDeploy: []string{"c", "d"}},
-							},
-						},
-					},
-				},
+			name:             "no options services to deploy",
+			servicesToDeploy: []string{},
+			composesInfo: []model.ComposeInfo{
+				{ServicesToDeploy: []string{"a", "b"}},
+				{ServicesToDeploy: []string{"c", "d"}},
 			},
 			expectedServices: []string{"a", "b", "c", "d"},
 		},
 		{
-			name: "both",
-			options: &Options{
-				servicesToDeploy: []string{"from command a", "from command b"},
-				Manifest: &model.Manifest{
-					Deploy: &model.DeployInfo{
-						ComposeSection: &model.ComposeSectionInfo{
-							ComposesInfo: []model.ComposeInfo{
-								{ServicesToDeploy: []string{"c", "d"}},
-							},
-						},
-					},
-				},
+			name:             "both",
+			servicesToDeploy: []string{"from command a", "from command b"},
+			composesInfo: []model.ComposeInfo{
+				{ServicesToDeploy: []string{"c", "d"}},
 			},
 			expectedServices: []string{"from command a", "from command b"},
 		},
@@ -150,7 +128,7 @@ func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			mergeServicesToDeployFromOptionsAndManifest(test.options)
+			result := mergeServicesToDeployFromOptionsAndManifest(test.servicesToDeploy, test.composesInfo)
 			// We have to check them as if they were sets to account for order
 			expected := map[string]bool{}
 			for _, service := range test.expectedServices {
@@ -158,7 +136,7 @@ func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
 			}
 
 			got := map[string]bool{}
-			for _, service := range test.options.servicesToDeploy {
+			for _, service := range result {
 				got[service] = true
 			}
 

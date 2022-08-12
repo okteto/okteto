@@ -161,7 +161,7 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	_, err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -195,7 +195,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	_, err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -230,7 +230,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	ctx := context.Background()
 
-	err := c.RunDeploy(ctx, opts)
+	_, err := c.RunDeploy(ctx, opts)
 
 	// we should get a build error because Dockerfile does not exist
 	assert.Error(t, err)
@@ -293,7 +293,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	_, err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -359,7 +359,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	err := c.RunDeploy(ctx, opts)
+	_, err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -413,7 +413,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	_, err := c.RunDeploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed
@@ -469,7 +469,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	_, err := c.RunDeploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed
