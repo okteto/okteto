@@ -30,7 +30,6 @@ import (
 
 var (
 	isOktetoSample *bool
-	mu             sync.Mutex
 )
 
 func GetBranch(ctx context.Context, path string) (string, error) {
@@ -98,6 +97,7 @@ func GetRandomSHA(ctx context.Context, path string) string {
 }
 
 func IsOktetoRepo() bool {
+	var mu sync.Mutex
 	mu.Lock()
 	defer mu.Unlock()
 
