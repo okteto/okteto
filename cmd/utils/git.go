@@ -98,7 +98,7 @@ func GetRandomSHA(ctx context.Context, path string) string {
 }
 
 func IsOktetoRepo() bool {
-
+	// adding mutex to avoid race condition at isOktetoSample
 	muOktetoSample.Lock()
 	defer muOktetoSample.Unlock()
 
