@@ -68,9 +68,18 @@ const (
     proxy_pass http://$FLASK_SERVER_ADDR;
   }
 }`
+	composeFailTemplate = `services:
+  app:
+   image: alpine
+   labels:
+      1!"·$!31: ñÇ*^.,`
+	oktetoCmdFailureTemplate = `deploy:
+- name: Failed command
+  command: exit 1
+`
 )
 
-func TestDeployOutput(t *testing.T) {
+func TestDeploySuccessOutput(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -79,7 +88,7 @@ func TestDeployOutput(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createComposeScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeploy", user)
+	testNamespace := integration.GetTestNamespace("TestSuccessOutput", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -134,6 +143,153 @@ func TestDeployOutput(t *testing.T) {
 		}
 
 	}
+}
+
+func TestCmdFailOutput(t *testing.T) {
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	require.NoError(t, createCommandFailureManifest(dir))
+
+	testNamespace := integration.GetTestNamespace("TestCmdFailOutput", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.Error(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+	cmap, err := integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", filepath.Base(dir)), c)
+	require.NoError(t, err)
+
+	uiOutput, err := base64.StdEncoding.DecodeString(cmap.Data["output"])
+	require.NoError(t, err)
+
+	var text oktetoLog.JSONLogFormat
+	stageLines := map[string][]string{}
+	prevLine := ""
+	numErrors := 0
+	for _, l := range strings.Split(string(uiOutput), "\n") {
+		if err := json.Unmarshal([]byte(l), &text); err != nil {
+			if prevLine != "EOF" {
+				t.Fatalf("not json format: %s", l)
+			}
+		}
+		if _, ok := stageLines[text.Stage]; ok {
+			stageLines[text.Stage] = append(stageLines[text.Stage], text.Message)
+		} else {
+			stageLines[text.Stage] = []string{text.Message}
+		}
+		prevLine = text.Message
+		if text.Level == "error" {
+			numErrors++
+		}
+	}
+
+	require.Equal(t, 1, numErrors)
+	stagesToTest := []string{"Load manifest", "Failed command", "done"}
+	for _, ss := range stagesToTest {
+		if _, ok := stageLines[ss]; !ok {
+			t.Fatalf("deploy didn't have the stage '%s'", ss)
+		}
+	}
+}
+
+func TestComposeFailOutput(t *testing.T) {
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	require.NoError(t, createFailCompose(dir))
+
+	testNamespace := integration.GetTestNamespace("TestComposeFailOutput", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.Error(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+	cmap, err := integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", filepath.Base(dir)), c)
+	require.NoError(t, err)
+
+	uiOutput, err := base64.StdEncoding.DecodeString(cmap.Data["output"])
+	require.NoError(t, err)
+
+	var text oktetoLog.JSONLogFormat
+	stageLines := map[string][]string{}
+	prevLine := ""
+	numErrors := 0
+	for _, l := range strings.Split(string(uiOutput), "\n") {
+		if err := json.Unmarshal([]byte(l), &text); err != nil {
+			if prevLine != "EOF" {
+				t.Fatalf("not json format: %s", l)
+			}
+		}
+		if _, ok := stageLines[text.Stage]; ok {
+			stageLines[text.Stage] = append(stageLines[text.Stage], text.Message)
+		} else {
+			stageLines[text.Stage] = []string{text.Message}
+		}
+		prevLine = text.Message
+		if text.Level == "error" {
+			numErrors++
+		}
+	}
+
+	require.Equal(t, 1, numErrors)
+	stagesToTest := []string{"Load manifest", "Deploying compose", "done"}
+	for _, ss := range stagesToTest {
+		if _, ok := stageLines[ss]; !ok {
+			t.Fatalf("deploy didn't have the stage '%s'", ss)
+		}
+	}
+}
+
+func createCommandFailureManifest(dir string) error {
+	oktetoPath := filepath.Join(dir, "okteto.yml")
+	oktetoContent := []byte(oktetoCmdFailureTemplate)
+	if err := os.WriteFile(oktetoPath, oktetoContent, 0644); err != nil {
+		return err
+	}
+	return nil
+}
+func createFailCompose(dir string) error {
+	composePath := filepath.Join(dir, "okteto-stack.yml")
+	composeContent := []byte(composeFailTemplate)
+	if err := os.WriteFile(composePath, composeContent, 0644); err != nil {
+		return err
+	}
+	return nil
 }
 
 func createComposeScenario(dir string) error {
