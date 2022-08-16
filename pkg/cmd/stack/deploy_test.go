@@ -20,7 +20,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -110,8 +109,7 @@ func Test_deploySvc(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			spinner := utils.NewSpinner("testing")
-			err := deploySvc(ctx, tt.stack, tt.svcName, client, spinner)
+			err := deploySvc(ctx, tt.stack, tt.svcName, client)
 			if err != nil {
 				t.Fatal("Not deployed correctly")
 			}
@@ -222,8 +220,7 @@ func Test_reDeploySvc(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			spinner := utils.NewSpinner("testing")
-			err := deploySvc(ctx, tt.stack, tt.svcName, fakeClient, spinner)
+			err := deploySvc(ctx, tt.stack, tt.svcName, fakeClient)
 			if err != nil {
 				t.Fatal("Not re-deployed correctly")
 			}
@@ -279,9 +276,7 @@ func Test_deployDeployment(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	spinner := utils.NewSpinner("Starting...")
-	spinner.Start()
-	_, err := deployDeployment(ctx, "test", stack, client, spinner)
+	_, err := deployDeployment(ctx, "test", stack, client)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -315,9 +310,7 @@ func Test_deployVolumes(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	spinner := utils.NewSpinner("Starting...")
-	spinner.Start()
-	err := deployVolume(ctx, "a", stack, client, spinner)
+	err := deployVolume(ctx, "a", stack, client)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -351,9 +344,7 @@ func Test_deploySfs(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	spinner := utils.NewSpinner("Starting...")
-	spinner.Start()
-	_, err := deployStatefulSet(ctx, "test", stack, client, spinner)
+	_, err := deployStatefulSet(ctx, "test", stack, client)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -378,9 +369,7 @@ func Test_deployJob(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	spinner := utils.NewSpinner("Starting...")
-	spinner.Start()
-	_, err := deployJob(ctx, "test", stack, client, spinner)
+	_, err := deployJob(ctx, "test", stack, client)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -861,7 +850,7 @@ func TestDeployK8sService(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewSimpleClientset(tt.k8sObjects...)
-			err := deployK8sService(context.Background(), "test", tt.stack, fakeClient, utils.NewSpinner(""))
+			err := deployK8sService(context.Background(), "test", tt.stack, fakeClient)
 			assert.NoError(t, err)
 			svc, _ := services.Get(context.Background(), "test", "ns", fakeClient)
 			assert.Equal(t, svc.ObjectMeta.Labels[model.StackNameLabel], tt.expectedNameLabel)

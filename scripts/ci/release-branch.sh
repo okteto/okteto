@@ -44,7 +44,7 @@
         # This will happen when creating a patch release from an LTS branch and it's
         # usually how promotion works.
         known_ancestor="$(git rev-list -n 1 "$(git describe --tags --abbrev=0 --match "*.*.*")")"
-        PREVIOUS_TAGS="$(git tag --points-at "$known_ancestor")"
+        PREVIOUS_TAGS="$(git show-ref --tags -d | grep "^${known_ancestor}" | sed -e 's,.* refs/tags/,,' -e 's/\^{}//')"
 
         # ROOT_MINOR_TAG is the oldest relevant tag we should be able to reach from this
         # release branch

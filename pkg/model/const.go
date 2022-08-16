@@ -259,9 +259,6 @@ const (
 	// OktetoKubernetesTimeoutEnvVar defines the timeout for kubernetes operations
 	OktetoKubernetesTimeoutEnvVar = "OKTETO_KUBERNETES_TIMEOUT"
 
-	// OktetoDisableSpinnerEnvVar if true spinner is disabled
-	OktetoDisableSpinnerEnvVar = "OKTETO_DISABLE_SPINNER"
-
 	// OktetoRescanIntervalEnvVar defines the time between scans for syncthing
 	OktetoRescanIntervalEnvVar = "OKTETO_RESCAN_INTERVAL"
 

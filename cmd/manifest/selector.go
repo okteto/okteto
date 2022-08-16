@@ -16,7 +16,7 @@ package manifest
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -46,14 +46,14 @@ func selectComposeFile(paths []string) (string, error) {
 
 func selectDockerfiles(ctx context.Context, cwd string) ([]string, error) {
 	dockerfiles := []string{}
-	files, err := ioutil.ReadDir(cwd)
+	files, err := os.ReadDir(cwd)
 	if err != nil {
 		return nil, err
 	}
 	for _, f := range files {
 		if f.IsDir() {
 			path := filepath.Join(cwd, f.Name())
-			files, err := ioutil.ReadDir(f.Name())
+			files, err := os.ReadDir(f.Name())
 			if err != nil {
 				return nil, err
 			}

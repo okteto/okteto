@@ -128,10 +128,9 @@ func (*ManifestCommand) RunInitV1(ctx context.Context, opts *InitOpts) error {
 			path := getPathFromApp(opts.Workdir, app.ObjectMeta().Name)
 
 			suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(app.Kind()), app.ObjectMeta().Name)
-			spinner := utils.NewSpinner(suffix)
-			spinner.Start()
+			oktetoLog.Spinner(suffix)
+			oktetoLog.StartSpinner()
 			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, opts.Language, path)
-			spinner.Stop()
 			if err == nil {
 				oktetoLog.Success(fmt.Sprintf("%s '%s' successfully analyzed", strings.ToLower(app.Kind()), app.ObjectMeta().Name))
 			} else {
