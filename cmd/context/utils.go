@@ -222,10 +222,11 @@ func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string
 	}
 	ctxResource, err := model.GetContextResource(path)
 	if err != nil {
-		// here discovery.ErrOktetoManifestNotFound will return as error
-		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return err
 		}
+
+		ctxResource = &model.ContextResource{}
 	}
 
 	if err := ctxResource.UpdateNamespace(namespace); err != nil {
