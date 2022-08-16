@@ -87,10 +87,10 @@ func (up *upContext) sync(ctx context.Context) error {
 }
 
 func (up *upContext) startSyncthing(ctx context.Context) error {
-	spinner := utils.NewSpinner("Starting the file synchronization service...")
-	spinner.Start()
-	up.spinner = spinner
-	defer spinner.Stop()
+	oktetoLog.Spinner("Starting the file synchronization service...")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
+
 	if err := config.UpdateStateFile(up.Dev, config.StartingSync); err != nil {
 		return err
 	}
@@ -111,7 +111,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 		return up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
 	}
 
-	spinner.Update("Scanning file system...")
+	oktetoLog.Spinner("Scanning file system...")
 	if err := up.Sy.WaitForScanning(ctx, true); err != nil {
 		return err
 	}
@@ -124,10 +124,9 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 }
 
 func (up *upContext) synchronizeFiles(ctx context.Context) error {
-	spinner := utils.NewSpinner("Synchronizing your files...")
-	up.spinner = spinner
-	up.spinner.Start()
-	defer up.spinner.Stop()
+	oktetoLog.Spinner("Synchronizing your files...")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	progressBar := utils.NewSyncthingProgressBar(40)
 	defer progressBar.Finish()
@@ -142,7 +141,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 			case <-time.NewTicker(1 * time.Second).C:
 				inSynchronizationFile := up.Sy.GetInSynchronizationFile(ctx)
 				if inSynchronizationFile != "" && oktetoLog.GetOutputFormat() != oktetoLog.PlainFormat {
-					spinner.Stop()
+					oktetoLog.StopSpinner()
 					progressBar.UpdateItemInSync(inSynchronizationFile)
 				}
 			}
@@ -155,9 +154,9 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 			value := int64(c)
 			if value > 0 && value < 100 {
 				if oktetoLog.GetOutputFormat() == oktetoLog.PlainFormat {
-					spinner.Update(fmt.Sprintf("Synchronizing your files [%d]...", value))
+					oktetoLog.Spinner(fmt.Sprintf("Synchronizing your files [%d]...", value))
 				} else {
-					spinner.Stop()
+					oktetoLog.StopSpinner()
 					progressBar.SetCurrent(value)
 				}
 			}

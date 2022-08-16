@@ -16,7 +16,6 @@ package registry
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -203,13 +202,13 @@ func copyDockerIgnore(originalPath, translatedPath string) error {
 }
 
 func copyFile(orig, dest string) error {
-	input, err := ioutil.ReadFile(orig)
+	input, err := os.ReadFile(orig)
 	if err != nil {
 		oktetoLog.Infof("could not read %s dockerfile", orig)
 		return err
 	}
 
-	err = ioutil.WriteFile(dest, input, 0644)
+	err = os.WriteFile(dest, input, 0644)
 	if err != nil {
 		oktetoLog.Infof("error creating %s: %s", dest, err)
 		return err

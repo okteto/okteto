@@ -20,7 +20,6 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -30,9 +29,9 @@ import (
 )
 
 func (dc *DeployCommand) wait(ctx context.Context, opts *Options) error {
-	spinner := utils.NewSpinner(fmt.Sprintf("Waiting for %s to be deployed...", opts.Name))
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Waiting for %s to be deployed...", opts.Name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -72,7 +71,8 @@ func (dc *DeployCommand) waitForResourcesToBeRunning(ctx context.Context, opts *
 				return err
 			}
 			areAllRunning := true
-			for _, d := range dList {
+			for i := range dList {
+				d := &dList[i]
 				if !deployments.IsRunning(ctx, opts.Manifest.Namespace, d.Name, c) {
 					areAllRunning = false
 				}
@@ -84,8 +84,9 @@ func (dc *DeployCommand) waitForResourcesToBeRunning(ctx context.Context, opts *
 			if err != nil {
 				return err
 			}
-			for _, sfs := range sfsList {
-				if !statefulsets.IsRunning(ctx, opts.Manifest.Namespace, sfs.Name, c) {
+			for i := range sfsList {
+				ss := &sfsList[i]
+				if !statefulsets.IsRunning(ctx, opts.Manifest.Namespace, ss.Name, c) {
 					areAllRunning = false
 				}
 			}

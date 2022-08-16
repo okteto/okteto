@@ -26,13 +26,13 @@ const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)
 
 var ansiRegex = regexp.MustCompile(ansi)
 
-//TTYWriter writes into a tty terminal
+// TTYWriter writes into a tty terminal
 type TTYWriter struct {
 	out  *logrus.Logger
 	file *logrus.Entry
 }
 
-//newTTYWriter creates a new ttyWriter
+// newTTYWriter creates a new ttyWriter
 func newTTYWriter(out *logrus.Logger, file *logrus.Entry) *TTYWriter {
 	return &TTYWriter{
 		out:  out,
@@ -100,57 +100,75 @@ func (*TTYWriter) Fatalf(format string, args ...interface{}) {
 // Green writes a line in green
 func (w *TTYWriter) Green(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
+	log.spinner.hold()
 	w.FPrintln(w.out.Out, greenString(format, args...))
+	log.spinner.unhold()
 }
 
 // Yellow writes a line in yellow
 func (w *TTYWriter) Yellow(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
+	log.spinner.hold()
 	w.FPrintln(w.out.Out, yellowString(format, args...))
+	log.spinner.unhold()
 }
 
 // Success prints a message with the success symbol first, and the text in green
 func (w *TTYWriter) Success(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
+	log.spinner.hold()
 	w.Fprintf(w.out.Out, "%s %s\n", coloredSuccessSymbol, greenString(format, args...))
+	log.spinner.unhold()
 }
 
 // Information prints a message with the information symbol first, and the text in blue
 func (w *TTYWriter) Information(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
+	log.spinner.hold()
 	w.Fprintf(w.out.Out, "%s %s\n", coloredInformationSymbol, blueString(format, args...))
+	log.spinner.unhold()
 }
 
 // Question prints a message with the question symbol first, and the text in magenta
 func (w *TTYWriter) Question(format string, args ...interface{}) error {
 	log.out.Infof(format, args...)
+	log.spinner.hold()
 	w.Fprintf(w.out.Out, "%s %s", coloredQuestionSymbol, color.MagentaString(format, args...))
+	log.spinner.unhold()
 	return nil
 }
 
 // Warning prints a message with the warning symbol first, and the text in yellow
 func (w *TTYWriter) Warning(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
+	log.spinner.hold()
 	w.Fprintf(w.out.Out, "%s %s\n", coloredWarningSymbol, yellowString(format, args...))
+	log.spinner.unhold()
 }
 
 // FWarning prints a message with the warning symbol first, and the text in yellow into an specific writer
 func (w *TTYWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
 	log.out.Infof(format, args...)
+	log.spinner.hold()
 	w.Fprintf(writer, "%s %s\n", coloredWarningSymbol, yellowString(format, args...))
+	log.spinner.unhold()
 }
 
 // Hint prints a message with the text in blue
 func (w *TTYWriter) Hint(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
+	log.spinner.hold()
 	w.Fprintf(w.out.Out, "%s\n", blueString(format, args...))
+	log.spinner.unhold()
 }
 
 // Fail prints a message with the error symbol first, and the text in red
 func (w *TTYWriter) Fail(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
 	log.out.Info(msg)
+	log.spinner.hold()
 	w.Fprintf(w.out.Out, "%s %s\n", coloredErrorSymbol, redString(format, args...))
+	log.spinner.unhold()
 	if msg != "" {
 		msg = convertToJSON(ErrorLevel, log.stage, msg)
 		if msg != "" {
@@ -163,7 +181,9 @@ func (w *TTYWriter) Fail(format string, args ...interface{}) {
 // Println writes a line with colors
 func (w *TTYWriter) Println(args ...interface{}) {
 	log.out.Info(args...)
+	log.spinner.hold()
 	w.FPrintln(w.out.Out, args...)
+	log.spinner.unhold()
 }
 
 // Fprintf prints a line with format
@@ -208,12 +228,14 @@ func (w *TTYWriter) Print(args ...interface{}) {
 
 }
 
-//Printf writes a line with format
+// Printf writes a line with format
 func (w *TTYWriter) Printf(format string, a ...interface{}) {
+	log.spinner.hold()
 	w.Fprintf(w.out.Out, format, a...)
+	log.spinner.unhold()
 }
 
-//IsInteractive checks if the writer is interactive
+// IsInteractive checks if the writer is interactive
 func (*TTYWriter) IsInteractive() bool {
 	return true
 }

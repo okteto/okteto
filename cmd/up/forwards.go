@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	forwardk8s "github.com/okteto/okteto/pkg/k8s/forward"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -29,10 +28,9 @@ import (
 )
 
 func (up *upContext) forwards(ctx context.Context) error {
-	spinner := utils.NewSpinner("Configuring SSH tunnel to your development container...")
-	spinner.Start()
-	up.spinner = spinner
-	defer spinner.Stop()
+	oktetoLog.Spinner("Configuring SSH tunnel to your development container...")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	if up.Dev.RemoteModeEnabled() {
 		return up.sshForwards(ctx)
