@@ -97,7 +97,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "deploy [service...]",
-		Short: "Execute the list of commands specified in the 'deploy' section of your okteto manifest",
+		Short: "Execute locally the list of commands specified in the 'deploy' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			// validate cmd options
@@ -105,10 +105,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("'dependencies' is only supported in clusters that have Okteto installed")
 			}
 
-			if err := validateOptionVars(options.Variables); err != nil {
-				return err
-			}
-			if err := setOptionVarsAsEnvs(options.Variables); err != nil {
+			if err := validateAndSet(options.Variables, os.Setenv); err != nil {
 				return err
 			}
 
@@ -399,7 +396,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		// should not overwrite the server and the credentials in the kubeconfig
 		fmt.Sprintf("%s=true", model.OktetoSkipConfigCredentialsUpdate),
 		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
-		fmt.Sprintf("%s=true", model.OktetoDisableSpinnerEnvVar),
+		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
@@ -512,9 +509,10 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		sp := utils.NewSpinner("Shutting down...")
-		sp.Start()
-		defer sp.Stop()
+		oktetoLog.Spinner("Shutting down...")
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
+
 		dc.Executor.CleanUp(oktetoErrors.ErrIntSig)
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
@@ -553,9 +551,9 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 
 func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error {
 
-	sp := utils.NewSpinner(fmt.Sprintf("Diverting namespace %s...", opts.Manifest.Deploy.Divert.Namespace))
-	sp.Start()
-	defer sp.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Diverting namespace %s...", opts.Manifest.Deploy.Divert.Namespace))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
@@ -573,7 +571,7 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 			oktetoLog.Infof("deployDivert context cancelled")
 			return ctx.Err()
 		default:
-			sp.Update(fmt.Sprintf("Diverting ingress %s/%s...", result.Items[i].Namespace, result.Items[i].Name))
+			oktetoLog.Spinner(fmt.Sprintf("Diverting ingress %s/%s...", result.Items[i].Namespace, result.Items[i].Name))
 			if err := diverts.DivertIngress(ctx, opts.Manifest, &result.Items[i], c); err != nil {
 				return err
 			}

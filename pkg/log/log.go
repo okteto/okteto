@@ -21,7 +21,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
+
+	sp "github.com/briandowns/spinner"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -59,7 +63,7 @@ var (
 	WarningLevel = "warn"
 	// ErrorLevel is the json level for error
 	ErrorLevel = "error"
-
+	// DebugLevel is the json level for debug
 	DebugLevel = "debug"
 )
 
@@ -76,6 +80,8 @@ type logger struct {
 	maskedWords []string
 	isMasked    bool
 	replacer    *strings.Replacer
+
+	spinner *spinnerLogger
 }
 
 var log = &logger{
@@ -87,6 +93,7 @@ func init() {
 		successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" + ")
 	}
 	Init(logrus.WarnLevel)
+	initSpinnerLog()
 }
 
 // Init configures the logger for the package to use.
@@ -96,6 +103,10 @@ func Init(level logrus.Level) {
 	log.writer = log.getWriter(TTYFormat)
 	log.maskedWords = []string{}
 	log.buf = &bytes.Buffer{}
+	log.spinner = &spinnerLogger{
+		sp:             sp.New(sp.CharSets[14], 100*time.Millisecond, sp.WithHiddenCursor(true)),
+		spinnerSupport: !loadBool(OktetoDisableSpinnerEnvVar) && IsInteractive(),
+	}
 }
 
 //ConfigureFileLogger configures the file to write
@@ -345,4 +356,16 @@ func GetOutputBuffer() *bytes.Buffer {
 // AddToBuffer logs into the buffer but does not print anything
 func AddToBuffer(level, format string, args ...interface{}) {
 	log.writer.AddToBuffer(level, format, args...)
+}
+
+func loadBool(env string) bool {
+	value := os.Getenv(env)
+	if value == "" {
+		value = "false"
+	}
+	boolValue, err := strconv.ParseBool(value)
+	if err != nil {
+		Yellow("'%s' is not a valid value for environment variable %s", value, env)
+	}
+	return boolValue
 }

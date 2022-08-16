@@ -218,10 +218,9 @@ func (up *upContext) devMode(ctx context.Context, app apps.App, create bool) err
 }
 
 func (up *upContext) createDevContainer(ctx context.Context, app apps.App, create bool) error {
-	spinner := utils.NewSpinner("Activating your development container...")
-	spinner.Start()
-	up.spinner = spinner
-	defer spinner.Stop()
+	oktetoLog.Spinner("Activating your development container...")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	if err := config.UpdateStateFile(up.Dev, config.Starting); err != nil {
 		return err
@@ -293,10 +292,9 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 		}
 	}
 
-	spinner := utils.NewSpinner(msg)
-	spinner.Start()
-	up.spinner = spinner
-	defer spinner.Stop()
+	oktetoLog.Spinner(msg)
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	optsWatchPod := metav1.ListOptions{
 		Watch:         true,
@@ -361,15 +359,13 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				}
 				if strings.Contains(e.Message, "Insufficient cpu") || strings.Contains(e.Message, "Insufficient memory") {
 					insufficientResourcesErr = fmt.Errorf(e.Message)
-					spinner.Update("Insufficient cpu/memory in the cluster. Waiting for new nodes to come up...")
+					oktetoLog.Spinner("Insufficient cpu/memory in the cluster. Waiting for new nodes to come up...")
 					continue
 				}
 				return fmt.Errorf(e.Message)
 			case "SuccessfulAttachVolume":
-				spinner.Stop()
 				oktetoLog.Success("Persistent volume successfully attached")
-				spinner.Update("Pulling images...")
-				spinner.Start()
+				oktetoLog.Spinner("Pulling images...")
 			case "Killing":
 				if app.Kind() == model.StatefulSet {
 					killing = true
@@ -378,11 +374,11 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				return oktetoErrors.ErrDevPodDeleted
 			case "Started":
 				if e.Message == "Started container okteto-init-data" {
-					spinner.Update("Initializing persistent volume content...")
+					oktetoLog.Spinner("Initializing persistent volume content...")
 				}
 			case "Pulling":
 				message := getPullingMessage(e.Message, up.Dev.Namespace)
-				spinner.Update(fmt.Sprintf("%s...", message))
+				oktetoLog.Spinner(fmt.Sprintf("%s...", message))
 				if err := config.UpdateStateFile(up.Dev, config.Pulling); err != nil {
 					oktetoLog.Infof("error updating state: %s", err.Error())
 				}
@@ -405,7 +401,6 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 
 			oktetoLog.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
 			if pod.Status.Phase == apiv1.PodRunning {
-				spinner.Stop()
 				oktetoLog.Success("Images successfully pulled")
 				return nil
 			}

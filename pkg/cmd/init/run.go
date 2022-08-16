@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -274,7 +273,7 @@ func doesItHaveWebpackAsDependency(path string) bool {
 		return false
 	}
 
-	b, err := ioutil.ReadFile(packagePath)
+	b, err := os.ReadFile(packagePath)
 	if err != nil {
 		oktetoLog.Infof("could not read 'package.json' on '%s' because of: %s", path, err)
 		return false

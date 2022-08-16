@@ -189,9 +189,9 @@ func getRandomName(ctx context.Context, scope string) string {
 }
 
 func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, wait bool, timeout time.Duration) (*types.PreviewResponse, error) {
-	spinner := utils.NewSpinner("Deploying your preview environment...")
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner("Deploying your preview environment...")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
@@ -206,9 +206,9 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 }
 
 func waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
-	spinner := utils.NewSpinner("Waiting for preview environment to be deployed...")
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner("Waiting for preview environment to be deployed...")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -221,14 +221,14 @@ func waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout
 			exit <- err
 			return
 		}
-		spinner.Update("Waiting for containers to be healthy...")
+		oktetoLog.Spinner("Waiting for containers to be healthy...")
 		exit <- waitForResourcesToBeRunning(ctx, name, timeout)
 	}()
 
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		spinner.Stop()
+		oktetoLog.StopSpinner()
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
