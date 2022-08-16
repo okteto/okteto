@@ -487,7 +487,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		if opts.Manifest.Deploy.Endpoints != nil {
 			oktetoLog.SetStage("Endpoints configuration")
 			if err := dc.deployEndpoints(ctx, opts); err != nil {
-				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying divert: %s", err.Error())
+				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error generating endpoints: %s", err.Error())
 				exit <- err
 				return
 			}
@@ -498,7 +498,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
 			oktetoLog.SetStage("Divert configuration")
 			if err := dc.deployDivert(ctx, opts); err != nil {
-				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying divert: %s", err.Error())
+				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
 				exit <- err
 				return
 			}
