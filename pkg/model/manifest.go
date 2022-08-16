@@ -239,7 +239,7 @@ func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
 		return getManifestFromFile(cwd, manifestPath)
 	}
 
-	return nil, oktetoErrors.ErrManifestNotFound
+	return nil, discovery.ErrOktetoManifestNotFound
 }
 
 //GetManifestV1 gets a manifest from a path or search for the files to generate it
@@ -251,7 +251,7 @@ func GetManifestV1(manifestPath string) (*Manifest, error) {
 
 	manifest, err := getManifestFromDevFilePath(cwd, manifestPath)
 	if err != nil {
-		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
 		}
 	}
@@ -281,7 +281,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 
 	manifest, err := getManifestFromDevFilePath(cwd, manifestPath)
 	if err != nil {
-		if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
 		}
 	}
@@ -348,7 +348,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 		}
 		return manifest, nil
 	}
-	return nil, oktetoErrors.ErrManifestNotFound
+	return nil, discovery.ErrOktetoManifestNotFound
 }
 
 func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
@@ -566,7 +566,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 	b, err := os.ReadFile(devPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, oktetoErrors.ErrManifestNotFound
+			return nil, discovery.ErrOktetoManifestNotFound
 		}
 		return nil, err
 	}
