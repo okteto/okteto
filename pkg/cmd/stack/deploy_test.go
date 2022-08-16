@@ -15,6 +15,7 @@ package stack
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -866,4 +867,108 @@ func TestDeployK8sService(t *testing.T) {
 			assert.Equal(t, svc.ObjectMeta.Labels[model.StackNameLabel], tt.expectedNameLabel)
 		})
 	}
+}
+
+func TestGetFailedStatusError(t *testing.T) {
+	tests := []struct {
+		name       string
+		k8sObjects []runtime.Object
+		stack      *model.Stack
+		err        error
+	}{
+		{
+			name: "no dependent services",
+			stack: &model.Stack{
+				Services: map[string]*model.Service{
+					"test2": {
+						DependsOn: model.DependsOn{},
+					},
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "dependent svc without reaching backoff",
+			k8sObjects: []runtime.Object{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							model.StackNameLabel:        "test",
+							model.StackServiceNameLabel: "test1",
+						},
+					},
+					Status: corev1.PodStatus{
+						ContainerStatuses: []corev1.ContainerStatus{
+							{
+								RestartCount: 1,
+							},
+						},
+					},
+				},
+			},
+			stack: &model.Stack{
+				Name: "test",
+				Services: map[string]*model.Service{
+					"test1": {
+						BackOffLimit: 2,
+						DependsOn:    model.DependsOn{},
+					},
+					"test2": {
+						DependsOn: model.DependsOn{
+							"test1": model.DependsOnConditionSpec{
+								Condition: model.DependsOnServiceHealthy,
+							},
+						},
+					},
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "dependent svc reaching backoff",
+			k8sObjects: []runtime.Object{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							model.StackNameLabel:        "test",
+							model.StackServiceNameLabel: "test1",
+						},
+					},
+					Status: corev1.PodStatus{
+						ContainerStatuses: []corev1.ContainerStatus{
+							{
+								RestartCount: 5,
+							},
+						},
+					},
+				},
+			},
+			stack: &model.Stack{
+				Name: "test",
+				Services: map[string]*model.Service{
+					"test1": {
+						BackOffLimit: 2,
+						DependsOn:    model.DependsOn{},
+					},
+					"test2": {
+						DependsOn: model.DependsOn{
+							"test1": model.DependsOnConditionSpec{
+								Condition: model.DependsOnServiceHealthy,
+							},
+						},
+					},
+				},
+			},
+			err: fmt.Errorf("Service 'test1' has been restarted 5 times. Please check the logs and try again"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClient := fake.NewSimpleClientset(tt.k8sObjects...)
+			err := getFailedStatusError(context.Background(), tt.stack, "test2", fakeClient)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+
 }
