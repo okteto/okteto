@@ -26,7 +26,14 @@ func TestGetContextResourcePathWhenExists(t *testing.T) {
 		name          string
 		filesToCreate []string
 		expected      string
+		expectErr     error
 	}{
+		{
+			name:          "manifest does not exists",
+			filesToCreate: []string{},
+			expected:      "",
+			expectErr:     ErrOktetoManifestNotFound,
+		},
 		{
 			name:          "docker-compose file exists",
 			filesToCreate: []string{"docker-compose.yml"},
@@ -69,8 +76,12 @@ func TestGetContextResourcePathWhenExists(t *testing.T) {
 				defer f.Close()
 			}
 			result, err := GetContextResourcePath(wd)
-			assert.NoError(t, err)
-			assert.Equal(t, filepath.Join(wd, tt.expected), result)
+			if tt.expectErr != nil {
+				assert.Error(t, err, tt.expectErr)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, filepath.Join(wd, tt.expected), result)
+			}
 		})
 	}
 }
