@@ -76,10 +76,8 @@ func TestGetContextResourcePathWhenExists(t *testing.T) {
 				defer f.Close()
 			}
 			result, err := GetContextResourcePath(wd)
-			if tt.expectErr != nil {
-				assert.Error(t, err, tt.expectErr)
-			} else {
-				assert.NoError(t, err)
+			assert.ErrorIs(t, tt.expectErr, err)
+			if err == nil {
 				assert.Equal(t, filepath.Join(wd, tt.expected), result)
 			}
 		})
