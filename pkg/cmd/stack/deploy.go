@@ -352,7 +352,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 								return fmt.Errorf("service '%s' has failed his healthcheck probes: %s", key, value)
 							}
 						}
-						if err := getFailedStatusError(ctx, stack, svcName, k8sClient); err != nil {
+						if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
 							return err
 						}
 						continue
@@ -428,7 +428,7 @@ func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcNam
 	return failedServices
 }
 
-func getFailedStatusError(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) error {
+func getErrorDueToRestartLimit(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) error {
 	svc := stack.Services[svcName]
 	for dependingSvc := range svc.DependsOn {
 		svcLabels := map[string]string{model.StackNameLabel: stack.Name, model.StackServiceNameLabel: dependingSvc}

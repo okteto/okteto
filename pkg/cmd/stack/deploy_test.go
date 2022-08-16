@@ -869,7 +869,7 @@ func TestDeployK8sService(t *testing.T) {
 	}
 }
 
-func TestGetFailedStatusError(t *testing.T) {
+func TestGetErrorDueToRestartLimit(t *testing.T) {
 	tests := []struct {
 		name       string
 		k8sObjects []runtime.Object
@@ -966,7 +966,7 @@ func TestGetFailedStatusError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewSimpleClientset(tt.k8sObjects...)
-			err := getFailedStatusError(context.Background(), tt.stack, "test2", fakeClient)
+			err := getErrorDueToRestartLimit(context.Background(), tt.stack, "test2", fakeClient)
 			assert.Equal(t, tt.err, err)
 		})
 	}
