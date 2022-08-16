@@ -471,27 +471,36 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 
 		// deploy compose if any
 		if opts.Manifest.Deploy.ComposeSection != nil {
+			oktetoLog.SetStage("Deploying compose")
 			if err := dc.deployStack(ctx, opts); err != nil {
+				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())
 				exit <- err
 				return
 			}
+			oktetoLog.SetStage("")
 		}
 
 		// deploy endpoits if any
 		if opts.Manifest.Deploy.Endpoints != nil {
+			oktetoLog.SetStage("Endpoints configuration")
 			if err := dc.deployEndpoints(ctx, opts); err != nil {
+				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error generating endpoints: %s", err.Error())
 				exit <- err
 				return
 			}
+			oktetoLog.SetStage("")
 		}
 
 		// deploy diver if any
 		if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
+			oktetoLog.SetStage("Divert configuration")
 			if err := dc.deployDivert(ctx, opts); err != nil {
+				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
 				exit <- err
 				return
 			}
 			oktetoLog.Success("Divert from '%s' successfully configured", opts.Manifest.Deploy.Divert.Namespace)
+			oktetoLog.SetStage("")
 		}
 
 		exit <- nil
@@ -512,8 +521,6 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 }
 
 func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
-	oktetoLog.SetStage("Deploying compose")
-	defer oktetoLog.SetStage("")
 	composeSectionInfo := opts.Manifest.Deploy.ComposeSection
 	composeSectionInfo.Stack.Namespace = okteto.Context().Namespace
 
@@ -543,8 +550,6 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 }
 
 func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error {
-	oktetoLog.SetStage("Divert configuration")
-	defer oktetoLog.SetStage("")
 
 	oktetoLog.Spinner(fmt.Sprintf("Diverting namespace %s...", opts.Manifest.Deploy.Divert.Namespace))
 	oktetoLog.StartSpinner()
@@ -576,8 +581,6 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 }
 
 func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) error {
-	oktetoLog.SetStage("Endpoints configuration")
-	defer oktetoLog.SetStage("")
 
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
