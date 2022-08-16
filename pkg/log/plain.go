@@ -37,55 +37,55 @@ func newPlainWriter(out *logrus.Logger, file *logrus.Entry) *PlainWriter {
 // Debug writes a debug-level log
 func (w *PlainWriter) Debug(args ...interface{}) {
 	w.out.Debug(args...)
-	if log.file != nil {
-		log.file.Debug(args...)
+	if w.file != nil {
+		w.file.Debug(args...)
 	}
 }
 
 // Debugf writes a debug-level log with a format
 func (w *PlainWriter) Debugf(format string, args ...interface{}) {
 	w.out.Debugf(format, args...)
-	if log.file != nil {
-		log.file.Debugf(format, args...)
+	if w.file != nil {
+		w.file.Debugf(format, args...)
 	}
 }
 
 // Info writes a info-level log
 func (w *PlainWriter) Info(args ...interface{}) {
 	w.out.Info(args...)
-	if log.file != nil {
-		log.file.Info(args...)
+	if w.file != nil {
+		w.file.Info(args...)
 	}
 }
 
 // Infof writes a info-level log with a format
 func (w *PlainWriter) Infof(format string, args ...interface{}) {
 	w.out.Infof(format, args...)
-	if log.file != nil {
-		log.file.Infof(format, args...)
+	if w.file != nil {
+		w.file.Infof(format, args...)
 	}
 }
 
 // Error writes a error-level log
 func (w *PlainWriter) Error(args ...interface{}) {
 	w.out.Error(args...)
-	if log.file != nil {
-		log.file.Error(args...)
+	if w.file != nil {
+		w.file.Error(args...)
 	}
 }
 
 // Errorf writes a error-level log with a format
 func (w *PlainWriter) Errorf(format string, args ...interface{}) {
 	w.out.Errorf(format, args...)
-	if log.file != nil {
-		log.file.Errorf(format, args...)
+	if w.file != nil {
+		w.file.Errorf(format, args...)
 	}
 }
 
 // Fatalf writes a error-level log with a format
 func (w *PlainWriter) Fatalf(format string, args ...interface{}) {
-	if log.file != nil {
-		log.file.Errorf(format, args...)
+	if w.file != nil {
+		w.file.Errorf(format, args...)
 	}
 
 	w.out.Fatalf(format, args...)
