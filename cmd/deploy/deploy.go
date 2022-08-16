@@ -480,7 +480,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options, manifest *mo
 			}
 		}
 
-		// deploy endpoits if any
+		// deploy endpoints if any
 		if manifest.Deploy.Endpoints != nil {
 			if err := dc.deployEndpoints(ctx, manifest.Name, manifest.Namespace, manifest.Deploy.Endpoints); err != nil {
 				exit <- err
@@ -488,7 +488,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options, manifest *mo
 			}
 		}
 
-		// deploy diver if any
+		// deploy divert if any
 		if manifest.Deploy.Divert != nil && manifest.Deploy.Divert.Namespace != manifest.Namespace {
 			if err := dc.deployDivert(ctx, manifest); err != nil {
 				exit <- err
