@@ -49,57 +49,57 @@ func (w *TTYWriter) Debug(args ...interface{}) {
 }
 
 // Debugf writes a debug-level log with a format
-func (*TTYWriter) Debugf(format string, args ...interface{}) {
-	log.out.Debugf(format, args...)
+func (w *TTYWriter) Debugf(format string, args ...interface{}) {
+	w.out.Debugf(format, args...)
 	if log.file != nil {
 		log.file.Debugf(format, args...)
 	}
 }
 
 // Info writes a info-level log
-func (*TTYWriter) Info(args ...interface{}) {
-	log.out.Info(args...)
+func (w *TTYWriter) Info(args ...interface{}) {
+	w.out.Info(args...)
 	if log.file != nil {
 		log.file.Info(args...)
 	}
 }
 
 // Infof writes a info-level log with a format
-func (*TTYWriter) Infof(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+func (w *TTYWriter) Infof(format string, args ...interface{}) {
+	w.out.Infof(format, args...)
 	if log.file != nil {
 		log.file.Infof(format, args...)
 	}
 }
 
 // Error writes a error-level log
-func (*TTYWriter) Error(args ...interface{}) {
-	log.out.Error(args...)
+func (w *TTYWriter) Error(args ...interface{}) {
+	w.out.Error(args...)
 	if log.file != nil {
 		log.file.Error(args...)
 	}
 }
 
 // Errorf writes a error-level log with a format
-func (*TTYWriter) Errorf(format string, args ...interface{}) {
-	log.out.Errorf(format, args...)
+func (w *TTYWriter) Errorf(format string, args ...interface{}) {
+	w.out.Errorf(format, args...)
 	if log.file != nil {
 		log.file.Errorf(format, args...)
 	}
 }
 
 // Fatalf writes a error-level log with a format
-func (*TTYWriter) Fatalf(format string, args ...interface{}) {
+func (w *TTYWriter) Fatalf(format string, args ...interface{}) {
 	if log.file != nil {
 		log.file.Errorf(format, args...)
 	}
 
-	log.out.Fatalf(format, args...)
+	w.out.Fatalf(format, args...)
 }
 
 // Green writes a line in green
 func (w *TTYWriter) Green(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	log.spinner.hold()
 	w.FPrintln(w.out.Out, greenString(format, args...))
 	log.spinner.unhold()
@@ -107,7 +107,7 @@ func (w *TTYWriter) Green(format string, args ...interface{}) {
 
 // Yellow writes a line in yellow
 func (w *TTYWriter) Yellow(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	log.spinner.hold()
 	w.FPrintln(w.out.Out, yellowString(format, args...))
 	log.spinner.unhold()
@@ -115,7 +115,7 @@ func (w *TTYWriter) Yellow(format string, args ...interface{}) {
 
 // Success prints a message with the success symbol first, and the text in green
 func (w *TTYWriter) Success(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	log.spinner.hold()
 	w.Fprintf(w.out.Out, "%s %s\n", coloredSuccessSymbol, greenString(format, args...))
 	log.spinner.unhold()
@@ -123,7 +123,7 @@ func (w *TTYWriter) Success(format string, args ...interface{}) {
 
 // Information prints a message with the information symbol first, and the text in blue
 func (w *TTYWriter) Information(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	log.spinner.hold()
 	w.Fprintf(w.out.Out, "%s %s\n", coloredInformationSymbol, blueString(format, args...))
 	log.spinner.unhold()
@@ -131,7 +131,7 @@ func (w *TTYWriter) Information(format string, args ...interface{}) {
 
 // Question prints a message with the question symbol first, and the text in magenta
 func (w *TTYWriter) Question(format string, args ...interface{}) error {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	log.spinner.hold()
 	w.Fprintf(w.out.Out, "%s %s", coloredQuestionSymbol, color.MagentaString(format, args...))
 	log.spinner.unhold()
@@ -140,7 +140,7 @@ func (w *TTYWriter) Question(format string, args ...interface{}) error {
 
 // Warning prints a message with the warning symbol first, and the text in yellow
 func (w *TTYWriter) Warning(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	log.spinner.hold()
 	w.Fprintf(w.out.Out, "%s %s\n", coloredWarningSymbol, yellowString(format, args...))
 	log.spinner.unhold()
@@ -148,7 +148,7 @@ func (w *TTYWriter) Warning(format string, args ...interface{}) {
 
 // FWarning prints a message with the warning symbol first, and the text in yellow into an specific writer
 func (w *TTYWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	log.spinner.hold()
 	w.Fprintf(writer, "%s %s\n", coloredWarningSymbol, yellowString(format, args...))
 	log.spinner.unhold()
@@ -156,7 +156,7 @@ func (w *TTYWriter) FWarning(writer io.Writer, format string, args ...interface{
 
 // Hint prints a message with the text in blue
 func (w *TTYWriter) Hint(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	log.spinner.hold()
 	w.Fprintf(w.out.Out, "%s\n", blueString(format, args...))
 	log.spinner.unhold()
@@ -165,7 +165,7 @@ func (w *TTYWriter) Hint(format string, args ...interface{}) {
 // Fail prints a message with the error symbol first, and the text in red
 func (w *TTYWriter) Fail(format string, args ...interface{}) {
 	msg := fmt.Sprintf(format, args...)
-	log.out.Info(msg)
+	w.out.Info(msg)
 	log.spinner.hold()
 	w.Fprintf(w.out.Out, "%s %s\n", coloredErrorSymbol, redString(format, args...))
 	log.spinner.unhold()
@@ -180,7 +180,7 @@ func (w *TTYWriter) Fail(format string, args ...interface{}) {
 
 // Println writes a line with colors
 func (w *TTYWriter) Println(args ...interface{}) {
-	log.out.Info(args...)
+	w.out.Info(args...)
 	log.spinner.hold()
 	w.FPrintln(w.out.Out, args...)
 	log.spinner.unhold()

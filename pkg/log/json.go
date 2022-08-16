@@ -81,86 +81,86 @@ func (w *JSONWriter) Debug(args ...interface{}) {
 }
 
 // Debugf writes a debug-level log with a format
-func (*JSONWriter) Debugf(format string, args ...interface{}) {
-	log.out.Debugf(format, args...)
+func (w *JSONWriter) Debugf(format string, args ...interface{}) {
+	w.out.Debugf(format, args...)
 	if log.file != nil {
 		log.file.Debugf(format, args...)
 	}
 }
 
 // Info writes a info-level log
-func (*JSONWriter) Info(args ...interface{}) {
-	log.out.Info(args...)
+func (w *JSONWriter) Info(args ...interface{}) {
+	w.out.Info(args...)
 	if log.file != nil {
 		log.file.Info(args...)
 	}
 }
 
 // Infof writes a info-level log with a format
-func (*JSONWriter) Infof(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+func (w *JSONWriter) Infof(format string, args ...interface{}) {
+	w.out.Infof(format, args...)
 	if log.file != nil {
 		log.file.Infof(format, args...)
 	}
 }
 
 // Error writes a error-level log
-func (*JSONWriter) Error(args ...interface{}) {
-	log.out.Error(args...)
+func (w *JSONWriter) Error(args ...interface{}) {
+	w.out.Error(args...)
 	if log.file != nil {
 		log.file.Error(args...)
 	}
 }
 
 // Errorf writes a error-level log with a format
-func (*JSONWriter) Errorf(format string, args ...interface{}) {
-	log.out.Errorf(format, args...)
+func (w *JSONWriter) Errorf(format string, args ...interface{}) {
+	w.out.Errorf(format, args...)
 	if log.file != nil {
 		log.file.Errorf(format, args...)
 	}
 }
 
 // Fatalf writes a error-level log with a format
-func (*JSONWriter) Fatalf(format string, args ...interface{}) {
+func (w *JSONWriter) Fatalf(format string, args ...interface{}) {
 	if log.file != nil {
 		log.file.Errorf(format, args...)
 	}
 
-	log.out.Fatalf(format, args...)
+	w.out.Fatalf(format, args...)
 }
 
 // Green writes a line in green
 func (w *JSONWriter) Green(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	w.FPrintln(w.out.Out, fmt.Sprintf(format, args...))
 }
 
 // Yellow writes a line in yellow
 func (w *JSONWriter) Yellow(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	w.FPrintln(w.out.Out, fmt.Sprintf(format, args...))
 }
 
 // Success prints a message with the success symbol first, and the text in green
 func (w *JSONWriter) Success(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	w.FPrintln(w.out.Out, fmt.Sprintf("%s %s", successSymbol, fmt.Sprintf(format, args...)))
 }
 
 // Information prints a message with the information symbol first, and the text in blue
 func (w *JSONWriter) Information(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	w.FPrintln(w.out.Out, fmt.Sprintf("%s %s", informationSymbol, fmt.Sprintf(format, args...)))
 }
 
 // Question prints a message with the question symbol first, and the text in magenta
-func (*JSONWriter) Question(format string, args ...interface{}) error {
+func (w *JSONWriter) Question(format string, args ...interface{}) error {
 	return fmt.Errorf("can't ask questions on json mode")
 }
 
 // Warning prints a message with the warning symbol first, and the text in yellow
 func (w *JSONWriter) Warning(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	msg := fmt.Sprintf("%s %s", warningSymbol, fmt.Sprintf(format, args...))
 	if msg != "" {
 		msg := convertToJSON("warn", log.stage, msg)
@@ -171,8 +171,8 @@ func (w *JSONWriter) Warning(format string, args ...interface{}) {
 }
 
 // FWarning prints a message with the warning symbol first, and the text in yellow
-func (*JSONWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+func (w *JSONWriter) FWarning(writer io.Writer, format string, args ...interface{}) {
+	w.out.Infof(format, args...)
 	msg := fmt.Sprintf("%s %s", warningSymbol, fmt.Sprintf(format, args...))
 	if msg != "" {
 		msg := convertToJSON("warn", log.stage, msg)
@@ -184,13 +184,13 @@ func (*JSONWriter) FWarning(writer io.Writer, format string, args ...interface{}
 
 // Hint prints a message with the text in blue
 func (w *JSONWriter) Hint(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	w.FPrintln(w.out.Out, fmt.Sprintf(format, args...))
 }
 
 // Fail prints a message with the error symbol first, and the text in red
 func (w *JSONWriter) Fail(format string, args ...interface{}) {
-	log.out.Infof(format, args...)
+	w.out.Infof(format, args...)
 	msg := fmt.Sprintf("%s %s", errorSymbol, fmt.Sprintf(format, args...))
 	if msg != "" {
 
@@ -257,7 +257,7 @@ func (w *JSONWriter) Printf(format string, a ...interface{}) {
 }
 
 //IsInteractive checks if the writer is interactive
-func (*JSONWriter) IsInteractive() bool {
+func (w *JSONWriter) IsInteractive() bool {
 	return false
 }
 
