@@ -348,7 +348,7 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 								return fmt.Errorf("service '%s' has failed his healthcheck probes: %s", key, value)
 							}
 						}
-						if err := getFailedStatusError(ctx, stack, svcName, k8sClient, config); err != nil {
+						if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
 							return err
 						}
 						continue
@@ -422,7 +422,7 @@ func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcNam
 	return failedServices
 }
 
-func getFailedStatusError(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) error {
+func getErrorDueToRestartLimit(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) error {
 	svc := stack.Services[svcName]
 	for dependingSvc := range svc.DependsOn {
 		svcLabels := map[string]string{model.StackNameLabel: stack.Name, model.StackServiceNameLabel: dependingSvc}
@@ -435,7 +435,11 @@ func getFailedStatusError(ctx context.Context, stack *model.Stack, svcName strin
 		for _, cStatus := range p.Status.ContainerStatuses {
 			totalRestarts += int(cStatus.RestartCount)
 		}
-		if totalRestarts >= maxRestartsToConsiderFailed {
+		maxSvcRestarts := stack.Services[dependingSvc].BackOffLimit
+		if maxSvcRestarts == 0 {
+			maxSvcRestarts = maxRestartsToConsiderFailed
+		}
+		if int32(totalRestarts) >= maxSvcRestarts {
 			return fmt.Errorf("Service '%s' has been restarted %d times. Please check the logs and try again", dependingSvc, totalRestarts)
 		}
 	}
