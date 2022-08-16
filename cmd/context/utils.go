@@ -156,7 +156,7 @@ func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.
 
 	manifest, err := model.GetManifestV1(opts.Filename)
 	if err != nil {
-		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
+		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
 		}
 		manifest, err = model.GetManifestV2(opts.Filename)
