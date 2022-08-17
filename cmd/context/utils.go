@@ -130,6 +130,19 @@ func addKubernetesContext(cfg *clientcmdapi.Config, ctxResource *model.ContextRe
 	return nil
 }
 
+func getCtxResource(path string) (*model.ContextResource, error) {
+	ctxResource, err := model.GetContextResource(path)
+	if err != nil {
+		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
+			return nil, err
+		}
+
+		ctxResource = &model.ContextResource{}
+	}
+
+	return ctxResource, nil
+}
+
 // LoadManifestWithContext loads context and then loads a manifest
 func LoadManifestWithContext(ctx context.Context, opts ManifestOptions) (*model.Manifest, error) {
 	ctxResource, err := model.GetContextResource(opts.Filename)
@@ -216,13 +229,9 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 
 //LoadContextFromPath initializes the okteto context taking into account command flags and manifest namespace/context fields
 func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string) error {
-	ctxResource, err := model.GetContextResource(path)
+	ctxResource, err := getCtxResource(path)
 	if err != nil {
-		if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
-			return err
-		}
-
-		ctxResource = &model.ContextResource{}
+		return err
 	}
 
 	if err := ctxResource.UpdateNamespace(namespace); err != nil {
