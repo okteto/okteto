@@ -117,9 +117,9 @@ func (pc *Command) ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOpti
 }
 
 func (pc *Command) destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
-	spinner := utils.NewSpinner(fmt.Sprintf("Destroying repository '%s'...", name))
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Destroying repository '%s'...", name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -139,7 +139,7 @@ func (pc *Command) destroyPipeline(ctx context.Context, name string, destroyVolu
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		spinner.Stop()
+		oktetoLog.StopSpinner()
 	case err := <-exit:
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
@@ -150,9 +150,9 @@ func (pc *Command) destroyPipeline(ctx context.Context, name string, destroyVolu
 }
 
 func (pc *Command) waitUntilDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
-	spinner := utils.NewSpinner(fmt.Sprintf("Waiting for the repository '%s' to be destroyed...", name))
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Waiting for the repository '%s' to be destroyed...", name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -165,7 +165,7 @@ func (pc *Command) waitUntilDestroyed(ctx context.Context, name string, action *
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		spinner.Stop()
+		oktetoLog.StopSpinner()
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {

@@ -314,9 +314,9 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	oktetoLog.SetStage("")
 	oktetoLog.DisableMasking()
 
-	spinner := utils.NewSpinner(fmt.Sprintf("Destroying development environment '%s'...", opts.Name))
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Destroying development environment '%s'...", opts.Name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	deployedByLs, err := labels.NewRequirement(
 		model.DeployedByLabel,
@@ -344,7 +344,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	}
 
 	oktetoLog.SetStage("Destroying Helm release")
-	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector, spinner); err != nil {
+	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
 		if !opts.ForceDestroy {
 			if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
 				return err
@@ -370,7 +370,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	return commandErr
 }
 
-func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts *Options, labelSelector string, spinner *utils.Spinner) error {
+func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts *Options, labelSelector string) error {
 	sList, err := dc.secrets.List(ctx, opts.Namespace, labelSelector)
 	if err != nil {
 		return err
@@ -394,7 +394,6 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 		oktetoLog.Debugf("uninstalling helm release '%s'", releaseName)
 		cmd := fmt.Sprintf(helmUninstallCommand, releaseName)
 		cmdInfo := model.DeployCommand{Command: cmd, Name: cmd}
-		spinner.Stop()
 		oktetoLog.Information("Running %s", cmdInfo.Name)
 		if err := dc.executor.Execute(cmdInfo, opts.Variables); err != nil {
 			oktetoLog.Infof("could not uninstall helm release '%s': %s", releaseName, err)
@@ -402,7 +401,6 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 				return err
 			}
 		}
-		spinner.Start()
 	}
 
 	return nil

@@ -21,7 +21,6 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -67,9 +66,9 @@ func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout ti
 }
 
 func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kubernetes.Clientset, timeout time.Duration) error {
-	spinner := utils.NewSpinner(fmt.Sprintf("Destroying compose '%s'...", s.Name))
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Destroying compose '%s'...", s.Name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -78,19 +77,19 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 	go func() {
 		s.Services = nil
 		s.Endpoints = nil
-		if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
+		if err := destroyServicesNotInStack(ctx, s, c); err != nil {
 			exit <- err
 			return
 		}
 
-		spinner.Update("Waiting for services to be destroyed...")
+		oktetoLog.Spinner("Waiting for services to be destroyed...")
 		if err := waitForPodsToBeDestroyed(ctx, s, c); err != nil {
 			exit <- err
 			return
 		}
 		if removeVolumes {
-			spinner.Update("Destroying volumes...")
-			if err := destroyStackVolumes(ctx, spinner, s, c, timeout); err != nil {
+			oktetoLog.Spinner("Destroying volumes...")
+			if err := destroyStackVolumes(ctx, s, c, timeout); err != nil {
 				exit <- err
 				return
 			}
@@ -101,7 +100,7 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		spinner.Stop()
+		oktetoLog.StopSpinner()
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
@@ -112,20 +111,20 @@ func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kuberne
 	return nil
 }
 
-func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c kubernetes.Interface) error {
-	if err := destroyDeployments(ctx, spinner, s, c); err != nil {
+func destroyServicesNotInStack(ctx context.Context, s *model.Stack, c kubernetes.Interface) error {
+	if err := destroyDeployments(ctx, s, c); err != nil {
 		return err
 	}
 
-	if err := destroyStatefulsets(ctx, spinner, s, c); err != nil {
+	if err := destroyStatefulsets(ctx, s, c); err != nil {
 		return err
 	}
 
-	if err := destroyJobs(ctx, spinner, s, c); err != nil {
+	if err := destroyJobs(ctx, s, c); err != nil {
 		return err
 	}
 
-	err := destroyIngresses(ctx, spinner, s, c)
+	err := destroyIngresses(ctx, s, c)
 	if err != nil {
 		return err
 	}
@@ -133,7 +132,7 @@ func destroyServicesNotInStack(ctx context.Context, spinner *utils.Spinner, s *m
 	return nil
 }
 
-func destroyDeployments(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c kubernetes.Interface) error {
+func destroyDeployments(ctx context.Context, s *model.Stack, c kubernetes.Interface) error {
 	dList, err := deployments.List(ctx, s.Namespace, s.GetLabelSelector(), c)
 	if err != nil {
 		return err
@@ -148,18 +147,16 @@ func destroyDeployments(ctx context.Context, spinner *utils.Spinner, s *model.St
 		if err := services.Destroy(ctx, dList[i].Name, dList[i].Namespace, c); err != nil {
 			return fmt.Errorf("error destroying service '%s': %s", dList[i].Name, err)
 		}
-		spinner.Stop()
 		if _, ok := s.Services[dList[i].Name]; ok {
 			oktetoLog.Success("Destroyed previous service '%s'", dList[i].Name)
 		} else {
 			oktetoLog.Success("Service '%s' destroyed", dList[i].Name)
 		}
-		spinner.Start()
 	}
 	return nil
 }
 
-func destroyStatefulsets(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c kubernetes.Interface) error {
+func destroyStatefulsets(ctx context.Context, s *model.Stack, c kubernetes.Interface) error {
 	sfsList, err := statefulsets.List(ctx, s.Namespace, s.GetLabelSelector(), c)
 	if err != nil {
 		return err
@@ -174,17 +171,15 @@ func destroyStatefulsets(ctx context.Context, spinner *utils.Spinner, s *model.S
 		if err := services.Destroy(ctx, sfsList[i].Name, sfsList[i].Namespace, c); err != nil {
 			return fmt.Errorf("error destroying service '%s': %s", sfsList[i].Name, err)
 		}
-		spinner.Stop()
 		if _, ok := s.Services[sfsList[i].Name]; ok {
 			oktetoLog.Success("Destroyed previous service '%s'", sfsList[i].Name)
 		} else {
 			oktetoLog.Success("Service '%s' destroyed", sfsList[i].Name)
 		}
-		spinner.Start()
 	}
 	return nil
 }
-func destroyJobs(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c kubernetes.Interface) error {
+func destroyJobs(ctx context.Context, s *model.Stack, c kubernetes.Interface) error {
 	jobsList, err := jobs.List(ctx, s.Namespace, s.GetLabelSelector(), c)
 	if err != nil {
 		return err
@@ -199,18 +194,18 @@ func destroyJobs(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c 
 		if err := services.Destroy(ctx, jobsList[i].Name, jobsList[i].Namespace, c); err != nil {
 			return fmt.Errorf("error destroying service '%s': %s", jobsList[i].Name, err)
 		}
-		spinner.Stop()
+		oktetoLog.StopSpinner()
 		if _, ok := s.Services[jobsList[i].Name]; ok {
 			oktetoLog.Success("Destroyed previous service '%s'", jobsList[i].Name)
 		} else {
 			oktetoLog.Success("Service '%s' destroyed", jobsList[i].Name)
 		}
-		spinner.Start()
+		oktetoLog.StartSpinner()
 	}
 	return nil
 }
 
-func destroyIngresses(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c kubernetes.Interface) error {
+func destroyIngresses(ctx context.Context, s *model.Stack, c kubernetes.Interface) error {
 	iClient, err := ingresses.GetClient(ctx, c)
 	if err != nil {
 		return fmt.Errorf("error getting ingress client: %s", err.Error())
@@ -247,9 +242,7 @@ func destroyIngresses(ctx context.Context, spinner *utils.Spinner, s *model.Stac
 		if err := iClient.Destroy(ctx, iList[i].GetName(), iList[i].GetNamespace()); err != nil {
 			return fmt.Errorf("error destroying ingress '%s': %s", iList[i].GetName(), err)
 		}
-		spinner.Stop()
 		oktetoLog.Success("Endpoint '%s' destroyed", iList[i].GetName())
-		spinner.Start()
 	}
 	return nil
 }
@@ -272,7 +265,7 @@ func waitForPodsToBeDestroyed(ctx context.Context, s *model.Stack, c *kubernetes
 	return fmt.Errorf("kubernetes is taking too long to destroy your stack. Please check for errors and try again")
 }
 
-func destroyStackVolumes(ctx context.Context, spinner *utils.Spinner, s *model.Stack, c *kubernetes.Clientset, timeout time.Duration) error {
+func destroyStackVolumes(ctx context.Context, s *model.Stack, c *kubernetes.Clientset, timeout time.Duration) error {
 	vList, err := volumes.List(ctx, s.Namespace, s.GetLabelSelector(), c)
 	if err != nil {
 		return err
@@ -282,9 +275,7 @@ func destroyStackVolumes(ctx context.Context, spinner *utils.Spinner, s *model.S
 			if err := volumes.Destroy(ctx, v.Name, v.Namespace, c, timeout); err != nil {
 				return fmt.Errorf("error destroying volume '%s': %s", v.Name, err)
 			}
-			spinner.Stop()
 			oktetoLog.Success("Volume '%s' destroyed", v.Name)
-			spinner.Start()
 		}
 	}
 	return nil

@@ -95,9 +95,10 @@ func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 		return err
 	}
 
-	spinner := utils.NewSpinner("Restarting deployments...")
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner("Restarting deployments...")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
@@ -109,7 +110,7 @@ func executeRestart(ctx context.Context, dev *model.Dev, sn string) error {
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		spinner.Stop()
+		oktetoLog.StopSpinner()
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {

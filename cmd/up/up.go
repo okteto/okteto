@@ -758,9 +758,8 @@ func (up *upContext) shutdown() {
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
 			oktetoLog.Infof("failed to restore terminal: %s", err.Error())
 		}
-		if up.spinner != nil {
-			up.spinner.Stop()
-		}
+
+		oktetoLog.StopSpinner()
 	}
 
 	oktetoLog.Infof("starting shutdown sequence")

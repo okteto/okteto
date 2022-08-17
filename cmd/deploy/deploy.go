@@ -396,7 +396,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		// should not overwrite the server and the credentials in the kubeconfig
 		fmt.Sprintf("%s=true", model.OktetoSkipConfigCredentialsUpdate),
 		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
-		fmt.Sprintf("%s=true", model.OktetoDisableSpinnerEnvVar),
+		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
 	)
@@ -471,27 +471,36 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 
 		// deploy compose if any
 		if opts.Manifest.Deploy.ComposeSection != nil {
+			oktetoLog.SetStage("Deploying compose")
 			if err := dc.deployStack(ctx, opts); err != nil {
+				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())
 				exit <- err
 				return
 			}
+			oktetoLog.SetStage("")
 		}
 
 		// deploy endpoits if any
 		if opts.Manifest.Deploy.Endpoints != nil {
+			oktetoLog.SetStage("Endpoints configuration")
 			if err := dc.deployEndpoints(ctx, opts); err != nil {
+				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error generating endpoints: %s", err.Error())
 				exit <- err
 				return
 			}
+			oktetoLog.SetStage("")
 		}
 
 		// deploy diver if any
 		if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
+			oktetoLog.SetStage("Divert configuration")
 			if err := dc.deployDivert(ctx, opts); err != nil {
+				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
 				exit <- err
 				return
 			}
 			oktetoLog.Success("Divert from '%s' successfully configured", opts.Manifest.Deploy.Divert.Namespace)
+			oktetoLog.SetStage("")
 		}
 
 		exit <- nil
@@ -500,9 +509,10 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		sp := utils.NewSpinner("Shutting down...")
-		sp.Start()
-		defer sp.Stop()
+		oktetoLog.Spinner("Shutting down...")
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
+
 		dc.Executor.CleanUp(oktetoErrors.ErrIntSig)
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
@@ -511,8 +521,6 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 }
 
 func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
-	oktetoLog.SetStage("Deploying compose")
-	defer oktetoLog.SetStage("")
 	composeSectionInfo := opts.Manifest.Deploy.ComposeSection
 	composeSectionInfo.Stack.Namespace = okteto.Context().Namespace
 
@@ -542,12 +550,10 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 }
 
 func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error {
-	oktetoLog.SetStage("Divert configuration")
-	defer oktetoLog.SetStage("")
 
-	sp := utils.NewSpinner(fmt.Sprintf("Diverting namespace %s...", opts.Manifest.Deploy.Divert.Namespace))
-	sp.Start()
-	defer sp.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Diverting namespace %s...", opts.Manifest.Deploy.Divert.Namespace))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
@@ -565,7 +571,7 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 			oktetoLog.Infof("deployDivert context cancelled")
 			return ctx.Err()
 		default:
-			sp.Update(fmt.Sprintf("Diverting ingress %s/%s...", result.Items[i].Namespace, result.Items[i].Name))
+			oktetoLog.Spinner(fmt.Sprintf("Diverting ingress %s/%s...", result.Items[i].Namespace, result.Items[i].Name))
 			if err := diverts.DivertIngress(ctx, opts.Manifest, &result.Items[i], c); err != nil {
 				return err
 			}
@@ -575,8 +581,6 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 }
 
 func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) error {
-	oktetoLog.SetStage("Endpoints configuration")
-	defer oktetoLog.SetStage("")
 
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
