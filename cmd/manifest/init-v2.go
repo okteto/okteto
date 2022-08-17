@@ -17,7 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -388,12 +388,9 @@ func getPathFromApp(wd, appName string) string {
 
 	if fInfo, err := os.Stat(possibleAppPath); err != nil {
 		oktetoLog.Infof("could not detect path: %s", err)
-	} else {
-		if fInfo.IsDir() {
-			path, _ := filepath.Rel(wd, possibleAppPath)
-			return path
-		}
-
+	} else if fInfo.IsDir() {
+		path, _ := filepath.Rel(wd, possibleAppPath)
+		return path
 	}
 	return wd
 }
@@ -520,10 +517,20 @@ func inferDeploySection(cwd string) (*model.DeployInfo, error) {
 }
 
 func inferDevsSection(cwd string) (model.ManifestDevs, error) {
-	files, err := ioutil.ReadDir(cwd)
+	dirEntries, err := os.ReadDir(cwd)
 	if err != nil {
 		return nil, err
 	}
+
+	files := make([]fs.FileInfo, 0, len(dirEntries))
+	for _, entry := range dirEntries {
+		info, err := entry.Info()
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, info)
+	}
+
 	devs := model.ManifestDevs{}
 	for _, f := range files {
 		if !f.IsDir() {
