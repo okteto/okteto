@@ -221,24 +221,19 @@ dependencies:
 func Test_GetCtxResource(t *testing.T) {
 	tests := []struct {
 		name                string
-		manifest            string
+		manifestName        string
 		expectedErr         error
 		manifestYAML        []byte
 		expectedCtxResource *model.ContextResource
 	}{
 		{
-			name:        "valid manifest returns a initialized ctx resource",
-			expectedErr: nil,
-			manifest:    "okteto.yml",
+			name:         "valid manifest returns a initialized ctx resource",
+			expectedErr:  nil,
+			manifestName: "okteto.yml",
 			manifestYAML: []byte(`
 namespace: test-namespace
 context: manifest-context
-build:
-    service:
-    image: defined-tag-image
-    context: ./service
-    target: build
-    dockerfile: custom-dockerfile`),
+`),
 			expectedCtxResource: &model.ContextResource{
 				Namespace: "test-namespace",
 				Context:   "manifest-context",
@@ -247,27 +242,25 @@ build:
 		{
 			name:                "no valid manifest returns a zero value ctx resource",
 			expectedErr:         nil,
-			manifest:            "",
+			manifestName:        "",
 			expectedCtxResource: &model.ContextResource{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			manifestPath := ""
+			if tt.manifestName != "" {
+				tmpFile, err := os.CreateTemp("", tt.manifestName)
+				if err != nil {
+					t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
+				}
+				if err := os.WriteFile(tmpFile.Name(), []byte(tt.manifestYAML), 0600); err != nil {
+					t.Fatalf("failed to write manifest file: %s", err.Error())
+				}
+				defer os.RemoveAll(tmpFile.Name())
 
-			tmpFile, err := os.CreateTemp("", tt.manifest)
-			if err != nil {
-				t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
-			}
-			if err := os.WriteFile(tmpFile.Name(), []byte(tt.manifestYAML), 0600); err != nil {
-				t.Fatalf("failed to write manifest file: %s", err.Error())
-			}
-
-			defer os.RemoveAll(tmpFile.Name())
-
-			manifestPath := tmpFile.Name()
-			if tt.manifest == "" {
-				manifestPath = ""
+				manifestPath = tmpFile.Name()
 			}
 
 			ctxResource, err := getCtxResource(manifestPath)
