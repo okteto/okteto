@@ -16,6 +16,7 @@ package discovery
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -77,9 +78,9 @@ func TestGetContextResourcePathWhenExists(t *testing.T) {
 			}
 			result, err := GetContextResourcePath(wd)
 			assert.ErrorIs(t, tt.expectErr, err)
-			if err == nil {
-				assert.Equal(t, filepath.Join(wd, tt.expected), result)
-			}
+
+			splittedPath := strings.Split(result, "/")
+			assert.Equal(t, tt.expected, splittedPath[len(splittedPath)-1])
 		})
 	}
 }
