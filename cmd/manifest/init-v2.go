@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -517,18 +516,9 @@ func inferDeploySection(cwd string) (*model.DeployInfo, error) {
 }
 
 func inferDevsSection(cwd string) (model.ManifestDevs, error) {
-	dirEntries, err := os.ReadDir(cwd)
+	files, err := os.ReadDir(cwd)
 	if err != nil {
 		return nil, err
-	}
-
-	files := make([]fs.FileInfo, 0, len(dirEntries))
-	for _, entry := range dirEntries {
-		info, err := entry.Info()
-		if err != nil {
-			return nil, err
-		}
-		files = append(files, info)
 	}
 
 	devs := model.ManifestDevs{}
