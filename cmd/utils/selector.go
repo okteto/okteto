@@ -44,6 +44,7 @@ var ErrInvalidOption = errors.New("invalid option")
 
 type OktetoSelectorInterface interface {
 	Ask(ctx context.Context) (string, bool, error)
+	SetOptions(items []SelectorItem)
 }
 
 // OktetoSelector represents the selector
@@ -108,6 +109,12 @@ func (s *OktetoSelector) Ask(ctx context.Context) (string, bool, error) {
 	}
 
 	return optionSelected, isOkteto, nil
+}
+
+// Ask given some options ask the user to select one
+func (s *OktetoSelector) SetOptions(items []SelectorItem) {
+	s.Items = items
+	s.Size = len(items)
 }
 
 func isValidOption(options []SelectorItem, optionSelected string) bool {

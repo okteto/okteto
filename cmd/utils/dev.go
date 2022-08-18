@@ -190,12 +190,13 @@ func sortOptions(in []string) {
 	})
 }
 
-func SelectDevFromManifest(manifest *model.Manifest, selector *OktetoSelector) (*model.Dev, error) {
+func getItemsForDevSelector(devs model.ManifestDevs) []SelectorItem {
 	devNames := []string{}
-	for name := range manifest.Dev {
+	for name := range devs {
 		devNames = append(devNames, name)
 	}
 
+	// items get sorted alfabetically
 	sortOptions(devNames)
 
 	items := []SelectorItem{}
@@ -206,8 +207,12 @@ func SelectDevFromManifest(manifest *model.Manifest, selector *OktetoSelector) (
 			Enable: true,
 		})
 	}
-	selector.Items = items
-	selector.Size = len(items)
+	return items
+}
+
+func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInterface) (*model.Dev, error) {
+	items := getItemsForDevSelector(manifest.Dev)
+	selector.SetOptions(items)
 	devName, _, err := selector.Ask(context.Background())
 	if err != nil {
 		return nil, err
