@@ -146,61 +146,78 @@ func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 	return nil, err
 }
 
-// GetDevFromManifest gets a dev from a manifest by
+// GetDevFromManifest returns the dev for devName
 func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
 	if len(manifest.Dev) == 0 {
 		return nil, oktetoErrors.ErrManifestNoDevSection
-	} else if len(manifest.Dev) == 1 {
-		for name, dev := range manifest.Dev {
-			if devName != "" && devName != name {
-				return nil, oktetoErrors.UserError{
-					E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
-					Hint: fmt.Sprintf("Available options are: [%s]", name),
-				}
-			}
+	}
+
+	options := []string{}
+	for name := range manifest.Dev {
+		options = append(options, name)
+	}
+
+	// if devName is empty and manifest only has one dev, return this
+	if len(manifest.Dev) == 1 && devName == "" {
+		for _, dev := range manifest.Dev {
 			return dev, nil
 		}
 	}
 
-	if devName != "" {
-		options := []string{}
-		for k := range manifest.Dev {
-			if k == devName {
-				return manifest.Dev[devName], nil
-			}
-			options = append(options, k)
+	if devName == "" {
+		selectedDev, err := selectDevFromManifest(manifest, "Select the development container you want to activate:")
+		if err != nil {
+			return nil, err
 		}
-		return nil, oktetoErrors.UserError{
-			E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
-			Hint: fmt.Sprintf("Available options are: [%s]", strings.Join(options, ", ")),
+		return selectedDev, nil
+	}
+
+	// iterate though options to look fot devName and return
+	for _, item := range options {
+		if item == devName {
+			return manifest.Dev[devName], nil
 		}
 	}
-	devs := []string{}
-	for k := range manifest.Dev {
-		devs = append(devs, k)
+	return nil, oktetoErrors.UserError{
+		E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
+		Hint: fmt.Sprintf("Available options are: [%s]", strings.Join(options, ", ")),
 	}
-	sort.Slice(devs, func(i, j int) bool {
-		l1, l2 := len(devs[i]), len(devs[j])
+}
+
+func sortOptions(in []string) {
+	sort.Slice(in, func(i, j int) bool {
+		l1, l2 := len(in[i]), len(in[j])
 		if l1 != l2 {
 			return l1 < l2
 		}
-		return devs[i] < devs[j]
+		return in[i] < in[j]
 	})
+}
+
+func selectDevFromManifest(manifest *model.Manifest, selectionPrompt string) (*model.Dev, error) {
+	devNames := []string{}
+	for name := range manifest.Dev {
+		devNames = append(devNames, name)
+	}
+
+	sortOptions(devNames)
+
 	items := []SelectorItem{}
-	for _, dev := range devs {
+	for _, name := range devNames {
 		items = append(items, SelectorItem{
-			Name:   dev,
-			Label:  dev,
+			Name:   name,
+			Label:  name,
 			Enable: true,
 		})
 	}
-	devKey, _, err := AskForOptionsOkteto(context.Background(), items, "Select the development container you want to activate:", "Development container")
+
+	devName, _, err := AskForOptionsOkteto(context.Background(), items, selectionPrompt, "Development container")
 	if err != nil {
 		return nil, err
 	}
-	dev := manifest.Dev[devKey]
 
-	dev.Name = devKey
+	dev := manifest.Dev[devName]
+	dev.Name = devName
 	if dev.Namespace == "" {
 		dev.Namespace = manifest.Namespace
 	}
@@ -212,7 +229,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		return nil, err
 	}
 
-	return manifest.Dev[devKey], nil
+	return manifest.Dev[devName], nil
 }
 
 //AskYesNo prompts for yes/no confirmation

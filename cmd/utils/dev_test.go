@@ -287,6 +287,21 @@ func Test_GetDevFromManifest(t *testing.T) {
 			err:     fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, wrongDevName),
 		},
 		{
+			name: "manifest has one dev section and devName is empty",
+			manifest: &model.Manifest{
+				Dev: model.ManifestDevs{
+					"test": &model.Dev{
+						Name: "test",
+					},
+				},
+			},
+			devName: "",
+			dev: &model.Dev{
+				Name: "test",
+			},
+			err: nil,
+		},
+		{
 			name: "manifest has several dev section user introduces wrong one",
 			manifest: &model.Manifest{
 				Dev: model.ManifestDevs{
@@ -302,13 +317,19 @@ func Test_GetDevFromManifest(t *testing.T) {
 			name: "manifest has several dev section user introduces correct one",
 			manifest: &model.Manifest{
 				Dev: model.ManifestDevs{
-					"test":   &model.Dev{},
-					"test-2": &model.Dev{},
+					"test": &model.Dev{
+						Name: "test",
+					},
+					"test-2": &model.Dev{
+						Name: "test-2",
+					},
 				},
 			},
 			devName: "test",
-			dev:     &model.Dev{},
-			err:     nil,
+			dev: &model.Dev{
+				Name: "test",
+			},
+			err: nil,
 		},
 	}
 	for _, tt := range tests {
