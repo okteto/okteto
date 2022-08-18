@@ -29,7 +29,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils/executor"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/linguist"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -127,7 +127,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 	var err error
 	if !opts.Overwrite {
 		manifest, _ = model.GetManifestV2(opts.DevPath)
-		if err != nil && !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
 		}
 	}
@@ -387,12 +387,9 @@ func getPathFromApp(wd, appName string) string {
 
 	if fInfo, err := os.Stat(possibleAppPath); err != nil {
 		oktetoLog.Infof("could not detect path: %s", err)
-	} else {
-		if fInfo.IsDir() {
-			path, _ := filepath.Rel(wd, possibleAppPath)
-			return path
-		}
-
+	} else if fInfo.IsDir() {
+		path, _ := filepath.Rel(wd, possibleAppPath)
+		return path
 	}
 	return wd
 }
@@ -523,6 +520,7 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	devs := model.ManifestDevs{}
 	for _, f := range files {
 		if !f.IsDir() {
