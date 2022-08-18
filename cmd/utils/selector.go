@@ -42,6 +42,10 @@ const (
 // ErrInvalidOption is raised when the selector has an invalid option
 var ErrInvalidOption = errors.New("invalid option")
 
+type OktetoSelectorInterface interface {
+	Ask(ctx context.Context) (string, bool, error)
+}
+
 // OktetoSelector represents the selector
 type OktetoSelector struct {
 	Label string
@@ -77,16 +81,13 @@ type SelectorItem struct {
 	Registry  string
 }
 
-//AskForOptionsOkteto given some options ask the user to select one
-func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label, selectedTpl string) (string, bool, error) {
+func NewOktetoSelector(label string, selectedTpl string) *OktetoSelector {
 	selectedTemplate := getSelectedTemplate(selectedTpl)
 	activeTemplate := getActiveTemplate()
 	inactiveTemplate := getInactiveTemplate()
 
-	prompt := OktetoSelector{
+	return &OktetoSelector{
 		Label: label,
-		Items: options,
-		Size:  len(options),
 		Templates: &promptui.SelectTemplates{
 			Label:    "{{ .Label }}",
 			Selected: selectedTemplate,
@@ -95,10 +96,13 @@ func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label, sel
 			FuncMap:  promptui.FuncMap,
 		},
 	}
+}
 
-	prompt.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
-	optionSelected, isOkteto, err := prompt.Run(ctx)
-	if err != nil || !isValidOption(options, optionSelected) {
+// Ask given some options ask the user to select one
+func (s *OktetoSelector) Ask(ctx context.Context) (string, bool, error) {
+	s.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
+	optionSelected, isOkteto, err := s.run(ctx)
+	if err != nil || !isValidOption(s.Items, optionSelected) {
 		oktetoLog.Infof("invalid init option: %s", err)
 		return "", false, ErrInvalidOption
 	}
@@ -115,8 +119,8 @@ func isValidOption(options []SelectorItem, optionSelected string) bool {
 	return false
 }
 
-//Run runs the selector prompt
-func (s *OktetoSelector) Run(ctx context.Context) (string, bool, error) {
+// Run runs the selector prompt
+func (s *OktetoSelector) run(ctx context.Context) (string, bool, error) {
 	startPosition, err := s.getInitialPosition(ctx)
 	if err != nil {
 		return "", false, err

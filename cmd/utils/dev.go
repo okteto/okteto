@@ -165,11 +165,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 	}
 
 	if devName == "" {
-		selectedDev, err := selectDevFromManifest(manifest, "Select the development container you want to activate:")
-		if err != nil {
-			return nil, err
-		}
-		return selectedDev, nil
+		return nil, oktetoErrors.ErrNoDevSelected
 	}
 
 	// iterate though options to look fot devName and return
@@ -194,7 +190,7 @@ func sortOptions(in []string) {
 	})
 }
 
-func selectDevFromManifest(manifest *model.Manifest, selectionPrompt string) (*model.Dev, error) {
+func SelectDevFromManifest(manifest *model.Manifest, selector *OktetoSelector) (*model.Dev, error) {
 	devNames := []string{}
 	for name := range manifest.Dev {
 		devNames = append(devNames, name)
@@ -210,8 +206,9 @@ func selectDevFromManifest(manifest *model.Manifest, selectionPrompt string) (*m
 			Enable: true,
 		})
 	}
-
-	devName, _, err := AskForOptionsOkteto(context.Background(), items, selectionPrompt, "Development container")
+	selector.Items = items
+	selector.Size = len(items)
+	devName, _, err := selector.Ask(context.Background())
 	if err != nil {
 		return nil, err
 	}

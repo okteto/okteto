@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -58,7 +59,15 @@ func Restart() *cobra.Command {
 			}
 			dev, err := utils.GetDevFromManifest(manifest, devName)
 			if err != nil {
-				return err
+				if !errors.Is(err, oktetoErrors.ErrNoDevSelected) {
+					return err
+				}
+
+				selector := utils.NewOktetoSelector("Select the development container you want to restart:", "Development container")
+				dev, err = utils.SelectDevFromManifest(manifest, selector)
+				if err != nil {
+					return err
+				}
 			}
 
 			if len(dev.Services) == 0 {

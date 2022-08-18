@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -65,7 +66,15 @@ func Doctor() *cobra.Command {
 			}
 			dev, err := utils.GetDevFromManifest(manifest, devName)
 			if err != nil {
-				return err
+				if !errors.Is(err, oktetoErrors.ErrNoDevSelected) {
+					return err
+				}
+
+				selector := utils.NewOktetoSelector("Select the development container you want to generate zip with logs:", "Development container")
+				dev, err = utils.SelectDevFromManifest(manifest, selector)
+				if err != nil {
+					return err
+				}
 			}
 			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, c)
 			if err == nil {

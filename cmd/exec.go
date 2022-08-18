@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -193,13 +194,22 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 
 	var dev *model.Dev
 	var err error
-	if len(args) == 1 || !manifest.Dev.HasDev(args[0]) {
-		dev, err = utils.GetDevFromManifest(manifest, "")
-		if err != nil {
+
+	devName := ""
+	if len(args) != 0 {
+		devName = args[0]
+	}
+	if devName != "" && !manifest.Dev.HasDev(devName) {
+		return nil, utils.ErrInvalidOption
+	}
+
+	dev, err = utils.GetDevFromManifest(manifest, devName)
+	if err != nil {
+		if !errors.Is(err, oktetoErrors.ErrNoDevSelected) {
 			return nil, err
 		}
-	} else {
-		dev, err = utils.GetDevFromManifest(manifest, args[0])
+		selector := utils.NewOktetoSelector("Select the development container where you want to execute:", "Development container")
+		dev, err = utils.SelectDevFromManifest(manifest, selector)
 		if err != nil {
 			return nil, err
 		}
