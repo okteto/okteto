@@ -14,6 +14,8 @@
 package utils
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -339,6 +341,186 @@ func Test_GetDevFromManifest(t *testing.T) {
 			if tt.err != nil {
 				assert.Equal(t, tt.err.Error(), err.Error())
 			}
+		})
+	}
+}
+
+type FakeSelector struct {
+	selected string
+	err      error
+}
+
+func NewFakeSelector(selected string, err error) *FakeSelector {
+	return &FakeSelector{
+		selected: selected,
+		err:      err,
+	}
+}
+
+func (fs *FakeSelector) Ask(ctx context.Context) (string, bool, error) {
+	return fs.selected, false, fs.err
+}
+
+func (fs *FakeSelector) SetOptions(i []SelectorItem) {}
+
+func Test_SelectDevFromManifest(t *testing.T) {
+	tests := []struct {
+		name        string
+		selector    *FakeSelector
+		manifest    *model.Manifest
+		expectedDev *model.Dev
+		expectedErr error
+	}{
+		{
+			name:        "selector-returns-error",
+			selector:    NewFakeSelector("", errors.New("error")),
+			manifest:    &model.Manifest{},
+			expectedErr: errors.New("error"),
+		},
+		{
+			name:     "selector-returns-devname",
+			selector: NewFakeSelector("test", nil),
+			manifest: &model.Manifest{
+				Dev: model.ManifestDevs{
+					"test": &model.Dev{
+						Name:            "test",
+						ImagePullPolicy: "Always",
+						Sync: model.Sync{
+							Folders: []model.SyncFolder{
+								{
+									LocalPath:  "/",
+									RemotePath: "/remote",
+								},
+							},
+						},
+						SSHServerPort: 80,
+						Image:         &model.BuildInfo{},
+					},
+					"test-2": &model.Dev{
+						Name:            "test-2",
+						ImagePullPolicy: "Always",
+						Sync: model.Sync{
+							Folders: []model.SyncFolder{
+								{
+									LocalPath:  "/",
+									RemotePath: "/remote",
+								},
+							},
+						},
+						SSHServerPort: 80,
+						Image:         &model.BuildInfo{},
+					},
+				},
+			},
+			expectedErr: nil,
+			expectedDev: &model.Dev{
+				Name:            "test",
+				ImagePullPolicy: "Always",
+				Sync: model.Sync{
+					Folders: []model.SyncFolder{
+						{
+							LocalPath:  "/",
+							RemotePath: "/remote",
+						},
+					},
+				},
+				SSHServerPort: 80,
+				Image:         &model.BuildInfo{},
+			},
+		},
+		{
+			name:     "selector-returns-invalid-error",
+			selector: NewFakeSelector("test", nil),
+			manifest: &model.Manifest{
+				Dev: model.ManifestDevs{
+					"test": &model.Dev{
+						Name: "test",
+					},
+					"test-2": &model.Dev{
+						Name:            "test-2",
+						ImagePullPolicy: "Always",
+						Sync: model.Sync{
+							Folders: []model.SyncFolder{
+								{
+									LocalPath:  "/",
+									RemotePath: "/remote",
+								},
+							},
+						},
+						SSHServerPort: 80,
+						Image:         &model.BuildInfo{},
+					},
+				},
+			},
+			expectedErr: errors.New("supported values for 'imagePullPolicy' are: 'Always', 'IfNotPresent' or 'Never'"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			res, err := SelectDevFromManifest(tt.manifest, tt.selector)
+			assert.EqualValues(t, tt.expectedErr, err)
+			assert.EqualValues(t, tt.expectedDev, res)
+		})
+	}
+}
+
+func Test_getItemsForDevSelector(t *testing.T) {
+	tests := []struct {
+		name     string
+		devs     model.ManifestDevs
+		expected []SelectorItem
+	}{
+		{
+			"empty-devs",
+			model.ManifestDevs{},
+			[]SelectorItem{},
+		},
+		{
+			"single-devs",
+			model.ManifestDevs{
+				"test": &model.Dev{},
+			},
+			[]SelectorItem{
+				{
+					Name:   "test",
+					Label:  "test",
+					Enable: true,
+				},
+			},
+		},
+		{
+			"multiple-devs",
+			model.ManifestDevs{
+				"b": &model.Dev{},
+				"c": &model.Dev{},
+				"a": &model.Dev{},
+			},
+			[]SelectorItem{
+				{
+					Name:   "a",
+					Label:  "a",
+					Enable: true,
+				},
+				{
+					Name:   "b",
+					Label:  "b",
+					Enable: true,
+				},
+				{
+					Name:   "c",
+					Label:  "c",
+					Enable: true,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			items := getItemsForDevSelector(tt.devs)
+			assert.EqualValues(t, tt.expected, items)
 		})
 	}
 }
