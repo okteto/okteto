@@ -43,7 +43,7 @@ const (
 var ErrInvalidOption = errors.New("invalid option")
 
 type OktetoSelectorInterface interface {
-	Ask(ctx context.Context) (string, bool, error)
+	Ask(ctx context.Context) (string, error)
 	SetOptions(items []SelectorItem)
 }
 
@@ -73,13 +73,9 @@ type oktetoTemplates struct {
 
 //SelectorItem represents a selectable item on a selector
 type SelectorItem struct {
-	Name      string
-	Label     string
-	Enable    bool
-	IsOkteto  bool
-	Namespace string
-	Builder   string
-	Registry  string
+	Name   string
+	Label  string
+	Enable bool
 }
 
 func NewOktetoSelector(label string, selectedTpl string) *OktetoSelector {
@@ -100,15 +96,15 @@ func NewOktetoSelector(label string, selectedTpl string) *OktetoSelector {
 }
 
 // Ask given some options ask the user to select one
-func (s *OktetoSelector) Ask(ctx context.Context) (string, bool, error) {
+func (s *OktetoSelector) Ask(ctx context.Context) (string, error) {
 	s.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
-	optionSelected, isOkteto, err := s.run(ctx)
+	optionSelected, err := s.run(ctx)
 	if err != nil || !isValidOption(s.Items, optionSelected) {
 		oktetoLog.Infof("invalid init option: %s", err)
-		return "", false, ErrInvalidOption
+		return "", ErrInvalidOption
 	}
 
-	return optionSelected, isOkteto, nil
+	return optionSelected, nil
 }
 
 // Ask given some options ask the user to select one
@@ -127,17 +123,17 @@ func isValidOption(options []SelectorItem, optionSelected string) bool {
 }
 
 // Run runs the selector prompt
-func (s *OktetoSelector) run(ctx context.Context) (string, bool, error) {
+func (s *OktetoSelector) run(ctx context.Context) (string, error) {
 	startPosition, err := s.getInitialPosition(ctx)
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 	if startPosition != -1 {
 		s.Items[startPosition].Label += " *"
 	}
 	l, err := list.New(s.Items, s.Size)
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 
 	s.prepareTemplates()
@@ -151,7 +147,7 @@ func (s *OktetoSelector) run(ctx context.Context) (string, bool, error) {
 	c := &readline.Config{}
 	err = c.Init()
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 	if runtime.GOOS != "windows" {
 		c.Stdout = &stdout{}
@@ -164,7 +160,7 @@ func (s *OktetoSelector) run(ctx context.Context) (string, bool, error) {
 
 	rl, err := readline.NewEx(c)
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 
 	sb := screenbuf.New(rl)
@@ -283,7 +279,7 @@ func (s *OktetoSelector) run(ctx context.Context) (string, bool, error) {
 		sb.Flush()
 		rl.Write([]byte(showCursor))
 		rl.Close()
-		return "", false, err
+		return "", err
 	}
 
 	items, idx := l.Items()
@@ -296,7 +292,7 @@ func (s *OktetoSelector) run(ctx context.Context) (string, bool, error) {
 	rl.Write([]byte(showCursor))
 	rl.Close()
 
-	return s.Items[l.Index()].Name, s.Items[l.Index()].IsOkteto, err
+	return s.Items[l.Index()].Name, err
 }
 
 func (s *OktetoSelector) prepareTemplates() error {

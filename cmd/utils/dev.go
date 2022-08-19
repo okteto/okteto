@@ -211,9 +211,9 @@ func getItemsForDevSelector(devs model.ManifestDevs) []SelectorItem {
 }
 
 func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInterface) (*model.Dev, error) {
-	items := getItemsForDevSelector(manifest.Dev)
-	selector.SetOptions(items)
-	devName, _, err := selector.Ask(context.Background())
+	selector.SetOptions(getItemsForDevSelector(manifest.Dev))
+
+	devName, err := selector.Ask(context.Background())
 	if err != nil {
 		return nil, err
 	}

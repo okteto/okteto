@@ -100,9 +100,9 @@ func (nc *NamespaceCommand) getNamespaceFromSelector(ctx context.Context) (strin
 		return "", err
 	}
 	selector := utils.NewOktetoSelector("Select the namespace you want to use:", "Namespace")
-	selector.Items = namespaces
-	selector.Size = len(namespaces)
-	ns, _, err := selector.Ask(ctx)
+	selector.SetOptions(namespaces)
+
+	ns, err := selector.Ask(ctx)
 	if err != nil {
 		return "", err
 	}

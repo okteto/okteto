@@ -125,23 +125,22 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
 	selector := utils.NewOktetoSelector("A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", "Context")
-	selector.Items = ctxs
-	selector.Size = len(ctxs)
-	oktetoContext, isOkteto, err := selector.Ask(ctx)
+	selector.SetOptions(getSelectorItemsFromContextSelector(ctxs))
+	ctxSelected, err := selector.Ask(ctx)
 	if err != nil {
 		return "", err
 	}
-	ctxOptions.IsOkteto = isOkteto
+	ctxOptions.IsOkteto = isOktetoContextSelected(ctxs, ctxSelected)
 
-	if isCreateNewContextOption(oktetoContext) {
-		oktetoContext, err = askForOktetoURL()
+	if isCreateNewContextOption(ctxSelected) {
+		ctxSelected, err = askForOktetoURL()
 		if err != nil {
 			return "", err
 		}
 		ctxOptions.IsOkteto = true
 	}
 
-	return oktetoContext, nil
+	return ctxSelected, nil
 }
 
 func setSecrets(secrets []types.Secret) {

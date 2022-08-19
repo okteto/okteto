@@ -27,19 +27,30 @@ var (
 	newOEOption = "Create new context"
 )
 
-func getContextsSelection(ctxOptions *ContextOptions) []utils.SelectorItem {
+// contextSelector represents the context information
+type contextSelector struct {
+	Name      string
+	Label     string
+	Enable    bool
+	IsOkteto  bool
+	Namespace string
+	Builder   string
+	Registry  string
+}
+
+func getContextsSelection(ctxOptions *ContextOptions) []contextSelector {
 	k8sClusters := make([]string, 0)
 	if !ctxOptions.OnlyOkteto {
 		k8sClusters = getKubernetesContextList(true)
 	}
-	clusters := make([]utils.SelectorItem, 0)
+	clusters := make([]contextSelector, 0)
 
-	clusters = append(clusters, utils.SelectorItem{Name: okteto.CloudURL, Label: cloudOption, Enable: true, IsOkteto: true})
+	clusters = append(clusters, contextSelector{Name: okteto.CloudURL, Label: cloudOption, Enable: true, IsOkteto: true})
 	clusters = append(clusters, getOktetoClusters(true)...)
 	if len(k8sClusters) > 0 {
 		clusters = append(clusters, getK8sClusters(k8sClusters)...)
 	}
-	clusters = append(clusters, []utils.SelectorItem{
+	clusters = append(clusters, []contextSelector{
 		{
 			Label:  "",
 			Enable: false,
@@ -54,8 +65,8 @@ func getContextsSelection(ctxOptions *ContextOptions) []utils.SelectorItem {
 	return clusters
 }
 
-func getOktetoClusters(skipCloud bool) []utils.SelectorItem {
-	orderedOktetoClusters := make([]utils.SelectorItem, 0)
+func getOktetoClusters(skipCloud bool) []contextSelector {
+	orderedOktetoClusters := make([]contextSelector, 0)
 	ctxStore := okteto.ContextStore()
 	for ctxName, okCtx := range ctxStore.Contexts {
 		if !okCtx.IsOkteto {
@@ -66,7 +77,7 @@ func getOktetoClusters(skipCloud bool) []utils.SelectorItem {
 		}
 		orderedOktetoClusters = append(
 			orderedOktetoClusters,
-			utils.SelectorItem{
+			contextSelector{
 				Name:      ctxName,
 				Label:     ctxName,
 				Enable:    true,
@@ -88,10 +99,10 @@ func getOktetoClusters(skipCloud bool) []utils.SelectorItem {
 	return orderedOktetoClusters
 }
 
-func getK8sClusters(k8sClusters []string) []utils.SelectorItem {
-	orderedK8sClusters := make([]utils.SelectorItem, 0)
+func getK8sClusters(k8sClusters []string) []contextSelector {
+	orderedK8sClusters := make([]contextSelector, 0)
 	for _, k8sCluster := range k8sClusters {
-		orderedK8sClusters = append(orderedK8sClusters, utils.SelectorItem{
+		orderedK8sClusters = append(orderedK8sClusters, contextSelector{
 			Name:      k8sCluster,
 			Label:     k8sCluster,
 			Enable:    true,
@@ -105,4 +116,25 @@ func getK8sClusters(k8sClusters []string) []utils.SelectorItem {
 		return strings.Compare(orderedK8sClusters[i].Name, orderedK8sClusters[j].Name) < 0
 	})
 	return orderedK8sClusters
+}
+
+func getSelectorItemsFromContextSelector(items []contextSelector) []utils.SelectorItem {
+	s := make([]utils.SelectorItem, len(items))
+	for _, i := range items {
+		s = append(s, utils.SelectorItem{
+			Name:   i.Name,
+			Label:  i.Label,
+			Enable: i.Enable,
+		})
+	}
+	return s
+}
+
+func isOktetoContextSelected(contexts []contextSelector, selected string) bool {
+	for _, i := range contexts {
+		if i.Name == selected {
+			return i.IsOkteto
+		}
+	}
+	return false
 }

@@ -98,7 +98,7 @@ func selectDockerfiles(ctx context.Context, cwd string) ([]string, error) {
 		selector.Items = dockerfilesItems
 		selector.Size = len(dockerfilesItems)
 
-		selection, _, err := selector.Ask(ctx)
+		selection, err := selector.Ask(ctx)
 		if err != nil {
 			return nil, err
 		}
