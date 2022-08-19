@@ -61,7 +61,7 @@ func NewExecutor(output string) *Executor {
 // Execute executes the specified command adding `env` to the execution environment
 func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 
-	cmd := exec.Command("bash", "-c", cmdInfo.Command)
+	cmd := exec.Command(cmdInfo.Command)
 	cmd.Env = append(os.Environ(), env...)
 	if err := e.displayer.startCommand(cmd); err != nil {
 		return err
