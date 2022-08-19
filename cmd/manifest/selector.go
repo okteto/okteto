@@ -85,19 +85,9 @@ func selectDockerfiles(ctx context.Context, cwd string) ([]string, error) {
 		if len(dockerfiles) == 1 {
 			break
 		}
-		dockerfilesItems := []utils.SelectorItem{}
-		for _, d := range dockerfiles {
-			dockerfilesItems = append(dockerfilesItems, utils.SelectorItem{
-				Name:   d,
-				Label:  d,
-				Enable: true,
-			})
-		}
 
-		selector := utils.NewOktetoSelector("Do you need to build any of the following Dockerfiles as part of your development environment?", "")
-		selector.Items = dockerfilesItems
-		selector.Size = len(dockerfilesItems)
-
+		selectorItems := getDockerfilesSelectorItems(dockerfiles)
+		selector := utils.NewOktetoSelector("Do you need to build any of the following Dockerfiles as part of your development environment?", selectorItems, "")
 		selection, err := selector.Ask(ctx)
 		if err != nil {
 			return nil, err
@@ -133,4 +123,16 @@ func validateDockerfileSelection(dockerfiles []string) error {
 		}
 	}
 	return nil
+}
+
+func getDockerfilesSelectorItems(items []string) []utils.SelectorItem {
+	dockerfilesItems := make([]utils.SelectorItem, len(items))
+	for _, d := range items {
+		dockerfilesItems = append(dockerfilesItems, utils.SelectorItem{
+			Name:   d,
+			Label:  d,
+			Enable: true,
+		})
+	}
+	return dockerfilesItems
 }

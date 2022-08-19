@@ -361,8 +361,6 @@ func (fs *FakeSelector) Ask(ctx context.Context) (string, error) {
 	return fs.selected, fs.err
 }
 
-func (fs *FakeSelector) SetOptions(i []SelectorItem) {}
-
 func Test_SelectDevFromManifest(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -519,7 +517,7 @@ func Test_getItemsForDevSelector(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			items := getItemsForDevSelector(tt.devs)
+			items := GetItemsForDevSelector(tt.devs)
 			assert.EqualValues(t, tt.expected, items)
 		})
 	}

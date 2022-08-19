@@ -44,7 +44,6 @@ var ErrInvalidOption = errors.New("invalid option")
 
 type OktetoSelectorInterface interface {
 	Ask(ctx context.Context) (string, error)
-	SetOptions(items []SelectorItem)
 }
 
 // OktetoSelector represents the selector
@@ -78,13 +77,15 @@ type SelectorItem struct {
 	Enable bool
 }
 
-func NewOktetoSelector(label string, selectedTpl string) *OktetoSelector {
+func NewOktetoSelector(label string, items []SelectorItem, selectedTpl string) *OktetoSelector {
 	selectedTemplate := getSelectedTemplate(selectedTpl)
 	activeTemplate := getActiveTemplate()
 	inactiveTemplate := getInactiveTemplate()
 
 	return &OktetoSelector{
 		Label: label,
+		Items: items,
+		Size:  len(items),
 		Templates: &promptui.SelectTemplates{
 			Label:    "{{ .Label }}",
 			Selected: selectedTemplate,
@@ -105,12 +106,6 @@ func (s *OktetoSelector) Ask(ctx context.Context) (string, error) {
 	}
 
 	return optionSelected, nil
-}
-
-// Ask given some options ask the user to select one
-func (s *OktetoSelector) SetOptions(items []SelectorItem) {
-	s.Items = items
-	s.Size = len(items)
 }
 
 func isValidOption(options []SelectorItem, optionSelected string) bool {
