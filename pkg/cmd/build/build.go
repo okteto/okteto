@@ -248,7 +248,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 	if registry.IsOktetoRegistry(b.Image) {
 		defaultBuildArgs := map[string]string{
-			model.OktetoUserNameEnvVar:        okteto.Context().Username,
+			model.OktetoContextEnvVar:        okteto.Context().Name,
 			model.OktetoNamespaceEnvVar:       okteto.Context().Namespace,
 		}
 
