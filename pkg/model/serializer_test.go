@@ -1074,7 +1074,7 @@ deploy:
 			isErrorExpected: false,
 		},
 		{
-			name: "dev manifest with dev and deploy",
+			name: "dev manifest with dev sanitized and deploy",
 			manifest: []byte(`
 deploy:
   - okteto stack deploy
@@ -1082,7 +1082,7 @@ dev:
   test-1:
     sync:
     - app:/app
-  test-2:
+  test_2:
     sync:
     - app:/app
 `),
@@ -1096,6 +1096,9 @@ dev:
 							Command: "okteto stack deploy",
 						},
 					},
+				},
+				DevWarnings: DevWarnings{
+					SanitizedDevs: map[string]string{"test_2": "test-2"},
 				},
 				Dependencies: map[string]*Dependency{},
 				Dev: map[string]*Dev{

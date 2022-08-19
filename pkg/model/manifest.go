@@ -639,12 +639,14 @@ func Read(bytes []byte) (*Manifest, error) {
 		}
 	}
 
-	sanitizedDevsNames := make(map[string]string)
 	hasShownWarning := false
 	for devKey, dev := range manifest.Dev {
 		if shouldBeSanitized(devKey) {
+			if manifest.DevWarnings.SanitizedDevs == nil {
+				manifest.DevWarnings.SanitizedDevs = make(map[string]string)
+			}
 			newDevKey := sanitizeName(devKey)
-			sanitizedDevsNames[devKey] = newDevKey
+			manifest.DevWarnings.SanitizedDevs[devKey] = newDevKey
 			manifest.Dev[newDevKey] = dev
 			delete(manifest.Dev, devKey)
 		}
@@ -654,8 +656,6 @@ func Read(bytes []byte) (*Manifest, error) {
 			oktetoLog.Yellow(`The 'image' extended syntax is deprecated and will be removed in a future version. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/manifest/#build"`)
 		}
 	}
-
-	manifest.DevWarnings.SanitizedDevs = sanitizedDevsNames
 
 	if err := manifest.setDefaults(); err != nil {
 		return nil, err
