@@ -98,10 +98,14 @@ type Manifest struct {
 	Build         ManifestBuild           `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  ManifestDependencies    `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
+	DevWarnings   DevWarnings
 
 	Type     Archetype `json:"-" yaml:"-"`
 	Manifest []byte    `json:"-" yaml:"-"`
 	IsV2     bool      `json:"-" yaml:"-"`
+}
+type DevWarnings struct {
+	SanitizedDevs map[string]string `yaml:"-"`
 }
 
 // ManifestDevs defines all the dev section
@@ -635,13 +639,23 @@ func Read(bytes []byte) (*Manifest, error) {
 		}
 	}
 
+	sanitizedDevsNames := make(map[string]string)
 	hasShownWarning := false
-	for _, d := range manifest.Dev {
-		if (d.Image.Context != "" || d.Image.Dockerfile != "") && !hasShownWarning {
+	for devKey, dev := range manifest.Dev {
+		if shouldBeSanitized(devKey) {
+			newDevKey := sanitizeName(devKey)
+			sanitizedDevsNames[devKey] = newDevKey
+			manifest.Dev[newDevKey] = dev
+			delete(manifest.Dev, devKey)
+		}
+
+		if (dev.Image.Context != "" || dev.Image.Dockerfile != "") && !hasShownWarning {
 			hasShownWarning = true
 			oktetoLog.Yellow(`The 'image' extended syntax is deprecated and will be removed in a future version. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/manifest/#build"`)
 		}
 	}
+
+	manifest.DevWarnings.SanitizedDevs = sanitizedDevsNames
 
 	if err := manifest.setDefaults(); err != nil {
 		return nil, err
