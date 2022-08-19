@@ -1097,9 +1097,6 @@ dev:
 						},
 					},
 				},
-				DevWarnings: DevWarnings{
-					SanitizedDevs: map[string]string{"test_2": "test-2"},
-				},
 				Dependencies: map[string]*Dependency{},
 				Dev: map[string]*Dev{
 					"test-1": {

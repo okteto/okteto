@@ -505,10 +505,6 @@ func (up *upContext) getManifest(path string) (*model.Manifest, error) {
 }
 
 func (up *upContext) start() error {
-	for previousName, newName := range up.Manifest.DevWarnings.SanitizedDevs {
-		oktetoLog.Warning("Service '%s' has been sanitized into '%s'. This may affect discovery service.", previousName, newName)
-	}
-
 	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
 		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
 		return fmt.Errorf("couldn't create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)

@@ -98,14 +98,10 @@ type Manifest struct {
 	Build         ManifestBuild           `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  ManifestDependencies    `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
-	DevWarnings   DevWarnings
 
 	Type     Archetype `json:"-" yaml:"-"`
 	Manifest []byte    `json:"-" yaml:"-"`
 	IsV2     bool      `json:"-" yaml:"-"`
-}
-type DevWarnings struct {
-	SanitizedDevs map[string]string `yaml:"-"`
 }
 
 // ManifestDevs defines all the dev section
@@ -642,13 +638,11 @@ func Read(bytes []byte) (*Manifest, error) {
 	hasShownWarning := false
 	for devKey, dev := range manifest.Dev {
 		if shouldBeSanitized(devKey) {
-			if manifest.DevWarnings.SanitizedDevs == nil {
-				manifest.DevWarnings.SanitizedDevs = make(map[string]string)
-			}
 			newDevKey := sanitizeName(devKey)
-			manifest.DevWarnings.SanitizedDevs[devKey] = newDevKey
 			manifest.Dev[newDevKey] = dev
+			oktetoLog.Warning("Service '%s' has been sanitized into '%s'. This may affect discovery service.", manifest.Dev, newDevKey)
 			delete(manifest.Dev, devKey)
+
 		}
 
 		if (dev.Image.Context != "" || dev.Image.Dockerfile != "") && !hasShownWarning {
