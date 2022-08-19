@@ -357,7 +357,7 @@ func NewFakeSelector(selected string, err error) *FakeSelector {
 	}
 }
 
-func (fs *FakeSelector) Ask(ctx context.Context) (string, error) {
+func (fs *FakeSelector) Ask(_ context.Context) (string, error) {
 	return fs.selected, fs.err
 }
 

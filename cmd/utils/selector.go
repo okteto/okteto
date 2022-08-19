@@ -332,7 +332,7 @@ func (s *OktetoSelector) prepareTemplates() error {
 	tpls.inactive = tpl
 
 	if s.Templates.Selected == "" {
-		s.Templates.Selected = fmt.Sprintf(`{{ "%s" | green }} {{ . | faint }}`, promptui.IconGood)
+		s.Templates.Selected = fmt.Sprintf(`{{ %q | green }} {{ . | faint }}`, promptui.IconGood)
 	}
 
 	tpl, err = template.New("").Funcs(tpls.FuncMap).Parse(s.Templates.Selected)

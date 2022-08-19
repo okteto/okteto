@@ -168,7 +168,6 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		return nil, oktetoErrors.ErrNoDevSelected
 	}
 
-	// iterate though options to look fot devName and return
 	for _, item := range options {
 		if item == devName {
 			return manifest.Dev[devName], nil
