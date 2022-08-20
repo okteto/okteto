@@ -142,7 +142,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			isOkteto:    false,
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
-				BuildArgs:  []string{namespaceEnvVar.String()},
+				BuildArgs:  []string{},
 			},
 		},
 		{
