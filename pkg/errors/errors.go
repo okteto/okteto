@@ -178,7 +178,6 @@ var (
 
 	// ErrCouldNotInferAnyManifest is raised when we can't detect any manifest to load
 	ErrCouldNotInferAnyManifest = errors.New("couldn't detect any manifest (okteto manifest, pipeline, compose, helm chart, k8s manifest)")
-
 )
 
 // IsForbidden raised if the Okteto API returns 401
