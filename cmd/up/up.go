@@ -140,7 +140,8 @@ func Up() *cobra.Command {
 					upOptions.ManifestPath = utils.DefaultManifest
 				}
 
-				if !utils.AskIfOktetoInit(upOptions.ManifestPath) {
+				createManifest, err := prompt.AskYesNo(fmt.Sprintf("okteto manifest (%s) doesn't exist, do you want to create it? [y/n] ", upOptions.ManifestPath))
+				if err != nil || !createManifest {
 					return err
 				}
 
@@ -160,7 +161,7 @@ func Up() *cobra.Command {
 
 			if len(oktetoManifest.Dev) == 0 {
 				oktetoLog.Warning("okteto manifest has no 'dev' section.")
-				answer, err := utils.AskYesNo("Do you want to configure okteto manifest now? [y/n]")
+				answer, err := prompt.AskYesNo("Do you want to configure okteto manifest now? [y/n]")
 				if err != nil {
 					return err
 				}

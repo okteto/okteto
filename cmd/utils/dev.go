@@ -238,25 +238,6 @@ func SelectDevFromManifest(manifest *model.Manifest, selector prompt.OktetoSelec
 	return manifest.Dev[devName], nil
 }
 
-// AskYesNo prompts for yes/no confirmation
-func AskYesNo(q string) (bool, error) {
-	var answer string
-	for {
-		oktetoLog.Question(q)
-		if _, err := fmt.Scanln(&answer); err != nil {
-			return false, err
-		}
-
-		if answer == "y" || answer == "n" {
-			break
-		}
-
-		oktetoLog.Fail("input must be 'y' or 'n'")
-	}
-
-	return answer == "y", nil
-}
-
 func AskForOptions(options []string, label string) (string, error) {
 	selectedTemplate := `{{ " ✓ " | bgGreen | black }} {{ .Label | green }}`
 	activeTemplate := fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect)
@@ -290,15 +271,6 @@ func AskForOptions(options []string, label string) (string, error) {
 	return options[i], nil
 }
 
-// AskIfOktetoInit asks if okteto init should be executed
-func AskIfOktetoInit(devPath string) bool {
-	result, err := AskYesNo(fmt.Sprintf("okteto manifest (%s) doesn't exist, do you want to create it? [y/n] ", devPath))
-	if err != nil {
-		return false
-	}
-	return result
-}
-
 // AsksQuestion asks a question to the user
 func AsksQuestion(q string) (string, error) {
 	var answer string
@@ -309,21 +281,6 @@ func AsksQuestion(q string) (string, error) {
 	}
 
 	return answer, nil
-}
-
-// AskIfDeploy asks if a new deployment must be created
-func AskIfDeploy(name, namespace string) error {
-	deploy, err := AskYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", name, namespace))
-	if err != nil {
-		return fmt.Errorf("couldn't read your response")
-	}
-	if !deploy {
-		return oktetoErrors.UserError{
-			E:    fmt.Errorf("deployment %s doesn't exist in namespace %s", name, namespace),
-			Hint: "Launch your application first or use 'okteto namespace' to select a different namespace and try again",
-		}
-	}
-	return nil
 }
 
 // ParseURL validates a URL

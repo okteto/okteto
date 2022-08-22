@@ -35,6 +35,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
 )
@@ -180,7 +181,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 		isDeployed := pipeline.IsDeployed(ctx, manifest.Name, namespace, c)
 		deployAnswer := false
 		if !isDeployed && !opts.AutoDeploy {
-			deployAnswer, err = utils.AskYesNo("Do you want to launch your development environment? [y/n]: ")
+			deployAnswer, err = prompt.AskYesNo("Do you want to launch your development environment? [y/n]: ")
 			if err != nil {
 				return nil, err
 			}
@@ -195,7 +196,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 		if isDeployed {
 			configureDevEnvsAnswer := false
 			if !opts.AutoConfigureDev {
-				configureDevEnvsAnswer, err = utils.AskYesNo("Do you want to configure your development containers? [y/n]: ")
+				configureDevEnvsAnswer, err = prompt.AskYesNo("Do you want to configure your development containers? [y/n]: ")
 				if err != nil {
 					return nil, err
 				}
@@ -231,7 +232,7 @@ func (*ManifestCommand) configureManifestDeployAndBuild(ctx context.Context, cwd
 			return nil, err
 		}
 		if composePath != "" {
-			answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? [y/n] ")
+			answer, err := prompt.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? [y/n] ")
 			if err != nil {
 				return nil, err
 			}
