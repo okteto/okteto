@@ -104,7 +104,7 @@ func Push(ctx context.Context) *cobra.Command {
 				}
 
 				selectorItems := utils.GetItemsForDevSelector(manifest.Dev)
-				selector := utils.NewOktetoSelector("Select the development container you want to push:", selectorItems, "Development container")
+				selector := oktetoLog.NewOktetoSelector("Select the development container you want to push:", selectorItems, "Development container")
 				dev, err = utils.SelectDevFromManifest(manifest, selector)
 				if err != nil {
 					return err

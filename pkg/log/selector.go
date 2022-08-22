@@ -1,21 +1,7 @@
-// Copyright 2022 The Okteto Authors
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-package utils
+package log
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -29,8 +15,6 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/manifoldco/promptui/list"
 	"github.com/manifoldco/promptui/screenbuf"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/term"
 )
 
@@ -43,7 +27,7 @@ const (
 var ErrInvalidOption = errors.New("invalid option")
 
 type OktetoSelectorInterface interface {
-	Ask(ctx context.Context) (string, error)
+	Ask() (string, error)
 }
 
 // OktetoSelector represents the selector
@@ -56,9 +40,10 @@ type OktetoSelector struct {
 	Keys      *promptui.SelectKeys
 
 	OktetoTemplates *oktetoTemplates
+	InitialPosition int
 }
 
-//oktetoTemplates stores the templates to render the text
+// oktetoTemplates stores the templates to render the text
 type oktetoTemplates struct {
 	FuncMap   template.FuncMap
 	label     *template.Template
@@ -70,7 +55,7 @@ type oktetoTemplates struct {
 	extraInfo *template.Template
 }
 
-//SelectorItem represents a selectable item on a selector
+// SelectorItem represents a selectable item on a selector
 type SelectorItem struct {
 	Name   string
 	Label  string
@@ -93,15 +78,16 @@ func NewOktetoSelector(label string, items []SelectorItem, selectedTpl string) *
 			Inactive: inactiveTemplate,
 			FuncMap:  promptui.FuncMap,
 		},
+		InitialPosition: -1,
 	}
 }
 
 // Ask given some options ask the user to select one
-func (s *OktetoSelector) Ask(ctx context.Context) (string, error) {
-	s.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
-	optionSelected, err := s.run(ctx)
+func (s *OktetoSelector) Ask() (string, error) {
+	s.Templates.FuncMap["oktetoblue"] = BlueString
+	optionSelected, err := s.run()
 	if err != nil || !isValidOption(s.Items, optionSelected) {
-		oktetoLog.Infof("invalid init option: %s", err)
+		Infof("invalid init option: %s", err)
 		return "", ErrInvalidOption
 	}
 
@@ -117,19 +103,20 @@ func isValidOption(options []SelectorItem, optionSelected string) bool {
 	return false
 }
 
+func (s *OktetoSelector) SetInitialPosition(p int) {
+	if p != -1 {
+		s.InitialPosition = p
+		s.Items[p].Label += " *"
+	}
+}
+
 // Run runs the selector prompt
-func (s *OktetoSelector) run(ctx context.Context) (string, error) {
-	startPosition, err := s.getInitialPosition(ctx)
-	if err != nil {
-		return "", err
-	}
-	if startPosition != -1 {
-		s.Items[startPosition].Label += " *"
-	}
+func (s *OktetoSelector) run() (string, error) {
 	l, err := list.New(s.Items, s.Size)
 	if err != nil {
 		return "", err
 	}
+	l.SetCursor(s.InitialPosition)
 
 	s.prepareTemplates()
 
@@ -159,7 +146,6 @@ func (s *OktetoSelector) run(ctx context.Context) (string, error) {
 	}
 
 	sb := screenbuf.New(rl)
-	l.SetCursor(startPosition)
 
 	c.SetListener(func(line []rune, pos int, key rune) ([]rune, int, bool) {
 		switch {
@@ -375,24 +361,6 @@ func (s *OktetoSelector) prepareTemplates() error {
 	s.OktetoTemplates = tpls
 
 	return nil
-}
-
-func (s OktetoSelector) getInitialPosition(ctx context.Context) (int, error) {
-	ctxStore := okteto.ContextStore()
-	oCtx := ctxStore.CurrentContext
-	if oCtx == "" {
-		return -1, nil
-	}
-
-	oCtx = okteto.K8sContextToOktetoUrl(ctx, oCtx, ctxStore.Contexts[oCtx].Namespace, okteto.NewK8sClientProvider())
-	idx := 0
-	for _, item := range s.Items {
-		if strings.Contains(item.Name, oCtx) {
-			return idx, nil
-		}
-		idx++
-	}
-	return -1, nil
 }
 
 func (s *OktetoSelector) renderDetails(item interface{}) [][]byte {

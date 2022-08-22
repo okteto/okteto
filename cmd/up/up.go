@@ -267,7 +267,7 @@ func Up() *cobra.Command {
 				}
 
 				selectorItems := utils.GetItemsForDevSelector(oktetoManifest.Dev)
-				selector := utils.NewOktetoSelector("Select the development container you want to activate:", selectorItems, "Development container")
+				selector := oktetoLog.NewOktetoSelector("Select the development container you want to activate:", selectorItems, "Development container")
 				dev, err = utils.SelectDevFromManifest(oktetoManifest, selector)
 				if err != nil {
 					return err

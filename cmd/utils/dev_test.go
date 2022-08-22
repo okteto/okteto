@@ -14,13 +14,13 @@
 package utils
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
@@ -357,7 +357,7 @@ func NewFakeSelector(selected string, err error) *FakeSelector {
 	}
 }
 
-func (fs *FakeSelector) Ask(_ context.Context) (string, error) {
+func (fs *FakeSelector) Ask() (string, error) {
 	return fs.selected, fs.err
 }
 
@@ -468,19 +468,19 @@ func Test_getItemsForDevSelector(t *testing.T) {
 	tests := []struct {
 		name     string
 		devs     model.ManifestDevs
-		expected []SelectorItem
+		expected []oktetoLog.SelectorItem
 	}{
 		{
 			"empty-devs",
 			model.ManifestDevs{},
-			[]SelectorItem{},
+			[]oktetoLog.SelectorItem{},
 		},
 		{
 			"single-devs",
 			model.ManifestDevs{
 				"test": &model.Dev{},
 			},
-			[]SelectorItem{
+			[]oktetoLog.SelectorItem{
 				{
 					Name:   "test",
 					Label:  "test",
@@ -495,7 +495,7 @@ func Test_getItemsForDevSelector(t *testing.T) {
 				"c": &model.Dev{},
 				"a": &model.Dev{},
 			},
-			[]SelectorItem{
+			[]oktetoLog.SelectorItem{
 				{
 					Name:   "a",
 					Label:  "a",

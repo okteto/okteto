@@ -18,7 +18,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/okteto/okteto/cmd/utils"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -118,16 +118,23 @@ func getK8sClusters(k8sClusters []string) []contextSelector {
 	return orderedK8sClusters
 }
 
-func getSelectorItemsFromContextSelector(items []contextSelector) []utils.SelectorItem {
-	s := make([]utils.SelectorItem, len(items))
-	for _, i := range items {
-		s = append(s, utils.SelectorItem{
-			Name:   i.Name,
-			Label:  i.Label,
-			Enable: i.Enable,
+// getSelectorItemsFromContextSelector returns a list of selectable items and the initial position for the current selected
+func getSelectorItemsFromContextSelector(items []contextSelector) ([]oktetoLog.SelectorItem, int) {
+	currentContextName := okteto.ContextStore().CurrentContext
+	s := make([]oktetoLog.SelectorItem, 0)
+	currentIndx := -1
+	for indx, item := range items {
+		s = append(s, oktetoLog.SelectorItem{
+			Name:   item.Name,
+			Label:  item.Label,
+			Enable: item.Enable,
 		})
+		// when the name is the current context, set the index so it will be pre-selected at prompt
+		if currentContextName == item.Name {
+			currentIndx = indx
+		}
 	}
-	return s
+	return s, currentIndx
 }
 
 func isOktetoContextSelected(contexts []contextSelector, selected string) bool {

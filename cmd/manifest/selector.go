@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 const (
@@ -87,8 +88,8 @@ func selectDockerfiles(ctx context.Context, cwd string) ([]string, error) {
 		}
 
 		selectorItems := getDockerfilesSelectorItems(dockerfiles)
-		selector := utils.NewOktetoSelector("Do you need to build any of the following Dockerfiles as part of your development environment?", selectorItems, "")
-		selection, err := selector.Ask(ctx)
+		selector := oktetoLog.NewOktetoSelector("Do you need to build any of the following Dockerfiles as part of your development environment?", selectorItems, "")
+		selection, err := selector.Ask()
 		if err != nil {
 			return nil, err
 		}
@@ -125,10 +126,10 @@ func validateDockerfileSelection(dockerfiles []string) error {
 	return nil
 }
 
-func getDockerfilesSelectorItems(items []string) []utils.SelectorItem {
-	dockerfilesItems := make([]utils.SelectorItem, len(items))
+func getDockerfilesSelectorItems(items []string) []oktetoLog.SelectorItem {
+	dockerfilesItems := make([]oktetoLog.SelectorItem, 0)
 	for _, d := range items {
-		dockerfilesItems = append(dockerfilesItems, utils.SelectorItem{
+		dockerfilesItems = append(dockerfilesItems, oktetoLog.SelectorItem{
 			Name:   d,
 			Label:  d,
 			Enable: true,

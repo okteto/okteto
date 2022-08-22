@@ -200,7 +200,7 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 		devName = args[0]
 	}
 	if devName != "" && !manifest.Dev.HasDev(devName) {
-		return nil, utils.ErrInvalidOption
+		return nil, oktetoLog.ErrInvalidOption
 	}
 
 	dev, err = utils.GetDevFromManifest(manifest, devName)
@@ -209,7 +209,7 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 			return nil, err
 		}
 		selectorItems := utils.GetItemsForDevSelector(manifest.Dev)
-		selector := utils.NewOktetoSelector("Select the development container where you want to execute:", selectorItems, "Development container")
+		selector := oktetoLog.NewOktetoSelector("Select the development container where you want to execute:", selectorItems, "Development container")
 		dev, err = utils.SelectDevFromManifest(manifest, selector)
 		if err != nil {
 			return nil, err

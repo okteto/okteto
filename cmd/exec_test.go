@@ -16,7 +16,7 @@ package cmd
 import (
 	"testing"
 
-	"github.com/okteto/okteto/cmd/utils"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 )
@@ -72,7 +72,7 @@ func TestGetDevFromArgs(t *testing.T) {
 			},
 			args:        []string{"not-api", "autocreate"},
 			expectedDev: nil,
-			expectedErr: utils.ErrInvalidOption,
+			expectedErr: oktetoLog.ErrInvalidOption,
 		},
 	}
 	for _, tt := range tests {
