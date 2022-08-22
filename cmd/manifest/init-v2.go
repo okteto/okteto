@@ -487,7 +487,7 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 			}
 		}
 		if !okteto.IsOkteto() {
-			imageName, err := utils.AsksQuestion(fmt.Sprintf("Which is the image name for %s: ", dockerfile))
+			imageName, err := prompt.AsksQuestion(fmt.Sprintf("Which is the image name for %s: ", dockerfile))
 			if err != nil {
 				return nil, err
 			}

@@ -271,18 +271,6 @@ func AskForOptions(options []string, label string) (string, error) {
 	return options[i], nil
 }
 
-// AsksQuestion asks a question to the user
-func AsksQuestion(q string) (string, error) {
-	var answer string
-
-	oktetoLog.Question(q)
-	if _, err := fmt.Scanln(&answer); err != nil {
-		return "", err
-	}
-
-	return answer, nil
-}
-
 // ParseURL validates a URL
 func ParseURL(u string) (string, error) {
 	url, err := url.Parse(u)
