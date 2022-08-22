@@ -636,15 +636,7 @@ func Read(bytes []byte) (*Manifest, error) {
 	}
 
 	hasShownWarning := false
-	for devKey, dev := range manifest.Dev {
-		if shouldBeSanitized(devKey) {
-			newDevKey := sanitizeName(devKey)
-			manifest.Dev[newDevKey] = dev
-			oktetoLog.Warning("Service '%s' has been sanitized into '%s'. This may affect discovery service.", manifest.Dev, newDevKey)
-			delete(manifest.Dev, devKey)
-
-		}
-
+	for _, dev := range manifest.Dev {
 		if (dev.Image.Context != "" || dev.Image.Dockerfile != "") && !hasShownWarning {
 			hasShownWarning = true
 			oktetoLog.Yellow(`The 'image' extended syntax is deprecated and will be removed in a future version. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/manifest/#build"`)
@@ -663,7 +655,62 @@ func Read(bytes []byte) (*Manifest, error) {
 }
 
 func (m *Manifest) validate() error {
+	err := m.sanitizeDev()
+	if err != nil {
+		return err
+	}
+
+	err = m.sanitizeBuild()
+	if err != nil {
+		return err
+	}
+
+	m.sanitizeGlobalForward()
+
 	return m.validateDivert()
+}
+
+func (m *Manifest) sanitizeDev() error {
+	for devKey, dev := range m.Dev {
+		if shouldBeSanitized(devKey) {
+			sanitizedSvcName := sanitizeName(devKey)
+			if _, ok := m.Dev[sanitizedSvcName]; ok {
+				return fmt.Errorf("could not sanitize '%s'. Service with name '%s' already exists", devKey, sanitizedSvcName)
+			}
+			dev.Name = sanitizedSvcName
+			m.Dev[sanitizedSvcName] = dev
+			oktetoLog.Warning("Service '%s' has been sanitized into '%s' in 'Dev' section. This may affect discovery service.", devKey, sanitizedSvcName)
+			delete(m.Dev, devKey)
+		}
+	}
+
+	return nil
+}
+
+func (m *Manifest) sanitizeBuild() error {
+	for buildKey, build := range m.Build {
+		if shouldBeSanitized(buildKey) {
+			sanitizedSvcName := sanitizeName(buildKey)
+			if _, ok := m.Build[sanitizedSvcName]; ok {
+				return fmt.Errorf("could not sanitize '%s'. Service with name '%s' already exists", buildKey, sanitizedSvcName)
+			}
+			m.Build[sanitizedSvcName] = build
+			oktetoLog.Warning("Service '%s' has been sanitized into '%s' in 'Build' section. This may affect discovery service.", buildKey, sanitizedSvcName)
+			delete(m.Dev, buildKey)
+		}
+	}
+
+	return nil
+}
+
+func (m *Manifest) sanitizeGlobalForward() {
+	for _, gf := range m.GlobalForward {
+		if shouldBeSanitized(gf.ServiceName) {
+			sanitizedSvcName := sanitizeName(gf.ServiceName)
+			oktetoLog.Warning("Service '%s' has been sanitized into '%s' in 'Global Forward' section. This may affect discovery service.", m.Dev, gf.ServiceName)
+			gf.ServiceName = sanitizedSvcName
+		}
+	}
 }
 
 func (m *Manifest) validateDivert() error {
