@@ -31,6 +31,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 	"github.com/okteto/okteto/pkg/ssh"
 
 	"github.com/spf13/cobra"
@@ -200,7 +201,7 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 		devName = args[0]
 	}
 	if devName != "" && !manifest.Dev.HasDev(devName) {
-		return nil, oktetoLog.ErrInvalidOption
+		return nil, prompt.ErrInvalidOption
 	}
 
 	dev, err = utils.GetDevFromManifest(manifest, devName)
@@ -209,7 +210,7 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 			return nil, err
 		}
 		selectorItems := utils.GetItemsForDevSelector(manifest.Dev)
-		selector := oktetoLog.NewOktetoSelector("Select the development container where you want to execute:", selectorItems, "Development container")
+		selector := prompt.NewOktetoSelector("Select the development container where you want to execute:", selectorItems, "Development container")
 		dev, err = utils.SelectDevFromManifest(manifest, selector)
 		if err != nil {
 			return nil, err

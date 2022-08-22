@@ -18,8 +18,8 @@ import (
 	"sort"
 	"strings"
 
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 )
 
 var (
@@ -119,12 +119,12 @@ func getK8sClusters(k8sClusters []string) []contextSelector {
 }
 
 // getSelectorItemsFromContextSelector returns a list of selectable items and the initial position for the current selected
-func getSelectorItemsFromContextSelector(items []contextSelector) ([]oktetoLog.SelectorItem, int) {
+func getSelectorItemsFromContextSelector(items []contextSelector) ([]prompt.SelectorItem, int) {
 	currentContextName := okteto.ContextStore().CurrentContext
-	s := make([]oktetoLog.SelectorItem, 0)
+	s := make([]prompt.SelectorItem, 0)
 	currentIndx := -1
 	for indx, item := range items {
-		s = append(s, oktetoLog.SelectorItem{
+		s = append(s, prompt.SelectorItem{
 			Name:   item.Name,
 			Label:  item.Label,
 			Enable: item.Enable,

@@ -24,10 +24,11 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 	"github.com/spf13/cobra"
 )
 
-//doctorOptions refers to all the options that can be passed to Doctor command
+// doctorOptions refers to all the options that can be passed to Doctor command
 type doctorOptions struct {
 	DevPath    string
 	Namespace  string
@@ -71,7 +72,7 @@ func Doctor() *cobra.Command {
 				}
 
 				selectorItems := utils.GetItemsForDevSelector(manifest.Dev)
-				selector := oktetoLog.NewOktetoSelector("Select the development container you want to generate zip with logs:", selectorItems, "Development container")
+				selector := prompt.NewOktetoSelector("Select the development container you want to generate zip with logs:", selectorItems, "Development container")
 				dev, err = utils.SelectDevFromManifest(manifest, selector)
 				if err != nil {
 					return err

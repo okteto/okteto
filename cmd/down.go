@@ -32,6 +32,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
 )
@@ -84,7 +85,7 @@ func Down() *cobra.Command {
 					}
 
 					selectorItems := utils.GetItemsForDevSelector(manifest.Dev)
-					selector := oktetoLog.NewOktetoSelector("Select the development container you want to deactivate:", selectorItems, "Development container")
+					selector := prompt.NewOktetoSelector("Select the development container you want to deactivate:", selectorItems, "Development container")
 					dev, err = utils.SelectDevFromManifest(manifest, selector)
 					if err != nil {
 						return err

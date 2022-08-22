@@ -33,6 +33,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -60,7 +61,7 @@ func LoadManifestContext(devPath string) (*model.ContextResource, error) {
 	return model.GetContextResource(devPath)
 }
 
-//LoadManifest loads an okteto manifest checking "yml" and "yaml"
+// LoadManifest loads an okteto manifest checking "yml" and "yaml"
 func LoadManifest(devPath string) (*model.Manifest, error) {
 	if !filesystem.FileExists(devPath) {
 		if devPath == DefaultManifest {
@@ -127,7 +128,7 @@ func LoadManifestRc(dev *model.Dev) error {
 	return nil
 }
 
-//LoadManifestOrDefault loads an okteto manifest or a default one if does not exist
+// LoadManifestOrDefault loads an okteto manifest or a default one if does not exist
 func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 	dev, err := LoadManifest(devPath)
 	if err == nil {
@@ -195,7 +196,7 @@ func sortOptions(in []string) {
 	})
 }
 
-func GetItemsForDevSelector(devs model.ManifestDevs) []oktetoLog.SelectorItem {
+func GetItemsForDevSelector(devs model.ManifestDevs) []prompt.SelectorItem {
 	devNames := []string{}
 	for name := range devs {
 		devNames = append(devNames, name)
@@ -204,9 +205,9 @@ func GetItemsForDevSelector(devs model.ManifestDevs) []oktetoLog.SelectorItem {
 	// items get sorted alfabetically
 	sortOptions(devNames)
 
-	items := []oktetoLog.SelectorItem{}
+	items := []prompt.SelectorItem{}
 	for _, name := range devNames {
-		items = append(items, oktetoLog.SelectorItem{
+		items = append(items, prompt.SelectorItem{
 			Name:   name,
 			Label:  name,
 			Enable: true,
@@ -215,7 +216,7 @@ func GetItemsForDevSelector(devs model.ManifestDevs) []oktetoLog.SelectorItem {
 	return items
 }
 
-func SelectDevFromManifest(manifest *model.Manifest, selector oktetoLog.OktetoSelectorInterface) (*model.Dev, error) {
+func SelectDevFromManifest(manifest *model.Manifest, selector prompt.OktetoSelectorInterface) (*model.Dev, error) {
 	devName, err := selector.Ask()
 	if err != nil {
 		return nil, err
@@ -237,7 +238,7 @@ func SelectDevFromManifest(manifest *model.Manifest, selector oktetoLog.OktetoSe
 	return manifest.Dev[devName], nil
 }
 
-//AskYesNo prompts for yes/no confirmation
+// AskYesNo prompts for yes/no confirmation
 func AskYesNo(q string) (bool, error) {
 	var answer string
 	for {
@@ -289,7 +290,7 @@ func AskForOptions(options []string, label string) (string, error) {
 	return options[i], nil
 }
 
-//AskIfOktetoInit asks if okteto init should be executed
+// AskIfOktetoInit asks if okteto init should be executed
 func AskIfOktetoInit(devPath string) bool {
 	result, err := AskYesNo(fmt.Sprintf("okteto manifest (%s) doesn't exist, do you want to create it? [y/n] ", devPath))
 	if err != nil {
@@ -310,7 +311,7 @@ func AsksQuestion(q string) (string, error) {
 	return answer, nil
 }
 
-//AskIfDeploy asks if a new deployment must be created
+// AskIfDeploy asks if a new deployment must be created
 func AskIfDeploy(name, namespace string) error {
 	deploy, err := AskYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", name, namespace))
 	if err != nil {
@@ -325,7 +326,7 @@ func AskIfDeploy(name, namespace string) error {
 	return nil
 }
 
-//ParseURL validates a URL
+// ParseURL validates a URL
 func ParseURL(u string) (string, error) {
 	url, err := url.Parse(u)
 	if err != nil {
@@ -339,7 +340,7 @@ func ParseURL(u string) (string, error) {
 	return strings.TrimRight(url.String(), "/"), nil
 }
 
-//CheckIfDirectory checks if a path is a directory
+// CheckIfDirectory checks if a path is a directory
 func CheckIfDirectory(path string) error {
 	fileInfo, err := os.Stat(path)
 	if err != nil {
@@ -352,7 +353,7 @@ func CheckIfDirectory(path string) error {
 	return fmt.Errorf("'%s' is not a directory", path)
 }
 
-//CheckIfRegularFile checks if a path is a regular file
+// CheckIfRegularFile checks if a path is a regular file
 func CheckIfRegularFile(path string) error {
 	fileInfo, err := os.Stat(path)
 	if err != nil {

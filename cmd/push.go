@@ -32,13 +32,14 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 )
 
-//pushOptions refers to all the options that can be passed to Push command
+// pushOptions refers to all the options that can be passed to Push command
 type pushOptions struct {
 	DevPath    string
 	Namespace  string
@@ -104,7 +105,7 @@ func Push(ctx context.Context) *cobra.Command {
 				}
 
 				selectorItems := utils.GetItemsForDevSelector(manifest.Dev)
-				selector := oktetoLog.NewOktetoSelector("Select the development container you want to push:", selectorItems, "Development container")
+				selector := prompt.NewOktetoSelector("Select the development container you want to push:", selectorItems, "Development container")
 				dev, err = utils.SelectDevFromManifest(manifest, selector)
 				if err != nil {
 					return err

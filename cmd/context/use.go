@@ -25,6 +25,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -125,7 +126,7 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
 	selectorItems, currentIndx := getSelectorItemsFromContextSelector(ctxs)
-	selector := oktetoLog.NewOktetoSelector("A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", selectorItems, "Context")
+	selector := prompt.NewOktetoSelector("A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", selectorItems, "Context")
 	selector.SetInitialPosition(currentIndx)
 	ctxSelected, err := selector.Ask()
 	if err != nil {

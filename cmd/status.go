@@ -28,6 +28,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/spf13/cobra"
 )
@@ -68,7 +69,7 @@ func Status() *cobra.Command {
 				}
 
 				selectorItems := utils.GetItemsForDevSelector(manifest.Dev)
-				selector := oktetoLog.NewOktetoSelector("Select the development container you want to check sync status:", selectorItems, "Development container")
+				selector := prompt.NewOktetoSelector("Select the development container you want to check sync status:", selectorItems, "Development container")
 				dev, err = utils.SelectDevFromManifest(manifest, selector)
 				if err != nil {
 					return err

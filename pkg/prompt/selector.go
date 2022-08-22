@@ -1,8 +1,7 @@
-package log
+package prompt
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,6 +14,7 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/manifoldco/promptui/list"
 	"github.com/manifoldco/promptui/screenbuf"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"golang.org/x/term"
 )
 
@@ -22,9 +22,6 @@ const (
 	esc        = "\033["
 	showCursor = esc + "?25h"
 )
-
-// ErrInvalidOption is raised when the selector has an invalid option
-var ErrInvalidOption = errors.New("invalid option")
 
 type OktetoSelectorInterface interface {
 	Ask() (string, error)
@@ -41,18 +38,6 @@ type OktetoSelector struct {
 
 	OktetoTemplates *oktetoTemplates
 	initialPosition int
-}
-
-// oktetoTemplates stores the templates to render the text
-type oktetoTemplates struct {
-	FuncMap   template.FuncMap
-	label     *template.Template
-	active    *template.Template
-	inactive  *template.Template
-	selected  *template.Template
-	details   *template.Template
-	help      *template.Template
-	extraInfo *template.Template
 }
 
 // SelectorItem represents a selectable item on a selector
@@ -84,10 +69,10 @@ func NewOktetoSelector(label string, items []SelectorItem, selectedTpl string) *
 
 // Ask given some options ask the user to select one
 func (s *OktetoSelector) Ask() (string, error) {
-	s.Templates.FuncMap["oktetoblue"] = BlueString
+	s.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
 	optionSelected, err := s.run()
 	if err != nil || !isValidOption(s.Items, optionSelected) {
-		Infof("invalid init option: %s", err)
+		oktetoLog.Infof("invalid init option: %s", err)
 		return "", ErrInvalidOption
 	}
 
@@ -110,7 +95,7 @@ func (s *OktetoSelector) SetInitialPosition(p int) {
 	}
 }
 
-// Run runs the selector prompt
+// run runs the selector prompt
 func (s *OktetoSelector) run() (string, error) {
 	l, err := list.New(s.Items, s.Size)
 	if err != nil {
@@ -425,60 +410,4 @@ func (s *OktetoSelector) renderHelp() []byte {
 	}
 
 	return render(s.OktetoTemplates.help, keys)
-}
-
-func render(tpl *template.Template, data interface{}) []byte {
-	var buf bytes.Buffer
-	err := tpl.Execute(&buf, data)
-	if err != nil {
-		return []byte(fmt.Sprintf("%v", data))
-	}
-	return buf.Bytes()
-}
-
-type stdout struct{}
-
-// Write implements an io.WriterCloser over os.Stderr, but it skips the terminal
-// bell character.
-func (*stdout) Write(b []byte) (int, error) {
-	if len(b) == 1 && b[0] == readline.CharBell {
-		return 0, nil
-	}
-	return os.Stderr.Write(b)
-}
-
-// Close implements an io.WriterCloser over os.Stderr.
-func (*stdout) Close() error {
-	return os.Stderr.Close()
-}
-
-func getSelectedTemplate(selectTpl string) string {
-	result := `{{ " ✓ " | bgGreen | black }} {{ .Label | green }}`
-	if selectTpl != "" {
-		result = fmt.Sprintf(`{{ " ✓ " | bgGreen | black }} {{ "%s '" | green }}{{ .Label | green }}{{ "' selected" | green }}`, selectTpl)
-	}
-
-	result = changeColorForWindows(result)
-	return result
-}
-
-func getActiveTemplate() string {
-	whitespaces := ""
-	result := fmt.Sprintf("%s%s {{ .Label }}", whitespaces, promptui.IconSelect)
-	result = changeColorForWindows(result)
-	return result
-}
-
-func getInactiveTemplate() string {
-	whitespaces := strings.Repeat(" ", 2)
-	result := fmt.Sprintf("{{if .Enable}}%s{{ .Label }}{{else}}%s{{ .Label }}{{end}}", whitespaces, whitespaces)
-	result = changeColorForWindows(result)
-	return result
-}
-
-func changeColorForWindows(template string) string {
-	if runtime.GOOS == "windows" {
-		template = strings.ReplaceAll(template, "oktetoblue", "blue")
-	}
-	return template
 }

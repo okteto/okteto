@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 
 	"github.com/okteto/okteto/pkg/model"
 
@@ -64,7 +65,7 @@ func Restart() *cobra.Command {
 				}
 
 				selectorItems := utils.GetItemsForDevSelector(manifest.Dev)
-				selector := oktetoLog.NewOktetoSelector("Select the development container you want to restart:", selectorItems, "Development container")
+				selector := prompt.NewOktetoSelector("Select the development container you want to restart:", selectorItems, "Development container")
 				dev, err = utils.SelectDevFromManifest(manifest, selector)
 				if err != nil {
 					return err

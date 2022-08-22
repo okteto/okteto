@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -30,7 +31,7 @@ const (
 	newNamespaceOption = "Create new namespace"
 )
 
-//UseOptions are the options for the use command
+// UseOptions are the options for the use command
 type UseOptions struct {
 	personal bool
 }
@@ -99,7 +100,7 @@ func (nc *NamespaceCommand) getNamespaceFromSelector(ctx context.Context) (strin
 	if err != nil {
 		return "", err
 	}
-	selector := oktetoLog.NewOktetoSelector("Select the namespace you want to use:", namespaces, "Namespace")
+	selector := prompt.NewOktetoSelector("Select the namespace you want to use:", namespaces, "Namespace")
 	selector.SetInitialPosition(currentIndex)
 
 	ns, err := selector.Ask()
@@ -119,7 +120,7 @@ func (nc *NamespaceCommand) getNamespaceFromSelector(ctx context.Context) (strin
 	return ns, nil
 }
 
-func getNamespacesSelection(ctx context.Context) ([]oktetoLog.SelectorItem, int, error) {
+func getNamespacesSelection(ctx context.Context) ([]prompt.SelectorItem, int, error) {
 	currentIndx := -1
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
@@ -130,10 +131,10 @@ func getNamespacesSelection(ctx context.Context) ([]oktetoLog.SelectorItem, int,
 		return nil, currentIndx, fmt.Errorf("failed to get namespaces: %s", err)
 	}
 
-	namespaces := []oktetoLog.SelectorItem{}
+	namespaces := []prompt.SelectorItem{}
 	for _, space := range spaces {
 		if space.Status != "Deleting" {
-			namespaces = append(namespaces, oktetoLog.SelectorItem{
+			namespaces = append(namespaces, prompt.SelectorItem{
 				Name:   space.ID,
 				Label:  space.ID,
 				Enable: true,
@@ -141,7 +142,7 @@ func getNamespacesSelection(ctx context.Context) ([]oktetoLog.SelectorItem, int,
 		}
 	}
 
-	namespaces = append(namespaces, []oktetoLog.SelectorItem{
+	namespaces = append(namespaces, []prompt.SelectorItem{
 		{
 			Label:  "",
 			Enable: false,

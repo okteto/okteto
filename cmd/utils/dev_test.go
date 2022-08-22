@@ -20,9 +20,9 @@ import (
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -468,19 +468,19 @@ func Test_getItemsForDevSelector(t *testing.T) {
 	tests := []struct {
 		name     string
 		devs     model.ManifestDevs
-		expected []oktetoLog.SelectorItem
+		expected []prompt.SelectorItem
 	}{
 		{
 			"empty-devs",
 			model.ManifestDevs{},
-			[]oktetoLog.SelectorItem{},
+			[]prompt.SelectorItem{},
 		},
 		{
 			"single-devs",
 			model.ManifestDevs{
 				"test": &model.Dev{},
 			},
-			[]oktetoLog.SelectorItem{
+			[]prompt.SelectorItem{
 				{
 					Name:   "test",
 					Label:  "test",
@@ -495,7 +495,7 @@ func Test_getItemsForDevSelector(t *testing.T) {
 				"c": &model.Dev{},
 				"a": &model.Dev{},
 			},
-			[]oktetoLog.SelectorItem{
+			[]prompt.SelectorItem{
 				{
 					Name:   "a",
 					Label:  "a",
