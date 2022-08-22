@@ -100,9 +100,7 @@ func (nc *NamespaceCommand) getNamespaceFromSelector(ctx context.Context) (strin
 	if err != nil {
 		return "", err
 	}
-	selector := prompt.NewOktetoSelector("Select the namespace you want to use:", namespaces, "Namespace")
-	selector.SetInitialPosition(currentIndex)
-
+	selector := prompt.NewOktetoSelector("Select the namespace you want to use:", namespaces, "Namespace", currentIndex)
 	ns, err := selector.Ask()
 	if err != nil {
 		return "", err
@@ -120,7 +118,7 @@ func (nc *NamespaceCommand) getNamespaceFromSelector(ctx context.Context) (strin
 	return ns, nil
 }
 
-func getNamespacesSelection(ctx context.Context) ([]prompt.SelectorItem, int, error) {
+func getNamespacesSelection(ctx context.Context) ([]string, int, error) {
 	currentIndx := -1
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
@@ -131,33 +129,19 @@ func getNamespacesSelection(ctx context.Context) ([]prompt.SelectorItem, int, er
 		return nil, currentIndx, fmt.Errorf("failed to get namespaces: %s", err)
 	}
 
-	namespaces := []prompt.SelectorItem{}
+	namespaces := make([]string, 0)
 	for _, space := range spaces {
 		if space.Status != "Deleting" {
-			namespaces = append(namespaces, prompt.SelectorItem{
-				Name:   space.ID,
-				Label:  space.ID,
-				Enable: true,
-			})
+			namespaces = append(namespaces, space.ID)
 		}
 	}
 
-	namespaces = append(namespaces, []prompt.SelectorItem{
-		{
-			Label:  "",
-			Enable: false,
-		},
-		{
-			Name:   newNamespaceOption,
-			Label:  newNamespaceOption,
-			Enable: true,
-		},
-	}...)
+	namespaces = append(namespaces, []string{"", newNamespaceOption}...)
 
 	currentContextName := okteto.CurrentStore.CurrentContext
 	currentNamespace := okteto.CurrentStore.Contexts[currentContextName].Namespace
 	for indx, namespace := range namespaces {
-		if namespace.Name == currentNamespace {
+		if namespace == currentNamespace {
 			currentIndx = indx
 		}
 	}

@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/prompt"
 )
 
 var (
@@ -119,18 +118,14 @@ func getK8sClusters(k8sClusters []string) []contextSelector {
 }
 
 // getSelectorItemsFromContextSelector returns a list of selectable items and the initial position for the current selected
-func getSelectorItemsFromContextSelector(items []contextSelector) ([]prompt.SelectorItem, int) {
+func getSelectorItemsFromContextSelector(items []contextSelector) ([]string, int) {
 	currentContextName := okteto.ContextStore().CurrentContext
-	s := make([]prompt.SelectorItem, 0)
+	s := make([]string, 0)
 	currentIndx := -1
 	for indx, item := range items {
-		s = append(s, prompt.SelectorItem{
-			Name:   item.Name,
-			Label:  item.Label,
-			Enable: item.Enable,
-		})
+		s = append(s, item.Label)
 		// when the name is the current context, set the index so it will be pre-selected at prompt
-		if currentContextName == item.Name {
+		if currentContextName != "" && currentContextName == item.Label {
 			currentIndx = indx
 		}
 	}

@@ -209,8 +209,7 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 		if !errors.Is(err, utils.ErrNoDevSelected) {
 			return nil, err
 		}
-		selectorItems := utils.GetItemsForDevSelector(manifest.Dev)
-		selector := prompt.NewOktetoSelector("Select the development container where you want to execute:", selectorItems, "Development container")
+		selector := prompt.NewOktetoSelector("Select the development container where you want to execute:", manifest.Dev.SortedNameList(), "Development container", -1)
 		dev, err = utils.SelectDevFromManifest(manifest, selector)
 		if err != nil {
 			return nil, err

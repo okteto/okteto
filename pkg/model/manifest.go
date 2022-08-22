@@ -272,7 +272,7 @@ func GetManifestV1(manifestPath string) (*Manifest, error) {
 	return manifest, nil
 }
 
-//GetManifestV2 gets a manifest from a path or search for the files to generate it
+// GetManifestV2 gets a manifest from a path or search for the files to generate it
 func GetManifestV2(manifestPath string) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -1134,4 +1134,21 @@ func (m *Manifest) setManifestDefaultsFromDev() {
 func (d ManifestDevs) HasDev(name string) bool {
 	_, ok := d[name]
 	return ok
+}
+
+func (d ManifestDevs) SortedNameList() []string {
+	names := []string{}
+	for name := range d {
+		names = append(names, name)
+	}
+
+	// items get sorted alfabetically
+	sort.Slice(names, func(i, j int) bool {
+		l1, l2 := len(names[i]), len(names[j])
+		if l1 != l2 {
+			return l1 < l2
+		}
+		return names[i] < names[j]
+	})
+	return names
 }

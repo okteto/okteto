@@ -71,8 +71,7 @@ func Doctor() *cobra.Command {
 					return err
 				}
 
-				selectorItems := utils.GetItemsForDevSelector(manifest.Dev)
-				selector := prompt.NewOktetoSelector("Select the development container you want to generate zip with logs:", selectorItems, "Development container")
+				selector := prompt.NewOktetoSelector("Select the development container you want to generate zip with logs:", manifest.Dev.SortedNameList(), "Development container", -1)
 				dev, err = utils.SelectDevFromManifest(manifest, selector)
 				if err != nil {
 					return err

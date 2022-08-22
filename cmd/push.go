@@ -104,8 +104,7 @@ func Push(ctx context.Context) *cobra.Command {
 					return err
 				}
 
-				selectorItems := utils.GetItemsForDevSelector(manifest.Dev)
-				selector := prompt.NewOktetoSelector("Select the development container you want to push:", selectorItems, "Development container")
+				selector := prompt.NewOktetoSelector("Select the development container you want to push:", manifest.Dev.SortedNameList(), "Development container", -1)
 				dev, err = utils.SelectDevFromManifest(manifest, selector)
 				if err != nil {
 					return err

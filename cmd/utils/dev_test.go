@@ -22,7 +22,6 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/prompt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -460,65 +459,6 @@ func Test_SelectDevFromManifest(t *testing.T) {
 			res, err := SelectDevFromManifest(tt.manifest, tt.selector)
 			assert.EqualValues(t, tt.expectedErr, err)
 			assert.EqualValues(t, tt.expectedDev, res)
-		})
-	}
-}
-
-func Test_getItemsForDevSelector(t *testing.T) {
-	tests := []struct {
-		name     string
-		devs     model.ManifestDevs
-		expected []prompt.SelectorItem
-	}{
-		{
-			"empty-devs",
-			model.ManifestDevs{},
-			[]prompt.SelectorItem{},
-		},
-		{
-			"single-devs",
-			model.ManifestDevs{
-				"test": &model.Dev{},
-			},
-			[]prompt.SelectorItem{
-				{
-					Name:   "test",
-					Label:  "test",
-					Enable: true,
-				},
-			},
-		},
-		{
-			"multiple-devs",
-			model.ManifestDevs{
-				"b": &model.Dev{},
-				"c": &model.Dev{},
-				"a": &model.Dev{},
-			},
-			[]prompt.SelectorItem{
-				{
-					Name:   "a",
-					Label:  "a",
-					Enable: true,
-				},
-				{
-					Name:   "b",
-					Label:  "b",
-					Enable: true,
-				},
-				{
-					Name:   "c",
-					Label:  "c",
-					Enable: true,
-				},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-
-			items := GetItemsForDevSelector(tt.devs)
-			assert.EqualValues(t, tt.expected, items)
 		})
 	}
 }

@@ -125,9 +125,8 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 
 func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
-	selectorItems, currentIndx := getSelectorItemsFromContextSelector(ctxs)
-	selector := prompt.NewOktetoSelector("A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", selectorItems, "Context")
-	selector.SetInitialPosition(currentIndx)
+	options, preselectedIndx := getSelectorItemsFromContextSelector(ctxs)
+	selector := prompt.NewOktetoSelector("A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", options, "Context", preselectedIndx)
 	ctxSelected, err := selector.Ask()
 	if err != nil {
 		return "", err
@@ -140,6 +139,10 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 			return "", err
 		}
 		ctxOptions.IsOkteto = true
+	}
+
+	if ctxSelected == cloudOption {
+		ctxSelected = okteto.CloudURL
 	}
 
 	return ctxSelected, nil

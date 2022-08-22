@@ -21,7 +21,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 
 	"github.com/manifoldco/promptui"
@@ -184,36 +183,6 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
 		Hint: fmt.Sprintf("Available options are: [%s]", strings.Join(options, ", ")),
 	}
-}
-
-func sortOptions(in []string) {
-	sort.Slice(in, func(i, j int) bool {
-		l1, l2 := len(in[i]), len(in[j])
-		if l1 != l2 {
-			return l1 < l2
-		}
-		return in[i] < in[j]
-	})
-}
-
-func GetItemsForDevSelector(devs model.ManifestDevs) []prompt.SelectorItem {
-	devNames := []string{}
-	for name := range devs {
-		devNames = append(devNames, name)
-	}
-
-	// items get sorted alfabetically
-	sortOptions(devNames)
-
-	items := []prompt.SelectorItem{}
-	for _, name := range devNames {
-		items = append(items, prompt.SelectorItem{
-			Name:   name,
-			Label:  name,
-			Enable: true,
-		})
-	}
-	return items
 }
 
 func SelectDevFromManifest(manifest *model.Manifest, selector prompt.OktetoSelectorInterface) (*model.Dev, error) {
