@@ -262,7 +262,7 @@ func Up() *cobra.Command {
 
 			dev, err := utils.GetDevFromManifest(oktetoManifest, upOptions.DevName)
 			if err != nil {
-				if !errors.Is(err, oktetoErrors.ErrNoDevSelected) {
+				if !errors.Is(err, utils.ErrNoDevSelected) {
 					return err
 				}
 

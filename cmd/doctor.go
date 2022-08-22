@@ -66,7 +66,7 @@ func Doctor() *cobra.Command {
 			}
 			dev, err := utils.GetDevFromManifest(manifest, devName)
 			if err != nil {
-				if !errors.Is(err, oktetoErrors.ErrNoDevSelected) {
+				if !errors.Is(err, utils.ErrNoDevSelected) {
 					return err
 				}
 

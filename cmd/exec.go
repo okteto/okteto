@@ -205,7 +205,7 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 
 	dev, err = utils.GetDevFromManifest(manifest, devName)
 	if err != nil {
-		if !errors.Is(err, oktetoErrors.ErrNoDevSelected) {
+		if !errors.Is(err, utils.ErrNoDevSelected) {
 			return nil, err
 		}
 		selectorItems := utils.GetItemsForDevSelector(manifest.Dev)
