@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 	"unicode"
 
 	sp "github.com/briandowns/spinner"
@@ -54,9 +55,9 @@ func (sl *spinnerLogger) unhold() {
 	StartSpinner()
 }
 
-// initSpinnerLog configures the spinner PreUpdate
-func initSpinnerLog() {
-	log.spinner.sp.PreUpdate = func(spinner *sp.Spinner) {
+func newSpinner() *sp.Spinner {
+	spinner := sp.New(sp.CharSets[14], 100*time.Millisecond, sp.WithHiddenCursor(true))
+	spinner.PreUpdate = func(spinner *sp.Spinner) {
 		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
 		if width > 4 && len(spinner.FinalMSG)+2 > width {
 			spinner.Suffix = spinner.FinalMSG[:width-5] + "..."
@@ -64,6 +65,7 @@ func initSpinnerLog() {
 			spinner.Suffix = spinner.FinalMSG
 		}
 	}
+	return spinner
 }
 
 // Spinner sets the text provided as Suffix and FinalMSG of the spinner instance
