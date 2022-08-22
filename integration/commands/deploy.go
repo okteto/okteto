@@ -43,6 +43,7 @@ type DestroyOptions struct {
 	Namespace    string
 	OktetoHome   string
 	Token        string
+	Name         string
 }
 
 // RunOktetoDeploy runs an okteto deploy command
@@ -73,9 +74,12 @@ func RunOktetoDeployAndGetOutput(oktetoPath string, deployOptions *DeployOptions
 // RunOktetoDestroy runs an okteto destroy command
 func RunOktetoDestroy(oktetoPath string, destroyOptions *DestroyOptions) error {
 	log.Printf("okteto destroy %s", oktetoPath)
-	cmd := exec.Command(oktetoPath, "deploy")
+	cmd := exec.Command(oktetoPath, "destroy")
 	if destroyOptions.Workdir != "" {
 		cmd.Dir = destroyOptions.Workdir
+	}
+	if destroyOptions.Name != "" {
+		cmd.Args = append(cmd.Args, "--name", destroyOptions.Name)
 	}
 	if destroyOptions.ManifestPath != "" {
 		cmd.Args = append(cmd.Args, "-f", destroyOptions.ManifestPath)

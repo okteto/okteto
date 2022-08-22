@@ -24,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -111,9 +110,10 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 //deploy deploys a stack to kubernetes
 func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *StackDeployOptions) error {
 	DisplayWarnings(s)
-	spinner := utils.NewSpinner(fmt.Sprintf("Deploying compose '%s'...", s.Name))
-	spinner.Start()
-	defer spinner.Stop()
+
+	oktetoLog.Spinner(fmt.Sprintf("Deploying compose '%s'...", s.Name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -129,26 +129,58 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			return
 		}
 
-		for _, name := range options.ServicesToDeploy {
-			if len(s.Services[name].Ports) > 0 {
-				svcK8s := translateService(name, s)
-				if err := services.Deploy(ctx, svcK8s, c); err != nil {
+		for _, serviceName := range options.ServicesToDeploy {
+			if len(s.Services[serviceName].Ports) == 0 {
+				continue
+			}
+
+			if err := deployK8sService(ctx, serviceName, s, c); err != nil {
+				exit <- err
+				return
+			}
+			// get the public ports from the compose service - this will be deployed into ingresses
+			ingressPortsToDeploy := getSvcPublicPorts(serviceName, s)
+			for _, ingressPort := range ingressPortsToDeploy {
+				ingressName := serviceName
+				// If more than one port, ingressName will have <serviceName>-<PORT>, each port will have an ingress
+				if len(ingressPortsToDeploy) > 1 {
+					ingressName = fmt.Sprintf("%s-%d", serviceName, ingressPort.ContainerPort)
+				}
+
+				// create a new endpoint for this port ingress deployment
+				endpoint := model.Endpoint{
+					Labels:      map[string]string{},
+					Annotations: map[string]string{},
+					Rules: []model.EndpointRule{
+						{
+							Path:    "/",
+							Service: serviceName,
+							Port:    ingressPort.ContainerPort,
+						},
+					},
+				}
+				// add specific stack labels
+				if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
+					endpoint.Labels[model.StackNameLabel] = s.Name
+				}
+				if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
+					endpoint.Labels[model.StackEndpointNameLabel] = ingressName
+				}
+
+				translateOptions := &ingresses.TranslateOptions{
+					Name:      s.Name,
+					Namespace: s.Namespace,
+				}
+				ingress := ingresses.Translate(ingressName, endpoint, translateOptions)
+
+				// check for labels collision in the case of a compose - before creation or update (deploy)
+				if skipIngressDeployForStackNameLabel(ctx, iClient, ingress) {
+					continue
+				}
+				if err := iClient.Deploy(ctx, ingress); err != nil {
 					exit <- err
 					return
 				}
-				ingressPorts := getSvcPublicPorts(name, s)
-				for _, ingressPort := range ingressPorts {
-					ingressName := name
-					if len(ingressPorts) > 1 {
-						ingressName = fmt.Sprintf("%s-%d", name, ingressPort.ContainerPort)
-					}
-					svcIngress := translateSvcIngress(ingressName, name, ingressPort.ContainerPort, s)
-					if err := deployIngress(ctx, svcIngress, iClient, spinner); err != nil {
-						exit <- err
-						return
-					}
-				}
-
 			}
 		}
 
@@ -158,29 +190,54 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		}
 
 		for _, name := range getVolumesToDeployFromServicesToDeploy(s, servicesToDeploySet) {
-			if err := deployVolume(ctx, name, s, c, spinner); err != nil {
+			if err := deployVolume(ctx, name, s, c); err != nil {
 				exit <- err
 				return
 			}
 		}
 
-		if err := deployServices(ctx, s, c, config, spinner, options); err != nil {
+		if err := deployServices(ctx, s, c, config, options); err != nil {
 			exit <- err
 			return
 		}
 
-		for _, name := range getEndpointsToDeployFromServicesToDeploy(s.Endpoints, servicesToDeploySet) {
-			ingressK8s := &ingresses.Ingress{
-				V1:      translateEndpointIngressV1(name, s),
-				V1Beta1: translateEndpointIngressV1Beta1(name, s),
+		// compose has capacity to deploy endpoints for its services
+		// each endpoint gets an ingress when using the endpoints spec at compose
+		// the endpoint would have paths for services as defined at the spec
+		for _, endpointName := range getEndpointsToDeployFromServicesToDeploy(s.Endpoints, servicesToDeploySet) {
+			endpoint := s.Endpoints[endpointName]
+			// initialize the maps for Labels and Annotations if nil
+			if endpoint.Labels == nil {
+				endpoint.Labels = map[string]string{}
 			}
-			if err := deployIngress(ctx, ingressK8s, iClient, spinner); err != nil {
+			if endpoint.Annotations == nil {
+				endpoint.Annotations = map[string]string{}
+			}
+
+			// add specific stack labels
+			if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
+				endpoint.Labels[model.StackNameLabel] = s.Name
+			}
+			if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
+				endpoint.Labels[model.StackEndpointNameLabel] = endpointName
+			}
+
+			translateOptions := &ingresses.TranslateOptions{
+				Name:      s.Name,
+				Namespace: s.Namespace,
+			}
+			ingress := ingresses.Translate(endpointName, endpoint, translateOptions)
+			// check for labels collision in the case of a compose - before creation or update (deploy)
+			if skipIngressDeployForStackNameLabel(ctx, iClient, ingress) {
+				continue
+			}
+			if err := iClient.Deploy(ctx, ingress); err != nil {
 				exit <- err
 				return
 			}
 		}
 
-		if err := destroyServicesNotInStack(ctx, spinner, s, c); err != nil {
+		if err := destroyServicesNotInStack(ctx, s, c); err != nil {
 			exit <- err
 			return
 		}
@@ -190,14 +247,14 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 			return
 		}
 
-		spinner.Update("Waiting for services to be ready...")
+		oktetoLog.Spinner("Waiting for services to be ready...")
 		exit <- waitForPodsToBeRunning(ctx, s, c)
 	}()
 
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		spinner.Stop()
+		oktetoLog.StopSpinner()
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
@@ -206,6 +263,21 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 		}
 	}
 	return nil
+}
+
+func skipIngressDeployForStackNameLabel(ctx context.Context, iClient *ingresses.Client, ingress *ingresses.Ingress) bool {
+	// err is not checked here, we just want to check if the ingress already exists for this labels
+	if old, _ := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace()); old != nil {
+		if old.GetLabels()[model.StackNameLabel] == "" {
+			oktetoLog.Warning("skipping deploy of %s due to name collision: the ingress '%s' was running before deploying your compose", old.GetName())
+			return true
+		}
+		if old.GetLabels()[model.StackNameLabel] != ingress.GetLabels()[model.StackNameLabel] {
+			oktetoLog.Warning("skipping creation of endpoint '%s' due to name collision with endpoint in stack '%s'", ingress.GetName(), old.GetLabels()[model.StackNameLabel])
+			return true
+		}
+	}
+	return false
 }
 
 func getVolumesToDeployFromServicesToDeploy(stack *model.Stack, servicesToDeploy map[string]bool) []string {
@@ -248,7 +320,7 @@ func getEndpointsToDeployFromServicesToDeploy(endpoints model.EndpointSpec, serv
 	return endpointsToDeploy
 }
 
-func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, spinner *utils.Spinner, options *StackDeployOptions) error {
+func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernetes.Interface, config *rest.Config, options *StackDeployOptions) error {
 	deployedSvcs := make(map[string]bool)
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(options.Timeout)
@@ -276,18 +348,18 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 								return fmt.Errorf("service '%s' has failed his healthcheck probes: %s", key, value)
 							}
 						}
-						if err := getFailedStatusError(ctx, stack, svcName, k8sClient, config); err != nil {
+						if err := getErrorDueToRestartLimit(ctx, stack, svcName, k8sClient); err != nil {
 							return err
 						}
 						continue
 					}
-					spinner.Update(fmt.Sprintf("Deploying service '%s'...", svcName))
-					err := deploySvc(ctx, stack, svcName, k8sClient, spinner)
+					oktetoLog.Spinner(fmt.Sprintf("Deploying service '%s'...", svcName))
+					err := deploySvc(ctx, stack, svcName, k8sClient)
 					if err != nil {
 						return err
 					}
 					deployedSvcs[svcName] = true
-					spinner.Update("Waiting for services to be ready...")
+					oktetoLog.Spinner("Waiting for services to be ready...")
 				}
 			}
 			return nil
@@ -295,24 +367,22 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 	}
 }
 
-func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, spinner *utils.Spinner) error {
+func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) error {
 	isNew := false
 	var err error
 	if stack.Services[svcName].IsJob() {
-		isNew, err = deployJob(ctx, svcName, stack, client, spinner)
+		isNew, err = deployJob(ctx, svcName, stack, client)
 	} else if len(stack.Services[svcName].Volumes) == 0 {
-		isNew, err = deployDeployment(ctx, svcName, stack, client, spinner)
+		isNew, err = deployDeployment(ctx, svcName, stack, client)
 	} else {
-		isNew, err = deployStatefulSet(ctx, svcName, stack, client, spinner)
+		isNew, err = deployStatefulSet(ctx, svcName, stack, client)
 	}
-	spinner.Stop()
+
 	if err != nil {
 		if strings.Contains(err.Error(), "skipping ") {
 			oktetoLog.Warning(err.Error())
-			spinner.Start()
 			return nil
 		}
-		spinner.Start()
 		return err
 	}
 	if isNew {
@@ -320,7 +390,7 @@ func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client k
 	} else {
 		oktetoLog.Success("Service '%s' updated", svcName)
 	}
-	spinner.Start()
+
 	return nil
 }
 
@@ -352,7 +422,7 @@ func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcNam
 	return failedServices
 }
 
-func getFailedStatusError(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) error {
+func getErrorDueToRestartLimit(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) error {
 	svc := stack.Services[svcName]
 	for dependingSvc := range svc.DependsOn {
 		svcLabels := map[string]string{model.StackNameLabel: stack.Name, model.StackServiceNameLabel: dependingSvc}
@@ -365,7 +435,11 @@ func getFailedStatusError(ctx context.Context, stack *model.Stack, svcName strin
 		for _, cStatus := range p.Status.ContainerStatuses {
 			totalRestarts += int(cStatus.RestartCount)
 		}
-		if totalRestarts >= maxRestartsToConsiderFailed {
+		maxSvcRestarts := stack.Services[dependingSvc].BackOffLimit
+		if maxSvcRestarts == 0 {
+			maxSvcRestarts = maxRestartsToConsiderFailed
+		}
+		if int32(totalRestarts) >= maxSvcRestarts {
 			return fmt.Errorf("Service '%s' has been restarted %d times. Please check the logs and try again", dependingSvc, totalRestarts)
 		}
 	}
@@ -478,7 +552,39 @@ func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.St
 	return false
 }
 
-func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface, spinner *utils.Spinner) (bool, error) {
+func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) error {
+	svcK8s := translateService(svcName, s)
+	old, err := services.Get(ctx, svcName, s.Namespace, c)
+	if err != nil {
+		if !oktetoErrors.IsNotFound(err) {
+			return fmt.Errorf("error getting service '%s': %w", svcName, err)
+		}
+		if err := services.Deploy(ctx, svcK8s, c); err != nil {
+			return err
+		}
+		oktetoLog.Success("Kubernetes service '%s' created", svcName)
+		return nil
+	}
+
+	if old.GetLabels()[model.StackNameLabel] == "" {
+		oktetoLog.Warning("skipping deploy of kubernetes service %s due to name collision: the service '%s' was running before deploying your compose", svcName, svcName)
+		return nil
+	}
+
+	if old.GetLabels()[model.StackNameLabel] != svcK8s.GetLabels()[model.StackNameLabel] {
+		oktetoLog.Warning("skipping creation of kubernetes '%s' due to name collision with endpoint in compose '%s'", svcName, old.GetLabels()[model.StackNameLabel])
+		return nil
+	}
+
+	svcK8s.ObjectMeta.ResourceVersion = old.ObjectMeta.ResourceVersion
+	if err := services.Deploy(ctx, svcK8s, c); err != nil {
+		return err
+	}
+	oktetoLog.Success("Kubernetes service '%s' updated", svcName)
+	return nil
+}
+
+func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) (bool, error) {
 	d := translateDeployment(svcName, s)
 	old, err := c.AppsV1().Deployments(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
@@ -495,7 +601,7 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		// for those users which will have a dev environment deployed with old version
 		// when re-deploying we switch the name for the environment and we have to move the resources to the new name
 		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
-			return false, fmt.Errorf("skipping deploy of deployment '%s' due to name collision with deployment in stack '%s'", svcName, old.Labels[model.StackNameLabel])
+			return false, fmt.Errorf("skipping deploy of deployment '%s' due to name collision with deployment in compose '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
 			d.Labels[model.DeployedByLabel] = v
@@ -525,7 +631,7 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 	return isNewDeployment, nil
 }
 
-func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface, spinner *utils.Spinner) (bool, error) {
+func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) (bool, error) {
 	sfs := translateStatefulSet(svcName, s)
 	old, err := c.AppsV1().StatefulSets(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
@@ -542,7 +648,7 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 		return false, fmt.Errorf("skipping deploy of statefulset '%s' due to name collision with pre-existing statefulset", svcName)
 	}
 	if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
-		return false, fmt.Errorf("skipping deploy of statefulset '%s' due to name collision with statefulset in stack '%s'", svcName, old.Labels[model.StackNameLabel])
+		return false, fmt.Errorf("skipping deploy of statefulset '%s' due to name collision with statefulset in compose '%s'", svcName, old.Labels[model.StackNameLabel])
 	}
 	if v, ok := old.Labels[model.DeployedByLabel]; ok {
 		sfs.Labels[model.DeployedByLabel] = v
@@ -565,7 +671,7 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 	return false, nil
 }
 
-func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface, spinner *utils.Spinner) (bool, error) {
+func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes.Interface) (bool, error) {
 	job := translateJob(svcName, s)
 	old, err := c.BatchV1().Jobs(s.Namespace).Get(ctx, svcName, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
@@ -593,7 +699,7 @@ func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes
 	return isNewJob, nil
 }
 
-func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kubernetes.Interface, spinner *utils.Spinner) error {
+func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kubernetes.Interface) error {
 	pvc := translatePersistentVolumeClaim(volumeName, s)
 
 	old, err := c.CoreV1().PersistentVolumeClaims(s.Namespace).Get(ctx, pvc.Name, metav1.GetOptions{})
@@ -604,20 +710,14 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 		if err := volumes.Create(ctx, &pvc, c); err != nil {
 			return fmt.Errorf("error creating volume '%s': %s", pvc.Name, err.Error())
 		}
-		spinner.Stop()
 		oktetoLog.Success("Volume '%s' created", volumeName)
-		spinner.Start()
 	} else {
 		if old.Labels[model.StackNameLabel] == "" {
-			spinner.Stop()
 			oktetoLog.Warning("skipping creation of volume '%s' due to name collision with pre-existing volume", pvc.Name)
-			spinner.Start()
 			return nil
 		}
 		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
-			spinner.Stop()
 			oktetoLog.Warning("skipping creation of volume '%s' due to name collision with volume in stack '%s'", pvc.Name, old.Labels[model.StackNameLabel])
-			spinner.Start()
 			return nil
 		}
 
@@ -638,48 +738,8 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 			}
 			return fmt.Errorf("error updating volume '%s': %s", old.Name, err.Error())
 		}
-		spinner.Stop()
 		oktetoLog.Success("Volume '%s' updated", volumeName)
-		spinner.Start()
 	}
-	return nil
-}
-
-func deployIngress(ctx context.Context, ingress *ingresses.Ingress, c *ingresses.Client, spinner *utils.Spinner) error {
-	old, err := c.Get(ctx, ingress.GetName(), ingress.GetNamespace())
-	if err != nil {
-		if !oktetoErrors.IsNotFound(err) {
-			return fmt.Errorf("error getting ingress '%s': %s", ingress.GetName(), err.Error())
-		}
-		if err := c.Create(ctx, ingress); err != nil {
-			return err
-		}
-		spinner.Stop()
-		oktetoLog.Success("Endpoint '%s' created", ingress.GetName())
-		spinner.Start()
-		return nil
-	}
-
-	if old.GetLabels()[model.StackNameLabel] == "" {
-		spinner.Stop()
-		oktetoLog.Warning("skipping deploy of ingress %s due to name collision: the ingress '%s' was running before deploying your compose", ingress.GetName(), ingress.GetName())
-		spinner.Start()
-		return nil
-	}
-
-	if old.GetLabels()[model.StackNameLabel] != ingress.GetLabels()[model.StackNameLabel] {
-		spinner.Stop()
-		oktetoLog.Warning("skipping creation of endpoint '%s' due to name collision with endpoint in stack '%s'", ingress.GetName(), old.GetLabels()[model.StackNameLabel])
-		spinner.Start()
-		return nil
-	}
-
-	if err := c.Update(ctx, ingress); err != nil {
-		return err
-	}
-	spinner.Stop()
-	oktetoLog.Success("Endpoint '%s' updated", ingress.GetName())
-	spinner.Start()
 	return nil
 }
 
@@ -768,7 +828,7 @@ func addImageMetadataToSvc(svc *model.Service) {
 }
 
 func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *StackDeployOptions, c kubernetes.Interface) error {
-	if err := validateDefinedServices(s, options.ServicesToDeploy); err != nil {
+	if err := ValidateDefinedServices(s, options.ServicesToDeploy); err != nil {
 		return err
 	}
 	if !options.InsidePipeline {
@@ -777,7 +837,8 @@ func validateServicesToDeploy(ctx context.Context, s *model.Stack, options *Stac
 	return nil
 }
 
-func validateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
+// ValidateDefinedServices checks that the services to deploy are in the compose file
+func ValidateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 	for _, svcToDeploy := range servicesToDeploy {
 		if _, ok := s.Services[svcToDeploy]; !ok {
 			definedSvcs := make([]string, 0)

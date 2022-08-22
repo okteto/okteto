@@ -101,11 +101,11 @@ func Status() *cobra.Command {
 }
 
 func runWithWatch(ctx context.Context, sy *syncthing.Syncthing) error {
-	suffix := "Synchronizing your files..."
-	spinner := utils.NewSpinner(suffix)
+	textSpinner := "Synchronizing your files..."
+	oktetoLog.Spinner(textSpinner)
 	pbScaling := 0.30
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -124,16 +124,16 @@ func runWithWatch(ctx context.Context, sy *syncthing.Syncthing) error {
 			if progress == 100 {
 				message = "Files synchronized"
 			} else {
-				message = utils.RenderProgressBar(suffix, progress, pbScaling)
+				message = utils.RenderProgressBar(textSpinner, progress, pbScaling)
 			}
-			spinner.Update(message)
+			oktetoLog.Spinner(message)
 		}
 	}()
 
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		spinner.Stop()
+		oktetoLog.StopSpinner()
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {

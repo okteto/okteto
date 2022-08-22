@@ -43,15 +43,14 @@ func downloadSyncthing() error {
 
 func sshKeys() error {
 	if !ssh.KeyExists() {
-		spinner := utils.NewSpinner("Generating your client certificates...")
-		spinner.Start()
+		oktetoLog.Spinner("Generating your client certificates...")
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
 
 		if err := ssh.GenerateKeys(); err != nil {
-			spinner.Stop()
 			return err
 		}
 
-		spinner.Stop()
 		oktetoLog.Success("Client certificates generated")
 	}
 

@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -59,7 +60,7 @@ var (
 	WarningLevel = "warn"
 	// ErrorLevel is the json level for error
 	ErrorLevel = "error"
-
+	// DebugLevel is the json level for debug
 	DebugLevel = "debug"
 )
 
@@ -76,6 +77,8 @@ type logger struct {
 	maskedWords []string
 	isMasked    bool
 	replacer    *strings.Replacer
+
+	spinner *spinnerLogger
 }
 
 var log = &logger{
@@ -96,9 +99,13 @@ func Init(level logrus.Level) {
 	log.writer = log.getWriter(TTYFormat)
 	log.maskedWords = []string{}
 	log.buf = &bytes.Buffer{}
+	log.spinner = &spinnerLogger{
+		sp:             newSpinner(),
+		spinnerSupport: !loadBool(OktetoDisableSpinnerEnvVar) && IsInteractive(),
+	}
 }
 
-//ConfigureFileLogger configures the file to write
+// ConfigureFileLogger configures the file to write
 func ConfigureFileLogger(dir, version string) {
 	fileLogger := logrus.New()
 	fileLogger.SetFormatter(&logrus.TextFormatter{
@@ -345,4 +352,16 @@ func GetOutputBuffer() *bytes.Buffer {
 // AddToBuffer logs into the buffer but does not print anything
 func AddToBuffer(level, format string, args ...interface{}) {
 	log.writer.AddToBuffer(level, format, args...)
+}
+
+func loadBool(env string) bool {
+	value := os.Getenv(env)
+	if value == "" {
+		value = "false"
+	}
+	boolValue, err := strconv.ParseBool(value)
+	if err != nil {
+		Yellow("'%s' is not a valid value for environment variable %s", value, env)
+	}
+	return boolValue
 }

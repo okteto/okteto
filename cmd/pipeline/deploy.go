@@ -177,9 +177,9 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 }
 
 func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployResponse, error) {
-	spinner := utils.NewSpinner(fmt.Sprintf("Deploying repository '%s'...", opts.Name))
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Deploying repository '%s'...", opts.Name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -211,7 +211,6 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*ty
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		spinner.Stop()
 		return nil, oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
@@ -227,9 +226,9 @@ func getPipelineName(repository string) string {
 }
 
 func (pc *Command) waitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
-	spinner := utils.NewSpinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", name))
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -243,7 +242,7 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name string, action *ty
 			return
 		}
 
-		spinner.Update("Waiting for containers to be healthy...")
+		oktetoLog.Spinner("Waiting for containers to be healthy...")
 		exit <- pc.waitForResourcesToBeRunning(ctx, name, timeout)
 	}()
 

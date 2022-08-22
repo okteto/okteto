@@ -1,12 +1,12 @@
 module github.com/okteto/okteto
 
-go 1.17
+go 1.18
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/a8m/envsubst v1.2.0
 	github.com/alessio/shellescape v1.4.1
-	github.com/briandowns/spinner v1.11.1
+	github.com/briandowns/spinner v1.19.0
 	github.com/cheggaaa/pb/v3 v3.0.8
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e
 	github.com/compose-spec/godotenv v1.1.1

@@ -20,7 +20,6 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -76,9 +75,9 @@ func computeProgress(local, remote float64) float64 {
 
 // Wait waits for the okteto up sequence to finish
 func Wait(ctx context.Context, dev *model.Dev, okStatusList []config.UpState) error {
-	spinner := utils.NewSpinner("Activating your development container...")
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner("Activating your development container...")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -110,7 +109,7 @@ func Wait(ctx context.Context, dev *model.Dev, okStatusList []config.UpState) er
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		spinner.Stop()
+		oktetoLog.StopSpinner()
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {

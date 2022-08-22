@@ -173,9 +173,9 @@ dependencies:
 						CacheFrom: []string{"cache-image-1", "cache-image-2"},
 					},
 				},
-				Icon:     "",
-				Dev:      model.ManifestDevs{},
-				Type:     model.OktetoManifestType,
+				Icon: "",
+				Dev:  model.ManifestDevs{},
+				Type: model.OktetoManifestType,
 				Dependencies: model.ManifestDependencies{
 					"one": &model.Dependency{
 						Repository: "https://repo.url",
@@ -214,6 +214,58 @@ dependencies:
 				assert.EqualValues(t, tt.expectedManifest, m)
 			}
 
+		})
+	}
+}
+
+func Test_GetCtxResource(t *testing.T) {
+	tests := []struct {
+		name                string
+		manifestName        string
+		expectedErr         error
+		manifestYAML        []byte
+		expectedCtxResource *model.ContextResource
+	}{
+		{
+			name:         "valid manifest returns a initialized ctx resource",
+			expectedErr:  nil,
+			manifestName: "okteto.yml",
+			manifestYAML: []byte(`
+namespace: test-namespace
+context: manifest-context
+`),
+			expectedCtxResource: &model.ContextResource{
+				Namespace: "test-namespace",
+				Context:   "manifest-context",
+			},
+		},
+		{
+			name:                "no valid manifest returns a zero value ctx resource",
+			expectedErr:         nil,
+			manifestName:        "",
+			expectedCtxResource: &model.ContextResource{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			manifestPath := ""
+			if tt.manifestName != "" {
+				tmpFile, err := os.CreateTemp("", tt.manifestName)
+				if err != nil {
+					t.Fatalf("failed to create dynamic manifest file: %s", err.Error())
+				}
+				if err := os.WriteFile(tmpFile.Name(), []byte(tt.manifestYAML), 0600); err != nil {
+					t.Fatalf("failed to write manifest file: %s", err.Error())
+				}
+				defer os.RemoveAll(tmpFile.Name())
+
+				manifestPath = tmpFile.Name()
+			}
+
+			ctxResource, err := getCtxResource(manifestPath)
+			assert.ErrorIs(t, err, tt.expectedErr)
+			assert.EqualValues(t, ctxResource, tt.expectedCtxResource)
 		})
 	}
 }

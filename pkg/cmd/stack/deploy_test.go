@@ -15,17 +15,20 @@ package stack
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
 
-	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -106,8 +109,7 @@ func Test_deploySvc(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			spinner := utils.NewSpinner("testing")
-			err := deploySvc(ctx, tt.stack, tt.svcName, client, spinner)
+			err := deploySvc(ctx, tt.stack, tt.svcName, client)
 			if err != nil {
 				t.Fatal("Not deployed correctly")
 			}
@@ -218,8 +220,7 @@ func Test_reDeploySvc(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			spinner := utils.NewSpinner("testing")
-			err := deploySvc(ctx, tt.stack, tt.svcName, fakeClient, spinner)
+			err := deploySvc(ctx, tt.stack, tt.svcName, fakeClient)
 			if err != nil {
 				t.Fatal("Not re-deployed correctly")
 			}
@@ -275,9 +276,7 @@ func Test_deployDeployment(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	spinner := utils.NewSpinner("Starting...")
-	spinner.Start()
-	_, err := deployDeployment(ctx, "test", stack, client, spinner)
+	_, err := deployDeployment(ctx, "test", stack, client)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -311,9 +310,7 @@ func Test_deployVolumes(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	spinner := utils.NewSpinner("Starting...")
-	spinner.Start()
-	err := deployVolume(ctx, "a", stack, client, spinner)
+	err := deployVolume(ctx, "a", stack, client)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -347,9 +344,7 @@ func Test_deploySfs(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	spinner := utils.NewSpinner("Starting...")
-	spinner.Start()
-	_, err := deployStatefulSet(ctx, "test", stack, client, spinner)
+	_, err := deployStatefulSet(ctx, "test", stack, client)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -374,9 +369,7 @@ func Test_deployJob(t *testing.T) {
 	}
 	client := fake.NewSimpleClientset()
 
-	spinner := utils.NewSpinner("Starting...")
-	spinner.Start()
-	_, err := deployJob(ctx, "test", stack, client, spinner)
+	_, err := deployJob(ctx, "test", stack, client)
 	if err != nil {
 		t.Fatal("Not deployed correctly")
 	}
@@ -424,7 +417,7 @@ func Test_ValidateDeploySomeServices(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateDefinedServices(tt.stack, tt.svcsToBeDeployed)
+			err := ValidateDefinedServices(tt.stack, tt.svcsToBeDeployed)
 			if err == nil && tt.expectedErr {
 				t.Fatal("Expected err but not thrown")
 			}
@@ -775,4 +768,196 @@ func Test_getEndpointsToDeployFromServicesToDeploy(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDeployK8sService(t *testing.T) {
+	tests := []struct {
+		name              string
+		k8sObjects        []runtime.Object
+		stack             *model.Stack
+		expectedNameLabel string
+	}{
+		{
+			name: "skip service",
+			k8sObjects: []runtime.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "ns",
+						Labels: map[string]string{
+							model.StackNameLabel: "hola",
+						},
+					},
+				},
+			},
+			stack: &model.Stack{
+				Namespace: "ns",
+				Name:      "test",
+				Services: map[string]*model.Service{
+					"test": {
+						Labels: map[string]string{
+							"ey": "a",
+						},
+					},
+				},
+			},
+			expectedNameLabel: "hola",
+		},
+		{
+			name: "update service",
+			k8sObjects: []runtime.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test",
+						Namespace: "ns",
+						Labels: map[string]string{
+							model.StackNameLabel: "test",
+						},
+					},
+				},
+			},
+			stack: &model.Stack{
+				Namespace: "ns",
+				Name:      "test",
+				Services: map[string]*model.Service{
+					"test": {
+						Labels: map[string]string{
+							"ey": "a",
+						},
+					},
+				},
+			},
+			expectedNameLabel: "test",
+		},
+		{
+			name:       "create new service",
+			k8sObjects: []runtime.Object{},
+			stack: &model.Stack{
+				Namespace: "ns",
+				Name:      "test",
+				Services: map[string]*model.Service{
+					"test": {
+						Labels: map[string]string{
+							"ey": "a",
+						},
+					},
+				},
+			},
+			expectedNameLabel: "test",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClient := fake.NewSimpleClientset(tt.k8sObjects...)
+			err := deployK8sService(context.Background(), "test", tt.stack, fakeClient)
+			assert.NoError(t, err)
+			svc, _ := services.Get(context.Background(), "test", "ns", fakeClient)
+			assert.Equal(t, svc.ObjectMeta.Labels[model.StackNameLabel], tt.expectedNameLabel)
+		})
+	}
+}
+
+func TestGetErrorDueToRestartLimit(t *testing.T) {
+	tests := []struct {
+		name       string
+		k8sObjects []runtime.Object
+		stack      *model.Stack
+		err        error
+	}{
+		{
+			name: "no dependent services",
+			stack: &model.Stack{
+				Services: map[string]*model.Service{
+					"test2": {
+						DependsOn: model.DependsOn{},
+					},
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "dependent svc without reaching backoff",
+			k8sObjects: []runtime.Object{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							model.StackNameLabel:        "test",
+							model.StackServiceNameLabel: "test1",
+						},
+					},
+					Status: corev1.PodStatus{
+						ContainerStatuses: []corev1.ContainerStatus{
+							{
+								RestartCount: 1,
+							},
+						},
+					},
+				},
+			},
+			stack: &model.Stack{
+				Name: "test",
+				Services: map[string]*model.Service{
+					"test1": {
+						BackOffLimit: 2,
+						DependsOn:    model.DependsOn{},
+					},
+					"test2": {
+						DependsOn: model.DependsOn{
+							"test1": model.DependsOnConditionSpec{
+								Condition: model.DependsOnServiceHealthy,
+							},
+						},
+					},
+				},
+			},
+			err: nil,
+		},
+		{
+			name: "dependent svc reaching backoff",
+			k8sObjects: []runtime.Object{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							model.StackNameLabel:        "test",
+							model.StackServiceNameLabel: "test1",
+						},
+					},
+					Status: corev1.PodStatus{
+						ContainerStatuses: []corev1.ContainerStatus{
+							{
+								RestartCount: 5,
+							},
+						},
+					},
+				},
+			},
+			stack: &model.Stack{
+				Name: "test",
+				Services: map[string]*model.Service{
+					"test1": {
+						BackOffLimit: 2,
+						DependsOn:    model.DependsOn{},
+					},
+					"test2": {
+						DependsOn: model.DependsOn{
+							"test1": model.DependsOnConditionSpec{
+								Condition: model.DependsOnServiceHealthy,
+							},
+						},
+					},
+				},
+			},
+			err: fmt.Errorf("Service 'test1' has been restarted 5 times. Please check the logs and try again"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClient := fake.NewSimpleClientset(tt.k8sObjects...)
+			err := getErrorDueToRestartLimit(context.Background(), tt.stack, "test2", fakeClient)
+			assert.Equal(t, tt.err, err)
+		})
+	}
+
 }

@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/discovery"
 
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -130,7 +131,7 @@ func Up() *cobra.Command {
 					return err
 				}
 
-				if !errors.Is(err, oktetoErrors.ErrManifestNotFound) {
+				if !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 					return err
 				}
 
@@ -757,9 +758,8 @@ func (up *upContext) shutdown() {
 		if err := term.RestoreTerminal(up.inFd, up.stateTerm); err != nil {
 			oktetoLog.Infof("failed to restore terminal: %s", err.Error())
 		}
-		if up.spinner != nil {
-			up.spinner.Stop()
-		}
+
+		oktetoLog.StopSpinner()
 	}
 
 	oktetoLog.Infof("starting shutdown sequence")

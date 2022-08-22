@@ -5,6 +5,7 @@
     - [Code review checklist](#code-review-checklist)
     - [PR Description](#pr-description)
     - [PR comments](#pr-comments)
+    - [PR Scope](#pr-scope)
     - [Tests](#tests)
       - [Unit tests](#unit-tests)
       - [E2E tests](#e2e-tests)
@@ -53,11 +54,21 @@ Comments are the basis of all pull requests. In comments, the reviewers will ask
 
 A respectful tone will be used when making comments and supporting documentation can be helpful for certain comments.
 
+### PR scope
+
+The logic introduced/modified in the pull request should be just enough to close the issue with the minimum acceptable quality. If during the implementation of the PR the developer encounters new issues not directly related to the current one, a new issue should be created. In this way, developers are totally focused on solving the issue they are working on, we avoid possible confusion to the reviewers (with less context than the developer) and we can locate more clearly possible bugs introduced.
+
+This approach can be summarized by the term **Minimum Viable Change (MVC)**. MVC means that each issue and pull request should contain the minimum amount of change/scope possible that is needed to address, in accordance to internal quality standards, the core need that was originally identified. Other needs, even if related to the original one, should be addressed in different issues and pull requests.
+
+If the developer decides to open a new issue from the current one or is not completely sure whether it is necessary to create a new issue or not, this must be commented in the original issue/PR.
+
 ### Tests
 
 All new features or bug fixes must have unit tests that cover the added code and the functionality it provides. When adding new features it is highly recommended that integration tests are also created and may be deemed required by a reviewer.
 
 Tests should fail with helpful messages saying what was wrong, what inputs were provided, the expected result, and the actual result received in testing. Assume that the person debugging your failing test is not you, and is potentially new to the entire project.
+
+To run unit/e2e tests locally, please check our [How to run tests guidelines](how-to-run-tests.md)
 
 #### Unit tests
 
@@ -180,17 +191,11 @@ In order to speed up the CI process, all tests are executed in parallel includin
 - `deploy/destroy` command: This command has the most dependencies, as it is used by all other services:
 
   - The information stored on the `configmap` is used on the UI to show information like structured logs, and repository information or to execute actions like redeploying or destroying the application.
-
   - The logs that are written in the buffer(`JSON`) will be the ones stored in the `configmap`, to later show them in the UI.
-
   - The following actions directly or indirectly use this command: [preview deploy](https://github.com/okteto/deploy-preview)/[pipeline deploy](https://github.com/okteto/pipeline)/[destroy pipeline](https://github.com/okteto/destroy-pipeline)/[preview destroy](https://github.com/okteto/destroy-preview)
-
   - Changes on this command can affect other commands like `preview` or `pipeline`
-
 - `up/down` command: It's mostly used on the `vscode` and `docker extension`
-
 - `stack` command: This command is used by `okteto deploy` command.
-
 - Changes on `graphql` calls: You have to check that your changes should work also with the previous `okteto chart` version.
 
 ### Logs

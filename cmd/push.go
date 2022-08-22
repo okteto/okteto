@@ -196,9 +196,9 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 		return err
 	}
 
-	spinner := utils.NewSpinner(fmt.Sprintf("Pushing source code to '%s'...", dev.Name))
-	spinner.Start()
-	defer spinner.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Pushing source code to '%s'...", dev.Name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -258,7 +258,7 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		spinner.Stop()
+		oktetoLog.StopSpinner()
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {

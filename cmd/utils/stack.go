@@ -15,7 +15,6 @@ package utils
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -63,7 +62,7 @@ func LoadStackContext(stackPaths []string) (*model.ContextResource, error) {
 // GetStackFiles returns the list of stack files on a path
 func GetStackFiles(cwd string) []string {
 	result := []string{}
-	paths, err := ioutil.ReadDir(cwd)
+	paths, err := os.ReadDir(cwd)
 	if err != nil {
 		return nil
 	}
