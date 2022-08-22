@@ -40,7 +40,7 @@ type OktetoSelector struct {
 	Keys      *promptui.SelectKeys
 
 	OktetoTemplates *oktetoTemplates
-	InitialPosition int
+	initialPosition int
 }
 
 // oktetoTemplates stores the templates to render the text
@@ -78,7 +78,7 @@ func NewOktetoSelector(label string, items []SelectorItem, selectedTpl string) *
 			Inactive: inactiveTemplate,
 			FuncMap:  promptui.FuncMap,
 		},
-		InitialPosition: -1,
+		initialPosition: -1,
 	}
 }
 
@@ -105,7 +105,7 @@ func isValidOption(options []SelectorItem, optionSelected string) bool {
 
 func (s *OktetoSelector) SetInitialPosition(p int) {
 	if p != -1 {
-		s.InitialPosition = p
+		s.initialPosition = p
 		s.Items[p].Label += " *"
 	}
 }
@@ -116,7 +116,7 @@ func (s *OktetoSelector) run() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	l.SetCursor(s.InitialPosition)
+	l.SetCursor(s.initialPosition)
 
 	s.prepareTemplates()
 

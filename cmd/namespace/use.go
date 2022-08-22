@@ -95,11 +95,12 @@ func (nc *NamespaceCommand) Use(ctx context.Context, namespace string) error {
 }
 
 func (nc *NamespaceCommand) getNamespaceFromSelector(ctx context.Context) (string, error) {
-	namespaces, err := getNamespacesSelection(ctx)
+	namespaces, currentIndex, err := getNamespacesSelection(ctx)
 	if err != nil {
 		return "", err
 	}
 	selector := oktetoLog.NewOktetoSelector("Select the namespace you want to use:", namespaces, "Namespace")
+	selector.SetInitialPosition(currentIndex)
 
 	ns, err := selector.Ask()
 	if err != nil {
@@ -118,14 +119,15 @@ func (nc *NamespaceCommand) getNamespaceFromSelector(ctx context.Context) (strin
 	return ns, nil
 }
 
-func getNamespacesSelection(ctx context.Context) ([]oktetoLog.SelectorItem, error) {
+func getNamespacesSelection(ctx context.Context) ([]oktetoLog.SelectorItem, int, error) {
+	currentIndx := -1
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
-		return nil, err
+		return nil, currentIndx, err
 	}
 	spaces, err := oktetoClient.Namespaces().List(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get namespaces: %s", err)
+		return nil, currentIndx, fmt.Errorf("failed to get namespaces: %s", err)
 	}
 
 	namespaces := []oktetoLog.SelectorItem{}
@@ -150,7 +152,15 @@ func getNamespacesSelection(ctx context.Context) ([]oktetoLog.SelectorItem, erro
 			Enable: true,
 		},
 	}...)
-	return namespaces, nil
+
+	currentContextName := okteto.CurrentStore.CurrentContext
+	currentNamespace := okteto.CurrentStore.Contexts[currentContextName].Namespace
+	for indx, namespace := range namespaces {
+		if namespace.Name == currentNamespace {
+			currentIndx = indx
+		}
+	}
+	return namespaces, currentIndx, nil
 }
 
 func askForOktetoNamespace() string {
