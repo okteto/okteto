@@ -1050,8 +1050,8 @@ github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
-github.com/okteto/buildkit v0.10.3-okteto1 h1:zl15Fko0ZqoL2/tyeS82OnkZ4l3f5vH1IZihYpr8nnk=
-github.com/okteto/buildkit v0.10.3-okteto1/go.mod h1:VcL5TJAllhL1fLZjF8y/IvNpUWdDiPW8IzkIVuNlvjg=
+github.com/okteto/buildkit v0.10.3-okteto2 h1:HWAXWjlZewzzaRhsS7rNlSuTs1oDCSvmEhwNPqlCmVY=
+github.com/okteto/buildkit v0.10.3-okteto2/go.mod h1:VcL5TJAllhL1fLZjF8y/IvNpUWdDiPW8IzkIVuNlvjg=
 github.com/olekukonko/tablewriter v0.0.0-20170122224234-a0225b3f23b5/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=
 github.com/olekukonko/tablewriter v0.0.4/go.mod h1:zq6QwlOf5SlnkVbMSr5EoBv3636FWnp+qbPhuoO21uA=
 github.com/onsi/ginkgo v0.0.0-20151202141238-7f8ab55aaf3b/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=

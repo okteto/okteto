@@ -222,7 +222,7 @@ require (
 
 replace (
 	github.com/Sirupsen/logrus => github.com/sirupsen/logrus v1.8.0
-	github.com/moby/buildkit => github.com/okteto/buildkit v0.10.3-okteto1
+	github.com/moby/buildkit => github.com/okteto/buildkit v0.10.3-okteto2
 )
 
 require (
