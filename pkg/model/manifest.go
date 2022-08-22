@@ -655,22 +655,16 @@ func Read(bytes []byte) (*Manifest, error) {
 }
 
 func (m *Manifest) validate() error {
-	err := m.sanitizeDev()
+	err := m.sanitizeSvcNames()
 	if err != nil {
 		return err
 	}
-
-	err = m.sanitizeBuild()
-	if err != nil {
-		return err
-	}
-
-	m.sanitizeGlobalForward()
 
 	return m.validateDivert()
 }
 
-func (m *Manifest) sanitizeDev() error {
+func (m *Manifest) sanitizeSvcNames() error {
+	sanitizedServicesNames := make(map[string]string)
 	for devKey, dev := range m.Dev {
 		if shouldBeSanitized(devKey) {
 			sanitizedSvcName := sanitizeName(devKey)
@@ -679,15 +673,11 @@ func (m *Manifest) sanitizeDev() error {
 			}
 			dev.Name = sanitizedSvcName
 			m.Dev[sanitizedSvcName] = dev
-			oktetoLog.Warning("Service '%s' has been sanitized into '%s' in 'Dev' section. This may affect discovery service.", devKey, sanitizedSvcName)
+			sanitizedServicesNames[devKey] = sanitizedSvcName
 			delete(m.Dev, devKey)
 		}
 	}
 
-	return nil
-}
-
-func (m *Manifest) sanitizeBuild() error {
 	for buildKey, build := range m.Build {
 		if shouldBeSanitized(buildKey) {
 			sanitizedSvcName := sanitizeName(buildKey)
@@ -695,22 +685,24 @@ func (m *Manifest) sanitizeBuild() error {
 				return fmt.Errorf("could not sanitize '%s'. Service with name '%s' already exists", buildKey, sanitizedSvcName)
 			}
 			m.Build[sanitizedSvcName] = build
-			oktetoLog.Warning("Service '%s' has been sanitized into '%s' in 'Build' section. This may affect discovery service.", buildKey, sanitizedSvcName)
+			sanitizedServicesNames[buildKey] = sanitizedSvcName
 			delete(m.Dev, buildKey)
 		}
 	}
 
-	return nil
-}
-
-func (m *Manifest) sanitizeGlobalForward() {
 	for _, gf := range m.GlobalForward {
 		if shouldBeSanitized(gf.ServiceName) {
 			sanitizedSvcName := sanitizeName(gf.ServiceName)
-			oktetoLog.Warning("Service '%s' has been sanitized into '%s' in 'Global Forward' section. This may affect discovery service.", m.Dev, gf.ServiceName)
 			gf.ServiceName = sanitizedSvcName
+			sanitizedServicesNames[gf.ServiceName] = sanitizedSvcName
 		}
 	}
+
+	for previousName, newName := range sanitizedServicesNames {
+		oktetoLog.Warning("Service '%s' has been sanitized into '%s' in okteto manifest.", previousName, newName)
+	}
+
+	return nil
 }
 
 func (m *Manifest) validateDivert() error {
