@@ -32,6 +32,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/prompt"
 	"github.com/okteto/okteto/pkg/registry"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -255,10 +256,8 @@ func GetLanguage(language, workDir string) (string, error) {
 
 func askForLanguage() (string, error) {
 	supportedLanguages := linguist.GetSupportedLanguages()
-	return utils.AskForOptions(
-		supportedLanguages,
-		"Couldn't detect any language in the current folder. Pick your project's main language from the list below:",
-	)
+	selector := prompt.NewOktetoSelector("Couldn't detect any language in the current folder. Pick your project's main language from the list below:", supportedLanguages, "", -1)
+	return selector.Ask()
 }
 
 func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, error) {
@@ -293,10 +292,9 @@ func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, er
 		options = append(options, sfsList[i].Name)
 	}
 	options = append(options, defaultInitValues)
-	option, err := utils.AskForOptions(
-		options,
-		"Select the resource you want to develop:",
-	)
+
+	selector := prompt.NewOktetoSelector("Select the resource you want to develop:", options, "", -1)
+	option, err := selector.Ask()
 	if err != nil {
 		return nil, err
 	}
@@ -322,10 +320,8 @@ func askForContainer(app apps.App) (string, error) {
 	for _, c := range app.PodSpec().Containers {
 		options = append(options, c.Name)
 	}
-	return utils.AskForOptions(
-		options,
-		fmt.Sprintf("%s '%s' has %d containers. Select the container you want to replace with your development container:", app.Kind(), app.ObjectMeta().Name, len(app.PodSpec().Containers)),
-	)
+	selector := prompt.NewOktetoSelector(fmt.Sprintf("%s '%s' has %d containers. Select the container you want to replace with your development container:", app.Kind(), app.ObjectMeta().Name, len(app.PodSpec().Containers)), options, "", -1)
+	return selector.Ask()
 }
 
 func validateDevPath(devPath string, overwrite bool) error {

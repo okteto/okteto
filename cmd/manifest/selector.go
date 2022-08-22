@@ -20,7 +20,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/prompt"
 )
 
@@ -37,12 +36,13 @@ func selectComposeFile(paths []string) (string, error) {
 	}
 
 	paths = append(paths, noneComposeOption)
-	selection, err := utils.AskForOptions(paths, "Select the compose to use:")
-	if err != nil || selection == noneComposeOption {
+	selector := prompt.NewOktetoSelector("Select the compose to use:", paths, "Compose File", -1)
+	composeSelected, err := selector.Ask()
+	if err != nil || composeSelected == noneComposeOption {
 		return "", err
 	}
 
-	return selection, nil
+	return composeSelected, nil
 }
 
 func selectDockerfiles(ctx context.Context, cwd string) ([]string, error) {

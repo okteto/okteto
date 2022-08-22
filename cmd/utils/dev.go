@@ -20,10 +20,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 
-	"github.com/manifoldco/promptui"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -205,39 +203,6 @@ func SelectDevFromManifest(manifest *model.Manifest, selector prompt.OktetoSelec
 	}
 
 	return manifest.Dev[devName], nil
-}
-
-func AskForOptions(options []string, label string) (string, error) {
-	selectedTemplate := `{{ " ✓ " | bgGreen | black }} {{ .Label | green }}`
-	activeTemplate := fmt.Sprintf("%s {{ . | oktetoblue }}", promptui.IconSelect)
-	inactiveTemplate := "  {{ . | oktetoblue }}"
-	if runtime.GOOS == "windows" {
-		selectedTemplate = " ✓  {{ . | blue }}"
-		activeTemplate = fmt.Sprintf("%s {{ . | blue }}", promptui.IconSelect)
-		inactiveTemplate = "  {{ . | blue }}"
-	}
-
-	prompt := promptui.Select{
-		Label: label,
-		Items: options,
-		Size:  len(options),
-		Templates: &promptui.SelectTemplates{
-			Label:    "{{ . }}",
-			Selected: selectedTemplate,
-			Active:   activeTemplate,
-			Inactive: inactiveTemplate,
-			FuncMap:  promptui.FuncMap,
-		},
-	}
-	prompt.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
-
-	i, _, err := prompt.Run()
-	if err != nil {
-		oktetoLog.Infof("invalid init option: %s", err)
-		return "", fmt.Errorf("invalid option")
-	}
-
-	return options[i], nil
 }
 
 // ParseURL validates a URL
