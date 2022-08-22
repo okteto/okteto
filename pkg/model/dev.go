@@ -225,6 +225,10 @@ type EnvVar struct {
 	Value string `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
+func (v *EnvVar) String() string {
+	return fmt.Sprintf("%s=%s", v.Name, v.Value)
+}
+
 // Secret represents a development secret
 type Secret struct {
 	LocalPath  string
@@ -856,15 +860,14 @@ func (dev *Dev) Save(path string) error {
 	return nil
 }
 
-//SerializeBuildArgs returns build  aaargs as a llist of strings
+//SerializeBuildArgs returns build  args as a list of strings
 func SerializeBuildArgs(buildArgs Environment) []string {
 	result := []string{}
 	for _, e := range buildArgs {
-		result = append(
-			result,
-			fmt.Sprintf("%s=%s", e.Name, e.Value),
-		)
+		result = append(result,e.String())
 	}
+	// // stable serialization
+	sort.Strings(result)
 	return result
 }
 

@@ -69,12 +69,18 @@ func Test_validateImage(t *testing.T) {
 }
 
 func Test_OptsFromBuildInfo(t *testing.T) {
+	context := okteto.OktetoContext{
+		Namespace: "test",
+		Registry:  "registry.okteto",
+	}
+
+	namespaceEnvVar := model.EnvVar{
+			Name: model.OktetoNamespaceEnvVar, Value: context.Namespace,
+	}
+
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				Registry:  "registry.okteto",
-			},
+			"test": &context,
 		},
 		CurrentContext: "test",
 	}
@@ -126,7 +132,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
-				BuildArgs:  []string{},
+				BuildArgs:  []string{namespaceEnvVar.String()},
 			},
 		},
 		{
@@ -165,7 +171,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
-				BuildArgs:  []string{"arg1=value1"},
+				BuildArgs:  []string{namespaceEnvVar.String(), "arg1=value1"},
 			},
 		},
 		{
@@ -200,7 +206,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
-				BuildArgs:  []string{"arg1=value1"},
+				BuildArgs:  []string{namespaceEnvVar.String(), "arg1=value1"},
 			},
 		},
 		{
@@ -212,7 +218,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
-				Args: model.Environment{
+				Args: []model.EnvVar {
+					namespaceEnvVar,
 					{
 						Name:  "arg1",
 						Value: "value1",
@@ -230,7 +237,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Target:     "build",
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
-				BuildArgs:  []string{"arg1=value1"},
+				BuildArgs:  []string{namespaceEnvVar.String(), "arg1=value1"},
 			},
 		},
 	}
