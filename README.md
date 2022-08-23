@@ -46,13 +46,7 @@ The end result is that the remote cluster is seen by your IDE and tools as a loc
 
 All you need to get started is to [install the Okteto CLI](https://www.okteto.com/docs/getting-started/#installing-okteto-cli) and have access to a Kubernetes cluster.
 
-You can also use `okteto` with [Okteto Cloud](https://okteto.com/), a **Kubernetes Namespace as a Service** platform where you can deploy your Kubernetes applications and development containers for free.
-
-### Super Quick Start
-
-- Deploy your application on Kubernetes.
-- Run `okteto init` from the root of your git repository to inspect your code and generate your [Okteto manifest](https://okteto.com/docs/reference/manifest/). The Okteto manifest defines your development container.
-- Run `okteto up` to deploy your development container.
+Okteto CLI works with **any** Kubernetes cluster. If it's your first time using it, we'd recommend you [try it](https://www.okteto.com/docs/getting-started/) with the [Okteto Platform](https://cloud.okteto.com/) for a complete holistic developer experience. If you want to try it out with any other K8s cluster, you can also check out [this article](https://www.okteto.com/blog/developing-microservices-by-hot-reloading-on-kubernetes-clusters/) as a guide.
 
 We created a [few guides to help you get started](https://github.com/okteto/samples) with `okteto` and your favorite programming language.
 
@@ -62,7 +56,7 @@ Okteto is released into three channels: stable, beta, and dev. By default when o
 
 ## Useful links
 
-- [Getting started](https://www.okteto.com/docs/getting-started/#installing-okteto-cli)
+- [Getting started](https://www.okteto.com/docs/getting-started/)
 - [CLI reference](https://okteto.com/docs/reference/cli)
 - [Okteto manifest reference](https://okteto.com/docs/reference/manifest/)
 - [Samples](https://github.com/okteto/samples)
