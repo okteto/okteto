@@ -123,6 +123,9 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 	return nil
 }
 
+// getContext ask the user to select a context
+// if create context is selected it will prompt input so the user can specify new context
+// it saves the selected context into ctxOptions
 func getContext(ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
 	options, preselectedIndx := getSelectorItemsFromContextSelector(ctxs)

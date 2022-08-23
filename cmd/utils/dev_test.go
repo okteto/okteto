@@ -344,11 +344,13 @@ func Test_GetDevFromManifest(t *testing.T) {
 	}
 }
 
+// FakeSelector represents the mock instance of an OktetoSelector
 type FakeSelector struct {
 	selected string
 	err      error
 }
 
+// NewFakeSelector returns a new FakeSelector
 func NewFakeSelector(selected string, err error) *FakeSelector {
 	return &FakeSelector{
 		selected: selected,
@@ -356,6 +358,7 @@ func NewFakeSelector(selected string, err error) *FakeSelector {
 	}
 }
 
+// Ask implements the OktetoSelectorInterface
 func (fs *FakeSelector) Ask() (string, error) {
 	return fs.selected, fs.err
 }

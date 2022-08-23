@@ -23,11 +23,12 @@ const (
 	showCursor = esc + "?25h"
 )
 
+// OktetoSelectorInterface represents the interface of an input selector
 type OktetoSelectorInterface interface {
 	Ask() (string, error)
 }
 
-// OktetoSelector represents the selector
+// OktetoSelector represents a selector for user input
 type OktetoSelector struct {
 	Label string
 	items []selectorItem
@@ -40,13 +41,16 @@ type OktetoSelector struct {
 	initialPosition int
 }
 
-// selectorItem represents a selectable item on a selector
+// selectorItem represents a selectable item in an OktetoSelector
 type selectorItem struct {
 	Name   string
 	Label  string
 	Enable bool
 }
 
+// NewOktetoSelector returns a new OktetoSelector where label will be the question to ask, options are items to choose from.
+// selectedTpl represents the selected template to use, can be empty string.
+// preselected is the index where the selector should start, if -1 this is ignored.
 func NewOktetoSelector(label string, options []string, selectedTpl string, preselected int) *OktetoSelector {
 	items := optionsToSelectorItem(options)
 	selectedTemplate := getSelectedTemplate(selectedTpl)
@@ -412,6 +416,7 @@ func (s *OktetoSelector) renderHelp() []byte {
 	return render(s.oktetoTemplates.help, keys)
 }
 
+// optionsToSelectorItem transforms an array of strings into selectorItems for the OktetoSelector
 func optionsToSelectorItem(options []string) []selectorItem {
 	items := make([]selectorItem, 0)
 	for _, option := range options {

@@ -208,7 +208,7 @@ type DeployCommand struct {
 	Command string `json:"command,omitempty" yaml:"command,omitempty"`
 }
 
-//NewDeployInfo creates a deploy Info
+// NewDeployInfo creates a deploy Info
 func NewDeployInfo() *DeployInfo {
 	return &DeployInfo{
 		Commands: []DeployCommand{},
@@ -242,7 +242,7 @@ func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
 	return nil, discovery.ErrOktetoManifestNotFound
 }
 
-//GetManifestV1 gets a manifest from a path or search for the files to generate it
+// GetManifestV1 gets a manifest from a path or search for the files to generate it
 func GetManifestV1(manifestPath string) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -1136,6 +1136,7 @@ func (d ManifestDevs) HasDev(name string) bool {
 	return ok
 }
 
+// SortedNameList returns an list of dev names sorted alphabetically
 func (d ManifestDevs) SortedNameList() []string {
 	names := []string{}
 	for name := range d {

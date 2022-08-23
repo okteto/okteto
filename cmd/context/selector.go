@@ -132,6 +132,7 @@ func getSelectorItemsFromContextSelector(items []contextSelector) ([]string, int
 	return s, currentIndx
 }
 
+// isOktetoContextSelected returns if the context selected is an Okteto context
 func isOktetoContextSelected(contexts []contextSelector, selected string) bool {
 	for _, i := range contexts {
 		if i.Name == selected {
