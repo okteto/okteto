@@ -770,11 +770,11 @@ func (dependency *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) e
 	return nil
 }
 
-func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	dev := NewDev()
 	err := unmarshal(&dev)
 	if err == nil {
-		*d = *NewManifestFromDev(dev)
+		*m = *NewManifestFromDev(dev)
 		return nil
 	}
 	if !isManifestFieldNotFound(err) {
@@ -790,17 +790,23 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
-	d.Deploy = manifest.Deploy
-	d.Destroy = manifest.Destroy
-	d.Dev = manifest.Dev
-	d.Icon = manifest.Icon
-	d.Build = manifest.Build
-	d.Namespace = manifest.Namespace
-	d.Context = manifest.Context
-	d.IsV2 = true
-	d.Dependencies = manifest.Dependencies
-	d.Name = manifest.Name
-	d.GlobalForward = manifest.GlobalForward
+	m.Deploy = manifest.Deploy
+	m.Destroy = manifest.Destroy
+	m.Dev = manifest.Dev
+	m.Icon = manifest.Icon
+	m.Build = manifest.Build
+	m.Namespace = manifest.Namespace
+	m.Context = manifest.Context
+	m.IsV2 = true
+	m.Dependencies = manifest.Dependencies
+	m.Name = manifest.Name
+	m.GlobalForward = manifest.GlobalForward
+
+	err = m.SanitizeSvcNames()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

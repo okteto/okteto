@@ -801,7 +801,7 @@ func DisplayVolumeMountWarnings(warnings []string) {
 
 func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	for previousName, newName := range previousToNewNameMap {
-		oktetoLog.Warning("Service '%s' has been sanitized into '%s' in compose file. This may affect discovery service.", previousName, newName)
+		oktetoLog.Warning("Service '%s' specified in compose file has been sanitized into '%s'. This may affect discovery service.", previousName, newName)
 	}
 }
 

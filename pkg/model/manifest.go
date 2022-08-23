@@ -655,15 +655,11 @@ func Read(bytes []byte) (*Manifest, error) {
 }
 
 func (m *Manifest) validate() error {
-	err := m.sanitizeSvcNames()
-	if err != nil {
-		return err
-	}
-
 	return m.validateDivert()
 }
 
-func (m *Manifest) sanitizeSvcNames() error {
+// SanitizeSvcNames sanitize service names in 'dev', 'build' and 'global forward' sections
+func (m *Manifest) SanitizeSvcNames() error {
 	sanitizedServicesNames := make(map[string]string)
 	for devKey, dev := range m.Dev {
 		if shouldBeSanitized(devKey) {
