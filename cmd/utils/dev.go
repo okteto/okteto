@@ -206,7 +206,8 @@ func SelectDevFromManifest(manifest *model.Manifest, label string) (*model.Dev, 
 			Enable: true,
 		})
 	}
-	devKey, err := AskForOptionsOkteto(items, label, "Development container", -1)
+	selector := NewOktetoSelector(label, items, "Development container")
+	devKey, err := selector.AskForOptionsOkteto(-1)
 	if err != nil {
 		return nil, err
 	}

@@ -94,7 +94,8 @@ func selectDockerfiles(ctx context.Context, cwd string) ([]string, error) {
 			})
 		}
 
-		selection, err := utils.AskForOptionsOkteto(dockerfilesItems, "Do you need to build any of the following Dockerfiles as part of your development environment?", "", -1)
+		selector := utils.NewOktetoSelector("Do you need to build any of the following Dockerfiles as part of your development environment?", dockerfilesItems, "")
+		selection, err := selector.AskForOptionsOkteto(-1)
 
 		if err != nil {
 			return nil, err

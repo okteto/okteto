@@ -125,7 +125,8 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
 	initialPosition := getInitialPosition(ctxs)
-	oktetoContext, err := utils.AskForOptionsOkteto(ctxs, "A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", "Context", initialPosition)
+	selector := utils.NewOktetoSelector("A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", ctxs, "Context")
+	oktetoContext, err := selector.AskForOptionsOkteto(initialPosition)
 	if err != nil {
 		return "", err
 	}

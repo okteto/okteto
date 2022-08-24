@@ -15,7 +15,6 @@ package utils
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -41,7 +40,12 @@ const (
 // ErrInvalidOption is raised when the selector has an invalid option
 var ErrInvalidOption = errors.New("invalid option")
 
-// OktetoSelector represents the selector
+// OktetoSelectorInterface represents an interface for a selector
+type OktetoSelectorInterface interface {
+	AskForOptionsOkteto(initialPosition int) (string, error)
+}
+
+// OktetoSelector implements the OktetoSelectorInterface
 type OktetoSelector struct {
 	Label string
 	Items []SelectorItem
@@ -72,13 +76,13 @@ type SelectorItem struct {
 	Enable bool
 }
 
-//AskForOptionsOkteto given some options ask the user to select one
-func AskForOptionsOkteto(options []SelectorItem, label, selectedTpl string, initialPosition int) (string, error) {
+// NewOktetoSelector returns a selector set up with the label and options from the input
+func NewOktetoSelector(label string, options []SelectorItem, selectedTpl string) *OktetoSelector {
 	selectedTemplate := getSelectedTemplate(selectedTpl)
 	activeTemplate := getActiveTemplate()
 	inactiveTemplate := getInactiveTemplate()
 
-	prompt := OktetoSelector{
+	return &OktetoSelector{
 		Label: label,
 		Items: options,
 		Size:  len(options),
@@ -90,10 +94,13 @@ func AskForOptionsOkteto(options []SelectorItem, label, selectedTpl string, init
 			FuncMap:  promptui.FuncMap,
 		},
 	}
+}
 
-	prompt.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
-	optionSelected, err := prompt.Run(initialPosition)
-	if err != nil || !isValidOption(options, optionSelected) {
+// AskForOptionsOkteto given some options ask the user to select one
+func (s *OktetoSelector) AskForOptionsOkteto(initialPosition int) (string, error) {
+	s.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
+	optionSelected, err := s.Run(initialPosition)
+	if err != nil || !isValidOption(s.Items, optionSelected) {
 		oktetoLog.Infof("invalid init option: %s", err)
 		return "", ErrInvalidOption
 	}
