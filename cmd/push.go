@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -98,7 +99,13 @@ func Push(ctx context.Context) *cobra.Command {
 			}
 			dev, err := utils.GetDevFromManifest(manifest, devName)
 			if err != nil {
-				return err
+				if !errors.Is(err, utils.ErrNoDevSelected) {
+					return err
+				}
+				dev, err = utils.SelectDevFromManifest(manifest, "Select the development container where you want to push:")
+				if err != nil {
+					return err
+				}
 			}
 
 			if len(pushOpts.AppName) > 0 && pushOpts.AppName != dev.Name {

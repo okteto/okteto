@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/signal"
 	"time"
@@ -62,7 +63,13 @@ func Status() *cobra.Command {
 			}
 			dev, err := utils.GetDevFromManifest(manifest, devName)
 			if err != nil {
-				return err
+				if !errors.Is(err, utils.ErrNoDevSelected) {
+					return err
+				}
+				dev, err = utils.SelectDevFromManifest(manifest, "Select the development container you want to get sync status:")
+				if err != nil {
+					return err
+				}
 			}
 
 			waitForStates := []config.UpState{config.Synchronizing, config.Ready}

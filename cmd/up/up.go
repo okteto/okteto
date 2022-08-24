@@ -262,7 +262,13 @@ func Up() *cobra.Command {
 
 			dev, err := utils.GetDevFromManifest(oktetoManifest, upOptions.DevName)
 			if err != nil {
-				return err
+				if !errors.Is(err, utils.ErrNoDevSelected) {
+					return err
+				}
+				dev, err = utils.SelectDevFromManifest(oktetoManifest, "Select the development container you want to activate:")
+				if err != nil {
+					return err
+				}
 			}
 
 			up.Dev = dev

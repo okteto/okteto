@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -78,7 +79,13 @@ func Down() *cobra.Command {
 				}
 				dev, err := utils.GetDevFromManifest(manifest, devName)
 				if err != nil {
-					return err
+					if !errors.Is(err, utils.ErrNoDevSelected) {
+						return err
+					}
+					dev, err = utils.SelectDevFromManifest(manifest, "Select the development container you want to deactivate:")
+					if err != nil {
+						return err
+					}
 				}
 
 				c, _, err := okteto.GetK8sClient()
