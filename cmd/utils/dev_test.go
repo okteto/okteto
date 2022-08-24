@@ -311,7 +311,7 @@ func Test_GetDevFromManifest(t *testing.T) {
 			err:     nil,
 		},
 		{
-			name: "manifest has one dev section and user intrudices empty devName",
+			name: "manifest has one dev section and user introduces empty devName",
 			manifest: &model.Manifest{
 				Dev: model.ManifestDevs{
 					"test": &model.Dev{},
@@ -322,7 +322,7 @@ func Test_GetDevFromManifest(t *testing.T) {
 			err:     nil,
 		},
 		{
-			name: "manifest has several dev section user introduces emtpy devName",
+			name: "manifest has several dev section user introduces empty devName",
 			manifest: &model.Manifest{
 				Dev: model.ManifestDevs{
 					"test":   &model.Dev{},
