@@ -73,7 +73,7 @@ type SelectorItem struct {
 }
 
 //AskForOptionsOkteto given some options ask the user to select one
-func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label, selectedTpl string, initialPosition int) (string, error) {
+func AskForOptionsOkteto(options []SelectorItem, label, selectedTpl string, initialPosition int) (string, error) {
 	selectedTemplate := getSelectedTemplate(selectedTpl)
 	activeTemplate := getActiveTemplate()
 	inactiveTemplate := getInactiveTemplate()
