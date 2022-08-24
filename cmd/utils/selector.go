@@ -67,13 +67,9 @@ type oktetoTemplates struct {
 
 //SelectorItem represents a selectable item on a selector
 type SelectorItem struct {
-	Name      string
-	Label     string
-	Enable    bool
-	IsOkteto  bool
-	Namespace string
-	Builder   string
-	Registry  string
+	Name   string
+	Label  string
+	Enable bool
 }
 
 //AskForOptionsOkteto given some options ask the user to select one
