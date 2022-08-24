@@ -30,7 +30,6 @@ import (
 	"github.com/manifoldco/promptui/list"
 	"github.com/manifoldco/promptui/screenbuf"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/term"
 )
 
@@ -78,7 +77,7 @@ type SelectorItem struct {
 }
 
 //AskForOptionsOkteto given some options ask the user to select one
-func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label, selectedTpl string) (string, bool, error) {
+func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label, selectedTpl string, initialPosition int) (string, bool, error) {
 	selectedTemplate := getSelectedTemplate(selectedTpl)
 	activeTemplate := getActiveTemplate()
 	inactiveTemplate := getInactiveTemplate()
@@ -97,7 +96,7 @@ func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label, sel
 	}
 
 	prompt.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
-	optionSelected, isOkteto, err := prompt.Run(ctx)
+	optionSelected, isOkteto, err := prompt.Run(initialPosition)
 	if err != nil || !isValidOption(options, optionSelected) {
 		oktetoLog.Infof("invalid init option: %s", err)
 		return "", false, ErrInvalidOption
@@ -115,13 +114,11 @@ func isValidOption(options []SelectorItem, optionSelected string) bool {
 	return false
 }
 
-//Run runs the selector prompt
-func (s *OktetoSelector) Run(ctx context.Context) (string, bool, error) {
-	startPosition, err := s.getInitialPosition(ctx)
-	if err != nil {
-		return "", false, err
-	}
-	if startPosition != -1 {
+// Run runs the selector prompt
+func (s *OktetoSelector) Run(initialPosition int) (string, bool, error) {
+	startPosition := -1
+	if initialPosition != -1 {
+		startPosition = initialPosition
 		s.Items[startPosition].Label += " *"
 	}
 	l, err := list.New(s.Items, s.Size)
@@ -373,24 +370,6 @@ func (s *OktetoSelector) prepareTemplates() error {
 	s.OktetoTemplates = tpls
 
 	return nil
-}
-
-func (s OktetoSelector) getInitialPosition(ctx context.Context) (int, error) {
-	ctxStore := okteto.ContextStore()
-	oCtx := ctxStore.CurrentContext
-	if oCtx == "" {
-		return -1, nil
-	}
-
-	oCtx = okteto.K8sContextToOktetoUrl(ctx, oCtx, ctxStore.Contexts[oCtx].Namespace, okteto.NewK8sClientProvider())
-	idx := 0
-	for _, item := range s.Items {
-		if strings.Contains(item.Name, oCtx) {
-			return idx, nil
-		}
-		idx++
-	}
-	return -1, nil
 }
 
 func (s *OktetoSelector) renderDetails(item interface{}) [][]byte {

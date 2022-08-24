@@ -124,7 +124,8 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 
 func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
-	oktetoContext, isOkteto, err := utils.AskForOptionsOkteto(ctx, ctxs, "A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", "Context")
+	initialPosition := getInitialPosition(ctxs)
+	oktetoContext, isOkteto, err := utils.AskForOptionsOkteto(ctx, ctxs, "A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", "Context", initialPosition)
 	if err != nil {
 		return "", err
 	}
@@ -151,4 +152,14 @@ func setSecrets(secrets []types.Secret) {
 		os.Setenv(secret.Name, secret.Value)
 		oktetoLog.AddMaskedWord(secret.Value)
 	}
+}
+
+func getInitialPosition(options []utils.SelectorItem) int {
+	currentContext := okteto.Context().Name
+	for indx, item := range options {
+		if strings.Contains(item.Name, currentContext) {
+			return indx
+		}
+	}
+	return -1
 }
