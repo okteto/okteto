@@ -310,6 +310,29 @@ func Test_GetDevFromManifest(t *testing.T) {
 			dev:     &model.Dev{},
 			err:     nil,
 		},
+		{
+			name: "manifest has one dev section and user intrudices empty devName",
+			manifest: &model.Manifest{
+				Dev: model.ManifestDevs{
+					"test": &model.Dev{},
+				},
+			},
+			devName: "",
+			dev:     &model.Dev{},
+			err:     nil,
+		},
+		{
+			name: "manifest has several dev section user introduces emtpy devName",
+			manifest: &model.Manifest{
+				Dev: model.ManifestDevs{
+					"test":   &model.Dev{},
+					"test-2": &model.Dev{},
+				},
+			},
+			devName: "",
+			dev:     nil,
+			err:     ErrNoDevSelected,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
