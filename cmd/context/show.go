@@ -31,11 +31,11 @@ import (
 const hintUrl = "https://okteto.com/docs/reference/cli/#show"
 
 func printContextMember(ctx *okteto.OktetoContext, key string) error {
-	val := reflect.ValueOf(ctx).Elem()
-	for i := 0; i < val.NumField(); i++ {
-		if strings.EqualFold(val.Type().Field(i).Name, key) {
-			val := fmt.Sprintf("%v", val.Field(i).Interface())
-			oktetoLog.Println(val)
+	element := reflect.ValueOf(ctx).Elem()
+	for i := 0; i < element.NumField(); i++ {
+		if strings.EqualFold(element.Type().Field(i).Name, key) {
+			memberValue := fmt.Sprintf("%v", element.Field(i).Interface())
+			oktetoLog.Println(memberValue)
 			return nil
 		}
 	}
