@@ -15,6 +15,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -33,6 +34,11 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
+)
+
+var (
+	// ErrNoDevSelected is raised when no development environment is selected
+	ErrNoDevSelected = errors.New("No Development Environment selected")
 )
 
 const (
