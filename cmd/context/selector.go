@@ -100,9 +100,9 @@ func getK8sClusters(k8sClusters []string) []utils.SelectorItem {
 }
 
 func getInitialPosition(options []utils.SelectorItem) int {
-	currentContext := okteto.Context().Name
+	currentContext := okteto.ContextStore().CurrentContext
 	for indx, item := range options {
-		if strings.Contains(item.Name, currentContext) {
+		if item.Enable && item.Name == currentContext {
 			return indx
 		}
 	}
@@ -111,10 +111,9 @@ func getInitialPosition(options []utils.SelectorItem) int {
 
 func selectedIsOkteto(selected string) bool {
 	ctxStore := okteto.ContextStore()
-	for ctxName, okCtx := range ctxStore.Contexts {
-		if selected == ctxName {
-			return okCtx.IsOkteto
-		}
+	selectedCtx, ok := ctxStore.Contexts[selected]
+	if !ok {
+		return false
 	}
-	return false
+	return selectedCtx.IsOkteto
 }
