@@ -26,8 +26,7 @@ func TestGetCMDWin(t *testing.T) {
 	}
 
 	cmd := getCMD("okteto deploy movies")
-	assert.Equal(t, "okteto", cmd.Path)
-	assert.Equal(t, []string{"deploy", "movies"}, cmd.Args)
+	assert.Equal(t, []string{"okteto deploy movies"}, cmd.Args)
 }
 
 func TestGetCMD(t *testing.T) {
@@ -36,6 +35,5 @@ func TestGetCMD(t *testing.T) {
 	}
 
 	cmd := getCMD("okteto deploy movies")
-	assert.Equal(t, "bash", cmd.Path)
-	assert.Equal(t, []string{"-c", "okteto", "deploy", "movies"}, cmd.Args)
+	assert.Equal(t, []string{"bash", "-c", "okteto deploy movies"}, cmd.Args)
 }
