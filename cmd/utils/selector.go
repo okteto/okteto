@@ -99,7 +99,7 @@ func (s *OktetoSelector) AskForOptionsOkteto(options []SelectorItem, initialPosi
 	s.Items = options
 	s.Size = len(options)
 	s.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
-	optionSelected, err := s.Run(initialPosition)
+	optionSelected, err := s.run(initialPosition)
 	if err != nil || !isValidOption(s.Items, optionSelected) {
 		oktetoLog.Infof("invalid init option: %s", err)
 		return "", ErrInvalidOption
@@ -118,7 +118,7 @@ func isValidOption(options []SelectorItem, optionSelected string) bool {
 }
 
 // Run runs the selector prompt
-func (s *OktetoSelector) Run(initialPosition int) (string, error) {
+func (s *OktetoSelector) run(initialPosition int) (string, error) {
 	startPosition := -1
 	if initialPosition != -1 {
 		startPosition = initialPosition
