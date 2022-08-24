@@ -60,16 +60,24 @@ func executeListContext(ctx context.Context) error {
 
 	var ctxs []okteto.OktetoContextViewer
 	for _, ctxSelector := range contexts {
-		if okCtx, ok := ctxStore.Contexts[ctxSelector.Name]; ok && okCtx.Builder != "" {
-			ctxSelector.Builder = okCtx.Builder
+		okCtx, isOkteto := ctxStore.Contexts[ctxSelector.Name]
+
+		ctxViewer := okteto.OktetoContextViewer{
+			Name:     ctxSelector.Name,
+			Builder:  "docker",
+			Registry: "-",
+			Current:  okteto.Context().Name == ctxSelector.Name,
 		}
-		ctxs = append(ctxs, okteto.OktetoContextViewer{
-			Name:      ctxSelector.Name,
-			Namespace: ctxSelector.Namespace,
-			Builder:   ctxSelector.Builder,
-			Registry:  ctxSelector.Registry,
-			Current:   okteto.Context().Name == ctxSelector.Name,
-		})
+		if isOkteto {
+			ctxViewer.Registry = okCtx.Registry
+			ctxViewer.Namespace = okCtx.Namespace
+			if okCtx.Builder != "" {
+				ctxViewer.Builder = okCtx.Builder
+			}
+		} else {
+			ctxViewer.Namespace = getKubernetesContextNamespace(ctxSelector.Name)
+		}
+		ctxs = append(ctxs, ctxViewer)
 	}
 
 	if output == "" {
