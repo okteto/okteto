@@ -69,7 +69,8 @@ func Doctor() *cobra.Command {
 				if !errors.Is(err, utils.ErrNoDevSelected) {
 					return err
 				}
-				dev, err = utils.SelectDevFromManifest(manifest, "Select which development container's logs to download:")
+				selector := utils.NewOktetoSelector("Select which development container's logs to download:", "Development container")
+				dev, err = utils.SelectDevFromManifest(manifest, selector)
 				if err != nil {
 					return err
 				}

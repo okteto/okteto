@@ -186,7 +186,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 }
 
 // SelectDevFromManifest prompts the selector to choose a development container and returns the dev selected or error
-func SelectDevFromManifest(manifest *model.Manifest, label string) (*model.Dev, error) {
+func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInterface) (*model.Dev, error) {
 	devs := []string{}
 	for k := range manifest.Dev {
 		devs = append(devs, k)
@@ -206,8 +206,7 @@ func SelectDevFromManifest(manifest *model.Manifest, label string) (*model.Dev, 
 			Enable: true,
 		})
 	}
-	selector := NewOktetoSelector(label, items, "Development container")
-	devKey, err := selector.AskForOptionsOkteto(-1)
+	devKey, err := selector.AskForOptionsOkteto(items, -1)
 	if err != nil {
 		return nil, err
 	}

@@ -62,7 +62,8 @@ func Restart() *cobra.Command {
 				if !errors.Is(err, utils.ErrNoDevSelected) {
 					return err
 				}
-				dev, err = utils.SelectDevFromManifest(manifest, "Select which development container to restart:")
+				selector := utils.NewOktetoSelector("Select which development container to restart:", "Development container")
+				dev, err = utils.SelectDevFromManifest(manifest, selector)
 				if err != nil {
 					return err
 				}

@@ -42,7 +42,7 @@ var ErrInvalidOption = errors.New("invalid option")
 
 // OktetoSelectorInterface represents an interface for a selector
 type OktetoSelectorInterface interface {
-	AskForOptionsOkteto(initialPosition int) (string, error)
+	AskForOptionsOkteto(options []SelectorItem, initialPosition int) (string, error)
 }
 
 // OktetoSelector implements the OktetoSelectorInterface
@@ -77,15 +77,13 @@ type SelectorItem struct {
 }
 
 // NewOktetoSelector returns a selector set up with the label and options from the input
-func NewOktetoSelector(label string, options []SelectorItem, selectedTpl string) *OktetoSelector {
+func NewOktetoSelector(label string, selectedTpl string) *OktetoSelector {
 	selectedTemplate := getSelectedTemplate(selectedTpl)
 	activeTemplate := getActiveTemplate()
 	inactiveTemplate := getInactiveTemplate()
 
 	return &OktetoSelector{
 		Label: label,
-		Items: options,
-		Size:  len(options),
 		Templates: &promptui.SelectTemplates{
 			Label:    "{{ .Label }}",
 			Selected: selectedTemplate,
@@ -97,7 +95,9 @@ func NewOktetoSelector(label string, options []SelectorItem, selectedTpl string)
 }
 
 // AskForOptionsOkteto given some options ask the user to select one
-func (s *OktetoSelector) AskForOptionsOkteto(initialPosition int) (string, error) {
+func (s *OktetoSelector) AskForOptionsOkteto(options []SelectorItem, initialPosition int) (string, error) {
+	s.Items = options
+	s.Size = len(options)
 	s.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
 	optionSelected, err := s.Run(initialPosition)
 	if err != nil || !isValidOption(s.Items, optionSelected) {
