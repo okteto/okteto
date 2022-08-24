@@ -17,21 +17,42 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
 
+const hintUrl = "https://okteto.com/docs/reference/cli/#show"
+
+func printContextMember(ctx *okteto.OktetoContext, key string) error {
+	val := reflect.ValueOf(ctx).Elem()
+	for i := 0; i < val.NumField(); i++ {
+		if strings.EqualFold(val.Type().Field(i).Name, key) {
+			val := fmt.Sprintf("%v", val.Field(i).Interface())
+			oktetoLog.Println(val)
+			return nil
+		}
+	}
+
+	return oktetoErrors.UserError{
+		E:    fmt.Errorf("unknown context key: '%s'", key),
+		Hint: hintUrl,
+	}
+}
+
 // Show current context
 func Show() *cobra.Command {
 	var output string
 	cmd := &cobra.Command{
-		Use:   "show",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#show"),
+		Use:   "show [key]",
 		Short: "Print the current context",
+		Args:  utils.MaximumNArgsAccepted(1, hintUrl),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
 
@@ -40,9 +61,15 @@ func Show() *cobra.Command {
 			}
 			ctxStore := okteto.ContextStore()
 			current := ctxStore.Contexts[ctxStore.CurrentContext]
+
+			if len(args) == 1 {
+				return printContextMember(current, args[0])
+			}
+
 			if err := validateOutput(output); err != nil {
 				return err
 			}
+
 			current.Certificate = ""
 			switch output {
 			case "json":
