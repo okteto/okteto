@@ -193,7 +193,7 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 	defer oktetoLog.StopSpinner()
 
 	devName := ""
-	if len(args) == 1 || manifest.Dev.HasDev(args[0]) {
+	if len(args) != 1 || manifest.Dev.HasDev(args[0]) {
 		devName = args[0]
 	}
 
