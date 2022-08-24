@@ -38,7 +38,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//pushOptions refers to all the options that can be passed to Push command
+// pushOptions refers to all the options that can be passed to Push command
 type pushOptions struct {
 	DevPath    string
 	Namespace  string

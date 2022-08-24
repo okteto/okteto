@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//doctorOptions refers to all the options that can be passed to Doctor command
+// doctorOptions refers to all the options that can be passed to Doctor command
 type doctorOptions struct {
 	DevPath    string
 	Namespace  string

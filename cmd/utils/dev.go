@@ -42,7 +42,7 @@ var (
 )
 
 const (
-	//DefaultManifest default okteto manifest file
+	// DefaultManifest default okteto manifest file
 	DefaultManifest   = "okteto.yml"
 	secondaryManifest = "okteto.yaml"
 )
