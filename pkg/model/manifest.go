@@ -695,7 +695,7 @@ func (m *Manifest) SanitizeSvcNames() error {
 	}
 
 	for previousName, newName := range sanitizedServicesNames {
-		oktetoLog.Warning("Service '%s' has been sanitized into '%s' in okteto manifest.", previousName, newName)
+		oktetoLog.Warning("Service '%s' in okteto manifest has been sanitized into '%s'.", previousName, newName)
 	}
 
 	return nil
