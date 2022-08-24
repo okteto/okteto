@@ -125,11 +125,11 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
 	initialPosition := getInitialPosition(ctxs)
-	oktetoContext, isOkteto, err := utils.AskForOptionsOkteto(ctx, ctxs, "A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", "Context", initialPosition)
+	oktetoContext, _, err := utils.AskForOptionsOkteto(ctx, ctxs, "A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", "Context", initialPosition)
 	if err != nil {
 		return "", err
 	}
-	ctxOptions.IsOkteto = isOkteto
+	ctxOptions.IsOkteto = selectedIsOkteto(ctxs, oktetoContext)
 
 	if isCreateNewContextOption(oktetoContext) {
 		oktetoContext, err = askForOktetoURL()
@@ -162,4 +162,13 @@ func getInitialPosition(options []utils.SelectorItem) int {
 		}
 	}
 	return -1
+}
+
+func selectedIsOkteto(options []utils.SelectorItem, selected string) bool {
+	for _, item := range options {
+		if item.Label == selected {
+			return item.IsOkteto
+		}
+	}
+	return false
 }
