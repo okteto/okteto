@@ -129,7 +129,6 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 	if err != nil {
 		return "", err
 	}
-	ctxOptions.IsOkteto = selectedIsOkteto(ctxs, oktetoContext)
 
 	if isCreateNewContextOption(oktetoContext) {
 		oktetoContext, err = askForOktetoURL()
@@ -137,6 +136,8 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 			return "", err
 		}
 		ctxOptions.IsOkteto = true
+	} else {
+		ctxOptions.IsOkteto = selectedIsOkteto(oktetoContext)
 	}
 
 	return oktetoContext, nil

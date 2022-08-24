@@ -117,10 +117,11 @@ func getInitialPosition(options []utils.SelectorItem) int {
 	return -1
 }
 
-func selectedIsOkteto(options []utils.SelectorItem, selected string) bool {
-	for _, item := range options {
-		if item.Label == selected {
-			return item.IsOkteto
+func selectedIsOkteto(selected string) bool {
+	ctxStore := okteto.ContextStore()
+	for ctxName, okCtx := range ctxStore.Contexts {
+		if selected == ctxName {
+			return okCtx.IsOkteto
 		}
 	}
 	return false
