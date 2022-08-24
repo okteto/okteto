@@ -208,7 +208,7 @@ type DeployCommand struct {
 	Command string `json:"command,omitempty" yaml:"command,omitempty"`
 }
 
-//NewDeployInfo creates a deploy Info
+// NewDeployInfo creates a deploy Info
 func NewDeployInfo() *DeployInfo {
 	return &DeployInfo{
 		Commands: []DeployCommand{},
@@ -242,7 +242,7 @@ func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
 	return nil, oktetoErrors.ErrManifestNotFound
 }
 
-//GetManifestV1 gets a manifest from a path or search for the files to generate it
+// GetManifestV1 gets a manifest from a path or search for the files to generate it
 func GetManifestV1(manifestPath string) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -272,7 +272,7 @@ func GetManifestV1(manifestPath string) (*Manifest, error) {
 	return manifest, nil
 }
 
-//GetManifestV2 gets a manifest from a path or search for the files to generate it
+// GetManifestV2 gets a manifest from a path or search for the files to generate it
 func GetManifestV2(manifestPath string) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -969,7 +969,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 			d.Push = nil
 		}
 	}
-	//Unmarshal with yamlv2 because we have the marshal with yaml v2
+	// Unmarshal with yamlv2 because we have the marshal with yaml v2
 	b, err := yaml.Marshal(m)
 	if err != nil {
 		return err

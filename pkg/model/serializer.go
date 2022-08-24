@@ -677,7 +677,7 @@ func checkFileAndNotDirectory(path string) error {
 }
 
 func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type devType Dev //Prevent recursion
+	type devType Dev // Prevent recursion
 	dev := devType(*d)
 	err := unmarshal(&dev)
 	if err != nil {
@@ -819,7 +819,7 @@ func (d *DeployCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	//prevent recursion
+	// prevent recursion
 	type deployCommand DeployCommand
 	var extendedCommand deployCommand
 	err = unmarshal(&extendedCommand)
