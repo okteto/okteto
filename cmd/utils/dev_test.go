@@ -14,6 +14,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -343,4 +344,94 @@ func Test_GetDevFromManifest(t *testing.T) {
 			}
 		})
 	}
+}
+
+type FakeOktetoSelector struct {
+	dev string
+	err error
+}
+
+func (s *FakeOktetoSelector) AskForOptionsOkteto(options []SelectorItem, init int) (string, error) {
+	return s.dev, s.err
+}
+
+func Test_SelectDevFromManifest(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest *model.Manifest
+		selector *FakeOktetoSelector
+		dev      *model.Dev
+		err      error
+	}{
+		{
+			name: "dev-is-selected",
+			manifest: &model.Manifest{
+				Dev: model.ManifestDevs{
+					"test": &model.Dev{
+						Name:            "test",
+						ImagePullPolicy: "Always",
+						Sync: model.Sync{
+							Folders: []model.SyncFolder{
+								{
+									LocalPath:  "/",
+									RemotePath: "/remote",
+								},
+							},
+						},
+						SSHServerPort: 80,
+						Image:         &model.BuildInfo{},
+					},
+					"test-2": &model.Dev{},
+				},
+			},
+			selector: &FakeOktetoSelector{
+				dev: "test",
+			},
+			dev: &model.Dev{
+				Name:            "test",
+				ImagePullPolicy: "Always",
+				Sync: model.Sync{
+					Folders: []model.SyncFolder{
+						{
+							LocalPath:  "/",
+							RemotePath: "/remote",
+						},
+					},
+				},
+				SSHServerPort: 80,
+				Image:         &model.BuildInfo{},
+			},
+		},
+		{
+			name: "dev-is-not-valid",
+			manifest: &model.Manifest{
+				Dev: model.ManifestDevs{
+					"test":   &model.Dev{},
+					"test-2": &model.Dev{},
+				},
+			},
+			selector: &FakeOktetoSelector{
+				dev: "test",
+			},
+			err: fmt.Errorf("supported values for 'imagePullPolicy' are: 'Always', 'IfNotPresent' or 'Never'"),
+		},
+		{
+			name:     "selector-returns-err",
+			manifest: &model.Manifest{},
+			selector: &FakeOktetoSelector{
+				err: errors.New("error-from-selector"),
+			},
+			err: errors.New("error-from-selector"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dev, err := SelectDevFromManifest(tt.manifest, tt.selector)
+			assert.Equal(t, tt.dev, dev)
+			if tt.err != nil {
+				assert.Equal(t, tt.err.Error(), err.Error())
+			}
+		})
+	}
+
 }
