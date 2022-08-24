@@ -16,6 +16,7 @@ package executor
 import (
 	"os"
 	"os/exec"
+	"runtime"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -61,7 +62,7 @@ func NewExecutor(output string) *Executor {
 // Execute executes the specified command adding `env` to the execution environment
 func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 
-	cmd := exec.Command(cmdInfo.Command)
+	cmd := getCMD(cmdInfo.Command)
 	cmd.Env = append(os.Environ(), env...)
 	if err := e.displayer.startCommand(cmd); err != nil {
 		return err
@@ -73,6 +74,18 @@ func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 
 	e.CleanUp(err)
 	return err
+}
+
+// getCMD returns the command to be executed based on the OS
+// We needed to diferentiate between windows and other OS because we were having problems
+// with using bash on windows: see:
+// - https://github.com/okteto/okteto/issues/2820
+// - https://github.com/okteto/okteto/issues/2592
+func getCMD(command string) *exec.Cmd {
+	if runtime.GOOS == "windows" {
+		return exec.Command(command)
+	}
+	return exec.Command("bash", "-c", command)
 }
 
 // CleanUp cleans the execution lines
