@@ -153,22 +153,3 @@ func setSecrets(secrets []types.Secret) {
 		oktetoLog.AddMaskedWord(secret.Value)
 	}
 }
-
-func getInitialPosition(options []utils.SelectorItem) int {
-	currentContext := okteto.Context().Name
-	for indx, item := range options {
-		if strings.Contains(item.Name, currentContext) {
-			return indx
-		}
-	}
-	return -1
-}
-
-func selectedIsOkteto(options []utils.SelectorItem, selected string) bool {
-	for _, item := range options {
-		if item.Label == selected {
-			return item.IsOkteto
-		}
-	}
-	return false
-}
