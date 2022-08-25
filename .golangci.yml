@@ -40,4 +40,6 @@ linters:
     - prealloc
     - goimports
     - nosprintfhostport
+    - interfacebloat
+    - reassign
   fast: true
