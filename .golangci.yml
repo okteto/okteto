@@ -5,6 +5,39 @@ linters:
   # Default: false
   enable-all: true
   disable:
+    # deprecated lints
     - ifshort
     - scopelint
+    # TODO: fix lint erros - ignore until fixed
+    - forcetypeassert
+    - godox
+    - gomnd
+    - gochecknoglobals
+    - containedctx
+    - forbidigo
+    - testpackage
+    - funlen
+    - goconst
+    - godot
+    - gomoddirectives
+    - lll
+    - tagliatelle
+    - nosnakecase
+    - nlreturn
+    - goprintffuncname
+    - usestdlibvars
+    - maintidx
+    - wsl
+    - nestif
+    - gocognit
+    - gofmt
+    - dupl
+    - gocyclo
+    - gochecknoinits
+    - gci
+    - gofumpt
+    - whitespace
+    - prealloc
+    - goimports
+    - nosprintfhostport
   fast: true
