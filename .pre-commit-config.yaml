@@ -63,4 +63,3 @@ repos:
         entry: yamllint --strict -c .yaml-lint.yml
         types: [yaml]
         files: \.(yaml|yml)$
-
