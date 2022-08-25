@@ -20,7 +20,6 @@ repos:
       - id: check-merge-conflict
       - id: check-toml
       - id: check-vcs-permalinks
-      - id: check-yaml
       - id: detect-private-key
         exclude: ^pkg/k8s/secrets/certs\.go$|^pkg/syncthing/certs\.go$|^cmd/deploy/certs\.go$
       - id: end-of-file-fixer
@@ -52,13 +51,14 @@ repos:
         name: Run prettier
         description: Format files with prettier
 
+  # yaml files check
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.26.3
     hooks:
       - id: yamllint
         name: Run yamllint
         description: Check YAML files with yamllint
-        entry: yamllint --strict -c .github/linters/.yaml-lint.yml
+        entry: yamllint --strict -c .yaml-lint.yml
         types: [yaml]
         files: \.(yaml|yml)$
 
