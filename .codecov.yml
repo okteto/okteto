@@ -9,3 +9,5 @@ coverage:
         informational: true
 
 comment: false
+github_checks:
+  annotations: false
