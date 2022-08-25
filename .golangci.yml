@@ -4,6 +4,8 @@ linters:
   # Enable all available linters.
   # Default: false
   enable-all: true
+  enable:
+
   disable:
     # deprecated lints
     - ifshort
@@ -40,6 +42,6 @@ linters:
     - prealloc
     - goimports
     - nosprintfhostport
-    - interfacebloat
-    - reassign
+    - gosec
+    - errcheck
   fast: true
