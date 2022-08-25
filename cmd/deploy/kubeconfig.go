@@ -15,6 +15,7 @@ package deploy
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -86,5 +87,6 @@ func (*KubeConfig) GetCMDAPIConfig() (*clientcmdapi.Config, error) {
 
 //GetTempKubeConfigFile returns a where the temp kubeConfigFile should be stored
 func GetTempKubeConfigFile(name string) string {
-	return fmt.Sprintf(tempKubeConfigTemplate, config.GetUserHomeDir(), name, time.Now().UnixMilli())
+	tempKubeConfigTemplate := fmt.Sprintf("kubeconfig-%s-%d", name, time.Now().UnixMilli())
+	return filepath.Join(config.GetOktetoHome(), tempKubeConfigTemplate)
 }
