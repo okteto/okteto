@@ -1,3 +1,8 @@
 linters:
+  # Enable all available linters.
+  # Default: false
+  enable-all: true
   disable:
-    - errcheck
+    - ifshort
+    - scopelint
+  fast: true
