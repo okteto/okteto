@@ -31,20 +31,20 @@ type kubeConfigHandler interface {
 	Modify(port int, sessionToken, destKubeconfigFile string) error
 }
 
-//KubeConfig refers to a KubeConfig object
+// KubeConfig refers to a KubeConfig object
 type KubeConfig struct{}
 
-//NewKubeConfig creates a new kubeconfig
+// NewKubeConfig creates a new kubeconfig
 func NewKubeConfig() *KubeConfig {
 	return &KubeConfig{}
 }
 
-//Read reads a kubeconfig from an apiConfig
+// Read reads a kubeconfig from an apiConfig
 func (k *KubeConfig) Read() (*rest.Config, error) {
 	return clientcmd.BuildConfigFromKubeconfigGetter("", k.GetCMDAPIConfig)
 }
 
-//Modify modifies the kubeconfig object to inject the proxy
+// Modify modifies the kubeconfig object to inject the proxy
 func (k *KubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) error {
 	clientCfg, err := k.GetCMDAPIConfig()
 	if err != nil {
@@ -85,7 +85,7 @@ func (*KubeConfig) GetCMDAPIConfig() (*clientcmdapi.Config, error) {
 	return okteto.Context().Cfg, nil
 }
 
-//GetTempKubeConfigFile returns a where the temp kubeConfigFile should be stored
+// GetTempKubeConfigFile returns a where the temp kubeConfigFile should be stored
 func GetTempKubeConfigFile(name string) string {
 	tempKubeConfigTemplate := fmt.Sprintf("kubeconfig-%s-%d", name, time.Now().UnixMilli())
 	return filepath.Join(config.GetOktetoHome(), tempKubeConfigTemplate)

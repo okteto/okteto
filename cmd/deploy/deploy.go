@@ -89,7 +89,7 @@ type DeployCommand struct {
 	PipelineType model.Archetype
 }
 
-//Deploy deploys the okteto manifest
+// Deploy deploys the okteto manifest
 func Deploy(ctx context.Context) *cobra.Command {
 	options := &Options{}
 
