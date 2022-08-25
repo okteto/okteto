@@ -4,16 +4,6 @@ name: Lint
 on: [pull_request]
 
 jobs:
-  misspell:
-    name: Check spelling all files in commit misspell # https://github.com/client9/misspell
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out
-        uses: actions/checkout@v3
-      - name: Install
-        run: wget -O - -q https://git.io/misspell | sh -s -- -b . # https://www.gnu.org/software/wget/
-      - name: misspell
-        run: git ls-files --empty-directory | xargs ./misspell -error
   pre-commit:
     name: Run pre-commit # https://pre-commit.com/
     runs-on: ubuntu-latest
