@@ -10,6 +10,8 @@ repos:
     hooks:
       - id: identity
       - id: check-hooks-apply
+
+  # general checks for the repository
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.1.0
     hooks:
