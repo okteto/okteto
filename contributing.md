@@ -145,6 +145,6 @@ This command will run `pre-commit run --all-files` and `golangci-lint run` for t
 > - [golangci-lint](https://golangci-lint.run/usage/install/#local-installation)
 > - [pre-commit](https://pre-commit.com/#installation)
 
-We recomend to have an [integration](https://golangci-lint.run/usage/integrations/) with your IDE so that golangci-lint is used as default linter
+We recommend to have an [integration](https://golangci-lint.run/usage/integrations/) with your IDE so that golangci-lint is used as default linter
 
 There is also a [lint workflow](.github/workflows/lint.yml) running `pre-commit` and static code analysis for Go is done by [DeepSource](https://deepsource.io/) pipeline.
