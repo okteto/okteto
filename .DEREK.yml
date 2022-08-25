@@ -1,4 +1,4 @@
-curators:
+maintainers:
   - pchico83
   - rberrelleza
   - rlamana
@@ -7,7 +7,6 @@ curators:
 
 features:
   - dco_check
-  - comments
   - pr_description_required
 
 contributing_url: https://github.com/okteto/okteto/blob/master/contributing.md
