@@ -138,9 +138,9 @@ Before making a PR, we recommend contributors to run a lint check on their code 
 make lint
 ```
 
-The same command also runs as part of CI on every PR with the workflow [.github/workflows/lint.yml](.github/workflows/lint.yml).
-
 > We use golangci-lint and pre-commit to run different linterns. You will need to download these tools in order to run the lint locally
 >
 > - Installation for [golangci-lint](https://golangci-lint.run/usage/install/#local-installation)
 > - Installation for [pre-commit](https://pre-commit.com/#installation)
+
+During the PR creation, there would be a [lint workflow](.github/workflows/lint.yml) running `pre-commit` and Deepsource will run static code analysis for Go.
