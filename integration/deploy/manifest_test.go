@@ -43,6 +43,13 @@ var (
 deploy:
   - kubectl apply -f k8s.yml
 `
+	oktetoManifestWithDestroyContent = `build:
+app:
+  context: app
+deploy:
+- okteto destroy
+- kubectl apply -f k8s.yml
+`
 )
 
 // TestDeployOktetoManifest tests the following scenario:
@@ -157,6 +164,70 @@ func TestRedeployOktetoManifestForImages(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NoError(t, expectForceBuild(output))
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	_, err = integration.GetService(context.Background(), testNamespace, "e2etest", c)
+	require.True(t, k8sErrors.IsNotFound(err))
+}
+
+// TestDeployOktetoManifestWithDestroy tests the following scenario:
+// - Deploying a okteto manifest locally
+// - The endpoints generated are accessible
+// - Redeploy with okteto deploy
+// - Checks that configmap is still there
+func TestDeployOktetoManifestWithDestroy(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	require.NoError(t, createOktetoManifest(dir))
+	require.NoError(t, createAppDockerfile(dir))
+	require.NoError(t, createK8sManifest(dir))
+
+	testNamespace := integration.GetTestNamespace("TestDeployDestroy", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+
+	// Test that image is not built before running okteto deploy
+	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
+	require.False(t, isImageBuilt(appImageDev))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	// Test that image is built after running okteto deploy
+	require.True(t, isImageBuilt(appImageDev))
+
+	// Test that endpoint works
+	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
+
+	deployOptions.LogLevel = "debug"
+	// Test redeploy is not building any image
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	_, err = integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", filepath.Base(dir)), c)
+	require.NoError(t, err)
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
