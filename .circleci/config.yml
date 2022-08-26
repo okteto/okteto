@@ -372,6 +372,14 @@ workflows:
           filters:
             branches:
               only: master
+      - push-image-tag:
+          requires:
+            - build-binaries
+      - release:
+          context: GKE
+          requires:
+            - build-binaries
+            - push-image-tag
 
   release-branch:
     jobs:
@@ -408,24 +416,6 @@ workflows:
           filters:
             branches:
               only: *release-branch-regex
-
-  release-dev:
-    when:
-      and:
-        - equal: [scheduled_pipeline, << pipeline.trigger_source >>]
-        - equal: ["release-dev", << pipeline.schedule.name >>]
-    jobs:
-      - build-binaries
-      - run-unit-test
-      - run-windows-unit-test
-      - push-image-tag:
-          requires:
-            - build-binaries
-      - release:
-          context: GKE
-          requires:
-            - build-binaries
-            - push-image-tag
 
   release:
     when:
