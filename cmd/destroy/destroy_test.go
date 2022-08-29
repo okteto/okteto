@@ -53,6 +53,7 @@ type fakeDestroyer struct {
 	destroyedVolumes bool
 	err              error
 	errOnVolumes     error
+	runner           runnerI
 }
 
 type fakeSecretHandler struct {
@@ -145,6 +146,7 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 		nsDestroyer:       destroyer,
 		executor:          executor,
 		k8sClientProvider: test.NewFakeK8sProvider(),
+		runner:            &oktetoDefaultRunner{},
 	}
 
 	err := cmd.runDestroy(ctx, opts)
@@ -202,6 +204,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 			cmd := &destroyCommand{
 				getManifest:       tt.getManifest,
 				secrets:           &secretHandler,
+				runner:            &oktetoDefaultRunner{},
 				nsDestroyer:       &fakeDestroyer{},
 				executor:          executor,
 				k8sClientProvider: test.NewFakeK8sProvider(),
@@ -337,6 +340,7 @@ func TestDestroyWithError(t *testing.T) {
 				executor:          executor,
 				nsDestroyer:       destroyer,
 				k8sClientProvider: test.NewFakeK8sProvider(),
+				runner:            &oktetoDefaultRunner{},
 			}
 
 			err := cmd.runDestroy(ctx, opts)
@@ -567,6 +571,238 @@ func TestDestroyWithoutError(t *testing.T) {
 				executor:          executor,
 				nsDestroyer:       destroyer,
 				k8sClientProvider: test.NewFakeK8sProvider(),
+				runner:            &oktetoDefaultRunner{},
+			}
+
+			err := cmd.runDestroy(ctx, opts)
+
+			assert.NoError(t, err)
+			assert.ElementsMatch(t, tt.want, executor.executed)
+			assert.True(t, destroyer.destroyed)
+			assert.True(t, destroyer.destroyedVolumes)
+
+			//check if configmap has been created
+			fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
+			if err != nil {
+				t.Fatal("could not create fake k8s client")
+			}
+			cfg, _ := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+			assert.Nil(t, cfg)
+		})
+	}
+}
+
+func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
+	ctx := context.Background()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
+	tests := []struct {
+		name        string
+		getManifest func(path string) (*model.Manifest, error)
+		secrets     []v1.Secret
+		want        []model.DeployCommand
+	}{
+		{
+			name:        "WithoutSecretsWithoutManifest",
+			getManifest: getManifestWithError,
+			secrets:     []v1.Secret{},
+			want:        []model.DeployCommand{},
+		},
+		{
+			name:        "WithoutSecretsWithManifest",
+			getManifest: getFakeManifest,
+			secrets:     []v1.Secret{},
+			want:        fakeManifest.Destroy,
+		},
+		{
+			name:        "WithSecretsWithoutManifest",
+			getManifest: getManifestWithError,
+			secrets: []v1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-1",
+					},
+				},
+			},
+			want: []model.DeployCommand{},
+		},
+		{
+			name:        "WithSecretsWithManifest",
+			getManifest: getFakeManifest,
+			secrets: []v1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-1",
+					},
+				},
+			},
+			want: fakeManifest.Destroy,
+		},
+		{
+			name:        "WithHelmSecretsWithoutManifest",
+			getManifest: getManifestWithError,
+			secrets: []v1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-1",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+			},
+			want: []model.DeployCommand{
+				{
+					Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "helm-app"),
+				},
+			},
+		},
+		{
+			name:        "WithSeveralHelmSecretsWithoutManifest",
+			getManifest: getManifestWithError,
+			secrets: []v1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-1",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-2",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "another-helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-3",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "last-helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+			},
+			want: []model.DeployCommand{
+				{
+					Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "helm-app"),
+				},
+				{
+					Name:    fmt.Sprintf(helmUninstallCommand, "another-helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "another-helm-app"),
+				},
+				{
+					Name:    fmt.Sprintf(helmUninstallCommand, "last-helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "last-helm-app"),
+				},
+			},
+		},
+		{
+			name:        "WithHelmSecretsWithManifest",
+			getManifest: getFakeManifest,
+			secrets: []v1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-1",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+			},
+			want: append(fakeManifest.Destroy, model.DeployCommand{Name: fmt.Sprintf(helmUninstallCommand, "helm-app"), Command: fmt.Sprintf(helmUninstallCommand, "helm-app")}),
+		},
+		{
+			name:        "WithSeveralHelmSecretsWithManifest",
+			getManifest: getFakeManifest,
+			secrets: []v1.Secret{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-1",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-2",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "another-helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "secret-3",
+						Labels: map[string]string{
+							ownerLabel: helmOwner,
+							nameLabel:  "last-helm-app",
+						},
+					},
+					Type: model.HelmSecretType,
+				},
+			},
+			want: append(
+				fakeManifest.Destroy,
+				model.DeployCommand{
+					Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "helm-app"),
+				},
+				model.DeployCommand{
+					Name:    fmt.Sprintf(helmUninstallCommand, "another-helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "another-helm-app"),
+				},
+				model.DeployCommand{
+					Name:    fmt.Sprintf(helmUninstallCommand, "last-helm-app"),
+					Command: fmt.Sprintf(helmUninstallCommand, "last-helm-app"),
+				},
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			executor := &fakeExecutor{}
+			opts := &Options{
+				Name: "test-app",
+			}
+			destroyer := &fakeDestroyer{}
+			secretHandler := fakeSecretHandler{
+				secrets: tt.secrets,
+			}
+			cmd := &destroyCommand{
+				getManifest:       tt.getManifest,
+				secrets:           &secretHandler,
+				executor:          executor,
+				nsDestroyer:       destroyer,
+				k8sClientProvider: test.NewFakeK8sProvider(),
+				runner:            &oktetoInsideOktetoRunner{},
 			}
 
 			err := cmd.runDestroy(ctx, opts)
@@ -614,6 +850,7 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 		executor:          executor,
 		nsDestroyer:       destroyer,
 		k8sClientProvider: test.NewFakeK8sProvider(),
+		runner:            &oktetoDefaultRunner{},
 	}
 
 	err := cmd.runDestroy(ctx, opts)
@@ -659,6 +896,7 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 		executor:          executor,
 		nsDestroyer:       destroyer,
 		k8sClientProvider: test.NewFakeK8sProvider(),
+		runner:            &oktetoDefaultRunner{},
 	}
 
 	err := cmd.runDestroy(ctx, opts)
