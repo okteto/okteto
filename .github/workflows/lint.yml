@@ -14,3 +14,5 @@ jobs:
           python-version: '3.x' # Version range or exact version of a Python version to use, using SemVer's version range syntax
           architecture: 'x64' # optional x64 or x86. Defaults to x64 if not specified
       - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args: --all-files
