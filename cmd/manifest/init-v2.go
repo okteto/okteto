@@ -269,7 +269,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 	c := &deploy.DeployCommand{
 		GetManifest:        mc.getManifest,
 		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat()),
+		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), false),
 		Proxy:              proxy,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,

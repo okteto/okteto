@@ -16,22 +16,22 @@ package executor
 import (
 	"os"
 	"os/exec"
-	"runtime"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
 
-//ManifestExecutor is the interface to execute a command
+// ManifestExecutor is the interface to execute a command
 type ManifestExecutor interface {
 	Execute(command model.DeployCommand, env []string) error
 	CleanUp(err error)
 }
 
-//Executor implements ManifestExecutor with a executor displayer
+// Executor implements ManifestExecutor with a executor displayer
 type Executor struct {
-	outputMode string
-	displayer  executorDisplayer
+	outputMode     string
+	displayer      executorDisplayer
+	runWithoutBash bool
 }
 
 type executorDisplayer interface {
@@ -41,7 +41,7 @@ type executorDisplayer interface {
 }
 
 // NewExecutor returns a new executor
-func NewExecutor(output string) *Executor {
+func NewExecutor(output string, runWithoutBash bool) *Executor {
 	var displayer executorDisplayer
 	switch output {
 	case oktetoLog.TTYFormat:
@@ -54,15 +54,19 @@ func NewExecutor(output string) *Executor {
 		displayer = newTTYExecutor()
 	}
 	return &Executor{
-		outputMode: output,
-		displayer:  displayer,
+		outputMode:     output,
+		displayer:      displayer,
+		runWithoutBash: runWithoutBash,
 	}
 }
 
 // Execute executes the specified command adding `env` to the execution environment
 func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 
-	cmd := getCMD(cmdInfo.Command)
+	cmd := exec.Command("bash", "-c", cmdInfo.Command)
+	if e.runWithoutBash {
+		cmd = exec.Command(cmdInfo.Command)
+	}
 	cmd.Env = append(os.Environ(), env...)
 	if err := e.displayer.startCommand(cmd); err != nil {
 		return err
@@ -74,18 +78,6 @@ func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 
 	e.CleanUp(err)
 	return err
-}
-
-// getCMD returns the command to be executed based on the OS
-// We needed to diferentiate between windows and other OS because we were having problems
-// with using bash on windows: see:
-// - https://github.com/okteto/okteto/issues/2820
-// - https://github.com/okteto/okteto/issues/2592
-func getCMD(command string) *exec.Cmd {
-	if runtime.GOOS == "windows" {
-		return exec.Command(command)
-	}
-	return exec.Command("bash", "-c", command)
 }
 
 // CleanUp cleans the execution lines
