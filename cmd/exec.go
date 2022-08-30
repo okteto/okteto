@@ -202,7 +202,7 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 		if !errors.Is(err, utils.ErrNoDevSelected) {
 			return nil, err
 		}
-		dev, err = utils.SelectDevFromManifest(manifest, "Select the development container where you want to exec:")
+		dev, err = utils.SelectDevFromManifest(manifest, "Select which development container to exec:")
 		if err != nil {
 			return nil, err
 		}

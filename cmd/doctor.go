@@ -69,7 +69,7 @@ func Doctor() *cobra.Command {
 				if !errors.Is(err, utils.ErrNoDevSelected) {
 					return err
 				}
-				dev, err = utils.SelectDevFromManifest(manifest, "Select the development container you want download logs:")
+				dev, err = utils.SelectDevFromManifest(manifest, "Select which development container's logs to download:")
 				if err != nil {
 					return err
 				}

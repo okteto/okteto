@@ -82,7 +82,7 @@ func Down() *cobra.Command {
 					if !errors.Is(err, utils.ErrNoDevSelected) {
 						return err
 					}
-					dev, err = utils.SelectDevFromManifest(manifest, "Select the development container you want to deactivate:")
+					dev, err = utils.SelectDevFromManifest(manifest, "Select which development container to deactivate:")
 					if err != nil {
 						return err
 					}
