@@ -29,8 +29,8 @@ import (
 
 const hintUrl = "https://okteto.com/docs/reference/cli/#show"
 
-func printContextMember(ctx *okteto.OktetoContext, key string) error {
-	if value, ok := model.GetFieldValueByTag(ctx, key, "json"); ok {
+func printContextMember(ctx *okteto.OktetoContext, key string, tag string) error {
+	if value, ok := model.GetFieldValueByTag(ctx, key, tag); ok {
 		oktetoLog.Println(value)
 		return nil
 	}
@@ -57,12 +57,12 @@ func Show() *cobra.Command {
 			ctxStore := okteto.ContextStore()
 			current := ctxStore.Contexts[ctxStore.CurrentContext]
 
-			if len(args) == 1 {
-				return printContextMember(current, args[0])
-			}
-
 			if err := validateOutput(output); err != nil {
 				return err
+			}
+
+			if len(args) == 1 {
+				return printContextMember(current, args[0], output)
 			}
 
 			current.Certificate = ""
