@@ -305,7 +305,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	// Proxy shutdown
 	assert.True(t, p.shutdown)
 
-	//check if configmap has been created
+	// check if configmap has been created
 	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
@@ -367,7 +367,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	// Proxy started
 	assert.True(t, p.started)
 
-	//check if configmap has been created
+	// check if configmap has been created
 	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
@@ -425,7 +425,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	// Proxy wasn't shutdown
 	assert.False(t, p.shutdown)
 
-	//check if configmap has been created
+	// check if configmap has been created
 	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
@@ -481,7 +481,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	// Proxy was shutdown
 	assert.True(t, p.shutdown)
 
-	//check if configmap has been created
+	// check if configmap has been created
 	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")

@@ -156,7 +156,7 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 	assert.False(t, destroyer.destroyed)
 	assert.False(t, destroyer.destroyedVolumes)
 
-	//check if configmap has been created
+	// check if configmap has been created
 	fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
@@ -215,7 +215,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 			assert.Error(t, err)
 			assert.Equal(t, tt.want, len(executor.executed))
 
-			//check if configmap has been created
+			// check if configmap has been created
 			fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
@@ -350,7 +350,7 @@ func TestDestroyWithError(t *testing.T) {
 			assert.False(t, destroyer.destroyed)
 			assert.True(t, destroyer.destroyedVolumes)
 
-			//check if configmap has been created
+			// check if configmap has been created
 			fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
@@ -581,7 +581,7 @@ func TestDestroyWithoutError(t *testing.T) {
 			assert.True(t, destroyer.destroyed)
 			assert.True(t, destroyer.destroyedVolumes)
 
-			//check if configmap has been created
+			// check if configmap has been created
 			fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
@@ -812,7 +812,7 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 			assert.True(t, destroyer.destroyed)
 			assert.True(t, destroyer.destroyedVolumes)
 
-			//check if configmap has been created
+			// check if configmap has been created
 			fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
@@ -860,7 +860,7 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 	assert.False(t, destroyer.destroyed)
 	assert.False(t, destroyer.destroyedVolumes)
 
-	//check if configmap has been created
+	// check if configmap has been created
 	fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
@@ -906,7 +906,7 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	assert.True(t, destroyer.destroyed)
 	assert.True(t, destroyer.destroyedVolumes)
 
-	//check if configmap has been created
+	// check if configmap has been created
 	fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
