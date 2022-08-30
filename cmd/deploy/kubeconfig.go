@@ -87,6 +87,6 @@ func (*KubeConfig) GetCMDAPIConfig() (*clientcmdapi.Config, error) {
 
 // GetTempKubeConfigFile returns a where the temp kubeConfigFile should be stored
 func GetTempKubeConfigFile(name string) string {
-	tempKubeConfigTemplate := fmt.Sprintf("kubeconfig-%s-%d", name, time.Now().UnixMilli())
+	tempKubeConfigTemplate := fmt.Sprintf("kubeconfig-deploy-%s-%d", name, time.Now().UnixMilli())
 	return filepath.Join(config.GetOktetoHome(), tempKubeConfigTemplate)
 }
