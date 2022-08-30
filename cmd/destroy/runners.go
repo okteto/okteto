@@ -61,15 +61,15 @@ func (*oktetoDefaultRunner) setErrorStatus(ctx context.Context, cfg *apiv1.Confi
 	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
 }
 
-func (*oktetoInsideOktetoRunner) translateConfigMapAndDeploy(ctx context.Context, data *pipeline.CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
+func (*oktetoInsideOktetoRunner) translateConfigMapAndDeploy(_ context.Context, _ *pipeline.CfgData, _ kubernetes.Interface) (*apiv1.ConfigMap, error) {
 	return nil, nil
 }
 
-func (*oktetoInsideOktetoRunner) destroyConfigMap(ctx context.Context, cfg *apiv1.ConfigMap, namespace string, c kubernetes.Interface) error {
+func (*oktetoInsideOktetoRunner) destroyConfigMap(_ context.Context, _ *apiv1.ConfigMap, _ string, _ kubernetes.Interface) error {
 	return nil
 }
 
-func (*oktetoInsideOktetoRunner) setErrorStatus(ctx context.Context, cfg *apiv1.ConfigMap, data *pipeline.CfgData, err error, c kubernetes.Interface) error {
+func (*oktetoInsideOktetoRunner) setErrorStatus(_ context.Context, _ *apiv1.ConfigMap, _ *pipeline.CfgData, err error, _ kubernetes.Interface) error {
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destruction failed: %s", err.Error())
 	return nil
 }
