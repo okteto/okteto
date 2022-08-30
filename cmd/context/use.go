@@ -138,7 +138,7 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 		}
 		ctxOptions.IsOkteto = true
 	} else {
-		ctxOptions.IsOkteto = selectedIsOkteto(oktetoContext)
+		ctxOptions.IsOkteto = okteto.IsOktetoContext(oktetoContext)
 	}
 
 	return oktetoContext, nil

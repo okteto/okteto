@@ -481,3 +481,13 @@ func (c *OktetoContext) ToViewer() *OktetoContextViewer {
 		Current:   Context().Name == c.Name,
 	}
 }
+
+// IsOktetoContext returns if the contextName param is Okteto
+func IsOktetoContext(contextName string) bool {
+	ctxStore := ContextStore()
+	selectedCtx, ok := ctxStore.Contexts[contextName]
+	if !ok {
+		return false
+	}
+	return selectedCtx.IsOkteto
+}
