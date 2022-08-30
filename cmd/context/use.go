@@ -143,9 +143,12 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 
 func setSecrets(secrets []types.Secret) {
 	for _, secret := range secrets {
-		if _, exists := os.LookupEnv(secret.Name); !exists {
-			os.Setenv(secret.Name, secret.Value)
-			oktetoLog.AddMaskedWord(secret.Value)
+		if value, exists := os.LookupEnv(secret.Name); exists {
+			oktetoLog.Warning("$%s secret is being overridden by a local environment variable by the same name.", secret.Name)
+			oktetoLog.AddMaskedWord(value)
+			continue
 		}
+		os.Setenv(secret.Name, secret.Value)
+		oktetoLog.AddMaskedWord(secret.Value)
 	}
 }
