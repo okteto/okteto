@@ -56,6 +56,7 @@ func Show() *cobra.Command {
 			}
 			ctxStore := okteto.ContextStore()
 			current := ctxStore.Contexts[ctxStore.CurrentContext]
+			current.Certificate = ""
 
 			if err := validateOutput(output); err != nil {
 				return err
@@ -65,7 +66,6 @@ func Show() *cobra.Command {
 				return printContextMember(current, args[0], output)
 			}
 
-			current.Certificate = ""
 			switch output {
 			case "json":
 				bytes, err := json.MarshalIndent(current, "", "  ")
