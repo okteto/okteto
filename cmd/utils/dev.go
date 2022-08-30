@@ -185,6 +185,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 	}
 }
 
+// SelectDevFromManifest prompts the selector to choose a development container and returns the dev selected or error
 func SelectDevFromManifest(manifest *model.Manifest, label string) (*model.Dev, error) {
 	devs := []string{}
 	for k := range manifest.Dev {
