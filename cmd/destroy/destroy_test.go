@@ -812,7 +812,6 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 			assert.True(t, destroyer.destroyed)
 			assert.True(t, destroyer.destroyedVolumes)
 
-			// check if configmap has been created
 			fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
