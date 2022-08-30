@@ -17,6 +17,49 @@ import (
 	"testing"
 )
 
+func Test_getFieldValueByTag(t *testing.T) {
+	newCar := struct {
+		Name              string               `json:"name" yaml:"yamlName,omitempty"`
+		Flag              bool               `json:"flag" yaml:"yamlFlag,omitempty"`
+	}{
+		Name:    "Okteto",
+		Flag: true,
+	}
+
+	var tests = []struct {
+		name     string
+		fieldName string
+		tag string
+		shouldExist bool
+		expected any
+	}{
+		{name: "get string from struct [json tag]", fieldName: "name", tag: "json", shouldExist: true, expected: "Okteto"},
+		{name: "get boolean from struct [json tag]", fieldName: "flag", tag: "json", shouldExist: true,expected: true},
+		{name: "get missing key from struct [json tag]", fieldName: "missing-key", shouldExist: false, tag: "json"},
+		{name: "get string from struct [yaml tag]", fieldName: "yamlName", tag: "yaml", shouldExist: true,expected: "Okteto"},
+		{name: "get boolean from struct [yaml tag]", fieldName: "yamlFlag", tag: "yaml", shouldExist: true,expected: true},
+		{name: "get missing key from struct [yaml tag]", fieldName: "missing-key", shouldExist: false, tag: "yaml"},
+		{name: "get unknown key from unknown tag", fieldName: "unknown-key", tag: "unknown-tag", shouldExist: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual, ok := GetFieldValueByTag(&newCar, tt.fieldName, tt.tag)
+			if !ok && tt.shouldExist {
+				t.Errorf("%s: couldn't find key: '%s'", tt.name, tt.fieldName)
+			}
+			
+			if ok && !tt.shouldExist {
+				t.Errorf("%s: found a key that doesn't exist: '%s'", tt.name, tt.fieldName)
+			}
+
+			if ok && actual != tt.expected {
+				t.Errorf("'%s' got '%v' expected: '%v'", tt.name, actual, tt.expected)
+			}
+		})
+	}
+}
+
 func Test_GetValidNameFromFolder(t *testing.T) {
 	var tests = []struct {
 		name     string

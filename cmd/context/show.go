@@ -17,12 +17,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
-	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -31,17 +30,13 @@ import (
 const hintUrl = "https://okteto.com/docs/reference/cli/#show"
 
 func printContextMember(ctx *okteto.OktetoContext, key string) error {
-	element := reflect.ValueOf(ctx).Elem()
-	for i := 0; i < element.NumField(); i++ {
-		if strings.EqualFold(element.Type().Field(i).Name, key) {
-			memberValue := fmt.Sprintf("%v", element.Field(i).Interface())
-			oktetoLog.Println(memberValue)
-			return nil
-		}
+	if value, ok := model.GetFieldValueByTag(ctx, key, "json"); ok {
+		oktetoLog.Println(value)
+		return nil
 	}
 
 	return oktetoErrors.UserError{
-		E:    fmt.Errorf("unknown context key: '%s'", key),
+		E:    fmt.Errorf("unknown context key: %s", key),
 		Hint: hintUrl,
 	}
 }

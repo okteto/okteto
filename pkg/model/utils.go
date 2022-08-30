@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -144,4 +145,26 @@ func pathExistsAndDir(path string) bool {
 		return false
 	}
 	return info.IsDir()
+}
+
+func GetFieldValueByTag[T any](obj *T, key string, tagKey string) (any, bool) {
+	element := reflect.ValueOf(obj).Elem()
+	for i := 0; i < element.NumField(); i++ {
+		tag, ok := element.Type().Field(i).Tag.Lookup(tagKey)
+		if (!ok) {
+			continue
+		}
+
+		name := strings.Split(tag, ",")[0]
+
+		// ignore omitted fields
+		if (name == "-") {
+			continue
+		}
+
+		if strings.EqualFold(name, key) {
+			return element.Field(i).Interface(), true
+		}
+	}
+	return nil, false
 }
