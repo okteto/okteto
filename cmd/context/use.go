@@ -99,7 +99,7 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 			return oktetoErrors.ErrCtxNotSet
 		}
 		oktetoLog.Infof("authenticating with interactive context")
-		oktetoContext, err := getContext(ctx, ctxOptions)
+		oktetoContext, err := getContext(ctxOptions)
 		if err != nil {
 			return err
 		}
@@ -122,13 +122,14 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 	return nil
 }
 
-func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
+func getContext(ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
-	oktetoContext, isOkteto, err := utils.AskForOptionsOkteto(ctx, ctxs, "A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", "Context")
+	initialPosition := getInitialPosition(ctxs)
+	selector := utils.NewOktetoSelector("A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", "Context")
+	oktetoContext, err := selector.AskForOptionsOkteto(ctxs, initialPosition)
 	if err != nil {
 		return "", err
 	}
-	ctxOptions.IsOkteto = isOkteto
 
 	if isCreateNewContextOption(oktetoContext) {
 		oktetoContext, err = askForOktetoURL()
@@ -136,6 +137,8 @@ func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error)
 			return "", err
 		}
 		ctxOptions.IsOkteto = true
+	} else {
+		ctxOptions.IsOkteto = okteto.IsOktetoContext(oktetoContext)
 	}
 
 	return oktetoContext, nil

@@ -66,7 +66,8 @@ func Status() *cobra.Command {
 				if !errors.Is(err, utils.ErrNoDevSelected) {
 					return err
 				}
-				dev, err = utils.SelectDevFromManifest(manifest, "Select which development container's sync status is needed:")
+				selector := utils.NewOktetoSelector("Select which development container's sync status is needed:", "Development container")
+				dev, err = utils.SelectDevFromManifest(manifest, selector)
 				if err != nil {
 					return err
 				}

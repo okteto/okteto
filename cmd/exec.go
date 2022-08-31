@@ -202,7 +202,8 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 		if !errors.Is(err, utils.ErrNoDevSelected) {
 			return nil, err
 		}
-		dev, err = utils.SelectDevFromManifest(manifest, "Select which development container to exec:")
+		selector := utils.NewOktetoSelector("Select which development container to exec:", "Development container")
+		dev, err = utils.SelectDevFromManifest(manifest, selector)
 		if err != nil {
 			return nil, err
 		}
