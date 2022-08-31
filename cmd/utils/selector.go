@@ -57,7 +57,7 @@ type OktetoSelector struct {
 	OktetoTemplates *oktetoTemplates
 }
 
-//oktetoTemplates stores the templates to render the text
+// oktetoTemplates stores the templates to render the text
 type oktetoTemplates struct {
 	FuncMap   template.FuncMap
 	label     *template.Template
@@ -69,7 +69,7 @@ type oktetoTemplates struct {
 	extraInfo *template.Template
 }
 
-//SelectorItem represents a selectable item on a selector
+// SelectorItem represents a selectable item on a selector
 type SelectorItem struct {
 	Name   string
 	Label  string

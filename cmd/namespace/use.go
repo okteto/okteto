@@ -30,7 +30,7 @@ const (
 	newNamespaceOption = "Create new namespace"
 )
 
-//UseOptions are the options for the use command
+// UseOptions are the options for the use command
 type UseOptions struct {
 	personal bool
 }
