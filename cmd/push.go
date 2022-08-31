@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -37,7 +38,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//pushOptions refers to all the options that can be passed to Push command
+// pushOptions refers to all the options that can be passed to Push command
 type pushOptions struct {
 	DevPath    string
 	Namespace  string
@@ -98,7 +99,13 @@ func Push(ctx context.Context) *cobra.Command {
 			}
 			dev, err := utils.GetDevFromManifest(manifest, devName)
 			if err != nil {
-				return err
+				if !errors.Is(err, utils.ErrNoDevSelected) {
+					return err
+				}
+				dev, err = utils.SelectDevFromManifest(manifest, "Select which development container to push to:")
+				if err != nil {
+					return err
+				}
 			}
 
 			if len(pushOpts.AppName) > 0 && pushOpts.AppName != dev.Name {

@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -26,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//doctorOptions refers to all the options that can be passed to Doctor command
+// doctorOptions refers to all the options that can be passed to Doctor command
 type doctorOptions struct {
 	DevPath    string
 	Namespace  string
@@ -65,7 +66,13 @@ func Doctor() *cobra.Command {
 			}
 			dev, err := utils.GetDevFromManifest(manifest, devName)
 			if err != nil {
-				return err
+				if !errors.Is(err, utils.ErrNoDevSelected) {
+					return err
+				}
+				dev, err = utils.SelectDevFromManifest(manifest, "Select which development container's logs to download:")
+				if err != nil {
+					return err
+				}
 			}
 			filename, err := doctor.Run(ctx, dev, doctorOpts.DevPath, c)
 			if err == nil {

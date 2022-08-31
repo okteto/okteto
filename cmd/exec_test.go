@@ -14,9 +14,10 @@
 package cmd
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/okteto/okteto/cmd/utils"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 )
@@ -72,14 +73,16 @@ func TestGetDevFromArgs(t *testing.T) {
 			},
 			args:        []string{"not-api", "autocreate"},
 			expectedDev: nil,
-			expectedErr: utils.ErrInvalidOption,
+			expectedErr: fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, "not-api"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			dev, err := getDevFromArgs(tt.manifest, tt.args)
 			assert.Equal(t, tt.expectedDev, dev)
-			assert.ErrorIs(t, err, tt.expectedErr)
+			if err != nil {
+				assert.Error(t, err, tt.expectedErr.Error())
+			}
 		})
 	}
 }

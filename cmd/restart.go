@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -58,7 +59,13 @@ func Restart() *cobra.Command {
 			}
 			dev, err := utils.GetDevFromManifest(manifest, devName)
 			if err != nil {
-				return err
+				if !errors.Is(err, utils.ErrNoDevSelected) {
+					return err
+				}
+				dev, err = utils.SelectDevFromManifest(manifest, "Select which development container to restart:")
+				if err != nil {
+					return err
+				}
 			}
 
 			if len(dev.Services) == 0 {

@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -191,15 +192,17 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	var dev *model.Dev
-	var err error
-	if len(args) == 1 || !manifest.Dev.HasDev(args[0]) {
-		dev, err = utils.GetDevFromManifest(manifest, "")
-		if err != nil {
+	devName := ""
+	if len(args) != 1 || manifest.Dev.HasDev(args[0]) {
+		devName = args[0]
+	}
+
+	dev, err := utils.GetDevFromManifest(manifest, devName)
+	if err != nil {
+		if !errors.Is(err, utils.ErrNoDevSelected) {
 			return nil, err
 		}
-	} else {
-		dev, err = utils.GetDevFromManifest(manifest, args[0])
+		dev, err = utils.SelectDevFromManifest(manifest, "Select which development container to exec:")
 		if err != nil {
 			return nil, err
 		}
