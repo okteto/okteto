@@ -99,7 +99,7 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 			return oktetoErrors.ErrCtxNotSet
 		}
 		oktetoLog.Infof("authenticating with interactive context")
-		oktetoContext, err := getContext(ctx, ctxOptions)
+		oktetoContext, err := getContext(ctxOptions)
 		if err != nil {
 			return err
 		}
@@ -122,7 +122,7 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 	return nil
 }
 
-func getContext(ctx context.Context, ctxOptions *ContextOptions) (string, error) {
+func getContext(ctxOptions *ContextOptions) (string, error) {
 	ctxs := getContextsSelection(ctxOptions)
 	initialPosition := getInitialPosition(ctxs)
 	selector := utils.NewOktetoSelector("A context defines the default cluster/namespace for any Okteto CLI command.\nSelect the context you want to use:", "Context")

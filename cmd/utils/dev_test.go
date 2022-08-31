@@ -351,7 +351,7 @@ type FakeOktetoSelector struct {
 	err error
 }
 
-func (s *FakeOktetoSelector) AskForOptionsOkteto(options []SelectorItem, init int) (string, error) {
+func (s *FakeOktetoSelector) AskForOptionsOkteto(_ []SelectorItem, _ int) (string, error) {
 	return s.dev, s.err
 }
 

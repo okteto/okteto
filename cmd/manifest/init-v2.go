@@ -447,7 +447,7 @@ func createFromCompose(composePath string) (*model.Manifest, error) {
 
 func createFromKubernetes(ctx context.Context, cwd string) (*model.Manifest, error) {
 	manifest := model.NewManifest()
-	dockerfiles, err := selectDockerfiles(ctx, cwd)
+	dockerfiles, err := selectDockerfiles(cwd)
 	if err != nil {
 		return nil, err
 	}
