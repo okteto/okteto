@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
@@ -91,7 +92,18 @@ func Build(ctx context.Context) *cobra.Command {
 func (bc *Command) getBuilder(ctx context.Context, options *types.BuildOptions) (Builder, error) {
 	var builder Builder
 
-	if err := loadContext(ctx, options); err != nil {
+	if options.File != "" && validateDockerfile(options.File) == nil {
+		maxV1Args := 1
+		docsURL := "https://okteto.com/docs/reference/cli/#build"
+		if len(options.CommandArgs) > maxV1Args {
+			return nil, oktetoErrors.UserError{
+				E:    fmt.Errorf("when passing a context to 'okteto build', it accepts at most %d arg(s), but received %d", maxV1Args, len(options.CommandArgs)),
+				Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
+			}
+		}
+	}
+
+	if err := bc.loadContext(ctx, options); err != nil {
 		return nil, err
 	}
 
@@ -135,7 +147,7 @@ func validateDockerfile(file string) error {
 	return err
 }
 
-func loadContext(ctx context.Context, options *types.BuildOptions) error {
+func (bc *Command) loadContext(ctx context.Context, options *types.BuildOptions) error {
 	ctxOpts := &contextCMD.ContextOptions{}
 
 	ctxResource, err := model.GetContextResource(options.File)
