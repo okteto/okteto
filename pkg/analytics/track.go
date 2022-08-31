@@ -131,8 +131,11 @@ func TrackPreviewDestroy(success bool) {
 }
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
-func TrackReconnect(success bool) {
-	track(reconnectEvent, success, nil)
+func TrackReconnect(success bool, isDevPodRecreated bool) {
+	props := map[string]interface{}{
+		"isDevPodRecreated": isDevPodRecreated,
+	}
+	track(reconnectEvent, success, props)
 }
 
 // TrackSyncError sends a tracking event to mixpanel when the init sync fails
