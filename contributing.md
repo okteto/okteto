@@ -138,44 +138,13 @@ Before making a PR, we recommend contributors to run a lint check on their code 
 make lint
 ```
 
-The same command also runs as part of CI on every PR.
+This command will run `pre-commit run --all-files` and `golangci-lint run` for the repository and raise any issue that might appear.
 
-> This command requires that you have [golangci-lint](https://github.com/golangci/golangci-lint#install) available on your `$PATH`.
+> You will need to download these tools in order to run the lint locally
+>
+> - [golangci-lint](https://golangci-lint.run/usage/install/#local-installation)
+> - [pre-commit](https://pre-commit.com/#installation)
 
-We also use `pre-commit` to lint our Markdown and YAML files using the following linters:
+We recommend to have an [integration](https://golangci-lint.run/usage/integrations/) with your IDE so that golangci-lint is used as default linter
 
-- [markdowlint-cli](https://github.com/igorshubovych/markdownlint-cli)
-- [yamllint](https://yamllint.readthedocs.io/en/stable/index.html)
-
-### pre-commit
-
-A framework for managing and maintaining multi-language pre-commit hooks.
-Pre-commit can be [installed](https://pre-commit.com/#installation) with
-`pip`, `curl`, `brew` or `conda`.
-
-You need to first install pre-commit and then install the pre-commit hooks
-with `pre-commit install`. Now pre-commit will run automatically on git
-commit!
-
-It's usually a good idea to run the hooks against all the files when
-adding new hooks (usually pre-commit will only run on the changed files
-during git hooks). Use `pre-commit run --all-files` to check all files.
-
-To run a single hook use `pre-commit run --all-files <hook_id>`
-
-To update use `pre-commit autoupdate`
-
-- [Quick start](https://pre-commit.com/#quick-start)
-- [Usage](https://pre-commit.com/#usage)
-- [pre-commit-autoupdate](https://pre-commit.com/#pre-commit-autoupdate)
-
-### Spell checking
-
-We are running [misspell](https://github.com/client9/misspell) to check for spelling errors using [GitHub Actions](.github/workflows/lint.yml). You can run this locally against all files using `misspell .` after [grabbing](https://github.com/client9/misspell#install) the `misspell` binary.
-
-Some useful `misspell` flags:
-
-- `-i` string: ignore the following corrections, comma-separated
-- `-w`: Overwrite file with corrections (default is just to display)
-
-We also run [codespell](https://github.com/codespell-project/codespell) to check spellings against a [small custom dictionary](codespell.txt).
+There is also a [lint workflow](.github/workflows/lint.yml) running `pre-commit` and static code analysis for Go is done by [DeepSource](https://deepsource.io/) pipeline.

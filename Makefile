@@ -32,6 +32,7 @@ latest:
 
 .PHONY: lint
 lint:
+	pre-commit run --all-files
 	golangci-lint run
 
 .PHONY: test

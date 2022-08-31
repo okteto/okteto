@@ -1,4 +1,4 @@
-# https://deepsource.io/docs/config/deepsource-toml.html
+# https://deepsource.io/docs/concepts/#deepsourcetoml-file
 version = 1
 
 test_patterns = [
@@ -8,6 +8,5 @@ test_patterns = [
 [[analyzers]]
 name = "go"
 enabled = true
-
   [analyzers.meta]
-  import_path = "github.com/okteto/okteto"
+  import_root = "github.com/okteto/okteto"

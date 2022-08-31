@@ -1,0 +1,13 @@
+# prevent codecov from blocking a PR and remove comments
+coverage:
+  status:
+    project:
+      default:
+        informational: true
+    patch:
+      default:
+        informational: true
+
+comment: false
+github_checks:
+  annotations: false
