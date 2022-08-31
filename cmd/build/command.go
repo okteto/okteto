@@ -23,10 +23,14 @@ import (
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
+	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/namespace"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -60,14 +64,11 @@ func Build(ctx context.Context) *cobra.Command {
 			options.CommandArgs = args
 			bc := NewBuildCommand()
 
-			builder, err := bc.getBuilder(options)
+			builder, err := bc.getBuilder(ctx, options)
 			if err != nil {
 				return err
 			}
 
-			if err := builder.LoadContext(ctx, options); err != nil {
-				return err
-			}
 			return builder.Build(ctx, options)
 		},
 	}
@@ -87,8 +88,12 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
+func (bc *Command) getBuilder(ctx context.Context, options *types.BuildOptions) (Builder, error) {
 	var builder Builder
+
+	if err := loadContext(ctx, options); err != nil {
+		return nil, err
+	}
 
 	manifest, err := bc.GetManifest(options.File)
 	if err != nil {
@@ -128,4 +133,39 @@ func validateDockerfile(file string) error {
 
 	_, _, err = instructions.Parse(parsedDockerfile.AST)
 	return err
+}
+
+func loadContext(ctx context.Context, options *types.BuildOptions) error {
+	ctxOpts := &contextCMD.ContextOptions{}
+
+	ctxResource, err := model.GetContextResource(options.File)
+	if err != nil {
+		return err
+	}
+
+	if options.Namespace != "" {
+		ctxOpts.Namespace = ctxResource.Namespace
+	}
+
+	if options.Namespace != "" {
+		ctxOpts.Context = ctxResource.Context
+	}
+
+	if okteto.IsOkteto() && ctxOpts.Namespace != "" {
+		create, err := utils.ShouldCreateNamespace(ctx, ctxOpts.Namespace)
+		if err != nil {
+			return err
+		}
+		if create {
+			nsCmd, err := namespace.NewCommand()
+			if err != nil {
+				return err
+			}
+			if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return contextCMD.NewContextCommand().Run(ctx, ctxOpts)
 }

@@ -20,8 +20,6 @@ import (
 	"os"
 
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
-	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -62,46 +60,6 @@ func NewBuilderFromScratch() *OktetoBuilder {
 		Registry:  registry,
 		V1Builder: buildv1.NewBuilder(builder, registry),
 	}
-}
-
-// LoadContext Loads the okteto context based on a build v2
-func (*OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOptions) error {
-	ctxOpts := &contextCMD.ContextOptions{}
-
-	if options.Manifest.Context != "" {
-		ctxOpts.Context = options.Manifest.Context
-	}
-	if options.K8sContext != "" {
-		ctxOpts.Context = options.K8sContext
-	}
-
-	if options.Manifest.Namespace != "" {
-		ctxOpts.Namespace = options.Manifest.Namespace
-	}
-	if options.Namespace != "" {
-		ctxOpts.Namespace = options.Namespace
-	}
-	if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
-		return err
-	}
-
-	if okteto.IsOkteto() && ctxOpts.Namespace != "" {
-		create, err := utils.ShouldCreateNamespace(ctx, ctxOpts.Namespace)
-		if err != nil {
-			return err
-		}
-		if create {
-			nsCmd, err := namespace.NewCommand()
-			if err != nil {
-				return err
-			}
-			if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
-				return err
-			}
-			return contextCMD.NewContextCommand().Run(ctx, ctxOpts)
-		}
-	}
-	return nil
 }
 
 // Build builds the images defined by a manifest
