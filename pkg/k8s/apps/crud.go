@@ -170,7 +170,7 @@ func TranslateDevMode(trMap map[string]*Translation) error {
 func ListDevModeOn(ctx context.Context, namespace string, c kubernetes.Interface) ([]string, error) {
 	devModeApps := make([]string, 0)
 
-	deploymentsDev, err := deployments.List(ctx, namespace, model.DevLabel, c)
+	deploymentsDev, err := deployments.List(ctx, namespace, fmt.Sprintf("%s=true", model.DevLabel), c)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func ListDevModeOn(ctx context.Context, namespace string, c kubernetes.Interface
 		devModeApps = append(devModeApps, i.Name)
 	}
 
-	statefulsetsDev, err := statefulsets.List(ctx, namespace, model.DevLabel, c)
+	statefulsetsDev, err := statefulsets.List(ctx, namespace, fmt.Sprintf("%s=true", model.DevLabel), c)
 	if err != nil {
 		return nil, err
 	}
