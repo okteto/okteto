@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
@@ -53,7 +54,7 @@ type fakeDestroyer struct {
 	destroyedVolumes bool
 	err              error
 	errOnVolumes     error
-	runner           runnerI
+	configMapHandler configMapHandler
 }
 
 type fakeSecretHandler struct {
@@ -130,6 +131,11 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 	opts := &Options{
 		Name: "test-app",
 	}
+	k8sClientProvider := test.NewFakeK8sProvider()
+	fakeClient, _, err := k8sClientProvider.Provide(api.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
 	destroyer := &fakeDestroyer{
 		errOnVolumes: assert.AnError,
 	}
@@ -145,11 +151,11 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 		getManifest:       getFakeManifest,
 		nsDestroyer:       destroyer,
 		executor:          executor,
-		k8sClientProvider: test.NewFakeK8sProvider(),
-		runner:            &oktetoDefaultRunner{},
+		k8sClientProvider: k8sClientProvider,
+		configMapHandler:  newConfigmapHandler(fakeClient),
 	}
 
-	err := cmd.runDestroy(ctx, opts)
+	err = cmd.runDestroy(ctx, opts)
 
 	assert.Error(t, err)
 	assert.Equal(t, 3, len(executor.executed))
@@ -157,10 +163,6 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 	assert.False(t, destroyer.destroyedVolumes)
 
 	// check if configmap has been created
-	fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
-	if err != nil {
-		t.Fatal("could not create fake k8s client")
-	}
 	cfg, _ := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
 	assert.NotNil(t, cfg)
 }
@@ -201,25 +203,26 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 			opts := &Options{
 				Name: "test-app",
 			}
+			k8sClientProvider := test.NewFakeK8sProvider()
+			fakeClient, _, err := k8sClientProvider.Provide(api.NewConfig())
+			if err != nil {
+				t.Fatal("could not create fake k8s client")
+			}
 			cmd := &destroyCommand{
 				getManifest:       tt.getManifest,
 				secrets:           &secretHandler,
-				runner:            &oktetoDefaultRunner{},
+				configMapHandler:  newConfigmapHandler(fakeClient),
 				nsDestroyer:       &fakeDestroyer{},
 				executor:          executor,
-				k8sClientProvider: test.NewFakeK8sProvider(),
+				k8sClientProvider: k8sClientProvider,
 			}
 
-			err := cmd.runDestroy(ctx, opts)
+			err = cmd.runDestroy(ctx, opts)
 
 			assert.Error(t, err)
 			assert.Equal(t, tt.want, len(executor.executed))
 
 			// check if configmap has been created
-			fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
-			if err != nil {
-				t.Fatal("could not create fake k8s client")
-			}
 			cfg, _ := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
 			assert.NotNil(t, cfg)
 		})
@@ -334,16 +337,22 @@ func TestDestroyWithError(t *testing.T) {
 			secretHandler := fakeSecretHandler{
 				secrets: tt.secrets,
 			}
+			k8sClientProvider := test.NewFakeK8sProvider()
+			fakeClient, _, err := k8sClientProvider.Provide(api.NewConfig())
+			if err != nil {
+				t.Fatal("could not create fake k8s client")
+			}
+
 			cmd := &destroyCommand{
 				getManifest:       tt.getManifest,
 				secrets:           &secretHandler,
 				executor:          executor,
 				nsDestroyer:       destroyer,
-				k8sClientProvider: test.NewFakeK8sProvider(),
-				runner:            &oktetoDefaultRunner{},
+				k8sClientProvider: k8sClientProvider,
+				configMapHandler:  newConfigmapHandler(fakeClient),
 			}
 
-			err := cmd.runDestroy(ctx, opts)
+			err = cmd.runDestroy(ctx, opts)
 
 			assert.Error(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
@@ -351,10 +360,6 @@ func TestDestroyWithError(t *testing.T) {
 			assert.True(t, destroyer.destroyedVolumes)
 
 			// check if configmap has been created
-			fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
-			if err != nil {
-				t.Fatal("could not create fake k8s client")
-			}
 			cfg, _ := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
 			assert.NotNil(t, cfg)
 		})
@@ -565,16 +570,21 @@ func TestDestroyWithoutError(t *testing.T) {
 			secretHandler := fakeSecretHandler{
 				secrets: tt.secrets,
 			}
+			k8sClientProvider := test.NewFakeK8sProvider()
+			fakeClient, _, err := k8sClientProvider.Provide(api.NewConfig())
+			if err != nil {
+				t.Fatal("could not create fake k8s client")
+			}
 			cmd := &destroyCommand{
 				getManifest:       tt.getManifest,
 				secrets:           &secretHandler,
 				executor:          executor,
 				nsDestroyer:       destroyer,
-				k8sClientProvider: test.NewFakeK8sProvider(),
-				runner:            &oktetoDefaultRunner{},
+				k8sClientProvider: k8sClientProvider,
+				configMapHandler:  newConfigmapHandler(fakeClient),
 			}
 
-			err := cmd.runDestroy(ctx, opts)
+			err = cmd.runDestroy(ctx, opts)
 
 			assert.NoError(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
@@ -582,10 +592,6 @@ func TestDestroyWithoutError(t *testing.T) {
 			assert.True(t, destroyer.destroyedVolumes)
 
 			// check if configmap has been created
-			fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
-			if err != nil {
-				t.Fatal("could not create fake k8s client")
-			}
 			cfg, _ := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
 			assert.Nil(t, cfg)
 		})
@@ -796,13 +802,15 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 			secretHandler := fakeSecretHandler{
 				secrets: tt.secrets,
 			}
+			// Set env var destroy inside deploy
+			t.Setenv(model.OktetoWithinDeployCommandContextEnvVar, "true")
 			cmd := &destroyCommand{
 				getManifest:       tt.getManifest,
 				secrets:           &secretHandler,
 				executor:          executor,
 				nsDestroyer:       destroyer,
 				k8sClientProvider: test.NewFakeK8sProvider(),
-				runner:            &oktetoInsideOktetoRunner{},
+				configMapHandler:  newConfigmapHandler(nil),
 			}
 
 			err := cmd.runDestroy(ctx, opts)
@@ -816,7 +824,8 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
 			}
-			cfg, _ := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+			cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+			assert.True(t, k8sErrors.IsNotFound(err))
 			assert.Nil(t, cfg)
 		})
 	}
@@ -843,16 +852,22 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 	secretHandler := fakeSecretHandler{
 		secrets: []v1.Secret{},
 	}
+	k8sClientProvider := test.NewFakeK8sProvider()
+	fakeClient, _, err := k8sClientProvider.Provide(api.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+
 	cmd := &destroyCommand{
 		getManifest:       getFakeManifest,
 		secrets:           &secretHandler,
 		executor:          executor,
 		nsDestroyer:       destroyer,
-		k8sClientProvider: test.NewFakeK8sProvider(),
-		runner:            &oktetoDefaultRunner{},
+		k8sClientProvider: k8sClientProvider,
+		configMapHandler:  newConfigmapHandler(fakeClient),
 	}
 
-	err := cmd.runDestroy(ctx, opts)
+	err = cmd.runDestroy(ctx, opts)
 
 	assert.Error(t, err)
 	assert.Equal(t, 1, len(executor.executed))
@@ -860,10 +875,6 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 	assert.False(t, destroyer.destroyedVolumes)
 
 	// check if configmap has been created
-	fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
-	if err != nil {
-		t.Fatal("could not create fake k8s client")
-	}
 	cfg, _ := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
 	assert.NotNil(t, cfg)
 }
@@ -889,16 +900,21 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	secretHandler := fakeSecretHandler{
 		secrets: []v1.Secret{},
 	}
+	k8sClientProvider := test.NewFakeK8sProvider()
+	fakeClient, _, err := k8sClientProvider.Provide(api.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
 	cmd := &destroyCommand{
 		getManifest:       getFakeManifest,
 		secrets:           &secretHandler,
 		executor:          executor,
 		nsDestroyer:       destroyer,
-		k8sClientProvider: test.NewFakeK8sProvider(),
-		runner:            &oktetoDefaultRunner{},
+		k8sClientProvider: k8sClientProvider,
+		configMapHandler:  newConfigmapHandler(fakeClient),
 	}
 
-	err := cmd.runDestroy(ctx, opts)
+	err = cmd.runDestroy(ctx, opts)
 
 	assert.Error(t, err)
 	assert.ElementsMatch(t, fakeManifest.Destroy, executor.executed)
@@ -906,10 +922,6 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	assert.True(t, destroyer.destroyedVolumes)
 
 	// check if configmap has been created
-	fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
-	if err != nil {
-		t.Fatal("could not create fake k8s client")
-	}
 	cfg, _ := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
 	assert.Nil(t, cfg)
 }

@@ -85,7 +85,7 @@ func (*KubeConfig) GetCMDAPIConfig() (*clientcmdapi.Config, error) {
 	return okteto.Context().Cfg, nil
 }
 
-// GetTempKubeConfigFile returns a where the temp kubeConfigFile should be stored
+// GetTempKubeConfigFile returns where the temp kubeConfigFile for deploy should be stored
 func GetTempKubeConfigFile(name string) string {
 	tempKubeConfigTemplate := fmt.Sprintf("kubeconfig-deploy-%s-%d", name, time.Now().UnixMilli())
 	return filepath.Join(config.GetOktetoHome(), tempKubeConfigTemplate)

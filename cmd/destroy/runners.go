@@ -25,51 +25,63 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// runnerI defines the different functions to run okteto inside an okteto deploy
+// configMapHandler defines the different functions to run okteto inside an okteto deploy
 // or an okteto destroy directly
-type runnerI interface {
-	translateConfigMapAndDeploy(context.Context, *pipeline.CfgData, kubernetes.Interface) (*apiv1.ConfigMap, error)
-	destroyConfigMap(context.Context, *apiv1.ConfigMap, string, kubernetes.Interface) error
-	setErrorStatus(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error, kubernetes.Interface) error
+type configMapHandler interface {
+	translateConfigMapAndDeploy(context.Context, *pipeline.CfgData) (*apiv1.ConfigMap, error)
+	destroyConfigMap(context.Context, *apiv1.ConfigMap, string) error
+	setErrorStatus(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error
 }
 
-// oktetoInsideOktetoRunner is the runner used when the okteto is executed
+// oktetoInsideOktetoConfigMapHandler is the runner used when the okteto is executed
 // inside an okteto deploy command
-type oktetoInsideOktetoRunner struct{}
+type oktetoInsideOktetoConfigMapHandler struct{}
 
-// oktetoDefaultRunner is the runner used when the okteto is executed
+func newOktetoInsideOktetoConfigMapHandler() *oktetoInsideOktetoConfigMapHandler {
+	return &oktetoInsideOktetoConfigMapHandler{}
+}
+
+// oktetoDefaultConfigMapHandler is the runner used when the okteto is executed
 // directly
-type oktetoDefaultRunner struct{}
+type defaultConfigMapHandler struct {
+	k8sClient kubernetes.Interface
+}
 
-func newRunner() runnerI {
-	if utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-		return &oktetoInsideOktetoRunner{}
+func newDefaultConfigMapHandler(c kubernetes.Interface) *defaultConfigMapHandler {
+	return &defaultConfigMapHandler{
+		k8sClient: c,
 	}
-	return &oktetoDefaultRunner{}
 }
 
-func (*oktetoDefaultRunner) translateConfigMapAndDeploy(ctx context.Context, data *pipeline.CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
-	return pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
+func newConfigmapHandler(c kubernetes.Interface) configMapHandler {
+	if utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+		return newOktetoInsideOktetoConfigMapHandler()
+	}
+	return newDefaultConfigMapHandler(c)
 }
 
-func (*oktetoDefaultRunner) destroyConfigMap(ctx context.Context, cfg *apiv1.ConfigMap, namespace string, c kubernetes.Interface) error {
-	return configmaps.Destroy(ctx, cfg.Name, namespace, c)
+func (ch *defaultConfigMapHandler) translateConfigMapAndDeploy(ctx context.Context, data *pipeline.CfgData) (*apiv1.ConfigMap, error) {
+	return pipeline.TranslateConfigMapAndDeploy(ctx, data, ch.k8sClient)
 }
 
-func (*oktetoDefaultRunner) setErrorStatus(ctx context.Context, cfg *apiv1.ConfigMap, data *pipeline.CfgData, err error, c kubernetes.Interface) error {
+func (ch *defaultConfigMapHandler) destroyConfigMap(ctx context.Context, cfg *apiv1.ConfigMap, namespace string) error {
+	return configmaps.Destroy(ctx, cfg.Name, namespace, ch.k8sClient)
+}
+
+func (ch *defaultConfigMapHandler) setErrorStatus(ctx context.Context, cfg *apiv1.ConfigMap, data *pipeline.CfgData, err error) error {
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destruction failed: %s", err.Error())
-	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
+	return pipeline.UpdateConfigMap(ctx, cfg, data, ch.k8sClient)
 }
 
-func (*oktetoInsideOktetoRunner) translateConfigMapAndDeploy(_ context.Context, _ *pipeline.CfgData, _ kubernetes.Interface) (*apiv1.ConfigMap, error) {
+func (*oktetoInsideOktetoConfigMapHandler) translateConfigMapAndDeploy(_ context.Context, _ *pipeline.CfgData) (*apiv1.ConfigMap, error) {
 	return nil, nil
 }
 
-func (*oktetoInsideOktetoRunner) destroyConfigMap(_ context.Context, _ *apiv1.ConfigMap, _ string, _ kubernetes.Interface) error {
+func (*oktetoInsideOktetoConfigMapHandler) destroyConfigMap(_ context.Context, _ *apiv1.ConfigMap, _ string) error {
 	return nil
 }
 
-func (*oktetoInsideOktetoRunner) setErrorStatus(_ context.Context, _ *apiv1.ConfigMap, _ *pipeline.CfgData, err error, _ kubernetes.Interface) error {
+func (*oktetoInsideOktetoConfigMapHandler) setErrorStatus(_ context.Context, _ *apiv1.ConfigMap, _ *pipeline.CfgData, err error) error {
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destruction failed: %s", err.Error())
 	return nil
 }
