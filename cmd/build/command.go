@@ -65,6 +65,10 @@ func Build(ctx context.Context) *cobra.Command {
 			options.CommandArgs = args
 			bc := NewBuildCommand()
 
+			if err := bc.loadContext(ctx, options); err != nil {
+				return err
+			}
+
 			builder, err := bc.getBuilder(ctx, options)
 			if err != nil {
 				return err
@@ -101,10 +105,6 @@ func (bc *Command) getBuilder(ctx context.Context, options *types.BuildOptions) 
 				Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
 			}
 		}
-	}
-
-	if err := bc.loadContext(ctx, options); err != nil {
-		return nil, err
 	}
 
 	manifest, err := bc.GetManifest(options.File)
@@ -147,7 +147,7 @@ func validateDockerfile(file string) error {
 	return err
 }
 
-func (bc *Command) loadContext(ctx context.Context, options *types.BuildOptions) error {
+func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) error {
 	ctxOpts := &contextCMD.ContextOptions{}
 
 	ctxResource, err := model.GetContextResource(options.File)
