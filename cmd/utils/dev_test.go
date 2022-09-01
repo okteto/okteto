@@ -426,7 +426,7 @@ func Test_SelectDevFromManifest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dev, err := SelectDevFromManifest(tt.manifest, tt.selector)
+			dev, err := SelectDevFromManifest(tt.manifest, tt.selector, tt.manifest.Dev.GetDevs())
 			assert.Equal(t, tt.dev, dev)
 			if tt.err != nil {
 				assert.Equal(t, tt.err.Error(), err.Error())

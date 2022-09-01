@@ -186,11 +186,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 }
 
 // SelectDevFromManifest prompts the selector to choose a development container and returns the dev selected or error
-func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInterface) (*model.Dev, error) {
-	devs := []string{}
-	for k := range manifest.Dev {
-		devs = append(devs, k)
-	}
+func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInterface, devs []string) (*model.Dev, error) {
 	sort.Slice(devs, func(i, j int) bool {
 		l1, l2 := len(devs[i]), len(devs[j])
 		if l1 != l2 {
