@@ -130,6 +130,14 @@ func TrackPreviewDestroy(success bool) {
 	track(previewDestroyEvent, success, nil)
 }
 
+const (
+	// ReconnectCauseDefault is the default cause for a reconnection
+	ReconnectCauseDefault = "unrecognised"
+
+	// ReconnectCauseDevPodRecreated is cause when pods UID change between retrys
+	ReconnectCauseDevPodRecreated = "dev-pod-recreated"
+)
+
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
 func TrackReconnect(success bool, isDevPodRecreated bool) {
 	props := map[string]interface{}{
