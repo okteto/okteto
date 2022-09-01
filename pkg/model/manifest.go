@@ -682,7 +682,7 @@ func (m *Manifest) SanitizeSvcNames() error {
 			}
 			m.Build[sanitizedSvcName] = build
 			sanitizedServicesNames[buildKey] = sanitizedSvcName
-			delete(m.Dev, buildKey)
+			delete(m.Build, buildKey)
 		}
 	}
 
