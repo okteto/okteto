@@ -165,3 +165,26 @@ func TranslateDevMode(trMap map[string]*Translation) error {
 	}
 	return nil
 }
+
+// ListDevModeOn returns a list of strings with the names of deployments or statefulsets in DevMode
+func ListDevModeOn(ctx context.Context, namespace string, c kubernetes.Interface) ([]string, error) {
+	devModeApps := make([]string, 0)
+
+	deploymentsDev, err := deployments.List(ctx, namespace, model.DevLabel, c)
+	if err != nil {
+		return nil, err
+	}
+	for _, i := range deploymentsDev {
+		devModeApps = append(devModeApps, i.Name)
+	}
+
+	statefulsetsDev, err := statefulsets.List(ctx, namespace, model.DevLabel, c)
+	if err != nil {
+		return nil, err
+	}
+	for _, i := range statefulsetsDev {
+		devModeApps = append(devModeApps, i.Name)
+	}
+
+	return devModeApps, nil
+}
