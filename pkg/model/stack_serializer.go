@@ -1199,12 +1199,13 @@ func hasUppercase(name string) bool {
 	return false
 }
 func shouldBeSanitized(name string) bool {
-	return strings.Contains(name, " ") || strings.Contains(name, "_")
+	return strings.Contains(name, " ") || strings.Contains(name, "_") || hasUppercase(name)
 }
 
 func sanitizeName(name string) string {
 	name = strings.ReplaceAll(name, " ", "-")
 	name = strings.ReplaceAll(name, "_", "-")
+	name = strings.ToLower(name)
 	return name
 }
 
