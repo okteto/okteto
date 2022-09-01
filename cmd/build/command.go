@@ -69,7 +69,7 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			builder, err := bc.getBuilder(ctx, options)
+			builder, err := bc.getBuilder(options)
 			if err != nil {
 				return err
 			}
@@ -93,7 +93,7 @@ func Build(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func (bc *Command) getBuilder(ctx context.Context, options *types.BuildOptions) (Builder, error) {
+func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 	var builder Builder
 
 	if options.File != "" && validateDockerfile(options.File) == nil {

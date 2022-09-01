@@ -14,7 +14,6 @@
 package build
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -252,7 +251,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			builder, err := tt.buildCommand.getBuilder(context.Background(), tt.options)
+			builder, err := tt.buildCommand.getBuilder(tt.options)
 			if err != nil && !tt.expectedError {
 				t.Errorf("getBuilder() fail on '%s'. Expected nil error, got %s", tt.name, err.Error())
 			}
