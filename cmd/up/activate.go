@@ -109,10 +109,10 @@ func (up *upContext) activate() error {
 		return err
 	}
 
-	var retryPodUID types.UID
+	var lastPodUID types.UID
 	if up.Pod != nil {
-		// keep the original up.Pod.UID before devMode starts
-		retryPodUID = up.Pod.UID
+		// if up.Pod exists save the UID before devMode to compare when retry
+		lastPodUID = up.Pod.UID
 	}
 
 	if err := up.devMode(ctx, app, create); err != nil {
@@ -126,7 +126,8 @@ func (up *upContext) activate() error {
 	}
 
 	if up.isRetry {
-		isDevPodRecreated := retryPodUID != up.Pod.UID
+		// isDevPodRecreated if the pod UID has changed from last retry
+		isDevPodRecreated := lastPodUID != up.Pod.UID
 		analytics.TrackReconnect(true, isDevPodRecreated)
 	}
 
