@@ -1198,8 +1198,17 @@ func hasUppercase(name string) bool {
 	}
 	return false
 }
+
+func hasEmptySpace(name string) bool {
+	return strings.Contains(name, " ")
+}
+
+func hasUnderscore(name string) bool {
+	return strings.Contains(name, "_")
+}
+
 func shouldBeSanitized(name string) bool {
-	return strings.Contains(name, " ") || strings.Contains(name, "_") || hasUppercase(name)
+	return hasEmptySpace(name) || hasUnderscore(name) || hasUppercase(name)
 }
 
 func sanitizeName(name string) string {
