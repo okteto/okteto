@@ -126,9 +126,11 @@ func (up *upContext) activate() error {
 	}
 
 	if up.isRetry {
-		// isDevPodRecreated if the pod UID has changed from last retry
-		isDevPodRecreated := lastPodUID != up.Pod.UID
-		analytics.TrackReconnect(true, isDevPodRecreated)
+		cause := analytics.ReconnectCauseDefault
+		if lastPodUID != up.Pod.UID {
+			cause = analytics.ReconnectCauseDevPodRecreated
+		}
+		analytics.TrackReconnect(true, cause)
 	}
 
 	up.isRetry = true

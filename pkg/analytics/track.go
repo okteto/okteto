@@ -139,9 +139,9 @@ const (
 )
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
-func TrackReconnect(success bool, isDevPodRecreated bool) {
+func TrackReconnect(success bool, cause string) {
 	props := map[string]interface{}{
-		"isDevPodRecreated": isDevPodRecreated,
+		"cause": cause,
 	}
 	track(reconnectEvent, success, props)
 }
