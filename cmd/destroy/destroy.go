@@ -191,7 +191,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands defined in the manifest")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment was deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment was deployed")
-	cmd.Flags().BoolVarP(&options.RunWithoutBash, "run-without-bash", "", false, "execute commands without bash")
+	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
 
 	return cmd
 }
