@@ -65,6 +65,9 @@ func Build(ctx context.Context) *cobra.Command {
 			options.CommandArgs = args
 			bc := NewBuildCommand()
 
+			// The context must be loaded before the read manifest. Otherwise,
+			// secrets will not be resolved when GetManifest is called and
+			// the manifest will load empty values.
 			if err := bc.loadContext(ctx, options); err != nil {
 				return err
 			}
