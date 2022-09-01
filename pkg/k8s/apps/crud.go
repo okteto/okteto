@@ -48,12 +48,12 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 	return &StatefulSetApp{sfs: sfs}, nil
 }
 
-//IsDevModeOn returns if a statefulset is in devmode
+// IsDevModeOn returns if a statefulset is in devmode
 func IsDevModeOn(app App) bool {
 	return app.ObjectMeta().Labels[model.DevLabel] == "true" || len(app.ObjectMeta().Labels[model.DevCloneLabel]) > 0
 }
 
-//SetLastBuiltAnnotation sets the app timestamp
+// SetLastBuiltAnnotation sets the app timestamp
 func SetLastBuiltAnnotation(app App) {
 	app.ObjectMeta().Annotations[model.LastBuiltAnnotation] = time.Now().UTC().Format(model.TimeFormat)
 }
@@ -100,7 +100,7 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 	}
 }
 
-//GetTranslations fills all the deployments pointed by a development container
+// GetTranslations fills all the deployments pointed by a development container
 func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
 	mainTr := &Translation{
 		MainDev: dev,
@@ -155,7 +155,7 @@ func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, re
 	return nil
 }
 
-//TranslateDevMode translates the deployment manifests to put them in dev mode
+// TranslateDevMode translates the deployment manifests to put them in dev mode
 func TranslateDevMode(trMap map[string]*Translation) error {
 	for _, tr := range trMap {
 		err := tr.translate()
