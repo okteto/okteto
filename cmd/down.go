@@ -64,6 +64,11 @@ func Down() *cobra.Command {
 				return err
 			}
 
+			c, _, err := okteto.GetK8sClient()
+			if err != nil {
+				return err
+			}
+
 			if all {
 				err := allDown(ctx, manifest, rm)
 				if err != nil {
@@ -87,11 +92,6 @@ func Down() *cobra.Command {
 					if err != nil {
 						return err
 					}
-				}
-
-				c, _, err := okteto.GetK8sClient()
-				if err != nil {
-					return err
 				}
 
 				app, _, err := utils.GetApp(ctx, dev, c, false)
