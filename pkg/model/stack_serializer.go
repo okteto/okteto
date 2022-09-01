@@ -35,7 +35,7 @@ const (
 	DefaultReplicasNumber = 1
 )
 
-//Stack represents an okteto stack
+// Stack represents an okteto stack
 type StackRaw struct {
 	Version   string                     `yaml:"version,omitempty"`
 	Name      string                     `yaml:"name"`
@@ -57,7 +57,7 @@ type StackRaw struct {
 	Warnings StackWarnings
 }
 
-//Service represents an okteto stack service
+// Service represents an okteto stack service
 type ServiceRaw struct {
 	Deploy                   *DeployInfoRaw        `yaml:"deploy,omitempty"`
 	Build                    *BuildInfo            `yaml:"build,omitempty"`
@@ -591,6 +591,7 @@ func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, erro
 // ports:         | ports:
 //   - 5000       |   - 5000:5000
 //   - 3000       |   - 3000:3000
+//
 // public: true   |
 func translateOktetoStacksPortsIntoComposeSyntax(ports []PortRaw) []PortRaw {
 	for idx, p := range ports {
