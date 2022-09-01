@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/kballard/go-shellquote"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -1189,6 +1190,14 @@ func getProtocol(protocolName string) (apiv1.Protocol, error) {
 	}
 }
 
+func hasUppercase(name string) bool {
+	for _, s := range name {
+		if unicode.IsUpper(s) {
+			return true
+		}
+	}
+	return false
+}
 func shouldBeSanitized(name string) bool {
 	return strings.Contains(name, " ") || strings.Contains(name, "_")
 }
