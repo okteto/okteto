@@ -77,6 +77,18 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			switch builder.(type) {
+			case *buildv1.OktetoBuilder:
+				maxV1Args := 1
+				docsURL := "https://okteto.com/docs/reference/cli/#build"
+				if len(options.CommandArgs) > maxV1Args {
+					return oktetoErrors.UserError{
+						E:    fmt.Errorf("when passing a context to 'okteto build', it accepts at most %d arg(s), but received %d", maxV1Args, len(options.CommandArgs)),
+						Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
+					}
+				}
+			}
+
 			return builder.Build(ctx, options)
 		},
 	}
@@ -99,20 +111,8 @@ func Build(ctx context.Context) *cobra.Command {
 func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 	var builder Builder
 
-	if options.File != "" && validateDockerfile(options.File) == nil {
-		maxV1Args := 1
-		docsURL := "https://okteto.com/docs/reference/cli/#build"
-		if len(options.CommandArgs) > maxV1Args {
-			return nil, oktetoErrors.UserError{
-				E:    fmt.Errorf("when passing a context to 'okteto build', it accepts at most %d arg(s), but received %d", maxV1Args, len(options.CommandArgs)),
-				Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
-			}
-		}
-	}
-
 	manifest, err := bc.GetManifest(options.File)
 	if err != nil {
-
 		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
 			return nil, err
 		}
@@ -126,6 +126,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 			builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
 		}
 	}
+
 	options.Manifest = manifest
 
 	return builder, nil
