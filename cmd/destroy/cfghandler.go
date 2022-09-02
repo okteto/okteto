@@ -33,12 +33,12 @@ type configMapHandler interface {
 	setErrorStatus(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error
 }
 
-// oktetoInsideOktetoConfigMapHandler is the runner used when the okteto is executed
+// destroyInsideDeployConfigMapHandler is the runner used when the okteto is executed
 // inside an okteto deploy command
-type oktetoInsideOktetoConfigMapHandler struct{}
+type destroyInsideDeployConfigMapHandler struct{}
 
-func newOktetoInsideOktetoConfigMapHandler() *oktetoInsideOktetoConfigMapHandler {
-	return &oktetoInsideOktetoConfigMapHandler{}
+func newDestroyInsideDeployConfigMapHandler() *destroyInsideDeployConfigMapHandler {
+	return &destroyInsideDeployConfigMapHandler{}
 }
 
 // oktetoDefaultConfigMapHandler is the runner used when the okteto is executed
@@ -55,7 +55,7 @@ func newDefaultConfigMapHandler(c kubernetes.Interface) *defaultConfigMapHandler
 
 func newConfigmapHandler(c kubernetes.Interface) configMapHandler {
 	if utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
-		return newOktetoInsideOktetoConfigMapHandler()
+		return newDestroyInsideDeployConfigMapHandler()
 	}
 	return newDefaultConfigMapHandler(c)
 }
@@ -73,15 +73,15 @@ func (ch *defaultConfigMapHandler) setErrorStatus(ctx context.Context, cfg *apiv
 	return pipeline.UpdateConfigMap(ctx, cfg, data, ch.k8sClient)
 }
 
-func (*oktetoInsideOktetoConfigMapHandler) translateConfigMapAndDeploy(_ context.Context, _ *pipeline.CfgData) (*apiv1.ConfigMap, error) {
+func (*destroyInsideDeployConfigMapHandler) translateConfigMapAndDeploy(_ context.Context, _ *pipeline.CfgData) (*apiv1.ConfigMap, error) {
 	return nil, nil
 }
 
-func (*oktetoInsideOktetoConfigMapHandler) destroyConfigMap(_ context.Context, _ *apiv1.ConfigMap, _ string) error {
+func (*destroyInsideDeployConfigMapHandler) destroyConfigMap(_ context.Context, _ *apiv1.ConfigMap, _ string) error {
 	return nil
 }
 
-func (*oktetoInsideOktetoConfigMapHandler) setErrorStatus(_ context.Context, _ *apiv1.ConfigMap, _ *pipeline.CfgData, err error) error {
+func (*destroyInsideDeployConfigMapHandler) setErrorStatus(_ context.Context, _ *apiv1.ConfigMap, _ *pipeline.CfgData, err error) error {
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destruction failed: %s", err.Error())
 	return nil
 }
