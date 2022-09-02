@@ -23,17 +23,37 @@ import (
 )
 
 // SetServiceEnvVars set okteto build env vars
-func (*OktetoBuilder) SetServiceEnvVars(service, reference string) {
+func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	reg, repo, tag, image := registry.GetReferecenceEnvs(reference)
 
 	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repo, image, tag)
 
 	// Can't add env vars with -
 	sanitizedSvc := strings.ToUpper(strings.ReplaceAll(service, "-", "_"))
-	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", sanitizedSvc), reg)
-	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", sanitizedSvc), repo)
-	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", sanitizedSvc), reference)
-	os.Setenv(fmt.Sprintf("OKTETO_BUILD_%s_TAG", sanitizedSvc), tag)
+
+	registryKey := fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", sanitizedSvc)
+	bc.lock.Lock()
+	bc.buildEnvironments[registryKey] = reg
+	os.Setenv(registryKey, reg)
+	bc.lock.Unlock()
+
+	repositoryKey := fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", sanitizedSvc)
+	bc.lock.Lock()
+	bc.buildEnvironments[repositoryKey] = repo
+	os.Setenv(repositoryKey, repo)
+	bc.lock.Unlock()
+
+	imageKey := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", sanitizedSvc)
+	bc.lock.Lock()
+	bc.buildEnvironments[imageKey] = reference
+	os.Setenv(imageKey, reference)
+	bc.lock.Unlock()
+
+	tagKey := fmt.Sprintf("OKTETO_BUILD_%s_TAG", sanitizedSvc)
+	bc.lock.Lock()
+	bc.buildEnvironments[tagKey] = tag
+	os.Setenv(tagKey, tag)
+	bc.lock.Unlock()
 
 	oktetoLog.Debug("manifest env vars set")
 }

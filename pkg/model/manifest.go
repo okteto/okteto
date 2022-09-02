@@ -655,7 +655,40 @@ func Read(bytes []byte) (*Manifest, error) {
 }
 
 func (m *Manifest) validate() error {
+	if err := m.Build.validate(); err != nil {
+		return err
+	}
 	return m.validateDivert()
+}
+
+func (b *ManifestBuild) validate() error {
+	cycle := getDependentCyclic(b.toGraph())
+	if len(cycle) == 1 { // depends on the same node
+		return fmt.Errorf("manifest build validation failed: image '%s' is referenced on its dependencies", cycle[0])
+	} else if len(cycle) > 1 {
+		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(cycle[:len(cycle)-1], ", "), cycle[len(cycle)-1])
+		return fmt.Errorf("manifest validation failed: cyclic dependendecy found between %s", svcsDependents)
+	}
+	return nil
+}
+
+// GetSvcsToBuildFromList returns the builds from a list and all its
+func (b *ManifestBuild) GetSvcsToBuildFromList(toBuild []string) []string {
+	initialSvcsToBuild := toBuild
+	svcsToBuildWithDependencies := getDependentNodes(b.toGraph(), toBuild)
+	if len(initialSvcsToBuild) != len(svcsToBuildWithDependencies) {
+		dependantBuildImages := getListDiff(initialSvcsToBuild, svcsToBuildWithDependencies)
+		oktetoLog.Warning("The following build images need to be built because of dependencies: [%s]", strings.Join(dependantBuildImages, ", "))
+	}
+	return svcsToBuildWithDependencies
+}
+
+func (b ManifestBuild) toGraph() graph {
+	g := graph{}
+	for k, v := range b {
+		g[k] = v.DependsOn
+	}
+	return g
 }
 
 // SanitizeSvcNames sanitize service names in 'dev', 'build' and 'global forward' sections

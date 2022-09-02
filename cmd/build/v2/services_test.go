@@ -25,9 +25,7 @@ import (
 
 func TestAllServicesAlreadyBuilt(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := &OktetoBuilder{
-		Registry: fakeReg,
-	}
+	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{}
 	fakeReg.AddImageByName(alreadyBuilt...)
 	ctx := context.Background()
@@ -39,9 +37,8 @@ func TestAllServicesAlreadyBuilt(t *testing.T) {
 
 func TestServicesNotAreAlreadyBuilt(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := &OktetoBuilder{
-		Registry: fakeReg,
-	}
+	bc := NewBuilder(nil, fakeReg)
+
 	alreadyBuilt := []string{"test/test-1"}
 	fakeReg.AddImageByName(alreadyBuilt...)
 	ctx := context.Background()
@@ -53,9 +50,7 @@ func TestServicesNotAreAlreadyBuilt(t *testing.T) {
 
 func TestNoServiceBuilt(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := &OktetoBuilder{
-		Registry: fakeReg,
-	}
+	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{"test/test-1", "test/test-2"}
 	fakeReg.AddImageByName(alreadyBuilt...)
 	ctx := context.Background()
@@ -67,9 +62,7 @@ func TestNoServiceBuilt(t *testing.T) {
 
 func TestServicesNotInStack(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := &OktetoBuilder{
-		Registry: fakeReg,
-	}
+	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{"test/test-1"}
 	fakeReg.AddImageByName(alreadyBuilt...)
 	ctx := context.Background()
@@ -90,9 +83,7 @@ func TestServicesNotInStack(t *testing.T) {
 
 func TestAllServicesAlreadyBuiltWithSubset(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := &OktetoBuilder{
-		Registry: fakeReg,
-	}
+	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{}
 	fakeReg.AddImageByName(alreadyBuilt...)
 	ctx := context.Background()
@@ -104,9 +95,7 @@ func TestAllServicesAlreadyBuiltWithSubset(t *testing.T) {
 
 func TestServicesNotAreAlreadyBuiltWithSubset(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := &OktetoBuilder{
-		Registry: fakeReg,
-	}
+	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{"test/test-1"}
 	fakeReg.AddImageByName(alreadyBuilt...)
 	ctx := context.Background()
@@ -118,9 +107,7 @@ func TestServicesNotAreAlreadyBuiltWithSubset(t *testing.T) {
 
 func TestNoServiceBuiltWithSubset(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := &OktetoBuilder{
-		Registry: fakeReg,
-	}
+	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{"test/test-1", "test/test-2"}
 	fakeReg.AddImageByName(alreadyBuilt...)
 	ctx := context.Background()

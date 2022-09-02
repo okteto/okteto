@@ -168,3 +168,30 @@ func pathExistsAndDir(path string) bool {
 	}
 	return info.IsDir()
 }
+
+func getListDiff(l1, l2 []string) []string {
+	var (
+		longerList  []string
+		shorterList []string
+	)
+	if len(l1) < len(l2) {
+		shorterList = l1
+		longerList = l2
+
+	} else {
+		shorterList = l2
+		shorterList = l1
+	}
+
+	shorterListSet := map[string]bool{}
+	for _, svc := range shorterList {
+		shorterListSet[svc] = true
+	}
+	added := []string{}
+	for _, svcName := range longerList {
+		if _, ok := shorterListSet[svcName]; ok {
+			added = append(added, svcName)
+		}
+	}
+	return added
+}

@@ -275,6 +275,87 @@ func Test_validateDivert(t *testing.T) {
 	}
 }
 
+func Test_validateManifestBuild(t *testing.T) {
+	tests := []struct {
+		name         string
+		buildSection ManifestBuild
+		expectedErr  error
+	}{
+		{
+			name: "no cycle - no connections",
+			buildSection: ManifestBuild{
+				"a": &BuildInfo{},
+				"b": &BuildInfo{},
+				"c": &BuildInfo{},
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "no cycle - connections",
+			buildSection: ManifestBuild{
+				"a": &BuildInfo{
+					DependsOn: []string{"b"},
+				},
+				"b": &BuildInfo{
+					DependsOn: []string{"c"},
+				},
+				"c": &BuildInfo{},
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "cycle - same node dependency",
+			buildSection: ManifestBuild{
+				"a": &BuildInfo{
+					DependsOn: []string{"a"},
+				},
+				"b": &BuildInfo{
+					DependsOn: []string{},
+				},
+				"c": &BuildInfo{},
+			},
+			expectedErr: fmt.Errorf("manifest build validation failed: image 'a' is referenced on its dependencies"),
+		},
+		{
+			name: "cycle - direct cycle",
+			buildSection: ManifestBuild{
+				"a": &BuildInfo{
+					DependsOn: []string{"b"},
+				},
+				"b": &BuildInfo{
+					DependsOn: []string{"a"},
+				},
+				"c": &BuildInfo{},
+			},
+			expectedErr: fmt.Errorf("manifest validation failed: cyclic dependendecy found between a and b"),
+		},
+		{
+			name: "cycle - indirect cycle",
+			buildSection: ManifestBuild{
+				"a": &BuildInfo{
+					DependsOn: []string{"b"},
+				},
+				"b": &BuildInfo{
+					DependsOn: []string{"c"},
+				},
+				"c": &BuildInfo{
+					DependsOn: []string{"a"},
+				},
+			},
+			expectedErr: fmt.Errorf("manifest validation failed: cyclic dependendecy found between a, b and c"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &Manifest{
+				Build: tt.buildSection,
+			}
+			assert.Equal(t, m.validate(), tt.expectedErr)
+		})
+	}
+}
+
 func TestInferFromStack(t *testing.T) {
 	dirtest := filepath.Clean("/stack/dir/")
 	devInterface := PrivilegedLocalhost

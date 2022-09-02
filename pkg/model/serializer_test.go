@@ -2153,3 +2153,32 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 		})
 	}
 }
+
+func TestBuildDependsOnUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name          string
+		buildManifest []byte
+		expected      BuildDependsOn
+	}{
+		{
+			name:          "single string",
+			buildManifest: []byte(`a`),
+			expected:      BuildDependsOn{"a"},
+		},
+		{
+			name: "list",
+			buildManifest: []byte(`- a
+- b`),
+			expected: BuildDependsOn{"a", "b"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result BuildDependsOn
+			err := yaml.UnmarshalStrict(tt.buildManifest, &result)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
