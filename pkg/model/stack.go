@@ -844,12 +844,12 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 
 func (s composeServices) toGraph() graph {
 	g := graph{}
-	for k, v := range s {
+	for svcName, svcInfo := range s {
 		dependsOnList := []string{}
-		for dependantSvc := range v.DependsOn {
+		for dependantSvc := range svcInfo.DependsOn {
 			dependsOnList = append(dependsOnList, dependantSvc)
 		}
-		g[k] = dependsOnList
+		g[svcName] = dependsOnList
 	}
 	return g
 }
