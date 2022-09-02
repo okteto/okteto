@@ -510,9 +510,7 @@ func TestStack_readImageContext(t *testing.T) {
 				t.Fatalf("Wrong unmarshalling: %s", err.Error())
 			}
 
-			if !reflect.DeepEqual(stack.Services["test"].Build, tt.expected) {
-				assert.Equal(t, tt.expected, stack.Services["test"].Build)
-			}
+			assert.Equal(t, tt.expected, stack.Services["test"].Build)
 		})
 	}
 }
