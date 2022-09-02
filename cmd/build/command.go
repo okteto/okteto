@@ -77,8 +77,7 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			switch builder.(type) {
-			case *buildv1.OktetoBuilder:
+			if _, ok := builder.(*buildv1.OktetoBuilder); ok {
 				maxV1Args := 1
 				docsURL := "https://okteto.com/docs/reference/cli/#build"
 				if len(options.CommandArgs) > maxV1Args {
