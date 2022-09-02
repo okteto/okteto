@@ -154,17 +154,22 @@ func validateDockerfile(file string) error {
 func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) error {
 	ctxOpts := &contextCMD.ContextOptions{}
 
-	ctxResource, err := model.GetContextResource(options.File)
-	if err != nil {
-		return err
-	}
+	// before calling the context command, there is need to retrieve the context and
+	// namespace through the given manifest. If the manifest is a Dockerfile, this
+	// information cannot be extracted so call to GetContextResource is skkiped.
+	if err := validateDockerfile(options.File); err != nil {
+		ctxResource, err := model.GetContextResource(options.File)
+		if err != nil {
+			return err
+		}
 
-	if options.Namespace != "" {
-		ctxOpts.Namespace = ctxResource.Namespace
-	}
+		if options.Namespace != "" {
+			ctxOpts.Namespace = ctxResource.Namespace
+		}
 
-	if options.Namespace != "" {
-		ctxOpts.Context = ctxResource.Context
+		if options.Namespace != "" {
+			ctxOpts.Context = ctxResource.Context
+		}
 	}
 
 	if okteto.IsOkteto() && ctxOpts.Namespace != "" {
