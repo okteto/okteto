@@ -54,6 +54,11 @@ func NewBuildCommand() *Command {
 	}
 }
 
+const (
+	maxV1CommandArgs = 1
+	docsURL          = "https://okteto.com/docs/reference/cli/#build"
+)
+
 // Build build and optionally push a Docker image
 func Build(ctx context.Context) *cobra.Command {
 
@@ -78,11 +83,9 @@ func Build(ctx context.Context) *cobra.Command {
 			}
 
 			if _, ok := builder.(*buildv1.OktetoBuilder); ok {
-				maxV1Args := 1
-				docsURL := "https://okteto.com/docs/reference/cli/#build"
-				if len(options.CommandArgs) > maxV1Args {
+				if len(options.CommandArgs) > maxV1CommandArgs {
 					return oktetoErrors.UserError{
-						E:    fmt.Errorf("when passing a context to 'okteto build', it accepts at most %d arg(s), but received %d", maxV1Args, len(options.CommandArgs)),
+						E:    fmt.Errorf("when passing a context to 'okteto build', it accepts at most %d arg(s), but received %d", maxV1CommandArgs, len(options.CommandArgs)),
 						Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
 					}
 				}
@@ -151,7 +154,10 @@ func validateDockerfile(file string) error {
 }
 
 func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) error {
-	ctxOpts := &contextCMD.ContextOptions{}
+	ctxOpts := &contextCMD.ContextOptions{
+		Context:   options.K8sContext,
+		Namespace: options.Namespace,
+	}
 
 	// before calling the context command, there is need to retrieve the context and
 	// namespace through the given manifest. If the manifest is a Dockerfile, this
@@ -162,13 +168,15 @@ func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) er
 			return err
 		}
 
-		if options.Namespace != "" {
-			ctxOpts.Namespace = ctxResource.Namespace
+		if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
+			return err
 		}
+		ctxOpts.Namespace = ctxResource.Namespace
 
-		if options.Namespace != "" {
-			ctxOpts.Context = ctxResource.Context
+		if err := ctxResource.UpdateContext(options.K8sContext); err != nil {
+			return err
 		}
+		ctxOpts.Context = ctxResource.Context
 	}
 
 	if okteto.IsOkteto() && ctxOpts.Namespace != "" {
