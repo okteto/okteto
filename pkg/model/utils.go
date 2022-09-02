@@ -23,6 +23,8 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
+type graph map[string][]string
+
 // GetValidNameFromFolder returns a valid kubernetes name for a folder
 func GetValidNameFromFolder(folder string) (string, error) {
 	dir, err := filepath.Abs(folder)
@@ -102,12 +104,12 @@ func GetRepositoryURL(path string) (string, error) {
 	return remotes[0].Config().URLs[0], nil
 }
 
-func getDependentCyclic(s *Stack) []string {
+func getDependentCyclic(g graph) []string {
 	visited := make(map[string]bool)
 	stack := make(map[string]bool)
 	cycle := make([]string, 0)
-	for svcName := range s.Services {
-		if dfs(s, svcName, visited, stack) {
+	for svcName := range g {
+		if dfs(g, svcName, visited, stack) {
 			for svc, isInStack := range stack {
 				if isInStack {
 					cycle = append(cycle, svc)
@@ -119,15 +121,36 @@ func getDependentCyclic(s *Stack) []string {
 	return cycle
 }
 
-func dfs(s *Stack, svcName string, visited, stack map[string]bool) bool {
+func getDependentNodes(g graph, startingNodes []string) []string {
+	initialLength := len(startingNodes)
+	svcsToDeploySet := map[string]bool{}
+	for _, svc := range startingNodes {
+		svcsToDeploySet[svc] = true
+	}
+	for _, svcToDeploy := range startingNodes {
+		for _, dependentSvc := range g[svcToDeploy] {
+			if _, ok := svcsToDeploySet[dependentSvc]; ok {
+				continue
+			}
+			startingNodes = append(startingNodes, dependentSvc)
+			svcsToDeploySet[dependentSvc] = true
+		}
+	}
+	if initialLength != len(startingNodes) {
+		return getDependentNodes(g, startingNodes)
+	}
+	return startingNodes
+}
+
+func dfs(g graph, svcName string, visited, stack map[string]bool) bool {
 	isVisited := visited[svcName]
 	if !isVisited {
 		visited[svcName] = true
 		stack[svcName] = true
 
-		svc := s.Services[svcName]
-		for dependentSvc := range svc.DependsOn {
-			if !visited[dependentSvc] && dfs(s, dependentSvc, visited, stack) {
+		svc := g[svcName]
+		for _, dependentSvc := range svc {
+			if !visited[dependentSvc] && dfs(g, dependentSvc, visited, stack) {
 				return true
 			} else if value, ok := stack[dependentSvc]; ok && value {
 				return true

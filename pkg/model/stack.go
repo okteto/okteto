@@ -49,9 +49,11 @@ type Stack struct {
 	Volumes   map[string]*VolumeSpec `yaml:"volumes,omitempty"`
 	Namespace string                 `yaml:"namespace,omitempty"`
 	Context   string                 `yaml:"context,omitempty"`
-	Services  map[string]*Service    `yaml:"services,omitempty"`
+	Services  composeServices        `yaml:"services,omitempty"`
 	Endpoints EndpointSpec           `yaml:"endpoints,omitempty"`
 }
+
+type composeServices map[string]*Service
 
 // Service represents an okteto stack service
 type Service struct {
@@ -475,7 +477,7 @@ func validateDependsOn(s *Stack) error {
 		}
 	}
 
-	dependencyCycle := getDependentCyclic(s)
+	dependencyCycle := getDependentCyclic(s.Services.toGraph())
 	if len(dependencyCycle) > 0 {
 		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(dependencyCycle[:len(dependencyCycle)-1], ", "), dependencyCycle[len(dependencyCycle)-1])
 		return fmt.Errorf(" There was a cyclic dependendecy between %s.", svcsDependents)
@@ -838,4 +840,16 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 	}
 
 	return nil
+}
+
+func (s composeServices) toGraph() graph {
+	g := graph{}
+	for k, v := range s {
+		dependsOnList := []string{}
+		for dependantSvc := range v.DependsOn {
+			dependsOnList = append(dependsOnList, dependantSvc)
+		}
+		g[k] = dependsOnList
+	}
+	return g
 }

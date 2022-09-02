@@ -406,6 +406,45 @@ func Test_HealthcheckUnmarshalling(t *testing.T) {
 	}
 }
 
+func TestComposeBuildSectionUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		bytes    []byte
+		expected *composeBuildInfo
+	}{
+		{
+			name:     "with depends on fail",
+			bytes:    []byte(`depends_on: a`),
+			expected: nil,
+		},
+		{
+			name:  "context",
+			bytes: []byte(`context: .`),
+			expected: &composeBuildInfo{
+				Context: ".",
+			},
+		},
+		{
+			name:  "image direct",
+			bytes: []byte(`nginx`),
+			expected: &composeBuildInfo{
+				Name: "nginx",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result composeBuildInfo
+			err := yaml.UnmarshalStrict(tt.bytes, &result)
+			if err != nil && tt.expected == nil {
+				return
+			}
+
+			assert.Equal(t, tt.expected, &result)
+		})
+	}
+}
+
 func Test_HealthcheckTestUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name            string
