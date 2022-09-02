@@ -180,7 +180,7 @@ func getListDiff(l1, l2 []string) []string {
 
 	} else {
 		shorterList = l2
-		shorterList = l1
+		longerList = l1
 	}
 
 	shorterListSet := map[string]bool{}
