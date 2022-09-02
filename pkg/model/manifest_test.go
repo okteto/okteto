@@ -279,7 +279,7 @@ func Test_validateManifestBuild(t *testing.T) {
 	tests := []struct {
 		name         string
 		buildSection ManifestBuild
-		expectedErr  error
+		expectedErr  bool
 	}{
 		{
 			name: "no cycle - no connections",
@@ -288,7 +288,7 @@ func Test_validateManifestBuild(t *testing.T) {
 				"b": &BuildInfo{},
 				"c": &BuildInfo{},
 			},
-			expectedErr: nil,
+			expectedErr: false,
 		},
 		{
 			name: "no cycle - connections",
@@ -301,7 +301,7 @@ func Test_validateManifestBuild(t *testing.T) {
 				},
 				"c": &BuildInfo{},
 			},
-			expectedErr: nil,
+			expectedErr: false,
 		},
 		{
 			name: "cycle - same node dependency",
@@ -314,7 +314,7 @@ func Test_validateManifestBuild(t *testing.T) {
 				},
 				"c": &BuildInfo{},
 			},
-			expectedErr: fmt.Errorf("manifest build validation failed: image 'a' is referenced on its dependencies"),
+			expectedErr: true,
 		},
 		{
 			name: "cycle - direct cycle",
@@ -327,7 +327,7 @@ func Test_validateManifestBuild(t *testing.T) {
 				},
 				"c": &BuildInfo{},
 			},
-			expectedErr: fmt.Errorf("manifest validation failed: cyclic dependendecy found between a and b"),
+			expectedErr: true,
 		},
 		{
 			name: "cycle - indirect cycle",
@@ -342,7 +342,7 @@ func Test_validateManifestBuild(t *testing.T) {
 					DependsOn: []string{"a"},
 				},
 			},
-			expectedErr: fmt.Errorf("manifest validation failed: cyclic dependendecy found between a, b and c"),
+			expectedErr: true,
 		},
 	}
 
@@ -351,7 +351,7 @@ func Test_validateManifestBuild(t *testing.T) {
 			m := &Manifest{
 				Build: tt.buildSection,
 			}
-			assert.Equal(t, m.validate(), tt.expectedErr)
+			assert.Equal(t, tt.expectedErr, m.validate() != nil)
 		})
 	}
 }
