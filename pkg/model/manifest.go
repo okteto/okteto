@@ -686,11 +686,11 @@ func (m *Manifest) SanitizeSvcNames() error {
 		}
 	}
 
-	for _, gf := range m.GlobalForward {
-		if shouldBeSanitized(gf.ServiceName) {
-			sanitizedSvcName := sanitizeName(gf.ServiceName)
-			gf.ServiceName = sanitizedSvcName
-			sanitizedServicesNames[gf.ServiceName] = sanitizedSvcName
+	for indx := range m.GlobalForward {
+		if shouldBeSanitized(m.GlobalForward[indx].ServiceName) {
+			sanitizedSvcName := sanitizeName(m.GlobalForward[indx].ServiceName)
+			m.GlobalForward[indx].ServiceName = sanitizedSvcName
+			sanitizedServicesNames[m.GlobalForward[indx].ServiceName] = sanitizedSvcName
 		}
 	}
 
