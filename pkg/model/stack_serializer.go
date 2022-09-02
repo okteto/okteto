@@ -1213,6 +1213,7 @@ func shouldBeSanitized(name string) bool {
 }
 
 func sanitizeName(name string) string {
+	name = strings.TrimSpace(name)
 	name = strings.ReplaceAll(name, " ", "-")
 	name = strings.ReplaceAll(name, "_", "-")
 	name = strings.ToLower(name)
