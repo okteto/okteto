@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -756,6 +757,148 @@ func TestHasDev(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.devSection.HasDev(tt.devName)
 			assert.Equal(t, tt.out, result)
+		})
+	}
+}
+
+func Test_SanitizeSvcNames(t *testing.T) {
+	tests := []struct {
+		name             string
+		manifest         *Manifest
+		expectedManifest *Manifest
+		expectedErr      error
+	}{
+		{
+			name: "keys-have-uppercase",
+			manifest: &Manifest{
+				Build: ManifestBuild{
+					"Frontend": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"Frontend": &Dev{},
+				},
+				GlobalForward: []forward.GlobalForward{
+					{
+						ServiceName: "Frontend",
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"frontend": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"frontend": &Dev{
+						Name: "frontend",
+					},
+				},
+				GlobalForward: []forward.GlobalForward{
+					{
+						ServiceName: "frontend",
+					},
+				},
+			},
+		},
+		{
+			name: "keys-have-spaces",
+			manifest: &Manifest{
+				Build: ManifestBuild{
+					" my build service": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"my dev service": &Dev{},
+				},
+				GlobalForward: []forward.GlobalForward{
+					{
+						ServiceName: "my global forward ",
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"my-build-service": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"my-dev-service": &Dev{
+						Name: "my-dev-service",
+					},
+				},
+				GlobalForward: []forward.GlobalForward{
+					{
+						ServiceName: "my-global-forward",
+					},
+				},
+			},
+		},
+		{
+			name: "keys-have-underscore",
+			manifest: &Manifest{
+				Build: ManifestBuild{
+					"my_build_service": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"my_dev_service": &Dev{},
+				},
+				GlobalForward: []forward.GlobalForward{
+					{
+						ServiceName: "my_global_forward",
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"my-build-service": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"my-dev-service": &Dev{
+						Name: "my-dev-service",
+					},
+				},
+				GlobalForward: []forward.GlobalForward{
+					{
+						ServiceName: "my-global-forward",
+					},
+				},
+			},
+		},
+		{
+			name: "keys-have-mix",
+			manifest: &Manifest{
+				Build: ManifestBuild{
+					"  my_Build service": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"my_DEV_service ": &Dev{},
+				},
+				GlobalForward: []forward.GlobalForward{
+					{
+						ServiceName: "my glOBal_forward",
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"my-build-service": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"my-dev-service": &Dev{
+						Name: "my-dev-service",
+					},
+				},
+				GlobalForward: []forward.GlobalForward{
+					{
+						ServiceName: "my-global-forward",
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.manifest.SanitizeSvcNames()
+			assert.ErrorIs(t, err, tt.expectedErr)
+			assert.Equal(t, tt.expectedManifest, tt.manifest)
 		})
 	}
 }
