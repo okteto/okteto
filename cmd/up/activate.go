@@ -122,6 +122,7 @@ func (up *upContext) activate() error {
 		if _, ok := err.(oktetoErrors.UserError); ok {
 			return err
 		}
+
 		return fmt.Errorf("couldn't activate your development container\n    %s", err.Error())
 	}
 
