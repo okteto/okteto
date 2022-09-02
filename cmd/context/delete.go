@@ -32,8 +32,12 @@ func DeleteCMD() *cobra.Command {
 		Short: "Delete a context",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			args[0] = okteto.AddSchema(args[0])
-			args[0] = strings.TrimSuffix(args[0], "/")
+			// only format the context name if sure it is a URL
+			if strings.Count(args[0], ".") == 2 {
+				args[0] = okteto.AddSchema(args[0])
+				args[0] = strings.TrimSuffix(args[0], "/")
+			}
+
 			if err := Delete(ctx, args[0]); err != nil {
 				return err
 			}
@@ -45,6 +49,11 @@ func DeleteCMD() *cobra.Command {
 
 func Delete(ctx context.Context, okCtx string) error {
 	ctxStore := okteto.ContextStore()
+
+	if !ctxStore.Contexts[okCtx].IsOkteto {
+		return fmt.Errorf("'%s' context isn't managed by Okteto so can't be deleted. Try removing it from your kubeconfig instead", okCtx)
+	}
+
 	if okCtx == ctxStore.CurrentContext {
 		ctxStore.CurrentContext = ""
 	}

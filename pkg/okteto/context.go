@@ -79,6 +79,7 @@ type OktetoContextViewer struct {
 	Builder   string `json:"builder,omitempty" yaml:"builder,omitempty"`
 	Registry  string `json:"registry,omitempty" yaml:"registry,omitempty"`
 	Current   bool   `json:"current" yaml:"current"`
+	Managed   bool   `json:"managed,omitempty" yaml:"managed,omitempty"`
 }
 
 // InitContextWithDeprecatedToken initializes the okteto context if an old fashion exists and it matches the current kubernetes context

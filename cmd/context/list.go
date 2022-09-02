@@ -60,7 +60,7 @@ func executeListContext(ctx context.Context) error {
 
 	var ctxs []okteto.OktetoContextViewer
 	for _, ctxSelector := range contexts {
-		okCtx, isOkteto := ctxStore.Contexts[ctxSelector.Name]
+		okCtx := ctxStore.Contexts[ctxSelector.Name]
 
 		ctxViewer := okteto.OktetoContextViewer{
 			Name:     ctxSelector.Name,
@@ -68,26 +68,28 @@ func executeListContext(ctx context.Context) error {
 			Registry: "-",
 			Current:  okteto.Context().Name == ctxSelector.Name,
 		}
-		if isOkteto {
+		if okCtx.IsOkteto {
 			ctxViewer.Registry = okCtx.Registry
 			ctxViewer.Namespace = okCtx.Namespace
 			if okCtx.Builder != "" {
 				ctxViewer.Builder = okCtx.Builder
 			}
+			ctxViewer.Managed = true
 		} else {
 			ctxViewer.Namespace = getKubernetesContextNamespace(ctxSelector.Name)
+			ctxViewer.Managed = false
 		}
 		ctxs = append(ctxs, ctxViewer)
 	}
 
 	if output == "" {
 		w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-		fmt.Fprintf(w, "Name\tNamespace\tBuilder\tRegistry\n")
+		fmt.Fprintf(w, "Name\tNamespace\tBuilder\tRegistry\tOkteto Managed\n")
 		for _, ctx := range ctxs {
 			if ctx.Name == ctxStore.CurrentContext {
 				ctx.Name += " *"
 			}
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\n", ctx.Name, ctx.Namespace, ctx.Builder, ctx.Registry)
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%v\n", ctx.Name, ctx.Namespace, ctx.Builder, ctx.Registry, ctx.Managed)
 		}
 		w.Flush()
 	} else if output == "json" {
