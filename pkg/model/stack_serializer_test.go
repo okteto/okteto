@@ -431,6 +431,17 @@ func TestComposeBuildSectionUnmarshalling(t *testing.T) {
 				Name: "nginx",
 			},
 		},
+		{
+			name: "complete",
+			bytes: []byte(`context: .
+dockerfile: Dockerfile
+image: nginx`),
+			expected: &composeBuildInfo{
+				Image:      "nginx",
+				Context:    ".",
+				Dockerfile: "Dockerfile",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
