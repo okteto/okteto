@@ -22,5 +22,5 @@ import (
 // Builder is the interface to build any image
 type Builder interface {
 	Build(ctx context.Context, options *types.BuildOptions) error
-	LoadContext(ctx context.Context, options *types.BuildOptions) error
+	IsV1() bool
 }

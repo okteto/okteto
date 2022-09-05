@@ -17,16 +17,21 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"os"
 
 	"github.com/moby/buildkit/frontend/dockerfile/instructions"
 	"github.com/moby/buildkit/frontend/dockerfile/parser"
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
+	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/namespace"
+	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
@@ -49,6 +54,11 @@ func NewBuildCommand() *Command {
 	}
 }
 
+const (
+	maxV1CommandArgs = 1
+	docsURL          = "https://okteto.com/docs/reference/cli/#build"
+)
+
 // Build build and optionally push a Docker image
 func Build(ctx context.Context) *cobra.Command {
 
@@ -60,14 +70,27 @@ func Build(ctx context.Context) *cobra.Command {
 			options.CommandArgs = args
 			bc := NewBuildCommand()
 
+			// The context must be loaded before reading manifest. Otherwise,
+			// secrets will not be resolved when GetManifest is called and
+			// the manifest will load empty values.
+			if err := bc.loadContext(ctx, options); err != nil {
+				return err
+			}
+
 			builder, err := bc.getBuilder(options)
 			if err != nil {
 				return err
 			}
 
-			if err := builder.LoadContext(ctx, options); err != nil {
-				return err
+			if builder.IsV1() {
+				if len(options.CommandArgs) > maxV1CommandArgs {
+					return oktetoErrors.UserError{
+						E:    fmt.Errorf("when passing a context to 'okteto build', it accepts at most %d arg(s), but received %d", maxV1CommandArgs, len(options.CommandArgs)),
+						Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
+					}
+				}
 			}
+
 			return builder.Build(ctx, options)
 		},
 	}
@@ -92,7 +115,6 @@ func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 
 	manifest, err := bc.GetManifest(options.File)
 	if err != nil {
-
 		if options.File != "" && errors.Is(err, oktetoErrors.ErrInvalidManifest) && validateDockerfile(options.File) != nil {
 			return nil, err
 		}
@@ -106,6 +128,7 @@ func (bc *Command) getBuilder(options *types.BuildOptions) (Builder, error) {
 			builder = buildv1.NewBuilder(bc.Builder, bc.Registry)
 		}
 	}
+
 	options.Manifest = manifest
 
 	return builder, nil
@@ -128,4 +151,49 @@ func validateDockerfile(file string) error {
 
 	_, _, err = instructions.Parse(parsedDockerfile.AST)
 	return err
+}
+
+func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) error {
+	ctxOpts := &contextCMD.ContextOptions{
+		Context:   options.K8sContext,
+		Namespace: options.Namespace,
+	}
+
+	// before calling the context command, there is need to retrieve the context and
+	// namespace through the given manifest. If the manifest is a Dockerfile, this
+	// information cannot be extracted so call to GetContextResource is skkiped.
+	if err := validateDockerfile(options.File); err != nil {
+		ctxResource, err := model.GetContextResource(options.File)
+		if err != nil {
+			return err
+		}
+
+		if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
+			return err
+		}
+		ctxOpts.Namespace = ctxResource.Namespace
+
+		if err := ctxResource.UpdateContext(options.K8sContext); err != nil {
+			return err
+		}
+		ctxOpts.Context = ctxResource.Context
+	}
+
+	if okteto.IsOkteto() && ctxOpts.Namespace != "" {
+		create, err := utils.ShouldCreateNamespace(ctx, ctxOpts.Namespace)
+		if err != nil {
+			return err
+		}
+		if create {
+			nsCmd, err := namespace.NewCommand()
+			if err != nil {
+				return err
+			}
+			if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return contextCMD.NewContextCommand().Run(ctx, ctxOpts)
 }
