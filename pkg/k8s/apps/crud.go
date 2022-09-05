@@ -179,9 +179,8 @@ func ListDevModeOn(ctx context.Context, manifest *model.Manifest, c kubernetes.I
 		app, err := Get(ctx, dev, manifest.Namespace, c)
 		if err != nil {
 			oktetoLog.Debugf("error listing dev-mode %s: %v", name, err)
-			return devModeApps
 		}
-		if IsDevModeOn(app) {
+		if app != nil && IsDevModeOn(app) {
 			// only add to slice the dev apps
 			devModeApps = append(devModeApps, name)
 		}

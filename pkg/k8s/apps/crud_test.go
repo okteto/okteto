@@ -293,6 +293,17 @@ func TestListDevModeOn(t *testing.T) {
 					Enabled: true,
 				},
 			},
+			"autocreate": &model.Dev{
+				Name:      "autocreate",
+				Namespace: "test",
+				Image: &model.BuildInfo{
+					Name: "image",
+				},
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Enabled: true,
+				},
+				Autocreate: true,
+			},
 		},
 	}
 	tests := []struct {
@@ -477,6 +488,35 @@ func TestListDevModeOn(t *testing.T) {
 			},
 			ds:           &appsv1.Deployment{},
 			expectedList: []string{},
+		},
+		{
+			name: "autocreate-dev",
+			sfs:  &appsv1.StatefulSet{},
+			ds: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "autocreate-okteto",
+					Namespace: "test",
+					Labels: map[string]string{
+						model.DevLabel: "true",
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									VolumeMounts: []v1.VolumeMount{
+										{
+											MountPath: "/data",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedList: []string{"autocreate"},
 		},
 	}
 
