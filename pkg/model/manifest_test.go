@@ -276,6 +276,87 @@ func Test_validateDivert(t *testing.T) {
 	}
 }
 
+func Test_validateManifestBuild(t *testing.T) {
+	tests := []struct {
+		name         string
+		buildSection ManifestBuild
+		expectedErr  bool
+	}{
+		{
+			name: "no cycle - no connections",
+			buildSection: ManifestBuild{
+				"a": &BuildInfo{},
+				"b": &BuildInfo{},
+				"c": &BuildInfo{},
+			},
+			expectedErr: false,
+		},
+		{
+			name: "no cycle - connections",
+			buildSection: ManifestBuild{
+				"a": &BuildInfo{
+					DependsOn: []string{"b"},
+				},
+				"b": &BuildInfo{
+					DependsOn: []string{"c"},
+				},
+				"c": &BuildInfo{},
+			},
+			expectedErr: false,
+		},
+		{
+			name: "cycle - same node dependency",
+			buildSection: ManifestBuild{
+				"a": &BuildInfo{
+					DependsOn: []string{"a"},
+				},
+				"b": &BuildInfo{
+					DependsOn: []string{},
+				},
+				"c": &BuildInfo{},
+			},
+			expectedErr: true,
+		},
+		{
+			name: "cycle - direct cycle",
+			buildSection: ManifestBuild{
+				"a": &BuildInfo{
+					DependsOn: []string{"b"},
+				},
+				"b": &BuildInfo{
+					DependsOn: []string{"a"},
+				},
+				"c": &BuildInfo{},
+			},
+			expectedErr: true,
+		},
+		{
+			name: "cycle - indirect cycle",
+			buildSection: ManifestBuild{
+				"a": &BuildInfo{
+					DependsOn: []string{"b"},
+				},
+				"b": &BuildInfo{
+					DependsOn: []string{"c"},
+				},
+				"c": &BuildInfo{
+					DependsOn: []string{"a"},
+				},
+			},
+			expectedErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &Manifest{
+				Build: tt.buildSection,
+			}
+			assert.Equal(t, tt.expectedErr, m.validate() != nil)
+		})
+	}
+}
+
 func TestInferFromStack(t *testing.T) {
 	dirtest := filepath.Clean("/stack/dir/")
 	devInterface := PrivilegedLocalhost

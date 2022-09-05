@@ -36,15 +36,16 @@ import (
 
 // BuildInfoRaw represents the build info for serialization
 type buildInfoRaw struct {
-	Name             string        `yaml:"name,omitempty"`
-	Context          string        `yaml:"context,omitempty"`
-	Dockerfile       string        `yaml:"dockerfile,omitempty"`
-	CacheFrom        []string      `yaml:"cache_from,omitempty"`
-	Target           string        `yaml:"target,omitempty"`
-	Args             Environment   `yaml:"args,omitempty"`
-	Image            string        `yaml:"image,omitempty"`
-	VolumesToInclude []StackVolume `yaml:"-"`
-	ExportCache      string        `yaml:"export_cache,omitempty"`
+	Name             string         `yaml:"name,omitempty"`
+	Context          string         `yaml:"context,omitempty"`
+	Dockerfile       string         `yaml:"dockerfile,omitempty"`
+	CacheFrom        []string       `yaml:"cache_from,omitempty"`
+	Target           string         `yaml:"target,omitempty"`
+	Args             Environment    `yaml:"args,omitempty"`
+	Image            string         `yaml:"image,omitempty"`
+	VolumesToInclude []StackVolume  `yaml:"-"`
+	ExportCache      string         `yaml:"export_cache,omitempty"`
+	DependsOn        BuildDependsOn `yaml:"depends_on,omitempty"`
 }
 
 type syncRaw struct {
@@ -290,6 +291,24 @@ func (sync Sync) MarshalYAML() (interface{}, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (d *BuildDependsOn) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		*d = BuildDependsOn{rawString}
+		return nil
+	}
+
+	var rawStringList []string
+	err = unmarshal(&rawStringList)
+	if err == nil {
+		*d = rawStringList
+		return nil
+	}
+	return err
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
 	err := unmarshal(&rawString)
@@ -312,6 +331,7 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	buildInfo.Image = rawBuildInfo.Image
 	buildInfo.CacheFrom = rawBuildInfo.CacheFrom
 	buildInfo.ExportCache = rawBuildInfo.ExportCache
+	buildInfo.DependsOn = rawBuildInfo.DependsOn
 	return nil
 }
 

@@ -15,6 +15,8 @@ package model
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_GetValidNameFromFolder(t *testing.T) {
@@ -67,6 +69,59 @@ func Test_GetValidNameFromGitRepo(t *testing.T) {
 			if result != tt.expected {
 				t.Errorf("'%s' got '%s' expected '%s'", tt.name, result, tt.expected)
 			}
+		})
+	}
+
+}
+
+func TestGetCycles(t *testing.T) {
+	var tests = []struct {
+		name          string
+		g             graph
+		expectedCycle bool
+	}{
+		{
+			name: "no cycle - no connections",
+			g: graph{
+				"a": []string{},
+				"b": []string{},
+				"c": []string{},
+			},
+			expectedCycle: false,
+		},
+		{
+			name: "no cycle - connections",
+			g: graph{
+				"a": []string{"b"},
+				"b": []string{"c"},
+				"c": []string{},
+			},
+			expectedCycle: false,
+		},
+		{
+			name: "cycle - direct cycle",
+			g: graph{
+				"a": []string{"b"},
+				"b": []string{"a"},
+				"c": []string{},
+			},
+			expectedCycle: true,
+		},
+		{
+			name: "cycle - indirect cycle",
+			g: graph{
+				"a": []string{"b"},
+				"b": []string{"c"},
+				"c": []string{"a"},
+			},
+			expectedCycle: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getDependentCyclic(tt.g)
+			assert.Equal(t, tt.expectedCycle, len(result) > 0)
 		})
 	}
 

@@ -20,7 +20,6 @@ import (
 	"strings"
 	"testing"
 
-	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -78,9 +77,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			}
 
 			registry := test.NewFakeOktetoRegistry(nil)
-			bc := &OktetoBuilder{
-				Registry: registry,
-			}
+			bc := NewBuilder(nil, registry)
 			bc.SetServiceEnvVars(tt.service, tt.reference)
 
 			registryEnvValue := os.Getenv(registryEnv)
@@ -122,11 +119,7 @@ func TestExpandStackVariables(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &OktetoBuilder{
-		Builder:   builder,
-		Registry:  registry,
-		V1Builder: buildv1.NewBuilder(builder, registry),
-	}
+	bc := NewBuilder(builder, registry)
 	stack := &model.Stack{
 		Services: map[string]*model.Service{
 			"test": {

@@ -118,16 +118,20 @@ type Args struct {
 
 // BuildInfo represents the build info to generate an image
 type BuildInfo struct {
-	Name             string        `yaml:"name,omitempty"`
-	Context          string        `yaml:"context,omitempty"`
-	Dockerfile       string        `yaml:"dockerfile,omitempty"`
-	CacheFrom        []string      `yaml:"cache_from,omitempty"`
-	Target           string        `yaml:"target,omitempty"`
-	Args             Environment   `yaml:"args,omitempty"`
-	Image            string        `yaml:"image,omitempty"`
-	VolumesToInclude []StackVolume `yaml:"-"`
-	ExportCache      string        `yaml:"export_cache,omitempty"`
+	Name             string         `yaml:"name,omitempty"`
+	Context          string         `yaml:"context,omitempty"`
+	Dockerfile       string         `yaml:"dockerfile,omitempty"`
+	CacheFrom        []string       `yaml:"cache_from,omitempty"`
+	Target           string         `yaml:"target,omitempty"`
+	Args             Environment    `yaml:"args,omitempty"`
+	Image            string         `yaml:"image,omitempty"`
+	VolumesToInclude []StackVolume  `yaml:"-"`
+	ExportCache      string         `yaml:"export_cache,omitempty"`
+	DependsOn        BuildDependsOn `yaml:"depends_on,omitempty"`
 }
+
+// BuildDependsOn represents the images that needs to be built before
+type BuildDependsOn []string
 
 // GetDockerfilePath returns the path to the Dockerfile
 func (b *BuildInfo) GetDockerfilePath() string {
@@ -146,6 +150,17 @@ func (b *BuildInfo) GetDockerfilePath() string {
 	}
 
 	return joinPath
+}
+
+// AddArgs add a set of args to the build information
+func (b *BuildInfo) AddArgs(args map[string]string) {
+	for k, v := range args {
+		b.Args = append(b.Args, EnvVar{
+			Name:  k,
+			Value: v,
+		})
+		oktetoLog.Infof("Added '%s' to build args", k)
+	}
 }
 
 // Volume represents a volume in the development container
@@ -864,7 +879,7 @@ func (dev *Dev) Save(path string) error {
 func SerializeBuildArgs(buildArgs Environment) []string {
 	result := []string{}
 	for _, e := range buildArgs {
-		result = append(result,e.String())
+		result = append(result, e.String())
 	}
 	// // stable serialization
 	sort.Strings(result)

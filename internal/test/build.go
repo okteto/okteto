@@ -41,8 +41,9 @@ func (fb *FakeOktetoBuilder) Run(_ context.Context, opts *types.BuildOptions) er
 		fb.Err = fb.Err[1:]
 		return err
 	}
+
 	if opts.Tag != "" {
-		fb.Registry.AddImageByName(opts.Tag)
+		fb.Registry.AddImageByOpts(opts)
 	}
 	return nil
 }
@@ -59,6 +60,7 @@ type FakeImage struct {
 	Repo     string
 	Tag      string
 	ImageRef string
+	Args     []string
 }
 
 // NewFakeOktetoRegistry creates a new registry if not already created
@@ -74,6 +76,12 @@ func (fb *FakeOktetoRegistry) AddImageByName(images ...string) error {
 	for _, image := range images {
 		fb.Registry[image] = &FakeImage{}
 	}
+	return nil
+}
+
+// AddImageByOpts adds an image to the registry
+func (fb *FakeOktetoRegistry) AddImageByOpts(opts *types.BuildOptions) error {
+	fb.Registry[opts.Tag] = &FakeImage{Args: opts.BuildArgs}
 	return nil
 }
 

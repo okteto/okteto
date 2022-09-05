@@ -510,9 +510,7 @@ func TestStack_readImageContext(t *testing.T) {
 				t.Fatalf("Wrong unmarshalling: %s", err.Error())
 			}
 
-			if !reflect.DeepEqual(stack.Services["test"].Build, tt.expected) {
-				t.Fatalf("Expected %v but got %v", tt.expected, stack.Services["test"].Build)
-			}
+			assert.Equal(t, tt.expected, stack.Services["test"].Build)
 		})
 	}
 }
@@ -1236,5 +1234,102 @@ func Test_translateEnvVars(t *testing.T) {
 		if e.Name == "EMPTY_VAR" && e.Value != "" {
 			t.Errorf("Wrong environment variable EMPTY_VAR: %s", e.Value)
 		}
+	}
+}
+
+func TestServicesToGraph(t *testing.T) {
+	tests := []struct {
+		name          string
+		services      composeServices
+		expectedGraph graph
+	}{
+		{
+			name: "no cycle - no connections",
+			services: composeServices{
+				"a": &Service{},
+				"b": &Service{},
+				"c": &Service{},
+			},
+			expectedGraph: graph{
+				"a": []string{},
+				"b": []string{},
+				"c": []string{},
+			},
+		},
+		{
+			name: "no cycle - connections",
+			services: composeServices{
+				"a": &Service{
+					DependsOn: DependsOn{
+						"b": DependsOnConditionSpec{},
+					},
+				},
+				"b": &Service{
+					DependsOn: DependsOn{
+						"c": DependsOnConditionSpec{},
+					},
+				},
+				"c": &Service{},
+			},
+			expectedGraph: graph{
+				"a": []string{"b"},
+				"b": []string{"c"},
+				"c": []string{},
+			},
+		},
+		{
+			name: "cycle - direct cycle",
+			services: composeServices{
+				"a": &Service{
+					DependsOn: DependsOn{
+						"b": DependsOnConditionSpec{},
+					},
+				},
+				"b": &Service{
+					DependsOn: DependsOn{
+						"a": DependsOnConditionSpec{},
+					},
+				},
+				"c": &Service{},
+			},
+			expectedGraph: graph{
+				"a": []string{"b"},
+				"b": []string{"a"},
+				"c": []string{},
+			},
+		},
+		{
+			name: "cycle - indirect cycle",
+			services: composeServices{
+				"a": &Service{
+					DependsOn: DependsOn{
+						"b": DependsOnConditionSpec{},
+					},
+				},
+				"b": &Service{
+					DependsOn: DependsOn{
+						"c": DependsOnConditionSpec{},
+					},
+				},
+				"c": &Service{
+					DependsOn: DependsOn{
+						"a": DependsOnConditionSpec{},
+					},
+				},
+			},
+			expectedGraph: graph{
+				"a": []string{"b"},
+				"b": []string{"c"},
+				"c": []string{"a"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.services.toGraph()
+			assert.Equal(t, tt.expectedGraph, result)
+		})
+
 	}
 }

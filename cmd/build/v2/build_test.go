@@ -17,9 +17,9 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
-	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -123,11 +123,7 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &OktetoBuilder{
-		Builder:   builder,
-		Registry:  registry,
-		V1Builder: buildv1.NewBuilder(builder, registry),
-	}
+	bc := NewBuilder(builder, registry)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -171,11 +167,7 @@ func TestTwoStepsBuild(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &OktetoBuilder{
-		Builder:   builder,
-		Registry:  registry,
-		V1Builder: buildv1.NewBuilder(builder, registry),
-	}
+	bc := NewBuilder(builder, registry)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -223,11 +215,7 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &OktetoBuilder{
-		Builder:   builder,
-		Registry:  registry,
-		V1Builder: buildv1.NewBuilder(builder, registry),
-	}
+	bc := NewBuilder(builder, registry)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -266,11 +254,7 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &OktetoBuilder{
-		Builder:   builder,
-		Registry:  registry,
-		V1Builder: buildv1.NewBuilder(builder, registry),
-	}
+	bc := NewBuilder(builder, registry)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -311,11 +295,7 @@ func TestBuildWithStack(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := &OktetoBuilder{
-		Builder:   builder,
-		Registry:  registry,
-		V1Builder: buildv1.NewBuilder(builder, registry),
-	}
+	bc := NewBuilder(builder, registry)
 	manifest := &model.Manifest{
 		Name: "test",
 		Type: model.StackType,
@@ -366,4 +346,75 @@ func createDockerfile(t *testing.T) (string, error) {
 		return "", err
 	}
 	return dir, nil
+}
+
+func TestBuildWithDependsOn(t *testing.T) {
+	ctx := context.Background()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+				Registry:  "my-registry",
+			},
+		},
+		CurrentContext: "test",
+	}
+
+	firstImage := "okteto/a:test"
+	secondImage := "okteto/b:test"
+	dir, err := createDockerfile(t)
+	assert.NoError(t, err)
+
+	registry := test.NewFakeOktetoRegistry(nil)
+	builder := test.NewFakeOktetoBuilder(registry)
+	bc := NewBuilder(builder, registry)
+	manifest := &model.Manifest{
+		Name: "test",
+		Build: model.ManifestBuild{
+			"a": &model.BuildInfo{
+				Context:    dir,
+				Dockerfile: filepath.Join(dir, "Dockerfile"),
+				Image:      firstImage,
+			},
+			"b": &model.BuildInfo{
+				Context:    dir,
+				Dockerfile: filepath.Join(dir, "Dockerfile"),
+				Image:      secondImage,
+				DependsOn:  []string{"a"},
+			},
+		},
+	}
+	err = bc.Build(ctx, &types.BuildOptions{
+		Manifest: manifest,
+	})
+
+	// error from the build
+	assert.NoError(t, err)
+
+	// check that images are on the registry
+	_, err = registry.GetImageTagWithDigest(firstImage)
+	assert.NoError(t, err)
+
+	_, err = registry.GetImageTagWithDigest(secondImage)
+	assert.NoError(t, err)
+
+	expectedKeys := map[string]bool{
+		"OKTETO_BUILD_A_IMAGE":      false,
+		"OKTETO_BUILD_A_REGISTRY":   false,
+		"OKTETO_BUILD_A_REPOSITORY": false,
+		"OKTETO_BUILD_A_TAG":        false,
+	}
+	for _, arg := range registry.Registry[secondImage].Args {
+		parts := strings.SplitN(arg, "=", 2)
+		if _, ok := expectedKeys[parts[0]]; ok {
+			expectedKeys[parts[0]] = true
+		}
+	}
+	for k, v := range expectedKeys {
+		if !v {
+			t.Fatalf("expected to inject '%s' on image '%s' but is not injected", k, secondImage)
+		}
+	}
+
 }
