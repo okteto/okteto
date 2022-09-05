@@ -44,8 +44,8 @@ deploy:
   - kubectl apply -f k8s.yml
 `
 	oktetoManifestWithDestroyContent = `build:
-app:
-  context: app
+  app:
+    context: app
 deploy:
 - okteto destroy
 - kubectl apply -f k8s.yml
