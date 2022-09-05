@@ -67,7 +67,7 @@ func Exec() *cobra.Command {
 			}
 
 			activeDevMode := apps.ListDevModeOn(ctx, manifest, c)
-			if len(activeDevMode) < 1 {
+			if len(activeDevMode) == 0 {
 				return oktetoErrors.UserError{
 					E:    fmt.Errorf("development containers not found in namespace '%s'", manifest.Namespace),
 					Hint: "Run 'okteto up' to launch your development container or use 'okteto context' to change your current context",
