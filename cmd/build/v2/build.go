@@ -62,6 +62,11 @@ func NewBuilderFromScratch() *OktetoBuilder {
 	}
 }
 
+// IsV1 returns false since it is a builder v2
+func (bc *OktetoBuilder) IsV1() bool {
+	return false
+}
+
 // Build builds the images defined by a manifest
 func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
 	if options.File != "" {

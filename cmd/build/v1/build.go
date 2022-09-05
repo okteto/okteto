@@ -57,6 +57,11 @@ func NewBuilderFromScratch() *OktetoBuilder {
 	}
 }
 
+// IsV1 returns true since it is a builder v1
+func (bc *OktetoBuilder) IsV1() bool {
+	return true
+}
+
 // Build builds the images defined by a Dockerfile
 func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
 	path := "."

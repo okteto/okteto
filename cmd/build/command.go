@@ -70,7 +70,7 @@ func Build(ctx context.Context) *cobra.Command {
 			options.CommandArgs = args
 			bc := NewBuildCommand()
 
-			// The context must be loaded before the read manifest. Otherwise,
+			// The context must be loaded before reading manifest. Otherwise,
 			// secrets will not be resolved when GetManifest is called and
 			// the manifest will load empty values.
 			if err := bc.loadContext(ctx, options); err != nil {
@@ -82,7 +82,7 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if _, ok := builder.(*buildv1.OktetoBuilder); ok {
+			if builder.IsV1() {
 				if len(options.CommandArgs) > maxV1CommandArgs {
 					return oktetoErrors.UserError{
 						E:    fmt.Errorf("when passing a context to 'okteto build', it accepts at most %d arg(s), but received %d", maxV1CommandArgs, len(options.CommandArgs)),
