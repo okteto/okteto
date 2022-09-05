@@ -171,6 +171,11 @@ func TranslateDevMode(trMap map[string]*Translation) error {
 func ListDevModeOn(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface) []string {
 	devModeApps := make([]string, 0)
 	for name, dev := range manifest.Dev {
+		// when autocreate is active, the app name has suffix -okteto
+		// this should be taken into account when searching for dev mode apps
+		if dev.Autocreate {
+			dev.Name = fmt.Sprintf("%s-okteto", name)
+		}
 		app, err := Get(ctx, dev, manifest.Namespace, c)
 		if err != nil {
 			oktetoLog.Debugf("error listing dev-mode %s: %v", name, err)
