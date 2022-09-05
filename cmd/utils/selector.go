@@ -275,8 +275,7 @@ func (s *OktetoSelector) run(initialPosition int) (string, error) {
 		return "", err
 	}
 
-	items, idx := l.Items()
-	item := items[idx]
+	item := strings.TrimSpace(strings.TrimSuffix(s.Items[l.Index()].Name, " *"))
 
 	sb.Reset()
 	sb.Write(render(s.OktetoTemplates.selected, item))
@@ -465,9 +464,9 @@ func (*stdout) Close() error {
 }
 
 func getSelectedTemplate(selectTpl string) string {
-	result := `{{ " ✓ " | bgGreen | black }} {{ .Label | green }}`
+	result := `{{ " ✓ " | bgGreen | black }} {{ . | green }}`
 	if selectTpl != "" {
-		result = fmt.Sprintf(`{{ " ✓ " | bgGreen | black }} {{ "%s '" | green }}{{ .Label | green }}{{ "' selected" | green }}`, selectTpl)
+		result = fmt.Sprintf(`{{ " ✓ " | bgGreen | black }} {{ "%s '" | green }}{{ . | green }}{{ "' selected" | green }}`, selectTpl)
 	}
 
 	result = changeColorForWindows(result)
