@@ -682,15 +682,16 @@ func (m *Manifest) SanitizeSvcNames() error {
 			}
 			m.Build[sanitizedSvcName] = build
 			sanitizedServicesNames[buildKey] = sanitizedSvcName
-			delete(m.Dev, buildKey)
+			delete(m.Build, buildKey)
 		}
 	}
 
-	for _, gf := range m.GlobalForward {
-		if shouldBeSanitized(gf.ServiceName) {
-			sanitizedSvcName := sanitizeName(gf.ServiceName)
-			gf.ServiceName = sanitizedSvcName
-			sanitizedServicesNames[gf.ServiceName] = sanitizedSvcName
+	for idx := range m.GlobalForward {
+		gfServiceName := m.GlobalForward[idx].ServiceName
+		if shouldBeSanitized(gfServiceName) {
+			sanitizedSvcName := sanitizeName(gfServiceName)
+			sanitizedServicesNames[gfServiceName] = sanitizedSvcName
+			m.GlobalForward[idx].ServiceName = sanitizedSvcName
 		}
 	}
 
