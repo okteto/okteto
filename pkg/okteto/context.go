@@ -127,7 +127,7 @@ func InitContextWithDeprecatedToken() {
 	}
 }
 
-//ContextExists checks if an okteto context has been created
+// ContextExists checks if an okteto context has been created
 func ContextExists() bool {
 	oktetoContextFolder := config.GetOktetoContextsStorePath()
 	if _, err := os.Stat(oktetoContextFolder); err != nil {
@@ -147,7 +147,7 @@ func UrlToKubernetesContext(uri string) string {
 // K8sContextToOktetoUrl translates k8s contexts like cloud_okteto_com to hettps://cloud.okteto.com
 func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string, clientProvider K8sClientProvider) string {
 	ctxStore := ContextStore()
-	//check if belongs to the okteto contexts
+	// check if belongs to the okteto contexts
 	for name, oCtx := range ctxStore.Contexts {
 		if oCtx.IsOkteto && UrlToKubernetesContext(name) == k8sContext {
 			return name
@@ -166,7 +166,7 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string,
 		return k8sContext
 	}
 
-	//check the namespace label
+	// check the namespace label
 	if k8sNamespace == "" {
 		k8sNamespace = cfg.Contexts[k8sContext].Namespace
 	}
@@ -285,7 +285,7 @@ type ContextConfigWriterInterface interface {
 	Write() error
 }
 
-//ContextConfigWriter writes the information about the context config into stdout
+// ContextConfigWriter writes the information about the context config into stdout
 type ContextConfigWriter struct{}
 
 func NewContextConfigWriter() *ContextConfigWriter {
@@ -480,4 +480,14 @@ func (c *OktetoContext) ToViewer() *OktetoContextViewer {
 		Registry:  registry,
 		Current:   Context().Name == c.Name,
 	}
+}
+
+// IsOktetoContext returns if the contextName param is Okteto
+func IsOktetoContext(contextName string) bool {
+	ctxStore := ContextStore()
+	selectedCtx, ok := ctxStore.Contexts[contextName]
+	if !ok {
+		return false
+	}
+	return selectedCtx.IsOkteto
 }

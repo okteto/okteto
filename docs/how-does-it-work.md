@@ -1,4 +1,4 @@
-## How does Okteto work?
+# How does Okteto work?
 
 Okteto helps you move your development environment into any Kubernetes cluster. Let's explain this process with a diagram:
 

@@ -77,7 +77,6 @@ func (*OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOptio
 
 	if options.Manifest.Namespace != "" {
 		ctxOpts.Namespace = options.Manifest.Namespace
-		ctxOpts.Namespace = options.Manifest.Namespace
 	}
 	if options.Namespace != "" {
 		ctxOpts.Namespace = options.Namespace

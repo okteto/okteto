@@ -35,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func (up *upContext) activate() error {
@@ -108,6 +109,12 @@ func (up *upContext) activate() error {
 		return err
 	}
 
+	var lastPodUID types.UID
+	if up.Pod != nil {
+		// if up.Pod exists save the UID before devMode to compare when retry
+		lastPodUID = up.Pod.UID
+	}
+
 	if err := up.devMode(ctx, app, create); err != nil {
 		if oktetoErrors.IsTransient(err) {
 			return err
@@ -119,7 +126,11 @@ func (up *upContext) activate() error {
 	}
 
 	if up.isRetry {
-		analytics.TrackReconnect(true)
+		cause := analytics.ReconnectCauseDefault
+		if lastPodUID != up.Pod.UID {
+			cause = analytics.ReconnectCauseDevPodRecreated
+		}
+		analytics.TrackReconnect(true, cause)
 	}
 
 	up.isRetry = true

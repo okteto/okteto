@@ -15,7 +15,6 @@ package utils
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -30,7 +29,6 @@ import (
 	"github.com/manifoldco/promptui/list"
 	"github.com/manifoldco/promptui/screenbuf"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/term"
 )
 
@@ -42,7 +40,12 @@ const (
 // ErrInvalidOption is raised when the selector has an invalid option
 var ErrInvalidOption = errors.New("invalid option")
 
-// OktetoSelector represents the selector
+// OktetoSelectorInterface represents an interface for a selector
+type OktetoSelectorInterface interface {
+	AskForOptionsOkteto(options []SelectorItem, initialPosition int) (string, error)
+}
+
+// OktetoSelector implements the OktetoSelectorInterface
 type OktetoSelector struct {
 	Label string
 	Items []SelectorItem
@@ -54,7 +57,7 @@ type OktetoSelector struct {
 	OktetoTemplates *oktetoTemplates
 }
 
-//oktetoTemplates stores the templates to render the text
+// oktetoTemplates stores the templates to render the text
 type oktetoTemplates struct {
 	FuncMap   template.FuncMap
 	label     *template.Template
@@ -66,27 +69,21 @@ type oktetoTemplates struct {
 	extraInfo *template.Template
 }
 
-//SelectorItem represents a selectable item on a selector
+// SelectorItem represents a selectable item on a selector
 type SelectorItem struct {
-	Name      string
-	Label     string
-	Enable    bool
-	IsOkteto  bool
-	Namespace string
-	Builder   string
-	Registry  string
+	Name   string
+	Label  string
+	Enable bool
 }
 
-//AskForOptionsOkteto given some options ask the user to select one
-func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label, selectedTpl string) (string, bool, error) {
+// NewOktetoSelector returns a selector set up with the label and options from the input
+func NewOktetoSelector(label string, selectedTpl string) *OktetoSelector {
 	selectedTemplate := getSelectedTemplate(selectedTpl)
 	activeTemplate := getActiveTemplate()
 	inactiveTemplate := getInactiveTemplate()
 
-	prompt := OktetoSelector{
+	return &OktetoSelector{
 		Label: label,
-		Items: options,
-		Size:  len(options),
 		Templates: &promptui.SelectTemplates{
 			Label:    "{{ .Label }}",
 			Selected: selectedTemplate,
@@ -95,15 +92,20 @@ func AskForOptionsOkteto(ctx context.Context, options []SelectorItem, label, sel
 			FuncMap:  promptui.FuncMap,
 		},
 	}
+}
 
-	prompt.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
-	optionSelected, isOkteto, err := prompt.Run(ctx)
-	if err != nil || !isValidOption(options, optionSelected) {
+// AskForOptionsOkteto given some options ask the user to select one
+func (s *OktetoSelector) AskForOptionsOkteto(options []SelectorItem, initialPosition int) (string, error) {
+	s.Items = options
+	s.Size = len(options)
+	s.Templates.FuncMap["oktetoblue"] = oktetoLog.BlueString
+	optionSelected, err := s.run(initialPosition)
+	if err != nil || !isValidOption(s.Items, optionSelected) {
 		oktetoLog.Infof("invalid init option: %s", err)
-		return "", false, ErrInvalidOption
+		return "", ErrInvalidOption
 	}
 
-	return optionSelected, isOkteto, nil
+	return optionSelected, nil
 }
 
 func isValidOption(options []SelectorItem, optionSelected string) bool {
@@ -115,18 +117,16 @@ func isValidOption(options []SelectorItem, optionSelected string) bool {
 	return false
 }
 
-//Run runs the selector prompt
-func (s *OktetoSelector) Run(ctx context.Context) (string, bool, error) {
-	startPosition, err := s.getInitialPosition(ctx)
-	if err != nil {
-		return "", false, err
-	}
-	if startPosition != -1 {
+// Run runs the selector prompt
+func (s *OktetoSelector) run(initialPosition int) (string, error) {
+	startPosition := -1
+	if initialPosition != -1 {
+		startPosition = initialPosition
 		s.Items[startPosition].Label += " *"
 	}
 	l, err := list.New(s.Items, s.Size)
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 
 	s.prepareTemplates()
@@ -140,7 +140,7 @@ func (s *OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 	c := &readline.Config{}
 	err = c.Init()
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 	if runtime.GOOS != "windows" {
 		c.Stdout = &stdout{}
@@ -153,7 +153,7 @@ func (s *OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 
 	rl, err := readline.NewEx(c)
 	if err != nil {
-		return "", false, err
+		return "", err
 	}
 
 	sb := screenbuf.New(rl)
@@ -272,7 +272,7 @@ func (s *OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 		sb.Flush()
 		rl.Write([]byte(showCursor))
 		rl.Close()
-		return "", false, err
+		return "", err
 	}
 
 	items, idx := l.Items()
@@ -285,7 +285,7 @@ func (s *OktetoSelector) Run(ctx context.Context) (string, bool, error) {
 	rl.Write([]byte(showCursor))
 	rl.Close()
 
-	return s.Items[l.Index()].Name, s.Items[l.Index()].IsOkteto, err
+	return s.Items[l.Index()].Name, err
 }
 
 func (s *OktetoSelector) prepareTemplates() error {
@@ -373,24 +373,6 @@ func (s *OktetoSelector) prepareTemplates() error {
 	s.OktetoTemplates = tpls
 
 	return nil
-}
-
-func (s OktetoSelector) getInitialPosition(ctx context.Context) (int, error) {
-	ctxStore := okteto.ContextStore()
-	oCtx := ctxStore.CurrentContext
-	if oCtx == "" {
-		return -1, nil
-	}
-
-	oCtx = okteto.K8sContextToOktetoUrl(ctx, oCtx, ctxStore.Contexts[oCtx].Namespace, okteto.NewK8sClientProvider())
-	idx := 0
-	for _, item := range s.Items {
-		if strings.Contains(item.Name, oCtx) {
-			return idx, nil
-		}
-		idx++
-	}
-	return -1, nil
 }
 
 func (s *OktetoSelector) renderDetails(item interface{}) [][]byte {

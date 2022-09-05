@@ -23,9 +23,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
-
-	sp "github.com/briandowns/spinner"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -93,7 +90,6 @@ func init() {
 		successSymbol = color.New(color.BgGreen, color.FgBlack).Sprint(" + ")
 	}
 	Init(logrus.WarnLevel)
-	initSpinnerLog()
 }
 
 // Init configures the logger for the package to use.
@@ -104,12 +100,12 @@ func Init(level logrus.Level) {
 	log.maskedWords = []string{}
 	log.buf = &bytes.Buffer{}
 	log.spinner = &spinnerLogger{
-		sp:             sp.New(sp.CharSets[14], 100*time.Millisecond, sp.WithHiddenCursor(true)),
+		sp:             newSpinner(),
 		spinnerSupport: !loadBool(OktetoDisableSpinnerEnvVar) && IsInteractive(),
 	}
 }
 
-//ConfigureFileLogger configures the file to write
+// ConfigureFileLogger configures the file to write
 func ConfigureFileLogger(dir, version string) {
 	fileLogger := logrus.New()
 	fileLogger.SetFormatter(&logrus.TextFormatter{

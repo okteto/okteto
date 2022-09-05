@@ -14,7 +14,6 @@
 package manifest
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,7 +43,7 @@ func selectComposeFile(paths []string) (string, error) {
 	return selection, nil
 }
 
-func selectDockerfiles(ctx context.Context, cwd string) ([]string, error) {
+func selectDockerfiles(cwd string) ([]string, error) {
 	dockerfiles := []string{}
 	files, err := os.ReadDir(cwd)
 	if err != nil {
@@ -94,7 +93,8 @@ func selectDockerfiles(ctx context.Context, cwd string) ([]string, error) {
 			})
 		}
 
-		selection, _, err := utils.AskForOptionsOkteto(ctx, dockerfilesItems, "Do you need to build any of the following Dockerfiles as part of your development environment?", "")
+		selector := utils.NewOktetoSelector("Do you need to build any of the following Dockerfiles as part of your development environment?", "")
+		selection, err := selector.AskForOptionsOkteto(dockerfilesItems, -1)
 
 		if err != nil {
 			return nil, err

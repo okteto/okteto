@@ -107,7 +107,7 @@ func (sd *Stack) Deploy(ctx context.Context, s *model.Stack, options *StackDeplo
 	return err
 }
 
-//deploy deploys a stack to kubernetes
+// deploy deploys a stack to kubernetes
 func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config *rest.Config, options *StackDeployOptions) error {
 	DisplayWarnings(s)
 
@@ -801,7 +801,7 @@ func DisplayVolumeMountWarnings(warnings []string) {
 
 func DisplaySanitizedServicesWarnings(previousToNewNameMap map[string]string) {
 	for previousName, newName := range previousToNewNameMap {
-		oktetoLog.Warning("Service '%s' has been sanitized into '%s'. This may affect discovery service.", previousName, newName)
+		oktetoLog.Warning("Service '%s' specified in compose file has been sanitized into '%s'. This may affect discovery service.", previousName, newName)
 	}
 }
 

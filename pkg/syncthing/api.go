@@ -55,16 +55,17 @@ func (s *Syncthing) APICall(ctx context.Context, url, method string, code int, p
 				return result, nil
 			}
 
-			if retries >= maxRetries {
-				return nil, err
-			}
-			retries++
-
 			if strings.Contains(err.Error(), "connection refused") {
 				oktetoLog.Infof("syncthing is not ready, retrying local=%t", local)
 			} else {
 				oktetoLog.Infof("retrying syncthing call[%s] local=%t: %s", url, local, err.Error())
 			}
+
+			if retries >= maxRetries {
+				return nil, err
+			}
+			retries++
+
 		case <-ctx.Done():
 			oktetoLog.Infof("call to syncthing.APICall %s canceled", url)
 			return nil, ctx.Err()
