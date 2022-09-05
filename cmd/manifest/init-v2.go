@@ -542,7 +542,7 @@ func inferDevsSection(cwd string) (model.ManifestDevs, error) {
 
 func (mc *ManifestCommand) getManifest(path string) (*model.Manifest, error) {
 	if mc.manifest != nil {
-		//Deepcopy so it does not get overwritten these changes
+		// Deepcopy so it does not get overwritten these changes
 		manifest := *mc.manifest
 		b := model.ManifestBuild{}
 		for k, v := range mc.manifest.Build {
