@@ -518,6 +518,35 @@ func TestListDevModeOn(t *testing.T) {
 			},
 			expectedList: []string{"autocreate"},
 		},
+		{
+			name: "dev-is-not-at-manifest",
+			sfs:  &appsv1.StatefulSet{},
+			ds: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "not-manifest",
+					Namespace: "test",
+					Labels: map[string]string{
+						model.DevLabel: "true",
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									VolumeMounts: []v1.VolumeMount{
+										{
+											MountPath: "/data",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedList: []string{},
+		},
 	}
 
 	for _, tt := range tests {
