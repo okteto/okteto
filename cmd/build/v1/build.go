@@ -58,7 +58,7 @@ func NewBuilderFromScratch() *OktetoBuilder {
 }
 
 // IsV1 returns true since it is a builder v1
-func (bc *OktetoBuilder) IsV1() bool {
+func (*OktetoBuilder) IsV1() bool {
 	return true
 }
 
