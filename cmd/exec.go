@@ -66,10 +66,7 @@ func Exec() *cobra.Command {
 				return err
 			}
 
-			activeDevMode, err := apps.ListDevModeOn(ctx, manifest.Namespace, c)
-			if err != nil {
-				return err
-			}
+			activeDevMode := apps.ListDevModeOn(ctx, manifest, c)
 			if len(activeDevMode) < 1 {
 				return oktetoErrors.UserError{
 					E:    fmt.Errorf("development containers not found in namespace '%s'", manifest.Namespace),

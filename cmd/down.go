@@ -88,10 +88,8 @@ func Down() *cobra.Command {
 						return err
 					}
 					selector := utils.NewOktetoSelector("Select which development container to deactivate:", "Development container")
-					options, err := apps.ListDevModeOn(ctx, manifest.Namespace, c)
-					if err != nil {
-						return err
-					}
+					options := apps.ListDevModeOn(ctx, manifest, c)
+
 					if len(options) < 1 {
 						oktetoLog.Success("All development containers are deactivated")
 					}

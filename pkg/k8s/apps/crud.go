@@ -167,24 +167,19 @@ func TranslateDevMode(trMap map[string]*Translation) error {
 }
 
 // ListDevModeOn returns a list of strings with the names of deployments or statefulsets in DevMode
-func ListDevModeOn(ctx context.Context, namespace string, c kubernetes.Interface) ([]string, error) {
+// if no app in dev mode found, empty slice is returned
+func ListDevModeOn(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface) []string {
 	devModeApps := make([]string, 0)
-
-	deploymentsDev, err := deployments.List(ctx, namespace, fmt.Sprintf("%s=true", model.DevLabel), c)
-	if err != nil {
-		return nil, err
+	for name, dev := range manifest.Dev {
+		app, err := Get(ctx, dev, manifest.Namespace, c)
+		if err != nil {
+			oktetoLog.Debugf("error listing dev-mode %s: %v", name, err)
+			return devModeApps
+		}
+		if IsDevModeOn(app) {
+			// only add to slice the dev apps
+			devModeApps = append(devModeApps, name)
+		}
 	}
-	for _, i := range deploymentsDev {
-		devModeApps = append(devModeApps, i.Name)
-	}
-
-	statefulsetsDev, err := statefulsets.List(ctx, namespace, fmt.Sprintf("%s=true", model.DevLabel), c)
-	if err != nil {
-		return nil, err
-	}
-	for _, i := range statefulsetsDev {
-		devModeApps = append(devModeApps, i.Name)
-	}
-
-	return devModeApps, nil
+	return devModeApps
 }

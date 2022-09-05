@@ -20,6 +20,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -265,4 +266,226 @@ func TestValidateMountPaths(t *testing.T) {
 		})
 	}
 
+}
+
+func TestListDevModeOn(t *testing.T) {
+	manifest := &model.Manifest{
+		Name:      "manifest-name",
+		Namespace: "test",
+		Dev: model.ManifestDevs{
+			"dev": &model.Dev{
+				Name:      "dev",
+				Namespace: "test",
+				Image: &model.BuildInfo{
+					Name: "image",
+				},
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Enabled: true,
+				},
+			},
+			"sfs": &model.Dev{
+				Name:      "sfs",
+				Namespace: "test",
+				Image: &model.BuildInfo{
+					Name: "image",
+				},
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Enabled: true,
+				},
+			},
+		},
+	}
+	tests := []struct {
+		name          string
+		sfs           *appsv1.StatefulSet
+		ds            *appsv1.Deployment
+		expectedList  []string
+		expectedError error
+	}{
+		{
+			name: "none-dev-mode",
+			sfs: &appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "sfs",
+					Namespace: "test",
+				},
+				Spec: appsv1.StatefulSetSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									VolumeMounts: []v1.VolumeMount{
+										{
+											MountPath: "/data",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			ds: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dev",
+					Namespace: "test",
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									VolumeMounts: []v1.VolumeMount{
+										{
+											MountPath: "/data",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedList: []string{},
+		},
+		{
+			name: "dev-is-dev-mode",
+			sfs: &appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "sfs",
+					Namespace: "test",
+				},
+				Spec: appsv1.StatefulSetSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									VolumeMounts: []v1.VolumeMount{
+										{
+											MountPath: "/data",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			ds: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dev",
+					Namespace: "test",
+					Labels: map[string]string{
+						model.DevLabel: "true",
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									VolumeMounts: []v1.VolumeMount{
+										{
+											MountPath: "/data",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedList: []string{"dev"},
+		},
+		{
+			name: "both-are-dev-mode",
+			sfs: &appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "sfs",
+					Namespace: "test",
+					Labels: map[string]string{
+						model.DevLabel: "true",
+					},
+				},
+				Spec: appsv1.StatefulSetSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									VolumeMounts: []v1.VolumeMount{
+										{
+											MountPath: "/data",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			ds: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dev",
+					Namespace: "test",
+					Labels: map[string]string{
+						model.DevLabel: "true",
+					},
+				},
+				Spec: appsv1.DeploymentSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									VolumeMounts: []v1.VolumeMount{
+										{
+											MountPath: "/data",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedList: []string{"dev", "sfs"},
+		},
+		{
+			name: "err-dev-not-found",
+			sfs: &appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "sfs-other",
+					Namespace: "test",
+					Labels: map[string]string{
+						model.DevLabel: "true",
+					},
+				},
+				Spec: appsv1.StatefulSetSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									VolumeMounts: []v1.VolumeMount{
+										{
+											MountPath: "/data",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			ds:           &appsv1.Deployment{},
+			expectedList: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		ctx := context.Background()
+		clientset := fake.NewSimpleClientset(tt.sfs, tt.ds)
+
+		result := ListDevModeOn(ctx, manifest, clientset)
+		assert.Equal(t, tt.expectedList, result)
+
+	}
 }
