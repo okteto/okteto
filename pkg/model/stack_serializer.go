@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/kballard/go-shellquote"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -34,7 +35,7 @@ const (
 	DefaultReplicasNumber = 1
 )
 
-//Stack represents an okteto stack
+// Stack represents an okteto stack
 type StackRaw struct {
 	Version   string                     `yaml:"version,omitempty"`
 	Name      string                     `yaml:"name"`
@@ -56,10 +57,10 @@ type StackRaw struct {
 	Warnings StackWarnings
 }
 
-//Service represents an okteto stack service
+// Service represents an okteto stack service
 type ServiceRaw struct {
 	Deploy                   *DeployInfoRaw        `yaml:"deploy,omitempty"`
-	Build                    *BuildInfo            `yaml:"build,omitempty"`
+	Build                    *composeBuildInfo     `yaml:"build,omitempty"`
 	CapAddSneakCase          []apiv1.Capability    `yaml:"cap_add,omitempty"`
 	CapAdd                   []apiv1.Capability    `yaml:"capAdd,omitempty"`
 	CapDropSneakCase         []apiv1.Capability    `yaml:"cap_drop,omitempty"`
@@ -235,6 +236,53 @@ type RawMessage struct {
 	unmarshal func(interface{}) error
 }
 
+type composeBuildInfo struct {
+	Name             string        `yaml:"name,omitempty"`
+	Context          string        `yaml:"context,omitempty"`
+	Dockerfile       string        `yaml:"dockerfile,omitempty"`
+	CacheFrom        []string      `yaml:"cache_from,omitempty"`
+	Target           string        `yaml:"target,omitempty"`
+	Args             Environment   `yaml:"args,omitempty"`
+	Image            string        `yaml:"image,omitempty"`
+	VolumesToInclude []StackVolume `yaml:"-"`
+	ExportCache      string        `yaml:"export_cache,omitempty"`
+}
+
+func (c *composeBuildInfo) toBuildInfo() *BuildInfo {
+	if c == nil {
+		return nil
+	}
+	return &BuildInfo{
+		Name:             c.Name,
+		Context:          c.Context,
+		Dockerfile:       c.Dockerfile,
+		CacheFrom:        c.CacheFrom,
+		Target:           c.Target,
+		Args:             c.Args,
+		Image:            c.Image,
+		VolumesToInclude: c.VolumesToInclude,
+		ExportCache:      c.ExportCache,
+	}
+}
+
+func (c *composeBuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		c.Name = rawString
+		return nil
+	}
+
+	type composeBuildInfoExtended composeBuildInfo // prevent recursion
+	var rawBuildInfo *composeBuildInfoExtended
+	err = unmarshal(&rawBuildInfo)
+	if err != nil {
+		return err
+	}
+	*c = composeBuildInfo(*rawBuildInfo)
+	return nil
+}
+
 func (s *Stack) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var stackRaw StackRaw
 	err := unmarshal(&stackRaw)
@@ -348,7 +396,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 		return nil, err
 	}
 	svc.Image = serviceRaw.Image
-	svc.Build = serviceRaw.Build
+	svc.Build = serviceRaw.Build.toBuildInfo()
 
 	svc.CapAdd = serviceRaw.CapAdd
 	if len(serviceRaw.CapAddSneakCase) > 0 {
@@ -590,6 +638,7 @@ func getSvcPorts(public bool, rawPorts, rawExpose []PortRaw) (bool, []Port, erro
 // ports:         | ports:
 //   - 5000       |   - 5000:5000
 //   - 3000       |   - 3000:3000
+//
 // public: true   |
 func translateOktetoStacksPortsIntoComposeSyntax(ports []PortRaw) []PortRaw {
 	for idx, p := range ports {
@@ -1189,13 +1238,32 @@ func getProtocol(protocolName string) (apiv1.Protocol, error) {
 	}
 }
 
+func hasUppercase(name string) bool {
+	for _, s := range name {
+		if unicode.IsUpper(s) {
+			return true
+		}
+	}
+	return false
+}
+
+func hasEmptySpace(name string) bool {
+	return strings.Contains(name, " ")
+}
+
+func hasUnderscore(name string) bool {
+	return strings.Contains(name, "_")
+}
+
 func shouldBeSanitized(name string) bool {
-	return strings.Contains(name, " ") || strings.Contains(name, "_")
+	return hasEmptySpace(name) || hasUnderscore(name) || hasUppercase(name)
 }
 
 func sanitizeName(name string) string {
+	name = strings.TrimSpace(name)
 	name = strings.ReplaceAll(name, " ", "-")
 	name = strings.ReplaceAll(name, "_", "-")
+	name = strings.ToLower(name)
 	return name
 }
 

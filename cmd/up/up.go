@@ -262,7 +262,14 @@ func Up() *cobra.Command {
 
 			dev, err := utils.GetDevFromManifest(oktetoManifest, upOptions.DevName)
 			if err != nil {
-				return err
+				if !errors.Is(err, utils.ErrNoDevSelected) {
+					return err
+				}
+				selector := utils.NewOktetoSelector("Select which development container to activate:", "Development container")
+				dev, err = utils.SelectDevFromManifest(oktetoManifest, selector)
+				if err != nil {
+					return err
+				}
 			}
 
 			up.Dev = dev
@@ -505,7 +512,6 @@ func (up *upContext) getManifest(path string) (*model.Manifest, error) {
 }
 
 func (up *upContext) start() error {
-
 	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
 		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
 		return fmt.Errorf("couldn't create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)

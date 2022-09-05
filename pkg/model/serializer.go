@@ -36,15 +36,16 @@ import (
 
 // BuildInfoRaw represents the build info for serialization
 type buildInfoRaw struct {
-	Name             string        `yaml:"name,omitempty"`
-	Context          string        `yaml:"context,omitempty"`
-	Dockerfile       string        `yaml:"dockerfile,omitempty"`
-	CacheFrom        []string      `yaml:"cache_from,omitempty"`
-	Target           string        `yaml:"target,omitempty"`
-	Args             Environment   `yaml:"args,omitempty"`
-	Image            string        `yaml:"image,omitempty"`
-	VolumesToInclude []StackVolume `yaml:"-"`
-	ExportCache      string        `yaml:"export_cache,omitempty"`
+	Name             string         `yaml:"name,omitempty"`
+	Context          string         `yaml:"context,omitempty"`
+	Dockerfile       string         `yaml:"dockerfile,omitempty"`
+	CacheFrom        []string       `yaml:"cache_from,omitempty"`
+	Target           string         `yaml:"target,omitempty"`
+	Args             Environment    `yaml:"args,omitempty"`
+	Image            string         `yaml:"image,omitempty"`
+	VolumesToInclude []StackVolume  `yaml:"-"`
+	ExportCache      string         `yaml:"export_cache,omitempty"`
+	DependsOn        BuildDependsOn `yaml:"depends_on,omitempty"`
 }
 
 type syncRaw struct {
@@ -290,6 +291,24 @@ func (sync Sync) MarshalYAML() (interface{}, error) {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (d *BuildDependsOn) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawString string
+	err := unmarshal(&rawString)
+	if err == nil {
+		*d = BuildDependsOn{rawString}
+		return nil
+	}
+
+	var rawStringList []string
+	err = unmarshal(&rawStringList)
+	if err == nil {
+		*d = rawStringList
+		return nil
+	}
+	return err
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
 	err := unmarshal(&rawString)
@@ -312,6 +331,7 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	buildInfo.Image = rawBuildInfo.Image
 	buildInfo.CacheFrom = rawBuildInfo.CacheFrom
 	buildInfo.ExportCache = rawBuildInfo.ExportCache
+	buildInfo.DependsOn = rawBuildInfo.DependsOn
 	return nil
 }
 
@@ -677,7 +697,7 @@ func checkFileAndNotDirectory(path string) error {
 }
 
 func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	type devType Dev //Prevent recursion
+	type devType Dev // Prevent recursion
 	dev := devType(*d)
 	err := unmarshal(&dev)
 	if err != nil {
@@ -770,11 +790,11 @@ func (dependency *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) e
 	return nil
 }
 
-func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	dev := NewDev()
 	err := unmarshal(&dev)
 	if err == nil {
-		*d = *NewManifestFromDev(dev)
+		*m = *NewManifestFromDev(dev)
 		return nil
 	}
 	if !isManifestFieldNotFound(err) {
@@ -790,17 +810,23 @@ func (d *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
-	d.Deploy = manifest.Deploy
-	d.Destroy = manifest.Destroy
-	d.Dev = manifest.Dev
-	d.Icon = manifest.Icon
-	d.Build = manifest.Build
-	d.Namespace = manifest.Namespace
-	d.Context = manifest.Context
-	d.IsV2 = true
-	d.Dependencies = manifest.Dependencies
-	d.Name = manifest.Name
-	d.GlobalForward = manifest.GlobalForward
+	m.Deploy = manifest.Deploy
+	m.Destroy = manifest.Destroy
+	m.Dev = manifest.Dev
+	m.Icon = manifest.Icon
+	m.Build = manifest.Build
+	m.Namespace = manifest.Namespace
+	m.Context = manifest.Context
+	m.IsV2 = true
+	m.Dependencies = manifest.Dependencies
+	m.Name = manifest.Name
+	m.GlobalForward = manifest.GlobalForward
+
+	err = m.SanitizeSvcNames()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -813,7 +839,7 @@ func (d *DeployCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	//prevent recursion
+	// prevent recursion
 	type deployCommand DeployCommand
 	var extendedCommand deployCommand
 	err = unmarshal(&extendedCommand)

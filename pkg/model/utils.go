@@ -23,6 +23,8 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
+type graph map[string][]string
+
 // GetValidNameFromFolder returns a valid kubernetes name for a folder
 func GetValidNameFromFolder(folder string) (string, error) {
 	dir, err := filepath.Abs(folder)
@@ -102,12 +104,17 @@ func GetRepositoryURL(path string) (string, error) {
 	return remotes[0].Config().URLs[0], nil
 }
 
-func getDependentCyclic(s *Stack) []string {
+func getDependentCyclic(g graph) []string {
 	visited := make(map[string]bool)
 	stack := make(map[string]bool)
 	cycle := make([]string, 0)
-	for svcName := range s.Services {
-		if dfs(s, svcName, visited, stack) {
+
+	// We need to iterate from all the nodes on the graph checking that there are no cycles in
+	// the graph.
+	for svcName := range g {
+		// dfs search for all the possible paths of a graph, starting from a node. If we find more
+		// than once one nodeit means that it has detected a cycle and returns the cycle
+		if dfs(g, svcName, visited, stack) {
 			for svc, isInStack := range stack {
 				if isInStack {
 					cycle = append(cycle, svc)
@@ -119,15 +126,38 @@ func getDependentCyclic(s *Stack) []string {
 	return cycle
 }
 
-func dfs(s *Stack, svcName string, visited, stack map[string]bool) bool {
+func getDependentNodes(g graph, startingNodes []string) []string {
+	initialLength := len(startingNodes)
+	svcsToDeploySet := map[string]bool{}
+	for _, svc := range startingNodes {
+		svcsToDeploySet[svc] = true
+	}
+	for _, svcToDeploy := range startingNodes {
+		for _, dependentSvc := range g[svcToDeploy] {
+			if _, ok := svcsToDeploySet[dependentSvc]; ok {
+				continue
+			}
+			startingNodes = append(startingNodes, dependentSvc)
+			svcsToDeploySet[dependentSvc] = true
+		}
+	}
+	if initialLength != len(startingNodes) {
+		return getDependentNodes(g, startingNodes)
+	}
+	return startingNodes
+}
+
+// dfs executes deep first search algorithm.
+// More information can be found at https://en.wikipedia.org/wiki/Depth-first_search
+func dfs(g graph, svcName string, visited, stack map[string]bool) bool {
 	isVisited := visited[svcName]
 	if !isVisited {
 		visited[svcName] = true
 		stack[svcName] = true
 
-		svc := s.Services[svcName]
-		for dependentSvc := range svc.DependsOn {
-			if !visited[dependentSvc] && dfs(s, dependentSvc, visited, stack) {
+		svc := g[svcName]
+		for _, dependentSvc := range svc {
+			if !visited[dependentSvc] && dfs(g, dependentSvc, visited, stack) {
 				return true
 			} else if value, ok := stack[dependentSvc]; ok && value {
 				return true
@@ -144,4 +174,31 @@ func pathExistsAndDir(path string) bool {
 		return false
 	}
 	return info.IsDir()
+}
+
+func getListDiff(l1, l2 []string) []string {
+	var (
+		longerList  []string
+		shorterList []string
+	)
+	if len(l1) < len(l2) {
+		shorterList = l1
+		longerList = l2
+
+	} else {
+		shorterList = l2
+		longerList = l1
+	}
+
+	shorterListSet := map[string]bool{}
+	for _, svc := range shorterList {
+		shorterListSet[svc] = true
+	}
+	added := []string{}
+	for _, svcName := range longerList {
+		if _, ok := shorterListSet[svcName]; ok {
+			added = append(added, svcName)
+		}
+	}
+	return added
 }

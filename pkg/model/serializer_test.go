@@ -1074,7 +1074,7 @@ deploy:
 			isErrorExpected: false,
 		},
 		{
-			name: "dev manifest with dev and deploy",
+			name: "dev manifest with dev sanitized and deploy",
 			manifest: []byte(`
 deploy:
   - okteto stack deploy
@@ -1082,7 +1082,7 @@ dev:
   test-1:
     sync:
     - app:/app
-  test-2:
+  test_2:
     sync:
     - app:/app
 `),
@@ -2150,6 +2150,35 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 			if !assert.Equal(t, tt.expected, result) {
 				t.Fatal("Failed")
 			}
+		})
+	}
+}
+
+func TestBuildDependsOnUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name          string
+		buildManifest []byte
+		expected      BuildDependsOn
+	}{
+		{
+			name:          "single string",
+			buildManifest: []byte(`a`),
+			expected:      BuildDependsOn{"a"},
+		},
+		{
+			name: "list",
+			buildManifest: []byte(`- a
+- b`),
+			expected: BuildDependsOn{"a", "b"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result BuildDependsOn
+			err := yaml.UnmarshalStrict(tt.buildManifest, &result)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

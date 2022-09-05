@@ -30,7 +30,7 @@ const (
 	newNamespaceOption = "Create new namespace"
 )
 
-//UseOptions are the options for the use command
+// UseOptions are the options for the use command
 type UseOptions struct {
 	personal bool
 }
@@ -99,7 +99,9 @@ func (nc *NamespaceCommand) getNamespaceFromSelector(ctx context.Context) (strin
 	if err != nil {
 		return "", err
 	}
-	ns, _, err := utils.AskForOptionsOkteto(ctx, namespaces, "Select the namespace you want to use:", "Namespace")
+	initialPosition := getInitialPosition(namespaces)
+	selector := utils.NewOktetoSelector("Select the namespace you want to use:", "Namespace")
+	ns, err := selector.AskForOptionsOkteto(namespaces, initialPosition)
 	if err != nil {
 		return "", err
 	}
@@ -156,4 +158,14 @@ func askForOktetoNamespace() string {
 	oktetoLog.Question("Enter the namespace you want to use: ")
 	fmt.Scanln(&namespace)
 	return namespace
+}
+
+func getInitialPosition(options []utils.SelectorItem) int {
+	currentNamespace := okteto.Context().Namespace
+	for indx, ns := range options {
+		if ns.Label == currentNamespace {
+			return indx
+		}
+	}
+	return -1
 }

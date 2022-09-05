@@ -34,7 +34,7 @@ func getContextsSelection(ctxOptions *ContextOptions) []utils.SelectorItem {
 	}
 	clusters := make([]utils.SelectorItem, 0)
 
-	clusters = append(clusters, utils.SelectorItem{Name: okteto.CloudURL, Label: cloudOption, Enable: true, IsOkteto: true})
+	clusters = append(clusters, utils.SelectorItem{Name: okteto.CloudURL, Label: cloudOption, Enable: true})
 	clusters = append(clusters, getOktetoClusters(true)...)
 	if len(k8sClusters) > 0 {
 		clusters = append(clusters, getK8sClusters(k8sClusters)...)
@@ -67,13 +67,9 @@ func getOktetoClusters(skipCloud bool) []utils.SelectorItem {
 		orderedOktetoClusters = append(
 			orderedOktetoClusters,
 			utils.SelectorItem{
-				Name:      ctxName,
-				Label:     ctxName,
-				Enable:    true,
-				IsOkteto:  true,
-				Namespace: okCtx.Namespace,
-				Builder:   okCtx.Builder,
-				Registry:  okCtx.Registry,
+				Name:   ctxName,
+				Label:  ctxName,
+				Enable: true,
 			})
 	}
 	sort.Slice(orderedOktetoClusters, func(i, j int) bool {
@@ -92,17 +88,23 @@ func getK8sClusters(k8sClusters []string) []utils.SelectorItem {
 	orderedK8sClusters := make([]utils.SelectorItem, 0)
 	for _, k8sCluster := range k8sClusters {
 		orderedK8sClusters = append(orderedK8sClusters, utils.SelectorItem{
-			Name:      k8sCluster,
-			Label:     k8sCluster,
-			Enable:    true,
-			IsOkteto:  false,
-			Namespace: getKubernetesContextNamespace(k8sCluster),
-			Builder:   "docker",
-			Registry:  "-",
+			Name:   k8sCluster,
+			Label:  k8sCluster,
+			Enable: true,
 		})
 	}
 	sort.Slice(orderedK8sClusters, func(i, j int) bool {
 		return strings.Compare(orderedK8sClusters[i].Name, orderedK8sClusters[j].Name) < 0
 	})
 	return orderedK8sClusters
+}
+
+func getInitialPosition(options []utils.SelectorItem) int {
+	currentContext := okteto.ContextStore().CurrentContext
+	for indx, item := range options {
+		if item.Enable && item.Name == currentContext {
+			return indx
+		}
+	}
+	return -1
 }

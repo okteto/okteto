@@ -18,10 +18,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
+	"sync"
 
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
-	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -42,15 +42,24 @@ type OktetoBuilder struct {
 	Builder   OktetoBuilderInterface
 	Registry  build.OktetoRegistryInterface
 	V1Builder *buildv1.OktetoBuilder
+
+	// buildEnvironments are the environment variables created by the build steps
+	buildEnvironments map[string]string
+
+	// lock is a mutex to provide builEnvironments map safe concurrency
+	lock sync.RWMutex
+
+	// builtImages represents the images that have been built already
+	builtImages map[string]bool
 }
 
 // NewBuilder creates a new okteto builder
 func NewBuilder(builder OktetoBuilderInterface, registry build.OktetoRegistryInterface) *OktetoBuilder {
-	return &OktetoBuilder{
-		Builder:   builder,
-		Registry:  registry,
-		V1Builder: buildv1.NewBuilder(builder, registry),
-	}
+	b := NewBuilderFromScratch()
+	b.Builder = builder
+	b.Registry = registry
+	b.V1Builder = buildv1.NewBuilder(builder, registry)
+	return b
 }
 
 // NewBuilderFromScratch creates a new okteto builder
@@ -58,51 +67,17 @@ func NewBuilderFromScratch() *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry()
 	return &OktetoBuilder{
-		Builder:   builder,
-		Registry:  registry,
-		V1Builder: buildv1.NewBuilder(builder, registry),
+		Builder:           builder,
+		Registry:          registry,
+		V1Builder:         buildv1.NewBuilder(builder, registry),
+		buildEnvironments: map[string]string{},
+		builtImages:       map[string]bool{},
 	}
 }
 
-// LoadContext Loads the okteto context based on a build v2
-func (*OktetoBuilder) LoadContext(ctx context.Context, options *types.BuildOptions) error {
-	ctxOpts := &contextCMD.ContextOptions{}
-
-	if options.Manifest.Context != "" {
-		ctxOpts.Context = options.Manifest.Context
-	}
-	if options.K8sContext != "" {
-		ctxOpts.Context = options.K8sContext
-	}
-
-	if options.Manifest.Namespace != "" {
-		ctxOpts.Namespace = options.Manifest.Namespace
-		ctxOpts.Namespace = options.Manifest.Namespace
-	}
-	if options.Namespace != "" {
-		ctxOpts.Namespace = options.Namespace
-	}
-	if err := contextCMD.NewContextCommand().Run(ctx, ctxOpts); err != nil {
-		return err
-	}
-
-	if okteto.IsOkteto() && ctxOpts.Namespace != "" {
-		create, err := utils.ShouldCreateNamespace(ctx, ctxOpts.Namespace)
-		if err != nil {
-			return err
-		}
-		if create {
-			nsCmd, err := namespace.NewCommand()
-			if err != nil {
-				return err
-			}
-			if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: ctxOpts.Namespace}); err != nil {
-				return err
-			}
-			return contextCMD.NewContextCommand().Run(ctx, ctxOpts)
-		}
-	}
-	return nil
+// IsV1 returns false since it is a builder v2
+func (*OktetoBuilder) IsV1() bool {
+	return false
 }
 
 // Build builds the images defined by a manifest
@@ -132,26 +107,47 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 	buildManifest := options.Manifest.Build
 
-	for _, svcToBuild := range toBuildSvcs {
-		if options.EnableStages {
-			oktetoLog.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
-		}
+	oktetoLog.Infof("Images to build: [%s]", strings.Join(toBuildSvcs, ", "))
+	for len(bc.builtImages) != len(toBuildSvcs) {
+		for _, svcToBuild := range toBuildSvcs {
+			if bc.builtImages[svcToBuild] {
+				oktetoLog.Infof("skipping image '%s' due to being already built")
+				continue
+			}
+			if !bc.areImagesBuilt(buildManifest[svcToBuild].DependsOn) {
+				oktetoLog.Infof("image '%s' can't be deployed because at least one of its dependent images(%s) are not built", svcToBuild, strings.Join(buildManifest[svcToBuild].DependsOn, ", "))
+				continue
+			}
+			if options.EnableStages {
+				oktetoLog.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
+			}
 
-		buildSvcInfo := buildManifest[svcToBuild]
-		if !okteto.Context().IsOkteto && buildSvcInfo.Image == "" {
-			return fmt.Errorf("'build.%s.image' is required if your cluster doesn't have Okteto installed", svcToBuild)
-		}
+			buildSvcInfo := buildManifest[svcToBuild]
+			if !okteto.Context().IsOkteto && buildSvcInfo.Image == "" {
+				return fmt.Errorf("'build.%s.image' is required if your cluster doesn't have Okteto installed", svcToBuild)
+			}
 
-		imageTag, err := bc.buildService(ctx, options.Manifest, svcToBuild, options)
-		if err != nil {
-			return err
+			imageTag, err := bc.buildService(ctx, options.Manifest, svcToBuild, options)
+			if err != nil {
+				return err
+			}
+			bc.SetServiceEnvVars(svcToBuild, imageTag)
+			bc.builtImages[svcToBuild] = true
 		}
-		bc.SetServiceEnvVars(svcToBuild, imageTag)
 	}
 	if options.EnableStages {
 		oktetoLog.SetStage("")
 	}
 	return options.Manifest.ExpandEnvVars()
+}
+
+func (bc *OktetoBuilder) areImagesBuilt(imagesToCheck []string) bool {
+	for _, imageToCheck := range imagesToCheck {
+		if _, ok := bc.builtImages[imageToCheck]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func (bc *OktetoBuilder) buildService(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
@@ -187,6 +183,8 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	oktetoLog.Information("Building image for service '%s'", svcName)
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
+
+	buildSvcInfo.AddArgs(bc.buildEnvironments)
 
 	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options)
 
@@ -266,13 +264,9 @@ func getAccessibleVolumeMounts(buildInfo *model.BuildInfo) []model.StackVolume {
 func getToBuildSvcs(manifest *model.Manifest, options *types.BuildOptions) []string {
 	toBuild := []string{}
 	if len(options.CommandArgs) != 0 {
-		for _, svc := range options.CommandArgs {
-			if _, ok := manifest.Build[svc]; ok {
-				toBuild = append(toBuild, svc)
-			}
-		}
-		return toBuild
+		return manifest.Build.GetSvcsToBuildFromList(options.CommandArgs)
 	}
+
 	for svcName := range manifest.Build {
 		toBuild = append(toBuild, svcName)
 	}

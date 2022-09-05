@@ -208,7 +208,7 @@ type DeployCommand struct {
 	Command string `json:"command,omitempty" yaml:"command,omitempty"`
 }
 
-//NewDeployInfo creates a deploy Info
+// NewDeployInfo creates a deploy Info
 func NewDeployInfo() *DeployInfo {
 	return &DeployInfo{
 		Commands: []DeployCommand{},
@@ -242,7 +242,7 @@ func getManifestFromDevFilePath(cwd, manifestPath string) (*Manifest, error) {
 	return nil, discovery.ErrOktetoManifestNotFound
 }
 
-//GetManifestV1 gets a manifest from a path or search for the files to generate it
+// GetManifestV1 gets a manifest from a path or search for the files to generate it
 func GetManifestV1(manifestPath string) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -272,7 +272,7 @@ func GetManifestV1(manifestPath string) (*Manifest, error) {
 	return manifest, nil
 }
 
-//GetManifestV2 gets a manifest from a path or search for the files to generate it
+// GetManifestV2 gets a manifest from a path or search for the files to generate it
 func GetManifestV2(manifestPath string) (*Manifest, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -636,8 +636,8 @@ func Read(bytes []byte) (*Manifest, error) {
 	}
 
 	hasShownWarning := false
-	for _, d := range manifest.Dev {
-		if (d.Image.Context != "" || d.Image.Dockerfile != "") && !hasShownWarning {
+	for _, dev := range manifest.Dev {
+		if (dev.Image.Context != "" || dev.Image.Dockerfile != "") && !hasShownWarning {
 			hasShownWarning = true
 			oktetoLog.Yellow(`The 'image' extended syntax is deprecated and will be removed in a future version. Define the images you want to build in the 'build' section of your manifest. More info at https://www.okteto.com/docs/reference/manifest/#build"`)
 		}
@@ -655,7 +655,84 @@ func Read(bytes []byte) (*Manifest, error) {
 }
 
 func (m *Manifest) validate() error {
+	if err := m.Build.validate(); err != nil {
+		return err
+	}
 	return m.validateDivert()
+}
+
+func (b *ManifestBuild) validate() error {
+	cycle := getDependentCyclic(b.toGraph())
+	if len(cycle) == 1 { // depends on the same node
+		return fmt.Errorf("manifest build validation failed: image '%s' is referenced on its dependencies", cycle[0])
+	} else if len(cycle) > 1 {
+		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(cycle[:len(cycle)-1], ", "), cycle[len(cycle)-1])
+		return fmt.Errorf("manifest validation failed: cyclic dependendecy found between %s", svcsDependents)
+	}
+	return nil
+}
+
+// GetSvcsToBuildFromList returns the builds from a list and all its
+func (b *ManifestBuild) GetSvcsToBuildFromList(toBuild []string) []string {
+	initialSvcsToBuild := toBuild
+	svcsToBuildWithDependencies := getDependentNodes(b.toGraph(), toBuild)
+	if len(initialSvcsToBuild) != len(svcsToBuildWithDependencies) {
+		dependantBuildImages := getListDiff(initialSvcsToBuild, svcsToBuildWithDependencies)
+		oktetoLog.Warning("The following build images need to be built because of dependencies: [%s]", strings.Join(dependantBuildImages, ", "))
+	}
+	return svcsToBuildWithDependencies
+}
+
+func (b ManifestBuild) toGraph() graph {
+	g := graph{}
+	for k, v := range b {
+		g[k] = v.DependsOn
+	}
+	return g
+}
+
+// SanitizeSvcNames sanitize service names in 'dev', 'build' and 'global forward' sections
+func (m *Manifest) SanitizeSvcNames() error {
+	sanitizedServicesNames := make(map[string]string)
+	for devKey, dev := range m.Dev {
+		if shouldBeSanitized(devKey) {
+			sanitizedSvcName := sanitizeName(devKey)
+			if _, ok := m.Dev[sanitizedSvcName]; ok {
+				return fmt.Errorf("could not sanitize '%s'. Service with name '%s' already exists", devKey, sanitizedSvcName)
+			}
+			dev.Name = sanitizedSvcName
+			m.Dev[sanitizedSvcName] = dev
+			sanitizedServicesNames[devKey] = sanitizedSvcName
+			delete(m.Dev, devKey)
+		}
+	}
+
+	for buildKey, build := range m.Build {
+		if shouldBeSanitized(buildKey) {
+			sanitizedSvcName := sanitizeName(buildKey)
+			if _, ok := m.Build[sanitizedSvcName]; ok {
+				return fmt.Errorf("could not sanitize '%s'. Service with name '%s' already exists", buildKey, sanitizedSvcName)
+			}
+			m.Build[sanitizedSvcName] = build
+			sanitizedServicesNames[buildKey] = sanitizedSvcName
+			delete(m.Build, buildKey)
+		}
+	}
+
+	for idx := range m.GlobalForward {
+		gfServiceName := m.GlobalForward[idx].ServiceName
+		if shouldBeSanitized(gfServiceName) {
+			sanitizedSvcName := sanitizeName(gfServiceName)
+			sanitizedServicesNames[gfServiceName] = sanitizedSvcName
+			m.GlobalForward[idx].ServiceName = sanitizedSvcName
+		}
+	}
+
+	for previousName, newName := range sanitizedServicesNames {
+		oktetoLog.Warning("Service '%s' specified in okteto manifest has been sanitized into '%s'.", previousName, newName)
+	}
+
+	return nil
 }
 
 func (m *Manifest) validateDivert() error {
@@ -926,7 +1003,7 @@ func (m *Manifest) WriteToFile(filePath string) error {
 			d.Push = nil
 		}
 	}
-	//Unmarshal with yamlv2 because we have the marshal with yaml v2
+	// Unmarshal with yamlv2 because we have the marshal with yaml v2
 	b, err := yaml.Marshal(m)
 	if err != nil {
 		return err

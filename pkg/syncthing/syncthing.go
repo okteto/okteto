@@ -368,6 +368,7 @@ func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
 	if strings.Contains(err.Error(), "Client.Timeout") {
 		return true
 	}
+	oktetoLog.Infof("error pinging syncthing: %s", err.Error())
 	return false
 }
 

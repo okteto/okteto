@@ -10,6 +10,8 @@ repos:
     hooks:
       - id: identity
       - id: check-hooks-apply
+
+  # general checks for the repository
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.1.0
     hooks:
@@ -20,7 +22,6 @@ repos:
       - id: check-merge-conflict
       - id: check-toml
       - id: check-vcs-permalinks
-      - id: check-yaml
       - id: detect-private-key
         exclude: ^pkg/k8s/secrets/certs\.go$|^pkg/syncthing/certs\.go$|^cmd/deploy/certs\.go$
       - id: end-of-file-fixer
@@ -28,48 +29,37 @@ repos:
       - id: mixed-line-ending
       - id: trailing-whitespace
         exclude: ^\.github/pull_request_template\.md$
+
+  # shell and markdown checks
   - repo: https://github.com/jumanjihouse/pre-commit-hooks
     rev: 2.1.6
     hooks:
       - id: shellcheck
-      # - id: shfmt
+      - id: markdownlint
+
+  # check spelling though all the repository
   - repo: https://github.com/codespell-project/codespell
     rev: v2.1.0
     hooks:
       - id: codespell
         name: Run codespell
         description: Check Spelling with codespell
-        entry: codespell --exclude-file=".circleci/config.yml" --ignore-words=codespell.txt
+        entry: codespell -L flate,keypair,splitted,vertexes,ba
+
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v2.6.1
+    rev: v2.7.1
     hooks:
       - id: prettier
         name: Run prettier
         description: Format files with prettier
-  - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.31.1
-    hooks:
-      - id: markdownlint
-        name: Run markdownlint
-        description: Check Markdown files with markdownlint
-        entry: markdownlint -c .github/linters/.markdown-lint.yml .
-        types: [markdown]
-        files: \.(md|mdown|markdown)$
+
+  # yaml files check
   - repo: https://github.com/adrienverge/yamllint
     rev: v1.26.3
     hooks:
       - id: yamllint
         name: Run yamllint
         description: Check YAML files with yamllint
-        entry: yamllint --strict -c .github/linters/.yaml-lint.yml
+        entry: yamllint --strict -c .yaml-lint.yml
         types: [yaml]
         files: \.(yaml|yml)$
-  - repo: local
-    hooks:
-      - id: sort-codespell-wordlist
-        name: Sort codespell.txt
-        description: Sort alphabetically and uniquify codespell.txt
-        entry: ./scripts/ci/pre-commit/sort-codespell-wordlist.sh
-        language: system
-        files: ^\.pre-commit-config\.yaml$|^codespell\.txt$
-        require_serial: true

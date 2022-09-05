@@ -19,19 +19,20 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
+	"time"
 
 	"strings"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/cmd/deploy"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
+	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
-	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
@@ -43,7 +44,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -86,6 +86,7 @@ type destroyCommand struct {
 	nsDestroyer       destroyer
 	secrets           secretHandler
 	k8sClientProvider okteto.K8sClientProvider
+	configMapHandler  configMapHandler
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -162,12 +163,13 @@ func Destroy(ctx context.Context) *cobra.Command {
 				getManifest: model.GetManifestV2,
 
 				executor:          executor.NewExecutor(oktetoLog.GetOutputFormat()),
+				configMapHandler:  newConfigmapHandler(k8sClient),
 				nsDestroyer:       namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProvider(),
 			}
 
-			kubeconfigPath := deploy.GetTempKubeConfigFile(name)
+			kubeconfigPath := getTempKubeConfigFile(name)
 			if err := kubeconfig.Write(okteto.Context().Cfg, kubeconfigPath); err != nil {
 				return err
 			}
@@ -221,11 +223,6 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		return err
 	}
 
-	c, _, err := dc.k8sClientProvider.Provide(okteto.Context().Cfg)
-	if err != nil {
-		return err
-	}
-
 	for _, variable := range opts.Variables {
 		value := strings.SplitN(variable, "=", 2)[1]
 		if strings.TrimSpace(value) != "" {
@@ -240,16 +237,19 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	}
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destroying...")
+
 	data := &pipeline.CfgData{
 		Name:      opts.Name,
 		Namespace: namespace,
 		Status:    pipeline.DestroyingStatus,
 		Filename:  opts.ManifestPathFlag,
 	}
-	cfg, err := pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
+
+	cfg, err := dc.configMapHandler.translateConfigMapAndDeploy(ctx, data)
 	if err != nil {
 		return err
 	}
+
 	if manifest.Context == "" {
 		manifest.Context = okteto.Context().Name
 	}
@@ -286,7 +286,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 			if err := dc.executor.Execute(command, opts.Variables); err != nil {
 				oktetoLog.Fail("error executing command '%s': %s", command.Name, err.Error())
 				if !opts.ForceDestroy {
-					if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
+					if err := dc.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 						exit <- err
 						return
 					}
@@ -324,7 +324,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		[]string{opts.Name},
 	)
 	if err != nil {
-		if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
+		if err := dc.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 			return err
 		}
 		return err
@@ -337,7 +337,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 
 	oktetoLog.SetStage("Destroying volumes")
 	if err := dc.nsDestroyer.DestroySFSVolumes(ctx, opts.Namespace, deleteOpts); err != nil {
-		if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
+		if err := dc.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 			return err
 		}
 		return err
@@ -346,7 +346,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	oktetoLog.SetStage("Destroying Helm release")
 	if err := dc.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
 		if !opts.ForceDestroy {
-			if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
+			if err := dc.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 				return err
 			}
 			return err
@@ -357,16 +357,18 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	oktetoLog.SetStage(fmt.Sprintf("Destroying by label '%s'", deployedBySelector))
 	if err := dc.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
 		oktetoLog.Infof("could not delete all the resources: %s", err)
-		if err := setErrorStatus(ctx, cfg, data, err, c); err != nil {
+		if err := dc.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 			return err
 		}
 		return err
 	}
 
 	oktetoLog.SetStage("Destroying configmap")
-	if err := configmaps.Destroy(ctx, cfg.Name, namespace, c); err != nil {
+
+	if err := dc.configMapHandler.destroyConfigMap(ctx, cfg, namespace); err != nil {
 		return err
 	}
+
 	return commandErr
 }
 
@@ -406,7 +408,7 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 	return nil
 }
 
-func setErrorStatus(ctx context.Context, cfg *v1.ConfigMap, data *pipeline.CfgData, err error, c kubernetes.Interface) error {
-	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destruction failed: %s", err.Error())
-	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
+func getTempKubeConfigFile(name string) string {
+	tempKubeconfigFileName := fmt.Sprintf("kubeconfig-destroy-%s-%d", name, time.Now().UnixMilli())
+	return filepath.Join(config.GetOktetoHome(), tempKubeconfigFileName)
 }
