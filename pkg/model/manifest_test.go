@@ -892,6 +892,37 @@ func Test_SanitizeSvcNames(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "keys-have-trailing-spaces",
+			manifest: &Manifest{
+				Build: ManifestBuild{
+					"  my-build ": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					" my-dev  ": &Dev{},
+				},
+				GlobalForward: []forward.GlobalForward{
+					{
+						ServiceName: "   my-global   ",
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Build: ManifestBuild{
+					"my-build": &BuildInfo{},
+				},
+				Dev: ManifestDevs{
+					"my-dev": &Dev{
+						Name: "my-dev",
+					},
+				},
+				GlobalForward: []forward.GlobalForward{
+					{
+						ServiceName: "my-global",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

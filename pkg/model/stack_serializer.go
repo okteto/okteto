@@ -1208,8 +1208,12 @@ func hasUnderscore(name string) bool {
 	return strings.Contains(name, "_")
 }
 
+func hasTrailingSpaces(name string) bool {
+	return strings.HasPrefix(name, " ") || strings.HasSuffix(name, " ")
+}
+
 func shouldBeSanitized(name string) bool {
-	return hasEmptySpace(name) || hasUnderscore(name) || hasUppercase(name)
+	return hasEmptySpace(name) || hasUnderscore(name) || hasUppercase(name) || hasTrailingSpaces(name)
 }
 
 func sanitizeName(name string) string {
