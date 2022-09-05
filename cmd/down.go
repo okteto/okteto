@@ -92,6 +92,7 @@ func Down() *cobra.Command {
 
 					if len(options) < 1 {
 						oktetoLog.Success("All development containers are deactivated")
+						return nil
 					}
 					dev, err = utils.SelectDevFromManifest(manifest, selector, options)
 					if err != nil {
