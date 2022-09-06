@@ -77,6 +77,7 @@ type Options struct {
 	DestroyDependencies bool
 	ForceDestroy        bool
 	K8sContext          string
+	RunWithoutBash      bool
 }
 
 type destroyCommand struct {
@@ -162,7 +163,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			c := &destroyCommand{
 				getManifest: model.GetManifestV2,
 
-				executor:          executor.NewExecutor(oktetoLog.GetOutputFormat()),
+				executor:          executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
 				configMapHandler:  newConfigmapHandler(k8sClient),
 				nsDestroyer:       namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:           secrets.NewSecrets(k8sClient),
@@ -192,6 +193,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVar(&options.ForceDestroy, "force-destroy", false, "forces the development environment to be destroyed even if there is an error executing the custom destroy commands defined in the manifest")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment was deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment was deployed")
+	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
 
 	return cmd
 }

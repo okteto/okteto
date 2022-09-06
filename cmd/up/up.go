@@ -488,7 +488,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 	c := &deploy.DeployCommand{
 		GetManifest:        up.getManifest,
 		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat()),
+		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), false),
 		Proxy:              proxy,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
 		K8sClientProvider:  okteto.NewK8sClientProvider(),

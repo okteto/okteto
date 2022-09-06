@@ -21,16 +21,17 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 )
 
-//ManifestExecutor is the interface to execute a command
+// ManifestExecutor is the interface to execute a command
 type ManifestExecutor interface {
 	Execute(command model.DeployCommand, env []string) error
 	CleanUp(err error)
 }
 
-//Executor implements ManifestExecutor with a executor displayer
+// Executor implements ManifestExecutor with a executor displayer
 type Executor struct {
-	outputMode string
-	displayer  executorDisplayer
+	outputMode     string
+	displayer      executorDisplayer
+	runWithoutBash bool
 }
 
 type executorDisplayer interface {
@@ -40,7 +41,7 @@ type executorDisplayer interface {
 }
 
 // NewExecutor returns a new executor
-func NewExecutor(output string) *Executor {
+func NewExecutor(output string, runWithoutBash bool) *Executor {
 	var displayer executorDisplayer
 	switch output {
 	case oktetoLog.TTYFormat:
@@ -53,8 +54,9 @@ func NewExecutor(output string) *Executor {
 		displayer = newTTYExecutor()
 	}
 	return &Executor{
-		outputMode: output,
-		displayer:  displayer,
+		outputMode:     output,
+		displayer:      displayer,
+		runWithoutBash: runWithoutBash,
 	}
 }
 
@@ -62,6 +64,9 @@ func NewExecutor(output string) *Executor {
 func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 
 	cmd := exec.Command("bash", "-c", cmdInfo.Command)
+	if e.runWithoutBash {
+		cmd = exec.Command(cmdInfo.Command)
+	}
 	cmd.Env = append(os.Environ(), env...)
 	if err := e.displayer.startCommand(cmd); err != nil {
 		return err
