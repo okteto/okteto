@@ -29,6 +29,8 @@ import (
 	"github.com/docker/cli/cli/command"
 	"github.com/docker/distribution/reference"
 	dockerTypes "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/registry"
+	"github.com/docker/docker/builder/remotecontext/urlutil"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/idtools"
@@ -36,7 +38,6 @@ import (
 	"github.com/docker/docker/pkg/progress"
 	"github.com/docker/docker/pkg/streamformatter"
 	"github.com/docker/docker/pkg/stringid"
-	"github.com/docker/docker/pkg/urlutil"
 	dockerRegistry "github.com/docker/docker/registry"
 	controlapi "github.com/moby/buildkit/api/services/control"
 	buildkitClient "github.com/moby/buildkit/client"
@@ -442,7 +443,7 @@ func pushImage(ctx context.Context, tag string, client *client.Client) error {
 	return jsonmessage.DisplayJSONMessagesToStream(responseBody, dockerCli.Out(), nil)
 }
 
-func ResolveAuthConfig(ctx context.Context, dockerCli *command.DockerCli, cli *client.Client, repoInfo *dockerRegistry.RepositoryInfo) dockerTypes.AuthConfig {
+func ResolveAuthConfig(ctx context.Context, dockerCli *command.DockerCli, cli *client.Client, repoInfo *dockerRegistry.RepositoryInfo) registry.AuthConfig {
 	configKey := repoInfo.Index.Name
 	if repoInfo.Index.Official {
 		info, err := cli.Info(ctx)
@@ -453,5 +454,5 @@ func ResolveAuthConfig(ctx context.Context, dockerCli *command.DockerCli, cli *c
 	}
 
 	a, _ := dockerCli.ConfigFile().GetAuthConfig(configKey)
-	return dockerTypes.AuthConfig(a)
+	return registry.AuthConfig(a)
 }
