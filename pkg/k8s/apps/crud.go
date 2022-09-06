@@ -173,10 +173,13 @@ func ListDevModeOn(ctx context.Context, manifest *model.Manifest, c kubernetes.I
 	for name, dev := range manifest.Dev {
 		// when autocreate is active, the app name has suffix -okteto
 		// this should be taken into account when searching for dev mode apps
-		if dev.Autocreate {
-			dev.Name = fmt.Sprintf("%s-okteto", name)
+		// we just want to modify the dev
+		var appDev model.Dev = *dev
+
+		if appDev.Autocreate {
+			appDev.Name = model.DevCloneName(appDev.Name)
 		}
-		app, err := Get(ctx, dev, manifest.Namespace, c)
+		app, err := Get(ctx, &appDev, manifest.Namespace, c)
 		if err != nil {
 			oktetoLog.Debugf("error listing dev-mode %s: %v", name, err)
 		}
