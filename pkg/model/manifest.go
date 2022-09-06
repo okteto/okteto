@@ -1212,3 +1212,12 @@ func (d ManifestDevs) HasDev(name string) bool {
 	_, ok := d[name]
 	return ok
 }
+
+// GetDevs returns a list of strings with the keys of devs defined
+func (d ManifestDevs) GetDevs() []string {
+	devs := []string{}
+	for k := range d {
+		devs = append(devs, k)
+	}
+	return devs
+}

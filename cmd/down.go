@@ -64,6 +64,11 @@ func Down() *cobra.Command {
 				return err
 			}
 
+			c, _, err := okteto.GetK8sClient()
+			if err != nil {
+				return err
+			}
+
 			if all {
 				err := allDown(ctx, manifest, rm)
 				if err != nil {
@@ -83,15 +88,16 @@ func Down() *cobra.Command {
 						return err
 					}
 					selector := utils.NewOktetoSelector("Select which development container to deactivate:", "Development container")
-					dev, err = utils.SelectDevFromManifest(manifest, selector)
+					options := apps.ListDevModeOn(ctx, manifest, c)
+
+					if len(options) == 0 {
+						oktetoLog.Success("All development containers are deactivated")
+						return nil
+					}
+					dev, err = utils.SelectDevFromManifest(manifest, selector, options)
 					if err != nil {
 						return err
 					}
-				}
-
-				c, _, err := okteto.GetK8sClient()
-				if err != nil {
-					return err
 				}
 
 				app, _, err := utils.GetApp(ctx, dev, c, false)

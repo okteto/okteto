@@ -61,7 +61,20 @@ func Exec() *cobra.Command {
 				return err
 			}
 
-			dev, err := getDevFromArgs(manifest, args)
+			c, _, err := okteto.GetK8sClient()
+			if err != nil {
+				return err
+			}
+
+			activeDevMode := apps.ListDevModeOn(ctx, manifest, c)
+			if len(activeDevMode) == 0 {
+				return oktetoErrors.UserError{
+					E:    fmt.Errorf("development containers not found in namespace '%s'", manifest.Namespace),
+					Hint: "Run 'okteto up' to launch your development container or use 'okteto context' to change your current context",
+				}
+			}
+
+			dev, err := getDevFromArgs(manifest, args, activeDevMode)
 			if err != nil {
 				return err
 			}
@@ -187,7 +200,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 	return exec.Exec(ctx, c, cfg, dev.Namespace, pod.Name, dev.Container, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 }
 
-func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error) {
+func getDevFromArgs(manifest *model.Manifest, args, activeDevMode []string) (*model.Dev, error) {
 	oktetoLog.Spinner("Selecting dev manifest")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -203,7 +216,7 @@ func getDevFromArgs(manifest *model.Manifest, args []string) (*model.Dev, error)
 			return nil, err
 		}
 		selector := utils.NewOktetoSelector("Select which development container to exec:", "Development container")
-		dev, err = utils.SelectDevFromManifest(manifest, selector)
+		dev, err = utils.SelectDevFromManifest(manifest, selector, activeDevMode)
 		if err != nil {
 			return nil, err
 		}

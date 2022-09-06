@@ -103,7 +103,7 @@ func Push(ctx context.Context) *cobra.Command {
 					return err
 				}
 				selector := utils.NewOktetoSelector("Select which development container to push to:", "Development container")
-				dev, err = utils.SelectDevFromManifest(manifest, selector)
+				dev, err = utils.SelectDevFromManifest(manifest, selector, manifest.Dev.GetDevs())
 				if err != nil {
 					return err
 				}

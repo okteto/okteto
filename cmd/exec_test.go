@@ -24,11 +24,12 @@ import (
 
 func TestGetDevFromArgs(t *testing.T) {
 	tests := []struct {
-		name        string
-		manifest    *model.Manifest
-		args        []string
-		expectedDev *model.Dev
-		expectedErr error
+		name          string
+		manifest      *model.Manifest
+		args          []string
+		activeDevMode []string
+		expectedDev   *model.Dev
+		expectedErr   error
 	}{
 		{
 			name: "first arg is on dev section",
@@ -78,7 +79,7 @@ func TestGetDevFromArgs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dev, err := getDevFromArgs(tt.manifest, tt.args)
+			dev, err := getDevFromArgs(tt.manifest, tt.args, tt.activeDevMode)
 			assert.Equal(t, tt.expectedDev, dev)
 			if err != nil {
 				assert.Error(t, err, tt.expectedErr.Error())

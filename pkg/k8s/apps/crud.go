@@ -48,12 +48,12 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 	return &StatefulSetApp{sfs: sfs}, nil
 }
 
-//IsDevModeOn returns if a statefulset is in devmode
+// IsDevModeOn returns if a statefulset is in devmode
 func IsDevModeOn(app App) bool {
 	return app.ObjectMeta().Labels[model.DevLabel] == "true" || len(app.ObjectMeta().Labels[model.DevCloneLabel]) > 0
 }
 
-//SetLastBuiltAnnotation sets the app timestamp
+// SetLastBuiltAnnotation sets the app timestamp
 func SetLastBuiltAnnotation(app App) {
 	app.ObjectMeta().Annotations[model.LastBuiltAnnotation] = time.Now().UTC().Format(model.TimeFormat)
 }
@@ -100,7 +100,7 @@ func GetRunningPodInLoop(ctx context.Context, dev *model.Dev, app App, c kuberne
 	}
 }
 
-//GetTranslations fills all the deployments pointed by a development container
+// GetTranslations fills all the deployments pointed by a development container
 func GetTranslations(ctx context.Context, dev *model.Dev, app App, reset bool, c kubernetes.Interface) (map[string]*Translation, error) {
 	mainTr := &Translation{
 		MainDev: dev,
@@ -155,7 +155,7 @@ func loadServiceTranslations(ctx context.Context, dev *model.Dev, reset bool, re
 	return nil
 }
 
-//TranslateDevMode translates the deployment manifests to put them in dev mode
+// TranslateDevMode translates the deployment manifests to put them in dev mode
 func TranslateDevMode(trMap map[string]*Translation) error {
 	for _, tr := range trMap {
 		err := tr.translate()
@@ -164,4 +164,26 @@ func TranslateDevMode(trMap map[string]*Translation) error {
 		}
 	}
 	return nil
+}
+
+// ListDevModeOn returns a list of strings with the names of deployments or statefulsets in DevMode
+// if no app in dev mode found, empty slice is returned
+func ListDevModeOn(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface) []string {
+	devModeApps := make([]string, 0)
+	for name, dev := range manifest.Dev {
+		// when autocreate is active, the app name has suffix -okteto
+		// this should be taken into account when searching for dev mode apps
+		if dev.Autocreate {
+			dev.Name = fmt.Sprintf("%s-okteto", name)
+		}
+		app, err := Get(ctx, dev, manifest.Namespace, c)
+		if err != nil {
+			oktetoLog.Debugf("error listing dev-mode %s: %v", name, err)
+		}
+		if app != nil && IsDevModeOn(app) {
+			// only add to slice the dev apps
+			devModeApps = append(devModeApps, name)
+		}
+	}
+	return devModeApps
 }
