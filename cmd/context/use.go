@@ -88,7 +88,10 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 	ctxOptions.initFromEnvVars()
 
 	if ctxOptions.Token == "" && kubeconfig.InCluster() && !isValidCluster(ctxOptions.Context) {
-		return oktetoErrors.ErrTokenFlagNeeded
+		if ctxOptions.IsCtxCommand {
+			return oktetoErrors.ErrTokenFlagNeeded
+		}
+		return oktetoErrors.ErrTokenEnvVarNeeded
 	}
 
 	if ctxOptions.Context == "" {
