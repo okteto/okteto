@@ -68,3 +68,8 @@ func (fc *FakePipelineClient) GetResourcesStatus(_ context.Context, _ string) (m
 func (_ *FakePipelineClient) GetByName(_ context.Context, _ string) (*types.GitDeploy, error) {
 	return nil, nil
 }
+
+// Stream deploys a fake SSE
+func (_ *FakePipelineClient) StreamLogs(name, actionName string) error {
+	return nil
+}

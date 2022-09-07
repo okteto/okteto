@@ -242,6 +242,7 @@ func TestDeployPipelineSuccesfulWithWait(t *testing.T) {
 			"svc2": okteto.RunningStatus,
 		},
 	}
+
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),

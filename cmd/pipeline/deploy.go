@@ -30,7 +30,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/sse"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -227,6 +226,10 @@ func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
 
+func (pc *Command) streamPipelineLogs(name, actionName string) error {
+	return pc.okClient.Pipeline().StreamLogs(name, actionName)
+}
+
 func (pc *Command) waitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
 	oktetoLog.Spinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", name))
 	oktetoLog.StartSpinner()
@@ -241,10 +244,8 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name string, action *ty
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		sseClient := sse.NewClient()
-		if err := sseClient.StreamPipelineLogs(name, action.Name); err != nil {
+		if err := pc.streamPipelineLogs(name, action.Name); err != nil {
 			exit <- err
-			return
 		}
 	}(&wg)
 

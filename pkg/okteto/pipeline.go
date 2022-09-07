@@ -14,8 +14,12 @@
 package okteto
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -28,11 +32,15 @@ import (
 )
 
 type pipelineClient struct {
-	client *graphql.Client
+	client    *graphql.Client
+	sseClient *http.Client
 }
 
-func newPipelineClient(client *graphql.Client) *pipelineClient {
-	return &pipelineClient{client: client}
+func newPipelineClient(client *graphql.Client, sseClient *http.Client) *pipelineClient {
+	return &pipelineClient{
+		client:    client,
+		sseClient: sseClient,
+	}
 }
 
 // Deploy creates a pipeline
@@ -443,4 +451,71 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name string) (m
 
 func getResourceFullName(kind, name string) string {
 	return strings.ToLower(fmt.Sprintf("%s/%s", kind, name))
+}
+
+// StreamLogs retrieves logs from the pipeline provided and prints them, returns error
+func (c *pipelineClient) StreamLogs(name, actionName string) error {
+	streamURL := fmt.Sprintf("%s/sse/logs/%s/gitdeploy/%s?action=%s", Context().Name, Context().Namespace, name, actionName)
+	url, err := url.Parse(streamURL)
+	if err != nil {
+		return err
+	}
+
+	req, err := createRequest(url.String())
+	if err != nil {
+		return err
+	}
+	resp, err := c.sseClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	sc := bufio.NewScanner(resp.Body)
+
+	for sc.Scan() {
+		msg := getMessage(sc.Text())
+		if isDone(msg) {
+			return nil
+		}
+		if msg != "" {
+			var eventLog *oktetoLog.JSONLogFormat
+			if err := json.Unmarshal([]byte(msg), &eventLog); err != nil {
+				continue
+			}
+			oktetoLog.Println(eventLog.Message)
+		}
+	}
+	return nil
+}
+
+// createRequest returns an authenticated request for the url provided
+func createRequest(url string) (*http.Request, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", Context().Token))
+	return req, nil
+}
+
+const (
+	// dataHeader is the sse string header for sse-data
+	dataHeader = "data: "
+
+	// pingEvent is the type of event ping
+	pingEvent = "ping"
+)
+
+// getMessage returns the parsed message from the sse-data
+func getMessage(s string) string {
+	if strings.HasPrefix(s, dataHeader) && !strings.Contains(s, pingEvent) {
+		return strings.TrimPrefix(s, dataHeader)
+	}
+	return ""
+}
+
+// isDone returns bool if the event msg is EOF
+func isDone(msg string) bool {
+	return strings.Contains(msg, "EOF")
 }
