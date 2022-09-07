@@ -24,7 +24,6 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
-	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	stackCMD "github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
@@ -42,7 +41,9 @@ import (
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -316,34 +317,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
-	// TODO: take this out to a new function deploy dependencies
-	for depName, dep := range deployOptions.Manifest.Dependencies {
-		oktetoLog.Information("Deploying dependency '%s'", depName)
-		dep.Variables = append(dep.Variables, model.EnvVar{
-			Name:  "OKTETO_ORIGIN",
-			Value: "okteto-deploy",
-		})
-		pipOpts := &pipelineCMD.DeployOptions{
-			Name:         depName,
-			Repository:   dep.Repository,
-			Branch:       dep.Branch,
-			File:         dep.ManifestPath,
-			Variables:    model.SerializeBuildArgs(dep.Variables),
-			Wait:         dep.Wait,
-			Timeout:      deployOptions.Timeout,
-			SkipIfExists: !deployOptions.Dependencies,
-		}
-		pc, err := pipelineCMD.NewCommand()
-		if err != nil {
-			return err
-		}
-		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
-			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); errStatus != nil {
-				return errStatus
-			}
-
-			return err
-		}
+	if err := dc.buildImages(ctx, cfg, c, data, deployOptions); err != nil {
+		return err
 	}
 
 	// TODO: take this out to a new function build images
@@ -617,4 +592,83 @@ func (dc *DeployCommand) cleanUp(ctx context.Context) {
 	if err := dc.Proxy.Shutdown(ctx); err != nil {
 		oktetoLog.Infof("could not stop local server: %s", err)
 	}
+}
+
+func (dc *DeployCommand) buildImages(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, pipelineData *pipeline.CfgData, deployOptions *Options) error {
+	if deployOptions.Build {
+		buildOptions := &types.BuildOptions{
+			EnableStages: true,
+			Manifest:     deployOptions.Manifest,
+			CommandArgs:  deployOptions.servicesToDeploy,
+		}
+		oktetoLog.Debug("force build from manifest definition")
+		if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
+			return updateConfigMapStatusError(ctx, cfg, c, pipelineData, errBuild)
+		}
+	} else {
+		stack := deployOptions.Manifest.GetStack()
+		if stack == nil {
+			return nil
+		}
+		stackServices := stack.GetServicesWithBuildSection()
+
+		stackServicesToBuild := setIntersection(stackServices, sliceToSet(deployOptions.servicesToDeploy))
+
+		manifestBuildImages := deployOptions.Manifest.GetBuildServices()
+
+		servicesToBuildSet := setUnion(stackServicesToBuild, manifestBuildImages)
+
+		servicesToBuild := setToSlice(servicesToBuildSet)
+
+		if len(servicesToBuild) != 0 {
+			buildOptions := &types.BuildOptions{
+				EnableStages: true,
+				Manifest:     deployOptions.Manifest,
+				CommandArgs:  servicesToBuild,
+			}
+
+			if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
+				return updateConfigMapStatusError(ctx, cfg, c, pipelineData, errBuild)
+			}
+		}
+	}
+
+	return nil
+}
+
+func sliceToSet[T comparable](slice []T) map[T]bool {
+	set := make(map[T]bool)
+	for _, value := range slice {
+		set[value] = true
+	}
+	return set
+}
+
+func setToSlice[T comparable](set map[T]bool) []T {
+	slice := make([]T, 0, len(set))
+	for value := range set {
+		slice = append(slice, value)
+	}
+	return slice
+}
+
+func setIntersection[T comparable](set1, set2 map[T]bool) map[T]bool {
+	intersection := make(map[T]bool)
+	for value := range set1 {
+		if _, ok := set2[value]; ok {
+			intersection[value] = true
+		}
+	}
+	return intersection
+}
+
+func setUnion[T comparable](set1, set2 map[T]bool) map[T]bool {
+	union := make(map[T]bool)
+	for value := range set1 {
+		union[value] = true
+	}
+	for value := range set2 {
+		union[value] = true
+	}
+	return union
 }
