@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"time"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -29,6 +30,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/sse"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -234,8 +236,21 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name string, action *ty
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 
-	go func() {
+	var wg sync.WaitGroup
 
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		sseClient := sse.NewClient()
+		if err := sseClient.StreamPipelineLogs(name, action.Name); err != nil {
+			exit <- err
+			return
+		}
+	}(&wg)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
 		err := pc.waitToBeDeployed(ctx, name, action, timeout)
 		if err != nil {
 			exit <- err
@@ -244,7 +259,9 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name string, action *ty
 
 		oktetoLog.Spinner("Waiting for containers to be healthy...")
 		exit <- pc.waitForResourcesToBeRunning(ctx, name, timeout)
-	}()
+	}(&wg)
+
+	wg.Wait()
 
 	select {
 	case <-stop:
