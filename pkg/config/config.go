@@ -18,6 +18,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -280,4 +281,17 @@ func GetDeployOrigin() (src string) {
 
 func RunningInInstaller() bool {
 	return os.Getenv(model.OktetoInInstaller) == "true"
+}
+
+func IsInsecureSkipVerify() bool {
+	envVarValue := os.Getenv("OKTETO_INSECURE_SKIP_TLS_VERIFY")
+	value, err := strconv.ParseBool(envVarValue)
+
+	if err != nil {
+		oktetoLog.Debugf("insecure mode disabled, error when reading insecure mode: OKTETO_INSECURE_SKIP_TLS_VERIFY=%s, %v", envVarValue, err)
+		return false
+	}
+
+	oktetoLog.Debugf("insecure mode: %v", value)
+	return value
 }

@@ -15,12 +15,14 @@ package okteto
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -68,7 +70,9 @@ func NewOktetoClient() (*OktetoClient, error) {
 		&oauth2.Token{AccessToken: token,
 			TokenType: "Bearer"},
 	)
-	httpClient := oauth2.NewClient(context.Background(), src)
+
+	ctx := backgroundContextWithHttpClient(config.IsInsecureSkipVerify())
+	httpClient := oauth2.NewClient(ctx, src)
 
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
@@ -84,7 +88,9 @@ func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 		&oauth2.Token{AccessToken: token,
 			TokenType: "Bearer"},
 	)
-	httpClient := oauth2.NewClient(context.Background(), src)
+
+	ctx := backgroundContextWithHttpClient(config.IsInsecureSkipVerify())
+	httpClient := oauth2.NewClient(ctx, src)
 
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
@@ -96,9 +102,24 @@ func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
 		return nil, err
 	}
 
-	httpClient := oauth2.NewClient(context.Background(), nil)
+	ctx := backgroundContextWithHttpClient(config.IsInsecureSkipVerify())
+	httpClient := oauth2.NewClient(ctx, nil)
 
 	return newOktetoClientFromGraphqlClient(u, httpClient)
+}
+
+func backgroundContextWithHttpClient(insecureSkipVerify bool) context.Context {
+	return context.WithValue(
+		context.Background(),
+		oauth2.HTTPClient,
+		&http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: insecureSkipVerify,
+				},
+			},
+		},
+	)
 }
 
 func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*OktetoClient, error) {
