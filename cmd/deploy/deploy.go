@@ -614,9 +614,9 @@ func (dc *DeployCommand) buildImages(ctx context.Context, cfg *corev1.ConfigMap,
 
 		stackServicesToBuild := setIntersection(stackServices, sliceToSet(deployOptions.servicesToDeploy))
 
-		manifestBuildImages := deployOptions.Manifest.GetBuildServices()
+		manifestBuildServices := deployOptions.Manifest.GetBuildServices()
 
-		servicesToBuildSet := setUnion(stackServicesToBuild, manifestBuildImages)
+		servicesToBuildSet := setUnion(stackServicesToBuild, manifestBuildServices)
 
 		servicesToBuild := setToSlice(servicesToBuildSet)
 
