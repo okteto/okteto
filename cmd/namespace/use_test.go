@@ -83,7 +83,7 @@ func Test_useNamespace(t *testing.T) {
 			}
 			fakeOktetoClient := &client.FakeOktetoClient{
 				Namespace: client.NewFakeNamespaceClient(tt.currentNamespaces, nil),
-				Preview:   client.NewFakePreviewClient(nil, nil),
+				Preview:   client.NewFakePreviewClient(nil, nil, nil),
 				Users:     client.NewFakeUsersClient(usr),
 			}
 			nsCmd := &NamespaceCommand{

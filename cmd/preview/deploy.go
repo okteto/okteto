@@ -198,11 +198,7 @@ func (pw *Command) executeDeployPreview(ctx context.Context, name, scope, reposi
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return nil, err
-	}
-	resp, err := oktetoClient.DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
+	resp, err := pw.okClient.Previews().DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
 
 	if err != nil {
 		return nil, err

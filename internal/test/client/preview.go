@@ -19,15 +19,25 @@ import (
 
 // FakePreviewsClient mocks the previews interface
 type FakePreviewsClient struct {
-	preview []types.Preview
-	err     error
+	preview     *types.PreviewResponse
+	previewList []types.Preview
+	err         error
 }
 
-func NewFakePreviewClient(previews []types.Preview, err error) *FakePreviewsClient {
-	return &FakePreviewsClient{preview: previews, err: err}
+func NewFakePreviewClient(previewList []types.Preview, preview *types.PreviewResponse, err error) *FakePreviewsClient {
+	return &FakePreviewsClient{
+		previewList: previewList,
+		preview:     preview,
+		err:         err,
+	}
 }
 
 // List list namespaces
 func (c *FakePreviewsClient) List(_ context.Context) ([]types.Preview, error) {
+	return c.previewList, c.err
+}
+
+// List list namespaces
+func (c *FakePreviewsClient) DeployPreview(_ context.Context, _, _, _, _, _, _ string, _ []types.Variable) (*types.PreviewResponse, error) {
 	return c.preview, c.err
 }
