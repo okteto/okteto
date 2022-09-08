@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -150,6 +151,9 @@ func (pc *Command) destroyPipeline(ctx context.Context, name string, destroyVolu
 }
 
 func (pc *Command) waitUntilDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
+	waitCtx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
 	oktetoLog.Spinner(fmt.Sprintf("Waiting for the repository '%s' to be destroyed...", name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -158,12 +162,31 @@ func (pc *Command) waitUntilDestroyed(ctx context.Context, name string, action *
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		err := pc.streamPipelineLogs(waitCtx, name, action.Name)
+		if err != nil {
+			oktetoLog.Warning("there was an error streaming pipeline logs: %v", err)
+		}
+	}(&wg)
+
+	wg.Add(1)
 	go func() {
 		exit <- pc.waitToBeDestroyed(ctx, name, action, timeout)
 	}()
 
+	go func(wg *sync.WaitGroup) {
+		wg.Wait()
+		close(stop)
+		close(exit)
+	}(&wg)
+
 	select {
 	case <-stop:
+		ctxCancel()
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		oktetoLog.StopSpinner()
 		return oktetoErrors.ErrIntSig
