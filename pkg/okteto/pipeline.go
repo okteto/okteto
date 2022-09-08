@@ -503,7 +503,7 @@ func (c *pipelineClient) StreamLogs(name, actionName string) error {
 		oktetoLog.Println(eventLog.Message)
 	}
 
-	// return wheather the scan has encountered any error
+	// return whether the scan has encountered any error
 	return sc.Err()
 }
 
