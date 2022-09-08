@@ -321,35 +321,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
-	// TODO: take this out to a new function build images
-	if deployOptions.Build {
-		buildOptions := &types.BuildOptions{
-			EnableStages: true,
-			Manifest:     deployOptions.Manifest,
-			CommandArgs:  deployOptions.servicesToDeploy,
-		}
-		oktetoLog.Debug("force build from manifest definition")
-		if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
-			return updateConfigMapStatusError(ctx, cfg, c, data, errBuild)
-		}
-	} else {
-		svcsToBuild, errBuild := dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy)
-		if errBuild != nil {
-			return updateConfigMapStatusError(ctx, cfg, c, data, errBuild)
-		}
-		if len(svcsToBuild) != 0 {
-			buildOptions := &types.BuildOptions{
-				CommandArgs:  svcsToBuild,
-				EnableStages: true,
-				Manifest:     deployOptions.Manifest,
-			}
-
-			if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
-				return updateConfigMapStatusError(ctx, cfg, c, data, errBuild)
-			}
-		}
-	}
-
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deploying '%s'...", deployOptions.Name)
 
 	defer dc.cleanUp(ctx)
