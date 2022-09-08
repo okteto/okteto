@@ -24,6 +24,7 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	stackCMD "github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
@@ -315,6 +316,36 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	cfg, err := getConfigMapFromData(ctx, data, c)
 	if err != nil {
 		return err
+	}
+
+	// TODO: take this out to a new function deploy dependencies
+	for depName, dep := range deployOptions.Manifest.Dependencies {
+		oktetoLog.Information("Deploying dependency '%s'", depName)
+		dep.Variables = append(dep.Variables, model.EnvVar{
+			Name:  "OKTETO_ORIGIN",
+			Value: "okteto-deploy",
+		})
+		pipOpts := &pipelineCMD.DeployOptions{
+			Name:         depName,
+			Repository:   dep.Repository,
+			Branch:       dep.Branch,
+			File:         dep.ManifestPath,
+			Variables:    model.SerializeBuildArgs(dep.Variables),
+			Wait:         dep.Wait,
+			Timeout:      deployOptions.Timeout,
+			SkipIfExists: !deployOptions.Dependencies,
+		}
+		pc, err := pipelineCMD.NewCommand()
+		if err != nil {
+			return err
+		}
+		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); errStatus != nil {
+				return errStatus
+			}
+
+			return err
+		}
 	}
 
 	if err := dc.buildImages(ctx, cfg, c, data, deployOptions); err != nil {
