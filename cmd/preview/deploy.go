@@ -241,11 +241,7 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name string, a *types.A
 	return nil
 }
 func (pw *Command) waitToBeDeployed(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-	return oktetoClient.Pipeline().WaitForActionToFinish(ctx, name, a.Name, timeout)
+	return pw.okClient.Pipeline().WaitForActionToFinish(ctx, name, a.Name, timeout)
 }
 
 func (pw *Command) waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.Duration) error {
