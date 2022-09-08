@@ -272,7 +272,7 @@ func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*t
 	return nil, oktetoErrors.ErrNotFound
 }
 
-func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error) {
+func (c *previewClient) GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error) {
 	var queryStruct struct {
 		Preview struct {
 			Deployments []struct {

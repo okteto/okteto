@@ -252,17 +252,12 @@ func (pw *Command) waitForResourcesToBeRunning(ctx context.Context, name string,
 	ticker := time.NewTicker(5 * time.Second)
 	to := time.NewTicker(timeout)
 
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-
 	for {
 		select {
 		case <-to.C:
 			return fmt.Errorf("preview environment '%s' didn't finish after %s", name, timeout.String())
 		case <-ticker.C:
-			resourceStatus, err := oktetoClient.GetResourcesStatusFromPreview(ctx, name, "")
+			resourceStatus, err := pw.okClient.Previews().GetResourcesStatusFromPreview(ctx, name, "")
 			if err != nil {
 				return err
 			}

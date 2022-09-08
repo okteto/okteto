@@ -19,9 +19,11 @@ import (
 
 // FakePreviewsClient mocks the previews interface
 type FakePreviewsClient struct {
-	preview     *types.PreviewResponse
-	previewList []types.Preview
-	err         error
+	preview        *types.PreviewResponse
+	previewList    []types.Preview
+	resourceStatus map[string]string
+
+	err error
 }
 
 func NewFakePreviewClient(previewList []types.Preview, preview *types.PreviewResponse, err error) *FakePreviewsClient {
@@ -40,4 +42,8 @@ func (c *FakePreviewsClient) List(_ context.Context) ([]types.Preview, error) {
 // List list namespaces
 func (c *FakePreviewsClient) DeployPreview(_ context.Context, _, _, _, _, _, _ string, _ []types.Variable) (*types.PreviewResponse, error) {
 	return c.preview, c.err
+}
+
+func (c *FakePreviewsClient) GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error) {
+	return c.resourceStatus, c.err
 }

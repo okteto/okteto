@@ -44,6 +44,7 @@ type NamespaceInterface interface {
 type PreviewInterface interface {
 	List(ctx context.Context) ([]Preview, error)
 	DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewResponse, error)
+	GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error)
 }
 
 // PipelineInterface represents the client that connects to the pipeline functions
