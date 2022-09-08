@@ -44,7 +44,7 @@ func NewFakePipelineClient(responses *FakePipelineResponses) *FakePipelineClient
 	}
 }
 
-// DeployPipeline deploys a fake pipeline
+// Deploy deploys a fake pipeline
 func (fc *FakePipelineClient) Deploy(_ context.Context, _, _, _, _ string, _ []types.Variable) (*types.GitDeployResponse, error) {
 	return fc.responses.DeployResponse, fc.responses.DeployErr
 }
@@ -54,22 +54,22 @@ func (fc *FakePipelineClient) WaitForActionToFinish(_ context.Context, _, _ stri
 	return fc.responses.WaitErr
 }
 
-// DestroyPipeline destroys a pipeline
+// Destroy destroys a pipeline
 func (fc *FakePipelineClient) Destroy(_ context.Context, _ string, _ bool) (*types.GitDeployResponse, error) {
 	return fc.responses.DestroyResponse, fc.responses.DestroyErr
 }
 
-// GetResourcesStatusFromPipeline gets the status of the resources from a pipeline name
+// GetResourcesStatus gets the status of the resources from a pipeline name
 func (fc *FakePipelineClient) GetResourcesStatus(_ context.Context, _ string) (map[string]string, error) {
 	return fc.responses.ResourcesMap, fc.responses.ResourceErr
 }
 
-// GetPipelineByName returns the name of the pipeline
+// GetByName returns the name of the pipeline
 func (_ *FakePipelineClient) GetByName(_ context.Context, _ string) (*types.GitDeploy, error) {
 	return nil, nil
 }
 
-// Stream deploys a fake SSE
-func (_ *FakePipelineClient) StreamLogs(name, actionName string) error {
+// StreamLogs deploys a fake SSE
+func (_ *FakePipelineClient) StreamLogs(_, _ string) error {
 	return nil
 }
