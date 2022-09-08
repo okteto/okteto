@@ -226,11 +226,14 @@ func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
 
-func (pc *Command) streamPipelineLogs(name, actionName string) error {
-	return pc.okClient.Pipeline().StreamLogs(name, actionName)
+func (pc *Command) streamPipelineLogs(ctx context.Context, name, actionName string) error {
+	return pc.okClient.Pipeline().StreamLogs(ctx, name, actionName)
 }
 
 func (pc *Command) waitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
+	waitCtx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
 	oktetoLog.Spinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -244,28 +247,34 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name string, action *ty
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		if err := pc.streamPipelineLogs(name, action.Name); err != nil {
-			exit <- err
+		err := pc.streamPipelineLogs(waitCtx, name, action.Name)
+		if err != nil {
+			oktetoLog.Warning("there was an error streaming pipeline logs: %v", err)
 		}
 	}(&wg)
 
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := pc.waitToBeDeployed(ctx, name, action, timeout)
+		err := pc.waitToBeDeployed(waitCtx, name, action, timeout)
 		if err != nil {
 			exit <- err
 			return
 		}
 
 		oktetoLog.Spinner("Waiting for containers to be healthy...")
-		exit <- pc.waitForResourcesToBeRunning(ctx, name, timeout)
+		exit <- pc.waitForResourcesToBeRunning(waitCtx, name, timeout)
 	}(&wg)
 
-	wg.Wait()
+	go func(wg *sync.WaitGroup) {
+		wg.Wait()
+		close(stop)
+		close(exit)
+	}(&wg)
 
 	select {
 	case <-stop:
+		ctxCancel()
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:

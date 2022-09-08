@@ -70,6 +70,6 @@ func (_ *FakePipelineClient) GetByName(_ context.Context, _ string) (*types.GitD
 }
 
 // StreamLogs deploys a fake SSE
-func (_ *FakePipelineClient) StreamLogs(_, _ string) error {
+func (_ *FakePipelineClient) StreamLogs(_ context.Context, _, _ string) error {
 	return nil
 }

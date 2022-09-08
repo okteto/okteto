@@ -454,14 +454,14 @@ func getResourceFullName(kind, name string) string {
 }
 
 // StreamLogs retrieves logs from the pipeline provided and prints them, returns error
-func (c *pipelineClient) StreamLogs(name, actionName string) error {
+func (c *pipelineClient) StreamLogs(ctx context.Context, name, actionName string) error {
 	streamURL := fmt.Sprintf("%s/sse/logs/%s/gitdeploy/%s?action=%s", Context().Name, Context().Namespace, name, actionName)
 	url, err := url.Parse(streamURL)
 	if err != nil {
 		return err
 	}
 
-	req, err := createRequest(url.String())
+	req, err := http.NewRequest("GET", url.String(), nil)
 	if err != nil {
 		return err
 	}
@@ -478,41 +478,36 @@ func (c *pipelineClient) StreamLogs(name, actionName string) error {
 	sc := bufio.NewScanner(resp.Body)
 	dataHeader := "data: "
 	for sc.Scan() {
-		scanText := sc.Text()
-		msg := ""
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			scanText := sc.Text()
+			msg := ""
 
-		// if the text scanned is a data message, trim and save into msg
-		if strings.HasPrefix(scanText, dataHeader) {
-			msg = strings.TrimPrefix(scanText, dataHeader)
+			// if the text scanned is a data message, trim and save into msg
+			if strings.HasPrefix(scanText, dataHeader) {
+				msg = strings.TrimPrefix(scanText, dataHeader)
+			}
+
+			// the msg from sse data is a string with a json log format
+			eventLog := &oktetoLog.JSONLogFormat{}
+			json.Unmarshal([]byte(msg), &eventLog)
+
+			// skip when the message is empty
+			if eventLog.Message == "" {
+				continue
+			}
+
+			// stop the scanner when the event log is in stage done and message is EOF
+			if eventLog.Stage == "done" && eventLog.Message == "EOF" {
+				break
+			}
+
+			oktetoLog.Println(eventLog.Message)
 		}
-
-		// the msg from sse data is a string with a json log format
-		var eventLog *oktetoLog.JSONLogFormat
-		json.Unmarshal([]byte(msg), &eventLog)
-
-		// skip when the message is empty
-		if eventLog.Message == "" {
-			continue
-		}
-
-		// stop the scanner when the event log is in stage done and message is EOF
-		if eventLog.Stage == "done" && eventLog.Message == "EOF" {
-			break
-		}
-
-		oktetoLog.Println(eventLog.Message)
 	}
 
 	// return whether the scan has encountered any error
 	return sc.Err()
-}
-
-// createRequest returns an authenticated request for the url provided
-func createRequest(url string) (*http.Request, error) {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", Context().Token))
-	return req, nil
 }
