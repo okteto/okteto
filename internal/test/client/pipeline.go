@@ -35,6 +35,8 @@ type FakePipelineResponses struct {
 
 	ResourcesMap map[string]string
 	ResourceErr  error
+
+	StreamErr error
 }
 
 // NewFakePipelineClient creates a pipeline client to use in tests
@@ -70,6 +72,6 @@ func (_ *FakePipelineClient) GetByName(_ context.Context, _ string) (*types.GitD
 }
 
 // StreamLogs deploys a fake SSE
-func (_ *FakePipelineClient) StreamLogs(_ context.Context, _, _ string) error {
-	return nil
+func (fc *FakePipelineClient) StreamLogs(_ context.Context, _, _ string) error {
+	return fc.responses.StreamErr
 }
