@@ -471,22 +471,40 @@ func (c *pipelineClient) StreamLogs(name, actionName string) error {
 	}
 	defer resp.Body.Close()
 
-	sc := bufio.NewScanner(resp.Body)
-
-	for sc.Scan() {
-		msg := getMessage(sc.Text())
-		if isDone(msg) {
-			return nil
-		}
-		if msg != "" {
-			var eventLog *oktetoLog.JSONLogFormat
-			if err := json.Unmarshal([]byte(msg), &eventLog); err != nil {
-				continue
-			}
-			oktetoLog.Println(eventLog.Message)
-		}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("error retrieving logs from pipeline %s: %s", name, resp.Status)
 	}
-	return nil
+
+	sc := bufio.NewScanner(resp.Body)
+	dataHeader := "data: "
+	for sc.Scan() {
+		scanText := sc.Text()
+		msg := ""
+
+		// if the text scanned is a data message, trim and save into msg
+		if strings.HasPrefix(scanText, dataHeader) {
+			msg = strings.TrimPrefix(scanText, dataHeader)
+		}
+
+		// the msg from sse data is a string with a json log format
+		var eventLog *oktetoLog.JSONLogFormat
+		json.Unmarshal([]byte(msg), &eventLog)
+
+		// skip when the message is empty
+		if eventLog.Message == "" {
+			continue
+		}
+
+		// stop the scanner when the event log is in stage done and message is EOF
+		if eventLog.Stage == "done" && eventLog.Message == "EOF" {
+			break
+		}
+
+		oktetoLog.Println(eventLog.Message)
+	}
+
+	// return wheather the scan has encountered any error
+	return sc.Err()
 }
 
 // createRequest returns an authenticated request for the url provided
@@ -497,25 +515,4 @@ func createRequest(url string) (*http.Request, error) {
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", Context().Token))
 	return req, nil
-}
-
-const (
-	// dataHeader is the sse string header for sse-data
-	dataHeader = "data: "
-
-	// pingEvent is the type of event ping
-	pingEvent = "ping"
-)
-
-// getMessage returns the parsed message from the sse-data
-func getMessage(s string) string {
-	if strings.HasPrefix(s, dataHeader) && !strings.Contains(s, pingEvent) {
-		return strings.TrimPrefix(s, dataHeader)
-	}
-	return ""
-}
-
-// isDone returns bool if the event msg is EOF
-func isDone(msg string) bool {
-	return strings.Contains(msg, "EOF")
 }
