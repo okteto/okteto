@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/pkg/namesgenerator"
@@ -207,6 +208,9 @@ func (pw *Command) executeDeployPreview(ctx context.Context, name, scope, reposi
 }
 
 func (pw *Command) waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
+	waitCtx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
 	oktetoLog.Spinner("Waiting for preview environment to be deployed...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -215,8 +219,19 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name string, a *types.A
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 
-	go func() {
+	var wg sync.WaitGroup
 
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		err := pw.okClient.Pipeline().StreamLogs(waitCtx, name, a.Name)
+		if err != nil {
+			oktetoLog.Warning("there was an error streaming preview logs: %v", err)
+		}
+	}(&wg)
+
+	wg.Add(1)
+	go func() {
 		err := pw.waitToBeDeployed(ctx, name, a, timeout)
 		if err != nil {
 			exit <- err
@@ -225,6 +240,12 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name string, a *types.A
 		oktetoLog.Spinner("Waiting for containers to be healthy...")
 		exit <- pw.waitForResourcesToBeRunning(ctx, name, timeout)
 	}()
+
+	go func(wg *sync.WaitGroup) {
+		wg.Wait()
+		close(stop)
+		close(exit)
+	}(&wg)
 
 	select {
 	case <-stop:
