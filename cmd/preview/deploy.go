@@ -15,6 +15,7 @@ package preview
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -31,6 +32,10 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
+)
+
+var (
+	ErrWaitResourcesTimeout = errors.New("preview environment didn't finish after on time")
 )
 
 type DeployOptions struct {
@@ -199,7 +204,7 @@ func (pw *Command) waitForResourcesToBeRunning(ctx context.Context, name string,
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("preview environment '%s' didn't finish after %s", name, timeout.String())
+			return fmt.Errorf("'%s' %w - timeout %s", name, ErrWaitResourcesTimeout, timeout.String())
 		case <-ticker.C:
 			resourceStatus, err := pw.okClient.Previews().GetResourcesStatusFromPreview(ctx, name, "")
 			if err != nil {
