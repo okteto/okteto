@@ -85,18 +85,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			varList := []types.Variable{}
-			for _, v := range opts.variables {
-				kv := strings.SplitN(v, "=", 2)
-				if len(kv) != 2 {
-					return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
-				}
-				varList = append(varList, types.Variable{
-					Name:  kv[0],
-					Value: kv[1],
-				})
-			}
-
 			if opts.filename != "" {
 				oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag'")
 				if opts.file == "" {
@@ -110,24 +98,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			resp, err := previewCmd.executeDeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, varList)
-			analytics.TrackPreviewDeploy(err == nil)
-			if err != nil {
-				return err
-			}
-
-			oktetoLog.Information("Preview URL: %s", getPreviewURL(opts.name))
-			if !opts.wait {
-				oktetoLog.Success("Preview environment '%s' scheduled for deployment", opts.name)
-				return nil
-			}
-
-			if err := previewCmd.waitUntilRunning(ctx, opts.name, resp.Action, opts.timeout); err != nil {
-				return err
-			}
-			oktetoLog.Success("Preview environment '%s' successfully deployed", opts.name)
-			return nil
+			return previewCmd.ExecuteDeployPreview(ctx, opts)
 		},
 	}
 	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
@@ -142,6 +113,38 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.filename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
 	cmd.Flags().MarkHidden("filename")
 	return cmd
+}
+
+func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions) error {
+	varList := []types.Variable{}
+	for _, v := range opts.variables {
+		kv := strings.SplitN(v, "=", 2)
+		if len(kv) != 2 {
+			return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
+		}
+		varList = append(varList, types.Variable{
+			Name:  kv[0],
+			Value: kv[1],
+		})
+	}
+
+	resp, err := pw.deployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, varList)
+	analytics.TrackPreviewDeploy(err == nil)
+	if err != nil {
+		return err
+	}
+
+	oktetoLog.Information("Preview URL: %s", getPreviewURL(opts.name))
+	if !opts.wait {
+		oktetoLog.Success("Preview environment '%s' scheduled for deployment", opts.name)
+		return nil
+	}
+
+	if err := pw.waitUntilRunning(ctx, opts.name, resp.Action, opts.timeout); err != nil {
+		return err
+	}
+	oktetoLog.Success("Preview environment '%s' successfully deployed", opts.name)
+	return nil
 }
 
 func validatePreviewType(previewType string) error {
@@ -197,7 +200,7 @@ func getRandomName(ctx context.Context, scope string) string {
 	return name
 }
 
-func (pw *Command) executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
+func (pw *Command) deployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
 	oktetoLog.Spinner("Deploying your preview environment...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
