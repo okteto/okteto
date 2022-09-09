@@ -82,7 +82,7 @@ func Test_createContext(t *testing.T) {
 
 			fakeClient := client.NewFakeOktetoClient()
 			fakeClient.Namespace = client.NewFakeNamespaceClient(tt.namespaces, tt.err)
-			fakeClient.Preview = client.NewFakePreviewClient(tt.previews, nil, tt.err)
+			fakeClient.Preview = client.NewFakePreviewClient(&client.FakePreviewResponse{PreviewList: tt.previews, Err: tt.err})
 			hasAccess, err := HasAccessToOktetoClusterNamespace(ctx, "test", fakeClient)
 
 			assert.Equal(t, tt.expectedErr, err != nil)
