@@ -81,17 +81,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			if err := validatePreviewType(opts.scope); err != nil {
+			if err := optionsSetup(opts); err != nil {
 				return err
-			}
-
-			if opts.filename != "" {
-				oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag'")
-				if opts.file == "" {
-					opts.file = opts.filename
-				} else {
-					oktetoLog.Warning("flags 'filename' and 'file' can not be used at the same time. 'file' flag will take precedence")
-				}
 			}
 
 			previewCmd, err := NewCommand()
@@ -113,6 +104,22 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.filename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
 	cmd.Flags().MarkHidden("filename")
 	return cmd
+}
+
+func optionsSetup(opts *DeployOptions) error {
+	if err := validatePreviewType(opts.scope); err != nil {
+		return err
+	}
+
+	if opts.filename != "" {
+		oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag'")
+		if opts.file == "" {
+			opts.file = opts.filename
+		} else {
+			oktetoLog.Warning("flags 'filename' and 'file' can not be used at the same time. 'file' flag will take precedence")
+		}
+	}
+	return nil
 }
 
 func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions) error {
