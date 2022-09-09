@@ -38,9 +38,11 @@ import (
 )
 
 const (
-	parallelism int64 = 10
-	volumeKind        = "PersistentVolumeClaim"
-	jobKind           = "Job"
+	parallelism              int64 = 10
+	volumeKind                     = "PersistentVolumeClaim"
+	jobKind                        = "Job"
+	resourcePolicyAnnotation       = "dev.okteto.com/policy"
+	keepPolicy                     = "keep"
 )
 
 // DeleteAllOptions options for delete all operation
@@ -105,10 +107,16 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 			return err
 		}
 		gvk := obj.GetObjectKind().GroupVersionKind()
-		if !opts.IncludeVolumes && gvk.Kind == volumeKind {
-			oktetoLog.Debugf("skipping deletion of pvc '%s'", m.GetName())
+		if gvk.Kind == volumeKind && !opts.IncludeVolumes {
+			oktetoLog.Debugf("skipping deletion of pvc '%s' because of volume flag", m.GetName())
 			return nil
 		}
+
+		if gvk.Kind == volumeKind && m.GetAnnotations()[resourcePolicyAnnotation] == keepPolicy {
+			oktetoLog.Debugf("skipping deletion of pvc '%s' because of policy annotation", m.GetName())
+			return nil
+		}
+
 		mapping, err := rm.RESTMapping(schema.GroupKind{Group: gvk.Group, Kind: gvk.Kind}, gvk.Version)
 		if err != nil {
 			return err
