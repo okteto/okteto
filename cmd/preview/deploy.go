@@ -35,19 +35,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type DeployOptions struct {
+	branch     string
+	filename   string
+	file       string
+	name       string
+	repository string
+	scope      string
+	sourceUrl  string
+	timeout    time.Duration
+	variables  []string
+	wait       bool
+}
+
 // Deploy Deploy a preview environment
 func Deploy(ctx context.Context) *cobra.Command {
-	var branch string
-	var filename string
-	var file string
-	var name string
-	var repository string
-	var scope string
-	var sourceUrl string
-	var timeout time.Duration
-	var variables []string
-	var wait bool
-
+	opts := &DeployOptions{}
 	cmd := &cobra.Command{
 		Use:   "deploy <name>",
 		Short: "Deploy a preview environment",
@@ -57,33 +60,33 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 			var err error
-			repository, err = getRepository(ctx, repository)
+			opts.repository, err = getRepository(ctx, opts.repository)
 			if err != nil {
 				return err
 			}
-			branch, err = getBranch(ctx, branch)
+			opts.branch, err = getBranch(ctx, opts.branch)
 			if err != nil {
 				return err
 			}
 
 			if len(args) == 0 {
-				name = getRandomName(ctx, scope)
+				opts.name = getRandomName(ctx, opts.scope)
 			} else {
-				name = getExpandedName(args[0])
+				opts.name = getExpandedName(args[0])
 			}
 
-			okteto.Context().Namespace = name
+			okteto.Context().Namespace = opts.name
 
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			if err := validatePreviewType(scope); err != nil {
+			if err := validatePreviewType(opts.scope); err != nil {
 				return err
 			}
 
 			varList := []types.Variable{}
-			for _, v := range variables {
+			for _, v := range opts.variables {
 				kv := strings.SplitN(v, "=", 2)
 				if len(kv) != 2 {
 					return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
@@ -94,10 +97,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 				})
 			}
 
-			if filename != "" {
+			if opts.filename != "" {
 				oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag'")
-				if file == "" {
-					file = filename
+				if opts.file == "" {
+					opts.file = opts.filename
 				} else {
 					oktetoLog.Warning("flags 'filename' and 'file' can not be used at the same time. 'file' flag will take precedence")
 				}
@@ -108,35 +111,35 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			resp, err := previewCmd.executeDeployPreview(ctx, name, scope, repository, branch, sourceUrl, file, varList)
+			resp, err := previewCmd.executeDeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, varList)
 			analytics.TrackPreviewDeploy(err == nil)
 			if err != nil {
 				return err
 			}
 
-			oktetoLog.Information("Preview URL: %s", getPreviewURL(name))
-			if !wait {
-				oktetoLog.Success("Preview environment '%s' scheduled for deployment", name)
+			oktetoLog.Information("Preview URL: %s", getPreviewURL(opts.name))
+			if !opts.wait {
+				oktetoLog.Success("Preview environment '%s' scheduled for deployment", opts.name)
 				return nil
 			}
 
-			if err := previewCmd.waitUntilRunning(ctx, name, resp.Action, timeout); err != nil {
+			if err := previewCmd.waitUntilRunning(ctx, opts.name, resp.Action, opts.timeout); err != nil {
 				return err
 			}
-			oktetoLog.Success("Preview environment '%s' successfully deployed", name)
+			oktetoLog.Success("Preview environment '%s' successfully deployed", opts.name)
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
-	cmd.Flags().StringVarP(&repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
-	cmd.Flags().StringVarP(&scope, "scope", "s", "personal", "the scope of preview environment to create. Accepted values are ['personal', 'global']")
-	cmd.Flags().StringVarP(&sourceUrl, "sourceUrl", "", "", "the URL of the original pull/merge request.")
-	cmd.Flags().DurationVarP(&timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
-	cmd.Flags().StringArrayVarP(&variables, "var", "v", []string{}, "set a preview environment variable (can be set more than once)")
-	cmd.Flags().BoolVarP(&wait, "wait", "w", false, "wait until the preview environment deployment finishes (defaults to false)")
-	cmd.Flags().StringVarP(&file, "file", "f", "", "relative path within the repository to the okteto manifest (default to okteto.yaml or .okteto/okteto.yaml)")
+	cmd.Flags().StringVarP(&opts.branch, "branch", "b", "", "the branch to deploy (defaults to the current branch)")
+	cmd.Flags().StringVarP(&opts.repository, "repository", "r", "", "the repository to deploy (defaults to the current repository)")
+	cmd.Flags().StringVarP(&opts.scope, "scope", "s", "personal", "the scope of preview environment to create. Accepted values are ['personal', 'global']")
+	cmd.Flags().StringVarP(&opts.sourceUrl, "sourceUrl", "", "", "the URL of the original pull/merge request.")
+	cmd.Flags().DurationVarP(&opts.timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
+	cmd.Flags().StringArrayVarP(&opts.variables, "var", "v", []string{}, "set a preview environment variable (can be set more than once)")
+	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", false, "wait until the preview environment deployment finishes (defaults to false)")
+	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "relative path within the repository to the okteto manifest (default to okteto.yaml or .okteto/okteto.yaml)")
 
-	cmd.Flags().StringVarP(&filename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
+	cmd.Flags().StringVarP(&opts.filename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
 	cmd.Flags().MarkHidden("filename")
 	return cmd
 }
