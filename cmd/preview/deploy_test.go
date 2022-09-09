@@ -81,6 +81,20 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 				ResourceStatus: map[string]string{},
 			},
 		},
+		{
+			name:     "err-deploy-preview",
+			username: "test-username",
+			opts: &DeployOptions{
+				scope:      "personal",
+				repository: "test-repo",
+				branch:     "test-branch",
+			},
+			pipelineResponses: &client.FakePipelineResponses{},
+			previewResponses: &client.FakePreviewResponse{
+				ErrDeployPreview: client.FakeErrDeployPreview,
+			},
+			expectedErr: client.FakeErrDeployPreview,
+		},
 	}
 
 	for _, tt := range tests {
