@@ -231,6 +231,84 @@ func TestDestroySFSVolumesIfNeeded(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:           "WithVolumeClaimTemplateOnlyDeleteTheOnesWithoutKeepPolicy",
+			includeVolumes: true,
+			k8Resources: []runtime.Object{
+				&appsv1.StatefulSet{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "sfs-1",
+						Namespace: ns,
+						Labels: map[string]string{
+							model.DeployedByLabel: appName,
+						},
+					},
+					Spec: appsv1.StatefulSetSpec{
+						VolumeClaimTemplates: []apiv1.PersistentVolumeClaim{
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "pvc",
+								},
+							},
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "mysql",
+								},
+							},
+							{
+								ObjectMeta: metav1.ObjectMeta{
+									Name: "redis",
+								},
+							},
+						},
+					},
+				},
+				&apiv1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pvc-sfs-1-aadfwt312ad",
+						Namespace: ns,
+						Annotations: map[string]string{
+							resourcePolicyAnnotation: keepPolicy,
+						},
+					},
+				},
+				&apiv1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "mysql-sfs-1-afahrret34",
+						Namespace: ns,
+					},
+				},
+				&apiv1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "redis-sfs-1-jdtrtqwetq",
+						Namespace: ns,
+					},
+				},
+				&apiv1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "mongodb",
+						Namespace: ns,
+					},
+				},
+			},
+			expectedPVCs: []apiv1.PersistentVolumeClaim{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "pvc-sfs-1-aadfwt312ad",
+						Namespace: ns,
+						Annotations: map[string]string{
+							resourcePolicyAnnotation: keepPolicy,
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "mongodb",
+						Namespace: ns,
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

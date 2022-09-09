@@ -183,6 +183,10 @@ func (n *Namespaces) DestroySFSVolumes(ctx context.Context, ns string, opts Dele
 		return fmt.Errorf("error getting volumes: %s", err)
 	}
 	for _, v := range vList {
+		if v.Annotations[resourcePolicyAnnotation] == keepPolicy {
+			oktetoLog.Debugf("skipping deletion of pvc '%s' because of policy annotation", v.GetName())
+			continue
+		}
 		for _, pvcName := range pvcNames {
 			if strings.HasPrefix(v.Name, pvcName) {
 				if err := volumes.DestroyWithoutTimeout(ctx, v.Name, ns, n.k8sClient); err != nil {
