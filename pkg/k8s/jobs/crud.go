@@ -36,10 +36,7 @@ func Update(ctx context.Context, job *batchv1.Job, c kubernetes.Interface) error
 	if err := Destroy(ctx, job.Name, job.Namespace, c); err != nil {
 		return err
 	}
-	if err := Create(ctx, job, c); err != nil {
-		return err
-	}
-	return nil
+	return Create(ctx, job, c)
 }
 
 func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]batchv1.Job, error) {

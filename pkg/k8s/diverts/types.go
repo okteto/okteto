@@ -86,10 +86,7 @@ func (in *Divert) DeepCopy() *Divert {
 
 // DeepCopyObject a deepcopy function, copying the receiver, creating a new runtime.Object.
 func (in *Divert) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil {
-		return c
-	}
-	return nil
+	return in.DeepCopy()
 }
 
 // DeepCopyInto a deepcopy function, copying the receiver, writing into out. in must be non-nil.
@@ -118,10 +115,7 @@ func (in *DivertList) DeepCopy() *DivertList {
 
 // DeepCopyObject a deepcopy function, copying the receiver, creating a new runtime.Object.
 func (in *DivertList) DeepCopyObject() runtime.Object {
-	if c := in.DeepCopy(); c != nil {
-		return c
-	}
-	return nil
+	return in.DeepCopy()
 }
 
 // DeepCopyInto a deepcopy function, copying the receiver, writing into out. in must be non-nil.

@@ -34,10 +34,7 @@ func DeleteCMD() *cobra.Command {
 			ctx := context.Background()
 			args[0] = okteto.AddSchema(args[0])
 			args[0] = strings.TrimSuffix(args[0], "/")
-			if err := Delete(ctx, args[0]); err != nil {
-				return err
-			}
-			return nil
+			return Delete(ctx, args[0])
 		},
 	}
 	return cmd
