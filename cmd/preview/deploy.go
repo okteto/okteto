@@ -59,21 +59,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
-			var err error
-
-			cwd, err := os.Getwd()
-			if err != nil {
-				return fmt.Errorf("failed to get the current working directory: %w", err)
-			}
-
-			opts.repository, err = getRepository(cwd, opts.repository)
-			if err != nil {
-				return err
-			}
-			opts.branch, err = getBranch(cwd, opts.branch)
-			if err != nil {
-				return err
-			}
 
 			if len(args) == 0 {
 				opts.name = getRandomName(ctx, opts.scope)
@@ -113,6 +98,20 @@ func Deploy(ctx context.Context) *cobra.Command {
 }
 
 func optionsSetup(opts *DeployOptions) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
+
+	opts.repository, err = getRepository(cwd, opts.repository)
+	if err != nil {
+		return err
+	}
+	opts.branch, err = getBranch(cwd, opts.branch)
+	if err != nil {
+		return err
+	}
+
 	if err := validatePreviewType(opts.scope); err != nil {
 		return err
 	}
