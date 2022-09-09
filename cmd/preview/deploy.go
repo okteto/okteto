@@ -60,20 +60,14 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if len(args) == 0 {
-				opts.name = getRandomName(ctx, opts.scope)
-			} else {
-				opts.name = getExpandedName(args[0])
+			if err := optionsSetup(opts, args); err != nil {
+				return err
 			}
 
 			okteto.Context().Namespace = opts.name
 
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
-			}
-
-			if err := optionsSetup(opts); err != nil {
-				return err
 			}
 
 			previewCmd, err := NewCommand()
@@ -97,10 +91,16 @@ func Deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func optionsSetup(opts *DeployOptions) error {
+func optionsSetup(opts *DeployOptions, args []string) error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get the current working directory: %w", err)
+	}
+
+	if len(args) == 0 {
+		opts.name = getRandomName(opts.scope)
+	} else {
+		opts.name = getExpandedName(args[0])
 	}
 
 	opts.repository, err = getRepository(cwd, opts.repository)
@@ -172,7 +172,7 @@ func getBranch(cwd, branch string) (string, error) {
 	return utils.GetBranch(cwd)
 }
 
-func getRandomName(ctx context.Context, scope string) string {
+func getRandomName(scope string) string {
 	name := strings.ReplaceAll(namesgenerator.GetRandomName(-1), "_", "-")
 	if scope == "personal" {
 		username := strings.ToLower(okteto.GetSanitizedUsername())
