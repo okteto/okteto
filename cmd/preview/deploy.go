@@ -116,19 +116,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 }
 
 func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions) error {
-	varList := []types.Variable{}
-	for _, v := range opts.variables {
-		kv := strings.SplitN(v, "=", 2)
-		if len(kv) != 2 {
-			return fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
-		}
-		varList = append(varList, types.Variable{
-			Name:  kv[0],
-			Value: kv[1],
-		})
-	}
-
-	resp, err := pw.deployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, varList)
+	resp, err := pw.deployPreview(ctx, opts)
 	analytics.TrackPreviewDeploy(err == nil)
 	if err != nil {
 		return err
@@ -200,12 +188,24 @@ func getRandomName(ctx context.Context, scope string) string {
 	return name
 }
 
-func (pw *Command) deployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
+func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*types.PreviewResponse, error) {
 	oktetoLog.Spinner("Deploying your preview environment...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	resp, err := pw.okClient.Previews().DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
+	varList := []types.Variable{}
+	for _, v := range opts.variables {
+		kv := strings.SplitN(v, "=", 2)
+		if len(kv) != 2 {
+			return nil, fmt.Errorf("invalid variable value '%s': must follow KEY=VALUE format", v)
+		}
+		varList = append(varList, types.Variable{
+			Name:  kv[0],
+			Value: kv[1],
+		})
+	}
+
+	resp, err := pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.filename, varList)
 
 	if err != nil {
 		return nil, err
