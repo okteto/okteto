@@ -56,15 +56,15 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploy a preview environment",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
-				return err
-			}
-
 			if err := optionsSetup(opts, args); err != nil {
 				return err
 			}
 
-			okteto.Context().Namespace = opts.name
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
+				Namespace: opts.name,
+			}); err != nil {
+				return err
+			}
 
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
