@@ -13,8 +13,15 @@ package client
 
 import (
 	"context"
+	"errors"
 
 	"github.com/okteto/okteto/pkg/types"
+)
+
+var (
+	FakeErrDeployPreview    = errors.New("fake deploy error")
+	FakeErrListPreview      = errors.New("fake list error")
+	FakeErrResourcesPreview = errors.New("fake resources error")
 )
 
 // FakePreviewsClient mocks the previews interface
@@ -27,7 +34,10 @@ type FakePreviewResponse struct {
 	PreviewList    []types.Preview
 	ResourceStatus map[string]string
 
-	Err error
+	ErrList          error
+	ErrDeployPreview error
+
+	ErrResources error
 }
 
 // NewFakePreviewClient returns a new fake preview client
@@ -39,15 +49,15 @@ func NewFakePreviewClient(response *FakePreviewResponse) *FakePreviewsClient {
 
 // List list namespaces
 func (c *FakePreviewsClient) List(_ context.Context) ([]types.Preview, error) {
-	return c.response.PreviewList, c.response.Err
+	return c.response.PreviewList, c.response.ErrList
 }
 
 // DeployPreview deploys a preview
 func (c *FakePreviewsClient) DeployPreview(_ context.Context, _, _, _, _, _, _ string, _ []types.Variable) (*types.PreviewResponse, error) {
-	return c.response.Preview, c.response.Err
+	return c.response.Preview, c.response.ErrDeployPreview
 }
 
 // GetResourcesStatusFromPreview gets resources from a fake preview
 func (c *FakePreviewsClient) GetResourcesStatusFromPreview(_ context.Context, _, _ string) (map[string]string, error) {
-	return c.response.ResourceStatus, c.response.Err
+	return c.response.ResourceStatus, c.response.ErrResources
 }
