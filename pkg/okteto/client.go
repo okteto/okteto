@@ -29,7 +29,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-// Client implementation to connect to Okteto API
+// OktetoClient implementation to connect to Okteto API
 type OktetoClient struct {
 	client *graphql.Client
 

@@ -154,7 +154,7 @@ type Port struct {
 
 type EndpointSpec map[string]Endpoint
 
-// Endpoints represents an okteto stack ingress
+// Endpoint represents an okteto stack ingress
 type Endpoint struct {
 	Labels      Labels         `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations Annotations    `json:"annotations,omitempty" yaml:"annotations,omitempty"`
