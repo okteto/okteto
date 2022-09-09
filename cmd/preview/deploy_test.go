@@ -14,6 +14,8 @@ import (
 
 func Test_ExecuteDeployPreview(t *testing.T) {
 
+	errWait := errors.New("wait-error")
+
 	tests := []struct {
 		name              string
 		username          string
@@ -94,6 +96,27 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 				ErrDeployPreview: client.FakeErrDeployPreview,
 			},
 			expectedErr: client.FakeErrDeployPreview,
+		},
+		{
+			name:     "err-wait-deploy",
+			username: "test-username",
+			opts: &DeployOptions{
+				scope:      "personal",
+				repository: "test-repo",
+				branch:     "test-branch",
+				wait:       true,
+			},
+			pipelineResponses: &client.FakePipelineResponses{
+				WaitErr: errWait,
+			},
+			previewResponses: &client.FakePreviewResponse{
+				Preview: &types.PreviewResponse{
+					Action: &types.Action{
+						Name: "action-name",
+					},
+				},
+			},
+			expectedErr: errWait,
 		},
 	}
 
