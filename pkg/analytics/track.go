@@ -164,7 +164,10 @@ func TrackResetDatabase(success bool) {
 	track(syncResetDatabase, success, nil)
 }
 
+// TrackUpMetadata defines the properties an up can have
 type TrackUpMetadata struct {
+	IsV2                   bool
+	ManifestType           model.Archetype
 	IsInteractive          bool
 	IsOktetoRepository     bool
 	HasDependenciesSection bool
@@ -177,6 +180,8 @@ type TrackUpMetadata struct {
 func TrackUp(m TrackUpMetadata) {
 	props := map[string]interface{}{
 		"isInteractive":          m.IsInteractive,
+		"isV2":                   m.IsV2,
+		"manifestType":           m.ManifestType,
 		"isOktetoRepository":     m.IsOktetoRepository,
 		"hasDependenciesSection": m.HasDependenciesSection,
 		"hasBuildSection":        m.HasBuildSection,

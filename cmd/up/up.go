@@ -321,6 +321,11 @@ func Up() *cobra.Command {
 				upOptions.Deploy = true
 			}
 
+			if up.Manifest.Type == model.OktetoManifestType && !up.Manifest.IsV2 {
+				oktetoLog.Warning("okteto manifest v1 is deprecated and will be removed in okteto 3.0")
+				oktetoLog.Println(fmt.Sprintf("    %s", oktetoLog.BlueString("Consider upgrading to the new manifest schema: https://www.okteto.com/docs/reference/manifest-migration/")))
+			}
+
 			err = up.start()
 
 			if err != nil {
@@ -525,6 +530,7 @@ func (up *upContext) start() error {
 	analytics.TrackUp(analytics.TrackUpMetadata{
 		IsInteractive:          up.getInteractive(),
 		IsOktetoRepository:     utils.IsOktetoRepo(),
+		IsV2:                   up.Manifest.IsV2,
 		HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
 		HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
 		HasDeploySection: (up.Manifest.IsV2 &&
