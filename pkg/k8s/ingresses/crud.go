@@ -57,7 +57,7 @@ func GetClient(ctx context.Context, c kubernetes.Interface) (*Client, error) {
 	return NewIngressClient(c, false), nil
 }
 
-//Get results the ingress
+// Get results the ingress
 func (iClient *Client) Get(ctx context.Context, name, namespace string) (metav1.Object, error) {
 	if iClient.isV1 {
 		i, err := iClient.c.NetworkingV1().Ingresses(namespace).Get(ctx, name, metav1.GetOptions{})
@@ -83,7 +83,7 @@ func (iClient *Client) Create(ctx context.Context, i *Ingress) error {
 	return err
 }
 
-//Update updates a statefulset
+// Update updates a statefulset
 func (iClient *Client) Update(ctx context.Context, i *Ingress) error {
 	if iClient.isV1 {
 		_, err := iClient.c.NetworkingV1().Ingresses(i.V1.Namespace).Update(ctx, i.V1, metav1.UpdateOptions{})
@@ -93,7 +93,7 @@ func (iClient *Client) Update(ctx context.Context, i *Ingress) error {
 	return err
 }
 
-//List returns the list of deployments
+// List returns the list of deployments
 func (iClient *Client) List(ctx context.Context, namespace, labels string) ([]metav1.Object, error) {
 	result := []metav1.Object{}
 	if iClient.isV1 {
@@ -117,7 +117,7 @@ func (iClient *Client) List(ctx context.Context, namespace, labels string) ([]me
 	return result, nil
 }
 
-//Destroy destroys a k8s deployment
+// Destroy destroys a k8s deployment
 func (iClient *Client) Destroy(ctx context.Context, name, namespace string) error {
 	oktetoLog.Infof("deleting ingress '%s'", name)
 	if iClient.isV1 {

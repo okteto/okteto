@@ -227,7 +227,7 @@ func LoadStackWithContext(ctx context.Context, name, namespace string, stackPath
 	return s, nil
 }
 
-//LoadContextFromPath initializes the okteto context taking into account command flags and manifest namespace/context fields
+// LoadContextFromPath initializes the okteto context taking into account command flags and manifest namespace/context fields
 func LoadContextFromPath(ctx context.Context, namespace, k8sContext, path string) error {
 	ctxResource, err := getCtxResource(path)
 	if err != nil {

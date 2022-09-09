@@ -18,7 +18,7 @@ type ActionBody struct {
 	Action Action `json:"action"`
 }
 
-//Action represents an action
+// Action represents an action
 type Action struct {
 	ID     string `json:"id"`
 	Name   string `json:"name"`

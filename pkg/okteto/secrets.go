@@ -29,7 +29,7 @@ func newUserClient(client *graphql.Client) *userClient {
 	return &userClient{client: client}
 }
 
-//GetSecrets returns the secrets from Okteto API
+// GetSecrets returns the secrets from Okteto API
 func (c *OktetoClient) GetSecrets(ctx context.Context) ([]types.Secret, error) {
 	var queryStruct struct {
 		Secrets []struct {
@@ -55,7 +55,7 @@ func (c *OktetoClient) GetSecrets(ctx context.Context) ([]types.Secret, error) {
 	return secrets, nil
 }
 
-//GetSecrets returns the secrets from Okteto API
+// GetSecrets returns the secrets from Okteto API
 func (c *userClient) GetContext(ctx context.Context) (*types.UserContext, error) {
 	var queryStruct struct {
 		User struct {

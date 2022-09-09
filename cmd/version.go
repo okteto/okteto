@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Version returns information about the binary
+// Version returns information about the binary
 func Version() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
@@ -36,7 +36,7 @@ func Version() *cobra.Command {
 	return cmd
 }
 
-//Update checks if there is a new version available and updates it
+// Update checks if there is a new version available and updates it
 func Update() *cobra.Command {
 	return &cobra.Command{
 		Use:   "update",
@@ -58,7 +58,7 @@ func Update() *cobra.Command {
 	}
 }
 
-//Show shows the current Okteto CLI version
+// Show shows the current Okteto CLI version
 func Show() *cobra.Command {
 	return &cobra.Command{
 		Use:   "show",

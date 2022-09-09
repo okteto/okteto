@@ -44,7 +44,7 @@ func GetValidNameFromFolder(folder string) (string, error) {
 	return name, nil
 }
 
-//GetValidNameFromFolder returns a valid kubernetes name for a folder
+// GetValidNameFromFolder returns a valid kubernetes name for a folder
 func GetValidNameFromGitRepo(folder string) (string, error) {
 	repo, err := GetRepositoryURL(folder)
 	if err != nil {

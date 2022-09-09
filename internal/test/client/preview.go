@@ -17,7 +17,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 )
 
-//FakePreviewsClient mocks the previews interface
+// FakePreviewsClient mocks the previews interface
 type FakePreviewsClient struct {
 	preview []types.Preview
 	err     error

@@ -15,7 +15,7 @@ package types
 
 import "github.com/shurcooL/graphql"
 
-//Client implementation to connect to Okteto API
+// Client implementation to connect to Okteto API
 type OktetoClient struct {
 	Client *graphql.Client
 }

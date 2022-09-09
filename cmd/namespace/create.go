@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//CreateOptions represents the options that namespace create has
+// CreateOptions represents the options that namespace create has
 type CreateOptions struct {
 	Members   *[]string
 	Namespace string

@@ -69,7 +69,7 @@ func (dev *Dev) translateDeprecatedVolumes() {
 	dev.Volumes = volumes
 }
 
-//IsSubPathFolder checks if a sync folder is a subpath of another sync folder
+// IsSubPathFolder checks if a sync folder is a subpath of another sync folder
 func (dev *Dev) IsSubPathFolder(path string) (bool, error) {
 	found := false
 	for _, sync := range dev.Sync.Folders {

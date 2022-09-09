@@ -37,14 +37,14 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//PodInfo info collected for pods
+// PodInfo info collected for pods
 type PodInfo struct {
 	CPU        string               `yaml:"cpu,omitempty"`
 	Memory     string               `yaml:"memory,omitempty"`
 	Conditions []apiv1.PodCondition `yaml:"conditions,omitempty"`
 }
 
-//Run runs the "okteto status" sequence
+// Run runs the "okteto status" sequence
 func Run(ctx context.Context, dev *model.Dev, devPath string, c *kubernetes.Clientset) (string, error) {
 	z := archiver.Zip{
 		CompressionLevel:       flate.DefaultCompression,

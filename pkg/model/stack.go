@@ -485,12 +485,12 @@ func validateDependsOn(s *Stack) error {
 	return nil
 }
 
-//GetLabelSelector returns the label selector for the stack name
+// GetLabelSelector returns the label selector for the stack name
 func (s *Stack) GetLabelSelector() string {
 	return fmt.Sprintf("%s=%s", StackNameLabel, s.Name)
 }
 
-//GetLabelSelector returns the label selector for the stack name
+// GetLabelSelector returns the label selector for the stack name
 func GetStackConfigMapName(stackName string) string {
 	return fmt.Sprintf("okteto-%s", stackName)
 }
@@ -504,7 +504,7 @@ func IsPortInService(port int32, ports []Port) bool {
 	return false
 }
 
-//SetLastBuiltAnnotation sets the dev timestamp
+// SetLastBuiltAnnotation sets the dev timestamp
 func (svc *Service) SetLastBuiltAnnotation() {
 	if svc.Annotations == nil {
 		svc.Annotations = Annotations{}
@@ -512,7 +512,7 @@ func (svc *Service) SetLastBuiltAnnotation() {
 	svc.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
 }
 
-//isAlreadyAdded checks if a port is already on port list
+// isAlreadyAdded checks if a port is already on port list
 func IsAlreadyAdded(p Port, ports []Port) bool {
 	for _, port := range ports {
 		if port.ContainerPort == p.ContainerPort {

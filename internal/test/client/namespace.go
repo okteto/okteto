@@ -18,7 +18,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 )
 
-//FakeNamespaceClient mocks the namespace interface
+// FakeNamespaceClient mocks the namespace interface
 type FakeNamespaceClient struct {
 	namespaces []types.Namespace
 	err        error

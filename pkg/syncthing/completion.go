@@ -33,7 +33,7 @@ type Completion struct {
 	NeedDeletes int64   `json:"needDeletes"`
 }
 
-//waitForCompletion represents a wait for completion iteration
+// waitForCompletion represents a wait for completion iteration
 type waitForCompletion struct {
 	localCompletion           *Completion
 	remoteCompletion          *Completion
