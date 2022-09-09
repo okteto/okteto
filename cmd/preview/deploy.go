@@ -56,7 +56,12 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Short: "Deploy a preview environment",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if err := optionsSetup(opts, args); err != nil {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get the current working directory: %w", err)
+			}
+
+			if err := optionsSetup(cwd, opts, args); err != nil {
 				return err
 			}
 
@@ -91,18 +96,14 @@ func Deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func optionsSetup(opts *DeployOptions, args []string) error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get the current working directory: %w", err)
-	}
-
+func optionsSetup(cwd string, opts *DeployOptions, args []string) error {
 	if len(args) == 0 {
 		opts.name = getRandomName(opts.scope)
 	} else {
 		opts.name = getExpandedName(args[0])
 	}
 
+	var err error
 	opts.repository, err = getRepository(cwd, opts.repository)
 	if err != nil {
 		return err
