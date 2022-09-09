@@ -107,7 +107,7 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 
 func addEnvVars(ctx context.Context, cwd string) error {
 	if os.Getenv(model.OktetoGitBranchEnvVar) == "" {
-		branch, err := utils.GetBranch(ctx, cwd)
+		branch, err := utils.GetBranch(cwd)
 		if err != nil {
 			oktetoLog.Infof("could not retrieve branch name: %s", err)
 		}

@@ -14,7 +14,6 @@
 package utils
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -34,7 +33,7 @@ func Test_getBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = GetBranch(context.TODO(), dir)
+	_, err = GetBranch(dir)
 
 	if err == nil {
 		t.Fatal("expected no-branch error")
@@ -81,7 +80,7 @@ func Test_getBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b, err := GetBranch(context.TODO(), dir)
+	b, err := GetBranch(dir)
 
 	if err != nil {
 		t.Fatal(err)
@@ -97,7 +96,7 @@ func Test_getBranch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := GetBranch(context.TODO(), dir); err == nil {
+	if _, err := GetBranch(dir); err == nil {
 
 		t.Fatal("didn't fail when getting a non branch")
 	}

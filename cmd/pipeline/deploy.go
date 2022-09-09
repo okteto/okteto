@@ -124,7 +124,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	if opts.Branch == "" && okteto.AreSameRepository(opts.Repository, currentRepo) {
 
 		oktetoLog.Info("inferring git repository branch")
-		b, err := utils.GetBranch(ctx, cwd)
+		b, err := utils.GetBranch(cwd)
 
 		if err != nil {
 			return err

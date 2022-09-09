@@ -60,11 +60,17 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 			var err error
-			opts.repository, err = getRepository(ctx, opts.repository)
+
+			cwd, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get the current working directory: %w", err)
+			}
+
+			opts.repository, err = getRepository(cwd, opts.repository)
 			if err != nil {
 				return err
 			}
-			opts.branch, err = getBranch(ctx, opts.branch)
+			opts.branch, err = getBranch(cwd, opts.branch)
 			if err != nil {
 				return err
 			}
@@ -149,41 +155,22 @@ func validatePreviewType(previewType string) error {
 	return nil
 }
 
-func getRepository(ctx context.Context, repository string) (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("failed to get the current working directory: %w", err)
+func getRepository(cwd string, repository string) (string, error) {
+	if repository != "" {
+		return repository, nil
 	}
 
-	if repository == "" {
-		oktetoLog.Info("inferring git repository URL")
-
-		r, err := model.GetRepositoryURL(cwd)
-
-		if err != nil {
-			return "", err
-		}
-
-		repository = r
-	}
-	return repository, nil
+	oktetoLog.Info("inferring git repository URL")
+	return model.GetRepositoryURL(cwd)
 }
 
-func getBranch(ctx context.Context, branch string) (string, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("failed to get the current working directory: %w", err)
+func getBranch(cwd, branch string) (string, error) {
+	if branch != "" {
+		return branch, nil
 	}
-	if branch == "" {
-		oktetoLog.Info("inferring git repository branch")
-		b, err := utils.GetBranch(ctx, cwd)
 
-		if err != nil {
-			return "", err
-		}
-		branch = b
-	}
-	return branch, nil
+	oktetoLog.Info("inferring git repository branch")
+	return utils.GetBranch(cwd)
 }
 
 func getRandomName(ctx context.Context, scope string) string {
