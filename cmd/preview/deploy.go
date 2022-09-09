@@ -131,12 +131,7 @@ func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*typ
 		})
 	}
 
-	resp, err := pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.filename, varList)
-
-	if err != nil {
-		return nil, err
-	}
-	return resp, nil
+	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.filename, varList)
 }
 
 func (pw *Command) waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
