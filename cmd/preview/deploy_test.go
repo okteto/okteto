@@ -2,7 +2,9 @@ package preview
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -29,6 +31,47 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 				branch:     "test-branch",
 			},
 			pipelineResponses: &client.FakePipelineResponses{},
+			previewResponses: &client.FakePreviewResponse{
+				Preview: &types.PreviewResponse{
+					Action: &types.Action{
+						Name: "action-name",
+					},
+				},
+			},
+		},
+		{
+			name:     "success-wait",
+			username: "test-username",
+			opts: &DeployOptions{
+				scope:      "personal",
+				repository: "test-repo",
+				branch:     "test-branch",
+				wait:       true,
+				timeout:    1 * time.Minute,
+			},
+			pipelineResponses: &client.FakePipelineResponses{},
+			previewResponses: &client.FakePreviewResponse{
+				Preview: &types.PreviewResponse{
+					Action: &types.Action{
+						Name: "action-name",
+					},
+				},
+				ResourceStatus: map[string]string{},
+			},
+		},
+		{
+			name:     "success-wait-stream-err",
+			username: "test-username",
+			opts: &DeployOptions{
+				scope:      "personal",
+				repository: "test-repo",
+				branch:     "test-branch",
+				wait:       true,
+				timeout:    1 * time.Minute,
+			},
+			pipelineResponses: &client.FakePipelineResponses{
+				StreamErr: errors.New("error"),
+			},
 			previewResponses: &client.FakePreviewResponse{
 				Preview: &types.PreviewResponse{
 					Action: &types.Action{
