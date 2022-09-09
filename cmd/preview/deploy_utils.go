@@ -1,6 +1,7 @@
 package preview
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,6 +10,10 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+)
+
+var (
+	ErrNotValidPreviewScope = errors.New("value is invalid for flag 'scope'. Accepted values are ['global', 'personal']")
 )
 
 func optionsSetup(cwd string, opts *DeployOptions, args []string) error {
@@ -45,7 +50,7 @@ func optionsSetup(cwd string, opts *DeployOptions, args []string) error {
 
 func validatePreviewType(previewType string) error {
 	if !(previewType == "global" || previewType == "personal") {
-		return fmt.Errorf("value '%s' is invalid for flag 'type'. Accepted values are ['global', 'personal']", previewType)
+		return fmt.Errorf("%s %w", previewType, ErrNotValidPreviewScope)
 	}
 	return nil
 }
