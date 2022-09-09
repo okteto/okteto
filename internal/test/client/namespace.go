@@ -28,7 +28,7 @@ func NewFakeNamespaceClient(ns []types.Namespace, err error) *FakeNamespaceClien
 	return &FakeNamespaceClient{namespaces: ns, err: err}
 }
 
-// CreateNamespace creates a namespace
+// Create creates a namespace
 func (c *FakeNamespaceClient) Create(_ context.Context, namespace string) (string, error) {
 	c.namespaces = append(c.namespaces, types.Namespace{ID: namespace})
 	return namespace, c.err
@@ -39,12 +39,12 @@ func (c *FakeNamespaceClient) List(_ context.Context) ([]types.Namespace, error)
 	return c.namespaces, c.err
 }
 
-// AddNamespaceMembers adds members to a namespace
+// AddMembers adds members to a namespace
 func (c *FakeNamespaceClient) AddMembers(_ context.Context, _ string, _ []string) error {
 	return c.err
 }
 
-// DeleteNamespace deletes a namespace
+// Delete deletes a namespace
 func (c *FakeNamespaceClient) Delete(_ context.Context, namespace string) error {
 	toRemove := -1
 	for idx, ns := range c.namespaces {

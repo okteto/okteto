@@ -107,7 +107,7 @@ func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, c kubernetes
 	return nil, oktetoErrors.ErrNotFound
 }
 
-// GetPodByReplicaSet returns a pod of a given replicaset
+// GetPodByStatefulSet returns a pod of a given replicaset
 func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*apiv1.Pod, error) {
 	podList, err := c.CoreV1().Pods(sfs.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {

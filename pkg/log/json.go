@@ -287,7 +287,7 @@ func (w *JSONWriter) AddToBuffer(level, format string, a ...interface{}) {
 	}
 }
 
-// AddToBuffer logs into the buffer but does not print anything
+// Write logs into the buffer but does not print anything
 func (w *JSONWriter) Write(p []byte) (n int, err error) {
 	msg := string(p)
 	msg = convertToJSON(InfoLevel, log.stage, msg)

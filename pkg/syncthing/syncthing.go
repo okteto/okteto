@@ -741,7 +741,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, local bool) error {
 	return fmt.Errorf("%s: %s", folderErrors.Data.Errors[0].Path, errMsg)
 }
 
-// GetObjectSyncthing the files syncthing
+// GetInSynchronizationFile the files syncthing
 func (s *Syncthing) GetInSynchronizationFile(ctx context.Context) string {
 	events := []ItemEvent{}
 	params := map[string]string{

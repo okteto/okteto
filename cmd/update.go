@@ -29,7 +29,7 @@ const (
 	INSTALL_PATH = "/usr/local/bin/okteto"
 )
 
-// Update checks if there is a new version available and updates it
+// UpdateDeprecated checks if there is a new version available and updates it
 func UpdateDeprecated() *cobra.Command {
 	return &cobra.Command{
 		Use:   "update",

@@ -490,7 +490,7 @@ func (s *Stack) GetLabelSelector() string {
 	return fmt.Sprintf("%s=%s", StackNameLabel, s.Name)
 }
 
-// GetLabelSelector returns the label selector for the stack name
+// GetStackConfigMapName returns the label selector for the stack name
 func GetStackConfigMapName(stackName string) string {
 	return fmt.Sprintf("okteto-%s", stackName)
 }
@@ -512,7 +512,7 @@ func (svc *Service) SetLastBuiltAnnotation() {
 	svc.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
 }
 
-// isAlreadyAdded checks if a port is already on port list
+// IsAlreadyAdded checks if a port is already on port list
 func IsAlreadyAdded(p Port, ports []Port) bool {
 	for _, port := range ports {
 		if port.ContainerPort == p.ContainerPort {

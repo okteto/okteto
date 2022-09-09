@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Create adds a new cluster to okteto context
+// DeleteCMD removes a cluster from okteto context
 func DeleteCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",

@@ -28,7 +28,7 @@ import (
 
 var output string
 
-// Lists all contexts managed by okteto
+// List returns all contexts managed by okteto
 func List() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
