@@ -562,6 +562,18 @@ func TestBuildImages(t *testing.T) {
 			expectedError:    nil,
 			expectedImages:   []string{"manifest A", "stack C"},
 		},
+		{
+			name:          "force build",
+			build:         true,
+			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
+			stack: &model.Stack{Services: map[string]*model.Service{
+				"stack A": {Build: &model.BuildInfo{}},
+				"stack B": {Build: &model.BuildInfo{}},
+			}},
+			servicesToDeploy: []string{"manifest A", "stack A"},
+			expectedError:    nil,
+			expectedImages:   []string{"manifest A", "stack A"},
+		},
 	}
 
 	for _, testCase := range testCases {
