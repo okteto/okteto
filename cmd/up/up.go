@@ -158,6 +158,9 @@ func Up() *cobra.Command {
 			os.Setenv(model.OktetoNameEnvVar, oktetoManifest.Name)
 
 			if len(oktetoManifest.Dev) == 0 {
+				if oktetoManifest.Type == model.StackType {
+					return fmt.Errorf("couldn't find any dev environment from your docker compose %q. Only services with local volumes are transformed into devs: https://www.okteto.com/docs/reference/compose/#volumes-string-optional", oktetoManifest.Name)
+				}
 				oktetoLog.Warning("okteto manifest has no 'dev' section.")
 				answer, err := utils.AskYesNo("Do you want to configure okteto manifest now? [y/n]")
 				if err != nil {
