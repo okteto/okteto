@@ -513,26 +513,46 @@ func TestBuildImages(t *testing.T) {
 		return nil
 	}
 
-	deployOptions := &Options{
-		Build: false,
-		Manifest: &model.Manifest{
-			Build: model.ManifestBuild{},
-			Deploy: &model.DeployInfo{
-				ComposeSection: &model.ComposeSectionInfo{
-					Stack: &model.Stack{
-						Services: map[string]*model.Service{
-							"service1": {
-								Build: &model.BuildInfo{},
+	testCases := []struct {
+		name             string
+		build            bool
+		services         map[string]*model.Service
+		servicesToDeploy []string
+		expectedError    error
+		expectedImages   []string
+	}{
+		{
+			name:  "mix",
+			build: false,
+			services: map[string]*model.Service{
+				"service1": {Build: &model.BuildInfo{}},
+			},
+			servicesToDeploy: []string{"service1", "service2"},
+			expectedError:    nil,
+			expectedImages:   []string{"service1"},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			deployOptions := &Options{
+				Build: testCase.build,
+				Manifest: &model.Manifest{
+					Build: model.ManifestBuild{},
+					Deploy: &model.DeployInfo{
+						ComposeSection: &model.ComposeSectionInfo{
+							Stack: &model.Stack{
+								Services: testCase.services,
 							},
 						},
 					},
 				},
-			},
-		},
-		servicesToDeploy: []string{"service1", "service2"},
+				servicesToDeploy: testCase.servicesToDeploy,
+			}
+			err := buildImages(context.Background(), build, deployOptions)
+			assert.Equal(t, testCase.expectedError, err)
+			assert.Equal(t, testCase.expectedImages, buildOptionsStorage.CommandArgs)
+		})
 	}
 
-	err := buildImages(context.Background(), build, deployOptions)
-	assert.NoError(t, err)
-	assert.Equal(t, []string{"service1"}, buildOptionsStorage.CommandArgs)
 }
