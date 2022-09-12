@@ -105,7 +105,6 @@ func Test_deleteNamespace(t *testing.T) {
 			}
 			fakeOktetoClient := &client.FakeOktetoClient{
 				Namespace: client.NewFakeNamespaceClient(tt.currentNamespaces, nil),
-				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
 				Users:     client.NewFakeUsersClient(usr),
 			}
 			nsCmd := &NamespaceCommand{
