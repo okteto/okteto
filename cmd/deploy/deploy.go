@@ -606,12 +606,11 @@ func buildImages(ctx context.Context, build func(context.Context, *types.BuildOp
 			return errBuild
 		}
 	} else {
-		stack := deployOptions.Manifest.GetStack()
-		if stack == nil {
-			return nil
-		}
-		stackServices := stack.GetServicesWithBuildSection()
+		var stackServices map[string]bool
 
+		if stack := deployOptions.Manifest.GetStack(); stack != nil {
+			stackServices = stack.GetServicesWithBuildSection()
+		}
 		stackServicesToBuild := setIntersection(stackServices, sliceToSet(deployOptions.servicesToDeploy))
 
 		manifestBuildServices := deployOptions.Manifest.GetBuildServices()
