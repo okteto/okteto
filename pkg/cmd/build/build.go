@@ -248,21 +248,21 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 	if registry.IsOktetoRegistry(b.Image) {
 		defaultBuildArgs := map[string]string{
-			model.OktetoContextEnvVar:        okteto.Context().Name,
-			model.OktetoNamespaceEnvVar:       okteto.Context().Namespace,
+			model.OktetoContextEnvVar:   okteto.Context().Name,
+			model.OktetoNamespaceEnvVar: okteto.Context().Namespace,
 		}
 
 		for _, e := range b.Args {
 			if _, exists := defaultBuildArgs[e.Name]; !exists {
-				continue;
+				continue
 			}
 			// we don't want to replace build arguments that were already set by the user
 			delete(defaultBuildArgs, e.Name)
 		}
 
 		for key, val := range defaultBuildArgs {
-			if (val == "") {
-				continue;
+			if val == "" {
+				continue
 			}
 
 			b.Args = append(b.Args, model.EnvVar{
@@ -271,9 +271,14 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		}
 	}
 
-	// add to the build the secrets at the manifest
-	for id, src := range b.Secrets {
-		o.Secrets = append(o.Secrets, fmt.Sprintf("id=%s,src=%s", id, src))
+	if len(b.Secrets) > 0 {
+		if o.Secrets == nil {
+			o.Secrets = make([]string, 0)
+		}
+		// add to the build the secrets at the manifest
+		for id, src := range b.Secrets {
+			o.Secrets = append(o.Secrets, fmt.Sprintf("id=%s,src=%s", id, src))
+		}
 	}
 
 	opts := &types.BuildOptions{
