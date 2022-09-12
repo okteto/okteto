@@ -506,49 +506,65 @@ func getErrorManifest(_ string) (*model.Manifest, error) {
 }
 
 func TestBuildImages(t *testing.T) {
-	var buildOptionsStorage *types.BuildOptions
-
-	build := func(ctx context.Context, buildOptions *types.BuildOptions) error {
-		buildOptionsStorage = buildOptions
-		return nil
-	}
-
 	testCases := []struct {
 		name             string
 		build            bool
-		services         map[string]*model.Service
+		buildServices    []string
+		stack            *model.Stack
 		servicesToDeploy []string
 		expectedError    error
 		expectedImages   []string
 	}{
 		{
-			name:  "mix",
-			build: false,
-			services: map[string]*model.Service{
-				"service1": {Build: &model.BuildInfo{}},
+			name:          "no build services",
+			build:         false,
+			buildServices: []string{},
+			stack: &model.Stack{
+				Services: map[string]*model.Service{
+					"A": {Build: &model.BuildInfo{}},
+				},
 			},
-			servicesToDeploy: []string{"service1", "service2"},
+			servicesToDeploy: []string{"A", "B"},
 			expectedError:    nil,
-			expectedImages:   []string{"service1"},
+			expectedImages:   []string{"A"},
+		},
+		{
+			name:             "nil stack",
+			build:            false,
+			buildServices:    []string{"B"},
+			stack:            nil,
+			servicesToDeploy: []string{"A"},
+			expectedError:    nil,
+			expectedImages:   []string{"B"},
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			var buildOptionsStorage *types.BuildOptions
+
+			build := func(ctx context.Context, buildOptions *types.BuildOptions) error {
+				buildOptionsStorage = buildOptions
+				return nil
+			}
+
 			deployOptions := &Options{
 				Build: testCase.build,
 				Manifest: &model.Manifest{
 					Build: model.ManifestBuild{},
 					Deploy: &model.DeployInfo{
 						ComposeSection: &model.ComposeSectionInfo{
-							Stack: &model.Stack{
-								Services: testCase.services,
-							},
+							Stack: testCase.stack,
 						},
 					},
 				},
 				servicesToDeploy: testCase.servicesToDeploy,
 			}
+
+			for _, service := range testCase.buildServices {
+				deployOptions.Manifest.Build[service] = &model.BuildInfo{}
+			}
+
 			err := buildImages(context.Background(), build, deployOptions)
 			assert.Equal(t, testCase.expectedError, err)
 			assert.Equal(t, testCase.expectedImages, buildOptionsStorage.CommandArgs)
