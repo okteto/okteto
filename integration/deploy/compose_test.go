@@ -41,6 +41,8 @@ const (
     ports:
       - 8080
       - 8913
+	labels:
+	  dev.okteto.com/policy: keep
   nginx:
     image: nginx
     volumes:
@@ -477,6 +479,9 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	_, err = integration.GetService(context.Background(), testNamespace, "app", c)
+	require.True(t, k8sErrors.IsNotFound(err))
 
 	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
