@@ -346,7 +346,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
-	if err := dc.buildImages(ctx, deployOptions); err != nil {
+	if err := buildImages(ctx, dc.Builder.Build, deployOptions); err != nil {
 		return updateConfigMapStatusError(ctx, cfg, c, data, err)
 	}
 
@@ -594,7 +594,7 @@ func (dc *DeployCommand) cleanUp(ctx context.Context) {
 	}
 }
 
-func (dc *DeployCommand) buildImages(ctx context.Context, deployOptions *Options) error {
+func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, deployOptions *Options) error {
 	if deployOptions.Build {
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
@@ -602,7 +602,7 @@ func (dc *DeployCommand) buildImages(ctx context.Context, deployOptions *Options
 			CommandArgs:  deployOptions.servicesToDeploy,
 		}
 		oktetoLog.Debug("force build from manifest definition")
-		if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
+		if errBuild := build(ctx, buildOptions); errBuild != nil {
 			return errBuild
 		}
 	} else {
@@ -627,7 +627,7 @@ func (dc *DeployCommand) buildImages(ctx context.Context, deployOptions *Options
 				CommandArgs:  servicesToBuild,
 			}
 
-			if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
+			if errBuild := build(ctx, buildOptions); errBuild != nil {
 				return errBuild
 			}
 		}

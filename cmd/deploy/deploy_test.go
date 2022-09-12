@@ -26,6 +26,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -502,4 +503,36 @@ func getFakeManifest(_ string) (*model.Manifest, error) {
 
 func getErrorManifest(_ string) (*model.Manifest, error) {
 	return errorManifest, nil
+}
+
+func TestBuildImages(t *testing.T) {
+	var buildOptionsStorage *types.BuildOptions
+
+	build := func(ctx context.Context, buildOptions *types.BuildOptions) error {
+		buildOptionsStorage = buildOptions
+		return nil
+	}
+
+	deployOptions := &Options{
+		Build: false,
+		Manifest: &model.Manifest{
+			Build: model.ManifestBuild{},
+			Deploy: &model.DeployInfo{
+				ComposeSection: &model.ComposeSectionInfo{
+					Stack: &model.Stack{
+						Services: map[string]*model.Service{
+							"service1": {
+								Build: &model.BuildInfo{},
+							},
+						},
+					},
+				},
+			},
+		},
+		servicesToDeploy: []string{"service1", "service2"},
+	}
+
+	err := buildImages(context.Background(), build, deployOptions)
+	assert.NoError(t, err)
+	assert.Equal(t, []string{"service1"}, buildOptionsStorage.CommandArgs)
 }
