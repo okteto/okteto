@@ -519,11 +519,9 @@ func TestBuildImages(t *testing.T) {
 			name:          "no build services",
 			build:         false,
 			buildServices: []string{},
-			stack: &model.Stack{
-				Services: map[string]*model.Service{
-					"A": {Build: &model.BuildInfo{}},
-				},
-			},
+			stack: &model.Stack{Services: map[string]*model.Service{
+				"A": {Build: &model.BuildInfo{}},
+			}},
 			servicesToDeploy: []string{"A", "B"},
 			expectedError:    nil,
 			expectedImages:   []string{"A"},
@@ -536,6 +534,29 @@ func TestBuildImages(t *testing.T) {
 			servicesToDeploy: []string{"A"},
 			expectedError:    nil,
 			expectedImages:   []string{"B"},
+		},
+		{
+			name:          "no services to deploy",
+			build:         false,
+			buildServices: []string{"B"},
+			stack: &model.Stack{Services: map[string]*model.Service{
+				"A": {Build: &model.BuildInfo{}},
+			}},
+			servicesToDeploy: []string{},
+			expectedError:    nil,
+			expectedImages:   []string{"B"},
+		},
+		{
+			name:          "build services, stack and services to deploy",
+			build:         false,
+			buildServices: []string{"A", "B"},
+			stack: &model.Stack{Services: map[string]*model.Service{
+				"B": {Build: &model.BuildInfo{}},
+				"C": {Build: &model.BuildInfo{}},
+			}},
+			servicesToDeploy: []string{"A", "C"},
+			expectedError:    nil,
+			expectedImages:   []string{"A", "B", "C"},
 		},
 	}
 
@@ -567,7 +588,7 @@ func TestBuildImages(t *testing.T) {
 
 			err := buildImages(context.Background(), build, deployOptions)
 			assert.Equal(t, testCase.expectedError, err)
-			assert.Equal(t, testCase.expectedImages, buildOptionsStorage.CommandArgs)
+			assert.Equal(t, sliceToSet(testCase.expectedImages), sliceToSet(buildOptionsStorage.CommandArgs))
 		})
 	}
 
