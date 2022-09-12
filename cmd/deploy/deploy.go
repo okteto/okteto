@@ -42,9 +42,7 @@ import (
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -348,8 +346,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
-	if err := dc.buildImages(ctx, cfg, c, data, deployOptions); err != nil {
-		return err
+	if err := dc.buildImages(ctx, deployOptions); err != nil {
+		return updateConfigMapStatusError(ctx, cfg, c, data, err)
 	}
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deploying '%s'...", deployOptions.Name)
@@ -596,7 +594,7 @@ func (dc *DeployCommand) cleanUp(ctx context.Context) {
 	}
 }
 
-func (dc *DeployCommand) buildImages(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, pipelineData *pipeline.CfgData, deployOptions *Options) error {
+func (dc *DeployCommand) buildImages(ctx context.Context, deployOptions *Options) error {
 	if deployOptions.Build {
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
@@ -605,7 +603,7 @@ func (dc *DeployCommand) buildImages(ctx context.Context, cfg *corev1.ConfigMap,
 		}
 		oktetoLog.Debug("force build from manifest definition")
 		if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
-			return updateConfigMapStatusError(ctx, cfg, c, pipelineData, errBuild)
+			return errBuild
 		}
 	} else {
 		stack := deployOptions.Manifest.GetStack()
@@ -630,7 +628,7 @@ func (dc *DeployCommand) buildImages(ctx context.Context, cfg *corev1.ConfigMap,
 			}
 
 			if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
-				return updateConfigMapStatusError(ctx, cfg, c, pipelineData, errBuild)
+				return errBuild
 			}
 		}
 	}
