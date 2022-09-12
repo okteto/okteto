@@ -346,7 +346,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
-	if err := buildImages(ctx, dc.Builder.Build, deployOptions); err != nil {
+	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
 		return updateConfigMapStatusError(ctx, cfg, c, data, err)
 	}
 
@@ -594,7 +594,7 @@ func (dc *DeployCommand) cleanUp(ctx context.Context) {
 	}
 }
 
-func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, deployOptions *Options) error {
+func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesToBuild func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {
 	if deployOptions.Build {
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
@@ -606,18 +606,26 @@ func buildImages(ctx context.Context, build func(context.Context, *types.BuildOp
 			return errBuild
 		}
 	} else {
+		// We will check the images from the services coming from:
+		// 1. The services defined in the okteto manifest
+		// 2. deployOptions.servicesToDeploy
+		// For that we'll need to know which services were defined in the stack, to know which ones were defined in the okteto manifest
+		// The `Manifest` has all the services combined into one, so we need (allServices - stackServices) + deployOptions.servicesToDeploy
 		var stackServices map[string]bool
 
 		if stack := deployOptions.Manifest.GetStack(); stack != nil {
 			stackServices = stack.GetServicesWithBuildSection()
 		}
-		stackServicesToBuild := setIntersection(stackServices, sliceToSet(deployOptions.servicesToDeploy))
 
-		manifestBuildServices := deployOptions.Manifest.GetBuildServices()
+		allServicesWithBuildSection := deployOptions.Manifest.GetBuildServices()
+		oktetoManifestBuildServices := setDifference(allServicesWithBuildSection, stackServices)
+		// servicesToBuildSet = (allServicesWithBuildSection - stackServices) + deployOptions.servicesToDeploy
+		servicesToBuildSet := setUnion(oktetoManifestBuildServices, sliceToSet(deployOptions.servicesToDeploy))
 
-		servicesToBuildSet := setUnion(stackServicesToBuild, manifestBuildServices)
-
-		servicesToBuild := setToSlice(servicesToBuildSet)
+		servicesToBuild, err := getServicesToBuild(ctx, deployOptions.Manifest, setToSlice(servicesToBuildSet))
+		if err != nil {
+			return err
+		}
 
 		if len(servicesToBuild) != 0 {
 			buildOptions := &types.BuildOptions{
@@ -670,4 +678,14 @@ func setUnion[T comparable](set1, set2 map[T]bool) map[T]bool {
 		union[value] = true
 	}
 	return union
+}
+
+func setDifference[T comparable](set1, set2 map[T]bool) map[T]bool {
+	difference := make(map[T]bool)
+	for value := range set1 {
+		if _, ok := set2[value]; !ok {
+			difference[value] = true
+		}
+	}
+	return difference
 }

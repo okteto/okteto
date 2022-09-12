@@ -507,66 +507,79 @@ func getErrorManifest(_ string) (*model.Manifest, error) {
 
 func TestBuildImages(t *testing.T) {
 	testCases := []struct {
-		name             string
-		build            bool
-		buildServices    []string
-		stack            *model.Stack
-		servicesToDeploy []string
-		expectedError    error
-		expectedImages   []string
+		name                 string
+		build                bool
+		buildServices        []string
+		stack                *model.Stack
+		servicesToDeploy     []string
+		servicesAlreadyBuilt []string
+		expectedError        error
+		expectedImages       []string
 	}{
 		{
-			name:          "no build services",
+			name:          "everything",
 			build:         false,
-			buildServices: []string{},
+			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"A": {Build: &model.BuildInfo{}},
+				"stack A": {Build: &model.BuildInfo{}},
+				"stack B": {Build: &model.BuildInfo{}},
 			}},
-			servicesToDeploy: []string{"A", "B"},
-			expectedError:    nil,
-			expectedImages:   []string{"A"},
+			servicesAlreadyBuilt: []string{"manifest B", "stack A"},
+			servicesToDeploy:     []string{"stack A"},
+			expectedError:        nil,
+			expectedImages:       []string{"manifest A"},
 		},
 		{
 			name:             "nil stack",
 			build:            false,
-			buildServices:    []string{"B"},
+			buildServices:    []string{"manifest A", "manifest B"},
 			stack:            nil,
-			servicesToDeploy: []string{"A"},
+			servicesToDeploy: []string{"manifest A"},
 			expectedError:    nil,
-			expectedImages:   []string{"B"},
+			expectedImages:   []string{"manifest A", "manifest B"},
 		},
 		{
 			name:          "no services to deploy",
 			build:         false,
-			buildServices: []string{"B"},
+			buildServices: []string{"manifest", "stack"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"A": {Build: &model.BuildInfo{}},
+				"stack": {Build: &model.BuildInfo{}},
 			}},
-			servicesToDeploy: []string{},
-			expectedError:    nil,
-			expectedImages:   []string{"B"},
+			servicesAlreadyBuilt: []string{"stack"},
+			servicesToDeploy:     []string{},
+			expectedError:        nil,
+			expectedImages:       []string{"manifest"},
 		},
 		{
-			name:          "build services, stack and services to deploy",
+			name:          "no services already built",
 			build:         false,
-			buildServices: []string{"A", "B"},
+			buildServices: []string{"manifest A", "stack B", "stack C"},
 			stack: &model.Stack{Services: map[string]*model.Service{
-				"B": {Build: &model.BuildInfo{}},
-				"C": {Build: &model.BuildInfo{}},
+				"stack B": {Build: &model.BuildInfo{}},
+				"stack C": {Build: &model.BuildInfo{}},
 			}},
-			servicesToDeploy: []string{"A", "C"},
+			servicesToDeploy: []string{"manifest A", "stack C"},
 			expectedError:    nil,
-			expectedImages:   []string{"A", "B", "C"},
+			expectedImages:   []string{"manifest A", "stack C"},
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			var buildOptionsStorage *types.BuildOptions
+			buildOptionsStorage := &types.BuildOptions{}
 
 			build := func(ctx context.Context, buildOptions *types.BuildOptions) error {
 				buildOptionsStorage = buildOptions
 				return nil
+			}
+
+			getServicesToBuild := func(ctx context.Context, manifest *model.Manifest, servicesToDeploy []string) ([]string, error) {
+				toBuild := make(map[string]bool, len(manifest.Build))
+				for service := range manifest.Build {
+					toBuild[service] = true
+				}
+
+				return setToSlice(setDifference(setIntersection(toBuild, sliceToSet(servicesToDeploy)), sliceToSet(testCase.servicesAlreadyBuilt))), nil
 			}
 
 			deployOptions := &Options{
@@ -586,7 +599,7 @@ func TestBuildImages(t *testing.T) {
 				deployOptions.Manifest.Build[service] = &model.BuildInfo{}
 			}
 
-			err := buildImages(context.Background(), build, deployOptions)
+			err := buildImages(context.Background(), build, getServicesToBuild, deployOptions)
 			assert.Equal(t, testCase.expectedError, err)
 			assert.Equal(t, sliceToSet(testCase.expectedImages), sliceToSet(buildOptionsStorage.CommandArgs))
 		})
