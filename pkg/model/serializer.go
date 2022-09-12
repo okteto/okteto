@@ -46,6 +46,7 @@ type buildInfoRaw struct {
 	VolumesToInclude []StackVolume  `yaml:"-"`
 	ExportCache      string         `yaml:"export_cache,omitempty"`
 	DependsOn        BuildDependsOn `yaml:"depends_on,omitempty"`
+	Secrets          BuildSecrets   `yaml:"secrets,omitempty"`
 }
 
 type syncRaw struct {
@@ -332,6 +333,7 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	buildInfo.CacheFrom = rawBuildInfo.CacheFrom
 	buildInfo.ExportCache = rawBuildInfo.ExportCache
 	buildInfo.DependsOn = rawBuildInfo.DependsOn
+	buildInfo.Secrets = rawBuildInfo.Secrets
 	return nil
 }
 

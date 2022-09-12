@@ -2112,7 +2112,10 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
   args:
     key1: value1
   cache_from:
-    - cache-image`),
+    - cache-image
+  secrets:
+    mysecret: source
+    othersecret: othersource`),
 			expected: ManifestBuild{
 				"service2": {
 					Context:    "./service2",
@@ -2125,6 +2128,10 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 						},
 					},
 					CacheFrom: []string{"cache-image"},
+					Secrets: BuildSecrets{
+						"mysecret":    "source",
+						"othersecret": "othersource",
+					},
 				},
 			},
 		},

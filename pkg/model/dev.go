@@ -128,10 +128,14 @@ type BuildInfo struct {
 	VolumesToInclude []StackVolume  `yaml:"-"`
 	ExportCache      string         `yaml:"export_cache,omitempty"`
 	DependsOn        BuildDependsOn `yaml:"depends_on,omitempty"`
+	Secrets          BuildSecrets   `yaml:"secrets,omitempty"`
 }
 
 // BuildDependsOn represents the images that needs to be built before
 type BuildDependsOn []string
+
+// BuildSecrets represents the secrets to be injected to the build of the image
+type BuildSecrets map[string]string
 
 // GetDockerfilePath returns the path to the Dockerfile
 func (b *BuildInfo) GetDockerfilePath() string {

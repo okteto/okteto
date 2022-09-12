@@ -225,6 +225,9 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 						Value: "value1",
 					},
 				},
+				Secrets: map[string]string{
+					"mysecret": "source",
+				},
 			},
 			initialOpts: &types.BuildOptions{
 				OutputMode: "tty",
@@ -238,6 +241,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Path:       "service",
 				CacheFrom:  []string{"cache-image"},
 				BuildArgs:  []string{namespaceEnvVar.String(), "arg1=value1"},
+				Secrets:    []string{"id=mysecret,src=source"},
 			},
 		},
 	}
