@@ -112,8 +112,8 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 			return nil
 		}
 
-		if gvk.Kind == volumeKind && m.GetAnnotations()[resourcePolicyAnnotation] == keepPolicy {
-			oktetoLog.Debugf("skipping deletion of pvc '%s' because of policy annotation", m.GetName())
+		if m.GetAnnotations()[resourcePolicyAnnotation] == keepPolicy {
+			oktetoLog.Debugf("skipping deletion of %s '%s' because of policy annotation", gvk.Kind, m.GetName())
 			return nil
 		}
 
