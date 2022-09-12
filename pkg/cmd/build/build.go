@@ -273,7 +273,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 	if len(b.Secrets) > 0 {
 		if o.Secrets == nil {
-			o.Secrets = make([]string, 0)
+			o.Secrets = []string{}
 		}
 		// add to the build the secrets at the manifest
 		for id, src := range b.Secrets {
