@@ -1221,3 +1221,18 @@ func (d ManifestDevs) GetDevs() []string {
 	}
 	return devs
 }
+
+func (m *Manifest) GetBuildServices() map[string]bool {
+	images := map[string]bool{}
+	for service := range m.Build {
+		images[service] = true
+	}
+	return images
+}
+
+func (m *Manifest) GetStack() *Stack {
+	if m.Deploy == nil || m.Deploy.ComposeSection == nil {
+		return nil
+	}
+	return m.Deploy.ComposeSection.Stack
+}
