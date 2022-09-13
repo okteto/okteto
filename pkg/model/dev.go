@@ -650,7 +650,12 @@ func (dev *Dev) expandEnvFiles() error {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
+		defer func() {
+			if err := f.Close(); err != nil {
+				oktetoLog.Debugf("Error closing file %s: %s", filename, err)
+			}
+		}()
+
 		envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 		if err != nil {
 			return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())

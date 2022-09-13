@@ -52,8 +52,12 @@ func (r *reverse) start(ctx context.Context) {
 		oktetoLog.Infof("%s -> failed to listen on remote address: %v", r.String(), err)
 		return
 	}
+	defer func() {
+		if err := remoteListener.Close(); err != nil {
+			oktetoLog.Debugf("Error closing remote listener '%s': %s", r.String(), err)
+		}
+	}()
 
-	defer remoteListener.Close()
 	go func() {
 		<-ctx.Done()
 		r.setDisconnected()
@@ -84,7 +88,11 @@ func (r *reverse) start(ctx context.Context) {
 }
 
 func (r *reverse) handle(ctx context.Context, remote net.Conn) {
-	defer remote.Close()
+	defer func() {
+		if err := remote.Close(); err != nil {
+			oktetoLog.Debugf("Error closing remote connection: %s", err)
+		}
+	}()
 
 	quit := make(chan struct{}, 1)
 	local, err := getConn(ctx, r.localAddress, 3)
@@ -93,7 +101,11 @@ func (r *reverse) handle(ctx context.Context, remote net.Conn) {
 		return
 	}
 
-	defer local.Close()
+	defer func() {
+		if err := local.Close(); err != nil {
+			oktetoLog.Debugf("Error closing local connection: %s", err)
+		}
+	}()
 
 	go r.transfer(remote, local, quit)
 	go r.transfer(local, remote, quit)

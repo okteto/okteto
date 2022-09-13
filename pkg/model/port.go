@@ -32,7 +32,11 @@ func GetAvailablePort(iface string) (int, error) {
 		return 0, err
 	}
 
-	defer listener.Close()
+	defer func() {
+		if err := listener.Close(); err != nil {
+			oktetoLog.Debugf("Error closing listener: %s", err)
+		}
+	}()
 	return listener.Addr().(*net.TCPAddr).Port, nil
 
 }
@@ -46,6 +50,10 @@ func IsPortAvailable(iface string, port int) bool {
 		return false
 	}
 
-	defer listener.Close()
+	defer func() {
+		if err := listener.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", listener, err)
+		}
+	}()
 	return true
 }

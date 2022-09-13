@@ -48,7 +48,11 @@ func addStignoreSecrets(dev *model.Dev) error {
 				Hint: "Update the 'sync' field of your okteto manifest to point to a valid directory path",
 			}
 		}
-		defer infile.Close()
+		defer func() {
+			if err := infile.Close(); err != nil {
+				oktetoLog.Debugf("Error closing file %s: %s", stignorePath, err)
+			}
+		}()
 		reader := bufio.NewReader(infile)
 
 		stignoreName := fmt.Sprintf(".stignore-%d", i+1)
@@ -57,7 +61,11 @@ func addStignoreSecrets(dev *model.Dev) error {
 		if err != nil {
 			return err
 		}
-		defer outfile.Close()
+		defer func() {
+			if err := outfile.Close(); err != nil {
+				oktetoLog.Infof("Error closing file %s: %s", transformedStignorePath, err)
+			}
+		}()
 
 		writer := bufio.NewWriter(outfile)
 		defer writer.Flush()

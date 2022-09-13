@@ -976,7 +976,11 @@ func isDirEmpty(path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", path, err)
+		}
+	}()
 
 	_, err = f.Readdirnames(1) // Or f.Readdir(1)
 	if err == io.EOF {

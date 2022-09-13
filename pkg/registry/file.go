@@ -47,7 +47,11 @@ func getTranslatedDockerFile(filename string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", filename, err)
+		}
+	}()
 
 	scanner := bufio.NewScanner(file)
 

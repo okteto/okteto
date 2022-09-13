@@ -41,7 +41,11 @@ func CopyFile(from, to string) error {
 	if err != nil {
 		return err
 	}
-	defer fromFile.Close()
+	defer func() {
+		if err := fromFile.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", from, err)
+		}
+	}()
 
 	// skipcq GSC-G302 syncthing is a binary so it needs exec permissions
 	toFile, err := os.OpenFile(to, os.O_RDWR|os.O_CREATE, 0700)
@@ -49,7 +53,11 @@ func CopyFile(from, to string) error {
 		return err
 	}
 
-	defer toFile.Close()
+	defer func() {
+		if err := toFile.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", to, err)
+		}
+	}()
 
 	_, err = io.Copy(toFile, fromFile)
 	if err != nil {

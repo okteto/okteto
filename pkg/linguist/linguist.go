@@ -154,8 +154,12 @@ func readFile(path string, limit int64) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", path, err)
+		}
+	}()
 
-	defer f.Close()
 	st, err := f.Stat()
 	if err != nil {
 		return nil, err

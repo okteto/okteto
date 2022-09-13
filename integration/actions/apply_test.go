@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/integration/commands"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 )
@@ -143,6 +144,11 @@ func writeDeployment(template *template.Template, name, path string) error {
 	if err := template.Execute(dFile, deployment{Name: name}); err != nil {
 		return err
 	}
-	defer dFile.Close()
+	defer func() {
+		if err := dFile.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", path, err)
+		}
+	}()
+
 	return nil
 }
