@@ -346,33 +346,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 	}
 
-	// TODO: take this out to a new function build images
-	if deployOptions.Build {
-		buildOptions := &types.BuildOptions{
-			EnableStages: true,
-			Manifest:     deployOptions.Manifest,
-			CommandArgs:  deployOptions.servicesToDeploy,
-		}
-		oktetoLog.Debug("force build from manifest definition")
-		if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
-			return updateConfigMapStatusError(ctx, cfg, c, data, errBuild)
-		}
-	} else {
-		svcsToBuild, errBuild := dc.Builder.GetServicesToBuild(ctx, deployOptions.Manifest, deployOptions.servicesToDeploy)
-		if errBuild != nil {
-			return updateConfigMapStatusError(ctx, cfg, c, data, errBuild)
-		}
-		if len(svcsToBuild) != 0 {
-			buildOptions := &types.BuildOptions{
-				CommandArgs:  svcsToBuild,
-				EnableStages: true,
-				Manifest:     deployOptions.Manifest,
-			}
-
-			if errBuild := dc.Builder.Build(ctx, buildOptions); errBuild != nil {
-				return updateConfigMapStatusError(ctx, cfg, c, data, errBuild)
-			}
-		}
+	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
+		return updateConfigMapStatusError(ctx, cfg, c, data, err)
 	}
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deploying '%s'...", deployOptions.Name)
@@ -617,4 +592,100 @@ func (dc *DeployCommand) cleanUp(ctx context.Context) {
 	if err := dc.Proxy.Shutdown(ctx); err != nil {
 		oktetoLog.Infof("could not stop local server: %s", err)
 	}
+}
+
+func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesToBuild func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {
+	if deployOptions.Build {
+		buildOptions := &types.BuildOptions{
+			EnableStages: true,
+			Manifest:     deployOptions.Manifest,
+			CommandArgs:  deployOptions.servicesToDeploy,
+		}
+		oktetoLog.Debug("force build from manifest definition")
+		if errBuild := build(ctx, buildOptions); errBuild != nil {
+			return errBuild
+		}
+	} else {
+		// We will check the images from the services coming from:
+		// 1. The services defined in the okteto manifest
+		// 2. deployOptions.servicesToDeploy
+		// For that we'll need to know which services were defined in the stack, to know which ones were defined in the okteto manifest
+		// The `Manifest` has all the services combined into one, so we need (allServices - stackServices) + deployOptions.servicesToDeploy
+		var stackServices map[string]bool
+
+		if stack := deployOptions.Manifest.GetStack(); stack != nil {
+			stackServices = stack.GetServicesWithBuildSection()
+		}
+
+		allServicesWithBuildSection := deployOptions.Manifest.GetBuildServices()
+		oktetoManifestBuildServices := setDifference(allServicesWithBuildSection, stackServices)
+		// servicesToBuildSet = (allServicesWithBuildSection - stackServices) + deployOptions.servicesToDeploy
+		servicesToBuildSet := setUnion(oktetoManifestBuildServices, sliceToSet(deployOptions.servicesToDeploy))
+
+		servicesToBuild, err := getServicesToBuild(ctx, deployOptions.Manifest, setToSlice(servicesToBuildSet))
+		if err != nil {
+			return err
+		}
+
+		if len(servicesToBuild) != 0 {
+			buildOptions := &types.BuildOptions{
+				EnableStages: true,
+				Manifest:     deployOptions.Manifest,
+				CommandArgs:  servicesToBuild,
+			}
+
+			if errBuild := build(ctx, buildOptions); errBuild != nil {
+				return errBuild
+			}
+		}
+	}
+
+	return nil
+}
+
+func sliceToSet[T comparable](slice []T) map[T]bool {
+	set := make(map[T]bool)
+	for _, value := range slice {
+		set[value] = true
+	}
+	return set
+}
+
+func setToSlice[T comparable](set map[T]bool) []T {
+	slice := make([]T, 0, len(set))
+	for value := range set {
+		slice = append(slice, value)
+	}
+	return slice
+}
+
+func setIntersection[T comparable](set1, set2 map[T]bool) map[T]bool {
+	intersection := make(map[T]bool)
+	for value := range set1 {
+		if _, ok := set2[value]; ok {
+			intersection[value] = true
+		}
+	}
+	return intersection
+}
+
+func setUnion[T comparable](set1, set2 map[T]bool) map[T]bool {
+	union := make(map[T]bool)
+	for value := range set1 {
+		union[value] = true
+	}
+	for value := range set2 {
+		union[value] = true
+	}
+	return union
+}
+
+func setDifference[T comparable](set1, set2 map[T]bool) map[T]bool {
+	difference := make(map[T]bool)
+	for value := range set1 {
+		if _, ok := set2[value]; !ok {
+			difference[value] = true
+		}
+	}
+	return difference
 }
