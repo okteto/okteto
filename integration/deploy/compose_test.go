@@ -41,6 +41,8 @@ const (
     ports:
       - 8080
       - 8913
+    labels:
+      dev.okteto.com/policy: keep
   nginx:
     image: nginx
     volumes:
@@ -206,6 +208,9 @@ func TestDeployPipelineFromCompose(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 
 	_, err = integration.GetService(context.Background(), testNamespace, "app", c)
+	require.NoError(t, err)
+
+	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
 }
 
@@ -284,6 +289,9 @@ func TestReDeployPipelineFromCompose(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 
 	_, err = integration.GetService(context.Background(), testNamespace, "app", c)
+	require.NoError(t, err)
+
+	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
 }
 
@@ -339,7 +347,10 @@ func TestDeployPipelineFromComposeOnlyOneSvc(t *testing.T) {
 
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 
-	_, err = integration.GetDeployment(context.Background(), testNamespace, "app", c)
+	_, err = integration.GetService(context.Background(), testNamespace, "app", c)
+	require.NoError(t, err)
+
+	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
 }
 
@@ -402,7 +413,7 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 
-	_, err = integration.GetDeployment(context.Background(), testNamespace, "app", c)
+	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
 }
 
@@ -477,6 +488,9 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 		OktetoHome: dir,
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	_, err = integration.GetService(context.Background(), testNamespace, "app", c)
+	require.NoError(t, err)
 
 	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
