@@ -108,7 +108,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			resp, err := previewCmd.executeDeployPreview(ctx, name, scope, repository, branch, sourceUrl, file, varList, wait, timeout)
+			resp, err := previewCmd.executeDeployPreview(ctx, name, scope, repository, branch, sourceUrl, file, varList)
 			analytics.TrackPreviewDeploy(err == nil)
 			if err != nil {
 				return err
@@ -194,7 +194,7 @@ func getRandomName(ctx context.Context, scope string) string {
 	return name
 }
 
-func (pw *Command) executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, wait bool, timeout time.Duration) (*types.PreviewResponse, error) {
+func (pw *Command) executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
 	oktetoLog.Spinner("Deploying your preview environment...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
