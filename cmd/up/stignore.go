@@ -96,7 +96,7 @@ func addStignoreSecrets(dev *model.Dev) error {
 			model.Secret{
 				LocalPath:  transformedStignorePath,
 				RemotePath: path.Join(folder.RemotePath, ".stignore"),
-				Mode:       0644,
+				Mode:       0600,
 			},
 		)
 	}
@@ -162,7 +162,7 @@ func askIfCreateStignoreDefaults(folder, stignorePath string) error {
 
 	if !stignoreDefaults {
 		stignoreContent := ""
-		if err := os.WriteFile(stignorePath, []byte(stignoreContent), 0644); err != nil {
+		if err := os.WriteFile(stignorePath, []byte(stignoreContent), 0600); err != nil {
 			return fmt.Errorf("failed to create empty '%s': %s", stignorePath, err.Error())
 		}
 		return nil
@@ -200,7 +200,7 @@ func askIfUpdatingStignore(folder, stignorePath string) error {
 	} else {
 		stignoreContent = fmt.Sprintf("// .git\n%s", stignoreContent)
 	}
-	if err := os.WriteFile(stignorePath, []byte(stignoreContent), 0644); err != nil {
+	if err := os.WriteFile(stignorePath, []byte(stignoreContent), 0600); err != nil {
 		return fmt.Errorf("failed to update '%s': %s", stignorePath, err.Error())
 	}
 	return nil

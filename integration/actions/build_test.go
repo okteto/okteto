@@ -50,7 +50,7 @@ func createDockerfile(t *testing.T) (string, error) {
 	log.Printf("created tempdir: %s", dir)
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
 	dockerfileContent := []byte("FROM alpine")
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return "", err
 	}
 	return dockerfilePath, nil

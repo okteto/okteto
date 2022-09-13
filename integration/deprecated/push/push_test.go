@@ -124,7 +124,7 @@ func TestPush(t *testing.T) {
 func createDockerfile(dir string) error {
 	appDockerfilePath := filepath.Join(dir, "Dockerfile")
 	appDockerfileContent := []byte(dockerfile)
-	if err := os.WriteFile(appDockerfilePath, appDockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(appDockerfilePath, appDockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -133,7 +133,7 @@ func createDockerfile(dir string) error {
 func createIndexHTML(dir string) error {
 	appDockerfilePath := filepath.Join(dir, "index.html")
 	appDockerfileContent := []byte(dockerfile)
-	if err := os.WriteFile(appDockerfilePath, appDockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(appDockerfilePath, appDockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -142,7 +142,7 @@ func createIndexHTML(dir string) error {
 func createOktetoManifest(dir string) error {
 	appDockerfilePath := filepath.Join(dir, "okteto.yml")
 	appDockerfileContent := []byte(oktetoManifest)
-	if err := os.WriteFile(appDockerfilePath, appDockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(appDockerfilePath, appDockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil

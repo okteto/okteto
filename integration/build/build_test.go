@@ -272,7 +272,7 @@ func TestBuildCommandV2VolumeMounts(t *testing.T) {
 func createDockerfile(dir string) error {
 	dockerfilePath := filepath.Join(dir, dockerfileName)
 	dockerfileContent := []byte(dockerfileContent)
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -281,7 +281,7 @@ func createDockerfile(dir string) error {
 func createManifestV2(dir string) error {
 	manifestPath := filepath.Join(dir, manifestName)
 	manifestBytes := []byte(manifestContent)
-	if err := os.WriteFile(manifestPath, manifestBytes, 0644); err != nil {
+	if err := os.WriteFile(manifestPath, manifestBytes, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -290,7 +290,7 @@ func createManifestV2(dir string) error {
 func createCompose(dir string) error {
 	manifestPath := filepath.Join(dir, composeName)
 	manifestBytes := []byte(composeContent)
-	if err := os.WriteFile(manifestPath, manifestBytes, 0644); err != nil {
+	if err := os.WriteFile(manifestPath, manifestBytes, 0600); err != nil {
 		return err
 	}
 	return nil

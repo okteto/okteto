@@ -268,11 +268,11 @@ func (s *Syncthing) initConfig() error {
 		return err
 	}
 
-	if err := os.WriteFile(filepath.Join(s.Home, certFile), cert, 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, certFile), cert, 0600); err != nil {
 		return fmt.Errorf("failed to write syncthing certificate: %w", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(s.Home, keyFile), key, 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, keyFile), key, 0600); err != nil {
 		return fmt.Errorf("failed to write syncthing key: %w", err)
 	}
 
@@ -286,7 +286,7 @@ func (s *Syncthing) UpdateConfig() error {
 		return fmt.Errorf("failed to write syncthing configuration template: %w", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(s.Home, configFile), buf.Bytes(), 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, configFile), buf.Bytes(), 0600); err != nil {
 		return fmt.Errorf("failed to write syncthing configuration file: %w", err)
 	}
 

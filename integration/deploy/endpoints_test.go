@@ -191,7 +191,7 @@ func Test_EndpointsFromOktetoManifest_InferredName(t *testing.T) {
 func createEndpointsFromOktetoManifestInferredName(dir string) error {
 	dockerfilePath := filepath.Join(dir, oktetoManifestName)
 	dockerfileContent := []byte(oktetoManifestWithInferredNameEndpointsContent)
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -248,7 +248,7 @@ func Test_EndpointsFromOktetoManifest_Name(t *testing.T) {
 func createEndpointsFromOktetoManifestName(dir string) error {
 	dockerfilePath := filepath.Join(dir, oktetoManifestName)
 	dockerfileContent := []byte(oktetoManifestWithNameEndpointsContent)
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -302,7 +302,7 @@ func createStackWithEndpointsInferredNameScenario(dir string) error {
 
 	nginxPath := filepath.Join(dir, "nginx", "nginx.conf")
 	nginxContent := []byte(nginxConf)
-	if err := os.WriteFile(nginxPath, nginxContent, 0644); err != nil {
+	if err := os.WriteFile(nginxPath, nginxContent, 0600); err != nil {
 		return err
 	}
 
@@ -312,7 +312,7 @@ func createStackWithEndpointsInferredNameScenario(dir string) error {
 
 	composePath := filepath.Join(dir, "okteto-stack.yml")
 	composeContent := []byte(stackWithEndpointsInferredNameContent)
-	if err := os.WriteFile(composePath, composeContent, 0644); err != nil {
+	if err := os.WriteFile(composePath, composeContent, 0600); err != nil {
 		return err
 	}
 
@@ -367,7 +367,7 @@ func createStackWithEndpointsNameScenario(dir string) error {
 
 	nginxPath := filepath.Join(dir, "nginx", "nginx.conf")
 	nginxContent := []byte(nginxConf)
-	if err := os.WriteFile(nginxPath, nginxContent, 0644); err != nil {
+	if err := os.WriteFile(nginxPath, nginxContent, 0600); err != nil {
 		return err
 	}
 
@@ -377,7 +377,7 @@ func createStackWithEndpointsNameScenario(dir string) error {
 
 	composePath := filepath.Join(dir, "okteto-stack.yml")
 	composeContent := []byte(stackWithEndpointsNameContent)
-	if err := os.WriteFile(composePath, composeContent, 0644); err != nil {
+	if err := os.WriteFile(composePath, composeContent, 0600); err != nil {
 		return err
 	}
 

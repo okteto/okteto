@@ -129,7 +129,7 @@ func UpdateStateFile(dev *model.Dev, state UpState) error {
 	}
 
 	s := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
-	if err := os.WriteFile(s, []byte(state), 0644); err != nil {
+	if err := os.WriteFile(s, []byte(state), 0600); err != nil {
 		return fmt.Errorf("failed to update state file: %s", err)
 	}
 

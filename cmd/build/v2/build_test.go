@@ -341,7 +341,7 @@ func Test_getAccessibleVolumeMounts(t *testing.T) {
 func createDockerfile(t *testing.T) (string, error) {
 	dir := t.TempDir()
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
-	err := os.WriteFile(dockerfilePath, []byte("Hello"), 0755)
+	err := os.WriteFile(dockerfilePath, []byte("Hello"), 0600)
 	if err != nil {
 		return "", err
 	}

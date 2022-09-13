@@ -503,7 +503,7 @@ func createComposeScenarioByManifest(dir string) error {
 
 	nginxPath := filepath.Join(dir, "nginx", "nginx.conf")
 	nginxContent := []byte(nginxConf)
-	if err := os.WriteFile(nginxPath, nginxContent, 0644); err != nil {
+	if err := os.WriteFile(nginxPath, nginxContent, 0600); err != nil {
 		return err
 	}
 
@@ -513,7 +513,7 @@ func createComposeScenarioByManifest(dir string) error {
 
 	composePath := filepath.Join(dir, "docker-compose.yml")
 	composeContent := []byte(composeTemplateByManifest2)
-	if err := os.WriteFile(composePath, composeContent, 0644); err != nil {
+	if err := os.WriteFile(composePath, composeContent, 0600); err != nil {
 		return err
 	}
 
@@ -527,7 +527,7 @@ func createComposeScenario(dir string) error {
 
 	nginxPath := filepath.Join(dir, "nginx", "nginx.conf")
 	nginxContent := []byte(nginxConf)
-	if err := os.WriteFile(nginxPath, nginxContent, 0644); err != nil {
+	if err := os.WriteFile(nginxPath, nginxContent, 0600); err != nil {
 		return err
 	}
 
@@ -537,7 +537,7 @@ func createComposeScenario(dir string) error {
 
 	composePath := filepath.Join(dir, "docker-compose.yml")
 	composeContent := []byte(composeTemplate)
-	if err := os.WriteFile(composePath, composeContent, 0644); err != nil {
+	if err := os.WriteFile(composePath, composeContent, 0600); err != nil {
 		return err
 	}
 
@@ -551,7 +551,7 @@ func createStacksScenario(dir string) error {
 
 	nginxPath := filepath.Join(dir, "nginx", "nginx.conf")
 	nginxContent := []byte(nginxConf)
-	if err := os.WriteFile(nginxPath, nginxContent, 0644); err != nil {
+	if err := os.WriteFile(nginxPath, nginxContent, 0600); err != nil {
 		return err
 	}
 
@@ -561,7 +561,7 @@ func createStacksScenario(dir string) error {
 
 	composePath := filepath.Join(dir, "okteto-stack.yml")
 	composeContent := []byte(stacksTemplate)
-	if err := os.WriteFile(composePath, composeContent, 0644); err != nil {
+	if err := os.WriteFile(composePath, composeContent, 0600); err != nil {
 		return err
 	}
 
@@ -585,7 +585,7 @@ func createAppDockerfile(dir string) error {
 
 	appDockerfilePath := filepath.Join(dir, "app", "Dockerfile")
 	appDockerfileContent := []byte(appDockerfile)
-	if err := os.WriteFile(appDockerfilePath, appDockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(appDockerfilePath, appDockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil

@@ -208,7 +208,7 @@ func copyFile(orig, dest string) error {
 		return err
 	}
 
-	err = os.WriteFile(dest, input, 0644)
+	err = os.WriteFile(dest, input, 0600)
 	if err != nil {
 		oktetoLog.Infof("error creating %s: %s", dest, err)
 		return err
