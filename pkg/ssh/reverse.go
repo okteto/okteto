@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"time"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -37,8 +38,8 @@ func (fm *ForwardManager) AddReverse(f model.Reverse) error {
 
 	fm.reverses[f.Local] = &reverse{
 		forward: forward{
-			localAddress:  fmt.Sprintf("%s:%d", fm.localInterface, f.Local),
-			remoteAddress: fmt.Sprintf("%s:%d", fm.remoteInterface, f.Remote),
+			localAddress:  net.JoinHostPort(fm.localInterface, strconv.Itoa(f.Local)),
+			remoteAddress: net.JoinHostPort(fm.remoteInterface, strconv.Itoa(f.Remote)),
 		},
 	}
 

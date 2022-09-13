@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -217,13 +218,13 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		binPath:          fullPath,
 		Client:           NewAPIClient(),
 		FileWatcherDelay: DefaultFileWatcherDelay,
-		GUIAddress:       fmt.Sprintf("%s:%d", dev.Interface, guiPort),
+		GUIAddress:       net.JoinHostPort(dev.Interface, strconv.Itoa(guiPort)),
 		Home:             config.GetAppHome(dev.Namespace, dev.Name),
 		LogPath:          GetLogFile(dev.Namespace, dev.Name),
-		ListenAddress:    fmt.Sprintf("%s:%d", dev.Interface, listenPort),
+		ListenAddress:    net.JoinHostPort(dev.Interface, strconv.Itoa(listenPort)),
 		RemoteAddress:    fmt.Sprintf("tcp://%s:%d", dev.Interface, remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
-		RemoteGUIAddress: fmt.Sprintf("%s:%d", dev.Interface, remoteGUIPort),
+		RemoteGUIAddress: net.JoinHostPort(dev.Interface, strconv.Itoa(remoteGUIPort)),
 		LocalGUIPort:     guiPort,
 		LocalPort:        listenPort,
 		RemoteGUIPort:    remoteGUIPort,
