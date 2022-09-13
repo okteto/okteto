@@ -41,8 +41,8 @@ const (
     ports:
       - 8080
       - 8913
-	labels:
-	  dev.okteto.com/policy: keep
+    labels:
+      dev.okteto.com/policy: keep
   nginx:
     image: nginx
     volumes:
