@@ -140,7 +140,7 @@ func addEnvVars(ctx context.Context, cwd string) error {
 			oktetoLog.Infof("could not status: %s", err)
 		}
 		if !isClean {
-			sha = utils.GetRandomSHA(ctx, cwd)
+			sha = utils.GetRandomSHA()
 		}
 		os.Setenv(model.OktetoGitCommitEnvVar, sha)
 	}

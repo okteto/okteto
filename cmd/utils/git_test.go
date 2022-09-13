@@ -16,6 +16,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -146,4 +147,10 @@ func Test_isOktetoRepoFromURL(t *testing.T) {
 			assert.Equal(t, tt.expected, isOktetoSample)
 		})
 	}
+}
+
+func TestGetRandomSHA(t *testing.T) {
+	sha := GetRandomSHA()
+	assert.Len(t, sha, 40)
+	assert.NotEqual(t, sha, strings.Repeat("0", 40))
 }
