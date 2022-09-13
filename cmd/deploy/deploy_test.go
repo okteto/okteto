@@ -570,9 +570,9 @@ func TestBuildImages(t *testing.T) {
 				"stack A": {Build: &model.BuildInfo{}},
 				"stack B": {Build: &model.BuildInfo{}},
 			}},
-			servicesToDeploy: []string{"manifest A", "stack A"},
+			servicesToDeploy: []string{"stack A"},
 			expectedError:    nil,
-			expectedImages:   []string{"manifest A", "stack A"},
+			expectedImages:   []string{"manifest A", "manifest B", "stack A", "stack B"},
 		},
 	}
 
