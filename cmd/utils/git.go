@@ -34,6 +34,7 @@ var (
 	isOktetoSampleOnce sync.Once
 )
 
+// GetBranch returns the branch from a .git directory
 func GetBranch(path string) (string, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
