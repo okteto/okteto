@@ -853,3 +853,13 @@ func (s composeServices) toGraph() graph {
 	}
 	return g
 }
+
+func (stack *Stack) GetServicesWithBuildSection() map[string]bool {
+	result := make(map[string]bool)
+	for name, service := range stack.Services {
+		if service.Build != nil || len(service.VolumeMounts) != 0 {
+			result[name] = true
+		}
+	}
+	return result
+}
