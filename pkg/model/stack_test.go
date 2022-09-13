@@ -296,9 +296,8 @@ services:
 	for key, value := range s.Services["vote"].Annotations {
 		if key == "traeffick.routes" && value == `Path("/")` {
 			continue
-		} else {
-			t.Errorf("'vote.annotations' was not parsed correctly: %+v", s.Services["vote"].Annotations)
 		}
+		t.Errorf("'vote.annotations' was not parsed correctly: %+v", s.Services["vote"].Annotations)
 	}
 
 	if len(s.Services["vote"].Labels) > 0 {
