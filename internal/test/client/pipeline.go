@@ -67,7 +67,7 @@ func (fc *FakePipelineClient) GetResourcesStatus(_ context.Context, _ string) (m
 }
 
 // GetByName returns the name of the pipeline
-func (_ *FakePipelineClient) GetByName(_ context.Context, _ string) (*types.GitDeploy, error) {
+func (*FakePipelineClient) GetByName(_ context.Context, _ string) (*types.GitDeploy, error) {
 	return nil, nil
 }
 
