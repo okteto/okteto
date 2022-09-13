@@ -16,8 +16,10 @@ package login
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -125,8 +127,15 @@ func StartWithBrowser(ctx context.Context, u string) (*Handler, error) {
 // EndWithBrowser finishes the browser based auth
 func EndWithBrowser(h *Handler) (*types.User, error) {
 	go func() {
-		http.Handle("/authorization-code/callback", h.handle())
-		h.errChan <- http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", h.port), nil)
+		sm := http.NewServeMux()
+		sm.Handle("/authorization-code/callback", h.handle())
+		server := &http.Server{
+			Addr:              net.JoinHostPort("127.0.0.1", strconv.Itoa(h.port)),
+			Handler:           sm,
+			ReadHeaderTimeout: 3 * time.Second,
+		}
+
+		h.errChan <- server.ListenAndServe()
 	}()
 
 	ticker := time.NewTicker(5 * time.Minute)
