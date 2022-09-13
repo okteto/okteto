@@ -271,16 +271,6 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		}
 	}
 
-	if len(b.Secrets) > 0 {
-		if o.Secrets == nil {
-			o.Secrets = []string{}
-		}
-		// add to the build the secrets at the manifest
-		for id, src := range b.Secrets {
-			o.Secrets = append(o.Secrets, fmt.Sprintf("id=%s,src=%s", id, src))
-		}
-	}
-
 	opts := &types.BuildOptions{
 		CacheFrom: b.CacheFrom,
 		Target:    b.Target,
@@ -290,6 +280,11 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		BuildArgs: model.SerializeBuildArgs(b.Args),
 		NoCache:   o.NoCache,
 		Secrets:   o.Secrets,
+	}
+
+	// add to the build the secrets at the manifest
+	for id, src := range b.Secrets {
+		opts.Secrets = append(opts.Secrets, fmt.Sprintf("id=%s,src=%s", id, src))
 	}
 
 	outputMode := oktetoLog.GetOutputFormat()
