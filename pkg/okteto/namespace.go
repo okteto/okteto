@@ -92,7 +92,7 @@ func (c *namespaceClient) List(ctx context.Context) ([]types.Namespace, error) {
 	return result, nil
 }
 
-// AddNamespaceMembers adds members to a namespace
+// AddMembers adds members to a namespace
 func (c *namespaceClient) AddMembers(ctx context.Context, namespace string, members []string) error {
 	var mutation struct {
 		Space struct {

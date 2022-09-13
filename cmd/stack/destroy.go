@@ -26,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Destroy destroys a stack
+// Destroy destroys a stack
 func Destroy(ctx context.Context) *cobra.Command {
 	var stackPath []string
 	var name string

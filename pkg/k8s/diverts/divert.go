@@ -25,7 +25,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-//DivertIngress diverts the traffic of a given ingress
+// DivertIngress diverts the traffic of a given ingress
 func DivertIngress(ctx context.Context, m *model.Manifest, fromIn *networkingv1.Ingress, c kubernetes.Interface) error {
 	in, err := c.NetworkingV1().Ingresses(m.Namespace).Get(ctx, fromIn.Name, metav1.GetOptions{})
 	if err != nil {

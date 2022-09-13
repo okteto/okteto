@@ -94,7 +94,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-//ExecuteDeployPipeline executes deploy pipeline given a set of options
+// ExecuteDeployPipeline executes deploy pipeline given a set of options
 func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 
 	cwd, err := os.Getwd()

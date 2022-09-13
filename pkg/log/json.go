@@ -23,7 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-//JSONWriter writes into a JSON terminal
+// JSONWriter writes into a JSON terminal
 type JSONWriter struct {
 	out  *logrus.Logger
 	file *logrus.Entry
@@ -36,7 +36,7 @@ type jsonMessage struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
-//JSONLogFormat formats the messages into json struct
+// JSONLogFormat formats the messages into json struct
 type JSONLogFormat struct {
 	Level     string `json:"level"`
 	Stage     string `json:"stage"`
@@ -44,7 +44,7 @@ type JSONLogFormat struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
-//Format formats the message
+// Format formats the message
 func (f *JSONLogFormat) Format(entry *logrus.Entry) ([]byte, error) {
 	level := strings.ToLower(entry.Level.String())
 	if entry.Level == logrus.WarnLevel {
@@ -64,7 +64,7 @@ func (f *JSONLogFormat) Format(entry *logrus.Entry) ([]byte, error) {
 	return messageJSON, nil
 }
 
-//newJSONWriter creates a new JSONWriter
+// newJSONWriter creates a new JSONWriter
 func newJSONWriter(out *logrus.Logger, file *logrus.Entry) *JSONWriter {
 	return &JSONWriter{
 		out:  out,
@@ -251,12 +251,12 @@ func (w *JSONWriter) Print(args ...interface{}) {
 
 }
 
-//Printf writes a line with format
+// Printf writes a line with format
 func (w *JSONWriter) Printf(format string, a ...interface{}) {
 	w.Fprintf(w.out.Out, format, a...)
 }
 
-//IsInteractive checks if the writer is interactive
+// IsInteractive checks if the writer is interactive
 func (*JSONWriter) IsInteractive() bool {
 	return false
 }
@@ -287,7 +287,7 @@ func (w *JSONWriter) AddToBuffer(level, format string, a ...interface{}) {
 	}
 }
 
-// AddToBuffer logs into the buffer but does not print anything
+// Write logs into the buffer but does not print anything
 func (w *JSONWriter) Write(p []byte) (n int, err error) {
 	msg := string(p)
 	msg = convertToJSON(InfoLevel, log.stage, msg)

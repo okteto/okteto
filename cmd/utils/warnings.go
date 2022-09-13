@@ -20,7 +20,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-//GetWarningState returns the value associated to a given warning
+// GetWarningState returns the value associated to a given warning
 func GetWarningState(path, name string) string {
 	filePath := filepath.Join(path, name)
 	bytes, err := os.ReadFile(filePath)
@@ -32,7 +32,7 @@ func GetWarningState(path, name string) string {
 	return string(bytes)
 }
 
-//SetWarningState sets the value associated to a given warning
+// SetWarningState sets the value associated to a given warning
 func SetWarningState(path, name, value string) error {
 	if err := os.MkdirAll(path, 0700); err != nil {
 		return err

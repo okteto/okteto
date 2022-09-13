@@ -19,7 +19,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Preview preview management commands
+// Preview preview management commands
 func Preview(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "preview",

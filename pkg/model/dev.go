@@ -847,7 +847,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 	dev.Secrets = append(dev.Secrets, p)
 }
 
-//LoadForcePull force the dev pods to be recreated and pull the latest version of their image
+// LoadForcePull force the dev pods to be recreated and pull the latest version of their image
 func (dev *Dev) LoadForcePull() {
 	restartUUID := uuid.New().String()
 	dev.ImagePullPolicy = apiv1.PullAlways
@@ -859,7 +859,7 @@ func (dev *Dev) LoadForcePull() {
 	oktetoLog.Infof("enabled force pull")
 }
 
-//Save saves the okteto manifest in a given path
+// Save saves the okteto manifest in a given path
 func (dev *Dev) Save(path string) error {
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
@@ -875,7 +875,7 @@ func (dev *Dev) Save(path string) error {
 	return nil
 }
 
-//SerializeBuildArgs returns build  args as a list of strings
+// SerializeBuildArgs returns build  args as a list of strings
 func SerializeBuildArgs(buildArgs Environment) []string {
 	result := []string{}
 	for _, e := range buildArgs {
@@ -886,7 +886,7 @@ func SerializeBuildArgs(buildArgs Environment) []string {
 	return result
 }
 
-//SetLastBuiltAnnotation sets the dev timestacmp
+// SetLastBuiltAnnotation sets the dev timestacmp
 func (dev *Dev) SetLastBuiltAnnotation() {
 	if dev.Metadata.Annotations == nil {
 		dev.Metadata.Annotations = Annotations{}
@@ -894,7 +894,7 @@ func (dev *Dev) SetLastBuiltAnnotation() {
 	dev.Metadata.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
 }
 
-//GetVolumeName returns the okteto volume name for a given development container
+// GetVolumeName returns the okteto volume name for a given development container
 func (dev *Dev) GetVolumeName() string {
 	return fmt.Sprintf(OktetoVolumeNameTemplate, dev.Name)
 }
@@ -1140,7 +1140,7 @@ func (s *Secret) GetFileName() string {
 	return filepath.Base(s.RemotePath)
 }
 
-//ExpandEnv expands the environments supporting the notation "${var:-$DEFAULT}"
+// ExpandEnv expands the environments supporting the notation "${var:-$DEFAULT}"
 func ExpandEnv(value string, expandIfEmpty bool) (string, error) {
 	result, err := envsubst.String(value)
 	if err != nil {

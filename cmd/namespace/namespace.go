@@ -23,13 +23,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//NamespaceCommand has all the namespaces subcommands
+// NamespaceCommand has all the namespaces subcommands
 type NamespaceCommand struct {
 	ctxCmd   *contextCMD.ContextCommand
 	okClient types.OktetoInterface
 }
 
-//NewCommand creates a namespace command to
+// NewCommand creates a namespace command to
 func NewCommand() (*NamespaceCommand, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {

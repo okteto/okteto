@@ -112,7 +112,8 @@ func Test_updateKubeconfig(t *testing.T) {
 			}
 			defer os.Remove(file)
 
-			if err := ExecuteUpdateKubeconfig(ctx); err != nil {
+			err = ExecuteUpdateKubeconfig(ctx)
+			if err != nil {
 				t.Fatal(err)
 			}
 			cfg := kubeconfig.Get(config.GetKubeconfigPath())

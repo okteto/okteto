@@ -15,7 +15,7 @@ package log
 
 import "io"
 
-//OktetoWriter implements the interface of the writers
+// OktetoWriter implements the interface of the writers
 type OktetoWriter interface {
 	Debug(args ...interface{})
 	Debugf(format string, args ...interface{})

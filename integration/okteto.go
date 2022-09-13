@@ -56,7 +56,7 @@ func GetOktetoPath() (string, error) {
 	return oktetoPath, nil
 }
 
-//GetToken returns the token used to run tests
+// GetToken returns the token used to run tests
 func GetToken() string {
 	var token string
 	if v := os.Getenv(model.OktetoTokenEnvVar); v != "" {

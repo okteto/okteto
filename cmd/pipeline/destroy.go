@@ -79,7 +79,7 @@ func destroy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-//ExecuteDestroyPipeline executes destroy pipeline given a set of options
+// ExecuteDestroyPipeline executes destroy pipeline given a set of options
 func (pc *Command) ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
 	if opts.Name == "" {
 		cwd, err := os.Getwd()

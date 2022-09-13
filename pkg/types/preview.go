@@ -13,7 +13,7 @@
 
 package types
 
-//Preview represents an Okteto preview environment
+// Preview represents an Okteto preview environment
 type Preview struct {
 	ID           string        `json:"id" yaml:"id"`
 	Sleeping     bool          `json:"sleeping" yaml:"sleeping"`
@@ -23,13 +23,13 @@ type Preview struct {
 	Deployments  []Deployment  `json:"deployments"`
 }
 
-//PreviewResponse represents the response of a deployPreview
+// PreviewResponse represents the response of a deployPreview
 type PreviewResponse struct {
 	Action  *Action  `json:"action" yaml:"action"`
 	Preview *Preview `json:"preview" yaml:"preview"`
 }
 
-//Statefulset represents an Okteto statefulset
+// Statefulset represents an Okteto statefulset
 type Statefulset struct {
 	ID         string     `json:"id"`
 	Name       string     `json:"name"`
@@ -38,7 +38,7 @@ type Statefulset struct {
 	Endpoints  []Endpoint `json:"endpoints"`
 }
 
-//Deployment represents an Okteto statefulset
+// Deployment represents an Okteto statefulset
 type Deployment struct {
 	ID         string     `json:"id"`
 	Name       string     `json:"name"`
@@ -47,7 +47,7 @@ type Deployment struct {
 	Endpoints  []Endpoint `json:"endpoints"`
 }
 
-//Endpoint represents an okteto endpoint
+// Endpoint represents an okteto endpoint
 type Endpoint struct {
 	URL     string `json:"url"`
 	Private bool   `json:"private"`

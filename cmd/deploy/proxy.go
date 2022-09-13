@@ -55,7 +55,7 @@ type proxyConfig struct {
 	token string
 }
 
-//Proxy refers to a proxy configuration
+// Proxy refers to a proxy configuration
 type Proxy struct {
 	s            *http.Server
 	proxyConfig  proxyConfig
@@ -67,7 +67,7 @@ type proxyHandler struct {
 	DivertedNamespace string
 }
 
-//NewProxy creates a new proxy
+// NewProxy creates a new proxy
 func NewProxy(kubeconfig *KubeConfig) (*Proxy, error) {
 	// Look for a free local port to start the proxy
 	port, err := model.GetAvailablePort("localhost")

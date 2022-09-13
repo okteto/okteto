@@ -71,7 +71,7 @@ const (
 // See: https://stackoverflow.com/a/4715480/1100238
 var maxLogOutputRaw = int(math.Floor(float64(maxLogOutput)*3) / 4)
 
-//CfgData represents the data to be include in a configmap
+// CfgData represents the data to be include in a configmap
 type CfgData struct {
 	Name       string
 	Namespace  string

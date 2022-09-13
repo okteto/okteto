@@ -13,7 +13,7 @@
 
 package types
 
-//Namespace represents an Okteto k8s namespace
+// Namespace represents an Okteto k8s namespace
 type Namespace struct {
 	ID       string `json:"id" yaml:"id"`
 	Sleeping bool   `json:"sleeping" yaml:"sleeping"`

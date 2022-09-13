@@ -28,7 +28,7 @@ import (
 
 var output string
 
-// Lists all contexts managed by okteto
+// List returns all contexts managed by okteto
 func List() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "list",
@@ -37,11 +37,7 @@ func List() *cobra.Command {
 		Short:   "List available contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			if err := executeListContext(ctx); err != nil {
-				return err
-			}
-
-			return nil
+			return executeListContext(ctx)
 		},
 	}
 	cmd.Flags().StringVarP(&output, "output", "o", "", "Output format. One of: json|yaml")
