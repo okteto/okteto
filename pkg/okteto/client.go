@@ -108,7 +108,7 @@ func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*Okt
 	c.namespace = newNamespaceClient(c.client)
 	c.preview = newPreviewClient(c.client)
 	c.user = newUserClient(c.client)
-	c.pipeline = newPipelineClient(c.client)
+	c.pipeline = newPipelineClient(c.client, httpClient)
 	return c, nil
 }
 

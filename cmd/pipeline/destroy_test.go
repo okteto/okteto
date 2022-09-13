@@ -15,6 +15,7 @@ package pipeline
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -55,6 +56,30 @@ func TestDestroyPipelineSuccesfulWithWait(t *testing.T) {
 				Name: "test",
 			},
 		},
+	}
+	pc := &Command{
+		okClient: &client.FakeOktetoClient{
+			PipelineClient: client.NewFakePipelineClient(response),
+		},
+	}
+	opts := &DestroyOptions{
+		Name: "test",
+		Wait: true,
+	}
+	err := pc.ExecuteDestroyPipeline(ctx, opts)
+	assert.NoError(t, err)
+}
+
+func TestDestroyPipelineSuccesfulWithWaitStreamErr(t *testing.T) {
+	ctx := context.Background()
+	response := &client.FakePipelineResponses{
+		DestroyResponse: &types.GitDeployResponse{
+			Action: &types.Action{
+				ID:   "test",
+				Name: "test",
+			},
+		},
+		StreamErr: errors.New("error"),
 	}
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
