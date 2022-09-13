@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	cloudAndStagingDefaultVolumeSize = "5Gi"
-	defaultVolumeSize                = "2Gi"
+	cloudAndStagingDefaultVolumeSize = "2Gi"
+	defaultVolumeSize                = "5Gi"
 )
 
 func (dev *Dev) translateDeprecatedVolumeFields() error {
