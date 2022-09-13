@@ -53,6 +53,8 @@ import (
 // ReconnectingMessage is the message shown when we are trying to reconnect
 const ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
 
+const composeVolumesUrl = "https://www.okteto.com/docs/reference/compose/#volumes-string-optional"
+
 // UpOptions represents the options available on up command
 type UpOptions struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
@@ -159,7 +161,7 @@ func Up() *cobra.Command {
 
 			if len(oktetoManifest.Dev) == 0 {
 				if oktetoManifest.Type == model.StackType {
-					return fmt.Errorf("couldn't find any dev environment from your docker compose %q. Only services with local volumes are transformed into devs: https://www.okteto.com/docs/reference/compose/#volumes-string-optional", oktetoManifest.Name)
+					return fmt.Errorf("your docker compose file is not currently supported: Okteto requires a 'host volume' to be defined. See %s", composeVolumesUrl)
 				}
 				oktetoLog.Warning("okteto manifest has no 'dev' section.")
 				answer, err := utils.AskYesNo("Do you want to configure okteto manifest now? [y/n]")
