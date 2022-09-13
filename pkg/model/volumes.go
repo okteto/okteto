@@ -205,7 +205,7 @@ func (dev *Dev) PersistentVolumeStorageClass() string {
 
 func (dev *Dev) AreDefaultPersistentVolumeValues() bool {
 	if dev.PersistentVolumeInfo != nil {
-		if dev.PersistentVolumeSize() == dev.getDefaultPersistentVolumeSize() && dev.PersistentVolumeStorageClass() == "" && dev.PersistentVolumeEnabled() {
+		if dev.IsDefaultPersistentVolumeSize() && dev.PersistentVolumeStorageClass() == "" && dev.PersistentVolumeEnabled() {
 			return true
 		}
 	}
