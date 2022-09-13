@@ -279,10 +279,13 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		File:      file,
 		BuildArgs: model.SerializeBuildArgs(b.Args),
 		NoCache:   o.NoCache,
-		Secrets:   o.Secrets,
 	}
 
-	// add to the build the secrets at the manifest
+	// if secrets are present at the cmd flag, copy them to opts.Secrets
+	if o.Secrets != nil {
+		opts.Secrets = o.Secrets
+	}
+	// add to the build the secrets from the manifest build
 	for id, src := range b.Secrets {
 		opts.Secrets = append(opts.Secrets, fmt.Sprintf("id=%s,src=%s", id, src))
 	}
