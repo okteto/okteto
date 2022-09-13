@@ -111,7 +111,7 @@ var (
 	ErrTokenFlagNeeded = fmt.Errorf("this command is not supported without the '--token' flag from inside a container")
 
 	// ErrTokenEnvVarNeeded is raised when the command is executed from inside a pod from a non ctx command
-	ErrTokenEnvVarNeeded = fmt.Errorf("this command is not supported without the 'OKTETO_TOKEN' environment variable set from inside a container")
+	ErrTokenEnvVarNeeded = fmt.Errorf("the 'OKTETO_TOKEN' environment variable is required when running this command from within a container")
 
 	// ErrNamespaceNotFound is raised when the namespace is not found on an okteto instance
 	ErrNamespaceNotFound = "namespace '%s' not found. Please verify that the namespace exists and that you have access to it"
