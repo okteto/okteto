@@ -16,6 +16,7 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 
 	errWait := errors.New("wait-error")
 	errResources := errors.New("resources-error")
+	errDeployPreview := errors.New("fake deploy error")
 
 	tests := []struct {
 		name              string
@@ -94,9 +95,9 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 			},
 			pipelineResponses: &client.FakePipelineResponses{},
 			previewResponses: &client.FakePreviewResponse{
-				ErrDeployPreview: client.FakeErrDeployPreview,
+				ErrDeployPreview: errDeployPreview,
 			},
-			expectedErr: client.FakeErrDeployPreview,
+			expectedErr: errDeployPreview,
 		},
 		{
 			name:     "err-wait-deploy",

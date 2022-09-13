@@ -13,15 +13,8 @@ package client
 
 import (
 	"context"
-	"errors"
 
 	"github.com/okteto/okteto/pkg/types"
-)
-
-var (
-	FakeErrDeployPreview    = errors.New("fake deploy error")
-	FakeErrListPreview      = errors.New("fake list error")
-	FakeErrResourcesPreview = errors.New("fake resources error")
 )
 
 // FakePreviewsClient mocks the previews interface
