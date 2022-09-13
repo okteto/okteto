@@ -421,7 +421,7 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name string) (m
 	if err := query(ctx, &queryStruct, variables, c.client); err != nil {
 		if oktetoErrors.IsNotFound(err) {
 			okClient := OktetoClient{client: c.client}
-			return okClient.GetResourcesStatusFromPreview(ctx, Context().Namespace, name)
+			return okClient.Previews().GetResourcesStatusFromPreview(ctx, Context().Namespace, name)
 		}
 		return nil, err
 	}

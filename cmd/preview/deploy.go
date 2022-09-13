@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/pkg/namesgenerator"
@@ -102,7 +103,12 @@ func Deploy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			resp, err := executeDeployPreview(ctx, name, scope, repository, branch, sourceUrl, file, varList, wait, timeout)
+			previewCmd, err := NewCommand()
+			if err != nil {
+				return err
+			}
+
+			resp, err := previewCmd.executeDeployPreview(ctx, name, scope, repository, branch, sourceUrl, file, varList)
 			analytics.TrackPreviewDeploy(err == nil)
 			if err != nil {
 				return err
@@ -114,7 +120,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return nil
 			}
 
-			if err := waitUntilRunning(ctx, name, resp.Action, timeout); err != nil {
+			if err := previewCmd.waitUntilRunning(ctx, name, resp.Action, timeout); err != nil {
 				return err
 			}
 			oktetoLog.Success("Preview environment '%s' successfully deployed", name)
@@ -188,16 +194,12 @@ func getRandomName(ctx context.Context, scope string) string {
 	return name
 }
 
-func executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, wait bool, timeout time.Duration) (*types.PreviewResponse, error) {
+func (pw *Command) executeDeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
 	oktetoLog.Spinner("Deploying your preview environment...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return nil, err
-	}
-	resp, err := oktetoClient.DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
+	resp, err := pw.okClient.Previews().DeployPreview(ctx, name, scope, repository, branch, sourceUrl, filename, variables)
 
 	if err != nil {
 		return nil, err
@@ -205,7 +207,10 @@ func executeDeployPreview(ctx context.Context, name, scope, repository, branch, 
 	return resp, nil
 }
 
-func waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
+func (pw *Command) waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
+	waitCtx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
 	oktetoLog.Spinner("Waiting for preview environment to be deployed...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -214,16 +219,33 @@ func waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 
-	go func() {
+	var wg sync.WaitGroup
 
-		err := waitToBeDeployed(ctx, name, a, timeout)
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		err := pw.okClient.Pipeline().StreamLogs(waitCtx, name, a.Name)
+		if err != nil {
+			oktetoLog.Warning("there was an error streaming preview logs: %v", err)
+		}
+	}(&wg)
+
+	wg.Add(1)
+	go func() {
+		err := pw.waitToBeDeployed(ctx, name, a, timeout)
 		if err != nil {
 			exit <- err
 			return
 		}
 		oktetoLog.Spinner("Waiting for containers to be healthy...")
-		exit <- waitForResourcesToBeRunning(ctx, name, timeout)
+		exit <- pw.waitForResourcesToBeRunning(ctx, name, timeout)
 	}()
+
+	go func(wg *sync.WaitGroup) {
+		wg.Wait()
+		close(stop)
+		close(exit)
+	}(&wg)
 
 	select {
 	case <-stop:
@@ -239,29 +261,20 @@ func waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout
 
 	return nil
 }
-func waitToBeDeployed(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
-	return oktetoClient.Pipeline().WaitForActionToFinish(ctx, name, a.Name, timeout)
+func (pw *Command) waitToBeDeployed(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
+	return pw.okClient.Pipeline().WaitForActionToFinish(ctx, name, a.Name, timeout)
 }
 
-func waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.Duration) error {
+func (pw *Command) waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.Duration) error {
 	ticker := time.NewTicker(5 * time.Second)
 	to := time.NewTicker(timeout)
-
-	oktetoClient, err := okteto.NewOktetoClient()
-	if err != nil {
-		return err
-	}
 
 	for {
 		select {
 		case <-to.C:
 			return fmt.Errorf("preview environment '%s' didn't finish after %s", name, timeout.String())
 		case <-ticker.C:
-			resourceStatus, err := oktetoClient.GetResourcesStatusFromPreview(ctx, name, "")
+			resourceStatus, err := pw.okClient.Previews().GetResourcesStatusFromPreview(ctx, name, "")
 			if err != nil {
 				return err
 			}
