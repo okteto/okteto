@@ -595,19 +595,22 @@ func (dc *DeployCommand) cleanUp(ctx context.Context) {
 }
 
 func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesToBuild func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {
-	var stackServices map[string]bool
+	var stackServicesWithBuild map[string]bool
 
 	if stack := deployOptions.Manifest.GetStack(); stack != nil {
-		stackServices = stack.GetServicesWithBuildSection()
+		stackServicesWithBuild = stack.GetServicesWithBuildSection()
 	}
 
 	allServicesWithBuildSection := deployOptions.Manifest.GetBuildServices()
-	oktetoManifestBuildServices := setDifference(allServicesWithBuildSection, stackServices)
+	oktetoManifestServicesWithBuild := setDifference(allServicesWithBuildSection, stackServicesWithBuild) // Warning: this way of getting the oktetoManifestServicesWithBuild is highly dependant on the manifest struct as it is now. We are assuming that: *okteto* manifest build = manifest build - stack build section
+	servicesToDeployWithBuild := setIntersection(allServicesWithBuildSection, sliceToSet(deployOptions.servicesToDeploy))
+	// We need to build:
+	// - All the services that have a build section defined in the *okteto* manifest
+	// - Services from *deployOptions.servicesToDeploy* that have a build section
+
+	servicesToBuildSet := setUnion(oktetoManifestServicesWithBuild, servicesToDeployWithBuild)
 
 	if deployOptions.Build {
-		finalStackIntersection := setIntersection(stackServices, sliceToSet(deployOptions.servicesToDeploy))
-		servicesToBuildSet := setUnion(oktetoManifestBuildServices, finalStackIntersection)
-
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
 			Manifest:     deployOptions.Manifest,
@@ -618,15 +621,6 @@ func buildImages(ctx context.Context, build func(context.Context, *types.BuildOp
 			return errBuild
 		}
 	} else {
-		// We will check the images from the services coming from:
-		// 1. The services defined in the okteto manifest
-		// 2. deployOptions.servicesToDeploy
-		// For that we'll need to know which services were defined in the stack, to know which ones were defined in the okteto manifest
-		// The `Manifest` has all the services combined into one, so we need (allServices - stackServices) + deployOptions.servicesToDeploy
-
-		// servicesToBuildSet = (allServicesWithBuildSection - stackServices) + deployOptions.servicesToDeploy
-		servicesToBuildSet := setUnion(oktetoManifestBuildServices, sliceToSet(deployOptions.servicesToDeploy))
-
 		servicesToBuild, err := getServicesToBuild(ctx, deployOptions.Manifest, setToSlice(servicesToBuildSet))
 		if err != nil {
 			return err
