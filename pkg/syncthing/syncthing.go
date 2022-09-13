@@ -200,7 +200,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 	}
 
 	pwd := uuid.New().String()
-	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), 0)
+	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), 10)
 	if err != nil {
 		oktetoLog.Infof("couldn't hash the password %s", err)
 		hash = []byte("")
