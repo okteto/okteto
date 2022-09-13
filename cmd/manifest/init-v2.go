@@ -365,12 +365,10 @@ func getLanguageFromPath(wd, appName string) (string, error) {
 	var err error
 	if fInfo, err := os.Stat(possibleAppPath); err != nil {
 		oktetoLog.Infof("could not detect path: %s", err)
-	} else {
-		if fInfo.IsDir() {
-			language, err = GetLanguage("", possibleAppPath)
-			if err != nil {
-				return "", err
-			}
+	} else if fInfo.IsDir() {
+		language, err = GetLanguage("", possibleAppPath)
+		if err != nil {
+			return "", err
 		}
 	}
 	if language == "" {
