@@ -188,7 +188,12 @@ func (dev *Dev) isOktetoCloud() bool { // TODO: inject this
 }
 
 func (dev *Dev) getDefaultPersistentVolumeSize() string {
-	return getDefaultVolumeSize(dev.isOktetoCloud())
+	switch {
+	case dev.isOktetoCloud():
+		return cloudAndStagingDefaultVolumeSize
+	default:
+		return defaultVolumeSize
+	}
 }
 
 func (dev *Dev) HasDefaultPersistentVolumeSize() bool {
@@ -337,13 +342,4 @@ func (dev *Dev) validateExternalVolumes() error {
 		}
 	}
 	return nil
-}
-
-func getDefaultVolumeSize(isCloud bool) string {
-	switch {
-	case isCloud:
-		return cloudAndStagingDefaultVolumeSize
-	default:
-		return defaultVolumeSize
-	}
 }

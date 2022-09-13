@@ -824,21 +824,26 @@ func Test_validateVolumes(t *testing.T) {
 func TestDefaultVolumeSize(t *testing.T) {
 
 	testCases := []struct {
-		isCloud  bool
+		context  string
 		expected string
 	}{
 		{
-			isCloud:  true,
+			context:  "https://cloud.okteto.com",
 			expected: cloudAndStagingDefaultVolumeSize,
 		},
 		{
-			isCloud:  false,
+			context:  "https://staging.okteto.dev",
+			expected: cloudAndStagingDefaultVolumeSize,
+		},
+		{
+			context:  "other",
 			expected: defaultVolumeSize,
 		},
 	}
 
 	for _, testCase := range testCases {
-		actual := getDefaultVolumeSize(testCase.isCloud)
+		dev := &Dev{Context: testCase.context}
+		actual := dev.getDefaultPersistentVolumeSize()
 		assert.Equal(t, testCase.expected, actual)
 	}
 
