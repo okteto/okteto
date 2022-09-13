@@ -99,7 +99,7 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 		return fmt.Errorf("current okteto volume size is wrong. Run '%s' and try again", utils.GetDownCommand(devPath))
 	}
 	if currentSize.Cmp(resource.MustParse(dev.PersistentVolumeSize())) > 0 {
-		if currentSize.Cmp(resource.MustParse("10Gi")) != 0 || dev.IsDefaultPersistentVolumeSize() {
+		if currentSize.Cmp(resource.MustParse("10Gi")) != 0 || dev.HasDefaultPersistentVolumeSize() {
 			return fmt.Errorf(
 				"okteto volume size '%s' cannot be less than previous value '%s'. Run '%s' and try again",
 				dev.PersistentVolumeSize(),

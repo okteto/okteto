@@ -191,7 +191,7 @@ func (dev *Dev) getDefaultPersistentVolumeSize() string {
 	return getDefaultVolumeSize(dev.isOktetoCloud())
 }
 
-func (dev *Dev) IsDefaultPersistentVolumeSize() bool {
+func (dev *Dev) HasDefaultPersistentVolumeSize() bool {
 	return dev.PersistentVolumeSize() == dev.getDefaultPersistentVolumeSize()
 }
 
@@ -205,7 +205,7 @@ func (dev *Dev) PersistentVolumeStorageClass() string {
 
 func (dev *Dev) AreDefaultPersistentVolumeValues() bool {
 	if dev.PersistentVolumeInfo != nil {
-		if dev.IsDefaultPersistentVolumeSize() && dev.PersistentVolumeStorageClass() == "" && dev.PersistentVolumeEnabled() {
+		if dev.HasDefaultPersistentVolumeSize() && dev.PersistentVolumeStorageClass() == "" && dev.PersistentVolumeEnabled() {
 			return true
 		}
 	}
