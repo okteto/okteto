@@ -413,9 +413,6 @@ func TestDeployPipelineFromOktetoStacks(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 
-	_, err = integration.GetService(context.Background(), testNamespace, "app", c)
-	require.NoError(t, err)
-
 	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
 }
