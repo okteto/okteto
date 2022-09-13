@@ -33,7 +33,7 @@ var (
 	isOktetoSampleOnce sync.Once
 )
 
-func GetBranch(ctx context.Context, path string) (string, error) {
+func GetBranch(path string) (string, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)

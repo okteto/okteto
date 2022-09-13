@@ -292,7 +292,7 @@ func Test_createContext(t *testing.T) {
 			fakeOktetoClient := &client.FakeOktetoClient{
 				Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
 				Users:     client.NewFakeUsersClient(tt.user),
-				Preview:   client.NewFakePreviewClient(nil, nil, nil),
+				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
 			}
 
 			ctxController := newFakeContextCommand(fakeOktetoClient, tt.user, tt.fakeObjects)
@@ -318,7 +318,6 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 	fakeOktetoClient := &client.FakeOktetoClient{
 		Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
 		Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
-		Preview:   client.NewFakePreviewClient(nil, nil, nil),
 	}
 
 	ctxController := newFakeContextCommand(fakeOktetoClient, user, nil)
@@ -377,7 +376,6 @@ func TestCheckAccessToNamespace(t *testing.T) {
 	fakeOktetoClient := &client.FakeOktetoClient{
 		Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
 		Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
-		Preview:   client.NewFakePreviewClient(nil, nil, nil),
 	}
 
 	fakeCtxCommand := newFakeContextCommand(fakeOktetoClient, user, []runtime.Object{
