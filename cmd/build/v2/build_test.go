@@ -328,7 +328,7 @@ func Test_getAccessibleVolumeMounts(t *testing.T) {
 			{LocalPath: missingPath, RemotePath: "/data/logs"},
 		},
 	}
-	err := os.Mkdir(existingPath, 0755)
+	err := os.Mkdir(existingPath, 0750)
 	if err != nil {
 		t.Fatal(err)
 	}
