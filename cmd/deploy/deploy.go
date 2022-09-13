@@ -596,10 +596,22 @@ func (dc *DeployCommand) cleanUp(ctx context.Context) {
 
 func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesToBuild func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {
 	if deployOptions.Build {
+		var stackServices map[string]bool
+
+		if stack := deployOptions.Manifest.GetStack(); stack != nil {
+			stackServices = stack.GetServicesWithBuildSection()
+		}
+
+		allServicesWithBuildSection := deployOptions.Manifest.GetBuildServices()
+		oktetoManifestBuildServices := setDifference(allServicesWithBuildSection, stackServices)
+
+		// servicesToBuildSet = (allServicesWithBuildSection - stackServices) + deployOptions.servicesToDeploy
+		servicesToBuildSet := setUnion(oktetoManifestBuildServices, stackServices)
+
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
 			Manifest:     deployOptions.Manifest,
-			CommandArgs:  deployOptions.servicesToDeploy,
+			CommandArgs:  setToSlice(servicesToBuildSet),
 		}
 		oktetoLog.Debug("force build from manifest definition")
 		if errBuild := build(ctx, buildOptions); errBuild != nil {
