@@ -24,6 +24,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
+
 	k8sTesting "k8s.io/client-go/testing"
 )
 
@@ -221,5 +223,25 @@ func TestDestroyWithoutTimeoutWithGenericError(t *testing.T) {
 
 	err := DestroyWithoutTimeout(ctx, pvcName, ns, c)
 
+	assert.Error(t, err)
+}
+
+func TestCreateForDev(t *testing.T) {
+	c := fake.NewSimpleClientset()
+	_, err := c.CoreV1().PersistentVolumeClaims("test").Create(context.Background(), &apiv1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "test-okteto"}}, metav1.CreateOptions{})
+	assert.NoError(t, err)
+
+	c.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "persistentvolumeclaims", func(action k8sTesting.Action) (bool, runtime.Object, error) {
+		return true, nil, assert.AnError
+	})
+
+	dev := &model.Dev{
+		Name:      "test",
+		Namespace: "test",
+		Volumes: []model.Volume{
+			{},
+		},
+	}
+	err = CreateForDev(context.Background(), dev, c, "")
 	assert.Error(t, err)
 }
