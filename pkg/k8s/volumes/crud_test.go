@@ -15,6 +15,7 @@ package volumes
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -227,21 +228,76 @@ func TestDestroyWithoutTimeoutWithGenericError(t *testing.T) {
 }
 
 func TestCreateForDev(t *testing.T) {
-	c := fake.NewSimpleClientset()
-	_, err := c.CoreV1().PersistentVolumeClaims("test").Create(context.Background(), &apiv1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "test-okteto"}}, metav1.CreateOptions{})
-	assert.NoError(t, err)
 
-	c.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor("get", "persistentvolumeclaims", func(action k8sTesting.Action) (bool, runtime.Object, error) {
-		return true, nil, assert.AnError
-	})
+	namespace := "test"
 
 	dev := &model.Dev{
 		Name:      "test",
-		Namespace: "test",
+		Namespace: namespace,
 		Volumes: []model.Volume{
 			{},
 		},
 	}
-	err = CreateForDev(context.Background(), dev, c, "")
-	assert.Error(t, err)
+
+	type verbAndError struct {
+		verb string
+		err  error
+	}
+
+	testTable := []struct {
+		name          string
+		expectedError bool
+		pvc           []string
+		addErrors     []verbAndError
+	}{
+		{
+			name:          "no error",
+			expectedError: false,
+			addErrors:     []verbAndError{},
+			pvc:           []string{"test-okteto"},
+		},
+		{
+			name:          "get error",
+			expectedError: true,
+			addErrors:     []verbAndError{{"get", assert.AnError}},
+			pvc:           []string{"test-okteto"},
+		},
+		{
+			name:          "update error",
+			expectedError: true,
+			addErrors:     []verbAndError{{"update", assert.AnError}},
+
+			pvc: []string{"test-okteto"},
+		},
+		{
+			name:          "update error handled",
+			expectedError: false,
+			addErrors:     []verbAndError{{"update", fmt.Errorf("persistentvolumeclaims \"%s\" is forbidden: only dynamically provisioned pvc can be resized and the storageclass that provisions the pvc must support resize", "test-okteto")}},
+			pvc:           []string{"test-okteto"},
+		},
+	}
+
+	for _, test := range testTable {
+		t.Run(test.name, func(t *testing.T) {
+			c := fake.NewSimpleClientset()
+			for _, pvc := range test.pvc {
+				_, err := c.CoreV1().PersistentVolumeClaims(namespace).Create(context.Background(), &apiv1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: pvc}}, metav1.CreateOptions{})
+				assert.NoError(t, err)
+			}
+
+			for _, verbAndError := range test.addErrors {
+				c.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor(verbAndError.verb, "persistentvolumeclaims", func(action k8sTesting.Action) (bool, runtime.Object, error) {
+					return true, nil, verbAndError.err
+				})
+			}
+
+			err := CreateForDev(context.Background(), dev, c, "")
+
+			if test.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
