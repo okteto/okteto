@@ -71,10 +71,18 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, 
 		pvc.Spec.VolumeName = k8Volume.Spec.VolumeName
 		_, err = vClient.Update(ctx, pvc, metav1.UpdateOptions{})
 		if err != nil {
+			if isDynamicallyProvisionedPVCError(err, pvc.Name) {
+				oktetoLog.Warning("Error while updating the dev volume: try running 'okteto down -v' and 'okteto up', or talk to your administrator (the PVC's storage class must support 'allowVolumeExpansion' to be able to upscale dev volumes)")
+			}
 			return fmt.Errorf("error updating kubernetes volume claim: %s", err)
 		}
 	}
 	return nil
+}
+
+func isDynamicallyProvisionedPVCError(err error, pvcName string) bool {
+	errorString := fmt.Sprintf("persistentvolumeclaims \"%s\" is forbidden: only dynamically provisioned pvc can be resized and the storageclass that provisions the pvc must support resize", pvcName)
+	return strings.Contains(err.Error(), errorString)
 }
 
 func Create(ctx context.Context, pvc *apiv1.PersistentVolumeClaim, c kubernetes.Interface) error {
