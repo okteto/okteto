@@ -71,11 +71,11 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface, d
 		pvc.Spec.VolumeName = k8Volume.Spec.VolumeName
 		_, err = vClient.Update(ctx, pvc, metav1.UpdateOptions{})
 		if err != nil {
-			if isDynamicallyProvisionedPVCError(err, pvc.Name) {
-				oktetoLog.Debug("could not update pvc in namespace: %w", dev.Namespace, err)
-				oktetoLog.Warning("Error while updating the dev volume: try running 'okteto down -v' and 'okteto up', or talk to your administrator (the PVC's storage class must support 'allowVolumeExpansion' to be able to upscale dev volumes)")
+			if !isDynamicallyProvisionedPVCError(err, pvc.Name) {
+				return fmt.Errorf("error updating kubernetes volume claim: %s", err)
 			}
-			return fmt.Errorf("error updating kubernetes volume claim: %s", err)
+			oktetoLog.Debug("could not update pvc in namespace: %w", dev.Namespace, err)
+			oktetoLog.Warning("Error while updating the dev volume: try running 'okteto down -v' and 'okteto up', or talk to your administrator (the PVC's storage class must support 'allowVolumeExpansion' to be able to upscale dev volumes)")
 		}
 	}
 	return nil
