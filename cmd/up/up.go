@@ -51,9 +51,11 @@ import (
 )
 
 // ReconnectingMessage is the message shown when we are trying to reconnect
-const ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
+const (
+	ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
 
-const composeVolumesUrl = "https://www.okteto.com/docs/reference/compose/#volumes-string-optional"
+	composeVolumesUrl = "https://www.okteto.com/docs/reference/compose/#volumes-string-optional"
+)
 
 // UpOptions represents the options available on up command
 type UpOptions struct {
