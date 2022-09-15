@@ -82,6 +82,7 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface, d
 }
 
 func isDynamicallyProvisionedPVCError(err error, pvcName string) bool {
+	// k8sErrors.
 	errorString := fmt.Sprintf("persistentvolumeclaims \"%s\" is forbidden: only dynamically provisioned pvc can be resized and the storageclass that provisions the pvc must support resize", pvcName)
 	return strings.Contains(err.Error(), errorString)
 }
@@ -107,7 +108,11 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 	if !ok {
 		return fmt.Errorf("current okteto volume size is wrong. Run '%s' and try again", utils.GetDownCommand(devPath))
 	}
-	if currentSize.Cmp(resource.MustParse(dev.PersistentVolumeSize())) > 0 {
+	devPVSize, err := resource.ParseQuantity(dev.PersistentVolumeSize())
+	if err != nil {
+		return fmt.Errorf("error parsing dev volume size %q: %w", dev.PersistentVolumeSize(), err)
+	}
+	if currentSize.Cmp(devPVSize) > 0 {
 		if currentSize.Cmp(resource.MustParse("10Gi")) != 0 || dev.HasDefaultPersistentVolumeSize() {
 			return fmt.Errorf(
 				"okteto volume size '%s' cannot be less than previous value '%s'. Run '%s' and try again",
@@ -117,7 +122,7 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 			)
 		}
 	}
-	if currentSize.Cmp(resource.MustParse(dev.PersistentVolumeSize())) < 0 {
+	if currentSize.Cmp(devPVSize) < 0 {
 		restartUUID := uuid.New().String()
 		if dev.Metadata == nil {
 			dev.Metadata = &model.Metadata{}
