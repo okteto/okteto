@@ -150,7 +150,14 @@ func Test_isOktetoRepoFromURL(t *testing.T) {
 }
 
 func TestGetRandomSHA(t *testing.T) {
+	SHALen := 40
+	defaultSHA := strings.Repeat("0", SHALen)
 	sha := GetRandomSHA()
-	assert.Len(t, sha, 40)
-	assert.NotEqual(t, sha, strings.Repeat("0", 40))
+	assert.Len(t, sha, SHALen)
+	assert.NotEqual(t, sha, defaultSHA)
+	anotherSHA := GetRandomSHA()
+	assert.Len(t, anotherSHA, SHALen)
+	assert.NotEqual(t, anotherSHA, defaultSHA)
+
+	assert.NotEqual(t, anotherSHA, sha)
 }
