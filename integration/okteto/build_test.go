@@ -35,11 +35,10 @@ func TestBuildReplaceSecretsInManifest(t *testing.T) {
 	require.NoError(t, createDockerfile(dir))
 	oktetoPath, err := integration.GetOktetoPath()
 	require.NoError(t, err)
-	testNamespace := integration.GetTestNamespace("TestBuildWithSecrets", user)
+	testNamespace := integration.GetTestNamespace("TestBuildWithSecrets", "")
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
-		Token:      token,
 	}
 
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
@@ -48,7 +47,6 @@ func TestBuildReplaceSecretsInManifest(t *testing.T) {
 	options := &commands.BuildOptions{
 		Workdir:    dir,
 		Namespace:  testNamespace,
-		Token:      token,
 		OktetoHome: dir,
 	}
 
