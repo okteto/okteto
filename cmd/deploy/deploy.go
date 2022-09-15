@@ -611,6 +611,9 @@ func buildImages(ctx context.Context, build func(context.Context, *types.BuildOp
 	servicesToBuildSet := setUnion(oktetoManifestServicesWithBuild, servicesToDeployWithBuild)
 
 	if deployOptions.Build {
+		finalStackIntersection := setIntersection(stackServices, sliceToSet(deployOptions.servicesToDeploy))
+		servicesToBuildSet := setUnion(oktetoManifestBuildServices, finalStackIntersection)
+
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
 			Manifest:     deployOptions.Manifest,
