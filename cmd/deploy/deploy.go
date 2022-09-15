@@ -602,7 +602,7 @@ func buildImages(ctx context.Context, build func(context.Context, *types.BuildOp
 	}
 
 	allServicesWithBuildSection := deployOptions.Manifest.GetBuildServices()
-	oktetoManifestServicesWithBuild := setDifference(allServicesWithBuildSection, stackServicesWithBuild) // Warning: this way of getting the oktetoManifestServicesWithBuild is highly dependant on the manifest struct as it is now. We are assuming that: *okteto* manifest build = manifest build - stack build section
+	oktetoManifestServicesWithBuild := setDifference(allServicesWithBuildSection, stackServicesWithBuild) // Warning: this way of getting the oktetoManifestServicesWithBuild is highly dependent on the manifest struct as it is now. We are assuming that: *okteto* manifest build = manifest build - stack build section
 	servicesToDeployWithBuild := setIntersection(allServicesWithBuildSection, sliceToSet(deployOptions.servicesToDeploy))
 	// We need to build:
 	// - All the services that have a build section defined in the *okteto* manifest
