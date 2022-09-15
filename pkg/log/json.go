@@ -60,7 +60,7 @@ func (f *JSONLogFormat) Format(entry *logrus.Entry) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	messageJSON = []byte(string(messageJSON[:]) + "\n")
+	messageJSON = []byte(string(messageJSON) + "\n")
 	return messageJSON, nil
 }
 
@@ -273,7 +273,7 @@ func convertToJSON(level, stage, message string) string {
 		Timestamp: time.Now().Unix(),
 	}
 	messageJSON, _ := json.Marshal(messageStruct)
-	return string(messageJSON[:])
+	return string(messageJSON)
 }
 
 // AddToBuffer logs into the buffer and writes to stdout if its a json writer
