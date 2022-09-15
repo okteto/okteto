@@ -56,17 +56,11 @@ func TestBuildReplaceSecretsInManifest(t *testing.T) {
 func createDockerfile(dir string) error {
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
 	dockerfileContent := []byte(dockerfileUsingSecrets)
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
-		return err
-	}
-	return nil
+	return os.WriteFile(dockerfilePath, dockerfileContent, 0600)
 }
 
 func createManifestV2(dir, content string) error {
 	manifestPath := filepath.Join(dir, "okteto.yml")
 	manifestBytes := []byte(content)
-	if err := os.WriteFile(manifestPath, manifestBytes, 0644); err != nil {
-		return err
-	}
-	return nil
+	return os.WriteFile(manifestPath, manifestBytes, 0600)
 }
