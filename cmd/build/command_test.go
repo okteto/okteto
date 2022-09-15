@@ -167,8 +167,8 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 	dir := t.TempDir()
 	malformedDockerfile := filepath.Join(dir, "malformedDockerfile")
 	dockerfile := filepath.Join(dir, "Dockerfile")
-	assert.NoError(t, os.WriteFile(dockerfile, []byte(`FROM alpine`), 0644))
-	assert.NoError(t, os.WriteFile(malformedDockerfile, []byte(`FROM alpine`), 0644))
+	assert.NoError(t, os.WriteFile(dockerfile, []byte(`FROM alpine`), 0600))
+	assert.NoError(t, os.WriteFile(malformedDockerfile, []byte(`FROM alpine`), 0600))
 	tests := []struct {
 		name              string
 		buildCommand      *Command

@@ -911,7 +911,7 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 	wd, _ := os.Getwd()
 	relativePathExpanded := filepath.Join(wd, "test_volume_relative_path_found")
 	relativePathExpandedFile := filepath.Join(wd, "test-file")
-	err := os.Mkdir("test_volume_relative_path_found", 0755)
+	err := os.Mkdir("test_volume_relative_path_found", 0750)
 	if err != nil {
 		t.Fatal(err)
 	}

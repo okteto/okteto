@@ -39,5 +39,5 @@ func SetWarningState(path, name, value string) error {
 	}
 	filePath := filepath.Join(path, name)
 
-	return os.WriteFile(filePath, []byte(value), 0644)
+	return os.WriteFile(filePath, []byte(value), 0600)
 }

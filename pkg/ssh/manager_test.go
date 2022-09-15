@@ -17,7 +17,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -154,7 +156,13 @@ func startServers(fm *ForwardManager) error {
 
 		go func() {
 			handler := &testHTTPHandler{message: fmt.Sprintf("%d", remote)}
-			_ = http.ListenAndServe(fmt.Sprintf(":%d", remote), handler)
+			server := &http.Server{
+				Addr:              net.JoinHostPort("", strconv.Itoa(remote)),
+				Handler:           handler,
+				ReadHeaderTimeout: 3 * time.Second,
+			}
+
+			_ = server.ListenAndServe()
 		}()
 	}
 
@@ -179,7 +187,13 @@ func connectReverseForwards(fm *ForwardManager) error {
 
 		go func() {
 			handler := &testHTTPHandler{message: fmt.Sprintf("%d", local)}
-			_ = http.ListenAndServe(fmt.Sprintf(":%d", local), handler)
+			server := &http.Server{
+				Addr:              net.JoinHostPort("", strconv.Itoa(local)),
+				Handler:           handler,
+				ReadHeaderTimeout: 3 * time.Second,
+			}
+
+			_ = server.ListenAndServe()
 		}()
 	}
 

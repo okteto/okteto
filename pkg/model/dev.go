@@ -650,7 +650,12 @@ func (dev *Dev) expandEnvFiles() error {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
+		defer func() {
+			if err := f.Close(); err != nil {
+				oktetoLog.Debugf("Error closing file %s: %s", filename, err)
+			}
+		}()
+
 		envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 		if err != nil {
 			return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
@@ -837,7 +842,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 	p := Secret{
 		LocalPath:  pubKeyPath,
 		RemotePath: authorizedKeysPath,
-		Mode:       0644,
+		Mode:       0600,
 	}
 
 	oktetoLog.Infof("enabled remote mode")
@@ -949,7 +954,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		rule.Healthchecks = true
 	}
 	if main == dev {
-		rule.Marker = OktetoBinImageTag //for backward compatibility
+		rule.Marker = OktetoBinImageTag // for backward compatibility
 		rule.OktetoBinImageTag = dev.InitContainer.Image
 		rule.Environment = append(
 			rule.Environment,

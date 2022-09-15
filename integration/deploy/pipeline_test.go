@@ -157,12 +157,12 @@ func TestDeployPipelineManifestInsidePipeline(t *testing.T) {
 func createPipelineInsidePipelineManifest(dir, oktetoPath, namespace string) error {
 	dockerfilePath := filepath.Join(dir, pipelineManifestName)
 	dockerfileContent := []byte(pipelineManifest)
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}
 	dockerfilePath = filepath.Join(dir, pipelineDeployPipelineManifestName)
 	dockerfileContent = []byte(fmt.Sprintf(pipelineDeployPipelineManifest, oktetoPath, namespace))
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -171,7 +171,7 @@ func createPipelineInsidePipelineManifest(dir, oktetoPath, namespace string) err
 func createPipelineManifest(dir string) error {
 	dockerfilePath := filepath.Join(dir, pipelineManifestName)
 	dockerfileContent := []byte(pipelineManifest)
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -180,7 +180,7 @@ func createPipelineManifest(dir string) error {
 func createK8sManifest(dir string) error {
 	dockerfilePath := filepath.Join(dir, k8sManifestName)
 	dockerfileContent := []byte(k8sManifestTemplate)
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil

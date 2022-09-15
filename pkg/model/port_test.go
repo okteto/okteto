@@ -14,8 +14,8 @@
 package model
 
 import (
-	"fmt"
 	"net"
+	"strconv"
 	"testing"
 )
 
@@ -40,12 +40,16 @@ func TestIsPortAvailable(t *testing.T) {
 		t.Fatalf("port %d wasn't available", p)
 	}
 
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", Localhost, p))
+	l, err := net.Listen("tcp", net.JoinHostPort(Localhost, strconv.Itoa(p)))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	defer l.Close()
+	defer func() {
+		if err := l.Close(); err != nil {
+			t.Fatalf("Error closing listener %s: %s", l.Addr(), err)
+		}
+	}()
 
 	if IsPortAvailable(Localhost, p) {
 		t.Fatalf("port %d was available", p)

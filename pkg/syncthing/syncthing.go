@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -200,7 +201,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 	}
 
 	pwd := uuid.New().String()
-	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), 0)
+	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), 10)
 	if err != nil {
 		oktetoLog.Infof("couldn't hash the password %s", err)
 		hash = []byte("")
@@ -217,13 +218,13 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		binPath:          fullPath,
 		Client:           NewAPIClient(),
 		FileWatcherDelay: DefaultFileWatcherDelay,
-		GUIAddress:       fmt.Sprintf("%s:%d", dev.Interface, guiPort),
+		GUIAddress:       net.JoinHostPort(dev.Interface, strconv.Itoa(guiPort)),
 		Home:             config.GetAppHome(dev.Namespace, dev.Name),
 		LogPath:          GetLogFile(dev.Namespace, dev.Name),
-		ListenAddress:    fmt.Sprintf("%s:%d", dev.Interface, listenPort),
+		ListenAddress:    net.JoinHostPort(dev.Interface, strconv.Itoa(listenPort)),
 		RemoteAddress:    fmt.Sprintf("tcp://%s:%d", dev.Interface, remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
-		RemoteGUIAddress: fmt.Sprintf("%s:%d", dev.Interface, remoteGUIPort),
+		RemoteGUIAddress: net.JoinHostPort(dev.Interface, strconv.Itoa(remoteGUIPort)),
 		LocalGUIPort:     guiPort,
 		LocalPort:        listenPort,
 		RemoteGUIPort:    remoteGUIPort,
@@ -267,11 +268,11 @@ func (s *Syncthing) initConfig() error {
 		return err
 	}
 
-	if err := os.WriteFile(filepath.Join(s.Home, certFile), cert, 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, certFile), cert, 0600); err != nil {
 		return fmt.Errorf("failed to write syncthing certificate: %w", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(s.Home, keyFile), key, 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, keyFile), key, 0600); err != nil {
 		return fmt.Errorf("failed to write syncthing key: %w", err)
 	}
 
@@ -285,7 +286,7 @@ func (s *Syncthing) UpdateConfig() error {
 		return fmt.Errorf("failed to write syncthing configuration template: %w", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(s.Home, configFile), buf.Bytes(), 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, configFile), buf.Bytes(), 0600); err != nil {
 		return fmt.Errorf("failed to write syncthing configuration file: %w", err)
 	}
 
@@ -975,7 +976,11 @@ func isDirEmpty(path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", path, err)
+		}
+	}()
 
 	_, err = f.Readdirnames(1) // Or f.Readdir(1)
 	if err == io.EOF {

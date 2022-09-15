@@ -152,7 +152,7 @@ func Test_overrideFileStack(t *testing.T) {
 func createFile(dir, name, content string) (string, error) {
 	dockerfilePath := filepath.Join(dir, name)
 	dockerfileContent := []byte(content)
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return dockerfilePath, err
 	}
 	return dockerfilePath, nil
