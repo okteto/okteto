@@ -595,11 +595,23 @@ func (dc *DeployCommand) cleanUp(ctx context.Context) {
 }
 
 func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesToBuild func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {
+	var stackServices map[string]bool
+
+	if stack := deployOptions.Manifest.GetStack(); stack != nil {
+		stackServices = stack.GetServicesWithBuildSection()
+	}
+
+	allServicesWithBuildSection := deployOptions.Manifest.GetBuildServices()
+	oktetoManifestBuildServices := setDifference(allServicesWithBuildSection, stackServices)
+
 	if deployOptions.Build {
+		finalStackIntersection := setIntersection(stackServices, sliceToSet(deployOptions.servicesToDeploy))
+		servicesToBuildSet := setUnion(oktetoManifestBuildServices, finalStackIntersection)
+
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
 			Manifest:     deployOptions.Manifest,
-			CommandArgs:  deployOptions.servicesToDeploy,
+			CommandArgs:  setToSlice(servicesToBuildSet),
 		}
 		oktetoLog.Debug("force build from manifest definition")
 		if errBuild := build(ctx, buildOptions); errBuild != nil {
@@ -611,14 +623,7 @@ func buildImages(ctx context.Context, build func(context.Context, *types.BuildOp
 		// 2. deployOptions.servicesToDeploy
 		// For that we'll need to know which services were defined in the stack, to know which ones were defined in the okteto manifest
 		// The `Manifest` has all the services combined into one, so we need (allServices - stackServices) + deployOptions.servicesToDeploy
-		var stackServices map[string]bool
 
-		if stack := deployOptions.Manifest.GetStack(); stack != nil {
-			stackServices = stack.GetServicesWithBuildSection()
-		}
-
-		allServicesWithBuildSection := deployOptions.Manifest.GetBuildServices()
-		oktetoManifestBuildServices := setDifference(allServicesWithBuildSection, stackServices)
 		// servicesToBuildSet = (allServicesWithBuildSection - stackServices) + deployOptions.servicesToDeploy
 		servicesToBuildSet := setUnion(oktetoManifestBuildServices, sliceToSet(deployOptions.servicesToDeploy))
 
