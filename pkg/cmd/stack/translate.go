@@ -114,7 +114,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 				MatchLabels: translateLabelSelector(svcName, s),
 			},
 			Strategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RecreateDeploymentStrategyType,
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
 			},
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{

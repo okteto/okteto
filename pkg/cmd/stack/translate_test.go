@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -152,7 +153,7 @@ func Test_translateDeployment(t *testing.T) {
 	if !reflect.DeepEqual(c.Resources, apiv1.ResourceRequirements{}) {
 		t.Errorf("Wrong container.resources: '%v'", c.Resources)
 	}
-
+	assert.Equal(t, result.Spec.Strategy, appsv1.RollingUpdateDeploymentStrategyType)
 }
 
 func Test_translateStatefulSet(t *testing.T) {
@@ -346,7 +347,7 @@ func Test_translateStatefulSet(t *testing.T) {
 	if !reflect.DeepEqual(vct.Spec, volumeClaimTemplateSpec) {
 		t.Errorf("Wrong statefulset volume claim template: '%v'", vct.Spec)
 	}
-
+	assert.Equal(t, result.Spec.UpdateStrategy, appsv1.RollingUpdateStatefulSetStrategyType)
 }
 
 func Test_translateJobWithoutVolumes(t *testing.T) {
