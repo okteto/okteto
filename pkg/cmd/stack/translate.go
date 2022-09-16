@@ -303,7 +303,7 @@ func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *ap
 	var command string
 	for idx, v := range svc.Volumes {
 		volumeClaimName := getVolumeClaimName(&v)
-		command = fmt.Sprintf("echo initilizing volume %s with content of the image '%s'...", volumeClaimName, svc.Image)
+		command = fmt.Sprintf("echo initializing volume %s with content of the image '%s'...", volumeClaimName, svc.Image)
 		subpath := fmt.Sprintf("data-%d", idx)
 		if v.LocalPath != "" {
 			subpath = v.LocalPath
