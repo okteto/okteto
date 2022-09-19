@@ -65,7 +65,7 @@ If the developer decides to open a new issue from the current one or is not comp
 
 ### PR Merge
 
-#### **If the author is a mantainer**
+#### **If the author is a maintainer**
 
 Once the PR is approved and the checks are passing, the author will be responsible for merging the PR or delegating the responsibility to another developer. There could be exceptions to this rule, for example, if the author is on vacation and the merge is "urgent", other developers can merge the PR to unblock the situation.
 
