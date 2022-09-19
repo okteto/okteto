@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
@@ -27,6 +28,10 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
+)
+
+const (
+	personalAccessTokenURL = "https://www.okteto.com/docs/cloud/personal-access-tokens/"
 )
 
 // Use context points okteto to a cluster.
@@ -91,7 +96,10 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 		if ctxOptions.IsCtxCommand {
 			return oktetoErrors.ErrTokenFlagNeeded
 		}
-		return oktetoErrors.ErrTokenEnvVarNeeded
+		return oktetoErrors.UserError{
+			E:    oktetoErrors.ErrTokenEnvVarNeeded,
+			Hint: fmt.Sprintf("Visit %s for more information about getting your token.", personalAccessTokenURL),
+		}
 	}
 
 	if ctxOptions.Context == "" {
