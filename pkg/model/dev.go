@@ -40,7 +40,7 @@ import (
 )
 
 var (
-	//OktetoBinImageTag image tag with okteto internal binaries
+	// OktetoBinImageTag image tag with okteto internal binaries
 	OktetoBinImageTag = "okteto/bin:1.4.1"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
@@ -94,7 +94,7 @@ type Dev struct {
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 
-	//Deprecated fields
+	// Deprecated fields
 	Healthchecks bool   `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 	Labels       Labels `json:"labels,omitempty" yaml:"labels,omitempty"`
 }

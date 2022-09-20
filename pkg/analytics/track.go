@@ -151,7 +151,7 @@ func TrackSyncError() {
 	track(syncErrorEvent, false, nil)
 }
 
-// TrackSyncError sends a tracking event to mixpanel when the init sync fails
+// TrackDurationInitialSync sends a tracking event to mixpanel with initial sync duration
 func TrackDurationInitialSync(durationInitialSync time.Duration) {
 	props := map[string]interface{}{
 		"duration": durationInitialSync,

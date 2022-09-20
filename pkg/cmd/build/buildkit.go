@@ -150,7 +150,7 @@ func getBuildkitClient(ctx context.Context) (*client.Client, error) {
 	buildkitHost := okteto.Context().Builder
 	octxStore := okteto.ContextStore()
 	for _, octx := range octxStore.Contexts {
-		//if a context configures buildkit with an Okteto Cluster
+		// if a context configures buildkit with an Okteto Cluster
 		if octx.IsOkteto && octx.Builder == buildkitHost {
 			okteto.Context().Token = octx.Token
 			okteto.Context().Certificate = octx.Certificate

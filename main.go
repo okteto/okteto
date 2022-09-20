@@ -134,7 +134,7 @@ func main() {
 	root.AddCommand(deploy.Endpoints(ctx))
 	root.AddCommand(generateFigSpec.NewCmdGenFigSpec())
 
-	//deprecated
+	// deprecated
 	root.AddCommand(cmd.Create(ctx))
 	root.AddCommand(cmd.List(ctx))
 	root.AddCommand(cmd.Delete(ctx))

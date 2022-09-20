@@ -317,7 +317,7 @@ func (s *Syncthing) Run(ctx context.Context) error {
 		cmdArgs = append(cmdArgs, "-verbose")
 	}
 
-	s.cmd = exec.Command(s.binPath, cmdArgs...) //nolint: gas, gosec
+	s.cmd = exec.Command(s.binPath, cmdArgs...) // nolint: gas, gosec
 	s.cmd.Env = append(os.Environ(), "STNOUPGRADE=1")
 
 	if err := s.cmd.Start(); err != nil {

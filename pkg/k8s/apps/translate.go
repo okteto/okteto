@@ -30,12 +30,12 @@ import (
 
 const (
 	oktetoVersionAnnotation = "dev.okteto.com/version"
-	//OktetoBinName name of the okteto bin init container
+	// OktetoBinName name of the okteto bin init container
 	OktetoBinName = "okteto-bin"
-	//OktetoInitVolumeContainerName name of the okteto init container that initializes the persistent colume from image content
+	// OktetoInitVolumeContainerName name of the okteto init container that initializes the persistent colume from image content
 	OktetoInitVolumeContainerName = "okteto-init-volume"
 
-	//syncthing
+	// syncthing
 	oktetoSyncSecretVolume = "okteto-sync-secret" // skipcq GSC-G101  not a secret
 	oktetoDevSecretVolume  = "okteto-dev-secret"  // skipcq GSC-G101  not a secret
 	oktetoSecretTemplate   = "okteto-%s"
@@ -122,7 +122,7 @@ func (tr *Translation) DevModeOff() error {
 		delete(tr.App.TemplateObjectMeta().Annotations, k)
 	}
 
-	//TODO: this is for backward compatibility: remove when people is on CLI >= 1.14
+	// TODO: this is for backward compatibility: remove when people is on CLI >= 1.14
 	delete(tr.App.ObjectMeta().Annotations, oktetoVersionAnnotation)
 	delete(tr.App.ObjectMeta().Annotations, model.OktetoRevisionAnnotation)
 
