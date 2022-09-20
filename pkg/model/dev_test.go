@@ -1696,6 +1696,28 @@ func TestExpandBuildArgs(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "buildInfo args only same as previousImageBuilt",
+			buildInfo: &BuildInfo{
+				Args: BuildArgs{
+					{
+						Name:  "KEY",
+						Value: "$KEY",
+					},
+				},
+			},
+			previousImageBuilt: map[string]string{
+				"KEY": "VALUE",
+			},
+			expected: &BuildInfo{
+				Args: BuildArgs{
+					{
+						Name:  "KEY",
+						Value: "VALUE",
+					},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

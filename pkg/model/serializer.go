@@ -144,17 +144,42 @@ type WeightedPodAffinityTerm struct {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (e *BuildArg) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw string
+	err := unmarshal(&raw)
+	if err != nil {
+		return err
+	}
+	parts := strings.SplitN(raw, "=", 2)
+	e.Name = parts[0]
+	if len(parts) == 2 {
+		e.Value = parts[1]
+		return nil
+	}
+
+	//AYYYY
+	// e.Name, err = ExpandEnv(parts[0], true)
+	// if err != nil {
+	// 	return err
+	// }
+	// e.Value = parts[0]
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
 	err := unmarshal(&raw)
 	if err != nil {
 		return err
 	}
-
 	parts := strings.SplitN(raw, "=", 2)
 	e.Name = parts[0]
 	if len(parts) == 2 {
-		e.Value = parts[1]
+		e.Value, err = ExpandEnv(parts[1], true)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 
@@ -1147,10 +1172,6 @@ func (l *Labels) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	for key, value := range result {
-		value, err = ExpandEnv(value, true)
-		if err != nil {
-			return err
-		}
 		labels[key] = value
 	}
 	*l = labels
@@ -1164,10 +1185,6 @@ func (a *Annotations) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	for key, value := range result {
-		value, err = ExpandEnv(value, true)
-		if err != nil {
-			return err
-		}
 		annotations[key] = value
 	}
 	*a = annotations
@@ -1181,10 +1198,6 @@ func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	for key, value := range result {
-		value, err = ExpandEnv(value, true)
-		if err != nil {
-			return err
-		}
 		envs = append(envs, EnvVar{Name: key, Value: value})
 	}
 	sort.SliceStable(envs, func(i, j int) bool {
@@ -1197,7 +1210,7 @@ func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (ba *BuildArgs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	buildArgs := make(BuildArgs, 0)
-	result, err := getKeyValue(unmarshal)
+	result, err := getBuildArgs(unmarshal)
 	if err != nil {
 		return err
 	}
@@ -1209,6 +1222,28 @@ func (ba *BuildArgs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	})
 	*ba = buildArgs
 	return nil
+}
+
+func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) {
+	result := make(map[string]string)
+
+	var rawList []BuildArg
+	err := unmarshal(&rawList)
+	if err == nil {
+		for _, label := range rawList {
+			result[label.Name] = label.Value
+		}
+		return result, nil
+	}
+	var rawMap map[string]string
+	err = unmarshal(&rawMap)
+	if err != nil {
+		return nil, err
+	}
+	for key, value := range rawMap {
+		result[key] = value
+	}
+	return result, nil
 }
 
 func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
@@ -1228,6 +1263,10 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
+		value, err = ExpandEnv(value, true)
+		if err != nil {
+			return nil, err
+		}
 		result[key] = value
 	}
 	return result, nil

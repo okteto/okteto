@@ -107,12 +107,12 @@ func TestEnvVarMashalling(t *testing.T) {
 		{
 			"key-value-with-env-var",
 			[]byte(`env=$DEV_ENV`),
-			EnvVar{Name: "env", Value: "$DEV_ENV"},
+			EnvVar{Name: "env", Value: "test_environment"},
 		},
 		{
 			"key-value-with-env-var-in-string",
 			[]byte(`env=my_env;$DEV_ENV;prod`),
-			EnvVar{Name: "env", Value: "my_env;$DEV_ENV;prod"},
+			EnvVar{Name: "env", Value: "my_env;test_environment;prod"},
 		},
 		{
 			"simple-key",
@@ -127,7 +127,7 @@ func TestEnvVarMashalling(t *testing.T) {
 		{
 			"key-with-env-var-not-defined",
 			[]byte(`noenv=$UNDEFINED`),
-			EnvVar{Name: "noenv", Value: "$UNDEFINED"},
+			EnvVar{Name: "noenv", Value: ""},
 		},
 		{
 			"just-env-var",
@@ -601,6 +601,11 @@ func TestLabelsUnmashalling(t *testing.T) {
 		data     []byte
 		expected Labels
 	}{
+		{
+			"key-value-with-env-var-map",
+			[]byte(`env: $DEV_ENV`),
+			Labels{"env": "test_environment"},
+		},
 		{
 			"key-value-list",
 			[]byte(`- env=production`),
