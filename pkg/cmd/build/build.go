@@ -265,7 +265,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 				continue
 			}
 
-			b.Args = append(b.Args, model.EnvVar{
+			b.Args = append(b.Args, model.BuildArg{
 				Name: key, Value: val,
 			})
 		}

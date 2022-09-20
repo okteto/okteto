@@ -107,12 +107,12 @@ func TestEnvVarMashalling(t *testing.T) {
 		{
 			"key-value-with-env-var",
 			[]byte(`env=$DEV_ENV`),
-			EnvVar{Name: "env", Value: "test_environment"},
+			EnvVar{Name: "env", Value: "$DEV_ENV"},
 		},
 		{
 			"key-value-with-env-var-in-string",
 			[]byte(`env=my_env;$DEV_ENV;prod`),
-			EnvVar{Name: "env", Value: "my_env;test_environment;prod"},
+			EnvVar{Name: "env", Value: "my_env;$DEV_ENV;prod"},
 		},
 		{
 			"simple-key",
@@ -127,7 +127,7 @@ func TestEnvVarMashalling(t *testing.T) {
 		{
 			"key-with-env-var-not-defined",
 			[]byte(`noenv=$UNDEFINED`),
-			EnvVar{Name: "noenv", Value: ""},
+			EnvVar{Name: "noenv", Value: "$UNDEFINED"},
 		},
 		{
 			"just-env-var",
@@ -2129,7 +2129,7 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 					Context:    "./service2",
 					Dockerfile: "Dockerfile",
 					Image:      "image-tag",
-					Args: []EnvVar{
+					Args: BuildArgs{
 						{
 							Name:  "key1",
 							Value: "value1",
@@ -2194,6 +2194,65 @@ func TestBuildDependsOnUnmarshalling(t *testing.T) {
 			err := yaml.UnmarshalStrict(tt.buildManifest, &result)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestBuildArgsUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected BuildArgs
+	}{
+		{
+			name: "list",
+			data: []byte("- KEY=VALUE"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "VALUE",
+				},
+			},
+		},
+		{
+			name: "list with env var",
+			data: []byte("- KEY=$VALUE"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "$VALUE",
+				},
+			},
+		},
+		{
+			name: "map",
+			data: []byte("KEY: VALUE"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "VALUE",
+				},
+			},
+		},
+		{
+			name: "map with env var",
+			data: []byte("KEY: $VALUE"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "$VALUE",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buildArgs BuildArgs
+			if err := yaml.UnmarshalStrict(tt.data, &buildArgs); err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, tt.expected, buildArgs)
 		})
 	}
 }

@@ -41,7 +41,7 @@ type buildInfoRaw struct {
 	Dockerfile       string         `yaml:"dockerfile,omitempty"`
 	CacheFrom        []string       `yaml:"cache_from,omitempty"`
 	Target           string         `yaml:"target,omitempty"`
-	Args             Environment    `yaml:"args,omitempty"`
+	Args             BuildArgs      `yaml:"args,omitempty"`
 	Image            string         `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume  `yaml:"-"`
 	ExportCache      string         `yaml:"export_cache,omitempty"`
@@ -154,10 +154,7 @@ func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	parts := strings.SplitN(raw, "=", 2)
 	e.Name = parts[0]
 	if len(parts) == 2 {
-		e.Value, err = ExpandEnv(parts[1], true)
-		if err != nil {
-			return err
-		}
+		e.Value = parts[1]
 		return nil
 	}
 
@@ -1150,6 +1147,10 @@ func (l *Labels) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	for key, value := range result {
+		value, err = ExpandEnv(value, true)
+		if err != nil {
+			return err
+		}
 		labels[key] = value
 	}
 	*l = labels
@@ -1163,6 +1164,10 @@ func (a *Annotations) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	for key, value := range result {
+		value, err = ExpandEnv(value, true)
+		if err != nil {
+			return err
+		}
 		annotations[key] = value
 	}
 	*a = annotations
@@ -1176,12 +1181,33 @@ func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 	for key, value := range result {
+		value, err = ExpandEnv(value, true)
+		if err != nil {
+			return err
+		}
 		envs = append(envs, EnvVar{Name: key, Value: value})
 	}
 	sort.SliceStable(envs, func(i, j int) bool {
 		return strings.Compare(envs[i].Name, envs[j].Name) < 0
 	})
 	*e = envs
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (ba *BuildArgs) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	buildArgs := make(BuildArgs, 0)
+	result, err := getKeyValue(unmarshal)
+	if err != nil {
+		return err
+	}
+	for key, value := range result {
+		buildArgs = append(buildArgs, BuildArg{Name: key, Value: value})
+	}
+	sort.SliceStable(buildArgs, func(i, j int) bool {
+		return strings.Compare(buildArgs[i].Name, buildArgs[j].Name) < 0
+	})
+	*ba = buildArgs
 	return nil
 }
 
@@ -1202,10 +1228,6 @@ func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {
 		return nil, err
 	}
 	for key, value := range rawMap {
-		value, err = ExpandEnv(value, true)
-		if err != nil {
-			return nil, err
-		}
 		result[key] = value
 	}
 	return result, nil

@@ -74,8 +74,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		Registry:  "registry.okteto",
 	}
 
-	namespaceEnvVar := model.EnvVar{
-			Name: model.OktetoNamespaceEnvVar, Value: context.Namespace,
+	namespaceEnvVar := model.BuildArg{
+		Name: model.OktetoNamespaceEnvVar, Value: context.Namespace,
 	}
 
 	okteto.CurrentStore = &okteto.OktetoContextStore{
@@ -153,7 +153,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
-				Args: model.Environment{
+				Args: model.BuildArgs{
 					{
 						Name:  "arg1",
 						Value: "value1",
@@ -182,7 +182,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
-				Args: model.Environment{
+				Args: model.BuildArgs{
 					{
 						Name:  "arg1",
 						Value: "value1",
@@ -218,7 +218,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
-				Args: []model.EnvVar {
+				Args: model.BuildArgs{
 					namespaceEnvVar,
 					{
 						Name:  "arg1",

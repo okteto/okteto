@@ -327,7 +327,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			Repository:   dep.Repository,
 			Branch:       dep.Branch,
 			File:         dep.ManifestPath,
-			Variables:    model.SerializeBuildArgs(dep.Variables),
+			Variables:    model.SerializeEnvironmentVars(dep.Variables),
 			Wait:         dep.Wait,
 			Timeout:      deployOptions.Timeout,
 			SkipIfExists: !deployOptions.Dependencies,
