@@ -55,7 +55,7 @@ func NewContextCommand() *ContextCommand {
 	}
 }
 
-// Create adds a new cluster to okteto context
+// CreateCMD adds a new cluster to okteto context
 func CreateCMD() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
