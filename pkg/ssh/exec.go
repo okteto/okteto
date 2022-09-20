@@ -39,7 +39,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		return fmt.Errorf("failed to get SSH configuration: %s", err)
 	}
 
-	//dockerterm.StdStreams() configures the terminal on windows
+	// dockerterm.StdStreams() configures the terminal on windows
 	dockerterm.StdStreams()
 
 	var connection *ssh.Client

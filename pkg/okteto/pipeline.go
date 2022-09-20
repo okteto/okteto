@@ -240,8 +240,8 @@ func AreSameRepository(repoA, repoB string) bool {
 		return false
 	}
 
-	//In short SSH URLs like git@github.com:okteto/movies.git, path doesn't start with '/', so we need to remove it
-	//in case it exists. It also happens with '.git' suffix. You don't have to specify it, so we remove in both cases
+	// In short SSH URLs like git@github.com:okteto/movies.git, path doesn't start with '/', so we need to remove it
+	// in case it exists. It also happens with '.git' suffix. You don't have to specify it, so we remove in both cases
 	repoPathA := strings.TrimSuffix(strings.TrimPrefix(parsedRepoA.Path, "/"), ".git")
 	repoPathB := strings.TrimSuffix(strings.TrimPrefix(parsedRepoB.Path, "/"), ".git")
 

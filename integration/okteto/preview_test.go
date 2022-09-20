@@ -46,7 +46,7 @@ func TestPreviewCommand(t *testing.T) {
 	contentURL := fmt.Sprintf("https://movies-%s.%s", testNamespace, appsSubdomain)
 	require.NotEmpty(t, integration.GetContentFromURL(contentURL, timeout))
 
-	//test `okteo pipeline deploy --wait` works in the context of a preview environment
+	// test `okteo pipeline deploy --wait` works in the context of a preview environment
 	pipelineOptions := &commands.DeployPipelineOptions{
 		Namespace:  testNamespace,
 		Repository: fmt.Sprintf("%s/%s", githubHTTPSURL, pipelineRepo),

@@ -127,7 +127,7 @@ func getRollingLog(path string) io.Writer {
 		Filename:   path,
 		MaxSize:    1, // megabytes
 		MaxBackups: 10,
-		MaxAge:     28, //days
+		MaxAge:     28, // days
 		Compress:   true,
 	}
 }

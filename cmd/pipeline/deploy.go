@@ -46,7 +46,7 @@ type DeployOptions struct {
 	File         string
 	Variables    []string
 
-	//Deprecated fields
+	// Deprecated fields
 	Filename string
 }
 

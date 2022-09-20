@@ -51,11 +51,11 @@ type OktetoWriter interface {
 }
 
 const (
-	//TTYFormat represents a tty logger
+	// TTYFormat represents a tty logger
 	TTYFormat string = "tty"
-	//PlainFormat represents a plain logger
+	// PlainFormat represents a plain logger
 	PlainFormat string = "plain"
-	//JSONFormat represents a json logger
+	// JSONFormat represents a json logger
 	JSONFormat string = "json"
 )
 
