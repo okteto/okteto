@@ -157,12 +157,11 @@ func (e *BuildArg) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return nil
 	}
 
-	//AYYYY
-	// e.Name, err = ExpandEnv(parts[0], true)
-	// if err != nil {
-	// 	return err
-	// }
-	// e.Value = parts[0]
+	e.Name, err = ExpandEnv(parts[0], true)
+	if err != nil {
+		return err
+	}
+	e.Value = parts[0]
 	return nil
 }
 
