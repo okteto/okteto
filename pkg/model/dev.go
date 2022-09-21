@@ -1299,11 +1299,12 @@ func getLocalhost() string {
 // Copy clones the buildInfo without the pointers
 func (b *BuildInfo) Copy() *BuildInfo {
 	result := &BuildInfo{
-		Name:       b.Name,
-		Context:    b.Context,
-		Dockerfile: b.Dockerfile,
-		Target:     b.Target,
-		Image:      b.Image,
+		Name:        b.Name,
+		Context:     b.Context,
+		Dockerfile:  b.Dockerfile,
+		Target:      b.Target,
+		Image:       b.Image,
+		ExportCache: b.ExportCache,
 	}
 	cacheFrom := []string{}
 	cacheFrom = append(cacheFrom, b.CacheFrom...)
@@ -1322,5 +1323,10 @@ func (b *BuildInfo) Copy() *BuildInfo {
 	volumesToMount := []StackVolume{}
 	volumesToMount = append(volumesToMount, b.VolumesToInclude...)
 	result.VolumesToInclude = volumesToMount
+
+	dependsOn := BuildDependsOn{}
+	dependsOn = append(dependsOn, b.DependsOn...)
+	result.DependsOn = dependsOn
+
 	return result
 }
