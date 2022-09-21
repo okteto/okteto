@@ -387,14 +387,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc := &Service{}
 	var err error
 
-	svc.Resources, err = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources, serviceRaw.CpuCount, serviceRaw.Cpus, serviceRaw.MemLimit, serviceRaw.MemReservation)
-	if err != nil {
-		return nil, err
-	}
-	svc.Replicas, err = unmarshalDeployReplicas(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas)
-	if err != nil {
-		return nil, err
-	}
+	svc.Resources = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources, serviceRaw.CpuCount, serviceRaw.Cpus, serviceRaw.MemLimit, serviceRaw.MemReservation)
+
+	svc.Replicas = unmarshalDeployReplicas(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas)
+
 	svc.Image = serviceRaw.Image
 	svc.Build = serviceRaw.Build.toBuildInfo()
 
@@ -1007,7 +1003,7 @@ func getRestartPolicy(svcName string, deployInfo *DeployInfoRaw, restartPolicy s
 		return apiv1.RestartPolicyAlways, fmt.Errorf("Cannot create container for service %s: invalid restart policy '%s'", svcName, restart)
 	}
 }
-func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResources, cpuCount, cpus, memLimit, memReservation Quantity) (*StackResources, error) {
+func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResources, cpuCount, cpus, memLimit, memReservation Quantity) *StackResources {
 	if resources == nil {
 		resources = &StackResources{}
 	}
@@ -1032,20 +1028,20 @@ func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResourc
 		resources.Requests.Memory = memReservation
 	}
 
-	return resources, nil
+	return resources
 }
 
-func unmarshalDeployReplicas(deployInfo *DeployInfoRaw, scale, replicas *int32) (int32, error) {
+func unmarshalDeployReplicas(deployInfo *DeployInfoRaw, scale, replicas *int32) int32 {
 	if replicas != nil {
-		return *replicas, nil
+		return *replicas
 	}
 	if deployInfo != nil && deployInfo.Replicas != nil {
-		return *deployInfo.Replicas, nil
+		return *deployInfo.Replicas
 	}
 	if scale != nil {
-		return *scale, nil
+		return *scale
 	}
-	return DefaultReplicasNumber, nil
+	return DefaultReplicasNumber
 }
 
 func (r DeployComposeResources) toServiceResources() ServiceResources {
