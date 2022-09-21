@@ -45,7 +45,7 @@ type JSONLogFormat struct {
 }
 
 // Format formats the message
-func (f *JSONLogFormat) Format(entry *logrus.Entry) ([]byte, error) {
+func (_ *JSONLogFormat) Format(entry *logrus.Entry) ([]byte, error) {
 	level := strings.ToLower(entry.Level.String())
 	if entry.Level == logrus.WarnLevel {
 		level = "info"

@@ -96,7 +96,7 @@ func (*fakeKubeConfig) Read() (*rest.Config, error) {
 func (fc *fakeKubeConfig) Modify(_ int, _, _ string) error {
 	return fc.errOnModify
 }
-func (*fakeKubeConfig) GetModifiedCMDAPIConfig() (*clientcmdapi.Config, error) {
+func (_ *fakeKubeConfig) GetModifiedCMDAPIConfig() (*clientcmdapi.Config, error) {
 	return nil, nil
 }
 
@@ -104,9 +104,9 @@ func (fk *fakeProxy) Start() {
 	fk.started = true
 }
 
-func (fk *fakeProxy) SetName(_ string) {}
+func (_ *fakeProxy) SetName(_ string) {}
 
-func (fk *fakeProxy) SetDivert(_ string) {}
+func (_ *fakeProxy) SetDivert(_ string) {}
 
 func (fk *fakeProxy) Shutdown(_ context.Context) error {
 	if fk.errOnShutdown != nil {
@@ -134,7 +134,7 @@ func (fe *fakeExecutor) Execute(command model.DeployCommand, _ []string) error {
 	return nil
 }
 
-func (*fakeExecutor) CleanUp(_ error) {}
+func (_ *fakeExecutor) CleanUp(_ error) {}
 
 func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 	p := &fakeProxy{}

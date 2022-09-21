@@ -40,7 +40,7 @@ func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte(t.message))
 }
 
-func (t *testSSHHandler) listenAndServe(address string) {
+func (_ *testSSHHandler) listenAndServe(address string) {
 	forwardHandler := &ssh.ForwardedTCPHandler{}
 	server := &ssh.Server{
 		Addr: address,
