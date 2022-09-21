@@ -1306,6 +1306,8 @@ func (b *BuildInfo) Copy() *BuildInfo {
 		Image:       b.Image,
 		ExportCache: b.ExportCache,
 	}
+
+	// copy to new pointers
 	cacheFrom := []string{}
 	cacheFrom = append(cacheFrom, b.CacheFrom...)
 	result.CacheFrom = cacheFrom
