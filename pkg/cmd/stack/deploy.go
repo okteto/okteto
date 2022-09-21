@@ -404,7 +404,7 @@ func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, c
 	return true
 }
 
-func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) map[string]string {
+func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, _ *rest.Config) map[string]string {
 	svc := stack.Services[svcName]
 	dependingServices := make([]string, 0)
 	for dependingSvc, condition := range svc.DependsOn {
@@ -447,7 +447,7 @@ func getErrorDueToRestartLimit(ctx context.Context, stack *model.Stack, svcName 
 	return nil
 }
 
-func getDependingFailedJobs(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) []string {
+func getDependingFailedJobs(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, _ *rest.Config) []string {
 	svc := stack.Services[svcName]
 	dependingJobs := make([]string, 0)
 	for dependingSvc := range svc.DependsOn {

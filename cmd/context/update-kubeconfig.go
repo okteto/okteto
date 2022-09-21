@@ -49,7 +49,7 @@ func UpdateKubeconfigCMD() *cobra.Command {
 	return cmd
 }
 
-func ExecuteUpdateKubeconfig(ctx context.Context) error {
+func ExecuteUpdateKubeconfig(_ context.Context) error {
 	if err := kubeconfig.Write(okteto.Context().Cfg, config.GetKubeconfigPath()[0]); err != nil {
 		return err
 	}

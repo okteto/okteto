@@ -28,6 +28,6 @@ func NewFakeLoginController(user *types.User, err error) *FakeLoginController {
 	return &FakeLoginController{User: user, Err: err}
 }
 
-func (fakeController FakeLoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*types.User, error) {
+func (fakeController FakeLoginController) AuthenticateToOktetoCluster(_ context.Context, _, _ string) (*types.User, error) {
 	return fakeController.User, fakeController.Err
 }

@@ -353,7 +353,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	return s, nil
 }
 
-func (svc *Service) ignoreSyncVolumes(s *Stack) {
+func (svc *Service) ignoreSyncVolumes(_ *Stack) {
 	notIgnoredVolumes := make([]StackVolume, 0)
 	wd, err := os.Getwd()
 	if err != nil {

@@ -89,7 +89,7 @@ func (c *divertClient) Update(ctx context.Context, divert *Divert) (*Divert, err
 	return &result, err
 }
 
-func (c *divertClient) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
+func (c *divertClient) Delete(ctx context.Context, name string, _ metav1.DeleteOptions) error {
 	return c.restClient.
 		Delete().
 		Namespace(c.ns).

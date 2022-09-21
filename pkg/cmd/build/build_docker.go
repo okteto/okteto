@@ -219,7 +219,7 @@ func buildWithDockerDaemon(ctx context.Context, buildOptions *types.BuildOptions
 
 }
 
-func displayStatus(out *os.File, eg *errgroup.Group, response dockerTypes.ImageBuildResponse, buildOutputMode string, at session.Attachable) error {
+func displayStatus(_ *os.File, eg *errgroup.Group, response dockerTypes.ImageBuildResponse, buildOutputMode string, at session.Attachable) error {
 
 	displayStatus := func(out *os.File, displayCh chan *buildkitClient.SolveStatus) {
 		var c console.Console
@@ -329,7 +329,7 @@ func isURL(path string) bool {
 }
 
 // getBuildContext returns the build context
-func getBuildContext(path, dockerfilePath string) (io.ReadCloser, error) {
+func getBuildContext(path, _ string) (io.ReadCloser, error) {
 	var dockerBuildContext io.ReadCloser
 	var err error
 	if urlutil.IsURL(path) {

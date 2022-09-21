@@ -125,7 +125,7 @@ func getTCPConnection(ctx context.Context, serverAddr string, keepAlive time.Dur
 	return c, nil
 }
 
-func getConn(ctx context.Context, serverAddr string, maxRetries int) (net.Conn, error) {
+func getConn(ctx context.Context, serverAddr string, _ int) (net.Conn, error) {
 	var lastErr error
 	t := time.NewTicker(100 * time.Millisecond)
 	for i := 0; i < 5; i++ {

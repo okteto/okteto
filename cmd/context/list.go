@@ -47,7 +47,7 @@ func List() *cobra.Command {
 	return cmd
 }
 
-func executeListContext(ctx context.Context) error {
+func executeListContext(_ context.Context) error {
 	contexts := getOktetoClusters(false)
 	contexts = append(contexts, getK8sClusters(getKubernetesContextList(true))...)
 

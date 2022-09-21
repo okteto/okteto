@@ -36,7 +36,7 @@ func NewFakeK8sProvider(objects ...runtime.Object) *FakeK8sProvider {
 	return &FakeK8sProvider{}
 }
 
-func (f *FakeK8sProvider) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
+func (f *FakeK8sProvider) Provide(_ *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
 	if f.client != nil {
 		return f.client, nil, nil
 	}

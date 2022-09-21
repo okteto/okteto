@@ -187,7 +187,7 @@ func askIfCreateStignoreDefaults(folder, stignorePath string) error {
 	return nil
 }
 
-func askIfUpdatingStignore(folder, stignorePath string) error {
+func askIfUpdatingStignore(_, stignorePath string) error {
 	stignoreBytes, err := os.ReadFile(stignorePath)
 	if err != nil {
 		return fmt.Errorf("failed to read '%s': %s", stignorePath, err.Error())

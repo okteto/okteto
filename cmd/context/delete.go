@@ -40,7 +40,7 @@ func DeleteCMD() *cobra.Command {
 	return cmd
 }
 
-func Delete(ctx context.Context, okCtx string) error {
+func Delete(_ context.Context, okCtx string) error {
 	ctxStore := okteto.ContextStore()
 	if okCtx == ctxStore.CurrentContext {
 		ctxStore.CurrentContext = ""

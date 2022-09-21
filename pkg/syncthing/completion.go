@@ -47,7 +47,7 @@ type waitForCompletion struct {
 }
 
 // WaitForCompletion waits for the remote to be totally synched
-func (s *Syncthing) WaitForCompletion(ctx context.Context, dev *model.Dev, reporter chan float64) error {
+func (s *Syncthing) WaitForCompletion(ctx context.Context, _ *model.Dev, reporter chan float64) error {
 	defer close(reporter)
 	ticker := time.NewTicker(250 * time.Millisecond)
 	wfc := &waitForCompletion{sy: s}

@@ -35,7 +35,7 @@ type testHTTPHandler struct {
 }
 type testSSHHandler struct{}
 
-func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (t *testHTTPHandler) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	oktetoLog.Println(fmt.Sprintf("message %s", t.message))
 	_, _ = w.Write([]byte(t.message))
 }

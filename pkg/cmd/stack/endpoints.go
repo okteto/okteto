@@ -25,7 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-func ListEndpoints(ctx context.Context, stack *model.Stack, output string) error {
+func ListEndpoints(ctx context.Context, stack *model.Stack, _ string) error {
 	c, _, err := okteto.GetK8sClient()
 	if err != nil {
 		return fmt.Errorf("failed to load your local Kubeconfig: %s", err)
