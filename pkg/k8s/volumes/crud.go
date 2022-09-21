@@ -49,14 +49,14 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 // CreateForDev deploys the volume claim for a given development container
 func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, devPath string) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
-	pvc := translate(dev)
-	k8Volume, err := vClient.Get(ctx, pvc.Name, metav1.GetOptions{})
+	pvcFromDev := translate(dev)
+	k8Volume, err := vClient.Get(ctx, pvcFromDev.Name, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("error getting kubernetes volume claim: %s", err)
 	}
 	if k8Volume.Name == "" {
-		oktetoLog.Infof("creating volume claim '%s'", pvc.Name)
-		_, err = vClient.Create(ctx, pvc, metav1.CreateOptions{})
+		oktetoLog.Infof("creating volume claim '%s'", pvcFromDev.Name)
+		_, err = vClient.Create(ctx, pvcFromDev, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error creating kubernetes volume claim: %s", err)
 		}
@@ -64,12 +64,12 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, 
 		if err := checkPVCValues(k8Volume, dev, devPath); err != nil {
 			return err
 		}
-		oktetoLog.Infof("updating volume claim '%s'", pvc.Name)
-		if pvc.Spec.StorageClassName == nil {
-			pvc.Spec.StorageClassName = k8Volume.Spec.StorageClassName
+		oktetoLog.Infof("updating volume claim '%s'", pvcFromDev.Name)
+		if pvcFromDev.Spec.StorageClassName == nil {
+			pvcFromDev.Spec.StorageClassName = k8Volume.Spec.StorageClassName
 		}
-		pvc.Spec.VolumeName = k8Volume.Spec.VolumeName
-		_, err = vClient.Update(ctx, pvc, metav1.UpdateOptions{})
+		pvcFromDev.Spec.VolumeName = k8Volume.Spec.VolumeName
+		_, err = vClient.Update(ctx, pvcFromDev, metav1.UpdateOptions{})
 		if err != nil {
 			return fmt.Errorf("error updating kubernetes volume claim: %s", err)
 		}
