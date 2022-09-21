@@ -34,6 +34,9 @@ const (
 	// OktetoSampleAnnotation indicates that the repo is a okteto sample
 	OktetoSampleAnnotation = "dev.okteto.com/sample"
 
+	// OktetoComposeUpdateStrategyAnnotation indicates how a compose service must be updated
+	OktetoComposeUpdateStrategyAnnotation = "dev.okteto.com/update"
+
 	// DetachedDevLabel indicates the detached dev pods
 	DetachedDevLabel = "detached.dev.okteto.com"
 
@@ -317,6 +320,9 @@ const (
 
 	// OktetoActionNameEnvVar defines the name of the pipeline action name
 	OktetoActionNameEnvVar = "OKTETO_ACTION_NAME"
+
+	// OktetoComposeUpdateStrategyEnvVar defines the strategy on compose to update the services
+	OktetoComposeUpdateStrategyEnvVar = "OKTETO_COMPOSE_UPDATE_STRATEGY"
 
 	// OktetoAutogenerateStignoreEnvVar skips the autogenerate stignore dialog and creates the default one
 	OktetoAutogenerateStignoreEnvVar = "OKTETO_AUTOGENERATE_STIGNORE"
