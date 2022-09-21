@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
+	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	k8sTesting "k8s.io/client-go/testing"
 )
 
@@ -222,4 +223,76 @@ func TestDestroyWithoutTimeoutWithGenericError(t *testing.T) {
 	err := DestroyWithoutTimeout(ctx, pvcName, ns, c)
 
 	assert.Error(t, err)
+}
+
+func TestCreateForDev(t *testing.T) {
+	namespace := "test"
+
+	dev := &model.Dev{
+		Name:      "test",
+		Namespace: namespace,
+		Volumes: []model.Volume{
+			{},
+		},
+	}
+
+	type verbAndError struct {
+		verb string
+		err  error
+	}
+
+	testTable := []struct {
+		name          string
+		expectedError bool
+		addErrors     []verbAndError
+	}{
+		{
+			name:          "no error",
+			expectedError: false,
+			addErrors:     []verbAndError{},
+		},
+		{
+			name:          "get error",
+			expectedError: true,
+			addErrors:     []verbAndError{{"get", assert.AnError}},
+		},
+		{
+			name:          "update error",
+			expectedError: true,
+			addErrors:     []verbAndError{{"update", assert.AnError}},
+		},
+	}
+
+	for _, test := range testTable {
+		t.Run(test.name, func(t *testing.T) {
+			c := fake.NewSimpleClientset()
+			existentPvc := &apiv1.PersistentVolumeClaim{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-okteto"},
+				Spec: apiv1.PersistentVolumeClaimSpec{
+					Resources: apiv1.ResourceRequirements{
+						Requests: apiv1.ResourceList{
+							"storage": resource.MustParse("2Gi"),
+						},
+					},
+				},
+			}
+
+			_, err := c.CoreV1().PersistentVolumeClaims(namespace).Create(context.Background(), existentPvc, metav1.CreateOptions{})
+			assert.NoError(t, err)
+
+			for _, verbAndError := range test.addErrors {
+				c.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor(verbAndError.verb, "persistentvolumeclaims", func(action k8sTesting.Action) (bool, runtime.Object, error) {
+					return true, nil, verbAndError.err
+				})
+			}
+
+			err = CreateForDev(context.Background(), dev, c, "")
+
+			if test.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

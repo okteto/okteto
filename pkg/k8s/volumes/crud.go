@@ -47,7 +47,7 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 }
 
 // CreateForDev deploys the volume claim for a given development container
-func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, devPath string) error {
+func CreateForDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface, devPath string) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	pvcFromDev := translate(dev)
 	k8Volume, err := vClient.Get(ctx, pvcFromDev.Name, metav1.GetOptions{})
