@@ -231,9 +231,7 @@ func TestCreateForDev(t *testing.T) {
 	dev := &model.Dev{
 		Name:      "test",
 		Namespace: namespace,
-		Volumes: []model.Volume{
-			{},
-		},
+		Volumes:   []model.Volume{},
 	}
 
 	type verbAndError struct {
@@ -242,24 +240,38 @@ func TestCreateForDev(t *testing.T) {
 	}
 
 	testTable := []struct {
-		name          string
-		expectedError bool
-		addErrors     []verbAndError
+		name               string
+		expectedError      bool
+		addErrors          []verbAndError
+		existentPvcStorage string
 	}{
 		{
-			name:          "no error",
-			expectedError: false,
-			addErrors:     []verbAndError{},
+			name:               "no error",
+			expectedError:      false,
+			addErrors:          []verbAndError{},
+			existentPvcStorage: "2Gi",
 		},
 		{
-			name:          "get error",
-			expectedError: true,
-			addErrors:     []verbAndError{{"get", assert.AnError}},
+			name:               "get error",
+			expectedError:      true,
+			addErrors:          []verbAndError{{"get", assert.AnError}},
+			existentPvcStorage: "2Gi",
 		},
 		{
-			name:          "update error",
-			expectedError: true,
-			addErrors:     []verbAndError{{"update", assert.AnError}},
+			name:               "update error",
+			expectedError:      true,
+			addErrors:          []verbAndError{{"update", assert.AnError}},
+			existentPvcStorage: "2Gi",
+		},
+		{
+			name:               "downsize error",
+			expectedError:      true,
+			existentPvcStorage: "20Gi",
+		},
+		{
+			name:               "upsize no error",
+			expectedError:      false,
+			existentPvcStorage: "1Gi",
 		},
 	}
 
@@ -271,7 +283,7 @@ func TestCreateForDev(t *testing.T) {
 				Spec: apiv1.PersistentVolumeClaimSpec{
 					Resources: apiv1.ResourceRequirements{
 						Requests: apiv1.ResourceList{
-							"storage": resource.MustParse("2Gi"),
+							"storage": resource.MustParse(test.existentPvcStorage),
 						},
 					},
 				},
