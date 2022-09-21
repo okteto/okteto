@@ -63,7 +63,7 @@ const (
 	recreateUpdateStrategy updateStrategy = "recreate"
 
 	// onDeleteUpdateStrategy represents a recreate update strategy
-	onDeleteUpdateStrategy updateStrategy = "onDelete"
+	onDeleteUpdateStrategy updateStrategy = "on-delete"
 )
 
 func buildStackImages(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {

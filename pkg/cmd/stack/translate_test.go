@@ -1588,7 +1588,7 @@ func TestGetStrategyStrategy(t *testing.T) {
 			},
 		},
 		{
-			name: "annotation ok - onDelete",
+			name: "annotation ok - on-delete",
 			svc: &model.Service{
 				Annotations: model.Annotations{
 					model.OktetoComposeUpdateStrategyAnnotation: string(onDeleteUpdateStrategy),
@@ -1600,7 +1600,7 @@ func TestGetStrategyStrategy(t *testing.T) {
 			},
 		},
 		{
-			name: "env var ok - onDelete",
+			name: "env var ok - on-delete",
 			svc: &model.Service{
 				Annotations: model.Annotations{},
 			},
