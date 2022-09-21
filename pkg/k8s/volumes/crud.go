@@ -82,7 +82,6 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface, d
 }
 
 func isDynamicallyProvisionedPVCError(err error, pvcName string) bool {
-	// k8sErrors.
 	errorString := fmt.Sprintf("persistentvolumeclaims \"%s\" is forbidden: only dynamically provisioned pvc can be resized and the storageclass that provisions the pvc must support resize", pvcName)
 	return strings.Contains(err.Error(), errorString)
 }
