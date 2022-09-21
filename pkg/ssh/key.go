@@ -56,10 +56,10 @@ func KeyExists() bool {
 // GenerateKeys generates a SSH key pair on path
 func GenerateKeys() error {
 	publicKeyPath, privateKeyPath := getKeyPaths()
-	return generateKeys(publicKeyPath, privateKeyPath, bitSize)
+	return generate(publicKeyPath, privateKeyPath, bitSize)
 }
 
-func generateKeys(public, private string, bitSize int) error {
+func generate(public, private string, bitSize int) error {
 	privateKey, err := generatePrivateKey(bitSize)
 	if err != nil {
 		return fmt.Errorf("failed to generate private SSH key: %s", err)

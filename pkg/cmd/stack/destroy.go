@@ -51,7 +51,7 @@ func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout ti
 		return err
 	}
 
-	err = destroy(ctx, s, removeVolumes, c, timeout)
+	err = destroyStack(ctx, s, removeVolumes, c, timeout)
 	if err != nil {
 		output = fmt.Sprintf("%s\nCompose '%s' destruction failed: %s", output, s.Name, err.Error())
 		cfg.Data[statusField] = errorStatus
@@ -65,7 +65,7 @@ func Destroy(ctx context.Context, s *model.Stack, removeVolumes bool, timeout ti
 	return err
 }
 
-func destroy(ctx context.Context, s *model.Stack, removeVolumes bool, c *kubernetes.Clientset, timeout time.Duration) error {
+func destroyStack(ctx context.Context, s *model.Stack, removeVolumes bool, c *kubernetes.Clientset, timeout time.Duration) error {
 	oktetoLog.Spinner(fmt.Sprintf("Destroying compose '%s'...", s.Name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
