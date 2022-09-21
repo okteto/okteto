@@ -61,7 +61,7 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, 
 			return fmt.Errorf("error creating kubernetes volume claim: %s", err)
 		}
 	} else {
-		if err := checkPVCValues(pvc, dev, devPath); err != nil {
+		if err := checkPVCValues(k8Volume, dev, devPath); err != nil {
 			return err
 		}
 		oktetoLog.Infof("updating volume claim '%s'", pvc.Name)
