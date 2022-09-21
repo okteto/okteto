@@ -1313,6 +1313,12 @@ func (b *BuildInfo) Copy() *BuildInfo {
 	args = append(args, b.Args...)
 	result.Args = args
 
+	secrets := BuildSecrets{}
+	for k, v := range b.Secrets {
+		secrets[k] = v
+	}
+	result.Secrets = secrets
+
 	volumesToMount := []StackVolume{}
 	volumesToMount = append(volumesToMount, b.VolumesToInclude...)
 	result.VolumesToInclude = volumesToMount
