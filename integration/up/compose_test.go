@@ -174,7 +174,7 @@ func createAppDockerfile(dir string) error {
 
 	appDockerfilePath := filepath.Join(dir, "app", "Dockerfile")
 	appDockerfileContent := []byte("FROM python:alpine")
-	if err := os.WriteFile(appDockerfilePath, appDockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(appDockerfilePath, appDockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -187,7 +187,7 @@ func createNginxDir(dir string) error {
 
 	nginxPath := filepath.Join(dir, "nginx", "nginx.conf")
 	nginxContent := []byte(nginxConf)
-	if err := os.WriteFile(nginxPath, nginxContent, 0644); err != nil {
+	if err := os.WriteFile(nginxPath, nginxContent, 0600); err != nil {
 		return err
 	}
 	return nil

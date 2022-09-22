@@ -236,7 +236,7 @@ func destroyIngresses(ctx context.Context, s *model.Stack, c kubernetes.Interfac
 			continue
 		}
 		if iList[i].GetLabels()[model.StackEndpointNameLabel] == "" {
-			//ingress created with "public"
+			// ingress created with "public"
 			continue
 		}
 		if err := iClient.Destroy(ctx, iList[i].GetName(), iList[i].GetNamespace()); err != nil {

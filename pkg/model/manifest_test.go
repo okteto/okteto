@@ -790,13 +790,13 @@ sync:
 			file := ""
 			if tt.manifestBytes != nil {
 				file = filepath.Join(dir, "okteto.yml")
-				assert.NoError(t, os.WriteFile(filepath.Join(dir, "okteto.yml"), tt.manifestBytes, 0644))
+				assert.NoError(t, os.WriteFile(filepath.Join(dir, "okteto.yml"), tt.manifestBytes, 0600))
 			}
 			if tt.composeBytes != nil {
 				if file == "" {
 					file = filepath.Join(dir, "docker-compose.yml")
 				}
-				assert.NoError(t, os.WriteFile(filepath.Join(dir, "docker-compose.yml"), tt.composeBytes, 0644))
+				assert.NoError(t, os.WriteFile(filepath.Join(dir, "docker-compose.yml"), tt.composeBytes, 0600))
 			}
 			_, err := getManifestFromFile(dir, file)
 

@@ -365,14 +365,19 @@ func createTarFromPath(contextDir string) (io.ReadCloser, error) {
 func readDockerignore(contextDir string) ([]string, error) {
 	var excludes []string
 
-	f, err := os.Open(filepath.Join(contextDir, ".dockerignore"))
+	path := filepath.Join(contextDir, ".dockerignore")
+	f, err := os.Open(path)
 	switch {
 	case os.IsNotExist(err):
 		return excludes, nil
 	case err != nil:
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", path, err)
+		}
+	}()
 
 	return dockerignore.ReadAll(f)
 }

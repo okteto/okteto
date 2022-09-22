@@ -117,7 +117,7 @@ func createStackFile(t *testing.T) (string, error) {
 	dir := t.TempDir()
 	log.Printf("created tempdir: %s", dir)
 	filePath := filepath.Join(dir, "okteto-stack.yaml")
-	if err := os.WriteFile(filePath, []byte(stackFile), 0644); err != nil {
+	if err := os.WriteFile(filePath, []byte(stackFile), 0600); err != nil {
 		return "", err
 	}
 	return filePath, nil

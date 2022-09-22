@@ -1070,6 +1070,7 @@ deploy:
 				Dependencies: map[string]*Dependency{},
 				Context:      "context-to-use",
 				IsV2:         true,
+				Type:         OktetoManifestType,
 			},
 			isErrorExpected: false,
 		},
@@ -1088,6 +1089,7 @@ dev:
 `),
 			expected: &Manifest{
 				IsV2:  true,
+				Type:  OktetoManifestType,
 				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
@@ -1240,6 +1242,7 @@ dev:
 sync:
   - app:/app`),
 			expected: &Manifest{
+				Type:          OktetoManifestType,
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Dependencies:  map[string]*Dependency{},
@@ -1322,6 +1325,7 @@ sync:
 services:
   - name: svc`),
 			expected: &Manifest{
+				Type:          OktetoManifestType,
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Dependencies:  map[string]*Dependency{},
@@ -1452,6 +1456,7 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				Type:         OktetoManifestType,
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
@@ -1537,6 +1542,7 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				Type:         OktetoManifestType,
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
@@ -1702,6 +1708,7 @@ deploy:
   - okteto stack deploy
 `),
 			expected: &Manifest{
+				Type:         OktetoManifestType,
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
@@ -1727,6 +1734,7 @@ devs:
   - test
 `),
 			expected: &Manifest{
+				Type:         OktetoManifestType,
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},

@@ -818,7 +818,11 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", filename, err)
+		}
+	}()
 
 	envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 	if err != nil {

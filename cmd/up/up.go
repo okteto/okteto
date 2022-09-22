@@ -51,7 +51,11 @@ import (
 )
 
 // ReconnectingMessage is the message shown when we are trying to reconnect
-const ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
+const (
+	ReconnectingMessage = "Trying to reconnect to your cluster. File synchronization will automatically resume when the connection improves."
+
+	composeVolumesUrl = "https://www.okteto.com/docs/reference/compose/#volumes-string-optional"
+)
 
 // UpOptions represents the options available on up command
 type UpOptions struct {
@@ -158,6 +162,9 @@ func Up() *cobra.Command {
 			os.Setenv(model.OktetoNameEnvVar, oktetoManifest.Name)
 
 			if len(oktetoManifest.Dev) == 0 {
+				if oktetoManifest.Type == model.StackType {
+					return fmt.Errorf("your docker compose file is not currently supported: Okteto requires a 'host volume' to be defined. See %s", composeVolumesUrl)
+				}
 				oktetoLog.Warning("okteto manifest has no 'dev' section.")
 				answer, err := utils.AskYesNo("Do you want to configure okteto manifest now? [y/n]")
 				if err != nil {
@@ -319,6 +326,12 @@ func Up() *cobra.Command {
 
 			if _, ok := os.LookupEnv(model.OktetoAutoDeployEnvVar); ok {
 				upOptions.Deploy = true
+			}
+
+			if up.Manifest.Type == model.OktetoManifestType && !up.Manifest.IsV2 {
+				oktetoLog.Warning("okteto manifest v1 is deprecated and will be removed in okteto 3.0")
+				oktetoLog.Println(oktetoLog.BlueString(`    Follow this guide to upgrade to the new okteto manifest schema:
+    https://www.okteto.com/docs/reference/manifest-migration/`))
 			}
 
 			err = up.start()
@@ -525,6 +538,7 @@ func (up *upContext) start() error {
 	analytics.TrackUp(analytics.TrackUpMetadata{
 		IsInteractive:          up.getInteractive(),
 		IsOktetoRepository:     utils.IsOktetoRepo(),
+		IsV2:                   up.Manifest.IsV2,
 		HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
 		HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
 		HasDeploySection: (up.Manifest.IsV2 &&

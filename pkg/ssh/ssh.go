@@ -20,6 +20,7 @@ import (
 	"strconv"
 
 	"github.com/okteto/okteto/pkg/config"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 func buildHostname(name string) string {
@@ -139,8 +140,11 @@ func getConfig(path string) (*sshConfig, error) {
 
 		return nil, fmt.Errorf("can't open %s: %s", path, err)
 	}
-
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", path, err)
+		}
+	}()
 
 	cfg, err := parse(f)
 	if err != nil {

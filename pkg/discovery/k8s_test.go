@@ -27,7 +27,11 @@ func TestGetK8sManifestFileWhenExists(t *testing.T) {
 	fullpath := filepath.Join(wd, "k8s.yml")
 	f, err := os.Create(fullpath)
 	assert.NoError(t, err)
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			t.Fatalf("Error closing file %s: %s", fullpath, err)
+		}
+	}()
 
 	result, err := GetK8sManifestPath(wd)
 	assert.NoError(t, err)
@@ -41,7 +45,11 @@ func TestGetK8sManifestFolderWhenExists(t *testing.T) {
 	assert.NoError(t, os.MkdirAll(filepath.Dir(fullpath), 0750))
 	f, err := os.Create(fullpath)
 	assert.NoError(t, err)
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			t.Fatalf("Error closing file %s: %s", fullpath, err)
+		}
+	}()
 
 	result, err := GetK8sManifestPath(wd)
 	assert.NoError(t, err)

@@ -48,16 +48,24 @@ func addStignoreSecrets(dev *model.Dev) error {
 				Hint: "Update the 'sync' field of your okteto manifest to point to a valid directory path",
 			}
 		}
-		defer infile.Close()
+		defer func() {
+			if err := infile.Close(); err != nil {
+				oktetoLog.Debugf("Error closing file %s: %s", stignorePath, err)
+			}
+		}()
 		reader := bufio.NewReader(infile)
 
 		stignoreName := fmt.Sprintf(".stignore-%d", i+1)
 		transformedStignorePath := filepath.Join(config.GetAppHome(dev.Namespace, dev.Name), stignoreName)
-		outfile, err := os.OpenFile(transformedStignorePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+		outfile, err := os.OpenFile(transformedStignorePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 		if err != nil {
 			return err
 		}
-		defer outfile.Close()
+		defer func() {
+			if err := outfile.Close(); err != nil {
+				oktetoLog.Infof("Error closing file %s: %s", transformedStignorePath, err)
+			}
+		}()
 
 		writer := bufio.NewWriter(outfile)
 		defer writer.Flush()
@@ -96,7 +104,7 @@ func addStignoreSecrets(dev *model.Dev) error {
 			model.Secret{
 				LocalPath:  transformedStignorePath,
 				RemotePath: path.Join(folder.RemotePath, ".stignore"),
-				Mode:       0644,
+				Mode:       0600,
 			},
 		)
 	}
@@ -162,7 +170,7 @@ func askIfCreateStignoreDefaults(folder, stignorePath string) error {
 
 	if !stignoreDefaults {
 		stignoreContent := ""
-		if err := os.WriteFile(stignorePath, []byte(stignoreContent), 0644); err != nil {
+		if err := os.WriteFile(stignorePath, []byte(stignoreContent), 0600); err != nil {
 			return fmt.Errorf("failed to create empty '%s': %s", stignorePath, err.Error())
 		}
 		return nil
@@ -200,7 +208,7 @@ func askIfUpdatingStignore(folder, stignorePath string) error {
 	} else {
 		stignoreContent = fmt.Sprintf("// .git\n%s", stignoreContent)
 	}
-	if err := os.WriteFile(stignorePath, []byte(stignoreContent), 0644); err != nil {
+	if err := os.WriteFile(stignorePath, []byte(stignoreContent), 0600); err != nil {
 		return fmt.Errorf("failed to update '%s': %s", stignorePath, err.Error())
 	}
 	return nil

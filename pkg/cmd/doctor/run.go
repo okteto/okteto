@@ -121,7 +121,11 @@ func generateSummaryFile() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer fileSummary.Close()
+	defer func() {
+		if err := fileSummary.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", summaryPath, err)
+		}
+	}()
 	fmt.Fprintf(fileSummary, "version=%s\nos=%s\narch=%s\n", config.VersionString, runtime.GOOS, runtime.GOARCH)
 	if err := fileSummary.Sync(); err != nil {
 		return "", err
@@ -155,7 +159,11 @@ func generateManifestFile(devPath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer manifestFile.Close()
+	defer func() {
+		if err := manifestFile.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", manifestFilename, err)
+		}
+	}()
 
 	b, err := os.ReadFile(devPath)
 	if err != nil {
@@ -239,7 +247,11 @@ func generatePodFile(ctx context.Context, dev *model.Dev, c *kubernetes.Clientse
 	if err != nil {
 		return "", err
 	}
-	defer podFile.Close()
+	defer func() {
+		if err := podFile.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", podFilename, err)
+		}
+	}()
 
 	devContainer := apps.GetDevContainer(&pod.Spec, dev.Container)
 	cpu := "unlimited"
@@ -290,7 +302,12 @@ func generateRemoteSyncthingLogsFile(ctx context.Context, dev *model.Dev, c *kub
 	if err != nil {
 		return "", err
 	}
-	defer fileRemoteLog.Close()
+	defer func() {
+		if err := fileRemoteLog.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", remoteLogsPath, err)
+		}
+	}()
+
 	fmt.Fprint(fileRemoteLog, remoteLogs)
 	if err := fileRemoteLog.Sync(); err != nil {
 		return "", err

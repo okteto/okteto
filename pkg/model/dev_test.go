@@ -1413,7 +1413,7 @@ services:
 }
 
 func createEnvFile(content map[string]string) (string, error) {
-	file, err := os.OpenFile(".env", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o666)
+	file, err := os.OpenFile(".env", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return "", err
 	}
@@ -1522,8 +1522,8 @@ func TestBuildInfo_GetDockerfilePath(t *testing.T) {
 
 	dockerfilePath := filepath.Join(dir, "Dockerfile")
 	dockerfiledevPath := filepath.Join(dir, "Dockerfile.dev")
-	assert.NoError(t, os.WriteFile(dockerfilePath, []byte(`FROM alpine`), 0644))
-	assert.NoError(t, os.WriteFile(dockerfiledevPath, []byte(`FROM alpine`), 0644))
+	assert.NoError(t, os.WriteFile(dockerfilePath, []byte(`FROM alpine`), 0600))
+	assert.NoError(t, os.WriteFile(dockerfiledevPath, []byte(`FROM alpine`), 0600))
 	tests := []struct {
 		name       string
 		context    string

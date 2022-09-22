@@ -15,8 +15,9 @@ package utils
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"os"
 	"strings"
 	"sync"
@@ -33,6 +34,7 @@ var (
 	isOktetoSampleOnce sync.Once
 )
 
+// GetBranch returns the branch from a .git directory
 func GetBranch(path string) (string, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
@@ -88,11 +90,16 @@ func IsCleanDirectory(ctx context.Context, path string) (bool, error) {
 	return status.IsClean(), nil
 }
 
-func GetRandomSHA(ctx context.Context, path string) string {
+// GetRandomSHA returns a random sha generated in the fly
+func GetRandomSHA() string {
 	var letters = []rune("0123456789abcdef")
 	b := make([]rune, 40)
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
+		if err != nil {
+			oktetoLog.Info("could not generate new int")
+		}
+		b[i] = letters[n.Int64()]
 	}
 	return string(b)
 }

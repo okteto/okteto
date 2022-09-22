@@ -275,7 +275,11 @@ func ContainerLogs(ctx context.Context, containerName, podName, namespace string
 	if err != nil {
 		return "", err
 	}
-	defer logsStream.Close()
+	defer func() {
+		if err := logsStream.Close(); err != nil {
+			oktetoLog.Debugf("Error closing logStream: %s", err)
+		}
+	}()
 
 	buf := new(bytes.Buffer)
 

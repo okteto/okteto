@@ -38,26 +38,26 @@ const (
 	contextsStoreFile       = "config.json"
 
 	oktetoFolderName = ".okteto"
-	//Activating up started
+	// Activating up started
 	Activating UpState = "activating"
-	//Starting up started the dev pod creation
+	// Starting up started the dev pod creation
 	Starting = "starting"
-	//Attaching up attaching volume
+	// Attaching up attaching volume
 	Attaching = "attaching"
-	//Pulling  up pulling images
+	// Pulling  up pulling images
 	Pulling = "pulling"
-	//Start ingSync up preparing syncthing
+	// Start ingSync up preparing syncthing
 	StartingSync = "startingSync"
-	//Synchronize ing up is syncthing
+	// Synchronize ing up is syncthing
 	Synchronizing = "synchronizing"
-	//Ready up fi nished
+	// Ready up fi nished
 	Ready = "ready"
-	//Fai led up failed
+	// Fai led up failed
 	Failed = "failed"
 
 	stateFile string = "okteto.state"
 
-	//OktetoContextVariableName defines the kubeconfig context of okteto commands
+	// OktetoContextVariableName defines the kubeconfig context of okteto commands
 	OktetoContextVariableName = "OKTETO_CONTEXT"
 )
 
@@ -129,7 +129,7 @@ func UpdateStateFile(dev *model.Dev, state UpState) error {
 	}
 
 	s := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
-	if err := os.WriteFile(s, []byte(state), 0644); err != nil {
+	if err := os.WriteFile(s, []byte(state), 0600); err != nil {
 		return fmt.Errorf("failed to update state file: %s", err)
 	}
 

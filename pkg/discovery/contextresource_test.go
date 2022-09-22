@@ -73,7 +73,11 @@ func TestGetContextResourcePathWhenExists(t *testing.T) {
 				fullpath := filepath.Join(wd, fileToCreate)
 				f, err := os.Create(fullpath)
 				assert.NoError(t, err)
-				defer f.Close()
+				defer func() {
+					if err := f.Close(); err != nil {
+						t.Fatalf("Error closing file %s: %s", fullpath, err)
+					}
+				}()
 			}
 			result, err := GetContextResourcePath(wd)
 			assert.ErrorIs(t, tt.expectErr, err)

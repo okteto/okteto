@@ -21,7 +21,6 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/pointer"
 )
@@ -29,7 +28,7 @@ import (
 func TestCreate(t *testing.T) {
 	ctx := context.Background()
 	job := &batchv1.Job{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
 		},
@@ -54,7 +53,7 @@ func TestUpdate(t *testing.T) {
 	ctx := context.Background()
 	labels := map[string]string{"key": "value"}
 	job := &batchv1.Job{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
 			Labels:    labels,
@@ -65,7 +64,7 @@ func TestUpdate(t *testing.T) {
 
 	updatedLabels := map[string]string{"key": "value", "key2": "value2"}
 	updatedJob := &batchv1.Job{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
 			Labels:    updatedLabels,
@@ -130,7 +129,7 @@ func TestDestroy(t *testing.T) {
 				t.Fatalf("unexpected error '%s'", err)
 			}
 
-			if list, _ := clientset.CoreV1().Pods(tt.namespace).List(ctx, v1.ListOptions{}); tt.deleted && len(list.Items) != 0 {
+			if list, _ := clientset.CoreV1().Pods(tt.namespace).List(ctx, metav1.ListOptions{}); tt.deleted && len(list.Items) != 0 {
 				t.Fatal("Not deleted job pods")
 			}
 		})
@@ -141,7 +140,7 @@ func TestList(t *testing.T) {
 	ctx := context.Background()
 
 	job := &batchv1.Job{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
 			Namespace: "test",
 		},
@@ -163,7 +162,7 @@ func TestIsSuccedded(t *testing.T) {
 	ctx := context.Background()
 
 	succeedjob := &batchv1.Job{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "succededtest",
 			Namespace: "test",
 		},
@@ -175,7 +174,7 @@ func TestIsSuccedded(t *testing.T) {
 		},
 	}
 	failedjob := &batchv1.Job{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "failedtest",
 			Namespace: "test",
 		},
@@ -201,7 +200,7 @@ func TestIsFailed(t *testing.T) {
 	ctx := context.Background()
 
 	succeedjob := &batchv1.Job{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "succededtest",
 			Namespace: "test",
 		},
@@ -214,7 +213,7 @@ func TestIsFailed(t *testing.T) {
 		},
 	}
 	failedjob := &batchv1.Job{
-		ObjectMeta: v1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "failedtest",
 			Namespace: "test",
 		},

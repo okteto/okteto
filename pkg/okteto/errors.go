@@ -3,7 +3,7 @@ package okteto
 import "errors"
 
 var (
-	//ErrGithubMissingBusinessEmail is raised when the user does not have a business email
+	// ErrGithubMissingBusinessEmail is raised when the user does not have a business email
 	ErrGithubMissingBusinessEmail = errors.New("github-missing-business-email")
 )
 

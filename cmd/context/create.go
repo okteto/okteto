@@ -55,7 +55,7 @@ func NewContextCommand() *ContextCommand {
 	}
 }
 
-// Create adds a new cluster to okteto context
+// CreateCMD adds a new cluster to okteto context
 func CreateCMD() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
@@ -142,7 +142,7 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 		ctxStore.Contexts[ctxOptions.Context] = &okteto.OktetoContext{Name: ctxOptions.Context}
 		created = true
 	} else if ctxOptions.Token == "" {
-		//this is to avoid login with the browser again if we already have a valid token
+		// this is to avoid login with the browser again if we already have a valid token
 		ctxOptions.Token = okCtx.Token
 		if ctxOptions.Builder == "" && okCtx.Builder != "" {
 			ctxOptions.Builder = okCtx.Builder

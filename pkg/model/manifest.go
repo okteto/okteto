@@ -651,6 +651,7 @@ func Read(bytes []byte) (*Manifest, error) {
 		return nil, err
 	}
 	manifest.Manifest = bytes
+	manifest.Type = OktetoManifestType
 	return manifest, nil
 }
 

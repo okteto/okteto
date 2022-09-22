@@ -31,7 +31,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
-	"github.com/okteto/okteto/pkg/errors"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
@@ -291,7 +290,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	// don't divert if current namespace is the diverted namespace
 	if deployOptions.Manifest.Deploy.Divert != nil {
 		if !okteto.IsOkteto() {
-			return errors.ErrDivertNotSupported
+			return oktetoErrors.ErrDivertNotSupported
 		}
 		if deployOptions.Manifest.Deploy.Divert.Namespace != deployOptions.Manifest.Namespace {
 			dc.Proxy.SetDivert(deployOptions.Manifest.Deploy.Divert.Namespace)
@@ -595,33 +594,32 @@ func (dc *DeployCommand) cleanUp(ctx context.Context) {
 }
 
 func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesToBuild func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {
+	var stackServicesWithBuild map[string]bool
+
+	if stack := deployOptions.Manifest.GetStack(); stack != nil {
+		stackServicesWithBuild = stack.GetServicesWithBuildSection()
+	}
+
+	allServicesWithBuildSection := deployOptions.Manifest.GetBuildServices()
+	oktetoManifestServicesWithBuild := setDifference(allServicesWithBuildSection, stackServicesWithBuild) // Warning: this way of getting the oktetoManifestServicesWithBuild is highly dependent on the manifest struct as it is now. We are assuming that: *okteto* manifest build = manifest build - stack build section
+	servicesToDeployWithBuild := setIntersection(allServicesWithBuildSection, sliceToSet(deployOptions.servicesToDeploy))
+	// We need to build:
+	// - All the services that have a build section defined in the *okteto* manifest
+	// - Services from *deployOptions.servicesToDeploy* that have a build section
+
+	servicesToBuildSet := setUnion(oktetoManifestServicesWithBuild, servicesToDeployWithBuild)
+
 	if deployOptions.Build {
 		buildOptions := &types.BuildOptions{
 			EnableStages: true,
 			Manifest:     deployOptions.Manifest,
-			CommandArgs:  deployOptions.servicesToDeploy,
+			CommandArgs:  setToSlice(servicesToBuildSet),
 		}
 		oktetoLog.Debug("force build from manifest definition")
 		if errBuild := build(ctx, buildOptions); errBuild != nil {
 			return errBuild
 		}
 	} else {
-		// We will check the images from the services coming from:
-		// 1. The services defined in the okteto manifest
-		// 2. deployOptions.servicesToDeploy
-		// For that we'll need to know which services were defined in the stack, to know which ones were defined in the okteto manifest
-		// The `Manifest` has all the services combined into one, so we need (allServices - stackServices) + deployOptions.servicesToDeploy
-		var stackServices map[string]bool
-
-		if stack := deployOptions.Manifest.GetStack(); stack != nil {
-			stackServices = stack.GetServicesWithBuildSection()
-		}
-
-		allServicesWithBuildSection := deployOptions.Manifest.GetBuildServices()
-		oktetoManifestBuildServices := setDifference(allServicesWithBuildSection, stackServices)
-		// servicesToBuildSet = (allServicesWithBuildSection - stackServices) + deployOptions.servicesToDeploy
-		servicesToBuildSet := setUnion(oktetoManifestBuildServices, sliceToSet(deployOptions.servicesToDeploy))
-
 		servicesToBuild, err := getServicesToBuild(ctx, deployOptions.Manifest, setToSlice(servicesToBuildSet))
 		if err != nil {
 			return err

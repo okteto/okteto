@@ -30,7 +30,11 @@ func createPIDFile(ns, dpName string) error {
 	if err != nil {
 		return fmt.Errorf("unable to create PID file at %s", filePath)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", filePath, err)
+		}
+	}()
 	if _, err := file.WriteString(strconv.Itoa(os.Getpid())); err != nil {
 		return fmt.Errorf("unable to write to PID file at %s", filePath)
 	}

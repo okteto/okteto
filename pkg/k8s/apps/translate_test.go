@@ -377,7 +377,7 @@ services:
 		},
 	}
 
-	//checking d1 state
+	// checking d1 state
 	d1App := tr1.App.(*DeploymentApp)
 	if !reflect.DeepEqual(d1App.d.Spec.Strategy, appsv1.DeploymentStrategy{Type: appsv1.RollingUpdateDeploymentStrategyType}) {
 		t.Fatalf("d1 wrong strategy %v", d1App.d.Spec.Strategy)
@@ -409,7 +409,7 @@ services:
 		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledD1), string(marshalledD1Orig))
 	}
 
-	//checking dev d1 state
+	// checking dev d1 state
 	devD1App := tr1.DevApp.(*DeploymentApp)
 	if !reflect.DeepEqual(devD1App.d.Spec.Strategy, appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}) {
 		t.Fatalf("dev d1 wrong strategy %v", d1App.d.Spec.Strategy)
@@ -545,7 +545,7 @@ services:
 		},
 	}
 
-	//checking d2 state
+	// checking d2 state
 	d2Orig := deployments.Sandbox(dev2)
 	if tr2.App.Replicas() != 0 {
 		t.Fatalf("d2 is running %d replicas", tr2.App.Replicas())
@@ -570,7 +570,7 @@ services:
 		t.Fatalf("Wrong d2 generation.\nActual %+v, \nExpected %+v", string(marshalledD2), string(marshalledD2Orig))
 	}
 
-	//checking dev d2 state
+	// checking dev d2 state
 	if tr2.DevApp.Replicas() != 3 {
 		t.Fatalf("dev d2 is running %d replicas", tr2.DevApp.Replicas())
 	}
@@ -1497,7 +1497,7 @@ services:
 		},
 	}
 
-	//checking sfs1 state
+	// checking sfs1 state
 	sfs1Orig := statefulsets.Sandbox(dev1)
 	if tr1.App.Replicas() != 0 {
 		t.Fatalf("sfs1 is running %d replicas", tr1.App.Replicas())
@@ -1523,7 +1523,7 @@ services:
 		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledSfs1), string(marshalledSfs1Orig))
 	}
 
-	//checking dev sfs1 state
+	// checking dev sfs1 state
 	if tr1.DevApp.Replicas() != 1 {
 		t.Fatalf("dev sfs1 is running %d replicas", tr1.DevApp.Replicas())
 	}
@@ -1651,7 +1651,7 @@ services:
 		},
 	}
 
-	//checking sfs2 state
+	// checking sfs2 state
 	sfs2Orig := statefulsets.Sandbox(dev2)
 	if tr2.App.Replicas() != 0 {
 		t.Fatalf("sfs2 is running %d replicas", tr2.App.Replicas())
@@ -1676,7 +1676,7 @@ services:
 		t.Fatalf("Wrong sfs2 generation.\nActual %+v, \nExpected %+v", string(marshalledSfs2), string(marshalledSfs2Orig))
 	}
 
-	//checking dev sfs2 state
+	// checking dev sfs2 state
 	if tr2.DevApp.Replicas() != 3 {
 		t.Fatalf("dev sfs2 is running %d replicas", tr2.DevApp.Replicas())
 	}

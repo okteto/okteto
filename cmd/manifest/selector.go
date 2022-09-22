@@ -101,15 +101,15 @@ func selectDockerfiles(cwd string) ([]string, error) {
 		}
 		if selection == noMoreDockerfileOption {
 			break
-		} else {
-			for idx, d := range dockerfiles {
-				if d != selection {
-					continue
-				}
-				dockerfiles = append(dockerfiles[:idx], dockerfiles[idx+1:]...)
-				toConfigure = append(toConfigure, selection)
-			}
 		}
+		for idx, d := range dockerfiles {
+			if d != selection {
+				continue
+			}
+			dockerfiles = append(dockerfiles[:idx], dockerfiles[idx+1:]...)
+			toConfigure = append(toConfigure, selection)
+		}
+
 	}
 	if err := validateDockerfileSelection(toConfigure); err != nil {
 		return nil, err

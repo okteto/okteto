@@ -16,6 +16,7 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -40,7 +41,7 @@ func Test_getBranch(t *testing.T) {
 	}
 
 	filename := filepath.Join(dir, "example-git-file")
-	if err := os.WriteFile(filename, []byte("hello world!"), 0644); err != nil {
+	if err := os.WriteFile(filename, []byte("hello world!"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -146,4 +147,17 @@ func Test_isOktetoRepoFromURL(t *testing.T) {
 			assert.Equal(t, tt.expected, isOktetoSample)
 		})
 	}
+}
+
+func TestGetRandomSHA(t *testing.T) {
+	SHALen := 40
+	defaultSHA := strings.Repeat("0", SHALen)
+	sha := GetRandomSHA()
+	assert.Len(t, sha, SHALen)
+	assert.NotEqual(t, sha, defaultSHA)
+	anotherSHA := GetRandomSHA()
+	assert.Len(t, anotherSHA, SHALen)
+	assert.NotEqual(t, anotherSHA, defaultSHA)
+
+	assert.NotEqual(t, anotherSHA, sha)
 }

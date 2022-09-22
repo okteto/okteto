@@ -58,22 +58,22 @@ const (
 	// SyncLabel indicates a syncthing pod
 	SyncLabel = "syncthing.okteto.com"
 
-	//OktetoRepositoryAnnotation indicates the git repo url with the source code of this component
+	// OktetoRepositoryAnnotation indicates the git repo url with the source code of this component
 	OktetoRepositoryAnnotation = "dev.okteto.com/repository"
 
-	//OktetoDevNameAnnotation indicates the name of the dev to be deployed
+	// OktetoDevNameAnnotation indicates the name of the dev to be deployed
 	OktetoDevNameAnnotation = "dev.okteto.com/name"
 
-	//OktetoPathAnnotation indicates the okteto manifest path of this component
+	// OktetoPathAnnotation indicates the okteto manifest path of this component
 	OktetoPathAnnotation = "dev.okteto.com/path"
 
-	//FluxAnnotation indicates if the deployment ha been deployed by Flux
+	// FluxAnnotation indicates if the deployment ha been deployed by Flux
 	FluxAnnotation = "helm.fluxcd.io/antecedent"
 
-	//DefaultStorageClassAnnotation indicates the defaault storage class
+	// DefaultStorageClassAnnotation indicates the defaault storage class
 	DefaultStorageClassAnnotation = "storageclass.kubernetes.io/is-default-class"
 
-	//StateBeforeSleepingAnnontation indicates the state of the resource prior to scale it to zero
+	// StateBeforeSleepingAnnontation indicates the state of the resource prior to scale it to zero
 	StateBeforeSleepingAnnontation = "dev.okteto.com/state-before-sleeping"
 
 	// DeployedByLabel indicates the service account that deployed an object
@@ -109,74 +109,74 @@ const (
 	// StackVolumeNameLabel indicates the name of the stack volume an object belongs to
 	StackVolumeNameLabel = "stack.okteto.com/volume"
 
-	//Deployment k8s deployemnt kind
+	// Deployment k8s deployemnt kind
 	Deployment = "Deployment"
-	//StatefulSet k8s statefulset kind
+	// StatefulSet k8s statefulset kind
 	StatefulSet = "StatefulSet"
-	//Job k8s job kind
+	// Job k8s job kind
 	Job = "job"
 
-	//Localhost localhost
+	// Localhost localhost
 	Localhost = "localhost"
-	//PrivilegedLocalhost localhost
+	// PrivilegedLocalhost localhost
 	PrivilegedLocalhost         = "0.0.0.0"
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
 	oktetoDefaultSSHServerPort  = 2222
-	//OktetoUpCmd up command
+	// OktetoUpCmd up command
 	OktetoUpCmd = "up"
-	//OktetoPushCmd push command
+	// OktetoPushCmd push command
 	OktetoPushCmd = "push"
 
-	//DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
+	// DeprecatedOktetoVolumeName name of the (deprecated) okteto persistent volume
 	DeprecatedOktetoVolumeName = "okteto"
-	//OktetoVolumeNameTemplate name template of the development container persistent volume
+	// OktetoVolumeNameTemplate name template of the development container persistent volume
 	OktetoVolumeNameTemplate = "%s-okteto"
-	//DeprecatedOktetoVolumeNameTemplate name template of the development container persistent volume
+	// DeprecatedOktetoVolumeNameTemplate name template of the development container persistent volume
 	DeprecatedOktetoVolumeNameTemplate = "okteto-%s"
-	//DataSubPath subpath in the development container persistent volume for the data volumes
+	// DataSubPath subpath in the development container persistent volume for the data volumes
 	DataSubPath = "data"
-	//SourceCodeSubPath subpath in the development container persistent volume for the source code
+	// SourceCodeSubPath subpath in the development container persistent volume for the source code
 	SourceCodeSubPath = "src"
-	//OktetoSyncthingMountPath syncthing volume mount path
+	// OktetoSyncthingMountPath syncthing volume mount path
 	OktetoSyncthingMountPath = "/var/syncthing"
-	//RemoteMountPath remote volume mount path
+	// RemoteMountPath remote volume mount path
 	RemoteMountPath = "/var/okteto/remote"
-	//SyncthingSubPath subpath in the development container persistent volume for the syncthing data
+	// SyncthingSubPath subpath in the development container persistent volume for the syncthing data
 	SyncthingSubPath = "syncthing"
-	//DefaultSyncthingRescanInterval default syncthing re-scan interval
+	// DefaultSyncthingRescanInterval default syncthing re-scan interval
 	DefaultSyncthingRescanInterval = 300
-	//RemoteSubPath subpath in the development container persistent volume for the remote data
+	// RemoteSubPath subpath in the development container persistent volume for the remote data
 	RemoteSubPath = "okteto-remote"
-	//OktetoURLAnnotation indicates the okteto cluster public url
+	// OktetoURLAnnotation indicates the okteto cluster public url
 	OktetoURLAnnotation = "dev.okteto.com/url"
-	//OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
+	// OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
-	//OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
+	// OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
 	OktetoRestartAnnotation = "dev.okteto.com/restart"
-	//OktetoSyncAnnotation indicates the hash of the sync folders to force redeployment
+	// OktetoSyncAnnotation indicates the hash of the sync folders to force redeployment
 	OktetoSyncAnnotation = "dev.okteto.com/sync"
-	//OktetoStignoreAnnotation indicates the hash of the stignore files to force redeployment
+	// OktetoStignoreAnnotation indicates the hash of the stignore files to force redeployment
 	OktetoStignoreAnnotation = "dev.okteto.com/stignore"
-	//OktetoInjectTokenAnnotation annotation to inject the okteto token
+	// OktetoInjectTokenAnnotation annotation to inject the okteto token
 	OktetoInjectTokenAnnotation = "dev.okteto.com/inject-token"
 
-	//OktetoInitContainer name of the okteto init container
+	// OktetoInitContainer name of the okteto init container
 	OktetoInitContainer = "okteto-init"
 
-	//DefaultImage default image for sandboxes
+	// DefaultImage default image for sandboxes
 	DefaultImage = "okteto/dev:latest"
 
-	//ResourceAMDGPU amd.com/gpu resource
+	// ResourceAMDGPU amd.com/gpu resource
 	ResourceAMDGPU apiv1.ResourceName = "amd.com/gpu"
-	//ResourceNVIDIAGPU nvidia.com/gpu resource
+	// ResourceNVIDIAGPU nvidia.com/gpu resource
 	ResourceNVIDIAGPU apiv1.ResourceName = "nvidia.com/gpu"
 
 	// this path is expected by remote
 	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
 
-	syncFieldDocsURL = "https://okteto.com/docs/reference/manifest/#sync-string-required"
+	syncFieldDocsURL = "https:// okteto.com/docs/reference/manifest/#sync-string-required"
 
-	//OktetoExtension identifies the okteto extension in kubeconfig files
+	// OktetoExtension identifies the okteto extension in kubeconfig files
 	OktetoExtension = "okteto"
 
 	// HelmSecretType indicates the type for secrets created by Helm
@@ -325,6 +325,6 @@ const (
 	// OktetoImageTagWithVolumes is the tag assigned to an image with volume mounts
 	OktetoImageTagWithVolumes = "okteto-with-volume-mounts"
 
-	//OktetoDivertedFromLabel represents an object is diverted from another one
+	// OktetoDivertedFromLabel represents an object is diverted from another one
 	OktetoDivertedFromLabel = "dev.okteto.com/divert-from"
 )

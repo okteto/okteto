@@ -87,15 +87,22 @@ func (f *forward) start(ctx context.Context) {
 }
 
 func (f *forward) handle(local net.Conn) {
-	defer local.Close()
+	defer func() {
+		if err := local.Close(); err != nil {
+			oktetoLog.Debugf("Error closing local connection: %s", err)
+		}
+	}()
 
 	remote, err := f.pool.get(f.remoteAddress)
 	if err != nil {
 		oktetoLog.Infof("%s -> failed to dial remote connection: %s", f.String(), err)
 		return
 	}
-
-	defer remote.Close()
+	defer func() {
+		if err := remote.Close(); err != nil {
+			oktetoLog.Debugf("Error closing remote connection: %s", err)
+		}
+	}()
 
 	quit := make(chan struct{}, 1)
 
