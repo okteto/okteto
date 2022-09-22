@@ -1229,8 +1229,8 @@ func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) 
 	var rawList []BuildArg
 	err := unmarshal(&rawList)
 	if err == nil {
-		for _, label := range rawList {
-			result[label.Name] = label.Value
+		for _, buildArg := range rawList {
+			result[buildArg.Name] = buildArg.Value
 		}
 		return result, nil
 	}
