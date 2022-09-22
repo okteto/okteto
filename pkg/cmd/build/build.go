@@ -362,7 +362,6 @@ func parseTempSecrets(buildOptions *types.BuildOptions) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		defer srcFile.Close()
 
 		// create temp file
 		tmpfile, err := os.CreateTemp(secretTempFolder, "secret-")
@@ -382,6 +381,9 @@ func parseTempSecrets(buildOptions *types.BuildOptions) (string, error) {
 			// save expanded to temp file
 			_, _ = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
 			writer.Flush()
+		}
+		if err := srcFile.Close(); err != nil {
+			return "", err
 		}
 		if sc.Err() != nil {
 			return "", sc.Err()
