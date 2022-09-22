@@ -14,8 +14,10 @@
 package build
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,6 +25,7 @@ import (
 	"github.com/docker/docker/api/types/versions"
 	"github.com/docker/docker/client"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -115,6 +118,14 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 			buildOptions.ExportCache = registry.ExpandOktetoGlobalRegistry(buildOptions.ExportCache)
 		}
 	}
+
+	// inject secrets to buildkit from temp folder
+	tempSecretsFolder, err := parseTempSecrets(buildOptions)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tempSecretsFolder)
+
 	opt, err := getSolveOpt(buildOptions)
 	if err != nil {
 		return errors.Wrap(err, "failed to create build solver")
@@ -326,4 +337,53 @@ func GetVolumesToInclude(volumesToInclude []model.StackVolume) []model.StackVolu
 		}
 	}
 	return result
+}
+
+// parseTempSecrets reads the content of the src of a secret and replaces the envs to mount into dockerfile
+func parseTempSecrets(buildOptions *types.BuildOptions) (string, error) {
+	// create a temp folder - this will be remove once the build has finished
+	secretTempFolder := filepath.Join(config.GetOktetoHome(), ".secret")
+	if err := os.MkdirAll(secretTempFolder, 0700); err != nil {
+		return "", fmt.Errorf("failed to create %s: %s", secretTempFolder, err)
+	}
+
+	// for each secret at buildOptions extract the src
+	// read the content of the file
+	// create a new file under tempFolder with the expanded content
+	// replace the src of the secret with the tempSrc
+	for indx, s := range buildOptions.Secrets {
+		splitSecret := strings.SplitN(s, "src=", 2)
+		if len(splitSecret) <= 0 {
+			return "", fmt.Errorf("unable to get secret src")
+		}
+		srcFileName := strings.TrimSpace(splitSecret[1])
+
+		// read source file
+		bytes, err := ioutil.ReadFile(srcFileName)
+		if err != nil {
+			return "", err
+		}
+
+		// expand content
+		srcContent, err := model.ExpandEnv(string(bytes), true)
+		if err != nil {
+			return "", err
+		}
+
+		// create temp file
+		tmpfile, err := os.CreateTemp(secretTempFolder, "secret-")
+		if err != nil {
+			return "", err
+		}
+
+		// save expanded to temp file
+		writter := bufio.NewWriter(tmpfile)
+		_, _ = writter.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
+		writter.Flush()
+
+		// replace src
+		buildOptions.Secrets[indx] = fmt.Sprintf("%ssrc=%s", splitSecret[0], tmpfile.Name())
+	}
+
+	return secretTempFolder, nil
 }
