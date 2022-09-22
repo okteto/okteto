@@ -17,7 +17,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -359,27 +358,34 @@ func parseTempSecrets(buildOptions *types.BuildOptions) (string, error) {
 		srcFileName := strings.TrimSpace(splitSecret[1])
 
 		// read source file
-		bytes, err := ioutil.ReadFile(srcFileName)
+		srcFile, err := os.Open(srcFileName)
 		if err != nil {
 			return "", err
 		}
-
-		// expand content
-		srcContent, err := model.ExpandEnv(string(bytes), true)
-		if err != nil {
-			return "", err
-		}
+		defer srcFile.Close()
 
 		// create temp file
 		tmpfile, err := os.CreateTemp(secretTempFolder, "secret-")
 		if err != nil {
 			return "", err
 		}
-
-		// save expanded to temp file
 		writer := bufio.NewWriter(tmpfile)
-		_, _ = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
-		writer.Flush()
+
+		sc := bufio.NewScanner(srcFile)
+		for sc.Scan() {
+			// expand content
+			srcContent, err := model.ExpandEnv(sc.Text(), true)
+			if err != nil {
+				return "", err
+			}
+
+			// save expanded to temp file
+			_, _ = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
+			writer.Flush()
+		}
+		if sc.Err() != nil {
+			return "", sc.Err()
+		}
 
 		// replace src
 		buildOptions.Secrets[indx] = fmt.Sprintf("%ssrc=%s", splitSecret[0], tmpfile.Name())
