@@ -1602,9 +1602,9 @@ func Test_BuildInfoCopy(t *testing.T) {
 		DependsOn: BuildDependsOn{"other"},
 	}
 
-	copy := b.Copy()
-	assert.EqualValues(t, b, copy)
+	copyB := b.Copy()
+	assert.EqualValues(t, b, copyB)
 
-	samePointer := &copy == &b
+	samePointer := &copyB == &b
 	assert.False(t, samePointer)
 }
