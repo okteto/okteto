@@ -1655,7 +1655,7 @@ func TestExpandBuildArgs(t *testing.T) {
 				},
 			},
 			previousImageBuilt: map[string]string{
-				"KEY2": "VALUE",
+				"KEY2": "VALUE2",
 			},
 			expected: &BuildInfo{
 				Args: BuildArgs{
@@ -1665,7 +1665,7 @@ func TestExpandBuildArgs(t *testing.T) {
 					},
 					{
 						Name:  "KEY2",
-						Value: "VALUE",
+						Value: "VALUE2",
 					},
 				},
 			},
@@ -1681,7 +1681,7 @@ func TestExpandBuildArgs(t *testing.T) {
 				},
 			},
 			previousImageBuilt: map[string]string{
-				"KEY2": "VALUE",
+				"KEY2": "VALUE2",
 			},
 			expected: &BuildInfo{
 				Args: BuildArgs{
@@ -1691,7 +1691,7 @@ func TestExpandBuildArgs(t *testing.T) {
 					},
 					{
 						Name:  "KEY2",
-						Value: "VALUE",
+						Value: "VALUE2",
 					},
 				},
 			},
@@ -1722,7 +1722,7 @@ func TestExpandBuildArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.NoError(t, tt.buildInfo.ExpandBuildArgs(tt.previousImageBuilt))
+			assert.NoError(t, tt.buildInfo.AddBuildArgs(tt.previousImageBuilt))
 
 			assert.Equal(t, tt.expected, tt.buildInfo)
 		})

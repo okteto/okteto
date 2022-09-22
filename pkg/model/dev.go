@@ -169,16 +169,15 @@ func (b *BuildInfo) GetDockerfilePath() string {
 	return joinPath
 }
 
-// ExpandBuildArgs add a set of args to the build information
-func (b *BuildInfo) ExpandBuildArgs(previousImageArgs map[string]string) error {
+// AddBuildArgs add a set of args to the build information
+func (b *BuildInfo) AddBuildArgs(previousImageArgs map[string]string) error {
 	if err := b.expandManifestBuildArgs(previousImageArgs); err != nil {
 		return err
 	}
-	return b.expandPreviousImageArgs(previousImageArgs)
+	return b.addExpandedPreviousImageArgs(previousImageArgs)
 }
 
-func (b *BuildInfo) expandManifestBuildArgs(previousImageArgs map[string]string) error {
-	var err error
+func (b *BuildInfo) expandManifestBuildArgs(previousImageArgs map[string]string) (err error) {
 	for idx, arg := range b.Args {
 		if val, ok := previousImageArgs[arg.Name]; ok {
 			oktetoLog.Infof("overriding '%s' with the content of previous build", arg.Name)
@@ -193,7 +192,7 @@ func (b *BuildInfo) expandManifestBuildArgs(previousImageArgs map[string]string)
 	return nil
 }
 
-func (b *BuildInfo) expandPreviousImageArgs(previousImageArgs map[string]string) error {
+func (b *BuildInfo) addExpandedPreviousImageArgs(previousImageArgs map[string]string) error {
 	alreadyAddedArg := map[string]bool{}
 	for _, arg := range b.Args {
 		alreadyAddedArg[arg.Name] = true
