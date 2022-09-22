@@ -377,9 +377,9 @@ func parseTempSecrets(buildOptions *types.BuildOptions) (string, error) {
 		}
 
 		// save expanded to temp file
-		writter := bufio.NewWriter(tmpfile)
-		_, _ = writter.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
-		writter.Flush()
+		writer := bufio.NewWriter(tmpfile)
+		_, _ = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
+		writer.Flush()
 
 		// replace src
 		buildOptions.Secrets[indx] = fmt.Sprintf("%ssrc=%s", splitSecret[0], tmpfile.Name())
