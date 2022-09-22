@@ -75,7 +75,7 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface, d
 				return fmt.Errorf("error updating kubernetes volume claim: %w", err)
 			}
 			oktetoLog.Debug("could not update pvc in namespace: %w", dev.Namespace, err)
-			oktetoLog.Warning("Error while updating the dev volume: try running 'okteto down -v' and 'okteto up', or talk to your administrator (the PVC's storage class must support 'allowVolumeExpansion' to be able to upscale dev volumes)")
+			oktetoLog.Warning("Could not increase the size of the dev volume from %s to %s: try running 'okteto down -v' and 'okteto up', or talk to your administrator (the PVC's storage class must support 'allowVolumeExpansion' to be able to upscale dev volumes).", k8Volume.Spec.Resources.Requests[apiv1.ResourceStorage], pvc.Spec.Resources.Requests[apiv1.ResourceStorage])
 		}
 	}
 	return nil
