@@ -71,7 +71,7 @@ Once the PR is approved and the checks are passing, the author will be responsib
 
 #### **If the author is not a maintainer**
 
-Any mantainer can merge the PR when:
+Any maintainer can merge the PR when:
 
 - The PR has approvals from at least two maintainers to ensure that the changes are aligned with the project's goals and quality standards.
 - All requests from the maintainers have been addressed, and those maintainers have approved the PR.
