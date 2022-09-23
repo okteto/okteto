@@ -233,12 +233,6 @@ const (
 	// OktetoRescanIntervalEnvVar defines the time between scans for syncthing
 	OktetoRescanIntervalEnvVar = "OKTETO_RESCAN_INTERVAL"
 
-	// OktetoWithinDeployCommandContextEnvVar defines if an okteto command is executed by deploy command
-	OktetoWithinDeployCommandContextEnvVar = "OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT"
-
-	// OktetoInInstaller if set to true okteto is running inside the pipeline installer
-	OktetoInInstaller = "OKTETO_IN_INSTALLER"
-
 	// OktetoCurrentDeployBelongsToPreview if set the current okteto deploy belongs
 	// to a preview environment
 	OktetoCurrentDeployBelongsToPreview = "OKTETO_CURRENT_DEPLOY_BELONGS_TO_PREVIEW"
