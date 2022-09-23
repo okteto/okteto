@@ -57,15 +57,15 @@ func (ap *authProvider) Register(server *grpc.Server) {
 	auth.RegisterAuthServer(server, ap)
 }
 
-func (_ *authProvider) FetchToken(_ context.Context, _ *auth.FetchTokenRequest) (*auth.FetchTokenResponse, error) {
+func (*authProvider) FetchToken(_ context.Context, _ *auth.FetchTokenRequest) (*auth.FetchTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FetchToken not implemented")
 }
 
-func (_ *authProvider) GetTokenAuthority(_ context.Context, _ *auth.GetTokenAuthorityRequest) (*auth.GetTokenAuthorityResponse, error) {
+func (*authProvider) GetTokenAuthority(_ context.Context, _ *auth.GetTokenAuthorityRequest) (*auth.GetTokenAuthorityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTokenAuthority not implemented")
 }
 
-func (_ *authProvider) VerifyTokenAuthority(_ context.Context, _ *auth.VerifyTokenAuthorityRequest) (*auth.VerifyTokenAuthorityResponse, error) {
+func (*authProvider) VerifyTokenAuthority(_ context.Context, _ *auth.VerifyTokenAuthorityRequest) (*auth.VerifyTokenAuthorityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyTokenAuthority not implemented")
 }
 
