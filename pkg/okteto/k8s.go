@@ -1,7 +1,6 @@
 package okteto
 
 import (
-	"context"
 	"os"
 	"sync"
 	"time"
@@ -22,7 +21,7 @@ var tOnce sync.Once
 
 type K8sClientProvider interface {
 	Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
-	GetIngressClient(ctx context.Context) (*ingresses.Client, error)
+	GetIngressClient() (*ingresses.Client, error)
 }
 
 type K8sClient struct{}
@@ -35,7 +34,7 @@ func (*K8sClient) Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Inte
 	return getK8sClientWithApiConfig(clientApiConfig)
 }
 
-func (*K8sClient) GetIngressClient(ctx context.Context) (*ingresses.Client, error) {
+func (*K8sClient) GetIngressClient() (*ingresses.Client, error) {
 	c, _, err := GetK8sClient()
 	if err != nil {
 		return nil, err
