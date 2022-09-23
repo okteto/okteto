@@ -10,9 +10,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package constants
 
-const (
-	// OktetoNameEnvVar defines if the command is running inside okteot
-	OktetoNameEnvVar = "OKTETO_NAME"
-)
+// Package constants defines constants that need to be shared across multiple packages in the CLI.
+// It should not depend upon any other package.
+// This package should always be evaded when possible.
+package constants
