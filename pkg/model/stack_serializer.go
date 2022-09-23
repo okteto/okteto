@@ -1212,7 +1212,7 @@ func (v StackVolume) MarshalYAML() (interface{}, error) {
 	return v.RemotePath, nil
 }
 
-// MarshalYAML Implements the marshaler interface of the yaml pkg.
+// ToString returns volume as string
 func (v StackVolume) ToString() string {
 	if v.LocalPath != "" {
 		return fmt.Sprintf("%s:%s", v.LocalPath, v.RemotePath)

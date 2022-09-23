@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// UpdateKubeconfig all contexts managed by okteto
+// UpdateKubeconfigCMD all contexts managed by okteto
 func UpdateKubeconfigCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
