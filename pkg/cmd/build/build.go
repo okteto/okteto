@@ -118,12 +118,17 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 		}
 	}
 
+	// create a temp folder - this will be remove once the build has finished
+	secretTempFolder := filepath.Join(config.GetOktetoHome(), ".secret")
+	if err := os.MkdirAll(secretTempFolder, 0700); err != nil {
+		return fmt.Errorf("failed to create %s: %s", secretTempFolder, err)
+	}
+	defer os.RemoveAll(secretTempFolder)
+
 	// inject secrets to buildkit from temp folder
-	tempSecretsFolder, err := parseTempSecrets(buildOptions)
-	if err != nil {
+	if err := parseTempSecrets(secretTempFolder, buildOptions); err != nil {
 		return err
 	}
-	defer os.RemoveAll(tempSecretsFolder)
 
 	opt, err := getSolveOpt(buildOptions)
 	if err != nil {
@@ -339,13 +344,7 @@ func GetVolumesToInclude(volumesToInclude []model.StackVolume) []model.StackVolu
 }
 
 // parseTempSecrets reads the content of the src of a secret and replaces the envs to mount into dockerfile
-func parseTempSecrets(buildOptions *types.BuildOptions) (string, error) {
-	// create a temp folder - this will be remove once the build has finished
-	secretTempFolder := filepath.Join(config.GetOktetoHome(), ".secret")
-	if err := os.MkdirAll(secretTempFolder, 0700); err != nil {
-		return "", fmt.Errorf("failed to create %s: %s", secretTempFolder, err)
-	}
-
+func parseTempSecrets(secretTempFolder string, buildOptions *types.BuildOptions) error {
 	// for each secret at buildOptions extract the src
 	// read the content of the file
 	// create a new file under tempFolder with the expanded content
@@ -353,20 +352,20 @@ func parseTempSecrets(buildOptions *types.BuildOptions) (string, error) {
 	for indx, s := range buildOptions.Secrets {
 		splitSecret := strings.SplitN(s, "src=", 2)
 		if len(splitSecret) <= 0 {
-			return "", fmt.Errorf("unable to get secret src")
+			return fmt.Errorf("unable to get secret src")
 		}
 		srcFileName := strings.TrimSpace(splitSecret[1])
 
 		// read source file
 		srcFile, err := os.Open(srcFileName)
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		// create temp file
 		tmpfile, err := os.CreateTemp(secretTempFolder, "secret-")
 		if err != nil {
-			return "", err
+			return err
 		}
 		writer := bufio.NewWriter(tmpfile)
 
@@ -375,7 +374,7 @@ func parseTempSecrets(buildOptions *types.BuildOptions) (string, error) {
 			// expand content
 			srcContent, err := model.ExpandEnv(sc.Text(), true)
 			if err != nil {
-				return "", err
+				return err
 			}
 
 			// save expanded to temp file
@@ -383,15 +382,15 @@ func parseTempSecrets(buildOptions *types.BuildOptions) (string, error) {
 			writer.Flush()
 		}
 		if err := srcFile.Close(); err != nil {
-			return "", err
+			return err
 		}
 		if sc.Err() != nil {
-			return "", sc.Err()
+			return sc.Err()
 		}
 
 		// replace src
 		buildOptions.Secrets[indx] = fmt.Sprintf("%ssrc=%s", splitSecret[0], tmpfile.Name())
 	}
 
-	return secretTempFolder, nil
+	return nil
 }
