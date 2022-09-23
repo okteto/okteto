@@ -363,7 +363,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	deployOptions.Variables = append(
 		deployOptions.Variables,
 		// Set KUBECONFIG environment variable as environment for the commands to be executed
-		fmt.Sprintf("%s=%s", model.KubeConfigEnvVar, dc.TempKubeconfigFile),
+		fmt.Sprintf("%s=%s", constants.KubeConfigEnvVar, dc.TempKubeconfigFile),
 		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all okteto commands ran inside this deploy
 		// know they are running inside another okteto deploy
 		fmt.Sprintf("%s=true", model.OktetoWithinDeployCommandContextEnvVar),

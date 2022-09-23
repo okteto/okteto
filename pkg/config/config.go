@@ -225,7 +225,7 @@ func homedirWindows() (string, error) {
 func GetKubeconfigPath() []string {
 	home := GetUserHomeDir()
 	kubeconfig := []string{filepath.Join(home, ".kube", "config")}
-	kubeconfigEnv := os.Getenv(model.KubeConfigEnvVar)
+	kubeconfigEnv := os.Getenv(constants.KubeConfigEnvVar)
 	if len(kubeconfigEnv) > 0 {
 		kubeconfig = splitKubeConfigEnv(kubeconfigEnv)
 	}

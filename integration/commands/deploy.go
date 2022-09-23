@@ -137,7 +137,7 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 
 	if deployOptions.OktetoHome != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, deployOptions.OktetoHome))
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.KubeConfigEnvVar, filepath.Join(deployOptions.OktetoHome, ".kube", "config")))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.KubeConfigEnvVar, filepath.Join(deployOptions.OktetoHome, ".kube", "config")))
 	}
 	if deployOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, deployOptions.Token))

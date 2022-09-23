@@ -31,4 +31,7 @@ const (
 
 	// OktetoHomeEnvVar defines the path of okteto folder
 	OktetoHomeEnvVar = "OKTETO_HOME"
+
+	// KubeConfigEnvVar defines the path where kubeconfig is stored
+	KubeConfigEnvVar = "KUBECONFIG"
 )

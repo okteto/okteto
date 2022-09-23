@@ -17,7 +17,7 @@ import (
 	"os"
 
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -33,7 +33,7 @@ func CreateKubeconfig(kubeconfigFields KubeconfigFields) (string, error) {
 		return "", err
 	}
 
-	os.Setenv(model.KubeConfigEnvVar, dir.Name())
+	os.Setenv(constants.KubeConfigEnvVar, dir.Name())
 
 	contexts := make(map[string]*clientcmdapi.Context)
 	for idx := range kubeconfigFields.Name {
