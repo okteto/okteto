@@ -13,6 +13,11 @@
 
 package model
 
+import (
+	"net/url"
+	"strings"
+)
+
 // ManifestDependencies represents the map of dependencies at a manifest
 type ManifestDependencies map[string]*Dependency
 
@@ -23,4 +28,9 @@ type Dependency struct {
 	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
 	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
 	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
+
+
+func getDependencyNameFromGitURL(repo *url.URL) string {
+	repoPath := strings.Split(strings.TrimPrefix(repo.Path, "/"), "/")
+	return strings.ReplaceAll(repoPath[1], ".git", "")
 }

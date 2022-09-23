@@ -16,7 +16,6 @@ package model
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -733,10 +732,6 @@ type dependenciesRaw struct {
 	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
 }
 
-func getRepoNameFromGitURL(repo *url.URL) string {
-	repoPath := strings.Split(strings.TrimPrefix(repo.Path, "/"), "/")
-	return strings.ReplaceAll(repoPath[1], ".git", "")
-}
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (md *ManifestDependencies) UnmarshalYAML(unmarshal func(interface{}) error) error {
