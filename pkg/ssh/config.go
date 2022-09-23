@@ -87,7 +87,7 @@ func (h *host) String() string {
 
 }
 
-func newParam(keyword string, args, _ []string) *param {
+func newParam(keyword string, args []string) *param {
 	return &param{
 		comments: nil,
 		keyword:  keyword,
