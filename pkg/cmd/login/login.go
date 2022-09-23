@@ -25,7 +25,6 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/skratchdot/open-golang/open"
 )
@@ -41,7 +40,7 @@ func NewLoginController() *LoginController {
 	return &LoginController{}
 }
 
-func (l LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*types.User, error) {
+func (*LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoURL, token string) (*types.User, error) {
 	if token == "" {
 		oktetoLog.Infof("authenticating with browser code")
 		user, err := WithBrowser(ctx, oktetoURL)
@@ -66,7 +65,10 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 		return nil, fmt.Errorf("couldn't start the login process, please try again")
 	}
 
-	authorizationURL := h.AuthorizationURL()
+	authorizationURL, err := h.AuthorizationURL()
+	if err != nil {
+		return nil, err
+	}
 	oktetoLog.Println("Authentication will continue in your default browser")
 	if err := open.Start(authorizationURL); err != nil {
 		if strings.Contains(err.Error(), "executable file not found in $PATH") {
@@ -81,7 +83,7 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 	oktetoLog.Printf("You can also open a browser and navigate to the following address:\n")
 	oktetoLog.Println(authorizationURL)
 
-	return EndWithBrowser(ctx, h)
+	return EndWithBrowser(h)
 }
 
 // StartWithBrowser starts the authentication of the user with the IDP via a browser
@@ -110,10 +112,10 @@ func StartWithBrowser(ctx context.Context, u string) (*Handler, error) {
 	handler := &Handler{
 		baseURL:  url.String(),
 		port:     port,
-		ctx:      context.Background(),
+		ctx:      ctx,
 		state:    state,
 		errChan:  make(chan error, 2),
-		response: make(chan string, 2),
+		response: make(chan *types.User, 2),
 	}
 
 	return handler, nil
@@ -121,25 +123,25 @@ func StartWithBrowser(ctx context.Context, u string) (*Handler, error) {
 }
 
 // EndWithBrowser finishes the browser based auth
-func EndWithBrowser(ctx context.Context, h *Handler) (*types.User, error) {
+func EndWithBrowser(h *Handler) (*types.User, error) {
 	go func() {
 		http.Handle("/authorization-code/callback", h.handle())
 		h.errChan <- http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d", h.port), nil)
 	}()
 
 	ticker := time.NewTicker(5 * time.Minute)
-	var code string
+	var user *types.User
 
 	select {
 	case <-ticker.C:
 		h.ctx.Done()
 		return nil, fmt.Errorf("authentication timeout")
-	case code = <-h.response:
+	case user = <-h.response:
 		break
 	case e := <-h.errChan:
 		h.ctx.Done()
 		return nil, e
 	}
 
-	return okteto.Auth(ctx, code, h.baseURL)
+	return user, nil
 }

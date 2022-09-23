@@ -18,13 +18,12 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
-	"os"
-	"text/template"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/cmd/login/html"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 )
 
 // Handler handles the authentication using a browser
@@ -33,15 +32,8 @@ type Handler struct {
 	state    string
 	baseURL  string
 	port     int
-	response chan string
+	response chan *types.User
 	errChan  chan error
-}
-
-// OriginData
-type OriginData struct {
-	Meta    string
-	Origin  string
-	Message string
 }
 
 func (h *Handler) handle() http.Handler {
@@ -51,35 +43,33 @@ func (h *Handler) handle() http.Handler {
 
 		if h.state != s {
 			h.errChan <- fmt.Errorf("invalid request state")
-			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
-		data := &OriginData{
-			Meta:    "http-equiv=\"Content-type\" content=\"text/html; charset=utf-8\"",
-			Origin:  "the Okteto CLI",
-			Message: "Close this window and go back to your terminal",
+		ctx := r.Context()
+		u, err := okteto.Auth(ctx, code, h.baseURL)
+		if err != nil {
+			if err := html.ExecuteError(w, err); err != nil {
+				h.errChan <- err
+				return
+			}
+			// we need to return a legible error for the CLI to display
+			h.errChan <- okteto.TranslateAuthError(err)
+			return
 		}
-		if os.Getenv(model.OktetoOriginEnvVar) == model.OktetoDockerDesktopOrigin {
-			data.Meta = "http-equiv=\"refresh\" content=\"1; url = docker-desktop://dashboard/open\""
-			data.Origin = "Docker Desktop"
-			data.Message = "Close this window and go back to Docker Desktop"
+		if err := html.ExecuteSuccess(w); err != nil {
+			h.errChan <- err
+			return
 		}
 
-		htmlTemplate := template.Must(template.New("response").Parse(loginHTMLTemplate))
-		if err := htmlTemplate.Execute(w, data); err != nil {
-			h.errChan <- fmt.Errorf("failed to write to the response: %s", err)
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-
-		h.response <- code
+		h.response <- u
 	}
 
 	return http.HandlerFunc(fn)
 }
 
 // AuthorizationURL returns the authorization URL used for login
-func (h *Handler) AuthorizationURL() string {
+func (h *Handler) AuthorizationURL() (string, error) {
 	redirectURL := fmt.Sprintf("http://127.0.0.1:%d/authorization-code/callback?state=%s", h.port, h.state)
 	params := url.Values{}
 	params.Add("state", h.state)
@@ -87,11 +77,11 @@ func (h *Handler) AuthorizationURL() string {
 
 	authorizationURL, err := url.Parse(fmt.Sprintf("%s/auth/authorization-code", h.baseURL))
 	if err != nil {
-		log.Fatalf("failed to build authorizationURL: %s", err)
+		return "", fmt.Errorf("failed to build authorizationURL: %w", err)
 	}
 
 	authorizationURL.RawQuery = params.Encode()
-	return authorizationURL.String()
+	return authorizationURL.String(), nil
 }
 
 func randToken() (string, error) {
