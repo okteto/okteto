@@ -111,8 +111,9 @@ func GetImageConfigFromImage(imageRef string) (*ImageConfig, error) {
 
 	if configFile.Config.ExposedPorts != nil {
 		for port := range configFile.Config.ExposedPorts {
-			if strings.Contains(port, "/") {
-				port = port[:strings.Index(port, "/")]
+			slashIndx := strings.Index(port, "/")
+			if slashIndx != -1 {
+				port = port[:slashIndx]
 				portInt, err := strconv.Atoi(port)
 				if err != nil {
 					continue
@@ -183,9 +184,10 @@ func GetImageMetadata(imageRef string) *ImageMetadata {
 	}
 	if configFile.Config.ExposedPorts != nil {
 		for port := range configFile.Config.ExposedPorts {
-			if strings.Contains(port, "/") {
-				port = port[:strings.Index(port, "/")]
-				portInt, err := strconv.Atoi(port)
+			slashIndx := strings.Index(port, "/")
+			if slashIndx != -1 {
+				port = port[:slashIndx]
+				portInt, err := strconv.ParseInt(port, 10, 32)
 				if err != nil {
 					continue
 				}

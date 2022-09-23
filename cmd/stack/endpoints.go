@@ -50,7 +50,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if err := stack.ListEndpoints(ctx, s, output); err != nil {
+			if err := stack.ListEndpoints(ctx, s); err != nil {
 				oktetoLog.Success("Compose '%s' successfully deployed", s.Name)
 			}
 			return nil

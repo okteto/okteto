@@ -154,7 +154,7 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 			<-ticker.C
 		}
 		waitForStates := []config.UpState{config.Ready}
-		if err := status.Wait(ctx, dev, waitForStates); err != nil {
+		if err := status.Wait(dev, waitForStates); err != nil {
 			return err
 		}
 

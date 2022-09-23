@@ -561,7 +561,7 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 		return err
 	}
 
-	iClient, err := ingresses.GetClient(ctx, c)
+	iClient, err := ingresses.GetClient(c)
 	if err != nil {
 		return fmt.Errorf("error getting ingress client: %s", err.Error())
 	}

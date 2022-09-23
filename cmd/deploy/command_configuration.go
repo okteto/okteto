@@ -131,7 +131,7 @@ func addEnvVars(ctx context.Context, cwd string) error {
 	}
 
 	if os.Getenv(model.OktetoGitCommitEnvVar) == "" {
-		sha, err := utils.GetGitCommit(ctx, cwd)
+		sha, err := utils.GetGitCommit(cwd)
 		if err != nil {
 			oktetoLog.Infof("could not retrieve sha: %s", err)
 		}
