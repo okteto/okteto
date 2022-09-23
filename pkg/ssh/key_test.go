@@ -18,17 +18,17 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 func TestKeyExists(t *testing.T) {
 	dir := t.TempDir()
 
 	defer func() {
-		os.Unsetenv(model.OktetoFolderEnvVar)
+		os.Unsetenv(constants.OktetoFolderEnvVar)
 	}()
 
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+	os.Setenv(constants.OktetoFolderEnvVar, dir)
 
 	if KeyExists() {
 		t.Error("keys shouldn't exist in an empty directory")
@@ -67,10 +67,10 @@ func TestGenerateKeys(t *testing.T) {
 	dir := t.TempDir()
 
 	defer func() {
-		os.Unsetenv(model.OktetoFolderEnvVar)
+		os.Unsetenv(constants.OktetoFolderEnvVar)
 	}()
 
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+	os.Setenv(constants.OktetoFolderEnvVar, dir)
 	public, private := getKeyPaths()
 	if err := generateKeys(public, private, 128); err != nil {
 		t.Error(err)

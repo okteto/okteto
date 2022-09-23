@@ -18,7 +18,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
@@ -114,10 +113,10 @@ func Test_homedirWindows(t *testing.T) {
 func TestGetOktetoHome(t *testing.T) {
 	dir := t.TempDir()
 	defer func() {
-		os.Unsetenv(model.OktetoFolderEnvVar)
+		os.Unsetenv(constants.OktetoFolderEnvVar)
 	}()
 
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+	os.Setenv(constants.OktetoFolderEnvVar, dir)
 
 	got := GetOktetoHome()
 	if got != dir {
@@ -128,7 +127,7 @@ func TestGetOktetoHome(t *testing.T) {
 func TestGetAppHome(t *testing.T) {
 	dir := t.TempDir()
 
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+	os.Setenv(constants.OktetoFolderEnvVar, dir)
 
 	got := GetAppHome("ns", "dp")
 	expected := filepath.Join(dir, "ns", "dp")

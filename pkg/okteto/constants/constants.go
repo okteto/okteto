@@ -37,4 +37,7 @@ const (
 
 	// OktetoWithinDeployCommandContextEnvVar defines if an okteto command is executed by deploy command
 	OktetoWithinDeployCommandContextEnvVar = "OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT"
+
+	// OktetoFolderEnvVar defines the path of okteto folder
+	OktetoFolderEnvVar = "OKTETO_FOLDER"
 )

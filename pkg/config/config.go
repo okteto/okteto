@@ -77,7 +77,7 @@ func GetBinaryFullPath() string {
 
 // GetOktetoHome returns the path of the okteto folder
 func GetOktetoHome() string {
-	if v, ok := os.LookupEnv(model.OktetoFolderEnvVar); ok {
+	if v, ok := os.LookupEnv(constants.OktetoFolderEnvVar); ok {
 		if !filesystem.FileExists(v) {
 			oktetoLog.Fatalf("OKTETO_FOLDER doesn't exist: %s", v)
 		}
