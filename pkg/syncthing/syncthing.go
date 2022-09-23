@@ -294,7 +294,7 @@ func (s *Syncthing) UpdateConfig() error {
 }
 
 // Run starts up a local syncthing process to serve files from.
-func (s *Syncthing) Run(_ context.Context) error {
+func (s *Syncthing) Run() error {
 	if err := s.initConfig(); err != nil {
 		return err
 	}

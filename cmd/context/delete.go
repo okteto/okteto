@@ -14,7 +14,6 @@
 package context
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -31,16 +30,15 @@ func DeleteCMD() *cobra.Command {
 		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#delete"),
 		Short: "Delete a context",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
 			args[0] = okteto.AddSchema(args[0])
 			args[0] = strings.TrimSuffix(args[0], "/")
-			return Delete(ctx, args[0])
+			return Delete(args[0])
 		},
 	}
 	return cmd
 }
 
-func Delete(_ context.Context, okCtx string) error {
+func Delete(okCtx string) error {
 	ctxStore := okteto.ContextStore()
 	if okCtx == ctxStore.CurrentContext {
 		ctxStore.CurrentContext = ""

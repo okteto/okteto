@@ -28,7 +28,7 @@ type DivertInterface interface {
 	Get(ctx context.Context, name string, options metav1.GetOptions) (*Divert, error)
 	Create(ctx context.Context, divert *Divert) (*Divert, error)
 	Update(ctx context.Context, divert *Divert) (*Divert, error)
-	Delete(ctx context.Context, name string, options metav1.DeleteOptions) error
+	Delete(ctx context.Context, name string) error
 }
 
 type divertClient struct {
@@ -89,7 +89,7 @@ func (c *divertClient) Update(ctx context.Context, divert *Divert) (*Divert, err
 	return &result, err
 }
 
-func (c *divertClient) Delete(ctx context.Context, name string, _ metav1.DeleteOptions) error {
+func (c *divertClient) Delete(ctx context.Context, name string) error {
 	return c.restClient.
 		Delete().
 		Namespace(c.ns).

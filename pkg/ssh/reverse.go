@@ -95,7 +95,7 @@ func (r *reverse) handle(ctx context.Context, remote net.Conn) {
 	}()
 
 	quit := make(chan struct{}, 1)
-	local, err := getConn(ctx, r.localAddress, 3)
+	local, err := getConn(ctx, r.localAddress)
 	if err != nil {
 		oktetoLog.Infof("%s -> failed to listen on local address: %v", r.String(), err)
 		return

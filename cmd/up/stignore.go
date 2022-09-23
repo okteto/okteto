@@ -137,7 +137,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 			continue
 		}
 
-		if err := askIfUpdatingStignore(folder.LocalPath, stignorePath); err != nil {
+		if err := askIfUpdatingStignore(stignorePath); err != nil {
 			return err
 		}
 	}
@@ -187,7 +187,7 @@ func askIfCreateStignoreDefaults(folder, stignorePath string) error {
 	return nil
 }
 
-func askIfUpdatingStignore(_, stignorePath string) error {
+func askIfUpdatingStignore(stignorePath string) error {
 	stignoreBytes, err := os.ReadFile(stignorePath)
 	if err != nil {
 		return fmt.Errorf("failed to read '%s': %s", stignorePath, err.Error())

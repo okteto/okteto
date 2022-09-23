@@ -55,7 +55,7 @@ func GetBranch(path string) (string, error) {
 	return name, nil
 }
 
-func GetGitCommit(_ context.Context, path string) (string, error) {
+func GetGitCommit(path string) (string, error) {
 	repo, err := git.PlainOpen(path)
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)

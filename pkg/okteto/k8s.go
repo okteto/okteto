@@ -40,7 +40,7 @@ func (*K8sClient) GetIngressClient(ctx context.Context) (*ingresses.Client, erro
 	if err != nil {
 		return nil, err
 	}
-	iClient, err := ingresses.GetClient(ctx, c)
+	iClient, err := ingresses.GetClient(c)
 	if err != nil {
 		return nil, err
 	}

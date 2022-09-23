@@ -74,7 +74,7 @@ func computeProgress(local, remote float64) float64 {
 }
 
 // Wait waits for the okteto up sequence to finish
-func Wait(_ context.Context, dev *model.Dev, okStatusList []config.UpState) error {
+func Wait(dev *model.Dev, okStatusList []config.UpState) error {
 	oktetoLog.Spinner("Activating your development container...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()

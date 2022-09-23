@@ -109,7 +109,7 @@ func (p *pool) getListener(address string) (net.Listener, error) {
 }
 
 func getTCPConnection(ctx context.Context, serverAddr string, keepAlive time.Duration) (net.Conn, error) {
-	c, err := getConn(ctx, serverAddr, 3)
+	c, err := getConn(ctx, serverAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func getTCPConnection(ctx context.Context, serverAddr string, keepAlive time.Dur
 	return c, nil
 }
 
-func getConn(ctx context.Context, serverAddr string, _ int) (net.Conn, error) {
+func getConn(ctx context.Context, serverAddr string) (net.Conn, error) {
 	var lastErr error
 	t := time.NewTicker(100 * time.Millisecond)
 	for i := 0; i < 5; i++ {

@@ -206,7 +206,7 @@ func destroyJobs(ctx context.Context, s *model.Stack, c kubernetes.Interface) er
 }
 
 func destroyIngresses(ctx context.Context, s *model.Stack, c kubernetes.Interface) error {
-	iClient, err := ingresses.GetClient(ctx, c)
+	iClient, err := ingresses.GetClient(c)
 	if err != nil {
 		return fmt.Errorf("error getting ingress client: %s", err.Error())
 	}
