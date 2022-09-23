@@ -28,6 +28,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -124,7 +125,7 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 	}
 	oktetoLog.Success("Compose '%s' successfully deployed", s.Name)
 
-	if !(!utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) || !c.IsInsideDeploy) {
+	if !(!utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) || !c.IsInsideDeploy) {
 		if err := stack.ListEndpoints(ctx, s, ""); err != nil {
 			return err
 		}

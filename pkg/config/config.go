@@ -273,7 +273,7 @@ func GetDeployOrigin() (src string) {
 	}
 	// deploys within another okteto deploy take precedence as a deploy origin.
 	// This is running okteto pipeline deploy as a step of another okteto deploy
-	if os.Getenv(model.OktetoWithinDeployCommandContextEnvVar) == "true" {
+	if os.Getenv(constants.OktetoWithinDeployCommandContextEnvVar) == "true" {
 		src = "okteto-deploy"
 	}
 	return

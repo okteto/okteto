@@ -20,8 +20,8 @@ import (
 	"strconv"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	"github.com/okteto/okteto/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -91,7 +91,7 @@ func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
 		return false, err
 	}
 	if !hasAccess {
-		if LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+		if LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 			return false, fmt.Errorf("cannot deploy on a namespace that doesn't exist. Please create %s and try again", ns)
 		}
 		create, err := AskYesNo(fmt.Sprintf("The namespace %s doesn't exist. Do you want to create it? [y/n] ", ns))

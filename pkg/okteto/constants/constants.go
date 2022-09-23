@@ -34,4 +34,7 @@ const (
 
 	// KubeConfigEnvVar defines the path where kubeconfig is stored
 	KubeConfigEnvVar = "KUBECONFIG"
+
+	// OktetoWithinDeployCommandContextEnvVar defines if an okteto command is executed by deploy command
+	OktetoWithinDeployCommandContextEnvVar = "OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT"
 )

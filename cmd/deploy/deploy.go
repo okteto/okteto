@@ -366,7 +366,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		fmt.Sprintf("%s=%s", constants.KubeConfigEnvVar, dc.TempKubeconfigFile),
 		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all okteto commands ran inside this deploy
 		// know they are running inside another okteto deploy
-		fmt.Sprintf("%s=true", model.OktetoWithinDeployCommandContextEnvVar),
+		fmt.Sprintf("%s=true", constants.OktetoWithinDeployCommandContextEnvVar),
 		// Set OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE env variable, so all the Okteto commands executed within this command execution
 		// should not overwrite the server and the credentials in the kubeconfig
 		fmt.Sprintf("%s=true", constants.OktetoSkipConfigCredentialsUpdate),
@@ -404,7 +404,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 					return err
 				}
 			}
-			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+			if !utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 				if err := dc.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: deployOptions.Manifest.Namespace}); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
 				}
