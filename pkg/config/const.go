@@ -26,4 +26,7 @@ const (
 
 	// userProfileEnvVar defines user profile
 	userProfileEnvVar = "USERPROFILE"
+
+	// oktetoOriginEnvVar defines where is executing okteto
+	oktetoOriginEnvVar = "OKTETO_ORIGIN"
 )

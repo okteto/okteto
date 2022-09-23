@@ -221,9 +221,6 @@ const (
 	// OktetoPathEnvVar defines where is okteto binary
 	OktetoPathEnvVar = "OKTETO_PATH"
 
-	// OktetoOriginEnvVar defines where is executing okteto
-	OktetoOriginEnvVar = "OKTETO_ORIGIN"
-
 	// OktetoFolderEnvVar defines the path of okteto folder
 	OktetoFolderEnvVar = "OKTETO_FOLDER"
 
@@ -254,9 +251,6 @@ const (
 
 	// TermEnvVar defines the type of terminal the user is using
 	TermEnvVar = "TERM"
-
-	// KubeConfigEnvVar defines the path where kubeconfig is stored
-	KubeConfigEnvVar = "KUBECONFIG"
 
 	// GithubRepositoryEnvVar defines the repository to be used
 	GithubRepositoryEnvVar = "GITHUB_REPOSITORY"
