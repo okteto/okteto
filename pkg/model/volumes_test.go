@@ -829,11 +829,11 @@ func TestDefaultVolumeSize(t *testing.T) {
 	}{
 		{
 			context:  "https://cloud.okteto.com",
-			expected: cloudAndStagingDefaultVolumeSize,
+			expected: cloudDefaultVolumeSize,
 		},
 		{
 			context:  "https://staging.okteto.dev",
-			expected: cloudAndStagingDefaultVolumeSize,
+			expected: cloudDefaultVolumeSize,
 		},
 		{
 			context:  "other",

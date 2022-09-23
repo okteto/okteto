@@ -23,8 +23,8 @@ import (
 )
 
 const (
-	cloudAndStagingDefaultVolumeSize = "2Gi"
-	defaultVolumeSize                = "5Gi"
+	cloudDefaultVolumeSize = "2Gi"
+	defaultVolumeSize      = "5Gi"
 )
 
 func (dev *Dev) translateDeprecatedVolumeFields() error {
@@ -190,7 +190,7 @@ func (dev *Dev) isOktetoCloud() bool { // TODO: inject this
 func (dev *Dev) getDefaultPersistentVolumeSize() string {
 	switch {
 	case dev.isOktetoCloud():
-		return cloudAndStagingDefaultVolumeSize
+		return cloudDefaultVolumeSize
 	default:
 		return defaultVolumeSize
 	}
