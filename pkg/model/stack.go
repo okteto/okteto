@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -263,13 +264,13 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 
 func getStackName(name, stackPath, actualStackName string) (string, error) {
 	if name != "" {
-		if err := os.Setenv(OktetoNameEnvVar, name); err != nil {
+		if err := os.Setenv(constants.OktetoNameEnvVar, name); err != nil {
 			return "", err
 		}
 		return name, nil
 	}
 	if actualStackName == "" {
-		nameEnvVar := os.Getenv(OktetoNameEnvVar)
+		nameEnvVar := os.Getenv(constants.OktetoNameEnvVar)
 		if nameEnvVar != "" {
 			return nameEnvVar, nil
 		}
@@ -280,12 +281,12 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 				return "", err
 			}
 		}
-		if err := os.Setenv(OktetoNameEnvVar, name); err != nil {
+		if err := os.Setenv(constants.OktetoNameEnvVar, name); err != nil {
 			return "", err
 		}
 		return name, nil
 	}
-	if err := os.Setenv(OktetoNameEnvVar, actualStackName); err != nil {
+	if err := os.Setenv(constants.OktetoNameEnvVar, actualStackName); err != nil {
 		return "", err
 	}
 	return actualStackName, nil

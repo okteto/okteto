@@ -35,6 +35,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/cobra"
 )
@@ -122,7 +123,7 @@ func Init() *cobra.Command {
 
 // RunInitV2 initializes a new okteto manifest
 func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
-	os.Setenv(model.OktetoNameEnvVar, utils.InferName(opts.Workdir))
+	os.Setenv(constants.OktetoNameEnvVar, utils.InferName(opts.Workdir))
 	manifest := model.NewManifest()
 	var err error
 	if !opts.Overwrite {
@@ -141,7 +142,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 
 	if manifest != nil {
 		mc.manifest = manifest
-		manifest.Name = os.Getenv(model.OktetoNameEnvVar)
+		manifest.Name = os.Getenv(constants.OktetoNameEnvVar)
 		if opts.Namespace == "" {
 			manifest.Namespace = ""
 		}

@@ -241,9 +241,6 @@ const (
 	// OktetoExecuteSSHEnvVar defines if the command should be executed through ssh
 	OktetoExecuteSSHEnvVar = "OKTETO_EXECUTE_SSH"
 
-	// OktetoNameEnvVar defines if the command is running inside okteot
-	OktetoNameEnvVar = "OKTETO_NAME"
-
 	// OktetoSSHTimeoutEnvVar defines the timeout for ssh operations
 	OktetoSSHTimeoutEnvVar = "OKTETO_SSH_TIMEOUT"
 

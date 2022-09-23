@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -1143,9 +1144,9 @@ func Test_getStackName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.testName, func(t *testing.T) {
-			os.Setenv(OktetoNameEnvVar, tt.nameEnv)
+			os.Setenv(constants.OktetoNameEnvVar, tt.nameEnv)
 			res, err := getStackName(tt.name, tt.stackPath, tt.actualStackName)
-			resEnv := os.Getenv(OktetoNameEnvVar)
+			resEnv := os.Getenv(constants.OktetoNameEnvVar)
 
 			if err == nil && tt.expectedErr {
 				t.Fatal("expected error but not thrown")
