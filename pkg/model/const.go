@@ -255,18 +255,6 @@ const (
 	// TermEnvVar defines the type of terminal the user is using
 	TermEnvVar = "TERM"
 
-	// HomeEnvVar defines home directory
-	HomeEnvVar = "HOME"
-
-	// HomePathEnvVar defines home path
-	HomePathEnvVar = "HOMEPATH"
-
-	// HomeDriveEnvVar defines home drive
-	HomeDriveEnvVar = "HOMEDRIVE"
-
-	// UserProfileEnvVar defines user profile
-	UserProfileEnvVar = "USERPROFILE"
-
 	// KubeConfigEnvVar defines the path where kubeconfig is stored
 	KubeConfigEnvVar = "KUBECONFIG"
 

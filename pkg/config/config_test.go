@@ -78,21 +78,21 @@ func Test_homedirWindows(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			home := os.Getenv(model.HomeEnvVar)
-			up := os.Getenv(model.UserProfileEnvVar)
-			hp := os.Getenv(model.HomePathEnvVar)
-			hd := os.Getenv(model.HomeDriveEnvVar)
+			home := os.Getenv(homeEnvVar)
+			up := os.Getenv(userProfileEnvVar)
+			hp := os.Getenv(homePathEnvVar)
+			hd := os.Getenv(homeDriveEnvVar)
 
-			os.Unsetenv(model.HomeEnvVar)
-			os.Unsetenv(model.UserProfileEnvVar)
-			os.Unsetenv(model.HomePathEnvVar)
-			os.Unsetenv(model.HomeDriveEnvVar)
+			os.Unsetenv(homeEnvVar)
+			os.Unsetenv(userProfileEnvVar)
+			os.Unsetenv(homePathEnvVar)
+			os.Unsetenv(homeDriveEnvVar)
 
 			defer func() {
-				os.Setenv(model.HomeEnvVar, home)
-				os.Setenv(model.UserProfileEnvVar, up)
-				os.Setenv(model.HomePathEnvVar, hp)
-				os.Setenv(model.HomeDriveEnvVar, hd)
+				os.Setenv(homeEnvVar, home)
+				os.Setenv(userProfileEnvVar, up)
+				os.Setenv(homePathEnvVar, hp)
+				os.Setenv(homeDriveEnvVar, hd)
 			}()
 
 			for k, v := range tt.env {

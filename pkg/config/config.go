@@ -198,21 +198,21 @@ func GetUserHomeDir() string {
 		return home
 	}
 
-	return os.Getenv(model.HomeEnvVar)
+	return os.Getenv(homeEnvVar)
 
 }
 
 func homedirWindows() (string, error) {
-	if home := os.Getenv(model.HomeEnvVar); home != "" {
+	if home := os.Getenv(homeEnvVar); home != "" {
 		return home, nil
 	}
 
-	if home := os.Getenv(model.UserProfileEnvVar); home != "" {
+	if home := os.Getenv(userProfileEnvVar); home != "" {
 		return home, nil
 	}
 
-	drive := os.Getenv(model.HomeDriveEnvVar)
-	path := os.Getenv(model.HomePathEnvVar)
+	drive := os.Getenv(homeDriveEnvVar)
+	path := os.Getenv(homePathEnvVar)
 	home := drive + path
 	if drive == "" || path == "" {
 		return "", fmt.Errorf("HOME, HOMEDRIVE, HOMEPATH, or USERPROFILE are empty. Use $OKTETO_HOME to set your home directory")
