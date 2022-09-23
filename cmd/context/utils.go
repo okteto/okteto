@@ -28,6 +28,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
@@ -57,7 +58,7 @@ func getKubernetesContextList(filterOkteto bool) []string {
 		return contextList
 	}
 	for name := range cfg.Contexts {
-		if _, ok := cfg.Contexts[name].Extensions[model.OktetoExtension]; ok && filterOkteto {
+		if _, ok := cfg.Contexts[name].Extensions[constants.OktetoExtension]; ok && filterOkteto {
 			continue
 		}
 		contextList = append(contextList, name)

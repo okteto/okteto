@@ -20,6 +20,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -387,7 +388,7 @@ func TestListDevModeOn(t *testing.T) {
 					Name:      "dev",
 					Namespace: "test",
 					Labels: map[string]string{
-						model.DevLabel: "true",
+						constants.DevLabel: "true",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -415,7 +416,7 @@ func TestListDevModeOn(t *testing.T) {
 					Name:      "sfs",
 					Namespace: "test",
 					Labels: map[string]string{
-						model.DevLabel: "true",
+						constants.DevLabel: "true",
 					},
 				},
 				Spec: appsv1.StatefulSetSpec{
@@ -439,7 +440,7 @@ func TestListDevModeOn(t *testing.T) {
 					Name:      "dev",
 					Namespace: "test",
 					Labels: map[string]string{
-						model.DevLabel: "true",
+						constants.DevLabel: "true",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -467,7 +468,7 @@ func TestListDevModeOn(t *testing.T) {
 					Name:      "sfs-other",
 					Namespace: "test",
 					Labels: map[string]string{
-						model.DevLabel: "true",
+						constants.DevLabel: "true",
 					},
 				},
 				Spec: appsv1.StatefulSetSpec{
@@ -497,7 +498,7 @@ func TestListDevModeOn(t *testing.T) {
 					Name:      "autocreate-okteto",
 					Namespace: "test",
 					Labels: map[string]string{
-						model.DevLabel: "true",
+						constants.DevLabel: "true",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{
@@ -526,7 +527,7 @@ func TestListDevModeOn(t *testing.T) {
 					Name:      "not-manifest",
 					Namespace: "test",
 					Labels: map[string]string{
-						model.DevLabel: "true",
+						constants.DevLabel: "true",
 					},
 				},
 				Spec: appsv1.DeploymentSpec{

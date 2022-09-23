@@ -409,7 +409,7 @@ func areNamespaceResourcesAwake(namespace string, timeout time.Duration, c kuber
 			}
 			areDeploymentSleeping := false
 			for _, d := range dList {
-				if v, ok := d.Labels[model.DevLabel]; ok && v == "true" {
+				if v, ok := d.Labels[constants.DevLabel]; ok && v == "true" {
 					continue
 				}
 				if *d.Spec.Replicas == 0 {

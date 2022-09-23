@@ -25,6 +25,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,7 +90,7 @@ func (i *DeploymentApp) DevClone() App {
 		Spec: *i.d.Spec.DeepCopy(),
 	}
 	if i.d.Annotations[model.OktetoAutoCreateAnnotation] == model.OktetoUpCmd {
-		clone.Labels[model.DevLabel] = "true"
+		clone.Labels[constants.DevLabel] = "true"
 	} else {
 		clone.Labels[model.DevCloneLabel] = string(i.d.UID)
 	}

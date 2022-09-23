@@ -32,6 +32,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	"github.com/okteto/okteto/pkg/registry"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -275,7 +276,7 @@ func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, er
 	}
 	options := []string{}
 	for i := range dList {
-		if dList[i].Labels[model.DevLabel] != "" {
+		if dList[i].Labels[constants.DevLabel] != "" {
 			continue
 		}
 		if dList[i].Labels[model.DevCloneLabel] != "" {
@@ -284,7 +285,7 @@ func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, er
 		options = append(options, dList[i].Name)
 	}
 	for i := range sfsList {
-		if sfsList[i].Labels[model.DevLabel] != "" {
+		if sfsList[i].Labels[constants.DevLabel] != "" {
 			continue
 		}
 		if sfsList[i].Labels[model.DevCloneLabel] != "" {

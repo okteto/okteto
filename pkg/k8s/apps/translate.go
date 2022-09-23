@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
@@ -59,7 +60,7 @@ func (tr *Translation) translate() error {
 	tr.DevApp = tr.App.DevClone()
 
 	tr.App.ObjectMeta().Annotations[model.AppReplicasAnnotation] = strconv.Itoa(int(replicas))
-	tr.App.ObjectMeta().Labels[model.DevLabel] = "true"
+	tr.App.ObjectMeta().Labels[constants.DevLabel] = "true"
 	tr.App.SetReplicas(0)
 
 	for k, v := range tr.Dev.Metadata.Annotations {
@@ -108,7 +109,7 @@ func (tr *Translation) DevModeOff() error {
 		return err
 	}
 
-	delete(tr.App.ObjectMeta().Labels, model.DevLabel)
+	delete(tr.App.ObjectMeta().Labels, constants.DevLabel)
 	tr.App.SetReplicas(getPreviousAppReplicas(tr.App))
 	delete(tr.App.ObjectMeta().Annotations, model.AppReplicasAnnotation)
 

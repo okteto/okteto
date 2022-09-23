@@ -26,6 +26,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -174,7 +175,7 @@ func IsDevModeOn(s *appsv1.StatefulSet) bool {
 	if labels == nil {
 		return false
 	}
-	_, ok := labels[model.DevLabel]
+	_, ok := labels[constants.DevLabel]
 	return ok
 }
 

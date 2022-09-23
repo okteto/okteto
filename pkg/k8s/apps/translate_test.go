@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -387,7 +388,7 @@ services:
 	if tr1.App.Replicas() != 0 {
 		t.Fatalf("d1 is running %d replicas", tr1.App.Replicas())
 	}
-	expectedLabels := map[string]string{model.DevLabel: "true"}
+	expectedLabels := map[string]string{constants.DevLabel: "true"}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong d1 labels: '%v'", tr1.App.ObjectMeta().Labels)
 	}
@@ -446,8 +447,8 @@ services:
 
 	tr1.DevModeOff()
 
-	if _, ok := tr1.App.ObjectMeta().Labels[model.DevLabel]; ok {
-		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	if _, ok := tr1.App.ObjectMeta().Labels[constants.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
 	}
 
 	if _, ok := tr1.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
@@ -550,7 +551,7 @@ services:
 	if tr2.App.Replicas() != 0 {
 		t.Fatalf("d2 is running %d replicas", tr2.App.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevLabel: "true"}
+	expectedLabels = map[string]string{constants.DevLabel: "true"}
 	if !reflect.DeepEqual(tr2.App.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong d2 labels: '%v'", tr2.App.ObjectMeta().Labels)
 	}
@@ -598,8 +599,8 @@ services:
 
 	tr2.DevModeOff()
 
-	if _, ok := tr2.App.ObjectMeta().Labels[model.DevLabel]; ok {
-		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	if _, ok := tr2.App.ObjectMeta().Labels[constants.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
 	}
 
 	if _, ok := tr2.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
@@ -1502,7 +1503,7 @@ services:
 	if tr1.App.Replicas() != 0 {
 		t.Fatalf("sfs1 is running %d replicas", tr1.App.Replicas())
 	}
-	expectedLabels := map[string]string{model.DevLabel: "true"}
+	expectedLabels := map[string]string{constants.DevLabel: "true"}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong sfs1 labels: '%v'", tr1.App.ObjectMeta().Labels)
 	}
@@ -1551,8 +1552,8 @@ services:
 
 	tr1.DevModeOff()
 
-	if _, ok := tr1.App.ObjectMeta().Labels[model.DevLabel]; ok {
-		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	if _, ok := tr1.App.ObjectMeta().Labels[constants.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
 	}
 
 	if _, ok := tr1.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
@@ -1656,7 +1657,7 @@ services:
 	if tr2.App.Replicas() != 0 {
 		t.Fatalf("sfs2 is running %d replicas", tr2.App.Replicas())
 	}
-	expectedLabels = map[string]string{model.DevLabel: "true"}
+	expectedLabels = map[string]string{constants.DevLabel: "true"}
 	if !reflect.DeepEqual(tr2.App.ObjectMeta().Labels, expectedLabels) {
 		t.Fatalf("Wrong sfs2 labels: '%v'", tr2.App.ObjectMeta().Labels)
 	}
@@ -1704,8 +1705,8 @@ services:
 
 	tr2.DevModeOff()
 
-	if _, ok := tr2.App.ObjectMeta().Labels[model.DevLabel]; ok {
-		t.Fatalf("'%s' label not eliminated on 'okteto down'", model.DevLabel)
+	if _, ok := tr2.App.ObjectMeta().Labels[constants.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
 	}
 
 	if _, ok := tr2.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {

@@ -19,9 +19,6 @@ const (
 	// TimeFormat is the format to use when storing timestamps as a string
 	TimeFormat = "2006-01-02T15:04:05"
 
-	// DevLabel indicates the deployment is in dev mode
-	DevLabel = "dev.okteto.com"
-
 	// DevCloneLabel indicates it is a dev pod clone
 	DevCloneLabel = "dev.okteto.com/clone"
 
@@ -140,8 +137,6 @@ const (
 	DefaultSyncthingRescanInterval = 300
 	// RemoteSubPath subpath in the development container persistent volume for the remote data
 	RemoteSubPath = "okteto-remote"
-	// OktetoURLAnnotation indicates the okteto cluster public url
-	OktetoURLAnnotation = "dev.okteto.com/url"
 	// OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 	// OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
@@ -168,9 +163,6 @@ const (
 	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
 
 	syncFieldDocsURL = "https:// okteto.com/docs/reference/manifest/#sync-string-required"
-
-	// OktetoExtension identifies the okteto extension in kubeconfig files
-	OktetoExtension = "okteto"
 
 	// HelmSecretType indicates the type for secrets created by Helm
 	HelmSecretType = "helm.sh/release.v1"
@@ -252,10 +244,6 @@ const (
 
 	// OktetoInInstaller if set to true okteto is running inside the pipeline installer
 	OktetoInInstaller = "OKTETO_IN_INSTALLER"
-
-	// OktetoSkipConfigCredentialsUpdate prevents the kubernetes config from being updated
-	// with the okteto credentials
-	OktetoSkipConfigCredentialsUpdate = "OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE"
 
 	// OktetoCurrentDeployBelongsToPreview if set the current okteto deploy belongs
 	// to a preview environment

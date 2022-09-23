@@ -110,7 +110,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
-			os.Setenv(model.OktetoSkipConfigCredentialsUpdate, "false")
+			os.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "false")
 			if options.ManifestPath != "" {
 				// if path is absolute, its transformed to rel from root
 				initialCWD, err := os.Getwd()
@@ -369,7 +369,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		fmt.Sprintf("%s=true", model.OktetoWithinDeployCommandContextEnvVar),
 		// Set OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE env variable, so all the Okteto commands executed within this command execution
 		// should not overwrite the server and the credentials in the kubeconfig
-		fmt.Sprintf("%s=true", model.OktetoSkipConfigCredentialsUpdate),
+		fmt.Sprintf("%s=true", constants.OktetoSkipConfigCredentialsUpdate),
 		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
 		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
