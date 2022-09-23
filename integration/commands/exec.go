@@ -20,6 +20,7 @@ import (
 	"os/exec"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 // ExecOptions are the options to add to an exec command
@@ -51,7 +52,7 @@ func RunExecCommand(oktetoPath string, execOptions *ExecOptions) (string, error)
 	}
 
 	if execOptions.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, execOptions.OktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, execOptions.OktetoHome))
 	}
 	if execOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, execOptions.Token))

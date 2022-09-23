@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 // NamespaceOptions defines the options that can be added to a build command
@@ -46,7 +47,7 @@ func RunOktetoCreateNamespace(oktetoPath string, namespaceOpts *NamespaceOptions
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, namespaceOpts.Token))
 	}
 	if namespaceOpts.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
 	}
 
 	log.Printf("Running: %s\n", cmd.String())
@@ -73,7 +74,7 @@ func RunOktetoNamespace(oktetoPath string, namespaceOpts *NamespaceOptions) erro
 	}
 
 	if namespaceOpts.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
 	}
 	if namespaceOpts.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, namespaceOpts.Token))
@@ -114,7 +115,7 @@ func RunOktetoDeleteNamespace(oktetoPath string, namespaceOpts *NamespaceOptions
 	}
 
 	if namespaceOpts.OktetoHome != "" {
-		deleteCMD.Env = append(deleteCMD.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
+		deleteCMD.Env = append(deleteCMD.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, namespaceOpts.OktetoHome))
 	}
 	o, err := deleteCMD.CombinedOutput()
 	if err != nil {

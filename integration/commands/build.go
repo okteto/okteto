@@ -19,6 +19,7 @@ import (
 	"os/exec"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 // BuildOptions defines the options that can be added to a build command
@@ -57,7 +58,7 @@ func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
 	}
 
 	if buildOptions.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, buildOptions.OktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, buildOptions.OktetoHome))
 	}
 	if buildOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, buildOptions.Token))

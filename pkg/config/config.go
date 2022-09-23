@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 	"gopkg.in/yaml.v2"
 )
 
@@ -180,7 +181,7 @@ func GetState(dev *model.Dev) (UpState, error) {
 
 // GetUserHomeDir returns the OS home dir
 func GetUserHomeDir() string {
-	if v, ok := os.LookupEnv(model.OktetoHomeEnvVar); ok {
+	if v, ok := os.LookupEnv(constants.OktetoHomeEnvVar); ok {
 		if !filesystem.FileExists(v) {
 			oktetoLog.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
 		}

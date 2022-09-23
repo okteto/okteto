@@ -20,6 +20,7 @@ import (
 	"os/exec"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 // StackDeployOptions defines the options that can be added to a deploy command
@@ -57,7 +58,7 @@ func RunOktetoStackDeploy(oktetoPath string, deployOptions *StackDeployOptions) 
 	}
 
 	if deployOptions.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, deployOptions.OktetoHome))
 	}
 	if deployOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, deployOptions.Token))
@@ -88,7 +89,7 @@ func RunOktetoStackDestroy(oktetoPath string, deployOptions *StackDestroyOptions
 	}
 
 	if deployOptions.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, deployOptions.OktetoHome))
 	}
 	if deployOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, deployOptions.Token))

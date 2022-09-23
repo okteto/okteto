@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 // RunOktetoKubeconfig runs okteto kubeconfig command
@@ -32,7 +33,7 @@ func RunOktetoKubeconfig(oktetoPath, oktetoHome string) error {
 	}
 
 	if oktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, oktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, oktetoHome))
 	}
 	o, err := cmd.CombinedOutput()
 	if err != nil {

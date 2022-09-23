@@ -227,9 +227,6 @@ const (
 	// OktetoFolderEnvVar defines the path of okteto folder
 	OktetoFolderEnvVar = "OKTETO_FOLDER"
 
-	// OktetoHomeEnvVar defines the path of okteto folder
-	OktetoHomeEnvVar = "OKTETO_HOME"
-
 	// OktetoExecuteSSHEnvVar defines if the command should be executed through ssh
 	OktetoExecuteSSHEnvVar = "OKTETO_EXECUTE_SSH"
 

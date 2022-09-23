@@ -17,8 +17,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 func TestMain(m *testing.M) {
@@ -68,7 +68,7 @@ func Test_getTrackID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			dir := t.TempDir()
 
-			os.Setenv(model.OktetoHomeEnvVar, dir)
+			os.Setenv(constants.OktetoHomeEnvVar, dir)
 
 			a := get()
 			a.MachineID = tt.machineID

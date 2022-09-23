@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 func TestGetUserHomeDir(t *testing.T) {
@@ -29,10 +30,10 @@ func TestGetUserHomeDir(t *testing.T) {
 
 	dir := t.TempDir()
 	defer func() {
-		os.Unsetenv(model.OktetoHomeEnvVar)
+		os.Unsetenv(constants.OktetoHomeEnvVar)
 	}()
 
-	os.Setenv(model.OktetoHomeEnvVar, dir)
+	os.Setenv(constants.OktetoHomeEnvVar, dir)
 	home = GetUserHomeDir()
 	if home != dir {
 		t.Fatalf("OKTETO_HOME override failed, got %s instead of %s", home, dir)

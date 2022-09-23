@@ -20,6 +20,7 @@ import (
 	"os/exec"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 // RunOktetoPush runs an okteto push command
@@ -27,7 +28,7 @@ func RunOktetoPush(oktetoPath, workdir string) error {
 	cmd := exec.Command(oktetoPath, "push")
 	if workdir != "" {
 		cmd.Dir = workdir
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, workdir))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, workdir))
 	}
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))

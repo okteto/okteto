@@ -28,4 +28,7 @@ const (
 	// OktetoSkipConfigCredentialsUpdate prevents the kubernetes config from being updated
 	// with the okteto credentials
 	OktetoSkipConfigCredentialsUpdate = "OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE"
+
+	// OktetoHomeEnvVar defines the path of okteto folder
+	OktetoHomeEnvVar = "OKTETO_HOME"
 )

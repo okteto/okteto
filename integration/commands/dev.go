@@ -25,6 +25,7 @@ import (
 
 	ps "github.com/mitchellh/go-ps"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 // UpOptions has the options for okteto up command
@@ -109,7 +110,7 @@ func getUpCmd(oktetoPath string, upOptions *UpOptions) *exec.Cmd {
 	}
 
 	if upOptions.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, upOptions.OktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, upOptions.OktetoHome))
 	}
 	if upOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, upOptions.Token))
@@ -147,7 +148,7 @@ func RunOktetoDown(oktetoPath string, downOpts *DownOptions) error {
 		downCMD.Env = append(downCMD.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, downOpts.Token))
 	}
 	if downOpts.OktetoHome != "" {
-		downCMD.Env = append(downCMD.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, downOpts.OktetoHome))
+		downCMD.Env = append(downCMD.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, downOpts.OktetoHome))
 	}
 	if downOpts.Service != "" {
 		downCMD.Args = append(downCMD.Args, downOpts.Service)
