@@ -247,9 +247,6 @@ const (
 	// OktetoSSHTimeoutEnvVar defines the timeout for ssh operations
 	OktetoSSHTimeoutEnvVar = "OKTETO_SSH_TIMEOUT"
 
-	// OktetoKubernetesTimeoutEnvVar defines the timeout for kubernetes operations
-	OktetoKubernetesTimeoutEnvVar = "OKTETO_KUBERNETES_TIMEOUT"
-
 	// OktetoRescanIntervalEnvVar defines the time between scans for syncthing
 	OktetoRescanIntervalEnvVar = "OKTETO_RESCAN_INTERVAL"
 
