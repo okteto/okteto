@@ -35,7 +35,7 @@ const (
 	DefaultReplicasNumber = 1
 )
 
-// Stack represents an okteto stack
+// StackRaw represents an okteto stack
 type StackRaw struct {
 	Version   string                     `yaml:"version,omitempty"`
 	Name      string                     `yaml:"name"`
@@ -57,7 +57,7 @@ type StackRaw struct {
 	Warnings StackWarnings
 }
 
-// Service represents an okteto stack service
+// ServiceRaw represents an okteto stack service
 type ServiceRaw struct {
 	Deploy                   *DeployInfoRaw        `yaml:"deploy,omitempty"`
 	Build                    *composeBuildInfo     `yaml:"build,omitempty"`
