@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,7 +38,7 @@ type StatefulSetApp struct {
 }
 
 func NewStatefulSetApp(sfs *appsv1.StatefulSet) *StatefulSetApp {
-	return &StatefulSetApp{kind: model.StatefulSet, sfs: sfs}
+	return &StatefulSetApp{kind: okteto.StatefulSet, sfs: sfs}
 }
 
 func (i *StatefulSetApp) Kind() string {

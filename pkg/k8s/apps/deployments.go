@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/replicasets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,7 +39,7 @@ type DeploymentApp struct {
 }
 
 func NewDeploymentApp(d *appsv1.Deployment) *DeploymentApp {
-	return &DeploymentApp{kind: model.Deployment, d: d}
+	return &DeploymentApp{kind: okteto.Deployment, d: d}
 }
 
 func (i *DeploymentApp) Kind() string {

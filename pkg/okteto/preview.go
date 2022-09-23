@@ -20,7 +20,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
@@ -307,19 +306,19 @@ func (c *previewClient) GetResourcesStatusFromPreview(ctx context.Context, previ
 	status := make(map[string]string)
 	for _, d := range queryStruct.Preview.Deployments {
 		if devName == "" || string(d.DeployedBy) == devName {
-			resourceName := getResourceFullName(model.Deployment, string(d.Name))
+			resourceName := getResourceFullName(Deployment, string(d.Name))
 			status[resourceName] = string(d.Status)
 		}
 	}
 	for _, sfs := range queryStruct.Preview.Statefulsets {
 		if devName == "" || string(sfs.DeployedBy) == devName {
-			resourceName := getResourceFullName(model.StatefulSet, string(sfs.Name))
+			resourceName := getResourceFullName(StatefulSet, string(sfs.Name))
 			status[resourceName] = string(sfs.Status)
 		}
 	}
 	for _, j := range queryStruct.Preview.Jobs {
 		if devName == "" || string(j.DeployedBy) == devName {
-			resourceName := getResourceFullName(model.Job, string(j.Name))
+			resourceName := getResourceFullName(job, string(j.Name))
 			status[resourceName] = string(j.Status)
 		}
 	}

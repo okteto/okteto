@@ -109,13 +109,6 @@ const (
 	// StackVolumeNameLabel indicates the name of the stack volume an object belongs to
 	StackVolumeNameLabel = "stack.okteto.com/volume"
 
-	// Deployment k8s deployemnt kind
-	Deployment = "Deployment"
-	// StatefulSet k8s statefulset kind
-	StatefulSet = "StatefulSet"
-	// Job k8s job kind
-	Job = "job"
-
 	// Localhost localhost
 	Localhost = "localhost"
 	// PrivilegedLocalhost localhost

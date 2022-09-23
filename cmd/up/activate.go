@@ -378,7 +378,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				oktetoLog.Success("Persistent volume successfully attached")
 				oktetoLog.Spinner("Pulling images...")
 			case "Killing":
-				if app.Kind() == model.StatefulSet {
+				if app.Kind() == okteto.StatefulSet {
 					killing = true
 					continue
 				}

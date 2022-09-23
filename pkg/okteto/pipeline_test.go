@@ -15,8 +15,6 @@ package okteto
 
 import (
 	"testing"
-
-	"github.com/okteto/okteto/pkg/model"
 )
 
 func Test_getResourceFullName(t *testing.T) {
@@ -28,19 +26,19 @@ func Test_getResourceFullName(t *testing.T) {
 	}{
 		{
 			name:    "deployment",
-			kindArg: model.Deployment,
+			kindArg: Deployment,
 			nameArg: "name",
 			result:  "deployment/name",
 		},
 		{
 			name:    "statefulset",
-			kindArg: model.StatefulSet,
+			kindArg: StatefulSet,
 			nameArg: "name",
 			result:  "statefulset/name",
 		},
 		{
 			name:    "job",
-			kindArg: model.Job,
+			kindArg: job,
 			nameArg: "name",
 			result:  "job/name",
 		},
