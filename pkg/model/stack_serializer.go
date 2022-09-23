@@ -571,7 +571,7 @@ func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
 	if p == "" {
 		return
 	}
-	port, err := strconv.Atoi(p)
+	port, err := strconv.ParseInt(p, 10, 32)
 	if err != nil {
 		return
 	}
@@ -896,7 +896,7 @@ func getRangePorts(portString string) (int32, int32, apiv1.Protocol, error) {
 }
 
 func getPortFromString(portString, originalPortString string) (int32, error) {
-	port, err := strconv.Atoi(portString)
+	port, err := strconv.ParseInt(portString, 10, 32)
 	if err != nil {
 		return 0, fmt.Errorf("Can not convert '%s' to a port: %s is not a number", originalPortString, portString)
 	}

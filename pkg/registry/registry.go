@@ -187,7 +187,7 @@ func GetImageMetadata(imageRef string) *ImageMetadata {
 			slashIndx := strings.Index(port, "/")
 			if slashIndx != -1 {
 				port = port[:slashIndx]
-				portInt, err := strconv.Atoi(port)
+				portInt, err := strconv.ParseInt(port, 10, 32)
 				if err != nil {
 					continue
 				}
