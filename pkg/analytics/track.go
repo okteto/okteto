@@ -174,6 +174,8 @@ type TrackUpMetadata struct {
 	HasBuildSection        bool
 	HasDeploySection       bool
 	Success                bool
+	RemoteDependencies     int
+	LocalDependencies      int
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
@@ -303,6 +305,8 @@ type TrackDeployMetadata struct {
 	IsPreview              bool
 	HasDependenciesSection bool
 	HasBuildSection        bool
+	RemoteDependencies     int
+	LocalDependencies      int
 }
 
 // TrackDeploy sends a tracking event to mixpanel when the user deploys a pipeline

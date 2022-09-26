@@ -23,6 +23,30 @@ import (
 // ManifestDependencies represents the map of dependencies at a manifest
 type ManifestDependencies map[string]Dependency
 
+// GetRemoteDependencies returns a list of the remotes dependencies
+func (md ManifestDependencies) GetRemoteDependencies() []RemoteDependency {
+	result := []RemoteDependency{}
+	for _, dependency := range md {
+		remoteDependency, ok := dependency.(*RemoteDependency)
+		if ok {
+			result = append(result, *remoteDependency)
+		}
+	}
+	return result
+}
+
+// GetLocalDependencies returns a list of the local dependencies
+func (md ManifestDependencies) GetLocalDependencies() []LocalDependency {
+	result := []LocalDependency{}
+	for _, dependency := range md {
+		localDependency, ok := dependency.(*LocalDependency)
+		if ok {
+			result = append(result, *localDependency)
+		}
+	}
+	return result
+}
+
 // Dependency represents a dependency object at the manifest
 type Dependency interface{}
 

@@ -255,6 +255,8 @@ func Up() *cobra.Command {
 					HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
 					HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
 					Err:                    err,
+					RemoteDependencies:     len(up.Manifest.Dependencies.GetRemoteDependencies()),
+					LocalDependencies:      len(up.Manifest.Dependencies.GetLocalDependencies()),
 				})
 
 				// only allow error.ErrManifestFoundButNoDeployCommands to go forward - autocreate property will deploy the app
@@ -544,6 +546,8 @@ func (up *upContext) start() error {
 		HasDeploySection: (up.Manifest.IsV2 &&
 			up.Manifest.Deploy != nil &&
 			(len(up.Manifest.Deploy.Commands) > 0 || up.Manifest.Deploy.ComposeSection.ComposesInfo != nil)),
+		RemoteDependencies: len(up.Manifest.Dependencies.GetRemoteDependencies()),
+		LocalDependencies:  len(up.Manifest.Dependencies.GetLocalDependencies()),
 	})
 
 	go up.activateLoop()

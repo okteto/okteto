@@ -212,6 +212,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 				IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
 				HasDependenciesSection: hasDependencySection,
 				HasBuildSection:        hasBuildSection,
+				RemoteDependencies:     len(options.Manifest.Dependencies.GetRemoteDependencies()),
+				LocalDependencies:      len(options.Manifest.Dependencies.GetLocalDependencies()),
 			})
 
 			return err
