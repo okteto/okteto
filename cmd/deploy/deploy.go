@@ -221,7 +221,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 				})
 
 				exit <- err
-				return
 			}()
 
 			select {
