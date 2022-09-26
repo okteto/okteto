@@ -318,19 +318,17 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	// TODO: take this out to a new function deploy dependencies
-	for depName, dep := range deployOptions.Manifest.Dependencies {
+	for depName, dep := range deployOptions.Manifest.Dependencies.GetRemoteDependencies() {
 		oktetoLog.Information("Deploying dependency '%s'", depName)
-		dep.Variables = append(dep.Variables, model.EnvVar{
-			Name:  "OKTETO_ORIGIN",
-			Value: "okteto-deploy",
-		})
+		dep.AddVariable("OKTETO_ORIGIN", "okteto-deploy")
+
 		pipOpts := &pipelineCMD.DeployOptions{
 			Name:         depName,
-			Repository:   dep.Repository,
-			Branch:       dep.Branch,
-			File:         dep.ManifestPath,
-			Variables:    model.SerializeBuildArgs(dep.Variables),
-			Wait:         dep.Wait,
+			Repository:   dep.GetRepository(),
+			Branch:       dep.GetBranch(),
+			File:         dep.GetManifestPath(),
+			Variables:    model.SerializeBuildArgs(dep.GetVariables()),
+			Wait:         dep.HasToWait(),
 			Timeout:      deployOptions.Timeout,
 			SkipIfExists: !deployOptions.Dependencies,
 		}

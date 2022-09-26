@@ -776,7 +776,7 @@ func (dm *dependencyMarshaller) UnmarshalYAML(unmarshal func(interface{}) error)
 	var remoteDependency remoteDependencyMarshaller
 	err := unmarshal(&remoteDependency)
 	if err == nil {
-		dm.remoteDependency = (*RemoteDependency)(&remoteDependency)
+		dm.remoteDependency = remoteDependency.toRemoteDependency()
 		return nil
 	}
 	var localDependency localDependencyMarshaller
@@ -803,9 +803,7 @@ func getDependencyFromString(dependency string) (*dependencyMarshaller, error) {
 	r, err := giturls.Parse(dependency)
 	if err == nil {
 		return &dependencyMarshaller{
-			remoteDependency: &RemoteDependency{
-				Repository: r.String(),
-			},
+			remoteDependency: NewRemoteDependencyFromRepository(r.String()),
 		}, nil
 	}
 	oktetoLog.Debugf("dependency '%s' could not been transformed to remote dependency. Trying transforming to local dependency", dependency)

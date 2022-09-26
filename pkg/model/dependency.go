@@ -23,25 +23,25 @@ import (
 // ManifestDependencies represents the map of dependencies at a manifest
 type ManifestDependencies map[string]Dependency
 
-// GetRemoteDependencies returns a list of the remotes dependencies
-func (md ManifestDependencies) GetRemoteDependencies() []RemoteDependency {
-	result := []RemoteDependency{}
-	for _, dependency := range md {
+// GetRemoteDependencies returns a map of the remotes dependencies
+func (md ManifestDependencies) GetRemoteDependencies() map[string]*RemoteDependency {
+	result := map[string]*RemoteDependency{}
+	for dependencyName, dependency := range md {
 		remoteDependency, ok := dependency.(*RemoteDependency)
 		if ok {
-			result = append(result, *remoteDependency)
+			result[dependencyName] = remoteDependency
 		}
 	}
 	return result
 }
 
 // GetLocalDependencies returns a list of the local dependencies
-func (md ManifestDependencies) GetLocalDependencies() []LocalDependency {
-	result := []LocalDependency{}
-	for _, dependency := range md {
+func (md ManifestDependencies) GetLocalDependencies() map[string]*LocalDependency {
+	result := map[string]*LocalDependency{}
+	for dependencyName, dependency := range md {
 		localDependency, ok := dependency.(*LocalDependency)
 		if ok {
-			result = append(result, *localDependency)
+			result[dependencyName] = localDependency
 		}
 	}
 	return result
@@ -52,11 +52,51 @@ type Dependency interface{}
 
 // RemoteDependency represents a remote dependency object at the manifest
 type RemoteDependency struct {
-	Repository   string
-	ManifestPath string
-	Branch       string
-	Variables    Environment
-	Wait         bool
+	repository   string
+	manifestPath string
+	branch       string
+	variables    Environment
+	wait         bool
+}
+
+// NewRemoteDependencyFromRepository returns a remote dependency from a repository
+func NewRemoteDependencyFromRepository(repository string) *RemoteDependency {
+	return &RemoteDependency{
+		repository: repository,
+	}
+}
+
+// GetRepository returns the repository of the dependency
+func (rd *RemoteDependency) GetRepository() string {
+	return rd.repository
+}
+
+// GetBranch returns the branch of the dependency
+func (rd *RemoteDependency) GetBranch() string {
+	return rd.branch
+}
+
+// GetManifestPath returns the manifest path of the dependency
+func (rd *RemoteDependency) GetManifestPath() string {
+	return rd.manifestPath
+}
+
+// HasToWait returns if Okteto should wait until the execution is finished
+func (rd *RemoteDependency) HasToWait() bool {
+	return rd.wait
+}
+
+// GetVariables returns the variables of the dependency
+func (rd *RemoteDependency) GetVariables() Environment {
+	return rd.variables
+}
+
+// AddVariable adds a variable to the dependency variable list
+func (rd *RemoteDependency) AddVariable(key, value string) {
+	rd.variables = append(rd.variables, EnvVar{
+		Name:  key,
+		Value: value,
+	})
 }
 
 type localPath struct {
@@ -87,7 +127,7 @@ func (dm *dependencyMarshaller) getName() string {
 	if dm.localDependency != nil {
 		return ""
 	}
-	repo, err := url.Parse(dm.remoteDependency.Repository)
+	repo, err := url.Parse(dm.remoteDependency.GetRepository())
 	if err != nil {
 		oktetoLog.Debugf("could not parse repo url: %w", err)
 	}
@@ -110,6 +150,16 @@ type remoteDependencyMarshaller struct {
 	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
 	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
 	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
+}
+
+func (ld *remoteDependencyMarshaller) toRemoteDependency() *RemoteDependency {
+	return &RemoteDependency{
+		repository:   ld.Repository,
+		manifestPath: ld.ManifestPath,
+		branch:       ld.Branch,
+		variables:    ld.Variables,
+		wait:         ld.Wait,
+	}
 }
 
 type localDependencyMarshaller struct {
