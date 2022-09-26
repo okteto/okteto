@@ -303,7 +303,7 @@ func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *ap
 	var command string
 	for idx, v := range svc.Volumes {
 		volumeClaimName := getVolumeClaimName(&v)
-		command = fmt.Sprintf("echo initializing volume %s with content of the image '%s'...", volumeClaimName, svc.Image)
+		command = fmt.Sprintf(`echo initializing volume %s with content of the image %s...`, volumeClaimName, svc.Image)
 		subpath := fmt.Sprintf("data-%d", idx)
 		if v.LocalPath != "" {
 			subpath = v.LocalPath
@@ -317,7 +317,7 @@ func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *ap
 			},
 		)
 
-		copyVolumeCmd := fmt.Sprintf("cp -Rv %s/. /init-volume-%d 2>&1 | sed -E 's/cp: (.*): No such file or directory/the image '%s' does not have any content in \\1/g'", v.RemotePath, idx, svc.Image)
+		copyVolumeCmd := fmt.Sprintf("cp -Rv %s/. /init-volume-%d 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image '%s' does not have any content in \\1/g'", v.RemotePath, idx, svc.Image)
 		command = fmt.Sprintf("%s && (%s || true)", command, copyVolumeCmd)
 	}
 	if len(c.VolumeMounts) != 0 {
