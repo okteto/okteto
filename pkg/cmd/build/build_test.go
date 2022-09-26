@@ -432,6 +432,7 @@ func Test_parseTempSecrets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer tmpTestSecretFile.Close()
 
 	writer := bufio.NewWriter(tmpTestSecretFile)
 	_, _ = writer.Write([]byte(fmt.Sprintf("%s\n", "content for ${SECRET_ENV}")))
