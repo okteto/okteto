@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
-
 	k8sTesting "k8s.io/client-go/testing"
 )
 
@@ -228,15 +227,12 @@ func TestDestroyWithoutTimeoutWithGenericError(t *testing.T) {
 }
 
 func TestCreateForDev(t *testing.T) {
-
 	namespace := "test"
 
 	dev := &model.Dev{
 		Name:      "test",
 		Namespace: namespace,
-		Volumes: []model.Volume{
-			{},
-		},
+		Volumes:   []model.Volume{},
 	}
 
 	type verbAndError struct {
@@ -245,45 +241,63 @@ func TestCreateForDev(t *testing.T) {
 	}
 
 	testTable := []struct {
-		name          string
-		expectedError bool
-		pvc           []string
-		addErrors     []verbAndError
+		name               string
+		expectedError      bool
+		addErrors          []verbAndError
+		existentPvcStorage string
 	}{
 		{
-			name:          "no error",
-			expectedError: false,
-			addErrors:     []verbAndError{},
-			pvc:           []string{"test-okteto"},
+			name:               "no error",
+			expectedError:      false,
+			addErrors:          []verbAndError{},
+			existentPvcStorage: "2Gi",
 		},
 		{
-			name:          "get error",
-			expectedError: true,
-			addErrors:     []verbAndError{{"get", assert.AnError}},
-			pvc:           []string{"test-okteto"},
+			name:               "get error",
+			expectedError:      true,
+			addErrors:          []verbAndError{{"get", assert.AnError}},
+			existentPvcStorage: "2Gi",
 		},
 		{
-			name:          "update error",
-			expectedError: true,
-			addErrors:     []verbAndError{{"update", assert.AnError}},
-
-			pvc: []string{"test-okteto"},
+			name:               "update error",
+			expectedError:      true,
+			addErrors:          []verbAndError{{"update", assert.AnError}},
+			existentPvcStorage: "2Gi",
 		},
 		{
-			name:          "update error handled",
-			expectedError: false,
-			addErrors:     []verbAndError{{"update", fmt.Errorf("persistentvolumeclaims \"%s\" is forbidden: only dynamically provisioned pvc can be resized and the storageclass that provisions the pvc must support resize", "test-okteto")}},
-			pvc:           []string{"test-okteto"},
+			name:               "downsize error",
+			expectedError:      true,
+			existentPvcStorage: "20Gi",
+		},
+		{
+			name:               "upsize no error",
+			expectedError:      false,
+			existentPvcStorage: "1Gi",
+		},
+		{
+			name:               "update error handled",
+			expectedError:      false,
+			addErrors:          []verbAndError{{"update", fmt.Errorf("persistentvolumeclaims \"%s\" is forbidden: only dynamically provisioned pvc can be resized and the storageclass that provisions the pvc must support resize", "test-okteto")}},
+			existentPvcStorage: "2Gi",
 		},
 	}
 
 	for _, test := range testTable {
 		t.Run(test.name, func(t *testing.T) {
 			c := fake.NewSimpleClientset()
-			for _, pvc := range test.pvc {
-				_, err := c.CoreV1().PersistentVolumeClaims(namespace).Create(context.Background(), &apiv1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: pvc}}, metav1.CreateOptions{})
-				assert.NoError(t, err)
+			existentPvc := &apiv1.PersistentVolumeClaim{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-okteto"},
+				Spec: apiv1.PersistentVolumeClaimSpec{
+					Resources: apiv1.ResourceRequirements{
+						Requests: apiv1.ResourceList{
+							"storage": resource.MustParse(test.existentPvcStorage),
+						},
+					},
+				},
 			}
+
+			_, err := c.CoreV1().PersistentVolumeClaims(namespace).Create(context.Background(), existentPvc, metav1.CreateOptions{})
+			assert.NoError(t, err)
 
 			for _, verbAndError := range test.addErrors {
 				c.CoreV1().(*fakecorev1.FakeCoreV1).PrependReactor(verbAndError.verb, "persistentvolumeclaims", func(action k8sTesting.Action) (bool, runtime.Object, error) {
@@ -291,7 +305,7 @@ func TestCreateForDev(t *testing.T) {
 				})
 			}
 
-			err := CreateForDev(context.Background(), dev, c, "")
+			err = CreateForDev(context.Background(), dev, c, "")
 
 			if test.expectedError {
 				assert.Error(t, err)

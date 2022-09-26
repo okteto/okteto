@@ -49,36 +49,36 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 // CreateForDev deploys the volume claim for a given development container
 func CreateForDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface, devPath string) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
-	pvc := translate(dev)
-	k8Volume, err := vClient.Get(ctx, pvc.Name, metav1.GetOptions{})
+	pvcForDev := translate(dev)
+	k8Volume, err := vClient.Get(ctx, pvcForDev.Name, metav1.GetOptions{})
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		return fmt.Errorf("error getting kubernetes volume claim: %s", err)
 	}
 	if k8Volume.Name == "" {
-		oktetoLog.Infof("creating volume claim '%s'", pvc.Name)
-		_, err = vClient.Create(ctx, pvc, metav1.CreateOptions{})
+		oktetoLog.Infof("creating volume claim '%s'", pvcForDev.Name)
+		_, err = vClient.Create(ctx, pvcForDev, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("error creating kubernetes volume claim: %s", err)
 		}
 	} else {
-		if err := checkPVCValues(pvc, dev, devPath); err != nil {
+		if err := checkPVCValues(k8Volume, dev, devPath); err != nil {
 			return err
 		}
-		oktetoLog.Infof("updating volume claim '%s'", pvc.Name)
-		if pvc.Spec.StorageClassName == nil {
-			pvc.Spec.StorageClassName = k8Volume.Spec.StorageClassName
+		oktetoLog.Infof("updating volume claim '%s'", pvcForDev.Name)
+		if pvcForDev.Spec.StorageClassName == nil {
+			pvcForDev.Spec.StorageClassName = k8Volume.Spec.StorageClassName
 		}
-		pvc.Spec.VolumeName = k8Volume.Spec.VolumeName
-		_, err = vClient.Update(ctx, pvc, metav1.UpdateOptions{})
+		pvcForDev.Spec.VolumeName = k8Volume.Spec.VolumeName
+		_, err = vClient.Update(ctx, pvcForDev, metav1.UpdateOptions{})
 		if err != nil {
-			if !isDynamicallyProvisionedPVCError(err, pvc.Name) {
+			if !isDynamicallyProvisionedPVCError(err, pvcForDev.Name) {
 				return fmt.Errorf("error updating kubernetes volume claim: %w", err)
 			}
 			oktetoLog.Debug("could not update pvc in namespace %s: %w", dev.Namespace, err)
 			oktetoLog.Warning(`Could not increase the size of the dev volume from %s to %s:
 try running 'okteto down -v' and 'okteto up', or talk to your administrator
 (the PVC's storage class must support 'allowVolumeExpansion' to be able to upscale dev volumes).`,
-				k8Volume.Spec.Resources.Requests[apiv1.ResourceStorage], pvc.Spec.Resources.Requests[apiv1.ResourceStorage])
+				k8Volume.Spec.Resources.Requests[apiv1.ResourceStorage], pvcForDev.Spec.Resources.Requests[apiv1.ResourceStorage])
 		}
 	}
 	return nil
