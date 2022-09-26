@@ -1067,7 +1067,7 @@ deploy:
 					},
 				},
 				Dev:          map[string]*Dev{},
-				Dependencies: map[string]*Dependency{},
+				Dependencies: NewManifestDependenciesSection(),
 				Context:      "context-to-use",
 				IsV2:         true,
 				Type:         OktetoManifestType,
@@ -1099,7 +1099,7 @@ dev:
 						},
 					},
 				},
-				Dependencies: map[string]*Dependency{},
+				Dependencies: NewManifestDependenciesSection(),
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1245,7 +1245,7 @@ sync:
 				Type:          OktetoManifestType,
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
-				Dependencies:  map[string]*Dependency{},
+				Dependencies:  NewManifestDependenciesSection(),
 				GlobalForward: []forward.GlobalForward{},
 				Dev: map[string]*Dev{
 					"test": {
@@ -1328,7 +1328,7 @@ services:
 				Type:          OktetoManifestType,
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
-				Dependencies:  map[string]*Dependency{},
+				Dependencies:  NewManifestDependenciesSection(),
 				GlobalForward: []forward.GlobalForward{},
 				Dev: map[string]*Dev{
 					"test": {
@@ -1459,7 +1459,7 @@ dev:
 				Type:         OktetoManifestType,
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
-				Dependencies: map[string]*Dependency{},
+				Dependencies: NewManifestDependenciesSection(),
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1545,7 +1545,7 @@ dev:
 				Type:         OktetoManifestType,
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
-				Dependencies: map[string]*Dependency{},
+				Dependencies: NewManifestDependenciesSection(),
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1712,7 +1712,7 @@ deploy:
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
-				Dependencies: map[string]*Dependency{},
+				Dependencies: NewManifestDependenciesSection(),
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1738,7 +1738,7 @@ devs:
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
-				Dependencies: map[string]*Dependency{},
+				Dependencies: NewManifestDependenciesSection(),
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{

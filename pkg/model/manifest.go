@@ -115,7 +115,7 @@ func NewManifest() *Manifest {
 	return &Manifest{
 		Dev:           map[string]*Dev{},
 		Build:         map[string]*BuildInfo{},
-		Dependencies:  ManifestDependencies{},
+		Dependencies:  NewManifestDependenciesSection(),
 		Deploy:        &DeployInfo{},
 		GlobalForward: []forward.GlobalForward{},
 	}

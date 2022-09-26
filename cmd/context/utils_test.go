@@ -177,7 +177,7 @@ dependencies:
 				Dev:  model.ManifestDevs{},
 				Type: model.OktetoManifestType,
 				Dependencies: model.ManifestDependencies{
-					"one": &model.Dependency{
+					"one": &model.RemoteDependency{
 						Repository: "https://repo.url",
 					},
 				},

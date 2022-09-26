@@ -16,19 +16,94 @@ package model
 import (
 	"net/url"
 	"strings"
+
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
 // ManifestDependencies represents the map of dependencies at a manifest
-type ManifestDependencies map[string]*Dependency
+type ManifestDependencies map[string]Dependency
 
 // Dependency represents a dependency object at the manifest
-type Dependency struct {
+type Dependency interface{}
+
+// RemoteDependency represents a remote dependency object at the manifest
+type RemoteDependency struct {
+	Repository   string
+	ManifestPath string
+	Branch       string
+	Variables    Environment
+	Wait         bool
+}
+
+type localPath struct {
+	absolutePath string
+	relativePath string
+}
+
+// LocalDependency represents a remote dependency object at the manifest
+type LocalDependency struct {
+	manifestPath *localPath
+	variables    Environment
+}
+
+type dependencyMarshaller struct {
+	remoteDependency *RemoteDependency
+	localDependency  *LocalDependency
+	name             string
+}
+
+func (dm *dependencyMarshaller) toDependency() Dependency {
+	if dm.localDependency != nil {
+		return dm.localDependency
+	}
+	return dm.remoteDependency
+}
+
+func (dm *dependencyMarshaller) getName() string {
+	if dm.localDependency != nil {
+		return ""
+	}
+	repo, err := url.Parse(dm.remoteDependency.Repository)
+	if err != nil {
+		oktetoLog.Debugf("could not parse repo url: %w", err)
+	}
+	return getDependencyNameFromGitURL(repo)
+}
+
+type manifestDependenciesMarshaller map[string]*dependencyMarshaller
+
+func (mdm manifestDependenciesMarshaller) toManifestDependencies() ManifestDependencies {
+	result := ManifestDependencies{}
+	for k, v := range mdm {
+		result[k] = v.toDependency()
+	}
+	return result
+}
+
+type remoteDependencyMarshaller struct {
 	Repository   string      `json:"repository" yaml:"repository"`
 	ManifestPath string      `json:"manifest,omitempty" yaml:"manifest,omitempty"`
 	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
 	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
 	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
+}
 
+type localDependencyMarshaller struct {
+	ManifestPath *localPath  `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
+}
+
+func (ld *localDependencyMarshaller) toLocalDependency() *LocalDependency {
+	return &LocalDependency{
+		manifestPath: ld.ManifestPath,
+		variables:    ld.Variables,
+	}
+}
+
+// NewManifestDependenciesSection creates a new manifest dependencies section object
+func NewManifestDependenciesSection() ManifestDependencies {
+	return ManifestDependencies{}
+}
 
 func getDependencyNameFromGitURL(repo *url.URL) string {
 	repoPath := strings.Split(strings.TrimPrefix(repo.Path, "/"), "/")

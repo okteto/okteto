@@ -732,59 +732,85 @@ type dependenciesRaw struct {
 	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
 }
 
-
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (md *ManifestDependencies) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rawList []string
-	err := unmarshal(&rawList)
-	if err == nil {
-		rawMd := ManifestDependencies{}
-		for _, repo := range rawList {
-			r, err := giturls.Parse(repo)
-			if err != nil {
-				return err
-			}
-			name := getRepoNameFromGitURL(r)
-			rawMd[name] = &Dependency{
-				Repository: r.String(),
-			}
-		}
-		*md = rawMd
-		return nil
-	}
+	var dependencies manifestDependenciesMarshaller
+	err := unmarshal(&dependencies)
 
-	type manifestDependencies ManifestDependencies
-	var rawMap manifestDependencies
-	err = unmarshal(&rawMap)
 	if err != nil {
 		return err
 	}
-	*md = ManifestDependencies(rawMap)
+	*md = dependencies.toManifestDependencies()
 	return nil
 }
 
-// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (dependency *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var rawString string
-	err := unmarshal(&rawString)
+func (md *manifestDependenciesMarshaller) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var simpleNotationDependencies []string
+	err := unmarshal(&simpleNotationDependencies)
 	if err == nil {
-		dependency.Repository = rawString
+		rawManifestDependencies := manifestDependenciesMarshaller{}
+		for _, dependency := range simpleNotationDependencies {
+			d, err := getDependencyFromString(dependency)
+			if err != nil {
+				return fmt.Errorf("could not unmarshall manifest dependencies: %w", err)
+			}
+			rawManifestDependencies[d.getName()] = d
+		}
+		*md = rawManifestDependencies
 		return nil
 	}
-
-	var rawDependency dependenciesRaw
-	err = unmarshal(&rawDependency)
-	if err != nil {
-		return err
+	var extendedNotationDependencies map[string]dependencyMarshaller
+	err = unmarshal(&extendedNotationDependencies)
+	if err == nil {
+		rawManifestDependencies := manifestDependenciesMarshaller{}
+		for dependencyName, dependencyInfo := range extendedNotationDependencies {
+			rawManifestDependencies[dependencyName] = &dependencyInfo
+		}
+		*md = rawManifestDependencies
+		return nil
 	}
+	return fmt.Errorf("could not unmarshal dependency section: %w", err)
+}
 
-	dependency.Repository = rawDependency.Repository
-	dependency.ManifestPath = rawDependency.ManifestPath
-	dependency.Branch = rawDependency.Branch
-	dependency.Variables = rawDependency.Variables
-	dependency.Wait = rawDependency.Wait
+func (dm *dependencyMarshaller) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var remoteDependency remoteDependencyMarshaller
+	err := unmarshal(&remoteDependency)
+	if err == nil {
+		dm.remoteDependency = (*RemoteDependency)(&remoteDependency)
+		return nil
+	}
+	var localDependency localDependencyMarshaller
+	err = unmarshal(&localDependency)
+	if err == nil {
+		dm.localDependency = localDependency.toLocalDependency()
+		return nil
+	}
+	var dependencyFromString string
+	err = unmarshal(&dependencyFromString)
+	if err == nil {
+		aux, err := getDependencyFromString(dependencyFromString)
+		if err != nil {
+			return err
+		}
+		*dm = *aux
+		return nil
+	}
+	return err
+}
 
-	return nil
+func getDependencyFromString(dependency string) (*dependencyMarshaller, error) {
+	// check if the dependency is a remote dependency
+	r, err := giturls.Parse(dependency)
+	if err == nil {
+		return &dependencyMarshaller{
+			remoteDependency: &RemoteDependency{
+				Repository: r.String(),
+			},
+		}, nil
+	}
+	oktetoLog.Debugf("dependency '%s' could not been transformed to remote dependency. Trying transforming to local dependency", dependency)
+
+	return nil, fmt.Errorf("could not transform '%s' to a valid dependency", dependency)
 }
 
 func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -801,7 +827,7 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	manifest := manifestRaw{
 		Dev:          map[string]*Dev{},
 		Build:        map[string]*BuildInfo{},
-		Dependencies: map[string]*Dependency{},
+		Dependencies: NewManifestDependenciesSection(),
 	}
 	err = unmarshal(&manifest)
 	if err != nil {
