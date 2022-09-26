@@ -186,35 +186,56 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Builder:            buildv2.NewBuilderFromScratch(),
 			}
 			startTime := time.Now()
-			err = c.RunDeploy(ctx, options)
 
-			deployType := "custom"
-			hasDependencySection := false
-			hasBuildSection := false
-			if options.Manifest != nil {
-				if options.Manifest.IsV2 &&
-					options.Manifest.Deploy != nil &&
-					options.Manifest.Deploy.ComposeSection != nil &&
-					options.Manifest.Deploy.ComposeSection.ComposesInfo != nil {
-					deployType = "compose"
+			stop := make(chan os.Signal, 1)
+			signal.Notify(stop, os.Interrupt)
+			exit := make(chan error, 1)
+
+			go func() {
+				err = c.RunDeploy(ctx, options)
+
+				deployType := "custom"
+				hasDependencySection := false
+				hasBuildSection := false
+				if options.Manifest != nil {
+					if options.Manifest.IsV2 &&
+						options.Manifest.Deploy != nil &&
+						options.Manifest.Deploy.ComposeSection != nil &&
+						options.Manifest.Deploy.ComposeSection.ComposesInfo != nil {
+						deployType = "compose"
+					}
+
+					hasDependencySection = options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0
+					hasBuildSection = options.Manifest.IsV2 && len(options.Manifest.Build) > 0
 				}
 
-				hasDependencySection = options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0
-				hasBuildSection = options.Manifest.IsV2 && len(options.Manifest.Build) > 0
+				analytics.TrackDeploy(analytics.TrackDeployMetadata{
+					Success:                err == nil,
+					IsOktetoRepo:           utils.IsOktetoRepo(),
+					Duration:               time.Since(startTime),
+					PipelineType:           c.PipelineType,
+					DeployType:             deployType,
+					IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
+					HasDependenciesSection: hasDependencySection,
+					HasBuildSection:        hasBuildSection,
+				})
+
+				exit <- err
+				return
+			}()
+
+			select {
+			case <-stop:
+				oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+				oktetoLog.Spinner("Shutting down...")
+				oktetoLog.StartSpinner()
+				defer oktetoLog.StopSpinner()
+
+				c.Executor.CleanUp(oktetoErrors.ErrIntSig)
+				return oktetoErrors.ErrIntSig
+			case err := <-exit:
+				return err
 			}
-
-			analytics.TrackDeploy(analytics.TrackDeployMetadata{
-				Success:                err == nil,
-				IsOktetoRepo:           utils.IsOktetoRepo(),
-				Duration:               time.Since(startTime),
-				PipelineType:           c.PipelineType,
-				DeployType:             deployType,
-				IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
-				HasDependenciesSection: hasDependencySection,
-				HasBuildSection:        hasBuildSection,
-			})
-
-			return err
 		},
 	}
 
@@ -427,71 +448,50 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 }
 
 func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-	exit := make(chan error, 1)
-	go func() {
-		// deploy commands if any
-		for _, command := range opts.Manifest.Deploy.Commands {
-			oktetoLog.Information("Running %s", command.Name)
-			oktetoLog.SetStage(command.Name)
-			if err := dc.Executor.Execute(command, opts.Variables); err != nil {
-				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
-				exit <- fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
-				return
-			}
-			oktetoLog.SetStage("")
+	// deploy commands if any
+	for _, command := range opts.Manifest.Deploy.Commands {
+		oktetoLog.Information("Running %s", command.Name)
+		oktetoLog.SetStage(command.Name)
+		if err := dc.Executor.Execute(command, opts.Variables); err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
+			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
-
-		// deploy compose if any
-		if opts.Manifest.Deploy.ComposeSection != nil {
-			oktetoLog.SetStage("Deploying compose")
-			if err := dc.deployStack(ctx, opts); err != nil {
-				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())
-				exit <- err
-				return
-			}
-			oktetoLog.SetStage("")
-		}
-
-		// deploy endpoits if any
-		if opts.Manifest.Deploy.Endpoints != nil {
-			oktetoLog.SetStage("Endpoints configuration")
-			if err := dc.deployEndpoints(ctx, opts); err != nil {
-				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error generating endpoints: %s", err.Error())
-				exit <- err
-				return
-			}
-			oktetoLog.SetStage("")
-		}
-
-		// deploy diver if any
-		if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
-			oktetoLog.SetStage("Divert configuration")
-			if err := dc.deployDivert(ctx, opts); err != nil {
-				oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
-				exit <- err
-				return
-			}
-			oktetoLog.Success("Divert from '%s' successfully configured", opts.Manifest.Deploy.Divert.Namespace)
-			oktetoLog.SetStage("")
-		}
-
-		exit <- nil
-	}()
-
-	select {
-	case <-stop:
-		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		oktetoLog.Spinner("Shutting down...")
-		oktetoLog.StartSpinner()
-		defer oktetoLog.StopSpinner()
-
-		dc.Executor.CleanUp(oktetoErrors.ErrIntSig)
-		return oktetoErrors.ErrIntSig
-	case err := <-exit:
-		return err
+		oktetoLog.SetStage("")
 	}
+
+	// deploy compose if any
+	if opts.Manifest.Deploy.ComposeSection != nil {
+		oktetoLog.SetStage("Deploying compose")
+		if err := dc.deployStack(ctx, opts); err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())
+			return err
+		}
+		oktetoLog.SetStage("")
+	}
+
+	// deploy endpoits if any
+	if opts.Manifest.Deploy.Endpoints != nil {
+		oktetoLog.SetStage("Endpoints configuration")
+		if err := dc.deployEndpoints(ctx, opts); err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error generating endpoints: %s", err.Error())
+			return err
+		}
+		oktetoLog.SetStage("")
+	}
+
+	// deploy diver if any
+	if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
+		oktetoLog.SetStage("Divert configuration")
+		if err := dc.deployDivert(ctx, opts); err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
+			return err
+		}
+		oktetoLog.Success("Divert from '%s' successfully configured", opts.Manifest.Deploy.Divert.Namespace)
+		oktetoLog.SetStage("")
+	}
+
+	return nil
+
 }
 
 func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
