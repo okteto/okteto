@@ -47,7 +47,7 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 }
 
 // CreateForDev deploys the volume claim for a given development container
-func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, devPath string) error {
+func CreateForDev(ctx context.Context, dev *model.Dev, c kubernetes.Interface, devPath string) error {
 	vClient := c.CoreV1().PersistentVolumeClaims(dev.Namespace)
 	pvc := translate(dev)
 	k8Volume, err := vClient.Get(ctx, pvc.Name, metav1.GetOptions{})
@@ -71,10 +71,22 @@ func CreateForDev(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, 
 		pvc.Spec.VolumeName = k8Volume.Spec.VolumeName
 		_, err = vClient.Update(ctx, pvc, metav1.UpdateOptions{})
 		if err != nil {
-			return fmt.Errorf("error updating kubernetes volume claim: %s", err)
+			if !isDynamicallyProvisionedPVCError(err, pvc.Name) {
+				return fmt.Errorf("error updating kubernetes volume claim: %w", err)
+			}
+			oktetoLog.Debug("could not update pvc in namespace %s: %w", dev.Namespace, err)
+			oktetoLog.Warning(`Could not increase the size of the dev volume from %s to %s:
+try running 'okteto down -v' and 'okteto up', or talk to your administrator
+(the PVC's storage class must support 'allowVolumeExpansion' to be able to upscale dev volumes).`,
+				k8Volume.Spec.Resources.Requests[apiv1.ResourceStorage], pvc.Spec.Resources.Requests[apiv1.ResourceStorage])
 		}
 	}
 	return nil
+}
+
+func isDynamicallyProvisionedPVCError(err error, pvcName string) bool {
+	errorString := fmt.Sprintf("persistentvolumeclaims \"%s\" is forbidden: only dynamically provisioned pvc can be resized and the storageclass that provisions the pvc must support resize", pvcName)
+	return strings.Contains(err.Error(), errorString)
 }
 
 func Create(ctx context.Context, pvc *apiv1.PersistentVolumeClaim, c kubernetes.Interface) error {
@@ -98,8 +110,12 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 	if !ok {
 		return fmt.Errorf("current okteto volume size is wrong. Run '%s' and try again", utils.GetDownCommand(devPath))
 	}
-	if currentSize.Cmp(resource.MustParse(dev.PersistentVolumeSize())) > 0 {
-		if currentSize.Cmp(resource.MustParse("10Gi")) != 0 || dev.PersistentVolumeSize() != model.OktetoDefaultPVSize {
+	devPVSize, err := resource.ParseQuantity(dev.PersistentVolumeSize())
+	if err != nil {
+		return fmt.Errorf("error parsing dev volume size %q: %w", dev.PersistentVolumeSize(), err)
+	}
+	if currentSize.Cmp(devPVSize) > 0 {
+		if currentSize.Cmp(resource.MustParse("10Gi")) != 0 || dev.HasDefaultPersistentVolumeSize() {
 			return fmt.Errorf(
 				"okteto volume size '%s' cannot be less than previous value '%s'. Run '%s' and try again",
 				dev.PersistentVolumeSize(),
@@ -108,7 +124,7 @@ func checkPVCValues(pvc *apiv1.PersistentVolumeClaim, dev *model.Dev, devPath st
 			)
 		}
 	}
-	if currentSize.Cmp(resource.MustParse(dev.PersistentVolumeSize())) < 0 {
+	if currentSize.Cmp(devPVSize) < 0 {
 		restartUUID := uuid.New().String()
 		if dev.Metadata == nil {
 			dev.Metadata = &model.Metadata{}

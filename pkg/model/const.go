@@ -125,8 +125,6 @@ const (
 	PrivilegedLocalhost         = "0.0.0.0"
 	oktetoSSHServerPortVariable = "OKTETO_REMOTE_PORT"
 	oktetoDefaultSSHServerPort  = 2222
-	// OktetoDefaultPVSize default volume size
-	OktetoDefaultPVSize = "2Gi"
 	// OktetoUpCmd up command
 	OktetoUpCmd = "up"
 	// OktetoPushCmd push command
