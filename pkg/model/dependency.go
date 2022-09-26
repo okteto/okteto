@@ -14,9 +14,11 @@
 package model
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
@@ -45,6 +47,20 @@ func (md ManifestDependencies) GetLocalDependencies() map[string]*LocalDependenc
 		}
 	}
 	return result
+}
+
+// GetRemoteDependencies returns a map of the remotes dependencies
+func (md ManifestDependencies) validate() error {
+	for dependencyName, dependencyInfo := range md.GetLocalDependencies() {
+		dependencyPath := dependencyInfo.GetManifestPath()
+		if !filesystem.FileExists(dependencyPath) {
+			return fmt.Errorf("dependency '%s' not found", dependencyName)
+		}
+		if !filesystem.FileExistsAndNotDir(dependencyPath) {
+			return fmt.Errorf("dependency '%s' is a directory", dependencyName)
+		}
+	}
+	return nil
 }
 
 // Dependency represents a dependency object at the manifest
@@ -108,6 +124,11 @@ type localPath struct {
 type LocalDependency struct {
 	manifestPath *localPath
 	variables    Environment
+}
+
+// GetManifestPath returns the manifest path of the dependency
+func (rd *LocalDependency) GetManifestPath() string {
+	return rd.manifestPath.absolutePath
 }
 
 type dependencyMarshaller struct {

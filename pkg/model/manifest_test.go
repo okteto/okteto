@@ -277,9 +277,15 @@ func Test_validateDivert(t *testing.T) {
 }
 
 func Test_validateManifestBuild(t *testing.T) {
+	dir := t.TempDir()
+	tmpTestSecretFile, err := os.CreateTemp(dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
 	tests := []struct {
 		name         string
 		buildSection ManifestBuild
+		dependencies ManifestDependencies
 		expectedErr  bool
 	}{
 		{
@@ -344,6 +350,36 @@ func Test_validateManifestBuild(t *testing.T) {
 				},
 			},
 			expectedErr: true,
+		},
+		{
+			name: "local dependency pointing to folder - error",
+			dependencies: ManifestDependencies{
+				"test": LocalDependency{
+					manifestPath: &localPath{
+						absolutePath: tmpTestSecretFile.Name(),
+					},
+				},
+			},
+		},
+		{
+			name: "local dependency pointing to non existen path - error",
+			dependencies: ManifestDependencies{
+				"test": LocalDependency{
+					manifestPath: &localPath{
+						absolutePath: filepath.Clean("/test/test/test"),
+					},
+				},
+			},
+		},
+		{
+			name: "local dependency pointing to correct file - no error",
+			dependencies: ManifestDependencies{
+				"test": LocalDependency{
+					manifestPath: &localPath{
+						absolutePath: tmpTestSecretFile.Name(),
+					},
+				},
+			},
 		},
 	}
 

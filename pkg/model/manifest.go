@@ -654,9 +654,15 @@ func Read(bytes []byte) (*Manifest, error) {
 
 func (m *Manifest) validate() error {
 	if err := m.Build.validate(); err != nil {
-		return err
+		return fmt.Errorf("error validating manifest build section: %s", err)
 	}
-	return m.validateDivert()
+	if err := m.Dependencies.validate(); err != nil {
+		return fmt.Errorf("error validating manifest dependencies: %s", err)
+	}
+	if err := m.validateDivert(); err != nil {
+		return fmt.Errorf("error validating divert: %s", err)
+	}
+	return nil
 }
 
 func (b *ManifestBuild) validate() error {
