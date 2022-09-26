@@ -327,7 +327,7 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 			return err
 		}
 
-		configFromImage, err := initCMD.GetDevDefaultsFromImage(ctx, app)
+		configFromImage, err := initCMD.GetDevDefaultsFromImage(app)
 		if err != nil {
 			return err
 		}
@@ -336,7 +336,7 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 			return err
 		}
 		setFromImageConfig(dev, configFromImage)
-		if err := initCMD.SetImage(ctx, dev, language, path); err != nil {
+		if err := initCMD.SetImage(dev, language, path); err != nil {
 			return err
 		}
 		err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language, path)

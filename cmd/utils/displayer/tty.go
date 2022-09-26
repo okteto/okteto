@@ -56,7 +56,7 @@ func newTTYDisplayer(stdout, stderr io.Reader) *ttyDisplayer {
 	}
 }
 
-func (d *ttyDisplayer) Display(command string) {
+func (d *ttyDisplayer) Display(_ string) {
 	d.commandContext, d.cancel = context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	wgDelta := 0

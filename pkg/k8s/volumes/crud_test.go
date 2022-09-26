@@ -15,6 +15,7 @@ package volumes
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -272,6 +273,12 @@ func TestCreateForDev(t *testing.T) {
 			name:               "upsize no error",
 			expectedError:      false,
 			existentPvcStorage: "1Gi",
+		},
+		{
+			name:               "update error handled",
+			expectedError:      false,
+			addErrors:          []verbAndError{{"update", fmt.Errorf("persistentvolumeclaims \"%s\" is forbidden: only dynamically provisioned pvc can be resized and the storageclass that provisions the pvc must support resize", "test-okteto")}},
+			existentPvcStorage: "2Gi",
 		},
 	}
 

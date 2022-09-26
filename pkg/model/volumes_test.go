@@ -20,6 +20,7 @@ import (
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDev_translateDeprecatedVolumeFields(t *testing.T) {
@@ -818,4 +819,32 @@ func Test_validateVolumes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDefaultVolumeSize(t *testing.T) {
+
+	testCases := []struct {
+		context  string
+		expected string
+	}{
+		{
+			context:  "https://cloud.okteto.com",
+			expected: cloudDefaultVolumeSize,
+		},
+		{
+			context:  "https://staging.okteto.dev",
+			expected: cloudDefaultVolumeSize,
+		},
+		{
+			context:  "other",
+			expected: defaultVolumeSize,
+		},
+	}
+
+	for _, testCase := range testCases {
+		dev := &Dev{Context: testCase.context}
+		actual := dev.getDefaultPersistentVolumeSize()
+		assert.Equal(t, testCase.expected, actual)
+	}
+
 }

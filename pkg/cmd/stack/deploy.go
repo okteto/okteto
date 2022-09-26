@@ -123,7 +123,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 		addImageMetadataToStack(s, options)
 
-		iClient, err := ingresses.GetClient(ctx, c)
+		iClient, err := ingresses.GetClient(c)
 		if err != nil {
 			exit <- fmt.Errorf("error getting ingress client: %s", err.Error())
 			return
@@ -337,13 +337,13 @@ func deployServices(ctx context.Context, stack *model.Stack, k8sClient kubernete
 					}
 
 					if !canSvcBeDeployed(ctx, stack, svcName, k8sClient, config) {
-						if failedJobs := getDependingFailedJobs(ctx, stack, svcName, k8sClient, config); len(failedJobs) > 0 {
+						if failedJobs := getDependingFailedJobs(ctx, stack, svcName, k8sClient); len(failedJobs) > 0 {
 							if len(failedJobs) == 1 {
 								return fmt.Errorf("service '%s' dependency '%s' failed", svcName, failedJobs[0])
 							}
 							return fmt.Errorf("service '%s' dependencies '%s' failed", svcName, strings.Join(failedJobs, ", "))
 						}
-						if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient, config); len(failedServices) > 0 {
+						if failedServices := getServicesWithFailedProbes(ctx, stack, svcName, k8sClient); len(failedServices) > 0 {
 							for key, value := range failedServices {
 								return fmt.Errorf("service '%s' has failed his healthcheck probes: %s", key, value)
 							}
@@ -404,7 +404,7 @@ func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, c
 	return true
 }
 
-func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) map[string]string {
+func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) map[string]string {
 	svc := stack.Services[svcName]
 	dependingServices := make([]string, 0)
 	for dependingSvc, condition := range svc.DependsOn {
@@ -447,7 +447,7 @@ func getErrorDueToRestartLimit(ctx context.Context, stack *model.Stack, svcName 
 	return nil
 }
 
-func getDependingFailedJobs(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) []string {
+func getDependingFailedJobs(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) []string {
 	svc := stack.Services[svcName]
 	dependingJobs := make([]string, 0)
 	for dependingSvc := range svc.DependsOn {
