@@ -122,13 +122,12 @@ type localPath struct {
 
 // LocalDependency represents a remote dependency object at the manifest
 type LocalDependency struct {
-	manifestPath *localPath
-	variables    Environment
+	manifestPath string
 }
 
 // GetManifestPath returns the manifest path of the dependency
 func (rd *LocalDependency) GetManifestPath() string {
-	return rd.manifestPath.absolutePath
+	return rd.manifestPath
 }
 
 type dependencyMarshaller struct {
@@ -146,7 +145,7 @@ func (dm *dependencyMarshaller) toDependency() Dependency {
 
 func (dm *dependencyMarshaller) getName() string {
 	if dm.localDependency != nil {
-		return ""
+		return dm.localDependency.manifestPath
 	}
 	repo, err := url.Parse(dm.remoteDependency.GetRepository())
 	if err != nil {
@@ -184,14 +183,12 @@ func (ld *remoteDependencyMarshaller) toRemoteDependency() *RemoteDependency {
 }
 
 type localDependencyMarshaller struct {
-	ManifestPath *localPath  `json:"manifest,omitempty" yaml:"manifest,omitempty"`
-	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
+	ManifestPath string `json:"manifest,omitempty" yaml:"manifest,omitempty"`
 }
 
 func (ld *localDependencyMarshaller) toLocalDependency() *LocalDependency {
 	return &LocalDependency{
 		manifestPath: ld.ManifestPath,
-		variables:    ld.Variables,
 	}
 }
 

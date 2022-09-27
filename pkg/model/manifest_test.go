@@ -355,9 +355,7 @@ func Test_validateManifestBuild(t *testing.T) {
 			name: "local dependency pointing to folder - error",
 			dependencies: ManifestDependencies{
 				"test": LocalDependency{
-					manifestPath: &localPath{
-						absolutePath: tmpTestSecretFile.Name(),
-					},
+					manifestPath: tmpTestSecretFile.Name(),
 				},
 			},
 		},
@@ -365,9 +363,7 @@ func Test_validateManifestBuild(t *testing.T) {
 			name: "local dependency pointing to non existen path - error",
 			dependencies: ManifestDependencies{
 				"test": LocalDependency{
-					manifestPath: &localPath{
-						absolutePath: filepath.Clean("/test/test/test"),
-					},
+					manifestPath: filepath.Clean("/test/test/test"),
 				},
 			},
 		},
@@ -375,9 +371,7 @@ func Test_validateManifestBuild(t *testing.T) {
 			name: "local dependency pointing to correct file - no error",
 			dependencies: ManifestDependencies{
 				"test": LocalDependency{
-					manifestPath: &localPath{
-						absolutePath: tmpTestSecretFile.Name(),
-					},
+					manifestPath: tmpTestSecretFile.Name(),
 				},
 			},
 		},

@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -2193,6 +2194,138 @@ func TestBuildDependsOnUnmarshalling(t *testing.T) {
 			var result BuildDependsOn
 			err := yaml.UnmarshalStrict(tt.buildManifest, &result)
 			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestManifestDependenciesUnmarshalling(t *testing.T) {
+	cwd, _ := os.Getwd()
+	defer os.Chdir(cwd)
+
+	dir := t.TempDir()
+	os.Chdir(dir)
+	tmpDependenciesFile, err := os.Create(filepath.Join(dir, "okteto.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tmpDependenciesFile2, err := os.Create(filepath.Join(dir, "okteto-2.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name     string
+		bytes    []byte
+		expected ManifestDependencies
+		err      bool
+	}{
+		{
+			name:  "simple notation - local dependencies",
+			bytes: []byte(fmt.Sprintf(`- %s`, tmpDependenciesFile.Name())),
+			expected: ManifestDependencies{
+				tmpDependenciesFile.Name(): &LocalDependency{
+					manifestPath: tmpDependenciesFile.Name(),
+				},
+			},
+			err: false,
+		},
+		{
+			name: "simple notation - local dependencies same folder and name",
+			bytes: []byte(fmt.Sprintf(`- %s
+- %s`, tmpDependenciesFile.Name(), tmpDependenciesFile.Name())),
+			expected: ManifestDependencies{
+				tmpDependenciesFile.Name(): &LocalDependency{
+					manifestPath: tmpDependenciesFile.Name(),
+				},
+			},
+			err: false,
+		},
+		{
+			name: "simple notation - local dependencies same folder",
+			bytes: []byte(fmt.Sprintf(`- %s
+- %s`, tmpDependenciesFile.Name(), tmpDependenciesFile2.Name())),
+			expected: ManifestDependencies{
+				tmpDependenciesFile.Name(): &LocalDependency{
+					manifestPath: tmpDependenciesFile.Name(),
+				},
+				tmpDependenciesFile2.Name(): &LocalDependency{
+					manifestPath: tmpDependenciesFile2.Name(),
+				},
+			},
+			err: false,
+		},
+		{
+			name:     "simple notation - local dependencies error",
+			bytes:    []byte(`- /test/tests`),
+			expected: nil,
+			err:      true,
+		},
+		{
+			name:  "simple notation - remote dependencies",
+			bytes: []byte(`- https://github.com/okteto/okteto`),
+			expected: ManifestDependencies{
+				"okteto": &RemoteDependency{
+					repository: "https://github.com/okteto/okteto",
+				},
+			},
+			err: false,
+		},
+		{
+			name: "simple notation - mixed dependencies",
+			bytes: []byte(fmt.Sprintf(`- %s
+- https://github.com/okteto/okteto`, tmpDependenciesFile.Name())),
+			expected: ManifestDependencies{
+				tmpDependenciesFile.Name(): &LocalDependency{
+					manifestPath: tmpDependenciesFile.Name(),
+				},
+				"okteto": &RemoteDependency{
+					repository: "https://github.com/okteto/okteto",
+				},
+			},
+			err: false,
+		},
+		{
+			name: "extended notation - local dependencies",
+			bytes: []byte(`a:
+  manifest: /test/test`),
+			expected: ManifestDependencies{
+				"a": &LocalDependency{
+					manifestPath: "/test/test",
+				},
+			},
+		},
+		{
+			name: "extended notation - remote dependencies",
+			bytes: []byte(`a:
+  repository: https://github.com/okteto/okteto`),
+			expected: ManifestDependencies{
+				"a": &RemoteDependency{
+					repository: "https://github.com/okteto/okteto",
+				},
+			},
+		},
+		{
+			name: "extended notation - mixed dependencies",
+			bytes: []byte(fmt.Sprintf(`a:
+  manifest: %s
+b:
+  repository: https://github.com/okteto/okteto`, tmpDependenciesFile.Name())),
+			expected: ManifestDependencies{
+				"a": &LocalDependency{
+					manifestPath: tmpDependenciesFile.Name(),
+				},
+				"b": &RemoteDependency{
+					repository: "https://github.com/okteto/okteto",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result ManifestDependencies
+			err := yaml.UnmarshalStrict(tt.bytes, &result)
+			assert.Equal(t, tt.err, err != nil)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

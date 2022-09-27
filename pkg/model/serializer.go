@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	giturls "github.com/whilp/git-urls"
@@ -759,12 +760,12 @@ func (md *manifestDependenciesMarshaller) UnmarshalYAML(unmarshal func(interface
 		*md = rawManifestDependencies
 		return nil
 	}
-	var extendedNotationDependencies map[string]dependencyMarshaller
+	var extendedNotationDependencies map[string]*dependencyMarshaller
 	err = unmarshal(&extendedNotationDependencies)
 	if err == nil {
 		rawManifestDependencies := manifestDependenciesMarshaller{}
 		for dependencyName, dependencyInfo := range extendedNotationDependencies {
-			rawManifestDependencies[dependencyName] = &dependencyInfo
+			rawManifestDependencies[dependencyName] = dependencyInfo
 		}
 		*md = rawManifestDependencies
 		return nil
@@ -773,16 +774,16 @@ func (md *manifestDependenciesMarshaller) UnmarshalYAML(unmarshal func(interface
 }
 
 func (dm *dependencyMarshaller) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var remoteDependency remoteDependencyMarshaller
-	err := unmarshal(&remoteDependency)
-	if err == nil {
-		dm.remoteDependency = remoteDependency.toRemoteDependency()
-		return nil
-	}
 	var localDependency localDependencyMarshaller
-	err = unmarshal(&localDependency)
+	err := unmarshal(&localDependency)
 	if err == nil {
 		dm.localDependency = localDependency.toLocalDependency()
+		return nil
+	}
+	var remoteDependency remoteDependencyMarshaller
+	err = unmarshal(&remoteDependency)
+	if err == nil {
+		dm.remoteDependency = remoteDependency.toRemoteDependency()
 		return nil
 	}
 	var dependencyFromString string
@@ -801,14 +802,33 @@ func (dm *dependencyMarshaller) UnmarshalYAML(unmarshal func(interface{}) error)
 func getDependencyFromString(dependency string) (*dependencyMarshaller, error) {
 	// check if the dependency is a remote dependency
 	r, err := giturls.Parse(dependency)
-	if err == nil {
+	if err == nil && r.Scheme != "file" {
 		return &dependencyMarshaller{
 			remoteDependency: NewRemoteDependencyFromRepository(r.String()),
 		}, nil
 	}
 	oktetoLog.Debugf("dependency '%s' could not been transformed to remote dependency. Trying transforming to local dependency", dependency)
 
-	return nil, fmt.Errorf("could not transform '%s' to a valid dependency", dependency)
+	if filesystem.FileExistsAndNotDir(dependency) {
+
+		if filepath.IsAbs(dependency) {
+			return &dependencyMarshaller{
+				localDependency: &LocalDependency{
+					manifestPath: dependency,
+				},
+			}, nil
+		} else {
+			abs, err := filepath.Abs(dependency)
+			if err == nil {
+				return &dependencyMarshaller{
+					localDependency: &LocalDependency{
+						manifestPath: abs,
+					},
+				}, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("could not translate dependency '%s'", dependency)
 }
 
 func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
