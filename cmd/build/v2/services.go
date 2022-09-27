@@ -118,3 +118,11 @@ func getToBuildTag(manifestName, svcName string, b *model.BuildInfo) string {
 	}
 	return ""
 }
+
+func sliceToSet[T comparable](slice []T) map[T]bool {
+	set := make(map[T]bool)
+	for _, value := range slice {
+		set[value] = true
+	}
+	return set
+}

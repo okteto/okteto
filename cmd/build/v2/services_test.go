@@ -23,43 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAllServicesAlreadyBuilt(t *testing.T) {
-	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := NewBuilder(nil, fakeReg)
-	alreadyBuilt := []string{}
-	fakeReg.AddImageByName(alreadyBuilt...)
-	ctx := context.Background()
-	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
-	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
-}
-
-func TestServicesNotAreAlreadyBuilt(t *testing.T) {
-	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := NewBuilder(nil, fakeReg)
-
-	alreadyBuilt := []string{"test/test-1"}
-	fakeReg.AddImageByName(alreadyBuilt...)
-	ctx := context.Background()
-	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
-	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
-}
-
-func TestNoServiceBuilt(t *testing.T) {
-	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := NewBuilder(nil, fakeReg)
-	alreadyBuilt := []string{"test/test-1", "test/test-2"}
-	fakeReg.AddImageByName(alreadyBuilt...)
-	ctx := context.Background()
-	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
-	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
-}
-
 func TestServicesNotInStack(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
@@ -81,40 +44,94 @@ func TestServicesNotInStack(t *testing.T) {
 	assert.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
 }
 
-func TestAllServicesAlreadyBuiltWithSubset(t *testing.T) {
-	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := NewBuilder(nil, fakeReg)
-	alreadyBuilt := []string{}
-	fakeReg.AddImageByName(alreadyBuilt...)
-	ctx := context.Background()
-	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1"})
-	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(toBuild))
-}
+func TestGetServicesToBuildWithManifestV2(t *testing.T) {
 
-func TestServicesNotAreAlreadyBuiltWithSubset(t *testing.T) {
-	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := NewBuilder(nil, fakeReg)
-	alreadyBuilt := []string{"test/test-1"}
-	fakeReg.AddImageByName(alreadyBuilt...)
-	ctx := context.Background()
-	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1"})
-	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(toBuild))
-}
+	testCases := []struct {
+		name                  string
+		manifestBuildImages   []string
+		alreadyBuilt          []string
+		servicesToDeploy      []string
+		expectedImagesToBuild []string
+	}{
+		{
+			name:                  "all services already built and deploy all",
+			manifestBuildImages:   []string{"1", "2", "3"},
+			alreadyBuilt:          []string{"1", "2", "3"},
+			servicesToDeploy:      []string{"1", "2", "3"},
+			expectedImagesToBuild: []string{},
+		},
+		{
+			name:                  "all services already built and deploy subset",
+			manifestBuildImages:   []string{"1", "2", "3"},
+			alreadyBuilt:          []string{"1", "2", "3"},
+			servicesToDeploy:      []string{"1", "2"},
+			expectedImagesToBuild: []string{},
+		},
+		{
+			name:                  "Same services to deploy and already built",
+			manifestBuildImages:   []string{"1", "2", "3"},
+			alreadyBuilt:          []string{"1", "2"},
+			servicesToDeploy:      []string{"1", "2"},
+			expectedImagesToBuild: []string{},
+		},
+		{
+			name:                  "some services already built",
+			manifestBuildImages:   []string{"1", "2", "3"},
+			alreadyBuilt:          []string{"1", "2"},
+			servicesToDeploy:      []string{"2", "3"},
+			expectedImagesToBuild: []string{"3"},
+		},
+		{
+			name:                  "No intesection between services to deploy and already built",
+			manifestBuildImages:   []string{"1", "2", "3"},
+			alreadyBuilt:          []string{"1"},
+			servicesToDeploy:      []string{"2", "3"},
+			expectedImagesToBuild: []string{"2", "3"},
+		},
+		{
+			name:                  "subset are already built",
+			manifestBuildImages:   []string{"1", "2", "3"},
+			alreadyBuilt:          []string{"1"},
+			servicesToDeploy:      []string{"1", "2"},
+			expectedImagesToBuild: []string{"2"},
+		},
+		{
+			name:                  "no services to deploy",
+			manifestBuildImages:   []string{"1", "2", "3"},
+			alreadyBuilt:          []string{"1"},
+			servicesToDeploy:      []string{},
+			expectedImagesToBuild: []string{},
+		},
+		{
+			name:                  "no services already built",
+			manifestBuildImages:   []string{"1", "2", "3"},
+			alreadyBuilt:          []string{},
+			servicesToDeploy:      []string{"1", "2"},
+			expectedImagesToBuild: []string{"1", "2"},
+		},
+	}
 
-func TestNoServiceBuiltWithSubset(t *testing.T) {
-	fakeReg := test.NewFakeOktetoRegistry(nil)
-	bc := NewBuilder(nil, fakeReg)
-	alreadyBuilt := []string{"test/test-1", "test/test-2"}
-	fakeReg.AddImageByName(alreadyBuilt...)
-	ctx := context.Background()
-	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1"})
-	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(toBuild))
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			fakeReg := test.NewFakeOktetoRegistry(nil)
+			bc := NewBuilder(nil, fakeReg)
+			fakeReg.AddImageByName(testCase.alreadyBuilt...)
+			ctx := context.Background()
+			var fakeManifestV2 *model.Manifest = &model.Manifest{
+				Build: model.ManifestBuild{},
+				IsV2:  true}
+
+			for _, image := range testCase.manifestBuildImages {
+				fakeManifestV2.Build[image] = &model.BuildInfo{Image: image}
+			}
+
+			toBuild, err := bc.GetServicesToBuild(ctx, fakeManifestV2, testCase.servicesToDeploy)
+			assert.NoError(t, err)
+
+			assert.Equal(t, sliceToSet(testCase.expectedImagesToBuild), sliceToSet(toBuild))
+		})
+	}
 }
 
 func TestGetToBuildTag(t *testing.T) {
