@@ -405,10 +405,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		if err == oktetoErrors.ErrIntSig {
 			return nil
 		}
-		err = oktetoErrors.UserError{
-			E:    err,
-			Hint: "Update the 'deploy' section of your okteto manifest and try again",
-		}
+		err = oktetoErrors.UserError{E: err}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, err.Error())
 		data.Status = pipeline.ErrorStatus
 	} else {

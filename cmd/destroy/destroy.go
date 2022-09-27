@@ -286,7 +286,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 			oktetoLog.Information("Running %s", command.Name)
 			oktetoLog.SetStage(command.Name)
 			if err := dc.executor.Execute(command, opts.Variables); err != nil {
-				oktetoLog.Fail("error executing command '%s': %s", command.Name, err.Error())
+				err = fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 				if !opts.ForceDestroy {
 					if err := dc.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 						exit <- err

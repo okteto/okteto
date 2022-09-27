@@ -70,6 +70,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
 				Namespace: opts.name,
+				Show:      true,
 			}); err != nil {
 				return err
 			}

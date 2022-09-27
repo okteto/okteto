@@ -85,10 +85,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		return fmt.Errorf("%s: %s", oktetoErrors.InvalidDockerfile, err.Error())
 	}
 
-	buildMsg := "Building the image"
-	if options.Tag != "" {
-		buildMsg = fmt.Sprintf("Building the image '%s'", options.Tag)
-	}
+	buildMsg := fmt.Sprintf("Building '%s'", options.File)
 	if okteto.Context().Builder == "" {
 		oktetoLog.Information("%s using your local docker daemon", buildMsg)
 	} else {
