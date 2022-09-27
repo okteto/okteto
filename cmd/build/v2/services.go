@@ -27,26 +27,26 @@ import (
 )
 
 // GetServicesToBuild returns the services it has to built because they are not already built
-func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error) {
-	buildManifest := manifest.Build
+func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, servicesToDeploy []string) ([]string, error) {
+	manifestBuildImages := mapKeysToSet(manifest.Build)
 
 	// check if images are at registry (global or dev) and set envs or send to build
-	toBuild := make(chan string, len(buildManifest))
+	imagesToBuild := make(chan string, len(manifestBuildImages))
 	g, _ := errgroup.WithContext(ctx)
-	for service := range buildManifest {
+	for service := range manifestBuildImages {
 
 		svc := service
 		g.Go(func() error {
-			return bc.checkServicesToBuild(svc, manifest, toBuild)
+			return bc.checkServicesToBuild(svc, manifest, imagesToBuild)
 		})
 	}
 
 	if err := g.Wait(); err != nil {
 		return nil, err
 	}
-	close(toBuild)
+	close(imagesToBuild)
 
-	if len(toBuild) == 0 {
+	if len(imagesToBuild) == 0 {
 		oktetoLog.Information("Images were already built. To rebuild your images run 'okteto build' or 'okteto deploy --build'")
 		if err := manifest.ExpandEnvVars(); err != nil {
 			return nil, err
@@ -54,18 +54,13 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 		return nil, nil
 	}
 
-	svcToDeployMap := map[string]bool{}
-	for _, svc := range svcToDeploy {
-		svcToDeployMap[svc] = true
-	}
-	svcsToBuildList := []string{}
-	for svc := range toBuild {
-		if _, ok := svcToDeployMap[svc]; len(svcToDeploy) > 0 && !ok {
-			continue
-		}
-		svcsToBuildList = append(svcsToBuildList, svc)
-	}
-	return svcsToBuildList, nil
+	imagesToBuildSet := channelToSet(imagesToBuild)
+
+	servicesToDeploySet := sliceToSet(servicesToDeploy)
+
+	servicesToBuildSet := setIntersection(imagesToBuildSet, servicesToDeploySet)
+
+	return setToSlice(servicesToBuildSet), nil
 }
 
 func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
@@ -123,6 +118,40 @@ func sliceToSet[T comparable](slice []T) map[T]bool {
 	set := make(map[T]bool)
 	for _, value := range slice {
 		set[value] = true
+	}
+	return set
+}
+
+func setToSlice[T comparable](set map[T]bool) []T {
+	slice := make([]T, 0, len(set))
+	for value := range set {
+		slice = append(slice, value)
+	}
+	return slice
+}
+
+func setIntersection[T comparable](set1, set2 map[T]bool) map[T]bool {
+	intersection := make(map[T]bool)
+	for value := range set1 {
+		if _, ok := set2[value]; ok {
+			intersection[value] = true
+		}
+	}
+	return intersection
+}
+
+func channelToSet[T comparable](ch chan T) map[T]bool {
+	set := make(map[T]bool)
+	for value := range ch {
+		set[value] = true
+	}
+	return set
+}
+
+func mapKeysToSet[K comparable, T any](m map[K]T) map[K]bool {
+	set := make(map[K]bool)
+	for key := range m {
+		set[key] = true
 	}
 	return set
 }
