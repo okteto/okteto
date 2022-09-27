@@ -104,9 +104,9 @@ func (fk *fakeProxy) Start() {
 	fk.started = true
 }
 
-func (fk *fakeProxy) SetName(_ string) {}
+func (*fakeProxy) SetName(_ string) {}
 
-func (fk *fakeProxy) SetDivert(_ string) {}
+func (*fakeProxy) SetDivert(_ string) {}
 
 func (fk *fakeProxy) Shutdown(_ context.Context) error {
 	if fk.errOnShutdown != nil {

@@ -1236,7 +1236,7 @@ func GetTimeout() (time.Duration, error) {
 	return parsed, nil
 }
 
-func (dev *Dev) translateDeprecatedMetadataFields() error {
+func (dev *Dev) translateDeprecatedMetadataFields() {
 	if len(dev.Labels) > 0 {
 		oktetoLog.Warning("The field 'labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
 		for k, v := range dev.Labels {
@@ -1250,22 +1250,21 @@ func (dev *Dev) translateDeprecatedMetadataFields() error {
 			dev.Metadata.Annotations[k] = v
 		}
 	}
-	for _, s := range dev.Services {
+	for indx, s := range dev.Services {
 		if len(s.Labels) > 0 {
 			oktetoLog.Warning("The field '%s.labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
 			for k, v := range s.Labels {
-				s.Selector[k] = v
+				dev.Services[indx].Selector[k] = v
 			}
 		}
 
 		if len(s.Annotations) > 0 {
 			oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in a future version. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
 			for k, v := range s.Annotations {
-				s.Metadata.Annotations[k] = v
+				dev.Services[indx].Metadata.Annotations[k] = v
 			}
 		}
 	}
-	return nil
 }
 
 func (service *Dev) validateForExtraFields() error {
@@ -1357,12 +1356,15 @@ func getLocalhost() string {
 // Copy clones the buildInfo without the pointers
 func (b *BuildInfo) Copy() *BuildInfo {
 	result := &BuildInfo{
-		Name:       b.Name,
-		Context:    b.Context,
-		Dockerfile: b.Dockerfile,
-		Target:     b.Target,
-		Image:      b.Image,
+		Name:        b.Name,
+		Context:     b.Context,
+		Dockerfile:  b.Dockerfile,
+		Target:      b.Target,
+		Image:       b.Image,
+		ExportCache: b.ExportCache,
 	}
+
+	// copy to new pointers
 	cacheFrom := []string{}
 	cacheFrom = append(cacheFrom, b.CacheFrom...)
 	result.CacheFrom = cacheFrom
@@ -1371,8 +1373,19 @@ func (b *BuildInfo) Copy() *BuildInfo {
 	args = append(args, b.Args...)
 	result.Args = args
 
+	secrets := BuildSecrets{}
+	for k, v := range b.Secrets {
+		secrets[k] = v
+	}
+	result.Secrets = secrets
+
 	volumesToMount := []StackVolume{}
 	volumesToMount = append(volumesToMount, b.VolumesToInclude...)
 	result.VolumesToInclude = volumesToMount
+
+	dependsOn := BuildDependsOn{}
+	dependsOn = append(dependsOn, b.DependsOn...)
+	result.DependsOn = dependsOn
+
 	return result
 }

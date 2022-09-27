@@ -74,7 +74,7 @@ func Status() *cobra.Command {
 			}
 
 			waitForStates := []config.UpState{config.Synchronizing, config.Ready}
-			if err := status.Wait(ctx, dev, waitForStates); err != nil {
+			if err := status.Wait(dev, waitForStates); err != nil {
 				return err
 			}
 

@@ -1575,6 +1575,40 @@ func TestBuildInfo_GetDockerfilePath(t *testing.T) {
 	}
 }
 
+func Test_BuildInfoCopy(t *testing.T) {
+	b := &BuildInfo{
+		Name:        "test",
+		Context:     "context",
+		Dockerfile:  "dockerfile",
+		Target:      "target",
+		Image:       "image",
+		CacheFrom:   []string{"cache"},
+		ExportCache: "export",
+		Args: BuildArgs{
+			BuildArg{
+				Name:  "env",
+				Value: "test",
+			},
+		},
+		Secrets: BuildSecrets{
+			"sec": "test",
+		},
+		VolumesToInclude: []StackVolume{
+			{
+				LocalPath:  "local",
+				RemotePath: "remote",
+			},
+		},
+		DependsOn: BuildDependsOn{"other"},
+	}
+
+	copyB := b.Copy()
+	assert.EqualValues(t, b, copyB)
+
+	samePointer := &copyB == &b
+	assert.False(t, samePointer)
+}
+
 func TestExpandBuildArgs(t *testing.T) {
 	t.Setenv("KEY", "VALUE")
 	tests := []struct {

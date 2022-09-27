@@ -775,9 +775,9 @@ func (m *Manifest) setDefaults() error {
 		if err := d.SetDefaults(); err != nil {
 			return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
 		}
-		if err := d.translateDeprecatedMetadataFields(); err != nil {
-			return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
-		}
+
+		d.translateDeprecatedMetadataFields()
+
 		sort.SliceStable(d.Forward, func(i, j int) bool {
 			return d.Forward[i].Less(&d.Forward[j])
 		})

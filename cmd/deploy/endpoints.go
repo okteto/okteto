@@ -139,7 +139,7 @@ func (dc *DeployCommand) getEndpoints(ctx context.Context, opts *EndpointsOption
 	}
 
 	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
-	iClient, err := dc.K8sClientProvider.GetIngressClient(ctx)
+	iClient, err := dc.K8sClientProvider.GetIngressClient()
 	if err != nil {
 		return nil, err
 	}
