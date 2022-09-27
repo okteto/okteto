@@ -118,7 +118,7 @@ func TestGetServicesToBuildWithManifestV2(t *testing.T) {
 			bc := NewBuilder(nil, fakeReg)
 			fakeReg.AddImageByName(testCase.alreadyBuilt...)
 			ctx := context.Background()
-			var fakeManifestV2 *model.Manifest = &model.Manifest{
+			fakeManifestV2 := &model.Manifest{
 				Build: model.ManifestBuild{},
 				IsV2:  true}
 
