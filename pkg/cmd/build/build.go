@@ -381,6 +381,9 @@ func parseTempSecrets(secretTempFolder string, buildOptions *types.BuildOptions)
 			_, _ = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
 			writer.Flush()
 		}
+		if err := tmpfile.Close(); err != nil {
+			return err
+		}
 		if err := srcFile.Close(); err != nil {
 			return err
 		}
