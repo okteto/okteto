@@ -26,8 +26,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// GetServicesToBuild returns the services that need to be built because they are not already built.
 // TODO: refactor this function. It does more things than checking the services to build. Luckily, it's only used once
-// GetServicesToBuild returns the services that need to be built because they are not already built
 func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, servicesToDeploy []string) ([]string, error) {
 	manifestBuildImages := mapKeysToSet(manifest.Build)
 
