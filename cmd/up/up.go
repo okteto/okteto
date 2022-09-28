@@ -258,6 +258,8 @@ func Up() *cobra.Command {
 					return err
 				}
 
+			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
+				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
 			}
 
 			dev, err := utils.GetDevFromManifest(oktetoManifest, upOptions.DevName)
