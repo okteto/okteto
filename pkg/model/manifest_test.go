@@ -1044,3 +1044,395 @@ func Test_SanitizeSvcNames(t *testing.T) {
 		})
 	}
 }
+
+func TestManifestBuildMerge(t *testing.T) {
+	tests := []struct {
+		name                 string
+		ogBuildSection       ManifestBuild
+		otherBuildSection    ManifestBuild
+		expectedBuildSection ManifestBuild
+		expectedWarnings     []string
+	}{
+		{
+			name: "different build section",
+			ogBuildSection: ManifestBuild{
+				"a": &BuildInfo{},
+			},
+			otherBuildSection: ManifestBuild{
+				"b": &BuildInfo{},
+			},
+			expectedBuildSection: ManifestBuild{
+				"a": &BuildInfo{},
+				"b": &BuildInfo{},
+			},
+			expectedWarnings: []string{},
+		},
+		{
+			name: "same build section",
+			ogBuildSection: ManifestBuild{
+				"a": &BuildInfo{},
+			},
+			otherBuildSection: ManifestBuild{
+				"a": &BuildInfo{},
+			},
+			expectedBuildSection: ManifestBuild{
+				"a": &BuildInfo{},
+			},
+			expectedWarnings: []string{
+				"build.a: Build a already declared in the main manifest",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			warnings := tt.ogBuildSection.merge(tt.otherBuildSection)
+			assert.Equal(t, tt.expectedBuildSection, tt.ogBuildSection)
+			assert.Equal(t, tt.expectedWarnings, warnings)
+		})
+	}
+}
+
+func TestManifestDependenciesMerge(t *testing.T) {
+	tests := []struct {
+		name                        string
+		ogDependenciesSection       ManifestDependencies
+		otherDependenciesSection    ManifestDependencies
+		expectedDependenciesSection ManifestDependencies
+		expectedWarnings            []string
+	}{
+		{
+			name: "different dependencies section",
+			ogDependenciesSection: ManifestDependencies{
+				"a": &RemoteDependency{},
+			},
+			otherDependenciesSection: ManifestDependencies{
+				"b": &RemoteDependency{},
+			},
+			expectedDependenciesSection: ManifestDependencies{
+				"a": &RemoteDependency{},
+			},
+			expectedWarnings: []string{
+				"dependencies: dependencies are only supported on the main manifest",
+			},
+		},
+		{
+			name: "same dependencies section",
+			ogDependenciesSection: ManifestDependencies{
+				"a": &RemoteDependency{},
+			},
+			otherDependenciesSection: ManifestDependencies{
+				"a": &RemoteDependency{},
+			},
+			expectedDependenciesSection: ManifestDependencies{
+				"a": &RemoteDependency{},
+			},
+			expectedWarnings: []string{
+				"dependencies: dependencies are only supported on the main manifest",
+			},
+		},
+		{
+			name: "no other dependencies",
+			ogDependenciesSection: ManifestDependencies{
+				"a": &RemoteDependency{},
+			},
+			otherDependenciesSection: ManifestDependencies{},
+			expectedDependenciesSection: ManifestDependencies{
+				"a": &RemoteDependency{},
+			},
+			expectedWarnings: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			warnings := tt.ogDependenciesSection.merge(tt.otherDependenciesSection)
+			assert.Equal(t, tt.expectedDependenciesSection, tt.ogDependenciesSection)
+			assert.Equal(t, tt.expectedWarnings, warnings)
+		})
+	}
+}
+
+func TestManifestDeployMerge(t *testing.T) {
+	tests := []struct {
+		name                  string
+		ogDeploySection       *DeployInfo
+		otherDeploySection    *DeployInfo
+		expectedDeploySection *DeployInfo
+		expectedWarnings      []string
+	}{
+		{
+			name: "merge commands",
+			ogDeploySection: &DeployInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "test",
+						Command: "test",
+					},
+				},
+			},
+			otherDeploySection: &DeployInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "test",
+						Command: "test",
+					},
+				},
+			},
+			expectedDeploySection: &DeployInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "test",
+						Command: "test",
+					},
+					{
+						Name:    "test",
+						Command: "test",
+					},
+				},
+			},
+			expectedWarnings: []string{},
+		},
+		{
+			name:            "other has compose section",
+			ogDeploySection: &DeployInfo{},
+			otherDeploySection: &DeployInfo{
+				ComposeSection: &ComposeSectionInfo{
+					ComposesInfo: ComposeInfoList{
+						ComposeInfo{
+							File: "test",
+						},
+					},
+				},
+			},
+			expectedDeploySection: &DeployInfo{},
+			expectedWarnings: []string{
+				"deploy.compose: compose can only be defined in main manifest",
+			},
+		},
+		{
+			name:            "other has endpoints section",
+			ogDeploySection: &DeployInfo{},
+			otherDeploySection: &DeployInfo{
+				Endpoints: EndpointSpec{
+					"aa": Endpoint{},
+				},
+			},
+			expectedDeploySection: &DeployInfo{},
+			expectedWarnings: []string{
+				"deploy.endpoints: endpoints can only be defined in main manifest",
+			},
+		},
+		{
+			name:            "other has divert section",
+			ogDeploySection: &DeployInfo{},
+			otherDeploySection: &DeployInfo{
+				Divert: &DivertDeploy{},
+			},
+			expectedDeploySection: &DeployInfo{},
+			expectedWarnings: []string{
+				"deploy.divert: divert can only be defined in main manifest",
+			},
+		},
+		{
+			name:            "multiple warnings",
+			ogDeploySection: &DeployInfo{},
+			otherDeploySection: &DeployInfo{
+				ComposeSection: &ComposeSectionInfo{},
+				Divert:         &DivertDeploy{},
+			},
+			expectedDeploySection: &DeployInfo{},
+			expectedWarnings: []string{
+				"deploy.compose: compose can only be defined in main manifest",
+				"deploy.divert: divert can only be defined in main manifest",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			warnings := tt.ogDeploySection.merge(tt.otherDeploySection)
+			assert.Equal(t, tt.expectedDeploySection, tt.ogDeploySection)
+			assert.Equal(t, tt.expectedWarnings, warnings)
+		})
+	}
+}
+
+func TestManifestDestroyMerge(t *testing.T) {
+	tests := []struct {
+		name                   string
+		ogDestroySection       ManifestDestroy
+		otherDestroySection    ManifestDestroy
+		expectedDestroySection ManifestDestroy
+	}{
+		{
+			name: "merge commands",
+			ogDestroySection: ManifestDestroy{
+				DeployCommand{
+					Name:    "test",
+					Command: "test",
+				},
+			},
+			otherDestroySection: ManifestDestroy{
+				DeployCommand{
+					Name:    "test",
+					Command: "test",
+				},
+			},
+			expectedDestroySection: ManifestDestroy{
+				DeployCommand{
+					Name:    "test",
+					Command: "test",
+				},
+				DeployCommand{
+					Name:    "test",
+					Command: "test",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.ogDestroySection.merge(tt.otherDestroySection)
+			assert.Equal(t, tt.expectedDestroySection, tt.ogDestroySection)
+		})
+	}
+}
+
+func TestManifestDevMerge(t *testing.T) {
+	tests := []struct {
+		name               string
+		ogDevSection       ManifestDevs
+		otherDevSection    ManifestDevs
+		expectedDevSection ManifestDevs
+		expectedWarnings   []string
+	}{
+		{
+			name: "different dev section",
+			ogDevSection: ManifestDevs{
+				"a": &Dev{},
+			},
+			otherDevSection: ManifestDevs{
+				"b": &Dev{},
+			},
+			expectedDevSection: ManifestDevs{
+				"a": &Dev{},
+				"b": &Dev{},
+			},
+			expectedWarnings: []string{},
+		},
+		{
+			name: "same dev section",
+			ogDevSection: ManifestDevs{
+				"a": &Dev{},
+			},
+			otherDevSection: ManifestDevs{
+				"a": &Dev{},
+			},
+			expectedDevSection: ManifestDevs{
+				"a": &Dev{},
+			},
+			expectedWarnings: []string{
+				"dev.a: Dev a already declared in the main manifest",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			warnings := tt.ogDevSection.merge(tt.otherDevSection)
+			assert.Equal(t, tt.expectedDevSection, tt.ogDevSection)
+			assert.Equal(t, tt.expectedWarnings, warnings)
+		})
+	}
+}
+
+func TestMergeWithOktetoManifest(t *testing.T) {
+	tests := []struct {
+		name             string
+		manifest         *Manifest
+		otherManifest    *Manifest
+		expectedWarnings []string
+	}{
+		{
+			name: "same context",
+			manifest: &Manifest{
+				Context: "a",
+				Deploy:  &DeployInfo{},
+			},
+			otherManifest: &Manifest{
+				Context: "a",
+				Deploy:  &DeployInfo{},
+			},
+			expectedWarnings: []string{},
+		},
+		{
+			name: "different context",
+			manifest: &Manifest{
+				Context: "a",
+				Deploy:  &DeployInfo{},
+			},
+			otherManifest: &Manifest{
+				Context: "b",
+				Deploy:  &DeployInfo{},
+			},
+			expectedWarnings: []string{"context can only be defined in the main manifest"},
+		},
+		{
+			name: "same icon",
+			manifest: &Manifest{
+				Icon:   "a",
+				Deploy: &DeployInfo{},
+			},
+			otherManifest: &Manifest{
+				Icon:   "a",
+				Deploy: &DeployInfo{},
+			},
+			expectedWarnings: []string{},
+		},
+		{
+			name: "different icon",
+			manifest: &Manifest{
+				Icon:   "a",
+				Deploy: &DeployInfo{},
+			},
+			otherManifest: &Manifest{
+				Icon:   "b",
+				Deploy: &DeployInfo{},
+			},
+			expectedWarnings: []string{"icon can only be defined in the main manifest"},
+		},
+		{
+			name: "same namespace",
+			manifest: &Manifest{
+				Namespace: "a",
+				Deploy:    &DeployInfo{},
+			},
+			otherManifest: &Manifest{
+				Namespace: "a",
+				Deploy:    &DeployInfo{},
+			},
+			expectedWarnings: []string{},
+		},
+		{
+			name: "different namespace",
+			manifest: &Manifest{
+				Namespace: "a",
+				Deploy:    &DeployInfo{},
+			},
+			otherManifest: &Manifest{
+				Namespace: "b",
+				Deploy:    &DeployInfo{},
+			},
+			expectedWarnings: []string{"namespace can only be defined in the main manifest"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			warnings := tt.manifest.mergeWithOktetoManifest(tt.otherManifest)
+			assert.Equal(t, tt.expectedWarnings, warnings)
+		})
+	}
+}

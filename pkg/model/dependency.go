@@ -25,6 +25,14 @@ import (
 // ManifestDependencies represents the map of dependencies at a manifest
 type ManifestDependencies map[string]Dependency
 
+func (ManifestDependencies) merge(other ManifestDependencies) []string {
+	warnings := []string{}
+	if len(other) > 0 {
+		warnings = append(warnings, "dependencies: dependencies are only supported on the main manifest")
+	}
+	return warnings
+}
+
 // GetRemoteDependencies returns a map of the remotes dependencies
 func (md ManifestDependencies) GetRemoteDependencies() map[string]*RemoteDependency {
 	result := map[string]*RemoteDependency{}

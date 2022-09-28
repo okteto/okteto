@@ -191,6 +191,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 			deployType := "custom"
 			hasDependencySection := false
 			hasBuildSection := false
+			remoteDependenciesLength := 0
+			localDependenciesLength := 0
 			if options.Manifest != nil {
 				if options.Manifest.IsV2 &&
 					options.Manifest.Deploy != nil &&
@@ -201,6 +203,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 				hasDependencySection = options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0
 				hasBuildSection = options.Manifest.IsV2 && len(options.Manifest.Build) > 0
+				remoteDependenciesLength = len(options.Manifest.Dependencies.GetRemoteDependencies())
+				localDependenciesLength = len(options.Manifest.Dependencies.GetLocalDependencies())
 			}
 
 			analytics.TrackDeploy(analytics.TrackDeployMetadata{
@@ -212,8 +216,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 				IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
 				HasDependenciesSection: hasDependencySection,
 				HasBuildSection:        hasBuildSection,
-				RemoteDependencies:     len(options.Manifest.Dependencies.GetRemoteDependencies()),
-				LocalDependencies:      len(options.Manifest.Dependencies.GetLocalDependencies()),
+				RemoteDependencies:     remoteDependenciesLength,
+				LocalDependencies:      localDependenciesLength,
 			})
 
 			return err

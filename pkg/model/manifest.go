@@ -94,7 +94,7 @@ type Manifest struct {
 	Icon          string                  `json:"icon,omitempty" yaml:"icon,omitempty"`
 	Deploy        *DeployInfo             `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev           ManifestDevs            `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy       []DeployCommand         `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Destroy       ManifestDestroy         `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         ManifestBuild           `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  ManifestDependencies    `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
@@ -109,6 +109,9 @@ type ManifestDevs map[string]*Dev
 
 // ManifestBuild defines all the build section
 type ManifestBuild map[string]*BuildInfo
+
+// ManifestDestroy defines the destroy section
+type ManifestDestroy []DeployCommand
 
 // NewManifest creates a new empty manifest
 func NewManifest() *Manifest {
@@ -176,6 +179,23 @@ type DeployInfo struct {
 	Divert         *DivertDeploy       `json:"divert,omitempty" yaml:"divert,omitempty"`
 }
 
+func (b *DeployInfo) merge(other *DeployInfo) []string {
+	for _, buildInfo := range other.Commands {
+		b.Commands = append(b.Commands, buildInfo)
+	}
+	warnings := []string{}
+	if other.ComposeSection != nil {
+		warnings = append(warnings, "deploy.compose: compose can only be defined in main manifest")
+	}
+	if other.Endpoints != nil {
+		warnings = append(warnings, "deploy.endpoints: endpoints can only be defined in main manifest")
+	}
+	if other.Divert != nil {
+		warnings = append(warnings, "deploy.divert: divert can only be defined in main manifest")
+	}
+	return warnings
+}
+
 // DivertDeploy represents information about the deploy divert configuration
 type DivertDeploy struct {
 	Namespace  string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
@@ -210,6 +230,10 @@ func NewDeployInfo() *DeployInfo {
 	return &DeployInfo{
 		Commands: []DeployCommand{},
 	}
+}
+
+func (b *ManifestDestroy) merge(other ManifestDestroy) {
+	*b = append(*b, other...)
 }
 
 func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
@@ -560,6 +584,16 @@ func inferHelmTags(path string) string {
 
 // getOktetoManifest returns an okteto object from a given file
 func getOktetoManifest(devPath string) (*Manifest, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("error computing workdir: %w", err)
+	}
+	defer func() {
+		err := os.Chdir(wd)
+		if err != nil {
+			oktetoLog.Infof("could not change workdir to %s", wd)
+		}
+	}()
 	b, err := os.ReadFile(devPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -580,6 +614,37 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, err.Error())
 	}
 
+	for dependencyName, dependencyInfo := range manifest.Dependencies.GetLocalDependencies() {
+		oktetoLog.Infof("adding local dependency '%s'", dependencyName)
+		dependencyPath := dependencyInfo.GetManifestPath()
+		err := os.Chdir(filepath.Dir(dependencyPath))
+		if err != nil {
+			oktetoLog.Infof("could not change workdir to %s", wd)
+		}
+		b, err := os.ReadFile(dependencyPath)
+		if err != nil {
+			return nil, fmt.Errorf("error reading dependency manifest '%s': %w", dependencyName, err)
+		}
+
+		dependencyManifest, err := Read(b)
+		if err != nil {
+			return nil, fmt.Errorf("error reading dependency %s: %w", dependencyName, err)
+		}
+		if !dependencyManifest.IsV2 {
+			return nil, fmt.Errorf("error on dependency %s: only manifest v2 are supported as local dependencies", dependencyName)
+		}
+
+		warnings := manifest.mergeWithOktetoManifest(dependencyManifest)
+		if len(warnings) > 0 {
+			oktetoLog.Warning("%s raised the following warnings while merging with main manifest: \n - %s", dependencyName, strings.Join(warnings, "\n - "))
+		}
+
+		err = os.Chdir(wd)
+		if err != nil {
+			oktetoLog.Infof("could not change workdir to %s", wd)
+		}
+
+	}
 	for _, dev := range manifest.Dev {
 
 		if err := dev.loadAbsPaths(devPath); err != nil {
@@ -695,6 +760,18 @@ func (b ManifestBuild) toGraph() graph {
 	return g
 }
 
+func (b ManifestBuild) merge(other ManifestBuild) []string {
+	warnings := []string{}
+	for name, buildInfo := range other {
+		if _, ok := b[name]; ok {
+			warnings = append(warnings, fmt.Sprintf("build.%s: Build %s already declared in the main manifest", name, name))
+			continue
+		}
+		b[name] = buildInfo
+	}
+	return warnings
+}
+
 // SanitizeSvcNames sanitize service names in 'dev', 'build' and 'global forward' sections
 func (m *Manifest) SanitizeSvcNames() error {
 	sanitizedServicesNames := make(map[string]string)
@@ -808,10 +885,34 @@ func (m *Manifest) setDefaults() error {
 	return nil
 }
 
-func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
-	if len(m.Dev) == 0 && len(other.Dev) != 0 {
-		m.Dev = other.Dev
+func (m *Manifest) mergeWithOktetoManifest(other *Manifest) []string {
+	warnings := []string{}
+	buildWarnings := m.Build.merge(other.Build)
+	warnings = append(warnings, buildWarnings...)
+
+	dependenciesWarnings := m.Dependencies.merge(other.Dependencies)
+	warnings = append(warnings, dependenciesWarnings...)
+
+	deployWarnings := m.Deploy.merge(other.Deploy)
+	warnings = append(warnings, deployWarnings...)
+
+	m.Destroy.merge(other.Destroy)
+
+	devWarnings := m.Dev.merge(other.Dev)
+	warnings = append(warnings, devWarnings...)
+
+	if other.Context != "" && other.Context != m.Context {
+		warnings = append(warnings, "context can only be defined in the main manifest")
 	}
+
+	if other.Icon != "" && other.Icon != m.Icon {
+		warnings = append(warnings, "icon can only be defined in the main manifest")
+	}
+
+	if other.Namespace != "" && other.Namespace != m.Namespace {
+		warnings = append(warnings, "namespace can only be defined in the main manifest")
+	}
+	return warnings
 }
 
 // ExpandEnvVars expands env vars to be set on the manifest
@@ -1200,6 +1301,18 @@ func (m *Manifest) setManifestDefaultsFromDev() {
 	} else {
 		oktetoLog.Infof("could not set context and manifest from dev section due to being '%d' devs declared", len(m.Dev))
 	}
+}
+
+func (b ManifestDevs) merge(other ManifestDevs) []string {
+	warnings := []string{}
+	for name, dev := range other {
+		if _, ok := b[name]; ok {
+			warnings = append(warnings, fmt.Sprintf("dev.%s: Dev %s already declared in the main manifest", name, name))
+			continue
+		}
+		b[name] = dev
+	}
+	return warnings
 }
 
 // HasDev checks if manifestDevs has a dev name as key

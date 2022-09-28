@@ -755,6 +755,10 @@ func (md *manifestDependenciesMarshaller) UnmarshalYAML(unmarshal func(interface
 			if err != nil {
 				return fmt.Errorf("could not unmarshall manifest dependencies: %w", err)
 			}
+			dependencyName := d.getName()
+			if _, ok := rawManifestDependencies[d.getName()]; ok {
+				oktetoLog.Warning("dependency '%s' is declared twice", dependencyName)
+			}
 			rawManifestDependencies[d.getName()] = d
 		}
 		*md = rawManifestDependencies
