@@ -162,7 +162,7 @@ dependencies:
 						Context:    "./service",
 						Dockerfile: "custom-dockerfile",
 						Image:      "defined-tag-image",
-						Args: []model.EnvVar{
+						Args: []model.BuildArg{
 							{
 								Name: "KEY1", Value: "Value1",
 							},
