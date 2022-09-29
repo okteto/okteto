@@ -283,7 +283,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 
 	go func() {
 		for _, command := range manifest.Destroy {
-			oktetoLog.Information("Running %s", command.Name)
+			oktetoLog.Information("Running '%s'", command.Name)
 			oktetoLog.SetStage(command.Name)
 			if err := dc.executor.Execute(command, opts.Variables); err != nil {
 				err = fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
@@ -398,7 +398,7 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 		oktetoLog.Debugf("uninstalling helm release '%s'", releaseName)
 		cmd := fmt.Sprintf(helmUninstallCommand, releaseName)
 		cmdInfo := model.DeployCommand{Command: cmd, Name: cmd}
-		oktetoLog.Information("Running %s", cmdInfo.Name)
+		oktetoLog.Information("Running '%s'", cmdInfo.Name)
 		if err := dc.executor.Execute(cmdInfo, opts.Variables); err != nil {
 			oktetoLog.Infof("could not uninstall helm release '%s': %s", releaseName, err)
 			if !opts.ForceDestroy {

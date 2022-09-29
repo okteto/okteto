@@ -446,7 +446,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	// deploy commands if any
 	for _, command := range opts.Manifest.Deploy.Commands {
-		oktetoLog.Information("Running %s", command.Name)
+		oktetoLog.Information("Running '%s'", command.Name)
 		oktetoLog.SetStage(command.Name)
 		if err := dc.Executor.Execute(command, opts.Variables); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
