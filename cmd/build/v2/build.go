@@ -180,7 +180,7 @@ func (bc *OktetoBuilder) buildService(ctx context.Context, manifest *model.Manif
 }
 
 func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *model.Manifest, svcName string, options *types.BuildOptions) (string, error) {
-	oktetoLog.Info("Building image for service '%s'", svcName)
+	oktetoLog.Infof("Building image for service '%s'", svcName)
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
 
