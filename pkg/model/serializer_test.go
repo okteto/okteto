@@ -2213,6 +2213,10 @@ func TestManifestDependenciesUnmarshalling(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		tmpDependenciesFile.Close()
+		tmpDependenciesFile2.Close()
+	}()
 	tests := []struct {
 		name     string
 		bytes    []byte
