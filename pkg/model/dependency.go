@@ -123,11 +123,6 @@ func (rd *RemoteDependency) AddVariable(key, value string) {
 	})
 }
 
-type localPath struct {
-	absolutePath string
-	relativePath string
-}
-
 // LocalDependency represents a remote dependency object at the manifest
 type LocalDependency struct {
 	manifestPath string
@@ -141,7 +136,6 @@ func (rd *LocalDependency) GetManifestPath() string {
 type dependencyMarshaller struct {
 	remoteDependency *RemoteDependency
 	localDependency  *LocalDependency
-	name             string
 }
 
 func (dm *dependencyMarshaller) toDependency() Dependency {

@@ -180,9 +180,7 @@ type DeployInfo struct {
 }
 
 func (b *DeployInfo) merge(other *DeployInfo) []string {
-	for _, buildInfo := range other.Commands {
-		b.Commands = append(b.Commands, buildInfo)
-	}
+	b.Commands = append(b.Commands, other.Commands...)
 	warnings := []string{}
 	if other.ComposeSection != nil {
 		warnings = append(warnings, "deploy.compose: compose can only be defined in main manifest")
