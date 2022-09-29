@@ -282,6 +282,9 @@ func Test_validateManifestBuild(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		_ = tmpTestSecretFile.Close()
+	}()
 	tests := []struct {
 		name         string
 		buildSection ManifestBuild
