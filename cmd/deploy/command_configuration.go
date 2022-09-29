@@ -153,6 +153,9 @@ func addEnvVars(ctx context.Context, cwd string) error {
 	if os.Getenv(model.OktetoTokenEnvVar) == "" {
 		os.Setenv(model.OktetoTokenEnvVar, okteto.Context().Token)
 	}
+	if os.Getenv(model.OktetoUserEnvVar) == "" {
+		os.Setenv(model.OktetoUserEnvVar, okteto.Context().Username)
+	}
 	return nil
 }
 
