@@ -150,6 +150,9 @@ func addEnvVars(ctx context.Context, cwd string) error {
 	if os.Getenv(model.OktetoBuildkitHostURLEnvVar) == "" {
 		os.Setenv(model.OktetoBuildkitHostURLEnvVar, okteto.Context().Builder)
 	}
+	if os.Getenv(model.OktetoTokenEnvVar) == "" {
+		os.Setenv(model.OktetoTokenEnvVar, okteto.Context().Token)
+	}
 	return nil
 }
 
