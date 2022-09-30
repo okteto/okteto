@@ -154,9 +154,6 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		os.Setenv(model.OktetoTokenEnvVar, okteto.Context().Token)
 	}
 	oktetoLog.AddMaskedWord(os.Getenv(model.OktetoTokenEnvVar))
-	if os.Getenv(model.OktetoUserEnvVar) == "" {
-		os.Setenv(model.OktetoUserEnvVar, okteto.Context().Username)
-	}
 	return nil
 }
 
