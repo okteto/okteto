@@ -513,6 +513,51 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	return svc, nil
 }
 
+type healthCheckunmarshaller struct {
+	HTTP        *HTTPHealtcheck `yaml:"http,omitempty"`
+	Test        HealtcheckTest  `yaml:"test,omitempty"`
+	Interval    time.Duration   `yaml:"interval,omitempty"`
+	Timeout     time.Duration   `yaml:"timeout,omitempty"`
+	Retries     int             `yaml:"retries,omitempty"`
+	StartPeriod time.Duration   `yaml:"start_period,omitempty"`
+	Disable     bool            `yaml:"disable,omitempty"`
+	Liveness    bool            `yaml:"x-okteto-liveness,omitempty"`
+	Readiness   *bool           `yaml:"x-okteto-readiness,omitempty"`
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (hc *HealthCheck) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var rawHealthcheck healthCheckunmarshaller
+	err := unmarshal(&rawHealthcheck)
+	if err != nil {
+		return fmt.Errorf("error reading healthchecks: %w", err)
+	}
+
+	var readiness bool
+	if rawHealthcheck.Readiness == nil {
+		readiness = true
+	} else {
+		readiness = *rawHealthcheck.Readiness
+	}
+
+	if !rawHealthcheck.Liveness && !readiness {
+		return fmt.Errorf("error reading healthchecks: 'x-okteto-liveness' or 'x-okteto-readiness' must be true")
+	}
+
+	*hc = HealthCheck{
+		HTTP:        rawHealthcheck.HTTP,
+		Test:        rawHealthcheck.Test,
+		Interval:    rawHealthcheck.Interval,
+		Timeout:     rawHealthcheck.Timeout,
+		Retries:     rawHealthcheck.Retries,
+		StartPeriod: rawHealthcheck.StartPeriod,
+		Disable:     rawHealthcheck.Disable,
+		Liveness:    rawHealthcheck.Liveness,
+		Readiness:   readiness,
+	}
+	return nil
+}
+
 func validateHealthcheck(healthcheck *HealthCheck) error {
 	if healthcheck != nil && len(healthcheck.Test) != 0 && healthcheck.Test[0] == "NONE" {
 		healthcheck.Test = make(HealtcheckTest, 0)
