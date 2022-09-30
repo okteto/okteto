@@ -1030,14 +1030,17 @@ func Test_translateSvcProbe(t *testing.T) {
 	tests := []struct {
 		name     string
 		svc      *model.Service
-		expected *apiv1.Probe
+		expected *healtcheckProbes
 	}{
 		{
 			name: "nil healthcheck",
 			svc: &model.Service{
 				Healtcheck: nil,
 			},
-			expected: nil,
+			expected: &healtcheckProbes{
+				readiness: nil,
+				liveness:  nil,
+			},
 		},
 		{
 			name: "healthcheck http",
@@ -1047,20 +1050,24 @@ func Test_translateSvcProbe(t *testing.T) {
 						Path: "/",
 						Port: 8080,
 					},
+					Readiness: true,
 				},
 			},
-			expected: &apiv1.Probe{
-				ProbeHandler: apiv1.ProbeHandler{
-					HTTPGet: &apiv1.HTTPGetAction{
-						Path: "/",
-						Port: intstr.IntOrString{IntVal: 8080},
+			expected: &healtcheckProbes{
+				readiness: &apiv1.Probe{
+					ProbeHandler: apiv1.ProbeHandler{
+						HTTPGet: &apiv1.HTTPGetAction{
+							Path: "/",
+							Port: intstr.IntOrString{IntVal: 8080},
+						},
 					},
 				},
+				liveness: nil,
 			},
 		},
 
 		{
-			name: "healthcheck http with other fields",
+			name: "healthcheck http with other fields both ",
 			svc: &model.Service{
 				Healtcheck: &model.HealthCheck{
 					HTTP: &model.HTTPHealtcheck{
@@ -1071,40 +1078,60 @@ func Test_translateSvcProbe(t *testing.T) {
 					Retries:     5,
 					Timeout:     5 * time.Minute,
 					Interval:    45 * time.Second,
+					Readiness:   true,
+					Liveness:    true,
 				},
 			},
-			expected: &apiv1.Probe{
-				ProbeHandler: apiv1.ProbeHandler{
-					HTTPGet: &apiv1.HTTPGetAction{
-						Path: "/",
-						Port: intstr.IntOrString{IntVal: 8080},
+			expected: &healtcheckProbes{
+				readiness: &apiv1.Probe{
+					ProbeHandler: apiv1.ProbeHandler{
+						HTTPGet: &apiv1.HTTPGetAction{
+							Path: "/",
+							Port: intstr.IntOrString{IntVal: 8080},
+						},
 					},
+					InitialDelaySeconds: 30,
+					FailureThreshold:    5,
+					TimeoutSeconds:      300,
+					PeriodSeconds:       45,
 				},
-				InitialDelaySeconds: 30,
-				FailureThreshold:    5,
-				TimeoutSeconds:      300,
-				PeriodSeconds:       45,
+				liveness: &apiv1.Probe{
+					ProbeHandler: apiv1.ProbeHandler{
+						HTTPGet: &apiv1.HTTPGetAction{
+							Path: "/",
+							Port: intstr.IntOrString{IntVal: 8080},
+						},
+					},
+					InitialDelaySeconds: 30,
+					FailureThreshold:    5,
+					TimeoutSeconds:      300,
+					PeriodSeconds:       45,
+				},
 			},
 		},
 		{
-			name: "healthcheck exec",
+			name: "healthcheck exec only readiness",
 			svc: &model.Service{
 				Healtcheck: &model.HealthCheck{
 					Test: model.HealtcheckTest{
 						"curl", "db-service:8080/readiness",
 					},
+					Readiness: true,
 				},
 			},
-			expected: &apiv1.Probe{
-				ProbeHandler: apiv1.ProbeHandler{
-					Exec: &apiv1.ExecAction{
-						Command: []string{"curl", "db-service:8080/readiness"},
+			expected: &healtcheckProbes{
+				readiness: &apiv1.Probe{
+					ProbeHandler: apiv1.ProbeHandler{
+						Exec: &apiv1.ExecAction{
+							Command: []string{"curl", "db-service:8080/readiness"},
+						},
 					},
 				},
+				liveness: nil,
 			},
 		},
 		{
-			name: "healthcheck exec with others fields",
+			name: "healthcheck exec with others fields only liveness",
 			svc: &model.Service{
 				Healtcheck: &model.HealthCheck{
 					Test: model.HealtcheckTest{
@@ -1114,18 +1141,21 @@ func Test_translateSvcProbe(t *testing.T) {
 					Retries:     5,
 					Timeout:     5 * time.Minute,
 					Interval:    45 * time.Second,
+					Liveness:    true,
 				},
 			},
-			expected: &apiv1.Probe{
-				ProbeHandler: apiv1.ProbeHandler{
-					Exec: &apiv1.ExecAction{
-						Command: []string{"curl", "db-service:8080/readiness"},
+			expected: &healtcheckProbes{
+				liveness: &apiv1.Probe{
+					ProbeHandler: apiv1.ProbeHandler{
+						Exec: &apiv1.ExecAction{
+							Command: []string{"curl", "db-service:8080/readiness"},
+						},
 					},
+					InitialDelaySeconds: 30,
+					FailureThreshold:    5,
+					TimeoutSeconds:      300,
+					PeriodSeconds:       45,
 				},
-				InitialDelaySeconds: 30,
-				FailureThreshold:    5,
-				TimeoutSeconds:      300,
-				PeriodSeconds:       45,
 			},
 		},
 	}
@@ -1133,9 +1163,7 @@ func Test_translateSvcProbe(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			probe := getSvcProbe(tt.svc)
-			if !reflect.DeepEqual(tt.expected, probe) {
-				t.Fatal("Wrong translation")
-			}
+			assert.Equal(t, tt.expected, probe)
 		})
 	}
 }
