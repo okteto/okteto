@@ -123,13 +123,26 @@ type BuildInfo struct {
 	Dockerfile       string         `yaml:"dockerfile,omitempty"`
 	CacheFrom        []string       `yaml:"cache_from,omitempty"`
 	Target           string         `yaml:"target,omitempty"`
-	Args             Environment    `yaml:"args,omitempty"`
+	Args             BuildArgs      `yaml:"args,omitempty"`
 	Image            string         `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume  `yaml:"-"`
 	ExportCache      string         `yaml:"export_cache,omitempty"`
 	DependsOn        BuildDependsOn `yaml:"depends_on,omitempty"`
 	Secrets          BuildSecrets   `yaml:"secrets,omitempty"`
 }
+
+// BuildArg is an argument used on the build step.
+type BuildArg struct {
+	Name  string
+	Value string
+}
+
+func (v *BuildArg) String() string {
+	return fmt.Sprintf("%s=%s", v.Name, v.Value)
+}
+
+// BuildArgs is a list of arguments used on the build step.
+type BuildArgs []BuildArg
 
 // BuildDependsOn represents the images that needs to be built before
 type BuildDependsOn []string
@@ -156,15 +169,49 @@ func (b *BuildInfo) GetDockerfilePath() string {
 	return joinPath
 }
 
-// AddArgs add a set of args to the build information
-func (b *BuildInfo) AddArgs(args map[string]string) {
-	for k, v := range args {
-		b.Args = append(b.Args, EnvVar{
+// AddBuildArgs add a set of args to the build information
+func (b *BuildInfo) AddBuildArgs(previousImageArgs map[string]string) error {
+	if err := b.expandManifestBuildArgs(previousImageArgs); err != nil {
+		return err
+	}
+	return b.addExpandedPreviousImageArgs(previousImageArgs)
+}
+
+func (b *BuildInfo) expandManifestBuildArgs(previousImageArgs map[string]string) (err error) {
+	for idx, arg := range b.Args {
+		if val, ok := previousImageArgs[arg.Name]; ok {
+			oktetoLog.Infof("overriding '%s' with the content of previous build", arg.Name)
+			arg.Value = val
+		}
+		arg.Value, err = ExpandEnv(arg.Value, true)
+		if err != nil {
+			return err
+		}
+		b.Args[idx] = arg
+	}
+	return nil
+}
+
+func (b *BuildInfo) addExpandedPreviousImageArgs(previousImageArgs map[string]string) error {
+	alreadyAddedArg := map[string]bool{}
+	for _, arg := range b.Args {
+		alreadyAddedArg[arg.Name] = true
+	}
+	for k, v := range previousImageArgs {
+		if _, ok := alreadyAddedArg[k]; ok {
+			continue
+		}
+		expandedValue, err := ExpandEnv(v, true)
+		if err != nil {
+			return err
+		}
+		b.Args = append(b.Args, BuildArg{
 			Name:  k,
-			Value: v,
+			Value: expandedValue,
 		})
 		oktetoLog.Infof("Added '%s' to build args", k)
 	}
+	return nil
 }
 
 // Volume represents a volume in the development container
@@ -885,9 +932,20 @@ func (dev *Dev) Save(path string) error {
 }
 
 // SerializeBuildArgs returns build  args as a list of strings
-func SerializeBuildArgs(buildArgs Environment) []string {
+func SerializeBuildArgs(buildArgs BuildArgs) []string {
 	result := []string{}
 	for _, e := range buildArgs {
+		result = append(result, e.String())
+	}
+	// // stable serialization
+	sort.Strings(result)
+	return result
+}
+
+// SerializeEnvironmentVars returns environment variables as a list of strings
+func SerializeEnvironmentVars(envs Environment) []string {
+	result := []string{}
+	for _, e := range envs {
 		result = append(result, e.String())
 	}
 	// // stable serialization
@@ -1311,7 +1369,7 @@ func (b *BuildInfo) Copy() *BuildInfo {
 	cacheFrom = append(cacheFrom, b.CacheFrom...)
 	result.CacheFrom = cacheFrom
 
-	args := Environment{}
+	args := BuildArgs{}
 	args = append(args, b.Args...)
 	result.Args = args
 

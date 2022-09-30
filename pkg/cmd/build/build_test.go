@@ -1,6 +1,7 @@
 package build
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"log"
@@ -74,8 +75,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		Registry:  "registry.okteto",
 	}
 
-	namespaceEnvVar := model.EnvVar{
-			Name: model.OktetoNamespaceEnvVar, Value: context.Namespace,
+	namespaceEnvVar := model.BuildArg{
+		Name: model.OktetoNamespaceEnvVar, Value: context.Namespace,
 	}
 
 	okteto.CurrentStore = &okteto.OktetoContextStore{
@@ -153,7 +154,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
-				Args: model.Environment{
+				Args: model.BuildArgs{
 					{
 						Name:  "arg1",
 						Value: "value1",
@@ -182,7 +183,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
-				Args: model.Environment{
+				Args: model.BuildArgs{
 					{
 						Name:  "arg1",
 						Value: "value1",
@@ -218,7 +219,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Dockerfile: serviceDockerfile,
 				Target:     "build",
 				CacheFrom:  []string{"cache-image"},
-				Args: []model.EnvVar {
+				Args: model.BuildArgs{
 					namespaceEnvVar,
 					{
 						Name:  "arg1",
@@ -423,4 +424,45 @@ func removeFile(s string) error {
 	}
 
 	return nil
+}
+
+func Test_parseTempSecrets(t *testing.T) {
+	secretDir := t.TempDir()
+	tmpTestSecretFile, err := os.CreateTemp(secretDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	writer := bufio.NewWriter(tmpTestSecretFile)
+	_, _ = writer.Write([]byte(fmt.Sprintf("%s\n", "content for ${SECRET_ENV}")))
+	writer.Flush()
+
+	tempFolder := t.TempDir()
+	envValue := "secret env value"
+	t.Setenv("SECRET_ENV", envValue)
+
+	buildOpts := &types.BuildOptions{
+		Secrets: []string{
+			fmt.Sprintf("id=mysecret,src=%s", tmpTestSecretFile.Name()),
+		},
+	}
+
+	if err := parseTempSecrets(tempFolder, buildOpts); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := tmpTestSecretFile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.NotContains(t, buildOpts.Secrets[0], tmpTestSecretFile.Name())
+	assert.Contains(t, buildOpts.Secrets[0], "secret-")
+
+	newSecretPath := strings.SplitN(buildOpts.Secrets[0], "id=mysecret,src=", 2)
+	b, err := os.ReadFile(newSecretPath[1])
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Contains(t, string(b), envValue)
+
 }

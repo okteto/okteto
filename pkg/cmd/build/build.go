@@ -280,7 +280,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 				continue
 			}
 
-			b.Args = append(b.Args, model.EnvVar{
+			b.Args = append(b.Args, model.BuildArg{
 				Name: key, Value: val,
 			})
 		}
@@ -380,6 +380,9 @@ func parseTempSecrets(secretTempFolder string, buildOptions *types.BuildOptions)
 			// save expanded to temp file
 			_, _ = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
 			writer.Flush()
+		}
+		if err := tmpfile.Close(); err != nil {
+			return err
 		}
 		if err := srcFile.Close(); err != nil {
 			return err

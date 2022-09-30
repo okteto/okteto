@@ -237,10 +237,6 @@ func Up() *cobra.Command {
 				// the autocreate property is forced to be true
 				forceAutocreate = true
 			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
-				if !upOptions.Deploy {
-					oktetoLog.Information("Deploying development environment '%s'...", up.Manifest.Name)
-					oktetoLog.Information("To redeploy your development environment manually run 'okteto deploy' or 'okteto up --deploy'")
-				}
 				startTime := time.Now()
 				err := up.deployApp(ctx)
 
@@ -265,8 +261,7 @@ func Up() *cobra.Command {
 				}
 
 			} else if !upOptions.Deploy && (up.Manifest.IsV2 && pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
-				oktetoLog.Information("Development environment '%s' already deployed.", up.Manifest.Name)
-				oktetoLog.Information("To redeploy your development environment run 'okteto deploy' or 'okteto up [devName] --deploy'")
+				oktetoLog.Information("'%s' was already deployed. To redeploy run 'okteto deploy' or 'okteto up --deploy'", up.Manifest.Name)
 			}
 
 			dev, err := utils.GetDevFromManifest(oktetoManifest, upOptions.DevName)

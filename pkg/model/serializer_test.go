@@ -603,6 +603,11 @@ func TestLabelsUnmashalling(t *testing.T) {
 		expected Labels
 	}{
 		{
+			"key-value-with-env-var-map",
+			[]byte(`env: $DEV_ENV`),
+			Labels{"env": "test_environment"},
+		},
+		{
 			"key-value-list",
 			[]byte(`- env=production`),
 			Labels{"env": "production"},
@@ -2130,7 +2135,7 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
 					Context:    "./service2",
 					Dockerfile: "Dockerfile",
 					Image:      "image-tag",
-					Args: []EnvVar{
+					Args: BuildArgs{
 						{
 							Name:  "key1",
 							Value: "value1",
@@ -2331,6 +2336,64 @@ b:
 			err := yaml.UnmarshalStrict(tt.bytes, &result)
 			assert.Equal(t, tt.err, err != nil)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+func TestBuildArgsUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected BuildArgs
+	}{
+		{
+			name: "list",
+			data: []byte("- KEY=VALUE"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "VALUE",
+				},
+			},
+		},
+		{
+			name: "list with env var",
+			data: []byte("- KEY=$VALUE"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "$VALUE",
+				},
+			},
+		},
+		{
+			name: "map",
+			data: []byte("KEY: VALUE"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "VALUE",
+				},
+			},
+		},
+		{
+			name: "map with env var",
+			data: []byte("KEY: $VALUE"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "$VALUE",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buildArgs BuildArgs
+			if err := yaml.UnmarshalStrict(tt.data, &buildArgs); err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, tt.expected, buildArgs)
 		})
 	}
 }
