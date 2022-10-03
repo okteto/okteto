@@ -70,6 +70,7 @@ func (ch *defaultConfigMapHandler) destroyConfigMap(ctx context.Context, cfg *ap
 
 func (ch *defaultConfigMapHandler) setErrorStatus(ctx context.Context, cfg *apiv1.ConfigMap, data *pipeline.CfgData, err error) error {
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destruction failed: %s", err.Error())
+	data.Status = pipeline.ErrorStatus
 	return pipeline.UpdateConfigMap(ctx, cfg, data, ch.k8sClient)
 }
 
