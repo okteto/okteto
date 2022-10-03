@@ -393,6 +393,12 @@ func Test_HealthcheckUnmarshalling(t *testing.T) {
 			expectedError: false,
 		},
 		{
+			name:          "healthcheck readiness=false unset",
+			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      x-okteto-readiness: false\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: curl --fail 0.0.0.0:8080\n    image: okteto/vote:1"),
+			expected:      nil,
+			expectedError: true,
+		},
+		{
 			name:          "healthcheck readiness=false liveness=false",
 			manifest:      []byte("services:\n  app:\n    healthcheck:\n      interval: 10s\n      x-okteto-readiness: false\n      x-okteto-liveness: false\n      timeout: 10m\n      retries: 5\n      start_period: 30s\n      test: curl --fail 0.0.0.0:8080\n    image: okteto/vote:1"),
 			expected:      nil,

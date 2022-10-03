@@ -116,7 +116,7 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
 
-	svcHealthchecks := getSvcProbe(svc)
+	svcHealthchecks := getSvcHealthProbe(svc)
 
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -186,7 +186,7 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
-	svcHealthchecks := getSvcProbe(svc)
+	svcHealthchecks := getSvcHealthProbe(svc)
 
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -240,7 +240,7 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
-	svcHealthchecks := getSvcProbe(svc)
+	svcHealthchecks := getSvcHealthProbe(svc)
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -684,13 +684,13 @@ func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 	return result
 }
 
-type healtcheckProbes struct {
+type healthcheckProbes struct {
 	readiness *apiv1.Probe
 	liveness  *apiv1.Probe
 }
 
-func getSvcProbe(svc *model.Service) *healtcheckProbes {
-	result := &healtcheckProbes{}
+func getSvcHealthProbe(svc *model.Service) *healthcheckProbes {
+	result := &healthcheckProbes{}
 	if svc.Healtcheck != nil {
 		var handler apiv1.ProbeHandler
 		if len(svc.Healtcheck.Test) != 0 {
