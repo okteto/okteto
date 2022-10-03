@@ -203,7 +203,7 @@ const (
 	// OktetoSkipCleanupEnvVar defines the okteto binary that should be used
 	OktetoSkipCleanupEnvVar = "OKTETO_SKIP_CLEANUP"
 
-	// OktetoUserEnvVar defines the user is using okteto
+	// OktetoUserEnvVar defines the user using okteto
 	OktetoUserEnvVar = "OKTETO_USER"
 
 	// OktetoUserNameEnvVar defines the user is using okteto
