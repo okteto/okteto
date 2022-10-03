@@ -1030,14 +1030,14 @@ func Test_translateSvcProbe(t *testing.T) {
 	tests := []struct {
 		name     string
 		svc      *model.Service
-		expected *healtcheckProbes
+		expected *healthcheckProbes
 	}{
 		{
 			name: "nil healthcheck",
 			svc: &model.Service{
 				Healtcheck: nil,
 			},
-			expected: &healtcheckProbes{
+			expected: &healthcheckProbes{
 				readiness: nil,
 				liveness:  nil,
 			},
@@ -1053,7 +1053,7 @@ func Test_translateSvcProbe(t *testing.T) {
 					Readiness: true,
 				},
 			},
-			expected: &healtcheckProbes{
+			expected: &healthcheckProbes{
 				readiness: &apiv1.Probe{
 					ProbeHandler: apiv1.ProbeHandler{
 						HTTPGet: &apiv1.HTTPGetAction{
@@ -1082,7 +1082,7 @@ func Test_translateSvcProbe(t *testing.T) {
 					Liveness:    true,
 				},
 			},
-			expected: &healtcheckProbes{
+			expected: &healthcheckProbes{
 				readiness: &apiv1.Probe{
 					ProbeHandler: apiv1.ProbeHandler{
 						HTTPGet: &apiv1.HTTPGetAction{
@@ -1119,7 +1119,7 @@ func Test_translateSvcProbe(t *testing.T) {
 					Readiness: true,
 				},
 			},
-			expected: &healtcheckProbes{
+			expected: &healthcheckProbes{
 				readiness: &apiv1.Probe{
 					ProbeHandler: apiv1.ProbeHandler{
 						Exec: &apiv1.ExecAction{
@@ -1144,7 +1144,7 @@ func Test_translateSvcProbe(t *testing.T) {
 					Liveness:    true,
 				},
 			},
-			expected: &healtcheckProbes{
+			expected: &healthcheckProbes{
 				liveness: &apiv1.Probe{
 					ProbeHandler: apiv1.ProbeHandler{
 						Exec: &apiv1.ExecAction{
@@ -1162,7 +1162,7 @@ func Test_translateSvcProbe(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			probe := getSvcProbe(tt.svc)
+			probe := getSvcHealthProbe(tt.svc)
 			assert.Equal(t, tt.expected, probe)
 		})
 	}
