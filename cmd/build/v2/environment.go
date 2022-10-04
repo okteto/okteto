@@ -55,5 +55,15 @@ func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	os.Setenv(tagKey, tag)
 	bc.lock.Unlock()
 
+	sha := tag
+	if strings.HasPrefix(sha, "sha256:") {
+		sha = fmt.Sprintf("okteto@%s", sha)
+	}
+	shaKey := fmt.Sprintf("OKTETO_BUILD_%s_SHA", sanitizedSvc)
+	bc.lock.Lock()
+	bc.buildEnvironments[shaKey] = sha
+	os.Setenv(shaKey, sha)
+	bc.lock.Unlock()
+
 	oktetoLog.Debug("manifest env vars set")
 }

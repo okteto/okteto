@@ -36,6 +36,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 		expRepository string
 		expImage      string
 		expTag        string
+		expSHA        string
 	}{
 		{
 			name:          "setting-variables",
@@ -45,6 +46,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			expRepository: "namespace/frontend",
 			expImage:      "registry.url/namespace/frontend@sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
 			expTag:        "sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
+			expSHA:        "okteto@sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
 		},
 		{
 			name:          "setting-variables-no-tag",
@@ -54,6 +56,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			expRepository: "namespace/frontend",
 			expImage:      "registry.url/namespace/frontend",
 			expTag:        "latest",
+			expSHA:        "latest",
 		},
 	}
 
@@ -63,6 +66,7 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			imageEnv := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(tt.service))
 			repositoryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", strings.ToUpper(tt.service))
 			tagEnv := fmt.Sprintf("OKTETO_BUILD_%s_TAG", strings.ToUpper(tt.service))
+			shaEnv := fmt.Sprintf("OKTETO_BUILD_%s_SHA", strings.ToUpper(tt.service))
 
 			envs := []string{registryEnv, imageEnv, repositoryEnv, tagEnv}
 			for _, e := range envs {
@@ -84,23 +88,23 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			imageEnvValue := os.Getenv(imageEnv)
 			repositoryEnvValue := os.Getenv(repositoryEnv)
 			tagEnvValue := os.Getenv(tagEnv)
+			shaEnvValue := os.Getenv(shaEnv)
 
 			if registryEnvValue != tt.expRegistry {
 				t.Errorf("registry - expected %s , got %s", tt.expRegistry, registryEnvValue)
 			}
 			if imageEnvValue != tt.expImage {
 				t.Errorf("image - expected %s , got %s", tt.expImage, imageEnvValue)
-
 			}
 			if repositoryEnvValue != tt.expRepository {
 				t.Errorf("repository - expected %s , got %s", tt.expRepository, repositoryEnvValue)
-
 			}
 			if tagEnvValue != tt.expTag {
 				t.Errorf("tag - expected %s , got %s", tt.expTag, tagEnvValue)
-
 			}
-
+			if shaEnvValue != tt.expSHA {
+				t.Errorf("sha - expected %s , got %s", tt.expSHA, shaEnvValue)
+			}
 		})
 	}
 }
