@@ -404,6 +404,7 @@ func TestBuildWithDependsOn(t *testing.T) {
 		"OKTETO_BUILD_A_REGISTRY":   false,
 		"OKTETO_BUILD_A_REPOSITORY": false,
 		"OKTETO_BUILD_A_TAG":        false,
+		"OKTETO_BUILD_A_SHA":        false,
 	}
 	for _, arg := range registry.Registry[secondImage].Args {
 		parts := strings.SplitN(arg, "=", 2)

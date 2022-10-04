@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/registry"
 )
 
@@ -53,6 +54,16 @@ func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	bc.lock.Lock()
 	bc.buildEnvironments[tagKey] = tag
 	os.Setenv(tagKey, tag)
+	bc.lock.Unlock()
+
+	sha := tag
+	if strings.HasPrefix(sha, "sha256:") {
+		sha = fmt.Sprintf("%s@%s", model.OktetoDefaultImageTag, sha)
+	}
+	shaKey := fmt.Sprintf("OKTETO_BUILD_%s_SHA", sanitizedSvc)
+	bc.lock.Lock()
+	bc.buildEnvironments[shaKey] = sha
+	os.Setenv(shaKey, sha)
 	bc.lock.Unlock()
 
 	oktetoLog.Debug("manifest env vars set")
