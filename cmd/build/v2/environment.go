@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/registry"
 )
 
@@ -57,7 +58,7 @@ func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 
 	sha := tag
 	if strings.HasPrefix(sha, "sha256:") {
-		sha = fmt.Sprintf("okteto@%s", sha)
+		sha = fmt.Sprintf("%s@%s", model.OktetoDefaultImageTag, sha)
 	}
 	shaKey := fmt.Sprintf("OKTETO_BUILD_%s_SHA", sanitizedSvc)
 	bc.lock.Lock()
