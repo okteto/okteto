@@ -170,9 +170,7 @@ func strictSSLHTTPClient() *http.Client {
 	pool.AddCert(contextCert)
 
 	transport := defaultTransport()
-	transport.TLSClientConfig = &tls.Config{ // skipcq: GO-S1020
-		RootCAs: pool,
-	}
+	transport.TLSClientConfig.RootCAs = pool
 
 	return &http.Client{
 		Transport: transport,
@@ -181,9 +179,7 @@ func strictSSLHTTPClient() *http.Client {
 
 func insecureHTTPClient() *http.Client {
 	transport := defaultTransport()
-	transport.TLSClientConfig = &tls.Config{ // skipcq: GO-S1020
-		InsecureSkipVerify: true, // skipcq: GSC-G402
-	}
+	transport.TLSClientConfig.InsecureSkipVerify = true // skipcq: GSC-G402
 
 	return &http.Client{
 		Transport: transport,
@@ -207,6 +203,10 @@ func defaultTransport() *http.Transport {
 		IdleConnTimeout:       90 * time.Second,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig: &tls.Config{
+			MinVersion: tls.VersionTLS12,
+			MaxVersion: 0,
+		},
 	}
 }
 
@@ -230,7 +230,7 @@ func getContextCertificate() (*x509.Certificate, error) {
 		return nil, err
 	}
 
-	if _, err := cert.Verify(x509.VerifyOptions{}); err != nil {
+	if _, err := cert.Verify(x509.VerifyOptions{}); err != nil { // skipcq: GO-S1031
 		strictTLSOnce.Do(func() {
 			oktetoLog.Debugf("context certificate not trusted by system roots: %s", err)
 			oktetoLog.Information("Using strict TLS verification with context %s", Context().Name)
