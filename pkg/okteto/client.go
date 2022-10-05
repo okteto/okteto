@@ -235,7 +235,6 @@ func getContextCertificate() (*x509.Certificate, error) {
 		strictTLSOnce.Do(func() {
 			oktetoLog.Debugf("certificate issuer %s", cert.Issuer)
 			oktetoLog.Debugf("context certificate not trusted by system roots: %s", err)
-			oktetoLog.Information("Using strict TLS verification with context %s", Context().Name)
 			if cert.Issuer.CommonName == config.OktetoDefaultSelfSignedIssuer {
 				hoursSinceInstall := time.Since(cert.NotBefore).Hours()
 				switch {
