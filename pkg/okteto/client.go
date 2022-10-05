@@ -28,6 +28,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -232,8 +233,20 @@ func getContextCertificate() (*x509.Certificate, error) {
 
 	if _, err := cert.Verify(x509.VerifyOptions{}); err != nil { // skipcq: GO-S1031
 		strictTLSOnce.Do(func() {
+			oktetoLog.Debugf("certificate issuer %s", cert.Issuer)
 			oktetoLog.Debugf("context certificate not trusted by system roots: %s", err)
 			oktetoLog.Information("Using strict TLS verification with context %s", Context().Name)
+			if cert.Issuer.CommonName == config.OktetoDefaultSelfSignedIssuer {
+				hoursSinceInstall := time.Since(cert.NotBefore).Hours()
+				switch {
+				case hoursSinceInstall <= 24: // less than 1 day
+					oktetoLog.Information("Your Okteto installation is using selfsigned certificates. Please switch to your own certificates before production use.")
+				case hoursSinceInstall <= 168: // less than 1 week
+					oktetoLog.Warning("Your Okteto installation has been using selfsigned certificates for more than a day. It's important to use your own certificates before production use.")
+				default: // more than 1 week
+					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using selfsigned certificates for more than a week. It's important to use your own certificates before production use.")
+				}
+			}
 		})
 	}
 

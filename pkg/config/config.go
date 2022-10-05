@@ -59,6 +59,9 @@ const (
 
 	// OktetoContextVariableName defines the kubeconfig context of okteto commands
 	OktetoContextVariableName = "OKTETO_CONTEXT"
+
+	// OktetoDefaultSelfSignedIssuer is the self signed CA issuer name used in helm chart installs
+	OktetoDefaultSelfSignedIssuer = "okteto-wildcard-ca"
 )
 
 var (
