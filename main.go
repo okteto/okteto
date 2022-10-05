@@ -113,7 +113,7 @@ func main() {
 
 	root.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "amount of information outputted (debug, info, warn, error)")
 	root.PersistentFlags().StringVar(&outputMode, "log-output", oktetoLog.TTYFormat, "output format for logs (tty, plain, json)")
-	root.PersistentFlags().BoolVarP(&insecureSkipTlsVerify, "insecure-skip-tls-verify", "", false, "If true, Okteto server certificate will not be validated against your local trust store, effectively making your connetion insecure.")
+	root.PersistentFlags().BoolVarP(&insecureSkipTlsVerify, "insecure-skip-tls-verify", "", false, "If true, Okteto server certificate will not be validated against your local trust store, effectively making your connection insecure.")
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
