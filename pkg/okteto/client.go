@@ -15,21 +15,15 @@ package okteto
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"encoding/base64"
-	"encoding/pem"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
@@ -80,12 +74,12 @@ func NewOktetoClient() (*OktetoClient, error) {
 			TokenType: "Bearer"},
 	)
 
-	var ctxHttpClient *http.Client
+	ctxHttpClient := http.DefaultClient
 
 	if insecureSkipTLSVerify {
-		ctxHttpClient = insecureHTTPClient()
-	} else {
-		ctxHttpClient = strictSSLHTTPClient()
+		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
+	} else if cert, err := GetContextCertificate(); err == nil {
+		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
 	}
 
 	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
@@ -107,13 +101,12 @@ func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 			TokenType: "Bearer"},
 	)
 
-	var ctxHttpClient *http.Client
+	ctxHttpClient := http.DefaultClient
 
 	if insecureSkipTLSVerify {
-		ctxHttpClient = insecureHTTPClient()
-
-	} else {
-		ctxHttpClient = strictSSLHTTPClient()
+		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
+	} else if cert, err := GetContextCertificate(); err == nil {
+		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
 	}
 
 	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
@@ -130,13 +123,12 @@ func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
 		return nil, err
 	}
 
-	var ctxHttpClient *http.Client
+	ctxHttpClient := http.DefaultClient
 
 	if insecureSkipTLSVerify {
-		ctxHttpClient = insecureHTTPClient()
-
-	} else {
-		ctxHttpClient = strictSSLHTTPClient()
+		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
+	} else if cert, err := GetContextCertificate(); err == nil {
+		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
 	}
 
 	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
@@ -153,103 +145,6 @@ func contextWithOauth2HttpClient(ctx context.Context, httpClient *http.Client) c
 		oauth2.HTTPClient,
 		httpClient,
 	)
-}
-
-func strictSSLHTTPClient() *http.Client {
-	contextCert, err := getContextCertificate()
-	if err != nil {
-		oktetoLog.Debugf("couldn't obtain or parse context certificate: %s", err)
-		return http.DefaultClient
-	}
-
-	pool, err := x509.SystemCertPool()
-	if err != nil {
-		oktetoLog.Debugf("couldn't obtain system cert pool: %s", err)
-		return http.DefaultClient
-	}
-
-	pool.AddCert(contextCert)
-
-	transport := defaultTransport()
-	transport.TLSClientConfig.RootCAs = pool
-
-	return &http.Client{
-		Transport: transport,
-	}
-}
-
-func insecureHTTPClient() *http.Client {
-	transport := defaultTransport()
-	transport.TLSClientConfig.InsecureSkipVerify = true // skipcq: GSC-G402
-
-	return &http.Client{
-		Transport: transport,
-	}
-}
-
-// defaultTransport returns an *http.Transport lifted from http.DefaultTransport
-// pointer cloning is not safe after init():
-// - https://github.com/golang/go/issues/26013
-// - https://github.com/kubernetes-retired/go-open-service-broker-client/pull/133
-func defaultTransport() *http.Transport {
-	return &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-			DualStack: true,
-		}).DialContext,
-		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-		TLSClientConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12,
-			MaxVersion: 0,
-		},
-	}
-}
-
-func getContextCertificate() (*x509.Certificate, error) {
-	certB64 := Context().Certificate
-	certPEM, err := base64.StdEncoding.DecodeString(certB64)
-
-	if err != nil {
-		return nil, err
-	}
-
-	block, _ := pem.Decode(certPEM)
-
-	if block == nil {
-		return nil, fmt.Errorf("couldn't decode pem")
-	}
-
-	cert, err := x509.ParseCertificate(block.Bytes)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if _, err := cert.Verify(x509.VerifyOptions{}); err != nil { // skipcq: GO-S1031
-		strictTLSOnce.Do(func() {
-			oktetoLog.Debugf("certificate issuer %s", cert.Issuer)
-			oktetoLog.Debugf("context certificate not trusted by system roots: %s", err)
-			if cert.Issuer.CommonName == config.OktetoDefaultSelfSignedIssuer {
-				hoursSinceInstall := time.Since(cert.NotBefore).Hours()
-				switch {
-				case hoursSinceInstall <= 24: // less than 1 day
-					oktetoLog.Information("Your Okteto installation is using selfsigned certificates. Please switch to your own certificates before production use.")
-				case hoursSinceInstall <= 168: // less than 1 week
-					oktetoLog.Warning("Your Okteto installation has been using selfsigned certificates for more than a day. It's important to use your own certificates before production use.")
-				default: // more than 1 week
-					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using selfsigned certificates for more than a week. It's important to use your own certificates before production use.")
-				}
-			}
-		})
-	}
-
-	return cert, nil
 }
 
 func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*OktetoClient, error) {
@@ -395,4 +290,8 @@ func SetInsecureSkipTLSVerifyPolicy(isInsecure bool) {
 		oktetoLog.Warning("Insecure mode enabled")
 	}
 	insecureSkipTLSVerify = isInsecure
+}
+
+func IsInsecureSkipTLSVerifyPolicy() bool {
+	return insecureSkipTLSVerify
 }
