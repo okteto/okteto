@@ -302,11 +302,12 @@ func IsInsecureSkipVerify(value string) bool {
 		return false
 	}
 
+	oktetoLog.Debug("insecure mode: %v", insecureSkipVerify)
+
 	if insecureSkipVerify {
 		insecureSkipVerifyOnce.Do(func() { oktetoLog.Warning("Insecure mode enabled") })
 		return true
 	}
 
-	oktetoLog.Debug("insecure mode: %v", insecureSkipVerify)
 	return false
 }
