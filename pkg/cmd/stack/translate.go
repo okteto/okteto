@@ -689,8 +689,8 @@ type healthcheckProbes struct {
 	liveness  *apiv1.Probe
 }
 
-func getSvcHealthProbe(svc *model.Service) *healthcheckProbes {
-	result := &healthcheckProbes{}
+func getSvcHealthProbe(svc *model.Service) healthcheckProbes {
+	result := healthcheckProbes{}
 	if svc.Healtcheck != nil {
 		var handler apiv1.ProbeHandler
 		if len(svc.Healtcheck.Test) != 0 {
