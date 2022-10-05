@@ -17,7 +17,10 @@ import (
 	"os"
 	"testing"
 
+	"net/http"
+
 	"github.com/okteto/okteto/pkg/model"
+	"golang.org/x/oauth2"
 )
 
 func TestInDevContainer(t *testing.T) {
@@ -77,6 +80,54 @@ func Test_parseOktetoURL(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("parseOktetoURL() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBackgroundContextWithHttpClient(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    bool
+		expected bool
+	}{
+		{
+			name:     "default",
+			value:    false,
+			expected: false,
+		},
+		{
+			name:     "insecure",
+			value:    true,
+			expected: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var ok bool
+
+			ctx := backgroundContextWithHttpClient(tt.value)
+
+			client := ctx.Value(oauth2.HTTPClient)
+
+			var httpClient *http.Client
+
+			if httpClient, ok = client.(*http.Client); !ok {
+				t.Errorf("got %T, want %T", client, httpClient)
+				return
+			}
+
+			var transport *http.Transport
+
+			if transport, ok = httpClient.Transport.(*http.Transport); !ok {
+				t.Errorf("got %T, want %T", httpClient.Transport, transport)
+				return
+			}
+
+			insecureSkipVerify := transport.TLSClientConfig.InsecureSkipVerify
+
+			if insecureSkipVerify != tt.expected {
+				t.Errorf("got %t, want %t", insecureSkipVerify, tt.expected)
 			}
 		})
 	}

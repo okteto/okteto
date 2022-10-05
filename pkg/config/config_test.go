@@ -135,3 +135,41 @@ func TestGetAppHome(t *testing.T) {
 		t.Errorf("expected %s, got %s", expected, got)
 	}
 }
+
+func TestInsecureSkipVerify(t *testing.T) {
+	var tests = []struct {
+		name     string
+		expected bool
+		envFunc  func() string
+	}{
+		{
+			name:     "none",
+			expected: false,
+			envFunc:  func() string { return "" },
+		},
+		{
+			name:     "disabled",
+			expected: false,
+			envFunc:  func() string { return "false" },
+		},
+		{
+			name:     "enabled",
+			expected: true,
+			envFunc:  func() string { return "true" },
+		},
+		{
+			name:     "invalid",
+			expected: false,
+			envFunc:  func() string { return "foo" },
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsInsecureSkipVerify(tt.envFunc)
+			if got != tt.expected {
+				t.Errorf("got %t, expected %t", got, tt.expected)
+			}
+		})
+	}
+}

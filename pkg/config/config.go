@@ -20,6 +20,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -60,10 +61,16 @@ const (
 
 	//OktetoContextVariableName defines the kubeconfig context of okteto commands
 	OktetoContextVariableName = "OKTETO_CONTEXT"
+
+	// OktetoInsecureSkipVerifyVariableName defines the environment variable name used to disable tls verify
+	OktetoInsecureSkipVerifyVariableName = "OKTETO_INSECURE_SKIP_TLS_VERIFY"
 )
 
-// VersionString the version of the cli
-var VersionString string
+var (
+	// VersionString the version of the cli
+	VersionString          string
+	insecureSkipVerifyOnce sync.Once
+)
 
 // GetBinaryName returns the name of the binary
 func GetBinaryName() string {
@@ -283,15 +290,25 @@ func RunningInInstaller() bool {
 	return os.Getenv(model.OktetoInInstaller) == "true"
 }
 
-func IsInsecureSkipVerify() bool {
-	envVarValue := os.Getenv("OKTETO_INSECURE_SKIP_TLS_VERIFY")
-	value, err := strconv.ParseBool(envVarValue)
+func IsInsecureSkipVerify(getValue func() string) bool {
+	value := getValue()
 
-	if err != nil {
-		oktetoLog.Debugf("insecure mode disabled, error when reading insecure mode: OKTETO_INSECURE_SKIP_TLS_VERIFY=%s, %v", envVarValue, err)
+	if value == "" {
 		return false
 	}
 
-	oktetoLog.Debugf("insecure mode: %v", value)
-	return value
+	insecureSkipVerify, err := strconv.ParseBool(value)
+
+	if err != nil {
+		oktetoLog.Debugf("insecure mode disabled, error when reading insecure mode: %q, %v", value, err)
+		return false
+	}
+
+	if insecureSkipVerify {
+		insecureSkipVerifyOnce.Do(func() { oktetoLog.Warning("Insecure mode enabled") })
+		return true
+	}
+
+	oktetoLog.Debug("insecure mode: %v", insecureSkipVerify)
+	return false
 }

@@ -71,7 +71,7 @@ func NewOktetoClient() (*OktetoClient, error) {
 			TokenType: "Bearer"},
 	)
 
-	ctx := backgroundContextWithHttpClient(config.IsInsecureSkipVerify())
+	ctx := backgroundContextWithHttpClient(config.IsInsecureSkipVerify(func() string { return os.Getenv(config.OktetoInsecureSkipVerifyVariableName) }))
 	httpClient := oauth2.NewClient(ctx, src)
 
 	return newOktetoClientFromGraphqlClient(u, httpClient)
@@ -89,7 +89,7 @@ func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 			TokenType: "Bearer"},
 	)
 
-	ctx := backgroundContextWithHttpClient(config.IsInsecureSkipVerify())
+	ctx := backgroundContextWithHttpClient(config.IsInsecureSkipVerify(func() string { return os.Getenv(config.OktetoInsecureSkipVerifyVariableName) }))
 	httpClient := oauth2.NewClient(ctx, src)
 
 	return newOktetoClientFromGraphqlClient(u, httpClient)
@@ -102,7 +102,7 @@ func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
 		return nil, err
 	}
 
-	ctx := backgroundContextWithHttpClient(config.IsInsecureSkipVerify())
+	ctx := backgroundContextWithHttpClient(config.IsInsecureSkipVerify(func() string { return os.Getenv(config.OktetoInsecureSkipVerifyVariableName) }))
 	httpClient := oauth2.NewClient(ctx, nil)
 
 	return newOktetoClientFromGraphqlClient(u, httpClient)
@@ -114,8 +114,7 @@ func backgroundContextWithHttpClient(insecureSkipVerify bool) context.Context {
 		oauth2.HTTPClient,
 		&http.Client{
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{ // skipcq: 
-GO-S1020
+				TLSClientConfig: &tls.Config{ // skipcq: GO-S1020
 					InsecureSkipVerify: insecureSkipVerify, // skipcq: GSC-G402
 				},
 			},
