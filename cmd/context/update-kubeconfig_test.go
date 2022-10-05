@@ -14,7 +14,6 @@
 package context
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -26,7 +25,6 @@ import (
 )
 
 func Test_updateKubeconfig(t *testing.T) {
-	ctx := context.Background()
 
 	var tests = []struct {
 		name          string
@@ -112,7 +110,8 @@ func Test_updateKubeconfig(t *testing.T) {
 			}
 			defer os.Remove(file)
 
-			if err := ExecuteUpdateKubeconfig(ctx); err != nil {
+			err = ExecuteUpdateKubeconfig()
+			if err != nil {
 				t.Fatal(err)
 			}
 			cfg := kubeconfig.Get(config.GetKubeconfigPath())

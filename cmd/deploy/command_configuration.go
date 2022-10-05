@@ -107,7 +107,7 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 
 func addEnvVars(ctx context.Context, cwd string) error {
 	if os.Getenv(model.OktetoGitBranchEnvVar) == "" {
-		branch, err := utils.GetBranch(ctx, cwd)
+		branch, err := utils.GetBranch(cwd)
 		if err != nil {
 			oktetoLog.Infof("could not retrieve branch name: %s", err)
 		}
@@ -131,7 +131,7 @@ func addEnvVars(ctx context.Context, cwd string) error {
 	}
 
 	if os.Getenv(model.OktetoGitCommitEnvVar) == "" {
-		sha, err := utils.GetGitCommit(ctx, cwd)
+		sha, err := utils.GetGitCommit(cwd)
 		if err != nil {
 			oktetoLog.Infof("could not retrieve sha: %s", err)
 		}
@@ -140,7 +140,7 @@ func addEnvVars(ctx context.Context, cwd string) error {
 			oktetoLog.Infof("could not status: %s", err)
 		}
 		if !isClean {
-			sha = utils.GetRandomSHA(ctx, cwd)
+			sha = utils.GetRandomSHA()
 		}
 		os.Setenv(model.OktetoGitCommitEnvVar, sha)
 	}
@@ -150,6 +150,10 @@ func addEnvVars(ctx context.Context, cwd string) error {
 	if os.Getenv(model.OktetoBuildkitHostURLEnvVar) == "" {
 		os.Setenv(model.OktetoBuildkitHostURLEnvVar, okteto.Context().Builder)
 	}
+	if os.Getenv(model.OktetoTokenEnvVar) == "" {
+		os.Setenv(model.OktetoTokenEnvVar, okteto.Context().Token)
+	}
+	oktetoLog.AddMaskedWord(os.Getenv(model.OktetoTokenEnvVar))
 	return nil
 }
 

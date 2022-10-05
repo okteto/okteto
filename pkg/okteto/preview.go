@@ -33,7 +33,7 @@ func newPreviewClient(client *graphql.Client) *previewClient {
 	return &previewClient{client: client}
 }
 
-//PreviewEnv represents an Okteto preview environment
+// PreviewEnv represents an Okteto preview environment
 type PreviewEnv struct {
 	ID       string `json:"id" yaml:"id"`
 	Job      string `json:"job" yaml:"job"`
@@ -49,7 +49,7 @@ type InputVariable struct {
 type PreviewScope graphql.String
 
 // DeployPreview creates a preview environment
-func (c *OktetoClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
+func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
 	if err := validateNamespace(name, "preview environment"); err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*t
 	return nil, oktetoErrors.ErrNotFound
 }
 
-func (c *OktetoClient) GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error) {
+func (c *previewClient) GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error) {
 	var queryStruct struct {
 		Preview struct {
 			Deployments []struct {

@@ -158,7 +158,7 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions *types.Buil
 			return nil
 		})
 
-		return displayStatus(os.Stdout, eg, response, buildOptions.OutputMode, dockerAuthProvider)
+		return displayStatus(eg, response, buildOptions.OutputMode, dockerAuthProvider)
 	})
 
 	return eg.Wait()
@@ -168,7 +168,7 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions *types.Buil
 func buildWithDockerDaemon(ctx context.Context, buildOptions *types.BuildOptions, cli *client.Client) error {
 	oktetoLog.Infof("building your image with docker client v%s", cli.ClientVersion())
 
-	dockerBuildContext, err := getBuildContext(buildOptions.Path, buildOptions.File)
+	dockerBuildContext, err := getBuildContext(buildOptions.File)
 	if err != nil {
 		errors.Wrap(err, "setting build context failed")
 	}
@@ -219,7 +219,7 @@ func buildWithDockerDaemon(ctx context.Context, buildOptions *types.BuildOptions
 
 }
 
-func displayStatus(out *os.File, eg *errgroup.Group, response dockerTypes.ImageBuildResponse, buildOutputMode string, at session.Attachable) error {
+func displayStatus(eg *errgroup.Group, response dockerTypes.ImageBuildResponse, buildOutputMode string, at session.Attachable) error {
 
 	displayStatus := func(out *os.File, displayCh chan *buildkitClient.SolveStatus) {
 		var c console.Console
@@ -329,7 +329,7 @@ func isURL(path string) bool {
 }
 
 // getBuildContext returns the build context
-func getBuildContext(path, dockerfilePath string) (io.ReadCloser, error) {
+func getBuildContext(path string) (io.ReadCloser, error) {
 	var dockerBuildContext io.ReadCloser
 	var err error
 	if urlutil.IsURL(path) {
@@ -365,14 +365,19 @@ func createTarFromPath(contextDir string) (io.ReadCloser, error) {
 func readDockerignore(contextDir string) ([]string, error) {
 	var excludes []string
 
-	f, err := os.Open(filepath.Join(contextDir, ".dockerignore"))
+	path := filepath.Join(contextDir, ".dockerignore")
+	f, err := os.Open(path)
 	switch {
 	case os.IsNotExist(err):
 		return excludes, nil
 	case err != nil:
 		return nil, err
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", path, err)
+		}
+	}()
 
 	return dockerignore.ReadAll(f)
 }

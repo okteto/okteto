@@ -56,7 +56,7 @@ const (
 	buildExample     = `build:
   my-service:
     context: .`
-	buildSvcEnvVars   = "You can use the following env vars to refer to this image in your deploy commands:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_TAG: image tag"
+	buildSvcEnvVars   = "You can use the following env vars to refer to this image in your deploy commands:\n - OKTETO_BUILD_%s_REGISTRY: image registry\n - OKTETO_BUILD_%s_REPOSITORY: image repo\n - OKTETO_BUILD_%s_IMAGE: image name\n - OKTETO_BUILD_%s_SHA: image tag sha256"
 	deployHeadComment = "The deploy section defines how to deploy your development environment\nMore info: https://www.okteto.com/docs/reference/manifest/#deploy"
 	deployExample     = `deploy:
   commands:
@@ -651,6 +651,7 @@ func Read(bytes []byte) (*Manifest, error) {
 		return nil, err
 	}
 	manifest.Manifest = bytes
+	manifest.Type = OktetoManifestType
 	return manifest, nil
 }
 
@@ -774,9 +775,9 @@ func (m *Manifest) setDefaults() error {
 		if err := d.SetDefaults(); err != nil {
 			return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
 		}
-		if err := d.translateDeprecatedMetadataFields(); err != nil {
-			return fmt.Errorf("Error on dev '%s': %s", d.Name, err)
-		}
+
+		d.translateDeprecatedMetadataFields()
+
 		sort.SliceStable(d.Forward, func(i, j int) bool {
 			return d.Forward[i].Less(&d.Forward[j])
 		})
@@ -1220,4 +1221,19 @@ func (d ManifestDevs) GetDevs() []string {
 		devs = append(devs, k)
 	}
 	return devs
+}
+
+func (m *Manifest) GetBuildServices() map[string]bool {
+	images := map[string]bool{}
+	for service := range m.Build {
+		images[service] = true
+	}
+	return images
+}
+
+func (m *Manifest) GetStack() *Stack {
+	if m.Deploy == nil || m.Deploy.ComposeSection == nil {
+		return nil
+	}
+	return m.Deploy.ComposeSection.Stack
 }

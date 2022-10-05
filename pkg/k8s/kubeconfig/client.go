@@ -28,12 +28,12 @@ func InCluster() bool {
 	return err == nil
 }
 
-//Create creates a new  kubeconfig file
+// Create creates a new  kubeconfig file
 func Create() *clientcmdapi.Config {
 	return clientcmdapi.NewConfig()
 }
 
-//Get retrieves a kubeconfig file
+// Get retrieves a kubeconfig file
 func Get(kubeconfigPaths []string) *clientcmdapi.Config {
 	loadingRules := clientcmd.ClientConfigLoadingRules{
 		Precedence: kubeconfigPaths,
@@ -45,7 +45,7 @@ func Get(kubeconfigPaths []string) *clientcmdapi.Config {
 	return mergedConfig
 }
 
-//Write stores a kubeconfig file
+// Write stores a kubeconfig file
 func Write(cfg *clientcmdapi.Config, kubeconfigPath string) error {
 	return clientcmd.WriteToFile(*cfg, kubeconfigPath)
 }

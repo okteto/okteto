@@ -22,6 +22,11 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
+const (
+	cloudDefaultVolumeSize = "2Gi"
+	defaultVolumeSize      = "5Gi"
+)
+
 func (dev *Dev) translateDeprecatedVolumeFields() error {
 	if dev.Workdir == "" && len(dev.Sync.Folders) == 0 {
 		dev.Workdir = "/okteto"
@@ -69,7 +74,7 @@ func (dev *Dev) translateDeprecatedVolumes() {
 	dev.Volumes = volumes
 }
 
-//IsSubPathFolder checks if a sync folder is a subpath of another sync folder
+// IsSubPathFolder checks if a sync folder is a subpath of another sync folder
 func (dev *Dev) IsSubPathFolder(path string) (bool, error) {
 	found := false
 	for _, sync := range dev.Sync.Folders {
@@ -165,12 +170,34 @@ func (dev *Dev) PersistentVolumeEnabled() bool {
 // PersistentVolumeSize returns the persistent volume size
 func (dev *Dev) PersistentVolumeSize() string {
 	if dev.PersistentVolumeInfo == nil {
-		return OktetoDefaultPVSize
+		return dev.getDefaultPersistentVolumeSize()
 	}
 	if dev.PersistentVolumeInfo.Size == "" {
-		return OktetoDefaultPVSize
+		return dev.getDefaultPersistentVolumeSize()
 	}
 	return dev.PersistentVolumeInfo.Size
+}
+
+func (dev *Dev) isOktetoCloud() bool { // TODO: inject this
+	switch dev.Context {
+	case "https://cloud.okteto.com", "https://staging.okteto.dev":
+		return true
+	default:
+		return false
+	}
+}
+
+func (dev *Dev) getDefaultPersistentVolumeSize() string {
+	switch {
+	case dev.isOktetoCloud():
+		return cloudDefaultVolumeSize
+	default:
+		return defaultVolumeSize
+	}
+}
+
+func (dev *Dev) HasDefaultPersistentVolumeSize() bool {
+	return dev.PersistentVolumeSize() == dev.getDefaultPersistentVolumeSize()
 }
 
 // PersistentVolumeStorageClass returns the persistent volume storage class
@@ -183,7 +210,7 @@ func (dev *Dev) PersistentVolumeStorageClass() string {
 
 func (dev *Dev) AreDefaultPersistentVolumeValues() bool {
 	if dev.PersistentVolumeInfo != nil {
-		if dev.PersistentVolumeSize() == OktetoDefaultPVSize && dev.PersistentVolumeStorageClass() == "" && dev.PersistentVolumeEnabled() {
+		if dev.HasDefaultPersistentVolumeSize() && dev.PersistentVolumeStorageClass() == "" && dev.PersistentVolumeEnabled() {
 			return true
 		}
 	}

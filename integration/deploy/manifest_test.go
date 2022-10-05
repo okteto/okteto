@@ -251,7 +251,7 @@ func isImageBuilt(image string) bool {
 func createOktetoManifest(dir string) error {
 	dockerfilePath := filepath.Join(dir, oktetoManifestName)
 	dockerfileContent := []byte(oktetoManifestContent)
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}
 	return nil

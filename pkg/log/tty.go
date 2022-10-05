@@ -252,7 +252,7 @@ func (*TTYWriter) AddToBuffer(level, format string, a ...interface{}) {
 	}
 }
 
-// AddToBuffer logs into the buffer but does not print anything
+// Write logs into the buffer but does not print anything
 func (w *TTYWriter) Write(p []byte) (n int, err error) {
 	return w.out.Out.Write(p)
 }

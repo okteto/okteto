@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"time"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -45,7 +46,7 @@ type DeployOptions struct {
 	File         string
 	Variables    []string
 
-	//Deprecated fields
+	// Deprecated fields
 	Filename string
 }
 
@@ -63,6 +64,7 @@ func deploy(ctx context.Context) *cobra.Command {
 
 			ctxOptions := &contextCMD.ContextOptions{
 				Namespace: ctxResource.Namespace,
+				Show:      true,
 			}
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
 				return err
@@ -94,7 +96,7 @@ func deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-//ExecuteDeployPipeline executes deploy pipeline given a set of options
+// ExecuteDeployPipeline executes deploy pipeline given a set of options
 func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 
 	cwd, err := os.Getwd()
@@ -123,7 +125,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	if opts.Branch == "" && okteto.AreSameRepository(opts.Repository, currentRepo) {
 
 		oktetoLog.Info("inferring git repository branch")
-		b, err := utils.GetBranch(ctx, cwd)
+		b, err := utils.GetBranch(cwd)
 
 		if err != nil {
 			return err
@@ -225,7 +227,14 @@ func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
 
+func (pc *Command) streamPipelineLogs(ctx context.Context, name, actionName string) error {
+	return pc.okClient.Pipeline().StreamLogs(ctx, name, actionName)
+}
+
 func (pc *Command) waitUntilRunning(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
+	waitCtx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
 	oktetoLog.Spinner(fmt.Sprintf("Waiting for repository '%s' to be deployed...", name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -234,20 +243,39 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name string, action *ty
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 
-	go func() {
+	var wg sync.WaitGroup
 
-		err := pc.waitToBeDeployed(ctx, name, action, timeout)
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		err := pc.streamPipelineLogs(waitCtx, name, action.Name)
+		if err != nil {
+			oktetoLog.Warning("there was an error streaming pipeline logs: %v", err)
+		}
+	}(&wg)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		err := pc.waitToBeDeployed(waitCtx, name, action, timeout)
 		if err != nil {
 			exit <- err
 			return
 		}
 
 		oktetoLog.Spinner("Waiting for containers to be healthy...")
-		exit <- pc.waitForResourcesToBeRunning(ctx, name, timeout)
-	}()
+		exit <- pc.waitForResourcesToBeRunning(waitCtx, name, timeout)
+	}(&wg)
+
+	go func(wg *sync.WaitGroup) {
+		wg.Wait()
+		close(stop)
+		close(exit)
+	}(&wg)
 
 	select {
 	case <-stop:
+		ctxCancel()
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:

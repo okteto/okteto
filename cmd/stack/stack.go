@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Stack stack management commands
+// Stack stack management commands
 func Stack(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:    "stack",

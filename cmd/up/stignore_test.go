@@ -69,7 +69,7 @@ func Test_addStignoreSecrets(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			stignorePath := filepath.Join(localPath, ".stignore")
-			if err := os.WriteFile(stignorePath, []byte(tt.stignoreContent), 0644); err != nil {
+			if err := os.WriteFile(stignorePath, []byte(tt.stignoreContent), 0600); err != nil {
 				t.Fatal(err)
 			}
 

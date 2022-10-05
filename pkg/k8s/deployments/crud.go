@@ -88,7 +88,7 @@ func Sandbox(dev *model.Dev) *appsv1.Deployment {
 	}
 }
 
-//List returns the list of deployments
+// List returns the list of deployments
 func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]appsv1.Deployment, error) {
 	dList, err := c.AppsV1().Deployments(namespace).List(
 		ctx,
@@ -102,12 +102,12 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return dList.Items, nil
 }
 
-//Get returns a deployment object by name
+// Get returns a deployment object by name
 func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
 	return c.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-//GetByDev returns a deployment object given a dev struct (by name or by label)
+// GetByDev returns a deployment object given a dev struct (by name or by label)
 func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.Deployment, error) {
 	if len(dev.Selector) == 0 {
 		return Get(ctx, dev.Name, namespace, c)
@@ -137,7 +137,7 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 	return validDeployments[0], nil
 }
 
-//CheckConditionErrors checks errors in conditions
+// CheckConditionErrors checks errors in conditions
 func CheckConditionErrors(deployment *appsv1.Deployment, dev *model.Dev) error {
 	for _, c := range deployment.Status.Conditions {
 		if c.Type == appsv1.DeploymentReplicaFailure && c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {
@@ -189,7 +189,7 @@ func getResourceLimitError(errorMessage string, dev *model.Dev) error {
 	return fmt.Errorf(strings.TrimSpace(errorToReturn))
 }
 
-//Deploy creates or updates a deployment
+// Deploy creates or updates a deployment
 func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (*appsv1.Deployment, error) {
 	d.ResourceVersion = ""
 	result, err := c.AppsV1().Deployments(d.Namespace).Update(ctx, d, metav1.UpdateOptions{})
@@ -204,12 +204,12 @@ func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (
 	return c.AppsV1().Deployments(d.Namespace).Create(ctx, d, metav1.CreateOptions{})
 }
 
-//IsDevModeOn returns if a deployment is in devmode
+// IsDevModeOn returns if a deployment is in devmode
 func IsDevModeOn(d *appsv1.Deployment) bool {
 	return labels.Get(d.GetObjectMeta(), model.DevLabel) != ""
 }
 
-//Destroy destroys a k8s deployment
+// Destroy destroys a k8s deployment
 func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	oktetoLog.Infof("deleting deployment '%s'", name)
 	dClient := c.AppsV1().Deployments(namespace)

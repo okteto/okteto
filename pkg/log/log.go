@@ -127,7 +127,7 @@ func getRollingLog(path string) io.Writer {
 		Filename:   path,
 		MaxSize:    1, // megabytes
 		MaxBackups: 10,
-		MaxAge:     28, //days
+		MaxAge:     28, // days
 		Compress:   true,
 	}
 }
@@ -306,7 +306,7 @@ func Printf(format string, args ...interface{}) {
 	log.writer.Print(msg)
 }
 
-//IsInteractive checks if the writer is interactive
+// IsInteractive checks if the writer is interactive
 func IsInteractive() bool {
 	return log.writer.IsInteractive()
 }
@@ -344,7 +344,7 @@ func redactMessage(message string) string {
 	return message
 }
 
-//GetOutputBuffer returns the buffer of the running command
+// GetOutputBuffer returns the buffer of the running command
 func GetOutputBuffer() *bytes.Buffer {
 	return log.buf
 }

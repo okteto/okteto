@@ -35,7 +35,7 @@ type App interface {
 	CheckConditionErrors(dev *model.Dev) error
 	GetRunningPod(ctx context.Context, c kubernetes.Interface) (*apiv1.Pod, error)
 
-	//TODO: remove after people move to CLI >= 1.14
+	// TODO: remove after people move to CLI >= 1.14
 	RestoreOriginal() error
 
 	Refresh(ctx context.Context, c kubernetes.Interface) error

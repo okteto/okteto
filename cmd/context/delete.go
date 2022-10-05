@@ -14,7 +14,6 @@
 package context
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -24,26 +23,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Create adds a new cluster to okteto context
+// DeleteCMD removes a cluster from okteto context
 func DeleteCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#delete"),
 		Short: "Delete a context",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
 			args[0] = okteto.AddSchema(args[0])
 			args[0] = strings.TrimSuffix(args[0], "/")
-			if err := Delete(ctx, args[0]); err != nil {
-				return err
-			}
-			return nil
+			return Delete(args[0])
 		},
 	}
 	return cmd
 }
 
-func Delete(ctx context.Context, okCtx string) error {
+func Delete(okCtx string) error {
 	ctxStore := okteto.ContextStore()
 	if okCtx == ctxStore.CurrentContext {
 		ctxStore.CurrentContext = ""

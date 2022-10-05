@@ -42,7 +42,7 @@ func (u CommandError) Error() string {
 }
 
 const (
-	//InvalidDockerfile text error
+	// InvalidDockerfile text error
 	InvalidDockerfile = "invalid Dockerfile"
 )
 
@@ -107,8 +107,11 @@ var (
 	// ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
 	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available on Okteto Cloud or Okteto Enterprise")
 
-	// ErrTokenFlagNeeded is raised when the command is executed from inside a pod
+	// ErrTokenFlagNeeded is raised when the command is executed from inside a pod from a ctx command
 	ErrTokenFlagNeeded = fmt.Errorf("this command is not supported without the '--token' flag from inside a container")
+
+	// ErrTokenEnvVarNeeded is raised when the command is executed from inside a pod from a non ctx command
+	ErrTokenEnvVarNeeded = fmt.Errorf("the 'OKTETO_TOKEN' environment variable is required when running this command from within a container")
 
 	// ErrNamespaceNotFound is raised when the namespace is not found on an okteto instance
 	ErrNamespaceNotFound = "namespace '%s' not found. Please verify that the namespace exists and that you have access to it"
@@ -164,16 +167,16 @@ var (
 	// ErrDevContainerNotExists is raised when the dev container doesn't exist on dev section
 	ErrDevContainerNotExists = "development container '%s' doesn't exist"
 
-	//ErrInvalidManifest is raised when cannot unmarshal manifest properly
+	// ErrInvalidManifest is raised when cannot unmarshal manifest properly
 	ErrInvalidManifest = errors.New("invalid manifest")
 
-	//ErrEmptyManifest is raised when cannot detected content to read in manifest
+	// ErrEmptyManifest is raised when cannot detected content to read in manifest
 	ErrEmptyManifest = errors.New("no content detected for okteto.yml file")
 
 	// ErrPortAlreadyAllocated is raised when port is allocated by other process
 	ErrPortAlreadyAllocated = errors.New("port is already allocated")
 
-	//ErrNotManifestContentDetected is raised when cannot load any field accepted by okteto manifest doc
+	// ErrNotManifestContentDetected is raised when cannot load any field accepted by okteto manifest doc
 	ErrNotManifestContentDetected = errors.New("couldn't detect okteto manifest content")
 
 	// ErrCouldNotInferAnyManifest is raised when we can't detect any manifest to load

@@ -43,6 +43,8 @@ type NamespaceInterface interface {
 // PreviewInterface represents the client that connects to the preview functions
 type PreviewInterface interface {
 	List(ctx context.Context) ([]Preview, error)
+	DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewResponse, error)
+	GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error)
 }
 
 // PipelineInterface represents the client that connects to the pipeline functions
@@ -52,6 +54,7 @@ type PipelineInterface interface {
 	Destroy(ctx context.Context, name string, destroyVolumes bool) (*GitDeployResponse, error)
 	GetResourcesStatus(ctx context.Context, name string) (map[string]string, error)
 	GetByName(ctx context.Context, name string) (*GitDeploy, error)
+	StreamLogs(ctx context.Context, name, actionName string) error
 }
 
 // OktetoClientProvider provides an okteto client ready to use or fail

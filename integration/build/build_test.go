@@ -59,6 +59,21 @@ services:
 `
 	dockerfileName    = "Dockerfile"
 	dockerfileContent = "FROM alpine"
+
+	dockerfileContentSecrets = `FROM alpine
+RUN --mount=type=secret,id=mysecret cat /run/secrets/mysecret
+RUN --mount=type=secret,id=mysecret,dst=/other cat /other`
+
+	secretFile             = "mysecret.txt"
+	secretFileContent      = "secret"
+	manifestContentSecrets = `
+build:
+    test:
+      context: .
+      dockerfile: Dockerfile
+      secrets:
+        mysecret: mysecret.txt
+`
 )
 
 func TestMain(m *testing.M) {
@@ -269,10 +284,64 @@ func TestBuildCommandV2VolumeMounts(t *testing.T) {
 	require.True(t, isImageBuilt(expectedImageWithVolumes), "%s not found", expectedImageWithVolumes)
 }
 
+// TestTestBuildCommandV2Secrets tests the following scenario:
+// - build having an okteto manifest v2
+// - inject secrets from manifest to build
+func TestBuildCommandV2Secrets(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	require.NoError(t, createDockerfileWithSecretMount(dir))
+	require.NoError(t, createManifestV2Secrets(dir))
+	require.NoError(t, createSecretFile(dir))
+
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	testNamespace := integration.GetTestNamespace("TestBuildSecretsV2", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+
+	expectedBuildImage := fmt.Sprintf("%s/%s/%s-test:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
+	require.False(t, isImageBuilt(expectedBuildImage))
+
+	options := &commands.BuildOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		Token:      token,
+		OktetoHome: dir,
+		NoCache:    true,
+	}
+	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
+	require.True(t, isImageBuilt(expectedBuildImage), "%s not found", expectedBuildImage)
+}
+
 func createDockerfile(dir string) error {
 	dockerfilePath := filepath.Join(dir, dockerfileName)
 	dockerfileContent := []byte(dockerfileContent)
-	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0644); err != nil {
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createDockerfileWithSecretMount(dir string) error {
+	dockerfilePath := filepath.Join(dir, dockerfileName)
+	dockerfileContent := []byte(dockerfileContentSecrets)
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createSecretFile(dir string) error {
+	secretFilePath := filepath.Join(dir, secretFile)
+	secretFileContent := []byte(secretFileContent)
+	if err := os.WriteFile(secretFilePath, secretFileContent, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -281,7 +350,16 @@ func createDockerfile(dir string) error {
 func createManifestV2(dir string) error {
 	manifestPath := filepath.Join(dir, manifestName)
 	manifestBytes := []byte(manifestContent)
-	if err := os.WriteFile(manifestPath, manifestBytes, 0644); err != nil {
+	if err := os.WriteFile(manifestPath, manifestBytes, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createManifestV2Secrets(dir string) error {
+	manifestPath := filepath.Join(dir, manifestName)
+	manifestBytes := []byte(manifestContentSecrets)
+	if err := os.WriteFile(manifestPath, manifestBytes, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -290,7 +368,7 @@ func createManifestV2(dir string) error {
 func createCompose(dir string) error {
 	manifestPath := filepath.Join(dir, composeName)
 	manifestBytes := []byte(composeContent)
-	if err := os.WriteFile(manifestPath, manifestBytes, 0644); err != nil {
+	if err := os.WriteFile(manifestPath, manifestBytes, 0600); err != nil {
 		return err
 	}
 	return nil

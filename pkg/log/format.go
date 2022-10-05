@@ -15,7 +15,7 @@ package log
 
 import "io"
 
-//OktetoWriter implements the interface of the writers
+// OktetoWriter implements the interface of the writers
 type OktetoWriter interface {
 	Debug(args ...interface{})
 	Debugf(format string, args ...interface{})
@@ -51,11 +51,11 @@ type OktetoWriter interface {
 }
 
 const (
-	//TTYFormat represents a tty logger
+	// TTYFormat represents a tty logger
 	TTYFormat string = "tty"
-	//PlainFormat represents a plain logger
+	// PlainFormat represents a plain logger
 	PlainFormat string = "plain"
-	//JSONFormat represents a json logger
+	// JSONFormat represents a json logger
 	JSONFormat string = "json"
 )
 

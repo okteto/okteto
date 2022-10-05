@@ -15,7 +15,7 @@ package types
 
 import "github.com/okteto/okteto/pkg/model"
 
-//BuildOptions define the options available for build
+// BuildOptions define the options available for build
 type BuildOptions struct {
 	BuildArgs     []string
 	CacheFrom     []string

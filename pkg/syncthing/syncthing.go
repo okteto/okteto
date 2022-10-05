@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -100,7 +101,7 @@ type Syncthing struct {
 	timeout          time.Duration `yaml:"-"`
 }
 
-//Folder represents a sync folder
+// Folder represents a sync folder
 type Folder struct {
 	Name        string `yaml:"name"`
 	LocalPath   string `yaml:"localPath"`
@@ -200,7 +201,7 @@ func New(dev *model.Dev) (*Syncthing, error) {
 	}
 
 	pwd := uuid.New().String()
-	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), 0)
+	hash, err := bcrypt.GenerateFromPassword([]byte(pwd), 10)
 	if err != nil {
 		oktetoLog.Infof("couldn't hash the password %s", err)
 		hash = []byte("")
@@ -217,13 +218,13 @@ func New(dev *model.Dev) (*Syncthing, error) {
 		binPath:          fullPath,
 		Client:           NewAPIClient(),
 		FileWatcherDelay: DefaultFileWatcherDelay,
-		GUIAddress:       fmt.Sprintf("%s:%d", dev.Interface, guiPort),
+		GUIAddress:       net.JoinHostPort(dev.Interface, strconv.Itoa(guiPort)),
 		Home:             config.GetAppHome(dev.Namespace, dev.Name),
 		LogPath:          GetLogFile(dev.Namespace, dev.Name),
-		ListenAddress:    fmt.Sprintf("%s:%d", dev.Interface, listenPort),
+		ListenAddress:    net.JoinHostPort(dev.Interface, strconv.Itoa(listenPort)),
 		RemoteAddress:    fmt.Sprintf("tcp://%s:%d", dev.Interface, remotePort),
 		RemoteDeviceID:   DefaultRemoteDeviceID,
-		RemoteGUIAddress: fmt.Sprintf("%s:%d", dev.Interface, remoteGUIPort),
+		RemoteGUIAddress: net.JoinHostPort(dev.Interface, strconv.Itoa(remoteGUIPort)),
 		LocalGUIPort:     guiPort,
 		LocalPort:        listenPort,
 		RemoteGUIPort:    remoteGUIPort,
@@ -267,11 +268,11 @@ func (s *Syncthing) initConfig() error {
 		return err
 	}
 
-	if err := os.WriteFile(filepath.Join(s.Home, certFile), cert, 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, certFile), cert, 0600); err != nil {
 		return fmt.Errorf("failed to write syncthing certificate: %w", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(s.Home, keyFile), key, 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, keyFile), key, 0600); err != nil {
 		return fmt.Errorf("failed to write syncthing key: %w", err)
 	}
 
@@ -285,7 +286,7 @@ func (s *Syncthing) UpdateConfig() error {
 		return fmt.Errorf("failed to write syncthing configuration template: %w", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(s.Home, configFile), buf.Bytes(), 0700); err != nil {
+	if err := os.WriteFile(filepath.Join(s.Home, configFile), buf.Bytes(), 0600); err != nil {
 		return fmt.Errorf("failed to write syncthing configuration file: %w", err)
 	}
 
@@ -293,7 +294,7 @@ func (s *Syncthing) UpdateConfig() error {
 }
 
 // Run starts up a local syncthing process to serve files from.
-func (s *Syncthing) Run(ctx context.Context) error {
+func (s *Syncthing) Run() error {
 	if err := s.initConfig(); err != nil {
 		return err
 	}
@@ -316,7 +317,7 @@ func (s *Syncthing) Run(ctx context.Context) error {
 		cmdArgs = append(cmdArgs, "-verbose")
 	}
 
-	s.cmd = exec.Command(s.binPath, cmdArgs...) //nolint: gas, gosec
+	s.cmd = exec.Command(s.binPath, cmdArgs...) // nolint: gas, gosec
 	s.cmd.Env = append(os.Environ(), "STNOUPGRADE=1")
 
 	if err := s.cmd.Start(); err != nil {
@@ -332,7 +333,7 @@ func (s *Syncthing) Run(ctx context.Context) error {
 	return nil
 }
 
-//WaitForPing waits for syncthing to be ready
+// WaitForPing waits for syncthing to be ready
 func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	ticker := time.NewTicker(300 * time.Millisecond)
 	to := time.Now().Add(s.timeout)
@@ -359,7 +360,7 @@ func (s *Syncthing) WaitForPing(ctx context.Context, local bool) error {
 	}
 }
 
-//Ping checks if syncthing is available
+// Ping checks if syncthing is available
 func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
 	_, err := s.APICall(ctx, "rest/system/ping", "GET", 200, nil, local, nil, false, 0)
 	if err == nil {
@@ -372,7 +373,7 @@ func (s *Syncthing) Ping(ctx context.Context, local bool) bool {
 	return false
 }
 
-//Overwrite overwrites local changes to the remote syncthing
+// Overwrite overwrites local changes to the remote syncthing
 func (s *Syncthing) Overwrite(ctx context.Context) error {
 	for _, folder := range s.Folders {
 		oktetoLog.Infof("overriding local changes to the remote syncthing path=%s", folder.LocalPath)
@@ -390,7 +391,7 @@ func (s *Syncthing) Overwrite(ctx context.Context) error {
 	return nil
 }
 
-//IsAllOverwritten checks if all overwrite operations has been completed
+// IsAllOverwritten checks if all overwrite operations has been completed
 func (s *Syncthing) IsAllOverwritten() bool {
 	for _, folder := range s.Folders {
 		if !folder.Overwritten {
@@ -400,7 +401,7 @@ func (s *Syncthing) IsAllOverwritten() bool {
 	return true
 }
 
-//WaitForConnected waits for local and remote syncthing to be connected
+// WaitForConnected waits for local and remote syncthing to be connected
 func (s *Syncthing) WaitForConnected(ctx context.Context) error {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	oktetoLog.Info("waiting for remote device to be connected")
@@ -442,7 +443,7 @@ func (s *Syncthing) WaitForConnected(ctx context.Context) error {
 	}
 }
 
-//WaitForScanning waits for syncthing to finish initial scanning
+// WaitForScanning waits for syncthing to finish initial scanning
 func (s *Syncthing) WaitForScanning(ctx context.Context, local bool) error {
 	for _, folder := range s.Folders {
 		if err := s.waitForFolderScanning(ctx, folder, local); err != nil {
@@ -741,7 +742,7 @@ func (s *Syncthing) GetFolderErrors(ctx context.Context, local bool) error {
 	return fmt.Errorf("%s: %s", folderErrors.Data.Errors[0].Path, errMsg)
 }
 
-// GetObjectSyncthing the files syncthing
+// GetInSynchronizationFile the files syncthing
 func (s *Syncthing) GetInSynchronizationFile(ctx context.Context) string {
 	events := []ItemEvent{}
 	params := map[string]string{
@@ -975,7 +976,11 @@ func isDirEmpty(path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", path, err)
+		}
+	}()
 
 	_, err = f.Readdirnames(1) // Or f.Readdir(1)
 	if err == io.EOF {

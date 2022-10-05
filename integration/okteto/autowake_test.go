@@ -295,7 +295,7 @@ func TestAutoWakeFromRunningUp(t *testing.T) {
 func writeDeployment(dir string) error {
 	deploymentManifestPath := filepath.Join(dir, deploymentManifestName)
 	deploymentContentBytes := []byte(deploymentContent)
-	if err := os.WriteFile(deploymentManifestPath, deploymentContentBytes, 0644); err != nil {
+	if err := os.WriteFile(deploymentManifestPath, deploymentContentBytes, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -304,7 +304,7 @@ func writeDeployment(dir string) error {
 func writeStatefulset(dir string) error {
 	sfsManifestPath := filepath.Join(dir, sfsManifestName)
 	sfsContentBytes := []byte(sfsContent)
-	if err := os.WriteFile(sfsManifestPath, sfsContentBytes, 0644); err != nil {
+	if err := os.WriteFile(sfsManifestPath, sfsContentBytes, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -313,7 +313,7 @@ func writeStatefulset(dir string) error {
 func writeIndexHTML(dir string) error {
 	htmlManifestPath := filepath.Join(dir, indexHTMLName)
 	htmlContentBytes := []byte("autowake")
-	if err := os.WriteFile(htmlManifestPath, htmlContentBytes, 0644); err != nil {
+	if err := os.WriteFile(htmlManifestPath, htmlContentBytes, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -322,7 +322,7 @@ func writeIndexHTML(dir string) error {
 func writeOktetoManifest(dir string) error {
 	manifestManifestPath := filepath.Join(dir, oktetoManifestV1Name)
 	manifestContentBytes := []byte(oktetoManifestV1Content)
-	if err := os.WriteFile(manifestManifestPath, manifestContentBytes, 0644); err != nil {
+	if err := os.WriteFile(manifestManifestPath, manifestContentBytes, 0600); err != nil {
 		return err
 	}
 	return nil
@@ -330,7 +330,7 @@ func writeOktetoManifest(dir string) error {
 func writeStIgnore(dir string) error {
 	stignoreManifestPath := filepath.Join(dir, stignoreName)
 	stignoreContentBytes := []byte(stignoreContent)
-	if err := os.WriteFile(stignoreManifestPath, stignoreContentBytes, 0644); err != nil {
+	if err := os.WriteFile(stignoreManifestPath, stignoreContentBytes, 0600); err != nil {
 		return err
 	}
 	return nil

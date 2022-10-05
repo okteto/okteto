@@ -159,7 +159,7 @@ func Test_DeployReplicasUnmarshalling(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			replicas, _ := unmarshalDeployReplicas(tt.deployRaw, tt.scale, tt.replicas)
+			replicas := unmarshalDeployReplicas(tt.deployRaw, tt.scale, tt.replicas)
 			if replicas != tt.expected {
 				t.Fatalf("expected %d replicas but got %d", tt.expected, replicas)
 			}
@@ -292,7 +292,7 @@ func Test_DeployResourcesUnmarshalling(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resources, _ := unmarshalDeployResources(tt.deployRaw, tt.resources, tt.cpu_count, tt.cpus, tt.memLimit, tt.memReservation)
+			resources := unmarshalDeployResources(tt.deployRaw, tt.resources, tt.cpu_count, tt.cpus, tt.memLimit, tt.memReservation)
 			if !reflect.DeepEqual(tt.expected, resources) {
 				t.Fatalf("expected %v but got %v", tt.expected, resources)
 			}
@@ -911,7 +911,7 @@ func Test_validateVolumesUnmarshalling(t *testing.T) {
 	wd, _ := os.Getwd()
 	relativePathExpanded := filepath.Join(wd, "test_volume_relative_path_found")
 	relativePathExpandedFile := filepath.Join(wd, "test-file")
-	err := os.Mkdir("test_volume_relative_path_found", 0755)
+	err := os.Mkdir("test_volume_relative_path_found", 0750)
 	if err != nil {
 		t.Fatal(err)
 	}

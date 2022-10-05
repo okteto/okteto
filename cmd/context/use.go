@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
 
@@ -27,6 +28,10 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
+)
+
+const (
+	personalAccessTokenURL = "https://www.okteto.com/docs/cloud/personal-access-tokens/"
 )
 
 // Use context points okteto to a cluster.
@@ -88,7 +93,13 @@ func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) er
 	ctxOptions.initFromEnvVars()
 
 	if ctxOptions.Token == "" && kubeconfig.InCluster() && !isValidCluster(ctxOptions.Context) {
-		return oktetoErrors.ErrTokenFlagNeeded
+		if ctxOptions.IsCtxCommand {
+			return oktetoErrors.ErrTokenFlagNeeded
+		}
+		return oktetoErrors.UserError{
+			E:    oktetoErrors.ErrTokenEnvVarNeeded,
+			Hint: fmt.Sprintf("Visit %s for more information about getting your token.", personalAccessTokenURL),
+		}
 	}
 
 	if ctxOptions.Context == "" {
@@ -146,8 +157,11 @@ func getContext(ctxOptions *ContextOptions) (string, error) {
 
 func setSecrets(secrets []types.Secret) {
 	for _, secret := range secrets {
-		if value, exists := os.LookupEnv(secret.Name); exists {
-			oktetoLog.Warning("$%s secret is being overridden by a local environment variable by the same name.", secret.Name)
+		value, exists := os.LookupEnv(secret.Name)
+		if exists {
+			if value != secret.Value {
+				oktetoLog.Warning("$%s secret is being overridden by a local environment variable by the same name.", secret.Name)
+			}
 			oktetoLog.AddMaskedWord(value)
 			continue
 		}

@@ -26,6 +26,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -103,9 +104,9 @@ func (fk *fakeProxy) Start() {
 	fk.started = true
 }
 
-func (fk *fakeProxy) SetName(_ string) {}
+func (*fakeProxy) SetName(_ string) {}
 
-func (fk *fakeProxy) SetDivert(_ string) {}
+func (*fakeProxy) SetDivert(_ string) {}
 
 func (fk *fakeProxy) Shutdown(_ context.Context) error {
 	if fk.errOnShutdown != nil {
@@ -502,4 +503,134 @@ func getFakeManifest(_ string) (*model.Manifest, error) {
 
 func getErrorManifest(_ string) (*model.Manifest, error) {
 	return errorManifest, nil
+}
+
+func TestBuildImages(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		build                bool
+		buildServices        []string
+		stack                *model.Stack
+		servicesToDeploy     []string
+		servicesAlreadyBuilt []string
+		expectedError        error
+		expectedImages       []string
+	}{
+		{
+			name:          "everything",
+			build:         false,
+			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
+			stack: &model.Stack{Services: map[string]*model.Service{
+				"stack A":             {Build: &model.BuildInfo{}},
+				"stack B":             {Build: &model.BuildInfo{}},
+				"stack without build": {},
+			}},
+			servicesAlreadyBuilt: []string{"manifest B", "stack A"},
+			servicesToDeploy:     []string{"stack A", "stack without build"},
+			expectedError:        nil,
+			expectedImages:       []string{"manifest A"},
+		},
+		{
+			name:             "nil stack",
+			build:            false,
+			buildServices:    []string{"manifest A", "manifest B"},
+			stack:            nil,
+			servicesToDeploy: []string{"manifest A"},
+			expectedError:    nil,
+			expectedImages:   []string{"manifest A", "manifest B"},
+		},
+		{
+			name:          "no services to deploy",
+			build:         false,
+			buildServices: []string{"manifest", "stack"},
+			stack: &model.Stack{Services: map[string]*model.Service{
+				"stack": {Build: &model.BuildInfo{}},
+			}},
+			servicesAlreadyBuilt: []string{"stack"},
+			servicesToDeploy:     []string{},
+			expectedError:        nil,
+			expectedImages:       []string{"manifest"},
+		},
+		{
+			name:          "no services already built",
+			build:         false,
+			buildServices: []string{"manifest A", "stack B", "stack C"},
+			stack: &model.Stack{Services: map[string]*model.Service{
+				"stack B": {Build: &model.BuildInfo{}},
+				"stack C": {Build: &model.BuildInfo{}},
+			}},
+			servicesToDeploy: []string{"manifest A", "stack C"},
+			expectedError:    nil,
+			expectedImages:   []string{"manifest A", "stack C"},
+		},
+		{
+			name:          "force build",
+			build:         true,
+			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
+			stack: &model.Stack{Services: map[string]*model.Service{
+				"stack A": {Build: &model.BuildInfo{}},
+				"stack B": {Build: &model.BuildInfo{}},
+			}},
+			servicesAlreadyBuilt: []string{"should be ignored since build is forced", "manifest A", "stack B"},
+			servicesToDeploy:     []string{"stack A", "stack B"},
+			expectedError:        nil,
+			expectedImages:       []string{"manifest A", "manifest B", "stack A", "stack B"},
+		},
+		{
+			name:          "force build specific services",
+			build:         true,
+			buildServices: []string{"manifest A", "manifest B", "stack A", "stack B"},
+			stack: &model.Stack{Services: map[string]*model.Service{
+				"stack A":             {Build: &model.BuildInfo{}},
+				"stack B":             {Build: &model.BuildInfo{}},
+				"stack without build": {},
+			}},
+			servicesAlreadyBuilt: []string{"should be ignored since build is forced", "manifest A", "stack B"},
+			servicesToDeploy:     []string{"stack A", "stack without build"},
+			expectedError:        nil,
+			expectedImages:       []string{"manifest A", "manifest B", "stack A"},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			buildOptionsStorage := &types.BuildOptions{}
+
+			build := func(ctx context.Context, buildOptions *types.BuildOptions) error {
+				buildOptionsStorage = buildOptions
+				return nil
+			}
+
+			getServicesToBuild := func(ctx context.Context, manifest *model.Manifest, servicesToDeploy []string) ([]string, error) {
+				toBuild := make(map[string]bool, len(manifest.Build))
+				for service := range manifest.Build {
+					toBuild[service] = true
+				}
+
+				return setToSlice(setDifference(setIntersection(toBuild, sliceToSet(servicesToDeploy)), sliceToSet(testCase.servicesAlreadyBuilt))), nil
+			}
+
+			deployOptions := &Options{
+				Build: testCase.build,
+				Manifest: &model.Manifest{
+					Build: model.ManifestBuild{},
+					Deploy: &model.DeployInfo{
+						ComposeSection: &model.ComposeSectionInfo{
+							Stack: testCase.stack,
+						},
+					},
+				},
+				servicesToDeploy: testCase.servicesToDeploy,
+			}
+
+			for _, service := range testCase.buildServices {
+				deployOptions.Manifest.Build[service] = &model.BuildInfo{}
+			}
+
+			err := buildImages(context.Background(), build, getServicesToBuild, deployOptions)
+			assert.Equal(t, testCase.expectedError, err)
+			assert.Equal(t, sliceToSet(testCase.expectedImages), sliceToSet(buildOptionsStorage.CommandArgs))
+		})
+	}
+
 }

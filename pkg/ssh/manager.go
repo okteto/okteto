@@ -16,11 +16,13 @@ package ssh
 import (
 	"context"
 	"fmt"
+	"net"
 	"runtime"
+	"strconv"
 	"time"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	k8sforward "github.com/okteto/okteto/pkg/k8s/forward"
+	k8sForward "github.com/okteto/okteto/pkg/k8s/forward"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	forwardModel "github.com/okteto/okteto/pkg/model/forward"
@@ -35,13 +37,13 @@ type ForwardManager struct {
 	reverses        map[int]*reverse
 	ctx             context.Context
 	sshAddr         string
-	pf              *k8sforward.PortForwardManager
+	pf              *k8sForward.PortForwardManager
 	pool            *pool
 	namespace       string
 }
 
 // NewForwardManager returns a newly initialized instance of ForwardManager
-func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInterface string, pf *k8sforward.PortForwardManager, namespace string) *ForwardManager {
+func NewForwardManager(ctx context.Context, sshAddr, localInterface, remoteInterface string, pf *k8sForward.PortForwardManager, namespace string) *ForwardManager {
 	return &ForwardManager{
 		ctx:             ctx,
 		localInterface:  localInterface,
@@ -86,7 +88,7 @@ func (fm *ForwardManager) canAdd(localPort int, checkAvailable bool) error {
 		}
 
 		return fmt.Errorf("local port %d is already in-use in your local machine: %w", localPort, oktetoErrors.ErrPortAlreadyAllocated)
-		//return fmt.Errorf("local port %d is already in-use in your local machine", localPort)
+		// return fmt.Errorf("local port %d is already in-use in your local machine", localPort)
 	}
 
 	return nil
@@ -105,12 +107,12 @@ func (fm *ForwardManager) Add(f forwardModel.Forward) error {
 	}
 
 	forwardsToUpdate[f.Local] = &forward{
-		localAddress:  fmt.Sprintf("%s:%d", fm.localInterface, f.Local),
-		remoteAddress: fmt.Sprintf("%s:%d", fm.remoteInterface, f.Remote),
+		localAddress:  net.JoinHostPort(fm.localInterface, strconv.Itoa(f.Local)),
+		remoteAddress: net.JoinHostPort(fm.remoteInterface, strconv.Itoa(f.Remote)),
 	}
 
 	if f.Service {
-		forwardsToUpdate[f.Local].remoteAddress = fmt.Sprintf("%s:%d", f.ServiceName, f.Remote)
+		forwardsToUpdate[f.Local].remoteAddress = net.JoinHostPort(f.ServiceName, strconv.Itoa(f.Remote))
 	}
 
 	return nil

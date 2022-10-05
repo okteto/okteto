@@ -16,10 +16,27 @@ package preview
 import (
 	"context"
 
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
 
-//Preview preview management commands
+type Command struct {
+	okClient types.OktetoInterface
+}
+
+// NewCommand creates a namespace command for previews
+func NewCommand() (*Command, error) {
+	c, err := okteto.NewOktetoClient()
+	if err != nil {
+		return nil, err
+	}
+	return &Command{
+		okClient: c,
+	}, nil
+}
+
+// Preview preview management commands
 func Preview(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "preview",

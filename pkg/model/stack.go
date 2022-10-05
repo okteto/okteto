@@ -154,7 +154,7 @@ type Port struct {
 
 type EndpointSpec map[string]Endpoint
 
-// Endpoints represents an okteto stack ingress
+// Endpoint represents an okteto stack ingress
 type Endpoint struct {
 	Labels      Labels         `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations Annotations    `json:"annotations,omitempty" yaml:"annotations,omitempty"`
@@ -353,7 +353,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	return s, nil
 }
 
-func (svc *Service) ignoreSyncVolumes(s *Stack) {
+func (svc *Service) ignoreSyncVolumes() {
 	notIgnoredVolumes := make([]StackVolume, 0)
 	wd, err := os.Getwd()
 	if err != nil {
@@ -444,7 +444,7 @@ func (s *Stack) Validate() error {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))
 			}
 		}
-		svc.ignoreSyncVolumes(s)
+		svc.ignoreSyncVolumes()
 	}
 	return validateDependsOn(s)
 }
@@ -485,12 +485,12 @@ func validateDependsOn(s *Stack) error {
 	return nil
 }
 
-//GetLabelSelector returns the label selector for the stack name
+// GetLabelSelector returns the label selector for the stack name
 func (s *Stack) GetLabelSelector() string {
 	return fmt.Sprintf("%s=%s", StackNameLabel, s.Name)
 }
 
-//GetLabelSelector returns the label selector for the stack name
+// GetStackConfigMapName returns the label selector for the stack name
 func GetStackConfigMapName(stackName string) string {
 	return fmt.Sprintf("okteto-%s", stackName)
 }
@@ -504,7 +504,7 @@ func IsPortInService(port int32, ports []Port) bool {
 	return false
 }
 
-//SetLastBuiltAnnotation sets the dev timestamp
+// SetLastBuiltAnnotation sets the dev timestamp
 func (svc *Service) SetLastBuiltAnnotation() {
 	if svc.Annotations == nil {
 		svc.Annotations = Annotations{}
@@ -512,7 +512,7 @@ func (svc *Service) SetLastBuiltAnnotation() {
 	svc.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
 }
 
-//isAlreadyAdded checks if a port is already on port list
+// IsAlreadyAdded checks if a port is already on port list
 func IsAlreadyAdded(p Port, ports []Port) bool {
 	for _, port := range ports {
 		if port.ContainerPort == p.ContainerPort {
@@ -818,7 +818,11 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if err := f.Close(); err != nil {
+			oktetoLog.Debugf("Error closing file %s: %s", filename, err)
+		}
+	}()
 
 	envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 	if err != nil {
@@ -852,4 +856,14 @@ func (s composeServices) toGraph() graph {
 		g[svcName] = dependsOnList
 	}
 	return g
+}
+
+func (stack *Stack) GetServicesWithBuildSection() map[string]bool {
+	result := make(map[string]bool)
+	for name, service := range stack.Services {
+		if service.Build != nil || len(service.VolumeMounts) != 0 {
+			result[name] = true
+		}
+	}
+	return result
 }

@@ -15,6 +15,7 @@ package pipeline
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -242,6 +243,7 @@ func TestDeployPipelineSuccesfulWithWait(t *testing.T) {
 			"svc2": okteto.RunningStatus,
 		},
 	}
+
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
@@ -280,4 +282,41 @@ func TestDeployWithError(t *testing.T) {
 	}
 	err := pc.ExecuteDeployPipeline(ctx, opts)
 	assert.ErrorIs(t, err, deployErr)
+}
+
+func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
+	ctx := context.Background()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {},
+		},
+	}
+	response := &client.FakePipelineResponses{
+		DeployResponse: &types.GitDeployResponse{
+			Action: &types.Action{
+				ID:   "test",
+				Name: "test",
+			},
+		},
+		ResourcesMap: map[string]string{
+			"svc":  okteto.CompletedStatus,
+			"svc2": okteto.RunningStatus,
+		},
+		StreamErr: errors.New("error"),
+	}
+
+	pc := &Command{
+		okClient: &client.FakeOktetoClient{
+			PipelineClient: client.NewFakePipelineClient(response),
+		},
+	}
+	opts := &DeployOptions{
+		Repository: "test",
+		Name:       "test",
+		Wait:       true,
+		Timeout:    2 * time.Second,
+	}
+	err := pc.ExecuteDeployPipeline(ctx, opts)
+	assert.NoError(t, err)
 }

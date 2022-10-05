@@ -602,6 +602,11 @@ func TestLabelsUnmashalling(t *testing.T) {
 		expected Labels
 	}{
 		{
+			"key-value-with-env-var-map",
+			[]byte(`env: $DEV_ENV`),
+			Labels{"env": "test_environment"},
+		},
+		{
 			"key-value-list",
 			[]byte(`- env=production`),
 			Labels{"env": "production"},
@@ -1070,6 +1075,7 @@ deploy:
 				Dependencies: map[string]*Dependency{},
 				Context:      "context-to-use",
 				IsV2:         true,
+				Type:         OktetoManifestType,
 			},
 			isErrorExpected: false,
 		},
@@ -1088,6 +1094,7 @@ dev:
 `),
 			expected: &Manifest{
 				IsV2:  true,
+				Type:  OktetoManifestType,
 				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
@@ -1240,6 +1247,7 @@ dev:
 sync:
   - app:/app`),
 			expected: &Manifest{
+				Type:          OktetoManifestType,
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Dependencies:  map[string]*Dependency{},
@@ -1322,6 +1330,7 @@ sync:
 services:
   - name: svc`),
 			expected: &Manifest{
+				Type:          OktetoManifestType,
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Dependencies:  map[string]*Dependency{},
@@ -1452,6 +1461,7 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				Type:         OktetoManifestType,
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
@@ -1537,6 +1547,7 @@ dev:
     - app:/app
 `),
 			expected: &Manifest{
+				Type:         OktetoManifestType,
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
@@ -1702,6 +1713,7 @@ deploy:
   - okteto stack deploy
 `),
 			expected: &Manifest{
+				Type:         OktetoManifestType,
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
@@ -1727,6 +1739,7 @@ devs:
   - test
 `),
 			expected: &Manifest{
+				Type:         OktetoManifestType,
 				IsV2:         true,
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
@@ -2112,19 +2125,26 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
   args:
     key1: value1
   cache_from:
-    - cache-image`),
+    - cache-image
+  secrets:
+    mysecret: source
+    othersecret: othersource`),
 			expected: ManifestBuild{
 				"service2": {
 					Context:    "./service2",
 					Dockerfile: "Dockerfile",
 					Image:      "image-tag",
-					Args: []EnvVar{
+					Args: BuildArgs{
 						{
 							Name:  "key1",
 							Value: "value1",
 						},
 					},
 					CacheFrom: []string{"cache-image"},
+					Secrets: BuildSecrets{
+						"mysecret":    "source",
+						"othersecret": "othersource",
+					},
 				},
 			},
 		},
@@ -2179,6 +2199,65 @@ func TestBuildDependsOnUnmarshalling(t *testing.T) {
 			err := yaml.UnmarshalStrict(tt.buildManifest, &result)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestBuildArgsUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected BuildArgs
+	}{
+		{
+			name: "list",
+			data: []byte("- KEY=VALUE"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "VALUE",
+				},
+			},
+		},
+		{
+			name: "list with env var",
+			data: []byte("- KEY=$VALUE"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "$VALUE",
+				},
+			},
+		},
+		{
+			name: "map",
+			data: []byte("KEY: VALUE"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "VALUE",
+				},
+			},
+		},
+		{
+			name: "map with env var",
+			data: []byte("KEY: $VALUE"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "$VALUE",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buildArgs BuildArgs
+			if err := yaml.UnmarshalStrict(tt.data, &buildArgs); err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, tt.expected, buildArgs)
 		})
 	}
 }

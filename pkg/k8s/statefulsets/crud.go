@@ -38,7 +38,7 @@ type patchAnnotations struct {
 	Value map[string]string `json:"value"`
 }
 
-//Sandbox returns a default statefulset for a given dev
+// Sandbox returns a default statefulset for a given dev
 func Sandbox(dev *model.Dev) *appsv1.StatefulSet {
 	image := dev.Image.Name
 	if image == "" {
@@ -84,7 +84,7 @@ func Sandbox(dev *model.Dev) *appsv1.StatefulSet {
 	}
 }
 
-//Deploy creates or updates a statefulset
+// Deploy creates or updates a statefulset
 func Deploy(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
 	sfs.ResourceVersion = ""
 	result, err := c.AppsV1().StatefulSets(sfs.Namespace).Update(ctx, sfs, metav1.UpdateOptions{})
@@ -99,7 +99,7 @@ func Deploy(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface
 	return c.AppsV1().StatefulSets(sfs.Namespace).Create(ctx, sfs, metav1.CreateOptions{})
 }
 
-//List returns the list of statefulsets
+// List returns the list of statefulsets
 func List(ctx context.Context, namespace, labels string, c kubernetes.Interface) ([]appsv1.StatefulSet, error) {
 	sfsList, err := c.AppsV1().StatefulSets(namespace).List(
 		ctx,
@@ -113,12 +113,12 @@ func List(ctx context.Context, namespace, labels string, c kubernetes.Interface)
 	return sfsList.Items, nil
 }
 
-//Get returns a deployment object by name
+// Get returns a deployment object by name
 func Get(ctx context.Context, name, namespace string, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
 	return c.AppsV1().StatefulSets(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-//GetByDev returns a statefulset object given a dev struct (by name or by labels)
+// GetByDev returns a statefulset object given a dev struct (by name or by labels)
 func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Interface) (*appsv1.StatefulSet, error) {
 	if len(dev.Selector) == 0 {
 		return Get(ctx, dev.Name, namespace, c)
@@ -148,7 +148,7 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 	return validStatefulsets[0], nil
 }
 
-//Destroy removes a statefulset object given its name and namespace
+// Destroy removes a statefulset object given its name and namespace
 func Destroy(ctx context.Context, name, namespace string, c kubernetes.Interface) error {
 	if err := c.AppsV1().StatefulSets(namespace).Delete(ctx, name, metav1.DeleteOptions{}); err != nil {
 		if oktetoErrors.IsNotFound(err) {
@@ -168,7 +168,7 @@ func IsRunning(ctx context.Context, namespace, svcName string, c kubernetes.Inte
 	return sfs.Status.ReadyReplicas > 0
 }
 
-//IsDevModeOn returns if a statefulset is in devmode
+// IsDevModeOn returns if a statefulset is in devmode
 func IsDevModeOn(s *appsv1.StatefulSet) bool {
 	labels := s.GetObjectMeta().GetLabels()
 	if labels == nil {
@@ -178,7 +178,7 @@ func IsDevModeOn(s *appsv1.StatefulSet) bool {
 	return ok
 }
 
-//CheckConditionErrors checks errors in conditions
+// CheckConditionErrors checks errors in conditions
 func CheckConditionErrors(sfs *appsv1.StatefulSet, dev *model.Dev) error {
 	for _, c := range sfs.Status.Conditions {
 		if c.Reason == "FailedCreate" && c.Status == apiv1.ConditionTrue {

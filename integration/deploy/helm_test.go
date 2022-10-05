@@ -142,13 +142,13 @@ func createHelmChart(dir string) error {
 
 	chartPath := filepath.Join(dir, "chart", "Chart.yaml")
 	chartContent := []byte(chartYaml)
-	if err := os.WriteFile(chartPath, chartContent, 0644); err != nil {
+	if err := os.WriteFile(chartPath, chartContent, 0600); err != nil {
 		return err
 	}
 
 	valuesPath := filepath.Join(dir, "chart", "values.yaml")
 	valuesContent := []byte(valuesYaml)
-	if err := os.WriteFile(valuesPath, valuesContent, 0644); err != nil {
+	if err := os.WriteFile(valuesPath, valuesContent, 0600); err != nil {
 		return err
 	}
 
@@ -158,13 +158,13 @@ func createHelmChart(dir string) error {
 
 	appPath := filepath.Join(dir, "chart", "templates", "app.yaml")
 	appContent := []byte(appDeploymentTemplate)
-	if err := os.WriteFile(appPath, appContent, 0644); err != nil {
+	if err := os.WriteFile(appPath, appContent, 0600); err != nil {
 		return err
 	}
 
 	appSvcPath := filepath.Join(dir, "chart", "templates", "app-svc.yaml")
 	appSvcContent := []byte(appSvcTemplate)
-	if err := os.WriteFile(appSvcPath, appSvcContent, 0644); err != nil {
+	if err := os.WriteFile(appSvcPath, appSvcContent, 0600); err != nil {
 		return err
 	}
 

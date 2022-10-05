@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//Analytics turns analytics on/off
+// Analytics turns analytics on/off
 func Analytics() *cobra.Command {
 	var disable bool
 	cmd := &cobra.Command{

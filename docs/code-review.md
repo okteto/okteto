@@ -6,6 +6,7 @@
     - [PR Description](#pr-description)
     - [PR comments](#pr-comments)
     - [PR Scope](#pr-scope)
+    - [PR Merge](#pr-merge)
     - [Tests](#tests)
       - [Unit tests](#unit-tests)
       - [E2E tests](#e2e-tests)
@@ -61,6 +62,19 @@ The logic introduced/modified in the pull request should be just enough to close
 This approach can be summarized by the term **Minimum Viable Change (MVC)**. MVC means that each issue and pull request should contain the minimum amount of change/scope possible that is needed to address, in accordance to internal quality standards, the core need that was originally identified. Other needs, even if related to the original one, should be addressed in different issues and pull requests.
 
 If the developer decides to open a new issue from the current one or is not completely sure whether it is necessary to create a new issue or not, this must be commented in the original issue/PR.
+
+### PR Merge
+
+#### **If the author is a maintainer**
+
+Once the PR is approved and the checks are passing, the author will be responsible for merging the PR or delegating the responsibility to another developer. There could be exceptions to this rule, for example, if the author is on vacation and the merge is "urgent", other developers can merge the PR to unblock the situation.
+
+#### **If the author is not a maintainer**
+
+Any maintainer can merge the PR when:
+
+- The PR has approvals from at least two maintainers to ensure that the changes are aligned with the project's goals and quality standards.
+- All requests from the maintainers have been addressed, and those maintainers have approved the PR.
 
 ### Tests
 

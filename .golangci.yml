@@ -7,6 +7,8 @@ linters:
     # TODO: enable when fixed
     - whitespace
     - staticcheck
+  enable:
+    - unparam
 # Enabled by your configuration linters:
 # deadcode: Finds unused code [fast: false, auto-fix: false]
 # gosimple (megacheck): Linter for Go source code that specializes in simplifying code [fast: false, auto-fix: false]
@@ -15,6 +17,7 @@ linters:
 # typecheck: Like the front-end of a Go compiler, parses and type-checks Go code [fast: false, auto-fix: false]
 # unused (megacheck): Checks Go code for unused constants, variables, functions and types [fast: false, auto-fix: false]
 # varcheck: Finds unused global variables and constants [fast: false, auto-fix: false]
+# unparam: Reports unused function parameters [fast: false, auto-fix: false]
 
 # Disabled by your configuration linters:
 # asasalint: check for pass []any as any in variadic func(...any) [fast: false, auto-fix: false]
@@ -98,7 +101,6 @@ linters:
 # thelper: thelper detects golang test helpers without t.Helper() call and checks the consistency of test helpers [fast: false, auto-fix: false]
 # tparallel: tparallel detects inappropriate usage of t.Parallel() method in your Go test codes [fast: false, auto-fix: false]
 # unconvert: Remove unnecessary type conversions [fast: false, auto-fix: false]
-# unparam: Reports unused function parameters [fast: false, auto-fix: false]
 # usestdlibvars: A linter that detect the possibility to use variables/constants from the Go standard library. [fast: true, auto-fix: false]
 # varnamelen: checks that the length of a variable's name matches its scope [fast: false, auto-fix: false]
 # wastedassign: wastedassign finds wasted assignment statements. [fast: false, auto-fix: false]

@@ -44,7 +44,7 @@ This will prompt you to select one of your existing contexts or to create a new 
 	cmd.AddCommand(List())
 	cmd.AddCommand(DeleteCMD())
 
-	//deprecated
+	// deprecated
 	cmd.AddCommand(CreateCMD())
 	cmd.AddCommand(UpdateKubeconfigCMD())
 	cmd.AddCommand(UseNamespace())

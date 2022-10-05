@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -255,7 +256,7 @@ func Test_translateStatefulSet(t *testing.T) {
 		Name:            fmt.Sprintf("init-volume-%s", "svcName"),
 		Image:           "image",
 		ImagePullPolicy: apiv1.PullIfNotPresent,
-		Command:         []string{"sh", "-c", "echo initializing volume... && (cp -Rv /volume1/. /init-volume-0 || true) && (cp -Rv /volume2/. /init-volume-1 || true)"},
+		Command:         []string{"sh", "-c", "echo initializing volume pvc with content of the image image... && (cp -Rv /volume1/. /init-volume-0 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image 'image' does not have any content in \\1/g' || true) && echo initializing volume pvc with content of the image image... && (cp -Rv /volume2/. /init-volume-1 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image 'image' does not have any content in \\1/g' || true)"},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				MountPath: "/init-volume-0",
@@ -587,7 +588,7 @@ func Test_translateJobWithVolumes(t *testing.T) {
 		Name:            fmt.Sprintf("init-volume-%s", "svcName"),
 		Image:           "image",
 		ImagePullPolicy: apiv1.PullIfNotPresent,
-		Command:         []string{"sh", "-c", "echo initializing volume... && (cp -Rv /volume1/. /init-volume-0 || true) && (cp -Rv /volume2/. /init-volume-1 || true)"},
+		Command:         []string{"sh", "-c", "echo initializing volume pvc with content of the image image... && (cp -Rv /volume1/. /init-volume-0 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image 'image' does not have any content in \\1/g' || true) && echo initializing volume pvc with content of the image image... && (cp -Rv /volume2/. /init-volume-1 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image 'image' does not have any content in \\1/g' || true)"},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				MountPath: "/init-volume-0",
@@ -1412,6 +1413,236 @@ func TestGetSvcPublicPorts(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ports := getSvcPublicPorts(tt.svcName, tt.stack)
 			assert.Len(t, ports, tt.expectedLength)
+		})
+	}
+}
+
+func TestGetDeploymentStrategy(t *testing.T) {
+	tests := []struct {
+		name     string
+		svc      *model.Service
+		envs     map[string]string
+		expected appsv1.DeploymentStrategy
+	}{
+		{
+			name: "default",
+			svc: &model.Service{
+				Annotations: model.Annotations{},
+			},
+			envs: map[string]string{},
+			expected: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
+		},
+		{
+			name: "annotation ok - rolling",
+			svc: &model.Service{
+				Annotations: model.Annotations{
+					model.OktetoComposeUpdateStrategyAnnotation: string(rollingUpdateStrategy),
+				},
+			},
+			envs: map[string]string{},
+			expected: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+			},
+		},
+		{
+			name: "annotation ok with different env var - rolling",
+			svc: &model.Service{
+				Annotations: model.Annotations{
+					model.OktetoComposeUpdateStrategyAnnotation: string(rollingUpdateStrategy),
+				},
+			},
+			envs: map[string]string{
+				model.OktetoComposeUpdateStrategyEnvVar: string(recreateUpdateStrategy),
+			},
+			expected: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+			},
+		},
+		{
+			name: "annotation not ok - rolling",
+			svc: &model.Service{
+				Annotations: model.Annotations{
+					model.OktetoComposeUpdateStrategyAnnotation: string(onDeleteUpdateStrategy),
+				},
+			},
+			envs: map[string]string{},
+			expected: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
+		},
+		{
+			name: "annotation ok - recreate",
+			svc: &model.Service{
+				Annotations: model.Annotations{
+					model.OktetoComposeUpdateStrategyAnnotation: string(recreateUpdateStrategy),
+				},
+			},
+			envs: map[string]string{},
+			expected: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
+		},
+		{
+			name: "env var ok - recreate",
+			svc: &model.Service{
+				Annotations: model.Annotations{},
+			},
+			envs: map[string]string{
+				model.OktetoComposeUpdateStrategyEnvVar: string(recreateUpdateStrategy),
+			},
+			expected: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
+		},
+		{
+			name: "env var ok - rolling",
+			svc: &model.Service{
+				Annotations: model.Annotations{},
+			},
+			envs: map[string]string{
+				model.OktetoComposeUpdateStrategyEnvVar: string(rollingUpdateStrategy),
+			},
+			expected: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+			},
+		},
+		{
+			name: "env var not ok",
+			svc: &model.Service{
+				Annotations: model.Annotations{},
+			},
+			envs: map[string]string{
+				model.OktetoComposeUpdateStrategyEnvVar: string(onDeleteUpdateStrategy),
+			},
+			expected: appsv1.DeploymentStrategy{
+				Type: appsv1.RecreateDeploymentStrategyType,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for k, v := range tt.envs {
+				t.Setenv(k, v)
+			}
+			result := getDeploymentUpdateStrategy(tt.svc)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestGetStrategyStrategy(t *testing.T) {
+	tests := []struct {
+		name     string
+		svc      *model.Service
+		envs     map[string]string
+		expected appsv1.StatefulSetUpdateStrategy
+	}{
+		{
+			name: "default",
+			svc: &model.Service{
+				Annotations: model.Annotations{},
+			},
+			envs: map[string]string{},
+			expected: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+			},
+		},
+		{
+			name: "annotation ok - rolling",
+			svc: &model.Service{
+				Annotations: model.Annotations{
+					model.OktetoComposeUpdateStrategyAnnotation: string(rollingUpdateStrategy),
+				},
+			},
+			envs: map[string]string{},
+			expected: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+			},
+		},
+		{
+			name: "annotation ok with different env var - rolling",
+			svc: &model.Service{
+				Annotations: model.Annotations{
+					model.OktetoComposeUpdateStrategyAnnotation: string(rollingUpdateStrategy),
+				},
+			},
+			envs: map[string]string{
+				model.OktetoComposeUpdateStrategyEnvVar: string(recreateUpdateStrategy),
+			},
+			expected: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+			},
+		},
+		{
+			name: "annotation not ok - rolling",
+			svc: &model.Service{
+				Annotations: model.Annotations{
+					model.OktetoComposeUpdateStrategyAnnotation: string(recreateUpdateStrategy),
+				},
+			},
+			envs: map[string]string{},
+			expected: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+			},
+		},
+		{
+			name: "annotation ok - on-delete",
+			svc: &model.Service{
+				Annotations: model.Annotations{
+					model.OktetoComposeUpdateStrategyAnnotation: string(onDeleteUpdateStrategy),
+				},
+			},
+			envs: map[string]string{},
+			expected: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.OnDeleteStatefulSetStrategyType,
+			},
+		},
+		{
+			name: "env var ok - on-delete",
+			svc: &model.Service{
+				Annotations: model.Annotations{},
+			},
+			envs: map[string]string{
+				model.OktetoComposeUpdateStrategyEnvVar: string(onDeleteUpdateStrategy),
+			},
+			expected: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.OnDeleteStatefulSetStrategyType,
+			},
+		},
+		{
+			name: "env var ok - rolling",
+			svc: &model.Service{
+				Annotations: model.Annotations{},
+			},
+			envs: map[string]string{
+				model.OktetoComposeUpdateStrategyEnvVar: string(rollingUpdateStrategy),
+			},
+			expected: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+			},
+		},
+		{
+			name: "env var not ok",
+			svc: &model.Service{
+				Annotations: model.Annotations{},
+			},
+			envs: map[string]string{
+				model.OktetoComposeUpdateStrategyEnvVar: string(recreateUpdateStrategy),
+			},
+			expected: appsv1.StatefulSetUpdateStrategy{
+				Type: appsv1.RollingUpdateStatefulSetStrategyType,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for k, v := range tt.envs {
+				t.Setenv(k, v)
+			}
+			result := getStatefulsetUpdateStrategy(tt.svc)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

@@ -41,11 +41,12 @@ type buildInfoRaw struct {
 	Dockerfile       string         `yaml:"dockerfile,omitempty"`
 	CacheFrom        []string       `yaml:"cache_from,omitempty"`
 	Target           string         `yaml:"target,omitempty"`
-	Args             Environment    `yaml:"args,omitempty"`
+	Args             BuildArgs      `yaml:"args,omitempty"`
 	Image            string         `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume  `yaml:"-"`
 	ExportCache      string         `yaml:"export_cache,omitempty"`
 	DependsOn        BuildDependsOn `yaml:"depends_on,omitempty"`
+	Secrets          BuildSecrets   `yaml:"secrets,omitempty"`
 }
 
 type syncRaw struct {
@@ -81,7 +82,7 @@ type AffinityRaw struct {
 	PodAntiAffinity *PodAntiAffinity `yaml:"podAntiAffinity,omitempty" json:"podAntiAffinity,omitempty"`
 }
 
-// Describes node affinity scheduling rules for the pod.
+// NodeAffinity describes node affinity scheduling rules for the pod.
 type NodeAffinity struct {
 	RequiredDuringSchedulingIgnoredDuringExecution  *NodeSelector             `yaml:"requiredDuringSchedulingIgnoredDuringExecution,omitempty" json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
 	PreferredDuringSchedulingIgnoredDuringExecution []PreferredSchedulingTerm `yaml:"preferredDuringSchedulingIgnoredDuringExecution,omitempty" json:"preferredDuringSchedulingIgnoredDuringExecution,omitempty"`
@@ -109,13 +110,13 @@ type PreferredSchedulingTerm struct {
 	Preference NodeSelectorTerm `yaml:"preference" json:"preference"`
 }
 
-// Describes pod affinity scheduling rules (e.g. co-locate this pod in the same node, zone, etc. as some other pod(s)).
+// PodAffinity describes pod affinity scheduling rules (e.g. co-locate this pod in the same node, zone, etc. as some other pod(s)).
 type PodAffinity struct {
 	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `yaml:"requiredDuringSchedulingIgnoredDuringExecution,omitempty" json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
 	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `yaml:"preferredDuringSchedulingIgnoredDuringExecution,omitempty" json:"preferredDuringSchedulingIgnoredDuringExecution,omitempty"`
 }
 
-// Describes pod anti-affinity scheduling rules (e.g. avoid putting this pod in the same node, zone, etc. as some other pod(s)).
+// PodAntiAffinity describes pod anti-affinity scheduling rules (e.g. avoid putting this pod in the same node, zone, etc. as some other pod(s)).
 type PodAntiAffinity struct {
 	RequiredDuringSchedulingIgnoredDuringExecution  []PodAffinityTerm         `yaml:"requiredDuringSchedulingIgnoredDuringExecution,omitempty" json:"requiredDuringSchedulingIgnoredDuringExecution,omitempty"`
 	PreferredDuringSchedulingIgnoredDuringExecution []WeightedPodAffinityTerm `yaml:"preferredDuringSchedulingIgnoredDuringExecution,omitempty" json:"preferredDuringSchedulingIgnoredDuringExecution,omitempty"`
@@ -143,13 +144,34 @@ type WeightedPodAffinityTerm struct {
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (e *BuildArg) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw string
+	err := unmarshal(&raw)
+	if err != nil {
+		return err
+	}
+	parts := strings.SplitN(raw, "=", 2)
+	e.Name = parts[0]
+	if len(parts) == 2 {
+		e.Value = parts[1]
+		return nil
+	}
+
+	e.Name, err = ExpandEnv(parts[0], true)
+	if err != nil {
+		return err
+	}
+	e.Value = parts[0]
+	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
 func (e *EnvVar) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw string
 	err := unmarshal(&raw)
 	if err != nil {
 		return err
 	}
-
 	parts := strings.SplitN(raw, "=", 2)
 	e.Name = parts[0]
 	if len(parts) == 2 {
@@ -332,6 +354,7 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 	buildInfo.CacheFrom = rawBuildInfo.CacheFrom
 	buildInfo.ExportCache = rawBuildInfo.ExportCache
 	buildInfo.DependsOn = rawBuildInfo.DependsOn
+	buildInfo.Secrets = rawBuildInfo.Secrets
 	return nil
 }
 
@@ -1181,6 +1204,45 @@ func (e *Environment) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	})
 	*e = envs
 	return nil
+}
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (ba *BuildArgs) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	buildArgs := make(BuildArgs, 0)
+	result, err := getBuildArgs(unmarshal)
+	if err != nil {
+		return err
+	}
+	for key, value := range result {
+		buildArgs = append(buildArgs, BuildArg{Name: key, Value: value})
+	}
+	sort.SliceStable(buildArgs, func(i, j int) bool {
+		return strings.Compare(buildArgs[i].Name, buildArgs[j].Name) < 0
+	})
+	*ba = buildArgs
+	return nil
+}
+
+func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) {
+	result := make(map[string]string)
+
+	var rawList []BuildArg
+	err := unmarshal(&rawList)
+	if err == nil {
+		for _, buildArg := range rawList {
+			result[buildArg.Name] = buildArg.Value
+		}
+		return result, nil
+	}
+	var rawMap map[string]string
+	err = unmarshal(&rawMap)
+	if err != nil {
+		return nil, err
+	}
+	for key, value := range rawMap {
+		result[key] = value
+	}
+	return result, nil
 }
 
 func getKeyValue(unmarshal func(interface{}) error) (map[string]string, error) {

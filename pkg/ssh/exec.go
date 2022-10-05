@@ -39,7 +39,7 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 		return fmt.Errorf("failed to get SSH configuration: %s", err)
 	}
 
-	//dockerterm.StdStreams() configures the terminal on windows
+	// dockerterm.StdStreams() configures the terminal on windows
 	dockerterm.StdStreams()
 
 	var connection *ssh.Client
@@ -56,8 +56,11 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	if err != nil {
 		return fmt.Errorf("failed to connect to SSH server: %s", err)
 	}
-
-	defer connection.Close()
+	defer func() {
+		if err := connection.Close(); err != nil {
+			oktetoLog.Debugf("Error closing connection: %s", connection.SessionID(), err)
+		}
+	}()
 	go func() {
 		<-ctx.Done()
 		if connection != nil {
@@ -74,8 +77,11 @@ func Exec(ctx context.Context, iface string, remotePort int, tty bool, inR io.Re
 	if err != nil {
 		return fmt.Errorf("failed to create SSH session: %s", err)
 	}
-
-	defer session.Close()
+	defer func() {
+		if err := session.Close(); err != nil {
+			oktetoLog.Debugf("Error closing session: %s", err)
+		}
+	}()
 
 	if tty {
 		modes := ssh.TerminalModes{

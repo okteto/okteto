@@ -18,13 +18,13 @@ type SpaceBody struct {
 	Space Space `json:"space"`
 }
 
-//GitDeployResponse represents
+// GitDeployResponse represents
 type GitDeployResponse struct {
 	Action    *Action    `json:"action"`
 	GitDeploy *GitDeploy `json:"gitDeploy"`
 }
 
-//GitDeploy represents an Okteto pipeline status
+// GitDeploy represents an Okteto pipeline status
 type GitDeploy struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`

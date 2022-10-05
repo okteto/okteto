@@ -40,8 +40,8 @@ import (
 )
 
 var (
-	//OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.4.0"
+	// OktetoBinImageTag image tag with okteto internal binaries
+	OktetoBinImageTag = "okteto/bin:1.4.1"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -94,7 +94,7 @@ type Dev struct {
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
 
-	//Deprecated fields
+	// Deprecated fields
 	Healthchecks bool   `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 	Labels       Labels `json:"labels,omitempty" yaml:"labels,omitempty"`
 }
@@ -123,15 +123,32 @@ type BuildInfo struct {
 	Dockerfile       string         `yaml:"dockerfile,omitempty"`
 	CacheFrom        []string       `yaml:"cache_from,omitempty"`
 	Target           string         `yaml:"target,omitempty"`
-	Args             Environment    `yaml:"args,omitempty"`
+	Args             BuildArgs      `yaml:"args,omitempty"`
 	Image            string         `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume  `yaml:"-"`
 	ExportCache      string         `yaml:"export_cache,omitempty"`
 	DependsOn        BuildDependsOn `yaml:"depends_on,omitempty"`
+	Secrets          BuildSecrets   `yaml:"secrets,omitempty"`
 }
+
+// BuildArg is an argument used on the build step.
+type BuildArg struct {
+	Name  string
+	Value string
+}
+
+func (v *BuildArg) String() string {
+	return fmt.Sprintf("%s=%s", v.Name, v.Value)
+}
+
+// BuildArgs is a list of arguments used on the build step.
+type BuildArgs []BuildArg
 
 // BuildDependsOn represents the images that needs to be built before
 type BuildDependsOn []string
+
+// BuildSecrets represents the secrets to be injected to the build of the image
+type BuildSecrets map[string]string
 
 // GetDockerfilePath returns the path to the Dockerfile
 func (b *BuildInfo) GetDockerfilePath() string {
@@ -152,15 +169,49 @@ func (b *BuildInfo) GetDockerfilePath() string {
 	return joinPath
 }
 
-// AddArgs add a set of args to the build information
-func (b *BuildInfo) AddArgs(args map[string]string) {
-	for k, v := range args {
-		b.Args = append(b.Args, EnvVar{
+// AddBuildArgs add a set of args to the build information
+func (b *BuildInfo) AddBuildArgs(previousImageArgs map[string]string) error {
+	if err := b.expandManifestBuildArgs(previousImageArgs); err != nil {
+		return err
+	}
+	return b.addExpandedPreviousImageArgs(previousImageArgs)
+}
+
+func (b *BuildInfo) expandManifestBuildArgs(previousImageArgs map[string]string) (err error) {
+	for idx, arg := range b.Args {
+		if val, ok := previousImageArgs[arg.Name]; ok {
+			oktetoLog.Infof("overriding '%s' with the content of previous build", arg.Name)
+			arg.Value = val
+		}
+		arg.Value, err = ExpandEnv(arg.Value, true)
+		if err != nil {
+			return err
+		}
+		b.Args[idx] = arg
+	}
+	return nil
+}
+
+func (b *BuildInfo) addExpandedPreviousImageArgs(previousImageArgs map[string]string) error {
+	alreadyAddedArg := map[string]bool{}
+	for _, arg := range b.Args {
+		alreadyAddedArg[arg.Name] = true
+	}
+	for k, v := range previousImageArgs {
+		if _, ok := alreadyAddedArg[k]; ok {
+			continue
+		}
+		expandedValue, err := ExpandEnv(v, true)
+		if err != nil {
+			return err
+		}
+		b.Args = append(b.Args, BuildArg{
 			Name:  k,
-			Value: v,
+			Value: expandedValue,
 		})
 		oktetoLog.Infof("Added '%s' to build args", k)
 	}
+	return nil
 }
 
 // Volume represents a volume in the development container
@@ -646,7 +697,12 @@ func (dev *Dev) expandEnvFiles() error {
 		if err != nil {
 			return err
 		}
-		defer f.Close()
+		defer func() {
+			if err := f.Close(); err != nil {
+				oktetoLog.Debugf("Error closing file %s: %s", filename, err)
+			}
+		}()
+
 		envMap, err := godotenv.ParseWithLookup(f, os.LookupEnv)
 		if err != nil {
 			return fmt.Errorf("error parsing env_file %s: %s", filename, err.Error())
@@ -833,7 +889,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 	p := Secret{
 		LocalPath:  pubKeyPath,
 		RemotePath: authorizedKeysPath,
-		Mode:       0644,
+		Mode:       0600,
 	}
 
 	oktetoLog.Infof("enabled remote mode")
@@ -847,7 +903,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 	dev.Secrets = append(dev.Secrets, p)
 }
 
-//LoadForcePull force the dev pods to be recreated and pull the latest version of their image
+// LoadForcePull force the dev pods to be recreated and pull the latest version of their image
 func (dev *Dev) LoadForcePull() {
 	restartUUID := uuid.New().String()
 	dev.ImagePullPolicy = apiv1.PullAlways
@@ -859,7 +915,7 @@ func (dev *Dev) LoadForcePull() {
 	oktetoLog.Infof("enabled force pull")
 }
 
-//Save saves the okteto manifest in a given path
+// Save saves the okteto manifest in a given path
 func (dev *Dev) Save(path string) error {
 	marshalled, err := yaml.Marshal(dev)
 	if err != nil {
@@ -875,8 +931,8 @@ func (dev *Dev) Save(path string) error {
 	return nil
 }
 
-//SerializeBuildArgs returns build  args as a list of strings
-func SerializeBuildArgs(buildArgs Environment) []string {
+// SerializeBuildArgs returns build  args as a list of strings
+func SerializeBuildArgs(buildArgs BuildArgs) []string {
 	result := []string{}
 	for _, e := range buildArgs {
 		result = append(result, e.String())
@@ -886,7 +942,18 @@ func SerializeBuildArgs(buildArgs Environment) []string {
 	return result
 }
 
-//SetLastBuiltAnnotation sets the dev timestacmp
+// SerializeEnvironmentVars returns environment variables as a list of strings
+func SerializeEnvironmentVars(envs Environment) []string {
+	result := []string{}
+	for _, e := range envs {
+		result = append(result, e.String())
+	}
+	// // stable serialization
+	sort.Strings(result)
+	return result
+}
+
+// SetLastBuiltAnnotation sets the dev timestacmp
 func (dev *Dev) SetLastBuiltAnnotation() {
 	if dev.Metadata.Annotations == nil {
 		dev.Metadata.Annotations = Annotations{}
@@ -894,7 +961,7 @@ func (dev *Dev) SetLastBuiltAnnotation() {
 	dev.Metadata.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
 }
 
-//GetVolumeName returns the okteto volume name for a given development container
+// GetVolumeName returns the okteto volume name for a given development container
 func (dev *Dev) GetVolumeName() string {
 	return fmt.Sprintf(OktetoVolumeNameTemplate, dev.Name)
 }
@@ -945,7 +1012,7 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		rule.Healthchecks = true
 	}
 	if main == dev {
-		rule.Marker = OktetoBinImageTag //for backward compatibility
+		rule.Marker = OktetoBinImageTag // for backward compatibility
 		rule.OktetoBinImageTag = dev.InitContainer.Image
 		rule.Environment = append(
 			rule.Environment,
@@ -1140,7 +1207,7 @@ func (s *Secret) GetFileName() string {
 	return filepath.Base(s.RemotePath)
 }
 
-//ExpandEnv expands the environments supporting the notation "${var:-$DEFAULT}"
+// ExpandEnv expands the environments supporting the notation "${var:-$DEFAULT}"
 func ExpandEnv(value string, expandIfEmpty bool) (string, error) {
 	result, err := envsubst.String(value)
 	if err != nil {
@@ -1169,7 +1236,7 @@ func GetTimeout() (time.Duration, error) {
 	return parsed, nil
 }
 
-func (dev *Dev) translateDeprecatedMetadataFields() error {
+func (dev *Dev) translateDeprecatedMetadataFields() {
 	if len(dev.Labels) > 0 {
 		oktetoLog.Warning("The field 'labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)")
 		for k, v := range dev.Labels {
@@ -1183,22 +1250,21 @@ func (dev *Dev) translateDeprecatedMetadataFields() error {
 			dev.Metadata.Annotations[k] = v
 		}
 	}
-	for _, s := range dev.Services {
+	for indx, s := range dev.Services {
 		if len(s.Labels) > 0 {
 			oktetoLog.Warning("The field '%s.labels' is deprecated and will be removed in a future version. Use the field 'selector' instead (https://okteto.com/docs/reference/manifest/#selector)", s.Name)
 			for k, v := range s.Labels {
-				s.Selector[k] = v
+				dev.Services[indx].Selector[k] = v
 			}
 		}
 
 		if len(s.Annotations) > 0 {
 			oktetoLog.Warning("The field 'annotations' is deprecated and will be removed in a future version. Use the field '%s.metadata.annotations' instead (https://okteto.com/docs/reference/manifest/#metadata)", s.Name)
 			for k, v := range s.Annotations {
-				s.Metadata.Annotations[k] = v
+				dev.Services[indx].Metadata.Annotations[k] = v
 			}
 		}
 	}
-	return nil
 }
 
 func (service *Dev) validateForExtraFields() error {
@@ -1290,22 +1356,36 @@ func getLocalhost() string {
 // Copy clones the buildInfo without the pointers
 func (b *BuildInfo) Copy() *BuildInfo {
 	result := &BuildInfo{
-		Name:       b.Name,
-		Context:    b.Context,
-		Dockerfile: b.Dockerfile,
-		Target:     b.Target,
-		Image:      b.Image,
+		Name:        b.Name,
+		Context:     b.Context,
+		Dockerfile:  b.Dockerfile,
+		Target:      b.Target,
+		Image:       b.Image,
+		ExportCache: b.ExportCache,
 	}
+
+	// copy to new pointers
 	cacheFrom := []string{}
 	cacheFrom = append(cacheFrom, b.CacheFrom...)
 	result.CacheFrom = cacheFrom
 
-	args := Environment{}
+	args := BuildArgs{}
 	args = append(args, b.Args...)
 	result.Args = args
+
+	secrets := BuildSecrets{}
+	for k, v := range b.Secrets {
+		secrets[k] = v
+	}
+	result.Secrets = secrets
 
 	volumesToMount := []StackVolume{}
 	volumesToMount = append(volumesToMount, b.VolumesToInclude...)
 	result.VolumesToInclude = volumesToMount
+
+	dependsOn := BuildDependsOn{}
+	dependsOn = append(dependsOn, b.DependsOn...)
+	result.DependsOn = dependsOn
+
 	return result
 }

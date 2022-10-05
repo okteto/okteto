@@ -35,7 +35,7 @@ const (
 	DefaultReplicasNumber = 1
 )
 
-// Stack represents an okteto stack
+// StackRaw represents an okteto stack
 type StackRaw struct {
 	Version   string                     `yaml:"version,omitempty"`
 	Name      string                     `yaml:"name"`
@@ -57,7 +57,7 @@ type StackRaw struct {
 	Warnings StackWarnings
 }
 
-// Service represents an okteto stack service
+// ServiceRaw represents an okteto stack service
 type ServiceRaw struct {
 	Deploy                   *DeployInfoRaw        `yaml:"deploy,omitempty"`
 	Build                    *composeBuildInfo     `yaml:"build,omitempty"`
@@ -242,7 +242,7 @@ type composeBuildInfo struct {
 	Dockerfile       string        `yaml:"dockerfile,omitempty"`
 	CacheFrom        []string      `yaml:"cache_from,omitempty"`
 	Target           string        `yaml:"target,omitempty"`
-	Args             Environment   `yaml:"args,omitempty"`
+	Args             BuildArgs     `yaml:"args,omitempty"`
 	Image            string        `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume `yaml:"-"`
 	ExportCache      string        `yaml:"export_cache,omitempty"`
@@ -387,14 +387,10 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	svc := &Service{}
 	var err error
 
-	svc.Resources, err = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources, serviceRaw.CpuCount, serviceRaw.Cpus, serviceRaw.MemLimit, serviceRaw.MemReservation)
-	if err != nil {
-		return nil, err
-	}
-	svc.Replicas, err = unmarshalDeployReplicas(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas)
-	if err != nil {
-		return nil, err
-	}
+	svc.Resources = unmarshalDeployResources(serviceRaw.Deploy, serviceRaw.Resources, serviceRaw.CpuCount, serviceRaw.Cpus, serviceRaw.MemLimit, serviceRaw.MemReservation)
+
+	svc.Replicas = unmarshalDeployReplicas(serviceRaw.Deploy, serviceRaw.Scale, serviceRaw.Replicas)
+
 	svc.Image = serviceRaw.Image
 	svc.Build = serviceRaw.Build.toBuildInfo()
 
@@ -575,7 +571,7 @@ func translateHealtcheckCurlToHTTP(healthcheck *HealthCheck) {
 	if p == "" {
 		return
 	}
-	port, err := strconv.Atoi(p)
+	port, err := strconv.ParseInt(p, 10, 32)
 	if err != nil {
 		return
 	}
@@ -900,7 +896,7 @@ func getRangePorts(portString string) (int32, int32, apiv1.Protocol, error) {
 }
 
 func getPortFromString(portString, originalPortString string) (int32, error) {
-	port, err := strconv.Atoi(portString)
+	port, err := strconv.ParseInt(portString, 10, 32)
 	if err != nil {
 		return 0, fmt.Errorf("Can not convert '%s' to a port: %s is not a number", originalPortString, portString)
 	}
@@ -1007,7 +1003,7 @@ func getRestartPolicy(svcName string, deployInfo *DeployInfoRaw, restartPolicy s
 		return apiv1.RestartPolicyAlways, fmt.Errorf("Cannot create container for service %s: invalid restart policy '%s'", svcName, restart)
 	}
 }
-func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResources, cpuCount, cpus, memLimit, memReservation Quantity) (*StackResources, error) {
+func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResources, cpuCount, cpus, memLimit, memReservation Quantity) *StackResources {
 	if resources == nil {
 		resources = &StackResources{}
 	}
@@ -1032,20 +1028,20 @@ func unmarshalDeployResources(deployInfo *DeployInfoRaw, resources *StackResourc
 		resources.Requests.Memory = memReservation
 	}
 
-	return resources, nil
+	return resources
 }
 
-func unmarshalDeployReplicas(deployInfo *DeployInfoRaw, scale, replicas *int32) (int32, error) {
+func unmarshalDeployReplicas(deployInfo *DeployInfoRaw, scale, replicas *int32) int32 {
 	if replicas != nil {
-		return *replicas, nil
+		return *replicas
 	}
 	if deployInfo != nil && deployInfo.Replicas != nil {
-		return *deployInfo.Replicas, nil
+		return *deployInfo.Replicas
 	}
 	if scale != nil {
-		return *scale, nil
+		return *scale
 	}
-	return DefaultReplicasNumber, nil
+	return DefaultReplicasNumber
 }
 
 func (r DeployComposeResources) toServiceResources() ServiceResources {
@@ -1216,7 +1212,7 @@ func (v StackVolume) MarshalYAML() (interface{}, error) {
 	return v.RemotePath, nil
 }
 
-// MarshalYAML Implements the marshaler interface of the yaml pkg.
+// ToString returns volume as string
 func (v StackVolume) ToString() string {
 	if v.LocalPath != "" {
 		return fmt.Sprintf("%s:%s", v.LocalPath, v.RemotePath)

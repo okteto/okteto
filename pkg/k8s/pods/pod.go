@@ -82,7 +82,7 @@ func ListBySelector(ctx context.Context, namespace string, selector map[string]s
 	return p.Items, nil
 }
 
-//GetPodByReplicaSet returns a pod of a given replicaset
+// GetPodByReplicaSet returns a pod of a given replicaset
 func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, c kubernetes.Interface) (*apiv1.Pod, error) {
 	podList, err := c.CoreV1().Pods(rs.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -107,7 +107,7 @@ func GetPodByReplicaSet(ctx context.Context, rs *appsv1.ReplicaSet, c kubernetes
 	return nil, oktetoErrors.ErrNotFound
 }
 
-//GetPodByReplicaSet returns a pod of a given replicaset
+// GetPodByStatefulSet returns a pod of a given replicaset
 func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, c kubernetes.Interface) (*apiv1.Pod, error) {
 	podList, err := c.CoreV1().Pods(sfs.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -134,7 +134,7 @@ func GetPodByStatefulSet(ctx context.Context, sfs *appsv1.StatefulSet, c kuberne
 	return nil, oktetoErrors.ErrNotFound
 }
 
-//GetUserByPod returns the current user of a running pod
+// GetUserByPod returns the current user of a running pod
 func GetUserByPod(ctx context.Context, p *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) (int64, error) {
 	cmd := []string{"sh", "-c", "id -u"}
 	userIDString, err := execCommandInPod(ctx, p, container, cmd, config, c)
@@ -148,7 +148,7 @@ func GetUserByPod(ctx context.Context, p *apiv1.Pod, container string, config *r
 	return userID, nil
 }
 
-//HasPackageJson returns if the container has node_modules
+// HasPackageJson returns if the container has node_modules
 func HasPackageJson(ctx context.Context, p *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) bool {
 	cmd := []string{"sh", "-c", "[ -f 'package.json' ] && echo 'package.json exists'"}
 	out, err := execCommandInPod(ctx, p, container, cmd, config, c)
@@ -158,13 +158,13 @@ func HasPackageJson(ctx context.Context, p *apiv1.Pod, container string, config 
 	return strings.Contains(out, "package.json exists")
 }
 
-//GetWorkdirByPod returns the workdir of a running pod
+// GetWorkdirByPod returns the workdir of a running pod
 func GetWorkdirByPod(ctx context.Context, p *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) (string, error) {
 	cmd := []string{"sh", "-c", "echo $PWD"}
 	return execCommandInPod(ctx, p, container, cmd, config, c)
 }
 
-//CheckIfBashIsAvailable returns if bash is available in the given container
+// CheckIfBashIsAvailable returns if bash is available in the given container
 func CheckIfBashIsAvailable(ctx context.Context, p *apiv1.Pod, container string, config *rest.Config, c *kubernetes.Clientset) bool {
 	cmd := []string{"bash", "--version"}
 	_, err := execCommandInPod(ctx, p, container, cmd, config, c)
@@ -197,7 +197,7 @@ func execCommandInPod(ctx context.Context, p *apiv1.Pod, container string, cmd [
 	return result, nil
 }
 
-//Exists returns true if pod still exists and is not being deleted
+// Exists returns true if pod still exists and is not being deleted
 func Exists(ctx context.Context, podName, namespace string, c kubernetes.Interface) bool {
 	pod, err := c.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 	if err != nil {
@@ -206,7 +206,7 @@ func Exists(ctx context.Context, podName, namespace string, c kubernetes.Interfa
 	return pod.GetObjectMeta().GetDeletionTimestamp() == nil
 }
 
-//Destroy destroys a pod by name
+// Destroy destroys a pod by name
 func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interface) error {
 	err := c.CoreV1().Pods(namespace).Delete(
 		ctx,
@@ -221,7 +221,7 @@ func Destroy(ctx context.Context, podName, namespace string, c kubernetes.Interf
 	return nil
 }
 
-//GetPodUserID returns the user id running the dev pod
+// GetPodUserID returns the user id running the dev pod
 func GetPodUserID(ctx context.Context, podName, containerName, namespace string, c *kubernetes.Clientset) int64 {
 	podLogs, err := ContainerLogs(ctx, containerName, podName, namespace, false, c)
 	if err != nil {
@@ -263,7 +263,7 @@ func parseUserID(output string) int64 {
 	return result
 }
 
-//ContainerLogs retrieves the logs of a container in a pod
+// ContainerLogs retrieves the logs of a container in a pod
 func ContainerLogs(ctx context.Context, containerName, podName, namespace string, timestamps bool, c kubernetes.Interface) (string, error) {
 	podLogOpts := apiv1.PodLogOptions{
 		Container:  containerName,
@@ -275,7 +275,11 @@ func ContainerLogs(ctx context.Context, containerName, podName, namespace string
 	if err != nil {
 		return "", err
 	}
-	defer logsStream.Close()
+	defer func() {
+		if err := logsStream.Close(); err != nil {
+			oktetoLog.Debugf("Error closing logStream: %s", err)
+		}
+	}()
 
 	buf := new(bytes.Buffer)
 

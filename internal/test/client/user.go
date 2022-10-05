@@ -17,7 +17,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 )
 
-//FakeUserClient is used to mock the userClient interface
+// FakeUserClient is used to mock the userClient interface
 type FakeUserClient struct {
 	userCtx *types.UserContext
 	err     []error

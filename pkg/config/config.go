@@ -50,9 +50,9 @@ const (
 	Pulling = "pulling"
 	// StartingSync up preparing syncthing
 	StartingSync = "startingSync"
-	// Synchronizing ing up is syncthing
+	// Synchronizing up is syncthing
 	Synchronizing = "synchronizing"
-	// Ready up fi nished
+	// Ready up finished
 	Ready = "ready"
 	// Failed up failed
 	Failed = "failed"
@@ -137,7 +137,7 @@ func UpdateStateFile(dev *model.Dev, state UpState) error {
 	}
 
 	s := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
-	if err := os.WriteFile(s, []byte(state), 0644); err != nil {
+	if err := os.WriteFile(s, []byte(state), 0600); err != nil {
 		return fmt.Errorf("failed to update state file: %s", err)
 	}
 
