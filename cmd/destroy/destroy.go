@@ -268,9 +268,15 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 			}
 			pipelineCmd, err := pipelineCMD.NewCommand()
 			if err != nil {
+				if err := dc.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+					return err
+				}
 				return err
 			}
 			if err := pipelineCmd.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
+				if err := dc.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+					return err
+				}
 				return err
 			}
 		}
@@ -305,7 +311,11 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
-		dc.executor.CleanUp(errors.New("interrupt signal received"))
+		errStop := "interrupt signal received"
+		dc.executor.CleanUp(errors.New(errStop))
+		if err := dc.configMapHandler.setErrorStatus(ctx, cfg, data, fmt.Errorf(errStop)); err != nil {
+			return err
+		}
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
 		if err != nil {
