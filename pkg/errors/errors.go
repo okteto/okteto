@@ -188,6 +188,11 @@ func IsForbidden(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "unauthorized")
 }
 
+// IsX509 raised if the Okteto API returns an error which contains x509
+func IsX509(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "x509")
+}
+
 // IsNotFound returns true if err is of the type not found
 func IsNotFound(err error) bool {
 	return err != nil && (strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "doesn't exist") || strings.Contains(err.Error(), "not-found"))

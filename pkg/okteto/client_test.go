@@ -125,6 +125,10 @@ func TestBackgroundContextWithHttpClient(t *testing.T) {
 				return
 			}
 
+			if !tt.expected && httpClient.Transport == nil {
+				return
+			}
+
 			var transport *http.Transport
 
 			if transport, ok = httpClient.Transport.(*http.Transport); !ok {

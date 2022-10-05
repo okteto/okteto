@@ -85,6 +85,7 @@ func main() {
 	oktetoLog.Init(logrus.WarnLevel)
 	var logLevel string
 	var outputMode string
+	var insecureSkipTlsVerify bool
 
 	if err := analytics.Init(); err != nil {
 		oktetoLog.Infof("error initializing okteto analytics: %s", err)
@@ -101,6 +102,7 @@ func main() {
 			ccmd.SilenceUsage = true
 			oktetoLog.SetLevel(logLevel)
 			oktetoLog.SetOutputFormat(outputMode)
+			okteto.SetInsecureSkipTLSVerifyPolicy(insecureSkipTlsVerify)
 			oktetoLog.Infof("started %s", strings.Join(os.Args, " "))
 
 		},
@@ -111,6 +113,7 @@ func main() {
 
 	root.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "amount of information outputted (debug, info, warn, error)")
 	root.PersistentFlags().StringVar(&outputMode, "log-output", oktetoLog.TTYFormat, "output format for logs (tty, plain, json)")
+	root.PersistentFlags().BoolVarP(&insecureSkipTlsVerify, "insecure-skip-tls-verify", "", false, "If true, Okteto server certificate will not be validated against your local trust store, effectively making your connetion insecure.")
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
