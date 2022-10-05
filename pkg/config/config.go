@@ -290,9 +290,7 @@ func RunningInInstaller() bool {
 	return os.Getenv(model.OktetoInInstaller) == "true"
 }
 
-func IsInsecureSkipVerify(getValue func() string) bool {
-	value := getValue()
-
+func IsInsecureSkipVerify(value string) bool {
 	if value == "" {
 		return false
 	}

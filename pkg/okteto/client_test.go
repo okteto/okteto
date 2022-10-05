@@ -14,6 +14,8 @@
 package okteto
 
 import (
+	"context"
+	"crypto/tls"
 	"os"
 	"testing"
 
@@ -87,18 +89,24 @@ func Test_parseOktetoURL(t *testing.T) {
 
 func TestBackgroundContextWithHttpClient(t *testing.T) {
 	tests := []struct {
-		name     string
-		value    bool
-		expected bool
+		name       string
+		httpClient *http.Client
+		expected   bool
 	}{
 		{
-			name:     "default",
-			value:    false,
-			expected: false,
+			name:       "default",
+			httpClient: &http.Client{},
+			expected:   false,
 		},
 		{
-			name:     "insecure",
-			value:    true,
+			name: "insecure",
+			httpClient: &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{ // skipcq: GO-S1020
+						InsecureSkipVerify: true, // skipcq: GSC-G402
+					},
+				},
+			},
 			expected: true,
 		},
 	}
@@ -106,7 +114,7 @@ func TestBackgroundContextWithHttpClient(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var ok bool
 
-			ctx := backgroundContextWithHttpClient(tt.value)
+			ctx := contextWithOauth2HttpClient(context.Background(), tt.httpClient)
 
 			client := ctx.Value(oauth2.HTTPClient)
 
