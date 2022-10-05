@@ -114,8 +114,9 @@ func backgroundContextWithHttpClient(insecureSkipVerify bool) context.Context {
 		oauth2.HTTPClient,
 		&http.Client{
 			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					InsecureSkipVerify: insecureSkipVerify,
+				TLSClientConfig: &tls.Config{ // skipcq: 
+GO-S1020
+					InsecureSkipVerify: insecureSkipVerify, // skipcq: GSC-G402
 				},
 			},
 		},
