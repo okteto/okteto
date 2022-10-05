@@ -40,26 +40,26 @@ const (
 	contextsStoreFile       = "config.json"
 
 	oktetoFolderName = ".okteto"
-	//Activating up started
+	// Activating up started
 	Activating UpState = "activating"
-	//Starting up started the dev pod creation
+	// Starting up started the dev pod creation
 	Starting = "starting"
-	//Attaching up attaching volume
+	// Attaching up attaching volume
 	Attaching = "attaching"
-	//Pulling  up pulling images
+	// Pulling  up pulling images
 	Pulling = "pulling"
-	//Start ingSync up preparing syncthing
+	// StartingSync up preparing syncthing
 	StartingSync = "startingSync"
-	//Synchronize ing up is syncthing
+	// Synchronizing ing up is syncthing
 	Synchronizing = "synchronizing"
-	//Ready up fi nished
+	// Ready up fi nished
 	Ready = "ready"
-	//Fai led up failed
+	// Failed up failed
 	Failed = "failed"
 
 	stateFile string = "okteto.state"
 
-	//OktetoContextVariableName defines the kubeconfig context of okteto commands
+	// OktetoContextVariableName defines the kubeconfig context of okteto commands
 	OktetoContextVariableName = "OKTETO_CONTEXT"
 
 	// OktetoInsecureSkipVerifyVariableName defines the environment variable name used to disable tls verify

@@ -31,7 +31,7 @@ import (
 	"golang.org/x/oauth2"
 )
 
-//Client implementation to connect to Okteto API
+// OktetoClient implementation to connect to Okteto API
 type OktetoClient struct {
 	client *graphql.Client
 
@@ -55,7 +55,7 @@ func (*OktetoClientProvider) Provide() (types.OktetoInterface, error) {
 	return c, err
 }
 
-//NewClient creates a new client to connect with Okteto API
+// NewOktetoClient creates a new client to connect with Okteto API
 func NewOktetoClient() (*OktetoClient, error) {
 	token := Context().Token
 	if token == "" {
@@ -83,7 +83,7 @@ func NewOktetoClient() (*OktetoClient, error) {
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
-//NewClient creates a new client to connect with Okteto API
+// NewOktetoClientFromUrlAndToken creates a new client to connect with Okteto API
 func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 	u, err := parseOktetoURL(url)
 	if err != nil {
@@ -107,7 +107,7 @@ func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
-//NewClient creates a new client to connect with Okteto API
+// NewOktetoClientFromUrl creates a new client to connect with Okteto API
 func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
 	u, err := parseOktetoURL(url)
 	if err != nil {
@@ -137,11 +137,11 @@ func contextWithOauth2HttpClient(ctx context.Context, httpClient *http.Client) c
 
 func insecureHTTPClient() *http.Client {
 	return &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{ // skipcq: GO-S1020
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{ // skipcq: GO-S1020
 				InsecureSkipVerify: true, // skipcq: GSC-G402
-				},
 			},
+		},
 	}
 }
 
