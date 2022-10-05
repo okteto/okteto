@@ -13,7 +13,7 @@ import (
 //
 // dev: reason why not doing pointer cloning is because not safe after init():
 // - https://github.com/golang/go/issues/26013
-// dev: kubernetes project preffered lift vs pointer cloning:
+// dev: kubernetes project preferred lift vs pointer cloning:
 // - https://github.com/kubernetes-retired/go-open-service-broker-client/pull/133
 func DefaultTransport() *http.Transport {
 	return &http.Transport{
