@@ -116,7 +116,8 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
 
-	healthcheckProbe := getSvcProbe(svc)
+	svcHealthchecks := getSvcHealthProbe(svc)
+
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -148,7 +149,8 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 							SecurityContext: translateSecurityContext(svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
-							ReadinessProbe:  healthcheckProbe,
+							ReadinessProbe:  svcHealthchecks.readiness,
+							LivenessProbe:   svcHealthchecks.liveness,
 						},
 					},
 				},
@@ -184,7 +186,7 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
-	healthcheckProbe := getSvcProbe(svc)
+	svcHealthchecks := getSvcHealthProbe(svc)
 
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -223,7 +225,8 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 							VolumeMounts:    translateVolumeMounts(svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
-							ReadinessProbe:  healthcheckProbe,
+							ReadinessProbe:  svcHealthchecks.readiness,
+							LivenessProbe:   svcHealthchecks.liveness,
 						},
 					},
 				},
@@ -237,7 +240,7 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
-	healthcheckProbe := getSvcProbe(svc)
+	svcHealthchecks := getSvcHealthProbe(svc)
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -271,7 +274,8 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 							VolumeMounts:    translateVolumeMounts(svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
-							ReadinessProbe:  healthcheckProbe,
+							ReadinessProbe:  svcHealthchecks.readiness,
+							LivenessProbe:   svcHealthchecks.liveness,
 						},
 					},
 					Volumes: translateVolumes(svc),
@@ -680,7 +684,13 @@ func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 	return result
 }
 
-func getSvcProbe(svc *model.Service) *apiv1.Probe {
+type healthcheckProbes struct {
+	readiness *apiv1.Probe
+	liveness  *apiv1.Probe
+}
+
+func getSvcHealthProbe(svc *model.Service) healthcheckProbes {
+	result := healthcheckProbes{}
 	if svc.Healtcheck != nil {
 		var handler apiv1.ProbeHandler
 		if len(svc.Healtcheck.Test) != 0 {
@@ -697,15 +707,22 @@ func getSvcProbe(svc *model.Service) *apiv1.Probe {
 				},
 			}
 		}
-		return &apiv1.Probe{
+		probe := &apiv1.Probe{
 			ProbeHandler:        handler,
 			TimeoutSeconds:      int32(svc.Healtcheck.Timeout.Seconds()),
 			PeriodSeconds:       int32(svc.Healtcheck.Interval.Seconds()),
 			FailureThreshold:    int32(svc.Healtcheck.Retries),
 			InitialDelaySeconds: int32(svc.Healtcheck.StartPeriod.Seconds()),
 		}
+
+		if svc.Healtcheck.Readiness {
+			result.readiness = probe
+		}
+		if svc.Healtcheck.Liveness {
+			result.liveness = probe
+		}
 	}
-	return nil
+	return result
 }
 
 type updateStrategyGetter interface {

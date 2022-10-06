@@ -113,6 +113,8 @@ type HealthCheck struct {
 	Retries     int             `yaml:"retries,omitempty"`
 	StartPeriod time.Duration   `yaml:"start_period,omitempty"`
 	Disable     bool            `yaml:"disable,omitempty"`
+	Liveness    bool            `yaml:"x-okteto-liveness,omitempty"`
+	Readiness   bool            `default:"true" yaml:"x-okteto-readiness,omitempty"`
 }
 
 type HTTPHealtcheck struct {
