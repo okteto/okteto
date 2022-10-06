@@ -50,7 +50,7 @@ func (*LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoU
 		if err != nil && oktetoErrors.IsX509(err) {
 			return nil, oktetoErrors.UserError{
 				E:    err,
-				Hint: "Add the flag \"--insecure-skip-tls-verify\" to connect to an instance with self-signed certificates",
+				Hint: "Add the flag '--insecure-skip-tls-verify' to connect to an instance with self-signed certificates",
 			}
 		}
 		if err != nil {
