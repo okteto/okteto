@@ -197,7 +197,7 @@ func translateAPIErr(err error) error {
 		if strings.Contains(err.Error(), "x509") {
 			return oktetoErrors.UserError{
 				E:    err,
-				Hint: "Add the flag \"--insecure-skip-tls-verify\" to connect to an instance with self-signed certificates",
+				Hint: "Add the flag '--insecure-skip-tls-verify' to connect to an instance with self-signed certificates",
 			}
 		}
 
