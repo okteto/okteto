@@ -46,6 +46,13 @@ func (*LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoU
 	if token == "" {
 		oktetoLog.Infof("authenticating with browser code")
 		user, err := WithBrowser(ctx, oktetoURL)
+		// If there is a TLS error, return the raw error
+		if oktetoErrors.IsX509(err) {
+			return nil, oktetoErrors.UserError{
+				E:    err,
+				Hint: oktetoErrors.ErrX509Hint,
+			}
+		}
 		if err != nil {
 			return nil, oktetoErrors.UserError{
 				E:    fmt.Errorf("couldn't authenticate to okteto cluster: %w", err),

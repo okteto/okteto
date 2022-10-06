@@ -18,13 +18,16 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
-func clientOptions(ref name.Reference) remote.Option {
+func clientOptions(ref name.Reference) []remote.Option {
 	registry := ref.Context().RegistryStr()
 	oktetoLog.Debugf("calling registry %s", registry)
+
+	var options []remote.Option
 
 	okRegistry := okteto.Context().Registry
 	if okRegistry == registry {
@@ -35,9 +38,23 @@ func clientOptions(ref name.Reference) remote.Option {
 			Username: username,
 			Password: password,
 		}
-		return remote.WithAuth(authenticator)
+
+		options = append(options, remote.WithAuth(authenticator))
+	} else {
+		options = append(options, remote.WithAuthFromKeychain(authn.DefaultKeychain))
 	}
-	return remote.WithAuthFromKeychain(authn.DefaultKeychain)
+
+	transport := oktetoHttp.DefaultTransport()
+
+	if okteto.IsInsecureSkipTLSVerifyPolicy() {
+		transport = oktetoHttp.InsecureTransport()
+	} else if cert, err := okteto.GetContextCertificate(); err == nil {
+		transport = oktetoHttp.StrictSSLTransport(cert)
+	}
+
+	options = append(options, remote.WithTransport(transport))
+
+	return options
 }
 
 func digestForReference(reference string) (string, error) {
@@ -48,7 +65,7 @@ func digestForReference(reference string) (string, error) {
 
 	options := clientOptions(ref)
 
-	img, err := remote.Get(ref, options)
+	img, err := remote.Get(ref, options...)
 	if err != nil {
 		return "", err
 	}
@@ -64,7 +81,7 @@ func imageForReference(reference string) (v1.Image, error) {
 
 	options := clientOptions(ref)
 
-	return remote.Image(ref, options)
+	return remote.Image(ref, options...)
 }
 
 // GetReferecenceEnvs returns the values to setup the image environment variables
