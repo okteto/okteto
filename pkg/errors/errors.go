@@ -181,6 +181,9 @@ var (
 
 	// ErrCouldNotInferAnyManifest is raised when we can't detect any manifest to load
 	ErrCouldNotInferAnyManifest = errors.New("couldn't detect any manifest (okteto manifest, pipeline, compose, helm chart, k8s manifest)")
+
+	// ErrX509Hint should be included within a UserError.Hint when IsX509() return true
+	ErrX509Hint = "Add the flag '--insecure-skip-tls-verify' to connect to an instance with self-signed certificates"
 )
 
 // IsForbidden raised if the Okteto API returns 401

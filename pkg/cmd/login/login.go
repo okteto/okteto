@@ -47,10 +47,10 @@ func (*LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoU
 		oktetoLog.Infof("authenticating with browser code")
 		user, err := WithBrowser(ctx, oktetoURL)
 		// If there is a TLS error, return the raw error
-		if err != nil && oktetoErrors.IsX509(err) {
+		if oktetoErrors.IsX509(err) {
 			return nil, oktetoErrors.UserError{
 				E:    err,
-				Hint: "Add the flag '--insecure-skip-tls-verify' to connect to an instance with self-signed certificates",
+				Hint: oktetoErrors.ErrX509Hint,
 			}
 		}
 		if err != nil {

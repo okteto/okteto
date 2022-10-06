@@ -194,10 +194,10 @@ func translateAPIErr(err error) error {
 		return fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")
 
 	default:
-		if strings.Contains(err.Error(), "x509") {
+		if oktetoErrors.IsX509(err) {
 			return oktetoErrors.UserError{
 				E:    err,
-				Hint: "Add the flag '--insecure-skip-tls-verify' to connect to an instance with self-signed certificates",
+				Hint: oktetoErrors.ErrX509Hint,
 			}
 		}
 

@@ -21,7 +21,6 @@ import (
 
 // Context points okteto to a cluster.
 func Context() *cobra.Command {
-	var insecureSkipTlsVerify bool
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{
 		Use:     "context",
@@ -40,7 +39,7 @@ To set your default context, run the ` + "`okteto context`" + ` command:
 This will prompt you to select one of your existing contexts or to create a new one.
 `,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			okteto.SetInsecureSkipTLSVerifyPolicy(insecureSkipTlsVerify)
+			okteto.SetInsecureSkipTLSVerifyPolicy(ctxOptions.InsecureSkipTlsVerify)
 		},
 		RunE: Use().RunE,
 	}
@@ -54,7 +53,7 @@ This will prompt you to select one of your existing contexts or to create a new 
 	cmd.AddCommand(UpdateKubeconfigCMD())
 	cmd.AddCommand(UseNamespace())
 
-	cmd.PersistentFlags().BoolVarP(&insecureSkipTlsVerify, "insecure-skip-tls-verify", "", false, " If enabled, the server's certificate will not be checked for validity. This will make your connections insecure")
+	cmd.PersistentFlags().BoolVarP(&ctxOptions.InsecureSkipTlsVerify, "insecure-skip-tls-verify", "", false, " If enabled, the server's certificate will not be checked for validity. This will make your connections insecure")
 	cmd.Flags().StringVarP(&ctxOptions.Token, "token", "t", "", "API token for authentication")
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
 	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")
