@@ -183,7 +183,7 @@ var (
 	ErrCouldNotInferAnyManifest = errors.New("couldn't detect any manifest (okteto manifest, pipeline, compose, helm chart, k8s manifest)")
 
 	// ErrX509Hint should be included within a UserError.Hint when IsX509() return true
-	ErrX509Hint = "Add the flag '--insecure-skip-tls-verify' to connect to an instance with self-signed certificates"
+	ErrX509Hint = "Add the flag '--insecure-skip-tls-verify' to skip certificate verification.\n    Follow this link to know more about configuring your own certificates with Okteto:\n    https://www.okteto.com/docs/self-hosted/administration/certificates/"
 )
 
 // IsForbidden raised if the Okteto API returns 401
