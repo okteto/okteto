@@ -670,6 +670,12 @@ func (b *ManifestBuild) validate() error {
 		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(cycle[:len(cycle)-1], ", "), cycle[len(cycle)-1])
 		return fmt.Errorf("manifest validation failed: cyclic dependendecy found between %s", svcsDependents)
 	}
+
+	for service, build := range *b {
+		if build.Image == "" {
+			return fmt.Errorf("error getting the image name for the service '%s'. Please update the manifest to include an image field in the build section when using a cluster that doesn't have Okteto installed", service)
+		}
+	}
 	return nil
 }
 
