@@ -170,7 +170,14 @@ func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) er
 		}
 
 		if ctxResource != nil {
+			if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
+				return err
+			}
 			ctxOpts.Namespace = ctxResource.Namespace
+
+			if err := ctxResource.UpdateContext(options.K8sContext); err != nil {
+				return err
+			}
 			ctxOpts.Context = ctxResource.Context
 		}
 	}
