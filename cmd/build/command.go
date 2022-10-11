@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -164,19 +165,14 @@ func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) er
 	// information cannot be extracted so call to GetContextResource is skkiped.
 	if err := validateDockerfile(options.File); err != nil {
 		ctxResource, err := model.GetContextResource(options.File)
-		if err != nil {
+		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return err
 		}
 
-		if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
-			return err
+		if ctxResource != nil {
+			ctxOpts.Namespace = ctxResource.Namespace
+			ctxOpts.Context = ctxResource.Context
 		}
-		ctxOpts.Namespace = ctxResource.Namespace
-
-		if err := ctxResource.UpdateContext(options.K8sContext); err != nil {
-			return err
-		}
-		ctxOpts.Context = ctxResource.Context
 	}
 
 	if okteto.IsOkteto() && ctxOpts.Namespace != "" {

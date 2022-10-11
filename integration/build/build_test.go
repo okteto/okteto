@@ -130,6 +130,17 @@ func TestBuildCommandV1(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedImage))
+
+	options = &commands.BuildOptions{
+		Workdir:    dir,
+		Tag:        "okteto.dev/test:okteto",
+		Namespace:  "",
+		Token:      token,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
+	require.True(t, isImageBuilt(expectedImage))
+
 }
 
 // TestBuildCommandV2 tests the following scenario:
