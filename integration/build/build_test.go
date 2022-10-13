@@ -130,8 +130,30 @@ func TestBuildCommandV1(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedImage))
+}
 
-	options = &commands.BuildOptions{
+func TestBuildCommandV1UsingInferredDockerfile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	require.NoError(t, createDockerfile(dir))
+
+	testNamespace := integration.GetTestNamespace("TestBuildCommandV1UsingInferredDockerfile", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+
+	expectedImage := fmt.Sprintf("%s/%s/test:okteto", okteto.Context().Registry, testNamespace)
+	require.False(t, isImageBuilt(expectedImage))
+
+	options := &commands.BuildOptions{
 		Workdir:    dir,
 		Tag:        "okteto.dev/test:okteto",
 		Namespace:  "",
@@ -140,7 +162,6 @@ func TestBuildCommandV1(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
 	require.True(t, isImageBuilt(expectedImage))
-
 }
 
 // TestBuildCommandV2 tests the following scenario:
