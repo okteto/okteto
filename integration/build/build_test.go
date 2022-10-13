@@ -132,12 +132,14 @@ func TestBuildCommandV1(t *testing.T) {
 	require.True(t, isImageBuilt(expectedImage))
 }
 
-func TestBuildCommandV1UsingInferredDockerfile(t *testing.T) {
+// TestBuildInferredDockerfile tests the following scenario:
+// - building having a no manifest v2 in the folder but a Dockerfile
+func TestBuildInferredDockerfile(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	require.NoError(t, createDockerfile(dir))
 
-	testNamespace := integration.GetTestNamespace("TestBuildCommandV1UsingInferredDockerfile", user)
+	testNamespace := integration.GetTestNamespace("TestBuildInferredDockerfile", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
