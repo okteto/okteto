@@ -565,7 +565,7 @@ func (up *upContext) activateLoop() {
 	iter := 0
 	defer t.Stop()
 
-	defer config.DeleteStateFile(up.Dev)
+	defer config.DeleteStateFile(up.Dev.Name, up.Dev.Namespace)
 
 	for {
 		if up.isRetry || isTransientError {

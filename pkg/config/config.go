@@ -23,7 +23,6 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto/constants"
 	"gopkg.in/yaml.v2"
 )
@@ -125,16 +124,16 @@ func GetAppHome(namespace, name string) string {
 }
 
 // UpdateStateFile updates the state file of a given dev environment
-func UpdateStateFile(dev *model.Dev, state UpState) error {
-	if dev.Namespace == "" {
+func UpdateStateFile(devName, devNamespace string, state UpState) error {
+	if devNamespace == "" {
 		return fmt.Errorf("can't update state file, namespace is empty")
 	}
 
-	if dev.Name == "" {
+	if devName == "" {
 		return fmt.Errorf("can't update state file, name is empty")
 	}
 
-	s := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
+	s := filepath.Join(GetAppHome(devNamespace, devName), stateFile)
 	if err := os.WriteFile(s, []byte(state), 0600); err != nil {
 		return fmt.Errorf("failed to update state file: %s", err)
 	}
@@ -143,31 +142,31 @@ func UpdateStateFile(dev *model.Dev, state UpState) error {
 }
 
 // DeleteStateFile deletes the state file of a given dev environment
-func DeleteStateFile(dev *model.Dev) error {
-	if dev.Namespace == "" {
+func DeleteStateFile(devName, devNamespace string) error {
+	if devNamespace == "" {
 		return fmt.Errorf("can't delete state file, namespace is empty")
 	}
 
-	if dev.Name == "" {
+	if devName == "" {
 		return fmt.Errorf("can't delete state file, name is empty")
 	}
 
-	s := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
+	s := filepath.Join(GetAppHome(devNamespace, devName), stateFile)
 	return os.Remove(s)
 }
 
 // GetState returns the state of a given dev environment
-func GetState(dev *model.Dev) (UpState, error) {
+func GetState(devName, devNamespace string) (UpState, error) {
 	var result UpState
-	if dev.Namespace == "" {
+	if devNamespace == "" {
 		return Failed, fmt.Errorf("can't update state file, namespace is empty")
 	}
 
-	if dev.Name == "" {
+	if devName == "" {
 		return Failed, fmt.Errorf("can't update state file, name is empty")
 	}
 
-	statePath := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
+	statePath := filepath.Join(GetAppHome(devNamespace, devName), stateFile)
 	stateBytes, err := os.ReadFile(statePath)
 	if err != nil {
 		oktetoLog.Infof("error reading state file: %s", err.Error())

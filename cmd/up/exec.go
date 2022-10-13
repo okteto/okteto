@@ -59,7 +59,7 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 
 func (up *upContext) runCommand(ctx context.Context, cmd []string) error {
 	oktetoLog.Infof("starting remote command")
-	if err := config.UpdateStateFile(up.Dev, config.Ready); err != nil {
+	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Ready); err != nil {
 		return err
 	}
 

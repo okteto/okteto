@@ -52,7 +52,7 @@ func (up *upContext) sync(ctx context.Context) error {
 	}
 
 	start := time.Now()
-	if err := config.UpdateStateFile(up.Dev, config.Synchronizing); err != nil {
+	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Synchronizing); err != nil {
 		return err
 	}
 
@@ -91,7 +91,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	if err := config.UpdateStateFile(up.Dev, config.StartingSync); err != nil {
+	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.StartingSync); err != nil {
 		return err
 	}
 
