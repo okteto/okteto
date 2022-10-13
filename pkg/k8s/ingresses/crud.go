@@ -43,7 +43,7 @@ type Ingress struct {
 	V1Beta1 *networkingv1beta1.Ingress
 }
 
-func GetClient(ctx context.Context, c kubernetes.Interface) (*Client, error) {
+func GetClient(c kubernetes.Interface) (*Client, error) {
 	rList, err := c.Discovery().ServerResourcesForGroupVersion("networking.k8s.io/v1")
 	if err != nil {
 		return nil, err

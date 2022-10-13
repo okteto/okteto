@@ -60,6 +60,12 @@ func Auth(ctx context.Context, code, url string) (*types.User, error) {
 		if IsErrGithubMissingBusinessEmail(err) {
 			return nil, err
 		}
+
+		// If there is a TLS error, return the raw error
+		if err != nil && oktetoErrors.IsX509(err) {
+			return nil, err
+		}
+
 		return nil, fmt.Errorf("authentication error, please try again")
 	}
 

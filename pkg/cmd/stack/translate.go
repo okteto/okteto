@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,6 +30,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -48,6 +50,20 @@ const (
 	destroyingStatus  = "destroying"
 
 	pvcName = "pvc"
+)
+
+// +enum
+type updateStrategy string
+
+const (
+	// rollingUpdateStrategy represent a rolling update strategy
+	rollingUpdateStrategy updateStrategy = "rolling"
+
+	// recreateUpdateStrategy represents a recreate update strategy
+	recreateUpdateStrategy updateStrategy = "recreate"
+
+	// onDeleteUpdateStrategy represents a recreate update strategy
+	onDeleteUpdateStrategy updateStrategy = "on-delete"
 )
 
 func buildStackImages(ctx context.Context, s *model.Stack, options *StackDeployOptions) error {
@@ -100,7 +116,8 @@ func translateConfigMap(s *model.Stack) *apiv1.ConfigMap {
 func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 	svc := s.Services[svcName]
 
-	healthcheckProbe := getSvcProbe(svc)
+	svcHealthchecks := getSvcHealthProbe(svc)
+
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -113,9 +130,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: translateLabelSelector(svcName, s),
 			},
-			Strategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RecreateDeploymentStrategyType,
-			},
+			Strategy: getDeploymentUpdateStrategy(svc),
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      translateLabels(svcName, s),
@@ -134,7 +149,8 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 							SecurityContext: translateSecurityContext(svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
-							ReadinessProbe:  healthcheckProbe,
+							ReadinessProbe:  svcHealthchecks.readiness,
+							LivenessProbe:   svcHealthchecks.liveness,
 						},
 					},
 				},
@@ -170,7 +186,8 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
-	healthcheckProbe := getSvcProbe(svc)
+	svcHealthchecks := getSvcHealthProbe(svc)
+
 	return &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -184,7 +201,8 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: translateLabelSelector(svcName, s),
 			},
-			ServiceName: svcName,
+			UpdateStrategy: getStatefulsetUpdateStrategy(svc),
+			ServiceName:    svcName,
 			Template: apiv1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      translateLabels(svcName, s),
@@ -207,7 +225,8 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 							VolumeMounts:    translateVolumeMounts(svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
-							ReadinessProbe:  healthcheckProbe,
+							ReadinessProbe:  svcHealthchecks.readiness,
+							LivenessProbe:   svcHealthchecks.liveness,
 						},
 					},
 				},
@@ -221,7 +240,7 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 	svc := s.Services[svcName]
 
 	initContainers := getInitContainers(svcName, s)
-	healthcheckProbe := getSvcProbe(svc)
+	svcHealthchecks := getSvcHealthProbe(svc)
 	return &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        svcName,
@@ -255,7 +274,8 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 							VolumeMounts:    translateVolumeMounts(svc),
 							Resources:       translateResources(svc),
 							WorkingDir:      svc.Workdir,
-							ReadinessProbe:  healthcheckProbe,
+							ReadinessProbe:  svcHealthchecks.readiness,
+							LivenessProbe:   svcHealthchecks.liveness,
 						},
 					},
 					Volumes: translateVolumes(svc),
@@ -299,8 +319,11 @@ func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *ap
 		ImagePullPolicy: apiv1.PullIfNotPresent,
 		VolumeMounts:    []apiv1.VolumeMount{},
 	}
-	command := "echo initializing volume..."
+
+	var initContainerCmd string
 	for idx, v := range svc.Volumes {
+		volumeClaimName := getVolumeClaimName(&v)
+		displayVolumeInfoCmd := fmt.Sprintf(`echo initializing volume %s with content of the image %s...`, volumeClaimName, svc.Image)
 		subpath := fmt.Sprintf("data-%d", idx)
 		if v.LocalPath != "" {
 			subpath = v.LocalPath
@@ -308,15 +331,23 @@ func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *ap
 		c.VolumeMounts = append(
 			c.VolumeMounts,
 			apiv1.VolumeMount{
-				Name:      getVolumeClaimName(&v),
+				Name:      volumeClaimName,
 				MountPath: fmt.Sprintf("/init-volume-%d", idx),
 				SubPath:   subpath,
 			},
 		)
-		command = fmt.Sprintf("%s && (cp -Rv %s/. /init-volume-%d || true)", command, v.RemotePath, idx)
+
+		copyVolumeCmd := fmt.Sprintf("cp -Rv %s/. /init-volume-%d 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image '%s' does not have any content in \\1/g'", v.RemotePath, idx, svc.Image)
+		volumeInitCmd := fmt.Sprintf("%s && (%s || true)", displayVolumeInfoCmd, copyVolumeCmd)
+
+		if initContainerCmd != "" {
+			initContainerCmd = fmt.Sprintf("%s &&", initContainerCmd)
+		}
+
+		initContainerCmd = strings.TrimSpace(fmt.Sprintf("%s %s", initContainerCmd, volumeInitCmd))
 	}
 	if len(c.VolumeMounts) != 0 {
-		c.Command = []string{"sh", "-c", command}
+		c.Command = []string{"sh", "-c", initContainerCmd}
 		return c
 	}
 	return nil
@@ -653,7 +684,13 @@ func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 	return result
 }
 
-func getSvcProbe(svc *model.Service) *apiv1.Probe {
+type healthcheckProbes struct {
+	readiness *apiv1.Probe
+	liveness  *apiv1.Probe
+}
+
+func getSvcHealthProbe(svc *model.Service) healthcheckProbes {
+	result := healthcheckProbes{}
 	if svc.Healtcheck != nil {
 		var handler apiv1.ProbeHandler
 		if len(svc.Healtcheck.Test) != 0 {
@@ -670,13 +707,107 @@ func getSvcProbe(svc *model.Service) *apiv1.Probe {
 				},
 			}
 		}
-		return &apiv1.Probe{
+		probe := &apiv1.Probe{
 			ProbeHandler:        handler,
 			TimeoutSeconds:      int32(svc.Healtcheck.Timeout.Seconds()),
 			PeriodSeconds:       int32(svc.Healtcheck.Interval.Seconds()),
 			FailureThreshold:    int32(svc.Healtcheck.Retries),
 			InitialDelaySeconds: int32(svc.Healtcheck.StartPeriod.Seconds()),
 		}
+
+		if svc.Healtcheck.Readiness {
+			result.readiness = probe
+		}
+		if svc.Healtcheck.Liveness {
+			result.liveness = probe
+		}
+	}
+	return result
+}
+
+type updateStrategyGetter interface {
+	validate(updateStrategy) error
+	getDefault() updateStrategy
+}
+
+type deploymentStrategyGetter struct{}
+
+func (*deploymentStrategyGetter) validate(updateStrategy updateStrategy) error {
+	if updateStrategy != rollingUpdateStrategy && updateStrategy != recreateUpdateStrategy {
+		return fmt.Errorf("invalid deployment update strategy: '%s'", updateStrategy)
 	}
 	return nil
+}
+
+func (*deploymentStrategyGetter) getDefault() updateStrategy {
+	return recreateUpdateStrategy
+}
+
+type statefulSetStrategyGetter struct{}
+
+func (*statefulSetStrategyGetter) validate(updateStrategy updateStrategy) error {
+	if updateStrategy != rollingUpdateStrategy && updateStrategy != onDeleteUpdateStrategy {
+		return fmt.Errorf("invalid statefulset update strategy: '%s'", updateStrategy)
+	}
+	return nil
+}
+
+func (*statefulSetStrategyGetter) getDefault() updateStrategy {
+	return rollingUpdateStrategy
+}
+
+func getDeploymentUpdateStrategy(svc *model.Service) appsv1.DeploymentStrategy {
+	result := getUpdateStrategy(svc, &deploymentStrategyGetter{})
+	if result == rollingUpdateStrategy {
+		return appsv1.DeploymentStrategy{
+			Type: appsv1.RollingUpdateDeploymentStrategyType,
+		}
+	}
+	return appsv1.DeploymentStrategy{
+		Type: appsv1.RecreateDeploymentStrategyType,
+	}
+}
+
+func getStatefulsetUpdateStrategy(svc *model.Service) appsv1.StatefulSetUpdateStrategy {
+	result := getUpdateStrategy(svc, &statefulSetStrategyGetter{})
+	if result == rollingUpdateStrategy {
+		return appsv1.StatefulSetUpdateStrategy{
+			Type: appsv1.RollingUpdateStatefulSetStrategyType,
+		}
+	}
+	return appsv1.StatefulSetUpdateStrategy{
+		Type: appsv1.OnDeleteStatefulSetStrategyType,
+	}
+}
+
+func getUpdateStrategy(svc *model.Service, strategy updateStrategyGetter) updateStrategy {
+	if result := getUpdateStrategyByAnnotation(svc); result != "" {
+		err := strategy.validate(result)
+		if err == nil {
+			return result
+		}
+		oktetoLog.Debugf("invalid strategy: %w", err)
+	}
+	if result := getUpdateStrategyByEnvVar(); result != "" {
+		err := strategy.validate(result)
+		if err == nil {
+			return result
+		}
+		oktetoLog.Debugf("invalid strategy: %w", err)
+	}
+	return strategy.getDefault()
+}
+
+func getUpdateStrategyByAnnotation(svc *model.Service) updateStrategy {
+	if v, ok := svc.Annotations[model.OktetoComposeUpdateStrategyAnnotation]; ok {
+		return updateStrategy(v)
+	}
+	return ""
+}
+
+func getUpdateStrategyByEnvVar() updateStrategy {
+	if v := os.Getenv(model.OktetoComposeUpdateStrategyEnvVar); v != "" {
+		return updateStrategy(v)
+	}
+	return ""
 }

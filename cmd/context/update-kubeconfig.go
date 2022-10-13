@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// UpdateKubeconfig all contexts managed by okteto
+// UpdateKubeconfigCMD all contexts managed by okteto
 func UpdateKubeconfigCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Hidden: true,
@@ -38,7 +38,7 @@ func UpdateKubeconfigCMD() *cobra.Command {
 				return err
 			}
 
-			if err := ExecuteUpdateKubeconfig(ctx); err != nil {
+			if err := ExecuteUpdateKubeconfig(); err != nil {
 				return err
 			}
 
@@ -49,7 +49,7 @@ func UpdateKubeconfigCMD() *cobra.Command {
 	return cmd
 }
 
-func ExecuteUpdateKubeconfig(ctx context.Context) error {
+func ExecuteUpdateKubeconfig() error {
 	if err := kubeconfig.Write(okteto.Context().Cfg, config.GetKubeconfigPath()[0]); err != nil {
 		return err
 	}

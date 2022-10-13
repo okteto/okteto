@@ -322,6 +322,12 @@ func (c ContextCommand) getUserContext(ctx context.Context) (*types.UserContext,
 			}
 			return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name)
 		}
+
+		// If there is a TLS error, don't continue the loop and return the raw error
+		if err != nil && oktetoErrors.IsX509(err) {
+			return nil, err
+		}
+
 		if err != nil {
 			oktetoLog.Info(err)
 			retries++

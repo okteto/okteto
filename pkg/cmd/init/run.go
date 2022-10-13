@@ -46,14 +46,14 @@ const (
 )
 
 // GetDevDefaultsFromImage sets dev defaults from a image
-func GetDevDefaultsFromImage(ctx context.Context, app apps.App) (*registry.ImageConfig, error) {
+func GetDevDefaultsFromImage(app apps.App) (*registry.ImageConfig, error) {
 	image := app.PodSpec().Containers[0].Image
 	return registry.GetImageConfigFromImage(image)
 
 }
 
 // SetImage sets dev defaults from a running app
-func SetImage(ctx context.Context, dev *model.Dev, language, path string) error {
+func SetImage(dev *model.Dev, language, path string) error {
 	language = linguist.NormalizeLanguage(language)
 	updateImageFromPod := false
 	switch language {

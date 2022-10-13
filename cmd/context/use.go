@@ -72,6 +72,7 @@ Or a Kubernetes context:
 			err := NewContextCommand().Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
 			if err != nil {
+				cmd.SilenceUsage = true
 				return err
 			}
 

@@ -46,8 +46,18 @@ func (*LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoU
 	if token == "" {
 		oktetoLog.Infof("authenticating with browser code")
 		user, err := WithBrowser(ctx, oktetoURL)
+		// If there is a TLS error, return the raw error
+		if oktetoErrors.IsX509(err) {
+			return nil, oktetoErrors.UserError{
+				E:    err,
+				Hint: oktetoErrors.ErrX509Hint,
+			}
+		}
 		if err != nil {
-			return nil, err
+			return nil, oktetoErrors.UserError{
+				E:    fmt.Errorf("couldn't authenticate to okteto cluster: %w", err),
+				Hint: "Try to set the context using the 'token' flag: https://www.okteto.com/docs/reference/cli/#context",
+			}
 		}
 		if user.New {
 			analytics.TrackSignup(true, user.ID)
@@ -63,8 +73,7 @@ func (*LoginController) AuthenticateToOktetoCluster(ctx context.Context, oktetoU
 func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 	h, err := StartWithBrowser(ctx, oktetoURL)
 	if err != nil {
-		oktetoLog.Infof("couldn't start the login process: %s", err)
-		return nil, fmt.Errorf("couldn't start the login process, please try again")
+		return nil, fmt.Errorf("couldn't start the login process: %w", err)
 	}
 
 	authorizationURL, err := h.AuthorizationURL()

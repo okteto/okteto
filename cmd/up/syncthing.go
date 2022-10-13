@@ -95,7 +95,7 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 		return err
 	}
 
-	if err := up.Sy.Run(ctx); err != nil {
+	if err := up.Sy.Run(); err != nil {
 		return err
 	}
 
@@ -164,7 +164,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 		quit <- true
 	}()
 
-	if err := up.Sy.WaitForCompletion(ctx, up.Dev, reporter); err != nil {
+	if err := up.Sy.WaitForCompletion(ctx, reporter); err != nil {
 		analytics.TrackSyncError()
 		switch err {
 		case oktetoErrors.ErrLostSyncthing:

@@ -56,7 +56,7 @@ func Test_renderProgressBar(t *testing.T) {
 
 }
 
-func Test_renderProgressBarFuzz(t *testing.T) {
+func Test_renderProgressBarFuzz(_ *testing.T) {
 	for i := 0.0; i < 100.0; i = i + 0.01 {
 		RenderProgressBar("", i, 0.35)
 	}

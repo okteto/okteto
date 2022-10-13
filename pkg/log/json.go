@@ -45,7 +45,7 @@ type JSONLogFormat struct {
 }
 
 // Format formats the message
-func (f *JSONLogFormat) Format(entry *logrus.Entry) ([]byte, error) {
+func (*JSONLogFormat) Format(entry *logrus.Entry) ([]byte, error) {
 	level := strings.ToLower(entry.Level.String())
 	if entry.Level == logrus.WarnLevel {
 		level = "info"
@@ -154,7 +154,7 @@ func (w *JSONWriter) Information(format string, args ...interface{}) {
 }
 
 // Question prints a message with the question symbol first, and the text in magenta
-func (*JSONWriter) Question(format string, args ...interface{}) error {
+func (*JSONWriter) Question(_ string, _ ...interface{}) error {
 	return fmt.Errorf("can't ask questions on json mode")
 }
 

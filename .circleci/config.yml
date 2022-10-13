@@ -167,8 +167,7 @@ jobs:
             sha=$(cat ./artifacts/bin/okteto-Darwin-x86_64.sha256 | awk '{print $1}')
             sha_arm=$(cat ./artifacts/bin/okteto-Darwin-arm64.sha256 | awk '{print $1}')
             ./scripts/update_homebrew_formula.sh 0.0.1 $sha $sha_arm
-      - setup_remote_docker:
-          version: '19.03.8'
+      - setup_remote_docker
       - run:
           name: Build Docker container
           command: |
@@ -258,16 +257,14 @@ jobs:
     executor: golang-ci
     steps:
       - checkout
-      - setup_remote_docker:
-          version: '19.03.8'
+      - setup_remote_docker
       - run: ./scripts/ci/push-image.sh "$CIRCLE_TAG"
 
   push-image-latest:
     executor: golang-ci
     steps:
       - checkout
-      - setup_remote_docker:
-          version: '19.03.8'
+      - setup_remote_docker
       - run: ./scripts/ci/push-image.sh latest
 
   release-external:
@@ -277,8 +274,7 @@ jobs:
       - attach_workspace:
           at: ./artifacts
       - run: *init-gcloud
-      - setup_remote_docker:
-          version: '19.03.8'
+      - setup_remote_docker
       - add_ssh_keys:
           fingerprints:
             - f7:81:9f:b4:31:3a:4d:46:ce:cf:54:a2:70:46:5a:df

@@ -102,7 +102,6 @@ func main() {
 			oktetoLog.SetLevel(logLevel)
 			oktetoLog.SetOutputFormat(outputMode)
 			oktetoLog.Infof("started %s", strings.Join(os.Args, " "))
-
 		},
 		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
 			oktetoLog.Infof("finished %s", strings.Join(os.Args, " "))

@@ -24,6 +24,10 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const (
+	defaultRetries = 5
+)
+
 type pool struct {
 	ka      time.Duration
 	client  *ssh.Client
@@ -109,7 +113,7 @@ func (p *pool) getListener(address string) (net.Listener, error) {
 }
 
 func getTCPConnection(ctx context.Context, serverAddr string, keepAlive time.Duration) (net.Conn, error) {
-	c, err := getConn(ctx, serverAddr, 3)
+	c, err := getConn(ctx, serverAddr, defaultRetries)
 	if err != nil {
 		return nil, err
 	}
@@ -125,10 +129,10 @@ func getTCPConnection(ctx context.Context, serverAddr string, keepAlive time.Dur
 	return c, nil
 }
 
-func getConn(ctx context.Context, serverAddr string, maxRetries int) (net.Conn, error) {
+func getConn(ctx context.Context, serverAddr string, retries int) (net.Conn, error) {
 	var lastErr error
 	t := time.NewTicker(100 * time.Millisecond)
-	for i := 0; i < 5; i++ {
+	for i := 0; i < retries; i++ {
 		d := net.Dialer{}
 		c, err := d.DialContext(ctx, "tcp", serverAddr)
 		if err == nil {

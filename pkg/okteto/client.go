@@ -20,8 +20,10 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto/constants"
 	"github.com/okteto/okteto/pkg/types"
@@ -40,6 +42,9 @@ type OktetoClient struct {
 }
 
 type OktetoClientProvider struct{}
+
+var insecureSkipTLSVerify bool
+var strictTLSOnce sync.Once
 
 func NewOktetoClientProvider() *OktetoClientProvider {
 	return &OktetoClientProvider{}
@@ -68,7 +73,18 @@ func NewOktetoClient() (*OktetoClient, error) {
 		&oauth2.Token{AccessToken: token,
 			TokenType: "Bearer"},
 	)
-	httpClient := oauth2.NewClient(context.Background(), src)
+
+	ctxHttpClient := http.DefaultClient
+
+	if insecureSkipTLSVerify {
+		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
+	} else if cert, err := GetContextCertificate(); err == nil {
+		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
+	}
+
+	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
+
+	httpClient := oauth2.NewClient(ctx, src)
 
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
@@ -84,7 +100,18 @@ func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 		&oauth2.Token{AccessToken: token,
 			TokenType: "Bearer"},
 	)
-	httpClient := oauth2.NewClient(context.Background(), src)
+
+	ctxHttpClient := http.DefaultClient
+
+	if insecureSkipTLSVerify {
+		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
+	} else if cert, err := GetContextCertificate(); err == nil {
+		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
+	}
+
+	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
+
+	httpClient := oauth2.NewClient(ctx, src)
 
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
@@ -96,9 +123,28 @@ func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
 		return nil, err
 	}
 
-	httpClient := oauth2.NewClient(context.Background(), nil)
+	ctxHttpClient := http.DefaultClient
+
+	if insecureSkipTLSVerify {
+		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
+	} else if cert, err := GetContextCertificate(); err == nil {
+		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
+	}
+
+	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
+
+	httpClient := oauth2.NewClient(ctx, nil)
 
 	return newOktetoClientFromGraphqlClient(u, httpClient)
+}
+
+// contextWithOauth2HttpClient returns a context.Context with a value of type oauth2.HTTPClient so oauth2.NewClient() can be bootstrapped with a custom http.Client
+func contextWithOauth2HttpClient(ctx context.Context, httpClient *http.Client) context.Context {
+	return context.WithValue(
+		ctx,
+		oauth2.HTTPClient,
+		httpClient,
+	)
 }
 
 func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*OktetoClient, error) {
@@ -148,6 +194,13 @@ func translateAPIErr(err error) error {
 		return fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")
 
 	default:
+		if oktetoErrors.IsX509(err) {
+			return oktetoErrors.UserError{
+				E:    err,
+				Hint: oktetoErrors.ErrX509Hint,
+			}
+		}
+
 		oktetoLog.Infof("Unrecognized API error: %s", err)
 		return fmt.Errorf(e)
 	}
@@ -229,4 +282,16 @@ func (c *OktetoClient) Pipeline() types.PipelineInterface {
 // User retrieves the UserClient
 func (c *OktetoClient) User() types.UserInterface {
 	return c.user
+}
+
+func SetInsecureSkipTLSVerifyPolicy(isInsecure bool) {
+	oktetoLog.Debugf("insecure mode: %t", isInsecure)
+	if isInsecure {
+		oktetoLog.Warning("Insecure mode enabled")
+	}
+	insecureSkipTLSVerify = isInsecure
+}
+
+func IsInsecureSkipTLSVerifyPolicy() bool {
+	return insecureSkipTLSVerify
 }

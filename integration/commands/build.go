@@ -31,6 +31,7 @@ type BuildOptions struct {
 	Namespace    string
 	OktetoHome   string
 	Token        string
+	NoCache      bool
 }
 
 // RunOktetoBuild runs an okteto build command
@@ -62,6 +63,10 @@ func RunOktetoBuild(oktetoPath string, buildOptions *BuildOptions) error {
 	}
 	if buildOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, buildOptions.Token))
+	}
+
+	if buildOptions.NoCache {
+		cmd.Args = append(cmd.Args, "--no-cache")
 	}
 
 	o, err := cmd.CombinedOutput()

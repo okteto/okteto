@@ -55,7 +55,6 @@ type fakeDestroyer struct {
 	destroyedVolumes bool
 	err              error
 	errOnVolumes     error
-	configMapHandler configMapHandler
 }
 
 type fakeSecretHandler struct {

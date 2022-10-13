@@ -67,7 +67,9 @@ func (k *KubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) e
 	if clusterInfo.CertificateAuthority != "" {
 		clusterInfo.CertificateAuthority = ""
 	}
-	clusterInfo.CertificateAuthorityData = cert
+	if !clusterInfo.InsecureSkipTLSVerify {
+		clusterInfo.CertificateAuthorityData = cert
+	}
 
 	// Save on disk the config changes
 	if err := clientcmd.WriteToFile(*proxyCfg, destKubeconfigFile); err != nil {

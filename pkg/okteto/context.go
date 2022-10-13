@@ -16,13 +16,16 @@ package okteto
 import (
 	"bytes"
 	"context"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"net"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -490,4 +493,48 @@ func IsOktetoContext(contextName string) bool {
 		return false
 	}
 	return selectedCtx.IsOkteto
+}
+
+func GetContextCertificate() (*x509.Certificate, error) {
+	certB64 := Context().Certificate
+	certPEM, err := base64.StdEncoding.DecodeString(certB64)
+
+	if err != nil {
+		oktetoLog.Debugf("couldn't decode context certificate from base64: %s", err)
+		return nil, err
+	}
+
+	block, _ := pem.Decode(certPEM)
+
+	if block == nil {
+		oktetoLog.Debugf("couldn't decode context certificate from pem: %s", err)
+		return nil, fmt.Errorf("couldn't decode pem")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+
+	if err != nil {
+		oktetoLog.Debugf("couldn't parse context certificate: %s", err)
+		return nil, err
+	}
+
+	if _, err := cert.Verify(x509.VerifyOptions{}); err != nil { // skipcq: GO-S1031
+		strictTLSOnce.Do(func() {
+			oktetoLog.Debugf("certificate issuer %s", cert.Issuer)
+			oktetoLog.Debugf("context certificate not trusted by system roots: %s", err)
+			if cert.Issuer.CommonName == config.OktetoDefaultSelfSignedIssuer {
+				hoursSinceInstall := time.Since(cert.NotBefore).Hours()
+				switch {
+				case hoursSinceInstall <= 24: // less than 1 day
+					oktetoLog.Information("Your Okteto installation is using selfsigned certificates. Please switch to your own certificates before production use.")
+				case hoursSinceInstall <= 168: // less than 1 week
+					oktetoLog.Warning("Your Okteto installation has been using selfsigned certificates for more than a day. It's important to use your own certificates before production use.")
+				default: // more than 1 week
+					oktetoLog.Fail("[PLEASE READ] Your Okteto installation has been using selfsigned certificates for more than a week. It's important to use your own certificates before production use.")
+				}
+			}
+		})
+	}
+
+	return cert, nil
 }

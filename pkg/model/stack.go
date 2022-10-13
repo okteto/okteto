@@ -114,6 +114,8 @@ type HealthCheck struct {
 	Retries     int             `yaml:"retries,omitempty"`
 	StartPeriod time.Duration   `yaml:"start_period,omitempty"`
 	Disable     bool            `yaml:"disable,omitempty"`
+	Liveness    bool            `yaml:"x-okteto-liveness,omitempty"`
+	Readiness   bool            `default:"true" yaml:"x-okteto-readiness,omitempty"`
 }
 
 type HTTPHealtcheck struct {
@@ -354,7 +356,7 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 	return s, nil
 }
 
-func (svc *Service) ignoreSyncVolumes(s *Stack) {
+func (svc *Service) ignoreSyncVolumes() {
 	notIgnoredVolumes := make([]StackVolume, 0)
 	wd, err := os.Getwd()
 	if err != nil {
@@ -445,7 +447,7 @@ func (s *Stack) Validate() error {
 				return fmt.Errorf(fmt.Sprintf("Invalid volume '%s' in service '%s': must be an absolute path", v.ToString(), name))
 			}
 		}
-		svc.ignoreSyncVolumes(s)
+		svc.ignoreSyncVolumes()
 	}
 	return validateDependsOn(s)
 }

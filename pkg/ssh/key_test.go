@@ -63,7 +63,7 @@ func TestKeyExists(t *testing.T) {
 	}
 }
 
-func TestGenerateKeys(t *testing.T) {
+func Test_generate(t *testing.T) {
 	dir := t.TempDir()
 
 	defer func() {
@@ -72,7 +72,7 @@ func TestGenerateKeys(t *testing.T) {
 
 	os.Setenv(constants.OktetoFolderEnvVar, dir)
 	public, private := getKeyPaths()
-	if err := generateKeys(public, private, 128); err != nil {
+	if err := generate(public, private, 128); err != nil {
 		t.Error(err)
 	}
 

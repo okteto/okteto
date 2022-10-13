@@ -47,23 +47,28 @@ const (
 	Attaching = "attaching"
 	// Pulling  up pulling images
 	Pulling = "pulling"
-	// Start ingSync up preparing syncthing
+	// StartingSync up preparing syncthing
 	StartingSync = "startingSync"
-	// Synchronize ing up is syncthing
+	// Synchronizing up is syncthing
 	Synchronizing = "synchronizing"
-	// Ready up fi nished
+	// Ready up finished
 	Ready = "ready"
-	// Fai led up failed
+	// Failed up failed
 	Failed = "failed"
 
 	stateFile string = "okteto.state"
 
 	// OktetoContextVariableName defines the kubeconfig context of okteto commands
 	OktetoContextVariableName = "OKTETO_CONTEXT"
+
+	// OktetoDefaultSelfSignedIssuer is the self signed CA issuer name used in helm chart installs
+	OktetoDefaultSelfSignedIssuer = "okteto-wildcard-ca"
 )
 
-// VersionString the version of the cli
-var VersionString string
+var (
+	// VersionString the version of the cli
+	VersionString string
+)
 
 // GetBinaryName returns the name of the binary
 func GetBinaryName() string {
