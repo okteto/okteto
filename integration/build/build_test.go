@@ -117,6 +117,40 @@ func TestBuildCommandV1(t *testing.T) {
 	require.True(t, isImageBuilt(expectedImage))
 }
 
+// TestBuildInferredDockerfile tests the following scenario:
+// - building having a no manifest v2 in the folder but a Dockerfile
+func TestBuildInferredDockerfile(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	require.NoError(t, createDockerfile(dir))
+
+	testNamespace := integration.GetTestNamespace("TestBuildInferredDockerfile", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+
+	expectedImage := fmt.Sprintf("%s/%s/test:okteto", okteto.Context().Registry, testNamespace)
+	require.False(t, isImageBuilt(expectedImage))
+
+	options := &commands.BuildOptions{
+		Workdir:    dir,
+		Tag:        "okteto.dev/test:okteto",
+		Namespace:  "",
+		Token:      token,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoBuild(oktetoPath, options))
+	require.True(t, isImageBuilt(expectedImage))
+}
+
 // TestBuildCommandV2 tests the following scenario:
 // - building having a manifest v2 with build section
 func TestBuildCommandV2(t *testing.T) {

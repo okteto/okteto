@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -164,19 +165,24 @@ func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) er
 	// information cannot be extracted so call to GetContextResource is skkiped.
 	if err := validateDockerfile(options.File); err != nil {
 		ctxResource, err := model.GetContextResource(options.File)
-		if err != nil {
+		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return err
 		}
 
-		if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
-			return err
-		}
-		ctxOpts.Namespace = ctxResource.Namespace
+		// if ctxResource == nil (we cannot obtain context and namespace from the
+		// manifest used) then /context/config.json file from okteto home will be
+		// used to obtain the current context and the namespace associated with it.
+		if ctxResource != nil {
+			if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
+				return err
+			}
+			ctxOpts.Namespace = ctxResource.Namespace
 
-		if err := ctxResource.UpdateContext(options.K8sContext); err != nil {
-			return err
+			if err := ctxResource.UpdateContext(options.K8sContext); err != nil {
+				return err
+			}
+			ctxOpts.Context = ctxResource.Context
 		}
-		ctxOpts.Context = ctxResource.Context
 	}
 
 	if okteto.IsOkteto() && ctxOpts.Namespace != "" {
