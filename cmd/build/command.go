@@ -169,6 +169,9 @@ func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) er
 			return err
 		}
 
+		// if ctxResource == nil (we cannot obtain context and namespace from the
+		// manifest used) then /context/config.json file from okteto home will be
+		// used to obtain the current context and the namespace associated with it.
 		if ctxResource != nil {
 			if err := ctxResource.UpdateNamespace(options.Namespace); err != nil {
 				return err
