@@ -29,7 +29,7 @@ import (
 	"k8s.io/utils/pointer"
 )
 
-func TestReverseMashalling(t *testing.T) {
+func TestReverseMarshalling(t *testing.T) {
 	tests := []struct {
 		name      string
 		data      string
@@ -88,7 +88,7 @@ func TestReverseMashalling(t *testing.T) {
 	}
 }
 
-func TestEnvVarMashalling(t *testing.T) {
+func TestEnvVarMarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
@@ -174,7 +174,7 @@ func TestEnvVarMashalling(t *testing.T) {
 	}
 }
 
-func TestCommandUnmashalling(t *testing.T) {
+func TestCommandUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
@@ -217,7 +217,7 @@ func TestCommandUnmashalling(t *testing.T) {
 	}
 }
 
-func TestCommandMashalling(t *testing.T) {
+func TestCommandMarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		command  Command
@@ -249,7 +249,7 @@ func TestCommandMashalling(t *testing.T) {
 	}
 }
 
-func TestImageMashalling(t *testing.T) {
+func TestImageMarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		image    *BuildInfo
@@ -286,7 +286,7 @@ func TestImageMashalling(t *testing.T) {
 	}
 }
 
-func TestProbesMashalling(t *testing.T) {
+func TestProbesMarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		probes   Probes
@@ -318,7 +318,7 @@ func TestProbesMashalling(t *testing.T) {
 	}
 }
 
-func TestLifecycleMashalling(t *testing.T) {
+func TestLifecycleMarshalling(t *testing.T) {
 	tests := []struct {
 		name      string
 		lifecycle Lifecycle
@@ -447,7 +447,7 @@ func TestSecretMarshalling(t *testing.T) {
 	}
 }
 
-func TestVolumeMashalling(t *testing.T) {
+func TestVolumeMarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
@@ -595,7 +595,7 @@ func TestEndpointUnmarshalling(t *testing.T) {
 	}
 }
 
-func TestLabelsUnmashalling(t *testing.T) {
+func TestLabelsUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
@@ -705,7 +705,7 @@ func TestLabelsUnmashalling(t *testing.T) {
 	}
 }
 
-func TestAnnotationsUnmashalling(t *testing.T) {
+func TestAnnotationsUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
@@ -810,7 +810,7 @@ func TestAnnotationsUnmashalling(t *testing.T) {
 	}
 }
 
-func TestEnvFileUnmashalling(t *testing.T) {
+func TestEnvFileUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
@@ -843,7 +843,7 @@ func TestEnvFileUnmashalling(t *testing.T) {
 	}
 }
 
-func TestDurationUnmashalling(t *testing.T) {
+func TestDurationUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
@@ -881,7 +881,7 @@ func TestDurationUnmashalling(t *testing.T) {
 	}
 }
 
-func TestTimeoutUnmashalling(t *testing.T) {
+func TestTimeoutUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
@@ -931,7 +931,7 @@ resources: 30s
 	}
 }
 
-func TestSyncUnmashalling(t *testing.T) {
+func TestSyncUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name     string
 		data     []byte
@@ -986,7 +986,7 @@ rescanInterval: 10`),
 	}
 }
 
-func TestSyncFoldersUnmashalling(t *testing.T) {
+func TestSyncFoldersUnmarshalling(t *testing.T) {
 	os.Setenv("REMOTE_PATH", "/usr/src/app")
 	tests := []struct {
 		name     string
@@ -2154,6 +2154,16 @@ func TestManifestBuildUnmarshalling(t *testing.T) {
   file: Dockerfile`),
 			expected:        ManifestBuild{},
 			isErrorExpected: true,
+		},
+		{
+			name: "cache_from-supports-str",
+			buildManifest: []byte(`service3:
+  cache_from: cache-image`),
+			expected: ManifestBuild{
+				"service3": {
+					CacheFrom: []string{"cache-image"},
+				},
+			},
 		},
 	}
 
