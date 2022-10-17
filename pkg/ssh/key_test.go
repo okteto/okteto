@@ -24,11 +24,7 @@ import (
 func TestKeyExists(t *testing.T) {
 	dir := t.TempDir()
 
-	defer func() {
-		os.Unsetenv(constants.OktetoFolderEnvVar)
-	}()
-
-	os.Setenv(constants.OktetoFolderEnvVar, dir)
+	t.Setenv(constants.OktetoFolderEnvVar, dir)
 
 	if KeyExists() {
 		t.Error("keys shouldn't exist in an empty directory")
@@ -66,11 +62,7 @@ func TestKeyExists(t *testing.T) {
 func Test_generate(t *testing.T) {
 	dir := t.TempDir()
 
-	defer func() {
-		os.Unsetenv(constants.OktetoFolderEnvVar)
-	}()
-
-	os.Setenv(constants.OktetoFolderEnvVar, dir)
+	t.Setenv(constants.OktetoFolderEnvVar, dir)
 	public, private := getKeyPaths()
 	if err := generate(public, private, 128); err != nil {
 		t.Error(err)
