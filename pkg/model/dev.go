@@ -121,7 +121,7 @@ type BuildInfo struct {
 	Name             string         `yaml:"name,omitempty"`
 	Context          string         `yaml:"context,omitempty"`
 	Dockerfile       string         `yaml:"dockerfile,omitempty"`
-	CacheFrom        []string       `yaml:"cache_from,omitempty"`
+	CacheFrom        CacheFrom      `yaml:"cache_from,omitempty"`
 	Target           string         `yaml:"target,omitempty"`
 	Args             BuildArgs      `yaml:"args,omitempty"`
 	Image            string         `yaml:"image,omitempty"`
@@ -130,6 +130,9 @@ type BuildInfo struct {
 	DependsOn        BuildDependsOn `yaml:"depends_on,omitempty"`
 	Secrets          BuildSecrets   `yaml:"secrets,omitempty"`
 }
+
+// CacheFrom is a list of images to import cache from.
+type CacheFrom []string
 
 // BuildArg is an argument used on the build step.
 type BuildArg struct {

@@ -39,7 +39,7 @@ type buildInfoRaw struct {
 	Name             string         `yaml:"name,omitempty"`
 	Context          string         `yaml:"context,omitempty"`
 	Dockerfile       string         `yaml:"dockerfile,omitempty"`
-	CacheFrom        interface{}    `yaml:"cache_from,omitempty"`
+	CacheFrom        CacheFrom      `yaml:"cache_from,omitempty"`
 	Target           string         `yaml:"target,omitempty"`
 	Args             BuildArgs      `yaml:"args,omitempty"`
 	Image            string         `yaml:"image,omitempty"`
@@ -141,6 +141,34 @@ type LabelSelectorRequirement struct {
 type WeightedPodAffinityTerm struct {
 	Weight          int32           `yaml:"weight" json:"weight"`
 	PodAffinityTerm PodAffinityTerm `yaml:"podAffinityTerm" json:"podAffinityTerm"`
+}
+
+// UnmarshalYAML implements the Unmarshaler interface of the yaml pkg.
+func (cf *CacheFrom) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var single string
+	err := unmarshal(&single)
+	if err == nil {
+		*cf = CacheFrom{single}
+		return nil
+	}
+
+	var multi []string
+	err = unmarshal(&multi)
+	if err == nil {
+		*cf = multi
+		return nil
+	}
+
+	return err
+}
+
+// MarshalYAML implements the marshaler interface of the yaml pkg.
+func (cf CacheFrom) MarshalYAML() (interface{}, error) {
+	if len(cf) == 1 {
+		return cf[0], nil
+	}
+
+	return cf, nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
@@ -345,31 +373,13 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 		return err
 	}
 
-	// allow cache_from to support both string and sequence of strings
-	if rawBuildInfo.CacheFrom != nil {
-		switch cacheFrom := rawBuildInfo.CacheFrom.(type) {
-		case string:
-			buildInfo.CacheFrom = []string{cacheFrom}
-		case []interface{}:
-			cfStrings := []string{}
-			for _, cf := range cacheFrom {
-				if cacheFromStr, ok := cf.(string); ok {
-					cfStrings = append(cfStrings, cacheFromStr)
-				}
-			}
-
-			buildInfo.CacheFrom = cfStrings
-		default:
-			return fmt.Errorf("cache_from only supports string or sequence of strings, not %T", cacheFrom)
-		}
-	}
-
 	buildInfo.Name = rawBuildInfo.Name
 	buildInfo.Context = rawBuildInfo.Context
 	buildInfo.Dockerfile = rawBuildInfo.Dockerfile
 	buildInfo.Target = rawBuildInfo.Target
 	buildInfo.Args = rawBuildInfo.Args
 	buildInfo.Image = rawBuildInfo.Image
+	buildInfo.CacheFrom = rawBuildInfo.CacheFrom
 	buildInfo.ExportCache = rawBuildInfo.ExportCache
 	buildInfo.DependsOn = rawBuildInfo.DependsOn
 	buildInfo.Secrets = rawBuildInfo.Secrets
@@ -379,44 +389,18 @@ func (buildInfo *BuildInfo) UnmarshalYAML(unmarshal func(interface{}) error) err
 // MarshalYAML Implements the marshaler interface of the yaml pkg.
 func (buildInfo *BuildInfo) MarshalYAML() (interface{}, error) {
 	if buildInfo.Context != "" && buildInfo.Context != "." {
-		return buildInfoToRaw(*buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	if buildInfo.Dockerfile != "" && buildInfo.Dockerfile != "./Dockerfile" {
-		return buildInfoToRaw(*buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	if buildInfo.Target != "" {
-		return buildInfoToRaw(*buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	if buildInfo.Args != nil && len(buildInfo.Args) != 0 {
-		return buildInfoToRaw(*buildInfo), nil
+		return buildInfoRaw(*buildInfo), nil
 	}
 	return buildInfo.Name, nil
-}
-
-// buildInfoToRaw creates a new buildInfoRaw struct from the data in buildInfo.
-func buildInfoToRaw(bi BuildInfo) buildInfoRaw {
-	raw := buildInfoRaw{
-		Name:             bi.Name,
-		Context:          bi.Context,
-		Dockerfile:       bi.Dockerfile,
-		CacheFrom:        bi.CacheFrom,
-		Target:           bi.Target,
-		Args:             bi.Args,
-		Image:            bi.Image,
-		VolumesToInclude: bi.VolumesToInclude,
-		ExportCache:      bi.ExportCache,
-		DependsOn:        bi.DependsOn,
-		Secrets:          bi.Secrets,
-	}
-
-	// buildInfoRaw.CacheFrom is an interface{}. It won't be nil if assigned an
-	// empty array and the default marshaler will serialize the field in the
-	// output even when 'omitempty' is set
-	if len(bi.CacheFrom) == 0 {
-		raw.CacheFrom = nil
-	}
-
-	return raw
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
