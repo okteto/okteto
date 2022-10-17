@@ -92,7 +92,7 @@
                         ;;
 
                 # normal bound of the release branch
-                prerelease | patch)
+                prerelease | patch | "")
                         if [ "$(semver compare "${ROOT_MINOR_TAG}" "$previous_stable")" -eq "1" ]; then
                                 NEXT_TAG="${ROOT_MINOR_TAG}-beta.1"
                                 echo "Latest reachable tag from release branch ${CURRENT_BRANCH} is a stable release from a previous release (${previous_stable})"
