@@ -26,9 +26,14 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-// GetServicesToBuild returns the services it has to built because they are not already built
+// GetServicesToBuild returns the services it has to build if they are not already built
 func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error) {
 	buildManifest := manifest.Build
+
+	if len(buildManifest) == 0 {
+		oktetoLog.Information("Build section is not defined in your okteto manifest")
+		return nil, nil
+	}
 
 	// check if images are at registry (global or dev) and set envs or send to build
 	toBuild := make(chan string, len(buildManifest))
