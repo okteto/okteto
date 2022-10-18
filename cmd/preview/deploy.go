@@ -137,7 +137,7 @@ func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*typ
 		})
 	}
 
-	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.filename, varList)
+	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, varList)
 }
 
 func (pw *Command) waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
