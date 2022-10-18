@@ -55,6 +55,9 @@ func RunOktetoDeployPipeline(oktetoPath string, deployOptions *DeployPipelineOpt
 	if deployOptions.Repository != "" {
 		cmd.Args = append(cmd.Args, "--repository", deployOptions.Repository)
 	}
+	if deployOptions.Namespace != "" {
+		cmd.Args = append(cmd.Args, "--namespace", deployOptions.Namespace)
+	}
 	if deployOptions.Wait {
 		cmd.Args = append(cmd.Args, "--wait")
 	}
