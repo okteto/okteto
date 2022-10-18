@@ -38,12 +38,11 @@ type pipelineClient struct {
 	url string
 }
 
-func newPipelineClient(url string, client *graphql.Client, sseClient *http.Client) *pipelineClient {
+func newPipelineClient(client *graphql.Client, sseClient *http.Client, url string) *pipelineClient {
 	return &pipelineClient{
 		client:    client,
 		sseClient: sseClient,
-
-		url: url,
+		url:       url,
 	}
 }
 
