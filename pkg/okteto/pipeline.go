@@ -34,12 +34,15 @@ import (
 type pipelineClient struct {
 	client    *graphql.Client
 	sseClient *http.Client
+
+	url string
 }
 
-func newPipelineClient(client *graphql.Client, sseClient *http.Client) *pipelineClient {
+func newPipelineClient(client *graphql.Client, sseClient *http.Client, url string) *pipelineClient {
 	return &pipelineClient{
 		client:    client,
 		sseClient: sseClient,
+		url:       url,
 	}
 }
 
@@ -420,7 +423,10 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name string) (m
 
 	if err := query(ctx, &queryStruct, variables, c.client); err != nil {
 		if oktetoErrors.IsNotFound(err) {
-			okClient := OktetoClient{client: c.client}
+			okClient, err := NewOktetoClientFromUrlAndToken(c.url, Context().Token)
+			if err != nil {
+				return nil, fmt.Errorf("could not create okteto client")
+			}
 			return okClient.Previews().GetResourcesStatusFromPreview(ctx, Context().Namespace, name)
 		}
 		return nil, err
