@@ -39,16 +39,16 @@ var (
 )
 
 type DeployOptions struct {
-	branch     string
-	filename   string
-	file       string
-	name       string
-	repository string
-	scope      string
-	sourceUrl  string
-	timeout    time.Duration
-	variables  []string
-	wait       bool
+	branch             string
+	deprecatedFilename string
+	file               string
+	name               string
+	repository         string
+	scope              string
+	sourceUrl          string
+	timeout            time.Duration
+	variables          []string
+	wait               bool
 }
 
 // Deploy Deploy a preview environment
@@ -95,7 +95,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", false, "wait until the preview environment deployment finishes (defaults to false)")
 	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "relative path within the repository to the okteto manifest (default to okteto.yaml or .okteto/okteto.yaml)")
 
-	cmd.Flags().StringVarP(&opts.filename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
+	cmd.Flags().StringVarP(&opts.deprecatedFilename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
 	cmd.Flags().MarkHidden("filename")
 	return cmd
 }
