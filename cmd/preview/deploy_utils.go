@@ -37,10 +37,10 @@ func optionsSetup(cwd string, opts *DeployOptions, args []string) error {
 		return err
 	}
 
-	if opts.filename != "" {
+	if opts.deprecatedFilename != "" {
 		oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag'")
 		if opts.file == "" {
-			opts.file = opts.filename
+			opts.file = opts.deprecatedFilename
 		} else {
 			oktetoLog.Warning("flags 'filename' and 'file' can not be used at the same time. 'file' flag will take precedence")
 		}
