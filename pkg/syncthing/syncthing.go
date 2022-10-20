@@ -793,6 +793,7 @@ func (s *Syncthing) Restart(ctx context.Context) error {
 
 // HardTerminate halts the background process, waits for 1s and kills the process if it is still running
 func (s *Syncthing) HardTerminate() error {
+	oktetoLog.Info("termitating previous syncthing process")
 	pList, err := process.Processes()
 	if err != nil {
 		return err
@@ -843,6 +844,7 @@ func (s *Syncthing) HardTerminate() error {
 			oktetoLog.Infof("error terminating syncthing %d with wait: %s", p.Pid, err.Error())
 		}
 		if parent != nil && parent.Pid != int32(pid) {
+			oktetoLog.Infof("pid: %s / name: %s / cmd: %s", p.Pid, p.Name, p.Cmdline)
 			if err := terminate(parent, true); err != nil {
 				oktetoLog.Infof("error terminating syncthing %d with wait: %s", p.Pid, err.Error())
 				continue
@@ -857,11 +859,11 @@ func (s *Syncthing) HardTerminate() error {
 func getParent(p *process.Process) (*process.Process, error) {
 	name, err := p.Name()
 	if err != nil {
-		return nil, fmt.Errorf("can not get parent name")
+		return nil, fmt.Errorf("can not get name: %w", err)
 	}
 	parent, err := p.Parent()
 	if err != nil {
-		return nil, fmt.Errorf("can not find parent")
+		return nil, fmt.Errorf("can not find parent process: %w", err)
 	}
 	if runtime.GOOS == "windows" && (parent.Pid == 0 || parent.Pid == 4) {
 		return nil, fmt.Errorf("can't remove root process")
@@ -870,9 +872,10 @@ func getParent(p *process.Process) (*process.Process, error) {
 	}
 	pName, err := parent.Name()
 	if err != nil {
-		oktetoLog.Infof("could not get  parent: %s", err)
+		oktetoLog.Infof("could not get parent name: %w", err)
 	}
 	if pName == name {
+		oktetoLog.Infof("parent name is the same: %s", name)
 		return getParent(parent)
 	}
 	return parent, nil
