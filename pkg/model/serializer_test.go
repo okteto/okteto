@@ -2261,3 +2261,114 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 		})
 	}
 }
+
+func TestDependencyUnmashalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected *Dependency
+	}{
+		{
+			name: "single line",
+			data: []byte(`https://github/test`),
+			expected: &Dependency{
+				Repository: "https://github/test",
+			},
+		},
+		{
+			name: "repository and branch",
+			data: []byte(`repository: https://github/test
+branch: main`),
+			expected: &Dependency{
+				Repository: "https://github/test",
+				Branch:     "main",
+			},
+		},
+		{
+			name: "repository,branch and manifest",
+			data: []byte(`repository: https://github/test
+branch: main
+manifest: okteto.yml`),
+			expected: &Dependency{
+				Repository:   "https://github/test",
+				Branch:       "main",
+				ManifestPath: "okteto.yml",
+			},
+		},
+		{
+			name: "repository,branch and manifest and variables",
+			data: []byte(`repository: https://github/test
+branch: main
+manifest: okteto.yml
+variables:
+  key: value`),
+			expected: &Dependency{
+				Repository:   "https://github/test",
+				Branch:       "main",
+				ManifestPath: "okteto.yml",
+				Variables: Environment{
+					EnvVar{
+						Name:  "key",
+						Value: "value",
+					},
+				},
+			},
+		},
+		{
+			name: "repository,branch,manifest,variables and wait",
+			data: []byte(`repository: https://github/test
+branch: main
+manifest: okteto.yml
+variables:
+  key: value
+wait: true`),
+			expected: &Dependency{
+				Repository:   "https://github/test",
+				Branch:       "main",
+				ManifestPath: "okteto.yml",
+				Wait:         true,
+				Variables: Environment{
+					EnvVar{
+						Name:  "key",
+						Value: "value",
+					},
+				},
+			},
+		},
+		{
+			name: "repository,branch,manifest,variables,wait and timeout",
+			data: []byte(`repository: https://github/test
+branch: main
+manifest: okteto.yml
+variables:
+  key: value
+wait: true
+timeout: 15m`),
+			expected: &Dependency{
+				Repository:   "https://github/test",
+				Branch:       "main",
+				ManifestPath: "okteto.yml",
+				Wait:         true,
+				Variables: Environment{
+					EnvVar{
+						Name:  "key",
+						Value: "value",
+					},
+				},
+				Timeout: 15 * time.Minute,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result *Dependency
+
+			if err := yaml.UnmarshalStrict(tt.data, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

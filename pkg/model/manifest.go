@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/a8m/envsubst"
 	"github.com/okteto/okteto/pkg/discovery"
@@ -886,11 +887,19 @@ func (manifest *Manifest) ExpandEnvVars() error {
 
 // Dependency represents a dependency object at the manifest
 type Dependency struct {
-	Repository   string      `json:"repository" yaml:"repository"`
-	ManifestPath string      `json:"manifest,omitempty" yaml:"manifest,omitempty"`
-	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
-	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
-	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
+	Repository   string        `json:"repository" yaml:"repository"`
+	ManifestPath string        `json:"manifest,omitempty" yaml:"manifest,omitempty"`
+	Branch       string        `json:"branch,omitempty" yaml:"branch,omitempty"`
+	Variables    Environment   `json:"variables,omitempty" yaml:"variables,omitempty"`
+	Wait         bool          `json:"wait,omitempty" yaml:"wait,omitempty"`
+	Timeout      time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+}
+
+func (d *Dependency) GetTimeout(defaultTimeout time.Duration) time.Duration {
+	if d.Timeout != 0 {
+		return d.Timeout
+	}
+	return defaultTimeout
 }
 
 // InferFromStack infers data from a stackfile

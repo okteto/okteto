@@ -1014,3 +1014,38 @@ func Test_SanitizeSvcNames(t *testing.T) {
 		})
 	}
 }
+
+func Test_GetTimeout(t *testing.T) {
+	tests := []struct {
+		name           string
+		defaultTimeout time.Duration
+		dependency     *Dependency
+		expected       time.Duration
+	}{
+		{
+			name:           "default timeout set and specific not",
+			defaultTimeout: 5 * time.Minute,
+			dependency:     &Dependency{},
+			expected:       5 * time.Minute,
+		},
+		{
+			name: "default timeout unset and specific set",
+			dependency: &Dependency{
+				Timeout: 10 * time.Minute,
+			},
+			expected: 10 * time.Minute,
+		},
+		{
+			name:       "both unset",
+			dependency: &Dependency{},
+			expected:   0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.dependency.GetTimeout(tt.defaultTimeout)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
