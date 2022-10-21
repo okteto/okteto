@@ -895,6 +895,7 @@ type Dependency struct {
 	Timeout      time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
+// GetTimeout returns dependency.Timeout if it's set or the one passed as arg if it's not
 func (d *Dependency) GetTimeout(defaultTimeout time.Duration) time.Duration {
 	if d.Timeout != 0 {
 		return d.Timeout
