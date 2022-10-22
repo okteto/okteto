@@ -128,8 +128,7 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 		} else {
 			if !isValidCluster(ctxOptions.Context) {
 				return oktetoErrors.UserError{E: fmt.Errorf("invalid okteto context '%s'", ctxOptions.Context),
-					Hint: fmt.Sprintf("Please run 'okteto context' to select one context. Please run 'kubectl config use-context %s' if attempting to use a Kubernetes context that is a not an Okteto context", ctxOptions.Context),
-				}
+					Hint: "Please run 'okteto context' to select one context"}
 			}
 			transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, c.K8sClientProvider)
 			if transformedCtx != ctxOptions.Context {

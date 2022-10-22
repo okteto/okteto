@@ -60,7 +60,7 @@ func Delete(okCtx string) error {
 		}
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("'%s' context doesn't exist. Valid options are: [%s]", okCtx, strings.Join(validOptions, ", ")),
-			Hint: fmt.Sprintf("Please run 'kubectl config delete-context %s' if attempting to delete a Kubernetes context that is a not an Okteto context", okCtx),
+			Hint: fmt.Sprintf("To delete a Kubernetes context run 'kubectl config delete-context %s'", okCtx),
 		}
 	}
 	return nil
