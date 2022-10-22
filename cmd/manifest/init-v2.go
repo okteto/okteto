@@ -180,7 +180,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 		isDeployed := pipeline.IsDeployed(ctx, manifest.Name, namespace, c)
 		deployAnswer := false
 		if !isDeployed && !opts.AutoDeploy {
-			deployAnswer, err = utils.AskYesNo("Do you want to launch your development environment? [y/n]: ")
+			deployAnswer, err = utils.AskYesNo("Do you want to launch your development environment?", utils.YesNoDefault_Yes)
 			if err != nil {
 				return nil, err
 			}
@@ -195,7 +195,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 		if isDeployed {
 			configureDevEnvsAnswer := false
 			if !opts.AutoConfigureDev {
-				configureDevEnvsAnswer, err = utils.AskYesNo("Do you want to configure your development containers? [y/n]: ")
+				configureDevEnvsAnswer, err = utils.AskYesNo("Do you want to configure your development containers?", utils.YesNoDefault_Yes)
 				if err != nil {
 					return nil, err
 				}
@@ -231,7 +231,7 @@ func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Mani
 			return nil, err
 		}
 		if composePath != "" {
-			answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue? [y/n] ")
+			answer, err := utils.AskYesNo("creating an okteto manifest is optional if you want to use a compose file. Do you want to continue?", utils.YesNoDefault_Yes)
 			if err != nil {
 				return nil, err
 			}

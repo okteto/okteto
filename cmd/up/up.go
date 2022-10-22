@@ -166,7 +166,7 @@ func Up() *cobra.Command {
 					return fmt.Errorf("your docker compose file is not currently supported: Okteto requires a 'host volume' to be defined. See %s", composeVolumesUrl)
 				}
 				oktetoLog.Warning("okteto manifest has no 'dev' section.")
-				answer, err := utils.AskYesNo("Do you want to configure okteto manifest now? [y/n]")
+				answer, err := utils.AskYesNo("Do you want to configure okteto manifest now?", utils.YesNoDefault_Yes)
 				if err != nil {
 					return err
 				}

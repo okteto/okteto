@@ -94,7 +94,7 @@ func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
 		if LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
 			return false, fmt.Errorf("cannot deploy on a namespace that doesn't exist. Please create %s and try again", ns)
 		}
-		create, err := AskYesNo(fmt.Sprintf("The namespace %s doesn't exist. Do you want to create it? [y/n] ", ns))
+		create, err := AskYesNo(fmt.Sprintf("The namespace %s doesn't exist. Do you want to create it?", ns), YesNoDefault_Yes)
 		if err != nil {
 			return false, err
 		}
