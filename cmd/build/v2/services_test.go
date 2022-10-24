@@ -105,6 +105,19 @@ func TestServicesNotAreAlreadyBuiltWithSubset(t *testing.T) {
 	assert.Equal(t, 0, len(toBuild))
 }
 
+func TestServicesBuildSection(t *testing.T) {
+	fakeReg := test.NewFakeOktetoRegistry(nil)
+	bc := NewBuilder(nil, fakeReg)
+	alreadyBuilt := []string{}
+	fakeReg.AddImageByName(alreadyBuilt...)
+	ctx := context.Background()
+	fakeManifest.Build = map[string]*model.BuildInfo{}
+	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{})
+	// should not throw error
+	assert.NoError(t, err)
+	assert.Empty(t, toBuild)
+}
+
 func TestNoServiceBuiltWithSubset(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)

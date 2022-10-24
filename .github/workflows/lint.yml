@@ -3,6 +3,9 @@ name: lint
 
 on: [pull_request]
 
+permissions:  # added using https://github.com/step-security/secure-workflows
+  contents: read
+
 jobs:
   pre-commit:
     name: Run pre-commit # https://pre-commit.com/

@@ -134,9 +134,12 @@ func UpdateStateFile(devName, devNamespace string, state UpState) error {
 	}
 
 	s := filepath.Join(GetAppHome(devNamespace, devName), stateFile)
+
+	oktetoLog.Infof("updating file '%s'", s)
 	if err := os.WriteFile(s, []byte(state), 0600); err != nil {
 		return fmt.Errorf("failed to update state file: %s", err)
 	}
+	oktetoLog.Infof("file '%s' updated successfully", s)
 
 	return nil
 }

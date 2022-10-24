@@ -227,7 +227,6 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 
 		// Modify all resources updated or created to include the label.
 		if r.Method == "PUT" || r.Method == "POST" {
-			isCreation := r.Method == "POST"
 			b, err := io.ReadAll(r.Body)
 			if err != nil {
 				oktetoLog.Infof("could not read the request body: %s", err)
@@ -240,7 +239,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 				return
 			}
 
-			b, err = ph.translateBody(b, isCreation)
+			b, err = ph.translateBody(b)
 			if err != nil {
 				oktetoLog.Info(err)
 				rw.WriteHeader(500)
@@ -268,7 +267,7 @@ func (ph *proxyHandler) SetDivert(divertedNamespace string) {
 	ph.DivertedNamespace = divertedNamespace
 }
 
-func (ph *proxyHandler) translateBody(b []byte, isCreation bool) ([]byte, error) {
+func (ph *proxyHandler) translateBody(b []byte) ([]byte, error) {
 	var body map[string]json.RawMessage
 	if err := json.Unmarshal(b, &body); err != nil {
 		oktetoLog.Infof("error unmarshalling resource body on proxy: %s", err.Error())
@@ -291,7 +290,7 @@ func (ph *proxyHandler) translateBody(b []byte, isCreation bool) ([]byte, error)
 			return nil, err
 		}
 	case "StatefulSet":
-		if err := ph.translateStatefulSetSpec(body, isCreation); err != nil {
+		if err := ph.translateStatefulSetSpec(body); err != nil {
 			return nil, err
 		}
 	case "Job":
@@ -366,18 +365,13 @@ func (ph *proxyHandler) translateDeploymentSpec(body map[string]json.RawMessage)
 	return nil
 }
 
-func (ph *proxyHandler) translateStatefulSetSpec(body map[string]json.RawMessage, isCreation bool) error {
+func (ph *proxyHandler) translateStatefulSetSpec(body map[string]json.RawMessage) error {
 	var spec appsv1.StatefulSetSpec
 	if err := json.Unmarshal(body["spec"], &spec); err != nil {
 		oktetoLog.Infof("error unmarshalling statefulset spec on proxy: %s", err.Error())
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	if isCreation {
-		for idx := range spec.VolumeClaimTemplates {
-			labels.SetInMetadata(&spec.VolumeClaimTemplates[idx].ObjectMeta, model.DeployedByLabel, ph.Name)
-		}
-	}
 	ph.applyDivert(&spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {

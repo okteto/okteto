@@ -9,6 +9,9 @@ on:
   schedule:
     - cron: '24 10 * * *'
 
+permissions:  # added using https://github.com/step-security/secure-workflows
+  contents: read
+
 jobs:
   stale:
     runs-on: ubuntu-latest

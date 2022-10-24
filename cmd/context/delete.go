@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -57,7 +58,10 @@ func Delete(okCtx string) error {
 				validOptions = append(validOptions, k)
 			}
 		}
-		return fmt.Errorf("'%s' context doesn't exist. Valid options are: [%s]", okCtx, strings.Join(validOptions, ", "))
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("'%s' context doesn't exist. Valid options are: [%s]", okCtx, strings.Join(validOptions, ", ")),
+			Hint: fmt.Sprintf("To delete a Kubernetes context run 'kubectl config delete-context %s'", okCtx),
+		}
 	}
 	return nil
 }

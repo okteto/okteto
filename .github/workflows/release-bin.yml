@@ -15,6 +15,9 @@ on:
         # Input has to be provided for the workflow to run
         required: true
 
+permissions:  # added using https://github.com/step-security/secure-workflows
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
