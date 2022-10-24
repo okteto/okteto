@@ -878,6 +878,10 @@ func getParent(p *process.Process) (*process.Process, error) {
 		oktetoLog.Infof("parent name is the same: %s", name)
 		return getParent(parent)
 	}
+	if strings.Contains(pName, "okteto") {
+		oktetoLog.Infof("okteto parent not found: %s", name)
+		return getParent(parent)
+	}
 	return parent, nil
 }
 
