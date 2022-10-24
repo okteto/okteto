@@ -3,7 +3,7 @@ package analytics
 import (
 	"testing"
 
-	"github.com/okteto/okteto/pkg/okteto/constants"
+	"github.com/okteto/okteto/pkg/constants"
 )
 
 func Test_Get(t *testing.T) {

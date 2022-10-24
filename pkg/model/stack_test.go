@@ -18,7 +18,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/okteto/constants"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

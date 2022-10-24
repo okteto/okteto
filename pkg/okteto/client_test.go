@@ -21,7 +21,7 @@ import (
 
 	"net/http"
 
-	"github.com/okteto/okteto/pkg/okteto/constants"
+	"github.com/okteto/okteto/pkg/constants"
 	"golang.org/x/oauth2"
 )
 

@@ -18,8 +18,8 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 // BuildOptions defines the options that can be added to a build command

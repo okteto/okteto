@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/okteto/constants"
+	"github.com/okteto/okteto/pkg/constants"
 )
 
 func TestKeyExists(t *testing.T) {

@@ -24,12 +24,12 @@ import (
 	"strings"
 
 	"github.com/a8m/envsubst"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
-	"github.com/okteto/okteto/pkg/okteto/constants"
 	yaml "gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
 )

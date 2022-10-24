@@ -20,10 +20,10 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto/constants"
 	"gopkg.in/yaml.v2"
 )
 

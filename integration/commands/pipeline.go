@@ -19,8 +19,8 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 // DeployPipelineOptions defines the options that can be added to a deploy command

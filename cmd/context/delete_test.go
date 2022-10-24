@@ -19,8 +19,8 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 func Test_deleteContext(t *testing.T) {

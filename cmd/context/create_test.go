@@ -22,9 +22,9 @@ import (
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/okteto/constants"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"

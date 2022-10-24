@@ -24,8 +24,8 @@ import (
 	"time"
 
 	ps "github.com/mitchellh/go-ps"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 // UpOptions has the options for okteto up command

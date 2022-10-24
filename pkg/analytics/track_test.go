@@ -17,8 +17,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 func TestMain(m *testing.M) {

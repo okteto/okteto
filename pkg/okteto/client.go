@@ -22,10 +22,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto/constants"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 	"golang.org/x/oauth2"

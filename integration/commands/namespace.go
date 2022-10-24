@@ -20,9 +20,9 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/okteto/constants"
 )
 
 // NamespaceOptions defines the options that can be added to a build command

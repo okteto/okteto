@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto/constants"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	apiv1 "k8s.io/api/core/v1"
