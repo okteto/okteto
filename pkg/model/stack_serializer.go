@@ -240,7 +240,7 @@ type composeBuildInfo struct {
 	Name             string        `yaml:"name,omitempty"`
 	Context          string        `yaml:"context,omitempty"`
 	Dockerfile       string        `yaml:"dockerfile,omitempty"`
-	CacheFrom        []string      `yaml:"cache_from,omitempty"`
+	CacheFrom        CacheFrom     `yaml:"cache_from,omitempty"`
 	Target           string        `yaml:"target,omitempty"`
 	Args             BuildArgs     `yaml:"args,omitempty"`
 	Image            string        `yaml:"image,omitempty"`

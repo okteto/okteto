@@ -39,7 +39,7 @@ type buildInfoRaw struct {
 	Name             string         `yaml:"name,omitempty"`
 	Context          string         `yaml:"context,omitempty"`
 	Dockerfile       string         `yaml:"dockerfile,omitempty"`
-	CacheFrom        []string       `yaml:"cache_from,omitempty"`
+	CacheFrom        CacheFrom      `yaml:"cache_from,omitempty"`
 	Target           string         `yaml:"target,omitempty"`
 	Args             BuildArgs      `yaml:"args,omitempty"`
 	Image            string         `yaml:"image,omitempty"`
@@ -141,6 +141,34 @@ type LabelSelectorRequirement struct {
 type WeightedPodAffinityTerm struct {
 	Weight          int32           `yaml:"weight" json:"weight"`
 	PodAffinityTerm PodAffinityTerm `yaml:"podAffinityTerm" json:"podAffinityTerm"`
+}
+
+// UnmarshalYAML implements the Unmarshaler interface of the yaml pkg.
+func (cf *CacheFrom) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var single string
+	err := unmarshal(&single)
+	if err == nil {
+		*cf = CacheFrom{single}
+		return nil
+	}
+
+	var multi []string
+	err = unmarshal(&multi)
+	if err == nil {
+		*cf = multi
+		return nil
+	}
+
+	return err
+}
+
+// MarshalYAML implements the marshaler interface of the yaml pkg.
+func (cf CacheFrom) MarshalYAML() (interface{}, error) {
+	if len(cf) == 1 {
+		return cf[0], nil
+	}
+
+	return cf, nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
