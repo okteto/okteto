@@ -693,7 +693,7 @@ func getDefaultTimeout() time.Duration {
 
 	parsed, err := time.ParseDuration(t)
 	if err != nil {
-		oktetoLog.Infof("OKTETO_TIMEOUT is not a valid duration: %s", t)
+		oktetoLog.Infof("OKTETO_TIMEOUT value is not a valid duration: %s", t)
 		oktetoLog.Infof("timeout fallback to defaultTimeout")
 		return defaultTimeout
 	}
