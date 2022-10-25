@@ -774,14 +774,6 @@ type manifestRaw struct {
 	DeprecatedDevs []string `yaml:"devs"`
 }
 
-type dependenciesRaw struct {
-	Repository   string      `json:"repository,omitempty" yaml:"repository,omitempty"`
-	ManifestPath string      `json:"manifest,omitempty" yaml:"manifest,omitempty"`
-	Branch       string      `json:"branch,omitempty" yaml:"branch,omitempty"`
-	Variables    Environment `json:"variables,omitempty" yaml:"variables,omitempty"`
-	Wait         bool        `json:"wait,omitempty" yaml:"wait,omitempty"`
-}
-
 func getRepoNameFromGitURL(repo *url.URL) string {
 	repoPath := strings.Split(strings.TrimPrefix(repo.Path, "/"), "/")
 	return strings.ReplaceAll(repoPath[1], ".git", "")
@@ -818,25 +810,21 @@ func (md *ManifestDependencies) UnmarshalYAML(unmarshal func(interface{}) error)
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
-func (dependency *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
+func (d *Dependency) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var rawString string
 	err := unmarshal(&rawString)
 	if err == nil {
-		dependency.Repository = rawString
+		d.Repository = rawString
 		return nil
 	}
 
-	var rawDependency dependenciesRaw
-	err = unmarshal(&rawDependency)
+	type dependencyPreventRecursionType Dependency
+	var dependencyRaw dependencyPreventRecursionType
+	err = unmarshal(&dependencyRaw)
 	if err != nil {
 		return err
 	}
-
-	dependency.Repository = rawDependency.Repository
-	dependency.ManifestPath = rawDependency.ManifestPath
-	dependency.Branch = rawDependency.Branch
-	dependency.Variables = rawDependency.Variables
-	dependency.Wait = rawDependency.Wait
+	*d = Dependency(dependencyRaw)
 
 	return nil
 }

@@ -248,7 +248,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
 
 	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the development environment is deployed (defaults to false)")
-	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
+	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 
 	return cmd
 }
@@ -349,7 +349,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			File:         dep.ManifestPath,
 			Variables:    model.SerializeEnvironmentVars(dep.Variables),
 			Wait:         dep.Wait,
-			Timeout:      deployOptions.Timeout,
+			Timeout:      dep.GetTimeout(deployOptions.Timeout),
 			SkipIfExists: !deployOptions.Dependencies,
 		}
 		pc, err := pipelineCMD.NewCommand()
@@ -682,4 +682,21 @@ func setDifference[T comparable](set1, set2 map[T]bool) map[T]bool {
 		}
 	}
 	return difference
+}
+
+func getDefaultTimeout() time.Duration {
+	defaultTimeout := 5 * time.Minute
+	t := os.Getenv(model.OktetoTimeoutEnvVar)
+	if t == "" {
+		return defaultTimeout
+	}
+
+	parsed, err := time.ParseDuration(t)
+	if err != nil {
+		oktetoLog.Infof("OKTETO_TIMEOUT value is not a valid duration: %s", t)
+		oktetoLog.Infof("timeout fallback to defaultTimeout")
+		return defaultTimeout
+	}
+
+	return parsed
 }
