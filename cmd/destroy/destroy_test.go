@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/model"
@@ -802,7 +803,7 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 				secrets: tt.secrets,
 			}
 			// Set env var destroy inside deploy
-			t.Setenv(model.OktetoWithinDeployCommandContextEnvVar, "true")
+			t.Setenv(constants.OktetoWithinDeployCommandContextEnvVar, "true")
 			cmd := &destroyCommand{
 				getManifest:       tt.getManifest,
 				secrets:           &secretHandler,

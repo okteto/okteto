@@ -20,10 +20,10 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"gopkg.in/yaml.v2"
 )
 
@@ -81,7 +81,7 @@ func GetBinaryFullPath() string {
 
 // GetOktetoHome returns the path of the okteto folder
 func GetOktetoHome() string {
-	if v, ok := os.LookupEnv(model.OktetoFolderEnvVar); ok {
+	if v, ok := os.LookupEnv(constants.OktetoFolderEnvVar); ok {
 		if !filesystem.FileExists(v) {
 			oktetoLog.Fatalf("OKTETO_FOLDER doesn't exist: %s", v)
 		}
@@ -124,16 +124,16 @@ func GetAppHome(namespace, name string) string {
 }
 
 // UpdateStateFile updates the state file of a given dev environment
-func UpdateStateFile(dev *model.Dev, state UpState) error {
-	if dev.Namespace == "" {
+func UpdateStateFile(devName, devNamespace string, state UpState) error {
+	if devNamespace == "" {
 		return fmt.Errorf("can't update state file, namespace is empty")
 	}
 
-	if dev.Name == "" {
+	if devName == "" {
 		return fmt.Errorf("can't update state file, name is empty")
 	}
 
-	s := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
+	s := filepath.Join(GetAppHome(devNamespace, devName), stateFile)
 
 	oktetoLog.Infof("updating file '%s'", s)
 	if err := os.WriteFile(s, []byte(state), 0600); err != nil {
@@ -145,31 +145,31 @@ func UpdateStateFile(dev *model.Dev, state UpState) error {
 }
 
 // DeleteStateFile deletes the state file of a given dev environment
-func DeleteStateFile(dev *model.Dev) error {
-	if dev.Namespace == "" {
+func DeleteStateFile(devName, devNamespace string) error {
+	if devNamespace == "" {
 		return fmt.Errorf("can't delete state file, namespace is empty")
 	}
 
-	if dev.Name == "" {
+	if devName == "" {
 		return fmt.Errorf("can't delete state file, name is empty")
 	}
 
-	s := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
+	s := filepath.Join(GetAppHome(devNamespace, devName), stateFile)
 	return os.Remove(s)
 }
 
 // GetState returns the state of a given dev environment
-func GetState(dev *model.Dev) (UpState, error) {
+func GetState(devName, devNamespace string) (UpState, error) {
 	var result UpState
-	if dev.Namespace == "" {
+	if devNamespace == "" {
 		return Failed, fmt.Errorf("can't update state file, namespace is empty")
 	}
 
-	if dev.Name == "" {
+	if devName == "" {
 		return Failed, fmt.Errorf("can't update state file, name is empty")
 	}
 
-	statePath := filepath.Join(GetAppHome(dev.Namespace, dev.Name), stateFile)
+	statePath := filepath.Join(GetAppHome(devNamespace, devName), stateFile)
 	stateBytes, err := os.ReadFile(statePath)
 	if err != nil {
 		oktetoLog.Infof("error reading state file: %s", err.Error())
@@ -188,7 +188,7 @@ func GetState(dev *model.Dev) (UpState, error) {
 
 // GetUserHomeDir returns the OS home dir
 func GetUserHomeDir() string {
-	if v, ok := os.LookupEnv(model.OktetoHomeEnvVar); ok {
+	if v, ok := os.LookupEnv(constants.OktetoHomeEnvVar); ok {
 		if !filesystem.FileExists(v) {
 			oktetoLog.Fatalf("OKTETO_HOME points to a non-existing directory: %s", v)
 		}
@@ -205,21 +205,21 @@ func GetUserHomeDir() string {
 		return home
 	}
 
-	return os.Getenv(model.HomeEnvVar)
+	return os.Getenv(homeEnvVar)
 
 }
 
 func homedirWindows() (string, error) {
-	if home := os.Getenv(model.HomeEnvVar); home != "" {
+	if home := os.Getenv(homeEnvVar); home != "" {
 		return home, nil
 	}
 
-	if home := os.Getenv(model.UserProfileEnvVar); home != "" {
+	if home := os.Getenv(userProfileEnvVar); home != "" {
 		return home, nil
 	}
 
-	drive := os.Getenv(model.HomeDriveEnvVar)
-	path := os.Getenv(model.HomePathEnvVar)
+	drive := os.Getenv(homeDriveEnvVar)
+	path := os.Getenv(homePathEnvVar)
 	home := drive + path
 	if drive == "" || path == "" {
 		return "", fmt.Errorf("HOME, HOMEDRIVE, HOMEPATH, or USERPROFILE are empty. Use $OKTETO_HOME to set your home directory")
@@ -232,7 +232,7 @@ func homedirWindows() (string, error) {
 func GetKubeconfigPath() []string {
 	home := GetUserHomeDir()
 	kubeconfig := []string{filepath.Join(home, ".kube", "config")}
-	kubeconfigEnv := os.Getenv(model.KubeConfigEnvVar)
+	kubeconfigEnv := os.Getenv(constants.KubeConfigEnvVar)
 	if len(kubeconfigEnv) > 0 {
 		kubeconfig = splitKubeConfigEnv(kubeconfigEnv)
 	}
@@ -274,18 +274,18 @@ func GetCertificatePath() string {
 // GetDeployOrigin gets the pipeline deploy origin. This is the initiator of the
 // deploy action: web, cli, github-action, etc
 func GetDeployOrigin() (src string) {
-	src = os.Getenv(model.OktetoOriginEnvVar)
+	src = os.Getenv(oktetoOriginEnvVar)
 	if src == "" {
 		src = "cli"
 	}
 	// deploys within another okteto deploy take precedence as a deploy origin.
 	// This is running okteto pipeline deploy as a step of another okteto deploy
-	if os.Getenv(model.OktetoWithinDeployCommandContextEnvVar) == "true" {
+	if os.Getenv(constants.OktetoWithinDeployCommandContextEnvVar) == "true" {
 		src = "okteto-deploy"
 	}
 	return
 }
 
 func RunningInInstaller() bool {
-	return os.Getenv(model.OktetoInInstaller) == "true"
+	return os.Getenv(oktetoInInstaller) == "true"
 }

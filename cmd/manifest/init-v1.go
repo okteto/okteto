@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -275,7 +276,7 @@ func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, er
 	}
 	options := []string{}
 	for i := range dList {
-		if dList[i].Labels[model.DevLabel] != "" {
+		if dList[i].Labels[constants.DevLabel] != "" {
 			continue
 		}
 		if dList[i].Labels[model.DevCloneLabel] != "" {
@@ -284,7 +285,7 @@ func askForRunningApp(ctx context.Context, c kubernetes.Interface) (apps.App, er
 		options = append(options, dList[i].Name)
 	}
 	for i := range sfsList {
-		if sfsList[i].Labels[model.DevLabel] != "" {
+		if sfsList[i].Labels[constants.DevLabel] != "" {
 			continue
 		}
 		if sfsList[i].Labels[model.DevCloneLabel] != "" {

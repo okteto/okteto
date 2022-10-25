@@ -21,15 +21,15 @@ import (
 
 	"net/http"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/constants"
 	"golang.org/x/oauth2"
 )
 
 func TestInDevContainer(t *testing.T) {
-	v := os.Getenv(model.OktetoNameEnvVar)
-	os.Setenv(model.OktetoNameEnvVar, "")
+	v := os.Getenv(constants.OktetoNameEnvVar)
+	os.Setenv(constants.OktetoNameEnvVar, "")
 	defer func() {
-		os.Setenv(model.OktetoNameEnvVar, v)
+		os.Setenv(constants.OktetoNameEnvVar, v)
 	}()
 
 	in := InDevContainer()
@@ -37,13 +37,13 @@ func TestInDevContainer(t *testing.T) {
 		t.Errorf("in dev container when there was no marker env var")
 	}
 
-	os.Setenv(model.OktetoNameEnvVar, "")
+	os.Setenv(constants.OktetoNameEnvVar, "")
 	in = InDevContainer()
 	if in {
 		t.Errorf("in dev container when there was an empty marker env var")
 	}
 
-	os.Setenv(model.OktetoNameEnvVar, "1")
+	os.Setenv(constants.OktetoNameEnvVar, "1")
 	in = InDevContainer()
 	if !in {
 		t.Errorf("not in dev container when there was a marker env var")

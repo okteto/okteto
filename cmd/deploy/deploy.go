@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
@@ -109,7 +110,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 			// This is needed because the deploy command needs the original kubeconfig configuration even in the execution within another
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
-			os.Setenv(model.OktetoSkipConfigCredentialsUpdate, "false")
+			os.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "false")
 			if options.ManifestPath != "" {
 				// if path is absolute, its transformed to rel from root
 				initialCWD, err := os.Getwd()
@@ -320,7 +321,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	dc.PipelineType = deployOptions.Manifest.Type
 
-	os.Setenv(model.OktetoNameEnvVar, deployOptions.Name)
+	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
@@ -382,13 +383,13 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	deployOptions.Variables = append(
 		deployOptions.Variables,
 		// Set KUBECONFIG environment variable as environment for the commands to be executed
-		fmt.Sprintf("%s=%s", model.KubeConfigEnvVar, dc.TempKubeconfigFile),
+		fmt.Sprintf("%s=%s", constants.KubeConfigEnvVar, dc.TempKubeconfigFile),
 		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all okteto commands ran inside this deploy
 		// know they are running inside another okteto deploy
-		fmt.Sprintf("%s=true", model.OktetoWithinDeployCommandContextEnvVar),
+		fmt.Sprintf("%s=true", constants.OktetoWithinDeployCommandContextEnvVar),
 		// Set OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE env variable, so all the Okteto commands executed within this command execution
 		// should not overwrite the server and the credentials in the kubeconfig
-		fmt.Sprintf("%s=true", model.OktetoSkipConfigCredentialsUpdate),
+		fmt.Sprintf("%s=true", constants.OktetoSkipConfigCredentialsUpdate),
 		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
 		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
@@ -420,7 +421,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 					return err
 				}
 			}
-			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+			if !utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 				if err := dc.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: deployOptions.Manifest.Namespace}); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
 				}

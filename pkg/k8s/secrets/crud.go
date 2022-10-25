@@ -19,6 +19,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/syncthing"
@@ -69,7 +70,7 @@ func Create(ctx context.Context, dev *model.Dev, c *kubernetes.Clientset, s *syn
 		ObjectMeta: metav1.ObjectMeta{
 			Name: secretName,
 			Labels: map[string]string{
-				model.DevLabel: "true",
+				constants.DevLabel: "true",
 			},
 		},
 		Type: v1.SecretTypeOpaque,

@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -51,7 +52,7 @@ func RunExecCommand(oktetoPath string, execOptions *ExecOptions) (string, error)
 	}
 
 	if execOptions.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, execOptions.OktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, execOptions.OktetoHome))
 	}
 	if execOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, execOptions.Token))

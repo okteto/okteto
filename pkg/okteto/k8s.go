@@ -7,7 +7,6 @@ import (
 
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -18,6 +17,11 @@ import (
 
 var timeout time.Duration
 var tOnce sync.Once
+
+const (
+	// oktetoKubernetesTimeoutEnvVar defines the timeout for kubernetes operations
+	oktetoKubernetesTimeoutEnvVar = "OKTETO_KUBERNETES_TIMEOUT"
+)
 
 type K8sClientProvider interface {
 	Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
@@ -49,7 +53,7 @@ func (*K8sClient) GetIngressClient() (*ingresses.Client, error) {
 func GetKubernetesTimeout() time.Duration {
 	tOnce.Do(func() {
 		timeout = 0 * time.Second
-		t, ok := os.LookupEnv(model.OktetoKubernetesTimeoutEnvVar)
+		t, ok := os.LookupEnv(oktetoKubernetesTimeoutEnvVar)
 		if !ok {
 			return
 		}

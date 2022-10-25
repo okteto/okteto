@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -68,7 +69,7 @@ func RunOktetoDeployPipeline(oktetoPath string, deployOptions *DeployPipelineOpt
 	}
 
 	if deployOptions.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, deployOptions.OktetoHome))
 	}
 	if deployOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, deployOptions.Token))
@@ -98,7 +99,7 @@ func RunOktetoPipelineDestroy(oktetoPath string, destroyOptions *DestroyPipeline
 	}
 
 	if destroyOptions.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, destroyOptions.OktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, destroyOptions.OktetoHome))
 	}
 	if destroyOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, destroyOptions.Token))

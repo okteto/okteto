@@ -19,6 +19,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -217,11 +218,11 @@ func Test_removeHost(t *testing.T) {
 func TestGetPort(t *testing.T) {
 	dir := t.TempDir()
 
-	if err := os.Setenv(model.OktetoHomeEnvVar, dir); err != nil {
+	if err := os.Setenv(constants.OktetoHomeEnvVar, dir); err != nil {
 		t.Fatal(err)
 	}
 
-	defer os.Unsetenv(model.OktetoHomeEnvVar)
+	defer os.Unsetenv(constants.OktetoHomeEnvVar)
 
 	if _, err := GetPort(t.Name()); err == nil {
 		t.Fatal("expected error on non existing host")

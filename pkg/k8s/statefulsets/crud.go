@@ -23,6 +23,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -174,7 +175,7 @@ func IsDevModeOn(s *appsv1.StatefulSet) bool {
 	if labels == nil {
 		return false
 	}
-	_, ok := labels[model.DevLabel]
+	_, ok := labels[constants.DevLabel]
 	return ok
 }
 

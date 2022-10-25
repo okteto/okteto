@@ -28,11 +28,11 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -183,8 +183,8 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string,
 		oktetoLog.Debugf("error accessing current namespace: %v", err)
 		return k8sContext
 	}
-	if _, ok := n.Labels[model.DevLabel]; ok {
-		return n.Annotations[model.OktetoURLAnnotation]
+	if _, ok := n.Labels[constants.DevLabel]; ok {
+		return n.Annotations[constants.OktetoURLAnnotation]
 	}
 
 	return k8sContext
@@ -325,7 +325,7 @@ func (*ContextConfigWriter) Write() error {
 func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName, oktetoURL string) {
 	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
 	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings
-	if os.Getenv(model.OktetoSkipConfigCredentialsUpdate) == "true" {
+	if os.Getenv(constants.OktetoSkipConfigCredentialsUpdate) == "true" {
 		return
 	}
 
@@ -356,7 +356,7 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	if context.Extensions == nil {
 		context.Extensions = map[string]runtime.Object{}
 	}
-	context.Extensions[model.OktetoExtension] = nil
+	context.Extensions[constants.OktetoExtension] = nil
 	context.Cluster = clusterName
 	context.AuthInfo = userName
 	context.Namespace = namespace

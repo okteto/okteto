@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/down"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -59,7 +60,7 @@ func Push(ctx context.Context) *cobra.Command {
 		Short:  "Build, push and redeploy source code to the target app",
 		Args:   utils.MaximumNArgsAccepted(1, "https://www.okteto.com/docs/0.10/reference/cli/#push"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !utils.LoadBoolean(model.OktetoWithinDeployCommandContextEnvVar) {
+			if !utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 				oktetoLog.Warning("'okteto push' is deprecated in favor of 'okteto deploy', and will be removed in a future version")
 			}
 			ctxResource, err := utils.LoadManifestContext(pushOpts.DevPath)

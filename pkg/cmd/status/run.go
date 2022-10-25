@@ -87,7 +87,7 @@ func Wait(dev *model.Dev, okStatusList []config.UpState) error {
 
 		ticker := time.NewTicker(500 * time.Millisecond)
 		for {
-			status, err := config.GetState(dev)
+			status, err := config.GetState(dev.Name, dev.Namespace)
 			if err != nil {
 				exit <- err
 				return

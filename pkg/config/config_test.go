@@ -18,7 +18,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/constants"
 )
 
 func TestGetUserHomeDir(t *testing.T) {
@@ -29,10 +29,10 @@ func TestGetUserHomeDir(t *testing.T) {
 
 	dir := t.TempDir()
 	defer func() {
-		os.Unsetenv(model.OktetoHomeEnvVar)
+		os.Unsetenv(constants.OktetoHomeEnvVar)
 	}()
 
-	os.Setenv(model.OktetoHomeEnvVar, dir)
+	os.Setenv(constants.OktetoHomeEnvVar, dir)
 	home = GetUserHomeDir()
 	if home != dir {
 		t.Fatalf("OKTETO_HOME override failed, got %s instead of %s", home, dir)
@@ -77,21 +77,21 @@ func Test_homedirWindows(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			home := os.Getenv(model.HomeEnvVar)
-			up := os.Getenv(model.UserProfileEnvVar)
-			hp := os.Getenv(model.HomePathEnvVar)
-			hd := os.Getenv(model.HomeDriveEnvVar)
+			home := os.Getenv(homeEnvVar)
+			up := os.Getenv(userProfileEnvVar)
+			hp := os.Getenv(homePathEnvVar)
+			hd := os.Getenv(homeDriveEnvVar)
 
-			os.Unsetenv(model.HomeEnvVar)
-			os.Unsetenv(model.UserProfileEnvVar)
-			os.Unsetenv(model.HomePathEnvVar)
-			os.Unsetenv(model.HomeDriveEnvVar)
+			os.Unsetenv(homeEnvVar)
+			os.Unsetenv(userProfileEnvVar)
+			os.Unsetenv(homePathEnvVar)
+			os.Unsetenv(homeDriveEnvVar)
 
 			defer func() {
-				os.Setenv(model.HomeEnvVar, home)
-				os.Setenv(model.UserProfileEnvVar, up)
-				os.Setenv(model.HomePathEnvVar, hp)
-				os.Setenv(model.HomeDriveEnvVar, hd)
+				os.Setenv(homeEnvVar, home)
+				os.Setenv(userProfileEnvVar, up)
+				os.Setenv(homePathEnvVar, hp)
+				os.Setenv(homeDriveEnvVar, hd)
 			}()
 
 			for k, v := range tt.env {
@@ -113,10 +113,10 @@ func Test_homedirWindows(t *testing.T) {
 func TestGetOktetoHome(t *testing.T) {
 	dir := t.TempDir()
 	defer func() {
-		os.Unsetenv(model.OktetoFolderEnvVar)
+		os.Unsetenv(constants.OktetoFolderEnvVar)
 	}()
 
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+	os.Setenv(constants.OktetoFolderEnvVar, dir)
 
 	got := GetOktetoHome()
 	if got != dir {
@@ -127,7 +127,7 @@ func TestGetOktetoHome(t *testing.T) {
 func TestGetAppHome(t *testing.T) {
 	dir := t.TempDir()
 
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+	os.Setenv(constants.OktetoFolderEnvVar, dir)
 
 	got := GetAppHome("ns", "dp")
 	expected := filepath.Join(dir, "ns", "dp")

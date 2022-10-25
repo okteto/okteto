@@ -19,9 +19,6 @@ const (
 	// TimeFormat is the format to use when storing timestamps as a string
 	TimeFormat = "2006-01-02T15:04:05"
 
-	// DevLabel indicates the deployment is in dev mode
-	DevLabel = "dev.okteto.com"
-
 	// DevCloneLabel indicates it is a dev pod clone
 	DevCloneLabel = "dev.okteto.com/clone"
 
@@ -112,13 +109,6 @@ const (
 	// StackVolumeNameLabel indicates the name of the stack volume an object belongs to
 	StackVolumeNameLabel = "stack.okteto.com/volume"
 
-	// Deployment k8s deployemnt kind
-	Deployment = "Deployment"
-	// StatefulSet k8s statefulset kind
-	StatefulSet = "StatefulSet"
-	// Job k8s job kind
-	Job = "job"
-
 	// Localhost localhost
 	Localhost = "localhost"
 	// PrivilegedLocalhost localhost
@@ -150,8 +140,6 @@ const (
 	DefaultSyncthingRescanInterval = 300
 	// RemoteSubPath subpath in the development container persistent volume for the remote data
 	RemoteSubPath = "okteto-remote"
-	// OktetoURLAnnotation indicates the okteto cluster public url
-	OktetoURLAnnotation = "dev.okteto.com/url"
 	// OktetoAutoCreateAnnotation indicates if the deployment was auto generatted by okteto up
 	OktetoAutoCreateAnnotation = "dev.okteto.com/auto-create"
 	// OktetoRestartAnnotation indicates the dev pod must be recreated to pull the latest version of its image
@@ -178,9 +166,6 @@ const (
 	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
 
 	syncFieldDocsURL = "https:// okteto.com/docs/reference/manifest/#sync-string-required"
-
-	// OktetoExtension identifies the okteto extension in kubeconfig files
-	OktetoExtension = "okteto"
 
 	// HelmSecretType indicates the type for secrets created by Helm
 	HelmSecretType = "helm.sh/release.v1"
@@ -239,39 +224,14 @@ const (
 	// OktetoPathEnvVar defines where is okteto binary
 	OktetoPathEnvVar = "OKTETO_PATH"
 
-	// OktetoOriginEnvVar defines where is executing okteto
-	OktetoOriginEnvVar = "OKTETO_ORIGIN"
-
-	// OktetoFolderEnvVar defines the path of okteto folder
-	OktetoFolderEnvVar = "OKTETO_FOLDER"
-
-	// OktetoHomeEnvVar defines the path of okteto folder
-	OktetoHomeEnvVar = "OKTETO_HOME"
-
 	// OktetoExecuteSSHEnvVar defines if the command should be executed through ssh
 	OktetoExecuteSSHEnvVar = "OKTETO_EXECUTE_SSH"
-
-	// OktetoNameEnvVar defines if the command is running inside okteot
-	OktetoNameEnvVar = "OKTETO_NAME"
 
 	// OktetoSSHTimeoutEnvVar defines the timeout for ssh operations
 	OktetoSSHTimeoutEnvVar = "OKTETO_SSH_TIMEOUT"
 
-	// OktetoKubernetesTimeoutEnvVar defines the timeout for kubernetes operations
-	OktetoKubernetesTimeoutEnvVar = "OKTETO_KUBERNETES_TIMEOUT"
-
 	// OktetoRescanIntervalEnvVar defines the time between scans for syncthing
 	OktetoRescanIntervalEnvVar = "OKTETO_RESCAN_INTERVAL"
-
-	// OktetoWithinDeployCommandContextEnvVar defines if an okteto command is executed by deploy command
-	OktetoWithinDeployCommandContextEnvVar = "OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT"
-
-	// OktetoInInstaller if set to true okteto is running inside the pipeline installer
-	OktetoInInstaller = "OKTETO_IN_INSTALLER"
-
-	// OktetoSkipConfigCredentialsUpdate prevents the kubernetes config from being updated
-	// with the okteto credentials
-	OktetoSkipConfigCredentialsUpdate = "OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE"
 
 	// OktetoCurrentDeployBelongsToPreview if set the current okteto deploy belongs
 	// to a preview environment
@@ -285,21 +245,6 @@ const (
 
 	// TermEnvVar defines the type of terminal the user is using
 	TermEnvVar = "TERM"
-
-	// HomeEnvVar defines home directory
-	HomeEnvVar = "HOME"
-
-	// HomePathEnvVar defines home path
-	HomePathEnvVar = "HOMEPATH"
-
-	// HomeDriveEnvVar defines home drive
-	HomeDriveEnvVar = "HOMEDRIVE"
-
-	// UserProfileEnvVar defines user profile
-	UserProfileEnvVar = "USERPROFILE"
-
-	// KubeConfigEnvVar defines the path where kubeconfig is stored
-	KubeConfigEnvVar = "KUBECONFIG"
 
 	// GithubRepositoryEnvVar defines the repository to be used
 	GithubRepositoryEnvVar = "GITHUB_REPOSITORY"

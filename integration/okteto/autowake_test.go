@@ -28,6 +28,7 @@ import (
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -409,7 +410,7 @@ func areNamespaceResourcesAwake(namespace string, timeout time.Duration, c kuber
 			}
 			areDeploymentSleeping := false
 			for _, d := range dList {
-				if v, ok := d.Labels[model.DevLabel]; ok && v == "true" {
+				if v, ok := d.Labels[constants.DevLabel]; ok && v == "true" {
 					continue
 				}
 				if *d.Spec.Replicas == 0 {

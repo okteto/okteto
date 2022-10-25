@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/a8m/envsubst"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -485,7 +486,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found helm chart on %s", chartPath)
 		tags := inferHelmTags(chartPath)
-		command := fmt.Sprintf("helm upgrade --install ${%s} %s %s", OktetoNameEnvVar, chartPath, tags)
+		command := fmt.Sprintf("helm upgrade --install ${%s} %s %s", constants.OktetoNameEnvVar, chartPath, tags)
 		chartManifest := &Manifest{
 			Type: ChartType,
 			Deploy: &DeployInfo{

@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 
 	"github.com/okteto/okteto/pkg/analytics"
@@ -258,7 +259,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	if manifest.Namespace == okteto.Context().Namespace {
 		manifest.Namespace = okteto.Context().Namespace
 	}
-	os.Setenv(model.OktetoNameEnvVar, opts.Name)
+	os.Setenv(constants.OktetoNameEnvVar, opts.Name)
 
 	if opts.DestroyDependencies {
 		for depName := range manifest.Dependencies {

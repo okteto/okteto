@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/compose-spec/godotenv"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -265,13 +266,13 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 
 func getStackName(name, stackPath, actualStackName string) (string, error) {
 	if name != "" {
-		if err := os.Setenv(OktetoNameEnvVar, name); err != nil {
+		if err := os.Setenv(constants.OktetoNameEnvVar, name); err != nil {
 			return "", err
 		}
 		return name, nil
 	}
 	if actualStackName == "" {
-		nameEnvVar := os.Getenv(OktetoNameEnvVar)
+		nameEnvVar := os.Getenv(constants.OktetoNameEnvVar)
 		if nameEnvVar != "" {
 			return nameEnvVar, nil
 		}
@@ -282,12 +283,12 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 				return "", err
 			}
 		}
-		if err := os.Setenv(OktetoNameEnvVar, name); err != nil {
+		if err := os.Setenv(constants.OktetoNameEnvVar, name); err != nil {
 			return "", err
 		}
 		return name, nil
 	}
-	if err := os.Setenv(OktetoNameEnvVar, actualStackName); err != nil {
+	if err := os.Setenv(constants.OktetoNameEnvVar, actualStackName); err != nil {
 		return "", err
 	}
 	return actualStackName, nil

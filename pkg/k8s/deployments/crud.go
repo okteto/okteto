@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -49,7 +50,7 @@ func Sandbox(dev *model.Dev) *appsv1.Deployment {
 			Name:      dev.Name,
 			Namespace: dev.Namespace,
 			Labels: model.Labels{
-				model.DevLabel: "true",
+				constants.DevLabel: "true",
 			},
 			Annotations: model.Annotations{
 				model.OktetoAutoCreateAnnotation: model.OktetoUpCmd,
@@ -206,7 +207,7 @@ func Deploy(ctx context.Context, d *appsv1.Deployment, c kubernetes.Interface) (
 
 // IsDevModeOn returns if a deployment is in devmode
 func IsDevModeOn(d *appsv1.Deployment) bool {
-	return labels.Get(d.GetObjectMeta(), model.DevLabel) != ""
+	return labels.Get(d.GetObjectMeta(), constants.DevLabel) != ""
 }
 
 // Destroy destroys a k8s deployment

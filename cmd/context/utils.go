@@ -22,6 +22,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -57,7 +58,7 @@ func getKubernetesContextList(filterOkteto bool) []string {
 		return contextList
 	}
 	for name := range cfg.Contexts {
-		if _, ok := cfg.Contexts[name].Extensions[model.OktetoExtension]; ok && filterOkteto {
+		if _, ok := cfg.Contexts[name].Extensions[constants.OktetoExtension]; ok && filterOkteto {
 			continue
 		}
 		contextList = append(contextList, name)

@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/okteto"
 )
 
@@ -65,7 +65,7 @@ func Test_deleteContext(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer os.Remove(file)
-			t.Setenv(model.OktetoHomeEnvVar, filepath.Dir(file))
+			t.Setenv(constants.OktetoHomeEnvVar, filepath.Dir(file))
 			okteto.CurrentStore = tt.ctxStore
 			if err := Delete(tt.toDelete); err == nil && tt.expectedErr || err != nil && !tt.expectedErr {
 				t.Fatal(err)

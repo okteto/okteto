@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils/executor"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/linguist"
@@ -122,7 +123,7 @@ func Init() *cobra.Command {
 
 // RunInitV2 initializes a new okteto manifest
 func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
-	os.Setenv(model.OktetoNameEnvVar, utils.InferName(opts.Workdir))
+	os.Setenv(constants.OktetoNameEnvVar, utils.InferName(opts.Workdir))
 	manifest := model.NewManifest()
 	var err error
 	if !opts.Overwrite {
@@ -141,7 +142,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 
 	if manifest != nil {
 		mc.manifest = manifest
-		manifest.Name = os.Getenv(model.OktetoNameEnvVar)
+		manifest.Name = os.Getenv(constants.OktetoNameEnvVar)
 		if opts.Namespace == "" {
 			manifest.Namespace = ""
 		}

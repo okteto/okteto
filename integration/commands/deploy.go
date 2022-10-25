@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 )
 
@@ -93,7 +94,7 @@ func RunOktetoDestroy(oktetoPath string, destroyOptions *DestroyOptions) error {
 	}
 
 	if destroyOptions.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, destroyOptions.OktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, destroyOptions.OktetoHome))
 	}
 	if destroyOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, destroyOptions.Token))
@@ -135,8 +136,8 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 	}
 
 	if deployOptions.OktetoHome != "" {
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoHomeEnvVar, deployOptions.OktetoHome))
-		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.KubeConfigEnvVar, filepath.Join(deployOptions.OktetoHome, ".kube", "config")))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, deployOptions.OktetoHome))
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.KubeConfigEnvVar, filepath.Join(deployOptions.OktetoHome, ".kube", "config")))
 	}
 	if deployOptions.Token != "" {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, deployOptions.Token))

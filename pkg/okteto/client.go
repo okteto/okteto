@@ -22,10 +22,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 	"golang.org/x/oauth2"
@@ -236,7 +236,7 @@ func isAPITransientErr(err error) bool {
 
 // InDevContainer returns true if running in an okteto dev container
 func InDevContainer() bool {
-	if v, ok := os.LookupEnv(model.OktetoNameEnvVar); ok && v != "" {
+	if v, ok := os.LookupEnv(constants.OktetoNameEnvVar); ok && v != "" {
 		return true
 	}
 

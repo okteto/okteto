@@ -42,7 +42,7 @@ func (up *upContext) activate() error {
 
 	oktetoLog.Infof("activating development container retry=%t", up.isRetry)
 
-	if err := config.UpdateStateFile(up.Dev, config.Activating); err != nil {
+	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Activating); err != nil {
 		return err
 	}
 
@@ -233,7 +233,7 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	if err := config.UpdateStateFile(up.Dev, config.Starting); err != nil {
+	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Starting); err != nil {
 		return err
 	}
 
@@ -298,7 +298,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 	msg := "Pulling images..."
 	if up.Dev.PersistentVolumeEnabled() {
 		msg = "Attaching persistent volume..."
-		if err := config.UpdateStateFile(up.Dev, config.Attaching); err != nil {
+		if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Attaching); err != nil {
 			oktetoLog.Infof("error updating state: %s", err.Error())
 		}
 	}
@@ -378,7 +378,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				oktetoLog.Success("Persistent volume successfully attached")
 				oktetoLog.Spinner("Pulling images...")
 			case "Killing":
-				if app.Kind() == model.StatefulSet {
+				if app.Kind() == okteto.StatefulSet {
 					killing = true
 					continue
 				}
@@ -390,7 +390,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 			case "Pulling":
 				message := getPullingMessage(e.Message, up.Dev.Namespace)
 				oktetoLog.Spinner(fmt.Sprintf("%s...", message))
-				if err := config.UpdateStateFile(up.Dev, config.Pulling); err != nil {
+				if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Pulling); err != nil {
 					oktetoLog.Infof("error updating state: %s", err.Error())
 				}
 			}

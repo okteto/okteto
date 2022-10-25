@@ -25,7 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 	giturls "github.com/whilp/git-urls"
@@ -435,20 +434,20 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name string) (m
 	status := make(map[string]string)
 	for _, d := range queryStruct.Space.Deployments {
 		if string(d.DeployedBy) == name {
-			resourceName := getResourceFullName(model.Deployment, string(d.Name))
+			resourceName := getResourceFullName(Deployment, string(d.Name))
 			status[resourceName] = string(d.Status)
 
 		}
 	}
 	for _, sfs := range queryStruct.Space.Statefulsets {
 		if string(sfs.DeployedBy) == name {
-			resourceName := getResourceFullName(model.StatefulSet, string(sfs.Name))
+			resourceName := getResourceFullName(StatefulSet, string(sfs.Name))
 			status[resourceName] = string(sfs.Status)
 		}
 	}
 	for _, j := range queryStruct.Space.Jobs {
 		if string(j.DeployedBy) == name {
-			resourceName := getResourceFullName(model.Job, string(j.Name))
+			resourceName := getResourceFullName(job, string(j.Name))
 			status[resourceName] = string(j.Status)
 		}
 	}

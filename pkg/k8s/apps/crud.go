@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -50,7 +51,7 @@ func Get(ctx context.Context, dev *model.Dev, namespace string, c kubernetes.Int
 
 // IsDevModeOn returns if a statefulset is in devmode
 func IsDevModeOn(app App) bool {
-	return app.ObjectMeta().Labels[model.DevLabel] == "true" || len(app.ObjectMeta().Labels[model.DevCloneLabel]) > 0
+	return app.ObjectMeta().Labels[constants.DevLabel] == "true" || len(app.ObjectMeta().Labels[model.DevCloneLabel]) > 0
 }
 
 // SetLastBuiltAnnotation sets the app timestamp
@@ -174,7 +175,7 @@ func ListDevModeOn(ctx context.Context, manifest *model.Manifest, c kubernetes.I
 		// when autocreate is active, the app name has suffix -okteto
 		// this should be taken into account when searching for dev mode apps
 		// we just want to modify the dev
-		var appDev model.Dev = *dev
+		var appDev = *dev
 
 		if appDev.Autocreate {
 			appDev.Name = model.DevCloneName(appDev.Name)

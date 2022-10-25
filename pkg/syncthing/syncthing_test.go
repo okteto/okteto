@@ -18,16 +18,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/constants"
 )
 
 func TestGetFiles(t *testing.T) {
 	dir := t.TempDir()
 	defer func() {
-		os.Unsetenv(model.OktetoFolderEnvVar)
+		os.Unsetenv(constants.OktetoFolderEnvVar)
 	}()
 
-	os.Setenv(model.OktetoFolderEnvVar, dir)
+	os.Setenv(constants.OktetoFolderEnvVar, dir)
 	log := GetLogFile("test", "application")
 	expected := filepath.Join(dir, "test", "application", "syncthing.log")
 

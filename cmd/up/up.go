@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -159,7 +160,7 @@ func Up() *cobra.Command {
 			if oktetoManifest.Name == "" {
 				oktetoManifest.Name = utils.InferName(wd)
 			}
-			os.Setenv(model.OktetoNameEnvVar, oktetoManifest.Name)
+			os.Setenv(constants.OktetoNameEnvVar, oktetoManifest.Name)
 
 			if len(oktetoManifest.Dev) == 0 {
 				if oktetoManifest.Type == model.StackType {
@@ -564,7 +565,7 @@ func (up *upContext) activateLoop() {
 	iter := 0
 	defer t.Stop()
 
-	defer config.DeleteStateFile(up.Dev)
+	defer config.DeleteStateFile(up.Dev.Name, up.Dev.Namespace)
 
 	for {
 		if up.isRetry || isTransientError {
