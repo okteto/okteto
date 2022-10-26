@@ -186,6 +186,11 @@ var (
 	ErrX509Hint = "Add the flag '--insecure-skip-tls-verify' to skip certificate verification.\n    Follow this link to know more about configuring your own certificates with Okteto:\n    https://www.okteto.com/docs/self-hosted/administration/certificates/"
 )
 
+// IsAlreadyExists raised if the Kubernetes API returns AlreadyExists
+func IsAlreadyExists(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "already exists")
+}
+
 // IsForbidden raised if the Okteto API returns 401
 func IsForbidden(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "unauthorized")

@@ -24,6 +24,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 )
 
 func Test_translateIngress(t *testing.T) {
@@ -81,7 +82,7 @@ func Test_translateIngress(t *testing.T) {
 			},
 		},
 	}
-	result := translateIngress(m, in, "")
+	result := translateIngress(m, in)
 	fmt.Println(result)
 	fmt.Println(expected)
 	assert.True(t, reflect.DeepEqual(result, expected))
@@ -107,7 +108,6 @@ func Test_translateEmptyIngress(t *testing.T) {
 			Annotations: map[string]string{
 				model.OktetoAutoCreateAnnotation: "true",
 			},
-			ResourceVersion: "version",
 		},
 		Spec: networkingv1.IngressSpec{
 			Rules: []networkingv1.IngressRule{},
@@ -123,7 +123,7 @@ func Test_translateEmptyIngress(t *testing.T) {
 			},
 		},
 	}
-	result := translateIngress(m, in, "version")
+	result := translateIngress(m, in)
 	assert.True(t, reflect.DeepEqual(result, expected))
 }
 
@@ -182,7 +182,7 @@ func Test_translateService(t *testing.T) {
 			},
 		},
 	}
-	result := translateService(m, s, "")
+	result := translateService(m, s)
 	assert.True(t, reflect.DeepEqual(result, expected))
 }
 
@@ -208,7 +208,6 @@ func Test_translateEmptyService(t *testing.T) {
 			Annotations: map[string]string{
 				model.OktetoAutoCreateAnnotation: "true",
 			},
-			ResourceVersion: "version",
 		},
 		Spec: apiv1.ServiceSpec{
 			Type:       apiv1.ServiceTypeClusterIP,
@@ -226,12 +225,12 @@ func Test_translateEmptyService(t *testing.T) {
 			},
 		},
 	}
-	result := translateService(m, s, "version")
+	result := translateService(m, s)
 	assert.True(t, reflect.DeepEqual(result, expected))
 }
 
 func Test_translateEndpoints(t *testing.T) {
-	e := &apiv1.Endpoints{
+	s := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			UID:         types.UID("my-uid"),
 			Name:        "name",
@@ -239,12 +238,20 @@ func Test_translateEndpoints(t *testing.T) {
 			Labels:      map[string]string{"l1": "v1"},
 			Annotations: map[string]string{"a1": "v1"},
 		},
-		Subsets: []apiv1.EndpointSubset{
-			{
-				Addresses: []apiv1.EndpointAddress{
-					{
-						IP: "my-ip",
-					},
+		Spec: apiv1.ServiceSpec{
+			ClusterIP: "my-ip",
+			Ports: []apiv1.ServicePort{
+				{
+					Name:        "port1",
+					Port:        8080,
+					Protocol:    apiv1.ProtocolTCP,
+					AppProtocol: pointer.StringPtr("tcp"),
+				},
+				{
+					Name:        "port2",
+					Port:        8081,
+					Protocol:    apiv1.ProtocolTCP,
+					AppProtocol: pointer.StringPtr("tcp"),
 				},
 			},
 		},
@@ -253,12 +260,10 @@ func Test_translateEndpoints(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "name",
 			Labels: map[string]string{
-				model.DeployedByLabel:         "test",
-				model.OktetoDivertedFromLabel: "my-uid",
-				"l1":                          "v1"},
+				model.DeployedByLabel: "test",
+			},
 			Annotations: map[string]string{
 				model.OktetoAutoCreateAnnotation: "true",
-				"a1":                             "v1",
 			},
 		},
 		Subsets: []apiv1.EndpointSubset{
@@ -266,6 +271,28 @@ func Test_translateEndpoints(t *testing.T) {
 				Addresses: []apiv1.EndpointAddress{
 					{
 						IP: "my-ip",
+						TargetRef: &apiv1.ObjectReference{
+							Kind:            "Service",
+							Namespace:       s.Namespace,
+							Name:            s.Name,
+							UID:             s.UID,
+							APIVersion:      "v1",
+							ResourceVersion: s.ResourceVersion,
+						},
+					},
+				},
+				Ports: []apiv1.EndpointPort{
+					{
+						Name:        "port1",
+						Port:        8080,
+						Protocol:    apiv1.ProtocolTCP,
+						AppProtocol: pointer.StringPtr("tcp"),
+					},
+					{
+						Name:        "port2",
+						Port:        8081,
+						Protocol:    apiv1.ProtocolTCP,
+						AppProtocol: pointer.StringPtr("tcp"),
 					},
 				},
 			},
@@ -280,41 +307,7 @@ func Test_translateEndpoints(t *testing.T) {
 			},
 		},
 	}
-	result := translateEndpoints(m, e, "")
-	assert.True(t, reflect.DeepEqual(result, expected))
-}
-
-func Test_translateEmptyEndpoints(t *testing.T) {
-	e := &apiv1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			UID:       types.UID("my-uid"),
-			Name:      "name",
-			Namespace: "staging",
-		},
-	}
-	expected := &apiv1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "name",
-			Labels: map[string]string{
-				model.DeployedByLabel:         "test",
-				model.OktetoDivertedFromLabel: "my-uid",
-			},
-			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
-			},
-			ResourceVersion: "version",
-		},
-	}
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-			},
-		},
-	}
-	result := translateEndpoints(m, e, "version")
+	result := translateEndpoints(m, s)
 	assert.True(t, reflect.DeepEqual(result, expected))
 }
 
