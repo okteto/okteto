@@ -373,6 +373,14 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 					oktetoLog.Spinner("Insufficient cpu/memory in the cluster. Waiting for new nodes to come up...")
 					continue
 				}
+				if strings.Contains(e.Message, "failed to create subPath directory") {
+					return oktetoErrors.UserError{
+						E: fmt.Errorf("There is no space left in persistent volume"),
+						Hint: fmt.Sprintf(`Okteto volume is full.
+    Increase your persistent volume size, run '%s' and try 'okteto up' again.
+    More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.ManifestPathFlag)),
+					}
+				}
 				return fmt.Errorf(e.Message)
 			case "SuccessfulAttachVolume":
 				oktetoLog.Success("Persistent volume successfully attached")
