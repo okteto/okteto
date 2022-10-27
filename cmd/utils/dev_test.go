@@ -16,8 +16,8 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
+	"path/filepath"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -458,9 +458,11 @@ func Test_AskYesNo(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		// Create a temp dir for files used to mock stdin
+		dir := t.TempDir()
 		t.Run(tt.name, func(t *testing.T) {
-			// Create a temp file to mock stdin
-			tmpFile, err := ioutil.TempFile("", "yes_no_tests")
+			tmpPath := filepath.Join(dir, fmt.Sprintf("yes_no_test-%s", tt.name))
+			tmpFile, err := os.Create(tmpPath)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -473,7 +475,7 @@ func Test_AskYesNo(t *testing.T) {
 				os.Remove(tmpFile.Name())
 			}()
 
-			if _, err := tmpFile.Write([]byte(tt.answer)); err != nil {
+			if _, err := tmpFile.WriteString(tt.answer); err != nil {
 				t.Fatal(err)
 			}
 
@@ -486,8 +488,9 @@ func Test_AskYesNo(t *testing.T) {
 
 			os.Stdin = tmpFile
 
-			got, _ := AskYesNo("", tt.def)
+			got, err := AskYesNo("", tt.def)
 
+			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, got)
 		})
 	}
