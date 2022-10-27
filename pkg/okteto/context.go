@@ -224,7 +224,9 @@ func ContextStore() *OktetoContextStore {
 		return CurrentStore
 	}
 
-	CurrentStore = &OktetoContextStore{}
+	CurrentStore = &OktetoContextStore{
+		Contexts: map[string]*OktetoContext{},
+	}
 	return CurrentStore
 }
 
