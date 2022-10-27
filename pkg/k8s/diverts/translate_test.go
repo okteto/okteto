@@ -261,9 +261,11 @@ func Test_translateEndpoints(t *testing.T) {
 			Name: "name",
 			Labels: map[string]string{
 				model.DeployedByLabel: "test",
+				"l1":                  "v1",
 			},
 			Annotations: map[string]string{
 				model.OktetoAutoCreateAnnotation: "true",
+				"a1":                             "v1",
 			},
 		},
 		Subsets: []apiv1.EndpointSubset{

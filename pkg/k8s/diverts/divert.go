@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -35,7 +36,7 @@ func DivertIngress(ctx context.Context, m *model.Manifest, fromIn *networkingv1.
 		}
 		in = translateIngress(m, fromIn)
 		if _, err := c.NetworkingV1().Ingresses(m.Namespace).Create(ctx, in, metav1.CreateOptions{}); err != nil {
-			if !oktetoErrors.IsAlreadyExists(err) {
+			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
 		}
@@ -72,7 +73,7 @@ func divertService(ctx context.Context, m *model.Manifest, name string, c kubern
 		}
 		s = translateService(m, from)
 		if _, err := c.CoreV1().Services(m.Namespace).Create(ctx, s, metav1.CreateOptions{}); err != nil {
-			if !oktetoErrors.IsAlreadyExists(err) {
+			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
 		}
@@ -98,7 +99,7 @@ func divertEndpoints(ctx context.Context, m *model.Manifest, from *apiv1.Service
 		}
 		e = translateEndpoints(m, from)
 		if _, err := c.CoreV1().Endpoints(m.Namespace).Create(ctx, e, metav1.CreateOptions{}); err != nil {
-			if !oktetoErrors.IsAlreadyExists(err) {
+			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
 		}
@@ -128,7 +129,7 @@ func createDivertCRD(ctx context.Context, m *model.Manifest, in *networkingv1.In
 	if old.Name == "" {
 		oktetoLog.Infof("creating  divert CRD '%s'", divertCRD.Name)
 		_, err = dClient.Diverts(m.Namespace).Create(ctx, divertCRD)
-		if err != nil {
+		if err != nil && !k8sErrors.IsAlreadyExists(err) {
 			return fmt.Errorf("error creating divert CRD '%s': %s", divertCRD.Name, err)
 		}
 		oktetoLog.Infof("created divert CRD '%s'", divertCRD.Name)

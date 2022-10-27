@@ -59,7 +59,7 @@ func translateService(m *model.Manifest, s *apiv1.Service) *apiv1.Service {
 		Spec: s.Spec,
 	}
 	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, m.Name)
-	// create a headless service pointing to an endpoints object that resolves to service cluuster ip in the diverted namespace
+	// create a headless service pointing to an endpoints object that resolves to service cluster ip in the diverted namespace
 	result.Spec.ClusterIP = apiv1.ClusterIPNone
 	result.Spec.ClusterIPs = nil
 	result.Spec.Selector = nil
@@ -73,13 +73,9 @@ func translateService(m *model.Manifest, s *apiv1.Service) *apiv1.Service {
 func translateEndpoints(m *model.Manifest, s *apiv1.Service) *apiv1.Endpoints {
 	result := &apiv1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: s.Name,
-			Labels: map[string]string{
-				model.DeployedByLabel: m.Name,
-			},
-			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
-			},
+			Name:        s.Name,
+			Labels:      s.Labels,
+			Annotations: s.Annotations,
 		},
 		Subsets: []apiv1.EndpointSubset{
 			{
@@ -100,6 +96,12 @@ func translateEndpoints(m *model.Manifest, s *apiv1.Service) *apiv1.Endpoints {
 			},
 		},
 	}
+	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, m.Name)
+	if result.Annotations == nil {
+		result.Annotations = map[string]string{}
+	}
+	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
+	delete(result.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
 	for _, p := range s.Spec.Ports {
 		result.Subsets[0].Ports = append(
 			result.Subsets[0].Ports,
