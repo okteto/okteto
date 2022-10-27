@@ -70,29 +70,28 @@
                 fi
         fi
 
-        download_uri="https://downloads.okteto.com/cli"
-        channel_file="${OKTETO_HOME:-$HOME/.okteto}/channel"
-
-        channel="stable"
-
-        if [ -e "$channel_file" ]; then
-                current=$(cat "$channel_file" || echo "")
-                case "$current" in
-                stable) channel="$current" ;;
-                beta) channel="$current" ;;
-                dev) channel="$current" ;;
-                *) channel="stable" ;;
-                esac
+        if [ -z "$OKTETO_CHANNEL" ]; then
+                OKTETO_CHANNEL="stable"
+                channel_file="${OKTETO_HOME:-$HOME/.okteto}/channel"
+                if [ -e "$channel_file" ]; then
+                        current=$(cat "$channel_file" || echo "")
+                        case "$current" in
+                        stable) OKTETO_CHANNEL="$current" ;;
+                        beta) OKTETO_CHANNEL="$current" ;;
+                        dev) OKTETO_CHANNEL="$current" ;;
+                        *) OKTETO_CHANNEL="stable" ;;
+                        esac
+                fi
         fi
+        printf '> Using Release Channel: %s\n' ${OKTETO_CHANNEL}
 
-        printf '> Using Release Channel: %s\n' ${channel}
-
+        download_uri="https://downloads.okteto.com/cli"
         if [ -z "$OKTETO_VERSION" ]; then
-                OKTETO_VERSION=$(curl -fsSL $download_uri/$channel/versions | tail -n1)
+                OKTETO_VERSION=$(curl -fsSL $download_uri/${OKTETO_CHANNEL}/versions | tail -n1)
         fi
         printf '> Using Version: %s\n' "$OKTETO_VERSION"
 
-        URL="$download_uri/$channel/$OKTETO_VERSION/$bin_file"
+        URL="$download_uri/${OKTETO_CHANNEL}/$OKTETO_VERSION/$bin_file"
         printf '> Downloading %s\n' "$URL"
         download_path=$(mktemp)
         curl -fSL "$URL" -o "$download_path"
