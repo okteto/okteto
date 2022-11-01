@@ -108,18 +108,16 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 
 	ctxStore := okteto.ContextStore()
 	if okCtx, ok := ctxStore.Contexts[ctxOptions.Context]; ok && okCtx.IsOkteto {
-		ctxOptions.Namespace = okCtx.Namespace
 		ctxOptions.IsOkteto = true
 	}
 
 	if okCtx, ok := ctxStore.Contexts[okteto.AddSchema(ctxOptions.Context)]; ok && okCtx.IsOkteto {
-		ctxOptions.Context = okteto.AddSchema(ctxOptions.Context) // Should this be changed to okCtx.Context?
+		ctxOptions.Context = okteto.AddSchema(ctxOptions.Context)
 		ctxOptions.Namespace = okCtx.Namespace
 		ctxOptions.IsOkteto = true
 	}
 
 	if ctxOptions.Context == okteto.CloudURL {
-		ctxOptions.Namespace = ctxStore.Contexts[ctxOptions.Context].Namespace
 		ctxOptions.IsOkteto = true
 	}
 
@@ -127,7 +125,6 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 
 		if isUrl(ctxOptions.Context) {
 			ctxOptions.Context = strings.TrimSuffix(ctxOptions.Context, "/")
-			ctxOptions.Namespace = ctxStore.Contexts[ctxOptions.Context].Namespace
 			ctxOptions.IsOkteto = true
 		} else {
 			if !isValidCluster(ctxOptions.Context) {
@@ -137,7 +134,6 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 			transformedCtx := okteto.K8sContextToOktetoUrl(ctx, ctxOptions.Context, ctxOptions.Namespace, c.K8sClientProvider)
 			if transformedCtx != ctxOptions.Context {
 				ctxOptions.Context = transformedCtx
-				ctxOptions.Namespace = ctxStore.Contexts[ctxOptions.Context].Namespace
 				ctxOptions.IsOkteto = true
 			}
 		}
@@ -145,7 +141,6 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 
 	if okCtx, ok := ctxStore.Contexts[ctxOptions.Context]; !ok {
 		ctxStore.Contexts[ctxOptions.Context] = &okteto.OktetoContext{Name: ctxOptions.Context}
-		// What should be the namespace here?
 		created = true
 	} else if ctxOptions.Token == "" {
 		// this is to avoid login with the browser again if we already have a valid token
@@ -153,6 +148,10 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 		if ctxOptions.Builder == "" && okCtx.Builder != "" {
 			ctxOptions.Builder = okCtx.Builder
 		}
+		if ctxOptions.Namespace == "" {
+			ctxOptions.Namespace = ctxStore.Contexts[ctxOptions.Context].Namespace
+		}
+
 	}
 
 	ctxStore.CurrentContext = ctxOptions.Context
