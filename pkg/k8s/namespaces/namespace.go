@@ -17,13 +17,16 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
-	"github.com/ibuildthecloud/finalizers/pkg/world"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/rancher/wrangler/pkg/ratelimit"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -35,6 +38,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/pager"
 )
 
 const (
@@ -44,6 +48,16 @@ const (
 	resourcePolicyAnnotation       = "dev.okteto.com/policy"
 	keepPolicy                     = "keep"
 )
+
+type Traveler interface {
+	See(obj runtime.Object) error
+}
+
+type TravelerFunc func(obj runtime.Object) error
+
+func (t TravelerFunc) See(obj runtime.Object) error {
+	return t(obj)
+}
 
 // DeleteAllOptions options for delete all operation
 type DeleteAllOptions struct {
@@ -59,6 +73,22 @@ type Namespaces struct {
 	discClient discovery.DiscoveryInterface
 	restConfig *rest.Config
 	k8sClient  kubernetes.Interface
+}
+
+type Options struct {
+	Namespace   string
+	List        metav1.ListOptions
+	Parallelism int64
+}
+
+type Trip struct {
+	namespace  string
+	list       metav1.ListOptions
+	restConfig *rest.Config
+	k8s        kubernetes.Interface
+	dynamic    dynamic.Interface
+	sem        *semaphore.Weighted
+	writeLock  sync.Mutex
 }
 
 // NewNamespace allows to create a new Namespace object
@@ -77,7 +107,7 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 		LabelSelector: opts.LabelSelector,
 	}
 
-	trip, err := world.NewTrip(n.restConfig, &world.Options{
+	trip, err := NewTrip(n.restConfig, &Options{
 		Namespace:   ns,
 		Parallelism: parallelism,
 		List:        listOptions,
@@ -101,7 +131,7 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 		logrus.SetLevel(prevLevel)
 	}()
 
-	return trip.Wander(ctx, world.TravelerFunc(func(obj runtime.Object) error {
+	return trip.Wander(ctx, TravelerFunc(func(obj runtime.Object) error {
 		m, err := meta.Accessor(obj)
 		if err != nil {
 			return err
@@ -198,4 +228,112 @@ func (n *Namespaces) DestroySFSVolumes(ctx context.Context, ns string, opts Dele
 	}
 
 	return nil
+}
+
+func NewTrip(restConfig *rest.Config, opts *Options) (*Trip, error) {
+	if opts == nil {
+		opts = &Options{}
+	}
+
+	if restConfig.RateLimiter == nil {
+		restConfig.RateLimiter = ratelimit.None
+	}
+
+	k8s, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	dynamic, err := dynamic.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	var sem *semaphore.Weighted
+	if opts.Parallelism > 0 {
+		sem = semaphore.NewWeighted(opts.Parallelism)
+	} else {
+		sem = semaphore.NewWeighted(10)
+	}
+
+	return &Trip{
+		namespace:  opts.Namespace,
+		list:       opts.List,
+		restConfig: restConfig,
+		k8s:        k8s,
+		dynamic:    dynamic,
+		sem:        sem,
+	}, nil
+}
+
+func (t *Trip) Wander(ctx context.Context, traveler Traveler) error {
+	_, apis, err := t.k8s.Discovery().ServerGroupsAndResources()
+	if err != nil {
+		return err
+	}
+
+	eg, _ := errgroup.WithContext(ctx)
+	for _, api := range apis {
+		for _, api2 := range api.APIResources {
+			listable := false
+			for _, verb := range api2.Verbs {
+				if verb == "list" {
+					listable = true
+					break
+				}
+			}
+			if !listable {
+				continue
+			}
+
+			if t.namespace != "" && !api2.Namespaced {
+				continue
+			}
+
+			gvr := schema.FromAPIVersionAndKind(api.GroupVersion, api2.Kind).
+				GroupVersion().
+				WithResource(api2.Name)
+
+			var client dynamic.ResourceInterface
+			if t.namespace == "" {
+				client = t.dynamic.Resource(gvr)
+			} else {
+				client = t.dynamic.Resource(gvr).Namespace(t.namespace)
+			}
+
+			// capture values for goroutine
+			api := api
+			api2 := api2
+			eg.Go(func() error {
+				if err := t.listAll(ctx, traveler, client, api, api2); err != nil {
+					logrus.Warn("Failed to list", api.GroupVersion, api2.Kind, err)
+				}
+				return nil
+			})
+		}
+	}
+
+	return eg.Wait()
+}
+
+func (t *Trip) listAll(ctx context.Context, traveler Traveler, client dynamic.ResourceInterface, api *metav1.APIResourceList, api2 metav1.APIResource) error {
+	t.sem.Acquire(ctx, 1)
+	defer t.sem.Release(1)
+
+	pager := pager.New(pager.SimplePageFunc(func(opts metav1.ListOptions) (runtime.Object, error) {
+		objs, err := client.List(ctx, t.list)
+		return objs, err
+	}))
+
+	return pager.EachListItem(ctx, t.list, func(obj runtime.Object) error {
+		t.writeLock.Lock()
+		defer t.writeLock.Unlock()
+		if err := traveler.See(obj); err != nil {
+			m, err2 := meta.Accessor(obj)
+			if err2 == nil {
+				logrus.Warn("Failed to process", api.GroupVersion, api2.Kind, m.GetNamespace(), m.GetName(), err)
+			}
+		}
+		return nil
+	})
 }
