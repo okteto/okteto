@@ -228,7 +228,7 @@ func Up() *cobra.Command {
 			}
 			up.Client, up.RestConfig, err = okteto.GetK8sClient()
 			if err != nil {
-				return fmt.Errorf("failed to load okteto context '%s': %v", up.Dev.Context, err)
+				return fmt.Errorf("failed to load k8s client: %v", err)
 			}
 
 			// if manifest v1 - either set autocreate: true or pass --deploy (okteto forces autocreate: true)
