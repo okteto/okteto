@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -520,12 +521,14 @@ func (up *upContext) getManifest(path string) (*model.Manifest, error) {
 }
 
 func (up *upContext) start() error {
-	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
+	up.pidController = newPIDController(up.Dev.Namespace, up.Dev.Name)
+
+	if err := up.pidController.create(); err != nil {
 		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
 		return fmt.Errorf("couldn't create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)
 	}
 
-	defer cleanPIDFile(up.Dev.Namespace, up.Dev.Name)
+	defer up.pidController.delete()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -570,6 +573,14 @@ func (up *upContext) activateLoop() {
 		if up.isRetry || isTransientError {
 			oktetoLog.Infof("waiting for shutdown sequence to finish")
 			<-up.ShutdownCompleted
+			pidFromFile, err := up.pidController.get()
+			if err != nil {
+				oktetoLog.Infof("error getting pid: %w")
+			}
+			if pidFromFile != strconv.Itoa(os.Getpid()) {
+				up.Exit <- fmt.Errorf("development container has been replaced")
+				return
+			}
 			if iter == 0 {
 				oktetoLog.Yellow("Connection lost to your development container, reconnecting...")
 			}

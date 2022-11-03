@@ -14,37 +14,119 @@
 package up
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
 
-	"github.com/okteto/okteto/pkg/config"
+	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestCreatePIDFile(t *testing.T) {
+type fakePIDProvider struct {
+	pid int
+}
+
+func (fpp fakePIDProvider) provide() int {
+	return fpp.pid
+}
+
+func TestPIDController(t *testing.T) {
+	t.Parallel()
 	deploymentName := "deployment"
 	namespace := "namespace"
-	if err := createPIDFile(namespace, deploymentName); err != nil {
-		t.Fatal("unable to create pid file")
+	fakePIDProvider := fakePIDProvider{
+		pid: 5,
 	}
 
-	filePath := filepath.Join(config.GetAppHome(namespace, deploymentName), "okteto.pid")
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+	pidController := pidController{
+		filesystem:  afero.NewMemMapFs(),
+		pidFilePath: filepath.Clean(fmt.Sprintf("/%s/%s", deploymentName, namespace)),
+		pidProvider: fakePIDProvider,
+	}
+
+	err := pidController.create()
+	assert.NoError(t, err)
+
+	if _, err := pidController.filesystem.Stat(pidController.pidFilePath); os.IsNotExist(err) {
 		t.Fatal("didn't create pid file")
 	}
 
-	filePID, err := os.ReadFile(filePath)
-	if err != nil {
-		t.Fatal("pid file is corrupted")
-	}
-	if string(filePID) != strconv.Itoa(os.Getpid()) {
-		t.Fatal("pid file content is invalid")
+	pid, err := pidController.get()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, strconv.Itoa(fakePIDProvider.pid), pid)
+
+	pidController.delete()
+
+	if _, err := pidController.filesystem.Stat(pidController.pidFilePath); !os.IsNotExist(err) {
+		t.Fatal("didn't remove pid file")
 	}
 
-	cleanPIDFile(namespace, deploymentName)
-	if _, err := os.Create(filePath); os.IsExist(err) {
-		t.Fatal("didn't delete pid file")
+}
+
+func TestTwoPIDControllerRaceConditionToRemoveFile(t *testing.T) {
+	t.Parallel()
+	deploymentName := "deployment"
+	namespace := "namespace"
+	fakePP := fakePIDProvider{
+		pid: 5,
 	}
 
+	filesystem := afero.NewMemMapFs()
+	pc := pidController{
+		filesystem:  filesystem,
+		pidFilePath: filepath.Clean(fmt.Sprintf("/%s/%s", deploymentName, namespace)),
+		pidProvider: fakePP,
+	}
+
+	err := pc.create()
+	assert.NoError(t, err)
+
+	if _, err := pc.filesystem.Stat(pc.pidFilePath); os.IsNotExist(err) {
+		t.Fatal("didn't create pid file")
+	}
+
+	pid, err := pc.get()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, strconv.Itoa(fakePP.pid), pid)
+
+	// Simulate that another oktet up session is modifying the file
+	fakePIDProviderWitAnotherPID := fakePIDProvider{
+		pid: 10,
+	}
+	pidControllerWitAnotherPID := pidController{
+		filesystem:  filesystem,
+		pidFilePath: filepath.Clean(fmt.Sprintf("/%s/%s", deploymentName, namespace)),
+		pidProvider: fakePIDProviderWitAnotherPID,
+	}
+
+	err = pidControllerWitAnotherPID.create()
+	assert.NoError(t, err)
+
+	if _, err := pidControllerWitAnotherPID.filesystem.Stat(pidControllerWitAnotherPID.pidFilePath); os.IsNotExist(err) {
+		t.Fatal("didn't create pid file")
+	}
+
+	pid, err = pidControllerWitAnotherPID.get()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, strconv.Itoa(fakePIDProviderWitAnotherPID.pid), pid)
+
+	// finish the first controller (finish the first okteto up while the second up keep running)
+	pc.delete()
+	if _, err := pc.filesystem.Stat(pc.pidFilePath); err != nil {
+		t.Fatal("pid was deleted")
+	}
+
+	pid, err = pidControllerWitAnotherPID.get()
+
+	assert.NoError(t, err)
+
+	assert.Equal(t, strconv.Itoa(fakePIDProviderWitAnotherPID.pid), pid)
 }

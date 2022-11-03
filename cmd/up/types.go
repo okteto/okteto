@@ -53,6 +53,7 @@ type upContext struct {
 	stateTerm             *term.State
 	StartTime             time.Time
 	Options               *UpOptions
+	pidController         pidController
 }
 
 // Forwarder is an interface for the port-forwarding features
