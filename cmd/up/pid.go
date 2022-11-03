@@ -93,6 +93,6 @@ func (pc pidController) delete() {
 	}
 }
 
-func (pp osPIDProvider) provide() int {
+func (osPIDProvider) provide() int {
 	return os.Getpid()
 }
