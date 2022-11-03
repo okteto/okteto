@@ -329,13 +329,21 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 
 	killing := false
 	to := time.Now().Add(up.Dev.Timeout.Resources)
-	var insufficientResourcesErr error
+	ticker := time.NewTicker(10 * time.Second)
+	var failedSchedulingEvent *apiv1.Event
 	for {
-		if time.Now().After(to) && insufficientResourcesErr != nil {
-			return oktetoErrors.UserError{E: fmt.Errorf("insufficient resources"),
-				Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest/#timeout-time-optional"}
+		if failedSchedulingEvent != nil && time.Now().After(to) {
+			// this provides 2 min for "FailedScheduling" to resolve by themselves
+			if strings.Contains(failedSchedulingEvent.Message, "Insufficient cpu") || strings.Contains(failedSchedulingEvent.Message, "Insufficient memory") {
+				return oktetoErrors.UserError{E: fmt.Errorf("insufficient resources"),
+					Hint: "Increase cluster resources or timeout of resources. More information is available here: https://okteto.com/docs/reference/manifest/#timeout-time-optional"}
+			}
+			return fmt.Errorf(failedSchedulingEvent.Message)
 		}
 		select {
+		case <-ticker.C:
+			oktetoLog.Info("ticker event in 'waitUntilDevelopmentContainerIsRunning' loop...")
+			continue
 		case event := <-watcherEvents.ResultChan():
 			if killing {
 				continue
@@ -359,23 +367,28 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				continue
 			}
 			optsWatchEvents.ResourceVersion = e.ResourceVersion
-			oktetoLog.Infof("pod event: %s:%s", e.Reason, e.Message)
+			oktetoLog.Infof("pod event: %s:%s:%s", e.Reason, e.Type, e.Message)
 			switch e.Reason {
-			case "Failed", "FailedScheduling", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
+			case "FailedScheduling":
+				if failedSchedulingEvent == nil {
+					failedSchedulingEvent = e
+					to = time.Now().Add(up.Dev.Timeout.Resources)
+				}
+				continue
+			case "TriggeredScaleUp":
+				failedSchedulingEvent = nil
+				oktetoLog.Spinner("Waiting for the cluster to scale up...")
+				continue
+			case "Failed", "FailedCreatePodSandBox", "ErrImageNeverPull", "InspectFailed", "FailedCreatePodContainer":
 				if strings.Contains(e.Message, "pod has unbound immediate PersistentVolumeClaims") {
 					continue
 				}
 				if strings.Contains(e.Message, "is in the cache, so can't be assumed") {
 					continue
 				}
-				if strings.Contains(e.Message, "Insufficient cpu") || strings.Contains(e.Message, "Insufficient memory") {
-					insufficientResourcesErr = fmt.Errorf(e.Message)
-					oktetoLog.Spinner("Insufficient cpu/memory in the cluster. Waiting for new nodes to come up...")
-					continue
-				}
 				if strings.Contains(e.Message, "failed to create subPath directory") {
 					return oktetoErrors.UserError{
-						E: fmt.Errorf("There is no space left in persistent volume"),
+						E: fmt.Errorf("there is no space left in persistent volume"),
 						Hint: fmt.Sprintf(`Okteto volume is full.
     Increase your persistent volume size, run '%s' and try 'okteto up' again.
     More information about configuring your persistent volume at https://okteto.com/docs/reference/manifest/#persistentvolume-object-optional`, utils.GetDownCommand(up.Options.ManifestPathFlag)),
@@ -383,6 +396,7 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				}
 				return fmt.Errorf(e.Message)
 			case "SuccessfulAttachVolume":
+				failedSchedulingEvent = nil
 				oktetoLog.Success("Persistent volume successfully attached")
 				oktetoLog.Spinner("Pulling images...")
 			case "Killing":
@@ -392,10 +406,12 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 				}
 				return oktetoErrors.ErrDevPodDeleted
 			case "Started":
+				failedSchedulingEvent = nil
 				if e.Message == "Started container okteto-init-data" {
 					oktetoLog.Spinner("Initializing persistent volume content...")
 				}
 			case "Pulling":
+				failedSchedulingEvent = nil
 				message := getPullingMessage(e.Message, up.Dev.Namespace)
 				oktetoLog.Spinner(fmt.Sprintf("%s...", message))
 				if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Pulling); err != nil {
