@@ -24,13 +24,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func translateIngress(m *model.Manifest, in *networkingv1.Ingress, resourceVersion string) *networkingv1.Ingress {
+func translateIngress(m *model.Manifest, in *networkingv1.Ingress) *networkingv1.Ingress {
 	result := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            in.Name,
-			Labels:          in.Labels,
-			Annotations:     in.Annotations,
-			ResourceVersion: resourceVersion,
+			Name:        in.Name,
+			Labels:      in.Labels,
+			Annotations: in.Annotations,
 		},
 		Spec: in.Spec,
 	}
@@ -50,18 +49,17 @@ func translateIngress(m *model.Manifest, in *networkingv1.Ingress, resourceVersi
 	return result
 }
 
-func translateService(m *model.Manifest, s *apiv1.Service, resourceVersion string) *apiv1.Service {
+func translateService(m *model.Manifest, s *apiv1.Service) *apiv1.Service {
 	result := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            s.Name,
-			Labels:          s.Labels,
-			Annotations:     s.Annotations,
-			ResourceVersion: resourceVersion,
+			Name:        s.Name,
+			Labels:      s.Labels,
+			Annotations: s.Annotations,
 		},
 		Spec: s.Spec,
 	}
 	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, m.Name)
-	// create a headless service pointing to an endpoints object that resolves to pods in the diverted namespace
+	// create a headless service pointing to an endpoints object that resolves to service cluster ip in the diverted namespace
 	result.Spec.ClusterIP = apiv1.ClusterIPNone
 	result.Spec.ClusterIPs = nil
 	result.Spec.Selector = nil
@@ -72,22 +70,50 @@ func translateService(m *model.Manifest, s *apiv1.Service, resourceVersion strin
 	return result
 }
 
-func translateEndpoints(m *model.Manifest, e *apiv1.Endpoints, resourceVersion string) *apiv1.Endpoints {
+func translateEndpoints(m *model.Manifest, s *apiv1.Service) *apiv1.Endpoints {
 	result := &apiv1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            e.Name,
-			Labels:          e.Labels,
-			Annotations:     e.Annotations,
-			ResourceVersion: resourceVersion,
+			Name:        s.Name,
+			Labels:      s.Labels,
+			Annotations: s.Annotations,
 		},
-		Subsets: e.Subsets,
+		Subsets: []apiv1.EndpointSubset{
+			{
+				Addresses: []apiv1.EndpointAddress{
+					{
+						IP: s.Spec.ClusterIP,
+						TargetRef: &apiv1.ObjectReference{
+							Kind:            "Service",
+							Namespace:       s.Namespace,
+							Name:            s.Name,
+							UID:             s.UID,
+							APIVersion:      "v1",
+							ResourceVersion: s.ResourceVersion,
+						},
+					},
+				},
+				Ports: []apiv1.EndpointPort{},
+			},
+		},
 	}
 	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, m.Name)
-	labels.SetInMetadata(&result.ObjectMeta, model.OktetoDivertedFromLabel, string(e.UID))
 	if result.Annotations == nil {
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
+	delete(result.Annotations, "kubectl.kubernetes.io/last-applied-configuration")
+	for _, p := range s.Spec.Ports {
+		result.Subsets[0].Ports = append(
+			result.Subsets[0].Ports,
+			apiv1.EndpointPort{
+				Name:        p.Name,
+				Port:        p.Port,
+				Protocol:    p.Protocol,
+				AppProtocol: p.AppProtocol,
+			},
+		)
+	}
+
 	return result
 }
 
