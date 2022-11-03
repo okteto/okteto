@@ -223,13 +223,31 @@ func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInte
 	return manifest.Dev[devKey], nil
 }
 
+// YesNoDefault specifies what will be assumed when the user doesn't answer explicitly
+type YesNoDefault string
+
+const (
+	YesNoDefault_Unspecified = "[y/n]"
+	YesNoDefault_Yes         = "[Y/n]"
+	YesNoDefault_No          = "[y/N]"
+)
+
 // AskYesNo prompts for yes/no confirmation
-func AskYesNo(q string) (bool, error) {
+func AskYesNo(q string, d YesNoDefault) (bool, error) {
 	var answer string
 	for {
-		oktetoLog.Question(q)
-		if _, err := fmt.Scanln(&answer); err != nil {
+		oktetoLog.Question(fmt.Sprintf("%s %s: ", q, d))
+		_, err := fmt.Scanln(&answer)
+		if err != nil && err.Error() != "unexpected newline" {
 			return false, err
+		}
+
+		if answer == "" && d != YesNoDefault_Unspecified {
+			answer = "y"
+			if d == YesNoDefault_No {
+				answer = "n"
+			}
+			break
 		}
 
 		if answer == "y" || answer == "n" {
@@ -277,7 +295,7 @@ func AskForOptions(options []string, label string) (string, error) {
 
 // AskIfOktetoInit asks if okteto init should be executed
 func AskIfOktetoInit(devPath string) bool {
-	result, err := AskYesNo(fmt.Sprintf("okteto manifest (%s) doesn't exist, do you want to create it? [y/n] ", devPath))
+	result, err := AskYesNo(fmt.Sprintf("okteto manifest (%s) doesn't exist, do you want to create it?", devPath), YesNoDefault_Yes)
 	if err != nil {
 		return false
 	}
@@ -298,7 +316,7 @@ func AsksQuestion(q string) (string, error) {
 
 // AskIfDeploy asks if a new deployment must be created
 func AskIfDeploy(name, namespace string) error {
-	deploy, err := AskYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one? [y/n]: ", name, namespace))
+	deploy, err := AskYesNo(fmt.Sprintf("Deployment %s doesn't exist in namespace %s. Do you want to create a new one?", name, namespace), YesNoDefault_Yes)
 	if err != nil {
 		return fmt.Errorf("couldn't read your response")
 	}

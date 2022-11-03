@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -431,6 +432,66 @@ func Test_SelectDevFromManifest(t *testing.T) {
 			if tt.err != nil {
 				assert.Equal(t, tt.err.Error(), err.Error())
 			}
+		})
+	}
+
+}
+
+func Test_AskYesNo(t *testing.T) {
+	tests := []struct {
+		name     string
+		def      YesNoDefault
+		answer   string
+		expected bool
+	}{
+		{
+			name:     "ignores-default-when-answer",
+			def:      YesNoDefault_No,
+			answer:   "y\n",
+			expected: true,
+		},
+		{
+			name:     "honors-default-when-no-answer",
+			def:      YesNoDefault_Yes,
+			answer:   "\n",
+			expected: true,
+		},
+	}
+	for _, tt := range tests {
+		// Create a temp dir for files used to mock stdin
+		dir := t.TempDir()
+		t.Run(tt.name, func(t *testing.T) {
+			tmpPath := filepath.Join(dir, fmt.Sprintf("yes_no_test-%s", tt.name))
+			tmpFile, err := os.Create(tmpPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			defer func() {
+				if err := tmpFile.Close(); err != nil {
+					t.Fatal(err)
+				}
+
+				os.Remove(tmpFile.Name())
+			}()
+
+			if _, err := tmpFile.WriteString(tt.answer); err != nil {
+				t.Fatal(err)
+			}
+
+			if _, err := tmpFile.Seek(0, 0); err != nil {
+				t.Fatal(err)
+			}
+
+			oldStdin := os.Stdin
+			defer func() { os.Stdin = oldStdin }()
+
+			os.Stdin = tmpFile
+
+			got, err := AskYesNo("", tt.def)
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, got)
 		})
 	}
 

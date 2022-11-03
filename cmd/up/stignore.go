@@ -163,7 +163,7 @@ func askIfCreateStignoreDefaults(folder, stignorePath string) error {
 	}
 
 	oktetoLog.Information("Okteto requires a '.stignore' file to ignore file patterns that help optimize the synchronization service.")
-	stignoreDefaults, err := utils.AskYesNo("Do you want to infer defaults for the '.stignore' file? (otherwise, it will be left blank) [y/n] ")
+	stignoreDefaults, err := utils.AskYesNo("Do you want to infer defaults for the '.stignore' file? (otherwise, it will be left blank)", utils.YesNoDefault_Yes)
 	if err != nil {
 		return fmt.Errorf("failed to add '.stignore' to '%s': %s", folder, err.Error())
 	}
@@ -198,7 +198,7 @@ func askIfUpdatingStignore(stignorePath string) error {
 	}
 
 	oktetoLog.Information("The synchronization service performance is degraded if the '.git' folder is synchronized.")
-	ignoreGit, err := utils.AskYesNo("Do you want to ignore the '.git' folder in your '.stignore' file? [y/n] ")
+	ignoreGit, err := utils.AskYesNo("Do you want to ignore the '.git' folder in your '.stignore' file?", utils.YesNoDefault_Yes)
 	if err != nil {
 		return fmt.Errorf("failed to ask for adding '.git' to '%s': %s", stignorePath, err.Error())
 	}
