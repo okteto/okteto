@@ -113,7 +113,6 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 
 	if okCtx, ok := ctxStore.Contexts[okteto.AddSchema(ctxOptions.Context)]; ok && okCtx.IsOkteto {
 		ctxOptions.Context = okteto.AddSchema(ctxOptions.Context)
-		ctxOptions.Namespace = okCtx.Namespace
 		ctxOptions.IsOkteto = true
 	}
 
