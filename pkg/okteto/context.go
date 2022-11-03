@@ -221,9 +221,6 @@ func ContextStore() *OktetoContextStore {
 		}
 		CurrentStore = ctxStore
 
-		if _, ok := CurrentStore.Contexts[CurrentStore.CurrentContext]; !ok {
-			return CurrentStore
-		}
 		return CurrentStore
 	}
 
