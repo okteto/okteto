@@ -21,6 +21,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/okteto/okteto/pkg/config"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/afero"
 )
@@ -177,7 +178,10 @@ func (pc pidController) notifyIfPIDFileChange(notifyCh chan error) {
 					continue
 				}
 				if strconv.Itoa(pid) != filePID {
-					notifyCh <- fmt.Errorf("your development container has been replaced")
+					notifyCh <- oktetoErrors.UserError{
+						E:    fmt.Errorf("development container has been deactivated by another 'okteto up' command"),
+						Hint: "If you want to run a second terminal you can use 'okteto exec' command",
+					}
 					return
 				}
 				continue

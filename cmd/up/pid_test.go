@@ -50,7 +50,7 @@ type fakeWatcher struct {
 	closeErr error
 }
 
-func (fw fakeWatcher) Add(name string) error {
+func (fw fakeWatcher) Add(_ string) error {
 	return fw.addErr
 }
 
