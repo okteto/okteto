@@ -222,6 +222,7 @@ require github.com/spf13/afero v1.9.2
 
 require (
 	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/golang-jwt/jwt/v4 v4.2.0 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect

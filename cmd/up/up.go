@@ -533,6 +533,8 @@ func (up *upContext) start() error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
+	pidFileCh := make(chan error, 1)
+
 	analytics.TrackUp(analytics.TrackUpMetadata{
 		IsInteractive:          up.getInteractive(),
 		IsOktetoRepository:     utils.IsOktetoRepo(),
@@ -546,6 +548,8 @@ func (up *upContext) start() error {
 
 	go up.activateLoop()
 
+	go up.pidController.notifyIfPIDFileChange(pidFileCh)
+
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
@@ -556,6 +560,9 @@ func (up *upContext) start() error {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
+	case err := <-pidFileCh:
+		oktetoLog.Infof("exit signal received due to pid file modification: %s", err)
+		return err
 	}
 	return nil
 }
