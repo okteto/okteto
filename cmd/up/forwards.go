@@ -114,7 +114,7 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 
 func addToForwarder(up *upContext) error {
 	ticker := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(up.Dev.Timeout.Resources)
+	to := time.NewTicker(10 * time.Second)
 	var forwardErr error
 	alreadyAdded := map[int]bool{}
 	for {

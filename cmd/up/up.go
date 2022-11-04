@@ -585,7 +585,10 @@ func (up *upContext) activateLoop() {
 				oktetoLog.Infof("error getting pid: %w")
 			}
 			if pidFromFile != strconv.Itoa(os.Getpid()) {
-				up.Exit <- fmt.Errorf("development container has been replaced")
+				up.Exit <- oktetoErrors.UserError{
+					E:    fmt.Errorf("development container has been deactivated by another 'okteto up' command"),
+					Hint: "If you want a second terminal you can use 'okteto exec' command",
+				}
 				return
 			}
 			if iter == 0 {
