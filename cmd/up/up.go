@@ -587,7 +587,7 @@ func (up *upContext) activateLoop() {
 			if pidFromFile != strconv.Itoa(os.Getpid()) {
 				up.Exit <- oktetoErrors.UserError{
 					E:    fmt.Errorf("development container has been deactivated by another 'okteto up' command"),
-					Hint: "If you want a second terminal you can use 'okteto exec' command",
+					Hint: "If you want to run a second terminal you can use 'okteto exec' command",
 				}
 				return
 			}
