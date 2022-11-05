@@ -49,12 +49,14 @@ func getSternConfig(manifest *model.Manifest, o *LogsOptions, kubeconfigFile str
 	}
 
 	labelSelector := labels.NewSelector()
-	req, err := labels.NewRequirement(model.DeployedByLabel, selection.Equals, []string{manifest.Name})
-	if err != nil {
-		return nil, err
+	if !o.All {
+		req, err := labels.NewRequirement(model.DeployedByLabel, selection.Equals, []string{manifest.Name})
+		if err != nil {
+			return nil, err
+		}
+		labelSelector = labelSelector.Add(*req)
 	}
-	labelSelector = labelSelector.Add(*req)
-	req, err = labels.NewRequirement(model.InteractiveDevLabel, selection.DoesNotExist, nil)
+	req, err := labels.NewRequirement(model.InteractiveDevLabel, selection.DoesNotExist, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +101,7 @@ func getSternConfig(manifest *model.Manifest, o *LogsOptions, kubeconfigFile str
 		LabelSelector:       labelSelector,
 		FieldSelector:       fieldSelector,
 		TailLines:           pointer.Int64Ptr(o.Tail),
-		Follow:              o.Follow,
+		Follow:              o.Watch,
 		Timestamps:          o.Timestamps,
 		AllNamespaces:       false,
 		ErrOut:              os.Stderr,

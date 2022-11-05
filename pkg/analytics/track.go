@@ -47,6 +47,7 @@ const (
 	pushEvent                = "Push"
 	restartEvent             = "Restart Services"
 	statusEvent              = "Status"
+	logsEvent                = "Logs"
 	doctorEvent              = "Doctor"
 	buildEvent               = "Build"
 	buildTransientErrorEvent = "BuildTransientError"
@@ -243,6 +244,14 @@ func TrackPush(success bool, oktetoRegistryURL string) {
 // TrackRestart sends a tracking event to mixpanel when the user restarts a development environment
 func TrackRestart(success bool) {
 	track(restartEvent, success, nil)
+}
+
+// TrackLogs sends a tracking event to mixpanel when the command okteto logs is executed
+func TrackLogs(success, all bool) {
+	props := map[string]interface{}{
+		"all": all,
+	}
+	track(logsEvent, success, props)
 }
 
 // TrackStatus sends a tracking event to mixpanel when the user uses the status command

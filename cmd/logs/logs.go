@@ -24,6 +24,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -34,11 +35,12 @@ import (
 
 // LogsOptions options for logs command
 type LogsOptions struct {
+	All          bool
 	ManifestPath string
 	Namespace    string
 	Context      string
 	exclude      string
-	Follow       bool
+	Watch        bool
 	Include      string
 	Since        time.Duration
 	Tail         int64
@@ -85,7 +87,11 @@ func Logs(ctx context.Context) *cobra.Command {
 				cancel()
 			}()
 
-			if err := stern.Run(ctx, c); err != nil {
+			err = stern.Run(ctx, c)
+
+			analytics.TrackLogs(err == nil, options.All)
+
+			if err != nil {
 				return errors.UserError{
 					E: fmt.Errorf("failed to get logs: %w", err),
 				}
@@ -95,14 +101,15 @@ func Logs(ctx context.Context) *cobra.Command {
 		Args: utils.MaximumNArgsAccepted(1, ""),
 	}
 
+	cmd.Flags().BoolVarP(&options.All, "all", "a", false, "fetch logs from the whole namespace")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overrides the namespace where logs are fetched")
 	cmd.Flags().StringVarP(&options.Context, "context", "c", "", "context where the logs are fetched")
-	cmd.Flags().StringVarP(&options.exclude, "exclude", "e", "", "exclude by pod name (regular expression)")
-	cmd.Flags().BoolVarP(&options.Follow, "follow", "", false, "follow log output")
+	cmd.Flags().StringVarP(&options.exclude, "exclude", "e", "", "exclude by service name (regular expression)")
+	cmd.Flags().BoolVarP(&options.Watch, "watch", "w", false, "watch the log output")
 	cmd.Flags().DurationVarP(&options.Since, "since", "s", 48*time.Hour, "return logs newer than a relative duration like 5s, 2m, or 3h")
 	cmd.Flags().Int64Var(&options.Tail, "tail", 100, "the number of lines from the end of the logs to show")
-	cmd.Flags().BoolVarP(&options.Timestamps, "timestamps", "t", false, "Print timestamps")
+	cmd.Flags().BoolVarP(&options.Timestamps, "timestamps", "t", false, "print timestamps")
 
 	return cmd
 }
