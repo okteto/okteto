@@ -230,6 +230,7 @@ func (n *Namespaces) DestroySFSVolumes(ctx context.Context, ns string, opts Dele
 	return nil
 }
 
+// Below functions were added to remove "github.com/ibuildthecloud/finalizers" as a dependency
 func NewTrip(restConfig *rest.Config, opts *Options) (*Trip, error) {
 	if opts == nil {
 		opts = &Options{}
