@@ -267,6 +267,13 @@ jobs:
       - setup_remote_docker
       - run: ./scripts/ci/push-image.sh latest
 
+  upload-static:
+    executor: golang-ci
+    steps:
+      - checkout
+      - run: *init-gcloud
+      - run: 'gsutil -m -h "Cache-Control: no-store" -h "Content-Type: text/x-sh" cp ./scripts/get-okteto.sh gs://get.okteto.com/get-okteto.sh'
+
   release-external:
     executor: golang-ci
     steps:
@@ -312,6 +319,14 @@ jobs:
 workflows:
   version: 2
 
+  upload-static:
+    jobs:
+      - upload-static:
+          context: GKE
+          filters:
+            branches:
+              only:
+                - master
   test:
     when:
       not:
