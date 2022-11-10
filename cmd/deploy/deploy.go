@@ -291,22 +291,27 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
+	sanitizedName, err := model.SanitizeName(deployOptions.Name)
+	if err != nil {
+		return err
+	}
 	data := &pipeline.CfgData{
-		Name:       deployOptions.Name,
-		Namespace:  deployOptions.Manifest.Namespace,
-		Repository: os.Getenv(model.GithubRepositoryEnvVar),
-		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
-		Filename:   deployOptions.ManifestPathFlag,
-		Status:     pipeline.ProgressingStatus,
-		Manifest:   deployOptions.Manifest.Manifest,
-		Icon:       deployOptions.Manifest.Icon,
+		Name:         deployOptions.Name,
+		Namespace:    deployOptions.Manifest.Namespace,
+		Repository:   os.Getenv(model.GithubRepositoryEnvVar),
+		Branch:       os.Getenv(model.OktetoGitBranchEnvVar),
+		Filename:     deployOptions.ManifestPathFlag,
+		Status:       pipeline.ProgressingStatus,
+		Manifest:     deployOptions.Manifest.Manifest,
+		Icon:         deployOptions.Manifest.Icon,
+		ResourceName: sanitizedName,
 	}
 
 	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType {
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
-	dc.Proxy.SetName(deployOptions.Name)
+	dc.Proxy.SetName(sanitizedName)
 	// don't divert if current namespace is the diverted namespace
 	if deployOptions.Manifest.Deploy.Divert != nil {
 		if !okteto.IsOkteto() {
@@ -410,7 +415,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Status = pipeline.ErrorStatus
 	} else {
 		oktetoLog.SetStage("")
-		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
+		hasDeployed, err := pipeline.HasDeployedSomething(ctx, sanitizedName, deployOptions.Manifest.Namespace, c)
 		if err != nil {
 			return err
 		}
