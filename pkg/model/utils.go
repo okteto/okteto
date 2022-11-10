@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/go-git/go-git/v5"
@@ -201,4 +202,25 @@ func getListDiff(l1, l2 []string) []string {
 		}
 	}
 	return added
+}
+
+func SanitizeName(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	name = strings.ToLower(name)
+
+	name = ValidKubeNameRegex.ReplaceAllString(name, "-")
+	name = strings.TrimSuffix(name, "-")
+	name = strings.TrimPrefix(name, "-")
+
+	// if multiple "-" replace all for only one
+	re, err := regexp.Compile(`-(-+)`)
+	if err != nil {
+		return "", err
+	}
+	name = re.ReplaceAllString(name, "-")
+	// trim the repository name for internal use in labels
+	if len(name) > 63 {
+		return name[:63], nil
+	}
+	return name, nil
 }
