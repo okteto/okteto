@@ -18,7 +18,7 @@ import (
 )
 
 // GetContextResourcePath returns the file that will load the context resource from
-// here we only include files which have context information - no k8s or helm files
+// here. We only include files which have context information - no k8s or helm files
 func GetContextResourcePath(wd string) (string, error) {
 
 	oktetoManifestPath, err := GetOktetoManifestPath(wd)
