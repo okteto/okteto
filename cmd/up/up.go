@@ -65,25 +65,26 @@ type UpOptions struct {
 	ManifestPathFlag string
 	// ManifestPath is the patah to the manifest used though the command execution.
 	// This might change its value during execution
-	ManifestPath string
-	Namespace    string
-	K8sContext   string
-	DevName      string
-	Devs         []string
-	Envs         []string
-	Remote       int
-	Deploy       bool
-	ForcePull    bool
-	Reset        bool
+	ManifestPath     string
+	Namespace        string
+	K8sContext       string
+	DevName          string
+	Devs             []string
+	Envs             []string
+	Remote           int
+	Deploy           bool
+	ForcePull        bool
+	Reset            bool
+	commandToExecute []string
 }
 
 // Up starts a development container
 func Up() *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
-		Use:   "up [svc]",
+		Use:   "up [svc] <command>",
 		Short: "Launch your development environment",
-		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#up"),
+		//Args:  utils.MaximumNArgsAccepted(2, "https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
@@ -363,17 +364,24 @@ func Up() *cobra.Command {
 // AddArgs sets the args as options and return err if it's not compatible
 func (o *UpOptions) AddArgs(cmd *cobra.Command, args []string) error {
 
-	maxV1Args := 1
-	docsURL := "https://okteto.com/docs/reference/cli/#up"
-	if len(args) > maxV1Args {
-		cmd.Help()
-		return oktetoErrors.UserError{
-			E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), maxV1Args, len(args)),
-			Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
-		}
-	} else if len(args) == 1 {
+	if len(args) == 1 {
 		o.DevName = args[0]
+	} else if len(args) > 1 {
+		o.DevName = args[0]
+		o.commandToExecute = args[1:]
 	}
+
+	// maxV1Args := 2
+	// docsURL := "https://okteto.com/docs/reference/cli/#up"
+	// if len(args) > maxV1Args {
+	// 	cmd.Help()
+	// 	return oktetoErrors.UserError{
+	// 		E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), maxV1Args, len(args)),
+	// 		Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
+	// 	}
+	// } else if len(args) == maxV1Args {
+	// 	o.DevName = args[0]
+	// }
 
 	return nil
 }
