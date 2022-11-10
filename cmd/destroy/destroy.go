@@ -240,12 +240,16 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	}
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destroying...")
-
+	sanitizedName, err := model.SanitizeName(opts.Name)
+	if err != nil {
+		return err
+	}
 	data := &pipeline.CfgData{
-		Name:      opts.Name,
-		Namespace: namespace,
-		Status:    pipeline.DestroyingStatus,
-		Filename:  opts.ManifestPathFlag,
+		Name:         opts.Name,
+		Namespace:    namespace,
+		Status:       pipeline.DestroyingStatus,
+		Filename:     opts.ManifestPathFlag,
+		ResourceName: sanitizedName,
 	}
 
 	cfg, err := dc.configMapHandler.translateConfigMapAndDeploy(ctx, data)
@@ -334,7 +338,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	deployedByLs, err := labels.NewRequirement(
 		model.DeployedByLabel,
 		selection.Equals,
-		[]string{opts.Name},
+		[]string{sanitizedName},
 	)
 	if err != nil {
 		if err := dc.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
