@@ -156,6 +156,11 @@ func main() {
 				oktetoLog.Hint("    %s", uErr.Hint)
 			}
 		}
+
+		// As we print a last error log, we cannot call to this in a common place
+		oktetoLog.Done()
 		os.Exit(1)
 	}
+
+	oktetoLog.Done()
 }
