@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/sanitization"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -240,10 +241,8 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	}
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destroying...")
-	sanitizedName, err := model.SanitizeName(opts.Name)
-	if err != nil {
-		return err
-	}
+	sanitizedName := sanitization.SanitizeName(opts.Name)
+
 	data := &pipeline.CfgData{
 		Name:         opts.Name,
 		Namespace:    namespace,

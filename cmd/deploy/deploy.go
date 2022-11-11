@@ -40,6 +40,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
+	"github.com/okteto/okteto/pkg/sanitization"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -291,10 +292,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
-	sanitizedName, err := model.SanitizeName(deployOptions.Name)
-	if err != nil {
-		return err
-	}
+	sanitizedName := sanitization.SanitizeName(deployOptions.Name)
+
 	data := &pipeline.CfgData{
 		Name:         deployOptions.Name,
 		Namespace:    deployOptions.Manifest.Namespace,
