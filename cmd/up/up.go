@@ -84,13 +84,12 @@ func Up() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "up [svc] <command>",
 		Short: "Launch your development environment",
-		//Args:  utils.MaximumNArgsAccepted(2, "https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
 			}
 
-			if err := upOptions.AddArgs(cmd, args); err != nil {
+			if err := upOptions.AddArgs(args); err != nil {
 				return err
 			}
 
@@ -275,6 +274,9 @@ func Up() *cobra.Command {
 					return err
 				}
 			}
+			if upOptions.commandToExecute != nil {
+				dev.Command.Values = upOptions.commandToExecute
+			}
 
 			up.Dev = dev
 			if forceAutocreate {
@@ -362,7 +364,7 @@ func Up() *cobra.Command {
 }
 
 // AddArgs sets the args as options and return err if it's not compatible
-func (o *UpOptions) AddArgs(cmd *cobra.Command, args []string) error {
+func (o *UpOptions) AddArgs(args []string) error {
 
 	if len(args) == 1 {
 		o.DevName = args[0]
@@ -370,18 +372,6 @@ func (o *UpOptions) AddArgs(cmd *cobra.Command, args []string) error {
 		o.DevName = args[0]
 		o.commandToExecute = args[1:]
 	}
-
-	// maxV1Args := 2
-	// docsURL := "https://okteto.com/docs/reference/cli/#up"
-	// if len(args) > maxV1Args {
-	// 	cmd.Help()
-	// 	return oktetoErrors.UserError{
-	// 		E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), maxV1Args, len(args)),
-	// 		Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
-	// 	}
-	// } else if len(args) == maxV1Args {
-	// 	o.DevName = args[0]
-	// }
 
 	return nil
 }
