@@ -22,6 +22,8 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
@@ -304,6 +306,52 @@ func TestEnvVarIsNotAddedWhenHasBuiltInOktetoEnvVarsFormat(t *testing.T) {
 			if !errors.Is(err, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD) {
 				t.Fatalf("expected error in setEnvVarsFromCmd: %s due to try to set a built-in okteto environment variable", err)
 			}
+		})
+	}
+}
+
+func TestAddArgs(t *testing.T) {
+	cmd := &cobra.Command{}
+	var tests = []struct {
+		name         string
+		opts         *UpOptions
+		args         []string
+		expectedOpts *UpOptions
+		expectedErr  bool
+	}{
+		{
+			name:         "no args",
+			opts:         &UpOptions{},
+			args:         []string{},
+			expectedOpts: &UpOptions{},
+			expectedErr:  false,
+		},
+		{
+			name: "1 arg",
+			opts: &UpOptions{},
+			args: []string{"test"},
+			expectedOpts: &UpOptions{
+				DevName: "test",
+			},
+			expectedErr: false,
+		},
+		{
+			name:         "more than 1 arg",
+			opts:         &UpOptions{},
+			args:         []string{"test", "test"},
+			expectedOpts: &UpOptions{},
+			expectedErr:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.opts.AddArgs(cmd, tt.args)
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tt.expectedOpts, tt.opts)
 		})
 	}
 }
