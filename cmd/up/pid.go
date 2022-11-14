@@ -125,7 +125,7 @@ func (pc pidController) delete() {
 	}
 
 	if strconv.Itoa(pid) != filePID {
-		oktetoLog.Infof("okteto process with PID '%s' has the ownership of the file.")
+		oktetoLog.Infof("okteto process with PID '%s' has the ownership of the file.", filePID)
 		oktetoLog.Info("skipping deletion of PID file")
 		return
 	}
