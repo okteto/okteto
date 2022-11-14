@@ -13,6 +13,11 @@ var (
 	moreThanOneHyphen = regexp.MustCompile(`-(-+)`)
 )
 
+const (
+	// maxK8sResourceMetaLength is the max length a string can have to be considered a kubernetes resource name, label, annotation, etc
+	maxK8sResourceMetaLength = 63
+)
+
 func SanitizeName(name string) string {
 	name = strings.TrimSpace(name)
 	name = strings.ToLower(name)
@@ -21,8 +26,8 @@ func SanitizeName(name string) string {
 
 	name = moreThanOneHyphen.ReplaceAllString(name, "-")
 	// trim the repository name for internal use in labels
-	if len(name) > 63 {
-		name = name[:63]
+	if len(name) > maxK8sResourceMetaLength {
+		name = name[:maxK8sResourceMetaLength]
 	}
 	name = strings.TrimSuffix(name, "-")
 	name = strings.TrimPrefix(name, "-")
