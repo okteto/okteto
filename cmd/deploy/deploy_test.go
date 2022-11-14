@@ -23,11 +23,11 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/errors"
+	oktetoFormat "github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/sanitization"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/apps/v1"
@@ -244,7 +244,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	}
 
 	// sanitizeName is needed to check the CFGmap - this sanitization is done at RunDeploy, labels and cfg name
-	sanitizedName := sanitization.SanitizeName(opts.Name)
+	sanitizedName := oktetoFormat.ResourceK8sMetaString(opts.Name)
 
 	cfg, _ := configmaps.Get(ctx, pipeline.TranslatePipelineName(sanitizedName), okteto.Context().Namespace, fakeClient)
 

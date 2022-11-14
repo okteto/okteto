@@ -1,4 +1,4 @@
-package sanitization
+package format
 
 import (
 	"regexp"
@@ -18,7 +18,8 @@ const (
 	maxK8sResourceMetaLength = 63
 )
 
-func SanitizeName(name string) string {
+// ResourceK8sMetaString transforms the name param intro a compatible k8s tring to be used as name or meta information in any resource
+func ResourceK8sMetaString(name string) string {
 	name = strings.TrimSpace(name)
 	name = strings.ToLower(name)
 

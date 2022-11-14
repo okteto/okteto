@@ -39,15 +39,14 @@ devs:
     - frontend/okteto.yml`)
 
 	data := &pipeline.CfgData{
-		Name:         "Name",
-		Namespace:    "Namespace",
-		Repository:   "https://github.com/okteto/movies",
-		Branch:       "master",
-		Filename:     "Filename",
-		Status:       "progressing",
-		Manifest:     manifest,
-		Icon:         "https://apps.okteto.com/movies/icon.png",
-		ResourceName: "my-sanitized-name",
+		Name:       "Name",
+		Namespace:  "Namespace",
+		Repository: "https://github.com/okteto/movies",
+		Branch:     "master",
+		Filename:   "Filename",
+		Status:     "progressing",
+		Manifest:   manifest,
+		Icon:       "https://apps.okteto.com/movies/icon.png",
 	}
 
 	p := &fakeProxy{}
@@ -71,7 +70,7 @@ devs:
 
 	expectedCfg := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "okteto-git-my-sanitized-name",
+			Name:      "okteto-git-name",
 			Namespace: "Namespace",
 			Labels:    map[string]string{"dev.okteto.com/git-deploy": "true"},
 		},

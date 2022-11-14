@@ -1,4 +1,4 @@
-package sanitization
+package format
 
 import "testing"
 
@@ -47,7 +47,7 @@ func Test_SanitizeName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := SanitizeName(tt.name)
+			got := ResourceK8sMetaString(tt.name)
 			if got != tt.expected {
 				t.Errorf("got %s, expected %s", got, tt.expected)
 			}

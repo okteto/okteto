@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoFormat "github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -40,7 +41,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
-	"github.com/okteto/okteto/pkg/sanitization"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -292,25 +292,22 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
-	sanitizedName := sanitization.SanitizeName(deployOptions.Name)
-
 	data := &pipeline.CfgData{
-		Name:         deployOptions.Name,
-		Namespace:    deployOptions.Manifest.Namespace,
-		Repository:   os.Getenv(model.GithubRepositoryEnvVar),
-		Branch:       os.Getenv(model.OktetoGitBranchEnvVar),
-		Filename:     deployOptions.ManifestPathFlag,
-		Status:       pipeline.ProgressingStatus,
-		Manifest:     deployOptions.Manifest.Manifest,
-		Icon:         deployOptions.Manifest.Icon,
-		ResourceName: sanitizedName,
+		Name:       deployOptions.Name,
+		Namespace:  deployOptions.Manifest.Namespace,
+		Repository: os.Getenv(model.GithubRepositoryEnvVar),
+		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
+		Filename:   deployOptions.ManifestPathFlag,
+		Status:     pipeline.ProgressingStatus,
+		Manifest:   deployOptions.Manifest.Manifest,
+		Icon:       deployOptions.Manifest.Icon,
 	}
 
 	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType {
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
-	dc.Proxy.SetName(sanitizedName)
+	dc.Proxy.SetName(oktetoFormat.ResourceK8sMetaString(deployOptions.Name))
 	// don't divert if current namespace is the diverted namespace
 	if deployOptions.Manifest.Deploy.Divert != nil {
 		if !okteto.IsOkteto() {
@@ -414,7 +411,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Status = pipeline.ErrorStatus
 	} else {
 		oktetoLog.SetStage("")
-		hasDeployed, err := pipeline.HasDeployedSomething(ctx, sanitizedName, deployOptions.Manifest.Namespace, c)
+		hasDeployed, err := pipeline.HasDeployedSomething(ctx, oktetoFormat.ResourceK8sMetaString(deployOptions.Name), deployOptions.Manifest.Namespace, c)
 		if err != nil {
 			return err
 		}

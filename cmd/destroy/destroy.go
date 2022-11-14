@@ -31,7 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/sanitization"
+	oktetoFormat "github.com/okteto/okteto/pkg/format"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -241,14 +241,12 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	}
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destroying...")
-	sanitizedName := sanitization.SanitizeName(opts.Name)
 
 	data := &pipeline.CfgData{
-		Name:         opts.Name,
-		Namespace:    namespace,
-		Status:       pipeline.DestroyingStatus,
-		Filename:     opts.ManifestPathFlag,
-		ResourceName: sanitizedName,
+		Name:      opts.Name,
+		Namespace: namespace,
+		Status:    pipeline.DestroyingStatus,
+		Filename:  opts.ManifestPathFlag,
 	}
 
 	cfg, err := dc.configMapHandler.translateConfigMapAndDeploy(ctx, data)
@@ -337,7 +335,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	deployedByLs, err := labels.NewRequirement(
 		model.DeployedByLabel,
 		selection.Equals,
-		[]string{sanitizedName},
+		[]string{oktetoFormat.ResourceK8sMetaString(opts.Name)},
 	)
 	if err != nil {
 		if err := dc.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
