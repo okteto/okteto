@@ -18,7 +18,7 @@ const (
 	maxK8sResourceMetaLength = 63
 )
 
-// ResourceK8sMetaString transforms the name param intro a compatible k8s tring to be used as name or meta information in any resource
+// ResourceK8sMetaString transforms the name param intro a compatible k8s string to be used as name or meta information in any resource
 func ResourceK8sMetaString(name string) string {
 	name = strings.TrimSpace(name)
 	name = strings.ToLower(name)
