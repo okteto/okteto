@@ -17,8 +17,8 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-// GetContextResourcePath returns the file that will load the context resource from
-// here. We only include files which have context information - no k8s or helm files
+// GetContextResourcePath returns the file that will load the context resource.
+// Here we only read files which have context information - no k8s or helm files
 func GetContextResourcePath(wd string) (string, error) {
 
 	oktetoManifestPath, err := GetOktetoManifestPath(wd)
