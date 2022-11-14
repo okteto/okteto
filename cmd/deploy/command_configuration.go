@@ -19,7 +19,6 @@ import (
 	"net/url"
 	"os"
 	"reflect"
-	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -30,6 +29,16 @@ import (
 	giturls "github.com/whilp/git-urls"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+)
+
+const (
+	sshScheme   = "ssh"
+	httpScheme  = "http"
+	httpsScheme = "https"
+)
+
+var (
+	schemeError = fmt.Errorf("could not detect repository scheme, please clone your repository using https or ssh")
 )
 
 func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
@@ -162,17 +171,16 @@ func switchSSHRepoToHTTPS(repo string) (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
-	if repoURL.Scheme == "ssh" {
-		repoURL.Scheme = "https"
+	switch repoURL.Scheme {
+	case sshScheme, httpScheme:
+		repoURL.Scheme = httpsScheme
 		repoURL.User = nil
-		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
 		return repoURL, nil
-	}
-	if repoURL.Scheme == "https" {
+	case httpsScheme:
 		return repoURL, nil
+	default:
+		return nil, schemeError
 	}
-
-	return nil, fmt.Errorf("could not detect repo protocol")
 }
 
 func updateConfigMapStatusError(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, errMain error) error {
