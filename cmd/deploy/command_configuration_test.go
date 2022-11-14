@@ -168,3 +168,50 @@ func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
 		})
 	}
 }
+
+func Test_switchSSHRepoToHTTPS(t *testing.T) {
+	tests := []struct {
+		name              string
+		repo              string
+		expectedUrlString string
+		expectedErr       error
+	}{
+		{
+			name:              "input-ssh",
+			repo:              "git@github.com:okteto/go-getting-started.git",
+			expectedUrlString: "https://github.com/okteto/go-getting-started.git",
+		},
+		{
+			name:              "input-https",
+			repo:              "https://github.com/okteto/go-getting-started.git",
+			expectedUrlString: "https://github.com/okteto/go-getting-started.git",
+		},
+		{
+			name:              "input-http",
+			repo:              "http://github.com/okteto/go-getting-started.git",
+			expectedUrlString: "https://github.com/okteto/go-getting-started.git",
+		},
+		{
+			name:        "input-not-allowed",
+			repo:        "github.com/okteto/go-getting-started.git",
+			expectedErr: assert.AnError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			url, err := switchSSHRepoToHTTPS(tt.repo)
+			if tt.expectedErr != nil && err == nil {
+				t.Fatalf("expected err: %v but got no error", tt.expectedErr)
+			}
+			if tt.expectedErr == nil && err != nil {
+				t.Fatalf("expected no err, but got: %v", err)
+			}
+			if tt.expectedErr != nil {
+				assert.Error(t, err)
+			}
+
+			assert.Equal(t, tt.expectedUrlString, url.String())
+		})
+	}
+}
