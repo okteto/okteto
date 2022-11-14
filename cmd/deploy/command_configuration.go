@@ -38,7 +38,7 @@ const (
 )
 
 var (
-	schemeError = fmt.Errorf("could not detect repository scheme, please clone your repository using https or ssh")
+	errUnsupportedScheme = fmt.Errorf("could not detect repository scheme, please clone your repository using https or ssh")
 )
 
 func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
@@ -179,7 +179,7 @@ func switchSSHRepoToHTTPS(repo string) (*url.URL, error) {
 	case httpsScheme:
 		return repoURL, nil
 	default:
-		return nil, schemeError
+		return nil, errUnsupportedScheme
 	}
 }
 
