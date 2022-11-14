@@ -371,7 +371,7 @@ func (o *UpOptions) AddArgs(cmd *cobra.Command, args []string) error {
 			E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), maxV1Args, len(args)),
 			Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
 		}
-	} else if len(args) == 1 {
+	} else if len(args) == maxV1Args {
 		o.DevName = args[0]
 	}
 
