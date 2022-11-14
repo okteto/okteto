@@ -211,7 +211,7 @@ func Test_switchSSHRepoToHTTPS(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url, err := switchSSHRepoToHTTPS(tt.repo)
+			url, err := switchRepoSchemaToHTTPS(tt.repo)
 			assert.ErrorIs(t, err, tt.expectedErr)
 
 			assert.Equal(t, tt.expected, url)

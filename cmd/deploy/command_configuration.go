@@ -130,7 +130,7 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		}
 
 		if repo != "" {
-			repoHTTPS, err := switchSSHRepoToHTTPS(repo)
+			repoHTTPS, err := switchRepoSchemaToHTTPS(repo)
 			if err != nil {
 				return err
 			}
@@ -166,7 +166,7 @@ func addEnvVars(ctx context.Context, cwd string) error {
 	return nil
 }
 
-func switchSSHRepoToHTTPS(repo string) (*url.URL, error) {
+func switchRepoSchemaToHTTPS(repo string) (*url.URL, error) {
 	repoURL, err := giturls.Parse(repo)
 	if err != nil {
 		return nil, err
