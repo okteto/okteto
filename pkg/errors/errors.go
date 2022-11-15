@@ -247,7 +247,11 @@ func IsTransient(err error) bool {
 		strings.Contains(err.Error(), "No connection could be made"),
 		strings.Contains(err.Error(), "operation was canceled"),
 		strings.Contains(err.Error(), "network is unreachable"),
-		strings.Contains(err.Error(), "development container has been removed"):
+		strings.Contains(err.Error(), "development container has been removed"),
+		strings.Contains(err.Error(), "unexpected packet in response to channel open"),
+		strings.Contains(err.Error(), "closing remote connection: EOF"),
+		strings.Contains(err.Error(), "request for pseudo terminal failed: eof"),
+		strings.Contains(err.Error(), "command execution failed: eof"):
 		return true
 	default:
 		return false
