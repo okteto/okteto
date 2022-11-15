@@ -354,6 +354,13 @@ func AddToBuffer(level, format string, args ...interface{}) {
 	log.writer.AddToBuffer(level, format, args...)
 }
 
+// Done sends the EOF message for the 'done' stage to complete the log. This should be called when no more logs are expected
+func Done() {
+	SetStage("done")
+	AddToBuffer(InfoLevel, "EOF")
+	SetStage("")
+}
+
 func loadBool(env string) bool {
 	value := os.Getenv(env)
 	if value == "" {
