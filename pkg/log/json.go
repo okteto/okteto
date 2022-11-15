@@ -193,9 +193,7 @@ func (w *JSONWriter) Fail(format string, args ...interface{}) {
 	log.out.Infof(format, args...)
 	msg := fmt.Sprintf("%s %s", errorSymbol, fmt.Sprintf(format, args...))
 	if msg != "" {
-		if log.stage == "" {
-			log.stage = "Internal server error"
-		}
+
 		msg = convertToJSON(ErrorLevel, log.stage, msg)
 		if msg != "" {
 			log.buf.WriteString(msg)
