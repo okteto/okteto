@@ -89,10 +89,6 @@ func Up() *cobra.Command {
 				return oktetoErrors.ErrNotInDevContainer
 			}
 
-			if err := upOptions.AddArgs(args); err != nil {
-				return err
-			}
-
 			u := utils.UpgradeAvailable()
 			if len(u) > 0 {
 				warningFolder := filepath.Join(config.GetOktetoHome(), ".warnings")
@@ -153,6 +149,11 @@ func Up() *cobra.Command {
 					return err
 				}
 			}
+
+			if err := upOptions.AddArgs(args, oktetoManifest); err != nil {
+				return err
+			}
+
 			wd, err := os.Getwd()
 			if err != nil {
 				return err
@@ -364,13 +365,21 @@ func Up() *cobra.Command {
 }
 
 // AddArgs sets the args as options and return err if it's not compatible
-func (o *UpOptions) AddArgs(args []string) error {
+func (o *UpOptions) AddArgs(args []string, oktetoManifest *model.Manifest) error {
 
 	if len(args) == 1 {
-		o.DevName = args[0]
+		if _, ok := oktetoManifest.Dev[args[0]]; ok {
+			o.DevName = args[0]
+		} else {
+			o.commandToExecute = args
+		}
 	} else if len(args) > 1 {
-		o.DevName = args[0]
-		o.commandToExecute = args[1:]
+		if _, ok := oktetoManifest.Dev[args[0]]; ok {
+			o.DevName = args[0]
+			o.commandToExecute = args[1:]
+		} else {
+			o.commandToExecute = args
+		}
 	}
 
 	return nil
