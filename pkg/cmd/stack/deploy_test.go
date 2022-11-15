@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/services"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -27,6 +28,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/fake"
@@ -960,4 +962,93 @@ func TestGetErrorDueToRestartLimit(t *testing.T) {
 		})
 	}
 
+}
+
+func TestDeployK8sEndpoint(t *testing.T) {
+	tests := []struct {
+		name   string
+		stack  *model.Stack
+		object []runtime.Object
+		err    error
+	}{
+		{
+			name: "deploy public endpoints",
+			stack: &model.Stack{
+				Namespace: "test",
+				Services: model.ComposeServices{
+					"test": &model.Service{},
+				},
+			},
+		},
+		{
+			name: "deploy private endpoints",
+			stack: &model.Stack{
+				Namespace: "test",
+				Services: model.ComposeServices{
+					"test": &model.Service{
+						Annotations: model.Annotations{
+							"dev.okteto.com/private": "true",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "skip deploy endpoint 1",
+			stack: &model.Stack{
+				Namespace: "test",
+				Services: model.ComposeServices{
+					"test": &model.Service{
+						Annotations: model.Annotations{
+							"dev.okteto.com/private": "true",
+						},
+					},
+				},
+			},
+			object: []runtime.Object{
+				&networkingv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							model.StackNameLabel: "",
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "skip deploy endpoint 2",
+			stack: &model.Stack{
+				Name:      "test",
+				Namespace: "test",
+				Services: model.ComposeServices{
+					"test": &model.Service{
+						Annotations: model.Annotations{
+							"dev.okteto.com/private": "true",
+						},
+					},
+				},
+			},
+			object: []runtime.Object{
+				&networkingv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{
+							model.StackNameLabel: "test",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClient := fake.NewSimpleClientset(tt.object...)
+			c := ingresses.NewIngressClient(fakeClient, true)
+			err := deployK8sEndpoint(context.Background(), "test", "test", model.Port{ContainerPort: 80}, tt.stack, c)
+			assert.Equal(t, tt.err, err)
+
+			obj, _ := c.Get(context.Background(), "test", "test")
+			assert.NotNil(t, obj)
+		})
+	}
 }

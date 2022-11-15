@@ -50,11 +50,11 @@ type Stack struct {
 	Volumes   map[string]*VolumeSpec `yaml:"volumes,omitempty"`
 	Namespace string                 `yaml:"namespace,omitempty"`
 	Context   string                 `yaml:"context,omitempty"`
-	Services  composeServices        `yaml:"services,omitempty"`
+	Services  ComposeServices        `yaml:"services,omitempty"`
 	Endpoints EndpointSpec           `yaml:"endpoints,omitempty"`
 }
 
-type composeServices map[string]*Service
+type ComposeServices map[string]*Service
 
 // Service represents an okteto stack service
 type Service struct {
@@ -849,7 +849,7 @@ func setEnvironmentFromFile(svc *Service, filename string) error {
 	return nil
 }
 
-func (s composeServices) toGraph() graph {
+func (s ComposeServices) toGraph() graph {
 	g := graph{}
 	for svcName, svcInfo := range s {
 		dependsOnList := []string{}
