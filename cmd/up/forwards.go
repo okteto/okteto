@@ -82,7 +82,6 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 	}
 
 	up.Forwarder = ssh.NewForwardManager(ctx, fmt.Sprintf(":%d", up.Dev.RemotePort), up.Dev.Interface, "0.0.0.0", f, up.Dev.Namespace)
-
 	if err := up.Forwarder.Add(forward.Forward{Local: up.Sy.RemotePort, Remote: syncthing.ClusterPort}); err != nil {
 		return err
 	}
@@ -91,24 +90,8 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 		return err
 	}
 
-	for idx, f := range up.Dev.Forward {
-		if f.Labels != nil {
-			forwardWithServiceName, err := up.Forwarder.TransformLabelsToServiceName(f)
-			if err != nil {
-				return err
-			}
-			up.Dev.Forward[idx] = forwardWithServiceName
-			f = forwardWithServiceName
-		}
-		if err := up.Forwarder.Add(f); err != nil {
-			return err
-		}
-	}
-
-	for _, r := range up.Dev.Reverse {
-		if err := up.Forwarder.AddReverse(r); err != nil {
-			return err
-		}
+	if err := addToForwarder(up); err != nil {
+		return err
 	}
 
 	if err := ssh.AddEntry(up.Dev.Name, up.Dev.Interface, up.Dev.RemotePort); err != nil {
@@ -127,6 +110,67 @@ func (up *upContext) sshForwards(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func addToForwarder(up *upContext) error {
+	ticker := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(10 * time.Second)
+	var forwardErr error
+	alreadyAdded := map[int]bool{}
+	for {
+		select {
+		case <-ticker.C:
+			forwardErr = nil
+
+			for idx, f := range up.Dev.Forward {
+				if _, ok := alreadyAdded[f.Local]; ok {
+					continue
+				}
+				if f.Labels != nil {
+					forwardWithServiceName, err := up.Forwarder.TransformLabelsToServiceName(f)
+					if err != nil {
+						oktetoLog.Infof("could not create forward port: %s", err)
+						forwardErr = err
+						continue
+					}
+					up.Dev.Forward[idx] = forwardWithServiceName
+					f = forwardWithServiceName
+					alreadyAdded[f.Local] = true
+				}
+				if err := up.Forwarder.Add(f); err != nil {
+					oktetoLog.Infof("could not create forward port: %s", err)
+					forwardErr = err
+					continue
+				}
+				alreadyAdded[f.Local] = true
+			}
+			if forwardErr != nil {
+				continue
+			}
+
+			for _, r := range up.Dev.Reverse {
+				if _, ok := alreadyAdded[r.Local]; ok {
+					continue
+				}
+				if err := up.Forwarder.AddReverse(r); err != nil {
+					oktetoLog.Infof("could not create reverse port: %s", err)
+					forwardErr = err
+					continue
+				}
+				alreadyAdded[r.Local] = true
+			}
+
+			if forwardErr != nil {
+				continue
+			}
+			return nil
+		case <-to.C:
+			if forwardErr != nil {
+				return forwardErr
+			}
+			return fmt.Errorf("could not create local ports after %s", up.Dev.Timeout.Resources.String())
+		}
+	}
 }
 
 func (up *upContext) setGlobalForwardsIfRequiredLoop(ctx context.Context) {

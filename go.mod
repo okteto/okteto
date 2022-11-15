@@ -56,7 +56,7 @@ require (
 
 require (
 	cloud.google.com/go v0.99.0 // indirect
-	cloud.google.com/go/storage v1.10.0 // indirect
+	cloud.google.com/go/storage v1.14.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
 	github.com/Azure/go-autorest/autorest v0.11.27 // indirect
@@ -217,8 +217,11 @@ require (
 	sigs.k8s.io/yaml v1.2.0 // indirect
 )
 
+require github.com/spf13/afero v1.9.2
+
 require (
 	github.com/emicklei/go-restful/v3 v3.8.0 // indirect
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/golang-jwt/jwt/v4 v4.2.0 // indirect
 	github.com/google/gnostic v0.5.7-v3refs // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect

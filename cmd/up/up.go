@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -521,15 +522,19 @@ func (up *upContext) getManifest(path string) (*model.Manifest, error) {
 }
 
 func (up *upContext) start() error {
-	if err := createPIDFile(up.Dev.Namespace, up.Dev.Name); err != nil {
+	up.pidController = newPIDController(up.Dev.Namespace, up.Dev.Name)
+
+	if err := up.pidController.create(); err != nil {
 		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
 		return fmt.Errorf("couldn't create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)
 	}
 
-	defer cleanPIDFile(up.Dev.Namespace, up.Dev.Name)
+	defer up.pidController.delete()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
+
+	pidFileCh := make(chan error, 1)
 
 	analytics.TrackUp(analytics.TrackUpMetadata{
 		IsInteractive:          up.getInteractive(),
@@ -544,6 +549,8 @@ func (up *upContext) start() error {
 
 	go up.activateLoop()
 
+	go up.pidController.notifyIfPIDFileChange(pidFileCh)
+
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
@@ -554,6 +561,9 @@ func (up *upContext) start() error {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
+	case err := <-pidFileCh:
+		oktetoLog.Infof("exit signal received due to pid file modification: %s", err)
+		return err
 	}
 	return nil
 }
@@ -571,6 +581,17 @@ func (up *upContext) activateLoop() {
 		if up.isRetry || isTransientError {
 			oktetoLog.Infof("waiting for shutdown sequence to finish")
 			<-up.ShutdownCompleted
+			pidFromFile, err := up.pidController.get()
+			if err != nil {
+				oktetoLog.Infof("error getting pid: %w")
+			}
+			if pidFromFile != strconv.Itoa(os.Getpid()) {
+				up.Exit <- oktetoErrors.UserError{
+					E:    fmt.Errorf("development container has been deactivated by another 'okteto up' command"),
+					Hint: "Use 'okteto exec' to open another terminal to your development container",
+				}
+				return
+			}
 			if iter == 0 {
 				oktetoLog.Yellow("Connection lost to your development container, reconnecting...")
 			}
