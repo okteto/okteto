@@ -317,6 +317,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			dc.Proxy.SetDivert(deployOptions.Manifest.Deploy.Divert.Namespace)
 		}
 	}
+	oktetoLog.SetStage("")
 
 	dc.PipelineType = deployOptions.Manifest.Type
 
@@ -325,9 +326,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
 	}
-
-	// We are doing some operations regarding to manifest load, so if it fails, it should belong to Load Manifest stage
-	oktetoLog.SetStage("")
 
 	// starting PROXY
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
@@ -400,12 +398,16 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.EnableMasking()
 	err = dc.deploy(ctx, deployOptions)
 	oktetoLog.DisableMasking()
+	oktetoLog.SetStage("done")
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
+	oktetoLog.SetStage("")
 
 	if err != nil {
 		if err == oktetoErrors.ErrIntSig {
 			return nil
 		}
 		err = oktetoErrors.UserError{E: err}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, err.Error())
 		data.Status = pipeline.ErrorStatus
 	} else {
 		oktetoLog.SetStage("")
@@ -448,6 +450,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		oktetoLog.Information("Running '%s'", command.Name)
 		oktetoLog.SetStage(command.Name)
 		if err := dc.Executor.Execute(command, opts.Variables); err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
 		oktetoLog.SetStage("")
@@ -457,6 +460,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	if opts.Manifest.Deploy.ComposeSection != nil {
 		oktetoLog.SetStage("Deploying compose")
 		if err := dc.deployStack(ctx, opts); err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())
 			return err
 		}
 		oktetoLog.SetStage("")
@@ -466,6 +470,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	if opts.Manifest.Deploy.Endpoints != nil {
 		oktetoLog.SetStage("Endpoints configuration")
 		if err := dc.deployEndpoints(ctx, opts); err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error generating endpoints: %s", err.Error())
 			return err
 		}
 		oktetoLog.SetStage("")
@@ -475,6 +480,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
 		oktetoLog.SetStage("Divert configuration")
 		if err := dc.deployDivert(ctx, opts); err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
 			return err
 		}
 		oktetoLog.Success("Divert from '%s' successfully configured", opts.Manifest.Deploy.Divert.Namespace)
