@@ -98,7 +98,7 @@ func Logs(ctx context.Context) *cobra.Command {
 			}
 			return nil
 		},
-		Args: utils.MaximumNArgsAccepted(1, ""),
+		Args: utils.MaximumNArgsAccepted(1, "https://www.okteto.com/docs/reference/cli/#logs"),
 	}
 
 	cmd.Flags().BoolVarP(&options.All, "all", "a", false, "fetch logs from the whole namespace")
