@@ -52,7 +52,7 @@ func Logs(ctx context.Context) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "logs",
-		Short: "Fetch the logs of a development environment",
+		Short: "Fetch the logs of your development environment",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
@@ -103,8 +103,8 @@ func Logs(ctx context.Context) *cobra.Command {
 
 	cmd.Flags().BoolVarP(&options.All, "all", "a", false, "fetch logs from the whole namespace")
 	cmd.Flags().StringVarP(&options.ManifestPath, "file", "f", "", "path to the manifest file")
-	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overrides the namespace where logs are fetched")
-	cmd.Flags().StringVarP(&options.Context, "context", "c", "", "context where the logs are fetched")
+	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "the namespace to use to fetch the logs (defaults to the current okteto namespace)")
+	cmd.Flags().StringVarP(&options.Context, "context", "c", "", "the context to use to fetch the logs")
 	cmd.Flags().StringVarP(&options.exclude, "exclude", "e", "", "exclude by service name (regular expression)")
 	cmd.Flags().BoolVarP(&options.Watch, "watch", "w", false, "watch the log output")
 	cmd.Flags().DurationVarP(&options.Since, "since", "s", 48*time.Hour, "return logs newer than a relative duration like 5s, 2m, or 3h")
