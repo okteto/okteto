@@ -224,8 +224,8 @@ require (
 	github.com/google/gnostic v0.6.9 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 )
-require github.com/stern/stern v1.22.0
 
+require github.com/stern/stern v1.22.0
 
 replace (
 	github.com/Sirupsen/logrus => github.com/sirupsen/logrus v1.8.0
