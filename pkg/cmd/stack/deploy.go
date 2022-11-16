@@ -396,10 +396,7 @@ func deployK8sEndpoint(ctx context.Context, ingressName, svcName string, port mo
 	if skipIngressDeployForStackNameLabel(ctx, c, ingress) {
 		return nil
 	}
-	if err := c.Deploy(ctx, ingress); err != nil {
-		return err
-	}
-	return nil
+	return c.Deploy(ctx, ingress)
 }
 
 func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {
