@@ -166,6 +166,10 @@ func translateOutput(output *bytes.Buffer) []byte {
 
 // translateConfigMapSandBox creates a configmap adding data from a config data
 func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
+	// if repository is empty, force empty branch
+	if data.Repository == "" {
+		data.Branch = ""
+	}
 	cmap := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: data.Namespace,
@@ -214,6 +218,11 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 		// when repository is empty - the filename should not be saved and redeploys should be done from cli
 		cmap.Data[filenameField] = data.Filename
 		cmap.Data[repoField] = data.Repository
+	}
+
+	// if repository is empty, force empty branch
+	if data.Repository == "" {
+		data.Branch = ""
 	}
 
 	if data.Branch != "" {
