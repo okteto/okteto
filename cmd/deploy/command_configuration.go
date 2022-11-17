@@ -175,7 +175,7 @@ func switchRepoSchemaToHTTPS(repo string) *url.URL {
 	case httpsScheme:
 		return repoURL
 	default:
-		// if repo was parsed but hasnt got a valid schema
+		// if repo was parsed but has not a valid schema
 		oktetoLog.Info("retrieved local repository")
 		return nil
 	}
