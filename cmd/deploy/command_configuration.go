@@ -15,7 +15,6 @@ package deploy
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"os"
 	"reflect"
@@ -35,10 +34,6 @@ const (
 	sshScheme   = "ssh"
 	httpScheme  = "http"
 	httpsScheme = "https"
-)
-
-var (
-	errUnsupportedScheme = fmt.Errorf("could not detect repository scheme, please clone your repository using https or ssh")
 )
 
 func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
@@ -134,7 +129,14 @@ func addEnvVars(ctx context.Context, cwd string) error {
 			if err != nil {
 				return err
 			}
-			repo = repoHTTPS.String()
+			if repoHTTPS != nil {
+				repo = repoHTTPS.String()
+			} else {
+				// ir repo was parsed but hasnt got a valid schema
+				// fallback to empty repository
+				oktetoLog.Warning("retrieved local repository")
+				repo = ""
+			}
 		}
 		os.Setenv(model.GithubRepositoryEnvVar, repo)
 	}
@@ -178,9 +180,8 @@ func switchRepoSchemaToHTTPS(repo string) (*url.URL, error) {
 		return repoURL, nil
 	case httpsScheme:
 		return repoURL, nil
-	default:
-		return nil, errUnsupportedScheme
 	}
+	return nil, nil
 }
 
 func updateConfigMapStatusError(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, errMain error) error {

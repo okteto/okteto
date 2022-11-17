@@ -203,9 +203,10 @@ func Test_switchSSHRepoToHTTPS(t *testing.T) {
 				Path:   "/okteto/go-getting-started.git",
 			}},
 		{
-			name:        "input-not-allowed",
+			name:        "input-local",
 			repo:        "github.com/okteto/go-getting-started.git",
-			expectedErr: errUnsupportedScheme,
+			expected:    nil,
+			expectedErr: nil,
 		},
 	}
 
