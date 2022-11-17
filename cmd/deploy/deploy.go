@@ -317,7 +317,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			dc.Proxy.SetDivert(deployOptions.Manifest.Deploy.Divert.Namespace)
 		}
 	}
-	oktetoLog.SetStage("")
 
 	dc.PipelineType = deployOptions.Manifest.Type
 
@@ -326,6 +325,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
 	}
+
+	oktetoLog.SetStage("")
 
 	// starting PROXY
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
