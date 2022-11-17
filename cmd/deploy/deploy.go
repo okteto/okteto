@@ -258,20 +258,24 @@ func Deploy(ctx context.Context) *cobra.Command {
 func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
 	cwd, err := os.Getwd()
 	if err != nil {
+		logUnstageError("failed to get the current working directory: %s", err.Error())
 		return fmt.Errorf("failed to get the current working directory: %w", err)
 	}
 
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
+		logUnstageError("could not read kubernetes configuration: %s", err.Error())
 		return err
 	}
 
 	if err := addEnvVars(ctx, cwd); err != nil {
+		logUnstageError("there was an un expected error: %s", err.Error())
 		return err
 	}
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
 	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
+		logUnstageError("there was an error configuring the command %s", err.Error())
 		return err
 	}
 	oktetoLog.SetStage("Load manifest")
@@ -317,7 +321,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			dc.Proxy.SetDivert(deployOptions.Manifest.Deploy.Divert.Namespace)
 		}
 	}
-	oktetoLog.SetStage("")
 
 	dc.PipelineType = deployOptions.Manifest.Type
 
@@ -327,12 +330,15 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
+	oktetoLog.SetStage("")
+
 	// starting PROXY
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
 	dc.Proxy.Start()
 
 	cfg, err := getConfigMapFromData(ctx, data, c)
 	if err != nil {
+		logUnstageError("there was an unexpected error: '%s'. Try again later", err.Error())
 		return err
 	}
 
@@ -358,6 +364,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return err
 		}
 		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+			logUnstageError("dependency '%s' failed to deploy: %s", depName, err.Error())
 			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); errStatus != nil {
 				return errStatus
 			}
@@ -367,6 +374,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
+		logUnstageError("there was an error building the images: %s", err.Error())
 		return updateConfigMapStatusError(ctx, cfg, c, data, err)
 	}
 
@@ -413,6 +421,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.SetStage("")
 		hasDeployed, err := pipeline.HasDeployedSomething(ctx, deployOptions.Name, deployOptions.Manifest.Namespace, c)
 		if err != nil {
+			logUnstageError("there was an unexpected error: %s", err.Error())
 			return err
 		}
 		if hasDeployed {
@@ -700,4 +709,11 @@ func getDefaultTimeout() time.Duration {
 	}
 
 	return parsed
+}
+
+// logUnstageError log an error happened when there is not an staged defined
+func logUnstageError(format string, args ...interface{}) {
+	oktetoLog.SetStage("Internal server error")
+	oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, format, args...)
+	oktetoLog.SetStage("")
 }
