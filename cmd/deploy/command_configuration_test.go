@@ -172,10 +172,9 @@ func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
 
 func Test_switchSSHRepoToHTTPS(t *testing.T) {
 	tests := []struct {
-		name        string
-		repo        string
-		expected    *url.URL
-		expectedErr error
+		name     string
+		repo     string
+		expected *url.URL
 	}{
 		{
 			name: "input-ssh",
@@ -203,18 +202,15 @@ func Test_switchSSHRepoToHTTPS(t *testing.T) {
 				Path:   "/okteto/go-getting-started.git",
 			}},
 		{
-			name:        "input-local",
-			repo:        "github.com/okteto/go-getting-started.git",
-			expected:    nil,
-			expectedErr: nil,
+			name:     "input-local",
+			repo:     "github.com/okteto/go-getting-started.git",
+			expected: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			url, err := switchRepoSchemaToHTTPS(tt.repo)
-			assert.ErrorIs(t, err, tt.expectedErr)
-
+			url := switchRepoSchemaToHTTPS(tt.repo)
 			assert.Equal(t, tt.expected, url)
 		})
 	}

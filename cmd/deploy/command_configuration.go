@@ -109,7 +109,7 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 }
 
-func addEnvVars(ctx context.Context, cwd string) error {
+func addEnvVars(ctx context.Context, cwd string) {
 	if os.Getenv(model.OktetoGitBranchEnvVar) == "" {
 		branch, err := utils.GetBranch(cwd)
 		if err != nil {
@@ -125,17 +125,12 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		}
 
 		if repo != "" {
-			repoHTTPS, err := switchRepoSchemaToHTTPS(repo)
-			if err != nil {
-				return err
-			}
-			if repoHTTPS != nil {
-				repo = repoHTTPS.String()
-			} else {
-				// ir repo was parsed but hasnt got a valid schema
+			repoHTTPS := switchRepoSchemaToHTTPS(repo)
+			if repoHTTPS == nil {
 				// fallback to empty repository
-				oktetoLog.Warning("retrieved local repository")
 				repo = ""
+			} else {
+				repo = repoHTTPS.String()
 			}
 		}
 		os.Setenv(model.GithubRepositoryEnvVar, repo)
@@ -165,23 +160,25 @@ func addEnvVars(ctx context.Context, cwd string) error {
 		os.Setenv(model.OktetoTokenEnvVar, okteto.Context().Token)
 	}
 	oktetoLog.AddMaskedWord(os.Getenv(model.OktetoTokenEnvVar))
-	return nil
 }
 
-func switchRepoSchemaToHTTPS(repo string) (*url.URL, error) {
+func switchRepoSchemaToHTTPS(repo string) *url.URL {
 	repoURL, err := giturls.Parse(repo)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	switch repoURL.Scheme {
 	case sshScheme, httpScheme:
 		repoURL.Scheme = httpsScheme
 		repoURL.User = nil
-		return repoURL, nil
+		return repoURL
 	case httpsScheme:
-		return repoURL, nil
+		return repoURL
+	default:
+		// if repo was parsed but hasnt got a valid schema
+		oktetoLog.Info("retrieved local repository")
+		return nil
 	}
-	return nil, nil
 }
 
 func updateConfigMapStatusError(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, errMain error) error {
