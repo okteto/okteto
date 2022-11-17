@@ -167,8 +167,8 @@ func TranslateDevMode(trMap map[string]*Translation) error {
 	return nil
 }
 
-// ListDevModeOn returns a list of strings with the names of deployments or statefulsets in DevMode
-// if no app in dev mode found, empty slice is returned
+// ListDevModeOn returns a list of strings with the names of deployments or statefulsets in DevMode.
+// If no app is found in dev mode, an empty slice is returned
 func ListDevModeOn(ctx context.Context, manifest *model.Manifest, c kubernetes.Interface) []string {
 	devModeApps := make([]string, 0)
 	for name, dev := range manifest.Dev {

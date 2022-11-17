@@ -58,7 +58,7 @@ func maxNArgs(cmd *cobra.Command, n int, url string, args []string) error {
 	return nil
 }
 
-// MinimumNArgsAccepted returns an error if there are more than N args.
+// MinimumNArgsAccepted returns an error if there are less than N args.
 func MinimumNArgsAccepted(n int, url string) cobra.PositionalArgs {
 	return func(cmd *cobra.Command, args []string) error {
 		var hint string
