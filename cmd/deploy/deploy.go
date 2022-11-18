@@ -401,7 +401,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.DisableMasking()
 	oktetoLog.SetStage("done")
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
-	oktetoLog.SetStage("")
 
 	if err != nil {
 		if err == oktetoErrors.ErrIntSig {
