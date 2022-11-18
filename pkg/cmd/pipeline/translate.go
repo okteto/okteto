@@ -88,7 +88,7 @@ type CfgData struct {
 // TranslateConfigMapAndDeploy translates the app into a configMap
 // name param is the pipeline sanitized name
 func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
-	cmap, err := configmaps.Get(ctx, TranslatePipelineName(format.ResourceK8sMetaString(data.Name)), data.Namespace, c)
+	cmap, err := configmaps.Get(ctx, TranslatePipelineName(data.Name), data.Namespace, c)
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
 			return nil, err
@@ -135,7 +135,7 @@ func UpdateConfigMap(ctx context.Context, cmap *apiv1.ConfigMap, data *CfgData, 
 
 // TranslatePipelineName translate the name into the configmap name
 func TranslatePipelineName(name string) string {
-	return fmt.Sprintf("okteto-git-%s", name)
+	return fmt.Sprintf("okteto-git-%s", format.ResourceK8sMetaString(name))
 }
 
 func translateOutput(output *bytes.Buffer) []byte {
