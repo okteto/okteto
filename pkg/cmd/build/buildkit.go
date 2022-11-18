@@ -70,6 +70,9 @@ func getSolveOpt(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 		}
 	}
 
+	if buildOptions.Platform != "" {
+		frontendAttrs["platform"] = buildOptions.Platform
+	}
 	if buildOptions.Target != "" {
 		frontendAttrs["target"] = buildOptions.Target
 	}

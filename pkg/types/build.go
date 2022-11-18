@@ -24,6 +24,7 @@ type BuildOptions struct {
 	OutputMode    string
 	Path          string
 	Secrets       []string
+	Platform      string
 	Tag           string
 	Target        string
 	Namespace     string
