@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -250,7 +251,7 @@ func TestEnvVarIsAddedProperlyToDevContainerWhenIsSetFromCmd(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			overridedEnvVars, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs)
 			if err != nil {
-				t.Fatalf("unexpected error in  setEnvVarsFromCmd: %s", err)
+				t.Fatalf("unexpected error in setEnvVarsFromCmd: %s", err)
 			}
 
 			if tt.expectedNumManifestEnvs != len(*overridedEnvVars) {
@@ -303,6 +304,50 @@ func TestEnvVarIsNotAddedWhenHasBuiltInOktetoEnvVarsFormat(t *testing.T) {
 			_, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs)
 			if !errors.Is(err, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD) {
 				t.Fatalf("expected error in setEnvVarsFromCmd: %s due to try to set a built-in okteto environment variable", err)
+			}
+		})
+	}
+}
+
+func TestCommandAddedToUpOptionsWhenPassedAsArgument(t *testing.T) {
+	var tests = []struct {
+		name            string
+		upOptions       *UpOptions
+		args            []string
+		Manifest        *model.Manifest
+		expectedCommand []string
+	}{
+		{
+			name:            "Passing dev environment but no command",
+			upOptions:       &UpOptions{},
+			args:            []string{},
+			Manifest:        &model.Manifest{Dev: map[string]*model.Dev{"frontend": {}}},
+			expectedCommand: nil,
+		},
+		{
+			name:            "Passing command but no dev environment",
+			upOptions:       &UpOptions{},
+			args:            []string{"echo", "hello"},
+			Manifest:        &model.Manifest{Dev: map[string]*model.Dev{}},
+			expectedCommand: []string{"echo", "hello"},
+		},
+		{
+			name:            "Passing command and dev environment",
+			upOptions:       &UpOptions{},
+			args:            []string{"echo", "hello"},
+			Manifest:        &model.Manifest{Dev: map[string]*model.Dev{"frontend": {}}},
+			expectedCommand: []string{"echo", "hello"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.upOptions.AddArgs(tt.args, tt.Manifest)
+			if err != nil {
+				t.Fatalf("unexpected error in  AddArgs: %s", err)
+			}
+
+			if reflect.DeepEqual(tt.expectedCommand, tt.upOptions.commandToExecute) == false {
+				t.Fatalf("error in AddArgs; expected command %v but got %v", tt.expectedCommand, tt.upOptions.commandToExecute)
 			}
 		})
 	}

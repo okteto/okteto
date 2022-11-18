@@ -63,7 +63,7 @@ type UpOptions struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
 	ManifestPathFlag string
-	// ManifestPath is the patah to the manifest used though the command execution.
+	// ManifestPath is the path to the manifest used though the command execution.
 	// This might change its value during execution
 	ManifestPath     string
 	Namespace        string
@@ -381,7 +381,7 @@ func (o *UpOptions) AddArgs(args []string, oktetoManifest *model.Manifest) error
 			o.commandToExecute = args
 		}
 	}
-
+	oktetoLog.Infof("dev name: %s / commandToExecute: %v", o.DevName, o.commandToExecute)
 	return nil
 }
 
