@@ -73,6 +73,7 @@ type OktetoContext struct {
 	Analytics         bool                 `json:"-" yaml:"-"`
 	ClusterType       string               `json:"-" yaml:"-"`
 	IsOkteto          bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
+	IsInsecure        bool                 `json:"isInsecure,omitempty" yaml:"isInsecure,omitempty"`
 }
 
 // OktetoContextViewer contains info to show
@@ -519,6 +520,9 @@ func GetContextCertificate() (*x509.Certificate, error) {
 		strictTLSOnce.Do(func() {
 			oktetoLog.Debugf("certificate issuer %s", cert.Issuer)
 			oktetoLog.Debugf("context certificate not trusted by system roots: %s", err)
+			if !Context().IsInsecure {
+				return
+			}
 			if cert.Issuer.CommonName == config.OktetoDefaultSelfSignedIssuer {
 				hoursSinceInstall := time.Since(cert.NotBefore).Hours()
 				switch {
