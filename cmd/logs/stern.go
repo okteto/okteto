@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stern/stern/stern"
@@ -50,7 +51,7 @@ func getSternConfig(manifest *model.Manifest, o *LogsOptions, kubeconfigFile str
 
 	labelSelector := labels.NewSelector()
 	if !o.All {
-		req, err := labels.NewRequirement(model.DeployedByLabel, selection.Equals, []string{manifest.Name})
+		req, err := labels.NewRequirement(model.DeployedByLabel, selection.Equals, []string{format.ResourceK8sMetaString(manifest.Name)})
 		if err != nil {
 			return nil, err
 		}

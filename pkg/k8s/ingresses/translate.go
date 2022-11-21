@@ -1,6 +1,7 @@
 package ingresses
 
 import (
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/model"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
@@ -74,7 +75,7 @@ func translateV1Beta1(ingressName string, endpoint model.Endpoint, opts *Transla
 func setLabels(endpoint model.Endpoint, opts *TranslateOptions) map[string]string {
 	// init with default label
 	labels := model.Labels{
-		model.DeployedByLabel: opts.Name,
+		model.DeployedByLabel: format.ResourceK8sMetaString(opts.Name),
 	}
 
 	// append labels from the endpoint spec

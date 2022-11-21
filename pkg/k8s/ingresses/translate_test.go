@@ -52,7 +52,7 @@ func Test_translateV1(t *testing.T) {
 				"annotation1":                       "value1",
 			},
 			expectedIngressLabels: map[string]string{
-				model.DeployedByLabel:        "stackName",
+				model.DeployedByLabel:        "stackname",
 				model.StackNameLabel:         "stackName",
 				model.StackEndpointNameLabel: "endpoint1",
 				"label1":                     "value1",
@@ -98,7 +98,7 @@ func Test_translateV1(t *testing.T) {
 				"annotation1":                       "value1",
 			},
 			expectedIngressLabels: map[string]string{
-				model.DeployedByLabel: "manifestName",
+				model.DeployedByLabel: "manifestname",
 				"label1":              "value1",
 			},
 			expectedIngressPaths: []networkingv1.HTTPIngressPath{
@@ -179,7 +179,7 @@ func Test_translateV1BetaV1(t *testing.T) {
 				"annotation1":                       "value1",
 			},
 			expectedIngressLabels: map[string]string{
-				model.DeployedByLabel:        "stackName",
+				model.DeployedByLabel:        "stackname",
 				model.StackNameLabel:         "stackName",
 				model.StackEndpointNameLabel: "endpoint1",
 				"label1":                     "value1",
@@ -220,7 +220,7 @@ func Test_translateV1BetaV1(t *testing.T) {
 				"annotation1":                       "value1",
 			},
 			expectedIngressLabels: map[string]string{
-				model.DeployedByLabel: "manifestName",
+				model.DeployedByLabel: "manifestname",
 				"label1":              "value1",
 			},
 			expectedIngressPaths: []networkingv1beta1.HTTPIngressPath{
