@@ -126,6 +126,7 @@ func buildWithDockerDaemonBuildkit(ctx context.Context, buildOptions *types.Buil
 			RemoteContext: remote,
 			SessionID:     s.ID(),
 			BuildArgs:     make(map[string]*string),
+			Platform:      buildOptions.Platform,
 		}
 		if buildOptions.Tag != "" {
 			dockerBuildOptions.Tags = append(dockerBuildOptions.Tags, buildOptions.Tag)
