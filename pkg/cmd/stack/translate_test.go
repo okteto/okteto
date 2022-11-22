@@ -169,7 +169,7 @@ func Test_translateStatefulSet(t *testing.T) {
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
-				Image:           "image",
+				Image:           "imagerepo/image:latest",
 				Replicas:        3,
 				StopGracePeriod: 20,
 				Entrypoint:      model.Entrypoint{Values: []string{"command1", "command2"}},
@@ -254,9 +254,9 @@ func Test_translateStatefulSet(t *testing.T) {
 	assert.Equal(t, initContainer, result.Spec.Template.Spec.InitContainers[0])
 	initVolumeContainer := apiv1.Container{
 		Name:            fmt.Sprintf("init-volume-%s", "svcName"),
-		Image:           "image",
+		Image:           "imagerepo/image:latest",
 		ImagePullPolicy: apiv1.PullIfNotPresent,
-		Command:         []string{"sh", "-c", "echo initializing volume pvc with content of the image image... && (cp -Rv /volume1/. /init-volume-0 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image 'image' does not have any content in \\1/g' || true) && echo initializing volume pvc with content of the image image... && (cp -Rv /volume2/. /init-volume-1 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image 'image' does not have any content in \\1/g' || true)"},
+		Command:         []string{"sh", "-c", "echo initializing volume pvc with content of the image imagerepo/image:latest... && (cp -Rv /volume1/. /init-volume-0 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image 'imagerepo\\\\/image:latest' does not have any content in \\1/g' || true) && echo initializing volume pvc with content of the image imagerepo/image:latest... && (cp -Rv /volume2/. /init-volume-1 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image 'imagerepo\\\\/image:latest' does not have any content in \\1/g' || true)"},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				MountPath: "/init-volume-0",
@@ -276,7 +276,7 @@ func Test_translateStatefulSet(t *testing.T) {
 	if c.Name != "svcName" {
 		t.Errorf("Wrong statefulset container.name: '%s'", c.Name)
 	}
-	if c.Image != "image" {
+	if c.Image != "imagerepo/image:latest" {
 		t.Errorf("Wrong statefulset container.image: '%s'", c.Image)
 	}
 	if !reflect.DeepEqual(c.Command, []string{"command1", "command2"}) {

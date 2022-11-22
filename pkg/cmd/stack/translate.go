@@ -337,7 +337,8 @@ func getInitializeVolumeContentContainer(svcName string, svc *model.Service) *ap
 			},
 		)
 
-		copyVolumeCmd := fmt.Sprintf("cp -Rv %s/. /init-volume-%d 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image '%s' does not have any content in \\1/g'", v.RemotePath, idx, svc.Image)
+		escapedImageName := strings.Replace(svc.Image, "/", "\\\\/", -1)
+		copyVolumeCmd := fmt.Sprintf("cp -Rv %s/. /init-volume-%d 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image '%s' does not have any content in \\1/g'", v.RemotePath, idx, escapedImageName)
 		volumeInitCmd := fmt.Sprintf("%s && (%s || true)", displayVolumeInfoCmd, copyVolumeCmd)
 
 		if initContainerCmd != "" {
