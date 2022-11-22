@@ -256,7 +256,7 @@ func Test_translateStatefulSet(t *testing.T) {
 		Name:            fmt.Sprintf("init-volume-%s", "svcName"),
 		Image:           "image",
 		ImagePullPolicy: apiv1.PullIfNotPresent,
-		Command:         []string{"sh", "-c", "echo initializing volume pvc with content of the image image... && (cp -Rv /volume1/. /init-volume-0 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image 'image' does not have any content in \\1/g' || true) && echo initializing volume pvc with content of the image image... && (cp -Rv /volume2/. /init-volume-1 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image 'image' does not have any content in \\1/g' || true)"},
+		Command:         []string{"sh", "-c", "echo initializing volume... && (cp -Rv /volume1/. /init-volume-0 || true) && (cp -Rv /volume2/. /init-volume-1 || true)"},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				MountPath: "/init-volume-0",
@@ -588,7 +588,7 @@ func Test_translateJobWithVolumes(t *testing.T) {
 		Name:            fmt.Sprintf("init-volume-%s", "svcName"),
 		Image:           "image",
 		ImagePullPolicy: apiv1.PullIfNotPresent,
-		Command:         []string{"sh", "-c", "echo initializing volume pvc with content of the image image... && (cp -Rv /volume1/. /init-volume-0 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image 'image' does not have any content in \\1/g' || true) && echo initializing volume pvc with content of the image image... && (cp -Rv /volume2/. /init-volume-1 2>&1 | sed -E 's/cp: cannot stat (.*): No such file or directory/the image 'image' does not have any content in \\1/g' || true)"},
+		Command:         []string{"sh", "-c", "echo initializing volume... && (cp -Rv /volume1/. /init-volume-0 || true) && (cp -Rv /volume2/. /init-volume-1 || true)"},
 		VolumeMounts: []apiv1.VolumeMount{
 			{
 				MountPath: "/init-volume-0",
