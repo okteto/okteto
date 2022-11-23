@@ -90,8 +90,8 @@ Or a Kubernetes context:
 
 func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	ctxStore := okteto.ContextStore()
-	ctxOptions.initFromContext()
 	ctxOptions.initFromEnvVars()
+	ctxOptions.initFromContext()
 
 	if ctxOptions.Token == "" && kubeconfig.InCluster() && !isValidCluster(ctxOptions.Context) {
 		if ctxOptions.IsCtxCommand {
