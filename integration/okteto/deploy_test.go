@@ -116,10 +116,10 @@ func TestDeploySuccessOutput(t *testing.T) {
 
 	var text oktetoLog.JSONLogFormat
 	stageLines := map[string][]string{}
-	prevLine := ""
+	prevStage := ""
 	for _, l := range strings.Split(string(uiOutput), "\n") {
 		if err := json.Unmarshal([]byte(l), &text); err != nil {
-			if prevLine != "EOF" {
+			if prevStage != "done" {
 				t.Fatalf("not json format: %s", l)
 			}
 		}
@@ -128,7 +128,7 @@ func TestDeploySuccessOutput(t *testing.T) {
 		} else {
 			stageLines[text.Stage] = []string{text.Message}
 		}
-		prevLine = text.Message
+		prevStage = text.Stage
 	}
 
 	stagesToTest := []string{"Load manifest", "Building service app", "Deploying compose", "done"}
@@ -182,11 +182,11 @@ func TestCmdFailOutput(t *testing.T) {
 
 	var text oktetoLog.JSONLogFormat
 	stageLines := map[string][]string{}
-	prevLine := ""
+	prevStage := ""
 	numErrors := 0
 	for _, l := range strings.Split(string(uiOutput), "\n") {
 		if err := json.Unmarshal([]byte(l), &text); err != nil {
-			if prevLine != "EOF" {
+			if prevStage != "done" {
 				t.Fatalf("not json format: %s", l)
 			}
 		}
@@ -195,7 +195,7 @@ func TestCmdFailOutput(t *testing.T) {
 		} else {
 			stageLines[text.Stage] = []string{text.Message}
 		}
-		prevLine = text.Message
+		prevStage = text.Stage
 		if text.Level == "error" {
 			numErrors++
 		}
@@ -247,11 +247,11 @@ func TestComposeFailOutput(t *testing.T) {
 
 	var text oktetoLog.JSONLogFormat
 	stageLines := map[string][]string{}
-	prevLine := ""
+	prevStage := ""
 	numErrors := 0
 	for _, l := range strings.Split(string(uiOutput), "\n") {
 		if err := json.Unmarshal([]byte(l), &text); err != nil {
-			if prevLine != "EOF" {
+			if prevStage != "done" {
 				t.Fatalf("not json format: %s", l)
 			}
 		}
@@ -260,7 +260,7 @@ func TestComposeFailOutput(t *testing.T) {
 		} else {
 			stageLines[text.Stage] = []string{text.Message}
 		}
-		prevLine = text.Message
+		prevStage = text.Stage
 		if text.Level == "error" {
 			numErrors++
 		}
