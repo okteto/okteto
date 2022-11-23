@@ -250,6 +250,7 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, okteto.Context().Name)
 	okteto.Context().Cfg = cfg
 	okteto.Context().IsOkteto = true
+	okteto.Context().IsInsecure = okteto.IsInsecureSkipTLSVerifyPolicy()
 
 	setSecrets(userContext.Secrets)
 
