@@ -54,6 +54,7 @@ type Stack struct {
 	Endpoints EndpointSpec           `yaml:"endpoints,omitempty"`
 }
 
+// ComposeServices represents the services declared in the compose
 type ComposeServices map[string]*Service
 
 // Service represents an okteto stack service
