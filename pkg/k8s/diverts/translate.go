@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
@@ -37,7 +38,7 @@ func translateIngress(m *model.Manifest, in *networkingv1.Ingress) *networkingv1
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
-	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, m.Name)
+	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(m.Name))
 	for i := range result.Spec.Rules {
 		result.Spec.Rules[i].Host = strings.ReplaceAll(result.Spec.Rules[i].Host, in.Namespace, m.Namespace)
 	}
@@ -58,7 +59,7 @@ func translateService(m *model.Manifest, s *apiv1.Service) *apiv1.Service {
 		},
 		Spec: s.Spec,
 	}
-	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, m.Name)
+	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(m.Name))
 	// create a headless service pointing to an endpoints object that resolves to service cluster ip in the diverted namespace
 	result.Spec.ClusterIP = apiv1.ClusterIPNone
 	result.Spec.ClusterIPs = nil
@@ -96,7 +97,7 @@ func translateEndpoints(m *model.Manifest, s *apiv1.Service) *apiv1.Endpoints {
 			},
 		},
 	}
-	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, m.Name)
+	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(m.Name))
 	if result.Annotations == nil {
 		result.Annotations = map[string]string{}
 	}
@@ -126,7 +127,7 @@ func translateDivertCRD(m *model.Manifest, in *networkingv1.Ingress) *Divert {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        fmt.Sprintf("%s-%s", m.Name, in.Name),
 			Namespace:   m.Namespace,
-			Labels:      map[string]string{model.DeployedByLabel: m.Name},
+			Labels:      map[string]string{model.DeployedByLabel: format.ResourceK8sMetaString(m.Name)},
 			Annotations: map[string]string{model.OktetoAutoCreateAnnotation: "true"},
 		},
 		Spec: DivertSpec{

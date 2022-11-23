@@ -27,6 +27,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -244,15 +245,17 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		b.Image = o.Tag
 	}
 
+	// manifestName can be not sanitized when option name is used at deploy
+	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	if okteto.Context().IsOkteto && b.Image == "" {
 		// if flag --global, point to global registry
 		targetRegistry := okteto.DevRegistry
 		if o != nil && o.BuildToGlobal {
 			targetRegistry = okteto.GlobalRegistry
 		}
-		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoDefaultImageTag)
+		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 		if len(b.VolumesToInclude) > 0 {
-			b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoImageTagWithVolumes)
+			b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
 		}
 	}
 

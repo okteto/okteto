@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -85,6 +86,7 @@ type CfgData struct {
 }
 
 // TranslateConfigMapAndDeploy translates the app into a configMap
+// name param is the pipeline sanitized name
 func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(data.Name), data.Namespace, c)
 	if err != nil {
@@ -131,9 +133,9 @@ func UpdateConfigMap(ctx context.Context, cmap *apiv1.ConfigMap, data *CfgData, 
 	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 }
 
-// TranslatePipelineName translate the name into the pipeline name
+// TranslatePipelineName translate the name into the configmap name
 func TranslatePipelineName(name string) string {
-	return fmt.Sprintf("okteto-git-%s", name)
+	return fmt.Sprintf("okteto-git-%s", format.ResourceK8sMetaString(name))
 }
 
 func translateOutput(output *bytes.Buffer) []byte {
@@ -173,7 +175,7 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 	cmap := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: data.Namespace,
-			Name:      TranslatePipelineName(data.Name),
+			Name:      TranslatePipelineName(format.ResourceK8sMetaString(data.Name)),
 			Labels: map[string]string{
 				model.GitDeployLabel: "true",
 			},

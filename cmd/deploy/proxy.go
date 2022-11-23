@@ -63,6 +63,7 @@ type Proxy struct {
 }
 
 type proxyHandler struct {
+	// Name is sanitized version of the pipeline name
 	Name              string
 	DivertedNamespace string
 }
@@ -166,6 +167,7 @@ func (p *Proxy) GetToken() string {
 }
 
 // SetName sets the name to be in the deployed-by label
+// name is sanitized when passing the parameter
 func (p *Proxy) SetName(name string) {
 	p.proxyHandler.SetName(name)
 }

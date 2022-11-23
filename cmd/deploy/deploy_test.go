@@ -15,6 +15,7 @@ package deploy
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -240,11 +242,15 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cfg, _ := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+
+	// sanitizeName is needed to check the CFGmap - this sanitization is done at RunDeploy, labels and cfg name
+	sanitizedName := format.ResourceK8sMetaString(opts.Name)
+
+	cfg, _ := configmaps.Get(ctx, pipeline.TranslatePipelineName(sanitizedName), okteto.Context().Namespace, fakeClient)
 
 	expectedCfg := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "okteto-git-testErr",
+			Name:      fmt.Sprintf("okteto-git-%s", sanitizedName),
 			Namespace: okteto.Context().Namespace,
 			Labels:    map[string]string{"dev.okteto.com/git-deploy": "true"},
 		},
