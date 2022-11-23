@@ -69,7 +69,6 @@ type UpOptions struct {
 	Namespace        string
 	K8sContext       string
 	DevName          string
-	Devs             []string
 	Envs             []string
 	Remote           int
 	Deploy           bool
