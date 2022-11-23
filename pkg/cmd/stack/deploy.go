@@ -147,37 +147,7 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 					ingressName = fmt.Sprintf("%s-%d", serviceName, ingressPort.ContainerPort)
 				}
 
-				// create a new endpoint for this port ingress deployment
-				endpoint := model.Endpoint{
-					Labels:      map[string]string{},
-					Annotations: map[string]string{},
-					Rules: []model.EndpointRule{
-						{
-							Path:    "/",
-							Service: serviceName,
-							Port:    ingressPort.ContainerPort,
-						},
-					},
-				}
-				// add specific stack labels
-				if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
-					endpoint.Labels[model.StackNameLabel] = s.Name
-				}
-				if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
-					endpoint.Labels[model.StackEndpointNameLabel] = ingressName
-				}
-
-				translateOptions := &ingresses.TranslateOptions{
-					Name:      s.Name,
-					Namespace: s.Namespace,
-				}
-				ingress := ingresses.Translate(ingressName, endpoint, translateOptions)
-
-				// check for labels collision in the case of a compose - before creation or update (deploy)
-				if skipIngressDeployForStackNameLabel(ctx, iClient, ingress) {
-					continue
-				}
-				if err := iClient.Deploy(ctx, ingress); err != nil {
+				if err := deployK8sEndpoint(ctx, ingressName, serviceName, ingressPort, s, iClient); err != nil {
 					exit <- err
 					return
 				}
@@ -392,6 +362,41 @@ func deploySvc(ctx context.Context, stack *model.Stack, svcName string, client k
 	}
 
 	return nil
+}
+
+func deployK8sEndpoint(ctx context.Context, ingressName, svcName string, port model.Port, s *model.Stack, c *ingresses.Client) error {
+
+	// create a new endpoint for this port ingress deployment
+	endpoint := model.Endpoint{
+		Labels:      translateLabels(svcName, s),
+		Annotations: translateAnnotations(s.Services[svcName]),
+		Rules: []model.EndpointRule{
+			{
+				Path:    "/",
+				Service: svcName,
+				Port:    port.ContainerPort,
+			},
+		},
+	}
+	// add specific stack labels
+	if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
+		endpoint.Labels[model.StackNameLabel] = s.Name
+	}
+	if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
+		endpoint.Labels[model.StackEndpointNameLabel] = ingressName
+	}
+
+	translateOptions := &ingresses.TranslateOptions{
+		Name:      s.Name,
+		Namespace: s.Namespace,
+	}
+	ingress := ingresses.Translate(ingressName, endpoint, translateOptions)
+
+	// check for labels collision in the case of a compose - before creation or update (deploy)
+	if skipIngressDeployForStackNameLabel(ctx, c, ingress) {
+		return nil
+	}
+	return c.Deploy(ctx, ingress)
 }
 
 func canSvcBeDeployed(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface, config *rest.Config) bool {

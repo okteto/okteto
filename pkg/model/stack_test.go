@@ -1240,12 +1240,12 @@ func Test_translateEnvVars(t *testing.T) {
 func TestServicesToGraph(t *testing.T) {
 	tests := []struct {
 		name          string
-		services      composeServices
+		services      ComposeServices
 		expectedGraph graph
 	}{
 		{
 			name: "no cycle - no connections",
-			services: composeServices{
+			services: ComposeServices{
 				"a": &Service{},
 				"b": &Service{},
 				"c": &Service{},
@@ -1258,7 +1258,7 @@ func TestServicesToGraph(t *testing.T) {
 		},
 		{
 			name: "no cycle - connections",
-			services: composeServices{
+			services: ComposeServices{
 				"a": &Service{
 					DependsOn: DependsOn{
 						"b": DependsOnConditionSpec{},
@@ -1279,7 +1279,7 @@ func TestServicesToGraph(t *testing.T) {
 		},
 		{
 			name: "cycle - direct cycle",
-			services: composeServices{
+			services: ComposeServices{
 				"a": &Service{
 					DependsOn: DependsOn{
 						"b": DependsOnConditionSpec{},
@@ -1300,7 +1300,7 @@ func TestServicesToGraph(t *testing.T) {
 		},
 		{
 			name: "cycle - indirect cycle",
-			services: composeServices{
+			services: ComposeServices{
 				"a": &Service{
 					DependsOn: DependsOn{
 						"b": DependsOnConditionSpec{},
