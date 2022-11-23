@@ -8,9 +8,6 @@ import (
 var (
 	// validKubeNameRegex is the regex to validate a kubernetes resource name
 	validKubeNameRegex = regexp.MustCompile(`[^a-z0-9\-]+`)
-
-	// moreThanOneHyphen is the regex to check if there is more than one hyphen together
-	moreThanOneHyphen = regexp.MustCompile(`-(-+)`)
 )
 
 const (
@@ -25,7 +22,6 @@ func ResourceK8sMetaString(name string) string {
 
 	name = validKubeNameRegex.ReplaceAllString(name, "-")
 
-	name = moreThanOneHyphen.ReplaceAllString(name, "-")
 	// trim the repository name for internal use in labels
 	if len(name) > maxK8sResourceMetaLength {
 		name = name[:maxK8sResourceMetaLength]
