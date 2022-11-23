@@ -969,7 +969,6 @@ func TestDeployK8sEndpoint(t *testing.T) {
 		name      string
 		stack     *model.Stack
 		ingresses []runtime.Object
-		err       error
 	}{
 		{
 			name: "deploy public endpoints",
@@ -1045,7 +1044,7 @@ func TestDeployK8sEndpoint(t *testing.T) {
 			fakeClient := fake.NewSimpleClientset(tt.ingresses...)
 			c := ingresses.NewIngressClient(fakeClient, true)
 			err := deployK8sEndpoint(context.Background(), "test", "test", model.Port{ContainerPort: 80}, tt.stack, c)
-			assert.Equal(t, tt.err, err)
+			assert.NoError(t, err)
 
 			obj, _ := c.Get(context.Background(), "test", "test")
 			assert.NotNil(t, obj)
