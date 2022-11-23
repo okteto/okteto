@@ -966,10 +966,10 @@ func TestGetErrorDueToRestartLimit(t *testing.T) {
 
 func TestDeployK8sEndpoint(t *testing.T) {
 	tests := []struct {
-		name   string
-		stack  *model.Stack
-		object []runtime.Object
-		err    error
+		name      string
+		stack     *model.Stack
+		ingresses []runtime.Object
+		err       error
 	}{
 		{
 			name: "deploy public endpoints",
@@ -1005,7 +1005,7 @@ func TestDeployK8sEndpoint(t *testing.T) {
 					},
 				},
 			},
-			object: []runtime.Object{
+			ingresses: []runtime.Object{
 				&networkingv1.Ingress{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
@@ -1028,7 +1028,7 @@ func TestDeployK8sEndpoint(t *testing.T) {
 					},
 				},
 			},
-			object: []runtime.Object{
+			ingresses: []runtime.Object{
 				&networkingv1.Ingress{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
@@ -1042,7 +1042,7 @@ func TestDeployK8sEndpoint(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fakeClient := fake.NewSimpleClientset(tt.object...)
+			fakeClient := fake.NewSimpleClientset(tt.ingresses...)
 			c := ingresses.NewIngressClient(fakeClient, true)
 			err := deployK8sEndpoint(context.Background(), "test", "test", model.Port{ContainerPort: 80}, tt.stack, c)
 			assert.Equal(t, tt.err, err)
