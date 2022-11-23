@@ -58,21 +58,21 @@ func (o *ContextOptions) initFromContext() {
 }
 
 func (o *ContextOptions) initFromEnvVars() {
-	environmentVarialbes := []string{}
+	usedEnvVars := []string{}
 	if o.Token == "" && os.Getenv(model.OktetoTokenEnvVar) != "" {
 		o.Token = os.Getenv(model.OktetoTokenEnvVar)
-		environmentVarialbes = append(environmentVarialbes, model.OktetoTokenEnvVar)
+		usedEnvVars = append(usedEnvVars, model.OktetoTokenEnvVar)
 	}
 
 	if o.Context == "" && os.Getenv(model.OktetoURLEnvVar) != "" {
 		o.Context = os.Getenv(model.OktetoURLEnvVar)
 		o.IsOkteto = true
-		environmentVarialbes = append(environmentVarialbes, model.OktetoURLEnvVar)
+		usedEnvVars = append(usedEnvVars, model.OktetoURLEnvVar)
 	}
 
 	if o.Context == "" && os.Getenv(model.OktetoContextEnvVar) != "" {
 		o.Context = os.Getenv(model.OktetoContextEnvVar)
-		environmentVarialbes = append(environmentVarialbes, model.OktetoContextEnvVar)
+		usedEnvVars = append(usedEnvVars, model.OktetoContextEnvVar)
 	}
 
 	if o.Token != "" {
@@ -84,13 +84,13 @@ func (o *ContextOptions) initFromEnvVars() {
 
 	if o.Namespace == "" && os.Getenv(model.OktetoNamespaceEnvVar) != "" {
 		o.Namespace = os.Getenv(model.OktetoNamespaceEnvVar)
-		environmentVarialbes = append(environmentVarialbes, model.OktetoNamespaceEnvVar)
+		usedEnvVars = append(usedEnvVars, model.OktetoNamespaceEnvVar)
 	}
 
-	if len(environmentVarialbes) == 1 {
-		oktetoLog.Warning("Initializing context with the value of %s environment variable", environmentVarialbes[0])
-	} else if len(environmentVarialbes) > 1 {
-		oktetoLog.Warning("Initializing context with the value of %s and %s environment variables", strings.Join(environmentVarialbes[0:len(environmentVarialbes)-1], ", "), environmentVarialbes[len(environmentVarialbes)-1])
+	if len(usedEnvVars) == 1 {
+		oktetoLog.Warning("Initializing context with the value of %s environment variable", usedEnvVars[0])
+	} else if len(usedEnvVars) > 1 {
+		oktetoLog.Warning("Initializing context with the value of %s and %s environment variables", strings.Join(usedEnvVars[0:len(usedEnvVars)-1], ", "), usedEnvVars[len(usedEnvVars)-1])
 	}
 
 }
