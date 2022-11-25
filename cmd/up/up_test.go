@@ -17,8 +17,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
@@ -316,13 +317,15 @@ func TestCommandAddedToUpOptionsWhenPassedAsArgument(t *testing.T) {
 		args            []string
 		Manifest        *model.Manifest
 		expectedCommand []string
+		expectedDev     string
 	}{
 		{
 			name:            "Passing dev environment but no command",
 			upOptions:       &UpOptions{},
-			args:            []string{},
+			args:            []string{"frontend"},
 			Manifest:        &model.Manifest{Dev: map[string]*model.Dev{"frontend": {}}},
 			expectedCommand: nil,
+			expectedDev:     "frontend",
 		},
 		{
 			name:            "Passing command but no dev environment",
@@ -330,24 +333,30 @@ func TestCommandAddedToUpOptionsWhenPassedAsArgument(t *testing.T) {
 			args:            []string{"echo", "hello"},
 			Manifest:        &model.Manifest{Dev: map[string]*model.Dev{}},
 			expectedCommand: []string{"echo", "hello"},
+			expectedDev:     "",
 		},
 		{
 			name:            "Passing command and dev environment",
 			upOptions:       &UpOptions{},
-			args:            []string{"echo", "hello"},
+			args:            []string{"frontend", "echo", "hello"},
 			Manifest:        &model.Manifest{Dev: map[string]*model.Dev{"frontend": {}}},
 			expectedCommand: []string{"echo", "hello"},
+			expectedDev:     "frontend",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := tt.upOptions.AddArgs(tt.args, tt.Manifest)
-			if err != nil {
+			if !assert.NoError(t, err) {
 				t.Fatalf("unexpected error in  AddArgs: %s", err)
 			}
 
-			if reflect.DeepEqual(tt.expectedCommand, tt.upOptions.commandToExecute) == false {
+			if !assert.Equal(t, tt.expectedCommand, tt.upOptions.commandToExecute) {
 				t.Fatalf("error in AddArgs; expected command %v but got %v", tt.expectedCommand, tt.upOptions.commandToExecute)
+			}
+
+			if !assert.Equal(t, tt.expectedDev, tt.upOptions.DevName) {
+				t.Fatalf("error in AddArgs; expected dev %s but got %s", tt.expectedDev, tt.upOptions.DevName)
 			}
 		})
 	}
