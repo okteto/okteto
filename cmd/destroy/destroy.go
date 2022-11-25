@@ -80,6 +80,7 @@ type Options struct {
 	ForceDestroy        bool
 	K8sContext          string
 	RunWithoutBash      bool
+	DestroyAll          bool
 }
 
 type destroyCommand struct {
@@ -196,6 +197,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment was deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment was deployed")
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
+	cmd.Flags().BoolVarP(&options.DestroyAll, "all", "", false, "destroy everything in the namespace")
 
 	return cmd
 }
