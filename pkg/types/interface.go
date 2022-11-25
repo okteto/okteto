@@ -39,6 +39,7 @@ type NamespaceInterface interface {
 	Delete(ctx context.Context, namespace string) error
 	AddMembers(ctx context.Context, namespace string, members []string) error
 	SleepNamespace(ctx context.Context, namespace string) error
+	DestroyAll(ctx context.Context, namespace string) error
 }
 
 // PreviewInterface represents the client that connects to the preview functions
