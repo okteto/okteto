@@ -11,8 +11,7 @@ import (
 )
 
 // GetAction gets a installer job given its name
-func (c *pipelineClient) GetAction(ctx context.Context, name string) (*types.Action, error) {
-	namespace := Context().Namespace
+func (c *pipelineClient) GetAction(ctx context.Context, name, namespace string) (*types.Action, error) {
 	var queryStruct struct {
 		Action struct {
 			Id     graphql.String
@@ -38,7 +37,7 @@ func (c *pipelineClient) GetAction(ctx context.Context, name string) (*types.Act
 	return action, nil
 }
 
-func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName, actionName string, timeout time.Duration) error {
+func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error {
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
@@ -48,7 +47,7 @@ func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName
 			oktetoLog.Infof("action '%s' didn't finish after %s", actionName, timeout.String())
 			return fmt.Errorf("'%s' didn't finish after %s", pipelineName, timeout.String())
 		case <-t.C:
-			a, err := c.GetAction(ctx, actionName)
+			a, err := c.GetAction(ctx, actionName, namespace)
 			if err != nil {
 				oktetoLog.Infof("action '%s' failed", actionName)
 				return fmt.Errorf("pipeline '%s' failed", pipelineName)

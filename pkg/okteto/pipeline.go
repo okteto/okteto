@@ -46,12 +46,12 @@ func newPipelineClient(client *graphql.Client, sseClient *http.Client, url strin
 }
 
 // Deploy creates a pipeline
-func (c *pipelineClient) Deploy(ctx context.Context, name, repository, branch, filename string, variables []types.Variable) (*types.GitDeployResponse, error) {
+func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOptions) (*types.GitDeployResponse, error) {
 	origin := config.GetDeployOrigin()
 
 	gitDeployResponse := &types.GitDeployResponse{}
 
-	if len(variables) > 0 {
+	if len(opts.Variables) > 0 {
 		var mutation struct {
 			GitDeployResponse struct {
 				Action struct {
@@ -69,7 +69,7 @@ func (c *pipelineClient) Deploy(ctx context.Context, name, repository, branch, f
 		}
 
 		variablesArg := []InputVariable{}
-		for _, v := range variables {
+		for _, v := range opts.Variables {
 			variablesArg = append(variablesArg, InputVariable{
 				Name:  graphql.String(v.Name),
 				Value: graphql.String(v.Value),
@@ -89,12 +89,12 @@ func (c *pipelineClient) Deploy(ctx context.Context, name, repository, branch, f
 			})
 		}
 		queryVariables := map[string]interface{}{
-			"name":       graphql.String(name),
-			"repository": graphql.String(repository),
-			"space":      graphql.String(Context().Namespace),
-			"branch":     graphql.String(branch),
+			"name":       graphql.String(opts.Name),
+			"repository": graphql.String(opts.Repository),
+			"space":      graphql.String(opts.Namespace),
+			"branch":     graphql.String(opts.Branch),
 			"variables":  variablesArg,
-			"filename":   graphql.String(filename),
+			"filename":   graphql.String(opts.Filename),
 		}
 
 		err := mutate(ctx, &mutation, queryVariables, c.client)
@@ -132,11 +132,11 @@ func (c *pipelineClient) Deploy(ctx context.Context, name, repository, branch, f
 		}
 
 		queryVariables := map[string]interface{}{
-			"name":       graphql.String(name),
-			"repository": graphql.String(repository),
-			"space":      graphql.String(Context().Namespace),
-			"branch":     graphql.String(branch),
-			"filename":   graphql.String(filename),
+			"name":       graphql.String(opts.Name),
+			"repository": graphql.String(opts.Repository),
+			"space":      graphql.String(opts.Namespace),
+			"branch":     graphql.String(opts.Branch),
+			"filename":   graphql.String(opts.Filename),
 			"variables": []InputVariable{
 				{Name: graphql.String("OKTETO_ORIGIN"), Value: graphql.String(origin)},
 			},
@@ -164,7 +164,7 @@ func (c *pipelineClient) Deploy(ctx context.Context, name, repository, branch, f
 }
 
 // GetByName gets a pipeline given its name
-func (c *pipelineClient) GetByName(ctx context.Context, name string) (*types.GitDeploy, error) {
+func (c *pipelineClient) GetByName(ctx context.Context, name, namespace string) (*types.GitDeploy, error) {
 	var queryStruct struct {
 		Space struct {
 			GitDeploys []struct {
@@ -175,7 +175,7 @@ func (c *pipelineClient) GetByName(ctx context.Context, name string) (*types.Git
 		} `graphql:"space(id: $id)"`
 	}
 	variables := map[string]interface{}{
-		"id": graphql.String(Context().Namespace),
+		"id": graphql.String(namespace),
 	}
 	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
@@ -393,7 +393,7 @@ func (c *pipelineClient) deprecatedDestroy(ctx context.Context, name string, des
 }
 
 // GetResourcesStatus returns the status of deployments statefulsets and jobs
-func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name string) (map[string]string, error) {
+func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name, namespace string) (map[string]string, error) {
 	var queryStruct struct {
 		Space struct {
 			Deployments []struct {
@@ -417,7 +417,7 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name string) (m
 		} `graphql:"space(id: $id)"`
 	}
 	variables := map[string]interface{}{
-		"id": graphql.String(Context().Namespace),
+		"id": graphql.String(namespace),
 	}
 
 	if err := query(ctx, &queryStruct, variables, c.client); err != nil {
@@ -426,7 +426,7 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name string) (m
 			if err != nil {
 				return nil, fmt.Errorf("could not create okteto client")
 			}
-			return okClient.Previews().GetResourcesStatusFromPreview(ctx, Context().Namespace, name)
+			return okClient.Previews().GetResourcesStatusFromPreview(ctx, namespace, name)
 		}
 		return nil, err
 	}
@@ -459,8 +459,8 @@ func getResourceFullName(kind, name string) string {
 }
 
 // StreamLogs retrieves logs from the pipeline provided and prints them, returns error
-func (c *pipelineClient) StreamLogs(ctx context.Context, name, actionName string) error {
-	streamURL := fmt.Sprintf("%s/sse/logs/%s/gitdeploy/%s?action=%s", Context().Name, Context().Namespace, name, actionName)
+func (c *pipelineClient) StreamLogs(ctx context.Context, name, namespace, actionName string) error {
+	streamURL := fmt.Sprintf("%s/sse/logs/%s/gitdeploy/%s?action=%s", Context().Name, namespace, name, actionName)
 	url, err := url.Parse(streamURL)
 	if err != nil {
 		return err

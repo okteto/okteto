@@ -47,12 +47,12 @@ func NewFakePipelineClient(responses *FakePipelineResponses) *FakePipelineClient
 }
 
 // Deploy deploys a fake pipeline
-func (fc *FakePipelineClient) Deploy(_ context.Context, _, _, _, _ string, _ []types.Variable) (*types.GitDeployResponse, error) {
+func (fc *FakePipelineClient) Deploy(_ context.Context, _ types.PipelineDeployOptions) (*types.GitDeployResponse, error) {
 	return fc.responses.DeployResponse, fc.responses.DeployErr
 }
 
 // WaitForActionToFinish waits for a pipeline to finish
-func (fc *FakePipelineClient) WaitForActionToFinish(_ context.Context, _, _ string, _ time.Duration) error {
+func (fc *FakePipelineClient) WaitForActionToFinish(_ context.Context, _, _, _ string, _ time.Duration) error {
 	return fc.responses.WaitErr
 }
 
@@ -62,16 +62,16 @@ func (fc *FakePipelineClient) Destroy(_ context.Context, _ string, _ bool) (*typ
 }
 
 // GetResourcesStatus gets the status of the resources from a pipeline name
-func (fc *FakePipelineClient) GetResourcesStatus(_ context.Context, _ string) (map[string]string, error) {
+func (fc *FakePipelineClient) GetResourcesStatus(_ context.Context, _, _ string) (map[string]string, error) {
 	return fc.responses.ResourcesMap, fc.responses.ResourceErr
 }
 
 // GetByName returns the name of the pipeline
-func (*FakePipelineClient) GetByName(_ context.Context, _ string) (*types.GitDeploy, error) {
+func (*FakePipelineClient) GetByName(_ context.Context, _, _ string) (*types.GitDeploy, error) {
 	return nil, nil
 }
 
 // StreamLogs deploys a fake SSE
-func (fc *FakePipelineClient) StreamLogs(_ context.Context, _, _ string) error {
+func (fc *FakePipelineClient) StreamLogs(_ context.Context, _, _, _ string) error {
 	return fc.responses.StreamErr
 }

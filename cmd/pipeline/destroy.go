@@ -168,7 +168,7 @@ func (pc *Command) waitUntilDestroyed(ctx context.Context, name string, action *
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := pc.streamPipelineLogs(waitCtx, name, action.Name)
+		err := pc.streamPipelineLogs(waitCtx, name, okteto.Context().Namespace, action.Name)
 		if err != nil {
 			oktetoLog.Warning("there was an error streaming pipeline logs: %v", err)
 		}
@@ -202,5 +202,5 @@ func (pc *Command) waitUntilDestroyed(ctx context.Context, name string, action *
 }
 
 func (pc *Command) waitToBeDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
-	return pc.okClient.Pipeline().WaitForActionToFinish(ctx, name, action.Name, timeout)
+	return pc.okClient.Pipeline().WaitForActionToFinish(ctx, name, okteto.Context().Namespace, action.Name, timeout)
 }

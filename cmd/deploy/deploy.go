@@ -342,7 +342,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
 		})
-		pipOpts := &pipelineCMD.DeployOptions{
+		pipOpts := &pipelineCMD.Options{
 			Name:         depName,
 			Repository:   dep.Repository,
 			Branch:       dep.Branch,
@@ -351,10 +351,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			Wait:         dep.Wait,
 			Timeout:      dep.GetTimeout(deployOptions.Timeout),
 			SkipIfExists: !deployOptions.Dependencies,
+			Namespace:    dep.Namespace,
 		}
 		pc, err := pipelineCMD.NewCommand()
 		if err != nil {
-			return err
+			return fmt.Errorf("could not create pipeline command: %w", err)
 		}
 		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
 			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); errStatus != nil {
