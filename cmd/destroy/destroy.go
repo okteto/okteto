@@ -169,9 +169,12 @@ func Destroy(ctx context.Context) *cobra.Command {
 					return errors.New("option `--all` is not available for non-Okteto clusters. Learn more: https://www.okteto.com/docs/self-hosted/")
 				}
 
-				// TODO: call destroyAllInSpace mutation
 				// TODO: stream logs
-				return nil
+				okClient, err := okteto.NewOktetoClient()
+				if err != nil {
+					return err
+				}
+				return okClient.Namespaces().DestroyAll(ctx, options.Namespace)
 			}
 
 			c := &destroyCommand{
