@@ -163,6 +163,17 @@ func Destroy(ctx context.Context) *cobra.Command {
 				options.Namespace = okteto.Context().Namespace
 			}
 
+			// when option --all the cmd will destroy everything at the namespace and return
+			if options.DestroyAll {
+				if !okteto.Context().IsOkteto {
+					return errors.New("option `--all` is not available for non-Okteto clusters. Learn more: https://www.okteto.com/docs/self-hosted/")
+				}
+
+				// TODO: call destroyAllInSpace mutation
+				// TODO: stream logs
+				return nil
+			}
+
 			c := &destroyCommand{
 				getManifest: model.GetManifestV2,
 
