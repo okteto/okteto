@@ -8,7 +8,6 @@ import (
 	"io"
 	"math"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -116,7 +115,7 @@ func requestWithRetry(c *http.Client, url string) (*http.Response, error) {
 	}
 }
 
-func stream(ctx context.Context, c *http.Client, url string) error {
+func Stream(ctx context.Context, c *http.Client, url string) error {
 	resp, err := requestWithRetry(c, url)
 	if err != nil {
 		return err
@@ -124,15 +123,4 @@ func stream(ctx context.Context, c *http.Client, url string) error {
 	defer resp.Body.Close()
 
 	return readBody(ctx, resp.Body)
-}
-
-// StreamLogs retrieves logs from the pipeline provided and prints them, returns error
-func StreamPipelineLogs(ctx context.Context, c *http.Client, contextName, contextNamespace, name, actionName string) error {
-	streamURL := fmt.Sprintf(GitDeployUrlTemplate, contextName, contextNamespace, name, actionName)
-	url, err := url.Parse(streamURL)
-	if err != nil {
-		return err
-	}
-
-	return stream(ctx, c, url.String())
 }

@@ -24,6 +24,7 @@ type OktetoInterface interface {
 	Namespaces() NamespaceInterface
 	Previews() PreviewInterface
 	Pipeline() PipelineInterface
+	SSE() SSEInterface
 }
 
 // UserInterface represents the client that connects to the user functions
@@ -54,10 +55,13 @@ type PipelineInterface interface {
 	Destroy(ctx context.Context, name, namespace string, destroyVolumes bool) (*GitDeployResponse, error)
 	GetResourcesStatus(ctx context.Context, name, namespace string) (map[string]string, error)
 	GetByName(ctx context.Context, name, namespace string) (*GitDeploy, error)
-	StreamLogs(ctx context.Context, name, namespace, actionName string) error
 }
 
 // OktetoClientProvider provides an okteto client ready to use or fail
 type OktetoClientProvider interface {
 	Provide() (OktetoInterface, error)
+}
+
+type SSEInterface interface {
+	StreamPipelineLogs(ctx context.Context, name, namespace, actionName string) error
 }

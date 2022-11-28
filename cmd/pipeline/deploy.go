@@ -195,7 +195,7 @@ func getPipelineName(repository string) string {
 }
 
 func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string) error {
-	return pc.okClient.Pipeline().StreamLogs(ctx, name, namespace, actionName)
+	return pc.okClient.SSE().StreamPipelineLogs(ctx, name, namespace, actionName)
 }
 
 func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration) error {

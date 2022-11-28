@@ -247,6 +247,7 @@ func TestDeployPipelineSuccesfulWithWait(t *testing.T) {
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
+			SSEClient:      client.NewFakeSSEClient(&client.FakeSSEResponse{}),
 		},
 	}
 	opts := &DeployOptions{
@@ -303,12 +304,12 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 			"svc":  okteto.CompletedStatus,
 			"svc2": okteto.RunningStatus,
 		},
-		StreamErr: errors.New("error"),
 	}
 
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
+			SSEClient:      client.NewFakeSSEClient(&client.FakeSSEResponse{StreamErr: errors.New("error")}),
 		},
 	}
 	opts := &DeployOptions{
