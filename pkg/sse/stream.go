@@ -106,7 +106,6 @@ func requestWithRetry(c *http.Client, url string) (*http.Response, error) {
 		attempts++
 		resp, err := request(c, url)
 		if err != nil {
-			fmt.Println("*****errrorr request")
 			continue
 		}
 
