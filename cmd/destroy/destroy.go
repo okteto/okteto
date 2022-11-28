@@ -174,7 +174,13 @@ func Destroy(ctx context.Context) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				return okClient.Namespaces().DestroyAll(ctx, options.Namespace)
+
+				if err := okClient.Namespaces().DestroyAll(ctx, options.Namespace); err != nil {
+					return err
+				}
+				if err := okClient.SSE().StreamDestroyAllLogs(ctx, options.Namespace); err != nil {
+					return err
+				}
 			}
 
 			c := &destroyCommand{

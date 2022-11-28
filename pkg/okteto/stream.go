@@ -77,3 +77,13 @@ func handlerPipelineLogLine(line string) bool {
 	}
 	return false
 }
+
+// StreamLogs retrieves logs from the pipeline provided and prints them, returns error
+func (c *sseClient) StreamDestroyAllLogs(ctx context.Context, namespace string) error {
+	streamURL := fmt.Sprintf(sse.DestroyAllUrlTemplate, Context().Name, Context().Namespace)
+	url, err := url.Parse(streamURL)
+	if err != nil {
+		return err
+	}
+	return sse.Stream(ctx, c.client, url.String())
+}
