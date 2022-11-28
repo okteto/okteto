@@ -338,6 +338,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	// TODO: take this out to a new function deploy dependencies
+	oktetoLog.SetStage("Deploying dependencies")
 	for depName, dep := range deployOptions.Manifest.Dependencies {
 		oktetoLog.Information("Deploying dependency '%s'", depName)
 		dep.Variables = append(dep.Variables, model.EnvVar{
@@ -366,6 +367,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return err
 		}
 	}
+	oktetoLog.SetStage("")
 
 	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
 		return updateConfigMapStatusError(ctx, cfg, c, data, err)
