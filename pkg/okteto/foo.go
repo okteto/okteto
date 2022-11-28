@@ -1,0 +1,3 @@
+package okteto
+
+func myFoo() {}
