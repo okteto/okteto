@@ -286,7 +286,7 @@ func (c *OktetoClient) User() types.UserInterface {
 	return c.user
 }
 
-// User retrieves the UserClient
+// SSE retrieves the SSE client
 func (c *OktetoClient) SSE() types.SSEInterface {
 	return c.sse
 }

@@ -82,7 +82,7 @@ func readBody(ctx context.Context, body io.ReadCloser) error {
 		}
 	}
 
-	//return whether the scan has encountered any error
+	// return whether the scan has encountered any error
 	return sc.Err()
 }
 

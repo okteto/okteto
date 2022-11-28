@@ -35,6 +35,6 @@ func NewFakeSSEClient(response *FakeSSEResponse) *FakeSSEClient {
 }
 
 // StreamPipelineLogs starts the streaming of pipeline logs
-func (c *FakeSSEClient) StreamPipelineLogs(ctx context.Context, _, _, _ string) error {
+func (c *FakeSSEClient) StreamPipelineLogs(_ context.Context, _, _, _ string) error {
 	return c.response.StreamErr
 }
