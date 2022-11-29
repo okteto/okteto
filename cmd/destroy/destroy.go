@@ -169,7 +169,6 @@ func Destroy(ctx context.Context) *cobra.Command {
 					return errors.New("option `--all` is not available for non-Okteto clusters. Learn more: https://www.okteto.com/docs/self-hosted/")
 				}
 
-				// TODO: stream logs
 				okClient, err := okteto.NewOktetoClient()
 				if err != nil {
 					return err
@@ -178,9 +177,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 				if err := okClient.Namespaces().DestroyAll(ctx, options.Namespace); err != nil {
 					return err
 				}
-				if err := okClient.SSE().StreamDestroyAllLogs(ctx, options.Namespace); err != nil {
-					return err
+				if err := okClient.Stream().StreamDestroyAllLogs(ctx, options.Namespace); err != nil {
+					oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
+					oktetoLog.Infof("destroy all logs cannot be streamed due to connectivity issues: %v", err)
 				}
+				return nil
 			}
 
 			c := &destroyCommand{

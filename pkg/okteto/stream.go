@@ -27,6 +27,8 @@ import (
 var (
 	// gitDeployUrlTemplate (baseURL, namespace, dev environment name, action name)
 	gitDeployUrlTemplate = "%s/sse/logs/%s/gitdeploy/%s?action=%s"
+	// destroyAllUrlTempleate (baseURL, namespace)
+	destroyAllUrlTempleate = "%s/sse/logs/%s/destroy-all"
 )
 
 type streamClient struct {
@@ -40,6 +42,10 @@ func newStreamClient(httpClient *http.Client) *streamClient {
 }
 
 type pipelineLogFormat oktetoLog.JSONLogFormat
+
+type destroyAllLogFormat struct {
+	Line string `json:"line"`
+}
 
 // PipelineLogs retrieves logs from the pipeline provided and prints them, returns error
 func (c *streamClient) PipelineLogs(ctx context.Context, name, namespace, actionName string) error {
@@ -79,11 +85,33 @@ func handlerPipelineLogLine(line string) bool {
 }
 
 // StreamLogs retrieves logs from the pipeline provided and prints them, returns error
-func (c *sseClient) StreamDestroyAllLogs(ctx context.Context, namespace string) error {
-	streamURL := fmt.Sprintf(sse.DestroyAllUrlTemplate, Context().Name, Context().Namespace)
+func (c *streamClient) StreamDestroyAllLogs(ctx context.Context, namespace string) error {
+	streamURL := fmt.Sprintf(destroyAllUrlTempleate, Context().Name, Context().Namespace)
 	url, err := url.Parse(streamURL)
 	if err != nil {
 		return err
 	}
-	return sse.Stream(ctx, c.client, url.String())
+	return stream.GetLogsFromURL(ctx, c.client, url.String(), printDestroyAllLog)
+}
+
+// printDestroyAllLog prints a line with the Message unmarshalled from line
+func printDestroyAllLog(line string) bool {
+	destroyAllLogList := []destroyAllLogFormat{}
+	json.Unmarshal([]byte(line), &destroyAllLogList)
+	for _, dLog := range destroyAllLogList {
+		// skip when the event log is in stage done and message is EOF
+		if dLog.Line == "Done" {
+			return true
+		}
+		fmt.Println(dLog.Line)
+	}
+
+	dLog := destroyAllLogFormat{}
+	json.Unmarshal([]byte(line), &dLog)
+	// skip when the event log is in stage done and message is EOF
+	if dLog.Line == "Done" {
+		return true
+	}
+	fmt.Println(dLog.Line)
+	return false
 }

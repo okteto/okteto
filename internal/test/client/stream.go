@@ -40,6 +40,6 @@ func (c *FakeStreamClient) PipelineLogs(_ context.Context, _, _, _ string) error
 }
 
 // StreamPipelineLogs starts the streaming of pipeline logs
-func (c *FakeSSEClient) StreamDestroyAllLogs(ctx context.Context, _ string) error {
+func (c *FakeStreamClient) StreamDestroyAllLogs(ctx context.Context, _ string) error {
 	return c.response.StreamErr
 }
