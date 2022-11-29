@@ -264,6 +264,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 
 	if opts.DestroyDependencies {
 		for depName := range manifest.Dependencies {
+			oktetoLog.SetStage(fmt.Sprintf("Destroying dependency '%s'", depName))
 			destOpts := &pipelineCMD.DestroyOptions{
 				Name:           depName,
 				DestroyVolumes: opts.DestroyVolumes,
@@ -282,6 +283,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 				return err
 			}
 		}
+		oktetoLog.SetStage("")
 	}
 
 	var commandErr error
