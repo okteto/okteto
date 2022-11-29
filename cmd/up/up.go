@@ -274,7 +274,7 @@ func Up() *cobra.Command {
 					return err
 				}
 			}
-			if upOptions.commandToExecute != nil {
+			if len(upOptions.commandToExecute) > 0 {
 				dev.Command.Values = upOptions.commandToExecute
 			}
 
