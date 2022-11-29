@@ -88,7 +88,7 @@ func GetLogsFromURL(ctx context.Context, c *http.Client, url string, print print
 			return ctx.Err()
 		default:
 			scanText := sc.Text()
-			// if the text scanned is a data message, trim and send to logChan
+			// if the text scanned is a data message, trim and print
 			if strings.HasPrefix(scanText, dataHeader) {
 				data := strings.TrimSpace(strings.TrimPrefix(scanText, dataHeader))
 				if data != dataPing {
