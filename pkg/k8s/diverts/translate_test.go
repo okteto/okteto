@@ -24,6 +24,7 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/pointer"
 )
 
@@ -244,12 +245,14 @@ func Test_translateEndpoints(t *testing.T) {
 				{
 					Name:        "port1",
 					Port:        8080,
+					TargetPort:  intstr.IntOrString{IntVal: 9090},
 					Protocol:    apiv1.ProtocolTCP,
 					AppProtocol: pointer.StringPtr("tcp"),
 				},
 				{
 					Name:        "port2",
 					Port:        8081,
+					TargetPort:  intstr.IntOrString{IntVal: 9091},
 					Protocol:    apiv1.ProtocolTCP,
 					AppProtocol: pointer.StringPtr("tcp"),
 				},
@@ -286,13 +289,13 @@ func Test_translateEndpoints(t *testing.T) {
 				Ports: []apiv1.EndpointPort{
 					{
 						Name:        "port1",
-						Port:        8080,
+						Port:        9090,
 						Protocol:    apiv1.ProtocolTCP,
 						AppProtocol: pointer.StringPtr("tcp"),
 					},
 					{
 						Name:        "port2",
-						Port:        8081,
+						Port:        9091,
 						Protocol:    apiv1.ProtocolTCP,
 						AppProtocol: pointer.StringPtr("tcp"),
 					},

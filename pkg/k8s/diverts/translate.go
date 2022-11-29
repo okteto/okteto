@@ -108,7 +108,7 @@ func translateEndpoints(m *model.Manifest, s *apiv1.Service) *apiv1.Endpoints {
 			result.Subsets[0].Ports,
 			apiv1.EndpointPort{
 				Name:        p.Name,
-				Port:        p.Port,
+				Port:        p.TargetPort.IntVal,
 				Protocol:    p.Protocol,
 				AppProtocol: p.AppProtocol,
 			},
