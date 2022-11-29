@@ -173,11 +173,11 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 	}
 
 	options := []string{}
-	for k := range manifest.Dev {
-		if k == devName {
-			return manifest.Dev[devName], nil
+	for name, dev := range manifest.Dev {
+		if name == devName {
+			return dev, nil
 		}
-		options = append(options, k)
+		options = append(options, name)
 	}
 	return nil, oktetoErrors.UserError{
 		E:    fmt.Errorf(oktetoErrors.ErrDevContainerNotExists, devName),
