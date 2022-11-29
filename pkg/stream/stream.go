@@ -11,14 +11,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sse
+package stream
 
 import (
 	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"math"
 	"net/http"
 	"strings"
@@ -27,64 +25,11 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-var (
-	// gitDeployUrlTemplate (baseURL, namespace, dev environment name, action name)
-	GitDeployUrlTemplate = "%s/sse/logs/%s/gitdeploy/%s?action=%s"
-)
-
 const (
 	maxRetryAttempts = 3
+	dataPing         = "ping"
+	dataHeader       = "data: "
 )
-
-func readBody(ctx context.Context, body io.ReadCloser) error {
-	sc := bufio.NewScanner(body)
-	dataHeader := "data: "
-	for sc.Scan() {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			scanText := sc.Text()
-
-			msg := ""
-			// if the text scanned is a data message, trim and save into msg
-			if strings.HasPrefix(scanText, dataHeader) {
-				msg = strings.TrimPrefix(scanText, dataHeader)
-			}
-			// the msg from sse data is a string with a json log format or slice of json log format
-			eventLogSlice := []oktetoLog.JSONLogFormat{}
-			json.Unmarshal([]byte(msg), &eventLogSlice)
-			if len(eventLogSlice) > 0 {
-				for _, e := range eventLogSlice {
-					if e.Message == "" {
-						continue
-					}
-					// stop the scanner when the event log is in stage done and message is EOF
-					if e.Stage == "done" && e.Message == "EOF" {
-						break
-					}
-					oktetoLog.Println(e.Message)
-				}
-				continue
-			}
-			eventLog := &oktetoLog.JSONLogFormat{}
-			// unmarshall errors ignored
-			json.Unmarshal([]byte(msg), &eventLog)
-			// skip when the message is empty
-			if eventLog.Message == "" {
-				continue
-			}
-			// stop the scanner when the event log is in stage done and message is EOF
-			if eventLog.Stage == "done" && eventLog.Message == "EOF" {
-				break
-			}
-			oktetoLog.Println(eventLog.Message)
-		}
-	}
-
-	// return whether the scan has encountered any error
-	return sc.Err()
-}
 
 func nextRetrySchedule(attempts int) time.Duration {
 	delaySecs := int64(math.Floor((math.Pow(2, float64(attempts)) - 1) * 0.5))
@@ -127,12 +72,32 @@ func requestWithRetry(c *http.Client, url string) (*http.Response, error) {
 	}
 }
 
-func Stream(ctx context.Context, c *http.Client, url string) error {
+type printFn func(line string)
+
+func GetLogsFromURL(ctx context.Context, c *http.Client, url string, print printFn) error {
 	resp, err := requestWithRetry(c, url)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	return readBody(ctx, resp.Body)
+	sc := bufio.NewScanner(resp.Body)
+	for sc.Scan() {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			scanText := sc.Text()
+			// if the text scanned is a data message, trim and send to logChan
+			if strings.HasPrefix(scanText, dataHeader) {
+				data := strings.TrimSpace(strings.TrimPrefix(scanText, dataHeader))
+				if data != dataPing {
+					print(data)
+				}
+			}
+		}
+	}
+
+	// return whether the scan has encountered any error
+	return sc.Err()
 }

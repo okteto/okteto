@@ -15,11 +15,18 @@ package okteto
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 
-	"github.com/okteto/okteto/pkg/sse"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/stream"
+)
+
+var (
+	// gitDeployUrlTemplate (baseURL, namespace, dev environment name, action name)
+	gitDeployUrlTemplate = "%s/sse/logs/%s/gitdeploy/%s?action=%s"
 )
 
 type sseClient struct {
@@ -32,12 +39,35 @@ func newSSEClient(httpClient *http.Client) *sseClient {
 	}
 }
 
-// StreamLogs retrieves logs from the pipeline provided and prints them, returns error
+type pipelineLogFormat oktetoLog.JSONLogFormat
+
+// StreamPipelineLogs retrieves logs from the pipeline provided and prints them, returns error
 func (c *sseClient) StreamPipelineLogs(ctx context.Context, name, namespace, actionName string) error {
-	streamURL := fmt.Sprintf(sse.GitDeployUrlTemplate, Context().Name, namespace, name, actionName)
+	streamURL := fmt.Sprintf(gitDeployUrlTemplate, Context().Name, namespace, name, actionName)
 	url, err := url.Parse(streamURL)
 	if err != nil {
 		return err
 	}
-	return sse.Stream(ctx, c.client, url.String())
+	return stream.GetLogsFromURL(ctx, c.client, url.String(), printPipelineLog)
+}
+
+// printPipelineLog prints a line with the Message unmarshalled from line
+func printPipelineLog(line string) {
+	pipelineLogList := []pipelineLogFormat{}
+	json.Unmarshal([]byte(line), &pipelineLogList)
+	for _, pLog := range pipelineLogList {
+		// stop when the event log is in stage done and message is EOF
+		if pLog.Stage == "done" && pLog.Message == "EOF" {
+			return
+		}
+		fmt.Println(pLog.Message)
+	}
+
+	pLog := pipelineLogFormat{}
+	json.Unmarshal([]byte(line), &pLog)
+	// stop when the event log is in stage done and message is EOF
+	if pLog.Stage == "done" && pLog.Message == "EOF" {
+		return
+	}
+	fmt.Println(pLog.Message)
 }
