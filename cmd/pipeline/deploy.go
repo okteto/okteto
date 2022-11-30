@@ -315,7 +315,7 @@ func (f deployFlags) toOptions() *DeployOptions {
 		Wait:         f.wait,
 		SkipIfExists: f.skipIfExists,
 		Timeout:      f.timeout,
-		File:         f.file,
+		File:         file,
 		Variables:    f.variables,
 	}
 }
