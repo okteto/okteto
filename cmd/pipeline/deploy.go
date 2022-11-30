@@ -34,8 +34,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// flags represents the user input
-type flags struct {
+// deployFlags represents the user input for a pipeline deploy command
+type deployFlags struct {
 	branch       string
 	repository   string
 	name         string
@@ -50,8 +50,8 @@ type flags struct {
 	filename string
 }
 
-// Options represents options for deploy pipeline command
-type Options struct {
+// DeployOptions represents options for deploy pipeline command
+type DeployOptions struct {
 	Branch       string
 	Repository   string
 	Name         string
@@ -64,7 +64,7 @@ type Options struct {
 }
 
 func deploy(ctx context.Context) *cobra.Command {
-	flags := &flags{}
+	flags := &deployFlags{}
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Deploy an okteto pipeline",
@@ -111,7 +111,7 @@ func deploy(ctx context.Context) *cobra.Command {
 }
 
 // ExecuteDeployPipeline executes deploy pipeline given a set of options
-func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *Options) error {
+func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error {
 
 	if err := opts.setDefaults(); err != nil {
 		return fmt.Errorf("could not set default values for options: %w", err)
@@ -152,7 +152,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *Options) err
 	return nil
 }
 
-func (pc *Command) deployPipeline(ctx context.Context, opts *Options) (*types.GitDeployResponse, error) {
+func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*types.GitDeployResponse, error) {
 	oktetoLog.Spinner(fmt.Sprintf("Deploying repository '%s'...", opts.Name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -297,7 +297,7 @@ func CheckAllResourcesRunning(name string, resourceStatus map[string]string) (bo
 	return allRunning, nil
 }
 
-func (f flags) toOptions() *Options {
+func (f deployFlags) toOptions() *DeployOptions {
 	file := f.file
 	if f.filename != "" {
 		oktetoLog.Warning("the 'filename' flag is deprecated and will be removed in a future version. Please consider using 'file' flag")
@@ -307,7 +307,7 @@ func (f flags) toOptions() *Options {
 			oktetoLog.Warning("flags 'filename' and 'file' can not be used at the same time. 'file' flag will take precedence")
 		}
 	}
-	return &Options{
+	return &DeployOptions{
 		Branch:       f.branch,
 		Repository:   f.repository,
 		Name:         f.name,
@@ -320,7 +320,7 @@ func (f flags) toOptions() *Options {
 	}
 }
 
-func (o *Options) setDefaults() error {
+func (o *DeployOptions) setDefaults() error {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get the current working directory: %w", err)
@@ -362,7 +362,7 @@ func (o *Options) setDefaults() error {
 	return nil
 }
 
-func (o *Options) toPipelineDeployOptions() (types.PipelineDeployOptions, error) {
+func (o *DeployOptions) toPipelineDeployOptions() (types.PipelineDeployOptions, error) {
 	varList := []types.Variable{}
 	for _, v := range o.Variables {
 		kv := strings.SplitN(v, "=", 2)
