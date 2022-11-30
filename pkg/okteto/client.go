@@ -39,7 +39,7 @@ type OktetoClient struct {
 	user      types.UserInterface
 	preview   types.PreviewInterface
 	pipeline  types.PipelineInterface
-	sse       types.SSEInterface
+	stream    types.StreamInterface
 }
 
 type OktetoClientProvider struct{}
@@ -156,7 +156,7 @@ func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*Okt
 	c.preview = newPreviewClient(c.client)
 	c.user = newUserClient(c.client)
 	c.pipeline = newPipelineClient(c.client, url)
-	c.sse = newSSEClient(httpClient)
+	c.stream = newStreamClient(httpClient)
 	return c, nil
 }
 
@@ -286,9 +286,9 @@ func (c *OktetoClient) User() types.UserInterface {
 	return c.user
 }
 
-// SSE retrieves the SSE client
-func (c *OktetoClient) SSE() types.SSEInterface {
-	return c.sse
+// Stream retrieves the Stream client
+func (c *OktetoClient) Stream() types.StreamInterface {
+	return c.stream
 }
 
 func SetInsecureSkipTLSVerifyPolicy(isInsecure bool) {

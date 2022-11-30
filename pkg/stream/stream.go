@@ -72,7 +72,8 @@ func requestWithRetry(c *http.Client, url string) (*http.Response, error) {
 	}
 }
 
-type printFn func(line string)
+// printFn represents the function that prints the log message, returns true when is "done" message
+type printFn func(line string) bool
 
 func GetLogsFromURL(ctx context.Context, c *http.Client, url string, print printFn) error {
 	resp, err := requestWithRetry(c, url)
@@ -91,8 +92,12 @@ func GetLogsFromURL(ctx context.Context, c *http.Client, url string, print print
 			// if the text scanned is a data message, trim and print
 			if strings.HasPrefix(scanText, dataHeader) {
 				data := strings.TrimSpace(strings.TrimPrefix(scanText, dataHeader))
-				if data != dataPing {
-					print(data)
+				if data == dataPing {
+					continue
+				}
+				done := print(data)
+				if done {
+					break
 				}
 			}
 		}

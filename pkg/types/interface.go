@@ -24,7 +24,7 @@ type OktetoInterface interface {
 	Namespaces() NamespaceInterface
 	Previews() PreviewInterface
 	Pipeline() PipelineInterface
-	SSE() SSEInterface
+	Stream() StreamInterface
 }
 
 // UserInterface represents the client that connects to the user functions
@@ -62,6 +62,6 @@ type OktetoClientProvider interface {
 	Provide() (OktetoInterface, error)
 }
 
-type SSEInterface interface {
-	StreamPipelineLogs(ctx context.Context, name, namespace, actionName string) error
+type StreamInterface interface {
+	PipelineLogs(ctx context.Context, name, namespace, actionName string) error
 }

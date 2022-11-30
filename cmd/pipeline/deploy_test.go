@@ -247,7 +247,7 @@ func TestDeployPipelineSuccesfulWithWait(t *testing.T) {
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
-			SSEClient:      client.NewFakeSSEClient(&client.FakeSSEResponse{}),
+			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 		},
 	}
 	opts := &DeployOptions{
@@ -309,7 +309,7 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
-			SSEClient:      client.NewFakeSSEClient(&client.FakeSSEResponse{StreamErr: errors.New("error")}),
+			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{StreamErr: errors.New("error")}),
 		},
 	}
 	opts := &DeployOptions{

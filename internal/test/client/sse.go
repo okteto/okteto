@@ -17,24 +17,24 @@ import (
 	"context"
 )
 
-// FakeSSEClient mocks the sse client interface
-type FakeSSEClient struct {
-	response *FakeSSEResponse
+// FakeStreamClient mocks the stream client interface
+type FakeStreamClient struct {
+	response *FakeStreamResponse
 }
 
-// FakeSSEResponse mocks the sse response
-type FakeSSEResponse struct {
+// FakeStreamResponse mocks the stream response
+type FakeStreamResponse struct {
 	StreamErr error
 }
 
-// NewFakeSSEClient returns a new fake sse client
-func NewFakeSSEClient(response *FakeSSEResponse) *FakeSSEClient {
-	return &FakeSSEClient{
+// NewFakeStreamClient returns a new fake stream client
+func NewFakeStreamClient(response *FakeStreamResponse) *FakeStreamClient {
+	return &FakeStreamClient{
 		response: response,
 	}
 }
 
-// StreamPipelineLogs starts the streaming of pipeline logs
-func (c *FakeSSEClient) StreamPipelineLogs(_ context.Context, _, _, _ string) error {
+// PipelineLogs starts the streaming of pipeline logs
+func (c *FakeStreamClient) PipelineLogs(_ context.Context, _, _, _ string) error {
 	return c.response.StreamErr
 }

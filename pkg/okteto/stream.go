@@ -29,12 +29,12 @@ var (
 	gitDeployUrlTemplate = "%s/sse/logs/%s/gitdeploy/%s?action=%s"
 )
 
-type sseClient struct {
+type streamClient struct {
 	client *http.Client
 }
 
-func newSSEClient(httpClient *http.Client) *sseClient {
-	return &sseClient{
+func newStreamClient(httpClient *http.Client) *streamClient {
+	return &streamClient{
 		client: httpClient,
 	}
 }
@@ -42,7 +42,7 @@ func newSSEClient(httpClient *http.Client) *sseClient {
 type pipelineLogFormat oktetoLog.JSONLogFormat
 
 // StreamPipelineLogs retrieves logs from the pipeline provided and prints them, returns error
-func (c *sseClient) StreamPipelineLogs(ctx context.Context, name, namespace, actionName string) error {
+func (c *streamClient) PipelineLogs(ctx context.Context, name, namespace, actionName string) error {
 	streamURL := fmt.Sprintf(gitDeployUrlTemplate, Context().Name, namespace, name, actionName)
 	url, err := url.Parse(streamURL)
 	if err != nil {
@@ -52,13 +52,14 @@ func (c *sseClient) StreamPipelineLogs(ctx context.Context, name, namespace, act
 }
 
 // printPipelineLog prints a line with the Message unmarshalled from line
-func printPipelineLog(line string) {
+// returns true when stream has to stop
+func printPipelineLog(line string) bool {
 	pipelineLogList := []pipelineLogFormat{}
 	json.Unmarshal([]byte(line), &pipelineLogList)
 	for _, pLog := range pipelineLogList {
 		// stop when the event log is in stage done and message is EOF
 		if pLog.Stage == "done" && pLog.Message == "EOF" {
-			return
+			return true
 		}
 		fmt.Println(pLog.Message)
 	}
@@ -67,7 +68,8 @@ func printPipelineLog(line string) {
 	json.Unmarshal([]byte(line), &pLog)
 	// stop when the event log is in stage done and message is EOF
 	if pLog.Stage == "done" && pLog.Message == "EOF" {
-		return
+		return true
 	}
 	fmt.Println(pLog.Message)
+	return false
 }
