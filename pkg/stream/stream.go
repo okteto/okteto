@@ -83,7 +83,8 @@ func GetLogsFromURL(ctx context.Context, c *http.Client, url string, print print
 	defer resp.Body.Close()
 
 	sc := bufio.NewScanner(resp.Body)
-	for sc.Scan() {
+	done := false
+	for sc.Scan() && !done {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -95,10 +96,7 @@ func GetLogsFromURL(ctx context.Context, c *http.Client, url string, print print
 				if data == dataPing {
 					continue
 				}
-				done := print(data)
-				if done {
-					break
-				}
+				done = print(data)
 			}
 		}
 	}

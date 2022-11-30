@@ -64,7 +64,7 @@ func (c *FakeOktetoClient) Pipeline() types.PipelineInterface {
 	return c.PipelineClient
 }
 
-// SSE retrieves the SSE client
+// Stream retrieves the SSE client
 func (c *FakeOktetoClient) Stream() types.StreamInterface {
 	return c.StreamClient
 }
