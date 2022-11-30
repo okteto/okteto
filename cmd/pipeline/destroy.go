@@ -93,20 +93,12 @@ func destroy(ctx context.Context) *cobra.Command {
 
 // ExecuteDestroyPipeline executes destroy pipeline given a set of options
 func (pc *Command) ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOptions) error {
-	if opts.Name == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return fmt.Errorf("failed to get the current working directory: %w", err)
-		}
-		repo, err := model.GetRepositoryURL(cwd)
-		if err != nil {
-			return err
-		}
 
-		opts.Name = getPipelineName(repo)
+	if err := opts.setDefaults(); err != nil {
+		return fmt.Errorf("could not set default values for options: %w", err)
 	}
 
-	resp, err := pc.destroyPipeline(ctx, opts.Name, opts.DestroyVolumes)
+	resp, err := pc.destroyPipeline(ctx, opts.Name, opts.Namespace, opts.DestroyVolumes)
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return err
 	}
@@ -118,7 +110,7 @@ func (pc *Command) ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOpti
 
 	// If error is not found we don't have to wait
 	if err == nil && resp != nil {
-		if err := pc.waitUntilDestroyed(ctx, opts.Name, resp.Action, opts.Timeout); err != nil {
+		if err := pc.waitUntilDestroyed(ctx, opts.Name, opts.Namespace, resp.Action, opts.Timeout); err != nil {
 			return err
 		}
 	}
@@ -128,7 +120,7 @@ func (pc *Command) ExecuteDestroyPipeline(ctx context.Context, opts *DestroyOpti
 	return nil
 }
 
-func (pc *Command) destroyPipeline(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
+func (pc *Command) destroyPipeline(ctx context.Context, name, namespace string, destroyVolumes bool) (*types.GitDeployResponse, error) {
 	oktetoLog.Spinner(fmt.Sprintf("Destroying repository '%s'...", name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -141,7 +133,7 @@ func (pc *Command) destroyPipeline(ctx context.Context, name string, destroyVolu
 	var resp *types.GitDeployResponse
 
 	go func() {
-		resp, err = pc.okClient.Pipeline().Destroy(ctx, name, destroyVolumes)
+		resp, err = pc.okClient.Pipeline().Destroy(ctx, name, namespace, destroyVolumes)
 		if err != nil {
 			exit <- fmt.Errorf("failed to destroy repository '%s': %w", name, err)
 			return
@@ -161,7 +153,7 @@ func (pc *Command) destroyPipeline(ctx context.Context, name string, destroyVolu
 	return resp, nil
 }
 
-func (pc *Command) waitUntilDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
+func (pc *Command) waitUntilDestroyed(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
@@ -178,7 +170,7 @@ func (pc *Command) waitUntilDestroyed(ctx context.Context, name string, action *
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := pc.streamPipelineLogs(waitCtx, name, okteto.Context().Namespace, action.Name)
+		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name)
 		if err != nil {
 			oktetoLog.Warning("there was an error streaming pipeline logs: %v", err)
 		}
@@ -186,7 +178,7 @@ func (pc *Command) waitUntilDestroyed(ctx context.Context, name string, action *
 
 	wg.Add(1)
 	go func() {
-		exit <- pc.waitToBeDestroyed(ctx, name, action, timeout)
+		exit <- pc.waitToBeDestroyed(ctx, name, namespace, action, timeout)
 	}()
 
 	go func(wg *sync.WaitGroup) {
@@ -211,8 +203,8 @@ func (pc *Command) waitUntilDestroyed(ctx context.Context, name string, action *
 	return nil
 }
 
-func (pc *Command) waitToBeDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
-	return pc.okClient.Pipeline().WaitForActionToFinish(ctx, name, okteto.Context().Namespace, action.Name, timeout)
+func (pc *Command) waitToBeDestroyed(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration) error {
+	return pc.okClient.Pipeline().WaitForActionToFinish(ctx, name, namespace, action.Name, timeout)
 }
 
 // toOptions transform the flags
@@ -224,4 +216,24 @@ func (f destroyFlags) toOptions() *DestroyOptions {
 		Timeout:        f.timeout,
 		DestroyVolumes: f.destroyVolumes,
 	}
+}
+
+func (o *DestroyOptions) setDefaults() error {
+	if o.Name == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get the current working directory: %w", err)
+		}
+		repo, err := model.GetRepositoryURL(cwd)
+		if err != nil {
+			return err
+		}
+
+		o.Name = getPipelineName(repo)
+	}
+
+	if o.Namespace == "" {
+		o.Namespace = okteto.Context().Namespace
+	}
+	return nil
 }

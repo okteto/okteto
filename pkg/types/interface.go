@@ -51,7 +51,7 @@ type PreviewInterface interface {
 type PipelineInterface interface {
 	Deploy(ctx context.Context, opts PipelineDeployOptions) (*GitDeployResponse, error)
 	WaitForActionToFinish(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error
-	Destroy(ctx context.Context, name string, destroyVolumes bool) (*GitDeployResponse, error)
+	Destroy(ctx context.Context, name, namespace string, destroyVolumes bool) (*GitDeployResponse, error)
 	GetResourcesStatus(ctx context.Context, name, namespace string) (map[string]string, error)
 	GetByName(ctx context.Context, name, namespace string) (*GitDeploy, error)
 	StreamLogs(ctx context.Context, name, namespace, actionName string) error

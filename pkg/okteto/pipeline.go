@@ -251,8 +251,8 @@ func AreSameRepository(repoA, repoB string) bool {
 }
 
 // Destroy destroys a pipeline
-func (c *pipelineClient) Destroy(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
-	oktetoLog.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
+func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, destroyVolumes bool) (*types.GitDeployResponse, error) {
+	oktetoLog.Infof("destroy pipeline: %s/%s", namespace, name)
 	gitDeployResponse := &types.GitDeployResponse{}
 	if destroyVolumes {
 		var mutation struct {
@@ -274,12 +274,12 @@ func (c *pipelineClient) Destroy(ctx context.Context, name string, destroyVolume
 		queryVariables := map[string]interface{}{
 			"name":           graphql.String(name),
 			"destroyVolumes": graphql.Boolean(destroyVolumes),
-			"space":          graphql.String(Context().Namespace),
+			"space":          graphql.String(namespace),
 		}
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
-				return c.deprecatedDestroy(ctx, name, destroyVolumes)
+				return c.deprecatedDestroy(ctx, name, namespace, destroyVolumes)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
@@ -318,7 +318,7 @@ func (c *pipelineClient) Destroy(ctx context.Context, name string, destroyVolume
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
-				return c.deprecatedDestroy(ctx, name, destroyVolumes)
+				return c.deprecatedDestroy(ctx, name, namespace, destroyVolumes)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
@@ -339,8 +339,8 @@ func (c *pipelineClient) Destroy(ctx context.Context, name string, destroyVolume
 	return gitDeployResponse, nil
 }
 
-func (c *pipelineClient) deprecatedDestroy(ctx context.Context, name string, destroyVolumes bool) (*types.GitDeployResponse, error) {
-	oktetoLog.Infof("destroy pipeline: %s/%s", Context().Namespace, name)
+func (c *pipelineClient) deprecatedDestroy(ctx context.Context, name, namespace string, destroyVolumes bool) (*types.GitDeployResponse, error) {
+	oktetoLog.Infof("destroy pipeline: %s/%s", namespace, name)
 	gitDeployResponse := &types.GitDeployResponse{}
 	if destroyVolumes {
 		var mutation struct {
@@ -353,7 +353,7 @@ func (c *pipelineClient) deprecatedDestroy(ctx context.Context, name string, des
 		queryVariables := map[string]interface{}{
 			"name":           graphql.String(name),
 			"destroyVolumes": graphql.Boolean(destroyVolumes),
-			"space":          graphql.String(Context().Namespace),
+			"space":          graphql.String(namespace),
 		}
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
@@ -373,12 +373,12 @@ func (c *pipelineClient) deprecatedDestroy(ctx context.Context, name string, des
 
 		queryVariables := map[string]interface{}{
 			"name":  graphql.String(name),
-			"space": graphql.String(Context().Namespace),
+			"space": graphql.String(namespace),
 		}
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
 			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
-				return c.deprecatedDestroy(ctx, name, destroyVolumes)
+				return c.deprecatedDestroy(ctx, name, namespace, destroyVolumes)
 			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
