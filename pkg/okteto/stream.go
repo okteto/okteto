@@ -84,8 +84,8 @@ func handlerPipelineLogLine(line string) bool {
 	return false
 }
 
-// StreamLogs retrieves logs from the pipeline provided and prints them, returns error
-func (c *streamClient) StreamDestroyAllLogs(ctx context.Context, namespace string) error {
+// DestroyAllLogs retrieves logs from the pipeline provided and prints them, returns error
+func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string) error {
 	streamURL := fmt.Sprintf(destroyAllUrlTempleate, Context().Name, Context().Namespace)
 	url, err := url.Parse(streamURL)
 	if err != nil {
@@ -103,7 +103,7 @@ func printDestroyAllLog(line string) bool {
 		if dLog.Line == "Done" {
 			return true
 		}
-		fmt.Println(dLog.Line)
+		oktetoLog.Println(dLog.Line)
 	}
 
 	dLog := destroyAllLogFormat{}
@@ -112,6 +112,6 @@ func printDestroyAllLog(line string) bool {
 	if dLog.Line == "Done" {
 		return true
 	}
-	fmt.Println(dLog.Line)
+	oktetoLog.Println(dLog.Line)
 	return false
 }

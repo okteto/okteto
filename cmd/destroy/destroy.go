@@ -177,7 +177,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				if err := okClient.Namespaces().DestroyAll(ctx, options.Namespace); err != nil {
 					return err
 				}
-				if err := okClient.Stream().StreamDestroyAllLogs(ctx, options.Namespace); err != nil {
+				if err := okClient.Stream().DestroyAllLogs(ctx, options.Namespace); err != nil {
 					oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
 					oktetoLog.Infof("destroy all logs cannot be streamed due to connectivity issues: %v", err)
 				}

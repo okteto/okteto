@@ -67,5 +67,5 @@ type OktetoClientProvider interface {
 // StreamInterface represents the streaming client
 type StreamInterface interface {
 	PipelineLogs(ctx context.Context, name, namespace, actionName string) error
-	StreamDestroyAllLogs(ctx context.Context, namespace string) error
+	DestroyAllLogs(ctx context.Context, namespace string) error
 }
