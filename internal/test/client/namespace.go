@@ -66,7 +66,7 @@ func (*FakeNamespaceClient) SleepNamespace(_ context.Context, _ string) error {
 	return nil
 }
 
-// SleepNamespace deletes a namespace
+// DestroyAll deletes a namespace
 func (*FakeNamespaceClient) DestroyAll(_ context.Context, _ string) error {
 	return nil
 }

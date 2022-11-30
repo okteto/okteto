@@ -169,7 +169,7 @@ func (c *namespaceClient) SleepNamespace(ctx context.Context, namespace string) 
 	return nil
 }
 
-// DeleteNamespace deletes a namespace
+// DestroyAll deletes a namespace
 func (c *namespaceClient) DestroyAll(ctx context.Context, namespace string) error {
 	var mutation struct {
 		Space struct {
