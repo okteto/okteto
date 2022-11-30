@@ -31,6 +31,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// destroyFlags represents the user input for a pipeline destroy command
+type destroyFlags struct {
+	name           string
+	namespace      string
+	wait           bool
+	destroyVolumes bool
+	timeout        time.Duration
+}
+
 // DestroyOptions options to destroy pipeline command
 type DestroyOptions struct {
 	Name           string
@@ -41,7 +50,7 @@ type DestroyOptions struct {
 }
 
 func destroy(ctx context.Context) *cobra.Command {
-	opts := &DestroyOptions{}
+	flags := &destroyFlags{}
 
 	cmd := &cobra.Command{
 		Use:   "destroy",
@@ -49,7 +58,7 @@ func destroy(ctx context.Context) *cobra.Command {
 		Args:  utils.NoArgsAccepted("https://www.okteto.com/docs/reference/cli/#destroy-1"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctxResource := &model.ContextResource{}
-			if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
+			if err := ctxResource.UpdateNamespace(flags.namespace); err != nil {
 				return err
 			}
 
@@ -69,15 +78,16 @@ func destroy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			opts := flags.toOptions()
 			return pipelineCmd.ExecuteDestroyPipeline(ctx, opts)
 		},
 	}
 
-	cmd.Flags().StringVarP(&opts.Name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
-	cmd.Flags().StringVarP(&opts.Namespace, "namespace", "n", "", "namespace where the pipeline is destroyed (defaults to the current namespace)")
-	cmd.Flags().BoolVarP(&opts.Wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
-	cmd.Flags().BoolVarP(&opts.DestroyVolumes, "volumes", "v", false, "destroy persistent volumes created by the pipeline (defaults to false)")
-	cmd.Flags().DurationVarP(&opts.Timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
+	cmd.Flags().StringVarP(&flags.name, "name", "p", "", "name of the pipeline (defaults to the git config name)")
+	cmd.Flags().StringVarP(&flags.namespace, "namespace", "n", "", "namespace where the pipeline is destroyed (defaults to the current namespace)")
+	cmd.Flags().BoolVarP(&flags.wait, "wait", "w", false, "wait until the pipeline finishes (defaults to false)")
+	cmd.Flags().BoolVarP(&flags.destroyVolumes, "volumes", "v", false, "destroy persistent volumes created by the pipeline (defaults to false)")
+	cmd.Flags().DurationVarP(&flags.timeout, "timeout", "t", (5 * time.Minute), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
 	return cmd
 }
 
@@ -203,4 +213,15 @@ func (pc *Command) waitUntilDestroyed(ctx context.Context, name string, action *
 
 func (pc *Command) waitToBeDestroyed(ctx context.Context, name string, action *types.Action, timeout time.Duration) error {
 	return pc.okClient.Pipeline().WaitForActionToFinish(ctx, name, okteto.Context().Namespace, action.Name, timeout)
+}
+
+// toOptions transform the flags
+func (f destroyFlags) toOptions() *DestroyOptions {
+	return &DestroyOptions{
+		Name:           f.name,
+		Namespace:      f.namespace,
+		Wait:           f.wait,
+		Timeout:        f.timeout,
+		DestroyVolumes: f.destroyVolumes,
+	}
 }
