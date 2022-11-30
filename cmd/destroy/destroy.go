@@ -262,10 +262,15 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	os.Setenv(constants.OktetoNameEnvVar, opts.Name)
 
 	if opts.DestroyDependencies {
-		for depName := range manifest.Dependencies {
+		for depName, depInfo := range manifest.Dependencies {
+			namespace := okteto.Context().Namespace
+			if depInfo.Namespace != "" {
+				namespace = depInfo.Namespace
+			}
 			destOpts := &pipelineCMD.DestroyOptions{
 				Name:           depName,
 				DestroyVolumes: opts.DestroyVolumes,
+				Namespace:      namespace,
 			}
 			pipelineCmd, err := pipelineCMD.NewCommand()
 			if err != nil {
