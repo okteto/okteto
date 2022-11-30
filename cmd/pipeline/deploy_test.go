@@ -215,7 +215,7 @@ func TestDeployPipelineSuccesful(t *testing.T) {
 			PipelineClient: client.NewFakePipelineClient(response),
 		},
 	}
-	opts := &Options{
+	opts := &DeployOptions{
 		Repository: "test",
 		Name:       "test",
 	}
@@ -249,7 +249,7 @@ func TestDeployPipelineSuccesfulWithWait(t *testing.T) {
 			PipelineClient: client.NewFakePipelineClient(response),
 		},
 	}
-	opts := &Options{
+	opts := &DeployOptions{
 		Repository: "test",
 		Name:       "test",
 		Wait:       true,
@@ -276,7 +276,7 @@ func TestDeployWithError(t *testing.T) {
 			PipelineClient: client.NewFakePipelineClient(response),
 		},
 	}
-	opts := &Options{
+	opts := &DeployOptions{
 		Repository: "test",
 		Name:       "test",
 	}
@@ -311,7 +311,7 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 			PipelineClient: client.NewFakePipelineClient(response),
 		},
 	}
-	opts := &Options{
+	opts := &DeployOptions{
 		Repository: "test",
 		Name:       "test",
 		Wait:       true,

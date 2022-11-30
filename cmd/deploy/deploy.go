@@ -342,7 +342,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
 		})
-		pipOpts := &pipelineCMD.Options{
+		pipOpts := &pipelineCMD.DeployOptions{
 			Name:         depName,
 			Repository:   dep.Repository,
 			Branch:       dep.Branch,
