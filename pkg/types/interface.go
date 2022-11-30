@@ -55,6 +55,7 @@ type PipelineInterface interface {
 	Destroy(ctx context.Context, name, namespace string, destroyVolumes bool) (*GitDeployResponse, error)
 	GetResourcesStatus(ctx context.Context, name, namespace string) (map[string]string, error)
 	GetByName(ctx context.Context, name, namespace string) (*GitDeploy, error)
+	WaitForActionToProgress(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error
 }
 
 // OktetoClientProvider provides an okteto client ready to use or fail

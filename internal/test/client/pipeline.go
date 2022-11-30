@@ -68,3 +68,8 @@ func (fc *FakePipelineClient) GetResourcesStatus(_ context.Context, _, _ string)
 func (*FakePipelineClient) GetByName(_ context.Context, _, _ string) (*types.GitDeploy, error) {
 	return nil, nil
 }
+
+// WaitForActionToFinish waits for a pipeline to finish
+func (fc *FakePipelineClient) WaitForActionToProgress(_ context.Context, _, _, _ string, _ time.Duration) error {
+	return fc.responses.WaitErr
+}

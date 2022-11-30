@@ -61,7 +61,7 @@ func printPipelineLog(line string) bool {
 		if pLog.Stage == "done" && pLog.Message == "EOF" {
 			return true
 		}
-		fmt.Println(pLog.Message)
+		oktetoLog.Println(pLog.Message)
 	}
 
 	pLog := pipelineLogFormat{}
@@ -70,6 +70,6 @@ func printPipelineLog(line string) bool {
 	if pLog.Stage == "done" && pLog.Message == "EOF" {
 		return true
 	}
-	fmt.Println(pLog.Message)
+	oktetoLog.Println(pLog.Message)
 	return false
 }
