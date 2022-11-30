@@ -177,11 +177,25 @@ func Destroy(ctx context.Context) *cobra.Command {
 				if err := okClient.Namespaces().DestroyAll(ctx, options.Namespace); err != nil {
 					return err
 				}
-				if err := okClient.Stream().DestroyAllLogs(ctx, options.Namespace); err != nil {
-					oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
-					oktetoLog.Infof("destroy all logs cannot be streamed due to connectivity issues: %v", err)
+
+				stop := make(chan os.Signal, 1)
+				signal.Notify(stop, os.Interrupt)
+				exit := make(chan error, 1)
+				go func() {
+					err := okClient.Stream().DestroyAllLogs(ctx, options.Namespace)
+					if err != nil {
+						oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
+						oktetoLog.Infof("destroy all logs cannot be streamed due to connectivity issues: %v", err)
+					}
+					exit <- err
+				}()
+				select {
+				case <-stop:
+					oktetoLog.Infof("CTRL+C received, exit")
+					return nil
+				case err := <-exit:
+					return err
 				}
-				return nil
 			}
 
 			c := &destroyCommand{
