@@ -59,14 +59,14 @@ func requestWithRetry(c *http.Client, url string) (*http.Response, error) {
 		}
 
 		if resp.StatusCode != http.StatusInternalServerError {
-			return nil, fmt.Errorf("error retrieving logs")
+			return nil, fmt.Errorf("response from request: %s", resp.Status)
 		}
 
 		if attempts >= maxRetryAttempts {
 			return nil, fmt.Errorf("server disconnected, maxRetries reached")
 		}
 
-		oktetoLog.Warning("sse client not reachable, waiting to reconnect...")
+		oktetoLog.Warning("stream client not reachable, waiting to reconnect...")
 		delay := nextRetrySchedule(attempts)
 		time.Sleep(delay)
 	}
