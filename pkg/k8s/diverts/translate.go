@@ -14,6 +14,7 @@
 package diverts
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -23,7 +24,13 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
+
+type portMapping struct {
+	ProxyPort          int32 `json:"proxy_port,omitempty" yaml:"proxy_port,omitempty"`
+	OriginalTargetPort int32 `json:"original_target_port,omitempty" yaml:"original_target_port,omitempty"`
+}
 
 func translateIngress(m *model.Manifest, in *networkingv1.Ingress) *networkingv1.Ingress {
 	result := &networkingv1.Ingress{
@@ -50,7 +57,7 @@ func translateIngress(m *model.Manifest, in *networkingv1.Ingress) *networkingv1
 	return result
 }
 
-func translateService(m *model.Manifest, s *apiv1.Service) *apiv1.Service {
+func translateService(m *model.Manifest, s *apiv1.Service) (*apiv1.Service, error) {
 	result := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        s.Name,
@@ -68,7 +75,21 @@ func translateService(m *model.Manifest, s *apiv1.Service) *apiv1.Service {
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
-	return result
+
+	if v := result.Annotations[model.OktetoDivertServiceAnnotation]; v != "" {
+		divertMapping := portMapping{}
+		if err := json.Unmarshal([]byte(v), &divertMapping); err != nil {
+			return nil, err
+		}
+		for i := range result.Spec.Ports {
+			if result.Spec.Ports[i].TargetPort.IntVal == divertMapping.ProxyPort {
+				result.Spec.Ports[i].TargetPort = intstr.IntOrString{IntVal: divertMapping.OriginalTargetPort}
+			}
+		}
+		delete(result.Annotations, model.OktetoDivertServiceAnnotation)
+	}
+
+	return result, nil
 }
 
 func translateEndpoints(m *model.Manifest, s *apiv1.Service) *apiv1.Endpoints {

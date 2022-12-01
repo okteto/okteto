@@ -71,7 +71,10 @@ func divertService(ctx context.Context, m *model.Manifest, name string, c kubern
 		if !oktetoErrors.IsNotFound(err) {
 			return err
 		}
-		s = translateService(m, from)
+		s, err = translateService(m, from)
+		if err != nil {
+			return err
+		}
 		if _, err := c.CoreV1().Services(m.Namespace).Create(ctx, s, metav1.CreateOptions{}); err != nil {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
@@ -84,7 +87,10 @@ func divertService(ctx context.Context, m *model.Manifest, name string, c kubern
 		return nil
 	}
 
-	s = translateService(m, from)
+	s, err = translateService(m, from)
+	if err != nil {
+		return err
+	}
 	if _, err := c.CoreV1().Services(m.Namespace).Update(ctx, s, metav1.UpdateOptions{}); err != nil {
 		return err
 	}
