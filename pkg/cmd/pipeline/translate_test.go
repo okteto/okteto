@@ -72,8 +72,6 @@ func Test_translateConfigMap(t *testing.T) {
 
 			assert.Nil(t, err)
 			assert.Equal(t, cfg.Data[statusField], tt.status)
-
-			assert.NotNil(t, cfg.Annotations[model.LastUpdatedAnnotation])
 		})
 	}
 }
@@ -93,9 +91,6 @@ func Test_AddDevAnnotations(t *testing.T) {
 	manifest := &model.Manifest{
 		Namespace: "namespace",
 		Dev: model.ManifestDevs{
-			"not-found-deployment": &model.Dev{
-				Name: "not-found-deployment",
-			},
 			"deployment": &model.Dev{
 				Name: "deployment",
 			},

@@ -23,7 +23,6 @@ import (
 	"math"
 	"os"
 	"strings"
-	"time"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
@@ -175,9 +174,6 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: data.Namespace,
 			Name:      TranslatePipelineName(data.Name),
-			Annotations: map[string]string{
-				model.LastUpdatedAnnotation: time.Now().UTC().Format(model.TimeFormat),
-			},
 			Labels: map[string]string{
 				model.GitDeployLabel: "true",
 			},
@@ -203,11 +199,6 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 }
 
 func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
-	if cmap.Annotations == nil {
-		cmap.Annotations = map[string]string{}
-	}
-	cmap.Annotations[model.LastUpdatedAnnotation] = time.Now().UTC().Format(model.TimeFormat)
-
 	actionName := os.Getenv(model.OktetoActionNameEnvVar)
 	if actionName == "" {
 		actionName = actionDefaultName

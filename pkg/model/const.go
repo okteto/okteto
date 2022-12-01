@@ -52,9 +52,6 @@ const (
 	// LastBuiltAnnotation indicates the timestamp of an operation
 	LastBuiltAnnotation = "dev.okteto.com/last-built"
 
-	// LastUpdatedAnnotation indicates update timestamp
-	LastUpdatedAnnotation = "dev.okteto.com/last-updated"
-
 	// TranslationAnnotation sets the translation rules
 	TranslationAnnotation = "dev.okteto.com/translation"
 
