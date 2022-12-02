@@ -57,6 +57,8 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 			deployOptions.Manifest.Name = deployOptions.Name
 		}
 		if deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection != nil && deployOptions.Manifest.Deploy.ComposeSection.Stack != nil {
+			// when deploy options has name, stack name is overriden
+			// this name might not be sanitized
 			deployOptions.Manifest.Deploy.ComposeSection.Stack.Name = deployOptions.Name
 		}
 	}

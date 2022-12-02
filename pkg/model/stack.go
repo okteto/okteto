@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	yaml "gopkg.in/yaml.v2"
@@ -491,12 +492,14 @@ func validateDependsOn(s *Stack) error {
 
 // GetLabelSelector returns the label selector for the stack name
 func (s *Stack) GetLabelSelector() string {
-	return fmt.Sprintf("%s=%s", StackNameLabel, s.Name)
+	// we need to sanitize the stack name in case this is overriden by the deploy options name
+	return fmt.Sprintf("%s=%s", StackNameLabel, format.ResourceK8sMetaString(s.Name))
 }
 
 // GetStackConfigMapName returns the label selector for the stack name
 func GetStackConfigMapName(stackName string) string {
-	return fmt.Sprintf("okteto-%s", stackName)
+	// we need to sanitize the stack name in case this is overriden by the deploy options name
+	return fmt.Sprintf("okteto-%s", format.ResourceK8sMetaString(stackName))
 }
 
 func IsPortInService(port int32, ports []Port) bool {
