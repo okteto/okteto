@@ -43,12 +43,69 @@ var (
 deploy:
   - kubectl apply -f k8s.yml
 `
+	oktetoManifestContentWithCache = `build:
+  app:
+    context: app
+	export-image: okteto.dev/app:dev
+	cache_from: okteto.dev/app:dev
+	image: okteto.dev/app:dev
+deploy:
+  - kubectl apply -f k8s.yml
+`
 	oktetoManifestWithDestroyContent = `build:
 app:
   context: app
 deploy:
 - okteto destroy
 - kubectl apply -f k8s.yml
+`
+
+	appDockerfileWithCache = `FROM python:alpine
+EXPOSE 2931
+RUN --mount=type=cache,target=/root/.cache echo hola`
+	k8sManifestTemplateWithCache = `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: e2etest
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: e2etest
+  template:
+    metadata:
+      labels:
+        app: e2etest
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+      - name: test
+        image: %s
+        ports:
+        - containerPort: 8080
+        workingDir: /usr/src/app
+        env:
+          - name: VAR
+            value: value1
+        command:
+            - sh
+            - -c
+            - "echo -n $VAR > var.html && python -m http.server 8080"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: e2etest
+  annotations:
+    dev.okteto.com/auto-ingress: "true"
+spec:
+  type: ClusterIP
+  ports:
+  - name: e2etest
+    port: 8080
+  selector:
+    app: e2etest
 `
 )
 
@@ -240,12 +297,74 @@ func TestDeployOktetoManifestWithDestroy(t *testing.T) {
 	require.True(t, k8sErrors.IsNotFound(err))
 }
 
+// TestDeployOktetoManifestExportCache tests the following scenario:
+// - Deploying a okteto manifest locally with a build that has a export cache
+func TestDeployOktetoManifestExportCache(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+
+	testNamespace := integration.GetTestNamespace("TestDeployManifestV2", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+
+	require.NoError(t, createOktetoManifestWithCache(dir))
+	require.NoError(t, createAppDockerfileWithCache(dir))
+	require.NoError(t, createK8sManifestWithCache(dir, testNamespace))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	// Test that endpoint works
+	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
+
+	// Test that image has been built
+
+	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
+	require.NotEmpty(t, getImageWithSHA(appImageDev))
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	_, err = integration.GetService(context.Background(), testNamespace, "e2etest", c)
+	require.True(t, k8sErrors.IsNotFound(err))
+}
+
 func isImageBuilt(image string) bool {
 	reg := registry.NewOktetoRegistry()
 	if _, err := reg.GetImageTagWithDigest(image); err == nil {
 		return true
 	}
 	return false
+}
+
+func createOktetoManifestWithCache(dir string) error {
+	dockerfilePath := filepath.Join(dir, oktetoManifestName)
+	dockerfileContent := []byte(oktetoManifestContent)
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
+		return err
+	}
+	return nil
 }
 
 func createOktetoManifest(dir string) error {
@@ -268,6 +387,31 @@ func expectImageFoundSkippingBuild(output string) error {
 func expectForceBuild(output string) error {
 	if ok := strings.Contains(output, "force build from manifest definition"); !ok {
 		return errors.New("expected force build from manifest definition")
+	}
+	return nil
+}
+
+func createK8sManifestWithCache(dir, ns string) error {
+	dockerfilePath := filepath.Join(dir, k8sManifestName)
+	appImageDev := fmt.Sprintf("%s/%s/app:dev", okteto.Context().Registry, ns, filepath.Base(dir))
+
+	fmt.Sprintf(k8sManifestTemplateWithCache, appImageDev)
+	dockerfileContent := []byte(k8sManifestTemplateWithCache)
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createAppDockerfileWithCache(dir string) error {
+	if err := os.Mkdir(filepath.Join(dir, "app"), 0700); err != nil {
+		return err
+	}
+
+	appDockerfilePath := filepath.Join(dir, "app", "Dockerfile")
+	appDockerfileContent := []byte(appDockerfileWithCache)
+	if err := os.WriteFile(appDockerfilePath, appDockerfileContent, 0600); err != nil {
+		return err
 	}
 	return nil
 }
