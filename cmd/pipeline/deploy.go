@@ -196,7 +196,7 @@ func getPipelineName(repository string) string {
 
 func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration) error {
 	// wait to Action be progressing
-	if err := pc.okClient.Pipeline().WaitForActionToProgress(ctx, name, namespace, actionName, timeout); err != nil {
+	if err := pc.okClient.Pipeline().WaitForActionProgressing(ctx, name, namespace, actionName, timeout); err != nil {
 		return err
 	}
 

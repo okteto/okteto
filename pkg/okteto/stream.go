@@ -41,21 +41,33 @@ func newStreamClient(httpClient *http.Client) *streamClient {
 
 type pipelineLogFormat oktetoLog.JSONLogFormat
 
-// StreamPipelineLogs retrieves logs from the pipeline provided and prints them, returns error
+// PipelineLogs retrieves logs from the pipeline provided and prints them, returns error
 func (c *streamClient) PipelineLogs(ctx context.Context, name, namespace, actionName string) error {
 	streamURL := fmt.Sprintf(gitDeployUrlTemplate, Context().Name, namespace, name, actionName)
 	url, err := url.Parse(streamURL)
 	if err != nil {
 		return err
 	}
-	return stream.GetLogsFromURL(ctx, c.client, url.String(), printPipelineLog)
+	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerPipelineLogLine)
 }
 
-// printPipelineLog prints a line with the Message unmarshalled from line
+// handlerPipelineLog prints a line with the Message unmarshalled from line
 // returns true when stream has to stop
-func printPipelineLog(line string) bool {
+func handlerPipelineLogLine(line string) bool {
 	pipelineLogList := []pipelineLogFormat{}
-	json.Unmarshal([]byte(line), &pipelineLogList)
+	if err := json.Unmarshal([]byte(line), &pipelineLogList); err != nil {
+		// if not slice, try to unmarshall to log format
+		pLog := pipelineLogFormat{}
+		if err := json.Unmarshal([]byte(line), &pLog); err != nil {
+			oktetoLog.Infof("error unmarshalling pipelineLog: %v", err)
+		}
+		// stop when the event log is in stage done and message is EOF
+		if pLog.Stage == "done" && pLog.Message == "EOF" {
+			return true
+		}
+		oktetoLog.Println(pLog.Message)
+		return false
+	}
 	for _, pLog := range pipelineLogList {
 		// stop when the event log is in stage done and message is EOF
 		if pLog.Stage == "done" && pLog.Message == "EOF" {
@@ -63,13 +75,5 @@ func printPipelineLog(line string) bool {
 		}
 		oktetoLog.Println(pLog.Message)
 	}
-
-	pLog := pipelineLogFormat{}
-	json.Unmarshal([]byte(line), &pLog)
-	// stop when the event log is in stage done and message is EOF
-	if pLog.Stage == "done" && pLog.Message == "EOF" {
-		return true
-	}
-	oktetoLog.Println(pLog.Message)
 	return false
 }

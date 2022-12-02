@@ -69,7 +69,7 @@ func (*FakePipelineClient) GetByName(_ context.Context, _, _ string) (*types.Git
 	return nil, nil
 }
 
-// WaitForActionToProgress waits for a pipeline to finish
-func (fc *FakePipelineClient) WaitForActionToProgress(_ context.Context, _, _, _ string, _ time.Duration) error {
+// WaitForActionProgressing waits for a pipeline to start progressing
+func (fc *FakePipelineClient) WaitForActionProgressing(_ context.Context, _, _, _ string, _ time.Duration) error {
 	return fc.responses.WaitErr
 }

@@ -67,7 +67,7 @@ func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName
 	}
 }
 
-func (c *pipelineClient) WaitForActionToProgress(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error {
+func (c *pipelineClient) WaitForActionProgressing(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error {
 	t := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 

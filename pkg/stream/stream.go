@@ -72,10 +72,13 @@ func requestWithRetry(c *http.Client, url string) (*http.Response, error) {
 	}
 }
 
-// printFn represents the function that prints the log message, returns true when is "done" message
-type printFn func(line string) bool
+// handleLineFn represents the function that prints the log message, returns true when is "done" message
+type handleLineFn func(line string) bool
 
-func GetLogsFromURL(ctx context.Context, c *http.Client, url string, print printFn) error {
+// GetLogsFromURL makes a request to the url provided and reads the content of the body
+// the client will try to retry connection if fails
+// the handler will handle the content of the streaming events coming from the request body
+func GetLogsFromURL(ctx context.Context, c *http.Client, url string, handler handleLineFn) error {
 	resp, err := requestWithRetry(c, url)
 	if err != nil {
 		return err
@@ -96,7 +99,7 @@ func GetLogsFromURL(ctx context.Context, c *http.Client, url string, print print
 				if data == dataPing {
 					continue
 				}
-				done = print(data)
+				done = handler(data)
 			}
 		}
 	}
