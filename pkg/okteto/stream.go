@@ -91,13 +91,25 @@ func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string) err
 	if err != nil {
 		return err
 	}
-	return stream.GetLogsFromURL(ctx, c.client, url.String(), printDestroyAllLog)
+	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerDestroyAllLog)
 }
 
-// printDestroyAllLog prints a line with the Message unmarshalled from line
-func printDestroyAllLog(line string) bool {
+// handlerDestroyAllLog prints a line with the Message unmarshalled from line
+func handlerDestroyAllLog(line string) bool {
 	destroyAllLogList := []destroyAllLogFormat{}
-	json.Unmarshal([]byte(line), &destroyAllLogList)
+	if err := json.Unmarshal([]byte(line), &destroyAllLogList); err != nil {
+		dLog := destroyAllLogFormat{}
+		if err := json.Unmarshal([]byte(line), &dLog); err != nil {
+			oktetoLog.Infof("error unmarshalling destroyAllLogFormat: %v", err)
+			return false
+		}
+		// skip when the event log is in stage done and message is EOF
+		if dLog.Line == "Done" {
+			return true
+		}
+		oktetoLog.Println(dLog.Line)
+		return false
+	}
 	for _, dLog := range destroyAllLogList {
 		// skip when the event log is in stage done and message is EOF
 		if dLog.Line == "Done" {
@@ -105,13 +117,5 @@ func printDestroyAllLog(line string) bool {
 		}
 		oktetoLog.Println(dLog.Line)
 	}
-
-	dLog := destroyAllLogFormat{}
-	json.Unmarshal([]byte(line), &dLog)
-	// skip when the event log is in stage done and message is EOF
-	if dLog.Line == "Done" {
-		return true
-	}
-	oktetoLog.Println(dLog.Line)
 	return false
 }
