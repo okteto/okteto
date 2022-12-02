@@ -35,6 +35,7 @@ type DeployOptions struct {
 	Namespace        string
 	OktetoHome       string
 	Token            string
+	Name             string
 }
 
 // DestroyOptions defines the options that can be added to a deploy command
@@ -129,6 +130,9 @@ func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 	}
 	if deployOptions.LogOutput != "" {
 		cmd.Args = append(cmd.Args, "--log-output", deployOptions.LogOutput)
+	}
+	if deployOptions.Name != "" {
+		cmd.Args = append(cmd.Args, "--name", deployOptions.Name)
 	}
 	cmd.Env = os.Environ()
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
