@@ -174,10 +174,12 @@ func (c *namespaceClient) DestroyAll(ctx context.Context, namespace string) erro
 	var mutation struct {
 		Space struct {
 			Id graphql.String
-		} `graphql:"destroyAllInSpace(id: $id)"`
+		} `graphql:"destroyAllInSpace(id: $id, includeVolumes: $includeVolumes)"`
 	}
+	// includingVolumes so everything is cleaned up by default with this cmd
 	variables := map[string]interface{}{
-		"id": graphql.String(namespace),
+		"id":             graphql.String(namespace),
+		"includeVolumes": graphql.Boolean(true),
 	}
 	err := mutate(ctx, &mutation, variables, c.client)
 	if err != nil {
