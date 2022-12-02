@@ -409,7 +409,7 @@ func (svc *Service) ToDev(svcName string) (*Dev, error) {
 }
 
 func (s *Stack) Validate() error {
-	// in case name is comming from option "name" at deploy this could not be sanitized
+	// in case name is coming from option "name" at deploy this could not be sanitized
 	if err := validateStackName(format.ResourceK8sMetaString(s.Name)); err != nil {
 		return fmt.Errorf("Invalid compose name: %s", err)
 	}
@@ -494,13 +494,13 @@ func validateDependsOn(s *Stack) error {
 
 // GetLabelSelector returns the label selector for the stack name
 func (s *Stack) GetLabelSelector() string {
-	// we need to sanitize the stack name in case this is overriden by the deploy options name
+	// we need to sanitize the stack name in case this is overridden by the deploy options name
 	return fmt.Sprintf("%s=%s", StackNameLabel, format.ResourceK8sMetaString(s.Name))
 }
 
 // GetStackConfigMapName returns the label selector for the stack name
 func GetStackConfigMapName(stackName string) string {
-	// we need to sanitize the stack name in case this is overriden by the deploy options name
+	// we need to sanitize the stack name in case this is overridden by the deploy options name
 	return fmt.Sprintf("okteto-%s", format.ResourceK8sMetaString(stackName))
 }
 
