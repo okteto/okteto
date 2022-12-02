@@ -91,6 +91,7 @@ type destroyCommand struct {
 	secrets           secretHandler
 	k8sClientProvider okteto.K8sClientProvider
 	configMapHandler  configMapHandler
+	oktetoClient      *okteto.OktetoClient
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -163,39 +164,9 @@ func Destroy(ctx context.Context) *cobra.Command {
 				options.Namespace = okteto.Context().Namespace
 			}
 
-			// when option --all the cmd will destroy everything at the namespace and return
-			if options.DestroyAll {
-				if !okteto.Context().IsOkteto {
-					return errors.New("option `--all` is not available for non-Okteto clusters. Learn more: https://www.okteto.com/docs/self-hosted/")
-				}
-
-				okClient, err := okteto.NewOktetoClient()
-				if err != nil {
-					return err
-				}
-
-				if err := okClient.Namespaces().DestroyAll(ctx, options.Namespace); err != nil {
-					return err
-				}
-
-				stop := make(chan os.Signal, 1)
-				signal.Notify(stop, os.Interrupt)
-				exit := make(chan error, 1)
-				go func() {
-					err := okClient.Stream().DestroyAllLogs(ctx, options.Namespace)
-					if err != nil {
-						oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
-						oktetoLog.Infof("destroy all logs cannot be streamed due to connectivity issues: %v", err)
-					}
-					exit <- err
-				}()
-				select {
-				case <-stop:
-					oktetoLog.Infof("CTRL+C received, exit")
-					return nil
-				case err := <-exit:
-					return err
-				}
+			okClient, err := okteto.NewOktetoClient()
+			if err != nil {
+				return err
 			}
 
 			c := &destroyCommand{
@@ -206,6 +177,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				nsDestroyer:       namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProvider(),
+				oktetoClient:      okClient,
 			}
 
 			kubeconfigPath := getTempKubeConfigFile(name)
@@ -214,6 +186,14 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 			os.Setenv("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
+
+			// when option --all the cmd will destroy everything at the namespace and return
+			if options.DestroyAll {
+				if !okteto.Context().IsOkteto {
+					return errors.New("option `--all` is not available for non-Okteto clusters. Learn more: https://www.okteto.com/docs/self-hosted/")
+				}
+				return c.runDestroyAll(ctx, options)
+			}
 			err = c.runDestroy(ctx, options)
 			analytics.TrackDestroy(err == nil)
 			if err == nil {
@@ -471,4 +451,32 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 func getTempKubeConfigFile(name string) string {
 	tempKubeconfigFileName := fmt.Sprintf("kubeconfig-destroy-%s-%d", name, time.Now().UnixMilli())
 	return filepath.Join(config.GetOktetoHome(), tempKubeconfigFileName)
+}
+
+func (dc *destroyCommand) runDestroyAll(ctx context.Context, opts *Options) error {
+	if err := dc.oktetoClient.Namespaces().DestroyAll(ctx, opts.Namespace); err != nil {
+		return err
+	}
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+	go func() {
+		err := dc.oktetoClient.Stream().DestroyAllLogs(ctx, opts.Namespace)
+		if err != nil {
+			oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
+			oktetoLog.Infof("destroy all logs cannot be streamed due to connectivity issues: %v", err)
+		}
+		exit <- err
+	}()
+	select {
+	case <-stop:
+		oktetoLog.Infof("CTRL+C received, exit")
+		return nil
+	case err := <-exit:
+		if err == nil {
+			oktetoLog.Success("Successfully destroyed all at namespace %s", opts.Namespace)
+		}
+		return err
+	}
 }
