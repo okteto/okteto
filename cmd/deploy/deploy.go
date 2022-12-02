@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -306,7 +307,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
-	dc.Proxy.SetName(deployOptions.Name)
+	dc.Proxy.SetName(format.ResourceK8sMetaString(deployOptions.Name))
 	// don't divert if current namespace is the diverted namespace
 	if deployOptions.Manifest.Deploy.Divert != nil {
 		if !okteto.IsOkteto() {
@@ -316,7 +317,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			dc.Proxy.SetDivert(deployOptions.Manifest.Deploy.Divert.Namespace)
 		}
 	}
-	oktetoLog.SetStage("")
 
 	dc.PipelineType = deployOptions.Manifest.Type
 
@@ -325,6 +325,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
 	}
+
+	oktetoLog.SetStage("")
 
 	// starting PROXY
 	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
@@ -338,6 +340,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	// TODO: take this out to a new function deploy dependencies
 	for depName, dep := range deployOptions.Manifest.Dependencies {
 		oktetoLog.Information("Deploying dependency '%s'", depName)
+		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
 		dep.Variables = append(dep.Variables, model.EnvVar{
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
@@ -365,6 +368,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return err
 		}
 	}
+	oktetoLog.SetStage("")
 
 	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
 		return updateConfigMapStatusError(ctx, cfg, c, data, err)
@@ -400,7 +404,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.DisableMasking()
 	oktetoLog.SetStage("done")
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
-	oktetoLog.SetStage("")
 
 	if err != nil {
 		if err == oktetoErrors.ErrIntSig {

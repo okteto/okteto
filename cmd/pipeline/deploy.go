@@ -216,7 +216,8 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 		defer wg.Done()
 		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name)
 		if err != nil {
-			oktetoLog.Warning("there was an error streaming pipeline logs: %v", err)
+			oktetoLog.Warning("pipeline logs cannot be streamed due to connectivity issues")
+			oktetoLog.Infof("pipeline logs cannot be streamed due to connectivity issues: %v", err)
 		}
 	}(&wg)
 

@@ -70,7 +70,7 @@ devs:
 
 	expectedCfg := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "okteto-git-Name",
+			Name:      "okteto-git-name",
 			Namespace: "Namespace",
 			Labels:    map[string]string{"dev.okteto.com/git-deploy": "true"},
 		},

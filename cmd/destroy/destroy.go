@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/format"
 
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -263,10 +264,13 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 
 	if opts.DestroyDependencies {
 		for depName, depInfo := range manifest.Dependencies {
+			oktetoLog.SetStage(fmt.Sprintf("Destroying dependency '%s'", depName))
+
 			namespace := okteto.Context().Namespace
 			if depInfo.Namespace != "" {
 				namespace = depInfo.Namespace
 			}
+
 			destOpts := &pipelineCMD.DestroyOptions{
 				Name:           depName,
 				DestroyVolumes: opts.DestroyVolumes,
@@ -286,6 +290,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 				return err
 			}
 		}
+		oktetoLog.SetStage("")
 	}
 
 	var commandErr error
@@ -339,7 +344,7 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	deployedByLs, err := labels.NewRequirement(
 		model.DeployedByLabel,
 		selection.Equals,
-		[]string{opts.Name},
+		[]string{format.ResourceK8sMetaString(opts.Name)},
 	)
 	if err != nil {
 		if err := dc.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {

@@ -90,6 +90,9 @@ Or a Kubernetes context:
 
 func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	ctxStore := okteto.ContextStore()
+
+	// We have to maintain this order to not break some commands
+	// See https://github.com/okteto/okteto/issues/3247 for more information
 	ctxOptions.initFromContext()
 	ctxOptions.initFromEnvVars()
 

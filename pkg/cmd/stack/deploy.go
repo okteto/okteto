@@ -25,6 +25,7 @@ import (
 	"time"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	forwardK8s "github.com/okteto/okteto/pkg/k8s/forward"
@@ -611,7 +612,7 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
 			d.Labels[model.DeployedByLabel] = v
 			if old.Labels[model.StackNameLabel] == "okteto" {
-				d.Labels[model.DeployedByLabel] = s.Name
+				d.Labels[model.DeployedByLabel] = format.ResourceK8sMetaString(s.Name)
 			}
 		}
 	}
@@ -658,7 +659,7 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 	if v, ok := old.Labels[model.DeployedByLabel]; ok {
 		sfs.Labels[model.DeployedByLabel] = v
 		if old.Labels[model.StackNameLabel] == "okteto" {
-			sfs.Labels[model.DeployedByLabel] = s.Name
+			sfs.Labels[model.DeployedByLabel] = format.ResourceK8sMetaString(s.Name)
 		}
 	}
 	if _, err := statefulsets.Deploy(ctx, sfs, c); err != nil {

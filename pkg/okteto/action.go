@@ -57,7 +57,7 @@ func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName
 			switch a.Status {
 			case "progressing", "queued":
 				continue
-			case "error":
+			case "error", "destroy-error":
 				oktetoLog.Infof("action '%s' failed", actionName)
 				return fmt.Errorf("pipeline '%s' failed", pipelineName)
 			default:

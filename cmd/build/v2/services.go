@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -107,15 +108,17 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 
 func getToBuildTag(manifestName, svcName string, b *model.BuildInfo) string {
 	targetRegistry := okteto.DevRegistry
+	// manifestName can be not sanitized when option name is used at deploy
+	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	switch {
 	case !okteto.IsOkteto():
 		return b.Image
 	case (shouldBuildFromDockerfile(b) && shouldAddVolumeMounts(b)) || shouldAddVolumeMounts(b):
-		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoImageTagWithVolumes)
+		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
 	case b.Image != "" && shouldBuildFromDockerfile(b):
 		return b.Image
 	case shouldBuildFromDockerfile(b):
-		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, manifestName, svcName, model.OktetoDefaultImageTag)
+		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 	case b.Image != "":
 		return b.Image
 	default:

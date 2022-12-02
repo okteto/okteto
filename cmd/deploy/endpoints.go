@@ -24,6 +24,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -138,7 +139,8 @@ func (dc *DeployCommand) getEndpoints(ctx context.Context, opts *EndpointsOption
 		defer oktetoLog.StopSpinner()
 	}
 
-	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, opts.Name)
+	sanitizedName := format.ResourceK8sMetaString(opts.Name)
+	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, sanitizedName)
 	iClient, err := dc.K8sClientProvider.GetIngressClient()
 	if err != nil {
 		return nil, err

@@ -159,7 +159,8 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 		defer wg.Done()
 		err := pw.okClient.Pipeline().StreamLogs(waitCtx, name, namespace, a.Name)
 		if err != nil {
-			oktetoLog.Warning("there was an error streaming preview logs: %v", err)
+			oktetoLog.Warning("preview logs cannot be streamed due to connectivity issues")
+			oktetoLog.Infof("preview logs cannot be streamed due to connectivity issues: %v", err)
 		}
 	}(&wg)
 

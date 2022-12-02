@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
@@ -37,7 +38,7 @@ func IsDeployed(ctx context.Context, name, namespace string, c kubernetes.Interf
 
 // ListDeployments list all the deployments created by the pipeline
 func ListDeployments(ctx context.Context, name, ns string, c kubernetes.Interface) ([]v1.Deployment, error) {
-	labels := fmt.Sprintf("%s=%s", model.DeployedByLabel, name)
+	labels := fmt.Sprintf("%s=%s", model.DeployedByLabel, format.ResourceK8sMetaString(name))
 	dList, err := deployments.List(ctx, ns, labels, c)
 	if err != nil {
 		return nil, err
@@ -47,7 +48,7 @@ func ListDeployments(ctx context.Context, name, ns string, c kubernetes.Interfac
 
 // ListStatefulsets list all the sfs created by the pipeline
 func ListStatefulsets(ctx context.Context, name, ns string, c kubernetes.Interface) ([]v1.StatefulSet, error) {
-	labels := fmt.Sprintf("%s=%s", model.DeployedByLabel, name)
+	labels := fmt.Sprintf("%s=%s", model.DeployedByLabel, format.ResourceK8sMetaString(name))
 	sfsList, err := statefulsets.List(ctx, ns, labels, c)
 	if err != nil {
 		return nil, err
@@ -57,7 +58,7 @@ func ListStatefulsets(ctx context.Context, name, ns string, c kubernetes.Interfa
 
 // HasDeployedSomething checks if the pipeline has deployed any deployment/statefulset/job
 func HasDeployedSomething(ctx context.Context, name, ns string, c kubernetes.Interface) (bool, error) {
-	labels := fmt.Sprintf("%s=%s", model.DeployedByLabel, name)
+	labels := fmt.Sprintf("%s=%s", model.DeployedByLabel, format.ResourceK8sMetaString(name))
 	dList, err := deployments.List(ctx, ns, labels, c)
 	if err != nil {
 		return false, err
