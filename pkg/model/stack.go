@@ -276,6 +276,7 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 	if actualStackName == "" {
 		nameEnvVar := os.Getenv(constants.OktetoNameEnvVar)
 		if nameEnvVar != "" {
+			// this name could be not sanitized when running at pipeline installer
 			return nameEnvVar, nil
 		}
 		name, err := GetValidNameFromGitRepo(filepath.Dir(stackPath))
@@ -408,7 +409,8 @@ func (svc *Service) ToDev(svcName string) (*Dev, error) {
 }
 
 func (s *Stack) Validate() error {
-	if err := validateStackName(s.Name); err != nil {
+	// in case name is comming from option "name" at deploy this could not be sanitized
+	if err := validateStackName(format.ResourceK8sMetaString(s.Name)); err != nil {
 		return fmt.Errorf("Invalid compose name: %s", err)
 	}
 	if len(s.Services) == 0 {
