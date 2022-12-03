@@ -194,6 +194,9 @@ func translateDivertCRD(m *model.Manifest) *Divert {
 			Annotations: map[string]string{model.OktetoAutoCreateAnnotation: "true"},
 		},
 		Spec: DivertSpec{
+			Ingress: IngressDivertSpec{
+				Value: m.Namespace,
+			},
 			FromService: ServiceDivertSpec{
 				Name:      m.Deploy.Divert.Service,
 				Namespace: m.Deploy.Divert.Namespace,

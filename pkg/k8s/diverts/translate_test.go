@@ -427,6 +427,9 @@ func Test_translateDivertCRD(t *testing.T) {
 			},
 		},
 		Spec: DivertSpec{
+			Ingress: IngressDivertSpec{
+				Value: "cindy",
+			},
 			FromService: ServiceDivertSpec{
 				Name:      "service",
 				Namespace: "staging",
