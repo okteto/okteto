@@ -139,14 +139,13 @@ func (dev *Dev) getSourceSubPath(path string) string {
 		dev.parentSyncFolder = "."
 	}
 	rel, err := filepath.Rel(dev.parentSyncFolder, filepath.ToSlash(sourceSubPath))
+	if err != nil {
+		oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
+	}
 	if filepath.IsAbs(sourceSubPath) {
-		if err != nil || strings.HasPrefix(rel, "..") {
-			if err != nil {
-				oktetoLog.Debugf("error on getSourceSubPath of '%s': %s", path, err.Error())
-			}
+		if strings.HasPrefix(rel, "..") {
 			if filepath.IsAbs(path) {
 				oktetoLog.Info("could not retrieve subpath")
-				path = filepath.Base(path)
 			} else {
 				p, err := filepath.Abs(path)
 				if err != nil {
