@@ -29,17 +29,17 @@ import (
 
 // DivertCache keep information about k8s service, ingress and endpoints to reduce k8s calls for diverting a namespace
 type DivertCache struct {
-	//DivertIngresses ingress cache for diverted namespace
+	// DivertIngresses ingress cache for diverted namespace
 	DivertIngresses map[string]*networkingv1.Ingress
-	//DivertServices service cache for diverted namespace
+	// DivertServices service cache for diverted namespace
 	DivertServices map[string]*apiv1.Service
-	//DivertEndpoints endpoints cache for diverted namespace
+	// DivertEndpoints endpoints cache for diverted namespace
 	DivertEndpoints map[string]*apiv1.Endpoints
-	//DivertIngresses ingress cache for developer namespace
+	// DivertIngresses ingress cache for developer namespace
 	DeveloperIngresses map[string]*networkingv1.Ingress
-	//DivertServices service cache for developer namespace
+	// DivertServices service cache for developer namespace
 	DeveloperServices map[string]*apiv1.Service
-	//DivertEndpoints endpoints cache for developer namespace
+	// DivertEndpoints endpoints cache for developer namespace
 	DeveloperEndpoints map[string]*apiv1.Endpoints
 }
 
@@ -52,7 +52,7 @@ func InitDivertCache(ctx context.Context, m *model.Manifest, c kubernetes.Interf
 		DeveloperServices:  map[string]*apiv1.Service{},
 		DeveloperEndpoints: map[string]*apiv1.Endpoints{},
 	}
-	//Init ingress cache for diverted namespace
+	// Init ingress cache for diverted namespace
 	iList, err := c.NetworkingV1().Ingresses(m.Deploy.Divert.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -61,7 +61,7 @@ func InitDivertCache(ctx context.Context, m *model.Manifest, c kubernetes.Interf
 		result.DivertIngresses[iList.Items[i].Name] = &iList.Items[i]
 	}
 
-	//Service cache for diverted namespace
+	// Service cache for diverted namespace
 	sList, err := c.CoreV1().Services(m.Deploy.Divert.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func InitDivertCache(ctx context.Context, m *model.Manifest, c kubernetes.Interf
 		result.DivertServices[sList.Items[i].Name] = &sList.Items[i]
 	}
 
-	//Endpoints cache for diverted namespace
+	// Endpoints cache for diverted namespace
 	eList, err := c.CoreV1().Endpoints(m.Deploy.Divert.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -79,7 +79,7 @@ func InitDivertCache(ctx context.Context, m *model.Manifest, c kubernetes.Interf
 		result.DivertEndpoints[eList.Items[i].Name] = &eList.Items[i]
 	}
 
-	//Ingress cache for developer namespace
+	// Ingress cache for developer namespace
 	iList, err = c.NetworkingV1().Ingresses(m.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func InitDivertCache(ctx context.Context, m *model.Manifest, c kubernetes.Interf
 		result.DeveloperIngresses[iList.Items[i].Name] = &iList.Items[i]
 	}
 
-	//Service cache for developer namespace
+	// Service cache for developer namespace
 	sList, err = c.CoreV1().Services(m.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func InitDivertCache(ctx context.Context, m *model.Manifest, c kubernetes.Interf
 		result.DeveloperServices[sList.Items[i].Name] = &sList.Items[i]
 	}
 
-	//Endpoints cache for developer namespace
+	// Endpoints cache for developer namespace
 	eList, err = c.CoreV1().Endpoints(m.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err

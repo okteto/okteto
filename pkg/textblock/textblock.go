@@ -14,8 +14,8 @@ type TextBlock struct {
 // TextBlock instance with them.
 func NewTextBlock(start, end string) *TextBlock {
 	return &TextBlock{
-		strings.Replace(start, "\n", "", -1),
-		strings.Replace(end, "\n", "", -1),
+		strings.ReplaceAll(start, "\n", ""),
+		strings.ReplaceAll(end, "\n", ""),
 	}
 }
 
