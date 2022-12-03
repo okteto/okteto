@@ -275,4 +275,10 @@ const (
 
 	// OktetoImageTagWithVolumes is the tag assigned to an image with volume mounts
 	OktetoImageTagWithVolumes = "okteto-with-volume-mounts"
+
+	// OktetoDivertServiceAnnotation service annotation used by divert to keep track of port mappings
+	OktetoDivertServiceAnnotation = "divert.okteto.com/modification"
+
+	// OktetoDivertInjectSidecarLabel pod label used by divert to inject envoy sidecar
+	OktetoDivertInjectSidecarLabel = "divert.okteto.com/inject-sidecar"
 )
