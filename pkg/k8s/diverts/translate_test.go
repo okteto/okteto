@@ -14,7 +14,6 @@
 package diverts
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -51,14 +50,17 @@ func Test_translateIngress(t *testing.T) {
 	}
 	expected := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "name",
+			Name:      "name",
+			Namespace: "cindy",
 			Labels: map[string]string{
 				model.DeployedByLabel: "test",
 				"l1":                  "v1",
 			},
 			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
-				"a1":                             "v1",
+				model.OktetoAutoCreateAnnotation:    "true",
+				"a1":                                "v1",
+				divertIngressInjectionAnnotation:    "cindy",
+				nginxConfigurationSnippetAnnotation: divertTextBlockParser.WriteBlock("proxy_set_header x-okteto-dvrt cindy;"),
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -84,8 +86,6 @@ func Test_translateIngress(t *testing.T) {
 		},
 	}
 	result := translateIngress(m, in)
-	fmt.Println(result)
-	fmt.Println(expected)
 	assert.True(t, reflect.DeepEqual(result, expected))
 }
 
@@ -102,12 +102,15 @@ func Test_translateEmptyIngress(t *testing.T) {
 	}
 	expected := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "name",
+			Name:      "name",
+			Namespace: "cindy",
 			Labels: map[string]string{
 				model.DeployedByLabel: "test",
 			},
 			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation: "true",
+				model.OktetoAutoCreateAnnotation:    "true",
+				divertIngressInjectionAnnotation:    "cindy",
+				nginxConfigurationSnippetAnnotation: divertTextBlockParser.WriteBlock("proxy_set_header x-okteto-dvrt cindy;"),
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -151,7 +154,8 @@ func Test_translateService(t *testing.T) {
 	}
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "name",
+			Name:      "name",
+			Namespace: "cindy",
 			Labels: map[string]string{
 				model.DeployedByLabel: "test",
 				"l1":                  "v1",
@@ -219,7 +223,8 @@ func Test_translateDivertedService(t *testing.T) {
 	}
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "name",
+			Name:      "name",
+			Namespace: "cindy",
 			Labels: map[string]string{
 				model.DeployedByLabel: "test",
 				"l1":                  "v1",
@@ -276,7 +281,8 @@ func Test_translateEmptyService(t *testing.T) {
 	}
 	expected := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "name",
+			Name:      "name",
+			Namespace: "cindy",
 			Labels: map[string]string{
 				model.DeployedByLabel: "test",
 			},
@@ -335,7 +341,8 @@ func Test_translateEndpoints(t *testing.T) {
 	}
 	expected := &apiv1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "name",
+			Name:      "name",
+			Namespace: "cindy",
 			Labels: map[string]string{
 				model.DeployedByLabel: "test",
 				"l1":                  "v1",
@@ -403,29 +410,23 @@ func Test_translateDivertCRD(t *testing.T) {
 			},
 		},
 	}
-	in := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ingress",
-			Namespace: "staging",
-		},
-	}
 	expected := &Divert{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Divert",
 			APIVersion: "weaver.okteto.com/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        "test-ingress",
-			Namespace:   "cindy",
-			Labels:      map[string]string{model.DeployedByLabel: "test"},
-			Annotations: map[string]string{model.OktetoAutoCreateAnnotation: "true"},
+			Name:      "test-service",
+			Namespace: "cindy",
+			Labels: map[string]string{
+				model.DeployedByLabel:    "test",
+				"dev.okteto.com/version": "0.1.9",
+			},
+			Annotations: map[string]string{
+				model.OktetoAutoCreateAnnotation: "true",
+			},
 		},
 		Spec: DivertSpec{
-			Ingress: IngressDivertSpec{
-				Name:      "ingress",
-				Namespace: "cindy",
-				Value:     "cindy",
-			},
 			FromService: ServiceDivertSpec{
 				Name:      "service",
 				Namespace: "staging",
@@ -442,6 +443,6 @@ func Test_translateDivertCRD(t *testing.T) {
 			},
 		},
 	}
-	result := translateDivertCRD(m, in)
+	result := translateDivertCRD(m)
 	assert.True(t, reflect.DeepEqual(result, expected))
 }

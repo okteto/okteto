@@ -16,19 +16,34 @@ package diverts
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/textblock"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-type portMapping struct {
+const (
+	nginxConfigurationSnippetAnnotation = "nginx.ingress.kubernetes.io/configuration-snippet"
+	divertIngressInjectionAnnotation    = "divert.okteto.com/injection"
+	divertTextBlockHeader               = "# ---- START DIVERT ----"
+	divertTextBlockFooter               = "# ---- END DIVERT ----"
+)
+
+var (
+	divertTextBlockParser = textblock.NewTextBlock(divertTextBlockHeader, divertTextBlockFooter)
+)
+
+// PortMapping represents the port mapping of a divert
+type PortMapping struct {
 	ProxyPort          int32 `json:"proxy_port,omitempty" yaml:"proxy_port,omitempty"`
+	OriginalPort       int32 `json:"original_port,omitempty" yaml:"original_port,omitempty"`
 	OriginalTargetPort int32 `json:"original_target_port,omitempty" yaml:"original_target_port,omitempty"`
 }
 
@@ -36,6 +51,7 @@ func translateIngress(m *model.Manifest, in *networkingv1.Ingress) *networkingv1
 	result := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        in.Name,
+			Namespace:   m.Namespace,
 			Labels:      in.Labels,
 			Annotations: in.Annotations,
 		},
@@ -45,6 +61,9 @@ func translateIngress(m *model.Manifest, in *networkingv1.Ingress) *networkingv1
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
+	result.Annotations[divertIngressInjectionAnnotation] = m.Namespace
+	result.Annotations[nginxConfigurationSnippetAnnotation] = divertTextBlockParser.WriteBlock(fmt.Sprintf("proxy_set_header x-okteto-dvrt %s;", m.Namespace))
+
 	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(m.Name))
 	for i := range result.Spec.Rules {
 		result.Spec.Rules[i].Host = strings.ReplaceAll(result.Spec.Rules[i].Host, in.Namespace, m.Namespace)
@@ -57,10 +76,21 @@ func translateIngress(m *model.Manifest, in *networkingv1.Ingress) *networkingv1
 	return result
 }
 
+func isEqualIngress(in1 *networkingv1.Ingress, in2 *networkingv1.Ingress) bool {
+	if in1.Annotations == nil {
+		in1.Annotations = map[string]string{}
+	}
+	if in2.Annotations == nil {
+		in2.Annotations = map[string]string{}
+	}
+	return reflect.DeepEqual(in1.Spec, in2.Spec) && (in1.Annotations[divertIngressInjectionAnnotation] == in2.Annotations[divertIngressInjectionAnnotation])
+}
+
 func translateService(m *model.Manifest, s *apiv1.Service) (*apiv1.Service, error) {
 	result := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        s.Name,
+			Namespace:   m.Namespace,
 			Labels:      s.Labels,
 			Annotations: s.Annotations,
 		},
@@ -77,7 +107,7 @@ func translateService(m *model.Manifest, s *apiv1.Service) (*apiv1.Service, erro
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
 
 	if v := result.Annotations[model.OktetoDivertServiceAnnotation]; v != "" {
-		divertMapping := portMapping{}
+		divertMapping := PortMapping{}
 		if err := json.Unmarshal([]byte(v), &divertMapping); err != nil {
 			return nil, err
 		}
@@ -92,10 +122,15 @@ func translateService(m *model.Manifest, s *apiv1.Service) (*apiv1.Service, erro
 	return result, nil
 }
 
+func isEqualService(s1 *apiv1.Service, s2 *apiv1.Service) bool {
+	return reflect.DeepEqual(s1.Spec, s2.Spec)
+}
+
 func translateEndpoints(m *model.Manifest, s *apiv1.Service) *apiv1.Endpoints {
 	result := &apiv1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        s.Name,
+			Namespace:   m.Namespace,
 			Labels:      s.Labels,
 			Annotations: s.Annotations,
 		},
@@ -139,24 +174,26 @@ func translateEndpoints(m *model.Manifest, s *apiv1.Service) *apiv1.Endpoints {
 	return result
 }
 
-func translateDivertCRD(m *model.Manifest, in *networkingv1.Ingress) *Divert {
+func isEqualEndpoints(e1 *apiv1.Endpoints, e2 *apiv1.Endpoints) bool {
+	return reflect.DeepEqual(e1.Subsets, e2.Subsets)
+}
+
+func translateDivertCRD(m *model.Manifest) *Divert {
 	result := &Divert{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Divert",
 			APIVersion: "weaver.okteto.com/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("%s-%s", m.Name, in.Name),
-			Namespace:   m.Namespace,
-			Labels:      map[string]string{model.DeployedByLabel: format.ResourceK8sMetaString(m.Name)},
+			Name:      fmt.Sprintf("%s-%s", m.Name, m.Deploy.Divert.Service),
+			Namespace: m.Namespace,
+			Labels: map[string]string{
+				model.DeployedByLabel:    format.ResourceK8sMetaString(m.Name),
+				"dev.okteto.com/version": "0.1.9",
+			},
 			Annotations: map[string]string{model.OktetoAutoCreateAnnotation: "true"},
 		},
 		Spec: DivertSpec{
-			Ingress: IngressDivertSpec{
-				Name:      in.Name,
-				Namespace: m.Namespace,
-				Value:     m.Namespace,
-			},
 			FromService: ServiceDivertSpec{
 				Name:      m.Deploy.Divert.Service,
 				Namespace: m.Deploy.Divert.Namespace,
