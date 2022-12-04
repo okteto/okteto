@@ -3,11 +3,11 @@ run:
   go: 1.18
 linters:
   disable:
-    - errcheck
     # TODO: enable when fixed
     - whitespace
     - staticcheck
   enable:
+    - errcheck
     - unparam
 # Enabled by your configuration linters:
 # deadcode: Finds unused code [fast: false, auto-fix: false]

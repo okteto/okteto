@@ -52,8 +52,9 @@ type Translation struct {
 }
 
 func (tr *Translation) translate() error {
-	tr.DevModeOff()
-
+	if err := tr.DevModeOff(); err != nil {
+		oktetoLog.Infof("failed to translate dev mode off: %s", err)
+	}
 	replicas := getPreviousAppReplicas(tr.App)
 	delete(tr.App.ObjectMeta().Annotations, model.StateBeforeSleepingAnnontation)
 
