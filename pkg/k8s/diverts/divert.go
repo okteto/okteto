@@ -122,8 +122,19 @@ func DivertIngress(ctx context.Context, m *model.Manifest, name string, cache *D
 			}
 			cache.DeveloperIngresses[name] = in
 		}
-	} else if in.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
-		updatedIn := translateIngress(m, cache.DivertIngresses[name])
+	} else {
+		updatedIn := in.DeepCopy()
+		if in.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
+			// ingress was created by divert
+			updatedIn = translateIngress(m, cache.DivertIngresses[name])
+		} else if in.Annotations[model.OktetoDivertIngressInjectionAnnotation] != m.Namespace {
+			// ingress wasnt created by divert, check header injection
+			if updatedIn.Annotations == nil {
+				updatedIn.Annotations = map[string]string{}
+			}
+			updatedIn.Annotations[model.OktetoDivertIngressInjectionAnnotation] = m.Namespace
+			updatedIn.Annotations[model.OktetoNginxConfigurationSnippetAnnotation] = divertTextBlockParser.WriteBlock(fmt.Sprintf("proxy_set_header x-okteto-dvrt %s;", m.Namespace))
+		}
 		if !isEqualIngress(in, updatedIn) {
 			oktetoLog.Infof("updating ingress %s/%s", updatedIn.Namespace, updatedIn.Name)
 			if _, err := c.NetworkingV1().Ingresses(m.Namespace).Update(ctx, updatedIn, metav1.UpdateOptions{}); err != nil {
