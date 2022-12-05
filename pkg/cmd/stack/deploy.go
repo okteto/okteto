@@ -16,7 +16,6 @@ package stack
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -29,7 +28,6 @@ import (
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
-	"github.com/okteto/okteto/pkg/k8s/diverts"
 	forwardK8s "github.com/okteto/okteto/pkg/k8s/forward"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/jobs"
@@ -43,7 +41,6 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -586,19 +583,7 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 	}
 
 	svcK8s.ObjectMeta.ResourceVersion = old.ObjectMeta.ResourceVersion
-	if old.Annotations[model.OktetoDivertServiceAnnotation] != "" {
-		svcK8s.Annotations[model.OktetoDivertServiceAnnotation] = old.Annotations[model.OktetoDivertServiceAnnotation]
-		divertMapping := diverts.PortMapping{}
-		if err := json.Unmarshal([]byte(old.Annotations[model.OktetoDivertServiceAnnotation]), &divertMapping); err != nil {
-			return err
-		}
-		for i := range svcK8s.Spec.Ports {
-			if svcK8s.Spec.Ports[i].Port == divertMapping.OriginalPort {
-				svcK8s.Spec.Ports[i].TargetPort = intstr.IntOrString{IntVal: divertMapping.ProxyPort}
-			}
-		}
-
-	}
+	applyDivertToService(svcK8s, old)
 	if err := services.Deploy(ctx, svcK8s, c); err != nil {
 		return err
 	}
@@ -631,9 +616,7 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 				d.Labels[model.DeployedByLabel] = format.ResourceK8sMetaString(s.Name)
 			}
 		}
-		if old.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] != "" {
-			d.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] = old.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel]
-		}
+		applyDivertToDeployment(d, old)
 	}
 
 	if !isNewDeployment && old.Labels[model.StackNameLabel] == "okteto" {
