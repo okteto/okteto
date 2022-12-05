@@ -57,10 +57,10 @@ func Test_translateIngress(t *testing.T) {
 				"l1":                  "v1",
 			},
 			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation:    "true",
-				"a1":                                "v1",
-				divertIngressInjectionAnnotation:    "cindy",
-				nginxConfigurationSnippetAnnotation: divertTextBlockParser.WriteBlock("proxy_set_header x-okteto-dvrt cindy;"),
+				model.OktetoAutoCreateAnnotation: "true",
+				"a1":                             "v1",
+				model.OktetoDivertIngressInjectionAnnotation:    "cindy",
+				model.OktetoNginxConfigurationSnippetAnnotation: divertTextBlockParser.WriteBlock("proxy_set_header x-okteto-dvrt cindy;"),
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -108,9 +108,9 @@ func Test_translateEmptyIngress(t *testing.T) {
 				model.DeployedByLabel: "test",
 			},
 			Annotations: map[string]string{
-				model.OktetoAutoCreateAnnotation:    "true",
-				divertIngressInjectionAnnotation:    "cindy",
-				nginxConfigurationSnippetAnnotation: divertTextBlockParser.WriteBlock("proxy_set_header x-okteto-dvrt cindy;"),
+				model.OktetoAutoCreateAnnotation:                "true",
+				model.OktetoDivertIngressInjectionAnnotation:    "cindy",
+				model.OktetoNginxConfigurationSnippetAnnotation: divertTextBlockParser.WriteBlock("proxy_set_header x-okteto-dvrt cindy;"),
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -198,8 +198,8 @@ func Test_translateDivertedService(t *testing.T) {
 			Namespace: "staging",
 			Labels:    map[string]string{"l1": "v1"},
 			Annotations: map[string]string{
-				"a1":                             "v1",
-				"divert.okteto.com/modification": "{\"proxy_port\":1024,\"original_port\":3000,\"original_target_port\":3000}",
+				"a1":                                "v1",
+				model.OktetoDivertServiceAnnotation: "{\"proxy_port\":1024,\"original_port\":3000,\"original_target_port\":3000}",
 			},
 		},
 		Spec: apiv1.ServiceSpec{

@@ -30,10 +30,8 @@ import (
 )
 
 const (
-	nginxConfigurationSnippetAnnotation = "nginx.ingress.kubernetes.io/configuration-snippet"
-	divertIngressInjectionAnnotation    = "divert.okteto.com/injection"
-	divertTextBlockHeader               = "# ---- START DIVERT ----"
-	divertTextBlockFooter               = "# ---- END DIVERT ----"
+	divertTextBlockHeader = "# ---- START DIVERT ----"
+	divertTextBlockFooter = "# ---- END DIVERT ----"
 )
 
 var (
@@ -47,30 +45,30 @@ type PortMapping struct {
 	OriginalTargetPort int32 `json:"original_target_port,omitempty" yaml:"original_target_port,omitempty"`
 }
 
-func translateIngress(m *model.Manifest, in *networkingv1.Ingress) *networkingv1.Ingress {
+func translateIngress(m *model.Manifest, from *networkingv1.Ingress) *networkingv1.Ingress {
 	result := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        in.Name,
+			Name:        from.Name,
 			Namespace:   m.Namespace,
-			Labels:      in.Labels,
-			Annotations: in.Annotations,
+			Labels:      from.Labels,
+			Annotations: from.Annotations,
 		},
-		Spec: in.Spec,
+		Spec: from.Spec,
 	}
 	if result.Annotations == nil {
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
-	result.Annotations[divertIngressInjectionAnnotation] = m.Namespace
-	result.Annotations[nginxConfigurationSnippetAnnotation] = divertTextBlockParser.WriteBlock(fmt.Sprintf("proxy_set_header x-okteto-dvrt %s;", m.Namespace))
+	result.Annotations[model.OktetoDivertIngressInjectionAnnotation] = m.Namespace
+	result.Annotations[model.OktetoNginxConfigurationSnippetAnnotation] = divertTextBlockParser.WriteBlock(fmt.Sprintf("proxy_set_header x-okteto-dvrt %s;", m.Namespace))
 
 	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(m.Name))
 	for i := range result.Spec.Rules {
-		result.Spec.Rules[i].Host = strings.ReplaceAll(result.Spec.Rules[i].Host, in.Namespace, m.Namespace)
+		result.Spec.Rules[i].Host = strings.ReplaceAll(result.Spec.Rules[i].Host, from.Namespace, m.Namespace)
 	}
 	for i := range result.Spec.TLS {
 		for j := range result.Spec.TLS[i].Hosts {
-			result.Spec.TLS[i].Hosts[j] = strings.ReplaceAll(result.Spec.TLS[i].Hosts[j], in.Namespace, m.Namespace)
+			result.Spec.TLS[i].Hosts[j] = strings.ReplaceAll(result.Spec.TLS[i].Hosts[j], from.Namespace, m.Namespace)
 		}
 	}
 	return result
@@ -83,7 +81,7 @@ func isEqualIngress(in1 *networkingv1.Ingress, in2 *networkingv1.Ingress) bool {
 	if in2.Annotations == nil {
 		in2.Annotations = map[string]string{}
 	}
-	return reflect.DeepEqual(in1.Spec, in2.Spec) && (in1.Annotations[divertIngressInjectionAnnotation] == in2.Annotations[divertIngressInjectionAnnotation])
+	return reflect.DeepEqual(in1.Spec, in2.Spec) && (in1.Annotations[model.OktetoDivertIngressInjectionAnnotation] == in2.Annotations[model.OktetoDivertIngressInjectionAnnotation])
 }
 
 func translateService(m *model.Manifest, s *apiv1.Service) (*apiv1.Service, error) {
@@ -123,7 +121,7 @@ func translateService(m *model.Manifest, s *apiv1.Service) (*apiv1.Service, erro
 }
 
 func isEqualService(s1 *apiv1.Service, s2 *apiv1.Service) bool {
-	return reflect.DeepEqual(s1.Spec, s2.Spec)
+	return reflect.DeepEqual(s1.Spec.Ports, s2.Spec.Ports)
 }
 
 func translateEndpoints(m *model.Manifest, s *apiv1.Service) *apiv1.Endpoints {

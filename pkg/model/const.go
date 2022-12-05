@@ -281,4 +281,10 @@ const (
 
 	// OktetoDivertInjectSidecarLabel pod label used by divert to inject envoy sidecar
 	OktetoDivertInjectSidecarLabel = "divert.okteto.com/inject-sidecar"
+
+	// OktetoNginxConfigurationSnippetAnnotation annotation for nginx configuration snippet
+	OktetoNginxConfigurationSnippetAnnotation = "nginx.ingress.kubernetes.io/configuration-snippet"
+
+	// OktetoDivertIngressInjectionAnnotation annotation for nginx header injection
+	OktetoDivertIngressInjectionAnnotation = "divert.okteto.com/injection"
 )
