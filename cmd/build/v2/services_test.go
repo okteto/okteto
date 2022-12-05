@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
@@ -27,7 +28,9 @@ func TestAllServicesAlreadyBuilt(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{}
-	fakeReg.AddImageByName(alreadyBuilt...)
+	if err := fakeReg.AddImageByName(alreadyBuilt...); err != nil {
+		oktetoLog.Infof("error adding image to registry: %s", err)
+	}
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
 	// should not throw error
@@ -40,7 +43,9 @@ func TestServicesNotAreAlreadyBuilt(t *testing.T) {
 	bc := NewBuilder(nil, fakeReg)
 
 	alreadyBuilt := []string{"test/test-1"}
-	fakeReg.AddImageByName(alreadyBuilt...)
+	if err := fakeReg.AddImageByName(alreadyBuilt...); err != nil {
+		oktetoLog.Infof("error adding image to registry: %s", err)
+	}
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
 	// should not throw error
@@ -52,7 +57,9 @@ func TestNoServiceBuilt(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{"test/test-1", "test/test-2"}
-	fakeReg.AddImageByName(alreadyBuilt...)
+	if err := fakeReg.AddImageByName(alreadyBuilt...); err != nil {
+		oktetoLog.Infof("error adding image to registry: %s", err)
+	}
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
 	// should not throw error
@@ -64,7 +71,9 @@ func TestServicesNotInStack(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{"test/test-1"}
-	fakeReg.AddImageByName(alreadyBuilt...)
+	if err := fakeReg.AddImageByName(alreadyBuilt...); err != nil {
+		oktetoLog.Infof("error adding image to registry: %s", err)
+	}
 	ctx := context.Background()
 	stack := &model.Stack{
 		Services: map[string]*model.Service{
@@ -85,7 +94,9 @@ func TestAllServicesAlreadyBuiltWithSubset(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{}
-	fakeReg.AddImageByName(alreadyBuilt...)
+	if err := fakeReg.AddImageByName(alreadyBuilt...); err != nil {
+		oktetoLog.Infof("error adding image to registry: %s", err)
+	}
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1"})
 	// should not throw error
@@ -97,7 +108,9 @@ func TestServicesNotAreAlreadyBuiltWithSubset(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{"test/test-1"}
-	fakeReg.AddImageByName(alreadyBuilt...)
+	if err := fakeReg.AddImageByName(alreadyBuilt...); err != nil {
+		oktetoLog.Infof("error adding image to registry: %s", err)
+	}
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1"})
 	// should not throw error
@@ -109,7 +122,9 @@ func TestServicesBuildSection(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{}
-	fakeReg.AddImageByName(alreadyBuilt...)
+	if err := fakeReg.AddImageByName(alreadyBuilt...); err != nil {
+		oktetoLog.Infof("error adding image to registry: %s", err)
+	}
 	ctx := context.Background()
 	fakeManifest.Build = map[string]*model.BuildInfo{}
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{})
@@ -122,7 +137,9 @@ func TestNoServiceBuiltWithSubset(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{"test/test-1", "test/test-2"}
-	fakeReg.AddImageByName(alreadyBuilt...)
+	if err := fakeReg.AddImageByName(alreadyBuilt...); err != nil {
+		oktetoLog.Infof("error adding image to registry: %s", err)
+	}
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1"})
 	// should not throw error

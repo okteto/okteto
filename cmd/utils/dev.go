@@ -310,7 +310,9 @@ func AskIfOktetoInit(devPath string) bool {
 func AsksQuestion(q string) (string, error) {
 	var answer string
 
-	oktetoLog.Question(q)
+	if err := oktetoLog.Question(q); err != nil {
+		oktetoLog.Infof("failed to ask question: %s", err)
+	}
 	if _, err := fmt.Scanln(&answer); err != nil {
 		return "", err
 	}

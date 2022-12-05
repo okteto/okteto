@@ -1858,7 +1858,9 @@ func Test_translateAnnotations(t *testing.T) {
 			for key, value := range tt.tr.App.TemplateObjectMeta().Annotations {
 				previousAppTemplateAnnotations[key] = value
 			}
-			tt.tr.translate()
+			if err := tt.tr.translate(); err != nil {
+				oktetoLog.Infof("error translating: %s", err)
+			}
 			for key, value := range tt.annotations {
 				if appValue, ok := tt.tr.App.ObjectMeta().Annotations[key]; ok {
 					if appValue != value {

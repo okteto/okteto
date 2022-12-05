@@ -155,7 +155,9 @@ func getNamespacesSelection(ctx context.Context) ([]utils.SelectorItem, error) {
 
 func askForOktetoNamespace() string {
 	var namespace string
-	oktetoLog.Question("Enter the namespace you want to use: ")
+	if err := oktetoLog.Question("Enter the namespace you want to use: "); err != nil {
+		oktetoLog.Infof("failed to ask for namespace: %s", err)
+	}
 	fmt.Scanln(&namespace)
 	return namespace
 }

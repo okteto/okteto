@@ -96,9 +96,14 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 
 	dir := t.TempDir()
 
-	os.Chdir(dir)
-	defer os.Chdir(originalWd)
-
+	if err := os.Chdir(dir); err != nil {
+		oktetoLog.Infof("failed to change dir: %s", err)
+	}
+	defer func() {
+		if err := os.Chdir(originalWd); err != nil {
+			oktetoLog.Infof("failed to change dir: %s", err)
+		}
+	}()
 	err := os.Mkdir(serviceContext, os.ModePerm)
 	if err != nil {
 		t.Fatal(err)
@@ -114,7 +119,9 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		if err := dockerfile.Close(); err != nil {
 			t.Fatal(err)
 		}
-		removeFile(df)
+		if err := removeFile(df); err != nil {
+			oktetoLog.Infof("failed to remove file: %s", err)
+		}
 	})
 
 	tests := []struct {
@@ -282,8 +289,14 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 
 	dir := t.TempDir()
 
-	os.Chdir(dir)
-	defer os.Chdir(originalWd)
+	if err := os.Chdir(dir); err != nil {
+		oktetoLog.Infof("failed to change dir: %s", err)
+	}
+	defer func() {
+		if err := os.Chdir(originalWd); err != nil {
+			oktetoLog.Infof("failed to change dir: %s", err)
+		}
+	}()
 
 	err := os.Mkdir(buildName, os.ModePerm)
 	if err != nil {
@@ -365,7 +378,11 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 
 			if tt.dockerfilesCreated != nil {
 				for _, df := range tt.dockerfilesCreated {
-					defer removeFile(df)
+					defer func() {
+						if err := removeFile(df); err != nil {
+							oktetoLog.Infof("failed to remove file: %s", err)
+						}
+					}()
 					dfFile, err := os.Create(df)
 					if err != nil {
 						t.Fatal(err)
@@ -410,7 +427,9 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 
 			if tt.dockerfilesCreated != nil {
 				for _, df := range tt.dockerfilesCreated {
-					removeFile(df)
+					if err := removeFile(df); err != nil {
+						oktetoLog.Infof("error removing file %s: %s", df, err)
+					}
 				}
 			}
 
