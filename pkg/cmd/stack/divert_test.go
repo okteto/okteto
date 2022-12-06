@@ -192,6 +192,46 @@ func Test_applyDivertToService(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "divert-with-autocreate",
+			s: &apiv1.Service{
+				Spec: apiv1.ServiceSpec{
+					Ports: []apiv1.ServicePort{
+						{
+							Name:       "web1",
+							Port:       8080,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+						},
+						{
+							Name:       "web2",
+							Port:       8081,
+							TargetPort: intstr.IntOrString{IntVal: 81},
+						},
+					},
+				},
+			},
+			old: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						model.OktetoDivertServiceAnnotation: "{\"proxy_port\":1024,\"original_port\":8081,\"original_target_port\":81}",
+						"key1":                              "value1",
+						model.OktetoAutoCreateAnnotation:    "true",
+					},
+				},
+			},
+			expected: []apiv1.ServicePort{
+				{
+					Name:       "web1",
+					Port:       8080,
+					TargetPort: intstr.IntOrString{IntVal: 80},
+				},
+				{
+					Name:       "web2",
+					Port:       8081,
+					TargetPort: intstr.IntOrString{IntVal: 81},
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {

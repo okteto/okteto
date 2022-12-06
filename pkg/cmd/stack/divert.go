@@ -41,6 +41,9 @@ func applyDivertToService(s *apiv1.Service, old *apiv1.Service) {
 	if old.Annotations[model.OktetoDivertServiceAnnotation] == "" {
 		return
 	}
+	if old.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
+		return
+	}
 	if s.Annotations == nil {
 		s.Annotations = map[string]string{}
 	}
