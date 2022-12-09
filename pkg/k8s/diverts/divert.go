@@ -138,7 +138,9 @@ func DivertIngress(ctx context.Context, m *model.Manifest, name string, cache *D
 		if !isEqualIngress(in, updatedIn) {
 			oktetoLog.Infof("updating ingress %s/%s", updatedIn.Namespace, updatedIn.Name)
 			if _, err := c.NetworkingV1().Ingresses(m.Namespace).Update(ctx, updatedIn, metav1.UpdateOptions{}); err != nil {
-				return err
+				if !k8sErrors.IsConflict(err) {
+					return err
+				}
 			}
 			cache.DeveloperIngresses[name] = updatedIn
 			in = updatedIn
@@ -188,7 +190,9 @@ func divertService(ctx context.Context, m *model.Manifest, name string, cache *D
 	if !isEqualService(s, updatedS) {
 		oktetoLog.Infof("updating service %s/%s", updatedS.Namespace, updatedS.Name)
 		if _, err := c.CoreV1().Services(m.Namespace).Update(ctx, updatedS, metav1.UpdateOptions{}); err != nil {
-			return err
+			if !k8sErrors.IsConflict(err) {
+				return err
+			}
 		}
 		cache.DeveloperServices[name] = updatedS
 	}
@@ -218,7 +222,9 @@ func divertEndpoints(ctx context.Context, m *model.Manifest, name string, cache 
 	}
 	oktetoLog.Infof("updating endpoints %s/%s", updatedE.Namespace, updatedE.Name)
 	if _, err := c.CoreV1().Endpoints(m.Namespace).Update(ctx, updatedE, metav1.UpdateOptions{}); err != nil {
-		return err
+		if !k8sErrors.IsConflict(err) {
+			return err
+		}
 	}
 	cache.DeveloperEndpoints[name] = updatedE
 	return nil
@@ -253,7 +259,9 @@ func CreateDivertCRD(ctx context.Context, m *model.Manifest) error {
 		old.Status = DivertStatus{}
 		_, err = dClient.Diverts(m.Namespace).Update(ctx, old)
 		if err != nil {
-			return fmt.Errorf("error updating divert CRD '%s': %w", divertCRD.Name, err)
+			if !k8sErrors.IsConflict(err) {
+				return fmt.Errorf("error updating divert CRD '%s': %w", divertCRD.Name, err)
+			}
 		}
 		oktetoLog.Infof("updated divert CRD '%s'.", divertCRD.Name)
 	}
