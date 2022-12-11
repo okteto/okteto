@@ -16,7 +16,7 @@ package stack
 import (
 	"encoding/json"
 
-	"github.com/okteto/okteto/pkg/k8s/diverts"
+	"github.com/okteto/okteto/pkg/divert/weaver"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	appsv1 "k8s.io/api/apps/v1"
@@ -48,7 +48,7 @@ func applyDivertToService(s *apiv1.Service, old *apiv1.Service) {
 		s.Annotations = map[string]string{}
 	}
 	s.Annotations[model.OktetoDivertServiceAnnotation] = old.Annotations[model.OktetoDivertServiceAnnotation]
-	divertMapping := diverts.PortMapping{}
+	divertMapping := weaver.PortMapping{}
 	if err := json.Unmarshal([]byte(old.Annotations[model.OktetoDivertServiceAnnotation]), &divertMapping); err != nil {
 		oktetoLog.Warning("skipping apply divert to service '%s': %s", s.Name, err.Error())
 		return
