@@ -96,7 +96,7 @@ devs:
 	assert.Equal(t, expectedCfg.Namespace, currentCfg.Namespace)
 	assert.Equal(t, expectedCfg.Labels, currentCfg.Labels)
 	assert.Equal(t, expectedCfg.Data, currentCfg.Data)
-	assert.NotNil(t, currentCfg.Annotations[model.LastUpdatedAnnotation])
+	assert.NotEmpty(t, currentCfg.Annotations[model.LastUpdatedAnnotation])
 }
 
 func Test_mergeServicesToDeployFromOptionsAndManifest(t *testing.T) {
