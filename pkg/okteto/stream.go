@@ -95,6 +95,7 @@ func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string) err
 }
 
 // handlerDestroyAllLog prints a line with the Message unmarshalled from line
+// returns true when line message is `Done` to break the scanner
 func handlerDestroyAllLog(line string) bool {
 	destroyAllLogList := []destroyAllLogFormat{}
 	if err := json.Unmarshal([]byte(line), &destroyAllLogList); err != nil {
@@ -103,7 +104,7 @@ func handlerDestroyAllLog(line string) bool {
 			oktetoLog.Infof("error unmarshalling destroyAllLogFormat: %v", err)
 			return false
 		}
-		// skip when the event log is in stage done and message is EOF
+		// skip when the event log line is "Done"
 		if dLog.Line == "Done" {
 			return true
 		}
@@ -111,7 +112,7 @@ func handlerDestroyAllLog(line string) bool {
 		return false
 	}
 	for _, dLog := range destroyAllLogList {
-		// skip when the event log is in stage done and message is EOF
+		// skip when the event log line is "Done"
 		if dLog.Line == "Done" {
 			return true
 		}
