@@ -331,7 +331,7 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	// Test that image has been built
-	require.NotEmpty(t, getImageWithSHA("okteto.dev/app:dev"))
+	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.Context().Registry, testNamespace)))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
