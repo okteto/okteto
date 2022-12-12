@@ -454,7 +454,7 @@ func getTempKubeConfigFile(name string) string {
 }
 
 func (dc *destroyCommand) runDestroyAll(ctx context.Context, opts *Options) error {
-	if err := dc.oktetoClient.Namespaces().DestroyAll(ctx, opts.Namespace); err != nil {
+	if err := dc.oktetoClient.Namespaces().DestroyAll(ctx, opts.Namespace, opts.DestroyVolumes); err != nil {
 		return err
 	}
 

@@ -170,7 +170,7 @@ func (c *namespaceClient) SleepNamespace(ctx context.Context, namespace string) 
 }
 
 // DestroyAll deletes a namespace
-func (c *namespaceClient) DestroyAll(ctx context.Context, namespace string) error {
+func (c *namespaceClient) DestroyAll(ctx context.Context, namespace string, destroyVolumes bool) error {
 	var mutation struct {
 		Space struct {
 			Id graphql.String
@@ -179,7 +179,7 @@ func (c *namespaceClient) DestroyAll(ctx context.Context, namespace string) erro
 	// includingVolumes so everything is cleaned up by default with this cmd
 	variables := map[string]interface{}{
 		"id":             graphql.String(namespace),
-		"includeVolumes": graphql.Boolean(true),
+		"includeVolumes": graphql.Boolean(destroyVolumes),
 	}
 	err := mutate(ctx, &mutation, variables, c.client)
 	if err != nil {
