@@ -46,9 +46,9 @@ deploy:
 	oktetoManifestContentWithCache = `build:
   app:
     context: app
-	export-image: okteto.dev/app:dev
-	cache_from: okteto.dev/app:dev
-	image: okteto.dev/app:dev
+    export-image: okteto.dev/app:dev
+    cache_from: okteto.dev/app:dev
+    image: okteto.dev/app:dev
 deploy:
   - kubectl apply -f k8s.yml
 `
