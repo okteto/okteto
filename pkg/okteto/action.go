@@ -89,7 +89,7 @@ func (c *pipelineClient) WaitForActionProgressing(ctx context.Context, pipelineN
 				return nil
 			case "queued":
 				continue
-			case "error":
+			case "error", "destroy-error":
 				oktetoLog.Infof("action '%s' failed", actionName)
 				return fmt.Errorf("pipeline '%s' failed", pipelineName)
 			default:
