@@ -54,22 +54,26 @@ func GetValidNameFromGitRepo(folder string) (string, error) {
 	return name, nil
 }
 
-func TranslateURLToName(repo string) string {
-	repoName := findRepoName(repo)
+// TranslateURLToName returns the repo name from the repository url
+// removes .git in case it has this as suffix
+// repoName is not sanitized
+func TranslateURLToName(repoURL string) string {
+	repoName := findRepoName(repoURL)
 
 	if strings.HasSuffix(repoName, ".git") {
 		repoName = repoName[:strings.LastIndex(repoName, ".git")]
 	}
-	name := ValidKubeNameRegex.ReplaceAllString(repoName, "-")
-	return name
+	return repoName
 }
-func findRepoName(repo string) string {
-	possibleName := strings.ToLower(repo[strings.LastIndex(repo, "/")+1:])
+
+// findRepoName returns string after last "/" from repoURL
+func findRepoName(repoURL string) string {
+	possibleName := repoURL[strings.LastIndex(repoURL, "/")+1:]
 	if possibleName == "" {
-		possibleName = repo
-		nthTrim := strings.Count(repo, "/")
+		possibleName = repoURL
+		nthTrim := strings.Count(repoURL, "/")
 		for i := 0; i < nthTrim-1; i++ {
-			possibleName = strings.ToLower(possibleName[strings.Index(possibleName, "/")+1:])
+			possibleName = possibleName[strings.Index(possibleName, "/")+1:]
 		}
 		possibleName = possibleName[:len(possibleName)-1]
 	}
