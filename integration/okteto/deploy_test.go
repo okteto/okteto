@@ -154,7 +154,7 @@ func TestDeployWithNonSanitizedNameSuccess(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createComposeScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeployWithNameSuccessOutput", user)
+	testNamespace := integration.GetTestNamespace("TestDeployWithNonSanitizedNameSuccess", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -175,7 +175,7 @@ func TestDeployWithNonSanitizedNameSuccess(t *testing.T) {
 
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
-	_, err := integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", "test-my-deployment"), c)
+	_, err = integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", "test-my-deployment"), c)
 	require.NoError(t, err)
 
 }
