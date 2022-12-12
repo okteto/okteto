@@ -330,14 +330,8 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
-	// Test that endpoint works
-	autowakeURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
-	require.NotEmpty(t, integration.GetContentFromURL(autowakeURL, timeout))
-
 	// Test that image has been built
-
-	appImageDev := fmt.Sprintf("%s/%s/%s-app:okteto", okteto.Context().Registry, testNamespace, filepath.Base(dir))
-	require.NotEmpty(t, getImageWithSHA(appImageDev))
+	require.NotEmpty(t, getImageWithSHA("okteto.dev/app:dev"))
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
@@ -360,7 +354,7 @@ func isImageBuilt(image string) bool {
 
 func createOktetoManifestWithCache(dir string) error {
 	dockerfilePath := filepath.Join(dir, oktetoManifestName)
-	dockerfileContent := []byte(oktetoManifestContent)
+	dockerfileContent := []byte(oktetoManifestContentWithCache)
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}
