@@ -345,6 +345,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
 		})
+		namespace := okteto.Context().Namespace
+		if dep.Namespace != "" {
+			namespace = dep.Namespace
+		}
 		pipOpts := &pipelineCMD.DeployOptions{
 			Name:         depName,
 			Repository:   dep.Repository,
@@ -354,7 +358,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			Wait:         dep.Wait,
 			Timeout:      dep.GetTimeout(deployOptions.Timeout),
 			SkipIfExists: !deployOptions.Dependencies,
-			Namespace:    dep.Namespace,
+			Namespace:    namespace,
 		}
 		pc, err := pipelineCMD.NewCommand()
 		if err != nil {
