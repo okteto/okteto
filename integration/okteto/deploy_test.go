@@ -175,7 +175,7 @@ func TestDeployWithNonSanitizedNameSuccess(t *testing.T) {
 
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
-	cmap, err := integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", "test-my-deployment"), c)
+	_, err := integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", "test-my-deployment"), c)
 	require.NoError(t, err)
 
 }
