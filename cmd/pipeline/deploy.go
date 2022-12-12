@@ -165,7 +165,7 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*ty
 
 	go func() {
 
-		pipelineOpts, err := opts.toPipelineDeployOptions()
+		pipelineOpts, err := opts.toPipelineDeployClientOptions()
 		if err != nil {
 			exit <- err
 			return
@@ -363,7 +363,7 @@ func (o *DeployOptions) setDefaults() error {
 	return nil
 }
 
-func (o *DeployOptions) toPipelineDeployOptions() (types.PipelineDeployOptions, error) {
+func (o *DeployOptions) toPipelineDeployClientOptions() (types.PipelineDeployOptions, error) {
 	varList := []types.Variable{}
 	for _, v := range o.Variables {
 		kv := strings.SplitN(v, "=", 2)
