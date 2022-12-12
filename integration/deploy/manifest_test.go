@@ -83,7 +83,7 @@ spec:
       - name: test
         image: %s
         ports:
-        - containerPort: 8080
+          - containerPort: 8080
         workingDir: /usr/src/app
         env:
           - name: VAR
