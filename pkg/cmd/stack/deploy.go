@@ -388,7 +388,7 @@ func deployK8sEndpoint(ctx context.Context, ingressName, svcName string, port mo
 	}
 
 	translateOptions := &ingresses.TranslateOptions{
-		Name:      s.Name,
+		Name:      format.ResourceK8sMetaString(s.Name),
 		Namespace: s.Namespace,
 	}
 	ingress := ingresses.Translate(ingressName, endpoint, translateOptions)

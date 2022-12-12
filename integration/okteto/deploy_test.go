@@ -145,7 +145,7 @@ func TestDeploySuccessOutput(t *testing.T) {
 	}
 }
 
-func TestDeployWithNameSuccessOutput(t *testing.T) {
+func TestDeployWithNonSanitizedNameSuccess(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -154,7 +154,7 @@ func TestDeployWithNameSuccessOutput(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createComposeScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TestSuccessOutput", user)
+	testNamespace := integration.GetTestNamespace("TestDeployWithNameSuccessOutput", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -169,47 +169,15 @@ func TestDeployWithNameSuccessOutput(t *testing.T) {
 		Namespace:  testNamespace,
 		OktetoHome: dir,
 		Token:      token,
-		Name:       "my deployment",
+		Name:       "test/my deployment",
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
-	cmap, err := integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", "my-deployment"), c)
+	cmap, err := integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", "test-my-deployment"), c)
 	require.NoError(t, err)
 
-	uiOutput, err := base64.StdEncoding.DecodeString(cmap.Data["output"])
-	require.NoError(t, err)
-
-	var text oktetoLog.JSONLogFormat
-	stageLines := map[string][]string{}
-	prevStage := ""
-	for _, l := range strings.Split(string(uiOutput), "\n") {
-		if err := json.Unmarshal([]byte(l), &text); err != nil {
-			if prevStage != "done" {
-				t.Fatalf("not json format: %s", l)
-			}
-		}
-		if _, ok := stageLines[text.Stage]; ok {
-			stageLines[text.Stage] = append(stageLines[text.Stage], text.Message)
-		} else {
-			stageLines[text.Stage] = []string{text.Message}
-		}
-		prevStage = text.Stage
-	}
-
-	stagesToTest := []string{"Load manifest", "Building service app", "Deploying compose", "done"}
-	for _, ss := range stagesToTest {
-		if _, ok := stageLines[ss]; !ok {
-			t.Fatalf("deploy didn't have the stage '%s'", ss)
-		}
-		if strings.HasPrefix(ss, "Building service") {
-			if len(stageLines[ss]) < 5 {
-				t.Fatalf("Not sending build output on stage %s. Output:%s", ss, stageLines[ss])
-			}
-		}
-
-	}
 }
 
 func TestCmdFailOutput(t *testing.T) {
