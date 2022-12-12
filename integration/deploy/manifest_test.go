@@ -393,7 +393,7 @@ func expectForceBuild(output string) error {
 
 func createK8sManifestWithCache(dir, ns string) error {
 	dockerfilePath := filepath.Join(dir, k8sManifestName)
-	appImageDev := fmt.Sprintf("%s/%s/app:dev", okteto.Context().Registry, ns, filepath.Base(dir))
+	appImageDev := fmt.Sprintf("%s/%s/app:dev", okteto.Context().Registry, ns)
 
 	fmt.Sprintf(k8sManifestTemplateWithCache, appImageDev)
 	dockerfileContent := []byte(k8sManifestTemplateWithCache)
