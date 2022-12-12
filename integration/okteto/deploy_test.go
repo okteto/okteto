@@ -145,7 +145,7 @@ func TestDeploySuccessOutput(t *testing.T) {
 	}
 }
 
-func TestDeployWithNonSanitizedNameSuccess(t *testing.T) {
+func TestDeployWithNonSanitizedOK(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -154,7 +154,7 @@ func TestDeployWithNonSanitizedNameSuccess(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createComposeScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeployWithNonSanitizedNameSuccess", user)
+	testNamespace := integration.GetTestNamespace("TestDeployWithNonSanitizedOK", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
