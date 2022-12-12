@@ -73,7 +73,7 @@ func Test_translateConfigMap(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, cfg.Data[statusField], tt.status)
 
-			assert.NotNil(t, cfg.Annotations[model.LastUpdatedAnnotation])
+			assert.NotEmpty(t, cfg.Annotations[model.LastUpdatedAnnotation])
 		})
 	}
 }

@@ -275,7 +275,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	assert.Equal(t, expectedCfg.Namespace, cfg.Namespace)
 	assert.Equal(t, expectedCfg.Labels, cfg.Labels)
 	assert.Equal(t, expectedCfg.Data, cfg.Data)
-	assert.NotNil(t, cfg.Annotations[model.LastUpdatedAnnotation])
+	assert.NotEmpty(t, cfg.Annotations[model.LastUpdatedAnnotation])
 }
 
 func TestDeployWithErrorExecutingCommands(t *testing.T) {
