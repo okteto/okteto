@@ -83,7 +83,7 @@ spec:
       - name: test
         image: %s
         ports:
-          - containerPort: 8080
+        - containerPort: 8080
         workingDir: /usr/src/app
         env:
           - name: VAR
@@ -395,8 +395,7 @@ func createK8sManifestWithCache(dir, ns string) error {
 	dockerfilePath := filepath.Join(dir, k8sManifestName)
 	appImageDev := fmt.Sprintf("%s/%s/app:dev", okteto.Context().Registry, ns)
 
-	fmt.Sprintf(k8sManifestTemplateWithCache, appImageDev)
-	dockerfileContent := []byte(k8sManifestTemplateWithCache)
+	dockerfileContent := []byte(fmt.Sprintf(k8sManifestTemplateWithCache, appImageDev))
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
 		return err
 	}
