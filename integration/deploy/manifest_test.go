@@ -306,7 +306,7 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 
 	dir := t.TempDir()
 
-	testNamespace := integration.GetTestNamespace("TestDeployManifestV2", user)
+	testNamespace := integration.GetTestNamespace("TestDeployExportCache", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
