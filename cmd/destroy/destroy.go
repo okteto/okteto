@@ -192,10 +192,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 				if !okteto.Context().IsOkteto {
 					return errors.New("option `--all` is not available for non-Okteto clusters. Learn more: https://www.okteto.com/docs/self-hosted/")
 				}
-				return c.runDestroyAll(ctx, options)
+				err = c.runDestroyAll(ctx, options)
+			} else {
+				err = c.runDestroy(ctx, options)
 			}
-			err = c.runDestroy(ctx, options)
-			analytics.TrackDestroy(err == nil)
+			analytics.TrackDestroy(err == nil, options.DestroyAll)
 			if err == nil {
 				oktetoLog.Success("Development environment '%s' successfully destroyed", options.Name)
 			}
