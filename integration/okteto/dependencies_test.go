@@ -33,7 +33,7 @@ deploy:
 dependencies:
   postgresql:
     repository: https://github.com/okteto/movies
-	branch: cli-e2e
+    branch: cli-e2e
     wait: true
     namespace: %s
 `
