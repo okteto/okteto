@@ -261,6 +261,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return fmt.Errorf("failed to get the current working directory: %w", err)
 	}
 
+	// We need to create a client that doesn't go through the proxy to create
+	// the configmap without the deployedByLabel
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
 		return err
