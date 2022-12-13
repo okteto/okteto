@@ -33,7 +33,7 @@ import (
 func Test_translateConfigMap(t *testing.T) {
 	s := &model.Stack{
 		Manifest: []byte("manifest"),
-		Name:     "stackName",
+		Name:     "stack Name",
 		Services: map[string]*model.Service{
 			"svcName": {
 				Image: "image",
@@ -41,13 +41,13 @@ func Test_translateConfigMap(t *testing.T) {
 		},
 	}
 	result := translateConfigMap(s)
-	if result.Name != "okteto-stackName" {
+	if result.Name != "okteto-stack-name" {
 		t.Errorf("Wrong configmap name: '%s'", result.Name)
 	}
 	if result.Labels[model.StackLabel] != "true" {
 		t.Errorf("Wrong labels: '%s'", result.Labels)
 	}
-	if result.Data[NameField] != "stackName" {
+	if result.Data[NameField] != "stack Name" {
 		t.Errorf("Wrong data.name: '%s'", result.Data[NameField])
 	}
 	if result.Data[YamlField] != base64.StdEncoding.EncodeToString(s.Manifest) {
@@ -94,7 +94,7 @@ func Test_translateDeployment(t *testing.T) {
 	labels := map[string]string{
 		"label1":                    "value1",
 		"label2":                    "value2",
-		model.StackNameLabel:        "stackName",
+		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
@@ -111,7 +111,7 @@ func Test_translateDeployment(t *testing.T) {
 		t.Errorf("Wrong deployment spec.replicas: '%d'", *result.Spec.Replicas)
 	}
 	selector := map[string]string{
-		model.StackNameLabel:        "stackName",
+		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Spec.Selector.MatchLabels, selector) {
@@ -211,7 +211,7 @@ func Test_translateStatefulSet(t *testing.T) {
 	labels := map[string]string{
 		"label1":                    "value1",
 		"label2":                    "value2",
-		model.StackNameLabel:        "stackName",
+		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
 	}
 	assert.Equal(t, labels, result.Labels)
@@ -227,7 +227,7 @@ func Test_translateStatefulSet(t *testing.T) {
 		t.Errorf("Wrong statefulset spec.replicas: '%d'", *result.Spec.Replicas)
 	}
 	selector := map[string]string{
-		model.StackNameLabel:        "stackName",
+		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Spec.Selector.MatchLabels, selector) {
@@ -405,7 +405,7 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 	labels := map[string]string{
 		"label1":                    "value1",
 		"label2":                    "value2",
-		model.StackNameLabel:        "stackName",
+		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
@@ -539,7 +539,7 @@ func Test_translateJobWithVolumes(t *testing.T) {
 	labels := map[string]string{
 		"label1":                    "value1",
 		"label2":                    "value2",
-		model.StackNameLabel:        "stackName",
+		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
 	}
 	if !reflect.DeepEqual(result.Labels, labels) {
@@ -702,7 +702,7 @@ func Test_translateService(t *testing.T) {
 					Labels: map[string]string{
 						"label1":                    "value1",
 						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
+						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
@@ -713,7 +713,7 @@ func Test_translateService(t *testing.T) {
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeClusterIP,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
+						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{
@@ -776,7 +776,7 @@ func Test_translateService(t *testing.T) {
 					Labels: map[string]string{
 						"label1":                    "value1",
 						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
+						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
@@ -788,7 +788,7 @@ func Test_translateService(t *testing.T) {
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeClusterIP,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
+						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{
@@ -849,7 +849,7 @@ func Test_translateService(t *testing.T) {
 					Labels: map[string]string{
 						"label1":                    "value1",
 						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
+						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
@@ -861,7 +861,7 @@ func Test_translateService(t *testing.T) {
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeClusterIP,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
+						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{
@@ -922,7 +922,7 @@ func Test_translateService(t *testing.T) {
 					Labels: map[string]string{
 						"label1":                    "value1",
 						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
+						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
@@ -934,7 +934,7 @@ func Test_translateService(t *testing.T) {
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeClusterIP,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
+						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{
@@ -990,7 +990,7 @@ func Test_translateService(t *testing.T) {
 					Labels: map[string]string{
 						"label1":                    "value1",
 						"label2":                    "value2",
-						model.StackNameLabel:        "stackName",
+						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
 					},
 					Annotations: map[string]string{
@@ -1001,7 +1001,7 @@ func Test_translateService(t *testing.T) {
 				Spec: apiv1.ServiceSpec{
 					Type: apiv1.ServiceTypeClusterIP,
 					Selector: map[string]string{
-						model.StackNameLabel:        "stackName",
+						model.StackNameLabel:        "stackname",
 						model.StackServiceNameLabel: "svcName",
 					},
 					Ports: []apiv1.ServicePort{

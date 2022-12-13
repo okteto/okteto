@@ -398,6 +398,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
+		// Set OKTETO_AUTODISCOVERY_RELEASE_NAME=sanitized name, so the release name in case of autodiscovery of helm is valid
+		fmt.Sprintf("%s=%s", constants.OktetoAutodiscoveryReleaseName, format.ResourceK8sMetaString(deployOptions.Name)),
 	)
 	oktetoLog.EnableMasking()
 	err = dc.deploy(ctx, deployOptions)
@@ -568,7 +570,7 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 
 	translateOptions := &ingresses.TranslateOptions{
 		Namespace: opts.Manifest.Namespace,
-		Name:      opts.Manifest.Name,
+		Name:      format.ResourceK8sMetaString(opts.Manifest.Name),
 	}
 
 	for name, endpoint := range opts.Manifest.Deploy.Endpoints {
