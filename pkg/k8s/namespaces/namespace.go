@@ -153,7 +153,7 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 		}
 		deleteOpts := metav1.DeleteOptions{}
 
-		// It seems that by default, client-go don't delete pods scheduled by jobs, so we need to set the propation policy
+		// It seems that by default, client-go doesn't delete pods scheduled by jobs, so we need to set the propagation policy
 		if gvk.Kind == jobKind {
 			deletePropagation := metav1.DeletePropagationBackground
 			deleteOpts.PropagationPolicy = &deletePropagation

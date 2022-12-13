@@ -24,6 +24,7 @@ import (
 	"time"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/events"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -408,7 +409,7 @@ func isRunning(p *apiv1.Pod) bool {
 }
 
 func GetHealthcheckFailure(ctx context.Context, namespace, svcName, stackName string, c kubernetes.Interface) string {
-	selector := fmt.Sprintf("%s=%s,%s=%s", model.StackNameLabel, stackName, model.StackServiceNameLabel, svcName)
+	selector := fmt.Sprintf("%s=%s,%s=%s", model.StackNameLabel, format.ResourceK8sMetaString(stackName), model.StackServiceNameLabel, svcName)
 	pods, err := c.CoreV1().Pods(namespace).List(
 		ctx,
 		metav1.ListOptions{

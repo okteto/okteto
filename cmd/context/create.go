@@ -147,6 +147,10 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 		if ctxOptions.Builder == "" && okCtx.Builder != "" {
 			ctxOptions.Builder = okCtx.Builder
 		}
+		if ctxOptions.Namespace == "" {
+			ctxOptions.Namespace = ctxStore.Contexts[ctxOptions.Context].Namespace
+		}
+
 	}
 
 	ctxStore.CurrentContext = ctxOptions.Context

@@ -35,7 +35,7 @@ func ListEndpoints(ctx context.Context, stack *model.Stack) error {
 		return err
 	}
 
-	endpointList, err := iClient.GetEndpointsBySelector(ctx, stack.Namespace, fmt.Sprintf("%s=%s", model.StackNameLabel, stack.Name))
+	endpointList, err := iClient.GetEndpointsBySelector(ctx, stack.Namespace, stack.GetLabelSelector())
 	if err != nil {
 		return err
 	}

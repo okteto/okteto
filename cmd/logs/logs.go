@@ -61,6 +61,13 @@ func Logs(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
+			wd, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+			if manifest.Name == "" {
+				manifest.Name = utils.InferName(wd)
+			}
 
 			if len(args) > 0 {
 				options.Include = args[0]

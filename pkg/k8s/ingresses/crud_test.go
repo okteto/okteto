@@ -21,7 +21,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/model"
 	networkingv1 "k8s.io/api/networking/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -197,5 +199,109 @@ func TestDestroyWithError(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), kubernetesError) {
 		t.Fatalf("Got '%s' error but expected '%s'", err.Error(), kubernetesError)
+	}
+}
+
+func Test_applyDivertChanges(t *testing.T) {
+	var tests = []struct {
+		name     string
+		iClient  *Client
+		ingress  *Ingress
+		old      *networkingv1.Ingress
+		expected map[string]string
+	}{
+		{
+			name:    "v1-no-divert",
+			iClient: &Client{isV1: true},
+			ingress: &Ingress{
+				V1: &networkingv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{"key1": "value1"},
+					},
+				},
+			},
+			old: &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{"key2": "value2"},
+				},
+			},
+			expected: map[string]string{"key1": "value1"},
+		},
+		{
+			name:    "v1-divert",
+			iClient: &Client{isV1: true},
+			ingress: &Ingress{
+				V1: &networkingv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{"key1": "value1"},
+					},
+				},
+			},
+			old: &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"key2": "value2",
+						model.OktetoDivertIngressInjectionAnnotation:    "cindy",
+						model.OktetoNginxConfigurationSnippetAnnotation: "start-divert-end",
+					},
+				},
+			},
+			expected: map[string]string{
+				"key1": "value1",
+				model.OktetoDivertIngressInjectionAnnotation:    "cindy",
+				model.OktetoNginxConfigurationSnippetAnnotation: "start-divert-end",
+			},
+		},
+		{
+			name:    "v1beta1-no-divert",
+			iClient: &Client{isV1: false},
+			ingress: &Ingress{
+				V1Beta1: &networkingv1beta1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{"key1": "value1"},
+					},
+				},
+			},
+			old: &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{"key2": "value2"},
+				},
+			},
+			expected: map[string]string{"key1": "value1"},
+		},
+		{
+			name:    "v1beta1-divert",
+			iClient: &Client{isV1: false},
+			ingress: &Ingress{
+				V1Beta1: &networkingv1beta1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{"key1": "value1"},
+					},
+				},
+			},
+			old: &networkingv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"key2": "value2",
+						model.OktetoDivertIngressInjectionAnnotation:    "cindy",
+						model.OktetoNginxConfigurationSnippetAnnotation: "start-divert-end",
+					},
+				},
+			},
+			expected: map[string]string{
+				"key1": "value1",
+				model.OktetoDivertIngressInjectionAnnotation:    "cindy",
+				model.OktetoNginxConfigurationSnippetAnnotation: "start-divert-end",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.iClient.applyDivertChanges(tt.ingress, tt.old.GetObjectMeta())
+			if !reflect.DeepEqual(tt.ingress.GetAnnotations(), tt.expected) {
+				t.Fatalf("Didn't updated annotations correctly")
+			}
+		})
 	}
 }

@@ -189,6 +189,7 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*ty
 	return resp, nil
 }
 
+// getPipelineName returns the repository name without sanitizing
 func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
@@ -337,6 +338,8 @@ func (o *DeployOptions) setDefaults() error {
 	}
 
 	if o.Name == "" {
+		// in case of inferring the name from the repositoryURL
+		// opts.Name is not sanitized
 		o.Name = getPipelineName(o.Repository)
 	}
 

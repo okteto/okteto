@@ -43,7 +43,6 @@ import (
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -262,6 +261,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return fmt.Errorf("failed to get the current working directory: %w", err)
 	}
 
+	// We need to create a client that doesn't go through the proxy to create
+	// the configmap without the deployedByLabel
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
 		return err
@@ -402,6 +403,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
+		// Set OKTETO_AUTODISCOVERY_RELEASE_NAME=sanitized name, so the release name in case of autodiscovery of helm is valid
+		fmt.Sprintf("%s=%s", constants.OktetoAutodiscoveryReleaseName, format.ResourceK8sMetaString(deployOptions.Name)),
 	)
 	oktetoLog.EnableMasking()
 	err = dc.deploy(ctx, deployOptions)
@@ -538,24 +541,24 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 		return err
 	}
 
-	result, err := c.NetworkingV1().Ingresses(opts.Manifest.Deploy.Divert.Namespace).List(ctx, metav1.ListOptions{})
+	cache, err := diverts.InitDivertCache(ctx, opts.Manifest, c)
 	if err != nil {
 		return err
 	}
 
-	for i := range result.Items {
+	for name, in := range cache.DivertIngresses {
 		select {
 		case <-ctx.Done():
 			oktetoLog.Infof("deployDivert context cancelled")
 			return ctx.Err()
 		default:
-			oktetoLog.Spinner(fmt.Sprintf("Diverting ingress %s/%s...", result.Items[i].Namespace, result.Items[i].Name))
-			if err := diverts.DivertIngress(ctx, opts.Manifest, &result.Items[i], c); err != nil {
+			oktetoLog.Spinner(fmt.Sprintf("Diverting ingress %s/%s...", in.Namespace, in.Name))
+			if err := diverts.DivertIngress(ctx, opts.Manifest, name, cache, c); err != nil {
 				return err
 			}
 		}
 	}
-	return nil
+	return diverts.CreateDivertCRD(ctx, opts.Manifest)
 }
 
 func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) error {
@@ -572,7 +575,7 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 
 	translateOptions := &ingresses.TranslateOptions{
 		Namespace: opts.Manifest.Namespace,
-		Name:      opts.Manifest.Name,
+		Name:      format.ResourceK8sMetaString(opts.Manifest.Name),
 	}
 
 	for name, endpoint := range opts.Manifest.Deploy.Endpoints {
