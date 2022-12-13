@@ -456,6 +456,8 @@ func (s *Stack) Validate() error {
 	return validateDependsOn(s)
 }
 
+// validateStackName checks if the name is compliant
+// name param is sanitized
 func validateStackName(name string) error {
 	if name == "" {
 		return fmt.Errorf("name cannot be empty")
