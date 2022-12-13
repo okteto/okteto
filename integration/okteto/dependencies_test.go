@@ -84,7 +84,7 @@ func createDependenciesManifest(dir, namespace string) error {
 		return err
 	}
 
-	manifestPath := filepath.Join(dir, "nginx", "nginx.conf")
+	manifestPath := filepath.Join(dir, "okteto.yml")
 	manifestContent := []byte(fmt.Sprintf(manifestWithDependencies, namespace))
 	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
 		return err
