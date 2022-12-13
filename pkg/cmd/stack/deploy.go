@@ -187,14 +187,14 @@ func deploy(ctx context.Context, s *model.Stack, c kubernetes.Interface, config 
 
 			// add specific stack labels
 			if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
-				endpoint.Labels[model.StackNameLabel] = s.Name
+				endpoint.Labels[model.StackNameLabel] = format.ResourceK8sMetaString(s.Name)
 			}
 			if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
 				endpoint.Labels[model.StackEndpointNameLabel] = endpointName
 			}
 
 			translateOptions := &ingresses.TranslateOptions{
-				Name:      s.Name,
+				Name:      format.ResourceK8sMetaString(s.Name),
 				Namespace: s.Namespace,
 			}
 			ingress := ingresses.Translate(endpointName, endpoint, translateOptions)
@@ -381,14 +381,14 @@ func deployK8sEndpoint(ctx context.Context, ingressName, svcName string, port mo
 	}
 	// add specific stack labels
 	if _, ok := endpoint.Labels[model.StackNameLabel]; !ok {
-		endpoint.Labels[model.StackNameLabel] = s.Name
+		endpoint.Labels[model.StackNameLabel] = format.ResourceK8sMetaString(s.Name)
 	}
 	if _, ok := endpoint.Labels[model.StackEndpointNameLabel]; !ok {
 		endpoint.Labels[model.StackEndpointNameLabel] = ingressName
 	}
 
 	translateOptions := &ingresses.TranslateOptions{
-		Name:      s.Name,
+		Name:      format.ResourceK8sMetaString(s.Name),
 		Namespace: s.Namespace,
 	}
 	ingress := ingresses.Translate(ingressName, endpoint, translateOptions)
@@ -431,7 +431,7 @@ func getServicesWithFailedProbes(ctx context.Context, stack *model.Stack, svcNam
 func getErrorDueToRestartLimit(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) error {
 	svc := stack.Services[svcName]
 	for dependingSvc := range svc.DependsOn {
-		svcLabels := map[string]string{model.StackNameLabel: stack.Name, model.StackServiceNameLabel: dependingSvc}
+		svcLabels := map[string]string{model.StackNameLabel: format.ResourceK8sMetaString(stack.Name), model.StackServiceNameLabel: dependingSvc}
 		p, err := pods.GetBySelector(ctx, stack.Namespace, svcLabels, client)
 		if err != nil {
 			oktetoLog.Infof("could not get pod of svc '%s': %s", dependingSvc, err)
@@ -487,7 +487,7 @@ func isSvcReady(ctx context.Context, stack *model.Stack, dependentSvcName string
 }
 
 func getPodName(ctx context.Context, stack *model.Stack, svcName string, client kubernetes.Interface) string {
-	svcLabels := map[string]string{model.StackNameLabel: stack.Name, model.StackServiceNameLabel: svcName}
+	svcLabels := map[string]string{model.StackNameLabel: format.ResourceK8sMetaString(stack.Name), model.StackServiceNameLabel: svcName}
 
 	p, err := pods.GetBySelector(ctx, stack.Namespace, svcLabels, client)
 	if err != nil {
@@ -606,7 +606,7 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 		// when the stack is under an .okteto folder, this was the name for the dev environment
 		// for those users which will have a dev environment deployed with old version
 		// when re-deploying we switch the name for the environment and we have to move the resources to the new name
-		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
+		if old.Labels[model.StackNameLabel] != format.ResourceK8sMetaString(s.Name) && old.Labels[model.StackNameLabel] != "okteto" {
 			return false, fmt.Errorf("skipping deploy of deployment '%s' due to name collision with deployment in compose '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 		if v, ok := old.Labels[model.DeployedByLabel]; ok {
@@ -653,7 +653,7 @@ func deployStatefulSet(ctx context.Context, svcName string, s *model.Stack, c ku
 	if old.Labels[model.StackNameLabel] == "" {
 		return false, fmt.Errorf("skipping deploy of statefulset '%s' due to name collision with pre-existing statefulset", svcName)
 	}
-	if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
+	if old.Labels[model.StackNameLabel] != format.ResourceK8sMetaString(s.Name) && old.Labels[model.StackNameLabel] != "okteto" {
 		return false, fmt.Errorf("skipping deploy of statefulset '%s' due to name collision with statefulset in compose '%s'", svcName, old.Labels[model.StackNameLabel])
 	}
 	if v, ok := old.Labels[model.DeployedByLabel]; ok {
@@ -688,7 +688,7 @@ func deployJob(ctx context.Context, svcName string, s *model.Stack, c kubernetes
 		if old.Labels[model.StackNameLabel] == "" {
 			return false, fmt.Errorf("skipping deploy of job '%s' due to name collision with pre-existing job", svcName)
 		}
-		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
+		if old.Labels[model.StackNameLabel] != format.ResourceK8sMetaString(s.Name) && old.Labels[model.StackNameLabel] != "okteto" {
 			return false, fmt.Errorf("skipping deploy of job '%s' due to name collision with job in stack '%s'", svcName, old.Labels[model.StackNameLabel])
 		}
 	}
@@ -722,7 +722,7 @@ func deployVolume(ctx context.Context, volumeName string, s *model.Stack, c kube
 			oktetoLog.Warning("skipping creation of volume '%s' due to name collision with pre-existing volume", pvc.Name)
 			return nil
 		}
-		if old.Labels[model.StackNameLabel] != s.Name && old.Labels[model.StackNameLabel] != "okteto" {
+		if old.Labels[model.StackNameLabel] != format.ResourceK8sMetaString(s.Name) && old.Labels[model.StackNameLabel] != "okteto" {
 			oktetoLog.Warning("skipping creation of volume '%s' due to name collision with volume in stack '%s'", pvc.Name, old.Labels[model.StackNameLabel])
 			return nil
 		}
@@ -758,7 +758,7 @@ func waitForPodsToBeRunning(ctx context.Context, s *model.Stack, c kubernetes.In
 	ticker := time.NewTicker(100 * time.Millisecond)
 	timeout := time.Now().Add(600 * time.Second)
 
-	selector := map[string]string{model.StackNameLabel: s.Name}
+	selector := map[string]string{model.StackNameLabel: format.ResourceK8sMetaString(s.Name)}
 	for time.Now().Before(timeout) {
 		<-ticker.C
 		pendingPods := numPods

@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	yaml "gopkg.in/yaml.v2"
@@ -275,6 +276,7 @@ func getStackName(name, stackPath, actualStackName string) (string, error) {
 	if actualStackName == "" {
 		nameEnvVar := os.Getenv(constants.OktetoNameEnvVar)
 		if nameEnvVar != "" {
+			// this name could be not sanitized when running at pipeline installer
 			return nameEnvVar, nil
 		}
 		name, err := GetValidNameFromGitRepo(filepath.Dir(stackPath))
@@ -407,7 +409,8 @@ func (svc *Service) ToDev(svcName string) (*Dev, error) {
 }
 
 func (s *Stack) Validate() error {
-	if err := validateStackName(s.Name); err != nil {
+	// in case name is coming from option "name" at deploy this could not be sanitized
+	if err := validateStackName(format.ResourceK8sMetaString(s.Name)); err != nil {
 		return fmt.Errorf("Invalid compose name: %s", err)
 	}
 	if len(s.Services) == 0 {
@@ -453,6 +456,8 @@ func (s *Stack) Validate() error {
 	return validateDependsOn(s)
 }
 
+// validateStackName checks if the name is compliant
+// name param is sanitized
 func validateStackName(name string) error {
 	if name == "" {
 		return fmt.Errorf("name cannot be empty")
@@ -491,12 +496,14 @@ func validateDependsOn(s *Stack) error {
 
 // GetLabelSelector returns the label selector for the stack name
 func (s *Stack) GetLabelSelector() string {
-	return fmt.Sprintf("%s=%s", StackNameLabel, s.Name)
+	// we need to sanitize the stack name in case this is overridden by the deploy options name
+	return fmt.Sprintf("%s=%s", StackNameLabel, format.ResourceK8sMetaString(s.Name))
 }
 
 // GetStackConfigMapName returns the label selector for the stack name
 func GetStackConfigMapName(stackName string) string {
-	return fmt.Sprintf("okteto-%s", stackName)
+	// we need to sanitize the stack name in case this is overridden by the deploy options name
+	return fmt.Sprintf("okteto-%s", format.ResourceK8sMetaString(stackName))
 }
 
 func IsPortInService(port int32, ports []Port) bool {
