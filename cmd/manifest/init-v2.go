@@ -30,6 +30,7 @@ import (
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/linguist"
@@ -123,7 +124,7 @@ func Init() *cobra.Command {
 
 // RunInitV2 initializes a new okteto manifest
 func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
-	os.Setenv(constants.OktetoNameEnvVar, utils.InferName(opts.Workdir))
+	os.Setenv(constants.OktetoNameEnvVar, devenvironment.InferName(opts.Workdir))
 	manifest := model.NewManifest()
 	var err error
 	if !opts.Overwrite {
@@ -472,7 +473,7 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 		var name string
 		var buildInfo *model.BuildInfo
 		if dockerfile == dockerfileName {
-			name = utils.InferName(cwd)
+			name = devenvironment.InferName(cwd)
 			buildInfo = &model.BuildInfo{
 				Context:    ".",
 				Dockerfile: dockerfile,

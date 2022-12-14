@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -48,7 +49,7 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 		if deployOptions.Manifest.Name != "" {
 			deployOptions.Name = deployOptions.Manifest.Name
 		} else {
-			deployOptions.Name = utils.InferName(cwd)
+			deployOptions.Name = devenvironment.InferName(cwd)
 			deployOptions.Manifest.Name = deployOptions.Name
 		}
 

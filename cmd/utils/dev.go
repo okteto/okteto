@@ -26,6 +26,7 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
@@ -82,7 +83,7 @@ func LoadManifest(devPath string) (*model.Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		manifest.Name = InferName(cwd)
+		manifest.Name = devenvironment.InferName(cwd)
 	}
 	if manifest.Namespace == "" {
 		manifest.Namespace = okteto.Context().Namespace

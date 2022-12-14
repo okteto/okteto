@@ -26,6 +26,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -45,6 +46,7 @@ type LogsOptions struct {
 	Since        time.Duration
 	Tail         int64
 	Timestamps   bool
+	Name         string
 }
 
 func Logs(ctx context.Context) *cobra.Command {
@@ -65,8 +67,12 @@ func Logs(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if manifest.Name == "" {
-				manifest.Name = utils.InferName(wd)
+
+			// call to get dev environment name
+			if options.Name != "" {
+				manifest.Name = options.Name
+			} else if manifest.Name == "" {
+				manifest.Name = devenvironment.InferName(wd)
 			}
 
 			if len(args) > 0 {
@@ -117,6 +123,7 @@ func Logs(ctx context.Context) *cobra.Command {
 	cmd.Flags().DurationVarP(&options.Since, "since", "s", 48*time.Hour, "return logs newer than a relative duration like 5s, 2m, or 3h")
 	cmd.Flags().Int64Var(&options.Tail, "tail", 100, "the number of lines from the end of the logs to show")
 	cmd.Flags().BoolVarP(&options.Timestamps, "timestamps", "t", false, "print timestamps")
+	cmd.Flags().StringVar(&options.Name, "name", "", "develpment environment name")
 
 	return cmd
 }

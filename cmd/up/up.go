@@ -34,6 +34,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/discovery"
 
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -159,7 +160,7 @@ func Up() *cobra.Command {
 				return err
 			}
 			if oktetoManifest.Name == "" {
-				oktetoManifest.Name = utils.InferName(wd)
+				oktetoManifest.Name = devenvironment.InferName(wd)
 			}
 			os.Setenv(constants.OktetoNameEnvVar, oktetoManifest.Name)
 
