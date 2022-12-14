@@ -435,7 +435,9 @@ func (s *OktetoSelector) renderLabel(sb *screenbuf.ScreenBuf) {
 				}
 				midLine := labelLine[lastChar : lastChar+width]
 				labelLineBytes := render(s.OktetoTemplates.label, midLine)
-				sb.Write(labelLineBytes)
+				if _, err := sb.Write(labelLineBytes); err != nil {
+					oktetoLog.Infof("error writing label: %s", err)
+				}
 				lastChar += width
 			}
 		}

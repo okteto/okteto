@@ -106,7 +106,9 @@ func (nc *NamespaceCommand) getNamespaceFromSelector(ctx context.Context) (strin
 		return "", err
 	}
 	if ns == newNamespaceOption {
-		ns = askForOktetoNamespace()
+		if ns, err = askForOktetoNamespace(); err != nil {
+			return "", err
+		}
 		createOptions := &CreateOptions{
 			Namespace: ns,
 			Show:      false,
@@ -153,13 +155,13 @@ func getNamespacesSelection(ctx context.Context) ([]utils.SelectorItem, error) {
 	return namespaces, nil
 }
 
-func askForOktetoNamespace() string {
+func askForOktetoNamespace() (string, error) {
 	var namespace string
 	if err := oktetoLog.Question("Enter the namespace you want to use: "); err != nil {
-		oktetoLog.Infof("failed to ask for namespace: %s", err)
+		return "", err
 	}
 	fmt.Scanln(&namespace)
-	return namespace
+	return namespace, nil
 }
 
 func getInitialPosition(options []utils.SelectorItem) int {

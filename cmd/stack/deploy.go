@@ -100,7 +100,7 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 				return err
 			}
 			if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: s.Namespace}); err != nil {
-				oktetoLog.Infof("failed to create namespace %s: %s", s.Namespace, err)
+				return err
 			}
 		}
 	}

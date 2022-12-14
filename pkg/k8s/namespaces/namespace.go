@@ -327,7 +327,9 @@ func (t *Trip) Wander(ctx context.Context, traveler Traveler) error {
 }
 
 func (t *Trip) listAll(ctx context.Context, traveler Traveler, client dynamic.ResourceInterface, api *metav1.APIResourceList, api2 metav1.APIResource) error {
-	t.sem.Acquire(ctx, 1)
+	if err := t.sem.Acquire(ctx, 1); err != nil {
+		oktetoLog.Infof("failed to acquire semaphore: %v", err)
+	}
 	defer t.sem.Release(1)
 
 	pager := pager.New(pager.SimplePageFunc(func(opts metav1.ListOptions) (runtime.Object, error) {
