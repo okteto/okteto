@@ -22,6 +22,7 @@ import (
 	"time"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
@@ -251,7 +252,7 @@ func waitForPodsToBeDestroyed(ctx context.Context, s *model.Stack, c *kubernetes
 	ticker := time.NewTicker(100 * time.Millisecond)
 	timeout := time.Now().Add(300 * time.Second)
 
-	selector := map[string]string{model.StackNameLabel: s.Name}
+	selector := map[string]string{model.StackNameLabel: format.ResourceK8sMetaString(s.Name)}
 	for time.Now().Before(timeout) {
 		<-ticker.C
 		podList, err := pods.ListBySelector(ctx, s.Namespace, selector, c)
@@ -271,7 +272,7 @@ func destroyStackVolumes(ctx context.Context, s *model.Stack, c *kubernetes.Clie
 		return err
 	}
 	for _, v := range vList {
-		if v.Labels[model.StackNameLabel] == s.Name {
+		if v.Labels[model.StackNameLabel] == format.ResourceK8sMetaString(s.Name) {
 			if err := volumes.Destroy(ctx, v.Name, v.Namespace, c, timeout); err != nil {
 				return fmt.Errorf("error destroying volume '%s': %s", v.Name, err)
 			}

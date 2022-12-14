@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/rest"
@@ -89,6 +90,6 @@ func (*KubeConfig) GetCMDAPIConfig() (*clientcmdapi.Config, error) {
 
 // GetTempKubeConfigFile returns where the temp kubeConfigFile for deploy should be stored
 func GetTempKubeConfigFile(name string) string {
-	tempKubeConfigTemplate := fmt.Sprintf("kubeconfig-deploy-%s-%d", name, time.Now().UnixMilli())
+	tempKubeConfigTemplate := fmt.Sprintf("kubeconfig-deploy-%s-%d", format.ResourceK8sMetaString(name), time.Now().UnixMilli())
 	return filepath.Join(config.GetOktetoHome(), tempKubeConfigTemplate)
 }

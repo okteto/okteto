@@ -24,6 +24,7 @@ import (
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	appsv1 "k8s.io/api/apps/v1"
@@ -447,7 +448,7 @@ func getSvcPublicPorts(svcName string, s *model.Stack) []model.Port {
 func translateVolumeLabels(volumeName string, s *model.Stack) map[string]string {
 	volume := s.Volumes[volumeName]
 	labels := map[string]string{
-		model.StackNameLabel:       s.Name,
+		model.StackNameLabel:       format.ResourceK8sMetaString(s.Name),
 		model.StackVolumeNameLabel: volumeName,
 	}
 	for k := range volume.Labels {
@@ -489,7 +490,7 @@ func translateAffinity(svc *model.Service) *apiv1.Affinity {
 func translateLabels(svcName string, s *model.Stack) map[string]string {
 	svc := s.Services[svcName]
 	labels := map[string]string{
-		model.StackNameLabel:        s.Name,
+		model.StackNameLabel:        format.ResourceK8sMetaString(s.Name),
 		model.StackServiceNameLabel: svcName,
 	}
 	for k := range svc.Labels {
@@ -506,7 +507,7 @@ func translateLabels(svcName string, s *model.Stack) map[string]string {
 
 func translateLabelSelector(svcName string, s *model.Stack) map[string]string {
 	labels := map[string]string{
-		model.StackNameLabel:        s.Name,
+		model.StackNameLabel:        format.ResourceK8sMetaString(s.Name),
 		model.StackServiceNameLabel: svcName,
 	}
 	return labels

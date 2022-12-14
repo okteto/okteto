@@ -29,7 +29,7 @@ func Test_translateV1(t *testing.T) {
 				"endpoint1": {
 					Labels: model.Labels{
 						"label1":                     "value1",
-						model.StackNameLabel:         "stackName",
+						model.StackNameLabel:         "stackname",
 						model.StackEndpointNameLabel: "endpoint1",
 					},
 					Annotations: model.Annotations{"annotation1": "value1"},
@@ -53,7 +53,7 @@ func Test_translateV1(t *testing.T) {
 			},
 			expectedIngressLabels: map[string]string{
 				model.DeployedByLabel:        "stackname",
-				model.StackNameLabel:         "stackName",
+				model.StackNameLabel:         "stackname",
 				model.StackEndpointNameLabel: "endpoint1",
 				"label1":                     "value1",
 			},
@@ -156,7 +156,7 @@ func Test_translateV1BetaV1(t *testing.T) {
 				"endpoint1": {
 					Labels: model.Labels{
 						"label1":                     "value1",
-						model.StackNameLabel:         "stackName",
+						model.StackNameLabel:         "stackname",
 						model.StackEndpointNameLabel: "endpoint1",
 					},
 					Annotations: model.Annotations{"annotation1": "value1"},
@@ -180,7 +180,7 @@ func Test_translateV1BetaV1(t *testing.T) {
 			},
 			expectedIngressLabels: map[string]string{
 				model.DeployedByLabel:        "stackname",
-				model.StackNameLabel:         "stackName",
+				model.StackNameLabel:         "stackname",
 				model.StackEndpointNameLabel: "endpoint1",
 				"label1":                     "value1",
 			},

@@ -26,10 +26,10 @@ func Test_GetValidNameFromFolder(t *testing.T) {
 		expected string
 	}{
 		{name: "all lower case", folder: "lowercase", expected: "lowercase"},
-		{name: "with some lower case", folder: "lowerCase", expected: "lowercase"},
-		{name: "upper case", folder: "UpperCase", expected: "uppercase"},
-		{name: "valid symbols", folder: "getting-started.test", expected: "getting-started-test"},
-		{name: "invalid symbols", folder: "getting_$#started", expected: "getting-started"},
+		{name: "with some lower case", folder: "lowerCase", expected: "lowerCase"},
+		{name: "upper case", folder: "UpperCase", expected: "UpperCase"},
+		{name: "valid symbols", folder: "getting-started.test", expected: "getting-started.test"},
+		{name: "invalid symbols", folder: "getting_$#started", expected: "getting_$#started"},
 		{name: "current folder", folder: ".", expected: "model"},
 		{name: "parent folder", folder: "..", expected: "pkg"},
 		{name: "okteto folder", folder: ".okteto", expected: "model"},
@@ -58,8 +58,8 @@ func Test_GetValidNameFromGitRepo(t *testing.T) {
 		{name: "https with slash at the end", gitRepo: "https://github.com/okteto/stacks-getting-started/", expected: "stacks-getting-started"},
 		{name: "ssh url", gitRepo: "git@github.com:okteto/stacks-getting-started.git", expected: "stacks-getting-started"},
 		{name: "ssh url with slash at the end", gitRepo: "git@github.com:okteto/stacks-getting-started.git/", expected: "stacks-getting-started"},
-		{name: "https with dots", gitRepo: "https://github.com/okteto/stacks.getting.started", expected: "stacks-getting-started"},
-		{name: "URL with uppers", gitRepo: "https://github.com/okteto/StacksGettingStarted", expected: "stacksgettingstarted"},
+		{name: "https with dots", gitRepo: "https://github.com/okteto/stacks.getting.started", expected: "stacks.getting.started"},
+		{name: "URL with uppers", gitRepo: "https://github.com/okteto/StacksGettingStarted", expected: "StacksGettingStarted"},
 	}
 
 	for _, tt := range tests {
