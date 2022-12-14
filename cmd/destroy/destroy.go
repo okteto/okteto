@@ -55,7 +55,6 @@ const (
 	nameLabel            = "name"
 	helmOwner            = "helm"
 	helmUninstallCommand = "helm uninstall %s"
-	namespaceStatusLabel = "space.okteto.com/status"
 )
 
 type destroyer interface {
@@ -460,15 +459,23 @@ func getTempKubeConfigFile(name string) string {
 }
 
 func (dc *destroyCommand) runDestroyAll(ctx context.Context, opts *Options) error {
+	oktetoLog.Spinner(fmt.Sprintf("Deleting all in %s namespace", opts.Namespace))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
+
 	if err := dc.oktetoClient.Namespaces().DestroyAll(ctx, opts.Namespace, opts.DestroyVolumes); err != nil {
 		return err
 	}
 
 	waitCtx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
+
 	stop := make(chan os.Signal, 1)
+	defer close(stop)
+
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
+	defer close(exit)
 
 	var wg sync.WaitGroup
 
@@ -486,13 +493,6 @@ func (dc *destroyCommand) runDestroyAll(ctx context.Context, opts *Options) erro
 			oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("destroy all logs cannot be streamed due to connectivity issues: %v", err)
 		}
-		exit <- err
-	}(&wg)
-
-	go func(wg *sync.WaitGroup) {
-		wg.Wait()
-		close(stop)
-		close(exit)
 	}(&wg)
 
 	select {
@@ -501,6 +501,8 @@ func (dc *destroyCommand) runDestroyAll(ctx context.Context, opts *Options) erro
 		oktetoLog.Infof("CTRL+C received, exit")
 		return oktetoErrors.ErrIntSig
 	case err := <-exit:
+		// wait until streaming logs have finished
+		wg.Wait()
 		return err
 	}
 }
@@ -526,9 +528,17 @@ func (pc *destroyCommand) waitForNamespaceDestroyAllToComplete(ctx context.Conte
 				return err
 			}
 
-			switch ns.Labels[namespaceStatusLabel] {
+			status, ok := ns.Labels["space.okteto.com/status"]
+			if !ok {
+				return errors.New("namespace does not have label for status")
+			}
+
+			switch status {
 			case "Active":
 				if hasBeenDestroyingAll {
+					// when status is active again check if all resources have been correctly distroyed
+					// no configmap for the given namespace should be up and running
+					// check if there are configmaps with error state
 					cfgList, err := c.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{})
 					if err != nil {
 						return err
@@ -538,8 +548,11 @@ func (pc *destroyCommand) waitForNamespaceDestroyAllToComplete(ctx context.Conte
 							return fmt.Errorf("namespace destroy all failed: some resources where not destroyed")
 						}
 					}
+					// exit the waiting loop when status is active again
+					return nil
 				}
 			case "DestroyingAll":
+				// initial state would be active, check if this changes to assure namespace has been in destroying all status
 				hasBeenDestroyingAll = true
 			case "DestroyAllFailed":
 				return errors.New("namespace destroy all failed")
