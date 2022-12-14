@@ -13,6 +13,16 @@
 
 package types
 
+// PipelineDeployOptions represents the options to deploy a pipeline
+type PipelineDeployOptions struct {
+	Name       string
+	Repository string
+	Branch     string
+	Filename   string
+	Variables  []Variable
+	Namespace  string
+}
+
 // SpaceBody top body answer
 type SpaceBody struct {
 	Space Space `json:"space"`
