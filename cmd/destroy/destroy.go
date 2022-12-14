@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"strings"
@@ -44,6 +45,7 @@ import (
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -53,6 +55,7 @@ const (
 	nameLabel            = "name"
 	helmOwner            = "helm"
 	helmUninstallCommand = "helm uninstall %s"
+	namespaceStatusLabel = "space.okteto.com/status"
 )
 
 type destroyer interface {
@@ -193,14 +196,16 @@ func Destroy(ctx context.Context) *cobra.Command {
 					return errors.New("option `--all` is not available for non-Okteto clusters. Learn more: https://www.okteto.com/docs/self-hosted/")
 				}
 				err = c.runDestroyAll(ctx, options)
+				if err == nil {
+					oktetoLog.Success("All resources at namespace '%s' where successfully destroyed", options.Namespace)
+				}
 			} else {
 				err = c.runDestroy(ctx, options)
+				if err == nil {
+					oktetoLog.Success("Development environment '%s' successfully destroyed", options.Name)
+				}
 			}
 			analytics.TrackDestroy(err == nil, options.DestroyAll)
-			if err == nil {
-				oktetoLog.Success("Development environment '%s' successfully destroyed", options.Name)
-			}
-
 			return err
 		},
 	}
@@ -459,25 +464,86 @@ func (dc *destroyCommand) runDestroyAll(ctx context.Context, opts *Options) erro
 		return err
 	}
 
+	waitCtx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
-	go func() {
-		err := dc.oktetoClient.Stream().DestroyAllLogs(ctx, opts.Namespace)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		exit <- dc.waitForNamespaceDestroyAllToComplete(waitCtx, opts.Namespace)
+	}(&wg)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		err := dc.oktetoClient.Stream().DestroyAllLogs(waitCtx, opts.Namespace)
 		if err != nil {
 			oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("destroy all logs cannot be streamed due to connectivity issues: %v", err)
 		}
 		exit <- err
-	}()
+	}(&wg)
+
+	go func(wg *sync.WaitGroup) {
+		wg.Wait()
+		close(stop)
+		close(exit)
+	}(&wg)
+
 	select {
 	case <-stop:
+		ctxCancel()
 		oktetoLog.Infof("CTRL+C received, exit")
-		return nil
+		return oktetoErrors.ErrIntSig
 	case err := <-exit:
-		if err == nil {
-			oktetoLog.Success("Successfully destroyed all at namespace %s", opts.Namespace)
-		}
 		return err
+	}
+}
+
+func (pc *destroyCommand) waitForNamespaceDestroyAllToComplete(ctx context.Context, namespace string) error {
+	timeout := 5 * time.Minute
+	ticker := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(timeout)
+
+	c, _, err := pc.k8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+	hasBeenDestroyingAll := false
+
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("'%s' deploy didn't finish after %s", namespace, timeout.String())
+		case <-ticker.C:
+			ns, err := c.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			switch ns.Labels[namespaceStatusLabel] {
+			case "Active":
+				if hasBeenDestroyingAll {
+					cfgList, err := c.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{})
+					if err != nil {
+						return err
+					}
+					for _, cg := range cfgList.Items {
+						if cg.Data["status"] == "error" || cg.Data["status"] == "destroy-error" {
+							return fmt.Errorf("namespace destroy all failed: some resources where not destroyed")
+						}
+					}
+				}
+			case "DestroyingAll":
+				hasBeenDestroyingAll = true
+			case "DestroyAllFailed":
+				return errors.New("namespace destroy all failed")
+			}
+		}
 	}
 }
