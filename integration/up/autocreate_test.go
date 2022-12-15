@@ -86,6 +86,23 @@ dev:
     - 8012:8080
     autocreate: true
 `
+
+	autocreateManifestV2WithDefinedUser = `
+name: test
+image: okteto.dev/test:latest
+command: echo done
+autocreate: true
+persistentVolume:
+  enabled: false
+sync:
+- .:/app
+`
+
+	dockerfileDefinedUser = `
+FROM alpine
+USER 1001
+COPY --chown=1001:1001 . /app
+`
 )
 
 func TestUpAutocreate(t *testing.T) {
@@ -351,4 +368,38 @@ func TestUpAutocreateV2WithBuild(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
+}
+
+func TestUpWithDefinedUserAndBuild(t *testing.T) {
+	t.Parallel()
+	// Prepare environment
+	dir := t.TempDir()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	testNamespace := integration.GetTestNamespace("TestUpWithDefinedUserAndBuild", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+
+	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), autocreateManifestV2WithDefinedUser))
+	require.NoError(t, writeFile(filepath.Join(dir, "Dockerfile"), dockerfileDefinedUser))
+	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
+	require.NoError(t, writeFile(filepath.Join(dir, ".dockerignore"), stignoreContent))
+
+	upOptions := &commands.UpOptions{
+		Name:         "test",
+		Namespace:    testNamespace,
+		Workdir:      dir,
+		ManifestPath: filepath.Join(dir, "okteto.yml"),
+		OktetoHome:   dir,
+		Token:        token,
+	}
+	_, err = commands.RunOktetoUp(oktetoPath, upOptions)
+	require.NoError(t, err)
 }
