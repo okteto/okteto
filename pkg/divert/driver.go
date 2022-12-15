@@ -11,13 +11,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package diverts
+package divert
 
 import (
 	"context"
+
+	"github.com/okteto/okteto/pkg/divert/weaver"
+	"github.com/okteto/okteto/pkg/k8s/diverts"
+	"github.com/okteto/okteto/pkg/model"
+	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 type Driver interface {
 	Deploy(ctx context.Context) error
 	Destroy(ctx context.Context) error
+	ApplyToDeployment(d1 *appsv1.Deployment, d2 *appsv1.Deployment)
+	ApplyToService(s1 *apiv1.Service, s2 *apiv1.Service)
+}
+
+func New(m *model.Manifest, dc *diverts.DivertV1Client, c kubernetes.Interface) Driver {
+	return &weaver.Driver{
+		Client:       c,
+		DivertClient: dc,
+		Manifest:     m,
+	}
 }
