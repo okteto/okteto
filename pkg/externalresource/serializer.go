@@ -4,19 +4,19 @@ import (
 	"fmt"
 )
 
-type externalResourceRaw struct {
-	Icon      string                `yaml:"icon,omitempty"`
-	Notes     string                `yaml:"notes,omitempty"`
-	Endpoints []externalEndpointRaw `yaml:"endpoints,omitempty"`
+type externalResourceUnmarshaller struct {
+	Icon      string                         `yaml:"icon,omitempty"`
+	Notes     string                         `yaml:"notes,omitempty"`
+	Endpoints []externalEndpointUnmarshaller `yaml:"endpoints,omitempty"`
 }
 
-type externalEndpointRaw struct {
+type externalEndpointUnmarshaller struct {
 	Name string `yaml:"name,omitempty"`
 	Url  string `yaml:"url,omitempty"`
 }
 
 func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var result externalResourceRaw
+	var result externalResourceUnmarshaller
 	err := unmarshal(&result)
 	if err != nil {
 		return err

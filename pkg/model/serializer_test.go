@@ -1074,7 +1074,7 @@ deploy:
 				},
 				Dev:          map[string]*Dev{},
 				Dependencies: map[string]*Dependency{},
-				External:     externalresource.ExternalResources{},
+				External:     externalresource.ExternalResourceSection{},
 				Context:      "context-to-use",
 				IsV2:         true,
 				Type:         OktetoManifestType,
@@ -1107,7 +1107,7 @@ dev:
 					},
 				},
 				Dependencies: map[string]*Dependency{},
-				External:     externalresource.ExternalResources{},
+				External:     externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1254,7 +1254,7 @@ sync:
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Dependencies:  map[string]*Dependency{},
-				External:      externalresource.ExternalResources{},
+				External:      externalresource.ExternalResourceSection{},
 				GlobalForward: []forward.GlobalForward{},
 				Dev: map[string]*Dev{
 					"test": {
@@ -1339,7 +1339,7 @@ services:
 				Deploy:        &DeployInfo{},
 				Dependencies:  map[string]*Dependency{},
 				GlobalForward: []forward.GlobalForward{},
-				External:      externalresource.ExternalResources{},
+				External:      externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1470,7 +1470,7 @@ dev:
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
-				External:     externalresource.ExternalResources{},
+				External:     externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1557,7 +1557,7 @@ dev:
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
-				External:     externalresource.ExternalResources{},
+				External:     externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1725,7 +1725,7 @@ deploy:
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
-				External:     externalresource.ExternalResources{},
+				External:     externalresource.ExternalResourceSection{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1752,7 +1752,7 @@ devs:
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
-				External:     externalresource.ExternalResources{},
+				External:     externalresource.ExternalResourceSection{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{

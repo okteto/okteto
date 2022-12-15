@@ -182,7 +182,7 @@ dependencies:
 						Repository: "https://repo.url",
 					},
 				},
-				External: externalresource.ExternalResources{},
+				External: externalresource.ExternalResourceSection{},
 			},
 		},
 		{

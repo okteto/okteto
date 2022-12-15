@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/afero"
 )
 
 // ExternalResources represents the map of external resources at a manifest
-type ExternalResources map[string]*ExternalResource
+type ExternalResourceSection map[string]*ExternalResource
 
 // ExternalResource represents information on an external resource
 type ExternalResource struct {
@@ -39,10 +40,16 @@ type ERFilesystemManager struct {
 
 // SetDefaults creates the necessary environment variables given an external resource
 func (er *ExternalResource) SetDefaults(externalName string) {
+	sanitizedExternalName := sanitizeForEnv(externalName)
 	for _, endpoint := range er.Endpoints {
-		endpointUrlEnv := fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", externalName, endpoint.Name)
+		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
+		endpointUrlEnv := fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)
 		os.Setenv(endpointUrlEnv, endpoint.Url)
 	}
+}
+
+func sanitizeForEnv(name string) string {
+	return strings.ToUpper(strings.ReplaceAll(name, "-", "_"))
 }
 
 // LoadMarkdownContent loads and store markdown content related to external resource

@@ -33,14 +33,17 @@ func TestExternalResource_SetDefaults(t *testing.T) {
 	defer reset(externalResourceName, externalResource)
 	externalResource.SetDefaults(externalResourceName)
 
+	sanitizedExternalName := sanitizeForEnv(externalResourceName)
 	for _, endpoint := range externalResource.Endpoints {
-		assert.Equal(t, endpoint.Url, os.Getenv(fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", externalResourceName, endpoint.Name)))
+		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
+		assert.Equal(t, endpoint.Url, os.Getenv(fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)))
 	}
 }
 
-func reset(erName string, er ExternalResource) {
+func reset(sanitizedExternalName string, er ExternalResource) {
 	for _, endpoint := range er.Endpoints {
-		endpointUrlEnv := fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", erName, endpoint.Name)
+		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
+		endpointUrlEnv := fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)
 		os.Unsetenv(endpointUrlEnv)
 	}
 }
@@ -106,6 +109,35 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 			}
 
 			assert.Equal(t, string(sDec), markdownContent)
+		})
+	}
+}
+
+func TestExternalResource_SanitizeForEnv(t *testing.T) {
+	tests := []struct {
+		name           string
+		input          string
+		expectedOutput string
+	}{
+		{
+			name:           "name with '-'",
+			input:          "TEST-NAME",
+			expectedOutput: "TEST_NAME",
+		},
+		{
+			name:           "name in lowercase",
+			input:          "test",
+			expectedOutput: "TEST",
+		},
+		{
+			name:           "name in lowercase and with '-'",
+			input:          "test-name",
+			expectedOutput: "TEST_NAME",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expectedOutput, sanitizeForEnv(tt.input))
 		})
 	}
 }
