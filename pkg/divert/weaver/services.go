@@ -107,5 +107,5 @@ func translateService(m *model.Manifest, s *apiv1.Service) (*apiv1.Service, erro
 }
 
 func isEqualService(s1 *apiv1.Service, s2 *apiv1.Service) bool {
-	return reflect.DeepEqual(s1.Spec.Ports, s2.Spec.Ports)
+	return reflect.DeepEqual(s1.Spec.Ports, s2.Spec.Ports) && reflect.DeepEqual(s1.Labels, s2.Labels) && reflect.DeepEqual(s1.Annotations, s2.Annotations)
 }

@@ -111,5 +111,5 @@ func isEqualIngress(in1 *networkingv1.Ingress, in2 *networkingv1.Ingress) bool {
 	if in2.Annotations == nil {
 		in2.Annotations = map[string]string{}
 	}
-	return reflect.DeepEqual(in1.Spec, in2.Spec) && (in1.Annotations[model.OktetoDivertIngressInjectionAnnotation] == in2.Annotations[model.OktetoDivertIngressInjectionAnnotation])
+	return reflect.DeepEqual(in1.Spec, in2.Spec) && reflect.DeepEqual(in1.Labels, in2.Labels) && reflect.DeepEqual(in1.Annotations, in2.Annotations)
 }

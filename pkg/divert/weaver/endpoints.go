@@ -106,5 +106,5 @@ func translateEndpoints(m *model.Manifest, s *apiv1.Service) *apiv1.Endpoints {
 }
 
 func isEqualEndpoints(e1 *apiv1.Endpoints, e2 *apiv1.Endpoints) bool {
-	return reflect.DeepEqual(e1.Subsets, e2.Subsets)
+	return reflect.DeepEqual(e1.Subsets, e2.Subsets) && reflect.DeepEqual(e1.Labels, e2.Labels) && reflect.DeepEqual(e1.Annotations, e2.Annotations)
 }

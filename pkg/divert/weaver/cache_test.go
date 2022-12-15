@@ -75,13 +75,7 @@ func Test_initCache(t *testing.T) {
 			Namespace: "other",
 		},
 	}
-	e3 := &apiv1.Endpoints{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "e3",
-			Namespace: "staging",
-		},
-	}
-	c := fake.NewSimpleClientset(i1, i2, i3, s1, s2, s3, e1, e2, e3)
+	c := fake.NewSimpleClientset(i1, i2, i3, s1, s2, s3, e1, e2)
 	m := &model.Manifest{
 		Name:      "test",
 		Namespace: "cindy",
@@ -111,8 +105,5 @@ func Test_initCache(t *testing.T) {
 
 	if !reflect.DeepEqual(map[string]*apiv1.Endpoints{"e1": e1}, d.cache.developerEndpoints) {
 		t.Errorf("failed developerEndpoints: %v", d.cache.developerEndpoints)
-	}
-	if !reflect.DeepEqual(map[string]*apiv1.Endpoints{"e3": e3}, d.cache.divertEndpoints) {
-		t.Errorf("failed divertEndpoints: %v", d.cache.divertEndpoints)
 	}
 }

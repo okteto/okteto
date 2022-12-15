@@ -52,6 +52,13 @@ type Driver struct {
 }
 
 func (d *Driver) Deploy(ctx context.Context) error {
+	if err := d.divertIngresses(ctx); err != nil {
+		return err
+	}
+	return d.createDivertCRD(ctx)
+}
+
+func (d *Driver) divertIngresses(ctx context.Context) error {
 	if err := d.initCache(ctx); err != nil {
 		return err
 	}
@@ -67,7 +74,7 @@ func (d *Driver) Deploy(ctx context.Context) error {
 			}
 		}
 	}
-	return d.createDivertCRD(ctx)
+	return nil
 }
 
 func (d *Driver) Destroy(ctx context.Context) error {
