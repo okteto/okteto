@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
@@ -1073,6 +1074,7 @@ deploy:
 				},
 				Dev:          map[string]*Dev{},
 				Dependencies: map[string]*Dependency{},
+				External:     externalresource.ExternalResources{},
 				Context:      "context-to-use",
 				IsV2:         true,
 				Type:         OktetoManifestType,
@@ -1105,6 +1107,7 @@ dev:
 					},
 				},
 				Dependencies: map[string]*Dependency{},
+				External:     externalresource.ExternalResources{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1251,6 +1254,7 @@ sync:
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Dependencies:  map[string]*Dependency{},
+				External:      externalresource.ExternalResources{},
 				GlobalForward: []forward.GlobalForward{},
 				Dev: map[string]*Dev{
 					"test": {
