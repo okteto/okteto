@@ -28,7 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (d *driver) divertService(ctx context.Context, name string) error {
+func (d *Driver) divertService(ctx context.Context, name string) error {
 	from, ok := d.cache.divertServices[name]
 	if !ok {
 		oktetoLog.Infof("service %s not found: %s", name)
@@ -36,12 +36,12 @@ func (d *driver) divertService(ctx context.Context, name string) error {
 	}
 	s, ok := d.cache.developerServices[name]
 	if !ok {
-		newS, err := translateService(d.m, from)
+		newS, err := translateService(d.Manifest, from)
 		if err != nil {
 			return err
 		}
 		oktetoLog.Infof("creating service %s/%s", newS.Namespace, newS.Name)
-		if _, err := d.c.CoreV1().Services(d.m.Namespace).Create(ctx, newS, metav1.CreateOptions{}); err != nil {
+		if _, err := d.Client.CoreV1().Services(d.Manifest.Namespace).Create(ctx, newS, metav1.CreateOptions{}); err != nil {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
@@ -54,13 +54,13 @@ func (d *driver) divertService(ctx context.Context, name string) error {
 		return nil
 	}
 
-	updatedS, err := translateService(d.m, from)
+	updatedS, err := translateService(d.Manifest, from)
 	if err != nil {
 		return err
 	}
 	if !isEqualService(s, updatedS) {
 		oktetoLog.Infof("updating service %s/%s", updatedS.Namespace, updatedS.Name)
-		if _, err := d.c.CoreV1().Services(d.m.Namespace).Update(ctx, updatedS, metav1.UpdateOptions{}); err != nil {
+		if _, err := d.Client.CoreV1().Services(d.Manifest.Namespace).Update(ctx, updatedS, metav1.UpdateOptions{}); err != nil {
 			if !k8sErrors.IsConflict(err) {
 				return err
 			}
@@ -91,7 +91,7 @@ func translateService(m *model.Manifest, s *apiv1.Service) (*apiv1.Service, erro
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
 
 	if v := result.Annotations[model.OktetoDivertServiceAnnotation]; v != "" {
-		divertMapping := PortMapping{}
+		divertMapping := portMapping{}
 		if err := json.Unmarshal([]byte(v), &divertMapping); err != nil {
 			return nil, err
 		}

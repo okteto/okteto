@@ -92,7 +92,7 @@ func Test_initCache(t *testing.T) {
 		},
 	}
 
-	d := &driver{c: c, m: m}
+	d := &Driver{Client: c, Manifest: m}
 	d.initCache(ctx)
 
 	if !reflect.DeepEqual(map[string]*networkingv1.Ingress{"i1": i1}, d.cache.developerIngresses) {
