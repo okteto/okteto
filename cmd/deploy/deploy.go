@@ -32,9 +32,10 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/divert/weaver"
+	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
+	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -477,7 +478,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		oktetoLog.SetStage("")
 	}
 
-	// deploy diver if any
+	// deploy divert if any
 	if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
 		oktetoLog.SetStage("Divert configuration")
 		if err := dc.deployDivert(ctx, opts); err != nil {
@@ -532,7 +533,12 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 		return err
 	}
 
-	driver := weaver.New(c, opts.Manifest)
+	dClient, err := diverts.GetDivertClient()
+	if err != nil {
+		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
+	}
+
+	driver := divert.New(opts.Manifest, dClient, c)
 	return driver.Deploy(ctx)
 }
 

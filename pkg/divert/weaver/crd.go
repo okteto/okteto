@@ -26,22 +26,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (d *driver) createDivertCRD(ctx context.Context) error {
-	dClient, err := diverts.GetDivertClient()
-	if err != nil {
-		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
-	}
+func (d *Driver) createDivertCRD(ctx context.Context) error {
+	divertCRD := translateDivertCRD(d.Manifest)
 
-	divertCRD := translateDivertCRD(d.m)
-
-	old, err := dClient.Diverts(d.m.Namespace).Get(ctx, divertCRD.Name, metav1.GetOptions{})
+	old, err := d.DivertClient.Diverts(d.Manifest.Namespace).Get(ctx, divertCRD.Name, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return fmt.Errorf("error getting divert CRD '%s': %w", divertCRD.Name, err)
 	}
 
 	if old.Name == "" {
 		oktetoLog.Infof("creating  divert CRD '%s'", divertCRD.Name)
-		_, err = dClient.Diverts(d.m.Namespace).Create(ctx, divertCRD)
+		_, err = d.DivertClient.Diverts(d.Manifest.Namespace).Create(ctx, divertCRD)
 		if err != nil && !k8sErrors.IsAlreadyExists(err) {
 			return fmt.Errorf("error creating divert CRD '%s': %w", divertCRD.Name, err)
 		}
@@ -53,7 +48,7 @@ func (d *driver) createDivertCRD(ctx context.Context) error {
 		old.Labels = divertCRD.Labels
 		old.Spec = divertCRD.Spec
 		old.Status = diverts.DivertStatus{}
-		_, err = dClient.Diverts(d.m.Namespace).Update(ctx, old)
+		_, err = d.DivertClient.Diverts(d.Manifest.Namespace).Update(ctx, old)
 		if err != nil {
 			if !k8sErrors.IsConflict(err) {
 				return fmt.Errorf("error updating divert CRD '%s': %w", divertCRD.Name, err)
