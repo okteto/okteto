@@ -1339,6 +1339,7 @@ services:
 				Deploy:        &DeployInfo{},
 				Dependencies:  map[string]*Dependency{},
 				GlobalForward: []forward.GlobalForward{},
+				External:      externalresource.ExternalResources{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1469,6 +1470,7 @@ dev:
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
+				External:     externalresource.ExternalResources{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1555,6 +1557,7 @@ dev:
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
+				External:     externalresource.ExternalResources{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1722,6 +1725,7 @@ deploy:
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
+				External:     externalresource.ExternalResources{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1748,6 +1752,7 @@ devs:
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
+				External:     externalresource.ExternalResources{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
