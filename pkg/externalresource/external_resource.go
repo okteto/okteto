@@ -12,37 +12,40 @@ import (
 // ExternalResources represents the map of external resources at a manifest
 type ExternalResources map[string]*ExternalResource
 
-// ExternalResources represents information on an external resource
+// ExternalResource represents information on an external resource
 type ExternalResource struct {
 	Icon      string
 	Notes     Notes
 	Endpoints []ExternalEndpoint
 }
 
+// Notes represents information about the location and content of the external resource markdown
 type Notes struct {
 	Path     string
 	Markdown string // base64 encoded content of the path
 }
 
+// ExternalEndpoint represents information about an endpoint
 type ExternalEndpoint struct {
 	Name string
 	Url  string
 }
 
+// ERFilesystemManager represents ExternalResource information with the filesystem inyected
 type ERFilesystemManager struct {
 	ExternalResource ExternalResource
 	Fs               afero.Fs
 }
 
+// SetDefaults creates the necessary environment variables given an external resource
 func (er *ExternalResource) SetDefaults(externalName string) {
 	for _, endpoint := range er.Endpoints {
 		endpointUrlEnv := fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", externalName, endpoint.Name)
 		os.Setenv(endpointUrlEnv, endpoint.Url)
 	}
-
-	return
 }
 
+// LoadMarkdownContent loads and store markdown content related to external resource
 func (ef *ERFilesystemManager) LoadMarkdownContent(manifestPath string) error {
 	markdownAbsPath := filepath.Join(manifestPath, ef.ExternalResource.Notes.Path)
 	b, err := afero.ReadFile(ef.Fs, markdownAbsPath)
