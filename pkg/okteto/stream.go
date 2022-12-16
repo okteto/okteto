@@ -86,7 +86,8 @@ func handlerPipelineLogLine(line string) bool {
 
 // DestroyAllLogs retrieves logs from the pipeline provided and prints them, returns error
 func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string) error {
-	streamURL := fmt.Sprintf(destroyAllUrlTempleate, Context().Name, Context().Namespace)
+	// Context().Name represents baseURL for SSE subscription endpoints
+	streamURL := fmt.Sprintf(destroyAllUrlTempleate, Context().Name, namespace)
 	url, err := url.Parse(streamURL)
 	if err != nil {
 		return err
