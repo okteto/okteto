@@ -94,7 +94,11 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		if err != nil {
 			return err
 		}
-		options.Manifest.Name = devenvironment.InferName(wd)
+		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+		if err != nil {
+			return err
+		}
+		options.Manifest.Name = devenvironment.InferName(ctx, wd, okteto.Context().Namespace, options.File, c)
 	}
 	toBuildSvcs := getToBuildSvcs(options.Manifest, options)
 	if err := validateOptions(options.Manifest, toBuildSvcs, options); err != nil {

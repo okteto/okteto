@@ -140,7 +140,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 			name := options.Name
 			if options.Name == "" {
-				name = devenvironment.InferName(cwd)
+				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+				if err != nil {
+					return err
+				}
+				name = devenvironment.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPathFlag, c)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}
@@ -219,7 +223,11 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 		if manifest.Name != "" {
 			opts.Name = manifest.Name
 		} else {
-			opts.Name = devenvironment.InferName(cwd)
+			c, _, err := dc.k8sClientProvider.Provide(okteto.Context().Cfg)
+			if err != nil {
+				return err
+			}
+			opts.Name = devenvironment.InferName(ctx, cwd, okteto.Context().Namespace, opts.ManifestPathFlag, c)
 		}
 
 	}

@@ -83,7 +83,11 @@ func LoadManifest(devPath string) (*model.Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		manifest.Name = devenvironment.InferName(cwd)
+		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+		if err != nil {
+			return nil, err
+		}
+		manifest.Name = devenvironment.InferName(context.Background(), cwd, okteto.Context().Namespace, devPath, c)
 	}
 	if manifest.Namespace == "" {
 		manifest.Namespace = okteto.Context().Namespace

@@ -98,7 +98,12 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				if manifest.Name != "" {
 					options.Name = manifest.Name
 				} else {
-					options.Name = devenvironment.InferName(cwd)
+					c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+					if err != nil {
+						return err
+					}
+					// TODO: Check manifest. It changes, probably need to keep the one specified by the user
+					options.Name = devenvironment.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPath, c)
 				}
 				if options.Namespace == "" {
 					options.Namespace = manifest.Namespace

@@ -161,7 +161,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 			}
 			name := options.Name
 			if options.Name == "" {
-				name = devenvironment.InferName(cwd)
+				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+				if err != nil {
+					return err
+				}
+				name = devenvironment.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPathFlag, c)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}

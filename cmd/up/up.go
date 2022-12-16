@@ -160,7 +160,12 @@ func Up() *cobra.Command {
 				return err
 			}
 			if oktetoManifest.Name == "" {
-				oktetoManifest.Name = devenvironment.InferName(wd)
+				oktetoLog.Information("okteto manifest doesn't have a name, inferring it...")
+				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+				if err != nil {
+					return err
+				}
+				oktetoManifest.Name = devenvironment.InferName(ctx, wd, okteto.Context().Namespace, upOptions.ManifestPathFlag, c)
 			}
 			os.Setenv(constants.OktetoNameEnvVar, oktetoManifest.Name)
 

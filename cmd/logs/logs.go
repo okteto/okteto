@@ -72,7 +72,11 @@ func Logs(ctx context.Context) *cobra.Command {
 			if options.Name != "" {
 				manifest.Name = options.Name
 			} else if manifest.Name == "" {
-				manifest.Name = devenvironment.InferName(wd)
+				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+				if err != nil {
+					return err
+				}
+				manifest.Name = devenvironment.InferName(ctx, wd, okteto.Context().Namespace, options.ManifestPath, c)
 			}
 
 			if len(args) > 0 {
