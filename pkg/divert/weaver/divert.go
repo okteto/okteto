@@ -77,11 +77,11 @@ func (d *Driver) divertIngresses(ctx context.Context) error {
 	return nil
 }
 
-func (d *Driver) Destroy(ctx context.Context) error {
+func (*Driver) Destroy(_ context.Context) error {
 	return nil
 }
 
-func (d *Driver) ApplyToDeployment(d1 *appsv1.Deployment, d2 *appsv1.Deployment) {
+func (*Driver) ApplyToDeployment(d1 *appsv1.Deployment, d2 *appsv1.Deployment) {
 	if d2.Spec.Template.Labels == nil {
 		return
 	}
@@ -94,7 +94,7 @@ func (d *Driver) ApplyToDeployment(d1 *appsv1.Deployment, d2 *appsv1.Deployment)
 	d1.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] = d2.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel]
 }
 
-func (d *Driver) ApplyToService(s1 *apiv1.Service, s2 *apiv1.Service) {
+func (*Driver) ApplyToService(s1 *apiv1.Service, s2 *apiv1.Service) {
 	if s2.Annotations[model.OktetoDivertServiceAnnotation] == "" {
 		return
 	}
