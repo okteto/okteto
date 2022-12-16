@@ -145,6 +145,41 @@ func TestDeploySuccessOutput(t *testing.T) {
 	}
 }
 
+func TestDeployWithNonSanitizedOK(t *testing.T) {
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	require.NoError(t, createComposeScenario(dir))
+
+	testNamespace := integration.GetTestNamespace("TestDeployWithNonSanitizedOK", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		Name:       "test/my deployment",
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+	_, err = integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", "test-my-deployment"), c)
+	require.NoError(t, err)
+
+}
+
 func TestCmdFailOutput(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
 	t.Parallel()

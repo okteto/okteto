@@ -489,7 +489,7 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found helm chart on %s", chartPath)
 		tags := inferHelmTags(chartPath)
-		command := fmt.Sprintf("helm upgrade --install ${%s} %s %s", constants.OktetoNameEnvVar, chartPath, tags)
+		command := fmt.Sprintf("helm upgrade --install ${%s} %s %s", constants.OktetoAutodiscoveryReleaseName, chartPath, tags)
 		chartManifest := &Manifest{
 			Type: ChartType,
 			Deploy: &DeployInfo{
@@ -897,6 +897,7 @@ type Dependency struct {
 	Variables    Environment   `json:"variables,omitempty" yaml:"variables,omitempty"`
 	Wait         bool          `json:"wait,omitempty" yaml:"wait,omitempty"`
 	Timeout      time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Namespace    string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 }
 
 // GetTimeout returns dependency.Timeout if it's set or the one passed as arg if it's not

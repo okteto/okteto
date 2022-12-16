@@ -40,4 +40,7 @@ const (
 
 	// OktetoFolderEnvVar defines the path of okteto folder
 	OktetoFolderEnvVar = "OKTETO_FOLDER"
+
+	// OktetoAutodiscoveryReleaseName defines the name used for helm release when autodiscovery
+	OktetoAutodiscoveryReleaseName = "OKTETO_AUTODISCOVERY_RELEASE_NAME"
 )

@@ -261,6 +261,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return fmt.Errorf("failed to get the current working directory: %w", err)
 	}
 
+	// We need to create a client that doesn't go through the proxy to create
+	// the configmap without the deployedByLabel
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
 		return err
@@ -344,6 +346,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			Name:  "OKTETO_ORIGIN",
 			Value: "okteto-deploy",
 		})
+		namespace := okteto.Context().Namespace
+		if dep.Namespace != "" {
+			namespace = dep.Namespace
+		}
 		pipOpts := &pipelineCMD.DeployOptions{
 			Name:         depName,
 			Repository:   dep.Repository,
@@ -353,10 +359,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			Wait:         dep.Wait,
 			Timeout:      dep.GetTimeout(deployOptions.Timeout),
 			SkipIfExists: !deployOptions.Dependencies,
+			Namespace:    namespace,
 		}
 		pc, err := pipelineCMD.NewCommand()
 		if err != nil {
-			return err
+			return fmt.Errorf("could not create pipeline command: %w", err)
 		}
 		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
 			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); errStatus != nil {
@@ -396,6 +403,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
 		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
 		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
+		// Set OKTETO_AUTODISCOVERY_RELEASE_NAME=sanitized name, so the release name in case of autodiscovery of helm is valid
+		fmt.Sprintf("%s=%s", constants.OktetoAutodiscoveryReleaseName, format.ResourceK8sMetaString(deployOptions.Name)),
 	)
 	oktetoLog.EnableMasking()
 	err = dc.deploy(ctx, deployOptions)
@@ -566,7 +575,7 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 
 	translateOptions := &ingresses.TranslateOptions{
 		Namespace: opts.Manifest.Namespace,
-		Name:      opts.Manifest.Name,
+		Name:      format.ResourceK8sMetaString(opts.Manifest.Name),
 	}
 
 	for name, endpoint := range opts.Manifest.Deploy.Endpoints {

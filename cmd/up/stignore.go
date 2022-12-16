@@ -104,7 +104,7 @@ func addStignoreSecrets(dev *model.Dev) error {
 			model.Secret{
 				LocalPath:  transformedStignorePath,
 				RemotePath: path.Join(folder.RemotePath, ".stignore"),
-				Mode:       0600,
+				Mode:       0644,
 			},
 		)
 	}
