@@ -537,16 +537,14 @@ func (pc *destroyCommand) waitForNamespaceDestroyAllToComplete(ctx context.Conte
 			case "Active":
 				if hasBeenDestroyingAll {
 					// when status is active again check if all resources have been correctly destroyed
-					// no configmap for the given namespace should be up and running
-					// check if there are configmaps with error state
 					cfgList, err := c.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{})
 					if err != nil {
 						return err
 					}
-					for _, cg := range cfgList.Items {
-						if cg.Data["status"] == "error" || cg.Data["status"] == "destroy-error" {
-							return fmt.Errorf("namespace destroy all failed: some resources were not destroyed")
-						}
+
+					// no configmap for the given namespace should exist
+					if len(cfgList.Items) > 0 {
+						return fmt.Errorf("namespace destroy all failed: some resources where not destroyed")
 					}
 					// exit the waiting loop when status is active again
 					return nil
