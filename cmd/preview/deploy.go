@@ -113,7 +113,7 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 		return nil
 	}
 
-	if err := pw.waitUntilRunning(ctx, opts.name, resp.Action, opts.timeout); err != nil {
+	if err := pw.waitUntilRunning(ctx, opts.name, okteto.Context().Namespace, resp.Action, opts.timeout); err != nil {
 		return err
 	}
 	oktetoLog.Success("Preview environment '%s' successfully deployed", opts.name)
@@ -140,7 +140,7 @@ func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*typ
 	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, varList)
 }
 
-func (pw *Command) waitUntilRunning(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
+func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string, a *types.Action, timeout time.Duration) error {
 	waitCtx, ctxCancel := context.WithCancel(ctx)
 	defer ctxCancel()
 
@@ -157,7 +157,7 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name string, a *types.A
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := pw.okClient.Pipeline().StreamLogs(waitCtx, name, a.Name)
+		err := pw.okClient.Pipeline().StreamLogs(waitCtx, name, namespace, a.Name)
 		if err != nil {
 			oktetoLog.Warning("preview logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("preview logs cannot be streamed due to connectivity issues: %v", err)
@@ -196,7 +196,7 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name string, a *types.A
 	return nil
 }
 func (pw *Command) waitToBeDeployed(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
-	return pw.okClient.Pipeline().WaitForActionToFinish(ctx, name, a.Name, timeout)
+	return pw.okClient.Pipeline().WaitForActionToFinish(ctx, name, okteto.Context().Namespace, a.Name, timeout)
 }
 
 func (pw *Command) waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.Duration) error {

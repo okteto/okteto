@@ -894,6 +894,7 @@ type Dependency struct {
 	Variables    Environment   `json:"variables,omitempty" yaml:"variables,omitempty"`
 	Wait         bool          `json:"wait,omitempty" yaml:"wait,omitempty"`
 	Timeout      time.Duration `json:"timeout,omitempty" yaml:"timeout,omitempty"`
+	Namespace    string        `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 }
 
 // GetTimeout returns dependency.Timeout if it's set or the one passed as arg if it's not

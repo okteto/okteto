@@ -97,8 +97,7 @@ func executeDeployPipelineAction(t *testing.T, namespace string) error {
 	if err != nil {
 		return err
 	}
-	okteto.Context().Namespace = namespace
-	pipeline, err := oktetoClient.Pipeline().GetByName(context.Background(), "movies")
+	pipeline, err := oktetoClient.Pipeline().GetByName(context.Background(), "movies", namespace)
 	if err != nil || pipeline == nil {
 		return fmt.Errorf("Could not get deployment %s", namespace)
 	}
@@ -138,8 +137,7 @@ func executeDeployWithComposePipelineAction(namespace string) error {
 	if err != nil {
 		return err
 	}
-	okteto.Context().Namespace = namespace
-	pipeline, err := oktetoClient.Pipeline().GetByName(context.Background(), "movies")
+	pipeline, err := oktetoClient.Pipeline().GetByName(context.Background(), "movies", namespace)
 	if err != nil || pipeline == nil {
 		return fmt.Errorf("Could not get deployment %s", namespace)
 	}
