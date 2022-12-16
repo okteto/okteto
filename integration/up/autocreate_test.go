@@ -98,6 +98,23 @@ sync:
 - .:/app
 `
 
+	autocreateManifestV2WithDefinedUser = `
+build:
+  test:
+    context: .
+dev:
+  test:
+    image: ${OKTETO_BUILD_TEST_IMAGE}
+    command:
+    - echo
+    - done
+    sync:
+    - .:/app
+    persistentVolume:
+      enabled: false
+    autocreate: true
+`
+
 	dockerfileDefinedUser = `
 FROM alpine
 USER 1001
@@ -388,6 +405,40 @@ func TestUpWithDefinedUserAndBuildV1(t *testing.T) {
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), autocreateManifestV1WithDefinedUser))
+	require.NoError(t, writeFile(filepath.Join(dir, "Dockerfile"), dockerfileDefinedUser))
+	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
+	require.NoError(t, writeFile(filepath.Join(dir, ".dockerignore"), stignoreContent))
+
+	upOptions := &commands.UpOptions{
+		Name:         "test",
+		Namespace:    testNamespace,
+		Workdir:      dir,
+		ManifestPath: filepath.Join(dir, "okteto.yml"),
+		OktetoHome:   dir,
+		Token:        token,
+	}
+	_, err = commands.RunOktetoUp(oktetoPath, upOptions)
+	require.NoError(t, err)
+}
+
+func TestUpWithDefinedUserAndBuildV2(t *testing.T) {
+	t.Parallel()
+	// Prepare environment
+	dir := t.TempDir()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	testNamespace := integration.GetTestNamespace("TestUpWithDefinedUserAndBuildV2", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+
+	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), autocreateManifestV2WithDefinedUser))
 	require.NoError(t, writeFile(filepath.Join(dir, "Dockerfile"), dockerfileDefinedUser))
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 	require.NoError(t, writeFile(filepath.Join(dir, ".dockerignore"), stignoreContent))
