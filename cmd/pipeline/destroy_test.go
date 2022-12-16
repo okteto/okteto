@@ -60,6 +60,7 @@ func TestDestroyPipelineSuccesfulWithWait(t *testing.T) {
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
+			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 		},
 	}
 	opts := &DestroyOptions{
@@ -79,11 +80,11 @@ func TestDestroyPipelineSuccesfulWithWaitStreamErr(t *testing.T) {
 				Name: "test",
 			},
 		},
-		StreamErr: errors.New("error"),
 	}
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
+			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{StreamErr: errors.New("error")}),
 		},
 	}
 	opts := &DestroyOptions{
@@ -122,6 +123,7 @@ func TestDestroyNonExistantPipelineWithWait(t *testing.T) {
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
+			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 		},
 	}
 
@@ -164,6 +166,7 @@ func TestDestroyExistantPipelineTimeoutError(t *testing.T) {
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
+			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 		},
 	}
 
