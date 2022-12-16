@@ -892,7 +892,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 	p := Secret{
 		LocalPath:  pubKeyPath,
 		RemotePath: authorizedKeysPath,
-		Mode:       0600,
+		Mode:       0644,
 	}
 
 	oktetoLog.Infof("enabled remote mode")
