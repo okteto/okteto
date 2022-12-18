@@ -81,11 +81,16 @@ type UpOptions struct {
 func Up() *cobra.Command {
 	upOptions := &UpOptions{}
 	cmd := &cobra.Command{
-		Use:   "up [svc] <command>",
+		Use:   "up [svc]",
 		Short: "Launch your development environment",
+		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
+			}
+
+			if err := upOptions.AddArgs(cmd, args); err != nil {
+				return err
 			}
 
 			u := utils.UpgradeAvailable()
@@ -147,10 +152,6 @@ func Up() *cobra.Command {
 				if err != nil {
 					return err
 				}
-			}
-
-			if err := upOptions.AddArgs(args, oktetoManifest); err != nil {
-				return err
 			}
 
 			wd, err := os.Getwd()
@@ -360,27 +361,25 @@ func Up() *cobra.Command {
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().MarkHidden("pull")
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
+	cmd.Flags().StringArrayVarP(&upOptions.commandToExecute, "command", "", []string{}, "external commands to be supplied to 'okteto up'")
 	return cmd
 }
 
 // AddArgs sets the args as options and return err if it's not compatible
-func (o *UpOptions) AddArgs(args []string, oktetoManifest *model.Manifest) error {
+func (o *UpOptions) AddArgs(cmd *cobra.Command, args []string) error {
 
-	if len(args) == 1 {
-		if _, ok := oktetoManifest.Dev[args[0]]; ok {
-			o.DevName = args[0]
-		} else {
-			o.commandToExecute = args
+	maxV1Args := 1
+	docsURL := "https://okteto.com/docs/reference/cli/#up"
+	if len(args) > maxV1Args {
+		cmd.Help()
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), maxV1Args, len(args)),
+			Hint: fmt.Sprintf("Visit %s for more information.", docsURL),
 		}
-	} else if len(args) > 1 {
-		if _, ok := oktetoManifest.Dev[args[0]]; ok {
-			o.DevName = args[0]
-			o.commandToExecute = args[1:]
-		} else {
-			o.commandToExecute = args
-		}
+	} else if len(args) == 1 {
+		o.DevName = args[0]
 	}
-	oktetoLog.Infof("dev name: %s / commandToExecute: %v", o.DevName, o.commandToExecute)
+
 	return nil
 }
 

@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -305,58 +303,6 @@ func TestEnvVarIsNotAddedWhenHasBuiltInOktetoEnvVarsFormat(t *testing.T) {
 			_, err := getOverridedEnvVarsFromCmd(tt.dev.Environment, tt.upOptions.Envs)
 			if !errors.Is(err, oktetoErrors.ErrBuiltInOktetoEnvVarSetFromCMD) {
 				t.Fatalf("expected error in setEnvVarsFromCmd: %s due to try to set a built-in okteto environment variable", err)
-			}
-		})
-	}
-}
-
-func TestCommandAddedToUpOptionsWhenPassedAsArgument(t *testing.T) {
-	var tests = []struct {
-		name            string
-		upOptions       *UpOptions
-		args            []string
-		Manifest        *model.Manifest
-		expectedCommand []string
-		expectedDev     string
-	}{
-		{
-			name:            "Passing dev environment but no command",
-			upOptions:       &UpOptions{},
-			args:            []string{"frontend"},
-			Manifest:        &model.Manifest{Dev: map[string]*model.Dev{"frontend": {}}},
-			expectedCommand: nil,
-			expectedDev:     "frontend",
-		},
-		{
-			name:            "Passing command but no dev environment",
-			upOptions:       &UpOptions{},
-			args:            []string{"echo", "hello"},
-			Manifest:        &model.Manifest{Dev: map[string]*model.Dev{}},
-			expectedCommand: []string{"echo", "hello"},
-			expectedDev:     "",
-		},
-		{
-			name:            "Passing command and dev environment",
-			upOptions:       &UpOptions{},
-			args:            []string{"frontend", "echo", "hello"},
-			Manifest:        &model.Manifest{Dev: map[string]*model.Dev{"frontend": {}}},
-			expectedCommand: []string{"echo", "hello"},
-			expectedDev:     "frontend",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.upOptions.AddArgs(tt.args, tt.Manifest)
-			if !assert.NoError(t, err) {
-				t.Fatalf("unexpected error in  AddArgs: %s", err)
-			}
-
-			if !assert.Equal(t, tt.expectedCommand, tt.upOptions.commandToExecute) {
-				t.Fatalf("error in AddArgs; expected command %v but got %v", tt.expectedCommand, tt.upOptions.commandToExecute)
-			}
-
-			if !assert.Equal(t, tt.expectedDev, tt.upOptions.DevName) {
-				t.Fatalf("error in AddArgs; expected dev %s but got %s", tt.expectedDev, tt.upOptions.DevName)
 			}
 		})
 	}
