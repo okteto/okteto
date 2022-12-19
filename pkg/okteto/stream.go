@@ -27,6 +27,8 @@ import (
 var (
 	// gitDeployUrlTemplate (baseURL, namespace, dev environment name, action name)
 	gitDeployUrlTemplate = "%s/sse/logs/%s/gitdeploy/%s?action=%s"
+	// destroyAllUrlTempleate (baseURL, namespace)
+	destroyAllUrlTempleate = "%s/sse/logs/%s/destroy-all"
 )
 
 type streamClient struct {
@@ -40,6 +42,10 @@ func newStreamClient(httpClient *http.Client) *streamClient {
 }
 
 type pipelineLogFormat oktetoLog.JSONLogFormat
+
+type destroyAllLogFormat struct {
+	Line string `json:"line"`
+}
 
 // PipelineLogs retrieves logs from the pipeline provided and prints them, returns error
 func (c *streamClient) PipelineLogs(ctx context.Context, name, namespace, actionName string) error {
@@ -74,6 +80,44 @@ func handlerPipelineLogLine(line string) bool {
 			return true
 		}
 		oktetoLog.Println(pLog.Message)
+	}
+	return false
+}
+
+// DestroyAllLogs retrieves logs from the pipeline provided and prints them, returns error
+func (c *streamClient) DestroyAllLogs(ctx context.Context, namespace string) error {
+	// Context().Name represents baseURL for SSE subscription endpoints
+	streamURL := fmt.Sprintf(destroyAllUrlTempleate, Context().Name, namespace)
+	url, err := url.Parse(streamURL)
+	if err != nil {
+		return err
+	}
+	return stream.GetLogsFromURL(ctx, c.client, url.String(), handlerDestroyAllLog)
+}
+
+// handlerDestroyAllLog prints a line with the Message unmarshalled from line
+// returns true when line message is `Done` to break the scanner
+func handlerDestroyAllLog(line string) bool {
+	destroyAllLogList := []destroyAllLogFormat{}
+	if err := json.Unmarshal([]byte(line), &destroyAllLogList); err != nil {
+		dLog := destroyAllLogFormat{}
+		if err := json.Unmarshal([]byte(line), &dLog); err != nil {
+			oktetoLog.Infof("error unmarshalling destroyAllLogFormat: %v", err)
+			return false
+		}
+		// skip when the event log line is "Done"
+		if dLog.Line == "Done" {
+			return true
+		}
+		oktetoLog.Println(dLog.Line)
+		return false
+	}
+	for _, dLog := range destroyAllLogList {
+		// skip when the event log line is "Done"
+		if dLog.Line == "Done" {
+			return true
+		}
+		oktetoLog.Println(dLog.Line)
 	}
 	return false
 }
