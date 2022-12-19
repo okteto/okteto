@@ -23,6 +23,7 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 		username          string
 		pipelineResponses *client.FakePipelineResponses
 		previewResponses  *client.FakePreviewResponse
+		streamResponses      *client.FakeStreamResponse
 		opts              *DeployOptions
 		expectedErr       error
 	}{
@@ -62,6 +63,7 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 				},
 				ResourceStatus: map[string]string{},
 			},
+			streamResponses: &client.FakeStreamResponse{},
 		},
 		{
 			name:     "success-wait-stream-err",
@@ -73,7 +75,8 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 				wait:       true,
 				timeout:    1 * time.Minute,
 			},
-			pipelineResponses: &client.FakePipelineResponses{
+			pipelineResponses: &client.FakePipelineResponses{},
+			streamResponses: &client.FakeStreamResponse{
 				StreamErr: errors.New("error"),
 			},
 			previewResponses: &client.FakePreviewResponse{
@@ -118,7 +121,8 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: errWait,
+			streamResponses: &client.FakeStreamResponse{},
+			expectedErr:  errWait,
 		},
 		{
 			name:     "err-wait-resources",
@@ -139,7 +143,8 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 				},
 				ErrResources: errResources,
 			},
-			expectedErr: errResources,
+			streamResponses: &client.FakeStreamResponse{},
+			expectedErr:  errResources,
 		},
 		{
 			name:     "err-wait-resources-timeout",
@@ -159,7 +164,8 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 					},
 				},
 			},
-			expectedErr: ErrWaitResourcesTimeout,
+			streamResponses: &client.FakeStreamResponse{},
+			expectedErr:  ErrWaitResourcesTimeout,
 		},
 	}
 
@@ -180,6 +186,7 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 				okClient: &client.FakeOktetoClient{
 					PipelineClient: client.NewFakePipelineClient(tt.pipelineResponses),
 					Preview:        client.NewFakePreviewClient(tt.previewResponses),
+					StreamClient:   client.NewFakeStreamClient(tt.streamResponses),
 				},
 			}
 			err := pw.ExecuteDeployPreview(ctx, tt.opts)

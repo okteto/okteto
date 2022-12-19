@@ -194,8 +194,13 @@ func getPipelineName(repository string) string {
 	return model.TranslateURLToName(repository)
 }
 
-func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string) error {
-	return pc.okClient.Pipeline().StreamLogs(ctx, name, namespace, actionName)
+func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration) error {
+	// wait to Action be progressing
+	if err := pc.okClient.Pipeline().WaitForActionProgressing(ctx, name, namespace, actionName, timeout); err != nil {
+		return err
+	}
+
+	return pc.okClient.Stream().PipelineLogs(ctx, name, namespace, actionName)
 }
 
 func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string, action *types.Action, timeout time.Duration) error {
@@ -215,7 +220,7 @@ func (pc *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name)
+		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name, timeout)
 		if err != nil {
 			oktetoLog.Warning("pipeline logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("pipeline logs cannot be streamed due to connectivity issues: %v", err)
