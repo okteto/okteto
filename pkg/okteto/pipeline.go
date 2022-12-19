@@ -14,12 +14,8 @@
 package okteto
 
 import (
-	"bufio"
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
-	"net/url"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -31,17 +27,14 @@ import (
 )
 
 type pipelineClient struct {
-	client    *graphql.Client
-	sseClient *http.Client
-
-	url string
+	client *graphql.Client
+	url    string
 }
 
-func newPipelineClient(client *graphql.Client, sseClient *http.Client, url string) *pipelineClient {
+func newPipelineClient(client *graphql.Client, url string) *pipelineClient {
 	return &pipelineClient{
-		client:    client,
-		sseClient: sseClient,
-		url:       url,
+		client: client,
+		url:    url,
 	}
 }
 
@@ -456,63 +449,4 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name, namespace
 
 func getResourceFullName(kind, name string) string {
 	return strings.ToLower(fmt.Sprintf("%s/%s", kind, name))
-}
-
-// StreamLogs retrieves logs from the pipeline provided and prints them, returns error
-func (c *pipelineClient) StreamLogs(ctx context.Context, name, namespace, actionName string) error {
-	streamURL := fmt.Sprintf("%s/sse/logs/%s/gitdeploy/%s?action=%s", Context().Name, namespace, name, actionName)
-	url, err := url.Parse(streamURL)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest("GET", url.String(), nil)
-	if err != nil {
-		return err
-	}
-	resp, err := c.sseClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("error retrieving logs from pipeline %s: %s", name, resp.Status)
-	}
-
-	sc := bufio.NewScanner(resp.Body)
-	dataHeader := "data: "
-	for sc.Scan() {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-			scanText := sc.Text()
-			msg := ""
-
-			// if the text scanned is a data message, trim and save into msg
-			if strings.HasPrefix(scanText, dataHeader) {
-				msg = strings.TrimPrefix(scanText, dataHeader)
-			}
-
-			// the msg from sse data is a string with a json log format
-			eventLog := &oktetoLog.JSONLogFormat{}
-			json.Unmarshal([]byte(msg), &eventLog)
-
-			// skip when the message is empty
-			if eventLog.Message == "" {
-				continue
-			}
-
-			// stop the scanner when the event log is in stage done and message is EOF
-			if eventLog.Stage == "done" && eventLog.Message == "EOF" {
-				break
-			}
-
-			oktetoLog.Println(eventLog.Message)
-		}
-	}
-
-	// return whether the scan has encountered any error
-	return sc.Err()
 }
