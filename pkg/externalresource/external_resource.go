@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/afero"
 )
 
-// ExternalResources represents the map of external resources at a manifest
+// ExternalResourceSection represents the map of external resources at a manifest
 type ExternalResourceSection map[string]*ExternalResource
 
 // ExternalResource represents information on an external resource
@@ -32,7 +32,7 @@ type ExternalEndpoint struct {
 	Url  string
 }
 
-// ERFilesystemManager represents ExternalResource information with the filesystem inyected
+// ERFilesystemManager represents ExternalResource information with the filesystem injected
 type ERFilesystemManager struct {
 	ExternalResource ExternalResource
 	Fs               afero.Fs
@@ -49,7 +49,8 @@ func (er *ExternalResource) SetDefaults(externalName string) {
 }
 
 func sanitizeForEnv(name string) string {
-	return strings.ToUpper(strings.ReplaceAll(name, "-", "_"))
+	whithoutSpaces := strings.ReplaceAll(name, " ", "_")
+	return strings.ToUpper(strings.ReplaceAll(whithoutSpaces, "-", "_"))
 }
 
 // LoadMarkdownContent loads and store markdown content related to external resource

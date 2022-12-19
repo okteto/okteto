@@ -35,6 +35,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
+	"github.com/okteto/okteto/pkg/k8s/externalresources"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -497,6 +498,16 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		oktetoLog.SetStage("")
 	}
 
+	// deploy externals if any
+	if opts.Manifest.External != nil {
+		oktetoLog.SetStage("External configuration")
+		if err := dc.deployExternals(ctx, opts); err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying external resources: %s", err.Error())
+			return err
+		}
+		oktetoLog.SetStage("")
+	}
+
 	return nil
 
 }
@@ -581,6 +592,17 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 	for name, endpoint := range opts.Manifest.Deploy.Endpoints {
 		ingress := ingresses.Translate(name, endpoint, translateOptions)
 		if err := iClient.Deploy(ctx, ingress); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (dc *DeployCommand) deployExternals(ctx context.Context, opts *Options) error {
+	for externalName, externalInfo := range opts.Manifest.External {
+		err := externalresources.CreateCRD(ctx, externalName, externalInfo)
+		if err != nil {
 			return err
 		}
 	}
