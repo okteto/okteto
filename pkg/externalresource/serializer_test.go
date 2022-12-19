@@ -4,6 +4,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -78,20 +79,13 @@ endpoints:
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var result ExternalResource
-			if err := yaml.Unmarshal([]byte(tt.data), &result); err != nil {
-				if tt.expectedErr {
-					return
-				}
-
-				t.Fatalf("no error expected but got: %s", err.Error())
-			}
-
 			if tt.expectedErr {
-				t.Fatal("didn't got expected error")
-			}
-
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("didn't unmarshal correctly. Actual '%+v', Expected '%+v'", result, tt.expected)
+				assert.Error(t, yaml.Unmarshal([]byte(tt.data), &result))
+			} else {
+				assert.NoError(t, yaml.Unmarshal([]byte(tt.data), &result))
+				if !reflect.DeepEqual(result, tt.expected) {
+					t.Errorf("didn't unmarshal correctly. Actual '%+v', Expected '%+v'", result, tt.expected)
+				}
 			}
 		})
 	}

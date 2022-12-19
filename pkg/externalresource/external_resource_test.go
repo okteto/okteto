@@ -91,24 +91,17 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.externalResourceFSM.LoadMarkdownContent(manifestPath); err != nil {
-				if tt.expectErr {
-					return
+			if tt.expectErr {
+				assert.Error(t, tt.externalResourceFSM.LoadMarkdownContent(manifestPath))
+			} else {
+				assert.NoError(t, tt.externalResourceFSM.LoadMarkdownContent(manifestPath))
+				sDec, err := b64.StdEncoding.DecodeString(tt.externalResourceFSM.ExternalResource.Notes.Markdown)
+				if err != nil {
+					t.Fatal(err)
 				}
 
-				t.Fatal(err)
+				assert.Equal(t, string(sDec), markdownContent)
 			}
-
-			if tt.expectErr {
-				t.Fatal("didn't got expected error")
-			}
-
-			sDec, err := b64.StdEncoding.DecodeString(tt.externalResourceFSM.ExternalResource.Notes.Markdown)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			assert.Equal(t, string(sDec), markdownContent)
 		})
 	}
 }
@@ -130,9 +123,14 @@ func TestExternalResource_SanitizeForEnv(t *testing.T) {
 			expectedOutput: "TEST",
 		},
 		{
-			name:           "name in lowercase and with '-'",
-			input:          "test-name",
-			expectedOutput: "TEST_NAME",
+			name:           "name with spaces",
+			input:          "test one",
+			expectedOutput: "TEST_ONE",
+		},
+		{
+			name:           "name in lowercase, with spaces and with '-'",
+			input:          "test-name one",
+			expectedOutput: "TEST_NAME_ONE",
 		},
 	}
 	for _, tt := range tests {
