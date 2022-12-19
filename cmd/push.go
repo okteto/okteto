@@ -89,7 +89,7 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			manifest, err := utils.LoadManifestOrDefault(pushOpts.DevPath, pushOpts.AppName)
+			manifest, err := utils.DeprecatedLoadManifestOrDefault(pushOpts.DevPath, pushOpts.AppName)
 			if err != nil {
 				return err
 			}

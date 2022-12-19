@@ -61,12 +61,13 @@ func LoadManifestContext(devPath string) (*model.ContextResource, error) {
 	return model.GetContextResource(devPath)
 }
 
-// LoadManifest loads an okteto manifest checking "yml" and "yaml"
-func LoadManifest(devPath string) (*model.Manifest, error) {
+// DeprecatedLoadManifest loads an okteto manifest checking "yml" and "yaml".
+// Deprecated: use model.GetManifestV2 instead
+func DeprecatedLoadManifest(devPath string) (*model.Manifest, error) {
 	if !filesystem.FileExists(devPath) {
 		if devPath == DefaultManifest {
 			if filesystem.FileExists(secondaryManifest) {
-				return LoadManifest(secondaryManifest)
+				return DeprecatedLoadManifest(secondaryManifest)
 			}
 		}
 
@@ -83,11 +84,7 @@ func LoadManifest(devPath string) (*model.Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
-		if err != nil {
-			return nil, err
-		}
-		manifest.Name = devenvironment.InferName(context.Background(), cwd, okteto.Context().Namespace, devPath, c)
+		manifest.Name = devenvironment.DeprecatedInferName(cwd)
 	}
 	if manifest.Namespace == "" {
 		manifest.Namespace = okteto.Context().Namespace
@@ -132,9 +129,10 @@ func LoadManifestRc(dev *model.Dev) error {
 	return nil
 }
 
-// LoadManifestOrDefault loads an okteto manifest or a default one if does not exist
-func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
-	dev, err := LoadManifest(devPath)
+// DeprecatedLoadManifestOrDefault loads an okteto manifest or a default one if does not exist
+// Deprecatd. It should only be used by `push` command that will be deleted on next major version. No new usages should be added
+func DeprecatedLoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
+	dev, err := DeprecatedLoadManifest(devPath)
 	if err == nil {
 		return dev, nil
 	}
