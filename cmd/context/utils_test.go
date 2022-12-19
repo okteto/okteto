@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
@@ -181,6 +182,7 @@ dependencies:
 						Repository: "https://repo.url",
 					},
 				},
+				External: externalresource.ExternalResourceSection{},
 			},
 		},
 		{
