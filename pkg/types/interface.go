@@ -24,6 +24,7 @@ type OktetoInterface interface {
 	Namespaces() NamespaceInterface
 	Previews() PreviewInterface
 	Pipeline() PipelineInterface
+	Stream() StreamInterface
 }
 
 // UserInterface represents the client that connects to the user functions
@@ -38,6 +39,7 @@ type NamespaceInterface interface {
 	Delete(ctx context.Context, namespace string) error
 	AddMembers(ctx context.Context, namespace string, members []string) error
 	SleepNamespace(ctx context.Context, namespace string) error
+	DestroyAll(ctx context.Context, namespace string, destroyVolumes bool) error
 }
 
 // PreviewInterface represents the client that connects to the preview functions
@@ -54,10 +56,16 @@ type PipelineInterface interface {
 	Destroy(ctx context.Context, name, namespace string, destroyVolumes bool) (*GitDeployResponse, error)
 	GetResourcesStatus(ctx context.Context, name, namespace string) (map[string]string, error)
 	GetByName(ctx context.Context, name, namespace string) (*GitDeploy, error)
-	StreamLogs(ctx context.Context, name, namespace, actionName string) error
+	WaitForActionProgressing(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error
 }
 
 // OktetoClientProvider provides an okteto client ready to use or fail
 type OktetoClientProvider interface {
 	Provide() (OktetoInterface, error)
+}
+
+// StreamInterface represents the streaming client
+type StreamInterface interface {
+	PipelineLogs(ctx context.Context, name, namespace, actionName string) error
+	DestroyAllLogs(ctx context.Context, namespace string) error
 }

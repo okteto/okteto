@@ -37,6 +37,7 @@ type FakeOktetoClient struct {
 	Users          types.UserInterface
 	Preview        types.PreviewInterface
 	PipelineClient types.PipelineInterface
+	StreamClient   types.StreamInterface
 }
 
 func NewFakeOktetoClient() *FakeOktetoClient {
@@ -61,4 +62,9 @@ func (c *FakeOktetoClient) User() types.UserInterface {
 // Pipeline retrieves the PipelineClient
 func (c *FakeOktetoClient) Pipeline() types.PipelineInterface {
 	return c.PipelineClient
+}
+
+// Stream retrieves the SSE client
+func (c *FakeOktetoClient) Stream() types.StreamInterface {
+	return c.StreamClient
 }
