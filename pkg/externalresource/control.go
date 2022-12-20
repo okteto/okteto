@@ -79,7 +79,7 @@ func translate(name string, externalResource *ExternalResource) *k8s.External {
 		},
 		Spec: k8s.ExternalResourceSpec{
 			Name: format.ResourceK8sMetaString(name),
-			Notes: k8s.Notes{
+			Notes: &k8s.Notes{
 				Path:     externalResource.Notes.Path,
 				Markdown: externalResource.Notes.Markdown,
 			},

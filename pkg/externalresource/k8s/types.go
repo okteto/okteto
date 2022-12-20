@@ -13,7 +13,7 @@ type External struct {
 	Spec ExternalResourceSpec `json:"spec"`
 }
 
-// ExternalResourceList represents the resource when a list of external resource items is requested
+// ExternalList represents the resource when a list of external resource items is requested
 type ExternalList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -23,7 +23,7 @@ type ExternalList struct {
 // ExternalResourceSpec represents the spec of a external resource. The information we store for each resource
 type ExternalResourceSpec struct {
 	Name      string     `json:"name"`
-	Notes     Notes      `json:"notes"`
+	Notes     *Notes     `json:"notes"`
 	Endpoints []Endpoint `json:"endpoints"`
 }
 
