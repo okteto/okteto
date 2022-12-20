@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
 	yaml "gopkg.in/yaml.v2"
@@ -1073,6 +1074,7 @@ deploy:
 				},
 				Dev:          map[string]*Dev{},
 				Dependencies: map[string]*Dependency{},
+				External:     externalresource.ExternalResourceSection{},
 				Context:      "context-to-use",
 				IsV2:         true,
 				Type:         OktetoManifestType,
@@ -1105,6 +1107,7 @@ dev:
 					},
 				},
 				Dependencies: map[string]*Dependency{},
+				External:     externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1251,6 +1254,7 @@ sync:
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
 				Dependencies:  map[string]*Dependency{},
+				External:      externalresource.ExternalResourceSection{},
 				GlobalForward: []forward.GlobalForward{},
 				Dev: map[string]*Dev{
 					"test": {
@@ -1335,6 +1339,7 @@ services:
 				Deploy:        &DeployInfo{},
 				Dependencies:  map[string]*Dependency{},
 				GlobalForward: []forward.GlobalForward{},
+				External:      externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1465,6 +1470,7 @@ dev:
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
+				External:     externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1551,6 +1557,7 @@ dev:
 				IsV2:         true,
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
+				External:     externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1718,6 +1725,7 @@ deploy:
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
+				External:     externalresource.ExternalResourceSection{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1744,6 +1752,7 @@ devs:
 				Dev:          map[string]*Dev{},
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
+				External:     externalresource.ExternalResourceSection{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{

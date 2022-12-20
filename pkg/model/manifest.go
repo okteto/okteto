@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -90,16 +91,17 @@ var (
 
 // Manifest represents an okteto manifest
 type Manifest struct {
-	Name          string                  `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace     string                  `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context       string                  `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon          string                  `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy        *DeployInfo             `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev           ManifestDevs            `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy       []DeployCommand         `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build         ManifestBuild           `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies  ManifestDependencies    `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Name          string                                   `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace     string                                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context       string                                   `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon          string                                   `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy        *DeployInfo                              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy       []DeployCommand                          `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build         ManifestBuild                            `json:"build,omitempty" yaml:"build,omitempty"`
+	Dependencies  ManifestDependencies                     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
+	External      externalresource.ExternalResourceSection `json:"external,omitempty" yaml:"external,omitempty"`
 
 	Type     Archetype `json:"-" yaml:"-"`
 	Manifest []byte    `json:"-" yaml:"-"`
@@ -123,6 +125,7 @@ func NewManifest() *Manifest {
 		Dependencies:  map[string]*Dependency{},
 		Deploy:        &DeployInfo{},
 		GlobalForward: []forward.GlobalForward{},
+		External:      externalresource.ExternalResourceSection{},
 	}
 }
 

@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"strings"
@@ -44,6 +45,7 @@ import (
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -69,7 +71,7 @@ type Options struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
 	ManifestPathFlag string
-	// ManifestPath is the patah to the manifest used though the command execution.
+	// ManifestPath is the path to the manifest used though the command execution.
 	// This might change its value during execution
 	ManifestPath        string
 	Name                string
@@ -80,6 +82,7 @@ type Options struct {
 	ForceDestroy        bool
 	K8sContext          string
 	RunWithoutBash      bool
+	DestroyAll          bool
 }
 
 type destroyCommand struct {
@@ -90,6 +93,7 @@ type destroyCommand struct {
 	secrets           secretHandler
 	k8sClientProvider okteto.K8sClientProvider
 	configMapHandler  configMapHandler
+	oktetoClient      *okteto.OktetoClient
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -162,6 +166,11 @@ func Destroy(ctx context.Context) *cobra.Command {
 				options.Namespace = okteto.Context().Namespace
 			}
 
+			okClient, err := okteto.NewOktetoClient()
+			if err != nil {
+				return err
+			}
+
 			c := &destroyCommand{
 				getManifest: model.GetManifestV2,
 
@@ -170,6 +179,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				nsDestroyer:       namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProvider(),
+				oktetoClient:      okClient,
 			}
 
 			kubeconfigPath := getTempKubeConfigFile(name)
@@ -178,12 +188,23 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 			os.Setenv("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
-			err = c.runDestroy(ctx, options)
-			analytics.TrackDestroy(err == nil)
-			if err == nil {
-				oktetoLog.Success("Development environment '%s' successfully destroyed", options.Name)
-			}
 
+			// when option --all the cmd will destroy everything at the namespace and return
+			if options.DestroyAll {
+				if !okteto.Context().IsOkteto {
+					return errors.New("option `--all` is not available for non-Okteto clusters. Learn more: https://www.okteto.com/docs/self-hosted/")
+				}
+				err = c.runDestroyAll(ctx, options)
+				if err == nil {
+					oktetoLog.Success("All resources at namespace '%s' where successfully destroyed", options.Namespace)
+				}
+			} else {
+				err = c.runDestroy(ctx, options)
+				if err == nil {
+					oktetoLog.Success("Development environment '%s' successfully destroyed", options.Name)
+				}
+			}
+			analytics.TrackDestroy(err == nil, options.DestroyAll)
 			return err
 		},
 	}
@@ -196,6 +217,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment was deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment was deployed")
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
+	cmd.Flags().BoolVarP(&options.DestroyAll, "all", "", false, "destroy everything in the namespace")
 
 	return cmd
 }
@@ -434,4 +456,105 @@ func (dc *destroyCommand) destroyHelmReleasesIfPresent(ctx context.Context, opts
 func getTempKubeConfigFile(name string) string {
 	tempKubeconfigFileName := fmt.Sprintf("kubeconfig-destroy-%s-%d", name, time.Now().UnixMilli())
 	return filepath.Join(config.GetOktetoHome(), tempKubeconfigFileName)
+}
+
+func (dc *destroyCommand) runDestroyAll(ctx context.Context, opts *Options) error {
+	oktetoLog.Spinner(fmt.Sprintf("Deleting all in %s namespace", opts.Namespace))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
+
+	if err := dc.oktetoClient.Namespaces().DestroyAll(ctx, opts.Namespace, opts.DestroyVolumes); err != nil {
+		return err
+	}
+
+	waitCtx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
+	stop := make(chan os.Signal, 1)
+	defer close(stop)
+
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+	defer close(exit)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		exit <- dc.waitForNamespaceDestroyAllToComplete(waitCtx, opts.Namespace)
+	}(&wg)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		err := dc.oktetoClient.Stream().DestroyAllLogs(waitCtx, opts.Namespace)
+		if err != nil {
+			oktetoLog.Warning("destroy all logs cannot be streamed due to connectivity issues")
+			oktetoLog.Infof("destroy all logs cannot be streamed due to connectivity issues: %v", err)
+		}
+	}(&wg)
+
+	select {
+	case <-stop:
+		ctxCancel()
+		oktetoLog.Infof("CTRL+C received, exit")
+		return oktetoErrors.ErrIntSig
+	case err := <-exit:
+		// wait until streaming logs have finished
+		wg.Wait()
+		return err
+	}
+}
+
+func (pc *destroyCommand) waitForNamespaceDestroyAllToComplete(ctx context.Context, namespace string) error {
+	timeout := 5 * time.Minute
+	ticker := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(timeout)
+
+	c, _, err := pc.k8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+	hasBeenDestroyingAll := false
+
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("'%s' deploy didn't finish after %s", namespace, timeout.String())
+		case <-ticker.C:
+			ns, err := c.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			status, ok := ns.Labels["space.okteto.com/status"]
+			if !ok {
+				return errors.New("namespace does not have label for status")
+			}
+
+			switch status {
+			case "Active":
+				if hasBeenDestroyingAll {
+					// when status is active again check if all resources have been correctly destroyed
+					cfgList, err := c.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{})
+					if err != nil {
+						return err
+					}
+
+					// no configmap for the given namespace should exist
+					if len(cfgList.Items) > 0 {
+						return fmt.Errorf("namespace destroy all failed: some resources where not destroyed")
+					}
+					// exit the waiting loop when status is active again
+					return nil
+				}
+			case "DestroyingAll":
+				// initial state would be active, check if this changes to assure namespace has been in destroying all status
+				hasBeenDestroyingAll = true
+			case "DestroyAllFailed":
+				return errors.New("namespace destroy all failed")
+			}
+		}
+	}
 }
