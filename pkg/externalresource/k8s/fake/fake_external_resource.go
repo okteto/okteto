@@ -10,7 +10,7 @@ import (
 	"k8s.io/client-go/testing"
 )
 
-// FakeExternalResourceV1 implements ExternalResourceInterface
+// FakeExternalResource implements ExternalResourceInterface
 type FakeExternalResource struct {
 	Fake                         *FakeExternalResourceV1
 	ns                           string
@@ -21,13 +21,13 @@ var externalResourceResource = schema.GroupVersionResource{Group: k8sexternalres
 
 var externalResourceKind = schema.GroupVersionKind{Group: k8sexternalresource.GroupName, Version: k8sexternalresource.GroupVersion, Kind: k8sexternalresource.ExternalResourceKind}
 
-func (c *FakeExternalResource) Create(ctx context.Context, external *k8sexternalresource.External) (*k8sexternalresource.External, error) {
+func (c *FakeExternalResource) Create(_ context.Context, external *k8sexternalresource.External) (*k8sexternalresource.External, error) {
 	if c.createErr != nil {
 		return nil, c.createErr
 	}
 
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(externalResourceResource, c.ns, &k8sexternalresource.External{}), &k8sexternalresource.External{})
+		Invokes(testing.NewCreateAction(externalResourceResource, c.ns, external), &k8sexternalresource.External{})
 
 	if obj == nil {
 		return nil, err
@@ -35,7 +35,7 @@ func (c *FakeExternalResource) Create(ctx context.Context, external *k8sexternal
 	return obj.(*k8sexternalresource.External), err
 }
 
-func (c *FakeExternalResource) Update(ctx context.Context, external *k8sexternalresource.External) (*k8sexternalresource.External, error) {
+func (c *FakeExternalResource) Update(_ context.Context, external *k8sexternalresource.External) (*k8sexternalresource.External, error) {
 	if c.updateErr != nil {
 		return nil, c.updateErr
 	}
@@ -49,7 +49,7 @@ func (c *FakeExternalResource) Update(ctx context.Context, external *k8sexternal
 	return obj.(*k8sexternalresource.External), err
 }
 
-func (c *FakeExternalResource) Get(ctx context.Context, name string, options metav1.GetOptions) (*k8sexternalresource.External, error) {
+func (c *FakeExternalResource) Get(_ context.Context, name string, _ metav1.GetOptions) (*k8sexternalresource.External, error) {
 	if c.getErr != nil {
 		return nil, c.getErr
 	}

@@ -6,7 +6,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/testing"
 )
 
@@ -49,9 +48,4 @@ func NewFakeExternalResourceV1(errs PossibleERErrors, objects ...runtime.Object)
 
 func (c *FakeExternalResourceV1) ExternalResources(namespace string) k8sexternalresource.ExternalResourceInterface {
 	return &FakeExternalResource{c, namespace, c.possibleErrs.GetErr, c.possibleErrs.CreateErr, c.possibleErrs.UpdateErr}
-}
-
-func (c *FakeExternalResourceV1) RESTClient() rest.Interface {
-	var ret *rest.RESTClient
-	return ret
 }

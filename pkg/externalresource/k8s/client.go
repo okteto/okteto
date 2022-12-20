@@ -31,7 +31,7 @@ type ExternalResourceV1Interface interface {
 	ExternalResources(namespace string) ExternalResourceInterface
 }
 
-// ExternalResourceClient client to work with ExternalResources v1 resources
+// ExternalResourceV1Client client to work with ExternalResources v1 resources
 type ExternalResourceV1Client struct {
 	restClient rest.Interface
 	scheme     *runtime.Scheme

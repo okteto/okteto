@@ -594,7 +594,7 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 	return nil
 }
 
-func (dc *DeployCommand) deployExternals(ctx context.Context, opts *Options) error {
+func (_ *DeployCommand) deployExternals(ctx context.Context, opts *Options) error {
 	k8sControl := externalresource.K8sControl{
 		ClientProvider: k8sExternalResources.GetExternalClient,
 		Cfg:            okteto.Context().Cfg,
