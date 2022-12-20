@@ -503,6 +503,10 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 	// deploy externals if any
 	if opts.Manifest.External != nil {
 		oktetoLog.SetStage("External configuration")
+		if !okteto.IsOkteto() {
+			oktetoLog.Warning("external resources cannot be deployed on a cluster not managed by okteto")
+			return nil
+		}
 		if err := dc.deployExternals(ctx, opts); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying external resources: %s", err.Error())
 			return err
@@ -596,10 +600,6 @@ func (dc *DeployCommand) deployExternals(ctx context.Context, opts *Options) err
 		Cfg:            okteto.Context().Cfg,
 	}
 	for externalName, externalInfo := range opts.Manifest.External {
-		if !okteto.IsOkteto() {
-			oktetoLog.Warning("external resources cannot be deployed on a cluster not managed by okteto")
-			break
-		}
 		err := k8sControl.Deploy(ctx, externalName, opts.Manifest.Namespace, externalInfo)
 		if err != nil {
 			return err
