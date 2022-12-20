@@ -21,12 +21,14 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
+	"k8s.io/client-go/kubernetes"
 )
 
 // NamespaceCommand has all the namespaces subcommands
 type NamespaceCommand struct {
-	ctxCmd   *contextCMD.ContextCommand
-	okClient types.OktetoInterface
+	ctxCmd    *contextCMD.ContextCommand
+	okClient  types.OktetoInterface
+	k8sClient kubernetes.Interface
 }
 
 // NewCommand creates a namespace command to
@@ -35,9 +37,15 @@ func NewCommand() (*NamespaceCommand, error) {
 	if err != nil {
 		return nil, err
 	}
+	k8sClient, _, err := okteto.GetK8sClient()
+	if err != nil {
+		return nil, err
+	}
+
 	return &NamespaceCommand{
-		ctxCmd:   contextCMD.NewContextCommand(),
-		okClient: c,
+		ctxCmd:    contextCMD.NewContextCommand(),
+		okClient:  c,
+		k8sClient: k8sClient,
 	}, nil
 }
 

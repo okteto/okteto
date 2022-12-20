@@ -15,7 +15,12 @@ package namespace
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
+	"os/signal"
+	"sync"
+	"time"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -24,6 +29,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Delete deletes a namespace
@@ -55,9 +61,17 @@ func Delete(ctx context.Context) *cobra.Command {
 }
 
 func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespace string) error {
+	oktetoLog.Spinner(fmt.Sprintf("Deleting %s namespace", namespace))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
+	// trigger namespace deletion
 	if err := nc.okClient.Namespaces().Delete(ctx, namespace); err != nil {
-		return fmt.Errorf("failed to delete namespace: %s", err)
+		return fmt.Errorf("failed to delete namespace: %v", err)
+	}
+
+	if err := nc.watchDelete(ctx, namespace); err != nil {
+		return err
 	}
 
 	oktetoLog.Success("Namespace '%s' deleted", namespace)
@@ -75,4 +89,72 @@ func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespac
 		return nc.ctxCmd.Run(ctx, ctxOptions)
 	}
 	return nil
+}
+
+func (nc *NamespaceCommand) watchDelete(ctx context.Context, namespace string) error {
+	waitCtx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
+	stop := make(chan os.Signal, 1)
+	defer close(stop)
+
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+	defer close(exit)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		exit <- nc.waitForNamespaceDeleted(waitCtx, namespace)
+	}(&wg)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		err := nc.okClient.Stream().DestroyAllLogs(waitCtx, namespace)
+		if err != nil {
+			oktetoLog.Warning("delete namespace logs cannot be streamed due to connectivity issues")
+			oktetoLog.Infof("delete namespace logs cannot be streamed due to connectivity issues: %v", err)
+		}
+	}(&wg)
+
+	select {
+	case <-stop:
+		ctxCancel()
+		oktetoLog.Infof("CTRL+C received, exit")
+		return oktetoErrors.ErrIntSig
+	case err := <-exit:
+		// wait until streaming logs have finished
+		wg.Wait()
+		return err
+	}
+}
+
+func (nc *NamespaceCommand) waitForNamespaceDeleted(ctx context.Context, namespace string) error {
+	timeout := 5 * time.Minute
+	ticker := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(timeout)
+
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("'%s' deploy didn't finish after %s", namespace, timeout.String())
+		case <-ticker.C:
+			ns, err := nc.k8sClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+			if err != nil {
+				// when err is NotFound return without error, as the namespace is correctly deleted
+				return nil
+			}
+
+			status, ok := ns.Labels["space.okteto.com/status"]
+			if !ok {
+				return errors.New("namespace does not have label for status")
+			}
+			if status == "DeleteFailed" {
+				return errors.New("namespace destroy all failed")
+			}
+		}
+	}
 }
