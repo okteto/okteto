@@ -27,7 +27,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-func newFakeNamespaceCommand(okClient *client.FakeOktetoClient, k8sClient kubernetes.Interface, namespaces []types.Namespace, user *types.User) *NamespaceCommand {
+func newFakeNamespaceCommand(okClient *client.FakeOktetoClient, k8sClient kubernetes.Interface, user *types.User) *NamespaceCommand {
 	return &NamespaceCommand{
 		okClient:  okClient,
 		ctxCmd:    newFakeContextCommand(okClient, user),
@@ -153,7 +153,7 @@ func Test_deleteNamespace(t *testing.T) {
 				CurrentContext: "test-context",
 			}
 
-			nsFakeCommand := newFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, tt.initialNamespacesAtOktetoClient, usr)
+			nsFakeCommand := newFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
 			err := nsFakeCommand.ExecuteDeleteNamespace(ctx, tt.toDeleteNs)
 			assert.ErrorIs(t, err, tt.err)
 			assert.Equal(t, tt.finalNs, okteto.Context().Namespace)
