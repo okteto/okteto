@@ -16,8 +16,6 @@ package model
 import apiv1 "k8s.io/api/core/v1"
 
 const (
-	// TimeFormat is the format to use when storing timestamps as a string
-	TimeFormat = "2006-01-02T15:04:05"
 
 	// DevCloneLabel indicates it is a dev pod clone
 	DevCloneLabel = "dev.okteto.com/clone"
@@ -51,9 +49,6 @@ const (
 
 	// LastBuiltAnnotation indicates the timestamp of an operation
 	LastBuiltAnnotation = "dev.okteto.com/last-built"
-
-	// LastUpdatedAnnotation indicates update timestamp
-	LastUpdatedAnnotation = "dev.okteto.com/last-updated"
 
 	// TranslationAnnotation sets the translation rules
 	TranslationAnnotation = "dev.okteto.com/translation"

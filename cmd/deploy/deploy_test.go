@@ -22,6 +22,7 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -275,7 +276,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	assert.Equal(t, expectedCfg.Namespace, cfg.Namespace)
 	assert.Equal(t, expectedCfg.Labels, cfg.Labels)
 	assert.Equal(t, expectedCfg.Data, cfg.Data)
-	assert.NotEmpty(t, cfg.Annotations[model.LastUpdatedAnnotation])
+	assert.NotEmpty(t, cfg.Annotations[constants.LastUpdatedAnnotation])
 }
 
 func TestDeployWithErrorExecutingCommands(t *testing.T) {
