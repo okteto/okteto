@@ -21,6 +21,8 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 )
@@ -97,6 +99,38 @@ func Test_deleteNamespace(t *testing.T) {
 				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
 				Users:        client.NewFakeUsersClient(usr),
 				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+			},
+			fakeK8sClient: fake.NewSimpleClientset(),
+		},
+		{
+			name:                            "delete namespace failed at job",
+			toDeleteNs:                      currentNamespace,
+			initialNamespacesAtOktetoClient: initNamespaces,
+			finalNs:                         currentNamespace,
+			fakeOkClient: &client.FakeOktetoClient{
+				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
+				Users:        client.NewFakeUsersClient(usr),
+				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+			},
+			fakeK8sClient: fake.NewSimpleClientset(&v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: currentNamespace,
+					Labels: map[string]string{
+						"space.okteto.com/status": "DeleteFailed",
+					},
+				},
+			}),
+			err: errFailedDeleteNamespace,
+		},
+		{
+			name:                            "delete namespace stream logs failed",
+			toDeleteNs:                      currentNamespace,
+			initialNamespacesAtOktetoClient: initNamespaces,
+			finalNs:                         personalNamespace,
+			fakeOkClient: &client.FakeOktetoClient{
+				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
+				Users:        client.NewFakeUsersClient(usr),
+				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{StreamErr: assert.AnError}),
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
 		},
