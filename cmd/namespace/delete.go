@@ -37,6 +37,7 @@ func Delete(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <name>",
 		Short: "Delete a namespace",
+		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
@@ -55,7 +56,6 @@ func Delete(ctx context.Context) *cobra.Command {
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},
-		Args: utils.ExactArgsAccepted(1, ""),
 	}
 	return cmd
 }
