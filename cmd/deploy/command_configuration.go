@@ -53,7 +53,8 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 			if err != nil {
 				return err
 			}
-			deployOptions.Name = devenvironment.InferName(ctx, cwd, okteto.Context().Namespace, deployOptions.ManifestPathFlag, c)
+			inferer := devenvironment.NewNameInferer(c)
+			deployOptions.Name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, deployOptions.ManifestPathFlag)
 			deployOptions.Manifest.Name = deployOptions.Name
 		}
 

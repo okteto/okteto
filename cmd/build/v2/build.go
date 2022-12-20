@@ -98,7 +98,8 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		if err != nil {
 			return err
 		}
-		options.Manifest.Name = devenvironment.InferName(ctx, wd, okteto.Context().Namespace, options.File, c)
+		inferer := devenvironment.NewNameInferer(c)
+		options.Manifest.Name = inferer.InferName(ctx, wd, okteto.Context().Namespace, options.File)
 	}
 	toBuildSvcs := getToBuildSvcs(options.Manifest, options)
 	if err := validateOptions(options.Manifest, toBuildSvcs, options); err != nil {

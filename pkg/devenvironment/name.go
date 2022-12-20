@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -26,13 +27,27 @@ func DeprecatedInferName(cwd string) string {
 	return model.TranslateURLToName(repoURL)
 }
 
+// NameInferer Allows to infer the name for a dev environment
+type NameInferer struct {
+	k8s              kubernetes.Interface
+	getRepositoryURL func(string) (string, error)
+}
+
+// NewNameInferer allows to create a new instance of a name inferer
+func NewNameInferer(k8s kubernetes.Interface) NameInferer {
+	return NameInferer{
+		k8s:              k8s,
+		getRepositoryURL: model.GetRepositoryURL,
+	}
+}
+
 // InferName infers the dev environment name from the folder received as parameter. It has the following preference:
 //   - If cwd (current working directory) contains a repo, we look for a dev environment deployed with the same repository and the same
 //   manifest path, and we took the name from the config map
 //   - If not dev environment is found, we use the repository name to infer the dev environment name
 //   - If the current working directory doesn't have a repository, we get the name from the folder name
-func InferName(ctx context.Context, cwd, namespace, manifestPath string, c kubernetes.Interface) string {
-	repoURL, err := model.GetRepositoryURL(cwd)
+func (n NameInferer) InferName(ctx context.Context, cwd, namespace, manifestPath string) string {
+	repoURL, err := n.getRepositoryURL(cwd)
 	if err != nil {
 		oktetoLog.Info("inferring name from folder")
 		return filepath.Base(cwd)
@@ -40,36 +55,48 @@ func InferName(ctx context.Context, cwd, namespace, manifestPath string, c kuber
 
 	labelSelector := fmt.Sprintf("%s=true", model.GitDeployLabel)
 
-	oktetoLog.Information("found repository url %s", repoURL)
-	cfList, err := configmaps.List(ctx, namespace, labelSelector, c)
+	oktetoLog.Infof("found repository url %s", repoURL)
+	cfList, err := configmaps.List(ctx, namespace, labelSelector, n.k8s)
 	if err != nil {
 		oktetoLog.Info("could not get deployed dev environments: %v. Inferring dev environment name from the repository URL", err)
 		return model.TranslateURLToName(repoURL)
 	}
 
-	oktetoLog.Information("found %d configmaps in the namespace %s", len(cfList), namespace)
+	oktetoLog.Infof("found '%d' configmaps in the namespace %s", len(cfList), namespace)
 
+	// There might be several dev environments with the specified repository and manifest. We retrieve all possibilities
+	possibleNames := []string{}
 	for _, cmap := range cfList {
-		oktetoLog.Information("checking configmap %s", cmap.Name)
+		oktetoLog.Infof("checking configmap %s", cmap.Name)
 		repo := cmap.Data["repository"]
 		if repo == "" {
-			oktetoLog.Information("configmap %s doesn't have a repository", cmap.Name)
+			oktetoLog.Infof("configmap %s doesn't have a repository", cmap.Name)
 			continue
 		}
 
 		if !okteto.AreSameRepository(repoURL, repo) {
-			oktetoLog.Information("configmap %s with repo %s doesn't match with found repo %s", cmap.Name, repo, repoURL)
+			oktetoLog.Infof("configmap %s with repo %s doesn't match with found repo %s", cmap.Name, repo, repoURL)
 			continue
 		}
 
 		if filename := cmap.Data["filename"]; filename != manifestPath {
-			oktetoLog.Information("configmap %s with manifest %s doesn't match with provided manifest %s", filename, repo, manifestPath)
+			oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", filename, repo, manifestPath)
 			continue
 		}
 
-		return cmap.Data["name"]
+		possibleNames = append(possibleNames, cmap.Data["name"])
 	}
 
-	oktetoLog.Info("inferring name from git repository URL")
-	return model.TranslateURLToName(repoURL)
+	// if no names were found we infer the name from the repository URL
+	if len(possibleNames) == 0 {
+		oktetoLog.Info("inferring name from git repository URL")
+		return model.TranslateURLToName(repoURL)
+	}
+
+	// If more than 1 name is found, we print a message to the user know the name that was inferred
+	if len(possibleNames) > 1 {
+		oktetoLog.Warning("found several dev environments candidates to infer the name: %s. Using '%s'", strings.Join(possibleNames, ", "), possibleNames[0])
+	}
+
+	return possibleNames[0]
 }

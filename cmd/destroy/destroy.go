@@ -144,7 +144,8 @@ func Destroy(ctx context.Context) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				name = devenvironment.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPathFlag, c)
+				inferer := devenvironment.NewNameInferer(c)
+				name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPathFlag)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}
@@ -227,7 +228,8 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 			if err != nil {
 				return err
 			}
-			opts.Name = devenvironment.InferName(ctx, cwd, okteto.Context().Namespace, opts.ManifestPathFlag, c)
+			inferer := devenvironment.NewNameInferer(c)
+			opts.Name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, opts.ManifestPathFlag)
 		}
 
 	}

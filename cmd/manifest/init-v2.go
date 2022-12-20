@@ -128,7 +128,8 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 	if er != nil {
 		return nil, er
 	}
-	name := devenvironment.InferName(ctx, opts.Workdir, okteto.Context().Namespace, opts.DevPath, c)
+	inferer := devenvironment.NewNameInferer(c)
+	name := inferer.InferName(ctx, opts.Workdir, okteto.Context().Namespace, opts.DevPath)
 	os.Setenv(constants.OktetoNameEnvVar, name)
 	manifest := model.NewManifest()
 	var err error
@@ -482,8 +483,9 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 			if err != nil {
 				return nil, err
 			}
+			inferer := devenvironment.NewNameInferer(c)
 			// In this case, the path is empty because we are inferring the names from Dockerfiles, so no manifest
-			name = devenvironment.InferName(context.Background(), cwd, okteto.Context().Namespace, "", c)
+			name = inferer.InferName(context.Background(), cwd, okteto.Context().Namespace, "")
 			buildInfo = &model.BuildInfo{
 				Context:    ".",
 				Dockerfile: dockerfile,

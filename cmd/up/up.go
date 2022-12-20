@@ -165,7 +165,8 @@ func Up() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				oktetoManifest.Name = devenvironment.InferName(ctx, wd, okteto.Context().Namespace, upOptions.ManifestPathFlag, c)
+				inferer := devenvironment.NewNameInferer(c)
+				oktetoManifest.Name = inferer.InferName(ctx, wd, okteto.Context().Namespace, upOptions.ManifestPathFlag)
 			}
 			os.Setenv(constants.OktetoNameEnvVar, oktetoManifest.Name)
 
