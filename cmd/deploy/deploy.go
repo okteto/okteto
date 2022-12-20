@@ -33,9 +33,10 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/externalresource"
+	k8sExternalResources "github.com/okteto/okteto/pkg/externalresource/k8s"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
-	"github.com/okteto/okteto/pkg/k8s/externalresources"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -600,8 +601,16 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 }
 
 func (dc *DeployCommand) deployExternals(ctx context.Context, opts *Options) error {
+	k8sControl := externalresource.K8sControl{
+		ClientProvider: k8sExternalResources.GetExternalClient,
+		Cfg:            okteto.Context().Cfg,
+	}
 	for externalName, externalInfo := range opts.Manifest.External {
-		err := externalresources.CreateCRD(ctx, externalName, externalInfo)
+		if !okteto.IsOkteto() {
+			oktetoLog.Warning("external resources cannot be deployed on a cluster not managed by okteto")
+			break
+		}
+		err := k8sControl.Deploy(ctx, externalName, opts.Manifest.Namespace, externalInfo)
 		if err != nil {
 			return err
 		}
