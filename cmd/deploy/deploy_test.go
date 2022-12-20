@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -645,4 +646,86 @@ func TestBuildImages(t *testing.T) {
 		})
 	}
 
+}
+
+type fakeExternalControl struct {
+	err error
+}
+
+func (f *fakeExternalControl) Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error {
+	return f.err
+}
+
+func TestDeployExternals(t *testing.T) {
+	ctx := context.Background()
+	testCases := []struct {
+		name        string
+		options     *Options
+		expectedErr bool
+		control     ExternalResourceInterface
+	}{
+		{
+			name: "no externals to deploy",
+			options: &Options{
+				Manifest: &model.Manifest{
+					Deploy:   &model.DeployInfo{},
+					External: nil,
+				},
+			},
+			control: &fakeExternalControl{},
+		},
+		{
+			name: "deploy external",
+			options: &Options{
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{},
+					External: externalresource.ExternalResourceSection{
+						"test": &externalresource.ExternalResource{
+							Icon: "myIcon",
+							Notes: externalresource.Notes{
+								Path: "/some/path",
+							},
+							Endpoints: []externalresource.ExternalEndpoint{},
+						},
+					},
+				},
+			},
+			control: &fakeExternalControl{},
+		},
+		{
+			name: "error when deploy external",
+			options: &Options{
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{},
+					External: externalresource.ExternalResourceSection{
+						"test": &externalresource.ExternalResource{
+							Icon: "myIcon",
+							Notes: externalresource.Notes{
+								Path: "/some/path",
+							},
+							Endpoints: []externalresource.ExternalEndpoint{},
+						},
+					},
+				},
+			},
+			control: &fakeExternalControl{
+				err: assert.AnError,
+			},
+			expectedErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dc := DeployCommand{
+				ExternalControl: tc.control,
+			}
+
+			if tc.expectedErr {
+				assert.Error(t, dc.deploy(ctx, tc.options))
+			} else {
+				assert.NoError(t, dc.deploy(ctx, tc.options))
+			}
+		})
+	}
 }

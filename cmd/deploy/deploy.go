@@ -89,8 +89,13 @@ type DeployCommand struct {
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
+	ExternalControl    ExternalResourceInterface
 
 	PipelineType model.Archetype
+}
+
+type ExternalResourceInterface interface {
+	Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
 }
 
 // Deploy deploys the okteto manifest
@@ -188,6 +193,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 				TempKubeconfigFile: GetTempKubeConfigFile(name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 				Builder:            buildv2.NewBuilderFromScratch(),
+				ExternalControl: &externalresource.K8sControl{
+					ClientProvider: k8sExternalResources.GetExternalClient,
+					Cfg:            okteto.Context().Cfg,
+				},
 			}
 			startTime := time.Now()
 
@@ -594,13 +603,9 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 	return nil
 }
 
-func (*DeployCommand) deployExternals(ctx context.Context, opts *Options) error {
-	k8sControl := externalresource.K8sControl{
-		ClientProvider: k8sExternalResources.GetExternalClient,
-		Cfg:            okteto.Context().Cfg,
-	}
+func (dc *DeployCommand) deployExternals(ctx context.Context, opts *Options) error {
 	for externalName, externalInfo := range opts.Manifest.External {
-		err := k8sControl.Deploy(ctx, externalName, opts.Manifest.Namespace, externalInfo)
+		err := dc.ExternalControl.Deploy(ctx, externalName, opts.Manifest.Namespace, externalInfo)
 		if err != nil {
 			return err
 		}
