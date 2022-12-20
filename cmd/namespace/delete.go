@@ -15,7 +15,6 @@ package namespace
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -29,6 +28,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -67,7 +67,7 @@ func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespac
 
 	// trigger namespace deletion
 	if err := nc.okClient.Namespaces().Delete(ctx, namespace); err != nil {
-		return fmt.Errorf("failed to delete namespace: %v", err)
+		return fmt.Errorf("%w: %v", errFailedDeleteNamespace, err)
 	}
 
 	if err := nc.watchDelete(ctx, namespace); err != nil {
@@ -140,20 +140,23 @@ func (nc *NamespaceCommand) waitForNamespaceDeleted(ctx context.Context, namespa
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("'%s' deploy didn't finish after %s", namespace, timeout.String())
+			return fmt.Errorf("%w: namespace %s, time %s", errDeleteNamespaceTimeout, namespace, timeout.String())
 		case <-ticker.C:
 			ns, err := nc.k8sClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 			if err != nil {
-				// when err is NotFound return without error, as the namespace is correctly deleted
-				return nil
+				if k8sErrors.IsNotFound(err) || k8sErrors.IsForbidden(err) {
+					// when err is NotFound return without error, as the namespace is correctly deleted
+					return nil
+				}
+				return err
 			}
 
 			status, ok := ns.Labels["space.okteto.com/status"]
 			if !ok {
-				return errors.New("namespace does not have label for status")
+				return errNoStatusLabel
 			}
 			if status == "DeleteFailed" {
-				return errors.New("namespace destroy all failed")
+				return errFailedDeleteNamespace
 			}
 		}
 	}
