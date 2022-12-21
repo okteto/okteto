@@ -15,7 +15,7 @@ import (
 
 // DeprecatedInferName infers the dev environment name from the folder received as parameter.
 // It is deprecated as it doesn't take into account deployed dev environments to get the non-sanitized name.
-// This is only being effectively used in push command, which will be deleted in the mext major version
+// This is only being effectively used in push command, which will be deleted in the next major version
 func DeprecatedInferName(cwd string) string {
 	repoURL, err := model.GetRepositoryURL(cwd)
 	if err != nil {
@@ -41,18 +41,10 @@ func NewNameInferer(k8s kubernetes.Interface) NameInferer {
 	}
 }
 
-// InferName infers the dev environment name from the folder received as parameter. It has the following preference:
-//   - If cwd (current working directory) contains a repo, we look for a dev environment deployed with the same repository and the same
-//   manifest path, and we took the name from the config map
-//   - If not dev environment is found, we use the repository name to infer the dev environment name
-//   - If the current working directory doesn't have a repository, we get the name from the folder name
-func (n NameInferer) InferName(ctx context.Context, cwd, namespace, manifestPath string) string {
-	repoURL, err := n.getRepositoryURL(cwd)
-	if err != nil {
-		oktetoLog.Info("inferring name from folder")
-		return filepath.Base(cwd)
-	}
-
+// InferNameFromDevEnvsAndRepository it infers the name from the development environments deployed in the specified namespace
+// or from the git repository URL if no dev environment is found.
+// `manifestPath` is needed because we compare it with the one in dev environments to see if it is the dev environment we look for
+func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repoURL, namespace, manifestPath string) string {
 	labelSelector := fmt.Sprintf("%s=true", model.GitDeployLabel)
 
 	oktetoLog.Infof("found repository url %s", repoURL)
@@ -100,4 +92,20 @@ func (n NameInferer) InferName(ctx context.Context, cwd, namespace, manifestPath
 
 	oktetoLog.Infof("inferred name from dev environment '%s'", possibleNames[0])
 	return possibleNames[0]
+}
+
+// InferName infers the dev environment name from the folder received as parameter. It has the following preference:
+//   - If cwd (current working directory) contains a repo, we look for a dev environment deployed with the same repository and the same
+//   manifest path, and we took the name from the config map
+//   - If not dev environment is found, we use the repository name to infer the dev environment name
+//   - If the current working directory doesn't have a repository, we get the name from the folder name
+// `manifestPath` is needed because we compare it with the one in dev environments to see if it is the dev environment we look for
+func (n NameInferer) InferName(ctx context.Context, cwd, namespace, manifestPath string) string {
+	repoURL, err := n.getRepositoryURL(cwd)
+	if err != nil {
+		oktetoLog.Info("inferring name from folder")
+		return filepath.Base(cwd)
+	}
+
+	return n.InferNameFromDevEnvsAndRepository(ctx, repoURL, namespace, manifestPath)
 }

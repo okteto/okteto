@@ -95,6 +95,66 @@ func TestInferName(t *testing.T) {
 	}
 }
 
+func TestInferNameFromDevEnvsAndRepository(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name          string
+		repositoryURL string
+		devEnvs       []runtime.Object
+		ns            string
+		manifestPath  string
+		expectedName  string
+	}{
+		{
+			name:          "without-dev-envs",
+			repositoryURL: "https://github.com/test-user/my-dev-env-repository.git",
+			devEnvs:       []runtime.Object{},
+			ns:            "test",
+			manifestPath:  "my-manifest/okteto.yml",
+			expectedName:  "my-dev-env-repository",
+		},
+		{
+			name:          "without-matching-criteria-dev-envs",
+			repositoryURL: "https://github.com/test-user/my-dev-env-repository.git",
+			devEnvs:       getDevEnvironmentConfigMaps(),
+			ns:            "test",
+			manifestPath:  "my-manifest/okteto.yml",
+			expectedName:  "my-dev-env-repository",
+		},
+		{
+			name:          "with-matching-criteria-for-one-dev-envs",
+			repositoryURL: "https://github.com/test/single-repo.git",
+			devEnvs:       getDevEnvironmentConfigMaps(),
+			ns:            "test",
+			manifestPath:  "my-manifest/okteto.yml",
+			expectedName:  "single dev name",
+		},
+		{
+			name:          "with-matching-criteria-for-multiple-dev-envs",
+			repositoryURL: "https://github.com/test/multiple-repo.git",
+			devEnvs:       getDevEnvironmentConfigMaps(),
+			ns:            "test",
+			manifestPath:  "my-manifest-multiple/okteto.yml",
+			expectedName:  "multiple dev name 1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewSimpleClientset(tt.devEnvs...)
+			inferer := NameInferer{
+				k8s: c,
+				getRepositoryURL: func(s string) (string, error) {
+					return "", assert.AnError
+				},
+			}
+
+			result := inferer.InferNameFromDevEnvsAndRepository(ctx, tt.repositoryURL, tt.ns, tt.manifestPath)
+			require.Equal(t, tt.expectedName, result)
+		})
+	}
+}
+
 func getDevEnvironmentConfigMaps() []runtime.Object {
 	return []runtime.Object{
 		&apiv1.ConfigMap{

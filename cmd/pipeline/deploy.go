@@ -25,6 +25,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -189,11 +190,6 @@ func (pc *Command) deployPipeline(ctx context.Context, opts *DeployOptions) (*ty
 	return resp, nil
 }
 
-// getPipelineName returns the repository name without sanitizing
-func getPipelineName(repository string) string {
-	return model.TranslateURLToName(repository)
-}
-
 func (pc *Command) streamPipelineLogs(ctx context.Context, name, namespace, actionName string, timeout time.Duration) error {
 	// wait to Action be progressing
 	if err := pc.okClient.Pipeline().WaitForActionProgressing(ctx, name, namespace, actionName, timeout); err != nil {
@@ -343,9 +339,14 @@ func (o *DeployOptions) setDefaults() error {
 	}
 
 	if o.Name == "" {
-		// in case of inferring the name from the repositoryURL
-		// opts.Name is not sanitized
-		o.Name = getPipelineName(o.Repository)
+
+		// in case of inferring the name, o.Name is not sanitized
+		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+		if err != nil {
+			return err
+		}
+		inferer := devenvironment.NewNameInferer(c)
+		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), o.Repository, okteto.Context().Namespace, o.File)
 	}
 
 	currentRepo, err := model.GetRepositoryURL(cwd)

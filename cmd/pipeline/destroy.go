@@ -23,6 +23,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -229,7 +230,13 @@ func (o *DestroyOptions) setDefaults() error {
 			return err
 		}
 
-		o.Name = getPipelineName(repo)
+		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+		if err != nil {
+			return err
+		}
+		inferer := devenvironment.NewNameInferer(c)
+		// okteto pipeline destroy doesn't have a -f flag to specify the path, so we pass empty string
+		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), repo, okteto.Context().Namespace, "")
 	}
 
 	if o.Namespace == "" {
