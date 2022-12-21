@@ -691,7 +691,7 @@ func TestDeployExternals(t *testing.T) {
 					External: externalresource.ExternalResourceSection{
 						"test": &externalresource.ExternalResource{
 							Icon: "myIcon",
-							Notes: externalresource.Notes{
+							Notes: &externalresource.Notes{
 								Path: "/some/path",
 							},
 							Endpoints: []externalresource.ExternalEndpoint{},
