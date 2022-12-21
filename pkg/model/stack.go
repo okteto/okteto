@@ -238,7 +238,8 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	}
 
 	if endpoint, ok := s.Endpoints[""]; ok {
-		s.Endpoints[s.Name] = endpoint
+		// s.Name should be sanitize and compliant with url format
+		s.Endpoints[format.ResourceK8sMetaString(s.Name)] = endpoint
 		delete(s.Endpoints, "")
 	}
 
