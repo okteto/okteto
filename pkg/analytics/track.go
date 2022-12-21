@@ -335,8 +335,11 @@ func TrackDeploy(m TrackDeployMetadata) {
 }
 
 // TrackDestroy sends a tracking event to mixpanel when the user destroys a pipeline from local
-func TrackDestroy(success bool) {
-	track(destroyEvent, success, nil)
+func TrackDestroy(success bool, isDestroyAll bool) {
+	props := map[string]interface{}{
+		"isDestroyAll": isDestroyAll,
+	}
+	track(destroyEvent, success, props)
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in

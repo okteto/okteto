@@ -66,3 +66,35 @@ func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName
 		}
 	}
 }
+
+func (c *pipelineClient) WaitForActionProgressing(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error {
+	t := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(timeout)
+
+	for {
+		select {
+		case <-to.C:
+			oktetoLog.Infof("action '%s' didn't progress after %s", actionName, timeout.String())
+			return fmt.Errorf("'%s' didn't progress after %s", pipelineName, timeout.String())
+		case <-t.C:
+			a, err := c.GetAction(ctx, actionName, namespace)
+			if err != nil {
+				oktetoLog.Infof("action '%s' failed", actionName)
+				return fmt.Errorf("pipeline '%s' failed", pipelineName)
+			}
+
+			oktetoLog.Infof("action '%s' is '%s'", actionName, a.Status)
+			switch a.Status {
+			case "progressing":
+				return nil
+			case "queued":
+				continue
+			case "error", "destroy-error":
+				oktetoLog.Infof("action '%s' failed", actionName)
+				return fmt.Errorf("pipeline '%s' failed", pipelineName)
+			default:
+				return nil
+			}
+		}
+	}
+}

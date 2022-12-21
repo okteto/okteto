@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
+	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	giturls "github.com/whilp/git-urls"
@@ -760,16 +761,17 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Name          string                  `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace     string                  `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context       string                  `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon          string                  `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy        *DeployInfo             `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev           ManifestDevs            `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy       []DeployCommand         `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build         ManifestBuild           `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies  ManifestDependencies    `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Name          string                                   `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace     string                                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context       string                                   `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon          string                                   `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy        *DeployInfo                              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy       []DeployCommand                          `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build         ManifestBuild                            `json:"build,omitempty" yaml:"build,omitempty"`
+	Dependencies  ManifestDependencies                     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
+	External      externalresource.ExternalResourceSection `json:"external,omitempty" yaml:"external,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
 }
@@ -844,6 +846,7 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		Dev:          map[string]*Dev{},
 		Build:        map[string]*BuildInfo{},
 		Dependencies: map[string]*Dependency{},
+		External:     externalresource.ExternalResourceSection{},
 	}
 	err = unmarshal(&manifest)
 	if err != nil {
@@ -860,6 +863,7 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	m.Dependencies = manifest.Dependencies
 	m.Name = manifest.Name
 	m.GlobalForward = manifest.GlobalForward
+	m.External = manifest.External
 
 	err = m.SanitizeSvcNames()
 	if err != nil {

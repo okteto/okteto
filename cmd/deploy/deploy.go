@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
+	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
@@ -492,7 +493,7 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		oktetoLog.SetStage("")
 	}
 
-	// deploy diver if any
+	// deploy divert if any
 	if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
 		oktetoLog.SetStage("Divert configuration")
 		if err := dc.deployDivert(ctx, opts); err != nil {
@@ -547,24 +548,13 @@ func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error 
 		return err
 	}
 
-	cache, err := diverts.InitDivertCache(ctx, opts.Manifest, c)
+	dClient, err := diverts.GetDivertClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
 	}
 
-	for name, in := range cache.DivertIngresses {
-		select {
-		case <-ctx.Done():
-			oktetoLog.Infof("deployDivert context cancelled")
-			return ctx.Err()
-		default:
-			oktetoLog.Spinner(fmt.Sprintf("Diverting ingress %s/%s...", in.Namespace, in.Name))
-			if err := diverts.DivertIngress(ctx, opts.Manifest, name, cache, c); err != nil {
-				return err
-			}
-		}
-	}
-	return diverts.CreateDivertCRD(ctx, opts.Manifest)
+	driver := divert.New(opts.Manifest, dClient, c)
+	return driver.Deploy(ctx)
 }
 
 func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) error {

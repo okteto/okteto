@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -583,7 +584,8 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 	}
 
 	svcK8s.ObjectMeta.ResourceVersion = old.ObjectMeta.ResourceVersion
-	applyDivertToService(svcK8s, old)
+	driver := divert.New(nil, nil, nil)
+	driver.ApplyToService(svcK8s, old)
 	if err := services.Deploy(ctx, svcK8s, c); err != nil {
 		return err
 	}
@@ -616,7 +618,8 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 				d.Labels[model.DeployedByLabel] = format.ResourceK8sMetaString(s.Name)
 			}
 		}
-		applyDivertToDeployment(d, old)
+		driver := divert.New(nil, nil, nil)
+		driver.ApplyToDeployment(d, old)
 	}
 
 	if !isNewDeployment && old.Labels[model.StackNameLabel] == "okteto" {
