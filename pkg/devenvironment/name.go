@@ -65,7 +65,7 @@ func (n NameInferer) InferName(ctx context.Context, cwd, namespace, manifestPath
 	oktetoLog.Infof("found '%d' configmaps in the namespace %s", len(cfList), namespace)
 
 	// There might be several dev environments with the specified repository and manifest. We retrieve all possibilities
-	possibleNames := []string{}
+	var possibleNames []string
 	for _, cmap := range cfList {
 		oktetoLog.Infof("checking configmap %s", cmap.Name)
 		repo := cmap.Data["repository"]

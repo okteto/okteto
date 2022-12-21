@@ -103,7 +103,6 @@ func Endpoints(ctx context.Context) *cobra.Command {
 						return err
 					}
 					inferer := devenvironment.NewNameInferer(c)
-					// TODO: Check manifest. It changes, probably need to keep the one specified by the user
 					options.Name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPath)
 				}
 				if options.Namespace == "" {
