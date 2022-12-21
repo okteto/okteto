@@ -156,6 +156,7 @@ func (nc *NamespaceCommand) waitForNamespaceDeleted(ctx context.Context, namespa
 			status, ok := ns.Labels["space.okteto.com/status"]
 			if !ok {
 				// when status label is not present, continue polling the namespace until timeout
+				oktetoLog.Debugf("namespace %q does not have label for status", namespace)
 				continue
 			}
 			if status == "DeleteFailed" {
