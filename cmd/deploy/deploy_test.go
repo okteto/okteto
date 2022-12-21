@@ -652,7 +652,7 @@ type fakeExternalControl struct {
 	err error
 }
 
-func (f *fakeExternalControl) Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error {
+func (f *fakeExternalControl) Deploy(_ context.Context, _ string, _ string, _ *externalresource.ExternalResource) error {
 	return f.err
 }
 
