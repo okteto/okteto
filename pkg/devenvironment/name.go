@@ -98,5 +98,6 @@ func (n NameInferer) InferName(ctx context.Context, cwd, namespace, manifestPath
 		oktetoLog.Warning("found several dev environments candidates to infer the name: %s. Using '%s'", strings.Join(possibleNames, ", "), possibleNames[0])
 	}
 
+	oktetoLog.Infof("inferred name from dev environment '%s'", possibleNames[0])
 	return possibleNames[0]
 }
