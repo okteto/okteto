@@ -11,19 +11,19 @@ import (
 	"github.com/okteto/okteto/pkg/format"
 	olog "github.com/okteto/okteto/pkg/log"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/rest"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // K8sControl represents the controller that performs the actions with k8s
 type K8sControl struct {
-	ClientProvider func(clientcmdapi.Config) (k8s.ExternalResourceV1Interface, error)
-	Cfg            *clientcmdapi.Config
+	ClientProvider func(*rest.Config) (k8s.ExternalResourceV1Interface, error)
+	Cfg            *rest.Config
 }
 
 func (c *K8sControl) Deploy(ctx context.Context, name, ns string, externalInfo *ExternalResource) error {
-	k8sclient, err := c.ClientProvider(*c.Cfg)
+	k8sclient, err := c.ClientProvider(c.Cfg)
 	if err != nil {
 		return fmt.Errorf("error creating external CRD client: %s", err.Error())
 	}

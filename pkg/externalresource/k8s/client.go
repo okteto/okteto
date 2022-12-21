@@ -4,10 +4,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	k8sScheme "k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"k8s.io/client-go/rest"
 )
@@ -37,14 +35,7 @@ type ExternalResourceV1Client struct {
 	scheme     *runtime.Scheme
 }
 
-func GetExternalClient(cfg clientcmdapi.Config) (ExternalResourceV1Interface, error) {
-	clientConfig := clientcmd.NewDefaultClientConfig(cfg, nil)
-
-	config, err := clientConfig.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-
+func GetExternalClient(config *rest.Config) (ExternalResourceV1Interface, error) {
 	c, err := NewForConfig(config)
 	if err != nil {
 		return nil, err

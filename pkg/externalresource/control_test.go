@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/rest"
 )
 
 type fakeClientProvider struct {
@@ -21,7 +21,7 @@ type errs struct {
 	providerErr, getErr, createErr, updateErr error
 }
 
-func (fcp *fakeClientProvider) provide(_ clientcmdapi.Config) (k8s.ExternalResourceV1Interface, error) {
+func (fcp *fakeClientProvider) provide(_ *rest.Config) (k8s.ExternalResourceV1Interface, error) {
 	if fcp.possibleErrs.providerErr != nil {
 		return nil, fcp.possibleErrs.providerErr
 	}
@@ -166,7 +166,7 @@ func TestDeploy(t *testing.T) {
 					objects:      tc.objects,
 					possibleErrs: tc.possibleErrs,
 				}).provide,
-				Cfg: &clientcmdapi.Config{},
+				Cfg: nil,
 			}
 			if tc.expectedErr {
 				assert.Error(t, ctrl.Deploy(ctx, tc.externalToDeploy, namespace, tc.externalInfo))

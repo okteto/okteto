@@ -39,7 +39,7 @@ import (
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	kconfig "github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -193,10 +193,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 				TempKubeconfigFile: GetTempKubeConfigFile(name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 				Builder:            buildv2.NewBuilderFromScratch(),
-				ExternalControl: &externalresource.K8sControl{
-					ClientProvider: k8sExternalResources.GetExternalClient,
-					Cfg:            okteto.Context().Cfg,
-				},
 			}
 			startTime := time.Now()
 
@@ -287,6 +283,17 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
 		return err
 	}
+
+	_, proxyConfig, err := dc.K8sClientProvider.Provide(kconfig.Get([]string{dc.TempKubeconfigFile}))
+	if err != nil {
+		return err
+	}
+
+	dc.ExternalControl = &externalresource.K8sControl{
+		ClientProvider: k8sExternalResources.GetExternalClient,
+		Cfg:            proxyConfig,
+	}
+
 	oktetoLog.SetStage("Load manifest")
 	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
@@ -544,7 +551,7 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 		InsidePipeline:   true,
 	}
 
-	c, cfg, err := dc.K8sClientProvider.Provide(kubeconfig.Get([]string{dc.TempKubeconfigFile}))
+	c, cfg, err := dc.K8sClientProvider.Provide(kconfig.Get([]string{dc.TempKubeconfigFile}))
 	if err != nil {
 		return err
 	}
