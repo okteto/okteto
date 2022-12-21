@@ -160,7 +160,7 @@ func Up() *cobra.Command {
 				return err
 			}
 			if oktetoManifest.Name == "" {
-				oktetoLog.Information("okteto manifest doesn't have a name, inferring it...")
+				oktetoLog.Info("okteto manifest doesn't have a name, inferring it...")
 				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
 				if err != nil {
 					return err
