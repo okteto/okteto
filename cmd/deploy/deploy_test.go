@@ -658,6 +658,15 @@ func (f *fakeExternalControl) Deploy(_ context.Context, _ string, _ string, _ *e
 
 func TestDeployExternals(t *testing.T) {
 	ctx := context.Background()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
 	testCases := []struct {
 		name        string
 		options     *Options
