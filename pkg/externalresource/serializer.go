@@ -22,10 +22,6 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 		return err
 	}
 
-	if result.Notes == "" {
-		return fmt.Errorf("'notes' property cannot be empty")
-	}
-
 	if len(result.Endpoints) < 1 {
 		return fmt.Errorf("there must be at least one endpoint available for the external resource")
 	}
