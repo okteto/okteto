@@ -62,7 +62,7 @@ func TestDeploy(t *testing.T) {
 			},
 			externalInfo: &ExternalResource{
 				Icon:      "",
-				Notes:     Notes{},
+				Notes:     &Notes{},
 				Endpoints: []ExternalEndpoint{},
 			},
 		},
@@ -75,7 +75,7 @@ func TestDeploy(t *testing.T) {
 			},
 			externalInfo: &ExternalResource{
 				Icon:      "",
-				Notes:     Notes{},
+				Notes:     &Notes{},
 				Endpoints: []ExternalEndpoint{},
 			},
 		},
@@ -87,7 +87,7 @@ func TestDeploy(t *testing.T) {
 			},
 			externalInfo: &ExternalResource{
 				Icon:      "",
-				Notes:     Notes{},
+				Notes:     &Notes{},
 				Endpoints: []ExternalEndpoint{},
 			},
 			externalToDeploy: "old",
@@ -112,7 +112,7 @@ func TestDeploy(t *testing.T) {
 			expectedErr: false,
 			externalInfo: &ExternalResource{
 				Icon:      "",
-				Notes:     Notes{},
+				Notes:     &Notes{},
 				Endpoints: []ExternalEndpoint{},
 			},
 			externalToDeploy: "new",
@@ -137,7 +137,7 @@ func TestDeploy(t *testing.T) {
 			expectedErr: false,
 			externalInfo: &ExternalResource{
 				Icon:      "",
-				Notes:     Notes{},
+				Notes:     &Notes{},
 				Endpoints: []ExternalEndpoint{},
 			},
 			externalToDeploy: "old",

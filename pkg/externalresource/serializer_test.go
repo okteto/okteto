@@ -71,7 +71,7 @@ endpoints:
   url: /some/url/1`),
 			expected: ExternalResource{
 				Icon: "myicon",
-				Notes: Notes{
+				Notes: &Notes{
 					Path: "/path/to/file",
 				},
 				Endpoints: []ExternalEndpoint{

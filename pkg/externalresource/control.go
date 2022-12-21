@@ -66,6 +66,14 @@ func translate(name string, externalResource *ExternalResource) *k8s.External {
 		externalEndpointsSpec = append(externalEndpointsSpec, k8s.Endpoint(endpoint))
 	}
 
+	var notes *k8s.Notes
+	if externalResource.Notes != nil {
+		notes = &k8s.Notes{
+			Path:     externalResource.Notes.Path,
+			Markdown: externalResource.Notes.Markdown,
+		}
+	}
+
 	return &k8s.External{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       k8s.ExternalResourceKind,
@@ -78,11 +86,8 @@ func translate(name string, externalResource *ExternalResource) *k8s.External {
 			},
 		},
 		Spec: k8s.ExternalResourceSpec{
-			Name: format.ResourceK8sMetaString(name),
-			Notes: &k8s.Notes{
-				Path:     externalResource.Notes.Path,
-				Markdown: externalResource.Notes.Markdown,
-			},
+			Name:      format.ResourceK8sMetaString(name),
+			Notes:     notes,
 			Endpoints: externalEndpointsSpec,
 		},
 	}
