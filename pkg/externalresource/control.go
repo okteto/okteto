@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/constants"
-	oerrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource/k8s"
 	"github.com/okteto/okteto/pkg/format"
 	olog "github.com/okteto/okteto/pkg/log"
@@ -31,7 +30,7 @@ func (c *K8sControl) Deploy(ctx context.Context, name, ns string, externalInfo *
 	externalResourceCRD := translate(name, externalInfo)
 
 	old, err := k8sclient.ExternalResources(ns).Get(ctx, externalResourceCRD.Name, metav1.GetOptions{})
-	if err != nil && !oerrors.IsNotFound(err) {
+	if err != nil && !k8sErrors.IsNotFound(err) {
 		return fmt.Errorf("error getting external resource CRD '%s': %w", externalResourceCRD.Name, err)
 	}
 
