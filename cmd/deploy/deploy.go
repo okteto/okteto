@@ -612,6 +612,9 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 
 func (dc *DeployCommand) deployExternals(ctx context.Context, opts *Options) error {
 	for externalName, externalInfo := range opts.Manifest.External {
+		oktetoLog.Spinner(fmt.Sprintf("Deploying external resource '%s'...", externalName))
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
 		err := dc.ExternalControl.Deploy(ctx, externalName, opts.Manifest.Namespace, externalInfo)
 		if err != nil {
 			return err
