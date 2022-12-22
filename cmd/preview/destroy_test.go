@@ -35,7 +35,7 @@ func TestExecuteDestroyPreviewWithErrorDestroying(t *testing.T) {
 
 func TestExecuteDestroyPreviewWithoutError(t *testing.T) {
 	ctx := context.Background()
-	previewResponse := client.FakePreviewResponse{}
+	var previewResponse client.FakePreviewResponse
 	command := destroyPreviewCommand{
 		okClient: &client.FakeOktetoClient{
 			Preview: client.NewFakePreviewClient(
@@ -54,7 +54,7 @@ func TestExecuteDestroyPreviewWithoutError(t *testing.T) {
 
 func TestExecuteDestroyPreviewWithFailedJob(t *testing.T) {
 	ctx := context.Background()
-	previewResponse := client.FakePreviewResponse{}
+	var previewResponse client.FakePreviewResponse
 	ns := v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-preview",
@@ -81,7 +81,7 @@ func TestExecuteDestroyPreviewWithFailedJob(t *testing.T) {
 
 func TestExecuteDestroyPreviewWithErrorStreaming(t *testing.T) {
 	ctx := context.Background()
-	previewResponse := client.FakePreviewResponse{}
+	var previewResponse client.FakePreviewResponse
 	command := destroyPreviewCommand{
 		okClient: &client.FakeOktetoClient{
 			Preview: client.NewFakePreviewClient(

@@ -58,7 +58,7 @@ func (c *FakePreviewsClient) GetResourcesStatusFromPreview(_ context.Context, _,
 	return c.response.ResourceStatus, c.response.ErrResources
 }
 
-func (c *FakePreviewsClient) Destroy(ctx context.Context, previewName string) error {
+func (c *FakePreviewsClient) Destroy(_ context.Context, _ string) error {
 	if c.response.ErrDestroyPreview != nil {
 		return c.response.ErrDestroyPreview
 	}
