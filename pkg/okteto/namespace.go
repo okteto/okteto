@@ -121,10 +121,12 @@ func (c *namespaceClient) Delete(ctx context.Context, namespace string) error {
 	var mutation struct {
 		Space struct {
 			Id graphql.String
-		} `graphql:"deleteSpace(id: $id)"`
+		} `graphql:"deleteSpace(id: $id, force: $force)"`
 	}
 	variables := map[string]interface{}{
 		"id": graphql.String(namespace),
+		// force is disabled to delete namespace using destroy-all-namespace job
+		"force": graphql.Boolean(false),
 	}
 	err := mutate(ctx, &mutation, variables, c.client)
 	if err != nil {
