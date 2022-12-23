@@ -38,7 +38,7 @@ func (p *fakeK8sProvider) Provide(_ *clientcmdapi.Config) (kubernetes.Interface,
 	return p.k8sClient, nil, nil
 }
 
-func (p *fakeK8sProvider) GetIngressClient() (*ingresses.Client, error) {
+func (*fakeK8sProvider) GetIngressClient() (*ingresses.Client, error) {
 	return nil, nil
 }
 
