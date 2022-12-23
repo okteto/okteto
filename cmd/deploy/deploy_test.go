@@ -412,12 +412,16 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
+	cp := fakeExternalControlProvider{
+		control: &fakeExternalControl{},
+	}
 	c := &DeployCommand{
-		GetManifest:       getFakeManifest,
-		Proxy:             p,
-		Executor:          e,
-		Kubeconfig:        &fakeKubeConfig{},
-		K8sClientProvider: test.NewFakeK8sProvider(deployment),
+		GetManifest:        getFakeManifest,
+		Proxy:              p,
+		Executor:           e,
+		Kubeconfig:         &fakeKubeConfig{},
+		K8sClientProvider:  test.NewFakeK8sProvider(deployment),
+		GetExternalControl: cp.getFakeExternalControl,
 	}
 	ctx := context.Background()
 
@@ -469,12 +473,17 @@ func TestDeployWithoutErrors(t *testing.T) {
 			Namespace: "test",
 		},
 	}
+
+	cp := fakeExternalControlProvider{
+		control: &fakeExternalControl{},
+	}
 	c := &DeployCommand{
-		GetManifest:       getFakeManifest,
-		Proxy:             p,
-		Executor:          e,
-		Kubeconfig:        &fakeKubeConfig{},
-		K8sClientProvider: test.NewFakeK8sProvider(deployment),
+		GetManifest:        getFakeManifest,
+		Proxy:              p,
+		Executor:           e,
+		Kubeconfig:         &fakeKubeConfig{},
+		K8sClientProvider:  test.NewFakeK8sProvider(deployment),
+		GetExternalControl: cp.getFakeExternalControl,
 	}
 	ctx := context.Background()
 	opts := &Options{
