@@ -16,6 +16,10 @@ package namespace
 import (
 	"context"
 	"fmt"
+	"os"
+	"os/signal"
+	"sync"
+	"time"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
@@ -24,6 +28,8 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Delete deletes a namespace
@@ -31,8 +37,9 @@ func Delete(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete <name>",
 		Short: "Delete a namespace",
+		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			nsToDelete := args[0]
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
@@ -45,19 +52,26 @@ func Delete(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			err = nsCmd.ExecuteDeleteNamespace(ctx, args[0])
+			err = nsCmd.ExecuteDeleteNamespace(ctx, nsToDelete)
 			analytics.TrackDeleteNamespace(err == nil)
 			return err
 		},
-		Args: utils.ExactArgsAccepted(1, ""),
 	}
 	return cmd
 }
 
 func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespace string) error {
+	oktetoLog.Spinner(fmt.Sprintf("Deleting %s namespace", namespace))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
+	// trigger namespace deletion
 	if err := nc.okClient.Namespaces().Delete(ctx, namespace); err != nil {
-		return fmt.Errorf("failed to delete namespace: %s", err)
+		return fmt.Errorf("%w: %v", errFailedDeleteNamespace, err)
+	}
+
+	if err := nc.watchDelete(ctx, namespace); err != nil {
+		return err
 	}
 
 	oktetoLog.Success("Namespace '%s' deleted", namespace)
@@ -75,4 +89,79 @@ func (nc *NamespaceCommand) ExecuteDeleteNamespace(ctx context.Context, namespac
 		return nc.ctxCmd.Run(ctx, ctxOptions)
 	}
 	return nil
+}
+
+func (nc *NamespaceCommand) watchDelete(ctx context.Context, namespace string) error {
+	waitCtx, ctxCancel := context.WithCancel(ctx)
+	defer ctxCancel()
+
+	stop := make(chan os.Signal, 1)
+	defer close(stop)
+
+	signal.Notify(stop, os.Interrupt)
+	exit := make(chan error, 1)
+	defer close(exit)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		exit <- nc.waitForNamespaceDeleted(waitCtx, namespace)
+	}(&wg)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		err := nc.okClient.Stream().DestroyAllLogs(waitCtx, namespace)
+		if err != nil {
+			oktetoLog.Warning("delete namespace logs cannot be streamed due to connectivity issues")
+			oktetoLog.Infof("delete namespace logs cannot be streamed due to connectivity issues: %v", err)
+		}
+	}(&wg)
+
+	select {
+	case <-stop:
+		ctxCancel()
+		oktetoLog.Infof("CTRL+C received, exit")
+		return oktetoErrors.ErrIntSig
+	case err := <-exit:
+		// wait until streaming logs have finished
+		wg.Wait()
+		return err
+	}
+}
+
+func (nc *NamespaceCommand) waitForNamespaceDeleted(ctx context.Context, namespace string) error {
+	timeout := 5 * time.Minute
+	ticker := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(timeout)
+
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("%w: namespace %s, time %s", errDeleteNamespaceTimeout, namespace, timeout.String())
+		case <-ticker.C:
+			ns, err := nc.k8sClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+			if err != nil {
+				// not found error is expected when the namespace is deleted.
+				// adding also IsForbidden as in some versions kubernetes returns this status when the namespace is deleted
+				// one or the other we assume the namespace has been deleted
+				if k8sErrors.IsNotFound(err) || k8sErrors.IsForbidden(err) {
+					return nil
+				}
+				return err
+			}
+
+			status, ok := ns.Labels["space.okteto.com/status"]
+			if !ok {
+				// when status label is not present, continue polling the namespace until timeout
+				oktetoLog.Debugf("namespace %q does not have label for status", namespace)
+				continue
+			}
+			if status == "DeleteFailed" {
+				return errFailedDeleteNamespace
+			}
+		}
+	}
 }

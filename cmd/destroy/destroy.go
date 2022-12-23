@@ -192,7 +192,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			// when option --all the cmd will destroy everything at the namespace and return
 			if options.DestroyAll {
 				if !okteto.Context().IsOkteto {
-					return errors.New("option `--all` is not available for non-Okteto clusters. Learn more: https://www.okteto.com/docs/self-hosted/")
+					return oktetoErrors.ErrContextIsNotOktetoCluster
 				}
 				err = c.runDestroyAll(ctx, options)
 				if err == nil {
@@ -530,7 +530,9 @@ func (pc *destroyCommand) waitForNamespaceDestroyAllToComplete(ctx context.Conte
 
 			status, ok := ns.Labels["space.okteto.com/status"]
 			if !ok {
-				return errors.New("namespace does not have label for status")
+				// when status label is not present, continue polling the namespace until timeout
+				oktetoLog.Debugf("namespace %q does not have label for status", namespace)
+				continue
 			}
 
 			switch status {

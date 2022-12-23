@@ -21,106 +21,146 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 )
+
+func newFakeNamespaceCommand(okClient *client.FakeOktetoClient, k8sClient kubernetes.Interface, user *types.User) *NamespaceCommand {
+	return &NamespaceCommand{
+		okClient:  okClient,
+		ctxCmd:    newFakeContextCommand(okClient, user),
+		k8sClient: k8sClient,
+	}
+}
 
 func Test_deleteNamespace(t *testing.T) {
 	ctx := context.Background()
-	personalNs := "personal"
-	currentNs := "test"
+	personalNamespace := "personal"
+	currentNamespace := "current"
+	usr := &types.User{
+		Token: "test-token",
+	}
+	initNamespaces := []types.Namespace{
+		{
+			ID: currentNamespace,
+		},
+		{
+			ID: personalNamespace,
+		},
+		{
+			ID: "test-1",
+		},
+	}
+
 	var tests = []struct {
-		name              string
-		toDeleteNs        string
-		currentNamespaces []types.Namespace
-		finalNs           string
-		err               bool
+		name string
+		// toDeleteNs the namespace to delete
+		toDeleteNs string
+		// finalNs the namespace user sould finaly be
+		finalNs                         string
+		initialNamespacesAtOktetoClient []types.Namespace
+		fakeOkClient                    *client.FakeOktetoClient
+		fakeK8sClient                   *fake.Clientset
+		err                             error
 	}{
 		{
-			name:       "delete existing ns, the current one",
-			toDeleteNs: currentNs,
-			currentNamespaces: []types.Namespace{
-				{
-					ID: "test-1",
-				},
-				{
-					ID: currentNs,
-				},
-				{
-					ID: personalNs,
-				},
+			name:                            "delete existing ns, the current one",
+			toDeleteNs:                      currentNamespace,
+			initialNamespacesAtOktetoClient: initNamespaces,
+			finalNs:                         personalNamespace,
+			fakeOkClient: &client.FakeOktetoClient{
+				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
+				Users:        client.NewFakeUsersClient(usr),
+				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 			},
-			finalNs: personalNs,
+			fakeK8sClient: fake.NewSimpleClientset(),
 		},
 		{
-			name:       "delete existing ns but not the current one",
-			toDeleteNs: "test-1",
-			currentNamespaces: []types.Namespace{
-				{
-					ID: "test-1",
-				},
-				{
-					ID: currentNs,
-				},
-				{
-					ID: personalNs,
-				},
+			name:                            "delete existing ns, not the current one",
+			toDeleteNs:                      "test-1",
+			initialNamespacesAtOktetoClient: initNamespaces,
+			finalNs:                         currentNamespace,
+			fakeOkClient: &client.FakeOktetoClient{
+				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
+				Users:        client.NewFakeUsersClient(usr),
+				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 			},
-			finalNs: currentNs,
+			fakeK8sClient: fake.NewSimpleClientset(),
 		},
 		{
-			name:       "delete non-existing ns",
-			toDeleteNs: "test-1",
-			currentNamespaces: []types.Namespace{
-				{
-					ID: "test",
-				},
-				{
-					ID: currentNs,
-				},
-				{
-					ID: personalNs,
-				},
+			name:                            "delete non-existing ns",
+			toDeleteNs:                      "test-non-existing",
+			initialNamespacesAtOktetoClient: initNamespaces,
+			finalNs:                         currentNamespace,
+			err:                             errFailedDeleteNamespace,
+			fakeOkClient: &client.FakeOktetoClient{
+				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
+				Users:        client.NewFakeUsersClient(usr),
+				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 			},
-			finalNs: currentNs,
-			err:     true,
+			fakeK8sClient: fake.NewSimpleClientset(),
+		},
+		{
+			name:                            "delete namespace failed at job",
+			toDeleteNs:                      currentNamespace,
+			initialNamespacesAtOktetoClient: initNamespaces,
+			finalNs:                         currentNamespace,
+			fakeOkClient: &client.FakeOktetoClient{
+				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
+				Users:        client.NewFakeUsersClient(usr),
+				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+			},
+			fakeK8sClient: fake.NewSimpleClientset(&v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: currentNamespace,
+					Labels: map[string]string{
+						"space.okteto.com/status": "DeleteFailed",
+					},
+				},
+			}),
+			err: errFailedDeleteNamespace,
+		},
+		{
+			name:                            "delete namespace stream logs failed",
+			toDeleteNs:                      currentNamespace,
+			initialNamespacesAtOktetoClient: initNamespaces,
+			finalNs:                         personalNamespace,
+			fakeOkClient: &client.FakeOktetoClient{
+				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
+				Users:        client.NewFakeUsersClient(usr),
+				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{StreamErr: assert.AnError}),
+			},
+			fakeK8sClient: fake.NewSimpleClientset(),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// init ctx current store with initial values
 			okteto.CurrentStore = &okteto.OktetoContextStore{
 				Contexts: map[string]*okteto.OktetoContext{
-					"test": {
-						Name:              "test",
-						Token:             "test",
-						PersonalNamespace: personalNs,
+					"test-context": {
+						Name:              "test-context",
+						Token:             "test-token",
+						PersonalNamespace: personalNamespace,
 						IsOkteto:          true,
-						Namespace:         currentNs,
+						Namespace:         currentNamespace,
 						UserID:            "1",
 					},
 				},
-				CurrentContext: "test",
-			}
-			usr := &types.User{
-				Token: "test",
-			}
-			fakeOktetoClient := &client.FakeOktetoClient{
-				Namespace: client.NewFakeNamespaceClient(tt.currentNamespaces, nil),
-				Users:     client.NewFakeUsersClient(usr),
-			}
-			nsCmd := &NamespaceCommand{
-				okClient: fakeOktetoClient,
-				ctxCmd:   newFakeContextCommand(fakeOktetoClient, usr),
-			}
-			err := nsCmd.ExecuteDeleteNamespace(ctx, tt.toDeleteNs)
-			if tt.err {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
+				CurrentContext: "test-context",
 			}
 
+			nsFakeCommand := newFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
+			err := nsFakeCommand.ExecuteDeleteNamespace(ctx, tt.toDeleteNs)
+			assert.ErrorIs(t, err, tt.err)
 			assert.Equal(t, tt.finalNs, okteto.Context().Namespace)
 
-			ns, err := fakeOktetoClient.Namespaces().List(ctx)
+			// check namespace has been deleted from list
+			ns, err := tt.fakeOkClient.Namespaces().List(ctx)
+			// no error for this namespace list
 			assert.Equal(t, nil, err)
 			for _, n := range ns {
 				assert.NotEqual(t, n.ID, tt.toDeleteNs)

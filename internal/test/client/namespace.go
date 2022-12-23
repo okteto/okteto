@@ -46,19 +46,19 @@ func (c *FakeNamespaceClient) AddMembers(_ context.Context, _ string, _ []string
 
 // Delete deletes a namespace
 func (c *FakeNamespaceClient) Delete(_ context.Context, namespace string) error {
-	toRemove := -1
-	for idx, ns := range c.namespaces {
-		if ns.ID == namespace {
-			toRemove = idx
-			break
+	var updatedNamespaces []types.Namespace
+	for _, ns := range c.namespaces {
+		if ns.ID != namespace {
+			updatedNamespaces = append(updatedNamespaces, ns)
 		}
 	}
-	if toRemove != -1 {
-		c.namespaces[toRemove] = c.namespaces[len(c.namespaces)-1]
-		c.namespaces = c.namespaces[:len(c.namespaces)-1]
-		return nil
+	// if updated are same as current, namespace was not found
+	if len(updatedNamespaces) == len(c.namespaces) {
+		return fmt.Errorf("not found")
 	}
-	return fmt.Errorf("not found")
+	// override with updated
+	c.namespaces = updatedNamespaces
+	return nil
 }
 
 // SleepNamespace deletes a namespace
