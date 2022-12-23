@@ -59,6 +59,26 @@ func (c *K8sControl) Deploy(ctx context.Context, name, ns string, externalInfo *
 	return nil
 }
 
+func (c *K8sControl) List(ctx context.Context, ns string, labelSelector string) ([]ExternalResource, error) {
+	k8sclient, err := c.ClientProvider(c.Cfg)
+	if err != nil {
+		return nil, fmt.Errorf("error providing external resource client: %w", err)
+	}
+
+	externals, err := k8sclient.ExternalResources(ns).List(ctx, metav1.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error listing external resources: %w", err)
+	}
+
+	result := []ExternalResource{}
+	for _, er := range externals.Items {
+		result = append(result, translateK8sToExternal(er))
+	}
+	return result, nil
+}
+
 func translate(name string, externalResource *ExternalResource) *k8s.External {
 	var externalEndpointsSpec []k8s.Endpoint
 	for _, endpoint := range externalResource.Endpoints {
@@ -89,5 +109,31 @@ func translate(name string, externalResource *ExternalResource) *k8s.External {
 			Notes:     notes,
 			Endpoints: externalEndpointsSpec,
 		},
+	}
+}
+
+func translateK8sToExternal(er k8s.External) ExternalResource {
+	var notes *Notes
+	if er.Spec.Notes != nil {
+		notes = &Notes{
+			Path:     er.Spec.Notes.Path,
+			Markdown: er.Spec.Notes.Markdown,
+		}
+	}
+
+	endpoints := []ExternalEndpoint{}
+	for _, ep := range er.Spec.Endpoints {
+		endpoints = append(endpoints, translateK8sToEndpoint(ep))
+	}
+	return ExternalResource{
+		Notes:     notes,
+		Endpoints: endpoints,
+	}
+}
+
+func translateK8sToEndpoint(k8sEndpoint k8s.Endpoint) ExternalEndpoint {
+	return ExternalEndpoint{
+		Name: k8sEndpoint.Name,
+		Url:  k8sEndpoint.Url,
 	}
 }
