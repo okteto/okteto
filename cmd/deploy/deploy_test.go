@@ -649,7 +649,8 @@ func TestBuildImages(t *testing.T) {
 }
 
 type fakeExternalControl struct {
-	err error
+	externals []externalresource.ExternalResource
+	err       error
 }
 
 type fakeExternalControlProvider struct {
@@ -658,6 +659,10 @@ type fakeExternalControlProvider struct {
 
 func (f *fakeExternalControl) Deploy(_ context.Context, _ string, _ string, _ *externalresource.ExternalResource) error {
 	return f.err
+}
+
+func (f *fakeExternalControl) List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error) {
+	return f.externals, f.err
 }
 
 func (f *fakeExternalControlProvider) getFakeExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {

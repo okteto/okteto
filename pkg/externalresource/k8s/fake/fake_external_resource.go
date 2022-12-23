@@ -12,12 +12,14 @@ import (
 
 // FakeExternalResource implements ExternalResourceInterface
 type FakeExternalResource struct {
-	Fake                         *FakeExternalResourceV1
-	ns                           string
-	getErr, createErr, updateErr error
+	Fake                                  *FakeExternalResourceV1
+	ns                                    string
+	getErr, createErr, updateErr, listErr error
 }
 
 var externalResourceResource = schema.GroupVersionResource{Group: k8sexternalresource.GroupName, Version: k8sexternalresource.GroupVersion, Resource: k8sexternalresource.ExternalResourceResource}
+
+var externalResourceKind = schema.GroupVersionKind{Group: k8sexternalresource.GroupName, Version: k8sexternalresource.GroupVersion, Kind: k8sexternalresource.ExternalResourceKind}
 
 func (c *FakeExternalResource) Create(_ context.Context, external *k8sexternalresource.External) (*k8sexternalresource.External, error) {
 	if c.createErr != nil {
@@ -59,4 +61,17 @@ func (c *FakeExternalResource) Get(_ context.Context, name string, _ metav1.GetO
 		return &k8sexternalresource.External{}, err
 	}
 	return obj.(*k8sexternalresource.External), err
+}
+
+func (c *FakeExternalResource) List(ctx context.Context, opts metav1.ListOptions) (*k8sexternalresource.ExternalList, error) {
+	if c.listErr != nil {
+		return nil, c.listErr
+	}
+	obj, err := c.Fake.
+		Invokes(testing.NewListAction(externalResourceResource, externalResourceKind, c.ns, opts), &k8sexternalresource.ExternalList{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*k8sexternalresource.ExternalList), err
 }
