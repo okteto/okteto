@@ -652,8 +652,16 @@ type fakeExternalControl struct {
 	err error
 }
 
+type fakeExternalControlProvider struct {
+	control ExternalResourceInterface
+}
+
 func (f *fakeExternalControl) Deploy(_ context.Context, _ string, _ string, _ *externalresource.ExternalResource) error {
 	return f.err
+}
+
+func (f *fakeExternalControlProvider) getFakeExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
+	return f.control, nil
 }
 
 func TestDeployExternals(t *testing.T) {
@@ -726,8 +734,13 @@ func TestDeployExternals(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
+			cp := fakeExternalControlProvider{
+				control: tc.control,
+			}
+
 			dc := DeployCommand{
-				ExternalControl: tc.control,
+				GetExternalControl: cp.getFakeExternalControl,
 			}
 
 			if tc.expectedErr {

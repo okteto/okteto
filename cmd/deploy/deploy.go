@@ -89,7 +89,7 @@ type DeployCommand struct {
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
-	ExternalControl    ExternalResourceInterface
+	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
 
 	PipelineType model.Archetype
 }
@@ -193,6 +193,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				TempKubeconfigFile: GetTempKubeConfigFile(name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 				Builder:            buildv2.NewBuilderFromScratch(),
+				GetExternalControl: getExternalControl,
 			}
 			startTime := time.Now()
 
@@ -262,6 +263,18 @@ func Deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
+func getExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
+	_, proxyConfig, err := cp.Provide(kconfig.Get([]string{filename}))
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalresource.K8sControl{
+		ClientProvider: k8sExternalResources.GetExternalClient,
+		Cfg:            proxyConfig,
+	}, nil
+}
+
 // RunDeploy runs the deploy sequence
 func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
 	cwd, err := os.Getwd()
@@ -282,16 +295,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
 		return err
-	}
-
-	_, proxyConfig, err := dc.K8sClientProvider.Provide(kconfig.Get([]string{dc.TempKubeconfigFile}))
-	if err != nil {
-		return err
-	}
-
-	dc.ExternalControl = &externalresource.K8sControl{
-		ClientProvider: k8sExternalResources.GetExternalClient,
-		Cfg:            proxyConfig,
 	}
 
 	oktetoLog.SetStage("Load manifest")
@@ -611,11 +614,16 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 }
 
 func (dc *DeployCommand) deployExternals(ctx context.Context, opts *Options) error {
+	control, err := dc.GetExternalControl(dc.K8sClientProvider, dc.TempKubeconfigFile)
+	if err != nil {
+		return err
+	}
+
 	for externalName, externalInfo := range opts.Manifest.External {
 		oktetoLog.Spinner(fmt.Sprintf("Deploying external resource '%s'...", externalName))
 		oktetoLog.StartSpinner()
 		defer oktetoLog.StopSpinner()
-		err := dc.ExternalControl.Deploy(ctx, externalName, opts.Manifest.Namespace, externalInfo)
+		err := control.Deploy(ctx, externalName, opts.Manifest.Namespace, externalInfo)
 		if err != nil {
 			return err
 		}
