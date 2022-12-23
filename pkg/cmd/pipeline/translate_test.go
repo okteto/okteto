@@ -17,6 +17,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
@@ -73,7 +74,7 @@ func Test_translateConfigMap(t *testing.T) {
 			assert.Nil(t, err)
 			assert.Equal(t, cfg.Data[statusField], tt.status)
 
-			assert.NotEmpty(t, cfg.Annotations[model.LastUpdatedAnnotation])
+			assert.NotEmpty(t, cfg.Annotations[constants.LastUpdatedAnnotation])
 		})
 	}
 }

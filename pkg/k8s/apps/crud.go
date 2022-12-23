@@ -56,7 +56,7 @@ func IsDevModeOn(app App) bool {
 
 // SetLastBuiltAnnotation sets the app timestamp
 func SetLastBuiltAnnotation(app App) {
-	app.ObjectMeta().Annotations[model.LastBuiltAnnotation] = time.Now().UTC().Format(model.TimeFormat)
+	app.ObjectMeta().Annotations[model.LastBuiltAnnotation] = time.Now().UTC().Format(constants.TimeFormat)
 }
 
 // GetRunningPodInLoop returns the dev pod for an app and loops until it success

@@ -16,7 +16,7 @@ type ExternalResourceSection map[string]*ExternalResource
 // ExternalResource represents information on an external resource
 type ExternalResource struct {
 	Icon      string
-	Notes     Notes
+	Notes     *Notes
 	Endpoints []ExternalEndpoint
 }
 
