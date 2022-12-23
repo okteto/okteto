@@ -137,12 +137,18 @@ func (nc *NamespaceCommand) waitForNamespaceDeleted(ctx context.Context, namespa
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 
+	// provide k8s
+	c, _, err := nc.k8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
 	for {
 		select {
 		case <-to.C:
 			return fmt.Errorf("%w: namespace %s, time %s", errDeleteNamespaceTimeout, namespace, timeout.String())
 		case <-ticker.C:
-			ns, err := nc.k8sClient.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+			ns, err := c.CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
 			if err != nil {
 				// not found error is expected when the namespace is deleted.
 				// adding also IsForbidden as in some versions kubernetes returns this status when the namespace is deleted
