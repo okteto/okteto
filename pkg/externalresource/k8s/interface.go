@@ -27,6 +27,7 @@ type ExternalResourceInterface interface {
 	Update(ctx context.Context, external *External) (*External, error)
 	Get(ctx context.Context, name string, options metav1.GetOptions) (*External, error)
 	Create(ctx context.Context, external *External) (*External, error)
+	List(ctx context.Context, options metav1.ListOptions) (*ExternalList, error)
 }
 
 func (c *externalClient) Create(ctx context.Context, external *External) (*External, error) {
@@ -66,5 +67,16 @@ func (c *externalClient) Update(ctx context.Context, external *External) (*Exter
 		Do(ctx).
 		Into(&result)
 
+	return &result, err
+}
+
+func (c *externalClient) List(ctx context.Context, opts metav1.ListOptions) (*ExternalList, error) {
+	result := ExternalList{}
+	err := c.restClient.Get().
+		Namespace(c.ns).
+		Resource(ExternalResourceResource).
+		VersionedParams(&opts, runtime.NewParameterCodec(c.scheme)).
+		Do(ctx).
+		Into(&result)
 	return &result, err
 }

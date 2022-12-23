@@ -16,7 +16,7 @@ type FakeExternalResourceV1 struct {
 }
 
 type PossibleERErrors struct {
-	GetErr, UpdateErr, CreateErr error
+	GetErr, UpdateErr, CreateErr, ListErr error
 }
 
 func NewFakeExternalResourceV1(errs PossibleERErrors, objects ...runtime.Object) *FakeExternalResourceV1 {
@@ -47,5 +47,5 @@ func NewFakeExternalResourceV1(errs PossibleERErrors, objects ...runtime.Object)
 }
 
 func (c *FakeExternalResourceV1) ExternalResources(namespace string) k8sexternalresource.ExternalResourceInterface {
-	return &FakeExternalResource{c, namespace, c.possibleErrs.GetErr, c.possibleErrs.CreateErr, c.possibleErrs.UpdateErr}
+	return &FakeExternalResource{c, namespace, c.possibleErrs.GetErr, c.possibleErrs.CreateErr, c.possibleErrs.UpdateErr, c.possibleErrs.ListErr}
 }

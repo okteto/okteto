@@ -96,6 +96,7 @@ type DeployCommand struct {
 
 type ExternalResourceInterface interface {
 	Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
+	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
 }
 
 // Deploy deploys the okteto manifest

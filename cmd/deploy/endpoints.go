@@ -24,6 +24,8 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/externalresource"
+	k8sExternalResources "github.com/okteto/okteto/pkg/externalresource/k8s"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -80,11 +82,13 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
 				return err
 			}
+
 			c := &DeployCommand{
 				GetManifest:        model.GetManifestV2,
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 				GetExternalControl: GetExternalControl,
 			}
+
 			cwd, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
@@ -151,6 +155,21 @@ func (dc *DeployCommand) getEndpoints(ctx context.Context, opts *EndpointsOption
 		return nil, err
 	}
 
+	externalCtrl, err := dc.GetExternalControl(dc.K8sClientProvider, dc.TempKubeconfigFile)
+	if err != nil {
+		return nil, err
+	}
+	externalEps, err := externalCtrl.List(ctx, opts.Namespace, labelSelector)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, externalEp := range externalEps {
+		for _, ep := range externalEp.Endpoints {
+			eps = append(eps, fmt.Sprintf("%s (external)", ep.Url))
+		}
+	}
+
 	if len(eps) > 0 {
 		sort.Slice(eps, func(i, j int) bool {
 			return len(eps[i]) < len(eps[j])
@@ -190,4 +209,16 @@ func (dc *DeployCommand) showEndpoints(ctx context.Context, opts *EndpointsOptio
 		}
 	}
 	return nil
+}
+
+func getExternalControlFromCtx(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
+	_, proxyConfig, err := cp.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalresource.K8sControl{
+		ClientProvider: k8sExternalResources.GetExternalClient,
+		Cfg:            proxyConfig,
+	}, nil
 }
