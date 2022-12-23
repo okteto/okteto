@@ -81,8 +81,9 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				return err
 			}
 			c := &DeployCommand{
-				GetManifest:       model.GetManifestV2,
-				K8sClientProvider: okteto.NewK8sClientProvider(),
+				GetManifest:        model.GetManifestV2,
+				K8sClientProvider:  okteto.NewK8sClientProvider(),
+				GetExternalControl: GetExternalControl,
 			}
 			cwd, err := os.Getwd()
 			if err != nil {

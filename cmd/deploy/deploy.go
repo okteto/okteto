@@ -193,7 +193,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				TempKubeconfigFile: GetTempKubeConfigFile(name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 				Builder:            buildv2.NewBuilderFromScratch(),
-				GetExternalControl: getExternalControl,
+				GetExternalControl: GetExternalControl,
 			}
 			startTime := time.Now()
 
@@ -263,7 +263,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func getExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
+func GetExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
 	_, proxyConfig, err := cp.Provide(kconfig.Get([]string{filename}))
 	if err != nil {
 		return nil, err
