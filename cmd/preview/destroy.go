@@ -179,7 +179,9 @@ func (c destroyPreviewCommand) waitForPreviewDestroyed(ctx context.Context, prev
 				oktetoLog.Debugf("namespace %q does not have label for status", preview)
 				continue
 			}
-			if status == "DeleteFailed" {
+			// We should also check "Active" status. If a dev environment fails to be destroyed, we go back the preview status
+			// to "Active" (okteto backend sets the status to deleting when starting the preview deletion)
+			if status == "DeleteFailed" || status == "Active" {
 				return errFailedDestroyPreview
 			}
 		}
