@@ -135,7 +135,7 @@ func (c destroyPreviewCommand) watchDestroy(ctx context.Context, preview string)
 		defer wg.Done()
 		err := c.okClient.Stream().DestroyAllLogs(waitCtx, preview)
 		if err != nil {
-			oktetoLog.Warning("destroy preview logs cannot be streamed due to connectivity issues")
+			oktetoLog.Warning("final log output will appear once this action is complete")
 			oktetoLog.Infof("destroy preview logs cannot be streamed due to connectivity issues: %v", err)
 		}
 	}(&wg)
