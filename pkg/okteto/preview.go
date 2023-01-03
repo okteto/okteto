@@ -152,7 +152,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 }
 
 // DestroyPreview destroy a preview environment
-func (c *OktetoClient) DestroyPreview(ctx context.Context, name string) error {
+func (c *previewClient) Destroy(ctx context.Context, name string) error {
 	var mutation struct {
 		Preview struct {
 			Id graphql.String
