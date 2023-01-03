@@ -45,13 +45,21 @@ notes: /path/to/file`),
 			expectedErr: true,
 		},
 		{
-			name: "invalid external resource: property 'notes' empty",
+			name: "valid external resource with property 'notes' empty",
 			data: []byte(`
 icon: myicon
 endpoints:
 - name: endpoint1
   url: /some/url/1`),
-			expectedErr: true,
+			expected: ExternalResource{
+				Icon: "myicon",
+				Endpoints: []ExternalEndpoint{
+					{
+						Name: "endpoint1",
+						Url:  "/some/url/1",
+					},
+				},
+			},
 		},
 		{
 			name: "valid external resource",
@@ -63,7 +71,7 @@ endpoints:
   url: /some/url/1`),
 			expected: ExternalResource{
 				Icon: "myicon",
-				Notes: Notes{
+				Notes: &Notes{
 					Path: "/path/to/file",
 				},
 				Endpoints: []ExternalEndpoint{

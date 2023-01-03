@@ -43,4 +43,10 @@ const (
 
 	// OktetoAutodiscoveryReleaseName defines the name used for helm release when autodiscovery
 	OktetoAutodiscoveryReleaseName = "OKTETO_AUTODISCOVERY_RELEASE_NAME"
+
+	// LastUpdatedAnnotation indicates update timestamp
+	LastUpdatedAnnotation = "dev.okteto.com/last-updated"
+
+	// TimeFormat is the format to use when storing timestamps as a string
+	TimeFormat = "2006-01-02T15:04:05"
 )

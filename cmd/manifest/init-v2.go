@@ -275,6 +275,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
 		Builder:            buildv2.NewBuilderFromScratch(),
+		GetExternalControl: deploy.GetExternalControl,
 	}
 
 	err = c.RunDeploy(ctx, &deploy.Options{

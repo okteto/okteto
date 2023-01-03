@@ -521,7 +521,7 @@ func (svc *Service) SetLastBuiltAnnotation() {
 	if svc.Annotations == nil {
 		svc.Annotations = Annotations{}
 	}
-	svc.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
+	svc.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(constants.TimeFormat)
 }
 
 // IsAlreadyAdded checks if a port is already on port list

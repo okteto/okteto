@@ -34,10 +34,12 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/externalresource"
+	k8sExternalResources "github.com/okteto/okteto/pkg/externalresource/k8s"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	kconfig "github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -87,8 +89,14 @@ type DeployCommand struct {
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
+	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
 
 	PipelineType model.Archetype
+}
+
+type ExternalResourceInterface interface {
+	Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
+	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
 }
 
 // Deploy deploys the okteto manifest
@@ -186,6 +194,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				TempKubeconfigFile: GetTempKubeConfigFile(name),
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 				Builder:            buildv2.NewBuilderFromScratch(),
+				GetExternalControl: GetExternalControl,
 			}
 			startTime := time.Now()
 
@@ -255,6 +264,18 @@ func Deploy(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
+func GetExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
+	_, proxyConfig, err := cp.Provide(kconfig.Get([]string{filename}))
+	if err != nil {
+		return nil, err
+	}
+
+	return &externalresource.K8sControl{
+		ClientProvider: k8sExternalResources.GetExternalClient,
+		Cfg:            proxyConfig,
+	}, nil
+}
+
 // RunDeploy runs the deploy sequence
 func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
 	cwd, err := os.Getwd()
@@ -276,6 +297,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
 		return err
 	}
+
 	oktetoLog.SetStage("Load manifest")
 	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
@@ -498,6 +520,20 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		oktetoLog.SetStage("")
 	}
 
+	// deploy externals if any
+	if opts.Manifest.External != nil {
+		oktetoLog.SetStage("External configuration")
+		if !okteto.IsOkteto() {
+			oktetoLog.Warning("external resources cannot be deployed on a cluster not managed by okteto")
+			return nil
+		}
+		if err := dc.deployExternals(ctx, opts); err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying external resources: %s", err.Error())
+			return err
+		}
+		oktetoLog.SetStage("")
+	}
+
 	return nil
 
 }
@@ -519,7 +555,7 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 		InsidePipeline:   true,
 	}
 
-	c, cfg, err := dc.K8sClientProvider.Provide(kubeconfig.Get([]string{dc.TempKubeconfigFile}))
+	c, cfg, err := dc.K8sClientProvider.Provide(kconfig.Get([]string{dc.TempKubeconfigFile}))
 	if err != nil {
 		return err
 	}
@@ -571,6 +607,25 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 	for name, endpoint := range opts.Manifest.Deploy.Endpoints {
 		ingress := ingresses.Translate(name, endpoint, translateOptions)
 		if err := iClient.Deploy(ctx, ingress); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (dc *DeployCommand) deployExternals(ctx context.Context, opts *Options) error {
+	control, err := dc.GetExternalControl(dc.K8sClientProvider, dc.TempKubeconfigFile)
+	if err != nil {
+		return err
+	}
+
+	for externalName, externalInfo := range opts.Manifest.External {
+		oktetoLog.Spinner(fmt.Sprintf("Deploying external resource '%s'...", externalName))
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
+		err := control.Deploy(ctx, externalName, opts.Manifest.Namespace, externalInfo)
+		if err != nil {
 			return err
 		}
 	}

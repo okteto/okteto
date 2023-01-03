@@ -22,10 +22,6 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 		return err
 	}
 
-	if result.Notes == "" {
-		return fmt.Errorf("'notes' property cannot be empty")
-	}
-
 	if len(result.Endpoints) < 1 {
 		return fmt.Errorf("there must be at least one endpoint available for the external resource")
 	}
@@ -40,7 +36,12 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 	}
 
 	er.Icon = result.Icon
-	er.Notes.Path = result.Notes
+
+	if result.Notes != "" {
+		er.Notes = &Notes{
+			Path: result.Notes,
+		}
+	}
 
 	for _, endpoint := range result.Endpoints {
 		er.Endpoints = append(er.Endpoints, ExternalEndpoint(endpoint))

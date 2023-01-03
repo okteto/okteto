@@ -14,7 +14,7 @@ func TestExternalResource_SetDefaults(t *testing.T) {
 	externalResourceName := "myExternalApp"
 	externalResource := ExternalResource{
 		Icon: "myIcon",
-		Notes: Notes{
+		Notes: &Notes{
 			Path:     "/some/path",
 			Markdown: "",
 		},
@@ -64,7 +64,7 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 			externalResourceFSM: ERFilesystemManager{
 				ExternalResource: ExternalResource{
 					Icon: "myIcon",
-					Notes: Notes{
+					Notes: &Notes{
 						Path: "/readme.md",
 					},
 					Endpoints: []ExternalEndpoint{},
@@ -78,7 +78,7 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 			externalResourceFSM: ERFilesystemManager{
 				ExternalResource: ExternalResource{
 					Icon: "myIcon",
-					Notes: Notes{
+					Notes: &Notes{
 						Path: "/external/readme.md",
 					},
 					Endpoints: []ExternalEndpoint{},

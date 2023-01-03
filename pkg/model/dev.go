@@ -29,6 +29,7 @@ import (
 	"github.com/a8m/envsubst"
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -961,7 +962,7 @@ func (dev *Dev) SetLastBuiltAnnotation() {
 	if dev.Metadata.Annotations == nil {
 		dev.Metadata.Annotations = Annotations{}
 	}
-	dev.Metadata.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
+	dev.Metadata.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(constants.TimeFormat)
 }
 
 // GetVolumeName returns the okteto volume name for a given development container
