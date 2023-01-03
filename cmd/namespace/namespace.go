@@ -30,7 +30,7 @@ type NamespaceCommand struct {
 	k8sClientProvider okteto.K8sClientProvider
 }
 
-// NewCommand creates a namespace command to
+// NewCommand creates a namespace command for use in further operations
 func NewCommand() (*NamespaceCommand, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
