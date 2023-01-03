@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -46,7 +46,7 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 			// ingress was created by divert
 			updatedIn = translateIngress(d.Manifest, d.cache.divertIngresses[name])
 		} else if in.Annotations[model.OktetoDivertIngressInjectionAnnotation] != d.Manifest.Namespace {
-			// ingress wasnt created by divert, check header injection
+			// ingress wasn't created by divert, check header injection
 			if updatedIn.Annotations == nil {
 				updatedIn.Annotations = map[string]string{}
 			}
