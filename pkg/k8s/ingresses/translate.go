@@ -19,7 +19,7 @@ type TranslateOptions struct {
 
 // Translate translates the endpoints spec at compose or okteto manifest and returns an ingress
 func Translate(endpointName string, endpoint model.Endpoint, opts *TranslateOptions) *Ingress {
-	// endpointName could not be sanitized 
+	// endpointName could not be sanitized
 	if endpointName == "" {
 		// opts.Name is already sanitized- this should be clean version of name
 		endpointName = opts.Name
