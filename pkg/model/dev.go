@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -29,6 +29,7 @@ import (
 	"github.com/a8m/envsubst"
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -961,7 +962,7 @@ func (dev *Dev) SetLastBuiltAnnotation() {
 	if dev.Metadata.Annotations == nil {
 		dev.Metadata.Annotations = Annotations{}
 	}
-	dev.Metadata.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
+	dev.Metadata.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(constants.TimeFormat)
 }
 
 // GetVolumeName returns the okteto volume name for a given development container

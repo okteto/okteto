@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -22,7 +22,9 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -275,7 +277,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	assert.Equal(t, expectedCfg.Namespace, cfg.Namespace)
 	assert.Equal(t, expectedCfg.Labels, cfg.Labels)
 	assert.Equal(t, expectedCfg.Data, cfg.Data)
-	assert.NotEmpty(t, cfg.Annotations[model.LastUpdatedAnnotation])
+	assert.NotEmpty(t, cfg.Annotations[constants.LastUpdatedAnnotation])
 }
 
 func TestDeployWithErrorExecutingCommands(t *testing.T) {
@@ -410,12 +412,16 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
+	cp := fakeExternalControlProvider{
+		control: &fakeExternalControl{},
+	}
 	c := &DeployCommand{
-		GetManifest:       getFakeManifest,
-		Proxy:             p,
-		Executor:          e,
-		Kubeconfig:        &fakeKubeConfig{},
-		K8sClientProvider: test.NewFakeK8sProvider(deployment),
+		GetManifest:        getFakeManifest,
+		Proxy:              p,
+		Executor:           e,
+		Kubeconfig:         &fakeKubeConfig{},
+		K8sClientProvider:  test.NewFakeK8sProvider(deployment),
+		GetExternalControl: cp.getFakeExternalControl,
 	}
 	ctx := context.Background()
 
@@ -467,12 +473,17 @@ func TestDeployWithoutErrors(t *testing.T) {
 			Namespace: "test",
 		},
 	}
+
+	cp := fakeExternalControlProvider{
+		control: &fakeExternalControl{},
+	}
 	c := &DeployCommand{
-		GetManifest:       getFakeManifest,
-		Proxy:             p,
-		Executor:          e,
-		Kubeconfig:        &fakeKubeConfig{},
-		K8sClientProvider: test.NewFakeK8sProvider(deployment),
+		GetManifest:        getFakeManifest,
+		Proxy:              p,
+		Executor:           e,
+		Kubeconfig:         &fakeKubeConfig{},
+		K8sClientProvider:  test.NewFakeK8sProvider(deployment),
+		GetExternalControl: cp.getFakeExternalControl,
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -644,4 +655,113 @@ func TestBuildImages(t *testing.T) {
 		})
 	}
 
+}
+
+type fakeExternalControl struct {
+	externals []externalresource.ExternalResource
+	err       error
+}
+
+type fakeExternalControlProvider struct {
+	control ExternalResourceInterface
+}
+
+func (f *fakeExternalControl) Deploy(_ context.Context, _ string, _ string, _ *externalresource.ExternalResource) error {
+	return f.err
+}
+
+func (f *fakeExternalControl) List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error) {
+	return f.externals, f.err
+}
+
+func (f *fakeExternalControlProvider) getFakeExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
+	return f.control, nil
+}
+
+func TestDeployExternals(t *testing.T) {
+	ctx := context.Background()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
+	testCases := []struct {
+		name        string
+		options     *Options
+		expectedErr bool
+		control     ExternalResourceInterface
+	}{
+		{
+			name: "no externals to deploy",
+			options: &Options{
+				Manifest: &model.Manifest{
+					Deploy:   &model.DeployInfo{},
+					External: nil,
+				},
+			},
+			control: &fakeExternalControl{},
+		},
+		{
+			name: "deploy external",
+			options: &Options{
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{},
+					External: externalresource.ExternalResourceSection{
+						"test": &externalresource.ExternalResource{
+							Icon: "myIcon",
+							Notes: &externalresource.Notes{
+								Path: "/some/path",
+							},
+							Endpoints: []externalresource.ExternalEndpoint{},
+						},
+					},
+				},
+			},
+			control: &fakeExternalControl{},
+		},
+		{
+			name: "error when deploy external",
+			options: &Options{
+				Manifest: &model.Manifest{
+					Deploy: &model.DeployInfo{},
+					External: externalresource.ExternalResourceSection{
+						"test": &externalresource.ExternalResource{
+							Icon: "myIcon",
+							Notes: &externalresource.Notes{
+								Path: "/some/path",
+							},
+							Endpoints: []externalresource.ExternalEndpoint{},
+						},
+					},
+				},
+			},
+			control: &fakeExternalControl{
+				err: assert.AnError,
+			},
+			expectedErr: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			cp := fakeExternalControlProvider{
+				control: tc.control,
+			}
+
+			dc := DeployCommand{
+				GetExternalControl: cp.getFakeExternalControl,
+			}
+
+			if tc.expectedErr {
+				assert.Error(t, dc.deploy(ctx, tc.options))
+			} else {
+				assert.NoError(t, dc.deploy(ctx, tc.options))
+			}
+		})
+	}
 }

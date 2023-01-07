@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -282,6 +282,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
 		Builder:            buildv2.NewBuilderFromScratch(),
+		GetExternalControl: deploy.GetExternalControl,
 	}
 
 	err = c.RunDeploy(ctx, &deploy.Options{

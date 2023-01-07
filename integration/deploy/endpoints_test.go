@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -473,7 +473,7 @@ func Test_EndpointsFromOktetoManifest_NameOption(t *testing.T) {
 		Workdir:    dir,
 		Namespace:  testNamespace,
 		OktetoHome: dir,
-		Name: 		"my test",
+		Name:       "my test",
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 

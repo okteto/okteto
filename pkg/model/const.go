@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,8 +16,6 @@ package model
 import apiv1 "k8s.io/api/core/v1"
 
 const (
-	// TimeFormat is the format to use when storing timestamps as a string
-	TimeFormat = "2006-01-02T15:04:05"
 
 	// DevCloneLabel indicates it is a dev pod clone
 	DevCloneLabel = "dev.okteto.com/clone"
@@ -51,9 +49,6 @@ const (
 
 	// LastBuiltAnnotation indicates the timestamp of an operation
 	LastBuiltAnnotation = "dev.okteto.com/last-built"
-
-	// LastUpdatedAnnotation indicates update timestamp
-	LastUpdatedAnnotation = "dev.okteto.com/last-updated"
 
 	// TranslationAnnotation sets the translation rules
 	TranslationAnnotation = "dev.okteto.com/translation"

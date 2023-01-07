@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -43,4 +43,10 @@ const (
 
 	// OktetoAutodiscoveryReleaseName defines the name used for helm release when autodiscovery
 	OktetoAutodiscoveryReleaseName = "OKTETO_AUTODISCOVERY_RELEASE_NAME"
+
+	// LastUpdatedAnnotation indicates update timestamp
+	LastUpdatedAnnotation = "dev.okteto.com/last-updated"
+
+	// TimeFormat is the format to use when storing timestamps as a string
+	TimeFormat = "2006-01-02T15:04:05"
 )

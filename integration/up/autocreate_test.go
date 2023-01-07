@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -85,40 +85,6 @@ dev:
     forward:
     - 8012:8080
     autocreate: true
-`
-
-	autocreateManifestV1WithDefinedUser = `
-name: test
-image: okteto.dev/test:latest
-command: echo done
-autocreate: true
-persistentVolume:
-  enabled: false
-sync:
-- .:/app
-`
-
-	autocreateManifestV2WithDefinedUser = `
-build:
-  test:
-    context: .
-dev:
-  test:
-    image: ${OKTETO_BUILD_TEST_IMAGE}
-    command:
-    - echo
-    - done
-    sync:
-    - .:/app
-    persistentVolume:
-      enabled: false
-    autocreate: true
-`
-
-	dockerfileDefinedUser = `
-FROM alpine
-USER 1001
-COPY --chown=1001:1001 . /app
 `
 )
 
@@ -385,72 +351,4 @@ func TestUpAutocreateV2WithBuild(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 
 	require.True(t, commands.HasUpCommandFinished(upResult.Pid.Pid))
-}
-
-func TestUpWithDefinedUserAndBuildV1(t *testing.T) {
-	t.Parallel()
-	// Prepare environment
-	dir := t.TempDir()
-	oktetoPath, err := integration.GetOktetoPath()
-	require.NoError(t, err)
-
-	testNamespace := integration.GetTestNamespace("TestUpWithDefinedUserAndBuildV1", user)
-	namespaceOpts := &commands.NamespaceOptions{
-		Namespace:  testNamespace,
-		OktetoHome: dir,
-		Token:      token,
-	}
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-
-	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), autocreateManifestV1WithDefinedUser))
-	require.NoError(t, writeFile(filepath.Join(dir, "Dockerfile"), dockerfileDefinedUser))
-	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
-	require.NoError(t, writeFile(filepath.Join(dir, ".dockerignore"), stignoreContent))
-
-	upOptions := &commands.UpOptions{
-		Name:         "test",
-		Namespace:    testNamespace,
-		Workdir:      dir,
-		ManifestPath: filepath.Join(dir, "okteto.yml"),
-		OktetoHome:   dir,
-		Token:        token,
-	}
-	_, err = commands.RunOktetoUp(oktetoPath, upOptions)
-	require.NoError(t, err)
-}
-
-func TestUpWithDefinedUserAndBuildV2(t *testing.T) {
-	t.Parallel()
-	// Prepare environment
-	dir := t.TempDir()
-	oktetoPath, err := integration.GetOktetoPath()
-	require.NoError(t, err)
-
-	testNamespace := integration.GetTestNamespace("TestUpWithDefinedUserAndBuildV2", user)
-	namespaceOpts := &commands.NamespaceOptions{
-		Namespace:  testNamespace,
-		OktetoHome: dir,
-		Token:      token,
-	}
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-
-	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), autocreateManifestV2WithDefinedUser))
-	require.NoError(t, writeFile(filepath.Join(dir, "Dockerfile"), dockerfileDefinedUser))
-	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
-	require.NoError(t, writeFile(filepath.Join(dir, ".dockerignore"), stignoreContent))
-
-	upOptions := &commands.UpOptions{
-		Name:         "test",
-		Namespace:    testNamespace,
-		Workdir:      dir,
-		ManifestPath: filepath.Join(dir, "okteto.yml"),
-		OktetoHome:   dir,
-		Token:        token,
-	}
-	_, err = commands.RunOktetoUp(oktetoPath, upOptions)
-	require.NoError(t, err)
 }

@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -152,7 +152,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 }
 
 // DestroyPreview destroy a preview environment
-func (c *OktetoClient) DestroyPreview(ctx context.Context, name string) error {
+func (c *previewClient) Destroy(ctx context.Context, name string) error {
 	var mutation struct {
 		Preview struct {
 			Id graphql.String

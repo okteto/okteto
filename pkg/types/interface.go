@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -47,6 +47,7 @@ type PreviewInterface interface {
 	List(ctx context.Context) ([]Preview, error)
 	DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewResponse, error)
 	GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error)
+	Destroy(ctx context.Context, previewName string) error
 }
 
 // PipelineInterface represents the client that connects to the pipeline functions
