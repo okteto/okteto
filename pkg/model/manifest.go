@@ -178,6 +178,7 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 
 // DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
+	Image          string              `json:"image,omitempty" yaml:"image,omitempty"`
 	Commands       []DeployCommand     `json:"commands,omitempty" yaml:"commands,omitempty"`
 	ComposeSection *ComposeSectionInfo `json:"compose,omitempty" yaml:"compose,omitempty"`
 	Endpoints      EndpointSpec        `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
