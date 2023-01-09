@@ -539,7 +539,10 @@ func (pc *destroyCommand) waitForNamespaceDestroyAllToComplete(ctx context.Conte
 			case "Active":
 				if hasBeenDestroyingAll {
 					// when status is active again check if all resources have been correctly destroyed
-					cfgList, err := c.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{})
+					// list configmaps that belong okteto deployments
+					cfgList, err := c.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{
+						LabelSelector: fmt.Sprintf("%s=%s", model.GitDeployLabel, "true"),
+					})
 					if err != nil {
 						return err
 					}
