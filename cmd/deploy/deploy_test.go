@@ -151,7 +151,7 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	c := &DeployCommand{
+	c := &localDeployer{
 		Proxy:    p,
 		Executor: e,
 		Kubeconfig: &fakeKubeConfig{
@@ -166,7 +166,7 @@ func TestDeployWithErrorChangingKubeConfig(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	err := c.deploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -364,7 +364,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 			},
 		},
 	}
-	c := &DeployCommand{
+	c := &localDeployer{
 		GetManifest:       getFakeManifest,
 		Proxy:             p,
 		Executor:          e,
@@ -373,7 +373,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	}
 	ctx := context.Background()
 
-	err := c.RunDeploy(ctx, opts)
+	err := c.deploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -477,7 +477,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	cp := fakeExternalControlProvider{
 		control: &fakeExternalControl{},
 	}
-	c := &DeployCommand{
+	c := &localDeployer{
 		GetManifest:        getFakeManifest,
 		Proxy:              p,
 		Executor:           e,
@@ -492,7 +492,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		Variables:    []string{},
 	}
 
-	err := c.RunDeploy(ctx, opts)
+	err := c.deploy(ctx, opts)
 
 	assert.NoError(t, err)
 	// No command was executed

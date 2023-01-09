@@ -42,6 +42,22 @@ type EndpointsOptions struct {
 	K8sContext   string
 }
 
+type endpointGetter struct {
+	GetManifest        func(path string) (*model.Manifest, error)
+	K8sClientProvider  okteto.K8sClientProvider
+	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
+	TempKubeconfigFile string
+}
+
+func newEndpointGetter(tempKubeconfig string) endpointGetter {
+	return endpointGetter{
+		GetManifest:        model.GetManifestV2,
+		K8sClientProvider:  okteto.NewK8sClientProvider(),
+		GetExternalControl: GetExternalControl,
+		TempKubeconfigFile: tempKubeconfig,
+	}
+}
+
 // Endpoints deploys the okteto manifest
 func Endpoints(ctx context.Context) *cobra.Command {
 	options := &EndpointsOptions{}
@@ -83,19 +99,14 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			c := &DeployCommand{
-				GetManifest:        model.GetManifestV2,
-				K8sClientProvider:  okteto.NewK8sClientProvider(),
-				GetExternalControl: GetExternalControl,
-			}
-
+			eg := newEndpointGetter("")
 			cwd, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
 			}
 
 			if options.Name == "" {
-				manifest, err := c.GetManifest(options.ManifestPath)
+				manifest, err := eg.GetManifest(options.ManifestPath)
 				if err != nil {
 					return err
 				}
@@ -115,7 +126,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			if err := validateOutput(options.Output); err != nil {
 				return err
 			}
-			return c.showEndpoints(ctx, options)
+			return eg.showEndpoints(ctx, options)
 		},
 	}
 	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
@@ -137,7 +148,7 @@ func validateOutput(output string) error {
 	}
 }
 
-func (dc *DeployCommand) getEndpoints(ctx context.Context, opts *EndpointsOptions) ([]string, error) {
+func (eg *endpointGetter) getEndpoints(ctx context.Context, opts *EndpointsOptions) ([]string, error) {
 	if opts.Output == "" {
 		oktetoLog.Spinner("Retrieving endpoints...")
 		oktetoLog.StartSpinner()
@@ -146,7 +157,7 @@ func (dc *DeployCommand) getEndpoints(ctx context.Context, opts *EndpointsOption
 
 	sanitizedName := format.ResourceK8sMetaString(opts.Name)
 	labelSelector := fmt.Sprintf("%s=%s", model.DeployedByLabel, sanitizedName)
-	iClient, err := dc.K8sClientProvider.GetIngressClient()
+	iClient, err := eg.K8sClientProvider.GetIngressClient()
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +166,7 @@ func (dc *DeployCommand) getEndpoints(ctx context.Context, opts *EndpointsOption
 		return nil, err
 	}
 
-	externalCtrl, err := dc.GetExternalControl(dc.K8sClientProvider, dc.TempKubeconfigFile)
+	externalCtrl, err := eg.GetExternalControl(eg.K8sClientProvider, eg.TempKubeconfigFile)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +189,7 @@ func (dc *DeployCommand) getEndpoints(ctx context.Context, opts *EndpointsOption
 	return eps, nil
 }
 
-func (dc *DeployCommand) showEndpoints(ctx context.Context, opts *EndpointsOptions) error {
+func (dc *endpointGetter) showEndpoints(ctx context.Context, opts *EndpointsOptions) error {
 	eps, err := dc.getEndpoints(ctx, opts)
 	if err != nil {
 		return err

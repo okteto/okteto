@@ -50,15 +50,8 @@ devs:
 		Icon:       "https://apps.okteto.com/movies/icon.png",
 	}
 
-	p := &fakeProxy{}
-	e := &fakeExecutor{
-		err: assert.AnError,
-	}
 	dc := &DeployCommand{
 		GetManifest:       getFakeManifest,
-		Proxy:             p,
-		Executor:          e,
-		Kubeconfig:        &fakeKubeConfig{},
 		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 
