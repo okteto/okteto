@@ -63,18 +63,18 @@ type UpOptions struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
 	ManifestPathFlag string
-	// ManifestPath is the patah to the manifest used though the command execution.
+	// ManifestPath is the path to the manifest used though the command execution.
 	// This might change its value during execution
-	ManifestPath string
-	Namespace    string
-	K8sContext   string
-	DevName      string
-	Devs         []string
-	Envs         []string
-	Remote       int
-	Deploy       bool
-	ForcePull    bool
-	Reset        bool
+	ManifestPath     string
+	Namespace        string
+	K8sContext       string
+	DevName          string
+	Envs             []string
+	Remote           int
+	Deploy           bool
+	ForcePull        bool
+	Reset            bool
+	commandToExecute []string
 }
 
 // Up starts a development container
@@ -153,6 +153,7 @@ func Up() *cobra.Command {
 					return err
 				}
 			}
+
 			wd, err := os.Getwd()
 			if err != nil {
 				return err
@@ -274,6 +275,9 @@ func Up() *cobra.Command {
 					return err
 				}
 			}
+			if len(upOptions.commandToExecute) > 0 {
+				dev.Command.Values = upOptions.commandToExecute
+			}
 
 			up.Dev = dev
 			if forceAutocreate {
@@ -357,6 +361,7 @@ func Up() *cobra.Command {
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
 	cmd.Flags().MarkHidden("pull")
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
+	cmd.Flags().StringArrayVarP(&upOptions.commandToExecute, "command", "", []string{}, "external commands to be supplied to 'okteto up'")
 	return cmd
 }
 
