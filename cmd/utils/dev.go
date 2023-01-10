@@ -155,7 +155,7 @@ func DeprecatedLoadManifestOrDefault(devPath, name string) (*model.Manifest, err
 	return nil, err
 }
 
-// GetDevFromManifest gets a dev from a manifest by
+// GetDevFromManifest gets a dev from a manifest by comparing the given dev name with the dev name in the manifest
 func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
 	if len(manifest.Dev) == 0 {
 		return nil, oktetoErrors.ErrManifestNoDevSection
