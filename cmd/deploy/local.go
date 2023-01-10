@@ -49,7 +49,6 @@ type localDeployer struct {
 	Builder            *buildv2.OktetoBuilder
 	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
 	deployWaiter       deployWaiter
-	endpointGetter     endpointGetter
 }
 
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not
@@ -220,7 +219,7 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 		fmt.Sprintf("%s=%s", constants.OktetoAutodiscoveryReleaseName, format.ResourceK8sMetaString(deployOptions.Name)),
 	)
 	oktetoLog.EnableMasking()
-	err = ld.deploy(ctx, deployOptions)
+	err = ld.runDeploySection(ctx, deployOptions)
 	oktetoLog.DisableMasking()
 	oktetoLog.SetStage("done")
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
@@ -245,7 +244,12 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 				}
 			}
 			if !utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
-				if err := ld.endpointGetter.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: deployOptions.Manifest.Namespace}); err != nil {
+				eg := endpointGetter{
+					K8sClientProvider:  ld.K8sClientProvider,
+					GetExternalControl: ld.GetExternalControl,
+					TempKubeconfigFile: ld.TempKubeconfigFile,
+				}
+				if err := eg.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: deployOptions.Manifest.Namespace}); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
 				}
 			}

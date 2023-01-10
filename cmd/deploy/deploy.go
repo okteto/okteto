@@ -74,8 +74,8 @@ type DeployCommand struct {
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
-	Deployer           deployer
 	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
+	GetDeployer        func(manifest *model.Manifest, opts *Options) (deployerInterface, error)
 
 	PipelineType model.Archetype
 }
@@ -85,7 +85,7 @@ type ExternalResourceInterface interface {
 	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
 }
 
-type deployer interface {
+type deployerInterface interface {
 	deploy(context.Context, *Options) error
 	cleanUp(context.Context, error)
 }
@@ -161,6 +161,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				GetManifest: model.GetManifestV2,
 
 				K8sClientProvider: okteto.NewK8sClientProvider(),
+				GetDeployer:       getDeployer,
 			}
 			startTime := time.Now()
 
@@ -207,7 +208,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 				oktetoLog.StartSpinner()
 				defer oktetoLog.StopSpinner()
 
-				c.Deployer.cleanUp(ctx, oktetoErrors.ErrIntSig)
+				deployer, err := c.GetDeployer(options.Manifest, options)
+				if err != nil {
+					return err
+				}
+				deployer.cleanUp(ctx, oktetoErrors.ErrIntSig)
 				return oktetoErrors.ErrIntSig
 			case err := <-exit:
 				return err
@@ -248,14 +253,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
-	var deployer deployer
-	if deployOptions.Manifest.Deploy.Image == "" {
-		deployer, err = newLocalDeployer(deployOptions.Name, deployOptions.RunWithoutBash)
-		if err != nil {
-			return fmt.Errorf("could not initialize local deploy command: %w", err)
-		}
-	} else {
-		deployer = newRemoteDeployer()
+	deployer, err := dc.GetDeployer(deployOptions.Manifest, deployOptions)
+	if err != nil {
+		return err
 	}
 	return deployer.deploy(ctx, deployOptions)
 }
@@ -370,4 +370,20 @@ func getDefaultTimeout() time.Duration {
 	}
 
 	return parsed
+}
+
+func getDeployer(manifest *model.Manifest, opts *Options) (deployerInterface, error) {
+	var (
+		deployer deployerInterface
+		err      error
+	)
+	if opts.Manifest.Deploy.Image == "" {
+		deployer, err = newLocalDeployer(opts.Name, opts.RunWithoutBash)
+		if err != nil {
+			return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
+		}
+	} else {
+		deployer = newRemoteDeployer()
+	}
+	return deployer, nil
 }

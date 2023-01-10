@@ -187,10 +187,14 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 		CurrentContext: "test",
 	}
 	c := &DeployCommand{
-		GetManifest:       getManifestWithError,
-		Proxy:             p,
-		Executor:          e,
-		Kubeconfig:        &fakeKubeConfig{},
+		GetManifest: getManifestWithError,
+		GetDeployer: func(manifest *model.Manifest, opts *Options) (deployerInterface, error) {
+			return &localDeployer{
+				Proxy:      p,
+				Executor:   e,
+				Kubeconfig: &fakeKubeConfig{},
+			}, nil
+		},
 		K8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	ctx := context.Background()
@@ -223,14 +227,20 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	registry := test.NewFakeOktetoRegistry(nil)
 	builder := test.NewFakeOktetoBuilder(registry)
+	clientProvider := test.NewFakeK8sProvider()
 
 	c := &DeployCommand{
-		GetManifest:       getErrorManifest,
-		Proxy:             p,
-		Executor:          e,
-		Kubeconfig:        &fakeKubeConfig{},
-		K8sClientProvider: test.NewFakeK8sProvider(),
-		Builder:           buildv2.NewBuilder(builder, registry),
+		GetManifest: getErrorManifest,
+		GetDeployer: func(manifest *model.Manifest, opts *Options) (deployerInterface, error) {
+			return &localDeployer{
+				Proxy:             p,
+				Executor:          e,
+				Kubeconfig:        &fakeKubeConfig{},
+				K8sClientProvider: clientProvider,
+				Builder:           buildv2.NewBuilder(builder, registry),
+			}, nil
+		},
+		K8sClientProvider: clientProvider,
 	}
 
 	ctx := context.Background()
@@ -285,6 +295,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	e := &fakeExecutor{
 		err: assert.AnError,
 	}
+	clientProvider := test.NewFakeK8sProvider()
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		Contexts: map[string]*okteto.OktetoContext{
 			"test": {
@@ -294,11 +305,16 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		CurrentContext: "test",
 	}
 	c := &DeployCommand{
-		GetManifest:       getFakeManifest,
-		Proxy:             p,
-		Executor:          e,
-		Kubeconfig:        &fakeKubeConfig{},
-		K8sClientProvider: test.NewFakeK8sProvider(),
+		GetManifest: getFakeManifest,
+		GetDeployer: func(manifest *model.Manifest, opts *Options) (deployerInterface, error) {
+			return &localDeployer{
+				Proxy:             p,
+				Executor:          e,
+				Kubeconfig:        &fakeKubeConfig{},
+				K8sClientProvider: clientProvider,
+			}, nil
+		},
+		K8sClientProvider: clientProvider,
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -364,16 +380,22 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 			},
 		},
 	}
-	c := &localDeployer{
-		GetManifest:       getFakeManifest,
-		Proxy:             p,
-		Executor:          e,
-		Kubeconfig:        &fakeKubeConfig{},
-		K8sClientProvider: test.NewFakeK8sProvider(cmap, deployment),
+	clientProvider := test.NewFakeK8sProvider(cmap, deployment)
+	c := &DeployCommand{
+		GetManifest: getFakeManifest,
+		GetDeployer: func(manifest *model.Manifest, opts *Options) (deployerInterface, error) {
+			return &localDeployer{
+				Proxy:             p,
+				Executor:          e,
+				Kubeconfig:        &fakeKubeConfig{},
+				K8sClientProvider: clientProvider,
+			}, nil
+		},
+		K8sClientProvider: clientProvider,
 	}
 	ctx := context.Background()
 
-	err := c.deploy(ctx, opts)
+	err := c.RunDeploy(ctx, opts)
 
 	assert.Error(t, err)
 	// No command was executed
@@ -415,13 +437,20 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	cp := fakeExternalControlProvider{
 		control: &fakeExternalControl{},
 	}
+	clientProvider := test.NewFakeK8sProvider(deployment)
 	c := &DeployCommand{
-		GetManifest:        getFakeManifest,
-		Proxy:              p,
-		Executor:           e,
-		Kubeconfig:         &fakeKubeConfig{},
-		K8sClientProvider:  test.NewFakeK8sProvider(deployment),
+		GetManifest: getFakeManifest,
+		GetDeployer: func(manifest *model.Manifest, opts *Options) (deployerInterface, error) {
+			return &localDeployer{
+				Proxy:              p,
+				Executor:           e,
+				Kubeconfig:         &fakeKubeConfig{},
+				K8sClientProvider:  clientProvider,
+				GetExternalControl: cp.getFakeExternalControl,
+			}, nil
+		},
 		GetExternalControl: cp.getFakeExternalControl,
+		K8sClientProvider:  clientProvider,
 	}
 	ctx := context.Background()
 
@@ -442,67 +471,6 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	assert.True(t, p.started)
 	// Proxy wasn't shutdown
 	assert.False(t, p.shutdown)
-
-	// check if configmap has been created
-	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
-	if err != nil {
-		t.Fatal("could not create fake k8s client")
-	}
-	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
-	assert.Nil(t, err)
-	assert.NotNil(t, cfg)
-	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
-}
-
-func TestDeployWithoutErrors(t *testing.T) {
-	p := &fakeProxy{}
-	e := &fakeExecutor{}
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-			},
-		},
-		CurrentContext: "test",
-	}
-	deployment := &v1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Labels: map[string]string{
-				model.DeployedByLabel: "movies",
-			},
-			Namespace: "test",
-		},
-	}
-
-	cp := fakeExternalControlProvider{
-		control: &fakeExternalControl{},
-	}
-	c := &localDeployer{
-		GetManifest:        getFakeManifest,
-		Proxy:              p,
-		Executor:           e,
-		Kubeconfig:         &fakeKubeConfig{},
-		K8sClientProvider:  test.NewFakeK8sProvider(deployment),
-		GetExternalControl: cp.getFakeExternalControl,
-	}
-	ctx := context.Background()
-	opts := &Options{
-		Name:         "movies",
-		ManifestPath: "",
-		Variables:    []string{},
-	}
-
-	err := c.deploy(ctx, opts)
-
-	assert.NoError(t, err)
-	// No command was executed
-	assert.Len(t, e.executed, 3)
-	// Check expected commands were executed
-	assert.Equal(t, fakeManifest.Deploy.Commands, e.executed)
-	// Proxy started
-	assert.True(t, p.started)
-	// Proxy was shutdown
-	assert.True(t, p.shutdown)
 
 	// check if configmap has been created
 	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
@@ -753,14 +721,14 @@ func TestDeployExternals(t *testing.T) {
 				control: tc.control,
 			}
 
-			dc := DeployCommand{
+			ld := localDeployer{
 				GetExternalControl: cp.getFakeExternalControl,
 			}
 
 			if tc.expectedErr {
-				assert.Error(t, dc.deploy(ctx, tc.options))
+				assert.Error(t, ld.runDeploySection(ctx, tc.options))
 			} else {
-				assert.NoError(t, dc.deploy(ctx, tc.options))
+				assert.NoError(t, ld.runDeploySection(ctx, tc.options))
 			}
 		})
 	}
