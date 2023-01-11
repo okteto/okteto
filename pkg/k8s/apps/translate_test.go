@@ -25,9 +25,9 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -446,9 +446,8 @@ services:
 		t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
 	}
 
-	if err := tr1.DevModeOff(); err != nil {
-		oktetoLog.Infof("error turning off dev mode: %s", err)
-	}
+	err = tr1.DevModeOff()
+	require.NoError(t, err)
 
 	if _, ok := tr1.App.ObjectMeta().Labels[constants.DevLabel]; ok {
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
@@ -600,9 +599,8 @@ services:
 		t.Fatalf("Wrong dev d2 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD2), string(marshalledDevD2OK))
 	}
 
-	if err := tr2.DevModeOff(); err != nil {
-		oktetoLog.Infof("error turning off dev mode: %s", err)
-	}
+	err = tr2.DevModeOff()
+	require.NoError(t, err)
 
 	if _, ok := tr2.App.ObjectMeta().Labels[constants.DevLabel]; ok {
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
@@ -1628,9 +1626,9 @@ services:
 		t.Fatalf("Wrong dev sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevSfs1), string(marshalledDevSfs1OK))
 	}
 
-	if err := tr1.DevModeOff(); err != nil {
-		oktetoLog.Infof("error turning off dev mode: %s", err)
-	}
+	err = tr1.DevModeOff()
+	require.NoError(t, err)
+
 	if _, ok := tr1.App.ObjectMeta().Labels[constants.DevLabel]; ok {
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
 	}
@@ -1782,9 +1780,8 @@ services:
 		t.Fatalf("Wrong dev sfs2 generation.\nActual %+v, \nExpected %+v", string(marshalledDevSfs2), string(marshalledDevSfs2OK))
 	}
 
-	if err := tr2.DevModeOff(); err != nil {
-		oktetoLog.Infof("error turning off dev mode: %s", err)
-	}
+	err = tr2.DevModeOff()
+	require.NoError(t, err)
 
 	if _, ok := tr2.App.ObjectMeta().Labels[constants.DevLabel]; ok {
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
@@ -1858,9 +1855,8 @@ func Test_translateAnnotations(t *testing.T) {
 			for key, value := range tt.tr.App.TemplateObjectMeta().Annotations {
 				previousAppTemplateAnnotations[key] = value
 			}
-			if err := tt.tr.translate(); err != nil {
-				oktetoLog.Infof("error translating: %s", err)
-			}
+			err := tt.tr.translate()
+			require.NoError(t, err)
 			for key, value := range tt.annotations {
 				if appValue, ok := tt.tr.App.ObjectMeta().Annotations[key]; ok {
 					if appValue != value {
@@ -1877,9 +1873,9 @@ func Test_translateAnnotations(t *testing.T) {
 					t.Fatal("devApp didn't set annotations correctly")
 				}
 			}
-			if err := tt.tr.DevModeOff(); err != nil {
-				oktetoLog.Infof("error turning dev mode off: %s", err)
-			}
+			err = tt.tr.DevModeOff()
+			require.NoError(t, err)
+
 			assert.Equal(t, previousAppObjectMetaAnnotations, tt.tr.App.ObjectMeta().Annotations)
 			assert.Equal(t, previousAppTemplateAnnotations, tt.tr.App.TemplateObjectMeta().Annotations)
 		})

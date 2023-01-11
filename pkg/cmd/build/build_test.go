@@ -17,6 +17,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_validateImage(t *testing.T) {
@@ -96,18 +97,14 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 
 	dir := t.TempDir()
 
-	if err := os.Chdir(dir); err != nil {
-		oktetoLog.Infof("failed to change dir: %s", err)
-	}
+	err := os.Chdir(dir)
+	require.NoError(t, err)
 	defer func() {
-		if err := os.Chdir(originalWd); err != nil {
-			oktetoLog.Infof("failed to change dir: %s", err)
-		}
+		err := os.Chdir(originalWd)
+		require.NoError(t, err)
 	}()
-	err := os.Mkdir(serviceContext, os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
+	err = os.Mkdir(serviceContext, os.ModePerm)
+	require.NoError(t, err)
 
 	df := filepath.Join(serviceContext, serviceDockerfile)
 	dockerfile, errCreate := os.Create(df)
@@ -119,9 +116,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		if err := dockerfile.Close(); err != nil {
 			t.Fatal(err)
 		}
-		if err := removeFile(df); err != nil {
-			oktetoLog.Infof("failed to remove file: %s", err)
-		}
+		err := removeFile(df)
+		require.NoError(t, err)
 	})
 
 	tests := []struct {
@@ -289,16 +285,14 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 
 	dir := t.TempDir()
 
-	if err := os.Chdir(dir); err != nil {
-		oktetoLog.Infof("failed to change dir: %s", err)
-	}
+	err := os.Chdir(dir)
+	require.NoError(t, err)
 	defer func() {
-		if err := os.Chdir(originalWd); err != nil {
-			oktetoLog.Infof("failed to change dir: %s", err)
-		}
+		err := os.Chdir(originalWd)
+		require.NoError(t, err)
 	}()
 
-	err := os.Mkdir(buildName, os.ModePerm)
+	err = os.Mkdir(buildName, os.ModePerm)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -379,9 +373,8 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 			if tt.dockerfilesCreated != nil {
 				for _, df := range tt.dockerfilesCreated {
 					defer func() {
-						if err := removeFile(df); err != nil {
-							oktetoLog.Infof("failed to remove file: %s", err)
-						}
+						err := removeFile(df)
+						require.NoError(t, err)
 					}()
 					dfFile, err := os.Create(df)
 					if err != nil {
@@ -427,9 +420,8 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 
 			if tt.dockerfilesCreated != nil {
 				for _, df := range tt.dockerfilesCreated {
-					if err := removeFile(df); err != nil {
-						oktetoLog.Infof("error removing file %s: %s", df, err)
-					}
+					err := removeFile(df)
+					require.NoError(t, err)
 				}
 			}
 

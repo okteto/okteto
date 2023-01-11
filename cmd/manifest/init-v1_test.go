@@ -22,8 +22,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/cmd/utils"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
 
@@ -120,9 +120,8 @@ func TestRunJustCreateNecessaryFields(t *testing.T) {
 
 	file, _ := os.ReadFile(p)
 	var result map[string]interface{}
-	if err := yaml.Unmarshal([]byte(file), &result); err != nil {
-		oktetoLog.Infof("error unmarshalling manifest: %s", err)
-	}
+	err := yaml.Unmarshal([]byte(file), &result)
+	require.NoError(t, err)
 
 	optionalFields := [...]string{"annotations", "autocreate", "container", "context", "environment",
 		"externalVolumes", "healthchecks", "interface", "imagePullPolicy", "labels", "namespace",
