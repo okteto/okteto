@@ -78,7 +78,7 @@ type DeployCommand struct {
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
 	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
-	GetDeployer        func(*model.Manifest, *Options, string, *buildv2.OktetoBuilder) (deployerInterface, error)
+	GetDeployer        func(context.Context, *model.Manifest, *Options, string, *buildv2.OktetoBuilder) (deployerInterface, error)
 	deployWaiter       deployWaiter
 	cfgMapHandler      configMapHandler
 
@@ -219,7 +219,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				oktetoLog.StartSpinner()
 				defer oktetoLog.StopSpinner()
 
-				deployer, err := c.GetDeployer(options.Manifest, options, "", nil)
+				deployer, err := c.GetDeployer(ctx, options.Manifest, options, "", nil)
 				if err != nil {
 					return err
 				}
@@ -311,7 +311,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return dc.cfgMapHandler.updateConfigMap(ctx, cfg, data, err)
 	}
 
-	deployer, err := dc.GetDeployer(deployOptions.Manifest, deployOptions, cwd, dc.Builder)
+	deployer, err := dc.GetDeployer(ctx, deployOptions.Manifest, deployOptions, cwd, dc.Builder)
 	if err != nil {
 		return err
 	}
@@ -476,7 +476,7 @@ func getDefaultTimeout() time.Duration {
 	return parsed
 }
 
-func getDeployer(manifest *model.Manifest, opts *Options, cwd string, builder *buildv2.OktetoBuilder) (deployerInterface, error) {
+func getDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, cwd string, builder *buildv2.OktetoBuilder) (deployerInterface, error) {
 	var (
 		deployer deployerInterface
 		err      error
@@ -485,7 +485,7 @@ func getDeployer(manifest *model.Manifest, opts *Options, cwd string, builder *b
 	isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
 
 	if isRemote || manifest.Deploy.Image == "" {
-		deployer, err = newLocalDeployer(opts.Name, cwd, opts.RunWithoutBash)
+		deployer, err = newLocalDeployer(ctx, cwd, opts)
 		if err != nil {
 			return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
 		}

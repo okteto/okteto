@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -135,7 +136,12 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 			name := options.Name
 			if options.Name == "" {
-				name = utils.InferName(cwd)
+				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+				if err != nil {
+					return err
+				}
+				inferer := devenvironment.NewNameInferer(c)
+				name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPathFlag)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}

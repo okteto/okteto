@@ -62,7 +62,7 @@ func TestRun(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	manifest, err := utils.LoadManifest(p)
+	manifest, err := utils.DeprecatedLoadManifest(p)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestRun(t *testing.T) {
 		t.Fatalf("manifest wasn't overwritten: %s", err)
 	}
 
-	manifest, err = utils.LoadManifest(p)
+	manifest, err = utils.DeprecatedLoadManifest(p)
 	if err != nil {
 		t.Fatal(err)
 	}

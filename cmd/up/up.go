@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/discovery"
 
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -159,7 +160,13 @@ func Up() *cobra.Command {
 				return err
 			}
 			if oktetoManifest.Name == "" {
-				oktetoManifest.Name = utils.InferName(wd)
+				oktetoLog.Info("okteto manifest doesn't have a name, inferring it...")
+				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+				if err != nil {
+					return err
+				}
+				inferer := devenvironment.NewNameInferer(c)
+				oktetoManifest.Name = inferer.InferName(ctx, wd, okteto.Context().Namespace, upOptions.ManifestPathFlag)
 			}
 			os.Setenv(constants.OktetoNameEnvVar, oktetoManifest.Name)
 

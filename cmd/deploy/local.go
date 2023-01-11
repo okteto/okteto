@@ -20,10 +20,10 @@ import (
 	"strings"
 
 	stackCMD "github.com/okteto/okteto/cmd/stack"
-	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
@@ -51,15 +51,24 @@ type localDeployer struct {
 }
 
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not
-func newLocalDeployer(name, cwd string, runWithoutBash bool) (*localDeployer, error) {
+func newLocalDeployer(ctx context.Context, cwd string, options *Options) (*localDeployer, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the current working directory: %w", err)
 	}
-	tempKubeconfigName := name
+	tempKubeconfigName := options.Name
 	if tempKubeconfigName == "" {
-		name = utils.InferName(cwd)
+		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+		if err != nil {
+			return nil, err
+		}
+		inferer := devenvironment.NewNameInferer(c)
+		tempKubeconfigName = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPathFlag)
+		if err != nil {
+			return nil, fmt.Errorf("could not infer environment name")
+		}
 	}
+
 	kubeconfig := NewKubeConfig()
 
 	proxy, err := NewProxy(kubeconfig)
@@ -71,9 +80,9 @@ func newLocalDeployer(name, cwd string, runWithoutBash bool) (*localDeployer, er
 	clientProvider := okteto.NewK8sClientProvider()
 	return &localDeployer{
 		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), runWithoutBash),
+		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
 		Proxy:              proxy,
-		TempKubeconfigFile: GetTempKubeConfigFile(name),
+		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),
 		K8sClientProvider:  clientProvider,
 		GetExternalControl: GetExternalControl,
 		deployWaiter:       newDeployWaiter(clientProvider),
