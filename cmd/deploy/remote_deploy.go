@@ -13,17 +13,82 @@
 
 package deploy
 
-import "context"
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"os"
+
+	buildV1 "github.com/okteto/okteto/cmd/build/v1"
+	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
+)
 
 type remoteDeployCommand struct {
+	image     string
+	namespace string
+	deployer  localDeployer
 }
 
-func newRemoteDeployer() *remoteDeployCommand {
-	return &remoteDeployCommand{}
+func newRemoteDeployer(name string, runWithoutBash bool) (*remoteDeployCommand, error) {
+	deployer, err := newLocalDeployer(name, runWithoutBash)
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
+	}
+
+	return &remoteDeployCommand{
+		deployer: *deployer,
+	}, nil
 }
 
 func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options) error {
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+
+	//COPY content
+	imageStepsUsedToDeploy := [][]byte{
+		[]byte("FROM okteto/okteto as okteto-cli"),
+		[]byte(fmt.Sprintf("FROM %s as deploy", deployOptions.Manifest.Deploy.Image)),
+		[]byte(fmt.Sprintf("ENV %s %s", model.OktetoContextEnvVar, okteto.Context().Name)),
+		[]byte(fmt.Sprintf("ENV %s %s", model.OktetoTokenEnvVar, okteto.Context().Token)),
+		[]byte("COPY --from=okteto-cli /usr/local/bin/okteto /usr/local/bin/okteto"),
+		[]byte("COPY . ."),
+		[]byte("RUN okteto deploy"),
+	}
+	dockerfileContent := bytes.Join(imageStepsUsedToDeploy, []byte("\n"))
+
+	fs := afero.NewOsFs()
+
+	dockerfile, err := afero.TempFile(fs, "", "Dockerfile.okteto.deploy")
+	if err != nil {
+		return err
+	}
+	err = afero.WriteFile(fs, dockerfile.Name(), dockerfileContent, 0600)
+	if err != nil {
+		return err
+	}
+
+	buildInfo := &model.BuildInfo{
+		Name:       "deployer",
+		Dockerfile: dockerfile.Name(),
+		Image:      "deployer",
+	}
+
+	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd})
+	if err := buildV1.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {}
+func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {
+	//TODO
+	return
+}

@@ -255,7 +255,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return fmt.Errorf("could not initialize local deploy command: %w", err)
 		}
 	} else {
-		deployer = newRemoteDeployer()
+		deployer, err = newRemoteDeployer(deployOptions.Name, deployOptions.RunWithoutBash)
+		if err != nil {
+			return fmt.Errorf("could not initialize remote deploy command: %w", err)
+		}
 	}
 	return deployer.deploy(ctx, deployOptions)
 }
