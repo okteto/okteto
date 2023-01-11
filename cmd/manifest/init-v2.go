@@ -30,6 +30,7 @@ import (
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/linguist"
@@ -123,7 +124,13 @@ func Init() *cobra.Command {
 
 // RunInitV2 initializes a new okteto manifest
 func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
-	os.Setenv(constants.OktetoNameEnvVar, utils.InferName(opts.Workdir))
+	c, _, er := mc.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if er != nil {
+		return nil, er
+	}
+	inferer := devenvironment.NewNameInferer(c)
+	name := inferer.InferName(ctx, opts.Workdir, okteto.Context().Namespace, opts.DevPath)
+	os.Setenv(constants.OktetoNameEnvVar, name)
 	manifest := model.NewManifest()
 	var err error
 	if !opts.Overwrite {
@@ -473,7 +480,13 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 		var name string
 		var buildInfo *model.BuildInfo
 		if dockerfile == dockerfileName {
-			name = utils.InferName(cwd)
+			c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+			if err != nil {
+				return nil, err
+			}
+			inferer := devenvironment.NewNameInferer(c)
+			// In this case, the path is empty because we are inferring the names from Dockerfiles, so no manifest
+			name = inferer.InferName(context.Background(), cwd, okteto.Context().Namespace, "")
 			buildInfo = &model.BuildInfo{
 				Context:    ".",
 				Dockerfile: dockerfile,

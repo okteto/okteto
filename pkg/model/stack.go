@@ -267,6 +267,14 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	return s, nil
 }
 
+// getStackName it returns the stack name based in the following criteria
+//    - If `name` is set, that value is used as stack name. This represents the value provided by
+//    the user with `--name`
+//    - If `actualStackName` is provided, that is the value used. This represents the value provided
+//    in the okteto-stack file with the property `name`
+//    - If none of them is provided, we get the name from the repository (if any) in the folder where
+//    the stack/compose file is (`stackPath`)
+//    - If no repository is found, we get the name from the folder where the stack/compose file is (`stackPath`)
 func getStackName(name, stackPath, actualStackName string) (string, error) {
 	if name != "" {
 		if err := os.Setenv(constants.OktetoNameEnvVar, name); err != nil {

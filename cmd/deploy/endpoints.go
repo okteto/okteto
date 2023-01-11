@@ -23,6 +23,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	k8sExternalResources "github.com/okteto/okteto/pkg/externalresource/k8s"
@@ -102,7 +103,12 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				if manifest.Name != "" {
 					options.Name = manifest.Name
 				} else {
-					options.Name = utils.InferName(cwd)
+					c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+					if err != nil {
+						return err
+					}
+					inferer := devenvironment.NewNameInferer(c)
+					options.Name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPath)
 				}
 				if options.Namespace == "" {
 					options.Namespace = manifest.Namespace
