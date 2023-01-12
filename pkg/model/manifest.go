@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
 )
@@ -586,6 +587,16 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 			return nil, err
 		}
 		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, err.Error())
+	}
+
+	ef := externalresource.ERFilesystemManager{
+		Fs: afero.NewOsFs(),
+	}
+
+	for name, external := range manifest.External {
+		external.SetDefaults(name)
+		ef.ExternalResource = *external
+		ef.LoadMarkdownContent(devPath)
 	}
 
 	for _, dev := range manifest.Dev {
