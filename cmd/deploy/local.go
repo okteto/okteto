@@ -96,7 +96,6 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 	}
 
 	addEnvVars(ctx, cwd)
-
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", ld.TempKubeconfigFile)
 	if err := ld.Kubeconfig.Modify(ld.Proxy.GetPort(), ld.Proxy.GetToken(), ld.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
@@ -187,8 +186,10 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 	}
 	oktetoLog.SetStage("")
 
-	if err := buildImages(ctx, ld.Builder.Build, ld.Builder.GetServicesToBuild, deployOptions); err != nil {
-		return updateConfigMapStatusError(ctx, cfg, c, data, err)
+	if !deployRemote {
+		if err := buildImages(ctx, ld.Builder.Build, ld.Builder.GetServicesToBuild, deployOptions); err != nil {
+			return updateConfigMapStatusError(ctx, cfg, c, data, err)
+		}
 	}
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deploying '%s'...", deployOptions.Name)

@@ -21,6 +21,7 @@ import (
 
 	buildV1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -33,15 +34,8 @@ type remoteDeployCommand struct {
 	deployer  localDeployer
 }
 
-func newRemoteDeployer(name string, runWithoutBash bool) (*remoteDeployCommand, error) {
-	deployer, err := newLocalDeployer(name, runWithoutBash)
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
-	}
-
-	return &remoteDeployCommand{
-		deployer: *deployer,
-	}, nil
+func newRemoteDeployer() *remoteDeployCommand {
+	return &remoteDeployCommand{}
 }
 
 func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options) error {
@@ -51,13 +45,15 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
-	//COPY content
 	imageStepsUsedToDeploy := [][]byte{
-		[]byte("FROM okteto/okteto as okteto-cli"),
+		[]byte("FROM fokingwone/okteto as okteto-cli"),
+		[]byte("FROM bitnami/kubectl as kubectl"),
 		[]byte(fmt.Sprintf("FROM %s as deploy", deployOptions.Manifest.Deploy.Image)),
 		[]byte(fmt.Sprintf("ENV %s %s", model.OktetoContextEnvVar, okteto.Context().Name)),
 		[]byte(fmt.Sprintf("ENV %s %s", model.OktetoTokenEnvVar, okteto.Context().Token)),
+		[]byte(fmt.Sprintf("ENV %s true", constants.OKtetoDeployRemote)),
 		[]byte("COPY --from=okteto-cli /usr/local/bin/okteto /usr/local/bin/okteto"),
+		[]byte("COPY --from=kubectl /opt/bitnami/kubectl/bin/kubectl /usr/local/bin/kubectl"),
 		[]byte("COPY . ."),
 		[]byte("RUN okteto deploy"),
 	}
@@ -75,12 +71,11 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	}
 
 	buildInfo := &model.BuildInfo{
-		Name:       "deployer",
 		Dockerfile: dockerfile.Name(),
-		Image:      "deployer",
 	}
 
 	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd})
+	buildOptions.Tag = ""
 	if err := buildV1.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
 		return err
 	}

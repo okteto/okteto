@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -39,6 +40,10 @@ import (
 const (
 	headerUpgrade          = "Upgrade"
 	succesfullyDeployedmsg = "Development environment '%s' successfully deployed"
+)
+
+var (
+	deployRemote = false
 )
 
 // Options options for deploy command
@@ -98,7 +103,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy [service...]",
 		Short: "Execute locally the list of commands specified in the 'deploy' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
 				return fmt.Errorf("'dependencies' is only supported in clusters that have Okteto installed")
@@ -253,6 +257,21 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
+	if v, ok := os.LookupEnv(constants.OKtetoDeployRemote); ok {
+		deployRemoteEnvAsBool, err := strconv.ParseBool(v)
+		if err != nil {
+			return err
+		}
+
+		deployRemote = deployRemoteEnvAsBool
+	}
+
+	if !deployRemote {
+		if err := buildImages(ctx, buildv2.NewBuilderFromScratch().Build, buildv2.NewBuilderFromScratch().GetServicesToBuild, deployOptions); err != nil {
+			return err
+		}
+	}
+
 	deployer, err := dc.GetDeployer(deployOptions.Manifest, deployOptions)
 	if err != nil {
 		return err
@@ -377,16 +396,15 @@ func getDeployer(manifest *model.Manifest, opts *Options) (deployerInterface, er
 		deployer deployerInterface
 		err      error
 	)
-	if opts.Manifest.Deploy.Image == "" {
+	if opts.Manifest.Deploy.Image == "" || deployRemote {
 		deployer, err = newLocalDeployer(opts.Name, opts.RunWithoutBash)
 		if err != nil {
 			return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
 		}
+		oktetoLog.Info("Deploying locally...")
 	} else {
-		deployer, err = newRemoteDeployer(opts.Name, opts.RunWithoutBash)
-		if err != nil {
-			return nil, fmt.Errorf("could not initialize remote deploy command: %w", err)
-		}
+		deployer = newRemoteDeployer()
+		oktetoLog.Info("Deploying remotely...")
 	}
 	return deployer, nil
 }

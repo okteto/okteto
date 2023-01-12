@@ -49,4 +49,7 @@ const (
 
 	// TimeFormat is the format to use when storing timestamps as a string
 	TimeFormat = "2006-01-02T15:04:05"
+
+	// OKtetoDeployRemote defines if deployment is executed remotely
+	OKtetoDeployRemote = "OKTETO_DEPLOY_REMOTE"
 )

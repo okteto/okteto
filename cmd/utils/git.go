@@ -56,37 +56,44 @@ func GetBranch(path string) (string, error) {
 }
 
 func GetGitCommit(path string) (string, error) {
+	oktetoLog.Warning("59...")
 	repo, err := git.PlainOpen(path)
 	if err != nil {
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)
 	}
 
+	oktetoLog.Warning("65...")
 	head, err := repo.Head()
 	if err != nil {
 		return "", fmt.Errorf("failed to infer the git repo's current branch: %w", err)
 	}
 
+	oktetoLog.Warning("71...")
 	hash := head.Hash()
-
+	oktetoLog.Warning("73...")
 	return hash.String(), nil
 }
 
 func IsCleanDirectory(ctx context.Context, path string) (bool, error) {
+	oktetoLog.Warning("78...")
 	repo, err := git.PlainOpen(path)
 	if err != nil {
 		return false, fmt.Errorf("failed to analyze git repo: %w", err)
 	}
 
+	oktetoLog.Warning("84...")
 	worktree, err := repo.Worktree()
 	if err != nil {
 		return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
 	}
 
+	oktetoLog.Warning("90...")
 	status, err := worktree.Status()
 	if err != nil {
 		return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
 	}
 
+	oktetoLog.Warning("96...")
 	return status.IsClean(), nil
 }
 
