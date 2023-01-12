@@ -80,7 +80,7 @@ type DeployCommand struct {
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
 	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
-	GetDeployer        func(manifest *model.Manifest, opts *Options) (deployerInterface, error)
+	GetDeployer        func(*model.Manifest, *Options) (deployerInterface, error)
 
 	PipelineType model.Archetype
 }
@@ -264,12 +264,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 
 		deployRemote = deployRemoteEnvAsBool
-	}
-
-	if !deployRemote {
-		if err := buildImages(ctx, buildv2.NewBuilderFromScratch().Build, buildv2.NewBuilderFromScratch().GetServicesToBuild, deployOptions); err != nil {
-			return err
-		}
 	}
 
 	deployer, err := dc.GetDeployer(deployOptions.Manifest, deployOptions)

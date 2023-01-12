@@ -20,6 +20,7 @@ import (
 	"os"
 
 	buildV1 "github.com/okteto/okteto/cmd/build/v1"
+	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
@@ -42,6 +43,17 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 	cwd, err := os.Getwd()
 	if err != nil {
+		return err
+	}
+
+	c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
+	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
+
+	if err := buildImages(ctx, buildv2.NewBuilderFromScratch().Build, buildv2.NewBuilderFromScratch().GetServicesToBuild, deployOptions); err != nil {
 		return err
 	}
 

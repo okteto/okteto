@@ -72,19 +72,15 @@ func GetKubernetesTimeout() time.Duration {
 }
 
 func getK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config) (*kubernetes.Clientset, *rest.Config, error) {
-	oktetoLog.Warning("75...")
 	clientConfig := clientcmd.NewDefaultClientConfig(*clientApiConfig, nil)
-	oktetoLog.Warning("77...")
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, nil, err
 	}
-	oktetoLog.Warning("82...")
 	config.WarningHandler = rest.NoWarnings{}
 
 	config.Timeout = GetKubernetesTimeout()
 
-	oktetoLog.Warning("97...")
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, nil, err
