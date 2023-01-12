@@ -55,7 +55,7 @@ func sanitizeForEnv(name string) string {
 
 // LoadMarkdownContent loads and store markdown content related to external resource
 func (ef *ERFilesystemManager) LoadMarkdownContent(manifestPath string) error {
-	markdownAbsPath := filepath.Join(manifestPath, ef.ExternalResource.Notes.Path)
+	markdownAbsPath := filepath.Join(filepath.Dir(manifestPath), ef.ExternalResource.Notes.Path)
 	b, err := afero.ReadFile(ef.Fs, markdownAbsPath)
 	if err != nil {
 		return err
