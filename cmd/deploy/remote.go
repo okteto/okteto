@@ -40,7 +40,7 @@ RUN apk update && apk add ca-certificates
 
 FROM {{ .UserDeployImage }} as deploy
 
-RUN mkdir -p /usr/local/bin/ && cp /app/bin/* /usr/local/bin/
+ENV PATH="${PATH}:/app/bin"
 COPY --from=certs /etc/ssl/certs /etc/ssl/certs
 COPY --from=okteto-cli /usr/local/bin/okteto /usr/local/bin/okteto
 
