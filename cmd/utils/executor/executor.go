@@ -17,6 +17,8 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 )
@@ -32,6 +34,7 @@ type Executor struct {
 	outputMode     string
 	displayer      executorDisplayer
 	runWithoutBash bool
+	shell          string
 }
 
 type executorDisplayer interface {
@@ -43,6 +46,7 @@ type executorDisplayer interface {
 // NewExecutor returns a new executor
 func NewExecutor(output string, runWithoutBash bool) *Executor {
 	var displayer executorDisplayer
+
 	switch output {
 	case oktetoLog.TTYFormat:
 		displayer = newTTYExecutor()
@@ -53,17 +57,24 @@ func NewExecutor(output string, runWithoutBash bool) *Executor {
 	default:
 		displayer = newTTYExecutor()
 	}
+
+	shell := "bash"
+	if utils.LoadBoolean(constants.OKtetoDeployRemote) {
+		shell = "sh"
+	}
+
 	return &Executor{
 		outputMode:     output,
 		displayer:      displayer,
 		runWithoutBash: runWithoutBash,
+		shell:          shell,
 	}
 }
 
 // Execute executes the specified command adding `env` to the execution environment
 func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 
-	cmd := exec.Command("bash", "-c", cmdInfo.Command)
+	cmd := exec.Command(e.shell, "-c", cmdInfo.Command)
 	if e.runWithoutBash {
 		cmd = exec.Command(cmdInfo.Command)
 	}
