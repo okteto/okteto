@@ -228,7 +228,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			case ss, ok := <-ch:
 				if ok {
 					plainChannel <- ss
-					if progress == oktetoLog.TTYFormat {
+					if progress == oktetoLog.TTYFormat || progress == "deploy" {
 						ttyChannel <- ss
 					}
 				} else {
@@ -247,20 +247,29 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 	})
 
 	eg.Go(func() error {
-		var c console.Console
+
 		w := &buildWriter{}
-		if progress == oktetoLog.TTYFormat {
+		switch progress {
+		case oktetoLog.TTYFormat:
+			var c console.Console
+
 			if cn, err := console.ConsoleFromFile(os.Stdout); err == nil {
 				c = cn
 			} else {
 				oktetoLog.Debugf("could not create console from file: %s ", err)
 			}
+
 			go progressui.DisplaySolveStatus(context.TODO(), "", c, oktetoLog.GetOutputWriter(), ttyChannel)
 			// not using shared context to not disrupt display but let it finish reporting errors
 			return progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
+		case "deploy":
+			go deployDisplayer(context.TODO(), ttyChannel)
+			return progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
+		default:
+			// not using shared context to not disrupt display but let it finish reporting errors
+			return progressui.DisplaySolveStatus(context.TODO(), "", nil, oktetoLog.GetOutputWriter(), plainChannel)
 		}
-		// not using shared context to not disrupt display but let it finish reporting errors
-		return progressui.DisplaySolveStatus(context.TODO(), "", nil, oktetoLog.GetOutputWriter(), plainChannel)
+
 	})
 
 	return eg.Wait()
