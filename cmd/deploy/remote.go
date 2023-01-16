@@ -19,7 +19,7 @@ import (
 	"os"
 	"text/template"
 
-	buildV1 "github.com/okteto/okteto/cmd/build/v1"
+	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
@@ -142,7 +142,12 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
 	buildOptions.Tag = ""
-	if err := buildV1.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
+
+	// we need to call Build() method using a remote builder. This Builder will have
+	// the same behavior as the V1 builder but with a different output taking into
+	// account that we must not confuse the user with build messages since this logic is
+	// executed in the deploy command.
+	if err := remoteBuild.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
 		return err
 	}
 
@@ -150,6 +155,5 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 }
 
 func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {
-	//TODO
 	return
 }
