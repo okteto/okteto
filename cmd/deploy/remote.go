@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -33,7 +34,6 @@ import (
 )
 
 const (
-	oktetoCLIImage     = "gcr.io/development-300207/okteto:remote-deploy"
 	dockerfileTemplate = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
@@ -111,7 +111,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	}
 
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:     oktetoCLIImage,
+		OktetoCLIImage:     constants.OktetoCLIImageForRemote,
 		UserDeployImage:    deployOptions.Manifest.Deploy.Image,
 		OktetoBuildEnvVars: rd.builder.GetBuildEnvVars(),
 		ContextEnvVar:      model.OktetoContextEnvVar,
@@ -145,6 +145,11 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		Dockerfile: dockerfile.Name(),
 	}
 
+	cwd = getOriginalCWD(cwd, deployOptions.ManifestPathFlag)
+
+	// undo modification of CWD for Build command
+	os.Chdir(cwd)
+
 	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
 	buildOptions.Tag = ""
 
@@ -174,6 +179,10 @@ func getDeployFlags(opts *Options) []string {
 		deployFlags = append(deployFlags, fmt.Sprintf("--namespace %s", opts.Namespace))
 	}
 
+	if opts.ManifestPathFlag != "" {
+		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", opts.ManifestPathFlag))
+	}
+
 	if len(opts.Variables) > 0 {
 		var varsToAddForDeploy []string
 		for _, v := range opts.Variables {
@@ -183,4 +192,9 @@ func getDeployFlags(opts *Options) []string {
 	}
 
 	return deployFlags
+}
+
+func getOriginalCWD(cwd, manifestPath string) string {
+	manifestPathDir := filepath.Dir(fmt.Sprintf("/%s", manifestPath))
+	return strings.TrimSuffix(cwd, manifestPathDir)
 }

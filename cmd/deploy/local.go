@@ -186,7 +186,7 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 	}
 	oktetoLog.SetStage("")
 
-	if !deployRemote {
+	if !deployFromRemote {
 		if err := buildImages(ctx, ld.Builder.Build, ld.Builder.GetServicesToBuild, deployOptions); err != nil {
 			return updateConfigMapStatusError(ctx, cfg, c, data, err)
 		}

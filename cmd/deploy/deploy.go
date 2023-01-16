@@ -43,7 +43,7 @@ const (
 )
 
 var (
-	deployRemote = false
+	deployFromRemote = false
 )
 
 // Options options for deploy command
@@ -263,7 +263,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return err
 		}
 
-		deployRemote = deployRemoteEnvAsBool
+		deployFromRemote = deployRemoteEnvAsBool
 	}
 
 	deployer, err := dc.GetDeployer(deployOptions.Manifest, deployOptions)
@@ -390,7 +390,7 @@ func getDeployer(manifest *model.Manifest, opts *Options) (deployerInterface, er
 		deployer deployerInterface
 		err      error
 	)
-	if opts.Manifest.Deploy.Image == "" || deployRemote {
+	if deployFromRemote {
 		deployer, err = newLocalDeployer(opts.Name, opts.RunWithoutBash)
 		if err != nil {
 			return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
