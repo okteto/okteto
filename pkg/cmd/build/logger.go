@@ -115,9 +115,6 @@ func (t trace) display() {
 	for _, v := range t.ongoing {
 		if t.isTransferringContext(v.name) {
 			oktetoLog.Spinner("Synchronising context...")
-			if v.completed {
-				oktetoLog.Spinner("Deploying your commands...")
-			}
 		}
 		if t.hasCommandLogs(v) {
 			oktetoLog.StopSpinner()
@@ -141,14 +138,7 @@ func (t trace) display() {
 						oktetoLog.Information("Running stage '%s'", text.Stage)
 						t.stages[text.Stage] = true
 					}
-					if strings.Contains(
-						strings.ToLower(text.Message),
-						strings.ToLower("ERROR"),
-					) {
-						oktetoLog.Fail(text.Message)
-					} else {
-						oktetoLog.Println(text.Message)
-					}
+					oktetoLog.Println(text.Message)
 
 				}
 			}
