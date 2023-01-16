@@ -188,7 +188,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getManifestWithError,
-		GetDeployer: func(manifest *model.Manifest, opts *Options) (deployerInterface, error) {
+		GetDeployer: func(manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:      p,
 				Executor:   e,
@@ -225,19 +225,16 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		Build:        true,
 	}
 
-	registry := test.NewFakeOktetoRegistry(nil)
-	builder := test.NewFakeOktetoBuilder(registry)
 	clientProvider := test.NewFakeK8sProvider()
 
 	c := &DeployCommand{
 		GetManifest: getErrorManifest,
-		GetDeployer: func(manifest *model.Manifest, opts *Options) (deployerInterface, error) {
+		GetDeployer: func(manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
 				Kubeconfig:        &fakeKubeConfig{},
 				K8sClientProvider: clientProvider,
-				Builder:           buildv2.NewBuilder(builder, registry),
 			}, nil
 		},
 		K8sClientProvider: clientProvider,
@@ -306,7 +303,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(manifest *model.Manifest, opts *Options) (deployerInterface, error) {
+		GetDeployer: func(manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -383,7 +380,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	clientProvider := test.NewFakeK8sProvider(cmap, deployment)
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(manifest *model.Manifest, opts *Options) (deployerInterface, error) {
+		GetDeployer: func(manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -440,7 +437,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	clientProvider := test.NewFakeK8sProvider(deployment)
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(manifest *model.Manifest, opts *Options) (deployerInterface, error) {
+		GetDeployer: func(manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:              p,
 				Executor:           e,

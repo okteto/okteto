@@ -78,9 +78,9 @@ type remoteDeployCommand struct {
 	builder *buildv2.OktetoBuilder
 }
 
-func newRemoteDeployer() *remoteDeployCommand {
+func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
 	return &remoteDeployCommand{
-		builder: buildv2.NewBuilderFromScratch(),
+		builder: builder,
 	}
 }
 
@@ -97,10 +97,6 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	}
 
 	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
-
-	if err := buildImages(ctx, rd.builder.Build, rd.builder.GetServicesToBuild, deployOptions); err != nil {
-		return err
-	}
 
 	tmpl, err := template.New("dockerfile").Parse(dockerfileTemplate)
 	if err != nil {
