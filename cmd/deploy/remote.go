@@ -15,8 +15,10 @@ package deploy
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"os"
+	"strings"
 	"text/template"
 
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
@@ -56,7 +58,7 @@ COPY . /okteto/app
 WORKDIR /okteto/app
 
 ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
-RUN okteto deploy --log-output=json
+RUN okteto deploy --log-output=json {{ .DeployFlags }}
 `
 )
 
@@ -71,6 +73,7 @@ type dockerfileTemplateProperties struct {
 	TokenEnvVar        string
 	TokenValue         string
 	RemoteDeployEnvVar string
+	DeployFlags        string
 	RandomInt          int
 }
 
@@ -106,6 +109,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	if err != nil {
 		return err
 	}
+
 	dockerfileSyntax := dockerfileTemplateProperties{
 		OktetoCLIImage:     oktetoCLIImage,
 		UserDeployImage:    deployOptions.Manifest.Deploy.Image,
@@ -118,6 +122,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		TokenValue:         okteto.Context().Token,
 		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
 		RandomInt:          rand.Intn(1000),
+		DeployFlags:        strings.Join(getDeployFlags(deployOptions), " "),
 	}
 
 	fs := afero.NewOsFs()
@@ -156,4 +161,38 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {
 	return
+}
+
+func getDeployFlags(opts *Options) []string {
+	var deployFlags []string
+
+	if opts.Name != "" {
+		deployFlags = append(deployFlags, fmt.Sprintf("--name %s", opts.Name))
+	}
+
+	if opts.Namespace != "" {
+		deployFlags = append(deployFlags, fmt.Sprintf("--namespace %s", opts.Namespace))
+	}
+
+	if opts.K8sContext != "" {
+		deployFlags = append(deployFlags, fmt.Sprintf("--context %s", opts.K8sContext))
+	}
+
+	if len(opts.Variables) > 0 {
+		var varsToAddForDeploy []string
+		for _, v := range opts.Variables {
+			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s", v))
+		}
+		deployFlags = append(deployFlags, strings.Join(varsToAddForDeploy, " "))
+	}
+
+	if opts.Timeout != getDefaultTimeout() {
+		deployFlags = append(deployFlags, fmt.Sprintf("--timeout %s", opts.Timeout))
+	}
+
+	if opts.Wait {
+		deployFlags = append(deployFlags, "--wait")
+	}
+
+	return deployFlags
 }
