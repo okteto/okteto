@@ -26,6 +26,7 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -158,7 +159,9 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
 	if err := remoteBuild.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
-		return err
+		return oktetoErrors.UserError{
+			E: fmt.Errorf("Error during development environment deployment."),
+		}
 	}
 
 	return nil

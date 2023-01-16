@@ -270,6 +270,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if err != nil {
 		return err
 	}
+
 	return deployer.deploy(ctx, deployOptions)
 }
 

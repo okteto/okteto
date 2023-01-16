@@ -141,7 +141,15 @@ func (t trace) display() {
 						oktetoLog.Information("Running stage '%s'", text.Stage)
 						t.stages[text.Stage] = true
 					}
-					oktetoLog.Println(text.Message)
+					if strings.Contains(
+						strings.ToLower(text.Message),
+						strings.ToLower("ERROR"),
+					) {
+						oktetoLog.Fail(text.Message)
+					} else {
+						oktetoLog.Println(text.Message)
+					}
+
 				}
 			}
 			oktetoLog.StartSpinner()
