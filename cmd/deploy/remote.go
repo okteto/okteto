@@ -174,24 +174,12 @@ func getDeployFlags(opts *Options) []string {
 		deployFlags = append(deployFlags, fmt.Sprintf("--namespace %s", opts.Namespace))
 	}
 
-	if opts.K8sContext != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--context %s", opts.K8sContext))
-	}
-
 	if len(opts.Variables) > 0 {
 		var varsToAddForDeploy []string
 		for _, v := range opts.Variables {
 			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s", v))
 		}
 		deployFlags = append(deployFlags, strings.Join(varsToAddForDeploy, " "))
-	}
-
-	if opts.Timeout != getDefaultTimeout() {
-		deployFlags = append(deployFlags, fmt.Sprintf("--timeout %s", opts.Timeout))
-	}
-
-	if opts.Wait {
-		deployFlags = append(deployFlags, "--wait")
 	}
 
 	return deployFlags
