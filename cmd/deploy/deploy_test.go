@@ -227,6 +227,8 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	clientProvider := test.NewFakeK8sProvider()
 
+	registry := test.NewFakeOktetoRegistry(nil)
+	builder := test.NewFakeOktetoBuilder(registry)
 	c := &DeployCommand{
 		GetManifest: getErrorManifest,
 		GetDeployer: func(manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
@@ -237,6 +239,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 				K8sClientProvider: clientProvider,
 			}, nil
 		},
+		Builder:           buildv2.NewBuilder(builder, registry),
 		K8sClientProvider: clientProvider,
 	}
 
@@ -397,8 +400,8 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	assert.Error(t, err)
 	// No command was executed
 	assert.Len(t, e.executed, 0)
-	// Proxy started
-	assert.True(t, p.started)
+	// Proxy didn't start
+	assert.False(t, p.started)
 
 	// check if configmap has been created
 	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
