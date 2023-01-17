@@ -53,7 +53,7 @@ func newEndpointGetter(tempKubeconfig string) endpointGetter {
 	return endpointGetter{
 		GetManifest:        model.GetManifestV2,
 		K8sClientProvider:  okteto.NewK8sClientProvider(),
-		GetExternalControl: GetExternalControl,
+		GetExternalControl: getExternalControlFromCtx,
 		TempKubeconfigFile: tempKubeconfig,
 	}
 }
