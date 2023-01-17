@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"context"
+	"os"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/types"
@@ -84,7 +85,7 @@ func (c *userClient) GetContext(ctx context.Context) (*types.UserContext, error)
 		} `graphql:"credentials(space: $cred)"`
 	}
 	variables := map[string]interface{}{
-		"cred": graphql.String(""),
+		"cred": graphql.String(os.Getenv("OKTETO_NAMESPACE")),
 	}
 	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
