@@ -15,6 +15,7 @@ package deploy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
@@ -80,11 +81,13 @@ type dockerfileTemplateProperties struct {
 
 type remoteDeployCommand struct {
 	builder *buildv2.OktetoBuilder
+	fs      afero.Fs
 }
 
 func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
 	return &remoteDeployCommand{
 		builder: builder,
+		fs:      afero.NewOsFs(),
 	}
 }
 
@@ -95,12 +98,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
-	c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
-	if err != nil {
-		return err
-	}
-
-	setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c)
+	cwd = getOriginalCWD(cwd, deployOptions.ManifestPathFlag)
 
 	tmpl, err := template.New("dockerfile").Parse(dockerfileTemplate)
 	if err != nil {
@@ -122,15 +120,23 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		DeployFlags:        strings.Join(getDeployFlags(deployOptions), " "),
 	}
 
-	fs := afero.NewOsFs()
+	tmpDir, err := afero.TempDir(rd.fs, "", "")
+	if err != nil {
+		return err
+	}
 
-	dockerfile, err := afero.TempFile(fs, "", "Dockerfile.okteto.deploy")
+	dockerfile, err := rd.fs.Create(fmt.Sprintf("%s/deploy", tmpDir))
+	if err != nil {
+		return err
+	}
+
+	err = rd.createDockerignoreIfNeeded(cwd, tmpDir)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
-		if err := fs.Remove(dockerfile.Name()); err != nil {
+		if err := rd.fs.Remove(dockerfile.Name()); err != nil {
 			oktetoLog.Infof("error removing dockerfile: %w", err)
 		}
 	}()
@@ -141,8 +147,6 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	buildInfo := &model.BuildInfo{
 		Dockerfile: dockerfile.Name(),
 	}
-
-	cwd = getOriginalCWD(cwd, deployOptions.ManifestPathFlag)
 
 	// undo modification of CWD for Build command
 	os.Chdir(cwd)
@@ -165,6 +169,28 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {
 	return
+}
+
+func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
+	dockerignoreName := "deploy.dockerignore"
+	dockerignoreFilePath := fmt.Sprintf("%s/%s", cwd, dockerignoreName)
+	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	} else {
+		dockerignoreContent, err := afero.ReadFile(rd.fs, dockerignoreFilePath)
+		if err != nil {
+			return err
+		}
+
+		err = afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, dockerignoreName), dockerignoreContent, 0600)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func getDeployFlags(opts *Options) []string {
