@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -938,6 +939,11 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
+
+	if deploy.Image == "" {
+		deploy.Image = constants.OktetoCLIImageForRemote
+	}
+
 	*d = DeployInfo(deploy)
 	return nil
 }

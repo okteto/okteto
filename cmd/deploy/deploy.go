@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strconv"
 	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -42,10 +41,6 @@ import (
 const (
 	headerUpgrade          = "Upgrade"
 	succesfullyDeployedmsg = "Development environment '%s' successfully deployed"
-)
-
-var (
-	deployRemote = false
 )
 
 // Options options for deploy command
@@ -86,6 +81,7 @@ type DeployCommand struct {
 	deployWaiter       deployWaiter
 
 	PipelineType model.Archetype
+	isRemote     bool
 }
 
 type ExternalResourceInterface interface {
@@ -173,6 +169,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				GetDeployer:        getDeployer,
 				Builder:            buildv2.NewBuilderFromScratch(),
 				deployWaiter:       newDeployWaiter(k8sClientProvider),
+				isRemote:           utils.LoadBoolean(constants.OKtetoDeployRemote),
 			}
 			startTime := time.Now()
 
@@ -264,28 +261,16 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
-	if v, ok := os.LookupEnv(constants.OKtetoDeployRemote); ok {
-		deployRemoteEnvAsBool, err := strconv.ParseBool(v)
-		if err != nil {
-			return err
-		}
-
-		deployRemote = deployRemoteEnvAsBool
-	}
-
-	// We need to create a client that doesn't go through the proxy to create
-	// the configmap without the deployedByLabel
-	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
-	if err != nil {
-		return err
-	}
-
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get the current working directory: %w", err)
 	}
 
-	addEnvVars(ctx, cwd)
+	// We need to create a client that doesn't go through the proxy to create
+	// the configmap without the deployedByLabel
+	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
+
+	dc.addEnvVars(ctx, cwd)
 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
@@ -492,7 +477,10 @@ func getDeployer(manifest *model.Manifest, opts *Options, cwd string, builder *b
 		deployer deployerInterface
 		err      error
 	)
-	if opts.Manifest.Deploy.Image == "" || deployRemote {
+
+	isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
+
+	if isRemote {
 		deployer, err = newLocalDeployer(opts.Name, cwd, opts.RunWithoutBash)
 		if err != nil {
 			return nil, fmt.Errorf("could not initialize local deploy command: %w", err)

@@ -45,7 +45,9 @@ type localDeployer struct {
 	K8sClientProvider  okteto.K8sClientProvider
 	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
 
-	cwd string
+	cwd          string
+	deployWaiter deployWaiter
+	isRemote     bool
 }
 
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not
@@ -74,6 +76,8 @@ func newLocalDeployer(name, cwd string, runWithoutBash bool) (*localDeployer, er
 		TempKubeconfigFile: GetTempKubeConfigFile(name),
 		K8sClientProvider:  clientProvider,
 		GetExternalControl: GetExternalControl,
+		deployWaiter:       newDeployWaiter(clientProvider),
+		isRemote:           true,
 	}, nil
 }
 
@@ -90,7 +94,6 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 		return err
 	}
 
-	addEnvVars(ctx, cwd)
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", ld.TempKubeconfigFile)
 	if err := ld.Kubeconfig.Modify(ld.Proxy.GetPort(), ld.Proxy.GetToken(), ld.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)

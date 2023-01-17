@@ -111,7 +111,7 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 }
 
-func addEnvVars(ctx context.Context, cwd string) {
+func (dc *DeployCommand) addEnvVars(ctx context.Context, cwd string) {
 	if os.Getenv(model.OktetoGitBranchEnvVar) == "" {
 		branch, err := utils.GetBranch(cwd)
 		if err != nil {
@@ -144,7 +144,7 @@ func addEnvVars(ctx context.Context, cwd string) {
 			oktetoLog.Infof("could not retrieve sha: %s", err)
 		}
 		isClean := true
-		if !deployRemote {
+		if !dc.isRemote {
 			isClean, err = utils.IsCleanDirectory(ctx, cwd)
 			if err != nil {
 				oktetoLog.Infof("could not status: %s", err)
