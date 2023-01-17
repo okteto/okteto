@@ -1837,6 +1837,7 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 						Command: "okteto stack deploy",
 					},
 				},
+				Image: "gcr.io/development-300207/okteto:remote-deploy",
 			},
 		},
 		{
