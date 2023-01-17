@@ -42,10 +42,6 @@ const (
 	succesfullyDeployedmsg = "Development environment '%s' successfully deployed"
 )
 
-var (
-	deployFromRemote = false
-)
-
 // Options options for deploy command
 type Options struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
@@ -257,15 +253,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
-	if v, ok := os.LookupEnv(constants.OKtetoDeployRemote); ok {
-		deployRemoteEnvAsBool, err := strconv.ParseBool(v)
-		if err != nil {
-			return err
-		}
-
-		deployFromRemote = deployRemoteEnvAsBool
-	}
-
 	deployer, err := dc.GetDeployer(deployOptions.Manifest, deployOptions)
 	if err != nil {
 		return err
@@ -391,7 +378,16 @@ func getDeployer(manifest *model.Manifest, opts *Options) (deployerInterface, er
 		deployer deployerInterface
 		err      error
 	)
-	if deployFromRemote {
+
+	isRemote := false
+	if v, ok := os.LookupEnv(constants.OKtetoDeployRemote); ok {
+		isRemote, err = strconv.ParseBool(v)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if isRemote {
 		deployer, err = newLocalDeployer(opts.Name, opts.RunWithoutBash)
 		if err != nil {
 			return nil, fmt.Errorf("could not initialize local deploy command: %w", err)

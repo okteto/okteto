@@ -49,6 +49,7 @@ type localDeployer struct {
 	Builder            *buildv2.OktetoBuilder
 	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
 	deployWaiter       deployWaiter
+	isRemote           bool
 }
 
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not
@@ -79,6 +80,7 @@ func newLocalDeployer(name string, runWithoutBash bool) (*localDeployer, error) 
 		Builder:            buildv2.NewBuilderFromScratch(),
 		GetExternalControl: GetExternalControl,
 		deployWaiter:       newDeployWaiter(clientProvider),
+		isRemote:           true,
 	}, nil
 }
 
@@ -95,7 +97,7 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 		return err
 	}
 
-	addEnvVars(ctx, cwd)
+	ld.addEnvVars(ctx, cwd)
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", ld.TempKubeconfigFile)
 	if err := ld.Kubeconfig.Modify(ld.Proxy.GetPort(), ld.Proxy.GetToken(), ld.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
@@ -186,7 +188,7 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 	}
 	oktetoLog.SetStage("")
 
-	if !deployFromRemote {
+	if !ld.isRemote {
 		if err := buildImages(ctx, ld.Builder.Build, ld.Builder.GetServicesToBuild, deployOptions); err != nil {
 			return updateConfigMapStatusError(ctx, cfg, c, data, err)
 		}
