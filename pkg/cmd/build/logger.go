@@ -142,7 +142,6 @@ func (t trace) display() {
 
 				}
 			}
-			oktetoLog.StartSpinner()
 			v.logs = []string{}
 		}
 	}
