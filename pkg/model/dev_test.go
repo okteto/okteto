@@ -1280,6 +1280,7 @@ func Test_validateForExtraFields(t *testing.T) {
                runAsUser: 1000
                runAsGroup: 2000
                fsGroup: 3000
+               allowPrivilegeEscalation: false
                capabilities:
                  add:
                  - SYS_PTRACE`,

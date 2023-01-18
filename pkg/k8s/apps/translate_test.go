@@ -1008,6 +1008,79 @@ func Test_translateSecurityContext(t *testing.T) {
 	}
 }
 
+func Test_translateSecurityContextWithParams(t *testing.T) {
+	var trueB = true
+	var falseB = false
+
+	pass_tests := []struct {
+		name                             string
+		c                                *apiv1.Container
+		s                                *model.SecurityContext
+		expectedRunAsNonRoot             *bool
+		expectedAllowPrivilegeEscalation *bool
+	}{
+		{
+			name: "add_nonroot",
+			c:    &apiv1.Container{},
+			s: &model.SecurityContext{
+				RunAsNonRoot: &trueB,
+			},
+			expectedRunAsNonRoot: &trueB,
+		},
+		{
+			name: "add_privilege",
+			c:    &apiv1.Container{},
+			s: &model.SecurityContext{
+				AllowPrivilegeEscalation: &falseB,
+			},
+			expectedAllowPrivilegeEscalation: &falseB,
+		},
+		{
+			name: "add_priv_nonroot",
+			c:    &apiv1.Container{},
+			s: &model.SecurityContext{
+				AllowPrivilegeEscalation: &falseB,
+				RunAsNonRoot:             &trueB,
+			},
+			expectedAllowPrivilegeEscalation: &falseB,
+			expectedRunAsNonRoot:             &trueB,
+		},
+		{
+			name: "add_neither",
+			c: &apiv1.Container{
+				SecurityContext: &apiv1.SecurityContext{
+					ReadOnlyRootFilesystem: &trueB,
+				},
+			},
+			s: &model.SecurityContext{
+				Capabilities: &model.Capabilities{
+					Add: []apiv1.Capability{"SYS_TRACE"},
+				},
+			},
+		},
+	}
+	for _, tt := range pass_tests {
+		t.Run(tt.name, func(t *testing.T) {
+			TranslateContainerSecurityContext(tt.c, tt.s)
+			if tt.c.SecurityContext == nil {
+				t.Fatal("SecurityContext was nil")
+			}
+
+			if tt.c.SecurityContext.AllowPrivilegeEscalation != tt.expectedAllowPrivilegeEscalation {
+				t.Errorf("tt.c.SecurityContext.AllowPrivilegeEscalation != tt.expectedAllowPrivilegeEscalation. Expected: %t, Got; %t", *tt.expectedAllowPrivilegeEscalation, *tt.c.SecurityContext.AllowPrivilegeEscalation)
+			}
+
+			if tt.c.SecurityContext.RunAsNonRoot != tt.expectedRunAsNonRoot {
+				t.Errorf("tt.c.SecurityContext.RunAsNonRoot != tt.expectedRunAsNonRoot. Expected: %t, Got; %t", *tt.expectedRunAsNonRoot, *tt.c.SecurityContext.RunAsNonRoot)
+			}
+
+			if tt.c.SecurityContext.ReadOnlyRootFilesystem != nil {
+				t.Errorf("ReadOnlyRootFilesystem was not removed")
+			}
+		})
+	}
+}
+
 func TestTranslateOktetoVolumes(t *testing.T) {
 	var tests = []struct {
 		name     string
