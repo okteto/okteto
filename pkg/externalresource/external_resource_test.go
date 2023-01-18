@@ -87,6 +87,21 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 			},
 			expectErr: false,
 		},
+		{
+			name: "notes info not present in external. No markdown loaded",
+			externalResourceFSM: ERFilesystemManager{
+				ExternalResource: ExternalResource{
+					Endpoints: []ExternalEndpoint{
+						{
+							Name: "name1",
+							Url:  "/some/url",
+						},
+					},
+				},
+				Fs: fs,
+			},
+			expectErr: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -95,12 +110,15 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 				assert.Error(t, tt.externalResourceFSM.LoadMarkdownContent(manifestPath))
 			} else {
 				assert.NoError(t, tt.externalResourceFSM.LoadMarkdownContent(manifestPath))
-				sDec, err := b64.StdEncoding.DecodeString(tt.externalResourceFSM.ExternalResource.Notes.Markdown)
-				if err != nil {
-					t.Fatal(err)
+				if tt.externalResourceFSM.ExternalResource.Notes != nil {
+					sDec, err := b64.StdEncoding.DecodeString(tt.externalResourceFSM.ExternalResource.Notes.Markdown)
+					if err != nil {
+						t.Fatal(err)
+					}
+
+					assert.Equal(t, string(sDec), markdownContent)
 				}
 
-				assert.Equal(t, string(sDec), markdownContent)
 			}
 		})
 	}
