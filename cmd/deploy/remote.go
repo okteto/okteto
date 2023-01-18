@@ -44,9 +44,9 @@ RUN apk update && apk add ca-certificates
 
 FROM {{ .UserDeployImage }} as deploy
 
-ENV PATH="${PATH}:/app/bin"
+ENV PATH="${PATH}:/okteto/bin"
 COPY --from=certs /etc/ssl/certs /etc/ssl/certs
-COPY --from=okteto-cli /usr/local/bin/okteto /usr/local/bin/okteto
+COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 {{range $key, $val := .OktetoBuildEnvVars }}
 ENV {{$key}} {{$val}}
@@ -56,8 +56,8 @@ ENV {{ .ContextEnvVar }} {{ .ContextValue }}
 ENV {{ .TokenEnvVar }} {{ .TokenValue }}
 ENV {{ .RemoteDeployEnvVar }} true
 
-COPY . /okteto/app
-WORKDIR /okteto/app
+COPY . /okteto/src
+WORKDIR /okteto/src
 
 ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
 RUN okteto deploy --log-output=json {{ .DeployFlags }}
