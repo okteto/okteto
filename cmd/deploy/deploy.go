@@ -43,6 +43,8 @@ import (
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -112,7 +114,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "false")
 			if options.ManifestPath != "" {
-				// if path is absolute, its transformed to rel from root
+				// if path is absolute, its transformed from root path to a rel path
 				initialCWD, err := os.Getwd()
 				if err != nil {
 					return fmt.Errorf("failed to get the current working directory: %w", err)
@@ -131,6 +133,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 				}
 				options.ManifestPath = uptManifestPath
 			}
+
+			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
 			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
 					return err
@@ -270,6 +274,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	addEnvVars(ctx, cwd)
 
+	// Injecting the PROXY into the kubeconfig file
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
 	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
@@ -338,41 +343,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
-	// TODO: take this out to a new function deploy dependencies
-	for depName, dep := range deployOptions.Manifest.Dependencies {
-		oktetoLog.Information("Deploying dependency '%s'", depName)
-		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
-		dep.Variables = append(dep.Variables, model.EnvVar{
-			Name:  "OKTETO_ORIGIN",
-			Value: "okteto-deploy",
-		})
-		namespace := okteto.Context().Namespace
-		if dep.Namespace != "" {
-			namespace = dep.Namespace
-		}
-		pipOpts := &pipelineCMD.DeployOptions{
-			Name:         depName,
-			Repository:   dep.Repository,
-			Branch:       dep.Branch,
-			File:         dep.ManifestPath,
-			Variables:    model.SerializeEnvironmentVars(dep.Variables),
-			Wait:         dep.Wait,
-			Timeout:      dep.GetTimeout(deployOptions.Timeout),
-			SkipIfExists: !deployOptions.Dependencies,
-			Namespace:    namespace,
-		}
-		pc, err := pipelineCMD.NewCommand()
-		if err != nil {
-			return fmt.Errorf("could not create pipeline command: %w", err)
-		}
-		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
-			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); errStatus != nil {
-				return errStatus
-			}
+	dc.deployDependencies(ctx, deployOptions, data, c, cfg)
 
-			return err
-		}
-	}
 	oktetoLog.SetStage("")
 
 	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
@@ -452,6 +424,45 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	return err
+}
+
+func (dc *DeployCommand) deployDependencies(ctx context.Context, opts *Options, data *pipeline.CfgData, c kubernetes.Interface, cfg *corev1.ConfigMap) error {
+
+	for depName, dep := range opts.Manifest.Dependencies {
+		oktetoLog.Information("Deploying dependency '%s'", depName)
+		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
+		dep.Variables = append(dep.Variables, model.EnvVar{
+			Name:  "OKTETO_ORIGIN",
+			Value: "okteto-deploy",
+		})
+		namespace := okteto.Context().Namespace
+		if dep.Namespace != "" {
+			namespace = dep.Namespace
+		}
+		pipOpts := &pipelineCMD.DeployOptions{
+			Name:         depName,
+			Repository:   dep.Repository,
+			Branch:       dep.Branch,
+			File:         dep.ManifestPath,
+			Variables:    model.SerializeEnvironmentVars(dep.Variables),
+			Wait:         dep.Wait,
+			Timeout:      dep.GetTimeout(opts.Timeout),
+			SkipIfExists: !opts.Dependencies,
+			Namespace:    namespace,
+		}
+		pc, err := pipelineCMD.NewCommand()
+		if err != nil {
+			return fmt.Errorf("could not create pipeline command: %w", err)
+		}
+		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); errStatus != nil {
+				return errStatus
+			}
+
+			return err
+		}
+	}
+	return nil
 }
 
 func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {

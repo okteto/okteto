@@ -80,7 +80,8 @@ func LoadBoolean(k string) bool {
 	return h
 }
 
-// ShouldCreateNamespace checks if the namespace exists and if not ask the user if he wants to create it
+// ShouldCreateNamespace checks if the user has access to the namespace.
+// If not, ask the user if he wants to create it
 func ShouldCreateNamespace(ctx context.Context, ns string) (bool, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
