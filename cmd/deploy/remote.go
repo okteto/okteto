@@ -127,7 +127,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
-	dockerfile, err := rd.fs.Create(fmt.Sprintf("%s/deploy", tmpDir))
+	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, "deploy"))
 	if err != nil {
 		return err
 	}
