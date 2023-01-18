@@ -276,11 +276,12 @@ type Duration time.Duration
 
 // SecurityContext represents a pod security context
 type SecurityContext struct {
-	RunAsUser    *int64        `json:"runAsUser,omitempty" yaml:"runAsUser,omitempty"`
-	RunAsGroup   *int64        `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
-	FSGroup      *int64        `json:"fsGroup,omitempty" yaml:"fsGroup,omitempty"`
-	Capabilities *Capabilities `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
-	RunAsNonRoot *bool         `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
+	RunAsUser    *int64              `json:"runAsUser,omitempty" yaml:"runAsUser,omitempty"`
+	RunAsGroup   *int64              `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
+	FSGroup      *int64              `json:"fsGroup,omitempty" yaml:"fsGroup,omitempty"`
+	Capabilities *Capabilities       `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
+	RunAsNonRoot *bool               `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
+        AllowPrivilegeEscalation *bool   `json:"allowPrivilegeEscalation,omitempty" yaml:"allowPrivilegeEscalation,omitempty"`
 }
 
 // Capabilities sets the linux capabilities of a container
