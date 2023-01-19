@@ -550,15 +550,27 @@ func (pc *destroyCommand) waitForNamespaceDestroyAllToComplete(ctx context.Conte
 			case "Active":
 				if hasBeenDestroyingAll {
 					// when status is active again check if all resources have been correctly destroyed
+					// list configmaps that belong okteto deployments
+					resourcesLabels := map[string]bool{
+						model.GitDeployLabel: true,
+						model.StackLabel:     true,
+						"dev.okteto.com/app": true,
+					}
+
 					cfgList, err := c.CoreV1().ConfigMaps(namespace).List(ctx, metav1.ListOptions{})
 					if err != nil {
 						return err
 					}
 
-					// no configmap for the given namespace should exist
-					if len(cfgList.Items) > 0 {
-						return fmt.Errorf("namespace destroy all failed: some resources where not destroyed")
+					// no configmap for resources of the given namespace should exist
+					for _, cfg := range cfgList.Items {
+						for l := range cfg.GetLabels() {
+							if _, ok := resourcesLabels[l]; ok {
+								return fmt.Errorf("namespace destroy all failed: some resources where not destroyed")
+							}
+						}
 					}
+
 					// exit the waiting loop when status is active again
 					return nil
 				}
