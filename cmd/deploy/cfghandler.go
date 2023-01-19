@@ -81,10 +81,14 @@ func (ch *defaultConfigMapHandler) updateConfigMap(ctx context.Context, cfg *api
 	return errMain
 }
 
+// translateConfigMapAndDeploy with the receiver deployInsideDeployConfigMapHandler doesn't do anything
+// because we have to  control the cfmap in the main execution
 func (*deployInsideDeployConfigMapHandler) translateConfigMapAndDeploy(_ context.Context, _ *pipeline.CfgData) (*apiv1.ConfigMap, error) {
 	return nil, nil
 }
 
+// updateConfigMap with the receiver deployInsideDeployConfigMapHandler doesn't do anything
+// because we have to  control the cfmap in the main execution
 func (*deployInsideDeployConfigMapHandler) updateConfigMap(_ context.Context, _ *apiv1.ConfigMap, _ *pipeline.CfgData, err error) error {
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destruction failed: %s", err.Error())
 	return nil
