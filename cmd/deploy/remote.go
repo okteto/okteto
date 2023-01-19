@@ -44,9 +44,9 @@ RUN apk update && apk add ca-certificates
 
 FROM {{ .UserDeployImage }} as deploy
 
-ENV PATH="${PATH}:/app/bin"
+ENV PATH="${PATH}:/okteto/bin"
 COPY --from=certs /etc/ssl/certs /etc/ssl/certs
-COPY --from=okteto-cli /usr/local/bin/okteto /usr/local/bin/okteto
+COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 {{range $key, $val := .OktetoBuildEnvVars }}
 ENV {{$key}} {{$val}}
@@ -56,12 +56,14 @@ ENV {{ .ContextEnvVar }} {{ .ContextValue }}
 ENV {{ .TokenEnvVar }} {{ .TokenValue }}
 ENV {{ .RemoteDeployEnvVar }} true
 
-COPY . /okteto/app
-WORKDIR /okteto/app
+COPY . /okteto/src
+WORKDIR /okteto/src
 
 ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
 RUN okteto deploy --log-output=json {{ .DeployFlags }}
 `
+	dockerignoreName = "deploy.dockerignore"
+	buildOutput      = "deploy"
 )
 
 type dockerfileTemplateProperties struct {
@@ -125,7 +127,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
-	dockerfile, err := rd.fs.Create(fmt.Sprintf("%s/deploy", tmpDir))
+	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, "deploy"))
 	if err != nil {
 		return err
 	}
@@ -151,7 +153,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	// undo modification of CWD for Build command
 	os.Chdir(cwd)
 
-	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
+	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: buildOutput})
 	buildOptions.Tag = ""
 
 	// we need to call Build() method using a remote builder. This Builder will have
@@ -172,7 +174,6 @@ func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {
 }
 
 func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
-	dockerignoreName := "deploy.dockerignore"
 	dockerignoreFilePath := fmt.Sprintf("%s/%s", cwd, dockerignoreName)
 	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {

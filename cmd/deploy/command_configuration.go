@@ -20,13 +20,11 @@ import (
 	"reflect"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	giturls "github.com/whilp/git-urls"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -184,23 +182,4 @@ func switchRepoSchemaToHTTPS(repo string) *url.URL {
 		oktetoLog.Infof("retrieved schema for %s - %s", repo, repoURL.Scheme)
 		return nil
 	}
-}
-
-func updateConfigMapStatusError(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, errMain error) error {
-	if err := updateConfigMapStatus(ctx, cfg, c, data, errMain); err != nil {
-		return err
-	}
-
-	return errMain
-}
-
-func getConfigMapFromData(ctx context.Context, data *pipeline.CfgData, c kubernetes.Interface) (*corev1.ConfigMap, error) {
-	return pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
-}
-
-func updateConfigMapStatus(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, err error) error {
-	oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, err.Error())
-	data.Status = pipeline.ErrorStatus
-
-	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
 }

@@ -54,5 +54,5 @@ const (
 	OKtetoDeployRemote = "OKTETO_DEPLOY_REMOTE"
 
 	// OktetoCLIImageForRemote defines okteto CLI image to use for remote deployments
-	OktetoCLIImageForRemote = "gcr.io/development-300207/okteto:remote-deploy"
+	OktetoCLIImageForRemote = "okteto/okteto:remote-deploy"
 )
