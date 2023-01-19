@@ -925,12 +925,14 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 				Command: cmdString,
 			})
 		}
+		d.Image = constants.OktetoPipelineRunnerImage
 		return nil
 	}
 	var commands []DeployCommand
 	err = unmarshal(&commands)
 	if err == nil {
 		d.Commands = commands
+		d.Image = constants.OktetoPipelineRunnerImage
 		return nil
 	}
 	type deployInfoRaw DeployInfo
