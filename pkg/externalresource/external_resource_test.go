@@ -1,7 +1,6 @@
 package externalresource
 
 import (
-	b64 "encoding/base64"
 	"fmt"
 	"os"
 	"testing"
@@ -58,6 +57,7 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 		name                string
 		externalResourceFSM ERFilesystemManager
 		expectErr           bool
+		expectedResult      ExternalResource
 	}{
 		{
 			name: "markdown not found",
@@ -86,6 +86,37 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 				Fs: fs,
 			},
 			expectErr: false,
+			expectedResult: ExternalResource{
+				Icon: "myIcon",
+				Notes: &Notes{
+					Path:     "/external/readme.md",
+					Markdown: "IyMgTWFya2Rvd24gY29udGVudA==",
+				},
+				Endpoints: []ExternalEndpoint{},
+			},
+		},
+		{
+			name: "notes info not present in external. No markdown loaded",
+			externalResourceFSM: ERFilesystemManager{
+				ExternalResource: ExternalResource{
+					Endpoints: []ExternalEndpoint{
+						{
+							Name: "name1",
+							Url:  "/some/url",
+						},
+					},
+				},
+				Fs: fs,
+			},
+			expectErr: false,
+			expectedResult: ExternalResource{
+				Endpoints: []ExternalEndpoint{
+					{
+						Name: "name1",
+						Url:  "/some/url",
+					},
+				},
+			},
 		},
 	}
 
@@ -95,12 +126,7 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 				assert.Error(t, tt.externalResourceFSM.LoadMarkdownContent(manifestPath))
 			} else {
 				assert.NoError(t, tt.externalResourceFSM.LoadMarkdownContent(manifestPath))
-				sDec, err := b64.StdEncoding.DecodeString(tt.externalResourceFSM.ExternalResource.Notes.Markdown)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				assert.Equal(t, string(sDec), markdownContent)
+				assert.Equal(t, tt.externalResourceFSM.ExternalResource, tt.expectedResult)
 			}
 		})
 	}
