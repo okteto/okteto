@@ -92,6 +92,5 @@ func (*deployInsideDeployConfigMapHandler) translateConfigMapAndDeploy(_ context
 // because we have to  control the cfmap in the main execution. If both handled the configmap we will be
 // overwritten the cfmap and leave it in a inconsistent status
 func (*deployInsideDeployConfigMapHandler) updateConfigMap(_ context.Context, _ *apiv1.ConfigMap, _ *pipeline.CfgData, err error) error {
-	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destruction failed: %s", err.Error())
 	return nil
 }

@@ -46,5 +46,7 @@ func (e *jsonExecutor) display(cmd string) {
 	e.displayer.Display(cmd)
 }
 func (e *jsonExecutor) cleanUp(err error) {
-	e.displayer.CleanUp(err)
+	if e.displayer != nil {
+		e.displayer.CleanUp(err)
+	}
 }
