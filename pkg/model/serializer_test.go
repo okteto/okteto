@@ -1253,9 +1253,11 @@ dev:
 sync:
   - app:/app`),
 			expected: &Manifest{
-				Type:          OktetoManifestType,
-				Build:         map[string]*BuildInfo{},
-				Deploy:        &DeployInfo{},
+				Type:  OktetoManifestType,
+				Build: map[string]*BuildInfo{},
+				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
+				},
 				Dependencies:  map[string]*Dependency{},
 				External:      externalresource.ExternalResourceSection{},
 				GlobalForward: []forward.GlobalForward{},
@@ -1337,9 +1339,11 @@ sync:
 services:
   - name: svc`),
 			expected: &Manifest{
-				Type:          OktetoManifestType,
-				Build:         map[string]*BuildInfo{},
-				Deploy:        &DeployInfo{},
+				Type:  OktetoManifestType,
+				Build: map[string]*BuildInfo{},
+				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
+				},
 				Dependencies:  map[string]*Dependency{},
 				GlobalForward: []forward.GlobalForward{},
 				External:      externalresource.ExternalResourceSection{},
