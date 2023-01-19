@@ -241,6 +241,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		},
 		Builder:           buildv2.NewBuilder(builder, registry),
 		K8sClientProvider: clientProvider,
+		cfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
 	}
 
 	ctx := context.Background()
@@ -315,6 +316,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 			}, nil
 		},
 		K8sClientProvider: clientProvider,
+		cfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -392,6 +394,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 			}, nil
 		},
 		K8sClientProvider: clientProvider,
+		cfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
 	}
 	ctx := context.Background()
 
@@ -451,6 +454,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		},
 		GetExternalControl: cp.getFakeExternalControl,
 		K8sClientProvider:  clientProvider,
+		cfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
 	}
 	ctx := context.Background()
 

@@ -124,7 +124,7 @@ func (t trace) display() {
 					oktetoLog.Infof("could not parse %s: %w", log, err)
 					continue
 				}
-
+				oktetoLog.SetStage(text.Stage)
 				switch text.Stage {
 				case "done":
 					continue
@@ -143,6 +143,7 @@ func (t trace) display() {
 				}
 			}
 			v.logs = []string{}
+			oktetoLog.SetStage("")
 		}
 	}
 }

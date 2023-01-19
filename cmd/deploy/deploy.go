@@ -79,6 +79,7 @@ type DeployCommand struct {
 	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
 	GetDeployer        func(*model.Manifest, *Options, string, *buildv2.OktetoBuilder) (deployerInterface, error)
 	deployWaiter       deployWaiter
+	cfgMapHandler      configMapHandler
 
 	PipelineType model.Archetype
 	isRemote     bool
@@ -170,6 +171,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Builder:            buildv2.NewBuilderFromScratch(),
 				deployWaiter:       newDeployWaiter(k8sClientProvider),
 				isRemote:           utils.LoadBoolean(constants.OKtetoDeployRemote),
+				cfgMapHandler:      newConfigmapHandler(k8sClientProvider),
 			}
 			startTime := time.Now()
 
@@ -291,20 +293,20 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
-	cfg, err := getConfigMapFromData(ctx, data, c)
+	cfg, err := dc.cfgMapHandler.translateConfigMapAndDeploy(ctx, data)
 	if err != nil {
 		return err
 	}
 
 	if err := dc.deployDependencies(ctx, deployOptions); err != nil {
-		if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); errStatus != nil {
+		if errStatus := dc.cfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
 		return err
 	}
 
 	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
-		return updateConfigMapStatusError(ctx, cfg, c, data, err)
+		return dc.cfgMapHandler.updateConfigMap(ctx, cfg, data, err)
 	}
 
 	deployer, err := dc.GetDeployer(deployOptions.Manifest, deployOptions, cwd, dc.Builder)
@@ -353,7 +355,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Status = pipeline.DeployedStatus
 	}
 
-	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
+	if err := dc.cfgMapHandler.updateConfigMap(ctx, cfg, data, nil); err != nil {
 		return err
 	}
 

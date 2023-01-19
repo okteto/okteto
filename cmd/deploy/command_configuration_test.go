@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 func TestGetConfigMapFromData(t *testing.T) {
@@ -50,17 +49,14 @@ devs:
 		Icon:       "https://apps.okteto.com/movies/icon.png",
 	}
 
+	fakeK8sProvider := test.NewFakeK8sProvider()
 	dc := &DeployCommand{
 		GetManifest:       getFakeManifest,
-		K8sClientProvider: test.NewFakeK8sProvider(),
+		K8sClientProvider: fakeK8sProvider,
+		cfgMapHandler:     newDefaultConfigMapHandler(fakeK8sProvider),
 	}
 
 	ctx := context.Background()
-
-	fakeClient, _, err := dc.K8sClientProvider.Provide(clientcmdapi.NewConfig())
-	if err != nil {
-		t.Fatal("could not create fake k8s client")
-	}
 
 	expectedCfg := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -81,7 +77,7 @@ devs:
 		},
 	}
 
-	currentCfg, err := getConfigMapFromData(ctx, data, fakeClient)
+	currentCfg, err := dc.cfgMapHandler.translateConfigMapAndDeploy(ctx, data)
 	if err != nil {
 		t.Fatal("error trying to get configmap from data object")
 	}
