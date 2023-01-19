@@ -18,7 +18,7 @@ func TestExternalResource_UnmarshalYAML(t *testing.T) {
 		{
 			name: "invalid external resource: wrong input format",
 			data: []byte(`
-icon: myicon
+icon: default
 notes: /path/to/file
 endpoints:
  name: endpoint1
@@ -28,7 +28,7 @@ endpoints:
 		{
 			name: "invalid external resource: duplicated endpoint names",
 			data: []byte(`
-icon: myicon
+icon: default
 notes: /path/to/file
 endpoints:
 - name: endpoint1
@@ -40,19 +40,28 @@ endpoints:
 		{
 			name: "invalid external resource: no endpoint declared",
 			data: []byte(`
-icon: myicon
+icon: default
 notes: /path/to/file`),
 			expectedErr: true,
 		},
 		{
-			name: "valid external resource with property 'notes' empty",
+			name: "invalid external resource: invalid icon value",
 			data: []byte(`
 icon: myicon
 endpoints:
 - name: endpoint1
   url: /some/url/1`),
+			expectedErr: true,
+		},
+		{
+			name: "valid external resource with property 'notes' empty",
+			data: []byte(`
+icon: default
+endpoints:
+- name: endpoint1
+  url: /some/url/1`),
 			expected: ExternalResource{
-				Icon: "myicon",
+				Icon: "default",
 				Endpoints: []ExternalEndpoint{
 					{
 						Name: "endpoint1",
@@ -64,13 +73,13 @@ endpoints:
 		{
 			name: "valid external resource",
 			data: []byte(`
-icon: myicon
+icon: default
 notes: /path/to/file
 endpoints:
 - name: endpoint1
   url: /some/url/1`),
 			expected: ExternalResource{
-				Icon: "myicon",
+				Icon: "default",
 				Notes: &Notes{
 					Path: "/path/to/file",
 				},

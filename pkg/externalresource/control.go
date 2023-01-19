@@ -105,6 +105,7 @@ func translate(name string, externalResource *ExternalResource) *k8s.External {
 			},
 		},
 		Spec: k8s.ExternalResourceSpec{
+			Icon:      format.ResourceK8sMetaString(externalResource.Icon),
 			Name:      format.ResourceK8sMetaString(name),
 			Notes:     notes,
 			Endpoints: externalEndpointsSpec,

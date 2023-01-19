@@ -112,7 +112,7 @@ func TestDeploy(t *testing.T) {
 			name:        "external not found: create a new external resource",
 			expectedErr: false,
 			externalInfo: &ExternalResource{
-				Icon:      "",
+				Icon:      "default",
 				Notes:     &Notes{},
 				Endpoints: []ExternalEndpoint{},
 			},
@@ -124,6 +124,7 @@ func TestDeploy(t *testing.T) {
 						Namespace: namespace,
 					},
 					Spec: k8s.ExternalResourceSpec{
+						Icon: "default",
 						Endpoints: []k8s.Endpoint{
 							{
 								Url: "https://test.com",
@@ -137,7 +138,7 @@ func TestDeploy(t *testing.T) {
 			name:        "external found: update an old external resource",
 			expectedErr: false,
 			externalInfo: &ExternalResource{
-				Icon:      "",
+				Icon:      "default",
 				Notes:     &Notes{},
 				Endpoints: []ExternalEndpoint{},
 			},
@@ -149,6 +150,7 @@ func TestDeploy(t *testing.T) {
 						Namespace: namespace,
 					},
 					Spec: k8s.ExternalResourceSpec{
+						Icon: "default",
 						Endpoints: []k8s.Endpoint{
 							{
 								Url: "https://test.com",

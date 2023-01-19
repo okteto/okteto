@@ -2,6 +2,23 @@ package externalresource
 
 import (
 	"fmt"
+	"strings"
+)
+
+const (
+	defValueForIcon = "default"
+)
+
+var (
+	possibleIconValues = map[string]bool{
+		"container":     true,
+		"dashboard":     true,
+		"database":      true,
+		defValueForIcon: true,
+		"function":      true,
+		"graph":         true,
+		"storage":       true,
+	}
 )
 
 type externalResourceUnmarshaller struct {
@@ -26,6 +43,18 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 		return fmt.Errorf("there must be at least one endpoint available for the external resource")
 	}
 
+	if result.Icon == "" {
+		result.Icon = defValueForIcon
+	} else if _, ok := possibleIconValues[result.Icon]; !ok {
+		keys := make([]string, 0, len(possibleIconValues))
+		for k := range possibleIconValues {
+			keys = append(keys, fmt.Sprintf("'%s'", k))
+		}
+		return fmt.Errorf("'%s' is not supported as icon value. Supported values: %s", result.Icon, strings.Join(keys, ", "))
+	}
+
+	er.Icon = result.Icon
+
 	uniqueEndpointsNames := make(map[string]bool)
 	for _, entry := range result.Endpoints {
 		if _, isAdded := uniqueEndpointsNames[entry.Name]; isAdded {
@@ -34,8 +63,6 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 
 		uniqueEndpointsNames[entry.Name] = false
 	}
-
-	er.Icon = result.Icon
 
 	if result.Notes != "" {
 		er.Notes = &Notes{
