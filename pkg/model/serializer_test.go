@@ -1838,7 +1838,7 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 						Command: "okteto stack deploy",
 					},
 				},
-				Image: constants.OktetoCLIImageForRemote,
+				Image: constants.OktetoPipelineRunnerImage,
 			},
 		},
 		{

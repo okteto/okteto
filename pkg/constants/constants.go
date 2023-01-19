@@ -55,4 +55,7 @@ const (
 
 	// OktetoCLIImageForRemote defines okteto CLI image to use for remote deployments
 	OktetoCLIImageForRemote = "okteto/okteto:remote-deploy"
+
+	// OktetoPipelineRunnerImage defines image to use for remote deployments if empty
+	OktetoPipelineRunnerImage = "okteto/installer:1.7.6"
 )

@@ -941,7 +941,7 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	if deploy.Image == "" {
-		deploy.Image = constants.OktetoCLIImageForRemote
+		deploy.Image = constants.OktetoPipelineRunnerImage
 	}
 
 	*d = DeployInfo(deploy)
