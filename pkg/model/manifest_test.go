@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
@@ -391,6 +392,7 @@ func TestInferFromStack(t *testing.T) {
 				Dev:   ManifestDevs{},
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: &Stack{
 							Services: map[string]*Service{
@@ -421,6 +423,7 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
@@ -438,6 +441,7 @@ func TestInferFromStack(t *testing.T) {
 					},
 				},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: &Stack{
 							Services: map[string]*Service{
@@ -468,6 +472,7 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: &Stack{
 							Services: map[string]*Service{
@@ -579,6 +584,7 @@ func TestInferFromStack(t *testing.T) {
 					},
 				},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},

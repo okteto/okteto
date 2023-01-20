@@ -355,7 +355,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Status = pipeline.DeployedStatus
 	}
 
-	if err := dc.cfgMapHandler.updateConfigMap(ctx, cfg, data, nil); err != nil {
+	if err := dc.cfgMapHandler.updateConfigMap(ctx, cfg, data, err); err != nil {
 		return err
 	}
 

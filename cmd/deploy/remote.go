@@ -165,6 +165,8 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 			E: fmt.Errorf("Error during development environment deployment."),
 		}
 	}
+	oktetoLog.SetStage("done")
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
 
 	return nil
 }

@@ -327,7 +327,9 @@ func (ld *localDeployer) cleanUp(ctx context.Context, err error) {
 	if err := ld.Proxy.Shutdown(ctx); err != nil {
 		oktetoLog.Infof("could not stop local server: %s", err)
 	}
-	ld.Executor.CleanUp(err)
+	if ld.Executor != nil {
+		ld.Executor.CleanUp(err)
+	}
 }
 
 func GetExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
