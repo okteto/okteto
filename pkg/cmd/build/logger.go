@@ -30,7 +30,7 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
 	timeout := time.NewTicker(10 * time.Minute)
 	defer timeout.Stop()
 
-	oktetoLog.Spinner("Preparing remote installer instance...")
+	oktetoLog.Spinner("Synchronizing context...")
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
@@ -113,9 +113,6 @@ func (t *trace) update(ss *client.SolveStatus) error {
 
 func (t trace) display() {
 	for _, v := range t.ongoing {
-		if t.isTransferringContext(v.name) {
-			oktetoLog.Spinner("Synchronising context...")
-		}
 		if t.hasCommandLogs(v) {
 			oktetoLog.StopSpinner()
 			for _, log := range v.logs {
@@ -148,17 +145,8 @@ func (t trace) display() {
 	}
 }
 
-func (t trace) isTransferringContext(name string) bool {
-	isInternal := strings.HasPrefix(name, "[internal]")
-	isLoadingCtx := strings.Contains(name, "load build context")
-	return isInternal && isLoadingCtx
-}
-
 func (t trace) hasCommandLogs(v *vertexInfo) bool {
-	if len(v.logs) != 0 {
-		return true
-	}
-	return false
+	return len(v.logs) != 0
 }
 
 func (t *trace) removeCompletedSteps() {
