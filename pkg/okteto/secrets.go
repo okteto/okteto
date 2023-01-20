@@ -15,7 +15,6 @@ package okteto
 
 import (
 	"context"
-	"os"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/types"
@@ -57,7 +56,7 @@ func (c *OktetoClient) GetSecrets(ctx context.Context) ([]types.Secret, error) {
 }
 
 // GetSecrets returns the secrets from Okteto API
-func (c *userClient) GetContext(ctx context.Context) (*types.UserContext, error) {
+func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserContext, error) {
 	var queryStruct struct {
 		User struct {
 			Id              graphql.String
@@ -85,7 +84,7 @@ func (c *userClient) GetContext(ctx context.Context) (*types.UserContext, error)
 		} `graphql:"credentials(space: $cred)"`
 	}
 	variables := map[string]interface{}{
-		"cred": graphql.String(os.Getenv("OKTETO_NAMESPACE")),
+		"cred": graphql.String(ns),
 	}
 	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
