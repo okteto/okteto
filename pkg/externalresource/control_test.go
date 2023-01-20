@@ -290,3 +290,59 @@ func TestList(t *testing.T) {
 		})
 	}
 }
+
+func TestValidate(t *testing.T) {
+	ctx := context.Background()
+	namespace := "testns"
+	var tt = []struct {
+		name             string
+		expectedErr      bool
+		possibleErrs     errs
+		externalToDeploy string
+		externalInfo     *ExternalResource
+	}{
+		{
+			name:        "provider-error",
+			expectedErr: true,
+			possibleErrs: errs{
+				providerErr: assert.AnError,
+			},
+		},
+		{
+			name:        "validation-error",
+			expectedErr: true,
+			possibleErrs: errs{
+				createErr: assert.AnError,
+			},
+			externalInfo: &ExternalResource{
+				Icon:      "myicon",
+				Notes:     &Notes{},
+				Endpoints: []ExternalEndpoint{},
+			},
+		},
+		{
+			name: "valid external resource",
+			externalInfo: &ExternalResource{
+				Icon:      "myicon",
+				Notes:     &Notes{},
+				Endpoints: []ExternalEndpoint{},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := K8sControl{
+				ClientProvider: (&fakeClientProvider{
+					possibleErrs: tc.possibleErrs,
+				}).provide,
+				Cfg: nil,
+			}
+			if tc.expectedErr {
+				assert.Error(t, ctrl.Validate(ctx, tc.externalToDeploy, namespace, tc.externalInfo))
+			} else {
+				assert.NoError(t, ctrl.Validate(ctx, tc.externalToDeploy, namespace, tc.externalInfo))
+			}
+		})
+	}
+}

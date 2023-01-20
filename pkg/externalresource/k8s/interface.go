@@ -26,11 +26,11 @@ type externalClient struct {
 type ExternalResourceInterface interface {
 	Update(ctx context.Context, external *External) (*External, error)
 	Get(ctx context.Context, name string, options metav1.GetOptions) (*External, error)
-	Create(ctx context.Context, external *External) (*External, error)
+	Create(ctx context.Context, external *External, options metav1.CreateOptions) (*External, error)
 	List(ctx context.Context, options metav1.ListOptions) (*ExternalList, error)
 }
 
-func (c *externalClient) Create(ctx context.Context, external *External) (*External, error) {
+func (c *externalClient) Create(ctx context.Context, external *External, opts metav1.CreateOptions) (*External, error) {
 	result := External{}
 	err := c.restClient.
 		Post().

@@ -45,15 +45,6 @@ notes: /path/to/file`),
 			expectedErr: true,
 		},
 		{
-			name: "invalid external resource: invalid icon value",
-			data: []byte(`
-icon: myicon
-endpoints:
-- name: endpoint1
-  url: /some/url/1`),
-			expectedErr: true,
-		},
-		{
 			name: "valid external resource with property 'notes' empty",
 			data: []byte(`
 icon: default

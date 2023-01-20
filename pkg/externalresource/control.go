@@ -36,7 +36,7 @@ func (c *K8sControl) Deploy(ctx context.Context, name, ns string, externalInfo *
 
 	if old.Name == "" {
 		olog.Infof("creating external resource CRD '%s'", externalResourceCRD.Name)
-		_, err = k8sclient.ExternalResources(ns).Create(ctx, externalResourceCRD)
+		_, err = k8sclient.ExternalResources(ns).Create(ctx, externalResourceCRD, metav1.CreateOptions{})
 		if err != nil && !k8sErrors.IsAlreadyExists(err) {
 			return fmt.Errorf("error creating external resource CRD '%s': %w", externalResourceCRD.Name, err)
 		}
@@ -79,6 +79,22 @@ func (c *K8sControl) List(ctx context.Context, ns string, labelSelector string) 
 	return result, nil
 }
 
+func (c *K8sControl) Validate(ctx context.Context, name, ns string, externalInfo *ExternalResource) error {
+	k8sclient, err := c.ClientProvider(c.Cfg)
+	if err != nil {
+		return fmt.Errorf("error creating external CRD client: %s", err.Error())
+	}
+
+	externalResourceCRD := translate(name, externalInfo)
+
+	_, err = k8sclient.ExternalResources(ns).Create(ctx, externalResourceCRD, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
+	if err != nil && !k8sErrors.IsAlreadyExists(err) {
+		return fmt.Errorf("error validating external resource CRD '%s': %w", externalResourceCRD.Name, err)
+	}
+
+	return nil
+}
+
 func translate(name string, externalResource *ExternalResource) *k8s.External {
 	var externalEndpointsSpec []k8s.Endpoint
 	for _, endpoint := range externalResource.Endpoints {
@@ -105,7 +121,7 @@ func translate(name string, externalResource *ExternalResource) *k8s.External {
 			},
 		},
 		Spec: k8s.ExternalResourceSpec{
-			Icon:      format.ResourceK8sMetaString(externalResource.Icon),
+			Icon:      externalResource.Icon,
 			Name:      format.ResourceK8sMetaString(name),
 			Notes:     notes,
 			Endpoints: externalEndpointsSpec,

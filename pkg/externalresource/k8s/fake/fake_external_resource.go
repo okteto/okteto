@@ -21,7 +21,7 @@ var externalResourceResource = schema.GroupVersionResource{Group: k8sexternalres
 
 var externalResourceKind = schema.GroupVersionKind{Group: k8sexternalresource.GroupName, Version: k8sexternalresource.GroupVersion, Kind: k8sexternalresource.ExternalResourceKind}
 
-func (c *FakeExternalResource) Create(_ context.Context, external *k8sexternalresource.External) (*k8sexternalresource.External, error) {
+func (c *FakeExternalResource) Create(_ context.Context, external *k8sexternalresource.External, opts metav1.CreateOptions) (*k8sexternalresource.External, error) {
 	if c.createErr != nil {
 		return nil, c.createErr
 	}
