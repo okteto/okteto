@@ -30,7 +30,7 @@ type ExternalResourceInterface interface {
 	List(ctx context.Context, options metav1.ListOptions) (*ExternalList, error)
 }
 
-func (c *externalClient) Create(ctx context.Context, external *External, opts metav1.CreateOptions) (*External, error) {
+func (c *externalClient) Create(ctx context.Context, external *External, _ metav1.CreateOptions) (*External, error) {
 	result := External{}
 	err := c.restClient.
 		Post().
