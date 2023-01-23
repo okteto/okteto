@@ -37,6 +37,7 @@ deploy:
     command: echo hola
 external:
   test:
+    icon: default
     notes: readme.md
     endpoints:
     - name: test-endpoint
