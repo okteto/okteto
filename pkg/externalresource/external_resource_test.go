@@ -17,7 +17,7 @@ func TestExternalResource_SetDefaults(t *testing.T) {
 			Path:     "/some/path",
 			Markdown: "",
 		},
-		Endpoints: []ExternalEndpoint{
+		Endpoints: []*ExternalEndpoint{
 			{
 				Name: "endpoint1",
 				Url:  "/some/url/endpoint1",
@@ -67,7 +67,7 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 					Notes: &Notes{
 						Path: "/readme.md",
 					},
-					Endpoints: []ExternalEndpoint{},
+					Endpoints: []*ExternalEndpoint{},
 				},
 				Fs: fs,
 			},
@@ -81,7 +81,7 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 					Notes: &Notes{
 						Path: "/external/readme.md",
 					},
-					Endpoints: []ExternalEndpoint{},
+					Endpoints: []*ExternalEndpoint{},
 				},
 				Fs: fs,
 			},
@@ -92,14 +92,14 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 					Path:     "/external/readme.md",
 					Markdown: "IyMgTWFya2Rvd24gY29udGVudA==",
 				},
-				Endpoints: []ExternalEndpoint{},
+				Endpoints: []*ExternalEndpoint{},
 			},
 		},
 		{
 			name: "notes info not present in external. No markdown loaded",
 			externalResourceFSM: ERFilesystemManager{
 				ExternalResource: ExternalResource{
-					Endpoints: []ExternalEndpoint{
+					Endpoints: []*ExternalEndpoint{
 						{
 							Name: "name1",
 							Url:  "/some/url",
@@ -110,7 +110,7 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 			},
 			expectErr: false,
 			expectedResult: ExternalResource{
-				Endpoints: []ExternalEndpoint{
+				Endpoints: []*ExternalEndpoint{
 					{
 						Name: "name1",
 						Url:  "/some/url",

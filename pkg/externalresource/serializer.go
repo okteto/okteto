@@ -44,7 +44,10 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 	}
 
 	for _, endpoint := range result.Endpoints {
-		er.Endpoints = append(er.Endpoints, ExternalEndpoint(endpoint))
+		er.Endpoints = append(er.Endpoints, &ExternalEndpoint{
+			Name: endpoint.Name,
+			Url:  endpoint.Url,
+		})
 	}
 
 	return nil

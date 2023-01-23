@@ -53,7 +53,7 @@ endpoints:
   url: /some/url/1`),
 			expected: ExternalResource{
 				Icon: "myicon",
-				Endpoints: []ExternalEndpoint{
+				Endpoints: []*ExternalEndpoint{
 					{
 						Name: "endpoint1",
 						Url:  "/some/url/1",
@@ -74,7 +74,7 @@ endpoints:
 				Notes: &Notes{
 					Path: "/path/to/file",
 				},
-				Endpoints: []ExternalEndpoint{
+				Endpoints: []*ExternalEndpoint{
 					{
 						Name: "endpoint1",
 						Url:  "/some/url/1",

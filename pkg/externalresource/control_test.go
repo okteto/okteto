@@ -53,6 +53,11 @@ func TestDeploy(t *testing.T) {
 			possibleErrs: errs{
 				providerErr: assert.AnError,
 			},
+			externalInfo: &ExternalResource{
+				Icon:      "",
+				Notes:     &Notes{},
+				Endpoints: []*ExternalEndpoint{},
+			},
 		},
 		{
 			name:        "get-error",
@@ -64,7 +69,7 @@ func TestDeploy(t *testing.T) {
 			externalInfo: &ExternalResource{
 				Icon:      "",
 				Notes:     &Notes{},
-				Endpoints: []ExternalEndpoint{},
+				Endpoints: []*ExternalEndpoint{},
 			},
 		},
 		{
@@ -77,7 +82,7 @@ func TestDeploy(t *testing.T) {
 			externalInfo: &ExternalResource{
 				Icon:      "",
 				Notes:     &Notes{},
-				Endpoints: []ExternalEndpoint{},
+				Endpoints: []*ExternalEndpoint{},
 			},
 		},
 		{
@@ -89,7 +94,7 @@ func TestDeploy(t *testing.T) {
 			externalInfo: &ExternalResource{
 				Icon:      "",
 				Notes:     &Notes{},
-				Endpoints: []ExternalEndpoint{},
+				Endpoints: []*ExternalEndpoint{},
 			},
 			externalToDeploy: "old",
 			objects: []runtime.Object{
@@ -114,7 +119,7 @@ func TestDeploy(t *testing.T) {
 			externalInfo: &ExternalResource{
 				Icon:      "",
 				Notes:     &Notes{},
-				Endpoints: []ExternalEndpoint{},
+				Endpoints: []*ExternalEndpoint{},
 			},
 			externalToDeploy: "new",
 			objects: []runtime.Object{
@@ -139,7 +144,7 @@ func TestDeploy(t *testing.T) {
 			externalInfo: &ExternalResource{
 				Icon:      "",
 				Notes:     &Notes{},
-				Endpoints: []ExternalEndpoint{},
+				Endpoints: []*ExternalEndpoint{},
 			},
 			externalToDeploy: "old",
 			objects: []runtime.Object{

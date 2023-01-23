@@ -10,6 +10,10 @@ import (
 	"github.com/spf13/afero"
 )
 
+const (
+	urlEnvFormat = "OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL"
+)
+
 // ExternalResourceSection represents the map of external resources at a manifest
 type ExternalResourceSection map[string]*ExternalResource
 
@@ -17,7 +21,7 @@ type ExternalResourceSection map[string]*ExternalResource
 type ExternalResource struct {
 	Icon      string
 	Notes     *Notes
-	Endpoints []ExternalEndpoint
+	Endpoints []*ExternalEndpoint
 }
 
 // Notes represents information about the location and content of the external resource markdown
@@ -43,7 +47,7 @@ func (er *ExternalResource) SetDefaults(externalName string) {
 	sanitizedExternalName := sanitizeForEnv(externalName)
 	for _, endpoint := range er.Endpoints {
 		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
-		endpointUrlEnv := fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)
+		endpointUrlEnv := fmt.Sprintf(urlEnvFormat, sanitizedExternalName, sanitizedEndpointName)
 		os.Setenv(endpointUrlEnv, endpoint.Url)
 	}
 }

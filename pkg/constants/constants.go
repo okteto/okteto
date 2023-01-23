@@ -49,4 +49,7 @@ const (
 
 	// TimeFormat is the format to use when storing timestamps as a string
 	TimeFormat = "2006-01-02T15:04:05"
+
+	// OktetoEnvFile defines the name for okteto env file
+	OktetoEnvFile = "OKTETO_ENV"
 )

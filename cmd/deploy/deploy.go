@@ -18,9 +18,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/compose-spec/godotenv"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
@@ -46,6 +48,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -91,6 +94,7 @@ type DeployCommand struct {
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
 	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
+	Fs                 afero.Fs
 
 	PipelineType model.Archetype
 }
@@ -201,6 +205,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				K8sClientProvider:  okteto.NewK8sClientProvider(),
 				Builder:            buildv2.NewBuilderFromScratch(),
 				GetExternalControl: GetExternalControl,
+				Fs:                 afero.NewOsFs(),
 			}
 			startTime := time.Now()
 
@@ -484,6 +489,17 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 }
 
 func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
+	oktetoEnvFile, err := dc.createTempOktetoEnvFile()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := dc.Fs.RemoveAll(filepath.Base(oktetoEnvFile.Name())); err != nil {
+			oktetoLog.Infof("error removing okteto env file dir: %w", err)
+		}
+	}()
+
 	// deploy commands if any
 	for _, command := range opts.Manifest.Deploy.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
@@ -492,6 +508,11 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
+
+		if err := dc.updateEnvironWithOktetoEnvFile(oktetoEnvFile); err != nil {
+			return err
+		}
+
 		oktetoLog.SetStage("")
 	}
 
@@ -649,6 +670,37 @@ func (dc *DeployCommand) cleanUp(ctx context.Context) {
 	if err := dc.Proxy.Shutdown(ctx); err != nil {
 		oktetoLog.Infof("could not stop local server: %s", err)
 	}
+}
+
+func (dc *DeployCommand) createTempOktetoEnvFile() (afero.File, error) {
+	oktetoEnvFileDir, err := afero.TempDir(dc.Fs, "", "")
+	if err != nil {
+		return nil, err
+	}
+
+	oktetoEnvFile, err := dc.Fs.Create(fmt.Sprintf("%s/.env", oktetoEnvFileDir))
+	if err != nil {
+		return nil, err
+	}
+
+	os.Setenv(constants.OktetoEnvFile, oktetoEnvFile.Name())
+	return oktetoEnvFile, nil
+}
+
+func (dc *DeployCommand) updateEnvironWithOktetoEnvFile(oktetoEnvFile afero.File) error {
+	envMap, err := godotenv.ParseWithLookup(oktetoEnvFile, os.LookupEnv)
+	if err != nil {
+		oktetoLog.Warning("no valid format used in the okteto env file: %s", err.Error())
+	}
+
+	for name, value := range envMap {
+		valueFromEnv := os.Getenv(name)
+		if valueFromEnv == "" {
+			os.Setenv(name, value)
+		}
+	}
+
+	return nil
 }
 
 func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesToBuild func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {

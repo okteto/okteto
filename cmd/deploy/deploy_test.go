@@ -716,7 +716,7 @@ func TestDeployExternals(t *testing.T) {
 							Notes: &externalresource.Notes{
 								Path: "/some/path",
 							},
-							Endpoints: []externalresource.ExternalEndpoint{},
+							Endpoints: []*externalresource.ExternalEndpoint{},
 						},
 					},
 				},
@@ -734,7 +734,7 @@ func TestDeployExternals(t *testing.T) {
 							Notes: &externalresource.Notes{
 								Path: "/some/path",
 							},
-							Endpoints: []externalresource.ExternalEndpoint{},
+							Endpoints: []*externalresource.ExternalEndpoint{},
 						},
 					},
 				},
