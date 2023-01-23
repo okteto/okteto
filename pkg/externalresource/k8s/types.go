@@ -22,6 +22,7 @@ type ExternalList struct {
 
 // ExternalResourceSpec represents the spec of a external resource. The information we store for each resource
 type ExternalResourceSpec struct {
+	Icon      string     `json:"icon"`
 	Name      string     `json:"name"`
 	Notes     *Notes     `json:"notes"`
 	Endpoints []Endpoint `json:"endpoints"`

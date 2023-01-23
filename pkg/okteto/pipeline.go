@@ -407,6 +407,12 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name, namespace
 				Status     graphql.String
 				DeployedBy graphql.String
 			}
+			Cronjobs []struct {
+				ID         graphql.String
+				Name       graphql.String
+				Status     graphql.String
+				DeployedBy graphql.String
+			}
 		} `graphql:"space(id: $id)"`
 	}
 	variables := map[string]interface{}{
@@ -440,8 +446,14 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name, namespace
 	}
 	for _, j := range queryStruct.Space.Jobs {
 		if string(j.DeployedBy) == name {
-			resourceName := getResourceFullName(job, string(j.Name))
+			resourceName := getResourceFullName(Job, string(j.Name))
 			status[resourceName] = string(j.Status)
+		}
+	}
+	for _, cj := range queryStruct.Space.Cronjobs {
+		if string(cj.DeployedBy) == name {
+			resourceName := getResourceFullName(CronJob, string(cj.Name))
+			status[resourceName] = string(cj.Status)
 		}
 	}
 	return status, nil
