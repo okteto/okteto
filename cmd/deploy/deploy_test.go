@@ -188,7 +188,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getManifestWithError,
-		GetDeployer: func(manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:      p,
 				Executor:   e,
@@ -231,7 +231,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	builder := test.NewFakeOktetoBuilder(registry)
 	c := &DeployCommand{
 		GetManifest: getErrorManifest,
-		GetDeployer: func(manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -307,7 +307,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -385,7 +385,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	clientProvider := test.NewFakeK8sProvider(cmap, deployment)
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -443,7 +443,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	clientProvider := test.NewFakeK8sProvider(deployment)
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:              p,
 				Executor:           e,
@@ -636,6 +636,7 @@ type fakeExternalControl struct {
 
 type fakeExternalControlProvider struct {
 	control ExternalResourceInterface
+	err     error
 }
 
 func (f *fakeExternalControl) Deploy(_ context.Context, _ string, _ string, _ *externalresource.ExternalResource) error {
@@ -646,8 +647,12 @@ func (f *fakeExternalControl) List(ctx context.Context, ns string, labelSelector
 	return f.externals, f.err
 }
 
+func (f *fakeExternalControl) Validate(_ context.Context, _ string, _ string, _ *externalresource.ExternalResource) error {
+	return f.err
+}
+
 func (f *fakeExternalControlProvider) getFakeExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
-	return f.control, nil
+	return f.control, f.err
 }
 
 func TestDeployExternals(t *testing.T) {
@@ -733,6 +738,110 @@ func TestDeployExternals(t *testing.T) {
 				assert.Error(t, ld.runDeploySection(ctx, tc.options))
 			} else {
 				assert.NoError(t, ld.runDeploySection(ctx, tc.options))
+			}
+		})
+	}
+}
+
+func TestValidateK8sResources(t *testing.T) {
+	ctx := context.Background()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+				IsOkteto:  true,
+			},
+		},
+		CurrentContext: "test",
+	}
+	testCases := []struct {
+		name        string
+		manifest    *model.Manifest
+		expectedErr bool
+		providedErr error
+		control     ExternalResourceInterface
+	}{
+		{
+			name: "no externals to validate",
+			manifest: &model.Manifest{
+				Deploy:   &model.DeployInfo{},
+				External: nil,
+			},
+			control: &fakeExternalControl{},
+		},
+		{
+			name: "error getting external control",
+			manifest: &model.Manifest{
+				Deploy: &model.DeployInfo{},
+				External: externalresource.ExternalResourceSection{
+					"test": &externalresource.ExternalResource{
+						Icon: "myIcon",
+						Notes: &externalresource.Notes{
+							Path: "/some/path",
+						},
+						Endpoints: []externalresource.ExternalEndpoint{},
+					},
+				},
+			},
+			control: &fakeExternalControl{
+				err: assert.AnError,
+			},
+			providedErr: assert.AnError,
+			expectedErr: true,
+		},
+		{
+			name: "error validating external control",
+			manifest: &model.Manifest{
+				Deploy: &model.DeployInfo{},
+				External: externalresource.ExternalResourceSection{
+					"test": &externalresource.ExternalResource{
+						Icon: "myIcon",
+						Notes: &externalresource.Notes{
+							Path: "/some/path",
+						},
+						Endpoints: []externalresource.ExternalEndpoint{},
+					},
+				},
+			},
+			control: &fakeExternalControl{
+				err: assert.AnError,
+			},
+			expectedErr: true,
+		},
+		{
+			name: "validated external control",
+			manifest: &model.Manifest{
+				Deploy: &model.DeployInfo{},
+				External: externalresource.ExternalResourceSection{
+					"test": &externalresource.ExternalResource{
+						Icon: "myIcon",
+						Notes: &externalresource.Notes{
+							Path: "/some/path",
+						},
+						Endpoints: []externalresource.ExternalEndpoint{},
+					},
+				},
+			},
+			control: &fakeExternalControl{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			cp := fakeExternalControlProvider{
+				control: tc.control,
+				err:     tc.providedErr,
+			}
+
+			dc := DeployCommand{
+				GetExternalControl: cp.getFakeExternalControl,
+			}
+
+			if tc.expectedErr {
+				assert.Error(t, dc.validateK8sResources(ctx, tc.manifest))
+			} else {
+				assert.NoError(t, dc.validateK8sResources(ctx, tc.manifest))
 			}
 		})
 	}

@@ -89,6 +89,7 @@ type DeployCommand struct {
 type ExternalResourceInterface interface {
 	Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
 	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
+	Validate(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
 }
 
 type deployerInterface interface {
@@ -300,6 +301,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
+	if err := dc.validateK8sResources(ctx, deployOptions.Manifest); err != nil {
+		return err
+	}
+
 	if err := dc.deployDependencies(ctx, deployOptions); err != nil {
 		if errStatus := dc.cfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
@@ -362,6 +367,27 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	return err
+}
+
+func (dc *DeployCommand) validateK8sResources(ctx context.Context, manifest *model.Manifest) error {
+	if manifest.External != nil {
+		// In a cluster not managed by Okteto it is not necessary to validate the externals
+		// because they will not be deployed.
+		if okteto.IsOkteto() {
+			control, err := dc.GetExternalControl(dc.K8sClientProvider, dc.TempKubeconfigFile)
+			if err != nil {
+				return err
+			}
+
+			for externalName, externalInfo := range manifest.External {
+				err := control.Validate(ctx, externalName, manifest.Namespace, externalInfo)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesToBuild func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {

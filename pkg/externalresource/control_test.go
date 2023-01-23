@@ -112,7 +112,7 @@ func TestDeploy(t *testing.T) {
 			name:        "external not found: create a new external resource",
 			expectedErr: false,
 			externalInfo: &ExternalResource{
-				Icon:      "",
+				Icon:      "default",
 				Notes:     &Notes{},
 				Endpoints: []ExternalEndpoint{},
 			},
@@ -124,6 +124,7 @@ func TestDeploy(t *testing.T) {
 						Namespace: namespace,
 					},
 					Spec: k8s.ExternalResourceSpec{
+						Icon: "default",
 						Endpoints: []k8s.Endpoint{
 							{
 								Url: "https://test.com",
@@ -137,7 +138,7 @@ func TestDeploy(t *testing.T) {
 			name:        "external found: update an old external resource",
 			expectedErr: false,
 			externalInfo: &ExternalResource{
-				Icon:      "",
+				Icon:      "default",
 				Notes:     &Notes{},
 				Endpoints: []ExternalEndpoint{},
 			},
@@ -149,6 +150,7 @@ func TestDeploy(t *testing.T) {
 						Namespace: namespace,
 					},
 					Spec: k8s.ExternalResourceSpec{
+						Icon: "default",
 						Endpoints: []k8s.Endpoint{
 							{
 								Url: "https://test.com",
@@ -285,6 +287,62 @@ func TestList(t *testing.T) {
 				assert.NoError(t, err)
 			}
 			assert.Len(t, result, tc.len)
+		})
+	}
+}
+
+func TestValidate(t *testing.T) {
+	ctx := context.Background()
+	namespace := "testns"
+	var tt = []struct {
+		name             string
+		expectedErr      bool
+		possibleErrs     errs
+		externalToDeploy string
+		externalInfo     *ExternalResource
+	}{
+		{
+			name:        "provider-error",
+			expectedErr: true,
+			possibleErrs: errs{
+				providerErr: assert.AnError,
+			},
+		},
+		{
+			name:        "validation-error",
+			expectedErr: true,
+			possibleErrs: errs{
+				createErr: assert.AnError,
+			},
+			externalInfo: &ExternalResource{
+				Icon:      "myicon",
+				Notes:     &Notes{},
+				Endpoints: []ExternalEndpoint{},
+			},
+		},
+		{
+			name: "valid external resource",
+			externalInfo: &ExternalResource{
+				Icon:      "myicon",
+				Notes:     &Notes{},
+				Endpoints: []ExternalEndpoint{},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := K8sControl{
+				ClientProvider: (&fakeClientProvider{
+					possibleErrs: tc.possibleErrs,
+				}).provide,
+				Cfg: nil,
+			}
+			if tc.expectedErr {
+				assert.Error(t, ctrl.Validate(ctx, tc.externalToDeploy, namespace, tc.externalInfo))
+			} else {
+				assert.NoError(t, ctrl.Validate(ctx, tc.externalToDeploy, namespace, tc.externalInfo))
+			}
 		})
 	}
 }

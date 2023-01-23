@@ -26,6 +26,8 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 		return fmt.Errorf("there must be at least one endpoint available for the external resource")
 	}
 
+	er.Icon = result.Icon
+
 	uniqueEndpointsNames := make(map[string]bool)
 	for _, entry := range result.Endpoints {
 		if _, isAdded := uniqueEndpointsNames[entry.Name]; isAdded {
@@ -34,8 +36,6 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 
 		uniqueEndpointsNames[entry.Name] = false
 	}
-
-	er.Icon = result.Icon
 
 	if result.Notes != "" {
 		er.Notes = &Notes{
