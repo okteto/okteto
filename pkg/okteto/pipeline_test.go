@@ -38,9 +38,15 @@ func Test_getResourceFullName(t *testing.T) {
 		},
 		{
 			name:    "job",
-			kindArg: job,
+			kindArg: Job,
 			nameArg: "name",
 			result:  "job/name",
+		},
+		{
+			name:    "cronjob",
+			kindArg: CronJob,
+			nameArg: "name",
+			result:  "cronjob/name",
 		},
 	}
 
