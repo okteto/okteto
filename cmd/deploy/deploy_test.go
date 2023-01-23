@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -299,6 +300,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		Executor:          e,
 		Kubeconfig:        &fakeKubeConfig{},
 		K8sClientProvider: test.NewFakeK8sProvider(),
+		Fs:                afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
 	opts := &Options{
