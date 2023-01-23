@@ -424,6 +424,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		Kubeconfig:         &fakeKubeConfig{},
 		K8sClientProvider:  test.NewFakeK8sProvider(deployment),
 		GetExternalControl: cp.getFakeExternalControl,
+		Fs:                 afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
 
@@ -486,6 +487,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		Kubeconfig:         &fakeKubeConfig{},
 		K8sClientProvider:  test.NewFakeK8sProvider(deployment),
 		GetExternalControl: cp.getFakeExternalControl,
+		Fs:                 afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -762,6 +764,7 @@ func TestDeployExternals(t *testing.T) {
 
 			dc := DeployCommand{
 				GetExternalControl: cp.getFakeExternalControl,
+				Fs:                 afero.NewMemMapFs(),
 			}
 
 			if tc.expectedErr {
