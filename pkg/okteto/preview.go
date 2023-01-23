@@ -292,6 +292,12 @@ func (c *previewClient) GetResourcesStatusFromPreview(ctx context.Context, previ
 				Status     graphql.String
 				DeployedBy graphql.String
 			}
+			Cronjobs []struct {
+				ID         graphql.String
+				Name       graphql.String
+				Status     graphql.String
+				DeployedBy graphql.String
+			}
 		} `graphql:"preview(id: $id)"`
 	}
 	variables := map[string]interface{}{
@@ -318,8 +324,14 @@ func (c *previewClient) GetResourcesStatusFromPreview(ctx context.Context, previ
 	}
 	for _, j := range queryStruct.Preview.Jobs {
 		if devName == "" || string(j.DeployedBy) == devName {
-			resourceName := getResourceFullName(job, string(j.Name))
+			resourceName := getResourceFullName(Job, string(j.Name))
 			status[resourceName] = string(j.Status)
+		}
+	}
+	for _, cj := range queryStruct.Preview.Cronjobs {
+		if devName == "" || string(cj.DeployedBy) == devName {
+			resourceName := getResourceFullName(CronJob, string(cj.Name))
+			status[resourceName] = string(cj.Status)
 		}
 	}
 	return status, nil
