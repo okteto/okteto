@@ -807,7 +807,7 @@ func TestValidateK8sResources(t *testing.T) {
 						Notes: &externalresource.Notes{
 							Path: "/some/path",
 						},
-						Endpoints: []externalresource.ExternalEndpoint{},
+						Endpoints: []*externalresource.ExternalEndpoint{},
 					},
 				},
 			},
@@ -827,7 +827,7 @@ func TestValidateK8sResources(t *testing.T) {
 						Notes: &externalresource.Notes{
 							Path: "/some/path",
 						},
-						Endpoints: []externalresource.ExternalEndpoint{},
+						Endpoints: []*externalresource.ExternalEndpoint{},
 					},
 				},
 			},
@@ -846,7 +846,7 @@ func TestValidateK8sResources(t *testing.T) {
 						Notes: &externalresource.Notes{
 							Path: "/some/path",
 						},
-						Endpoints: []externalresource.ExternalEndpoint{},
+						Endpoints: []*externalresource.ExternalEndpoint{},
 					},
 				},
 			},

@@ -143,7 +143,7 @@ func translateK8sToExternal(er k8s.External) ExternalResource {
 		}
 	}
 
-	endpoints := []*ExternalEndpoint{}
+	var endpoints []*ExternalEndpoint
 	for _, ep := range er.Spec.Endpoints {
 		endpoints = append(endpoints, translateK8sToEndpoint(ep))
 	}
