@@ -692,7 +692,7 @@ func (dc *DeployCommand) createTempOktetoEnvFile() (afero.File, error) {
 	return oktetoEnvFile, nil
 }
 
-func (dc *DeployCommand) updateEnvironWithOktetoEnvFile(oktetoEnvFile afero.File) error {
+func (*DeployCommand) updateEnvironWithOktetoEnvFile(oktetoEnvFile afero.File) error {
 	envMap, err := godotenv.ParseWithLookup(oktetoEnvFile, os.LookupEnv)
 	if err != nil {
 		oktetoLog.Warning("no valid format used in the okteto env file: %s", err.Error())
