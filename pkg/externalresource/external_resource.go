@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/spf13/afero"
 )
 
@@ -42,16 +43,6 @@ type ERFilesystemManager struct {
 	Fs               afero.Fs
 }
 
-// SetDefaults creates the necessary environment variables given an external resource
-func (er *ExternalResource) SetDefaults(externalName string) {
-	sanitizedExternalName := sanitizeForEnv(externalName)
-	for _, endpoint := range er.Endpoints {
-		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
-		endpointUrlEnv := fmt.Sprintf(urlEnvFormat, sanitizedExternalName, sanitizedEndpointName)
-		os.Setenv(endpointUrlEnv, endpoint.Url)
-	}
-}
-
 func sanitizeForEnv(name string) string {
 	whithoutSpaces := strings.ReplaceAll(name, " ", "_")
 	return strings.ToUpper(strings.ReplaceAll(whithoutSpaces, "-", "_"))
@@ -71,5 +62,24 @@ func (ef *ERFilesystemManager) LoadMarkdownContent(manifestPath string) error {
 	}
 
 	ef.ExternalResource.Notes.Markdown = b64.StdEncoding.EncodeToString([]byte(string(b)))
+	return nil
+}
+
+func (er *ExternalResource) SetURLUsingEnvironFile(name string) error {
+	for _, endpoint := range er.Endpoints {
+		urlEnvKey := fmt.Sprintf(urlEnvFormat, sanitizeForEnv(name), sanitizeForEnv(endpoint.Name))
+		urlValue := os.Getenv(urlEnvKey)
+		if urlValue != "" {
+			if endpoint.Url != "" {
+				oktetoLog.Warning("the value of the URL '%s' for the external resource '%s' will be overwritten.", endpoint.Name, name)
+			}
+			endpoint.Url = urlValue
+		}
+
+		if endpoint.Url == "" {
+			return fmt.Errorf("no value associated to the url '%s' of the external resource '%s'.", endpoint.Name, name)
+		}
+	}
+
 	return nil
 }

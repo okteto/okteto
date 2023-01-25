@@ -593,8 +593,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 		Fs: afero.NewOsFs(),
 	}
 
-	for name, external := range manifest.External {
-		external.SetDefaults(name)
+	for _, external := range manifest.External {
 		ef.ExternalResource = *external
 		ef.LoadMarkdownContent(devPath)
 	}

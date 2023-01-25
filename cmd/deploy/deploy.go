@@ -113,7 +113,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy [service...]",
 		Short: "Execute locally the list of commands specified in the 'deploy' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
 				return fmt.Errorf("'dependencies' is only supported in clusters that have Okteto installed")
@@ -656,6 +655,10 @@ func (dc *DeployCommand) deployExternals(ctx context.Context, opts *Options) err
 		oktetoLog.Spinner(fmt.Sprintf("Deploying external resource '%s'...", externalName))
 		oktetoLog.StartSpinner()
 		defer oktetoLog.StopSpinner()
+		if err := externalInfo.SetURLUsingEnvironFile(externalName); err != nil {
+			return err
+		}
+
 		err := control.Deploy(ctx, externalName, opts.Manifest.Namespace, externalInfo)
 		if err != nil {
 			return err
@@ -683,12 +686,13 @@ func (dc *DeployCommand) createTempOktetoEnvFile() (afero.File, error) {
 		return nil, err
 	}
 
-	oktetoEnvFile, err := dc.Fs.Create(fmt.Sprintf("%s/.env", oktetoEnvFileDir))
+	oktetoEnvFile, err := dc.Fs.Create(fmt.Sprintf(filepath.Join(oktetoEnvFileDir, ".env")))
 	if err != nil {
 		return nil, err
 	}
 
 	os.Setenv(constants.OktetoEnvFile, oktetoEnvFile.Name())
+	oktetoLog.Debug("using %s as env file for deploy command", oktetoEnvFile.Name())
 	return oktetoEnvFile, nil
 }
 
@@ -699,10 +703,7 @@ func (*DeployCommand) updateEnvironWithOktetoEnvFile(oktetoEnvFile afero.File) e
 	}
 
 	for name, value := range envMap {
-		valueFromEnv := os.Getenv(name)
-		if valueFromEnv == "" {
-			os.Setenv(name, value)
-		}
+		os.Setenv(name, value)
 	}
 
 	return nil

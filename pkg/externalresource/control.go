@@ -3,7 +3,6 @@ package externalresource
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -22,17 +21,13 @@ type K8sControl struct {
 	Cfg            *rest.Config
 }
 
-func (c *K8sControl) Deploy(ctx context.Context, name, ns string, externalInfo *ExternalResource) error {
-	if err := setValuesFromOktetoEnvFile(name, externalInfo.Endpoints); err != nil {
-		return err
-	}
-
+func (c *K8sControl) Deploy(ctx context.Context, name, ns string, er *ExternalResource) error {
 	k8sclient, err := c.ClientProvider(c.Cfg)
 	if err != nil {
 		return fmt.Errorf("error creating external CRD client: %s", err.Error())
 	}
 
-	externalResourceCRD := translate(name, externalInfo)
+	externalResourceCRD := translate(name, er)
 
 	old, err := k8sclient.ExternalResources(ns).Get(ctx, externalResourceCRD.Name, metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
@@ -158,23 +153,4 @@ func translateK8sToEndpoint(k8sEndpoint k8s.Endpoint) *ExternalEndpoint {
 		Name: k8sEndpoint.Name,
 		Url:  k8sEndpoint.Url,
 	}
-}
-
-func setValuesFromOktetoEnvFile(name string, endpoints []*ExternalEndpoint) error {
-	for _, endpoint := range endpoints {
-		urlEnvKey := fmt.Sprintf(urlEnvFormat, sanitizeForEnv(name), sanitizeForEnv(endpoint.Name))
-		urlValue := os.Getenv(urlEnvKey)
-		if urlValue != "" {
-			if endpoint.Url != "" {
-				oktetoLog.Warning("the value of the URL '%s' for the external resource '%s' will be overwritten.", endpoint.Name, name)
-			}
-			endpoint.Url = urlValue
-		}
-
-		if endpoint.Url == "" {
-			return fmt.Errorf("no value associated to the url '%s' of the external resource '%s'.", endpoint.Name, name)
-		}
-	}
-
-	return nil
 }
