@@ -686,7 +686,7 @@ func (dc *DeployCommand) createTempOktetoEnvFile() (afero.File, error) {
 		return nil, err
 	}
 
-	oktetoEnvFile, err := dc.Fs.Create(fmt.Sprintf(filepath.Join(oktetoEnvFileDir, ".env")))
+	oktetoEnvFile, err := dc.Fs.Create(filepath.Join(oktetoEnvFileDir, ".env"))
 	if err != nil {
 		return nil, err
 	}
