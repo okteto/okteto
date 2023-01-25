@@ -44,6 +44,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -349,6 +350,22 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
 		return updateConfigMapStatusError(ctx, cfg, c, data, err)
+	}
+
+	// Not sure of the value for the `deployed-by` label
+	pods, err := c.CoreV1().Pods(okteto.Context().Namespace).List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", model.DeployedByLabel, deployOptions.Name)})
+	if err != nil {
+		//return err
+		oktetoLog.Infof("could not list pods %s", err)
+	}
+	for _, pod := range pods.Items {
+		if pod.Status.Phase == "Failed" {
+			err := c.CoreV1().Pods(okteto.Context().Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+			if err != nil {
+				//return err
+				oktetoLog.Infof("could not delete pod %s", err)
+			}
+		}
 	}
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deploying '%s'...", deployOptions.Name)
