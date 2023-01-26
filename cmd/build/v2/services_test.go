@@ -235,3 +235,72 @@ func TestGetToBuildTags(t *testing.T) {
 		})
 	}
 }
+
+func TestGetDigestFromService(t *testing.T) {
+	fakeReg := test.NewFakeOktetoRegistry(nil)
+
+	tests := []struct {
+		name           string
+		manifest       *model.Manifest
+		isOkteto       bool
+		expectedErr    bool
+		expectedDigest bool
+	}{
+		{
+			name: "image is set not okteto cluster",
+			manifest: &model.Manifest{
+				Build: model.ManifestBuild{
+					"test": {
+						Dockerfile: "Dockerfile",
+						Context:    ".",
+					},
+				},
+			},
+			isOkteto:       false,
+			expectedErr:    true,
+			expectedDigest: false,
+		},
+		{
+			name: "image not in registry",
+			manifest: &model.Manifest{
+				Build: model.ManifestBuild{
+					"test": {
+						Dockerfile: "Dockerfile",
+						Context:    ".",
+					},
+				},
+			},
+			isOkteto:       true,
+			expectedErr:    false,
+			expectedDigest: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			okteto.CurrentStore = &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						Namespace: "test",
+						IsOkteto:  tt.isOkteto,
+						Registry:  "https://registry.test",
+					},
+				},
+				CurrentContext: "test",
+			}
+
+			bc := NewBuilder(nil, fakeReg)
+			digest, err := bc.getDigestFromService("test", tt.manifest)
+			if tt.expectedErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			if tt.expectedDigest {
+				assert.NotEmpty(t, digest)
+			} else {
+				assert.Empty(t, digest)
+			}
+
+		})
+	}
+}

@@ -43,7 +43,25 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 
 		svc := service
 		g.Go(func() error {
-			return bc.checkServicesToBuild(svc, manifest, toBuild)
+			digest, err := bc.getDigestFromService(svc, manifest)
+			if err != nil {
+				return err
+			}
+			if digest == "" {
+				toBuild <- svc
+				return nil
+			}
+			oktetoLog.Debug("Skipping build for image for service")
+
+			bc.SetServiceEnvVars(svc, digest)
+
+			if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
+				stack := manifest.Deploy.ComposeSection.Stack
+				if svcInfo, ok := stack.Services[svc]; ok && svcInfo.Image == "" {
+					stack.Services[svc].Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(svc, "-", "_")))
+				}
+			}
+			return nil
 		})
 	}
 
@@ -74,28 +92,27 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	return svcsToBuildList, nil
 }
 
-func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
+func (bc *OktetoBuilder) getDigestFromService(service string, manifest *model.Manifest) (string, error) {
 	buildInfo := manifest.Build[service].Copy()
-	isStack := manifest.Type == model.StackType
-	if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
-		buildInfo.Image = ""
-	}
-	tag := getToBuildTag(manifest.Name, service, buildInfo)
-	if tag == "" {
-		return fmt.Errorf("error getting the image name for the service '%s'. Please specify the full name of the image when using a cluster that doesn't have Okteto installed", service)
+
+	tags := getToBuildTags(manifest.Name, service, buildInfo)
+	if len(tags) == 0 {
+		return "", fmt.Errorf("error getting the image name for the service '%s'. Please specify the full name of the image when using a cluster that doesn't have Okteto installed", service)
 	}
 
-	imageWithDigest, err := bc.Registry.GetImageTagWithDigest(tag)
-	if oktetoErrors.IsNotFound(err) {
-		oktetoLog.Debug("image not found, building image")
-		ch <- service
-		return nil
-	} else if err != nil {
-		return fmt.Errorf("error checking image at registry %s: %v", tag, err)
+	for _, tag := range tags {
+		imageWithDigest, err := bc.Registry.GetImageTagWithDigest(tag)
+		if oktetoErrors.IsNotFound(err) {
+			oktetoLog.Debugf("image not found for tag %s, building image", tag)
+			continue
+		} else if err != nil {
+			return "", fmt.Errorf("error checking image at registry %s: %w", tag, err)
+		}
+		return imageWithDigest, nil
 	}
-	oktetoLog.Debug("Skipping build for image for service")
 
-	bc.SetServiceEnvVars(service, imageWithDigest)
+	return "", nil
+}
 
 func getToBuildTags(manifestName, svcName string, b *model.BuildInfo) []string {
 	if !okteto.IsOkteto() {
