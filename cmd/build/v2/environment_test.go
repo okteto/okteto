@@ -116,6 +116,7 @@ func TestExpandStackVariables(t *testing.T) {
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
+				Registry:  "https://registry.okteto.com",
 			},
 		},
 		CurrentContext: "test",

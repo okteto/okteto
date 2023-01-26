@@ -247,7 +247,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	if okteto.Context().IsOkteto && b.Image == "" {
+	if okteto.Context().IsOkteto && !registry.IsOktetoRegistry(b.Image) {
 		// if flag --global, point to global registry
 		targetRegistry := okteto.DevRegistry
 		if o != nil && o.BuildToGlobal {

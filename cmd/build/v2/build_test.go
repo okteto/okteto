@@ -115,6 +115,7 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
+				Registry:  "https://registry.okteto.com",
 			},
 		},
 		CurrentContext: "test",
@@ -157,6 +158,7 @@ func TestTwoStepsBuild(t *testing.T) {
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
+				Registry:  "https://registry.okteto.com",
 			},
 		},
 		CurrentContext: "test",
@@ -205,6 +207,7 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
+				Registry:  "https://registry.okteto.com",
 			},
 		},
 		CurrentContext: "test",
@@ -244,6 +247,7 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
+				Registry:  "https://registry.okteto.com",
 			},
 		},
 		CurrentContext: "test",
@@ -270,7 +274,7 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 	// error from the build
 	assert.NoError(t, err)
 	// assert that the name of the image is the dev one
-	assert.Equal(t, "okteto/test", image)
+	assert.Equal(t, "okteto.dev/test-test:okteto", image)
 	// the image is at the fake registry
 	image, err = bc.Registry.GetImageTagWithDigest(image)
 	assert.NoError(t, err)
@@ -284,7 +288,7 @@ func TestBuildWithStack(t *testing.T) {
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
-				Registry:  "my-registry",
+				Registry:  "https://registry.okteto.com",
 			},
 		},
 		CurrentContext: "test",
@@ -355,14 +359,14 @@ func TestBuildWithDependsOn(t *testing.T) {
 			"test": {
 				Namespace: "test",
 				IsOkteto:  true,
-				Registry:  "my-registry",
+				Registry:  "https://registry.okteto.com",
 			},
 		},
 		CurrentContext: "test",
 	}
 
-	firstImage := "okteto/a:test"
-	secondImage := "okteto/b:test"
+	firstImage := "okteto.dev/a:okteto"
+	secondImage := "okteto.dev/b:okteto"
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 

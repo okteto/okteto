@@ -255,6 +255,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 					"test": {
 						Namespace: "test",
 						IsOkteto:  tt.isOkteto,
+						Registry:  "https://registry.okteto.com",
 					},
 				},
 				CurrentContext: "test",
