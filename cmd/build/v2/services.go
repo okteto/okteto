@@ -97,32 +97,34 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 
 	bc.SetServiceEnvVars(service, imageWithDigest)
 
-	if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
-		stack := manifest.Deploy.ComposeSection.Stack
-		if svc, ok := stack.Services[service]; ok && svc.Image == "" {
-			stack.Services[service].Image = fmt.Sprintf("${OKTETO_BUILD_%s_IMAGE}", strings.ToUpper(strings.ReplaceAll(service, "-", "_")))
+func getToBuildTags(manifestName, svcName string, b *model.BuildInfo) []string {
+	if !okteto.IsOkteto() {
+		if b.Image != "" {
+			return []string{b.Image}
 		}
+		return []string{}
 	}
-	return nil
-}
 
-func getToBuildTag(manifestName, svcName string, b *model.BuildInfo) string {
-	targetRegistry := okteto.DevRegistry
+	if registry.IsOktetoRegistry(b.Image) {
+		return []string{b.Image}
+	}
+
+	possibleTags := []string{}
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	switch {
-	case !okteto.IsOkteto():
-		return b.Image
-	case (shouldBuildFromDockerfile(b) && shouldAddVolumeMounts(b)) || shouldAddVolumeMounts(b):
-		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
-	case b.Image != "" && shouldBuildFromDockerfile(b):
-		return b.Image
-	case shouldBuildFromDockerfile(b):
-		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
-	case b.Image != "":
-		return b.Image
-	default:
-		oktetoLog.Infof("could not build service %s, due to not having Dockerfile defined or volumes to include", svcName)
+
+	targetRegistries := []string{okteto.DevRegistry, okteto.GlobalRegistry}
+	for _, targetRegistry := range targetRegistries {
+		if shouldAddVolumeMounts(b) {
+			possibleTags = append(possibleTags, fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes))
+			continue
+		}
+		if shouldBuildFromDockerfile(b) {
+			possibleTags = append(possibleTags, fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag))
+		}
 	}
-	return ""
+	if b.Image != "" && !shouldAddVolumeMounts(b) {
+		possibleTags = append(possibleTags, b.Image)
+	}
+	return possibleTags
 }

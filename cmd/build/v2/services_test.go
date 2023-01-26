@@ -130,29 +130,31 @@ func TestNoServiceBuiltWithSubset(t *testing.T) {
 	assert.Equal(t, 0, len(toBuild))
 }
 
-func TestGetToBuildTag(t *testing.T) {
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
+func TestGetToBuildTags(t *testing.T) {
 	tests := []struct {
 		name         string
 		buildInfo    *model.BuildInfo
 		manifestName string
 		svcName      string
-		output       string
+		isOkteto     bool
+		output       []string
 	}{
 		{
-			name: "image is set",
+			name: "image is set not okteto cluster",
 			buildInfo: &model.BuildInfo{
 				Image: "nginx",
 			},
-			output: "nginx",
+			isOkteto: false,
+			output:   []string{"nginx"},
+		},
+		{
+			name: "image is set not okteto cluster",
+			buildInfo: &model.BuildInfo{
+				Dockerfile: "Dockerfile",
+				Context:    ".",
+			},
+			isOkteto: false,
+			output:   []string{},
 		},
 		{
 			name: "image inferred without volume mounts",
@@ -160,9 +162,13 @@ func TestGetToBuildTag(t *testing.T) {
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
+			isOkteto:     true,
 			manifestName: "test",
 			svcName:      "test",
-			output:       "okteto.dev/test-test:okteto",
+			output: []string{
+				"okteto.dev/test-test:okteto",
+				"okteto.global/test-test:okteto",
+			},
 		},
 		{
 			name: "image inferred with volume mounts",
@@ -175,9 +181,13 @@ func TestGetToBuildTag(t *testing.T) {
 					},
 				},
 			},
+			isOkteto:     true,
 			manifestName: "test",
 			svcName:      "test",
-			output:       "okteto.dev/test-test:okteto-with-volume-mounts",
+			output: []string{
+				"okteto.dev/test-test:okteto-with-volume-mounts",
+				"okteto.global/test-test:okteto-with-volume-mounts",
+			},
 		},
 		{
 			name: "image is set without volume mounts",
@@ -186,14 +196,41 @@ func TestGetToBuildTag(t *testing.T) {
 				Context:    ".",
 				Image:      "okteto.dev/test:test",
 			},
+			isOkteto:     true,
 			manifestName: "test",
 			svcName:      "test",
-			output:       "okteto.dev/test:test",
+			output:       []string{"okteto.dev/test:test"},
+		},
+		{
+			name: "image is set without volume mounts",
+			buildInfo: &model.BuildInfo{
+				Dockerfile: "Dockerfile",
+				Context:    ".",
+				Image:      "test/test:test",
+			},
+			isOkteto:     true,
+			manifestName: "test",
+			svcName:      "test",
+			output: []string{
+				"okteto.dev/test-test:okteto",
+				"okteto.global/test-test:okteto",
+				"test/test:test",
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := getToBuildTag(tt.manifestName, tt.svcName, tt.buildInfo)
+			okteto.CurrentStore = &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						Namespace: "test",
+						IsOkteto:  tt.isOkteto,
+						Registry:  "https://registry.test",
+					},
+				},
+				CurrentContext: "test",
+			}
+			result := getToBuildTags(tt.manifestName, tt.svcName, tt.buildInfo)
 			assert.Equal(t, tt.output, result)
 		})
 	}
