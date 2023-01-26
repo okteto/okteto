@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/rancher/wrangler/pkg/ratelimit"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
@@ -90,6 +89,16 @@ type Trip struct {
 	sem        *semaphore.Weighted
 	writeLock  sync.Mutex
 }
+
+// noneRateLimiter noop rate limiter to avoid rate limiting errors on k8s client.
+// We created this to avoid to depend on github.com/rancher/rancher dependency as this is the only place where it was used.
+type noneRateLimiter struct{}
+
+func (*noneRateLimiter) TryAccept() bool              { return true }
+func (*noneRateLimiter) Stop()                        {}
+func (*noneRateLimiter) Accept()                      {}
+func (*noneRateLimiter) QPS() float32                 { return 1 }
+func (*noneRateLimiter) Wait(_ context.Context) error { return nil }
 
 // NewNamespace allows to create a new Namespace object
 func NewNamespace(dynClient dynamic.Interface, discClient discovery.DiscoveryInterface, restConfig *rest.Config, k8s kubernetes.Interface) *Namespaces {
@@ -237,7 +246,7 @@ func NewTrip(restConfig *rest.Config, opts *Options) (*Trip, error) {
 	}
 
 	if restConfig.RateLimiter == nil {
-		restConfig.RateLimiter = ratelimit.None
+		restConfig.RateLimiter = &noneRateLimiter{}
 	}
 
 	k8s, err := kubernetes.NewForConfig(restConfig)
