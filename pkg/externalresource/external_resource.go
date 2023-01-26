@@ -48,6 +48,16 @@ func sanitizeForEnv(name string) string {
 	return strings.ToUpper(strings.ReplaceAll(whithoutSpaces, "-", "_"))
 }
 
+// SetDefaults creates the necessary environment variables given an external resource
+func (er *ExternalResource) SetDefaults(externalName string) {
+	sanitizedExternalName := sanitizeForEnv(externalName)
+	for _, endpoint := range er.Endpoints {
+		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
+		endpointUrlEnv := fmt.Sprintf(urlEnvFormat, sanitizedExternalName, sanitizedEndpointName)
+		os.Setenv(endpointUrlEnv, endpoint.Url)
+	}
+}
+
 // LoadMarkdownContent loads and store markdown content related to external resource
 func (ef *ERFilesystemManager) LoadMarkdownContent(manifestPath string) error {
 
@@ -65,13 +75,14 @@ func (ef *ERFilesystemManager) LoadMarkdownContent(manifestPath string) error {
 	return nil
 }
 
-func (er *ExternalResource) SetURLUsingEnvironFile(name string) error {
+func (er *ExternalResource) SetURLUsingEnvironFile(name string, dynamicEnvs map[string]string) error {
 	for _, endpoint := range er.Endpoints {
 		urlEnvKey := fmt.Sprintf(urlEnvFormat, sanitizeForEnv(name), sanitizeForEnv(endpoint.Name))
-		urlValue := os.Getenv(urlEnvKey)
+		urlValue := dynamicEnvs[urlEnvKey]
 		if urlValue != "" {
 			if endpoint.Url != "" {
-				oktetoLog.Warning("the value of the URL '%s' for the external resource '%s' will be overwritten.", endpoint.Name, name)
+				oktetoLog.Warning(`the original value of the URL belonging to the endpoint '%s' of the `+
+					`external resource '%s' will be overwritten by the one declared in the deploy section.`, endpoint.Name, name)
 			}
 			endpoint.Url = urlValue
 		}

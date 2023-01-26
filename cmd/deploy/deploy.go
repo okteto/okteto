@@ -504,18 +504,32 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		}
 	}()
 
+	var envMapFromOktetoEnvFile map[string]string
 	// deploy commands if any
 	for _, command := range opts.Manifest.Deploy.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
 		oktetoLog.SetStage(command.Name)
+
 		if err := dc.Executor.Execute(command, opts.Variables); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
 
-		if err := dc.updateEnvironWithOktetoEnvFile(oktetoEnvFile); err != nil {
-			return err
+		envMapFromOktetoEnvFile, err = godotenv.Read(oktetoEnvFile.Name())
+		if err != nil {
+			oktetoLog.Warning("no valid format used in the okteto env file: %s", err.Error())
 		}
+
+		envsFromOktetoEnvFile := make([]string, 0, len(envMapFromOktetoEnvFile))
+		for k, v := range envMapFromOktetoEnvFile {
+			envsFromOktetoEnvFile = append(envsFromOktetoEnvFile, fmt.Sprintf("%s=%s", k, v))
+		}
+
+		// the variables in the $OKTETO_ENV file are added as environment variables
+		// to the executor. If there is already a previously set value for that
+		// variable, the executor will use in next command the last one added which
+		// corresponds to those coming from $OKTETO_ENV.
+		opts.Variables = append(opts.Variables, envsFromOktetoEnvFile...)
 
 		oktetoLog.SetStage("")
 	}
@@ -558,7 +572,8 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 			oktetoLog.Warning("external resources cannot be deployed on a cluster not managed by okteto")
 			return nil
 		}
-		if err := dc.deployExternals(ctx, opts); err != nil {
+
+		if err := dc.deployExternals(ctx, opts, envMapFromOktetoEnvFile); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying external resources: %s", err.Error())
 			return err
 		}
@@ -645,7 +660,7 @@ func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) err
 	return nil
 }
 
-func (dc *DeployCommand) deployExternals(ctx context.Context, opts *Options) error {
+func (dc *DeployCommand) deployExternals(ctx context.Context, opts *Options, dynamicEnvs map[string]string) error {
 	control, err := dc.GetExternalControl(dc.K8sClientProvider, dc.TempKubeconfigFile)
 	if err != nil {
 		return err
@@ -655,7 +670,7 @@ func (dc *DeployCommand) deployExternals(ctx context.Context, opts *Options) err
 		oktetoLog.Spinner(fmt.Sprintf("Deploying external resource '%s'...", externalName))
 		oktetoLog.StartSpinner()
 		defer oktetoLog.StopSpinner()
-		if err := externalInfo.SetURLUsingEnvironFile(externalName); err != nil {
+		if err := externalInfo.SetURLUsingEnvironFile(externalName, dynamicEnvs); err != nil {
 			return err
 		}
 
@@ -694,19 +709,6 @@ func (dc *DeployCommand) createTempOktetoEnvFile() (afero.File, error) {
 	os.Setenv(constants.OktetoEnvFile, oktetoEnvFile.Name())
 	oktetoLog.Debug("using %s as env file for deploy command", oktetoEnvFile.Name())
 	return oktetoEnvFile, nil
-}
-
-func (*DeployCommand) updateEnvironWithOktetoEnvFile(oktetoEnvFile afero.File) error {
-	envMap, err := godotenv.ParseWithLookup(oktetoEnvFile, os.LookupEnv)
-	if err != nil {
-		oktetoLog.Warning("no valid format used in the okteto env file: %s", err.Error())
-	}
-
-	for name, value := range envMap {
-		os.Setenv(name, value)
-	}
-
-	return nil
 }
 
 func (dc *DeployCommand) validateK8sResources(ctx context.Context, manifest *model.Manifest) error {

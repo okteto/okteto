@@ -18,6 +18,36 @@ func reset(name string, er *ExternalResource) {
 	}
 }
 
+func TestExternalResource_SetDefaults(t *testing.T) {
+	externalResourceName := "myExternalApp"
+	externalResource := ExternalResource{
+		Icon: "myIcon",
+		Notes: &Notes{
+			Path:     "/some/path",
+			Markdown: "",
+		},
+		Endpoints: []*ExternalEndpoint{
+			{
+				Name: "endpoint1",
+				Url:  "/some/url/endpoint1",
+			},
+			{
+				Name: "endpoint2",
+				Url:  "/some/url/endpoint2",
+			},
+		},
+	}
+
+	defer reset(externalResourceName, &externalResource)
+	externalResource.SetDefaults(externalResourceName)
+
+	sanitizedExternalName := sanitizeForEnv(externalResourceName)
+	for _, endpoint := range externalResource.Endpoints {
+		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
+		assert.Equal(t, endpoint.Url, os.Getenv(fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)))
+	}
+}
+
 func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 	manifestPath := "/test/okteto.yml"
 	markdownContent := "## Markdown content"
@@ -110,7 +140,7 @@ func TestExternalResource_SetURLUsingEnvironFile(t *testing.T) {
 		name                     string
 		externalResource         *ExternalResource
 		expectedExternalResource *ExternalResource
-		envsToSet                []string
+		envsToSet                map[string]string
 		expectedErr              error
 	}{
 		{
@@ -141,8 +171,8 @@ func TestExternalResource_SetURLUsingEnvironFile(t *testing.T) {
 					},
 				},
 			},
-			envsToSet: []string{
-				"OKTETO_EXTERNAL_TEST_ENDPOINTS_ENDPOINT1_URL",
+			envsToSet: map[string]string{
+				"OKTETO_EXTERNAL_TEST_ENDPOINTS_ENDPOINT1_URL": newURLvalue,
 			},
 		},
 		{
@@ -190,20 +220,15 @@ func TestExternalResource_SetURLUsingEnvironFile(t *testing.T) {
 					},
 				},
 			},
-			envsToSet: []string{
-				"OKTETO_EXTERNAL_TEST_ENDPOINTS_ENDPOINT1_URL",
+			envsToSet: map[string]string{
+				"OKTETO_EXTERNAL_TEST_ENDPOINTS_ENDPOINT1_URL": newURLvalue,
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			for _, env := range tt.envsToSet {
-				os.Setenv(env, newURLvalue)
-			}
-
-			defer reset(externalResourceName, tt.externalResource)
-			err := tt.externalResource.SetURLUsingEnvironFile(externalResourceName)
+			err := tt.externalResource.SetURLUsingEnvironFile(externalResourceName, tt.envsToSet)
 			if tt.expectedErr != nil {
 				assert.Error(t, err)
 			}
