@@ -85,6 +85,31 @@ func Test_createContext(t *testing.T) {
 				CurrentContext: "https://okteto.cloud.com",
 			},
 			ctxOptions: &ContextOptions{
+				IsOkteto:      true,
+				Save:          true,
+				Context:       "https://okteto.cloud.com",
+				Namespace:     "not-found",
+				FromNamespace: true,
+			},
+			user: &types.User{
+				Token: "test",
+			},
+			kubeconfigCtx: test.KubeconfigFields{
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: "",
+			},
+			expectedErr: true,
+		},
+		{
+			name: "change to personal namespace if namespace is not found",
+			ctxStore: &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"https://okteto.cloud.com": {},
+				},
+				CurrentContext: "https://okteto.cloud.com",
+			},
+			ctxOptions: &ContextOptions{
 				IsOkteto:  true,
 				Save:      true,
 				Context:   "https://okteto.cloud.com",
@@ -98,7 +123,7 @@ func Test_createContext(t *testing.T) {
 				Namespace:      []string{"test"},
 				CurrentContext: "",
 			},
-			expectedErr: true,
+			expectedErr: false,
 		},
 		{
 			name: "transform k8s to url and create okteto context -> namespace with label",
@@ -368,6 +393,8 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 }
 
 func TestCheckAccessToNamespace(t *testing.T) {
+    t.Parallel()
+
 	ctx := context.Background()
 	user := &types.User{
 		Token: "test",

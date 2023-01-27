@@ -84,11 +84,12 @@ func (nc *NamespaceCommand) Use(ctx context.Context, namespace string) error {
 	return nc.ctxCmd.Run(
 		ctx,
 		&contextCMD.ContextOptions{
-			Context:      okteto.Context().Name,
-			Namespace:    namespace,
-			Save:         true,
-			Show:         false,
-			IsCtxCommand: true,
+			Context:       okteto.Context().Name,
+			Namespace:     namespace,
+			Save:          true,
+			Show:          false,
+			IsCtxCommand:  true,
+			FromNamespace: true,
 		},
 	)
 

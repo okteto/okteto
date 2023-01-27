@@ -172,8 +172,19 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 			return err
 		}
 
-		if !hasAccess {
-			return oktetoErrors.UserError{E: fmt.Errorf("namespace '%s' not found on context '%s'", ctxOptions.Namespace, ctxOptions.Context),
+		// if using a new context, our cached namespace may have been removed
+		// so swap over to the personal namespace instead of erroring
+		if !hasAccess && !ctxOptions.FromNamespace {
+			oktetoLog.Success(
+				"No access to namespace '%s' switching to personal namespace '%s'",
+				ctxOptions.Namespace,
+				okteto.Context().PersonalNamespace,
+			)
+			currentCtx := ctxStore.Contexts[ctxOptions.Context]
+            currentCtx.Namespace = currentCtx.PersonalNamespace
+		} else if !hasAccess {
+			return oktetoErrors.UserError{
+				E:    fmt.Errorf("namespace '%s' not found on context '%s'", ctxOptions.Namespace, ctxOptions.Context),
 				Hint: "Please verify that the namespace exists and that you have access to it.",
 			}
 		}
