@@ -26,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/statefulsets"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -45,9 +44,7 @@ var (
 
 func Test_translateWithVolumes(t *testing.T) {
 	file, err := os.CreateTemp("", "okteto-secret-test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer os.Remove(file.Name())
 
 	var runAsUser int64 = 100
@@ -109,9 +106,7 @@ services:
        - worker:/src`, file.Name()))
 
 	manifest1, err := model.Read(manifest)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	dev1 := manifest1.Dev["web"]
 
@@ -130,9 +125,7 @@ services:
 		App:     NewDeploymentApp(d1),
 		Rules:   []*model.TranslationRule{rule1},
 	}
-	if err := tr1.translate(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, tr1.translate())
 	dDevPod1OK := apiv1.PodSpec{
 		NodeSelector: map[string]string{
 			"disktype": "ssd",
@@ -446,8 +439,7 @@ services:
 		t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
 	}
 
-	err = tr1.DevModeOff()
-	require.NoError(t, err)
+	require.NoError(t, tr1.DevModeOff())
 
 	if _, ok := tr1.App.ObjectMeta().Labels[constants.DevLabel]; ok {
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
@@ -472,13 +464,9 @@ services:
 	ctx := context.Background()
 
 	c := fake.NewSimpleClientset(d2)
-	if err := loadServiceTranslations(ctx, dev1, false, translationRules, c); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, loadServiceTranslations(ctx, dev1, false, translationRules, c))
 	tr2 := translationRules[dev2.Name]
-	if err := tr2.translate(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, tr2.translate())
 	d2DevPodOK := apiv1.PodSpec{
 		Affinity: &apiv1.Affinity{
 			PodAffinity: &apiv1.PodAffinity{
@@ -599,8 +587,7 @@ services:
 		t.Fatalf("Wrong dev d2 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD2), string(marshalledDevD2OK))
 	}
 
-	err = tr2.DevModeOff()
-	require.NoError(t, err)
+	require.NoError(t, tr2.DevModeOff())
 
 	if _, ok := tr2.App.ObjectMeta().Labels[constants.DevLabel]; ok {
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
@@ -625,9 +612,7 @@ persistentVolume:
   enabled: false`)
 
 	manifest, err := model.Read(manifestBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	dev := manifest.Dev["web"]
 
 	d := deployments.Sandbox(dev)
@@ -638,9 +623,7 @@ persistentVolume:
 		App:     NewDeploymentApp(d),
 		Rules:   []*model.TranslationRule{rule},
 	}
-	if err := tr.translate(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, tr.translate())
 	dDevPodOK := &apiv1.PodSpec{
 		TerminationGracePeriodSeconds: pointer.Int64Ptr(0),
 		Volumes: []apiv1.Volume{
@@ -1182,9 +1165,7 @@ environment:
 `)
 
 	manifest, err := model.Read(manifestBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	dev := manifest.Dev["web"]
 
 	dev.Username = "cindy"
@@ -1197,9 +1178,7 @@ environment:
 		App:     NewDeploymentApp(d),
 		Rules:   []*model.TranslationRule{rule},
 	}
-	if err := tr.translate(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, tr.translate())
 	envOK := []apiv1.EnvVar{
 		{
 			Name:  "key1",
@@ -1247,9 +1226,7 @@ environment:
 
 func Test_translateSfsWithVolumes(t *testing.T) {
 	file, err := os.CreateTemp("", "okteto-secret-test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	defer os.Remove(file.Name())
 
 	var runAsUser int64 = 100
@@ -1307,9 +1284,7 @@ services:
        - worker:/src`, file.Name()))
 
 	manifest, err := model.Read(manifestBytes)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	dev1 := manifest.Dev["web"]
 
 	sfs1 := statefulsets.Sandbox(dev1)
@@ -1324,10 +1299,7 @@ services:
 		App:     NewStatefulSetApp(sfs1),
 		Rules:   []*model.TranslationRule{rule1},
 	}
-	err = tr1.translate()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, tr1.translate())
 	sfs1PodDev := apiv1.PodSpec{
 		NodeSelector: map[string]string{
 			"disktype": "ssd",
@@ -1626,8 +1598,7 @@ services:
 		t.Fatalf("Wrong dev sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevSfs1), string(marshalledDevSfs1OK))
 	}
 
-	err = tr1.DevModeOff()
-	require.NoError(t, err)
+	require.NoError(t, tr1.DevModeOff())
 
 	if _, ok := tr1.App.ObjectMeta().Labels[constants.DevLabel]; ok {
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
@@ -1656,10 +1627,7 @@ services:
 		t.Fatal(err)
 	}
 	tr2 := trMap[dev2.Name]
-	err = tr2.translate()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, tr2.translate())
 	sfs2DevPod := apiv1.PodSpec{
 		Affinity: &apiv1.Affinity{
 			PodAffinity: &apiv1.PodAffinity{
@@ -1780,8 +1748,7 @@ services:
 		t.Fatalf("Wrong dev sfs2 generation.\nActual %+v, \nExpected %+v", string(marshalledDevSfs2), string(marshalledDevSfs2OK))
 	}
 
-	err = tr2.DevModeOff()
-	require.NoError(t, err)
+	require.NoError(t, tr2.DevModeOff())
 
 	if _, ok := tr2.App.ObjectMeta().Labels[constants.DevLabel]; ok {
 		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
@@ -1855,8 +1822,7 @@ func Test_translateAnnotations(t *testing.T) {
 			for key, value := range tt.tr.App.TemplateObjectMeta().Annotations {
 				previousAppTemplateAnnotations[key] = value
 			}
-			err := tt.tr.translate()
-			require.NoError(t, err)
+			require.NoError(t, tt.tr.translate())
 			for key, value := range tt.annotations {
 				if appValue, ok := tt.tr.App.ObjectMeta().Annotations[key]; ok {
 					if appValue != value {
@@ -1873,11 +1839,10 @@ func Test_translateAnnotations(t *testing.T) {
 					t.Fatal("devApp didn't set annotations correctly")
 				}
 			}
-			err = tt.tr.DevModeOff()
-			require.NoError(t, err)
+			require.NoError(t, tt.tr.DevModeOff())
 
-			assert.Equal(t, previousAppObjectMetaAnnotations, tt.tr.App.ObjectMeta().Annotations)
-			assert.Equal(t, previousAppTemplateAnnotations, tt.tr.App.TemplateObjectMeta().Annotations)
+			require.Equal(t, previousAppObjectMetaAnnotations, tt.tr.App.ObjectMeta().Annotations)
+			require.Equal(t, previousAppTemplateAnnotations, tt.tr.App.TemplateObjectMeta().Annotations)
 		})
 	}
 

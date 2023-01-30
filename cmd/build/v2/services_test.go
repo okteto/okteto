@@ -20,7 +20,6 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,48 +27,43 @@ func TestAllServicesAlreadyBuilt(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{}
-	err := fakeReg.AddImageByName(alreadyBuilt...)
-	require.NoError(t, err)
+	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
 	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
+	require.NoError(t, err)
+	require.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
 }
 
 func TestServicesNotAreAlreadyBuilt(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
-
 	alreadyBuilt := []string{"test/test-1"}
-	err := fakeReg.AddImageByName(alreadyBuilt...)
-	require.NoError(t, err)
+	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
 	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
+	require.NoError(t, err)
+	require.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
 }
 
 func TestNoServiceBuilt(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{"test/test-1", "test/test-2"}
-	err := fakeReg.AddImageByName(alreadyBuilt...)
-	require.NoError(t, err)
+	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
 	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
+	require.NoError(t, err)
+	require.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
 }
 
 func TestServicesNotInStack(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{"test/test-1"}
-	err := fakeReg.AddImageByName(alreadyBuilt...)
-	require.NoError(t, err)
+	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
 	stack := &model.Stack{
 		Services: map[string]*model.Service{
@@ -82,61 +76,57 @@ func TestServicesNotInStack(t *testing.T) {
 	}}
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
 	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
+	require.NoError(t, err)
+	require.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
 }
 
 func TestAllServicesAlreadyBuiltWithSubset(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{}
-	err := fakeReg.AddImageByName(alreadyBuilt...)
-	require.NoError(t, err)
+	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1"})
 	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, 1, len(toBuild))
+	require.NoError(t, err)
+	require.Equal(t, 1, len(toBuild))
 }
 
 func TestServicesNotAreAlreadyBuiltWithSubset(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{"test/test-1"}
-	err := fakeReg.AddImageByName(alreadyBuilt...)
-	require.NoError(t, err)
+	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1"})
 	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(toBuild))
+	require.NoError(t, err)
+	require.Equal(t, 0, len(toBuild))
 }
 
 func TestServicesBuildSection(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{}
-	err := fakeReg.AddImageByName(alreadyBuilt...)
-	require.NoError(t, err)
+	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
 	fakeManifest.Build = map[string]*model.BuildInfo{}
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{})
 	// should not throw error
-	assert.NoError(t, err)
-	assert.Empty(t, toBuild)
+	require.NoError(t, err)
+	require.Empty(t, toBuild)
 }
 
 func TestNoServiceBuiltWithSubset(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
 	bc := NewBuilder(nil, fakeReg)
 	alreadyBuilt := []string{"test/test-1", "test/test-2"}
-	err := fakeReg.AddImageByName(alreadyBuilt...)
-	require.NoError(t, err)
+	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
 	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1"})
 	// should not throw error
-	assert.NoError(t, err)
-	assert.Equal(t, 0, len(toBuild))
+	require.NoError(t, err)
+	require.Equal(t, 0, len(toBuild))
 }
 
 func TestGetToBuildTag(t *testing.T) {
@@ -203,7 +193,7 @@ func TestGetToBuildTag(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := getToBuildTag(tt.manifestName, tt.svcName, tt.buildInfo)
-			assert.Equal(t, tt.output, result)
+			require.Equal(t, tt.output, result)
 		})
 	}
 }

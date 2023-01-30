@@ -1,6 +1,13 @@
 run:
   timeout: 5m
   go: 1.18
+# All possible options can be found here https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
+linters-settings:
+  errcheck:
+    # Report about not checking of errors in type assertions: `a := b.(MyStruct)`.
+    # Such cases aren't reported by default.
+    # Default: false
+    check-type-assertions: true
 linters:
   disable:
     # TODO: enable when fixed
