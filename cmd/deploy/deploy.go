@@ -35,6 +35,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -81,6 +82,7 @@ type DeployCommand struct {
 	GetDeployer        func(context.Context, *model.Manifest, *Options, string, *buildv2.OktetoBuilder) (deployerInterface, error)
 	deployWaiter       deployWaiter
 	cfgMapHandler      configMapHandler
+	Fs                 afero.Fs
 
 	PipelineType model.Archetype
 	isRemote     bool
@@ -174,6 +176,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				deployWaiter:       newDeployWaiter(k8sClientProvider),
 				isRemote:           utils.LoadBoolean(constants.OKtetoDeployRemote),
 				cfgMapHandler:      newConfigmapHandler(k8sClientProvider),
+				Fs:                 afero.NewOsFs(),
 			}
 			startTime := time.Now()
 

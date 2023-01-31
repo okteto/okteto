@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -193,6 +194,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 				Proxy:      p,
 				Executor:   e,
 				Kubeconfig: &fakeKubeConfig{},
+				Fs:         afero.NewMemMapFs(),
 			}, nil
 		},
 		K8sClientProvider: test.NewFakeK8sProvider(),
@@ -237,6 +239,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 				Executor:          e,
 				Kubeconfig:        &fakeKubeConfig{},
 				K8sClientProvider: clientProvider,
+				Fs:                afero.NewMemMapFs(),
 			}, nil
 		},
 		Builder:           buildv2.NewBuilder(builder, registry),
@@ -313,10 +316,12 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 				Executor:          e,
 				Kubeconfig:        &fakeKubeConfig{},
 				K8sClientProvider: clientProvider,
+				Fs:                afero.NewMemMapFs(),
 			}, nil
 		},
 		K8sClientProvider: clientProvider,
 		cfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
+		Fs:                afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -391,6 +396,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 				Executor:          e,
 				Kubeconfig:        &fakeKubeConfig{},
 				K8sClientProvider: clientProvider,
+				Fs:                afero.NewMemMapFs(),
 			}, nil
 		},
 		K8sClientProvider: clientProvider,
@@ -450,11 +456,13 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 				Kubeconfig:         &fakeKubeConfig{},
 				K8sClientProvider:  clientProvider,
 				GetExternalControl: cp.getFakeExternalControl,
+				Fs:                 afero.NewMemMapFs(),
 			}, nil
 		},
 		GetExternalControl: cp.getFakeExternalControl,
 		K8sClientProvider:  clientProvider,
 		cfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
+		Fs:                 afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
 
@@ -475,6 +483,77 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	assert.True(t, p.started)
 	// Proxy wasn't shutdown
 	assert.False(t, p.shutdown)
+
+	// check if configmap has been created
+	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
+	if err != nil {
+		t.Fatal("could not create fake k8s client")
+	}
+	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
+	assert.Nil(t, err)
+	assert.NotNil(t, cfg)
+	assert.Equal(t, pipeline.DeployedStatus, cfg.Data["status"])
+}
+
+func TestDeployWithoutErrors(t *testing.T) {
+	p := &fakeProxy{}
+	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
+	deployment := &v1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				model.DeployedByLabel: "movies",
+			},
+			Namespace: "test",
+		},
+	}
+
+	cp := fakeExternalControlProvider{
+		control: &fakeExternalControl{},
+	}
+	clientProvider := test.NewFakeK8sProvider(deployment)
+	c := &DeployCommand{
+		GetManifest:        getFakeManifest,
+		K8sClientProvider:  clientProvider,
+		GetExternalControl: cp.getFakeExternalControl,
+		Fs:                 afero.NewMemMapFs(),
+		cfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
+			return &localDeployer{
+				Proxy:              p,
+				Executor:           e,
+				Kubeconfig:         &fakeKubeConfig{},
+				K8sClientProvider:  clientProvider,
+				GetExternalControl: cp.getFakeExternalControl,
+				Fs:                 afero.NewMemMapFs(),
+			}, nil
+		},
+	}
+	ctx := context.Background()
+	opts := &Options{
+		Name:         "movies",
+		ManifestPath: "",
+		Variables:    []string{},
+	}
+
+	err := c.RunDeploy(ctx, opts)
+
+	assert.NoError(t, err)
+	// No command was executed
+	assert.Len(t, e.executed, 3)
+	// Check expected commands were executed
+	assert.Equal(t, fakeManifest.Deploy.Commands, e.executed)
+	// Proxy started
+	assert.True(t, p.started)
+	// Proxy was shutdown
+	assert.True(t, p.shutdown)
 
 	// check if configmap has been created
 	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
@@ -693,7 +772,7 @@ func TestDeployExternals(t *testing.T) {
 							Notes: &externalresource.Notes{
 								Path: "/some/path",
 							},
-							Endpoints: []externalresource.ExternalEndpoint{},
+							Endpoints: []*externalresource.ExternalEndpoint{},
 						},
 					},
 				},
@@ -711,7 +790,7 @@ func TestDeployExternals(t *testing.T) {
 							Notes: &externalresource.Notes{
 								Path: "/some/path",
 							},
-							Endpoints: []externalresource.ExternalEndpoint{},
+							Endpoints: []*externalresource.ExternalEndpoint{},
 						},
 					},
 				},
@@ -732,6 +811,7 @@ func TestDeployExternals(t *testing.T) {
 
 			ld := localDeployer{
 				GetExternalControl: cp.getFakeExternalControl,
+				Fs:                 afero.NewMemMapFs(),
 			}
 
 			if tc.expectedErr {
@@ -779,7 +859,7 @@ func TestValidateK8sResources(t *testing.T) {
 						Notes: &externalresource.Notes{
 							Path: "/some/path",
 						},
-						Endpoints: []externalresource.ExternalEndpoint{},
+						Endpoints: []*externalresource.ExternalEndpoint{},
 					},
 				},
 			},
@@ -799,7 +879,7 @@ func TestValidateK8sResources(t *testing.T) {
 						Notes: &externalresource.Notes{
 							Path: "/some/path",
 						},
-						Endpoints: []externalresource.ExternalEndpoint{},
+						Endpoints: []*externalresource.ExternalEndpoint{},
 					},
 				},
 			},
@@ -818,7 +898,7 @@ func TestValidateK8sResources(t *testing.T) {
 						Notes: &externalresource.Notes{
 							Path: "/some/path",
 						},
-						Endpoints: []externalresource.ExternalEndpoint{},
+						Endpoints: []*externalresource.ExternalEndpoint{},
 					},
 				},
 			},

@@ -8,7 +8,7 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/externalresource/k8s"
 	"github.com/okteto/okteto/pkg/format"
-	olog "github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/rest"
 
@@ -21,13 +21,13 @@ type K8sControl struct {
 	Cfg            *rest.Config
 }
 
-func (c *K8sControl) Deploy(ctx context.Context, name, ns string, externalInfo *ExternalResource) error {
+func (c *K8sControl) Deploy(ctx context.Context, name, ns string, er *ExternalResource) error {
 	k8sclient, err := c.ClientProvider(c.Cfg)
 	if err != nil {
 		return fmt.Errorf("error creating external CRD client: %s", err.Error())
 	}
 
-	externalResourceCRD := translate(name, externalInfo)
+	externalResourceCRD := translate(name, er)
 
 	old, err := k8sclient.ExternalResources(ns).Get(ctx, externalResourceCRD.Name, metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
@@ -35,14 +35,14 @@ func (c *K8sControl) Deploy(ctx context.Context, name, ns string, externalInfo *
 	}
 
 	if old.Name == "" {
-		olog.Infof("creating external resource CRD '%s'", externalResourceCRD.Name)
+		oktetoLog.Infof("creating external resource CRD '%s'", externalResourceCRD.Name)
 		_, err = k8sclient.ExternalResources(ns).Create(ctx, externalResourceCRD, metav1.CreateOptions{})
 		if err != nil && !k8sErrors.IsAlreadyExists(err) {
 			return fmt.Errorf("error creating external resource CRD '%s': %w", externalResourceCRD.Name, err)
 		}
-		olog.Infof("created external resource CRD '%s'", externalResourceCRD.Name)
+		oktetoLog.Infof("created external resource CRD '%s'", externalResourceCRD.Name)
 	} else {
-		olog.Infof("updating external resource CRD '%s'", externalResourceCRD.Name)
+		oktetoLog.Infof("updating external resource CRD '%s'", externalResourceCRD.Name)
 		old.TypeMeta = externalResourceCRD.TypeMeta
 		old.Annotations = externalResourceCRD.Annotations
 		old.Labels = externalResourceCRD.Labels
@@ -53,7 +53,7 @@ func (c *K8sControl) Deploy(ctx context.Context, name, ns string, externalInfo *
 				return fmt.Errorf("error updating external resource CRD '%s': %w", externalResourceCRD.Name, err)
 			}
 		}
-		olog.Infof("updated external resource CRD '%s'.", externalResourceCRD.Name)
+		oktetoLog.Infof("updated external resource CRD '%s'.", externalResourceCRD.Name)
 	}
 
 	return nil
@@ -98,7 +98,7 @@ func (c *K8sControl) Validate(ctx context.Context, name, ns string, externalInfo
 func translate(name string, externalResource *ExternalResource) *k8s.External {
 	var externalEndpointsSpec []k8s.Endpoint
 	for _, endpoint := range externalResource.Endpoints {
-		externalEndpointsSpec = append(externalEndpointsSpec, k8s.Endpoint(endpoint))
+		externalEndpointsSpec = append(externalEndpointsSpec, k8s.Endpoint(*endpoint))
 	}
 
 	var notes *k8s.Notes
@@ -138,7 +138,7 @@ func translateK8sToExternal(er k8s.External) ExternalResource {
 		}
 	}
 
-	endpoints := []ExternalEndpoint{}
+	var endpoints []*ExternalEndpoint
 	for _, ep := range er.Spec.Endpoints {
 		endpoints = append(endpoints, translateK8sToEndpoint(ep))
 	}
@@ -148,8 +148,8 @@ func translateK8sToExternal(er k8s.External) ExternalResource {
 	}
 }
 
-func translateK8sToEndpoint(k8sEndpoint k8s.Endpoint) ExternalEndpoint {
-	return ExternalEndpoint{
+func translateK8sToEndpoint(k8sEndpoint k8s.Endpoint) *ExternalEndpoint {
+	return &ExternalEndpoint{
 		Name: k8sEndpoint.Name,
 		Url:  k8sEndpoint.Url,
 	}

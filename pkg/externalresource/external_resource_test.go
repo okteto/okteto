@@ -9,6 +9,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func reset(name string, er *ExternalResource) {
+	sanitizedExternalName := sanitizeForEnv(name)
+	for _, endpoint := range er.Endpoints {
+		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
+		endpointUrlEnv := fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)
+		os.Unsetenv(endpointUrlEnv)
+	}
+}
+
 func TestExternalResource_SetDefaults(t *testing.T) {
 	externalResourceName := "myExternalApp"
 	externalResource := ExternalResource{
@@ -17,7 +26,7 @@ func TestExternalResource_SetDefaults(t *testing.T) {
 			Path:     "/some/path",
 			Markdown: "",
 		},
-		Endpoints: []ExternalEndpoint{
+		Endpoints: []*ExternalEndpoint{
 			{
 				Name: "endpoint1",
 				Url:  "/some/url/endpoint1",
@@ -29,21 +38,13 @@ func TestExternalResource_SetDefaults(t *testing.T) {
 		},
 	}
 
-	defer reset(externalResourceName, externalResource)
+	defer reset(externalResourceName, &externalResource)
 	externalResource.SetDefaults(externalResourceName)
 
 	sanitizedExternalName := sanitizeForEnv(externalResourceName)
 	for _, endpoint := range externalResource.Endpoints {
 		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
 		assert.Equal(t, endpoint.Url, os.Getenv(fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)))
-	}
-}
-
-func reset(sanitizedExternalName string, er ExternalResource) {
-	for _, endpoint := range er.Endpoints {
-		sanitizedEndpointName := sanitizeForEnv(endpoint.Name)
-		endpointUrlEnv := fmt.Sprintf("OKTETO_EXTERNAL_%s_ENDPOINTS_%s_URL", sanitizedExternalName, sanitizedEndpointName)
-		os.Unsetenv(endpointUrlEnv)
 	}
 }
 
@@ -67,7 +68,7 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 					Notes: &Notes{
 						Path: "/readme.md",
 					},
-					Endpoints: []ExternalEndpoint{},
+					Endpoints: []*ExternalEndpoint{},
 				},
 				Fs: fs,
 			},
@@ -81,7 +82,7 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 					Notes: &Notes{
 						Path: "/external/readme.md",
 					},
-					Endpoints: []ExternalEndpoint{},
+					Endpoints: []*ExternalEndpoint{},
 				},
 				Fs: fs,
 			},
@@ -92,14 +93,14 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 					Path:     "/external/readme.md",
 					Markdown: "IyMgTWFya2Rvd24gY29udGVudA==",
 				},
-				Endpoints: []ExternalEndpoint{},
+				Endpoints: []*ExternalEndpoint{},
 			},
 		},
 		{
 			name: "notes info not present in external. No markdown loaded",
 			externalResourceFSM: ERFilesystemManager{
 				ExternalResource: ExternalResource{
-					Endpoints: []ExternalEndpoint{
+					Endpoints: []*ExternalEndpoint{
 						{
 							Name: "name1",
 							Url:  "/some/url",
@@ -110,7 +111,7 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 			},
 			expectErr: false,
 			expectedResult: ExternalResource{
-				Endpoints: []ExternalEndpoint{
+				Endpoints: []*ExternalEndpoint{
 					{
 						Name: "name1",
 						Url:  "/some/url",
@@ -132,36 +133,109 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 	}
 }
 
-func TestExternalResource_SanitizeForEnv(t *testing.T) {
+func TestExternalResource_SetURLUsingEnvironFile(t *testing.T) {
+	externalResourceName := "test"
+	newURLvalue := "/new/url/value"
 	tests := []struct {
-		name           string
-		input          string
-		expectedOutput string
+		name                     string
+		externalResource         *ExternalResource
+		expectedExternalResource *ExternalResource
+		envsToSet                map[string]string
+		expectedErr              error
 	}{
 		{
-			name:           "name with '-'",
-			input:          "TEST-NAME",
-			expectedOutput: "TEST_NAME",
+			name: "error - empty url value",
+			externalResource: &ExternalResource{
+				Endpoints: []*ExternalEndpoint{
+					{
+						Name: "endpoint1",
+					},
+				},
+			},
+			expectedErr: assert.AnError,
 		},
 		{
-			name:           "name in lowercase",
-			input:          "test",
-			expectedOutput: "TEST",
+			name: "url value to add",
+			externalResource: &ExternalResource{
+				Endpoints: []*ExternalEndpoint{
+					{
+						Name: "endpoint1",
+					},
+				},
+			},
+			expectedExternalResource: &ExternalResource{
+				Endpoints: []*ExternalEndpoint{
+					{
+						Name: "endpoint1",
+						Url:  newURLvalue,
+					},
+				},
+			},
+			envsToSet: map[string]string{
+				"OKTETO_EXTERNAL_TEST_ENDPOINTS_ENDPOINT1_URL": newURLvalue,
+			},
 		},
 		{
-			name:           "name with spaces",
-			input:          "test one",
-			expectedOutput: "TEST_ONE",
+			name: "no url value to overwrite",
+			externalResource: &ExternalResource{
+				Endpoints: []*ExternalEndpoint{
+					{
+						Name: "endpoint1",
+						Url:  "/url/for/endpoint/1",
+					},
+				},
+			},
+			expectedExternalResource: &ExternalResource{
+				Endpoints: []*ExternalEndpoint{
+					{
+						Name: "endpoint1",
+						Url:  "/url/for/endpoint/1",
+					},
+				},
+			},
 		},
 		{
-			name:           "name in lowercase, with spaces and with '-'",
-			input:          "test-name one",
-			expectedOutput: "TEST_NAME_ONE",
+			name: "url value to overwrite",
+			externalResource: &ExternalResource{
+				Endpoints: []*ExternalEndpoint{
+					{
+						Name: "endpoint1",
+						Url:  "/url/for/endpoint/1",
+					},
+					{
+						Name: "endpoint2",
+						Url:  "/url/for/endpoint/2",
+					},
+				},
+			},
+			expectedExternalResource: &ExternalResource{
+				Endpoints: []*ExternalEndpoint{
+					{
+						Name: "endpoint1",
+						Url:  newURLvalue,
+					},
+					{
+						Name: "endpoint2",
+						Url:  "/url/for/endpoint/2",
+					},
+				},
+			},
+			envsToSet: map[string]string{
+				"OKTETO_EXTERNAL_TEST_ENDPOINTS_ENDPOINT1_URL": newURLvalue,
+			},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.expectedOutput, sanitizeForEnv(tt.input))
+			err := tt.externalResource.SetURLUsingEnvironFile(externalResourceName, tt.envsToSet)
+			if tt.expectedErr != nil {
+				assert.Error(t, err)
+			}
+
+			if err == nil {
+				assert.Equal(t, tt.expectedExternalResource, tt.externalResource)
+			}
 		})
 	}
 }

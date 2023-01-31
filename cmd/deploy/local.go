@@ -17,8 +17,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
+	"github.com/compose-spec/godotenv"
 	stackCMD "github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/cmd/stack"
@@ -35,6 +37,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/spf13/afero"
 )
 
 type localDeployer struct {
@@ -48,6 +51,7 @@ type localDeployer struct {
 	cwd          string
 	deployWaiter deployWaiter
 	isRemote     bool
+	Fs           afero.Fs
 }
 
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not
@@ -87,6 +91,7 @@ func newLocalDeployer(ctx context.Context, cwd string, options *Options) (*local
 		GetExternalControl: GetExternalControl,
 		deployWaiter:       newDeployWaiter(clientProvider),
 		isRemote:           true,
+		Fs:                 afero.NewOsFs(),
 	}, nil
 }
 
@@ -172,14 +177,44 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 }
 
 func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) error {
+	oktetoEnvFile, err := ld.createTempOktetoEnvFile()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := ld.Fs.RemoveAll(filepath.Base(oktetoEnvFile.Name())); err != nil {
+			oktetoLog.Infof("error removing okteto env file dir: %w", err)
+		}
+	}()
+
+	var envMapFromOktetoEnvFile map[string]string
 	// deploy commands if any
 	for _, command := range opts.Manifest.Deploy.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
 		oktetoLog.SetStage(command.Name)
+
 		if err := ld.Executor.Execute(command, opts.Variables); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
+
+		envMapFromOktetoEnvFile, err = godotenv.Read(oktetoEnvFile.Name())
+		if err != nil {
+			oktetoLog.Warning("no valid format used in the okteto env file: %s", err.Error())
+		}
+
+		envsFromOktetoEnvFile := make([]string, 0, len(envMapFromOktetoEnvFile))
+		for k, v := range envMapFromOktetoEnvFile {
+			envsFromOktetoEnvFile = append(envsFromOktetoEnvFile, fmt.Sprintf("%s=%s", k, v))
+		}
+
+		// the variables in the $OKTETO_ENV file are added as environment variables
+		// to the executor. If there is already a previously set value for that
+		// variable, the executor will use in next command the last one added which
+		// corresponds to those coming from $OKTETO_ENV.
+		opts.Variables = append(opts.Variables, envsFromOktetoEnvFile...)
+
 		oktetoLog.SetStage("")
 	}
 
@@ -221,7 +256,8 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 			oktetoLog.Warning("external resources cannot be deployed on a cluster not managed by okteto")
 			return nil
 		}
-		if err := ld.deployExternals(ctx, opts); err != nil {
+
+		if err := ld.deployExternals(ctx, opts, envMapFromOktetoEnvFile); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying external resources: %s", err.Error())
 			return err
 		}
@@ -307,7 +343,7 @@ func (ld *localDeployer) deployEndpoints(ctx context.Context, opts *Options) err
 	return nil
 }
 
-func (ld *localDeployer) deployExternals(ctx context.Context, opts *Options) error {
+func (ld *localDeployer) deployExternals(ctx context.Context, opts *Options, dynamicEnvs map[string]string) error {
 	control, err := ld.GetExternalControl(ld.K8sClientProvider, ld.TempKubeconfigFile)
 	if err != nil {
 		return err
@@ -317,6 +353,10 @@ func (ld *localDeployer) deployExternals(ctx context.Context, opts *Options) err
 		oktetoLog.Spinner(fmt.Sprintf("Deploying external resource '%s'...", externalName))
 		oktetoLog.StartSpinner()
 		defer oktetoLog.StopSpinner()
+		if err := externalInfo.SetURLUsingEnvironFile(externalName, dynamicEnvs); err != nil {
+			return err
+		}
+
 		err := control.Deploy(ctx, externalName, opts.Manifest.Namespace, externalInfo)
 		if err != nil {
 			return err
@@ -351,4 +391,20 @@ func GetExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalR
 		ClientProvider: k8sExternalResources.GetExternalClient,
 		Cfg:            proxyConfig,
 	}, nil
+}
+
+func (ld *localDeployer) createTempOktetoEnvFile() (afero.File, error) {
+	oktetoEnvFileDir, err := afero.TempDir(ld.Fs, "", "")
+	if err != nil {
+		return nil, err
+	}
+
+	oktetoEnvFile, err := ld.Fs.Create(filepath.Join(oktetoEnvFileDir, ".env"))
+	if err != nil {
+		return nil, err
+	}
+
+	os.Setenv(constants.OktetoEnvFile, oktetoEnvFile.Name())
+	oktetoLog.Debug("using %s as env file for deploy command", oktetoEnvFile.Name())
+	return oktetoEnvFile, nil
 }

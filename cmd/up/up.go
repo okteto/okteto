@@ -49,6 +49,7 @@ import (
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/okteto/okteto/pkg/types"
 
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -506,6 +507,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		K8sClientProvider:  okteto.NewK8sClientProvider(),
 		Builder:            buildv2.NewBuilderFromScratch(),
 		GetExternalControl: deploy.GetExternalControl,
+		Fs:                 afero.NewOsFs(),
 	}
 
 	return c.RunDeploy(ctx, &deploy.Options{
