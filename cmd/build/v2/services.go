@@ -136,7 +136,7 @@ func getToBuildTags(manifestName, svcName string, b *model.BuildInfo) []string {
 	}
 	if shouldBuildFromDockerfile(b) {
 		possibleTags = append(possibleTags, fmt.Sprintf("%s/%s-%s:%s", okteto.DevRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag))
-		possibleTags = append(possibleTags, fmt.Sprintf("%s/%s-%s:%s", okteto.GlobalRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes))
+		possibleTags = append(possibleTags, fmt.Sprintf("%s/%s-%s:%s", okteto.GlobalRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag))
 	}
 	if b.Image != "" && !shouldAddVolumeMounts(b) {
 		possibleTags = append(possibleTags, b.Image)
