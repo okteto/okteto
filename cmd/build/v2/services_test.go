@@ -238,7 +238,7 @@ func TestGetToBuildTags(t *testing.T) {
 
 func TestGetDigestFromService(t *testing.T) {
 	fakeReg := test.NewFakeOktetoRegistry(nil)
-
+	bc := NewBuilder(nil, fakeReg)
 	tests := []struct {
 		name           string
 		manifest       *model.Manifest
@@ -288,7 +288,6 @@ func TestGetDigestFromService(t *testing.T) {
 				CurrentContext: "test",
 			}
 
-			bc := NewBuilder(nil, fakeReg)
 			digest, err := bc.getDigestFromService("test", tt.manifest)
 			if tt.expectedErr {
 				assert.Error(t, err)
