@@ -31,7 +31,7 @@ type ContextOptions struct {
 	Show                  bool
 	Save                  bool
 	IsCtxCommand          bool
-	FromNamespace         bool
+	CheckNamespaceAccess  bool
 	IsOkteto              bool
 	raiseNotCtxError      bool
 	InsecureSkipTlsVerify bool

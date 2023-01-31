@@ -85,11 +85,11 @@ func Test_createContext(t *testing.T) {
 				CurrentContext: "https://okteto.cloud.com",
 			},
 			ctxOptions: &ContextOptions{
-				IsOkteto:      true,
-				Save:          true,
-				Context:       "https://okteto.cloud.com",
-				Namespace:     "not-found",
-				FromNamespace: true,
+				IsOkteto:             true,
+				Save:                 true,
+				Context:              "https://okteto.cloud.com",
+				Namespace:            "not-found",
+				CheckNamespaceAccess: true,
 			},
 			user: &types.User{
 				Token: "test",
@@ -393,7 +393,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 }
 
 func TestCheckAccessToNamespace(t *testing.T) {
-    t.Parallel()
+	t.Parallel()
 
 	ctx := context.Background()
 	user := &types.User{

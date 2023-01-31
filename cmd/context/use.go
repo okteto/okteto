@@ -68,6 +68,7 @@ Or a Kubernetes context:
 
 			ctxOptions.IsCtxCommand = true
 			ctxOptions.Save = true
+			ctxOptions.CheckNamespaceAccess = ctxOptions.Namespace != ""
 
 			err := NewContextCommand().Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
