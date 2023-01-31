@@ -130,15 +130,13 @@ func getToBuildTags(manifestName, svcName string, b *model.BuildInfo) []string {
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 
-	targetRegistries := []string{okteto.DevRegistry, okteto.GlobalRegistry}
-	for _, targetRegistry := range targetRegistries {
-		if shouldAddVolumeMounts(b) {
-			possibleTags = append(possibleTags, fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes))
-			continue
-		}
-		if shouldBuildFromDockerfile(b) {
-			possibleTags = append(possibleTags, fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag))
-		}
+	if shouldAddVolumeMounts(b) {
+		possibleTags = append(possibleTags, fmt.Sprintf("%s/%s-%s:%s", okteto.DevRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes))
+		possibleTags = append(possibleTags, fmt.Sprintf("%s/%s-%s:%s", okteto.GlobalRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes))
+	}
+	if shouldBuildFromDockerfile(b) {
+		possibleTags = append(possibleTags, fmt.Sprintf("%s/%s-%s:%s", okteto.DevRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag))
+		possibleTags = append(possibleTags, fmt.Sprintf("%s/%s-%s:%s", okteto.GlobalRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes))
 	}
 	if b.Image != "" && !shouldAddVolumeMounts(b) {
 		possibleTags = append(possibleTags, b.Image)
