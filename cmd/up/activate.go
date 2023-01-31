@@ -115,6 +115,11 @@ func (up *upContext) activate() error {
 		lastPodUID = up.Pod.UID
 	}
 
+	if err := up.waitUntilAppIsAwaken(ctx, app); err != nil {
+		oktetoLog.Infof("error waiting for the original %s to be awaken: %s", app.Kind(), err.Error())
+		return err
+	}
+
 	if err := up.devMode(ctx, app, create); err != nil {
 		if oktetoErrors.IsTransient(err) {
 			return err
@@ -456,4 +461,30 @@ func getPullingMessage(message, namespace string) string {
 	}
 	toReplace := fmt.Sprintf("%s/%s", registry, namespace)
 	return strings.Replace(message, toReplace, okteto.DevRegistry, 1)
+}
+
+// waitUntilAppIsAwaken waits until the app is awaken checking if the annotation dev.okteto.com/state-before-sleeping is present in the app resource
+func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) error {
+	if _, ok := app.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]; !ok {
+		return nil
+	}
+
+	timeout := 5 * time.Minute
+	to := time.NewTicker(timeout)
+	ticker := time.NewTicker(10 * time.Second)
+	for {
+		select {
+		case <-to.C:
+			return fmt.Errorf("'%s' '%s' didn't wake up after %s", app.Kind(), app.ObjectMeta().Name, timeout.String())
+		case <-ticker.C:
+			if err := app.Refresh(ctx, up.Client); err != nil {
+				return err
+			}
+
+			// If the app is not sleeping anymore, we are done
+			if _, ok := app.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]; !ok {
+				return nil
+			}
+		}
+	}
 }
