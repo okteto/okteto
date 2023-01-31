@@ -101,9 +101,6 @@ var (
 	// ErrDevPodDeleted raised if dev pod is deleted in the middle of the "okteto up" sequence
 	ErrDevPodDeleted = fmt.Errorf("development container has been removed")
 
-	// ErrDivertNotSupported raised if the divert feature is not supported in the current cluster
-	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in clusters that have Okteto installed")
-
 	// ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
 	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available in clusters where Okteto is installed.\n Follow this link to know more about configuring Okteto at your cluster: https://www.okteto.com/docs/self-hosted/")
 

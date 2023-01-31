@@ -672,10 +672,7 @@ func Read(bytes []byte) (*Manifest, error) {
 }
 
 func (m *Manifest) validate() error {
-	if err := m.Build.validate(); err != nil {
-		return err
-	}
-	return m.validateDivert()
+	return m.Build.validate()
 }
 
 func (b *ManifestBuild) validate() error {
@@ -749,25 +746,6 @@ func (m *Manifest) SanitizeSvcNames() error {
 		oktetoLog.Warning("Service '%s' specified in okteto manifest has been sanitized into '%s'.", previousName, newName)
 	}
 
-	return nil
-}
-
-func (m *Manifest) validateDivert() error {
-	if m.Deploy == nil {
-		return nil
-	}
-	if m.Deploy.Divert == nil {
-		return nil
-	}
-	if m.Deploy.Divert.Namespace == "" {
-		return fmt.Errorf("the field 'deploy.divert.namespace' is mandatory")
-	}
-	if m.Deploy.Divert.Service == "" {
-		return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
-	}
-	if m.Deploy.Divert.Deployment == "" {
-		return fmt.Errorf("the field 'deploy.divert.deployment' is mandatory")
-	}
 	return nil
 }
 

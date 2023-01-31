@@ -19,7 +19,6 @@ import (
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	networkingv1 "k8s.io/api/networking/v1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	"k8s.io/client-go/kubernetes"
@@ -204,7 +203,7 @@ func (i Ingress) GetAnnotations() map[string]string {
 
 // Deploy creates or updates an ingress
 func (iClient *Client) Deploy(ctx context.Context, ingress *Ingress) error {
-	old, err := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace())
+	_, err := iClient.Get(ctx, ingress.GetName(), ingress.GetNamespace())
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
 			return fmt.Errorf("error getting ingress '%s': %v", ingress.GetName(), err)
@@ -216,25 +215,9 @@ func (iClient *Client) Deploy(ctx context.Context, ingress *Ingress) error {
 		return nil
 	}
 
-	iClient.applyDivertChanges(ingress, old)
 	if err := iClient.Update(ctx, ingress); err != nil {
 		return err
 	}
 	oktetoLog.Success("Endpoint '%s' updated", ingress.GetName())
 	return nil
-}
-
-func (iClient *Client) applyDivertChanges(ingress *Ingress, old metav1.Object) {
-	divertIngressInjection := old.GetAnnotations()[model.OktetoDivertIngressInjectionAnnotation]
-	if divertIngressInjection == "" {
-		return
-	}
-	nginxConfigurationSnippet := old.GetAnnotations()[model.OktetoNginxConfigurationSnippetAnnotation]
-	if iClient.isV1 {
-		ingress.V1.Annotations[model.OktetoDivertIngressInjectionAnnotation] = divertIngressInjection
-		ingress.V1.Annotations[model.OktetoNginxConfigurationSnippetAnnotation] = nginxConfigurationSnippet
-	} else {
-		ingress.V1Beta1.Annotations[model.OktetoDivertIngressInjectionAnnotation] = divertIngressInjection
-		ingress.V1Beta1.Annotations[model.OktetoNginxConfigurationSnippetAnnotation] = nginxConfigurationSnippet
-	}
 }

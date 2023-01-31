@@ -110,8 +110,6 @@ func (fk *fakeProxy) Start() {
 
 func (*fakeProxy) SetName(_ string) {}
 
-func (*fakeProxy) SetDivert(_ string) {}
-
 func (fk *fakeProxy) Shutdown(_ context.Context) error {
 	if fk.errOnShutdown != nil {
 		return fk.errOnShutdown

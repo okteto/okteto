@@ -33,12 +33,10 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
-	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	k8sExternalResources "github.com/okteto/okteto/pkg/externalresource/k8s"
 	"github.com/okteto/okteto/pkg/format"
-	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	kconfig "github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -339,15 +337,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	dc.Proxy.SetName(format.ResourceK8sMetaString(deployOptions.Name))
-	// don't divert if current namespace is the diverted namespace
-	if deployOptions.Manifest.Deploy.Divert != nil {
-		if !okteto.IsOkteto() {
-			return oktetoErrors.ErrDivertNotSupported
-		}
-		if deployOptions.Manifest.Deploy.Divert.Namespace != deployOptions.Manifest.Namespace {
-			dc.Proxy.SetDivert(deployOptions.Manifest.Deploy.Divert.Namespace)
-		}
-	}
 
 	dc.PipelineType = deployOptions.Manifest.Type
 
@@ -520,17 +509,6 @@ func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
 		oktetoLog.SetStage("")
 	}
 
-	// deploy divert if any
-	if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
-		oktetoLog.SetStage("Divert configuration")
-		if err := dc.deployDivert(ctx, opts); err != nil {
-			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
-			return err
-		}
-		oktetoLog.Success("Divert from '%s' successfully configured", opts.Manifest.Deploy.Divert.Namespace)
-		oktetoLog.SetStage("")
-	}
-
 	// deploy externals if any
 	if opts.Manifest.External != nil {
 		oktetoLog.SetStage("External configuration")
@@ -576,26 +554,6 @@ func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
 		IsInsideDeploy: true,
 	}
 	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
-}
-
-func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error {
-
-	oktetoLog.Spinner(fmt.Sprintf("Diverting namespace %s...", opts.Manifest.Deploy.Divert.Namespace))
-	oktetoLog.StartSpinner()
-	defer oktetoLog.StopSpinner()
-
-	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
-	if err != nil {
-		return err
-	}
-
-	dClient, err := diverts.GetDivertClient()
-	if err != nil {
-		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
-	}
-
-	driver := divert.New(opts.Manifest, dClient, c)
-	return driver.Deploy(ctx)
 }
 
 func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) error {

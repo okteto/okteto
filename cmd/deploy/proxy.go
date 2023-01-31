@@ -47,7 +47,6 @@ type proxyInterface interface {
 	GetPort() int
 	GetToken() string
 	SetName(name string)
-	SetDivert(divertedNamespace string)
 }
 
 type proxyConfig struct {
@@ -64,8 +63,7 @@ type Proxy struct {
 
 type proxyHandler struct {
 	// Name is sanitized version of the pipeline name
-	Name              string
-	DivertedNamespace string
+	Name string
 }
 
 // NewProxy creates a new proxy
@@ -172,11 +170,6 @@ func (p *Proxy) SetName(name string) {
 	p.proxyHandler.SetName(name)
 }
 
-// SetDivert sets the namespace used for divert
-func (p *Proxy) SetDivert(divertedNamespace string) {
-	p.proxyHandler.SetDivert(divertedNamespace)
-}
-
 func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config) (http.Handler, error) {
 	// By default we don't disable HTTP/2
 	trans, err := newProtocolTransport(clusterConfig, false)
@@ -263,10 +256,6 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 
 func (ph *proxyHandler) SetName(name string) {
 	ph.Name = name
-}
-
-func (ph *proxyHandler) SetDivert(divertedNamespace string) {
-	ph.DivertedNamespace = divertedNamespace
 }
 
 func (ph *proxyHandler) translateBody(b []byte) ([]byte, error) {
@@ -358,7 +347,6 @@ func (ph *proxyHandler) translateDeploymentSpec(body map[string]json.RawMessage)
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process deployment's spec: %s", err)
@@ -374,7 +362,6 @@ func (ph *proxyHandler) translateStatefulSetSpec(body map[string]json.RawMessage
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process statefulset's spec: %s", err)
@@ -390,7 +377,6 @@ func (ph *proxyHandler) translateJobSpec(body map[string]json.RawMessage) error 
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process job's spec: %s", err)
@@ -406,7 +392,6 @@ func (ph *proxyHandler) translateCronJobSpec(body map[string]json.RawMessage) er
 		return nil
 	}
 	labels.SetInMetadata(&spec.JobTemplate.Spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.JobTemplate.Spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process cronjob's spec: %s", err)
@@ -422,7 +407,6 @@ func (ph *proxyHandler) translateDaemonSetSpec(body map[string]json.RawMessage) 
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process daemonset's spec: %s", err)
@@ -438,7 +422,6 @@ func (ph *proxyHandler) translateReplicationControllerSpec(body map[string]json.
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process replicationcontroller's spec: %s", err)
@@ -454,28 +437,12 @@ func (ph *proxyHandler) translateReplicaSetSpec(body map[string]json.RawMessage)
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process replicaset's spec: %s", err)
 	}
 	body["spec"] = specAsByte
 	return nil
-}
-
-func (ph *proxyHandler) applyDivert(podSpec *apiv1.PodSpec) {
-	if ph.DivertedNamespace == "" {
-		return
-	}
-	if podSpec.DNSConfig == nil {
-		podSpec.DNSConfig = &apiv1.PodDNSConfig{}
-	}
-	if podSpec.DNSConfig.Searches == nil {
-		podSpec.DNSConfig.Searches = []string{}
-	}
-	searches := []string{fmt.Sprintf("%s.svc.cluster.local", ph.DivertedNamespace)}
-	searches = append(searches, podSpec.DNSConfig.Searches...)
-	podSpec.DNSConfig.Searches = searches
 }
 
 func newProtocolTransport(clusterConfig *rest.Config, disableHTTP2 bool) (http.RoundTripper, error) {
