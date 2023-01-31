@@ -17,7 +17,6 @@ import (
 	"context"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -45,7 +44,7 @@ func (fb *FakeOktetoBuilder) Run(_ context.Context, opts *types.BuildOptions) er
 
 	if opts.Tag != "" {
 		if err := fb.Registry.AddImageByOpts(opts); err != nil {
-			oktetoLog.Infof("error adding image to registry: %s", err)
+			return err
 		}
 	}
 	return nil

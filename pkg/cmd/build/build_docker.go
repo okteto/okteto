@@ -171,16 +171,12 @@ func buildWithDockerDaemon(ctx context.Context, buildOptions *types.BuildOptions
 
 	dockerBuildContext, err := getBuildContext(buildOptions.File)
 	if err != nil {
-		if err := errors.Wrap(err, "setting build context failed"); err != nil {
-			oktetoLog.Infof("failed to set error: %s", err)
-		}
+		return err
 	}
 
 	dockerBuildOptions, err := getDockerOptions(buildOptions)
 	if err != nil {
-		if err := errors.Wrap(err, "setting build options failed"); err != nil {
-			oktetoLog.Infof("failed to set error: %s", err)
-		}
+		return err
 	}
 	progressOutput := streamformatter.NewProgressOutput(os.Stdout)
 
