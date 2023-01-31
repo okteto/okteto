@@ -38,6 +38,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -283,6 +284,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		K8sClientProvider:  mc.K8sClientProvider,
 		Builder:            buildv2.NewBuilderFromScratch(),
 		GetExternalControl: deploy.GetExternalControl,
+		Fs:                 afero.NewOsFs(),
 	}
 
 	err = c.RunDeploy(ctx, &deploy.Options{

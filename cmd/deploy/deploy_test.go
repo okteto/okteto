@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -299,6 +300,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 		Executor:          e,
 		Kubeconfig:        &fakeKubeConfig{},
 		K8sClientProvider: test.NewFakeK8sProvider(),
+		Fs:                afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -422,6 +424,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		Kubeconfig:         &fakeKubeConfig{},
 		K8sClientProvider:  test.NewFakeK8sProvider(deployment),
 		GetExternalControl: cp.getFakeExternalControl,
+		Fs:                 afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
 
@@ -484,6 +487,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		Kubeconfig:         &fakeKubeConfig{},
 		K8sClientProvider:  test.NewFakeK8sProvider(deployment),
 		GetExternalControl: cp.getFakeExternalControl,
+		Fs:                 afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
 	opts := &Options{
@@ -721,7 +725,7 @@ func TestDeployExternals(t *testing.T) {
 							Notes: &externalresource.Notes{
 								Path: "/some/path",
 							},
-							Endpoints: []externalresource.ExternalEndpoint{},
+							Endpoints: []*externalresource.ExternalEndpoint{},
 						},
 					},
 				},
@@ -739,7 +743,7 @@ func TestDeployExternals(t *testing.T) {
 							Notes: &externalresource.Notes{
 								Path: "/some/path",
 							},
-							Endpoints: []externalresource.ExternalEndpoint{},
+							Endpoints: []*externalresource.ExternalEndpoint{},
 						},
 					},
 				},
@@ -760,6 +764,7 @@ func TestDeployExternals(t *testing.T) {
 
 			dc := DeployCommand{
 				GetExternalControl: cp.getFakeExternalControl,
+				Fs:                 afero.NewMemMapFs(),
 			}
 
 			if tc.expectedErr {
@@ -807,7 +812,7 @@ func TestValidateK8sResources(t *testing.T) {
 						Notes: &externalresource.Notes{
 							Path: "/some/path",
 						},
-						Endpoints: []externalresource.ExternalEndpoint{},
+						Endpoints: []*externalresource.ExternalEndpoint{},
 					},
 				},
 			},
@@ -827,7 +832,7 @@ func TestValidateK8sResources(t *testing.T) {
 						Notes: &externalresource.Notes{
 							Path: "/some/path",
 						},
-						Endpoints: []externalresource.ExternalEndpoint{},
+						Endpoints: []*externalresource.ExternalEndpoint{},
 					},
 				},
 			},
@@ -846,7 +851,7 @@ func TestValidateK8sResources(t *testing.T) {
 						Notes: &externalresource.Notes{
 							Path: "/some/path",
 						},
-						Endpoints: []externalresource.ExternalEndpoint{},
+						Endpoints: []*externalresource.ExternalEndpoint{},
 					},
 				},
 			},
