@@ -465,6 +465,11 @@ func getPullingMessage(message, namespace string) string {
 
 // waitUntilAppIsAwaken waits until the app is awaken checking if the annotation dev.okteto.com/state-before-sleeping is present in the app resource
 func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) error {
+	// If it is auto create, we don't need to wait for the app to wake up
+	if up.Dev.Autocreate {
+		return nil
+	}
+
 	appToCheck := app
 	// If the app is already in dev mode, we need to check the cloned app to see if it is awaken
 	if apps.IsDevModeOn(app) {
