@@ -55,4 +55,7 @@ const (
 
 	// NamespaceStatusLabel label added to namespaces to indicate its status
 	NamespaceStatusLabel = "space.okteto.com/status"
+
+	// NamespaceStatusSleeping indicates that the namespace is sleeping
+	NamespaceStatusSleeping = "Sleeping"
 )

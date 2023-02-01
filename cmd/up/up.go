@@ -301,17 +301,12 @@ func Up() *cobra.Command {
 			if okteto.Context().IsOkteto {
 				// We execute it in a goroutine to not impact the command performance
 				go func() {
-					k8sClient, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
-					if err != nil {
-						oktetoLog.Infof("failed to create k8s client: '%s'", err.Error())
-						return
-					}
 					okClient, err := okteto.NewOktetoClient()
 					if err != nil {
 						oktetoLog.Infof("failed to create okteto client: '%s'", err.Error())
 						return
 					}
-					if err := wakeNamespaceIfApplies(ctx, up.Dev.Namespace, k8sClient, okClient); err != nil {
+					if err := wakeNamespaceIfApplies(ctx, up.Dev.Namespace, up.Client, okClient); err != nil {
 						// If there is an error waking up namespace, we don't want to fail the up command
 						oktetoLog.Infof("failed to wake up the namespace: %s", err.Error())
 					}
@@ -935,7 +930,7 @@ func wakeNamespaceIfApplies(ctx context.Context, ns string, k8sClient kubernetes
 	}
 
 	// If the namespace is not sleeping, do nothing
-	if n.Labels[constants.NamespaceStatusLabel] != "Sleeping" {
+	if n.Labels[constants.NamespaceStatusLabel] != constants.NamespaceStatusSleeping {
 		return nil
 	}
 

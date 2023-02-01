@@ -39,8 +39,8 @@ type App interface {
 	// TODO: remove after people move to CLI >= 1.14
 	RestoreOriginal() error
 
-	// GetCloned returns the cloned app from Kubernetes
-	GetCloned(ctx context.Context, c kubernetes.Interface) (App, error)
+	// GetDevClone returns the cloned app from Kubernetes
+	GetDevClone(ctx context.Context, c kubernetes.Interface) (App, error)
 	Refresh(ctx context.Context, c kubernetes.Interface) error
 	Watch(ctx context.Context, result chan error, c kubernetes.Interface)
 	Deploy(ctx context.Context, c kubernetes.Interface) error

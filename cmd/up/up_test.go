@@ -375,7 +375,7 @@ func TestWakeNamespaceIfAppliesWithoutErrors(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 					Labels: map[string]string{
-						constants.NamespaceStatusLabel: "Sleeping",
+						constants.NamespaceStatusLabel: constants.NamespaceStatusSleeping,
 					},
 				},
 			},

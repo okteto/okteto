@@ -474,7 +474,7 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 	// If the app is already in dev mode, we need to check the cloned app to see if it is awaken
 	if apps.IsDevModeOn(app) {
 		var err error
-		appToCheck, err = app.GetCloned(ctx, up.Client)
+		appToCheck, err = app.GetDevClone(ctx, up.Client)
 		if err != nil {
 			return err
 		}
@@ -486,14 +486,18 @@ func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) err
 
 	timeout := 5 * time.Minute
 	to := time.NewTicker(timeout)
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
+	defer to.Stop()
+	defer ticker.Stop()
 	oktetoLog.Spinner(fmt.Sprintf("Dev environment '%s' is sleeping. Waiting for it to wake up...", appToCheck.ObjectMeta().Name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("Dev environment '%s' didn't wake up after %s", appToCheck.ObjectMeta().Name, timeout.String())
+			// In case of timeout, we just print a warning to avoid the command to fail
+			oktetoLog.Warning("Dev environment '%s' didn't wake up after %s", appToCheck.ObjectMeta().Name, timeout.String())
+			return nil
 		case <-ticker.C:
 			if err := appToCheck.Refresh(ctx, up.Client); err != nil {
 				return err
