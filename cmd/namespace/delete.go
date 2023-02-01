@@ -24,6 +24,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -159,7 +160,7 @@ func (nc *NamespaceCommand) waitForNamespaceDeleted(ctx context.Context, namespa
 				return err
 			}
 
-			status, ok := ns.Labels["space.okteto.com/status"]
+			status, ok := ns.Labels[constants.NamespaceStatusLabel]
 			if !ok {
 				// when status label is not present, continue polling the namespace until timeout
 				oktetoLog.Debugf("namespace %q does not have label for status", namespace)

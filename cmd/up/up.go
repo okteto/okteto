@@ -299,18 +299,23 @@ func Up() *cobra.Command {
 
 			// only if the context is an okteto one, we should verify if the namespace has to be woken up
 			if okteto.Context().IsOkteto {
-				k8sClient, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
-				if err != nil {
-					return err
-				}
-				okClient, err := okteto.NewOktetoClient()
-				if err != nil {
-					return err
-				}
-				if err := wakeNamespaceIfApplies(ctx, up.Dev.Namespace, k8sClient, okClient); err != nil {
-					// If there is an error waking up namespace, we don't want to fail the up command
-					oktetoLog.Infof("failed to wake up the namespace: %s", err.Error())
-				}
+				// We execute it in a goroutine to not impact the command performance
+				go func() {
+					k8sClient, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+					if err != nil {
+						oktetoLog.Infof("failed to create k8s client: '%s'", err.Error())
+						return
+					}
+					okClient, err := okteto.NewOktetoClient()
+					if err != nil {
+						oktetoLog.Infof("failed to create okteto client: '%s'", err.Error())
+						return
+					}
+					if err := wakeNamespaceIfApplies(ctx, up.Dev.Namespace, k8sClient, okClient); err != nil {
+						// If there is an error waking up namespace, we don't want to fail the up command
+						oktetoLog.Infof("failed to wake up the namespace: %s", err.Error())
+					}
+				}()
 			}
 
 			if err := setBuildEnvVars(ctx, oktetoManifest); err != nil {
@@ -930,7 +935,7 @@ func wakeNamespaceIfApplies(ctx context.Context, ns string, k8sClient kubernetes
 	}
 
 	// If the namespace is not sleeping, do nothing
-	if n.Labels["space.okteto.com/status"] != "Sleeping" {
+	if n.Labels[constants.NamespaceStatusLabel] != "Sleeping" {
 		return nil
 	}
 

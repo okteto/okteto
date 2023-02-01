@@ -465,24 +465,37 @@ func getPullingMessage(message, namespace string) string {
 
 // waitUntilAppIsAwaken waits until the app is awaken checking if the annotation dev.okteto.com/state-before-sleeping is present in the app resource
 func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) error {
-	if _, ok := app.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]; !ok {
+	appToCheck := app
+	// If the app is already in dev mode, we need to check the cloned app to see if it is awaken
+	if apps.IsDevModeOn(app) {
+		var err error
+		appToCheck, err = app.GetCloned(ctx, up.Client)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _, ok := appToCheck.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]; !ok {
 		return nil
 	}
 
 	timeout := 5 * time.Minute
 	to := time.NewTicker(timeout)
 	ticker := time.NewTicker(10 * time.Second)
+	oktetoLog.Spinner(fmt.Sprintf("Dev environment '%s' is sleeping. Waiting for it to wake up...", appToCheck.ObjectMeta().Name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 	for {
 		select {
 		case <-to.C:
-			return fmt.Errorf("'%s' '%s' didn't wake up after %s", app.Kind(), app.ObjectMeta().Name, timeout.String())
+			return fmt.Errorf("Dev environment '%s' didn't wake up after %s", appToCheck.ObjectMeta().Name, timeout.String())
 		case <-ticker.C:
-			if err := app.Refresh(ctx, up.Client); err != nil {
+			if err := appToCheck.Refresh(ctx, up.Client); err != nil {
 				return err
 			}
 
 			// If the app is not sleeping anymore, we are done
-			if _, ok := app.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]; !ok {
+			if _, ok := appToCheck.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]; !ok {
 				return nil
 			}
 		}

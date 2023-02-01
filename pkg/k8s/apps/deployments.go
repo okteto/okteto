@@ -207,3 +207,13 @@ func (i *DeploymentApp) Destroy(ctx context.Context, c kubernetes.Interface) err
 func (i *DeploymentApp) PatchAnnotations(ctx context.Context, c kubernetes.Interface) error {
 	return deployments.PatchAnnotations(ctx, i.d, c)
 }
+
+// GetCloned Returns from Kubernetes the cloned deployment
+func (i *DeploymentApp) GetCloned(ctx context.Context, c kubernetes.Interface) (App, error) {
+	clonedName := fmt.Sprintf("%s-%s", i.d.Name, "okteto")
+	d, err := deployments.Get(ctx, clonedName, i.d.Namespace, c)
+	if err == nil {
+		return NewDeploymentApp(d), nil
+	}
+	return nil, err
+}

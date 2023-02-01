@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -362,7 +363,7 @@ func TestWakeNamespaceIfAppliesWithoutErrors(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 					Labels: map[string]string{
-						"space.okteto.com/status": "Active",
+						constants.NamespaceStatusLabel: "Active",
 					},
 				},
 			},
@@ -374,7 +375,7 @@ func TestWakeNamespaceIfAppliesWithoutErrors(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 					Labels: map[string]string{
-						"space.okteto.com/status": "Sleeping",
+						constants.NamespaceStatusLabel: "Sleeping",
 					},
 				},
 			},
