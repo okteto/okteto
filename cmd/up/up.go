@@ -550,6 +550,7 @@ func (up *upContext) start() error {
 		HasDeploySection: (up.Manifest.IsV2 &&
 			up.Manifest.Deploy != nil &&
 			(len(up.Manifest.Deploy.Commands) > 0 || up.Manifest.Deploy.ComposeSection.ComposesInfo != nil)),
+		HasReverse: len(up.Dev.Reverse) > 0,
 	})
 
 	go up.activateLoop()

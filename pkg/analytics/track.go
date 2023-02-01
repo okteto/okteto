@@ -175,6 +175,7 @@ type TrackUpMetadata struct {
 	HasBuildSection        bool
 	HasDeploySection       bool
 	Success                bool
+	HasReverse             bool
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
@@ -187,6 +188,7 @@ func TrackUp(m TrackUpMetadata) {
 		"hasDependenciesSection": m.HasDependenciesSection,
 		"hasBuildSection":        m.HasBuildSection,
 		"hasDeploySection":       m.HasDeploySection,
+		"hasReverse":             m.HasReverse,
 	}
 	track(upEvent, m.Success, props)
 }
