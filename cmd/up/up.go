@@ -368,7 +368,9 @@ func Up() *cobra.Command {
 	cmd.Flags().IntVarP(&upOptions.Remote, "remote", "r", 0, "configures remote execution on the specified port")
 	cmd.Flags().BoolVarP(&upOptions.Deploy, "deploy", "d", false, "Force execution of the commands in the 'deploy' section of the okteto manifest (defaults to 'false')")
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
-	cmd.Flags().MarkHidden("pull")
+	if err := cmd.Flags().MarkHidden("pull"); err != nil {
+		oktetoLog.Infof("failed to mark 'pull' flag as hidden: %s", err)
+	}
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
 	cmd.Flags().StringArrayVarP(&upOptions.commandToExecute, "command", "", []string{}, "external commands to be supplied to 'okteto up'")
 	return cmd
@@ -591,8 +593,11 @@ func (up *upContext) activateLoop() {
 	iter := 0
 	defer t.Stop()
 
-	defer config.DeleteStateFile(up.Dev.Name, up.Dev.Namespace)
-
+	defer func() {
+		if err := config.DeleteStateFile(up.Dev.Name, up.Dev.Namespace); err != nil {
+			oktetoLog.Infof("failed to delete state file: %s", err)
+		}
+	}()
 	for {
 		if up.isRetry || isTransientError {
 			oktetoLog.Infof("waiting for shutdown sequence to finish")

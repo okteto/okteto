@@ -219,7 +219,11 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer os.Chdir(cwd)
+	defer func() {
+		if err := os.Chdir(cwd); err != nil {
+			oktetoLog.Infof("failed to change directory to %s: %s", cwd, err)
+		}
+	}()
 
 	stackWorkingDir := GetWorkdirFromManifestPath(stackPath)
 	if err := os.Chdir(stackWorkingDir); err != nil {

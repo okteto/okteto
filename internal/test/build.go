@@ -43,7 +43,9 @@ func (fb *FakeOktetoBuilder) Run(_ context.Context, opts *types.BuildOptions) er
 	}
 
 	if opts.Tag != "" {
-		fb.Registry.AddImageByOpts(opts)
+		if err := fb.Registry.AddImageByOpts(opts); err != nil {
+			return err
+		}
 	}
 	return nil
 }

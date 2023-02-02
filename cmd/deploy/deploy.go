@@ -164,7 +164,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 					if err != nil {
 						return err
 					}
-					nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.Context().Namespace})
+					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.Context().Namespace}); err != nil {
+						return err
+					}
 				}
 			}
 

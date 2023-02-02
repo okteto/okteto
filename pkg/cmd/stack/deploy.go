@@ -545,7 +545,9 @@ func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.St
 			continue
 		}
 	}
-	forwarder.Start(podName, stack.Namespace)
+	if err := forwarder.Start(podName, stack.Namespace); err != nil {
+		oktetoLog.Infof("could not start port-forward: %s", err)
+	}
 	defer forwarder.Stop()
 	for _, port := range portsToTest {
 		p := strconv.Itoa(port)
