@@ -151,8 +151,8 @@ func validateNamespace(namespace, object string) error {
 	return nil
 }
 
-// SleepNamespace sleeps a namespace
-func (c *namespaceClient) SleepNamespace(ctx context.Context, namespace string) error {
+// Sleep sleeps a namespace
+func (c *namespaceClient) Sleep(ctx context.Context, namespace string) error {
 	var mutation struct {
 		Space struct {
 			Id graphql.String

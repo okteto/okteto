@@ -342,7 +342,7 @@ func sleepNamespace(namespace string) error {
 	if err != nil {
 		return err
 	}
-	if err := client.Namespaces().SleepNamespace(context.Background(), namespace); err != nil {
+	if err := client.Namespaces().Sleep(context.Background(), namespace); err != nil {
 		return err
 	}
 	return nil
