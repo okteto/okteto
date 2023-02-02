@@ -99,7 +99,9 @@ func (c *DeployCommand) RunDeploy(ctx context.Context, s *model.Stack, options *
 			if err != nil {
 				return err
 			}
-			nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: s.Namespace})
+			if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: s.Namespace}); err != nil {
+				return err
+			}
 		}
 	}
 

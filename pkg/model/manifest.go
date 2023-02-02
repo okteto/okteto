@@ -1002,7 +1002,9 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 			m.Build[svcName] = buildInfo
 		}
 	}
-	m.setDefaults()
+	if err := m.setDefaults(); err != nil {
+		oktetoLog.Infof("failed to set defaults: %s", err)
+	}
 	return m, nil
 }
 

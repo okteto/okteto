@@ -294,7 +294,9 @@ func (w *JSONWriter) Write(p []byte) (n int, err error) {
 	msg := string(p)
 	msg = convertToJSON(InfoLevel, log.stage, msg)
 	if msg != "" {
-		w.out.Out.Write([]byte(""))
+		if _, err := w.out.Out.Write([]byte("")); err != nil {
+			return 0, err
+		}
 	}
 	if !strings.HasSuffix(msg, "\n") {
 		msg += "\n"

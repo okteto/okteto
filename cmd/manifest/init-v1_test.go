@@ -23,6 +23,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
 
@@ -53,24 +54,17 @@ func TestRun(t *testing.T) {
 		Workdir:  dir,
 	}
 
-	if err := mc.RunInitV1(ctx, opts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, mc.RunInitV1(ctx, opts))
 
 	stignorePath := filepath.Join(dir, ".stignore")
-	if _, err := os.Stat(stignorePath); os.IsNotExist(err) {
-		t.Fatal(err)
-	}
+	_, err := os.Stat(stignorePath)
+	require.NoError(t, err)
 
 	manifest, err := utils.DeprecatedLoadManifest(p)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	dev, err := utils.GetDevFromManifest(manifest, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if dev.Image.Name != "okteto/golang:1" {
 		t.Errorf("got %s, expected %s", dev.Image.Name, "okteto/golang:1")
@@ -88,14 +82,10 @@ func TestRun(t *testing.T) {
 	}
 
 	manifest, err = utils.DeprecatedLoadManifest(p)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	dev, err = utils.GetDevFromManifest(manifest, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if dev.Image.Name != "okteto/ruby:2" {
 		t.Errorf("got %s, expected %s", dev.Image.Name, "okteto/ruby:2")
@@ -113,13 +103,11 @@ func TestRunJustCreateNecessaryFields(t *testing.T) {
 		Language: "golang",
 		Workdir:  dir,
 	}
-	if err := mc.RunInitV1(ctx, opts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, mc.RunInitV1(ctx, opts))
 
 	file, _ := os.ReadFile(p)
 	var result map[string]interface{}
-	yaml.Unmarshal([]byte(file), &result)
+	require.NoError(t, yaml.Unmarshal([]byte(file), &result))
 
 	optionalFields := [...]string{"annotations", "autocreate", "container", "context", "environment",
 		"externalVolumes", "healthchecks", "interface", "imagePullPolicy", "labels", "namespace",
