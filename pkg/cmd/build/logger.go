@@ -130,9 +130,13 @@ func (t *trace) display() {
 			default:
 				continue
 			}
+
+			if v.completed {
+				oktetoLog.StopSpinner()
+			}
 		}
 		if t.hasCommandLogs(v) {
-			oktetoLog.StopSpinner()
+			oktetoLog.Spinner("Deploying your development environment...")
 			for _, log := range v.logs {
 				var text oktetoLog.JSONLogFormat
 				if err := json.Unmarshal([]byte(log), &text); err != nil {
