@@ -25,6 +25,11 @@ import (
 	"github.com/tonistiigi/units"
 )
 
+const (
+	// largeContextThreshold is the threshold (in bytes) by which a context is catalogued as large or not (50MB)
+	largeContextThreshold = 50000000
+)
+
 func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
 
 	// TODO: import build timeout
@@ -62,16 +67,16 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
 }
 
 type trace struct {
-	ongoing                 map[string]*vertexInfo
-	stages                  map[string]bool
-	showSynchronizingStatus bool
-	transferringCtxTimer    *time.Timer
+	ongoing       map[string]*vertexInfo
+	stages        map[string]bool
+	showCtxAdvice bool
 }
 
 func newTrace() *trace {
 	return &trace{
-		ongoing: map[string]*vertexInfo{},
-		stages:  map[string]bool{},
+		ongoing:       map[string]*vertexInfo{},
+		stages:        map[string]bool{},
+		showCtxAdvice: true,
 	}
 }
 
@@ -115,24 +120,13 @@ func (t *trace) update(ss *client.SolveStatus) error {
 func (t *trace) display() {
 	for _, v := range t.ongoing {
 		if t.isTransferringContext(v.name) {
-			if t.transferringCtxTimer == nil {
-				t.transferringCtxTimer = time.NewTimer(10 * time.Second)
-			}
-
-			if v.currentTransferedContext != 0 && t.showSynchronizingStatus {
-				oktetoLog.Spinner(fmt.Sprintf("Synchronizing context: %.2f", units.Bytes(v.currentTransferedContext)))
-			}
-
-			select {
-			case <-t.transferringCtxTimer.C:
-				t.showSynchronizingStatus = true
-				oktetoLog.Warning("Build context used to deploy your development environment is large.")
-			default:
-				continue
-			}
-
-			if v.completed {
-				oktetoLog.StopSpinner()
+			if v.currentTransferedContext != 0 {
+				currentLoadedCtx := units.Bytes(v.currentTransferedContext)
+				if t.showCtxAdvice && currentLoadedCtx > largeContextThreshold {
+					t.showCtxAdvice = false
+					oktetoLog.Information("You can use '.oktetodeployignore' file to optimize the context used to deploy your development environment.")
+				}
+				oktetoLog.Spinner(fmt.Sprintf("Synchronizing context: %.2f", currentLoadedCtx))
 			}
 		}
 		if t.hasCommandLogs(v) {
