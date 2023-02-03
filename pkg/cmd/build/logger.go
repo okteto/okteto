@@ -22,6 +22,7 @@ import (
 
 	"github.com/moby/buildkit/client"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/tonistiigi/units"
 )
 
 func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
@@ -61,8 +62,10 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
 }
 
 type trace struct {
-	ongoing map[string]*vertexInfo
-	stages  map[string]bool
+	ongoing                 map[string]*vertexInfo
+	stages                  map[string]bool
+	showSynchronizingStatus bool
+	transferringCtxTimer    *time.Timer
 }
 
 func newTrace() *trace {
@@ -94,11 +97,9 @@ func (t *trace) update(ss *client.SolveStatus) error {
 		if !ok {
 			continue // shouldn't happen
 		}
-		if s.Completed != nil {
-			v.completed = true
-			t.ongoing[s.Vertex.Encoded()] = v
-			continue
-		}
+		v.completed = s.Completed != nil
+		v.currentTransferedContext = s.Current
+		v.totalTransferedContext = s.Total
 	}
 	for _, l := range ss.Logs {
 		v, ok := t.ongoing[l.Vertex.Encoded()]
@@ -111,8 +112,25 @@ func (t *trace) update(ss *client.SolveStatus) error {
 	return nil
 }
 
-func (t trace) display() {
+func (t *trace) display() {
 	for _, v := range t.ongoing {
+		if t.isTransferringContext(v.name) {
+			if t.transferringCtxTimer == nil {
+				t.transferringCtxTimer = time.NewTimer(10 * time.Second)
+			}
+
+			if v.currentTransferedContext != 0 && t.showSynchronizingStatus {
+				oktetoLog.Spinner(fmt.Sprintf("Synchronizing context: %.2f", units.Bytes(v.currentTransferedContext)))
+			}
+
+			select {
+			case <-t.transferringCtxTimer.C:
+				t.showSynchronizingStatus = true
+				oktetoLog.Warning("Build context used to deploy your development environment is large.")
+			default:
+				continue
+			}
+		}
 		if t.hasCommandLogs(v) {
 			oktetoLog.StopSpinner()
 			for _, log := range v.logs {
@@ -145,6 +163,12 @@ func (t trace) display() {
 	}
 }
 
+func (t trace) isTransferringContext(name string) bool {
+	isInternal := strings.HasPrefix(name, "[internal]")
+	isLoadingCtx := strings.Contains(name, "load build")
+	return isInternal && isLoadingCtx
+}
+
 func (t trace) hasCommandLogs(v *vertexInfo) bool {
 	return len(v.logs) != 0
 }
@@ -158,7 +182,9 @@ func (t *trace) removeCompletedSteps() {
 }
 
 type vertexInfo struct {
-	name      string
-	completed bool
-	logs      []string
+	name                     string
+	currentTransferedContext int64
+	totalTransferedContext   int64
+	completed                bool
+	logs                     []string
 }
