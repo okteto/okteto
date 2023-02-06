@@ -43,6 +43,7 @@ import (
 const (
 	parallelism              int64 = 10
 	volumeKind                     = "PersistentVolumeClaim"
+	volumeSnapshotKind             = "VolumeSnapshot"
 	jobKind                        = "Job"
 	resourcePolicyAnnotation       = "dev.okteto.com/policy"
 	keepPolicy                     = "keep"
@@ -146,7 +147,7 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 			return err
 		}
 		gvk := obj.GetObjectKind().GroupVersionKind()
-		if gvk.Kind == volumeKind && !opts.IncludeVolumes {
+		if isStorage(gvk.Kind) && !opts.IncludeVolumes {
 			oktetoLog.Debugf("skipping deletion of pvc '%s' because of volume flag", m.GetName())
 			return nil
 		}
@@ -348,4 +349,15 @@ func (t *Trip) listAll(ctx context.Context, traveler Traveler, client dynamic.Re
 		}
 		return nil
 	})
+}
+
+// isStorage returns if the kind is some of storage kind
+func isStorage(kind string) bool {
+	switch kind {
+	case volumeKind:
+		return true
+	case volumeSnapshotKind:
+		return true
+	}
+	return false
 }
