@@ -942,10 +942,6 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	if deploy.Image == "" {
-		deploy.Image = constants.OktetoPipelineRunnerImage
-	}
-
 	*d = DeployInfo(deploy)
 	return nil
 }

@@ -807,11 +807,6 @@ func (m *Manifest) setDefaults() error {
 			b.setBuildDefaults()
 		}
 	}
-	if m.Deploy != nil {
-		if m.Deploy.Image == "" {
-			m.Deploy.Image = constants.OktetoPipelineRunnerImage
-		}
-	}
 
 	return nil
 }
