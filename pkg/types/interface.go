@@ -40,6 +40,7 @@ type NamespaceInterface interface {
 	AddMembers(ctx context.Context, namespace string, members []string) error
 	Sleep(ctx context.Context, namespace string) error
 	DestroyAll(ctx context.Context, namespace string, destroyVolumes bool) error
+	Wake(ctx context.Context, namespace string) error
 }
 
 // PreviewInterface represents the client that connects to the preview functions

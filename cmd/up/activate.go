@@ -118,6 +118,11 @@ func (up *upContext) activate() error {
 		lastPodUID = up.Pod.UID
 	}
 
+	if err := up.waitUntilAppIsAwaken(ctx, app); err != nil {
+		oktetoLog.Infof("error waiting for the original %s to be awaken: %s", app.Kind(), err.Error())
+		return err
+	}
+
 	if err := up.devMode(ctx, app, create); err != nil {
 		if oktetoErrors.IsTransient(err) {
 			return err
@@ -459,4 +464,52 @@ func getPullingMessage(message, namespace string) string {
 	}
 	toReplace := fmt.Sprintf("%s/%s", registry, namespace)
 	return strings.Replace(message, toReplace, okteto.DevRegistry, 1)
+}
+
+// waitUntilAppIsAwaken waits until the app is awaken checking if the annotation dev.okteto.com/state-before-sleeping is present in the app resource
+func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) error {
+	// If it is auto create, we don't need to wait for the app to wake up
+	if up.Dev.Autocreate {
+		return nil
+	}
+
+	appToCheck := app
+	// If the app is already in dev mode, we need to check the cloned app to see if it is awaken
+	if apps.IsDevModeOn(app) {
+		var err error
+		appToCheck, err = app.GetDevClone(ctx, up.Client)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _, ok := appToCheck.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]; !ok {
+		return nil
+	}
+
+	timeout := 5 * time.Minute
+	to := time.NewTicker(timeout)
+	ticker := time.NewTicker(2 * time.Second)
+	defer to.Stop()
+	defer ticker.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Dev environment '%s' is sleeping. Waiting for it to wake up...", appToCheck.ObjectMeta().Name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
+	for {
+		select {
+		case <-to.C:
+			// In case of timeout, we just print a warning to avoid the command to fail
+			oktetoLog.Warning("Dev environment '%s' didn't wake up after %s", appToCheck.ObjectMeta().Name, timeout.String())
+			return nil
+		case <-ticker.C:
+			if err := appToCheck.Refresh(ctx, up.Client); err != nil {
+				return err
+			}
+
+			// If the app is not sleeping anymore, we are done
+			if _, ok := appToCheck.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]; !ok {
+				return nil
+			}
+		}
+	}
 }

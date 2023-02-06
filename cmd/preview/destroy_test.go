@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
@@ -59,7 +60,7 @@ func TestExecuteDestroyPreviewWithFailedJob(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-preview",
 			Labels: map[string]string{
-				"space.okteto.com/status": "DeleteFailed",
+				constants.NamespaceStatusLabel: "DeleteFailed",
 			},
 		},
 	}

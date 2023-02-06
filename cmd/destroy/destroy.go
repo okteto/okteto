@@ -539,7 +539,7 @@ func (pc *destroyCommand) waitForNamespaceDestroyAllToComplete(ctx context.Conte
 				return err
 			}
 
-			status, ok := ns.Labels["space.okteto.com/status"]
+			status, ok := ns.Labels[constants.NamespaceStatusLabel]
 			if !ok {
 				// when status label is not present, continue polling the namespace until timeout
 				oktetoLog.Debugf("namespace %q does not have label for status", namespace)

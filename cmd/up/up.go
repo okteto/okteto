@@ -36,6 +36,8 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/discovery"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
@@ -293,6 +295,22 @@ func Up() *cobra.Command {
 				// update autocreate property if needed to be forced
 				oktetoLog.Info("Setting Autocreate to true because manifest v1 and flag --deploy")
 				up.Dev.Autocreate = true
+			}
+
+			// only if the context is an okteto one, we should verify if the namespace has to be woken up
+			if okteto.Context().IsOkteto {
+				// We execute it in a goroutine to not impact the command performance
+				go func() {
+					okClient, err := okteto.NewOktetoClient()
+					if err != nil {
+						oktetoLog.Infof("failed to create okteto client: '%s'", err.Error())
+						return
+					}
+					if err := wakeNamespaceIfApplies(ctx, up.Dev.Namespace, up.Client, okClient); err != nil {
+						// If there is an error waking up namespace, we don't want to fail the up command
+						oktetoLog.Infof("failed to wake up the namespace: %s", err.Error())
+					}
+				}()
 			}
 
 			if err := setBuildEnvVars(ctx, oktetoManifest); err != nil {
@@ -908,4 +926,20 @@ func setBuildEnvVars(ctx context.Context, m *model.Manifest) error {
 		Manifest:    m,
 	}
 	return builder.Build(ctx, buildOptions)
+}
+
+// wakeNamespaceIfApplies wakes the namespace if it is sleeping
+func wakeNamespaceIfApplies(ctx context.Context, ns string, k8sClient kubernetes.Interface, okClient types.OktetoInterface) error {
+	n, err := k8sClient.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	// If the namespace is not sleeping, do nothing
+	if n.Labels[constants.NamespaceStatusLabel] != constants.NamespaceStatusSleeping {
+		return nil
+	}
+
+	oktetoLog.Information("Namespace '%s' is sleeping, waking it up...", ns)
+	return okClient.Namespaces().Wake(ctx, ns)
 }
