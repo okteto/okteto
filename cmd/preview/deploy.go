@@ -96,7 +96,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "relative path within the repository to the okteto manifest (default to okteto.yaml or .okteto/okteto.yaml)")
 
 	cmd.Flags().StringVarP(&opts.deprecatedFilename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
-	cmd.Flags().MarkHidden("filename")
+	if err := cmd.Flags().MarkHidden("filename"); err != nil {
+		oktetoLog.Infof("failed to hide deprecated flag: %s", err)
+	}
 	return cmd
 }
 

@@ -129,7 +129,9 @@ func (s *OktetoSelector) run(initialPosition int) (string, error) {
 		return "", err
 	}
 
-	s.prepareTemplates()
+	if err := s.prepareTemplates(); err != nil {
+		oktetoLog.Infof("error preparing templates: %s", err)
+	}
 
 	s.Keys = &promptui.SelectKeys{
 		Prev:     promptui.Key{Code: promptui.KeyPrev, Display: promptui.KeyPrevDisplay},
@@ -195,8 +197,9 @@ func (s *OktetoSelector) run(initialPosition int) (string, error) {
 		s.renderLabel(sb)
 
 		help := s.renderHelp()
-		sb.Write(help)
-
+		if _, err := sb.Write(help); err != nil {
+			oktetoLog.Infof("error writing help: %s", err)
+		}
 		items, idx := l.Items()
 		last := len(items) - 1
 
@@ -224,18 +227,26 @@ func (s *OktetoSelector) run(initialPosition int) (string, error) {
 				output = append(output, render(s.OktetoTemplates.inactive, item)...)
 			}
 
-			sb.Write(output)
+			if _, err := sb.Write(output); err != nil {
+				oktetoLog.Infof("error writing output: %s", err)
+			}
 		}
 
 		if idx == list.NotFound {
-			sb.WriteString("")
-			sb.WriteString("No results")
+			if _, err := sb.WriteString(""); err != nil {
+				oktetoLog.Infof("error writing string: %s", err)
+			}
+			if _, err := sb.WriteString("No results"); err != nil {
+				oktetoLog.Infof("error writing string: %s", err)
+			}
 		} else {
 			active := items[idx]
 
 			details := s.renderDetails(active)
 			for _, d := range details {
-				sb.Write(d)
+				if _, err := sb.Write(d); err != nil {
+					oktetoLog.Infof("error writing details: %s", err)
+				}
 			}
 		}
 
@@ -268,9 +279,13 @@ func (s *OktetoSelector) run(initialPosition int) (string, error) {
 			err = promptui.ErrInterrupt
 		}
 		sb.Reset()
-		sb.WriteString("")
+		if _, err := sb.WriteString(""); err != nil {
+			oktetoLog.Infof("error writing string: %s", err)
+		}
 		sb.Flush()
-		rl.Write([]byte(showCursor))
+		if _, err := rl.Write([]byte(showCursor)); err != nil {
+			oktetoLog.Infof("error writing cursor: %s", err)
+		}
 		rl.Close()
 		return "", err
 	}
@@ -278,10 +293,14 @@ func (s *OktetoSelector) run(initialPosition int) (string, error) {
 	item := strings.TrimSpace(strings.TrimSuffix(s.Items[l.Index()].Name, " *"))
 
 	sb.Reset()
-	sb.Write(render(s.OktetoTemplates.selected, item))
+	if _, err := sb.Write(render(s.OktetoTemplates.selected, item)); err != nil {
+		oktetoLog.Infof("error writing selected: %s", err)
+	}
 	sb.Flush()
 
-	rl.Write([]byte(showCursor))
+	if _, err := rl.Write([]byte(showCursor)); err != nil {
+		oktetoLog.Infof("error writing cursor: %s", err)
+	}
 	rl.Close()
 
 	return s.Items[l.Index()].Name, err
@@ -399,7 +418,9 @@ func (s *OktetoSelector) renderLabel(sb *screenbuf.ScreenBuf) {
 	for _, labelLine := range strings.Split(s.Label, "\n") {
 		if width == 0 {
 			labelLineBytes := render(s.OktetoTemplates.label, labelLine)
-			sb.Write(labelLineBytes)
+			if _, err := sb.Write(labelLineBytes); err != nil {
+				oktetoLog.Infof("error writing label: %s", err)
+			}
 		} else {
 			lines := len(labelLine) / width
 			lastChar := 0
@@ -407,12 +428,16 @@ func (s *OktetoSelector) renderLabel(sb *screenbuf.ScreenBuf) {
 				if lines == i {
 					midLine := labelLine[lastChar:]
 					labelLineBytes := render(s.OktetoTemplates.label, midLine)
-					sb.Write(labelLineBytes)
+					if _, err := sb.Write(labelLineBytes); err != nil {
+						oktetoLog.Infof("error writing label: %s", err)
+					}
 					break
 				}
 				midLine := labelLine[lastChar : lastChar+width]
 				labelLineBytes := render(s.OktetoTemplates.label, midLine)
-				sb.Write(labelLineBytes)
+				if _, err := sb.Write(labelLineBytes); err != nil {
+					oktetoLog.Infof("error writing label: %s", err)
+				}
 				lastChar += width
 			}
 		}

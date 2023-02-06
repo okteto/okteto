@@ -38,7 +38,7 @@ type NamespaceInterface interface {
 	List(ctx context.Context) ([]Namespace, error)
 	Delete(ctx context.Context, namespace string) error
 	AddMembers(ctx context.Context, namespace string, members []string) error
-	SleepNamespace(ctx context.Context, namespace string) error
+	Sleep(ctx context.Context, namespace string) error
 	DestroyAll(ctx context.Context, namespace string, destroyVolumes bool) error
 	Wake(ctx context.Context, namespace string) error
 }

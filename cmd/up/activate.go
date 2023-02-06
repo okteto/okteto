@@ -103,8 +103,11 @@ func (up *upContext) activate() error {
 		}
 	}
 
-	go up.initializeSyncthing()
-
+	go func() {
+		if err := up.initializeSyncthing(); err != nil {
+			oktetoLog.Infof("could not initialize syncthing: %s", err)
+		}
+	}()
 	if err := up.setDevContainer(app); err != nil {
 		return err
 	}

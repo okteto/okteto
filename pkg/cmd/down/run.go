@@ -43,7 +43,9 @@ func Run(dev *model.Dev, app apps.App, trMap map[string]*apps.Translation, wait 
 				return err
 			}
 		} else {
-			tr.DevModeOff()
+			if err := tr.DevModeOff(); err != nil {
+				oktetoLog.Infof("failed to turn devmode off: %s", err)
+			}
 			if err := tr.App.Deploy(ctx, c); err != nil {
 				return err
 			}

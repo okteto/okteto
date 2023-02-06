@@ -171,12 +171,12 @@ func buildWithDockerDaemon(ctx context.Context, buildOptions *types.BuildOptions
 
 	dockerBuildContext, err := getBuildContext(buildOptions.File)
 	if err != nil {
-		errors.Wrap(err, "setting build context failed")
+		return err
 	}
 
 	dockerBuildOptions, err := getDockerOptions(buildOptions)
 	if err != nil {
-		errors.Wrap(err, "setting build options failed")
+		return err
 	}
 	progressOutput := streamformatter.NewProgressOutput(os.Stdout)
 

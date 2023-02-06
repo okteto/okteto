@@ -107,7 +107,9 @@ func deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringArrayVarP(&flags.variables, "var", "v", []string{}, "set a pipeline variable (can be set more than once)")
 	cmd.Flags().StringVarP(&flags.file, "file", "f", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
 	cmd.Flags().StringVarP(&flags.filename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
-	cmd.Flags().MarkHidden("filename")
+	if err := cmd.Flags().MarkHidden("filename"); err != nil {
+		oktetoLog.Infof("failed to mark 'filename' flag as hidden: %s", err)
+	}
 	return cmd
 }
 

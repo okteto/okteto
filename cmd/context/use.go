@@ -68,6 +68,7 @@ Or a Kubernetes context:
 
 			ctxOptions.IsCtxCommand = true
 			ctxOptions.Save = true
+			ctxOptions.CheckNamespaceAccess = ctxOptions.Namespace != ""
 
 			err := NewContextCommand().Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
@@ -84,7 +85,9 @@ Or a Kubernetes context:
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
 	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")
 	cmd.Flags().BoolVarP(&ctxOptions.OnlyOkteto, "okteto", "", false, "only shows okteto cluster options")
-	cmd.Flags().MarkHidden("okteto")
+	if err := cmd.Flags().MarkHidden("okteto"); err != nil {
+		oktetoLog.Infof("failed to mark 'okteto' flag as hidden: %s", err)
+	}
 	return cmd
 }
 
