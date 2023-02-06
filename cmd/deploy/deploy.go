@@ -59,6 +59,7 @@ type Options struct {
 	Build            bool
 	Dependencies     bool
 	RunWithoutBash   bool
+	RunInRemote      bool
 	servicesToDeploy []string
 
 	Repository string
@@ -238,6 +239,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the development environment")
 	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
+	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "force run deploy commands in remote")
 
 	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the development environment is deployed (defaults to false)")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
@@ -482,7 +484,7 @@ func getDeployer(manifest *model.Manifest, opts *Options, cwd string, builder *b
 
 	isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
 
-	if isRemote {
+	if isRemote || manifest.Deploy.Image == "" {
 		deployer, err = newLocalDeployer(opts.Name, cwd, opts.RunWithoutBash)
 		if err != nil {
 			return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
