@@ -19,10 +19,17 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func Test_waitUntilExitOrInterrupt(t *testing.T) {
@@ -340,6 +347,55 @@ func TestCommandAddedToUpOptionsWhenPassedAsFlag(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.expectedCommand, flagValue)
+		})
+	}
+}
+
+func TestWakeNamespaceIfAppliesWithoutErrors(t *testing.T) {
+	tests := []struct {
+		name              string
+		ns                v1.Namespace
+		expectedWakeCalls int
+	}{
+		{
+			name: "wake namespace if it is not sleeping",
+			ns: v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+					Labels: map[string]string{
+						constants.NamespaceStatusLabel: "Active",
+					},
+				},
+			},
+			expectedWakeCalls: 0,
+		},
+		{
+			name: "wake namespace if it is sleeping",
+			ns: v1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test",
+					Labels: map[string]string{
+						constants.NamespaceStatusLabel: constants.NamespaceStatusSleeping,
+					},
+				},
+			},
+			expectedWakeCalls: 1,
+		},
+	}
+	ctx := context.Background()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			k8sClient := fake.NewSimpleClientset(&tt.ns)
+			nsClient := client.NewFakeNamespaceClient([]types.Namespace{}, nil)
+			oktetoClient := &client.FakeOktetoClient{
+				Namespace: nsClient,
+			}
+
+			err := wakeNamespaceIfApplies(ctx, tt.ns.Name, k8sClient, oktetoClient)
+
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedWakeCalls, nsClient.WakeCalls)
 		})
 	}
 }

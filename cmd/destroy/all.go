@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils/executor"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -117,7 +118,7 @@ func (ld *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx conte
 				return err
 			}
 
-			status, ok := ns.Labels["space.okteto.com/status"]
+			status, ok := ns.Labels[constants.NamespaceStatusLabel]
 			if !ok {
 				// when status label is not present, continue polling the namespace until timeout
 				oktetoLog.Debugf("namespace %q does not have label for status", namespace)
