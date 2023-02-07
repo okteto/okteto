@@ -115,6 +115,7 @@ func (t trace) display() {
 	for _, v := range t.ongoing {
 		if t.hasCommandLogs(v) {
 			oktetoLog.StopSpinner()
+			oktetoLog.Println(strings.Join(v.logs, ""))
 			for _, log := range v.logs {
 				var text oktetoLog.JSONLogFormat
 				if err := json.Unmarshal([]byte(log), &text); err != nil {
