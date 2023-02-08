@@ -72,6 +72,7 @@ type Options struct {
 	K8sContext          string
 	RunWithoutBash      bool
 	DestroyAll          bool
+	RunInRemote         bool
 }
 
 type destroyInterface interface {
@@ -165,7 +166,6 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 
 			c := &destroyCommand{
-
 				executor:          executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
 				configMapHandler:  newConfigmapHandler(k8sClient),
 				nsDestroyer:       namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
@@ -209,6 +209,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment was deployed")
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
 	cmd.Flags().BoolVarP(&options.DestroyAll, "all", "", false, "destroy everything in the namespace")
+	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "force run destroy commands in remote")
 
 	return cmd
 }

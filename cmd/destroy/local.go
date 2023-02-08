@@ -35,7 +35,7 @@ type localDestroyCommand struct {
 	nsDestroyer       destroyer
 	executor          executor.ManifestExecutor
 	oktetoClient      *okteto.OktetoClient
-	secrets           *secrets.Secrets
+	secrets           secretHandler
 	k8sClientProvider okteto.K8sClientProvider
 }
 
@@ -59,6 +59,14 @@ func newLocalDestroyer(
 }
 
 func (ld *localDestroyCommand) destroy(ctx context.Context, opts *Options) error {
+
+	if opts.RunInRemote {
+		if ld.manifest.Deploy != nil {
+			if ld.manifest.Deploy.Image == "" {
+				ld.manifest.Deploy.Image = constants.OktetoPipelineRunnerImage
+			}
+		}
+	}
 
 	var err error
 	// when option --all the cmd will destroy everything at the namespace and return
