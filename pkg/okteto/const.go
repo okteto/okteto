@@ -5,6 +5,8 @@ const (
 	Deployment = "Deployment"
 	// StatefulSet k8s statefulset kind
 	StatefulSet = "StatefulSet"
-	// job k8s job kind
-	job = "job"
+	// Job k8s Job kind
+	Job = "job"
+	// CronJob k8s CronJob kind
+	CronJob = "CronJob"
 )
