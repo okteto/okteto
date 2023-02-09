@@ -22,6 +22,12 @@ import (
 
 	"github.com/moby/buildkit/client"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/tonistiigi/units"
+)
+
+const (
+	// largeContextThreshold is the threshold (in bytes) by which a context is catalogued as large or not (50MB)
+	largeContextThreshold = 50000000
 )
 
 func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
@@ -61,14 +67,16 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
 }
 
 type trace struct {
-	ongoing map[string]*vertexInfo
-	stages  map[string]bool
+	ongoing       map[string]*vertexInfo
+	stages        map[string]bool
+	showCtxAdvice bool
 }
 
 func newTrace() *trace {
 	return &trace{
-		ongoing: map[string]*vertexInfo{},
-		stages:  map[string]bool{},
+		ongoing:       map[string]*vertexInfo{},
+		stages:        map[string]bool{},
+		showCtxAdvice: true,
 	}
 }
 
@@ -94,11 +102,9 @@ func (t *trace) update(ss *client.SolveStatus) error {
 		if !ok {
 			continue // shouldn't happen
 		}
-		if s.Completed != nil {
-			v.completed = true
-			t.ongoing[s.Vertex.Encoded()] = v
-			continue
-		}
+		v.completed = s.Completed != nil
+		v.currentTransferedContext = s.Current
+		v.totalTransferedContext = s.Total
 	}
 	for _, l := range ss.Logs {
 		v, ok := t.ongoing[l.Vertex.Encoded()]
@@ -111,10 +117,20 @@ func (t *trace) update(ss *client.SolveStatus) error {
 	return nil
 }
 
-func (t trace) display() {
+func (t *trace) display() {
 	for _, v := range t.ongoing {
+		if t.isTransferringContext(v.name) {
+			if v.currentTransferedContext != 0 {
+				currentLoadedCtx := units.Bytes(v.currentTransferedContext)
+				if t.showCtxAdvice && currentLoadedCtx > largeContextThreshold {
+					t.showCtxAdvice = false
+					oktetoLog.Information("You can use '.oktetodeployignore' file to optimize the context used to deploy your development environment.")
+				}
+				oktetoLog.Spinner(fmt.Sprintf("Synchronizing context: %.2f", currentLoadedCtx))
+			}
+		}
 		if t.hasCommandLogs(v) {
-			oktetoLog.StopSpinner()
+			oktetoLog.Spinner("Deploying your development environment...")
 			for _, log := range v.logs {
 				var text oktetoLog.JSONLogFormat
 				if err := json.Unmarshal([]byte(log), &text); err != nil {
@@ -145,6 +161,12 @@ func (t trace) display() {
 	}
 }
 
+func (t trace) isTransferringContext(name string) bool {
+	isInternal := strings.HasPrefix(name, "[internal]")
+	isLoadingCtx := strings.Contains(name, "load build")
+	return isInternal && isLoadingCtx
+}
+
 func (t trace) hasCommandLogs(v *vertexInfo) bool {
 	return len(v.logs) != 0
 }
@@ -158,7 +180,9 @@ func (t *trace) removeCompletedSteps() {
 }
 
 type vertexInfo struct {
-	name      string
-	completed bool
-	logs      []string
+	name                     string
+	currentTransferedContext int64
+	totalTransferedContext   int64
+	completed                bool
+	logs                     []string
 }
