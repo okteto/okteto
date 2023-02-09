@@ -16,6 +16,7 @@ package build
 import (
 	"context"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/docker/cli/cli/config"
@@ -85,8 +86,12 @@ func (ap *authProvider) Credentials(_ context.Context, req *auth.CredentialsRequ
 	}
 	ac, err := ap.config.GetAuthConfig(req.Host)
 	if err != nil {
-		oktetoLog.Infof("could not access %s defined in %s", ap.config.CredentialsStore, ap.config.Filename)
-		return res, nil
+		if strings.HasPrefix(err.Error(), "error getting credentials") {
+			oktetoLog.Infof("could not access %s defined in %s", ap.config.CredentialsStore, ap.config.Filename)
+			return res, nil
+		}
+
+		return nil, err
 	}
 	if ac.IdentityToken != "" {
 		res.Secret = ac.IdentityToken
