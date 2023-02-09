@@ -79,6 +79,11 @@ func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
 }
 
 func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) error {
+
+	if rd.manifest.Destroy.Image == "" {
+		rd.manifest.Destroy.Image = constants.OktetoPipelineRunnerImage
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err

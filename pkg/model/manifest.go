@@ -814,6 +814,10 @@ func (m *Manifest) setDefaults() error {
 		}
 	}
 
+	if m.Destroy == nil {
+		m.Destroy = &DestroyInfo{}
+	}
+
 	return nil
 }
 

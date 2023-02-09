@@ -87,7 +87,7 @@ type destroyCommand struct {
 	k8sClientProvider okteto.K8sClientProvider
 	configMapHandler  configMapHandler
 	oktetoClient      *okteto.OktetoClient
-	getDestroyer      func(*model.Manifest, *kubernetes.Clientset, okteto.K8sClientProvider, destroyer, executor.ManifestExecutor, *okteto.OktetoClient) (destroyInterface, error)
+	getDestroyer      func(*model.Manifest, *kubernetes.Clientset, okteto.K8sClientProvider, destroyer, executor.ManifestExecutor, *okteto.OktetoClient, bool) (destroyInterface, error)
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -191,7 +191,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				}
 			}
 
-			destroyer, err := c.getDestroyer(manifest, k8sClient, c.k8sClientProvider, c.nsDestroyer, c.executor, c.oktetoClient)
+			destroyer, err := c.getDestroyer(manifest, k8sClient, c.k8sClientProvider, c.nsDestroyer, c.executor, c.oktetoClient, options.RunInRemote)
 			if err != nil {
 				return err
 			}
@@ -219,19 +219,22 @@ func getTempKubeConfigFile(name string) string {
 	return filepath.Join(config.GetOktetoHome(), tempKubeconfigFileName)
 }
 
-func getDestroyer(manifest *model.Manifest, k8sClient *kubernetes.Clientset, okK8sClient okteto.K8sClientProvider, nsDestroyer destroyer, executor executor.ManifestExecutor, okClient *okteto.OktetoClient) (destroyInterface, error) {
+func getDestroyer(manifest *model.Manifest, k8sClient *kubernetes.Clientset, okK8sClient okteto.K8sClientProvider, nsDestroyer destroyer, executor executor.ManifestExecutor, okClient *okteto.OktetoClient, runInRemoteRequest bool) (destroyInterface, error) {
 	var (
 		deployer destroyInterface
 	)
 
 	isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
 
-	if isRemote || manifest.Destroy.Image == "" {
-		deployer = newLocalDestroyer(manifest, k8sClient, okK8sClient, executor, nsDestroyer, okClient)
-		oktetoLog.Info("Destroying locally...")
-	} else {
+	runInRemote := !isRemote && (manifest.Destroy.Image != "" || runInRemoteRequest)
+
+	if runInRemote {
 		deployer = newRemoteDestroyer(manifest)
 		oktetoLog.Info("Destroying remotely...")
+	} else {
+		deployer = newLocalDestroyer(manifest, k8sClient, okK8sClient, executor, nsDestroyer, okClient)
+
+		oktetoLog.Info("Destroying locally...")
 	}
 	return deployer, nil
 }

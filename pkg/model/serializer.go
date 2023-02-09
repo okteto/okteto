@@ -894,10 +894,6 @@ func (d *DeployCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-func (d *DestroyInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	return nil
-}
-
 func (d *DeployInfo) MarshalYAML() (interface{}, error) {
 	if d.ComposeSection != nil && len(d.ComposeSection.ComposesInfo) != 0 {
 		return d, nil
