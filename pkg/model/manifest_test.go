@@ -428,6 +428,7 @@ func TestInferFromStack(t *testing.T) {
 						Stack: stack,
 					},
 				},
+				Destroy: &DestroyInfo{},
 			},
 		},
 		{
@@ -470,7 +471,8 @@ func TestInferFromStack(t *testing.T) {
 						Dockerfile: filepath.Join("test-1", "Dockerfile"),
 					},
 				},
-				Dev: ManifestDevs{},
+				Dev:     ManifestDevs{},
+				Destroy: &DestroyInfo{},
 				Deploy: &DeployInfo{
 					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
@@ -534,6 +536,7 @@ func TestInferFromStack(t *testing.T) {
 						Dockerfile: "Dockerfile",
 					},
 				},
+				Destroy: &DestroyInfo{},
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Name:      "one",
@@ -584,7 +587,6 @@ func TestInferFromStack(t *testing.T) {
 					},
 				},
 				Deploy: &DeployInfo{
-					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
