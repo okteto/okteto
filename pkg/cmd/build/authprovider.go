@@ -86,7 +86,7 @@ func (ap *authProvider) Credentials(_ context.Context, req *auth.CredentialsRequ
 	}
 	ac, err := ap.config.GetAuthConfig(req.Host)
 	if err != nil {
-		if strings.HasPrefix(err.Error(), "error getting credentials") {
+		if isErrCredentialsHelperNotAccessible(err) {
 			oktetoLog.Infof("could not access %s defined in %s", ap.config.CredentialsStore, ap.config.Filename)
 			return res, nil
 		}
@@ -100,4 +100,21 @@ func (ap *authProvider) Credentials(_ context.Context, req *auth.CredentialsRequ
 		res.Secret = ac.Password
 	}
 	return res, nil
+}
+
+func isErrCredentialsHelperNotAccessible(err error) bool {
+
+	if !strings.HasPrefix(err.Error(), "error getting credentials") {
+		return false
+	}
+
+	if strings.Contains(err.Error(), "resolves to executable in current directory") {
+		return true
+	}
+
+	if strings.Contains(err.Error(), "executable file not found in $PATH") {
+		return true
+	}
+
+	return false
 }
