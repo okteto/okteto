@@ -15,16 +15,12 @@ package weaver
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/okteto/okteto/pkg/k8s/diverts"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/textblock"
-	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -36,12 +32,6 @@ const (
 var (
 	divertTextBlockParser = textblock.NewTextBlock(divertTextBlockHeader, divertTextBlockFooter)
 )
-
-type portMapping struct {
-	ProxyPort          int32 `json:"proxy_port,omitempty" yaml:"proxy_port,omitempty"`
-	OriginalPort       int32 `json:"original_port,omitempty" yaml:"original_port,omitempty"`
-	OriginalTargetPort int32 `json:"original_target_port,omitempty" yaml:"original_target_port,omitempty"`
-}
 
 // Driver weaver struct for the divert driver
 type Driver struct {
@@ -81,38 +71,9 @@ func (*Driver) Destroy(_ context.Context) error {
 	return nil
 }
 
-func (*Driver) ApplyToDeployment(d1 *appsv1.Deployment, d2 *appsv1.Deployment) {
-	if d2.Spec.Template.Labels == nil {
-		return
+func (d *Driver) GetDivertNamespace() string {
+	if d.Manifest.Deploy.Divert.Namespace == d.Manifest.Namespace {
+		return ""
 	}
-	if d2.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] == "" {
-		return
-	}
-	if d1.Spec.Template.Labels == nil {
-		d1.Spec.Template.Labels = map[string]string{}
-	}
-	d1.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] = d2.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel]
-}
-
-func (*Driver) ApplyToService(s1 *apiv1.Service, s2 *apiv1.Service) {
-	if s2.Annotations[model.OktetoDivertServiceAnnotation] == "" {
-		return
-	}
-	if s2.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
-		return
-	}
-	if s1.Annotations == nil {
-		s1.Annotations = map[string]string{}
-	}
-	s1.Annotations[model.OktetoDivertServiceAnnotation] = s2.Annotations[model.OktetoDivertServiceAnnotation]
-	divertMapping := portMapping{}
-	if err := json.Unmarshal([]byte(s2.Annotations[model.OktetoDivertServiceAnnotation]), &divertMapping); err != nil {
-		oktetoLog.Warning("skipping apply divert to service '%s': %s", s1.Name, err.Error())
-		return
-	}
-	for i := range s1.Spec.Ports {
-		if s1.Spec.Ports[i].Port == divertMapping.OriginalPort {
-			s1.Spec.Ports[i].TargetPort = intstr.IntOrString{IntVal: divertMapping.ProxyPort}
-		}
-	}
+	return d.Manifest.Deploy.Divert.Namespace
 }

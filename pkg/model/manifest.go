@@ -187,10 +187,12 @@ type DeployInfo struct {
 
 // DivertDeploy represents information about the deploy divert configuration
 type DivertDeploy struct {
-	Namespace  string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Service    string `json:"service,omitempty" yaml:"service,omitempty"`
-	Port       int    `json:"port,omitempty" yaml:"port,omitempty"`
-	Deployment string `json:"deployment,omitempty" yaml:"deployment,omitempty"`
+	Driver          string   `json:"driver,omitempty" yaml:"driver,omitempty"`
+	Namespace       string   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Service         string   `json:"service,omitempty" yaml:"service,omitempty"`
+	Port            int      `json:"port,omitempty" yaml:"port,omitempty"`
+	Deployment      string   `json:"deployment,omitempty" yaml:"deployment,omitempty"`
+	VirtualServices []string `json:"virtualServices,omitempty" yaml:"virtualServices,omitempty"`
 }
 
 // ComposeSectionInfo represents information about compose file
@@ -762,16 +764,34 @@ func (m *Manifest) validateDivert() error {
 	if m.Deploy.Divert.Namespace == "" {
 		return fmt.Errorf("the field 'deploy.divert.namespace' is mandatory")
 	}
-	if m.Deploy.Divert.Service == "" {
-		return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
-	}
-	if m.Deploy.Divert.Deployment == "" {
-		return fmt.Errorf("the field 'deploy.divert.deployment' is mandatory")
+
+	switch m.Deploy.Divert.Driver {
+	case OktetoDivertWeaverDriver:
+		if m.Deploy.Divert.Service == "" {
+			return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
+		}
+		if m.Deploy.Divert.Deployment == "" {
+			return fmt.Errorf("the field 'deploy.divert.deployment' is mandatory")
+		}
+	case OktetoDivertIstioDriver:
+		if m.Deploy.Divert.Service == "" {
+			return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
+		}
+	default:
+		return fmt.Errorf("the divert driver '%s' isn't supported", m.Deploy.Divert.Driver)
 	}
 	return nil
 }
 
 func (m *Manifest) setDefaults() error {
+	if m.Deploy != nil && m.Deploy.Divert != nil {
+		if m.Deploy.Divert.Driver == "" {
+			m.Deploy.Divert.Driver = OktetoDivertWeaverDriver
+		}
+		if m.Deploy.Divert.Driver == OktetoDivertIstioDriver && len(m.Deploy.Divert.VirtualServices) == 0 {
+			m.Deploy.Divert.VirtualServices = []string{"*"}
+		}
+	}
 	for dName, d := range m.Dev {
 		if d.Name == "" {
 			d.Name = dName

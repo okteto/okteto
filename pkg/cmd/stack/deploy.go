@@ -16,6 +16,7 @@ package stack
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -24,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/divert"
+	"github.com/okteto/okteto/pkg/divert/weaver"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -40,8 +41,10 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/registry"
+	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -586,8 +589,7 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 	}
 
 	svcK8s.ObjectMeta.ResourceVersion = old.ObjectMeta.ResourceVersion
-	driver := divert.New(nil, nil, nil)
-	driver.ApplyToService(svcK8s, old)
+	keepDivertInService(svcK8s, old)
 	if err := services.Deploy(ctx, svcK8s, c); err != nil {
 		return err
 	}
@@ -620,8 +622,7 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 				d.Labels[model.DeployedByLabel] = format.ResourceK8sMetaString(s.Name)
 			}
 		}
-		driver := divert.New(nil, nil, nil)
-		driver.ApplyToDeployment(d, old)
+		keepDivertInDeployment(d, old)
 	}
 
 	if !isNewDeployment && old.Labels[model.StackNameLabel] == "okteto" {
@@ -911,4 +912,40 @@ func getAddedSvcs(initialSvcsToDeploy, svcsToDeployWithDependencies []string) []
 		}
 	}
 	return added
+}
+
+func keepDivertInDeployment(d1 *appsv1.Deployment, d2 *appsv1.Deployment) {
+	if d2.Spec.Template.Labels == nil {
+		return
+	}
+	if d2.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] == "" {
+		return
+	}
+	if d1.Spec.Template.Labels == nil {
+		d1.Spec.Template.Labels = map[string]string{}
+	}
+	d1.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] = d2.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel]
+}
+
+func keepDivertInService(s1 *apiv1.Service, s2 *apiv1.Service) {
+	if s2.Annotations[model.OktetoDivertServiceAnnotation] == "" {
+		return
+	}
+	if s2.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
+		return
+	}
+	if s1.Annotations == nil {
+		s1.Annotations = map[string]string{}
+	}
+	s1.Annotations[model.OktetoDivertServiceAnnotation] = s2.Annotations[model.OktetoDivertServiceAnnotation]
+	divertMapping := weaver.PortMapping{}
+	if err := json.Unmarshal([]byte(s2.Annotations[model.OktetoDivertServiceAnnotation]), &divertMapping); err != nil {
+		oktetoLog.Warning("skipping apply divert to service '%s': %s", s1.Name, err.Error())
+		return
+	}
+	for i := range s1.Spec.Ports {
+		if s1.Spec.Ports[i].Port == divertMapping.OriginalPort {
+			s1.Spec.Ports[i].TargetPort = intstr.IntOrString{IntVal: divertMapping.ProxyPort}
+		}
+	}
 }

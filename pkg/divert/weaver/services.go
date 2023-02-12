@@ -28,6 +28,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+// PortMapping represents the divert original port mappings
+type PortMapping struct {
+	ProxyPort          int32 `json:"proxy_port,omitempty" yaml:"proxy_port,omitempty"`
+	OriginalPort       int32 `json:"original_port,omitempty" yaml:"original_port,omitempty"`
+	OriginalTargetPort int32 `json:"original_target_port,omitempty" yaml:"original_target_port,omitempty"`
+}
+
 func (d *Driver) divertService(ctx context.Context, name string) error {
 	from, ok := d.cache.divertServices[name]
 	if !ok {
@@ -91,7 +98,7 @@ func translateService(m *model.Manifest, s *apiv1.Service) (*apiv1.Service, erro
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
 
 	if v := result.Annotations[model.OktetoDivertServiceAnnotation]; v != "" {
-		divertMapping := portMapping{}
+		divertMapping := PortMapping{}
 		if err := json.Unmarshal([]byte(v), &divertMapping); err != nil {
 			return nil, err
 		}

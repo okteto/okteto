@@ -493,6 +493,10 @@ func IsOktetoContext(contextName string) bool {
 	return selectedCtx.IsOkteto
 }
 
+func GetSubdomain() string {
+	return strings.Replace(Context().Registry, "registry.", "", 1)
+}
+
 func GetContextCertificate() (*x509.Certificate, error) {
 	certB64 := Context().Certificate
 	certPEM, err := base64.StdEncoding.DecodeString(certB64)

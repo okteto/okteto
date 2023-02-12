@@ -216,6 +216,7 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ok-with-port",
 			divert: DivertDeploy{
+				Driver:     OktetoDivertWeaverDriver,
 				Namespace:  "namespace",
 				Service:    "service",
 				Port:       8080,
@@ -226,6 +227,7 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ok-without-port",
 			divert: DivertDeploy{
+				Driver:     OktetoDivertWeaverDriver,
 				Namespace:  "namespace",
 				Service:    "service",
 				Deployment: "deployment",
@@ -235,6 +237,7 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ko-without-namespace",
 			divert: DivertDeploy{
+				Driver:     OktetoDivertWeaverDriver,
 				Namespace:  "",
 				Service:    "service",
 				Port:       8080,
@@ -245,6 +248,7 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ko-without-service",
 			divert: DivertDeploy{
+				Driver:     OktetoDivertWeaverDriver,
 				Namespace:  "namespace",
 				Service:    "",
 				Port:       8080,
@@ -255,6 +259,7 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ko-without-deployment",
 			divert: DivertDeploy{
+				Driver:     OktetoDivertWeaverDriver,
 				Namespace:  "namespace",
 				Service:    "service",
 				Port:       8080,
