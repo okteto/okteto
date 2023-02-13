@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
@@ -46,7 +47,7 @@ COPY . /okteto/src
 WORKDIR /okteto/src
 
 ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
-RUN okteto destroy
+RUN okteto destroy {{ .DestroyFlags }}
 `
 	dockerignoreName = "deploy.dockerignore"
 	buildOutput      = "deploy"
@@ -65,6 +66,7 @@ type dockerfileTemplateProperties struct {
 	RemoteDeployEnvVar string
 	DeployFlags        string
 	RandomInt          int
+	DestroyFlags       string
 }
 
 type remoteDestroyCommand struct {
@@ -107,6 +109,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		TokenValue:         okteto.Context().Token,
 		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
 		RandomInt:          rand.Intn(1000),
+		DestroyFlags:       strings.Join(getDestroyFlags(opts), " "),
 	}
 
 	tmpDir, err := afero.TempDir(rd.fs, "", "")
@@ -178,4 +181,34 @@ func (rd *remoteDestroyCommand) createDockerignoreIfNeeded(cwd, tmpDir string) e
 	}
 
 	return nil
+}
+
+func getDestroyFlags(opts *Options) []string {
+	var deployFlags []string
+
+	if opts.Name != "" {
+		deployFlags = append(deployFlags, fmt.Sprintf("--name %s", opts.Name))
+	}
+
+	if opts.Namespace != "" {
+		deployFlags = append(deployFlags, fmt.Sprintf("--namespace %s", opts.Namespace))
+	}
+
+	if opts.ManifestPathFlag != "" {
+		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", opts.ManifestPathFlag))
+	}
+
+	if opts.DestroyVolumes {
+		deployFlags = append(deployFlags, "--volumes")
+	}
+
+	if opts.ForceDestroy {
+		deployFlags = append(deployFlags, "--force-destroy")
+	}
+
+	if opts.DestroyAll {
+		deployFlags = append(deployFlags, "--all")
+	}
+
+	return deployFlags
 }
