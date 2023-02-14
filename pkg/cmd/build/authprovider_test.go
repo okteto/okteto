@@ -53,8 +53,10 @@ func Test_GetAuthConfig_OmisionIfNeeded(t *testing.T) {
 		AuthConfigs: map[string]types.AuthConfig{
 			"https://index.docker.io/v1/": {},
 		},
-		CredentialsStore: "desktop",
+		CredentialsStore: "okteto-fake", // resolves to binary named docker-credential-okteto-fake, which shouldn't be present at $PATH
 	}
 	_, err := config.GetAuthConfig("https://index.docker.io/v1/")
+	require.Error(t, err)
+	t.Logf("error is: %q", err)
 	require.True(t, isErrCredentialsHelperNotAccessible(err))
 }
