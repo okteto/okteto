@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/docker/cli/cli/config/configfile"
+	"github.com/docker/cli/cli/config/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,4 +46,15 @@ func Test_isErrCredentialsHelperNotAccessiblee(t *testing.T) {
 			require.Equal(t, isErrCredentialsHelperNotAccessible(tt.err), tt.expected)
 		})
 	}
+}
+
+func Test_GetAuthConfig_OmisionIfNeeded(t *testing.T) {
+	config := &configfile.ConfigFile{
+		AuthConfigs: map[string]types.AuthConfig{
+			"https://index.docker.io/v1/": {},
+		},
+		CredentialsStore: "desktop",
+	}
+	_, err := config.GetAuthConfig("https://index.docker.io/v1/")
+	require.True(t, isErrCredentialsHelperNotAccessible(err))
 }
