@@ -112,7 +112,7 @@ func isErrCredentialsHelperNotAccessible(err error) bool {
 		return true
 	}
 
-	if strings.Contains(err.Error(), "executable file not found in $PATH") {
+	if strings.Contains(err.Error(), "executable file not found") {
 		return true
 	}
 
