@@ -62,7 +62,7 @@ WORKDIR /okteto/src
 ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
 RUN okteto deploy --log-output=json {{ .DeployFlags }}
 `
-	dockerignoreName = "deploy.dockerignore"
+	dockerignoreName = ".oktetodeployignore"
 	buildOutput      = "deploy"
 )
 
@@ -187,7 +187,7 @@ func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) er
 			return err
 		}
 
-		err = afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, dockerignoreName), dockerignoreContent, 0600)
+		err = afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
 		if err != nil {
 			return err
 		}
