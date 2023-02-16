@@ -93,6 +93,11 @@ Or a Kubernetes context:
 
 func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	ctxStore := okteto.ContextStore()
+	if len(ctxStore.Contexts) == 0 {
+		// if the context store has no context stored, set flag to save
+		// the new one generated.
+		ctxOptions.Save = true
+	}
 
 	// We have to maintain this order to not break some commands
 	// See https://github.com/okteto/okteto/issues/3247 for more information
