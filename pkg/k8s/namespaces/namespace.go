@@ -148,7 +148,7 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 		}
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		if isStorage(gvk.Kind) && !opts.IncludeVolumes {
-			oktetoLog.Debugf("skipping deletion of pvc '%s' because of volume flag", m.GetName())
+			oktetoLog.Debugf("skipping deletion of '%s' '%s' because of volume flag", gvk.Kind, m.GetName())
 			return nil
 		}
 
@@ -191,7 +191,7 @@ func (n *Namespaces) DestroySFSVolumes(ctx context.Context, ns string, opts Dele
 	if !opts.IncludeVolumes {
 		return nil
 	}
-	pvcNames := []string{}
+	var pvcNames []string
 
 	ssList, err := statefulsets.List(ctx, ns, opts.LabelSelector, n.k8sClient)
 	if err != nil {
@@ -354,9 +354,7 @@ func (t *Trip) listAll(ctx context.Context, traveler Traveler, client dynamic.Re
 // isStorage returns if the kind is some of storage kind
 func isStorage(kind string) bool {
 	switch kind {
-	case volumeKind:
-		return true
-	case volumeSnapshotKind:
+	case volumeKind, volumeSnapshotKind:
 		return true
 	}
 	return false
