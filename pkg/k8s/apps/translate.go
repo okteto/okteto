@@ -454,10 +454,10 @@ func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityCont
 	if s.RunAsNonRoot != nil {
 		c.SecurityContext.RunAsNonRoot = s.RunAsNonRoot
 	}
-    
+
 	if s.AllowPrivilegeEscalation != nil {
 		c.SecurityContext.AllowPrivilegeEscalation = s.AllowPrivilegeEscalation
-	}    
+	}
 
 	if s.Capabilities == nil {
 		return

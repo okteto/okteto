@@ -44,7 +44,7 @@ repos:
       - id: codespell
         name: Run codespell
         description: Check Spelling with codespell
-        entry: codespell -L flate,keypair,splitted,vertexes,ba
+        entry: codespell -L flate,keypair,splitted,vertexes,ba --exclude-file=go.sum
 
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v2.7.1
