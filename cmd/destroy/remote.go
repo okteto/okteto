@@ -98,9 +98,8 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	}
 
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:   constants.OktetoCLIImageForRemote,
-		UserDestroyImage: rd.manifest.Destroy.Image,
-		//OktetoBuildEnvVars: rd.builder.GetBuildEnvVars(),
+		OktetoCLIImage:     constants.OktetoCLIImageForRemote,
+		UserDestroyImage:   rd.manifest.Destroy.Image,
 		ContextEnvVar:      model.OktetoContextEnvVar,
 		ContextValue:       okteto.Context().Name,
 		NamespaceEnvVar:    model.OktetoNamespaceEnvVar,
