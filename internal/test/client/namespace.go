@@ -22,6 +22,9 @@ import (
 type FakeNamespaceClient struct {
 	namespaces []types.Namespace
 	err        error
+
+	// WakeCalls is the number of times Wake was called
+	WakeCalls int
 }
 
 func NewFakeNamespaceClient(ns []types.Namespace, err error) *FakeNamespaceClient {
@@ -68,5 +71,15 @@ func (*FakeNamespaceClient) Sleep(_ context.Context, _ string) error {
 
 // DestroyAll deletes a namespace
 func (*FakeNamespaceClient) DestroyAll(_ context.Context, _ string, _ bool) error {
+	return nil
+}
+
+// Wake wakes up a namespace
+func (c *FakeNamespaceClient) Wake(_ context.Context, _ string) error {
+	if c.err != nil {
+		return c.err
+	}
+
+	c.WakeCalls++
 	return nil
 }

@@ -1236,6 +1236,151 @@ func Test_translateServiceEnvironment(t *testing.T) {
 	}
 }
 
+func Test_translateResources(t *testing.T) {
+	tests := []struct {
+		name      string
+		svc       *model.Service
+		resources apiv1.ResourceRequirements
+	}{
+		{
+			name: "svc not defined",
+			svc: &model.Service{
+				Resources: nil,
+			},
+			resources: apiv1.ResourceRequirements{},
+		},
+		{
+			name: "svc Limits CPU defined",
+			svc: &model.Service{
+				Resources: &model.StackResources{
+					Limits: model.ServiceResources{
+						CPU: model.Quantity{Value: resource.MustParse("2")},
+					},
+				},
+			},
+			resources: apiv1.ResourceRequirements{
+				Limits: apiv1.ResourceList{
+					apiv1.ResourceCPU: resource.MustParse("2"),
+				},
+			},
+		},
+		{
+			name: "svc Limits Memory defined",
+			svc: &model.Service{
+				Resources: &model.StackResources{
+					Limits: model.ServiceResources{
+						Memory: model.Quantity{Value: resource.MustParse("5Gi")},
+					},
+				},
+			},
+			resources: apiv1.ResourceRequirements{
+				Limits: apiv1.ResourceList{
+					apiv1.ResourceMemory: resource.MustParse("5Gi"),
+				},
+			},
+		},
+		{
+			name: "svc Limits ALL defined",
+			svc: &model.Service{
+				Resources: &model.StackResources{
+					Limits: model.ServiceResources{
+						CPU:    model.Quantity{Value: resource.MustParse("2")},
+						Memory: model.Quantity{Value: resource.MustParse("5Gi")},
+					},
+				},
+			},
+			resources: apiv1.ResourceRequirements{
+				Limits: apiv1.ResourceList{
+					apiv1.ResourceCPU:    resource.MustParse("2"),
+					apiv1.ResourceMemory: resource.MustParse("5Gi"),
+				},
+			},
+		},
+
+		{
+			name: "svc Requests CPU defined",
+			svc: &model.Service{
+				Resources: &model.StackResources{
+					Requests: model.ServiceResources{
+						CPU: model.Quantity{Value: resource.MustParse("11m")},
+					},
+				},
+			},
+			resources: apiv1.ResourceRequirements{
+				Requests: apiv1.ResourceList{
+					apiv1.ResourceCPU: resource.MustParse("11m"),
+				},
+			},
+		},
+		{
+			name: "svc Requests Memory defined",
+			svc: &model.Service{
+				Resources: &model.StackResources{
+					Requests: model.ServiceResources{
+						Memory: model.Quantity{Value: resource.MustParse("60Mi")},
+					},
+				},
+			},
+			resources: apiv1.ResourceRequirements{
+				Requests: apiv1.ResourceList{
+					apiv1.ResourceMemory: resource.MustParse("60Mi"),
+				},
+			},
+		},
+		{
+			name: "svc Requests ALL defined",
+			svc: &model.Service{
+				Resources: &model.StackResources{
+					Requests: model.ServiceResources{
+						CPU:    model.Quantity{Value: resource.MustParse("11m")},
+						Memory: model.Quantity{Value: resource.MustParse("60Mi")},
+					},
+				},
+			},
+			resources: apiv1.ResourceRequirements{
+				Requests: apiv1.ResourceList{
+					apiv1.ResourceCPU:    resource.MustParse("11m"),
+					apiv1.ResourceMemory: resource.MustParse("60Mi"),
+				},
+			},
+		},
+		{
+			name: "svc ALL defined",
+			svc: &model.Service{
+				Resources: &model.StackResources{
+					Limits: model.ServiceResources{
+						CPU:    model.Quantity{Value: resource.MustParse("2")},
+						Memory: model.Quantity{Value: resource.MustParse("5Gi")},
+					},
+					Requests: model.ServiceResources{
+						CPU:    model.Quantity{Value: resource.MustParse("11m")},
+						Memory: model.Quantity{Value: resource.MustParse("60Mi")},
+					},
+				},
+			},
+			resources: apiv1.ResourceRequirements{
+				Limits: apiv1.ResourceList{
+					apiv1.ResourceCPU:    resource.MustParse("2"),
+					apiv1.ResourceMemory: resource.MustParse("5Gi"),
+				},
+				Requests: apiv1.ResourceList{
+					apiv1.ResourceCPU:    resource.MustParse("11m"),
+					apiv1.ResourceMemory: resource.MustParse("60Mi"),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := translateResources(tt.svc)
+			if !reflect.DeepEqual(tt.resources, res) {
+				t.Fatalf("Wrong translation expected %v, got %v", tt.resources, res)
+			}
+		})
+	}
+}
+
 func Test_translateAffinity(t *testing.T) {
 	tests := []struct {
 		name     string

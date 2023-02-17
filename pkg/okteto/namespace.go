@@ -188,3 +188,21 @@ func (c *namespaceClient) DestroyAll(ctx context.Context, namespace string, dest
 
 	return nil
 }
+
+// Wake wakes a namespace
+func (c *namespaceClient) Wake(ctx context.Context, namespace string) error {
+	var mutation struct {
+		Space struct {
+			Id graphql.String
+		} `graphql:"wakeSpace(space: $space)"`
+	}
+	variables := map[string]interface{}{
+		"space": graphql.String(namespace),
+	}
+	err := mutate(ctx, &mutation, variables, c.client)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

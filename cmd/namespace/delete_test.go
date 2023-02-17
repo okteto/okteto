@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -133,7 +134,7 @@ func Test_deleteNamespace(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: currentNamespace,
 					Labels: map[string]string{
-						"space.okteto.com/status": "DeleteFailed",
+						constants.NamespaceStatusLabel: "DeleteFailed",
 					},
 				},
 			}),

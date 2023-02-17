@@ -16,6 +16,7 @@ package build
 import (
 	"context"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/docker/cli/cli/config"
@@ -23,6 +24,7 @@ import (
 	"github.com/docker/cli/cli/config/types"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -84,6 +86,11 @@ func (ap *authProvider) Credentials(_ context.Context, req *auth.CredentialsRequ
 	}
 	ac, err := ap.config.GetAuthConfig(req.Host)
 	if err != nil {
+		if isErrCredentialsHelperNotAccessible(err) {
+			oktetoLog.Infof("could not access %s defined in %s", ap.config.CredentialsStore, ap.config.Filename)
+			return res, nil
+		}
+
 		return nil, err
 	}
 	if ac.IdentityToken != "" {
@@ -93,4 +100,21 @@ func (ap *authProvider) Credentials(_ context.Context, req *auth.CredentialsRequ
 		res.Secret = ac.Password
 	}
 	return res, nil
+}
+
+func isErrCredentialsHelperNotAccessible(err error) bool {
+
+	if !strings.HasPrefix(err.Error(), "error getting credentials") {
+		return false
+	}
+
+	if strings.Contains(err.Error(), "resolves to executable in current directory") {
+		return true
+	}
+
+	if strings.Contains(err.Error(), "executable file not found") {
+		return true
+	}
+
+	return false
 }

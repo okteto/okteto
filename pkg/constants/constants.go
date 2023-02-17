@@ -52,4 +52,10 @@ const (
 
 	// OktetoEnvFile defines the name for okteto env file
 	OktetoEnvFile = "OKTETO_ENV"
+
+	// NamespaceStatusLabel label added to namespaces to indicate its status
+	NamespaceStatusLabel = "space.okteto.com/status"
+
+	// NamespaceStatusSleeping indicates that the namespace is sleeping
+	NamespaceStatusSleeping = "Sleeping"
 )

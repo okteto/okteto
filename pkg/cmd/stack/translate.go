@@ -667,8 +667,8 @@ func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 		if svc.Resources.Requests.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
 			if result.Requests == nil {
 				result.Requests = apiv1.ResourceList{}
-				result.Requests[apiv1.ResourceMemory] = svc.Resources.Requests.Memory.Value
 			}
+			result.Requests[apiv1.ResourceMemory] = svc.Resources.Requests.Memory.Value
 		}
 	}
 	return result
