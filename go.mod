@@ -1,6 +1,6 @@
 module github.com/okteto/okteto
 
-go 1.20
+go 1.19
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
