@@ -26,153 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func Test_createIntoDeveloperVirtualService(t *testing.T) {
-	tests := []struct {
-		name     string
-		vs       *istioV1beta1.VirtualService
-		expected *istioV1beta1.VirtualService
-	}{
-		{
-			name: "ok",
-			vs: &istioV1beta1.VirtualService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "service-a",
-					Namespace:   "staging",
-					Labels:      map[string]string{"l1": "v1"},
-					Annotations: map[string]string{"a1": "v1"},
-				},
-				Spec: istioNetworkingV1beta1.VirtualService{
-					Gateways: []string{"ingress-http"},
-					Hosts: []string{
-						"service-a.staging.demo.okteto.dev",
-						"service-a.staging.svc.cluster.local",
-						"service-a.staging",
-					},
-					Http: []*istioNetworkingV1beta1.HTTPRoute{
-						{
-							Name: "ingress-gateway-http-app-service",
-							Match: []*istioNetworkingV1beta1.HTTPMatchRequest{
-								{
-									Gateways: []string{"ingress-http"},
-									Port:     80,
-								},
-							},
-							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
-								{
-									Destination: &istioNetworkingV1beta1.Destination{
-										Host: "service-a.staging.svc.cluster.local",
-										Port: &istioNetworkingV1beta1.PortSelector{
-											Number: 80,
-										},
-										Subset: "stable",
-									},
-									Weight: 100,
-								},
-								{
-									Destination: &istioNetworkingV1beta1.Destination{
-										Host: "service-a",
-										Port: &istioNetworkingV1beta1.PortSelector{
-											Number: 80,
-										},
-										Subset: "stable",
-									},
-									Weight: 100,
-								},
-							},
-						},
-					},
-				},
-			},
-			expected: &istioV1beta1.VirtualService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "service-a",
-					Namespace: "cindy",
-					Labels: map[string]string{
-						model.DeployedByLabel: "test",
-						"l1":                  "v1",
-					},
-					Annotations: map[string]string{
-						model.OktetoAutoCreateAnnotation: "true",
-						"a1":                             "v1",
-					},
-				},
-				Spec: istioNetworkingV1beta1.VirtualService{
-					Gateways: []string{"ingress-http"},
-					Hosts: []string{
-						"service-a-cindy.demo.okteto.dev",
-						"service-a.cindy.svc.cluster.local",
-					},
-					Tls: nil,
-					Http: []*istioNetworkingV1beta1.HTTPRoute{
-						{
-							Name: "ingress-gateway-http-app-service",
-							Match: []*istioNetworkingV1beta1.HTTPMatchRequest{
-								{
-									Gateways: []string{"ingress-http"},
-									Port:     80,
-								},
-							},
-							Headers: &istioNetworkingV1beta1.Headers{
-								Request: &istioNetworkingV1beta1.Headers_HeaderOperations{
-									Set: map[string]string{model.OktetoDivertHeader: "cindy"},
-								},
-							},
-							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
-								{
-									Destination: &istioNetworkingV1beta1.Destination{
-										Host: "service-a.staging.svc.cluster.local",
-										Port: &istioNetworkingV1beta1.PortSelector{
-											Number: 80,
-										},
-										Subset: "stable",
-									},
-									Weight: 100,
-								},
-								{
-									Destination: &istioNetworkingV1beta1.Destination{
-										Host: "service-a.staging.svc.cluster.local",
-										Port: &istioNetworkingV1beta1.PortSelector{
-											Number: 80,
-										},
-										Subset: "stable",
-									},
-									Weight: 100,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-				Service:   "service-a",
-			},
-		},
-	}
-	okteto.AddOktetoContext("test", &types.User{Registry: "registry.demo.okteto.dev"}, "okteto", "cyndy")
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := createIntoDeveloperVirtualService(m, tt.vs)
-			assert.True(t, reflect.DeepEqual(result.ObjectMeta, tt.expected.ObjectMeta))
-			assert.True(t, reflect.DeepEqual(result.Spec.Hosts, tt.expected.Spec.Hosts))
-			assert.True(t, reflect.DeepEqual(result.Spec.Gateways, tt.expected.Spec.Gateways))
-			for i := range tt.expected.Spec.Http {
-				assert.True(t, reflect.DeepEqual(result.Spec.Http[i].Headers, tt.expected.Spec.Http[i].Headers))
-				assert.True(t, reflect.DeepEqual(result.Spec.Http[i].Route, tt.expected.Spec.Http[i].Route))
-			}
-		})
-	}
-}
-
-func Test_translateDivertVirtualService(t *testing.T) {
+func Test_translateDivertService(t *testing.T) {
 	tests := []struct {
 		name     string
 		vs       *istioV1beta1.VirtualService
@@ -364,20 +218,19 @@ func Test_translateDivertVirtualService(t *testing.T) {
 		},
 	}
 
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-				Service:   "service-a",
-			},
+	d := &Driver{
+		name:      "test",
+		namespace: "cindy",
+		divert: model.DivertDeploy{
+			Namespace:      "staging",
+			Service:        "service-a",
+			VirtualService: "virtual-service-a",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := translateDivertVirtualService(m, tt.vs)
+			result := d.translateDivertService(tt.vs)
 			assert.True(t, reflect.DeepEqual(result.ObjectMeta, tt.expected.ObjectMeta))
 			assert.True(t, reflect.DeepEqual(result.Spec.Hosts, tt.expected.Spec.Hosts))
 			assert.True(t, reflect.DeepEqual(result.Spec.Gateways, tt.expected.Spec.Gateways))
@@ -389,7 +242,7 @@ func Test_translateDivertVirtualService(t *testing.T) {
 	}
 }
 
-func Test_restoreDivertVirtualService(t *testing.T) {
+func Test_restoreDivertService(t *testing.T) {
 	tests := []struct {
 		name     string
 		vs       *istioV1beta1.VirtualService
@@ -502,20 +355,250 @@ func Test_restoreDivertVirtualService(t *testing.T) {
 		},
 	}
 
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-				Service:   "service-a",
-			},
+	d := &Driver{
+		name:      "test",
+		namespace: "cindy",
+		divert: model.DivertDeploy{
+			Namespace:      "staging",
+			Service:        "service-a",
+			VirtualService: "virtual-service-a",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := restoreDivertVirtualService(m, tt.vs)
+			result := d.restoreDivertService(tt.vs)
+			assert.True(t, reflect.DeepEqual(result.ObjectMeta, tt.expected.ObjectMeta))
+			assert.True(t, reflect.DeepEqual(result.Spec.Hosts, tt.expected.Spec.Hosts))
+			assert.True(t, reflect.DeepEqual(result.Spec.Gateways, tt.expected.Spec.Gateways))
+			for i := range tt.expected.Spec.Http {
+				assert.True(t, reflect.DeepEqual(result.Spec.Http[i].Headers, tt.expected.Spec.Http[i].Headers))
+				assert.True(t, reflect.DeepEqual(result.Spec.Http[i].Route, tt.expected.Spec.Http[i].Route))
+			}
+		})
+	}
+}
+
+func Test_translateDivertHost(t *testing.T) {
+	tests := []struct {
+		name     string
+		vs       *istioV1beta1.VirtualService
+		expected *istioV1beta1.VirtualService
+	}{
+		{
+			name: "divert-host-different-namespace",
+			vs: &istioV1beta1.VirtualService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "service-a",
+					Namespace:       "staging",
+					Labels:          map[string]string{"l1": "v1"},
+					Annotations:     map[string]string{"a1": "v1"},
+					ResourceVersion: "version",
+				},
+				Spec: istioNetworkingV1beta1.VirtualService{
+					Gateways: []string{"ingress-http"},
+					Hosts: []string{
+						"service-a.staging.svc.cluster.local",
+						"service-a.staging.com",
+					},
+					Http: []*istioNetworkingV1beta1.HTTPRoute{
+						{
+							Name: "okteto-divert-cindy-ingress-gateway-http-app-service",
+							Match: []*istioNetworkingV1beta1.HTTPMatchRequest{
+								{
+									Gateways: []string{"ingress-http"},
+									Port:     80,
+								},
+							},
+							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
+								{
+									Destination: &istioNetworkingV1beta1.Destination{
+										Host: "service-a.staging.svc.cluster.local",
+										Port: &istioNetworkingV1beta1.PortSelector{
+											Number: 80,
+										},
+										Subset: "stable",
+									},
+									Weight: 100,
+								},
+								{
+									Destination: &istioNetworkingV1beta1.Destination{
+										Host: "service-a",
+										Port: &istioNetworkingV1beta1.PortSelector{
+											Number: 80,
+										},
+										Subset: "stable",
+									},
+									Weight: 100,
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &istioV1beta1.VirtualService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "service-a",
+					Namespace: "cindy",
+					Labels: map[string]string{
+						"l1":                         "v1",
+						"dev.okteto.com/deployed-by": "test",
+					},
+					Annotations: map[string]string{"a1": "v1"},
+				},
+				Spec: istioNetworkingV1beta1.VirtualService{
+					Gateways: []string{"ingress-http"},
+					Hosts: []string{
+						"service-a-cindy.demo.okteto.dev",
+						"service-a.cindy.svc.cluster.local",
+					},
+					Http: []*istioNetworkingV1beta1.HTTPRoute{
+						{
+							Name: "ingress-gateway-http-app-service",
+							Match: []*istioNetworkingV1beta1.HTTPMatchRequest{
+								{
+									Gateways: []string{"ingress-http"},
+									Port:     80,
+								},
+							},
+							Headers: &istioNetworkingV1beta1.Headers{
+								Request: &istioNetworkingV1beta1.Headers_HeaderOperations{
+									Set: map[string]string{model.OktetoDivertHeader: "cindy"},
+								},
+							},
+							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
+								{
+									Destination: &istioNetworkingV1beta1.Destination{
+										Host: "service-a.staging.svc.cluster.local",
+										Port: &istioNetworkingV1beta1.PortSelector{
+											Number: 80,
+										},
+										Subset: "stable",
+									},
+									Weight: 100,
+								},
+								{
+									Destination: &istioNetworkingV1beta1.Destination{
+										Host: "service-a.staging.svc.cluster.local",
+										Port: &istioNetworkingV1beta1.PortSelector{
+											Number: 80,
+										},
+										Subset: "stable",
+									},
+									Weight: 100,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "divert-host-same-namespace",
+			vs: &istioV1beta1.VirtualService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "service-a",
+					Namespace:   "cindy",
+					Labels:      map[string]string{"l1": "v1"},
+					Annotations: map[string]string{"a1": "v1"},
+				},
+				Spec: istioNetworkingV1beta1.VirtualService{
+					Gateways: []string{"ingress-http"},
+					Hosts: []string{
+						"service-a-cindy.demo.okteto.dev",
+						"service-a.cindy.svc.cluster.local",
+						"service-a.cindy.com",
+					},
+					Http: []*istioNetworkingV1beta1.HTTPRoute{
+						{
+							Name: "okteto-divert-cindy-ingress-gateway-http-app-service",
+							Match: []*istioNetworkingV1beta1.HTTPMatchRequest{
+								{
+									Gateways: []string{"ingress-http"},
+									Port:     80,
+								},
+							},
+							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
+								{
+									Destination: &istioNetworkingV1beta1.Destination{
+										Host: "service-a",
+										Port: &istioNetworkingV1beta1.PortSelector{
+											Number: 80,
+										},
+										Subset: "stable",
+									},
+									Weight: 100,
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &istioV1beta1.VirtualService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "service-a",
+					Namespace: "cindy",
+					Labels: map[string]string{
+						"l1":                         "v1",
+						"dev.okteto.com/deployed-by": "test",
+					},
+					Annotations: map[string]string{"a1": "v1"},
+				},
+				Spec: istioNetworkingV1beta1.VirtualService{
+					Gateways: []string{"ingress-http"},
+					Hosts: []string{
+						"service-a-cindy.demo.okteto.dev",
+						"service-a.cindy.svc.cluster.local",
+						"service-a.cindy.com",
+					},
+					Http: []*istioNetworkingV1beta1.HTTPRoute{
+						{
+							Name: "ingress-gateway-http-app-service",
+							Match: []*istioNetworkingV1beta1.HTTPMatchRequest{
+								{
+									Gateways: []string{"ingress-http"},
+									Port:     80,
+								},
+							},
+							Headers: &istioNetworkingV1beta1.Headers{
+								Request: &istioNetworkingV1beta1.Headers_HeaderOperations{
+									Set: map[string]string{model.OktetoDivertHeader: "cindy"},
+								},
+							},
+							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
+								{
+									Destination: &istioNetworkingV1beta1.Destination{
+										Host: "service-a",
+										Port: &istioNetworkingV1beta1.PortSelector{
+											Number: 80,
+										},
+										Subset: "stable",
+									},
+									Weight: 100,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	d := &Driver{
+		name:      "test",
+		namespace: "cindy",
+		divert: model.DivertDeploy{
+			Namespace:      "staging",
+			Service:        "service-a",
+			VirtualService: "virtual-service-a",
+		},
+	}
+	okteto.AddOktetoContext("test", &types.User{Registry: "registry.demo.okteto.dev"}, "okteto", "cyndy")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := d.translateDivertHost(tt.vs)
+			assert.Equal(t, result.ResourceVersion, "")
 			assert.True(t, reflect.DeepEqual(result.ObjectMeta, tt.expected.ObjectMeta))
 			assert.True(t, reflect.DeepEqual(result.Spec.Hosts, tt.expected.Spec.Hosts))
 			assert.True(t, reflect.DeepEqual(result.Spec.Gateways, tt.expected.Spec.Gateways))

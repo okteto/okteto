@@ -35,10 +35,18 @@ var (
 
 // Driver weaver struct for the divert driver
 type Driver struct {
-	Client       kubernetes.Interface
-	DivertClient *diverts.DivertV1Client
-	Manifest     *model.Manifest
+	manifest     *model.Manifest
+	client       kubernetes.Interface
+	divertClient *diverts.DivertV1Client
 	cache        *cache
+}
+
+func New(m *model.Manifest, c kubernetes.Interface, dc *diverts.DivertV1Client) *Driver {
+	return &Driver{
+		manifest:     m,
+		client:       c,
+		divertClient: dc,
+	}
 }
 
 func (d *Driver) Deploy(ctx context.Context) error {
@@ -72,8 +80,8 @@ func (*Driver) Destroy(_ context.Context) error {
 }
 
 func (d *Driver) GetDivertNamespace() string {
-	if d.Manifest.Deploy.Divert.Namespace == d.Manifest.Namespace {
+	if d.manifest.Deploy.Divert.Namespace == d.manifest.Namespace {
 		return ""
 	}
-	return d.Manifest.Deploy.Divert.Namespace
+	return d.manifest.Deploy.Divert.Namespace
 }

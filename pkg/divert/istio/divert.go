@@ -16,50 +16,52 @@ package istio
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/okteto/okteto/pkg/k8s/virtualservices"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	istioV1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	istioclientset "istio.io/client-go/pkg/clientset/versioned"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 )
 
 const (
-	UPDATE_CONFLICT_RETRIES = 10
+	UPDATE_CONFLICT_RETRIES = 20
 )
 
 // Driver weaver struct for the divert driver
 type Driver struct {
-	Client      kubernetes.Interface
-	IstioClient istioclientset.Interface
-	Manifest    *model.Manifest
-	cache       *divertIstioCache
+	name        string
+	namespace   string
+	divert      model.DivertDeploy
+	client      kubernetes.Interface
+	istioClient istioclientset.Interface
 }
 
-type divertIstioCache struct {
-	divertVirtualServices    map[string]*istioV1beta1.VirtualService
-	developerVirtualServices map[string]*istioV1beta1.VirtualService
+func New(m *model.Manifest, c kubernetes.Interface, ic istioclientset.Interface) *Driver {
+	return &Driver{
+		name:        m.Name,
+		namespace:   m.Namespace,
+		divert:      *m.Deploy.Divert,
+		client:      c,
+		istioClient: ic,
+	}
 }
 
 func (d *Driver) Deploy(ctx context.Context) error {
-	for name := range d.cache.divertVirtualServices {
+	oktetoLog.Spinner(fmt.Sprintf("Diverting service %s/%s...", d.divert.Namespace, d.divert.Service))
+	if err := d.retryTranslateDivertService(ctx); err != nil {
+		return err
+	}
+
+	for i := range d.divert.Hosts {
 		select {
 		case <-ctx.Done():
 			oktetoLog.Infof("deployDivert context cancelled")
 			return ctx.Err()
 		default:
-			oktetoLog.Spinner(fmt.Sprintf("Diverting virtual service %s/%s ...", d.Manifest.Deploy.Divert.Namespace, name))
-			if err := d.retryTranslateDivertVirtualService(ctx, name); err != nil {
-				return err
-			}
-
-			if !isInDivertVirtualServices(name, d.Manifest.Deploy.Divert.VirtualServices) {
-				continue
-			}
-			if err := d.retryTranslateDeveloperVirtualService(ctx, name); err != nil {
+			oktetoLog.Spinner(fmt.Sprintf("Diverting host %s/%s...", d.divert.Hosts[i].Namespace, d.divert.Hosts[i].VirtualService))
+			if err := d.retryTranslateDivertHost(ctx, d.divert.Hosts[i]); err != nil {
 				return err
 			}
 		}
@@ -69,144 +71,78 @@ func (d *Driver) Deploy(ctx context.Context) error {
 }
 
 func (d *Driver) Destroy(ctx context.Context) error {
-	for name := range d.cache.divertVirtualServices {
-		select {
-		case <-ctx.Done():
-			oktetoLog.Infof("destroyDivert context cancelled")
-			return ctx.Err()
-		default:
-			oktetoLog.Spinner(fmt.Sprintf("Destroying divert un virtual service %s/%s ...", d.Manifest.Deploy.Divert.Namespace, name))
-			if err := d.retryRestoreDivertVirtualService(ctx, name); err != nil {
-				return err
-			}
+	oktetoLog.Spinner(fmt.Sprintf("Destroying divert service %s/%s ...", d.divert.Namespace, d.divert.Service))
+	var err error
+	for retries := 0; retries < UPDATE_CONFLICT_RETRIES; retries++ {
+		vs, err := virtualservices.Get(ctx, d.divert.VirtualService, d.divert.Namespace, d.istioClient)
+		if err != nil {
+			return err
+		}
+		restoredVS := d.restoreDivertService(vs)
+
+		err = virtualservices.Update(ctx, restoredVS, d.istioClient)
+		if err == nil {
+			return nil
+		}
+		if !k8sErrors.IsConflict(err) {
+			return err
 		}
 	}
-	return nil
+	return err
 }
 
 func (d *Driver) GetDivertNamespace() string {
-	if d.Manifest.Deploy.Divert.Namespace == d.Manifest.Namespace {
-		return ""
-	}
-	return d.Manifest.Deploy.Divert.Namespace
+	return ""
 }
 
-func (d *Driver) InitCache(ctx context.Context) error {
-	d.cache = &divertIstioCache{
-		divertVirtualServices:    map[string]*istioV1beta1.VirtualService{},
-		developerVirtualServices: map[string]*istioV1beta1.VirtualService{},
-	}
-	vsList, err := virtualservices.List(ctx, d.Manifest.Deploy.Divert.Namespace, d.IstioClient)
-	if err != nil {
-		return err
-	}
-	for i := range vsList {
-		d.cache.divertVirtualServices[vsList[i].Name] = vsList[i]
-	}
-
-	vsList, err = virtualservices.List(ctx, d.Manifest.Namespace, d.IstioClient)
-	if err != nil {
-		return err
-	}
-	for i := range vsList {
-		d.cache.developerVirtualServices[vsList[i].Name] = vsList[i]
-	}
-	return nil
-}
-
-func (d *Driver) retryTranslateDeveloperVirtualService(ctx context.Context, name string) error {
-	retries := 0
+func (d *Driver) retryTranslateDivertService(ctx context.Context) error {
 	var err error
-	for retries < UPDATE_CONFLICT_RETRIES {
-		if _, ok := d.cache.developerVirtualServices[name]; !ok {
-			vs := createIntoDeveloperVirtualService(d.Manifest, d.cache.divertVirtualServices[name])
-			err = virtualservices.Create(ctx, vs, d.IstioClient)
+	for retries := 0; retries < UPDATE_CONFLICT_RETRIES; retries++ {
+		vs, err := virtualservices.Get(ctx, d.divert.VirtualService, d.divert.Namespace, d.istioClient)
+		if err != nil {
+			return err
+		}
+		translatedVS := d.translateDivertService(vs)
+		err = virtualservices.Update(ctx, translatedVS, d.istioClient)
+		if err == nil {
+			return nil
+		}
+		if !k8sErrors.IsConflict(err) {
+			return err
+		}
+	}
+	return err
+}
+
+func (d *Driver) retryTranslateDivertHost(ctx context.Context, divertHost model.DivertHost) error {
+	var err error
+	for retries := 0; retries < UPDATE_CONFLICT_RETRIES; retries++ {
+		vs, err := virtualservices.Get(ctx, divertHost.VirtualService, divertHost.Namespace, d.istioClient)
+		if err != nil {
+			return err
+		}
+		translatedVS := d.translateDivertHost(vs)
+
+		devVS, err := virtualservices.Get(ctx, divertHost.VirtualService, d.namespace, d.istioClient)
+		if k8sErrors.IsNotFound(err) {
+			err = virtualservices.Create(ctx, translatedVS, d.istioClient)
 			if err == nil {
-				d.cache.developerVirtualServices[name] = vs
 				return nil
 			}
-			if !k8sErrors.IsAlreadyExists(err) {
-				return err
+			if k8sErrors.IsAlreadyExists(err) {
+				return nil
 			}
-			return nil
+			return err
 		}
 
-		vs := translateDeveloperVirtualService(d.Manifest, d.cache.developerVirtualServices[name])
-		if vs.Annotations[model.OktetoAutoCreateAnnotation] != "" {
-			vs = createIntoDeveloperVirtualService(d.Manifest, d.cache.divertVirtualServices[name])
-			vs.ResourceVersion = d.cache.developerVirtualServices[name].ResourceVersion
-		}
-		if isEqualVirtualService(vs, d.cache.developerVirtualServices[name]) {
-			return nil
-		}
-
-		err = virtualservices.Update(ctx, vs, d.IstioClient)
+		translatedVS.ResourceVersion = devVS.ResourceVersion
+		err = virtualservices.Update(ctx, translatedVS, d.istioClient)
 		if err == nil {
-			d.cache.developerVirtualServices[name] = vs
 			return nil
 		}
 		if !k8sErrors.IsConflict(err) {
 			return err
 		}
-		retries++
 	}
 	return err
-}
-
-func (d *Driver) retryTranslateDivertVirtualService(ctx context.Context, name string) error {
-	retries := 0
-	var err error
-	for retries < UPDATE_CONFLICT_RETRIES {
-		vs := translateDivertVirtualService(d.Manifest, d.cache.divertVirtualServices[name])
-		if isEqualVirtualService(vs, d.cache.divertVirtualServices[name]) {
-			return nil
-		}
-
-		err = virtualservices.Update(ctx, vs, d.IstioClient)
-		if err == nil {
-			d.cache.divertVirtualServices[name] = vs
-			return nil
-		}
-		if !k8sErrors.IsConflict(err) {
-			return err
-		}
-		retries++
-	}
-	return err
-}
-
-func (d *Driver) retryRestoreDivertVirtualService(ctx context.Context, name string) error {
-	retries := 0
-	var err error
-	for retries < UPDATE_CONFLICT_RETRIES {
-		vs := restoreDivertVirtualService(d.Manifest, d.cache.divertVirtualServices[name])
-		if isEqualVirtualService(vs, d.cache.divertVirtualServices[name]) {
-			return nil
-		}
-
-		err = virtualservices.Update(ctx, vs, d.IstioClient)
-		if err == nil {
-			d.cache.divertVirtualServices[name] = vs
-			return nil
-		}
-		if !k8sErrors.IsConflict(err) {
-			return err
-		}
-		retries++
-	}
-	return err
-}
-
-func isInDivertVirtualServices(name string, virtualServices []string) bool {
-	for _, vs := range virtualServices {
-		switch vs {
-		case "*", name:
-			return true
-		}
-	}
-	return false
-}
-
-func isEqualVirtualService(vs1 *istioV1beta1.VirtualService, vs2 *istioV1beta1.VirtualService) bool {
-	return reflect.DeepEqual(vs1.Spec, vs2.Spec)
 }

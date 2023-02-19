@@ -223,19 +223,10 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-require github.com/spf13/afero v1.9.2
-
 require (
-	github.com/emicklei/go-restful/v3 v3.9.0 // indirect
-	github.com/fsnotify/fsnotify v1.6.0
-	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
-	github.com/google/gnostic v0.6.9 // indirect
-	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	istio.io/api v0.0.0-20221013011440-bc935762d2b9
 	istio.io/client-go v1.15.3
 )
-
-require github.com/stern/stern v1.22.0
 
 replace (
 	github.com/Sirupsen/logrus => github.com/sirupsen/logrus v1.8.0

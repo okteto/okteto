@@ -32,9 +32,9 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 	from := d.cache.divertIngresses[name]
 	in, ok := d.cache.developerIngresses[name]
 	if !ok {
-		in = translateIngress(d.Manifest, from)
+		in = translateIngress(d.manifest, from)
 		oktetoLog.Infof("creating ingress %s/%s", in.Namespace, in.Name)
-		if _, err := d.Client.NetworkingV1().Ingresses(d.Manifest.Namespace).Create(ctx, in, metav1.CreateOptions{}); err != nil {
+		if _, err := d.client.NetworkingV1().Ingresses(d.manifest.Namespace).Create(ctx, in, metav1.CreateOptions{}); err != nil {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
@@ -44,18 +44,18 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 		updatedIn := in.DeepCopy()
 		if in.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
 			// ingress was created by divert
-			updatedIn = translateIngress(d.Manifest, d.cache.divertIngresses[name])
-		} else if in.Annotations[model.OktetoDivertIngressInjectionAnnotation] != d.Manifest.Namespace {
+			updatedIn = translateIngress(d.manifest, d.cache.divertIngresses[name])
+		} else if in.Annotations[model.OktetoDivertIngressInjectionAnnotation] != d.manifest.Namespace {
 			// ingress wasn't created by divert, check header injection
 			if updatedIn.Annotations == nil {
 				updatedIn.Annotations = map[string]string{}
 			}
-			updatedIn.Annotations[model.OktetoDivertIngressInjectionAnnotation] = d.Manifest.Namespace
-			updatedIn.Annotations[model.OktetoNginxConfigurationSnippetAnnotation] = divertTextBlockParser.WriteBlock(fmt.Sprintf("proxy_set_header x-okteto-dvrt %s;", d.Manifest.Namespace))
+			updatedIn.Annotations[model.OktetoDivertIngressInjectionAnnotation] = d.manifest.Namespace
+			updatedIn.Annotations[model.OktetoNginxConfigurationSnippetAnnotation] = divertTextBlockParser.WriteBlock(fmt.Sprintf("proxy_set_header x-okteto-dvrt %s;", d.manifest.Namespace))
 		}
 		if !isEqualIngress(in, updatedIn) {
 			oktetoLog.Infof("updating ingress %s/%s", updatedIn.Namespace, updatedIn.Name)
-			if _, err := d.Client.NetworkingV1().Ingresses(d.Manifest.Namespace).Update(ctx, updatedIn, metav1.UpdateOptions{}); err != nil {
+			if _, err := d.client.NetworkingV1().Ingresses(d.manifest.Namespace).Update(ctx, updatedIn, metav1.UpdateOptions{}); err != nil {
 				if !k8sErrors.IsConflict(err) {
 					return err
 				}

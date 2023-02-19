@@ -332,11 +332,11 @@ func (dc *destroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
 
-	// deploy divert if any
+	// destroy divert if any
 	if manifest.Deploy != nil && manifest.Deploy.Divert != nil && manifest.Deploy.Divert.Namespace != manifest.Namespace {
 		oktetoLog.SetStage("Destroy Divert")
 		if err := dc.destroyDivert(ctx, manifest); err != nil {
-			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error destroying divert: %s", err.Error())
 			return err
 		}
 		oktetoLog.Success("Divert from '%s' successfully destroyed", manifest.Deploy.Divert.Namespace)
@@ -485,7 +485,7 @@ func (dc *destroyCommand) destroyDivert(ctx context.Context, manifest *model.Man
 	if err != nil {
 		return err
 	}
-	driver, err := divert.New(ctx, manifest, c)
+	driver, err := divert.New(manifest, c)
 	if err != nil {
 		return err
 	}

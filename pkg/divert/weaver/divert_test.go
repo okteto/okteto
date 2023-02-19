@@ -643,7 +643,7 @@ func Test_divertIngresses(t *testing.T) {
 		},
 	}
 
-	d := &Driver{Client: c, Manifest: m}
+	d := &Driver{client: c, manifest: m}
 	d.divertIngresses(ctx)
 
 	resultI1, _ := c.NetworkingV1().Ingresses("cindy").Get(ctx, "i1", metav1.GetOptions{})

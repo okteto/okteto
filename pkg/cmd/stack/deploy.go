@@ -914,38 +914,38 @@ func getAddedSvcs(initialSvcsToDeploy, svcsToDeployWithDependencies []string) []
 	return added
 }
 
-func keepDivertInDeployment(d1 *appsv1.Deployment, d2 *appsv1.Deployment) {
-	if d2.Spec.Template.Labels == nil {
+func keepDivertInDeployment(new *appsv1.Deployment, old *appsv1.Deployment) {
+	if old.Spec.Template.Labels == nil {
 		return
 	}
-	if d2.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] == "" {
+	if old.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] == "" {
 		return
 	}
-	if d1.Spec.Template.Labels == nil {
-		d1.Spec.Template.Labels = map[string]string{}
+	if new.Spec.Template.Labels == nil {
+		new.Spec.Template.Labels = map[string]string{}
 	}
-	d1.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] = d2.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel]
+	new.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] = old.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel]
 }
 
-func keepDivertInService(s1 *apiv1.Service, s2 *apiv1.Service) {
-	if s2.Annotations[model.OktetoDivertServiceAnnotation] == "" {
+func keepDivertInService(new *apiv1.Service, old *apiv1.Service) {
+	if old.Annotations[model.OktetoDivertServiceAnnotation] == "" {
 		return
 	}
-	if s2.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
+	if old.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
 		return
 	}
-	if s1.Annotations == nil {
-		s1.Annotations = map[string]string{}
+	if new.Annotations == nil {
+		new.Annotations = map[string]string{}
 	}
-	s1.Annotations[model.OktetoDivertServiceAnnotation] = s2.Annotations[model.OktetoDivertServiceAnnotation]
+	new.Annotations[model.OktetoDivertServiceAnnotation] = old.Annotations[model.OktetoDivertServiceAnnotation]
 	divertMapping := weaver.PortMapping{}
-	if err := json.Unmarshal([]byte(s2.Annotations[model.OktetoDivertServiceAnnotation]), &divertMapping); err != nil {
-		oktetoLog.Warning("skipping apply divert to service '%s': %s", s1.Name, err.Error())
+	if err := json.Unmarshal([]byte(old.Annotations[model.OktetoDivertServiceAnnotation]), &divertMapping); err != nil {
+		oktetoLog.Warning("skipping apply divert to service '%s': %s", new.Name, err.Error())
 		return
 	}
-	for i := range s1.Spec.Ports {
-		if s1.Spec.Ports[i].Port == divertMapping.OriginalPort {
-			s1.Spec.Ports[i].TargetPort = intstr.IntOrString{IntVal: divertMapping.ProxyPort}
+	for i := range new.Spec.Ports {
+		if new.Spec.Ports[i].Port == divertMapping.OriginalPort {
+			new.Spec.Ports[i].TargetPort = intstr.IntOrString{IntVal: divertMapping.ProxyPort}
 		}
 	}
 }

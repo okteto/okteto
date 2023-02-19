@@ -33,7 +33,7 @@ type Driver interface {
 	GetDivertNamespace() string
 }
 
-func New(ctx context.Context, m *model.Manifest, c kubernetes.Interface) (Driver, error) {
+func New(m *model.Manifest, c kubernetes.Interface) (Driver, error) {
 	if !okteto.IsOkteto() {
 		return nil, oktetoErrors.ErrDivertNotSupported
 	}
@@ -43,11 +43,7 @@ func New(ctx context.Context, m *model.Manifest, c kubernetes.Interface) (Driver
 		if err != nil {
 			return nil, fmt.Errorf("error creating weaver client: %w", err)
 		}
-		return &weaver.Driver{
-			Client:       c,
-			DivertClient: dc,
-			Manifest:     m,
-		}, nil
+		return weaver.New(m, c, dc), nil
 	}
 
 	ic, err := virtualservices.GetIstioClient()
@@ -55,14 +51,5 @@ func New(ctx context.Context, m *model.Manifest, c kubernetes.Interface) (Driver
 		return nil, fmt.Errorf("error creating istio client: %w", err)
 	}
 
-	d := &istio.Driver{
-		Client:      c,
-		IstioClient: ic,
-		Manifest:    m,
-	}
-
-	if err := d.InitCache(ctx); err != nil {
-		return nil, err
-	}
-	return d, nil
+	return istio.New(m, c, ic), nil
 }

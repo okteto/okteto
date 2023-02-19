@@ -43,12 +43,12 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 	}
 	s, ok := d.cache.developerServices[name]
 	if !ok {
-		newS, err := translateService(d.Manifest, from)
+		newS, err := translateService(d.manifest, from)
 		if err != nil {
 			return err
 		}
 		oktetoLog.Infof("creating service %s/%s", newS.Namespace, newS.Name)
-		if _, err := d.Client.CoreV1().Services(d.Manifest.Namespace).Create(ctx, newS, metav1.CreateOptions{}); err != nil {
+		if _, err := d.client.CoreV1().Services(d.manifest.Namespace).Create(ctx, newS, metav1.CreateOptions{}); err != nil {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
@@ -61,13 +61,13 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 		return nil
 	}
 
-	updatedS, err := translateService(d.Manifest, from)
+	updatedS, err := translateService(d.manifest, from)
 	if err != nil {
 		return err
 	}
 	if !isEqualService(s, updatedS) {
 		oktetoLog.Infof("updating service %s/%s", updatedS.Namespace, updatedS.Name)
-		if _, err := d.Client.CoreV1().Services(d.Manifest.Namespace).Update(ctx, updatedS, metav1.UpdateOptions{}); err != nil {
+		if _, err := d.client.CoreV1().Services(d.manifest.Namespace).Update(ctx, updatedS, metav1.UpdateOptions{}); err != nil {
 			if !k8sErrors.IsConflict(err) {
 				return err
 			}
