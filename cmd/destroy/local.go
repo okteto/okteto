@@ -30,7 +30,11 @@ import (
 )
 
 type localDestroyCommand struct {
-	manifest          *model.Manifest
+	*localDestroyAllCommand
+	manifest *model.Manifest
+}
+
+type localDestroyAllCommand struct {
 	configMapHandler  configMapHandler
 	nsDestroyer       destroyer
 	executor          executor.ManifestExecutor
@@ -41,17 +45,25 @@ type localDestroyCommand struct {
 
 func newLocalDestroyer(
 	manifest *model.Manifest,
+	destroyerAll *localDestroyAllCommand,
+) *localDestroyCommand {
+	return &localDestroyCommand{
+		destroyerAll,
+		manifest,
+	}
+}
+
+func newLocalDestroyerAll(
 	k8sClient *kubernetes.Clientset,
 	k8sClientProvider okteto.K8sClientProvider,
 	executor executor.ManifestExecutor,
 	nsDestroyer destroyer,
 	oktetoClient *okteto.OktetoClient,
-) *localDestroyCommand {
-	return &localDestroyCommand{
+) *localDestroyAllCommand {
+	return &localDestroyAllCommand{
 		configMapHandler:  newConfigmapHandler(k8sClient),
 		secrets:           secrets.NewSecrets(k8sClient),
 		k8sClientProvider: k8sClientProvider,
-		manifest:          manifest,
 		oktetoClient:      oktetoClient,
 		nsDestroyer:       nsDestroyer,
 		executor:          executor,
@@ -68,28 +80,16 @@ func (ld *localDestroyCommand) destroy(ctx context.Context, opts *Options) error
 		}
 	}
 
-	var err error
-	// when option --all the cmd will destroy everything at the namespace and return
-	if opts.DestroyAll {
-		if !okteto.Context().IsOkteto {
-			return oktetoErrors.ErrContextIsNotOktetoCluster
-		}
-		err = ld.runDestroyAll(ctx, opts)
-		if err == nil {
-			oktetoLog.Success("All resources at namespace '%s' where successfully destroyed", opts.Namespace)
-		}
-	} else {
-		err = ld.runDestroy(ctx, opts)
-		if err == nil {
-			oktetoLog.Success("Development environment '%s' successfully destroyed", opts.Name)
-		}
+	err := ld.runDestroy(ctx, opts)
+	if err == nil {
+		oktetoLog.Success("Development environment '%s' successfully destroyed", opts.Name)
 	}
 	analytics.TrackDestroy(err == nil, opts.DestroyAll)
 
 	return err
 }
 
-func (dc *localDestroyCommand) runDestroyAll(ctx context.Context, opts *Options) error {
+func (dc *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) error {
 	oktetoLog.Spinner(fmt.Sprintf("Deleting all in %s namespace", opts.Namespace))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
@@ -324,7 +324,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 	return commandErr
 }
 
-func (ld *localDestroyCommand) waitForNamespaceDestroyAllToComplete(ctx context.Context, namespace string) error {
+func (ld *localDestroyAllCommand) waitForNamespaceDestroyAllToComplete(ctx context.Context, namespace string) error {
 	timeout := 5 * time.Minute
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)

@@ -151,11 +151,13 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 	}
 
 	ld := localDestroyCommand{
-		manifest:          fakeManifest,
-		configMapHandler:  newConfigmapHandler(fakeClient),
-		nsDestroyer:       destroyer,
-		executor:          executor,
-		k8sClientProvider: k8sClientProvider,
+		&localDestroyAllCommand{
+			configMapHandler:  newConfigmapHandler(fakeClient),
+			nsDestroyer:       destroyer,
+			executor:          executor,
+			k8sClientProvider: k8sClientProvider,
+		},
+		fakeManifest,
 	}
 
 	err = ld.runDestroy(ctx, opts)
@@ -215,12 +217,14 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 			}
 
 			ld := localDestroyCommand{
-				manifest:          tt.manifest,
-				configMapHandler:  newConfigmapHandler(fakeClient),
-				nsDestroyer:       &fakeDestroyer{},
-				executor:          executor,
-				k8sClientProvider: k8sClientProvider,
-				secrets:           &secretHandler,
+				&localDestroyAllCommand{
+					configMapHandler:  newConfigmapHandler(fakeClient),
+					nsDestroyer:       &fakeDestroyer{},
+					executor:          executor,
+					k8sClientProvider: k8sClientProvider,
+					secrets:           &secretHandler,
+				},
+				tt.manifest,
 			}
 
 			err = ld.runDestroy(ctx, opts)
@@ -356,12 +360,14 @@ func TestDestroyWithError(t *testing.T) {
 			}
 
 			ld := localDestroyCommand{
-				manifest:          tt.manifest,
-				secrets:           &secretHandler,
-				executor:          executor,
-				nsDestroyer:       destroyer,
-				k8sClientProvider: k8sClientProvider,
-				configMapHandler:  newConfigmapHandler(fakeClient),
+				&localDestroyAllCommand{
+					configMapHandler:  newConfigmapHandler(fakeClient),
+					nsDestroyer:       destroyer,
+					executor:          executor,
+					k8sClientProvider: k8sClientProvider,
+					secrets:           &secretHandler,
+				},
+				tt.manifest,
 			}
 
 			err = ld.runDestroy(ctx, opts)
@@ -595,13 +601,16 @@ func TestDestroyWithoutError(t *testing.T) {
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
 			}
-			ld := &localDestroyCommand{
-				manifest:          tt.manifest,
-				secrets:           &secretHandler,
-				executor:          executor,
-				nsDestroyer:       destroyer,
-				k8sClientProvider: k8sClientProvider,
-				configMapHandler:  newConfigmapHandler(fakeClient),
+
+			ld := localDestroyCommand{
+				&localDestroyAllCommand{
+					configMapHandler:  newConfigmapHandler(fakeClient),
+					nsDestroyer:       destroyer,
+					executor:          executor,
+					k8sClientProvider: k8sClientProvider,
+					secrets:           &secretHandler,
+				},
+				tt.manifest,
 			}
 
 			err = ld.runDestroy(ctx, opts)
@@ -840,13 +849,16 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 			}
 			// Set env var destroy inside deploy
 			t.Setenv(constants.OktetoWithinDeployCommandContextEnvVar, "true")
-			ld := &localDestroyCommand{
-				manifest:          tt.manifest,
-				secrets:           &secretHandler,
-				executor:          executor,
-				nsDestroyer:       destroyer,
-				k8sClientProvider: test.NewFakeK8sProvider(),
-				configMapHandler:  newConfigmapHandler(nil),
+
+			ld := localDestroyCommand{
+				&localDestroyAllCommand{
+					configMapHandler:  newConfigmapHandler(nil),
+					nsDestroyer:       destroyer,
+					executor:          executor,
+					k8sClientProvider: test.NewFakeK8sProvider(),
+					secrets:           &secretHandler,
+				},
+				tt.manifest,
 			}
 
 			err := ld.runDestroy(ctx, opts)
@@ -894,13 +906,15 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 		t.Fatal("could not create fake k8s client")
 	}
 
-	ld := &localDestroyCommand{
-		manifest:          fakeManifest,
-		secrets:           &secretHandler,
-		executor:          executor,
-		nsDestroyer:       destroyer,
-		k8sClientProvider: k8sClientProvider,
-		configMapHandler:  newConfigmapHandler(fakeClient),
+	ld := localDestroyCommand{
+		&localDestroyAllCommand{
+			configMapHandler:  newConfigmapHandler(fakeClient),
+			nsDestroyer:       destroyer,
+			executor:          executor,
+			k8sClientProvider: k8sClientProvider,
+			secrets:           &secretHandler,
+		},
+		fakeManifest,
 	}
 
 	err = ld.runDestroy(ctx, opts)
@@ -943,12 +957,14 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	}
 
 	ld := localDestroyCommand{
-		manifest:          fakeManifest,
-		secrets:           &secretHandler,
-		executor:          executor,
-		nsDestroyer:       destroyer,
-		k8sClientProvider: k8sClientProvider,
-		configMapHandler:  newConfigmapHandler(fakeClient),
+		&localDestroyAllCommand{
+			configMapHandler:  newConfigmapHandler(fakeClient),
+			nsDestroyer:       destroyer,
+			executor:          executor,
+			k8sClientProvider: k8sClientProvider,
+			secrets:           &secretHandler,
+		},
+		fakeManifest,
 	}
 
 	err = ld.runDestroy(ctx, opts)

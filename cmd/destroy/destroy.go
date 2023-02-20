@@ -87,7 +87,7 @@ type destroyCommand struct {
 	k8sClientProvider okteto.K8sClientProvider
 	configMapHandler  configMapHandler
 	oktetoClient      *okteto.OktetoClient
-	getDestroyer      func(*model.Manifest, *kubernetes.Clientset, okteto.K8sClientProvider, destroyer, executor.ManifestExecutor, *okteto.OktetoClient, bool) (destroyInterface, error)
+	getDestroyer      func(*kubernetes.Clientset, okteto.K8sClientProvider, destroyer, executor.ManifestExecutor, *okteto.OktetoClient, *Options) (destroyInterface, error)
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -182,16 +182,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			os.Setenv("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
-			manifest, err := model.GetManifestV2(options.ManifestPath)
-			if err != nil {
-				// Log error message but application can still be deleted
-				oktetoLog.Infof("could not find manifest file to be executed: %s", err)
-				manifest = &model.Manifest{
-					Destroy: &model.DestroyInfo{},
-				}
-			}
-
-			destroyer, err := c.getDestroyer(manifest, k8sClient, c.k8sClientProvider, c.nsDestroyer, c.executor, c.oktetoClient, options.RunInRemote)
+			destroyer, err := c.getDestroyer(k8sClient, c.k8sClientProvider, c.nsDestroyer, c.executor, c.oktetoClient, options)
 			if err != nil {
 				return err
 			}
@@ -219,22 +210,39 @@ func getTempKubeConfigFile(name string) string {
 	return filepath.Join(config.GetOktetoHome(), tempKubeconfigFileName)
 }
 
-func getDestroyer(manifest *model.Manifest, k8sClient *kubernetes.Clientset, okK8sClient okteto.K8sClientProvider, nsDestroyer destroyer, executor executor.ManifestExecutor, okClient *okteto.OktetoClient, runInRemoteRequest bool) (destroyInterface, error) {
+func getDestroyer(k8sClient *kubernetes.Clientset, okK8sClient okteto.K8sClientProvider, nsDestroyer destroyer, executor executor.ManifestExecutor, okClient *okteto.OktetoClient, opts *Options) (destroyInterface, error) {
 	var (
 		deployer destroyInterface
 	)
 
-	isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
-
-	runInRemote := !isRemote && (manifest.Destroy.Image != "" || runInRemoteRequest)
-
-	if runInRemote {
-		deployer = newRemoteDestroyer(manifest)
-		oktetoLog.Info("Destroying remotely...")
-	} else {
-		deployer = newLocalDestroyer(manifest, k8sClient, okK8sClient, executor, nsDestroyer, okClient)
-
+	if opts.DestroyAll {
+		if !okteto.Context().IsOkteto {
+			return nil, oktetoErrors.ErrContextIsNotOktetoCluster
+		}
+		deployer = newLocalDestroyerAll(k8sClient, okK8sClient, executor, nsDestroyer, okClient)
 		oktetoLog.Info("Destroying locally...")
+	} else {
+
+		manifest, err := model.GetManifestV2(opts.ManifestPath)
+		if err != nil {
+			// Log error message but application can still be deleted
+			oktetoLog.Infof("could not find manifest file to be executed: %s", err)
+			manifest = &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			}
+		}
+
+		isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
+
+		runInRemote := !isRemote && (manifest.Destroy.Image != "" || opts.RunInRemote)
+		if runInRemote {
+			deployer = newRemoteDestroyer(manifest)
+			oktetoLog.Info("Destroying remotely...")
+		} else {
+			deployer = newLocalDestroyer(manifest, newLocalDestroyerAll(k8sClient, okK8sClient, executor, nsDestroyer, okClient))
+			oktetoLog.Info("Destroying locally...")
+		}
 	}
+
 	return deployer, nil
 }
