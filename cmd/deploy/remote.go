@@ -62,8 +62,6 @@ WORKDIR /okteto/src
 ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
 RUN okteto deploy --log-output=json {{ .DeployFlags }}
 `
-	dockerignoreName = "deploy.dockerignore"
-	buildOutput      = "deploy"
 )
 
 type dockerfileTemplateProperties struct {
@@ -153,7 +151,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	// undo modification of CWD for Build command
 	os.Chdir(cwd)
 
-	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: buildOutput})
+	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
 	buildOptions.Tag = ""
 
 	// we need to call Build() method using a remote builder. This Builder will have
@@ -176,7 +174,7 @@ func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {
 }
 
 func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
-	dockerignoreFilePath := fmt.Sprintf("%s/%s", cwd, dockerignoreName)
+	dockerignoreFilePath := fmt.Sprintf("%s/%s", cwd, ".oktetodeployignore")
 	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return err
@@ -187,7 +185,7 @@ func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) er
 			return err
 		}
 
-		err = afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, dockerignoreName), dockerignoreContent, 0600)
+		err = afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
 		if err != nil {
 			return err
 		}

@@ -137,6 +137,22 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 			manifest:         &Manifest{},
 			expectedManifest: &Manifest{},
 		},
+		{
+			name: "expand image for remote deploy",
+			envs: map[string]string{
+				"myImage": "test",
+			},
+			manifest: &Manifest{
+				Deploy: &DeployInfo{
+					Image: "${myImage}",
+				},
+			},
+			expectedManifest: &Manifest{
+				Deploy: &DeployInfo{
+					Image: "test",
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
