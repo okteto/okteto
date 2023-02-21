@@ -28,6 +28,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+// PortMapping represents the divert original port mappings
+type PortMapping struct {
+	ProxyPort          int32 `json:"proxy_port,omitempty" yaml:"proxy_port,omitempty"`
+	OriginalPort       int32 `json:"original_port,omitempty" yaml:"original_port,omitempty"`
+	OriginalTargetPort int32 `json:"original_target_port,omitempty" yaml:"original_target_port,omitempty"`
+}
+
 func (d *Driver) divertService(ctx context.Context, name string) error {
 	from, ok := d.cache.divertServices[name]
 	if !ok {
@@ -36,12 +43,12 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 	}
 	s, ok := d.cache.developerServices[name]
 	if !ok {
-		newS, err := translateService(d.Manifest, from)
+		newS, err := translateService(d.manifest, from)
 		if err != nil {
 			return err
 		}
 		oktetoLog.Infof("creating service %s/%s", newS.Namespace, newS.Name)
-		if _, err := d.Client.CoreV1().Services(d.Manifest.Namespace).Create(ctx, newS, metav1.CreateOptions{}); err != nil {
+		if _, err := d.client.CoreV1().Services(d.manifest.Namespace).Create(ctx, newS, metav1.CreateOptions{}); err != nil {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
@@ -54,13 +61,13 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 		return nil
 	}
 
-	updatedS, err := translateService(d.Manifest, from)
+	updatedS, err := translateService(d.manifest, from)
 	if err != nil {
 		return err
 	}
 	if !isEqualService(s, updatedS) {
 		oktetoLog.Infof("updating service %s/%s", updatedS.Namespace, updatedS.Name)
-		if _, err := d.Client.CoreV1().Services(d.Manifest.Namespace).Update(ctx, updatedS, metav1.UpdateOptions{}); err != nil {
+		if _, err := d.client.CoreV1().Services(d.manifest.Namespace).Update(ctx, updatedS, metav1.UpdateOptions{}); err != nil {
 			if !k8sErrors.IsConflict(err) {
 				return err
 			}
@@ -91,7 +98,7 @@ func translateService(m *model.Manifest, s *apiv1.Service) (*apiv1.Service, erro
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
 
 	if v := result.Annotations[model.OktetoDivertServiceAnnotation]; v != "" {
-		divertMapping := portMapping{}
+		divertMapping := PortMapping{}
 		if err := json.Unmarshal([]byte(v), &divertMapping); err != nil {
 			return nil, err
 		}
