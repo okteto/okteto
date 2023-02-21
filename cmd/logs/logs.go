@@ -127,7 +127,7 @@ func Logs(ctx context.Context) *cobra.Command {
 	cmd.Flags().DurationVarP(&options.Since, "since", "s", 48*time.Hour, "return logs newer than a relative duration like 5s, 2m, or 3h")
 	cmd.Flags().Int64Var(&options.Tail, "tail", 100, "the number of lines from the end of the logs to show")
 	cmd.Flags().BoolVarP(&options.Timestamps, "timestamps", "t", false, "print timestamps")
-	cmd.Flags().StringVar(&options.Name, "name", "", "develpment environment name")
+	cmd.Flags().StringVar(&options.Name, "name", "", "development environment name")
 
 	return cmd
 }
