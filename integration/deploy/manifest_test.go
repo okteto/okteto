@@ -386,7 +386,7 @@ func TestDeployRemoteOktetoManifest(t *testing.T) {
 		Namespace:  testNamespace,
 		OktetoHome: dir,
 	}
-	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+	require.NoError(t, commands.RunOktetoDestroyRemote(oktetoPath, destroyOptions))
 
 	_, err = integration.GetDeployment(context.Background(), testNamespace, "my-dep", c)
 	require.NoError(t, err)
