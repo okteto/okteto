@@ -22,7 +22,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/mholt/archiver"
+	"github.com/mholt/archiver/v3"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
