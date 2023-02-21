@@ -9,7 +9,7 @@ RUN apk --no-cache add curl && \
     apk add --no-cache openssl && \
     bash <( curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 ) "--version" "v${HELM_VERSION}"
 
-FROM golang:1.19-bullseye as builder
+FROM golang:1.18-buster as builder
 WORKDIR /okteto
 
 ENV CGO_ENABLED=0
