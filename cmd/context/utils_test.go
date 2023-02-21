@@ -174,9 +174,10 @@ dependencies:
 						CacheFrom: []string{"cache-image-1", "cache-image-2"},
 					},
 				},
-				Icon: "",
-				Dev:  model.ManifestDevs{},
-				Type: model.OktetoManifestType,
+				Icon:    "",
+				Dev:     model.ManifestDevs{},
+				Type:    model.OktetoManifestType,
+				Destroy: &model.DestroyInfo{},
 				Dependencies: model.ManifestDependencies{
 					"one": &model.Dependency{
 						Repository: "https://repo.url",

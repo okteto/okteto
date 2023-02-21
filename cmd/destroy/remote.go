@@ -1,17 +1,4 @@
-// Copyright 2023 The Okteto Authors
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
-package deploy
+package destroy
 
 import (
 	"context"
@@ -24,10 +11,10 @@ import (
 	"text/template"
 
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
-	buildv2 "github.com/okteto/okteto/cmd/build/v2"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -42,7 +29,7 @@ FROM {{ .OktetoCLIImage }} as okteto-cli
 FROM alpine as certs
 RUN apk update && apk add ca-certificates
 
-FROM {{ .UserDeployImage }} as deploy
+FROM {{ .UserDestroyImage }} as deploy
 
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=certs /etc/ssl/certs /etc/ssl/certs
@@ -60,13 +47,13 @@ COPY . /okteto/src
 WORKDIR /okteto/src
 
 ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
-RUN okteto deploy --log-output=json {{ .DeployFlags }}
+RUN okteto destroy --log-output=json {{ .DestroyFlags }}
 `
 )
 
 type dockerfileTemplateProperties struct {
 	OktetoCLIImage     string
-	UserDeployImage    string
+	UserDestroyImage   string
 	OktetoBuildEnvVars map[string]string
 	ContextEnvVar      string
 	ContextValue       string
@@ -77,28 +64,31 @@ type dockerfileTemplateProperties struct {
 	RemoteDeployEnvVar string
 	DeployFlags        string
 	RandomInt          int
+	DestroyFlags       string
 }
 
-type remoteDeployCommand struct {
-	builder *buildv2.OktetoBuilder
-	fs      afero.Fs
+type remoteDestroyCommand struct {
+	manifest *model.Manifest
+	fs       afero.Fs
 }
 
-func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
-	return &remoteDeployCommand{
-		builder: builder,
-		fs:      afero.NewOsFs(),
+func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
+	return &remoteDestroyCommand{
+		manifest: manifest,
+		fs:       afero.NewOsFs(),
 	}
 }
 
-func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options) error {
+func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) error {
+
+	if rd.manifest.Destroy.Image == "" {
+		rd.manifest.Destroy.Image = constants.OktetoPipelineRunnerImage
+	}
 
 	cwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-
-	cwd = getOriginalCWD(cwd, deployOptions.ManifestPathFlag)
 
 	tmpl, err := template.New("dockerfile").Parse(dockerfileTemplate)
 	if err != nil {
@@ -107,8 +97,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 	dockerfileSyntax := dockerfileTemplateProperties{
 		OktetoCLIImage:     constants.OktetoCLIImageForRemote,
-		UserDeployImage:    deployOptions.Manifest.Deploy.Image,
-		OktetoBuildEnvVars: rd.builder.GetBuildEnvVars(),
+		UserDestroyImage:   rd.manifest.Destroy.Image,
 		ContextEnvVar:      model.OktetoContextEnvVar,
 		ContextValue:       okteto.Context().Name,
 		NamespaceEnvVar:    model.OktetoNamespaceEnvVar,
@@ -117,7 +106,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		TokenValue:         okteto.Context().Token,
 		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
 		RandomInt:          rand.Intn(1000),
-		DeployFlags:        strings.Join(getDeployFlags(deployOptions), " "),
+		DestroyFlags:       strings.Join(getDestroyFlags(opts), " "),
 	}
 
 	tmpDir, err := afero.TempDir(rd.fs, "", "")
@@ -169,11 +158,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	return nil
 }
 
-func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {
-	return
-}
-
-func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
+func (rd *remoteDestroyCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
 	dockerignoreFilePath := fmt.Sprintf("%s/%s", cwd, ".oktetodeployignore")
 	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
@@ -194,7 +179,7 @@ func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) er
 	return nil
 }
 
-func getDeployFlags(opts *Options) []string {
+func getDestroyFlags(opts *Options) []string {
 	var deployFlags []string
 
 	if opts.Name != "" {
@@ -209,18 +194,13 @@ func getDeployFlags(opts *Options) []string {
 		deployFlags = append(deployFlags, fmt.Sprintf("--file %s", opts.ManifestPathFlag))
 	}
 
-	if len(opts.Variables) > 0 {
-		var varsToAddForDeploy []string
-		for _, v := range opts.Variables {
-			varsToAddForDeploy = append(varsToAddForDeploy, fmt.Sprintf("--var %s", v))
-		}
-		deployFlags = append(deployFlags, strings.Join(varsToAddForDeploy, " "))
+	if opts.DestroyVolumes {
+		deployFlags = append(deployFlags, "--volumes")
+	}
+
+	if opts.ForceDestroy {
+		deployFlags = append(deployFlags, "--force-destroy")
 	}
 
 	return deployFlags
-}
-
-func getOriginalCWD(cwd, manifestPath string) string {
-	manifestPathDir := filepath.Dir(fmt.Sprintf("/%s", manifestPath))
-	return strings.TrimSuffix(cwd, manifestPathDir)
 }

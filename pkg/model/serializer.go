@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
-	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -768,7 +767,7 @@ type manifestRaw struct {
 	Icon          string                                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	Deploy        *DeployInfo                              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy       []DeployCommand                          `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         ManifestBuild                            `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  ManifestDependencies                     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
@@ -925,14 +924,12 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 				Command: cmdString,
 			})
 		}
-		d.Image = constants.OktetoPipelineRunnerImage
 		return nil
 	}
 	var commands []DeployCommand
 	err = unmarshal(&commands)
 	if err == nil {
 		d.Commands = commands
-		d.Image = constants.OktetoPipelineRunnerImage
 		return nil
 	}
 	type deployInfoRaw DeployInfo
@@ -940,10 +937,6 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	err = unmarshal(&deploy)
 	if err != nil {
 		return err
-	}
-
-	if deploy.Image == "" {
-		deploy.Image = constants.OktetoPipelineRunnerImage
 	}
 
 	*d = DeployInfo(deploy)

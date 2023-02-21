@@ -137,6 +137,22 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 			manifest:         &Manifest{},
 			expectedManifest: &Manifest{},
 		},
+		{
+			name: "expand image for remote deploy",
+			envs: map[string]string{
+				"myImage": "test",
+			},
+			manifest: &Manifest{
+				Deploy: &DeployInfo{
+					Image: "${myImage}",
+				},
+			},
+			expectedManifest: &Manifest{
+				Deploy: &DeployInfo{
+					Image: "test",
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -428,6 +444,7 @@ func TestInferFromStack(t *testing.T) {
 						Stack: stack,
 					},
 				},
+				Destroy: &DestroyInfo{},
 			},
 		},
 		{
@@ -470,7 +487,8 @@ func TestInferFromStack(t *testing.T) {
 						Dockerfile: filepath.Join("test-1", "Dockerfile"),
 					},
 				},
-				Dev: ManifestDevs{},
+				Dev:     ManifestDevs{},
+				Destroy: &DestroyInfo{},
 				Deploy: &DeployInfo{
 					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
@@ -534,6 +552,7 @@ func TestInferFromStack(t *testing.T) {
 						Dockerfile: "Dockerfile",
 					},
 				},
+				Destroy: &DestroyInfo{},
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Name:      "one",
@@ -584,7 +603,6 @@ func TestInferFromStack(t *testing.T) {
 					},
 				},
 				Deploy: &DeployInfo{
-					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},

@@ -22,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
@@ -1066,7 +1065,6 @@ deploy:
 				Namespace: "test",
 				Build:     map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
-					Image: constants.OktetoPipelineRunnerImage,
 					Commands: []DeployCommand{
 						{
 							Name:    "okteto stack deploy",
@@ -1074,6 +1072,7 @@ deploy:
 						},
 					},
 				},
+				Destroy:      &DestroyInfo{},
 				Dev:          map[string]*Dev{},
 				Dependencies: map[string]*Dependency{},
 				External:     externalresource.ExternalResourceSection{},
@@ -1101,7 +1100,6 @@ dev:
 				Type:  OktetoManifestType,
 				Build: map[string]*BuildInfo{},
 				Deploy: &DeployInfo{
-					Image: constants.OktetoPipelineRunnerImage,
 					Commands: []DeployCommand{
 						{
 							Name:    "okteto stack deploy",
@@ -1109,6 +1107,7 @@ dev:
 						},
 					},
 				},
+				Destroy:      &DestroyInfo{},
 				Dependencies: map[string]*Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
@@ -1253,11 +1252,10 @@ dev:
 sync:
   - app:/app`),
 			expected: &Manifest{
-				Type:  OktetoManifestType,
-				Build: map[string]*BuildInfo{},
-				Deploy: &DeployInfo{
-					Image: constants.OktetoPipelineRunnerImage,
-				},
+				Type:          OktetoManifestType,
+				Build:         map[string]*BuildInfo{},
+				Deploy:        &DeployInfo{},
+				Destroy:       &DestroyInfo{},
 				Dependencies:  map[string]*Dependency{},
 				External:      externalresource.ExternalResourceSection{},
 				GlobalForward: []forward.GlobalForward{},
@@ -1339,11 +1337,10 @@ sync:
 services:
   - name: svc`),
 			expected: &Manifest{
-				Type:  OktetoManifestType,
-				Build: map[string]*BuildInfo{},
-				Deploy: &DeployInfo{
-					Image: constants.OktetoPipelineRunnerImage,
-				},
+				Type:          OktetoManifestType,
+				Build:         map[string]*BuildInfo{},
+				Deploy:        &DeployInfo{},
+				Destroy:       &DestroyInfo{},
 				Dependencies:  map[string]*Dependency{},
 				GlobalForward: []forward.GlobalForward{},
 				External:      externalresource.ExternalResourceSection{},
@@ -1478,6 +1475,7 @@ dev:
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
 				External:     externalresource.ExternalResourceSection{},
+				Destroy:      &DestroyInfo{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1565,6 +1563,7 @@ dev:
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
 				External:     externalresource.ExternalResourceSection{},
+				Destroy:      &DestroyInfo{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1733,8 +1732,8 @@ deploy:
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
 				External:     externalresource.ExternalResourceSection{},
+				Destroy:      &DestroyInfo{},
 				Deploy: &DeployInfo{
-					Image: constants.OktetoPipelineRunnerImage,
 					Commands: []DeployCommand{
 						{
 							Name:    "okteto stack deploy",
@@ -1761,8 +1760,8 @@ devs:
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
 				External:     externalresource.ExternalResourceSection{},
+				Destroy:      &DestroyInfo{},
 				Deploy: &DeployInfo{
-					Image: constants.OktetoPipelineRunnerImage,
 					Commands: []DeployCommand{
 						{
 							Name:    "okteto stack deploy",
@@ -1813,7 +1812,6 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 			deployInfoManifest: []byte(`
 - okteto stack deploy`),
 			expected: &DeployInfo{
-				Image: constants.OktetoPipelineRunnerImage,
 				Commands: []DeployCommand{
 					{
 						Name:    "okteto stack deploy",
@@ -1828,7 +1826,6 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 - name: deploy stack
   command: okteto stack deploy`),
 			expected: &DeployInfo{
-				Image: constants.OktetoPipelineRunnerImage,
 				Commands: []DeployCommand{
 					{
 						Name:    "deploy stack",
@@ -1848,7 +1845,6 @@ func TestDeployInfoUnmarshalling(t *testing.T) {
 						Command: "okteto stack deploy",
 					},
 				},
-				Image: constants.OktetoPipelineRunnerImage,
 			},
 		},
 		{

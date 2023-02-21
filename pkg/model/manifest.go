@@ -97,7 +97,7 @@ type Manifest struct {
 	Icon          string                                   `json:"icon,omitempty" yaml:"icon,omitempty"`
 	Deploy        *DeployInfo                              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
 	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy       []DeployCommand                          `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
 	Build         ManifestBuild                            `json:"build,omitempty" yaml:"build,omitempty"`
 	Dependencies  ManifestDependencies                     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
 	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
@@ -183,6 +183,12 @@ type DeployInfo struct {
 	ComposeSection *ComposeSectionInfo `json:"compose,omitempty" yaml:"compose,omitempty"`
 	Endpoints      EndpointSpec        `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	Divert         *DivertDeploy       `json:"divert,omitempty" yaml:"divert,omitempty"`
+}
+
+// DestroyInfo represents what must be destroyed for the app
+type DestroyInfo struct {
+	Image    string          `json:"image,omitempty" yaml:"image,omitempty"`
+	Commands []DeployCommand `json:"commands,omitempty" yaml:"commands,omitempty"`
 }
 
 // DivertDeploy represents information about the deploy divert configuration
@@ -807,10 +813,9 @@ func (m *Manifest) setDefaults() error {
 			b.setBuildDefaults()
 		}
 	}
-	if m.Deploy != nil {
-		if m.Deploy.Image == "" {
-			m.Deploy.Image = constants.OktetoPipelineRunnerImage
-		}
+
+	if m.Destroy == nil {
+		m.Destroy = &DestroyInfo{}
 	}
 
 	return nil
@@ -826,6 +831,12 @@ func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 func (manifest *Manifest) ExpandEnvVars() error {
 	var err error
 	if manifest.Deploy != nil {
+		if manifest.Deploy.Image != "" {
+			manifest.Deploy.Image, err = envsubst.String(manifest.Deploy.Image)
+			if err != nil {
+				return errors.New("could not parse env vars for an image used for remote deploy")
+			}
+		}
 		if manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 			var stackFiles []string
 			for _, composeInfo := range manifest.Deploy.ComposeSection.ComposesInfo {
@@ -869,12 +880,12 @@ func (manifest *Manifest) ExpandEnvVars() error {
 		}
 	}
 	if manifest.Destroy != nil {
-		for idx, cmd := range manifest.Destroy {
+		for idx, cmd := range manifest.Destroy.Commands {
 			cmd.Command, err = envsubst.String(cmd.Command)
 			if err != nil {
 				return errors.New("could not parse env vars")
 			}
-			manifest.Destroy[idx] = cmd
+			manifest.Destroy.Commands[idx] = cmd
 		}
 	}
 

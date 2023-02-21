@@ -108,6 +108,43 @@ func RunOktetoDestroy(oktetoPath string, destroyOptions *DestroyOptions) error {
 	return nil
 }
 
+// RunOktetoDestroyRemote runs an okteto destroy command in remote
+func RunOktetoDestroyRemote(oktetoPath string, destroyOptions *DestroyOptions) error {
+	log.Printf("okteto destroy %s", oktetoPath)
+	cmd := exec.Command(oktetoPath, "destroy")
+	cmd.Args = append(cmd.Args, "--remote")
+
+	if destroyOptions.Workdir != "" {
+		cmd.Dir = destroyOptions.Workdir
+	}
+	if destroyOptions.Name != "" {
+		cmd.Args = append(cmd.Args, "--name", destroyOptions.Name)
+	}
+	if destroyOptions.ManifestPath != "" {
+		cmd.Args = append(cmd.Args, "-f", destroyOptions.ManifestPath)
+	}
+	if destroyOptions.Namespace != "" {
+		cmd.Args = append(cmd.Args, "--namespace", destroyOptions.Namespace)
+	}
+	cmd.Env = os.Environ()
+	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoURLEnvVar, v))
+	}
+
+	if destroyOptions.OktetoHome != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, destroyOptions.OktetoHome))
+	}
+	if destroyOptions.Token != "" {
+		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, destroyOptions.Token))
+	}
+	o, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("okteto deploy --remote failed: %s - %s", string(o), err)
+	}
+	log.Printf("okteto destroy success")
+	return nil
+}
+
 func getDeployCmd(oktetoPath string, deployOptions *DeployOptions) *exec.Cmd {
 	cmd := exec.Command(oktetoPath, "deploy")
 	if deployOptions.Workdir != "" {

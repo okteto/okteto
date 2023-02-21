@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/stack"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -35,6 +36,14 @@ const (
 )
 
 func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
+	if deployOptions.RunInRemote {
+		if deployOptions.Manifest.Deploy != nil {
+			if deployOptions.Manifest.Deploy.Image == "" {
+				deployOptions.Manifest.Deploy.Image = constants.OktetoPipelineRunnerImage
+			}
+		}
+	}
+
 	if deployOptions.Manifest.Context == "" {
 		deployOptions.Manifest.Context = okteto.Context().Name
 	}
