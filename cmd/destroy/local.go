@@ -13,6 +13,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
+	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
@@ -108,8 +109,8 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 	if ld.manifest.Context == "" {
 		ld.manifest.Context = okteto.Context().Name
 	}
-	if ld.manifest.Namespace == okteto.Context().Namespace {
-		ld.manifest.Namespace = okteto.Context().Namespace
+	if ld.manifest.Namespace == "" {
+		ld.manifest.Namespace = namespace
 	}
 	os.Setenv(constants.OktetoNameEnvVar, name)
 
@@ -148,6 +149,17 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 	exit := make(chan error, 1)
+
+	// destroy divert if any
+	if ld.manifest.Deploy != nil && ld.manifest.Deploy.Divert != nil && ld.manifest.Deploy.Divert.Namespace != ld.manifest.Namespace {
+		oktetoLog.SetStage("Destroy Divert")
+		if err := ld.destroyDivert(ctx, ld.manifest); err != nil {
+			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error destroying divert: %s", err.Error())
+			return err
+		}
+		oktetoLog.Success("Divert from '%s' successfully destroyed", ld.manifest.Deploy.Divert.Namespace)
+		oktetoLog.SetStage("")
+	}
 
 	go func() {
 		for _, command := range ld.manifest.Destroy.Commands {
@@ -280,4 +292,21 @@ func (dc *localDestroyCommand) destroyHelmReleasesIfPresent(ctx context.Context,
 	}
 
 	return nil
+}
+
+func (ld *localDestroyCommand) destroyDivert(ctx context.Context, manifest *model.Manifest) error {
+	oktetoLog.Spinner(fmt.Sprintf("Destroying divert in %s...", manifest.Deploy.Divert.Namespace))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
+
+	c, _, err := ld.k8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+	driver, err := divert.New(manifest, c)
+	if err != nil {
+		return err
+	}
+
+	return driver.Destroy(ctx)
 }

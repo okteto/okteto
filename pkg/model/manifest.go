@@ -194,10 +194,19 @@ type DestroyInfo struct {
 
 // DivertDeploy represents information about the deploy divert configuration
 type DivertDeploy struct {
-	Namespace  string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Service    string `json:"service,omitempty" yaml:"service,omitempty"`
-	Port       int    `json:"port,omitempty" yaml:"port,omitempty"`
-	Deployment string `json:"deployment,omitempty" yaml:"deployment,omitempty"`
+	Driver         string       `json:"driver,omitempty" yaml:"driver,omitempty"`
+	Namespace      string       `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Service        string       `json:"service,omitempty" yaml:"service,omitempty"`
+	Port           int          `json:"port,omitempty" yaml:"port,omitempty"`
+	Deployment     string       `json:"deployment,omitempty" yaml:"deployment,omitempty"`
+	VirtualService string       `json:"virtualService,omitempty" yaml:"virtualService,omitempty"`
+	Hosts          []DivertHost `json:"hosts,omitempty" yaml:"hosts,omitempty"`
+}
+
+// DivertHost represents a host from a virtual service in a namespace to be diverted
+type DivertHost struct {
+	VirtualService string `json:"virtualService,omitempty" yaml:"virtualService,omitempty"`
+	Namespace      string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 }
 
 // ComposeSectionInfo represents information about compose file
@@ -769,16 +778,53 @@ func (m *Manifest) validateDivert() error {
 	if m.Deploy.Divert.Namespace == "" {
 		return fmt.Errorf("the field 'deploy.divert.namespace' is mandatory")
 	}
-	if m.Deploy.Divert.Service == "" {
-		return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
-	}
-	if m.Deploy.Divert.Deployment == "" {
-		return fmt.Errorf("the field 'deploy.divert.deployment' is mandatory")
+
+	switch m.Deploy.Divert.Driver {
+	case OktetoDivertWeaverDriver:
+		if m.Deploy.Divert.Service == "" {
+			return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
+		}
+		if m.Deploy.Divert.Deployment == "" {
+			return fmt.Errorf("the field 'deploy.divert.deployment' is mandatory")
+		}
+	case OktetoDivertIstioDriver:
+		if m.Deploy.Divert.Service == "" {
+			return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
+		}
+		if m.Deploy.Divert.VirtualService == "" {
+			return fmt.Errorf("the field 'deploy.divert.virtualService' is mandatory")
+		}
+		for i := range m.Deploy.Divert.Hosts {
+			if m.Deploy.Divert.Hosts[i].VirtualService == "" {
+				return fmt.Errorf("the field 'deploy.divert.hosts.virtualService' is mandatory")
+			}
+			if m.Deploy.Divert.Hosts[i].Namespace == "" {
+				return fmt.Errorf("the field 'deploy.divert.hosts.namespace' is mandatory")
+			}
+		}
+	default:
+		return fmt.Errorf("the divert driver '%s' isn't supported", m.Deploy.Divert.Driver)
 	}
 	return nil
 }
 
 func (m *Manifest) setDefaults() error {
+	if m.Deploy != nil && m.Deploy.Divert != nil {
+		if m.Deploy.Divert.Driver == "" {
+			m.Deploy.Divert.Driver = OktetoDivertWeaverDriver
+		}
+		for i := range m.Deploy.Divert.Hosts {
+			var err error
+			m.Deploy.Divert.Hosts[i].VirtualService, err = ExpandEnv(m.Deploy.Divert.Hosts[i].VirtualService, false)
+			if err != nil {
+				return err
+			}
+			m.Deploy.Divert.Hosts[i].Namespace, err = ExpandEnv(m.Deploy.Divert.Hosts[i].Namespace, false)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	for dName, d := range m.Dev {
 		if d.Name == "" {
 			d.Name = dName

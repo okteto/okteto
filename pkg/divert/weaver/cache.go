@@ -38,7 +38,7 @@ func (d *Driver) initCache(ctx context.Context) error {
 		developerEndpoints: map[string]*apiv1.Endpoints{},
 	}
 	// Init ingress cache for diverted namespace
-	iList, err := d.Client.NetworkingV1().Ingresses(d.Manifest.Deploy.Divert.Namespace).List(ctx, metav1.ListOptions{})
+	iList, err := d.client.NetworkingV1().Ingresses(d.manifest.Deploy.Divert.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -47,7 +47,7 @@ func (d *Driver) initCache(ctx context.Context) error {
 	}
 
 	// Service cache for diverted namespace
-	sList, err := d.Client.CoreV1().Services(d.Manifest.Deploy.Divert.Namespace).List(ctx, metav1.ListOptions{})
+	sList, err := d.client.CoreV1().Services(d.manifest.Deploy.Divert.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (d *Driver) initCache(ctx context.Context) error {
 	}
 
 	// Ingress cache for developer namespace
-	iList, err = d.Client.NetworkingV1().Ingresses(d.Manifest.Namespace).List(ctx, metav1.ListOptions{})
+	iList, err = d.client.NetworkingV1().Ingresses(d.manifest.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (d *Driver) initCache(ctx context.Context) error {
 	}
 
 	// Service cache for developer namespace
-	sList, err = d.Client.CoreV1().Services(d.Manifest.Namespace).List(ctx, metav1.ListOptions{})
+	sList, err = d.client.CoreV1().Services(d.manifest.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func (d *Driver) initCache(ctx context.Context) error {
 	}
 
 	// Endpoints cache for developer namespace
-	eList, err := d.Client.CoreV1().Endpoints(d.Manifest.Namespace).List(ctx, metav1.ListOptions{})
+	eList, err := d.client.CoreV1().Endpoints(d.manifest.Namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}

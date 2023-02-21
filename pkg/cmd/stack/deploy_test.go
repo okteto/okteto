@@ -28,10 +28,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
+	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/fake"
 )
 
@@ -66,7 +67,7 @@ func Test_deploySvc(t *testing.T) {
 				Services: map[string]*model.Service{
 					"test": {
 						Image:         "test_image",
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 					},
 				},
 			},
@@ -80,7 +81,7 @@ func Test_deploySvc(t *testing.T) {
 				Services: map[string]*model.Service{
 					"test": {
 						Image:         "test_image",
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 						Volumes: []model.StackVolume{
 							{
 								LocalPath:  "a",
@@ -103,7 +104,7 @@ func Test_deploySvc(t *testing.T) {
 				Services: map[string]*model.Service{
 					"test": {
 						Image:         "test_image",
-						RestartPolicy: corev1.RestartPolicyNever,
+						RestartPolicy: apiv1.RestartPolicyNever,
 					},
 				},
 			},
@@ -175,7 +176,7 @@ func Test_reDeploySvc(t *testing.T) {
 				Services: map[string]*model.Service{
 					"serviceName": {
 						Image:         "test_image",
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 					},
 				},
 			},
@@ -190,7 +191,7 @@ func Test_reDeploySvc(t *testing.T) {
 				Services: map[string]*model.Service{
 					"serviceName": {
 						Image:         "test_image",
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 						Volumes: []model.StackVolume{
 							{
 								LocalPath:  "a",
@@ -214,7 +215,7 @@ func Test_reDeploySvc(t *testing.T) {
 				Services: map[string]*model.Service{
 					"serviceName": {
 						Image:         "test_image",
-						RestartPolicy: corev1.RestartPolicyNever,
+						RestartPolicy: apiv1.RestartPolicyNever,
 					},
 				},
 			},
@@ -273,7 +274,7 @@ func Test_deployDeployment(t *testing.T) {
 		Services: map[string]*model.Service{
 			"test": {
 				Image:         "test_image",
-				RestartPolicy: corev1.RestartPolicyAlways,
+				RestartPolicy: apiv1.RestartPolicyAlways,
 			},
 		},
 	}
@@ -298,7 +299,7 @@ func Test_deployVolumes(t *testing.T) {
 		Services: map[string]*model.Service{
 			"test": {
 				Image:         "test_image",
-				RestartPolicy: corev1.RestartPolicyAlways,
+				RestartPolicy: apiv1.RestartPolicyAlways,
 				Volumes: []model.StackVolume{
 					{
 						LocalPath:  "a",
@@ -332,7 +333,7 @@ func Test_deploySfs(t *testing.T) {
 		Services: map[string]*model.Service{
 			"test": {
 				Image:         "test_image",
-				RestartPolicy: corev1.RestartPolicyAlways,
+				RestartPolicy: apiv1.RestartPolicyAlways,
 				Volumes: []model.StackVolume{
 					{
 						LocalPath:  "a",
@@ -366,7 +367,7 @@ func Test_deployJob(t *testing.T) {
 		Services: map[string]*model.Service{
 			"test": {
 				Image:         "test_image",
-				RestartPolicy: corev1.RestartPolicyNever,
+				RestartPolicy: apiv1.RestartPolicyNever,
 			},
 		},
 	}
@@ -487,7 +488,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"job-not-running": {
-						RestartPolicy: corev1.RestartPolicyNever,
+						RestartPolicy: apiv1.RestartPolicyNever,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"job-not-running": model.DependsOnConditionSpec{},
@@ -509,7 +510,7 @@ func Test_AddSomeServices(t *testing.T) {
 								RemotePath: "/",
 							},
 						},
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"sfs-not-running": model.DependsOnConditionSpec{},
@@ -525,7 +526,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"dep-not-running": {
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"dep-not-running": model.DependsOnConditionSpec{},
@@ -541,7 +542,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"job-active": {
-						RestartPolicy: corev1.RestartPolicyNever,
+						RestartPolicy: apiv1.RestartPolicyNever,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"job-active": model.DependsOnConditionSpec{},
@@ -557,7 +558,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"job-failed": {
-						RestartPolicy: corev1.RestartPolicyNever,
+						RestartPolicy: apiv1.RestartPolicyNever,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"job-failed": model.DependsOnConditionSpec{},
@@ -573,7 +574,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"job-succeeded": {
-						RestartPolicy: corev1.RestartPolicyNever,
+						RestartPolicy: apiv1.RestartPolicyNever,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"job-succeeded": model.DependsOnConditionSpec{},
@@ -595,7 +596,7 @@ func Test_AddSomeServices(t *testing.T) {
 								RemotePath: "/",
 							},
 						},
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"sfs": model.DependsOnConditionSpec{},
@@ -611,7 +612,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"dep": {
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"dep": model.DependsOnConditionSpec{},
@@ -783,7 +784,7 @@ func TestDeployK8sService(t *testing.T) {
 		{
 			name: "skip service",
 			k8sObjects: []runtime.Object{
-				&corev1.Service{
+				&apiv1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "ns",
@@ -809,7 +810,7 @@ func TestDeployK8sService(t *testing.T) {
 		{
 			name: "update service",
 			k8sObjects: []runtime.Object{
-				&corev1.Service{
+				&apiv1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "ns",
@@ -882,15 +883,15 @@ func TestGetErrorDueToRestartLimit(t *testing.T) {
 		{
 			name: "dependent svc without reaching backoff",
 			k8sObjects: []runtime.Object{
-				&corev1.Pod{
+				&apiv1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
 							model.StackNameLabel:        "test",
 							model.StackServiceNameLabel: "test1",
 						},
 					},
-					Status: corev1.PodStatus{
-						ContainerStatuses: []corev1.ContainerStatus{
+					Status: apiv1.PodStatus{
+						ContainerStatuses: []apiv1.ContainerStatus{
 							{
 								RestartCount: 1,
 							},
@@ -919,15 +920,15 @@ func TestGetErrorDueToRestartLimit(t *testing.T) {
 		{
 			name: "dependent svc reaching backoff",
 			k8sObjects: []runtime.Object{
-				&corev1.Pod{
+				&apiv1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
 							model.StackNameLabel:        "test",
 							model.StackServiceNameLabel: "test1",
 						},
 					},
-					Status: corev1.PodStatus{
-						ContainerStatuses: []corev1.ContainerStatus{
+					Status: apiv1.PodStatus{
+						ContainerStatuses: []apiv1.ContainerStatus{
 							{
 								RestartCount: 5,
 							},
@@ -1049,6 +1050,226 @@ func TestDeployK8sEndpoint(t *testing.T) {
 
 			obj, _ := c.Get(context.Background(), "test", "test")
 			assert.NotNil(t, obj)
+		})
+	}
+}
+
+func Test_keepDivertInDeployment(t *testing.T) {
+	var tests = []struct {
+		name     string
+		d        *appsv1.Deployment
+		old      *appsv1.Deployment
+		expected map[string]string
+	}{
+		{
+			name: "no-divert",
+			d: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: apiv1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"key1": "value1",
+							},
+						},
+					},
+				},
+			},
+			old:      &appsv1.Deployment{},
+			expected: map[string]string{"key1": "value1"},
+		},
+		{
+			name: "divert",
+			d: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: apiv1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								"key1": "value1",
+							},
+						},
+					},
+				},
+			},
+			old: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: apiv1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								model.OktetoDivertInjectSidecarLabel: "cindy",
+								"key2":                               "value2",
+							},
+						},
+					},
+				},
+			},
+			expected: map[string]string{
+				"key1":                               "value1",
+				model.OktetoDivertInjectSidecarLabel: "cindy",
+			},
+		},
+		{
+			name: "empty-divert",
+			d:    &appsv1.Deployment{},
+			old: &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: apiv1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels: map[string]string{
+								model.OktetoDivertInjectSidecarLabel: "cindy",
+								"key2":                               "value2",
+							},
+						},
+					},
+				},
+			},
+			expected: map[string]string{
+				model.OktetoDivertInjectSidecarLabel: "cindy",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			keepDivertInDeployment(tt.d, tt.old)
+			if !reflect.DeepEqual(tt.d.Spec.Template.Labels, tt.expected) {
+				t.Fatalf("Didn't updated template labels correctly")
+			}
+		})
+	}
+}
+
+func Test_keepDivertInService(t *testing.T) {
+	var tests = []struct {
+		name     string
+		s        *apiv1.Service
+		old      *apiv1.Service
+		expected []apiv1.ServicePort
+	}{
+		{
+			name: "no-divert",
+			s: &apiv1.Service{
+				Spec: apiv1.ServiceSpec{
+					Ports: []apiv1.ServicePort{
+						{
+							Name:       "web1",
+							Port:       8080,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+						},
+						{
+							Name:       "web2",
+							Port:       8081,
+							TargetPort: intstr.IntOrString{IntVal: 81},
+						},
+					},
+				},
+			},
+			old: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						"key1": "value1",
+					},
+				},
+			},
+			expected: []apiv1.ServicePort{
+				{
+					Name:       "web1",
+					Port:       8080,
+					TargetPort: intstr.IntOrString{IntVal: 80},
+				},
+				{
+					Name:       "web2",
+					Port:       8081,
+					TargetPort: intstr.IntOrString{IntVal: 81},
+				},
+			},
+		},
+		{
+			name: "divert",
+			s: &apiv1.Service{
+				Spec: apiv1.ServiceSpec{
+					Ports: []apiv1.ServicePort{
+						{
+							Name:       "web1",
+							Port:       8080,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+						},
+						{
+							Name:       "web2",
+							Port:       8081,
+							TargetPort: intstr.IntOrString{IntVal: 81},
+						},
+					},
+				},
+			},
+			old: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						model.OktetoDivertServiceAnnotation: "{\"proxy_port\":1024,\"original_port\":8081,\"original_target_port\":81}",
+						"key1":                              "value1",
+					},
+				},
+			},
+			expected: []apiv1.ServicePort{
+				{
+					Name:       "web1",
+					Port:       8080,
+					TargetPort: intstr.IntOrString{IntVal: 80},
+				},
+				{
+					Name:       "web2",
+					Port:       8081,
+					TargetPort: intstr.IntOrString{IntVal: 1024},
+				},
+			},
+		},
+		{
+			name: "divert-with-autocreate",
+			s: &apiv1.Service{
+				Spec: apiv1.ServiceSpec{
+					Ports: []apiv1.ServicePort{
+						{
+							Name:       "web1",
+							Port:       8080,
+							TargetPort: intstr.IntOrString{IntVal: 80},
+						},
+						{
+							Name:       "web2",
+							Port:       8081,
+							TargetPort: intstr.IntOrString{IntVal: 81},
+						},
+					},
+				},
+			},
+			old: &apiv1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						model.OktetoDivertServiceAnnotation: "{\"proxy_port\":1024,\"original_port\":8081,\"original_target_port\":81}",
+						"key1":                              "value1",
+						model.OktetoAutoCreateAnnotation:    "true",
+					},
+				},
+			},
+			expected: []apiv1.ServicePort{
+				{
+					Name:       "web1",
+					Port:       8080,
+					TargetPort: intstr.IntOrString{IntVal: 80},
+				},
+				{
+					Name:       "web2",
+					Port:       8081,
+					TargetPort: intstr.IntOrString{IntVal: 81},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			keepDivertInService(tt.s, tt.old)
+			if !reflect.DeepEqual(tt.s.Spec.Ports, tt.expected) {
+				t.Fatalf("Didn't updated ports correctly")
+			}
 		})
 	}
 }

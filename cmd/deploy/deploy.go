@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -83,6 +84,7 @@ type DeployCommand struct {
 	deployWaiter       deployWaiter
 	cfgMapHandler      configMapHandler
 	Fs                 afero.Fs
+	DivertDriver       divert.Driver
 
 	PipelineType model.Archetype
 	isRemote     bool

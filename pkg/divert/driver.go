@@ -15,26 +15,41 @@ package divert
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/okteto/okteto/pkg/divert/istio"
 	"github.com/okteto/okteto/pkg/divert/weaver"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/diverts"
+	"github.com/okteto/okteto/pkg/k8s/virtualservices"
 	"github.com/okteto/okteto/pkg/model"
-	appsv1 "k8s.io/api/apps/v1"
-	apiv1 "k8s.io/api/core/v1"
+	"github.com/okteto/okteto/pkg/okteto"
 	"k8s.io/client-go/kubernetes"
 )
 
 type Driver interface {
 	Deploy(ctx context.Context) error
 	Destroy(ctx context.Context) error
-	ApplyToDeployment(d1 *appsv1.Deployment, d2 *appsv1.Deployment)
-	ApplyToService(s1 *apiv1.Service, s2 *apiv1.Service)
+	GetDivertNamespace() string
 }
 
-func New(m *model.Manifest, dc *diverts.DivertV1Client, c kubernetes.Interface) Driver {
-	return &weaver.Driver{
-		Client:       c,
-		DivertClient: dc,
-		Manifest:     m,
+func New(m *model.Manifest, c kubernetes.Interface) (Driver, error) {
+	if !okteto.IsOkteto() {
+		return nil, oktetoErrors.ErrDivertNotSupported
 	}
+
+	if m.Deploy.Divert.Driver == model.OktetoDivertWeaverDriver {
+		dc, err := diverts.GetDivertClient()
+		if err != nil {
+			return nil, fmt.Errorf("error creating weaver client: %w", err)
+		}
+		return weaver.New(m, c, dc), nil
+	}
+
+	ic, err := virtualservices.GetIstioClient()
+	if err != nil {
+		return nil, fmt.Errorf("error creating istio client: %w", err)
+	}
+
+	return istio.New(m, c, ic), nil
 }

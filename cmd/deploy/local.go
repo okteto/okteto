@@ -27,11 +27,9 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/divert"
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	k8sExternalResources "github.com/okteto/okteto/pkg/externalresource/k8s"
 	"github.com/okteto/okteto/pkg/format"
-	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	kconfig "github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -52,6 +50,7 @@ type localDeployer struct {
 	deployWaiter deployWaiter
 	isRemote     bool
 	Fs           afero.Fs
+	DivertDriver divert.Driver
 }
 
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not
@@ -119,14 +118,13 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 	}
 
 	ld.Proxy.SetName(format.ResourceK8sMetaString(deployOptions.Name))
-	// don't divert if current namespace is the diverted namespace
 	if deployOptions.Manifest.Deploy.Divert != nil {
-		if !okteto.IsOkteto() {
-			return oktetoErrors.ErrDivertNotSupported
+		driver, err := divert.New(deployOptions.Manifest, c)
+		if err != nil {
+			return err
 		}
-		if deployOptions.Manifest.Deploy.Divert.Namespace != deployOptions.Manifest.Namespace {
-			ld.Proxy.SetDivert(deployOptions.Manifest.Deploy.Divert.Namespace)
-		}
+		ld.Proxy.SetDivert(driver.GetDivertNamespace())
+		ld.DivertDriver = driver
 	}
 
 	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
@@ -168,6 +166,13 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 		// Set OKTETO_AUTODISCOVERY_RELEASE_NAME=sanitized name, so the release name in case of autodiscovery of helm is valid
 		fmt.Sprintf("%s=%s", constants.OktetoAutodiscoveryReleaseName, format.ResourceK8sMetaString(deployOptions.Name)),
 	)
+	if okteto.IsOkteto() {
+		deployOptions.Variables = append(
+			deployOptions.Variables,
+			// Set OKTETO_DOMAIN=okteto-subdomain env variable
+			fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
+		)
+	}
 	oktetoLog.EnableMasking()
 	err = ld.runDeploySection(ctx, deployOptions)
 	oktetoLog.DisableMasking()
@@ -240,7 +245,7 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 
 	// deploy divert if any
 	if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
-		oktetoLog.SetStage("Divert configuration")
+		oktetoLog.SetStage("Deploy Divert")
 		if err := ld.deployDivert(ctx, opts); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
 			return err
@@ -298,22 +303,11 @@ func (ld *localDeployer) deployStack(ctx context.Context, opts *Options) error {
 
 func (ld *localDeployer) deployDivert(ctx context.Context, opts *Options) error {
 
-	oktetoLog.Spinner(fmt.Sprintf("Diverting namespace %s...", opts.Manifest.Deploy.Divert.Namespace))
+	oktetoLog.Spinner(fmt.Sprintf("Deploying divert in namespace %s...", opts.Manifest.Deploy.Divert.Namespace))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	c, _, err := ld.K8sClientProvider.Provide(okteto.Context().Cfg)
-	if err != nil {
-		return err
-	}
-
-	dClient, err := diverts.GetDivertClient()
-	if err != nil {
-		return fmt.Errorf("error creating divert CRD client: %s", err.Error())
-	}
-
-	driver := divert.New(opts.Manifest, dClient, c)
-	return driver.Deploy(ctx)
+	return ld.DivertDriver.Deploy(ctx)
 }
 
 func (ld *localDeployer) deployEndpoints(ctx context.Context, opts *Options) error {

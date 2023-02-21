@@ -27,16 +27,16 @@ import (
 )
 
 func (d *Driver) createDivertCRD(ctx context.Context) error {
-	divertCRD := translateDivertCRD(d.Manifest)
+	divertCRD := translateDivertCRD(d.manifest)
 
-	old, err := d.DivertClient.Diverts(d.Manifest.Namespace).Get(ctx, divertCRD.Name, metav1.GetOptions{})
+	old, err := d.divertClient.Diverts(d.manifest.Namespace).Get(ctx, divertCRD.Name, metav1.GetOptions{})
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return fmt.Errorf("error getting divert CRD '%s': %w", divertCRD.Name, err)
 	}
 
 	if old.Name == "" {
 		oktetoLog.Infof("creating  divert CRD '%s'", divertCRD.Name)
-		_, err = d.DivertClient.Diverts(d.Manifest.Namespace).Create(ctx, divertCRD)
+		_, err = d.divertClient.Diverts(d.manifest.Namespace).Create(ctx, divertCRD)
 		if err != nil && !k8sErrors.IsAlreadyExists(err) {
 			return fmt.Errorf("error creating divert CRD '%s': %w", divertCRD.Name, err)
 		}
@@ -48,7 +48,7 @@ func (d *Driver) createDivertCRD(ctx context.Context) error {
 		old.Labels = divertCRD.Labels
 		old.Spec = divertCRD.Spec
 		old.Status = diverts.DivertStatus{}
-		_, err = d.DivertClient.Diverts(d.Manifest.Namespace).Update(ctx, old)
+		_, err = d.divertClient.Diverts(d.manifest.Namespace).Update(ctx, old)
 		if err != nil {
 			if !k8sErrors.IsConflict(err) {
 				return fmt.Errorf("error updating divert CRD '%s': %w", divertCRD.Name, err)
