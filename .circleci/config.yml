@@ -52,7 +52,7 @@ commands:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:2.1.0
+      - image: okteto/golang-ci:1.18.0
 
 jobs:
   build-binaries:
@@ -104,7 +104,7 @@ jobs:
       - checkout
       - run:
           name: Upgrade Golang
-          command: choco upgrade golang --version 1.19
+          command: choco upgrade golang --version 1.18
       - restore_cache:
           keys:
             - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
@@ -182,7 +182,7 @@ jobs:
       - checkout
       - run:
           name: Upgrade Golang
-          command: choco upgrade golang --version 1.19
+          command: choco upgrade golang --version 1.18
       - restore_cache:
           keys:
             - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}

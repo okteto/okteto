@@ -1,6 +1,6 @@
 run:
   timeout: 5m
-  go: 1.19
+  go: 1.18
 # All possible options can be found here https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
 linters-settings:
   errcheck:
