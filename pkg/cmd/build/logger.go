@@ -130,11 +130,6 @@ func (t *trace) display() {
 			}
 		}
 		if t.hasCommandLogs(v) {
-			oktetoLog.StopSpinner()
-			logs := strings.Join(v.logs, "")
-			if !strings.HasPrefix(logs, "{") {
-				oktetoLog.Println(logs)
-			}
 			oktetoLog.Spinner("Deploying your development environment...")
 			for _, log := range v.logs {
 				var text oktetoLog.JSONLogFormat

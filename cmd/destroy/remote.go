@@ -47,7 +47,7 @@ COPY . /okteto/src
 WORKDIR /okteto/src
 
 ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
-RUN okteto destroy {{ .DestroyFlags }}
+RUN okteto destroy --log-output=json {{ .DestroyFlags }}
 `
 )
 
@@ -148,7 +148,6 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
 	if err := remoteBuild.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
-		fmt.Println(err)
 		return oktetoErrors.UserError{
 			E: fmt.Errorf("Error during development environment deployment."),
 		}
@@ -201,10 +200,6 @@ func getDestroyFlags(opts *Options) []string {
 
 	if opts.ForceDestroy {
 		deployFlags = append(deployFlags, "--force-destroy")
-	}
-
-	if opts.DestroyAll {
-		deployFlags = append(deployFlags, "--all")
 	}
 
 	return deployFlags

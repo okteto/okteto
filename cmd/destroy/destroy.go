@@ -211,16 +211,14 @@ func getTempKubeConfigFile(name string) string {
 }
 
 func getDestroyer(k8sClient *kubernetes.Clientset, okK8sClient okteto.K8sClientProvider, nsDestroyer destroyer, executor executor.ManifestExecutor, okClient *okteto.OktetoClient, opts *Options) (destroyInterface, error) {
-	var (
-		deployer destroyInterface
-	)
+	var deployer destroyInterface
 
 	if opts.DestroyAll {
 		if !okteto.Context().IsOkteto {
 			return nil, oktetoErrors.ErrContextIsNotOktetoCluster
 		}
 		deployer = newLocalDestroyerAll(k8sClient, okK8sClient, executor, nsDestroyer, okClient)
-		oktetoLog.Info("Destroying locally...")
+		oktetoLog.Info("Destroying all...")
 	} else {
 
 		manifest, err := model.GetManifestV2(opts.ManifestPath)
