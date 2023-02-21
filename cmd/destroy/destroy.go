@@ -36,7 +36,6 @@ import (
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -87,7 +86,6 @@ type destroyCommand struct {
 	k8sClientProvider okteto.K8sClientProvider
 	configMapHandler  configMapHandler
 	oktetoClient      *okteto.OktetoClient
-	getDestroyer      func(*kubernetes.Clientset, okteto.K8sClientProvider, destroyer, executor.ManifestExecutor, *okteto.OktetoClient, *Options) (destroyInterface, error)
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -172,7 +170,6 @@ func Destroy(ctx context.Context) *cobra.Command {
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProvider(),
 				oktetoClient:      okClient,
-				getDestroyer:      getDestroyer,
 			}
 
 			kubeconfigPath := getTempKubeConfigFile(name)
@@ -182,7 +179,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			os.Setenv("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
-			destroyer, err := c.getDestroyer(k8sClient, c.k8sClientProvider, c.nsDestroyer, c.executor, c.oktetoClient, options)
+			destroyer, err := c.getDestroyer(options)
 			if err != nil {
 				return err
 			}
@@ -210,14 +207,19 @@ func getTempKubeConfigFile(name string) string {
 	return filepath.Join(config.GetOktetoHome(), tempKubeconfigFileName)
 }
 
-func getDestroyer(k8sClient *kubernetes.Clientset, okK8sClient okteto.K8sClientProvider, nsDestroyer destroyer, executor executor.ManifestExecutor, okClient *okteto.OktetoClient, opts *Options) (destroyInterface, error) {
+func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) {
 	var deployer destroyInterface
+
+	k8sClient, _, err := dc.k8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	if opts.DestroyAll {
 		if !okteto.Context().IsOkteto {
 			return nil, oktetoErrors.ErrContextIsNotOktetoCluster
 		}
-		deployer = newLocalDestroyerAll(k8sClient, okK8sClient, executor, nsDestroyer, okClient)
+		deployer = newLocalDestroyerAll(k8sClient, dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)
 		oktetoLog.Info("Destroying all...")
 	} else {
 
@@ -237,7 +239,7 @@ func getDestroyer(k8sClient *kubernetes.Clientset, okK8sClient okteto.K8sClientP
 			deployer = newRemoteDestroyer(manifest)
 			oktetoLog.Info("Destroying remotely...")
 		} else {
-			deployer = newLocalDestroyer(manifest, newLocalDestroyerAll(k8sClient, okK8sClient, executor, nsDestroyer, okClient))
+			deployer = newLocalDestroyer(manifest, newLocalDestroyerAll(k8sClient, dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient))
 			oktetoLog.Info("Destroying locally...")
 		}
 	}

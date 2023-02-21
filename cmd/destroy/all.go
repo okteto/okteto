@@ -28,7 +28,7 @@ type localDestroyAllCommand struct {
 }
 
 func newLocalDestroyerAll(
-	k8sClient *kubernetes.Clientset,
+	k8sClient kubernetes.Interface,
 	k8sClientProvider okteto.K8sClientProvider,
 	executor executor.ManifestExecutor,
 	nsDestroyer destroyer,
