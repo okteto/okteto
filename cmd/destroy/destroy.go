@@ -208,18 +208,20 @@ func getTempKubeConfigFile(name string) string {
 }
 
 func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) {
-	var deployer destroyInterface
-
-	k8sClient, _, err := dc.k8sClientProvider.Provide(okteto.Context().Cfg)
-	if err != nil {
-		return nil, err
-	}
+	var (
+		deployer destroyInterface
+		err      error
+	)
 
 	if opts.DestroyAll {
 		if !okteto.Context().IsOkteto {
 			return nil, oktetoErrors.ErrContextIsNotOktetoCluster
 		}
-		deployer = newLocalDestroyerAll(k8sClient, dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)
+		deployer, err = newLocalDestroyerAll(dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)
+		if err != nil {
+			return nil, err
+		}
+
 		oktetoLog.Info("Destroying all...")
 	} else {
 
@@ -235,11 +237,17 @@ func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) 
 		isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
 
 		runInRemote := !isRemote && (manifest.Destroy.Image != "" || opts.RunInRemote)
+
 		if runInRemote {
 			deployer = newRemoteDestroyer(manifest)
 			oktetoLog.Info("Destroying remotely...")
 		} else {
-			deployer = newLocalDestroyer(manifest, newLocalDestroyerAll(k8sClient, dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient))
+			destroyerAll, err := newLocalDestroyerAll(dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)
+			if err != nil {
+				return nil, err
+			}
+
+			deployer = newLocalDestroyer(manifest, destroyerAll)
 			oktetoLog.Info("Destroying locally...")
 		}
 	}

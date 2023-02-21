@@ -15,7 +15,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 type localDestroyAllCommand struct {
@@ -28,12 +27,15 @@ type localDestroyAllCommand struct {
 }
 
 func newLocalDestroyerAll(
-	k8sClient kubernetes.Interface,
 	k8sClientProvider okteto.K8sClientProvider,
 	executor executor.ManifestExecutor,
 	nsDestroyer destroyer,
 	oktetoClient *okteto.OktetoClient,
-) *localDestroyAllCommand {
+) (*localDestroyAllCommand, error) {
+	k8sClient, _, err := k8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return nil, err
+	}
 	return &localDestroyAllCommand{
 		configMapHandler:  newConfigmapHandler(k8sClient),
 		secrets:           secrets.NewSecrets(k8sClient),
@@ -41,7 +43,7 @@ func newLocalDestroyerAll(
 		oktetoClient:      oktetoClient,
 		nsDestroyer:       nsDestroyer,
 		executor:          executor,
-	}
+	}, nil
 }
 
 func (dc *localDestroyAllCommand) destroy(ctx context.Context, opts *Options) error {
