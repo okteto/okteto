@@ -162,6 +162,9 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 	}
 
 	go func() {
+		if ld.manifest.Destroy == nil {
+			exit <- nil
+		}
 		for _, command := range ld.manifest.Destroy.Commands {
 			oktetoLog.Information("Running '%s'", command.Name)
 			oktetoLog.SetStage(command.Name)
