@@ -242,7 +242,11 @@ func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) 
 
 		isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
 
-		runInRemote := !isRemote && (manifest.Destroy.Image != "" || opts.RunInRemote)
+		destroyImage := ""
+		if manifest.Destroy != nil {
+			destroyImage = manifest.Destroy.Image
+		}
+		runInRemote := !isRemote && (destroyImage != "" || opts.RunInRemote)
 
 		if runInRemote {
 			deployer = newRemoteDestroyer(manifest)
