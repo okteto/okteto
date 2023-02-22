@@ -312,6 +312,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
+	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
+
 	if err := dc.deployDependencies(ctx, deployOptions); err != nil {
 		if errStatus := dc.cfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
