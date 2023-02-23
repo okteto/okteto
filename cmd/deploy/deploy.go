@@ -76,8 +76,6 @@ type Options struct {
 type DeployCommand struct {
 	GetManifest func(path string) (*model.Manifest, error)
 
-	Proxy              proxyInterface
-	Kubeconfig         kubeConfigHandler
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
@@ -177,7 +175,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 				GetExternalControl: getExternalControlFromCtx,
 				K8sClientProvider:  k8sClientProvider,
-				GetDeployer:        GetDeployer,
+				GetDeployer:        getDeployer,
 				Builder:            buildv2.NewBuilderFromScratch(),
 				deployWaiter:       newDeployWaiter(k8sClientProvider),
 				isRemote:           utils.LoadBoolean(constants.OKtetoDeployRemote),
@@ -285,19 +283,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 
 	dc.addEnvVars(ctx, cwd)
-
-	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
-	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
-		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
-		return err
-	}
-
-	if deployOptions.Manifest.Deploy == nil {
-		return oktetoErrors.ErrManifestFoundButNoDeployCommands
-	}
-	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy.ComposeSection == nil {
-		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
-	}
 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
@@ -526,7 +511,7 @@ func getDefaultTimeout() time.Duration {
 	return parsed
 }
 
-func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, cwd string, builder *buildv2.OktetoBuilder) (deployerInterface, error) {
+func getDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, cwd string, builder *buildv2.OktetoBuilder) (deployerInterface, error) {
 	var (
 		deployer deployerInterface
 		err      error
