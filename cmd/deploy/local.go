@@ -182,6 +182,7 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 	oktetoLog.DisableMasking()
 	oktetoLog.SetStage("done")
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
+	oktetoLog.SetStage("")
 	return err
 }
 
