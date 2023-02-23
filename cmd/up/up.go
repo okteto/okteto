@@ -524,6 +524,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 	k8sProvider := okteto.NewK8sClientProvider()
 	c := &deploy.DeployCommand{
 		GetManifest:        up.getManifest,
+		GetDeployer:        deploy.GetDeployer,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
 		K8sClientProvider:  okteto.NewK8sClientProvider(),
 		Builder:            buildv2.NewBuilderFromScratch(),

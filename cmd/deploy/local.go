@@ -113,6 +113,10 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 		return err
 	}
 
+	if err := ld.validateK8sResources(ctx, deployOptions.Manifest); err != nil {
+		return err
+	}
+
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
 	}
@@ -373,6 +377,27 @@ func (ld *localDeployer) cleanUp(ctx context.Context, err error) {
 	if ld.Executor != nil {
 		ld.Executor.CleanUp(err)
 	}
+}
+
+func (ld *localDeployer) validateK8sResources(ctx context.Context, manifest *model.Manifest) error {
+	if manifest.External != nil {
+		// In a cluster not managed by Okteto it is not necessary to validate the externals
+		// because they will not be deployed.
+		if okteto.IsOkteto() {
+			control, err := ld.GetExternalControl(ld.K8sClientProvider, ld.TempKubeconfigFile)
+			if err != nil {
+				return err
+			}
+
+			for externalName, externalInfo := range manifest.External {
+				err := control.Validate(ctx, externalName, manifest.Namespace, externalInfo)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func GetExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
