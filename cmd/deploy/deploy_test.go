@@ -244,7 +244,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 		},
 		Builder:           buildv2.NewBuilder(builder, registry),
 		K8sClientProvider: clientProvider,
-		cfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
+		CfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
 	}
 
 	ctx := context.Background()
@@ -320,7 +320,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 			}, nil
 		},
 		K8sClientProvider: clientProvider,
-		cfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
+		CfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
 		Fs:                afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
@@ -400,7 +400,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 			}, nil
 		},
 		K8sClientProvider: clientProvider,
-		cfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
+		CfgMapHandler:     newDefaultConfigMapHandler(clientProvider),
 	}
 	ctx := context.Background()
 
@@ -461,7 +461,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		},
 		GetExternalControl: cp.getFakeExternalControl,
 		K8sClientProvider:  clientProvider,
-		cfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
+		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
 		Fs:                 afero.NewMemMapFs(),
 	}
 	ctx := context.Background()
@@ -524,7 +524,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 		K8sClientProvider:  clientProvider,
 		GetExternalControl: cp.getFakeExternalControl,
 		Fs:                 afero.NewMemMapFs(),
-		cfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
+		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
 		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:              p,

@@ -275,6 +275,7 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		Builder:            buildv2.NewBuilderFromScratch(),
 		GetExternalControl: deploy.GetExternalControl,
 		Fs:                 afero.NewOsFs(),
+		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
 	}
 
 	err := c.RunDeploy(ctx, &deploy.Options{

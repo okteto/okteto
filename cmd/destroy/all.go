@@ -20,7 +20,7 @@ import (
 )
 
 type localDestroyAllCommand struct {
-	configMapHandler  configMapHandler
+	ConfigMapHandler  configMapHandler
 	nsDestroyer       destroyer
 	executor          executor.ManifestExecutor
 	oktetoClient      *okteto.OktetoClient
@@ -39,7 +39,7 @@ func newLocalDestroyerAll(
 		return nil, err
 	}
 	return &localDestroyAllCommand{
-		configMapHandler:  newConfigmapHandler(k8sClient),
+		ConfigMapHandler:  NewConfigmapHandler(k8sClient),
 		secrets:           secrets.NewSecrets(k8sClient),
 		k8sClientProvider: k8sClientProvider,
 		oktetoClient:      oktetoClient,

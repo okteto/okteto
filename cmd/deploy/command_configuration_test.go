@@ -61,7 +61,7 @@ devs:
 	dc := &DeployCommand{
 		GetManifest:       getFakeManifest,
 		K8sClientProvider: fakeK8sProvider,
-		cfgMapHandler:     newDefaultConfigMapHandler(fakeK8sProvider),
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sProvider),
 	}
 
 	ctx := context.Background()
@@ -85,7 +85,7 @@ devs:
 		},
 	}
 
-	currentCfg, err := dc.cfgMapHandler.translateConfigMapAndDeploy(ctx, data)
+	currentCfg, err := dc.CfgMapHandler.translateConfigMapAndDeploy(ctx, data)
 	if err != nil {
 		t.Fatal("error trying to get configmap from data object")
 	}

@@ -82,7 +82,7 @@ type DeployCommand struct {
 	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
 	GetDeployer        func(context.Context, *model.Manifest, *Options, string, *buildv2.OktetoBuilder) (deployerInterface, error)
 	deployWaiter       deployWaiter
-	cfgMapHandler      configMapHandler
+	CfgMapHandler      configMapHandler
 	Fs                 afero.Fs
 	DivertDriver       divert.Driver
 
@@ -179,7 +179,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Builder:            buildv2.NewBuilderFromScratch(),
 				deployWaiter:       newDeployWaiter(k8sClientProvider),
 				isRemote:           utils.LoadBoolean(constants.OKtetoDeployRemote),
-				cfgMapHandler:      newConfigmapHandler(k8sClientProvider),
+				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider),
 				Fs:                 afero.NewOsFs(),
 			}
 			startTime := time.Now()
@@ -303,7 +303,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
-	cfg, err := dc.cfgMapHandler.translateConfigMapAndDeploy(ctx, data)
+	cfg, err := dc.CfgMapHandler.translateConfigMapAndDeploy(ctx, data)
 	if err != nil {
 		return err
 	}
@@ -315,14 +315,14 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
 
 	if err := dc.deployDependencies(ctx, deployOptions); err != nil {
-		if errStatus := dc.cfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
+		if errStatus := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
 			return errStatus
 		}
 		return err
 	}
 
 	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
-		return dc.cfgMapHandler.updateConfigMap(ctx, cfg, data, err)
+		return dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err)
 	}
 
 	deployer, err := dc.GetDeployer(ctx, deployOptions.Manifest, deployOptions, cwd, dc.Builder)
@@ -371,7 +371,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Status = pipeline.DeployedStatus
 	}
 
-	if err := dc.cfgMapHandler.updateConfigMap(ctx, cfg, data, err); err != nil {
+	if err := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); err != nil {
 		return err
 	}
 

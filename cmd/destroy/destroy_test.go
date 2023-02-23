@@ -152,7 +152,7 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 
 	ld := localDestroyCommand{
 		&localDestroyAllCommand{
-			configMapHandler:  newConfigmapHandler(fakeClient),
+			ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 			nsDestroyer:       destroyer,
 			executor:          executor,
 			k8sClientProvider: k8sClientProvider,
@@ -218,7 +218,7 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 
 			ld := localDestroyCommand{
 				&localDestroyAllCommand{
-					configMapHandler:  newConfigmapHandler(fakeClient),
+					ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 					nsDestroyer:       &fakeDestroyer{},
 					executor:          executor,
 					k8sClientProvider: k8sClientProvider,
@@ -361,7 +361,7 @@ func TestDestroyWithError(t *testing.T) {
 
 			ld := localDestroyCommand{
 				&localDestroyAllCommand{
-					configMapHandler:  newConfigmapHandler(fakeClient),
+					ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 					nsDestroyer:       destroyer,
 					executor:          executor,
 					k8sClientProvider: k8sClientProvider,
@@ -604,7 +604,7 @@ func TestDestroyWithoutError(t *testing.T) {
 
 			ld := localDestroyCommand{
 				&localDestroyAllCommand{
-					configMapHandler:  newConfigmapHandler(fakeClient),
+					ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 					nsDestroyer:       destroyer,
 					executor:          executor,
 					k8sClientProvider: k8sClientProvider,
@@ -852,7 +852,7 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 
 			ld := localDestroyCommand{
 				&localDestroyAllCommand{
-					configMapHandler:  newConfigmapHandler(nil),
+					ConfigMapHandler:  NewConfigmapHandler(nil),
 					nsDestroyer:       destroyer,
 					executor:          executor,
 					k8sClientProvider: test.NewFakeK8sProvider(),
@@ -908,7 +908,7 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 
 	ld := localDestroyCommand{
 		&localDestroyAllCommand{
-			configMapHandler:  newConfigmapHandler(fakeClient),
+			ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 			nsDestroyer:       destroyer,
 			executor:          executor,
 			k8sClientProvider: k8sClientProvider,
@@ -958,7 +958,7 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 
 	ld := localDestroyCommand{
 		&localDestroyAllCommand{
-			configMapHandler:  newConfigmapHandler(fakeClient),
+			ConfigMapHandler:  NewConfigmapHandler(fakeClient),
 			nsDestroyer:       destroyer,
 			executor:          executor,
 			k8sClientProvider: k8sClientProvider,

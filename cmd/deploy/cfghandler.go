@@ -51,7 +51,7 @@ func newDefaultConfigMapHandler(provider okteto.K8sClientProvider) *defaultConfi
 	}
 }
 
-func newConfigmapHandler(provider okteto.K8sClientProvider) configMapHandler {
+func NewConfigmapHandler(provider okteto.K8sClientProvider) configMapHandler {
 	if utils.LoadBoolean(constants.OKtetoDeployRemote) {
 		return newDeployInsideDeployConfigMapHandler()
 	}

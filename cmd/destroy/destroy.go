@@ -85,7 +85,7 @@ type destroyCommand struct {
 	nsDestroyer       destroyer
 	secrets           secretHandler
 	k8sClientProvider okteto.K8sClientProvider
-	configMapHandler  configMapHandler
+	ConfigMapHandler  configMapHandler
 	oktetoClient      *okteto.OktetoClient
 }
 
@@ -171,7 +171,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 
 			c := &destroyCommand{
 				executor:          executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
-				configMapHandler:  newConfigmapHandler(k8sClient),
+				ConfigMapHandler:  NewConfigmapHandler(k8sClient),
 				nsDestroyer:       namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProvider(),

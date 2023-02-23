@@ -521,6 +521,7 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVar
 }
 
 func (up *upContext) deployApp(ctx context.Context) error {
+	k8sProvider := okteto.NewK8sClientProvider()
 	c := &deploy.DeployCommand{
 		GetManifest:        up.getManifest,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
@@ -528,6 +529,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		Builder:            buildv2.NewBuilderFromScratch(),
 		GetExternalControl: deploy.GetExternalControl,
 		Fs:                 afero.NewOsFs(),
+		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider),
 	}
 
 	return c.RunDeploy(ctx, &deploy.Options{
