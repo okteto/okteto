@@ -175,7 +175,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 				GetExternalControl: getExternalControlFromCtx,
 				K8sClientProvider:  k8sClientProvider,
-				GetDeployer:        getDeployer,
+				GetDeployer:        GetDeployer,
 				Builder:            buildv2.NewBuilderFromScratch(),
 				deployWaiter:       newDeployWaiter(k8sClientProvider),
 				isRemote:           utils.LoadBoolean(constants.OKtetoDeployRemote),
@@ -308,10 +308,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return err
 	}
 
-	if err := dc.validateK8sResources(ctx, deployOptions.Manifest); err != nil {
-		return err
-	}
-
 	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
 
 	if err := dc.deployDependencies(ctx, deployOptions); err != nil {
@@ -376,27 +372,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	return err
-}
-
-func (dc *DeployCommand) validateK8sResources(ctx context.Context, manifest *model.Manifest) error {
-	if manifest.External != nil {
-		// In a cluster not managed by Okteto it is not necessary to validate the externals
-		// because they will not be deployed.
-		if okteto.IsOkteto() {
-			control, err := dc.GetExternalControl(dc.K8sClientProvider, dc.TempKubeconfigFile)
-			if err != nil {
-				return err
-			}
-
-			for externalName, externalInfo := range manifest.External {
-				err := control.Validate(ctx, externalName, manifest.Namespace, externalInfo)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
 }
 
 func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesToBuild func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {
@@ -511,7 +486,7 @@ func getDefaultTimeout() time.Duration {
 	return parsed
 }
 
-func getDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, cwd string, builder *buildv2.OktetoBuilder) (deployerInterface, error) {
+func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, cwd string, builder *buildv2.OktetoBuilder) (deployerInterface, error) {
 	var (
 		deployer deployerInterface
 		err      error

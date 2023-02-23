@@ -914,14 +914,14 @@ func TestValidateK8sResources(t *testing.T) {
 				err:     tc.providedErr,
 			}
 
-			dc := DeployCommand{
+			ld := localDeployer{
 				GetExternalControl: cp.getFakeExternalControl,
 			}
 
 			if tc.expectedErr {
-				assert.Error(t, dc.validateK8sResources(ctx, tc.manifest))
+				assert.Error(t, ld.validateK8sResources(ctx, tc.manifest))
 			} else {
-				assert.NoError(t, dc.validateK8sResources(ctx, tc.manifest))
+				assert.NoError(t, ld.validateK8sResources(ctx, tc.manifest))
 			}
 		})
 	}
