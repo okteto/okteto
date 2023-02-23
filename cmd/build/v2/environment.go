@@ -68,3 +68,8 @@ func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 
 	oktetoLog.Debug("manifest env vars set")
 }
+
+// SetServiceEnvVars set okteto build env vars
+func (bc *OktetoBuilder) GetBuildEnvVars() map[string]string {
+	return bc.buildEnvironments
+}

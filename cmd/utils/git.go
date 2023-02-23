@@ -67,7 +67,6 @@ func GetGitCommit(path string) (string, error) {
 	}
 
 	hash := head.Hash()
-
 	return hash.String(), nil
 }
 

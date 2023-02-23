@@ -73,7 +73,6 @@ func GetKubernetesTimeout() time.Duration {
 
 func getK8sClientWithApiConfig(clientApiConfig *clientcmdapi.Config) (*kubernetes.Clientset, *rest.Config, error) {
 	clientConfig := clientcmd.NewDefaultClientConfig(*clientApiConfig, nil)
-
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, nil, err

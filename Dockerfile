@@ -1,6 +1,6 @@
 # syntax = docker/dockerfile:experimental
 
-FROM bitnami/kubectl:1.21.0 as kubectl
+FROM bitnami/kubectl:1.24.9 as kubectl
 
 FROM alpine:3.16 as helm
 ARG HELM_VERSION=3.11.1

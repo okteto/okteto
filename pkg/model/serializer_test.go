@@ -1072,6 +1072,7 @@ deploy:
 						},
 					},
 				},
+				Destroy:      &DestroyInfo{},
 				Dev:          map[string]*Dev{},
 				Dependencies: map[string]*Dependency{},
 				External:     externalresource.ExternalResourceSection{},
@@ -1106,6 +1107,7 @@ dev:
 						},
 					},
 				},
+				Destroy:      &DestroyInfo{},
 				Dependencies: map[string]*Dependency{},
 				External:     externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
@@ -1253,6 +1255,7 @@ sync:
 				Type:          OktetoManifestType,
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
+				Destroy:       &DestroyInfo{},
 				Dependencies:  map[string]*Dependency{},
 				External:      externalresource.ExternalResourceSection{},
 				GlobalForward: []forward.GlobalForward{},
@@ -1337,6 +1340,7 @@ services:
 				Type:          OktetoManifestType,
 				Build:         map[string]*BuildInfo{},
 				Deploy:        &DeployInfo{},
+				Destroy:       &DestroyInfo{},
 				Dependencies:  map[string]*Dependency{},
 				GlobalForward: []forward.GlobalForward{},
 				External:      externalresource.ExternalResourceSection{},
@@ -1471,6 +1475,7 @@ dev:
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
 				External:     externalresource.ExternalResourceSection{},
+				Destroy:      &DestroyInfo{},
 				Dev: map[string]*Dev{
 					"test": {
 						Name: "test",
@@ -1558,6 +1563,7 @@ dev:
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
 				External:     externalresource.ExternalResourceSection{},
+				Destroy:      &DestroyInfo{},
 				Dev: map[string]*Dev{
 					"test-1": {
 						Name: "test-1",
@@ -1726,6 +1732,7 @@ deploy:
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
 				External:     externalresource.ExternalResourceSection{},
+				Destroy:      &DestroyInfo{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{
@@ -1753,6 +1760,7 @@ devs:
 				Build:        map[string]*BuildInfo{},
 				Dependencies: map[string]*Dependency{},
 				External:     externalresource.ExternalResourceSection{},
+				Destroy:      &DestroyInfo{},
 				Deploy: &DeployInfo{
 					Commands: []DeployCommand{
 						{

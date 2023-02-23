@@ -50,6 +50,15 @@ const (
 	// TimeFormat is the format to use when storing timestamps as a string
 	TimeFormat = "2006-01-02T15:04:05"
 
+	// OKtetoDeployRemote defines if deployment is executed remotely
+	OKtetoDeployRemote = "OKTETO_DEPLOY_REMOTE"
+
+	// OktetoCLIImageForRemote defines okteto CLI image to use for remote deployments
+	OktetoCLIImageForRemote = "okteto/okteto:remote-deploy"
+
+	// OktetoPipelineRunnerImage defines image to use for remote deployments if empty
+	OktetoPipelineRunnerImage = "okteto/installer:1.7.6"
+
 	// OktetoEnvFile defines the name for okteto env file
 	OktetoEnvFile = "OKTETO_ENV"
 

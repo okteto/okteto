@@ -26,7 +26,6 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/cmd/utils/executor"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
@@ -269,25 +268,17 @@ func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Mani
 }
 
 func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
-	kubeconfig := deploy.NewKubeConfig()
-	proxy, err := deploy.NewProxy(kubeconfig)
-	if err != nil {
-		return err
-	}
-
 	c := &deploy.DeployCommand{
 		GetManifest:        mc.getManifest,
-		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), false),
-		Proxy:              proxy,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
 		Builder:            buildv2.NewBuilderFromScratch(),
 		GetExternalControl: deploy.GetExternalControl,
 		Fs:                 afero.NewOsFs(),
+		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
 	}
 
-	err = c.RunDeploy(ctx, &deploy.Options{
+	err := c.RunDeploy(ctx, &deploy.Options{
 		Name:         mc.manifest.Name,
 		ManifestPath: opts.DevPath,
 		Timeout:      5 * time.Minute,

@@ -492,7 +492,7 @@ func Test_EndpointsFromStackWith_NameOption(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createStackWithEndpointsInferredNameScenario(dir))
 
-	testNamespace := integration.GetTestNamespace("TEndpointsStackNameOp", user)
+	testNamespace := integration.GetTestNamespace("TEpStackNameOpt", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,

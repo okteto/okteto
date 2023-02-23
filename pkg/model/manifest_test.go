@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
@@ -135,6 +136,22 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 			},
 			manifest:         &Manifest{},
 			expectedManifest: &Manifest{},
+		},
+		{
+			name: "expand image for remote deploy",
+			envs: map[string]string{
+				"myImage": "test",
+			},
+			manifest: &Manifest{
+				Deploy: &DeployInfo{
+					Image: "${myImage}",
+				},
+			},
+			expectedManifest: &Manifest{
+				Deploy: &DeployInfo{
+					Image: "test",
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -396,6 +413,7 @@ func TestInferFromStack(t *testing.T) {
 				Dev:   ManifestDevs{},
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: &Stack{
 							Services: map[string]*Service{
@@ -426,10 +444,12 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},
+				Destroy: &DestroyInfo{},
 			},
 		},
 		{
@@ -443,6 +463,7 @@ func TestInferFromStack(t *testing.T) {
 					},
 				},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: &Stack{
 							Services: map[string]*Service{
@@ -471,8 +492,10 @@ func TestInferFromStack(t *testing.T) {
 						Dockerfile: filepath.Join("test-1", "Dockerfile"),
 					},
 				},
-				Dev: ManifestDevs{},
+				Dev:     ManifestDevs{},
+				Destroy: &DestroyInfo{},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: &Stack{
 							Services: map[string]*Service{
@@ -534,6 +557,7 @@ func TestInferFromStack(t *testing.T) {
 						Dockerfile: "Dockerfile",
 					},
 				},
+				Destroy: &DestroyInfo{},
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Name:      "one",

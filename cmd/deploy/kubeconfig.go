@@ -51,7 +51,6 @@ func (k *KubeConfig) Modify(port int, sessionToken, destKubeconfigFile string) e
 	if err != nil {
 		return err
 	}
-
 	// We should change only the config for the proxy, not the one in Context.Cfg
 	proxyCfg := clientCfg.DeepCopy()
 

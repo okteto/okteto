@@ -23,10 +23,10 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 func TestGetConfigMapFromData(t *testing.T) {
@@ -38,7 +38,14 @@ deploy:
 devs:
     - api/okteto.yml
     - frontend/okteto.yml`)
-
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	data := &pipeline.CfgData{
 		Name:       "Name",
 		Namespace:  "Namespace",
@@ -50,24 +57,14 @@ devs:
 		Icon:       "https://apps.okteto.com/movies/icon.png",
 	}
 
-	p := &fakeProxy{}
-	e := &fakeExecutor{
-		err: assert.AnError,
-	}
+	fakeK8sProvider := test.NewFakeK8sProvider()
 	dc := &DeployCommand{
 		GetManifest:       getFakeManifest,
-		Proxy:             p,
-		Executor:          e,
-		Kubeconfig:        &fakeKubeConfig{},
-		K8sClientProvider: test.NewFakeK8sProvider(),
+		K8sClientProvider: fakeK8sProvider,
+		CfgMapHandler:     newDefaultConfigMapHandler(fakeK8sProvider),
 	}
 
 	ctx := context.Background()
-
-	fakeClient, _, err := dc.K8sClientProvider.Provide(clientcmdapi.NewConfig())
-	if err != nil {
-		t.Fatal("could not create fake k8s client")
-	}
 
 	expectedCfg := &apiv1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -88,7 +85,7 @@ devs:
 		},
 	}
 
-	currentCfg, err := getConfigMapFromData(ctx, data, fakeClient)
+	currentCfg, err := dc.CfgMapHandler.translateConfigMapAndDeploy(ctx, data)
 	if err != nil {
 		t.Fatal("error trying to get configmap from data object")
 	}
