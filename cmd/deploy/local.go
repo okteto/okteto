@@ -87,7 +87,7 @@ func newLocalDeployer(ctx context.Context, cwd string, options *Options) (*local
 		Proxy:              proxy,
 		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),
 		K8sClientProvider:  clientProvider,
-		GetExternalControl: GetExternalControl,
+		GetExternalControl: getExternalControlFromCtx,
 		deployWaiter:       newDeployWaiter(clientProvider),
 		isRemote:           true,
 		Fs:                 afero.NewOsFs(),
