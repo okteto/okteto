@@ -53,7 +53,7 @@ func newDefaultConfigMapHandler(c kubernetes.Interface) *defaultConfigMapHandler
 	}
 }
 
-func newConfigmapHandler(c kubernetes.Interface) configMapHandler {
+func NewConfigmapHandler(c kubernetes.Interface) configMapHandler {
 	if utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
 		return newDestroyInsideDeployConfigMapHandler()
 	}

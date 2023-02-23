@@ -101,7 +101,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 		Filename:  opts.ManifestPathFlag,
 	}
 
-	cfg, err := ld.configMapHandler.translateConfigMapAndDeploy(ctx, data)
+	cfg, err := ld.ConfigMapHandler.translateConfigMapAndDeploy(ctx, data)
 	if err != nil {
 		return err
 	}
@@ -130,13 +130,13 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 			}
 			pipelineCmd, err := pipelineCMD.NewCommand()
 			if err != nil {
-				if err := ld.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+				if err := ld.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 					return err
 				}
 				return err
 			}
 			if err := pipelineCmd.ExecuteDestroyPipeline(ctx, destOpts); err != nil {
-				if err := ld.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+				if err := ld.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 					return err
 				}
 				return err
@@ -172,7 +172,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 			if err := ld.executor.Execute(command, opts.Variables); err != nil {
 				err = fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 				if !opts.ForceDestroy {
-					if err := ld.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+					if err := ld.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 						exit <- err
 						return
 					}
@@ -191,7 +191,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
 		errStop := "interrupt signal received"
 		ld.executor.CleanUp(errors.New(errStop))
-		if err := ld.configMapHandler.setErrorStatus(ctx, cfg, data, fmt.Errorf(errStop)); err != nil {
+		if err := ld.ConfigMapHandler.setErrorStatus(ctx, cfg, data, fmt.Errorf(errStop)); err != nil {
 			return err
 		}
 		return oktetoErrors.ErrIntSig
@@ -214,7 +214,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 		[]string{format.ResourceK8sMetaString(name)},
 	)
 	if err != nil {
-		if err := ld.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+		if err := ld.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 			return err
 		}
 		return err
@@ -227,7 +227,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 
 	oktetoLog.SetStage("Destroying volumes")
 	if err := ld.nsDestroyer.DestroySFSVolumes(ctx, opts.Namespace, deleteOpts); err != nil {
-		if err := ld.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+		if err := ld.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 			return err
 		}
 		return err
@@ -236,7 +236,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 	oktetoLog.SetStage("Destroying Helm release")
 	if err := ld.destroyHelmReleasesIfPresent(ctx, opts, deployedBySelector); err != nil {
 		if !opts.ForceDestroy {
-			if err := ld.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+			if err := ld.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 				return err
 			}
 			return err
@@ -247,7 +247,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 	oktetoLog.SetStage(fmt.Sprintf("Destroying by label '%s'", deployedBySelector))
 	if err := ld.nsDestroyer.DestroyWithLabel(ctx, opts.Namespace, deleteOpts); err != nil {
 		oktetoLog.Infof("could not delete all the resources: %s", err)
-		if err := ld.configMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
+		if err := ld.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
 			return err
 		}
 		return err
@@ -255,7 +255,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 
 	oktetoLog.SetStage("Destroying configmap")
 
-	if err := ld.configMapHandler.destroyConfigMap(ctx, cfg, namespace); err != nil {
+	if err := ld.ConfigMapHandler.destroyConfigMap(ctx, cfg, namespace); err != nil {
 		return err
 	}
 
