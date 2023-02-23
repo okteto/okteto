@@ -522,8 +522,17 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVar
 
 func (up *upContext) deployApp(ctx context.Context) error {
 	k8sProvider := okteto.NewK8sClientProvider()
+	kubeconfig := deploy.NewKubeConfig()
+	proxy, err := deploy.NewProxy(kubeconfig)
+	if err != nil {
+		return err
+	}
+
 	c := &deploy.DeployCommand{
 		GetManifest:        up.getManifest,
+		Kubeconfig:         kubeconfig,
+		Proxy:              proxy,
+		GetDeployer:        deploy.GetDeployer,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
 		K8sClientProvider:  okteto.NewK8sClientProvider(),
 		Builder:            buildv2.NewBuilderFromScratch(),
