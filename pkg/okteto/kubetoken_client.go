@@ -75,6 +75,10 @@ func (c *kubeTokenClient) GetKubeToken() (string, error) {
 		return "", fmt.Errorf("failed GET request: %w", err)
 	}
 
+	if resp.StatusCode == http.StatusUnauthorized {
+		return "", fmt.Errorf(oktetoErrors.ErrNotLogged, Context().Name)
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("GET request returned status %s", resp.Status)
 	}
