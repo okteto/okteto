@@ -14,7 +14,10 @@
 package kubetoken
 
 import (
+	"context"
 	"fmt"
+
+	contextCMD "github.com/okteto/okteto/cmd/context"
 
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
@@ -28,6 +31,13 @@ func KubeToken() *cobra.Command {
 	}
 
 	cmd.RunE = func(*cobra.Command, []string) error {
+		ctx := context.Background()
+
+		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{})
+		if err != nil {
+			return err
+		}
+
 		c, err := okteto.NewKubeTokenClient()
 		if err != nil {
 			return fmt.Errorf("failed to initialize the kubetoken client: %w", err)
