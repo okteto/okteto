@@ -22,8 +22,9 @@ import (
 
 func KubeToken() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "kubetoken",
-		Short: "Gets a token to access the Kubernetes API with client authentication",
+		Use:    "kubetoken",
+		Short:  "Gets a token to access the Kubernetes API with client authentication",
+		Hidden: true,
 	}
 
 	cmd.RunE = func(*cobra.Command, []string) error {
