@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -80,25 +81,25 @@ type dockerfileTemplateProperties struct {
 }
 
 type remoteDeployCommand struct {
-	builder *buildv2.OktetoBuilder
-	fs      afero.Fs
+	builder          *buildv2.OktetoBuilder
+	fs               afero.Fs
+	workingDirectory filesystem.WorkingDirectoryInterface
 }
 
+// newRemoteDeployer creates the remote deployer from a
 func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
 	return &remoteDeployCommand{
-		builder: builder,
-		fs:      afero.NewOsFs(),
+		builder:          builder,
+		fs:               afero.NewOsFs(),
+		workingDirectory: filesystem.NewOsWorkingDirectoryCtrl(),
 	}
 }
 
 func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options) error {
-
-	cwd, err := os.Getwd()
+	cwd, err := rd.getOriginalCWD(deployOptions.ManifestPathFlag)
 	if err != nil {
 		return err
 	}
-
-	cwd = getOriginalCWD(cwd, deployOptions.ManifestPathFlag)
 
 	tmpl, err := template.New("dockerfile").Parse(dockerfileTemplate)
 	if err != nil {
@@ -149,7 +150,9 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	}
 
 	// undo modification of CWD for Build command
-	os.Chdir(cwd)
+	if err := rd.workingDirectory.Change(cwd); err != nil {
+		return err
+	}
 
 	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
 	buildOptions.Tag = ""
@@ -169,9 +172,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	return nil
 }
 
-func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {
-	return
-}
+func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {}
 
 func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
 	dockerignoreFilePath := fmt.Sprintf("%s/%s", cwd, ".oktetodeployignore")
@@ -220,7 +221,12 @@ func getDeployFlags(opts *Options) []string {
 	return deployFlags
 }
 
-func getOriginalCWD(cwd, manifestPath string) string {
-	manifestPathDir := filepath.Dir(fmt.Sprintf("/%s", manifestPath))
-	return strings.TrimSuffix(cwd, manifestPathDir)
+// getOriginalCWD returns the original cwd
+func (rd *remoteDeployCommand) getOriginalCWD(manifestPath string) (string, error) {
+	cwd, err := rd.workingDirectory.Get()
+	if err != nil {
+		return "", err
+	}
+	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
+	return strings.TrimSuffix(cwd, manifestPathDir), nil
 }
