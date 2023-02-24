@@ -19,6 +19,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -36,6 +37,10 @@ func KubeToken() *cobra.Command {
 		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{})
 		if err != nil {
 			return err
+		}
+
+		if !okteto.Context().IsOkteto {
+			return errors.ErrContextIsNotOktetoCluster
 		}
 
 		c, err := okteto.NewKubeTokenClient()
