@@ -1,0 +1,13 @@
+{
+    "name": "okteto/php-getting-started",
+    "description": "Develop PHP applications directly in your Kubernetes cluster with Okteto",
+    "type": "project",
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "Ramiro Berrelleza",
+            "email": "rberrelleza@gmail.com"
+        }
+    ],
+    "require": {}
+}
