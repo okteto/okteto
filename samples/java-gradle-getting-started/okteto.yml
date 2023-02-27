@@ -1,0 +1,11 @@
+dev:
+  hello-world:
+    image: okteto/gradle:6.5
+    command: bash
+    sync:
+      - .:/usr/src/app
+    forward:
+      - 8080:8080
+      - 5005:5005
+    volumes:
+      - /home/gradle/.gradle
