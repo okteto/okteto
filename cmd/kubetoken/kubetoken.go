@@ -16,6 +16,7 @@ package kubetoken
 import (
 	"context"
 	"fmt"
+	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 
@@ -56,6 +57,8 @@ func KubeToken() *cobra.Command {
 		cmd.Print(out)
 		return nil
 	}
+
+	cmd.SetOut(os.Stdout)
 
 	return cmd
 }
