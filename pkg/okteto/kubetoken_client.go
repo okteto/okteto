@@ -26,12 +26,12 @@ import (
 
 const kubetokenPath = "auth/kubetoken"
 
-type kubeTokenClient struct {
+type KubeTokenClient struct {
 	httpClient *http.Client
 	url        string
 }
 
-func NewKubeTokenClient() (*kubeTokenClient, error) {
+func NewKubeTokenClient() (*KubeTokenClient, error) {
 	token := Context().Token
 	if token == "" {
 		return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, Context().Name)
@@ -63,13 +63,13 @@ func NewKubeTokenClient() (*kubeTokenClient, error) {
 
 	httpClient := oauth2.NewClient(ctx, src)
 
-	return &kubeTokenClient{
+	return &KubeTokenClient{
 		httpClient: httpClient,
 		url:        parsed,
 	}, nil
 }
 
-func (c *kubeTokenClient) GetKubeToken() (string, error) {
+func (c *KubeTokenClient) GetKubeToken() (string, error) {
 	resp, err := c.httpClient.Get(c.url)
 	if err != nil {
 		return "", fmt.Errorf("failed GET request: %w", err)
