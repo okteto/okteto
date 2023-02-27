@@ -23,6 +23,7 @@ import (
 	"strings"
 	"text/template"
 
+	builder "github.com/okteto/okteto/cmd/build"
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
@@ -37,7 +38,10 @@ import (
 )
 
 const (
-	dockerfileTemplate = `
+	templateName           = "dockerfile"
+	dockerfileTemporalNane = "deploy"
+	oktetoDockerignoreName = ".oktetodeployignore"
+	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
 FROM alpine as certs
@@ -81,17 +85,22 @@ type dockerfileTemplateProperties struct {
 }
 
 type remoteDeployCommand struct {
-	builder          *buildv2.OktetoBuilder
-	fs               afero.Fs
-	workingDirectory filesystem.WorkingDirectoryInterface
+	builderV2            *buildv2.OktetoBuilder
+	builderV1            builder.Builder
+	fs                   afero.Fs
+	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
+	temporalCtrl         filesystem.TemporalDirectoryInterface
 }
 
 // newRemoteDeployer creates the remote deployer from a
 func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
+	fs := afero.NewOsFs()
 	return &remoteDeployCommand{
-		builder:          builder,
-		fs:               afero.NewOsFs(),
-		workingDirectory: filesystem.NewOsWorkingDirectoryCtrl(),
+		builderV2:            builder,
+		builderV1:            remoteBuild.NewBuilderFromScratch(),
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 	}
 }
 
@@ -101,56 +110,28 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
-	tmpl, err := template.New("dockerfile").Parse(dockerfileTemplate)
+	tmpDir, err := rd.temporalCtrl.Create()
 	if err != nil {
 		return err
 	}
 
-	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:     constants.OktetoCLIImageForRemote,
-		UserDeployImage:    deployOptions.Manifest.Deploy.Image,
-		OktetoBuildEnvVars: rd.builder.GetBuildEnvVars(),
-		ContextEnvVar:      model.OktetoContextEnvVar,
-		ContextValue:       okteto.Context().Name,
-		NamespaceEnvVar:    model.OktetoNamespaceEnvVar,
-		NamespaceValue:     okteto.Context().Namespace,
-		TokenEnvVar:        model.OktetoTokenEnvVar,
-		TokenValue:         okteto.Context().Token,
-		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
-		RandomInt:          rand.Intn(1000),
-		DeployFlags:        strings.Join(getDeployFlags(deployOptions), " "),
-	}
-
-	tmpDir, err := afero.TempDir(rd.fs, "", "")
-	if err != nil {
-		return err
-	}
-
-	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, "deploy"))
-	if err != nil {
-		return err
-	}
-
-	err = rd.createDockerignoreIfNeeded(cwd, tmpDir)
+	dockerfile, err := rd.createDockerfile(tmpDir, deployOptions)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
-		if err := rd.fs.Remove(dockerfile.Name()); err != nil {
+		if err := rd.fs.Remove(dockerfile); err != nil {
 			oktetoLog.Infof("error removing dockerfile: %w", err)
 		}
 	}()
-	if err := tmpl.Execute(dockerfile, dockerfileSyntax); err != nil {
-		return err
-	}
 
 	buildInfo := &model.BuildInfo{
-		Dockerfile: dockerfile.Name(),
+		Dockerfile: dockerfile,
 	}
 
 	// undo modification of CWD for Build command
-	if err := rd.workingDirectory.Change(cwd); err != nil {
+	if err := rd.workingDirectoryCtrl.Change(cwd); err != nil {
 		return err
 	}
 
@@ -161,7 +142,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
-	if err := remoteBuild.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
+	if err := rd.builderV1.Build(ctx, buildOptions); err != nil {
 		return oktetoErrors.UserError{
 			E: fmt.Errorf("Error during development environment deployment."),
 		}
@@ -174,8 +155,47 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {}
 
+func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (string, error) {
+	cwd, err := rd.workingDirectoryCtrl.Get()
+	if err != nil {
+		return "", err
+	}
+
+	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
+
+	dockerfileSyntax := dockerfileTemplateProperties{
+		OktetoCLIImage:     constants.OktetoCLIImageForRemote,
+		UserDeployImage:    opts.Manifest.Deploy.Image,
+		OktetoBuildEnvVars: rd.builderV2.GetBuildEnvVars(),
+		ContextEnvVar:      model.OktetoContextEnvVar,
+		ContextValue:       okteto.Context().Name,
+		NamespaceEnvVar:    model.OktetoNamespaceEnvVar,
+		NamespaceValue:     okteto.Context().Namespace,
+		TokenEnvVar:        model.OktetoTokenEnvVar,
+		TokenValue:         okteto.Context().Token,
+		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
+		RandomInt:          rand.Intn(1000),
+		DeployFlags:        strings.Join(getDeployFlags(opts), " "),
+	}
+
+	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, dockerfileTemporalNane))
+	if err != nil {
+		return "", err
+	}
+
+	err = rd.createDockerignoreIfNeeded(cwd, tmpDir)
+	if err != nil {
+		return "", err
+	}
+
+	if err := tmpl.Execute(dockerfile, dockerfileSyntax); err != nil {
+		return "", err
+	}
+	return dockerfile.Name(), nil
+}
+
 func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
-	dockerignoreFilePath := fmt.Sprintf("%s/%s", cwd, ".oktetodeployignore")
+	dockerignoreFilePath := fmt.Sprintf("%s/%s", cwd, oktetoDockerignoreName)
 	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return err
@@ -223,7 +243,7 @@ func getDeployFlags(opts *Options) []string {
 
 // getOriginalCWD returns the original cwd
 func (rd *remoteDeployCommand) getOriginalCWD(manifestPath string) (string, error) {
-	cwd, err := rd.workingDirectory.Get()
+	cwd, err := rd.workingDirectoryCtrl.Get()
 	if err != nil {
 		return "", err
 	}

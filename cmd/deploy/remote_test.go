@@ -15,15 +15,28 @@ package deploy
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"testing"
 
 	v2 "github.com/okteto/okteto/cmd/build/v2"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
+
+type fakeBuilder struct {
+	err error
+}
+
+func (f fakeBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
+	return f.err
+}
+
+func (f fakeBuilder) IsV1() bool { return true }
 
 func TestRemoteTest(t *testing.T) {
 	ctx := context.Background()
@@ -33,10 +46,14 @@ func TestRemoteTest(t *testing.T) {
 		},
 	}
 	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+	fs := afero.NewMemMapFs()
+	tempCreator := filesystem.NewTemporalDirectoryCtrl(fs)
 
 	type config struct {
-		wd      filesystem.FakeWorkingDirectoryCtrlErrors
-		options *Options
+		wd            filesystem.FakeWorkingDirectoryCtrlErrors
+		tempFsCreator error
+		options       *Options
+		builderErr    error
 	}
 	var tests = []struct {
 		name     string
@@ -54,6 +71,14 @@ func TestRemoteTest(t *testing.T) {
 			expected: assert.AnError,
 		},
 		{
+			name: "OS can't create temporal directory",
+			config: config{
+				options:       &Options{},
+				tempFsCreator: assert.AnError,
+			},
+			expected: assert.AnError,
+		},
+		{
 			name: "OS can't change to the previous working directory",
 			config: config{
 				wd: filesystem.FakeWorkingDirectoryCtrlErrors{
@@ -65,19 +90,208 @@ func TestRemoteTest(t *testing.T) {
 			},
 			expected: assert.AnError,
 		},
+		{
+			name: "build incorrect",
+			config: config{
+				options: &Options{
+					Manifest: fakeManifest,
+				},
+				builderErr: assert.AnError,
+			},
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("Error during development environment deployment."),
+			},
+		},
+		{
+			name: "everything correct",
+			config: config{
+				options: &Options{
+					Manifest: fakeManifest,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wdCtrl.SetErrors(tt.config.wd)
+			tempCreator.SetError(tt.config.tempFsCreator)
+			rdc := remoteDeployCommand{
+				builderV2:            &v2.OktetoBuilder{},
+				builderV1:            fakeBuilder{tt.config.builderErr},
+				fs:                   fs,
+				workingDirectoryCtrl: wdCtrl,
+				temporalCtrl:         tempCreator,
+			}
+			err := rdc.deploy(ctx, tt.config.options)
+			assert.Equal(t, tt.expected, err)
+		})
+	}
+}
+
+func TestGetDeployFlags(t *testing.T) {
+	type config struct {
+		opts *Options
+	}
+	var tests = []struct {
+		name     string
+		config   config
+		expected []string
+	}{
+		{
+			name: "no extra options",
+			config: config{
+				opts: &Options{},
+			},
+		},
+		{
+			name: "name set",
+			config: config{
+				opts: &Options{
+					Name: "test",
+				},
+			},
+			expected: []string{"--name test"},
+		},
+		{
+			name: "namespace set",
+			config: config{
+				opts: &Options{
+					Namespace: "test",
+				},
+			},
+			expected: []string{"--namespace test"},
+		},
+		{
+			name: "manifest path set",
+			config: config{
+				opts: &Options{
+					ManifestPathFlag: "/hello/this/is/a/test",
+				},
+			},
+			expected: []string{"--file /hello/this/is/a/test"},
+		},
+		{
+			name: "variables set",
+			config: config{
+				opts: &Options{
+					Variables: []string{
+						"a=b",
+						"c=d",
+					},
+				},
+			},
+			expected: []string{"--var a=b --var c=d"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			flags := getDeployFlags(tt.config.opts)
+			assert.Equal(t, tt.expected, flags)
+		})
+	}
+}
+
+func TestCreateDockerfile(t *testing.T) {
+	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
+	fs := afero.NewMemMapFs()
+	fakeManifest := &model.Manifest{
+		Deploy: &model.DeployInfo{
+			Image: "test-image",
+		},
+	}
+	type config struct {
+		wd   filesystem.FakeWorkingDirectoryCtrlErrors
+		opts *Options
+	}
+	type expected struct {
+		dockerfileName string
+		err            error
+	}
+	var tests = []struct {
+		name     string
+		config   config
+		expected expected
+	}{
+		{
+			name: "OS can't access working directory",
+			config: config{
+				wd: filesystem.FakeWorkingDirectoryCtrlErrors{
+					Getter: assert.AnError,
+				},
+			},
+			expected: expected{
+				dockerfileName: "",
+				err:            assert.AnError,
+			},
+		},
+		{
+			name: "with dockerignore",
+			config: config{
+				opts: &Options{
+					Manifest: fakeManifest,
+				},
+			},
+			expected: expected{
+				dockerfileName: "/test/deploy",
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
 			rdc := remoteDeployCommand{
-				builder:          &v2.OktetoBuilder{},
-				fs:               afero.NewMemMapFs(),
-				workingDirectory: wdCtrl,
+				builderV2:            &v2.OktetoBuilder{},
+				fs:                   fs,
+				workingDirectoryCtrl: wdCtrl,
 			}
-			err := rdc.deploy(ctx, tt.config.options)
-			assert.ErrorIs(t, err, tt.expected)
+			dockerfileName, err := rdc.createDockerfile("/test", tt.config.opts)
+			assert.ErrorIs(t, err, tt.expected.err)
+			assert.Equal(t, tt.expected.dockerfileName, dockerfileName)
+
+			if tt.expected.err == nil {
+				_, err = rdc.fs.Stat(filepath.Join("/test", dockerfileTemporalNane))
+				assert.NoError(t, err)
+			}
+
 		})
 	}
+}
 
+func TestCreateDockerignoreIfNeeded(t *testing.T) {
+	fs := afero.NewMemMapFs()
+
+	dockerignoreWd := "/test/"
+	assert.NoError(t, fs.MkdirAll(dockerignoreWd, 0755))
+	assert.NoError(t, afero.WriteFile(fs, "/test/.oktetodeployignore", []byte("FROM alpine"), 0644))
+	type config struct {
+		wd string
+	}
+	var tests = []struct {
+		name   string
+		config config
+	}{
+		{
+			name: "dockerignore present",
+			config: config{
+				wd: dockerignoreWd,
+			},
+		},
+		{
+			name:   "without dockerignore",
+			config: config{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rdc := remoteDeployCommand{
+				fs: fs,
+			}
+			err := rdc.createDockerignoreIfNeeded(tt.config.wd, "/temp")
+			assert.NoError(t, err)
+		})
+	}
 }
