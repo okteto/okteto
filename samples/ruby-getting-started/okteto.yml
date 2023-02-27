@@ -1,0 +1,10 @@
+dev:
+  hello-world:
+    command: bash
+    sync:
+      - .:/opt/app/
+    forward:
+      - 8080:8080
+      - 1234:1234
+    volumes:
+      - /usr/local/bundle/cache
