@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package manifest
+package init
 
 import (
 	"context"
@@ -23,10 +23,8 @@ import (
 	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/utils"
-	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
@@ -38,7 +36,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/spf13/afero"
-	"github.com/spf13/cobra"
 )
 
 // ManifestCommand has all the namespaces subcommands
@@ -54,72 +51,13 @@ type InitOpts struct {
 	Context   string
 	Overwrite bool
 
-	ShowCTA  bool
-	Version1 bool
+	ShowCTA bool
 
 	Language string
 	Workdir  string
 
 	AutoDeploy       bool
 	AutoConfigureDev bool
-}
-
-// Init automatically generates the manifest
-func Init() *cobra.Command {
-	opts := &InitOpts{}
-	cmd := &cobra.Command{
-		Use:   "init",
-		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
-		Short: "Automatically generate your okteto manifest",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := context.Background()
-
-			ctxResource := &model.ContextResource{}
-			if err := ctxResource.UpdateNamespace(opts.Namespace); err != nil {
-				return err
-			}
-
-			if err := ctxResource.UpdateContext(opts.Context); err != nil {
-				return err
-			}
-			ctxOptions := &contextCMD.ContextOptions{
-				Context:   ctxResource.Context,
-				Namespace: ctxResource.Namespace,
-				Show:      true,
-			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
-				return err
-			}
-
-			cwd, err := os.Getwd()
-			if err != nil {
-				return err
-			}
-			opts.Workdir = cwd
-			opts.ShowCTA = oktetoLog.IsInteractive()
-			mc := &ManifestCommand{
-				K8sClientProvider: okteto.NewK8sClientProvider(),
-			}
-			if opts.Version1 {
-				if err := mc.RunInitV1(ctx, opts); err != nil {
-					return err
-				}
-			} else {
-				_, err := mc.RunInitV2(ctx, opts)
-				return err
-			}
-			return err
-		},
-	}
-
-	cmd.Flags().StringVarP(&opts.Namespace, "namespace", "n", "", "namespace target for generating the okteto manifest")
-	cmd.Flags().StringVarP(&opts.Context, "context", "c", "", "context target for generating the okteto manifest")
-	cmd.Flags().StringVarP(&opts.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
-	cmd.Flags().BoolVarP(&opts.Overwrite, "replace", "r", false, "overwrite existing manifest file")
-	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: https://www.okteto.com/docs/0.10/reference/manifest/")
-	cmd.Flags().BoolVarP(&opts.AutoDeploy, "deploy", "", false, "deploy the application after generate the okteto manifest if it's not running already")
-	cmd.Flags().BoolVarP(&opts.AutoConfigureDev, "configure-devs", "", false, "configure devs after deploying the application")
-	return cmd
 }
 
 // RunInitV2 initializes a new okteto manifest
@@ -329,7 +267,7 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 			return err
 		}
 
-		configFromImage, err := initCMD.GetDevDefaultsFromImage(app)
+		configFromImage, err := GetDevDefaultsFromImage(app)
 		if err != nil {
 			return err
 		}
@@ -338,10 +276,10 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 			return err
 		}
 		setFromImageConfig(dev, configFromImage)
-		if err := initCMD.SetImage(dev, language, path); err != nil {
+		if err := SetImage(dev, language, path); err != nil {
 			return err
 		}
-		err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, language, path)
+		err = SetDevDefaultsFromApp(ctx, dev, app, container, language, path)
 		if err != nil {
 			oktetoLog.Infof("could not get defaults from app: %s", err.Error())
 		}

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package manifest
+package init
 
 import (
 	"context"
@@ -23,7 +23,6 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
-	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
@@ -131,7 +130,7 @@ func (*ManifestCommand) RunInitV1(ctx context.Context, opts *InitOpts) error {
 			suffix := fmt.Sprintf("Analyzing %s '%s'...", strings.ToLower(app.Kind()), app.ObjectMeta().Name)
 			oktetoLog.Spinner(suffix)
 			oktetoLog.StartSpinner()
-			err = initCMD.SetDevDefaultsFromApp(ctx, dev, app, container, opts.Language, path)
+			err = SetDevDefaultsFromApp(ctx, dev, app, container, opts.Language, path)
 			if err == nil {
 				oktetoLog.Success(fmt.Sprintf("%s '%s' successfully analyzed", strings.ToLower(app.Kind()), app.ObjectMeta().Name))
 			} else {

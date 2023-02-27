@@ -29,9 +29,9 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
-	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
+	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/discovery"
@@ -183,13 +183,13 @@ func Up() *cobra.Command {
 					return err
 				}
 				if answer {
-					mc := &manifest.ManifestCommand{
+					mc := &initCMD.ManifestCommand{
 						K8sClientProvider: okteto.NewK8sClientProvider(),
 					}
 					if upOptions.ManifestPath == "" {
 						upOptions.ManifestPath = utils.DefaultManifest
 					}
-					oktetoManifest, err = mc.RunInitV2(ctx, &manifest.InitOpts{
+					oktetoManifest, err = mc.RunInitV2(ctx, &initCMD.InitOpts{
 						DevPath:          upOptions.ManifestPath,
 						Namespace:        upOptions.Namespace,
 						Context:          upOptions.K8sContext,
@@ -425,10 +425,10 @@ func LoadManifestWithInit(ctx context.Context, k8sContext, namespace, devPath st
 		return nil, err
 	}
 
-	mc := &manifest.ManifestCommand{
+	mc := &initCMD.ManifestCommand{
 		K8sClientProvider: okteto.NewK8sClientProvider(),
 	}
-	manifest, err := mc.RunInitV2(ctx, &manifest.InitOpts{DevPath: devPath, ShowCTA: false, Workdir: dir})
+	manifest, err := mc.RunInitV2(ctx, &initCMD.InitOpts{DevPath: devPath, ShowCTA: false, Workdir: dir})
 	if err != nil {
 		return nil, err
 	}

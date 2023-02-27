@@ -18,8 +18,8 @@ import (
 	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/utils"
+	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -28,7 +28,7 @@ import (
 
 // Init creates okteto manifest
 func Init() *cobra.Command {
-	opts := &manifest.InitOpts{}
+	opts := &initCMD.InitOpts{}
 	cmd := &cobra.Command{
 		Use:   "init",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#init"),
@@ -59,18 +59,16 @@ func Init() *cobra.Command {
 			}
 			opts.Workdir = cwd
 			opts.ShowCTA = oktetoLog.IsInteractive()
-			mc := &manifest.ManifestCommand{
+			mc := &initCMD.ManifestCommand{
 				K8sClientProvider: okteto.NewK8sClientProvider(),
 			}
-			if opts.Version1 {
-				if err := mc.RunInitV1(ctx, opts); err != nil {
-					return err
-				}
+
+			if okteto.IsOkteto() {
+				_, err = mc.RunInitV2(ctx, opts)
 			} else {
-				_, err := mc.RunInitV2(ctx, opts)
-				return err
+				err = mc.RunInitV1(ctx, opts)
 			}
-			return nil
+			return err
 		},
 	}
 
@@ -78,8 +76,13 @@ func Init() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Context, "context", "c", "", "context target for generating the okteto manifest")
 	cmd.Flags().StringVarP(&opts.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&opts.Overwrite, "replace", "r", false, "overwrite existing manifest file")
-	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: www.okteto.com/docs/0.10/reference/manifest/")
 	cmd.Flags().BoolVarP(&opts.AutoDeploy, "deploy", "", false, "deploy the application after generate the okteto manifest")
 	cmd.Flags().BoolVarP(&opts.AutoConfigureDev, "configure-devs", "", false, "configure devs after deploying the application")
+	if err := cmd.Flags().MarkHidden("deploy"); err != nil {
+		oktetoLog.Infof("failed to mark 'deploy' flag as hidden: %s", err)
+	}
+	if err := cmd.Flags().MarkHidden("configure-devs"); err != nil {
+		oktetoLog.Infof("failed to mark 'configure-devs' flag as hidden: %s", err)
+	}
 	return cmd
 }

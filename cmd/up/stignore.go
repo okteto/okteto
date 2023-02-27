@@ -24,8 +24,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/utils"
+	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -176,7 +176,7 @@ func askIfCreateStignoreDefaults(folder, stignorePath string) error {
 		return nil
 	}
 
-	language, err := manifest.GetLanguage("", folder)
+	language, err := initCMD.GetLanguage("", folder)
 	if err != nil {
 		return fmt.Errorf("failed to get language for '%s': %s", folder, err.Error())
 	}
