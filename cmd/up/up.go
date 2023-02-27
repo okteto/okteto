@@ -38,6 +38,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -522,6 +523,10 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVar
 
 func (up *upContext) deployApp(ctx context.Context) error {
 	k8sProvider := okteto.NewK8sClientProvider()
+	pc, err := pipelineCMD.NewCommand()
+	if err != nil {
+		return err
+	}
 	c := &deploy.DeployCommand{
 		GetManifest:        up.getManifest,
 		GetDeployer:        deploy.GetDeployer,
@@ -531,6 +536,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		GetExternalControl: deploy.GetExternalControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider),
+		PipelineCMD:        pc,
 	}
 
 	return c.RunDeploy(ctx, &deploy.Options{

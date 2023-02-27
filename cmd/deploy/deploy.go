@@ -85,6 +85,7 @@ type DeployCommand struct {
 	CfgMapHandler      configMapHandler
 	Fs                 afero.Fs
 	DivertDriver       divert.Driver
+	PipelineCMD        pipelineCMD.PipelineDeployerInterface
 
 	PipelineType model.Archetype
 	isRemote     bool
@@ -170,6 +171,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 			options.servicesToDeploy = args
 
 			k8sClientProvider := okteto.NewK8sClientProvider()
+			pc, err := pipelineCMD.NewCommand()
+			if err != nil {
+				return err
+			}
 			c := &DeployCommand{
 				GetManifest: model.GetManifestV2,
 
@@ -181,6 +186,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				isRemote:           utils.LoadBoolean(constants.OKtetoDeployRemote),
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider),
 				Fs:                 afero.NewOsFs(),
+				PipelineCMD:        pc,
 			}
 			startTime := time.Now()
 
@@ -531,11 +537,8 @@ func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *
 			SkipIfExists: !deployOptions.Dependencies,
 			Namespace:    namespace,
 		}
-		pc, err := pipelineCMD.NewCommand()
-		if err != nil {
-			return fmt.Errorf("could not create pipeline command: %w", err)
-		}
-		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+
+		if err := dc.PipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
 			return err
 		}
 	}
