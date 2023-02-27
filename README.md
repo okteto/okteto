@@ -13,7 +13,7 @@ Kubernetes has made it very easy to deploy applications to the cloud at a higher
 
 Today, most developers try to either run parts of the infrastructure locally or just test these integrations directly in the cluster via CI jobs, or the _docker build/redeploy_ cycle. It works, but this workflow is painful and incredibly slow.
 
-`okteto` accelerates the development workflow of Kubernetes applications. You write your code locally and `okteto` detects the changes and instantly updates your Kubernetes applications.
+The Okteto CLI accelerates the development workflow of Kubernetes applications. You write your code locally and the Okteto CLI detects the changes and instantly updates your Kubernetes applications.
 
 ## How it works
 
@@ -33,33 +33,45 @@ The end result is that the remote cluster is seen by your IDE and tools as a loc
 
 ## Why Okteto
 
-`okteto` has several advantages when compared to more traditional development approaches:
+The Okteto CLI has several advantages when compared to more traditional development approaches:
 
 - **Fast inner loop development**: build and run your application using your favorite tools directly from your development container. Native builds are always faster than the _docker build/redeploy_ cycle.
 - **Realistic development environment**: your development container reuses the same variables, secrets, sidecars, volumes, etc... than your original Kubernetes deployment. Realistic environments eliminate integration issues.
 - **Replicability**: development containers eliminate the need to install your dependencies locally, everything is pre-configured in your development image.
 - **Unlimited resources**: get access to the hardware and network of your cluster when developing your application.
-- **Deployment independent**: `okteto` decouples deployment from development. You can deploy your application with kubectl, Helm, a serverless framework, or even a CI pipeline and use `okteto up` to develop it. This is especially useful for cloud-native applications where deployment pipelines are not trivial.
-- **Works anywhere**: `okteto` works with any Kubernetes cluster, local or remote. `okteto` is also available for macOS, Linux, and Windows.
+- **Deployment independent**: the Okteto CLI decouples deployment from development. You can deploy your application with kubectl, Helm, a serverless framework, or even a CI pipeline and use `okteto up` to develop it. This is especially useful for cloud-native applications where deployment pipelines are not trivial.
+- **Works anywhere**: the Okteto CLI works with any Kubernetes cluster, local or remote. The Okteto CLI is also available for macOS, Linux, and Windows.
 
 ## Getting started
 
-All you need to get started is to [install the Okteto CLI](https://www.okteto.com/docs/getting-started/#installing-okteto-cli) and have access to a Kubernetes cluster.
+All you need to get started is:
 
-Okteto CLI works with **any** Kubernetes cluster. If it's your first time using it, we'd recommend you [try it](https://www.okteto.com/docs/getting-started/) with the [Okteto Platform](https://cloud.okteto.com/) for a complete holistic developer experience. If you want to try it out with any other K8s cluster, you can also check out [this article](https://www.okteto.com/blog/developing-microservices-by-hot-reloading-on-kubernetes-clusters/) as a guide.
+- Deploy your application on Kubernetes.
+- [Install the Okteto CLI](https://www.okteto.com/docs/getting-started/#installing-okteto-cli)
+- Configure the Okteto CLI to access to your Kubernetes cluster with `okteto context`
+- Run `okteto init` from the root of your application git repository to inspect your code and generate your [Okteto manifest](https://okteto.com/docs/reference/manifest/). The Okteto manifest defines your development container
+- Run `okteto up` to activate your development container
 
-We created a [few guides to help you get started](https://github.com/okteto/samples) with `okteto` and your favorite programming language.
+We created a few guides to help you get started with the Okteto CLI and your favorite programming languages:
+
+- [Golang](samples/go-getting-started/README.md)
+- [Java Gradle](samples/java-gradle-getting-started/README.md)
+- [Java Maven](samples/java-maven-getting-started/README.md)
+- [Node.js](samples/node-getting-started/README.md)
+- [PHP](samples/php-getting-started/README.md)
+- [Python](samples/python-getting-started/README.md)
+- [Ruby](samples/ruby-getting-started/README.md)
 
 ### Releases
 
-Okteto is released into three channels: stable, beta, and dev. By default when okteto is installed the stable channel is used. If you need to access features not yet widely available you can install from the beta or dev channel. More info in the [release documentation](docs/RELEASE.md).
+The Okteto CLI is released into three channels: stable, beta, and dev. By default when okteto is installed the stable channel is used. If you need to access features not yet widely available you can install from the beta or dev channel. More info in the [release documentation](docs/RELEASE.md).
 
 ## Useful links
 
 - [Getting started](https://www.okteto.com/docs/getting-started/)
 - [CLI reference](https://okteto.com/docs/reference/cli)
 - [Okteto manifest reference](https://okteto.com/docs/reference/manifest/)
-- [Samples](https://github.com/okteto/samples)
+- [Samples](samples)
 - Frequently asked questions ([FAQs](https://okteto.com/docs/reference/faqs/))
 - [Known issues](https://okteto.com/docs/reference/known-issues/)
 
