@@ -19,6 +19,8 @@ import (
 	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -35,7 +37,14 @@ func KubeToken() *cobra.Command {
 	cmd.RunE = func(*cobra.Command, []string) error {
 		ctx := context.Background()
 
-		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{})
+		cfg := kubeconfig.Get(config.GetKubeconfigPath())
+		if cfg == nil {
+			return fmt.Errorf("failed to get the kubeconfig file. Please, check that your kubeconfig file is valid and in path")
+		}
+
+		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
+			Context: cfg.CurrentContext,
+		})
 		if err != nil {
 			return err
 		}
