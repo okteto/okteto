@@ -343,7 +343,21 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	if !ok {
 		user = clientcmdapi.NewAuthInfo()
 	}
-	user.Token = cred.Token
+	serverHasKubeTokenCapabilities := true // YODO: check if server has client authentication support
+	if serverHasKubeTokenCapabilities {
+		user.Token = ""
+		user.Exec = &clientcmdapi.ExecConfig{
+			Command:            "okteto",
+			Args:               []string{"kubetoken"},
+			APIVersion:         "client.authentication.k8s.io/v1",
+			InstallHint:        "Okteto needs to be installed and in your PATH to use this context. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
+			ProvideClusterInfo: true,
+			InteractiveMode:    "IfAvailable",
+		}
+	} else {
+		// fallback for okteto API before client authentication support
+		user.Token = cred.Token
+	}
 	cfg.AuthInfos[userName] = user
 
 	// create context
