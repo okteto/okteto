@@ -1078,6 +1078,36 @@ func isManifestFieldNotFound(err error) bool {
 	return false
 }
 
+func (d *DestroyInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var commandsString []string
+	err := unmarshal(&commandsString)
+	if err == nil {
+		d.Commands = []DeployCommand{}
+		for _, cmdString := range commandsString {
+			d.Commands = append(d.Commands, DeployCommand{
+				Name:    cmdString,
+				Command: cmdString,
+			})
+		}
+		return nil
+	}
+	var commands []DeployCommand
+	err = unmarshal(&commands)
+	if err == nil {
+		d.Commands = commands
+		return nil
+	}
+	type destroyInfoRaw DestroyInfo
+	var destroy destroyInfoRaw
+	err = unmarshal(&destroy)
+	if err != nil {
+		return err
+	}
+
+	*d = DestroyInfo(destroy)
+	return nil
+}
+
 func (d *Dev) MarshalYAML() (interface{}, error) {
 	type dev Dev // prevent recursion
 	toMarshall := dev(*d)

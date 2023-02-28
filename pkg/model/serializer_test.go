@@ -1800,6 +1800,104 @@ devs:
 	}
 }
 
+func TestDestroyInfoUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name            string
+		input           []byte
+		expected        *DestroyInfo
+		isErrorExpected bool
+	}{
+		{
+			name: "list of commands",
+			input: []byte(`
+- okteto stack deploy`),
+			expected: &DestroyInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "okteto stack deploy",
+						Command: "okteto stack deploy",
+					},
+				},
+			},
+		},
+		{
+			name: "list of commands extended",
+			input: []byte(`
+- name: deploy stack
+  command: okteto stack deploy`),
+			expected: &DestroyInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "deploy stack",
+						Command: "okteto stack deploy",
+					},
+				},
+			},
+		},
+		{
+			name: "commands",
+			input: []byte(`commands:
+- okteto stack deploy`),
+			expected: &DestroyInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "okteto stack deploy",
+						Command: "okteto stack deploy",
+					},
+				},
+			},
+		},
+		{
+			name: "compose with endpoints",
+			input: []byte(`compose:
+  manifest: path
+  endpoints:
+    - path: /
+      service: app
+      port: 80`),
+			expected: &DestroyInfo{
+				Commands: []DeployCommand{},
+			},
+			isErrorExpected: true,
+		},
+		{
+			name: "all together",
+			input: []byte(`commands:
+- kubectl apply -f manifest.yml
+compose:
+  manifest: ./docker-compose.yml
+  endpoints:
+  - path: /
+    service: frontend
+    port: 80
+  - path: /api
+    service: api
+    port: 8080`),
+			expected: &DestroyInfo{
+				Commands: []DeployCommand{},
+			},
+			isErrorExpected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NewDestroyInfo()
+
+			err := yaml.UnmarshalStrict(tt.input, &result)
+			if err != nil && !tt.isErrorExpected {
+				t.Fatalf("Not expecting error but got %s", err)
+			} else if tt.isErrorExpected && err == nil {
+				t.Fatal("Expected error but got none")
+			}
+
+			if !assert.Equal(t, tt.expected, result) {
+				t.Fatal("Failed")
+			}
+		})
+	}
+}
+
 func TestDeployInfoUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name               string
