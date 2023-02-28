@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -42,7 +43,8 @@ type ContextCommand struct {
 	LoginController      login.LoginInterface
 	OktetoClientProvider types.OktetoClientProvider
 
-	OktetoContextWriter okteto.ContextConfigWriterInterface
+	OktetoContextWriter    okteto.ContextConfigWriterInterface
+	oktetoKubeTokenPresent func(url string) (bool, error)
 }
 
 // NewContextCommand creates a new ContextCommand
@@ -52,6 +54,19 @@ func NewContextCommand() *ContextCommand {
 		LoginController:      login.NewLoginController(),
 		OktetoClientProvider: okteto.NewOktetoClientProvider(),
 		OktetoContextWriter:  okteto.NewContextConfigWriter(),
+		oktetoKubeTokenPresent: func(oktetoURL string) (bool, error) {
+			kubeTokenURL, err := okteto.ParseOktetoURLWithPath(oktetoURL, "auth/kubetoken")
+			if err != nil {
+				return false, fmt.Errorf("failed to parse kubetoken url: %w", err)
+			}
+
+			resp, err := http.Get(kubeTokenURL)
+			if err != nil {
+				return false, fmt.Errorf("failed to get kubetoken url: %w", err)
+			}
+
+			return resp.StatusCode == http.StatusUnauthorized, nil
+		},
 	}
 }
 
@@ -264,7 +279,10 @@ func (c *ContextCommand) initOktetoContext(ctx context.Context, ctxOptions *Cont
 	if cfg == nil {
 		cfg = kubeconfig.Create()
 	}
-	okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, okteto.Context().Name)
+	err = okteto.AddOktetoCredentialsToCfg(cfg, &userContext.Credentials, ctxOptions.Namespace, userContext.User.ID, okteto.Context().Name, c.oktetoKubeTokenPresent)
+	if err != nil {
+		return err
+	}
 	okteto.Context().Cfg = cfg
 	okteto.Context().IsOkteto = true
 	okteto.Context().IsInsecure = okteto.IsInsecureSkipTLSVerifyPolicy()

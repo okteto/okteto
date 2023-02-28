@@ -320,11 +320,11 @@ func (*ContextConfigWriter) Write() error {
 	return nil
 }
 
-func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName, oktetoURL string) {
+func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName, oktetoURL string, hasKubeTokenCapabily func(oktetoURL string) (bool, error)) error {
 	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
 	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings
 	if os.Getenv(constants.OktetoSkipConfigCredentialsUpdate) == "true" {
-		return
+		return nil
 	}
 
 	clusterName := UrlToKubernetesContext(oktetoURL)
@@ -343,8 +343,12 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	if !ok {
 		user = clientcmdapi.NewAuthInfo()
 	}
-	serverHasKubeTokenCapabilities := true // YODO: check if server has client authentication support
-	if serverHasKubeTokenCapabilities {
+
+	hasKubeToken, err := hasKubeTokenCapabily(oktetoURL)
+	if err != nil {
+		return err
+	}
+	if hasKubeToken {
 		user.Token = ""
 		user.Exec = &clientcmdapi.ExecConfig{
 			Command:            "okteto",
@@ -357,6 +361,7 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	} else {
 		// fallback for okteto API before client authentication support
 		user.Token = cred.Token
+		user.Exec = nil
 	}
 	cfg.AuthInfos[userName] = user
 
@@ -375,6 +380,7 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	cfg.Contexts[clusterName] = context
 
 	cfg.CurrentContext = clusterName
+	return nil
 }
 
 func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {
