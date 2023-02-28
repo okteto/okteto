@@ -734,6 +734,10 @@ func (f *fakeExternalControlProvider) getFakeExternalControl(cp okteto.K8sClient
 	return f.control, f.err
 }
 
+func (f *fakeExternalControlProvider) getFakeExternalControlValidator(cp okteto.K8sClientProvider) (ExternalResourceValidatorInterface, error) {
+	return f.control, f.err
+}
+
 func TestDeployExternals(t *testing.T) {
 	ctx := context.Background()
 	okteto.CurrentStore = &okteto.OktetoContextStore{
@@ -915,7 +919,7 @@ func TestValidateK8sResources(t *testing.T) {
 			}
 
 			ld := localDeployer{
-				GetExternalControl: cp.getFakeExternalControl,
+				GetExternalControlForValidator: cp.getFakeExternalControlValidator,
 			}
 
 			if tc.expectedErr {
