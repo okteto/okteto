@@ -108,7 +108,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	}
 
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:     getOktetoCLIVersion(),
+		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
 		UserDeployImage:    deployOptions.Manifest.Deploy.Image,
 		OktetoBuildEnvVars: rd.builder.GetBuildEnvVars(),
 		ContextEnvVar:      model.OktetoContextEnvVar,
@@ -227,10 +227,10 @@ func getOriginalCWD(cwd, manifestPath string) string {
 	return strings.TrimSuffix(cwd, manifestPathDir)
 }
 
-func getOktetoCLIVersion() string {
+func getOktetoCLIVersion(versionString string) string {
 	var version string
-	if match, _ := regexp.MatchString(`\d+\.\d+\.\d+`, config.VersionString); match {
-		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, config.VersionString)
+	if match, _ := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
+		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
 	} else {
 		remoteOktetoImage := os.Getenv(constants.OKtetoDeployRemoteImage)
 		if remoteOktetoImage != "" {
