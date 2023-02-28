@@ -1800,6 +1800,113 @@ devs:
 	}
 }
 
+func TestManifestMarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest *Manifest
+		expected string
+	}{
+		{
+			name: "destroy not empty",
+			manifest: &Manifest{
+				Destroy: &DestroyInfo{
+					Commands: []DeployCommand{
+						{
+							Name:    "hello",
+							Command: "hello",
+						},
+					},
+				},
+			},
+			expected: "destroy:\n- hello\n",
+		},
+		{
+			name:     "destroy empty",
+			manifest: &Manifest{},
+			expected: "{}\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshalled, err := yaml.Marshal(tt.manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(marshalled) != tt.expected {
+				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDestroyInfoMarshalling(t *testing.T) {
+	tests := []struct {
+		name        string
+		destroyInfo *DestroyInfo
+		expected    string
+	}{
+		{
+			name: "same-name-and-cmd",
+			destroyInfo: &DestroyInfo{Commands: []DeployCommand{
+				{
+					Name:    "okteto build",
+					Command: "okteto build",
+				},
+				{
+					Name:    "okteto deploy",
+					Command: "okteto deploy",
+				},
+			}},
+			expected: "- okteto build\n- okteto deploy\n",
+		},
+		{
+			name: "full",
+			destroyInfo: &DestroyInfo{
+				Image: "test",
+				Commands: []DeployCommand{
+					{
+						Name:    "build",
+						Command: "okteto build",
+					},
+					{
+						Name:    "deploy",
+						Command: "okteto deploy",
+					},
+				}},
+			expected: "image: test\ncommands:\n- name: build\n  command: okteto build\n- name: deploy\n  command: okteto deploy\n",
+		},
+		{
+			name: "different-name-cmd",
+			destroyInfo: &DestroyInfo{Commands: []DeployCommand{
+				{
+					Name:    "build",
+					Command: "okteto build",
+				},
+				{
+					Name:    "deploy",
+					Command: "okteto deploy",
+				},
+			}},
+			expected: "commands:\n- name: build\n  command: okteto build\n- name: deploy\n  command: okteto deploy\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshalled, err := yaml.Marshal(tt.destroyInfo)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(marshalled) != tt.expected {
+				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
+			}
+		})
+	}
+}
+
 func TestDestroyInfoUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name            string

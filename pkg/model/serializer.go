@@ -1108,6 +1108,31 @@ func (d *DestroyInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
+func (d *DestroyInfo) MarshalYAML() (interface{}, error) {
+	isCommandList := true
+	for _, cmd := range d.Commands {
+		if cmd.Command != cmd.Name {
+			isCommandList = false
+		}
+	}
+	if isCommandList {
+		result := []string{}
+		for _, cmd := range d.Commands {
+			result = append(result, cmd.Command)
+		}
+		return result, nil
+	}
+	return d, nil
+}
+
+func (m *Manifest) MarshalYAML() (interface{}, error) {
+	if m.Destroy == nil || len(m.Destroy.Commands) == 0 {
+		m.Destroy = nil
+		return m, nil
+	}
+	return m, nil
+}
+
 func (d *Dev) MarshalYAML() (interface{}, error) {
 	type dev Dev // prevent recursion
 	toMarshall := dev(*d)
