@@ -17,6 +17,6 @@ package types
 type Credential struct {
 	Server      string `json:"server" yaml:"server"`
 	Certificate string `json:"certificate" yaml:"certificate"`
-	Token       string `json:"token" yaml:"token"`
+	Token       string `json:"token" yaml:"token"` // TODO: Deprecate once we move to kubetoken auth
 	Namespace   string `json:"namespace" yaml:"namespace"`
 }

@@ -79,7 +79,7 @@ func (c *userClient) GetContext(ctx context.Context) (*types.UserContext, error)
 		Cred struct {
 			Server      graphql.String
 			Certificate graphql.String
-			Token       graphql.String
+			Token       graphql.String // TODO: Deprecate once we move to kubetoken auth
 			Namespace   graphql.String
 		} `graphql:"credentials(space: $cred)"`
 	}
