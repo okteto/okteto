@@ -97,6 +97,7 @@ type ExternalResourceValidatorInterface interface {
 type ExternalResourceInterface interface {
 	Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
 	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
+	ExternalResourceValidatorInterface
 }
 
 type deployerInterface interface {
