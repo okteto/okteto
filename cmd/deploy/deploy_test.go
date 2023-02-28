@@ -919,7 +919,7 @@ func TestValidateK8sResources(t *testing.T) {
 			}
 
 			ld := localDeployer{
-				GetExternalValidator: cp.getFakeExternalControlValidator,
+				GetExternalControlForValidator: cp.getFakeExternalControlValidator,
 			}
 
 			if tc.expectedErr {

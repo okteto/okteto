@@ -45,8 +45,8 @@ type localDeployer struct {
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
 
-	GetExternalValidator func(cp okteto.K8sClientProvider) (ExternalResourceValidatorInterface, error)
-	GetExternalControl   func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
+	GetExternalControlForValidator func(cp okteto.K8sClientProvider) (ExternalResourceValidatorInterface, error)
+	GetExternalControl             func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
 
 	cwd          string
 	deployWaiter deployWaiter
@@ -84,16 +84,16 @@ func newLocalDeployer(ctx context.Context, cwd string, options *Options) (*local
 
 	clientProvider := okteto.NewK8sClientProvider()
 	return &localDeployer{
-		Kubeconfig:           kubeconfig,
-		Executor:             executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
-		Proxy:                proxy,
-		TempKubeconfigFile:   GetTempKubeConfigFile(tempKubeconfigName),
-		K8sClientProvider:    clientProvider,
-		GetExternalValidator: getExternalValidator,
-		GetExternalControl:   getExternalControlFromCtx,
-		deployWaiter:         newDeployWaiter(clientProvider),
-		isRemote:             true,
-		Fs:                   afero.NewOsFs(),
+		Kubeconfig:                     kubeconfig,
+		Executor:                       executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
+		Proxy:                          proxy,
+		TempKubeconfigFile:             GetTempKubeConfigFile(tempKubeconfigName),
+		K8sClientProvider:              clientProvider,
+		GetExternalControlForValidator: getExternalControlForValidator,
+		GetExternalControl:             getExternalControlFromCtx,
+		deployWaiter:                   newDeployWaiter(clientProvider),
+		isRemote:                       true,
+		Fs:                             afero.NewOsFs(),
 	}, nil
 }
 
@@ -388,7 +388,7 @@ func (ld *localDeployer) validateK8sResources(ctx context.Context, manifest *mod
 		// In a cluster not managed by Okteto it is not necessary to validate the externals
 		// because they will not be deployed.
 		if okteto.IsOkteto() {
-			control, err := ld.GetExternalValidator(ld.K8sClientProvider)
+			control, err := ld.GetExternalControlForValidator(ld.K8sClientProvider)
 			if err != nil {
 				return err
 			}

@@ -229,7 +229,7 @@ func (dc *endpointGetter) showEndpoints(ctx context.Context, opts *EndpointsOpti
 	return nil
 }
 
-func getExternalValidator(cp okteto.K8sClientProvider) (ExternalResourceValidatorInterface, error) {
+func getExternalControlForValidator(cp okteto.K8sClientProvider) (ExternalResourceValidatorInterface, error) {
 	_, cfg, err := cp.Provide(okteto.Context().Cfg)
 	if err != nil {
 		return nil, err
