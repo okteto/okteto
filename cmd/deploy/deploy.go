@@ -90,10 +90,13 @@ type DeployCommand struct {
 	isRemote     bool
 }
 
+type ExternalResourceValidatorInterface interface {
+	Validate(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
+}
+
 type ExternalResourceInterface interface {
 	Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
 	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
-	Validate(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
 }
 
 type deployerInterface interface {
