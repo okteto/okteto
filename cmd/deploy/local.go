@@ -260,7 +260,7 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 	}
 
 	// deploy externals if any
-	if opts.Manifest.External != nil {
+	if len(opts.Manifest.External) > 0 {
 		oktetoLog.SetStage("External configuration")
 		if !okteto.IsOkteto() {
 			oktetoLog.Warning("external resources cannot be deployed on a cluster not managed by okteto")

@@ -7,10 +7,12 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
+	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
@@ -96,7 +98,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	}
 
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:     constants.OktetoCLIImageForRemote,
+		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
 		UserDestroyImage:   rd.manifest.Destroy.Image,
 		ContextEnvVar:      model.OktetoContextEnvVar,
 		ContextValue:       okteto.Context().Name,
@@ -203,4 +205,20 @@ func getDestroyFlags(opts *Options) []string {
 	}
 
 	return deployFlags
+}
+
+func getOktetoCLIVersion(versionString string) string {
+	var version string
+	if match, _ := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
+		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
+	} else {
+		remoteOktetoImage := os.Getenv(constants.OKtetoDeployRemoteImage)
+		if remoteOktetoImage != "" {
+			version = remoteOktetoImage
+		} else {
+			version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, "latest")
+		}
+	}
+
+	return version
 }
