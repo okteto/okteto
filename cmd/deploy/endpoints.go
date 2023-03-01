@@ -28,6 +28,7 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	k8sExternalResources "github.com/okteto/okteto/pkg/externalresource/k8s"
 	"github.com/okteto/okteto/pkg/format"
+	kconfig "github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -228,8 +229,19 @@ func (dc *endpointGetter) showEndpoints(ctx context.Context, opts *EndpointsOpti
 	return nil
 }
 
+func getExternalControlForValidator(cp okteto.K8sClientProvider) (ExternalResourceValidatorInterface, error) {
+	_, cfg, err := cp.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return nil, err
+	}
+	return &externalresource.K8sControl{
+		ClientProvider: k8sExternalResources.GetExternalClient,
+		Cfg:            cfg,
+	}, nil
+}
+
 func getExternalControlFromCtx(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
-	_, proxyConfig, err := cp.Provide(okteto.Context().Cfg)
+	_, proxyConfig, err := cp.Provide(kconfig.Get([]string{filename}))
 	if err != nil {
 		return nil, err
 	}

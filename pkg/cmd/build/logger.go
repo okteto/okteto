@@ -31,7 +31,6 @@ const (
 )
 
 func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
-
 	// TODO: import build timeout
 	timeout := time.NewTicker(10 * time.Minute)
 	defer timeout.Stop()
@@ -46,6 +45,7 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
 	for {
 		select {
 		case <-ctx.Done():
+			oktetoLog.StopSpinner()
 			return ctx.Err()
 		case <-timeout.C:
 		case ss, ok := <-ch:
@@ -60,6 +60,7 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
 				done = true
 			}
 			if done {
+				oktetoLog.StopSpinner()
 				return nil
 			}
 		}
