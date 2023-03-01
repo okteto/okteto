@@ -237,6 +237,13 @@ func NewDeployInfo() *DeployInfo {
 	}
 }
 
+// NewDeployInfo creates a deploy Info
+func NewDestroyInfo() *DestroyInfo {
+	return &DestroyInfo{
+		Commands: []DeployCommand{},
+	}
+}
+
 func getManifestFromOktetoFile(cwd string) (*Manifest, error) {
 	manifestPath, err := discovery.GetOktetoManifestPath(cwd)
 	if err != nil {
