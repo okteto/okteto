@@ -27,21 +27,20 @@ import (
 const kubetokenPath = "auth/kubetoken"
 
 type KubeTokenClient struct {
-	httpClient *http.Client
-	url        string
+	httpClient  *http.Client
+	url         string
+	contextName string
 }
 
-func NewKubeTokenClient() (*KubeTokenClient, error) {
-	token := Context().Token
+func NewKubeTokenClient(contextName, token string) (*KubeTokenClient, error) {
 	if token == "" {
-		return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, Context().Name)
+		return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, contextName)
 	}
-	u := Context().Name
-	if u == "" {
+	if contextName == "" {
 		return nil, fmt.Errorf("the okteto URL is not set")
 	}
 
-	parsed, err := parseOktetoURLWithPath(u, kubetokenPath)
+	parsed, err := parseOktetoURLWithPath(contextName, kubetokenPath)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +63,9 @@ func NewKubeTokenClient() (*KubeTokenClient, error) {
 	httpClient := oauth2.NewClient(ctx, src)
 
 	return &KubeTokenClient{
-		httpClient: httpClient,
-		url:        parsed,
+		httpClient:  httpClient,
+		url:         parsed,
+		contextName: contextName,
 	}, nil
 }
 
@@ -76,7 +76,7 @@ func (c *KubeTokenClient) GetKubeToken() (string, error) {
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return "", fmt.Errorf(oktetoErrors.ErrNotLogged, Context().Name)
+		return "", fmt.Errorf(oktetoErrors.ErrNotLogged, c.contextName)
 	}
 
 	if resp.StatusCode != http.StatusOK {
