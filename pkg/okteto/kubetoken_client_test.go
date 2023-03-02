@@ -2,6 +2,8 @@ package okteto
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -58,4 +60,24 @@ func TestNewKubeTokenClient(t *testing.T) {
 		require.Equal(t, "cloud.okteto.com", client.contextName)
 	},
 	)
+}
+
+func TestGetKubeToken(t *testing.T) {
+	expectedToken := "token"
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(expectedToken))
+	}))
+
+	defer s.Close()
+
+	c := &KubeTokenClient{
+		httpClient:  s.Client(),
+		url:         s.URL,
+		contextName: "test",
+	}
+
+	token, err := c.GetKubeToken()
+	require.NoError(t, err)
+	require.Equal(t, expectedToken, token)
 }
