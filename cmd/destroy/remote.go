@@ -2,9 +2,10 @@ package destroy
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -153,6 +154,11 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		return "", err
 	}
 
+	randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000))
+	if err != nil {
+		return "", err
+	}
+
 	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
 	dockerfileSyntax := dockerfileTemplateProperties{
 		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
@@ -164,7 +170,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		TokenEnvVar:        model.OktetoTokenEnvVar,
 		TokenValue:         okteto.Context().Token,
 		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
-		RandomInt:          rand.Intn(1000),
+		RandomInt:          int(randomNumber.Int64()),
 		DestroyFlags:       strings.Join(getDestroyFlags(opts), " "),
 	}
 

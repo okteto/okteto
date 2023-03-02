@@ -15,9 +15,10 @@ package deploy
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -165,6 +166,11 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 
 	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
 
+	randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000))
+	if err != nil {
+		return "", err
+	}
+
 	dockerfileSyntax := dockerfileTemplateProperties{
 		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
 		UserDeployImage:    opts.Manifest.Deploy.Image,
@@ -176,7 +182,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		TokenEnvVar:        model.OktetoTokenEnvVar,
 		TokenValue:         okteto.Context().Token,
 		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
-		RandomInt:          rand.Intn(1000),
+		RandomInt:          int(randomNumber.Int64()),
 		DeployFlags:        strings.Join(getDeployFlags(opts), " "),
 	}
 
