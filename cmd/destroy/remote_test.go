@@ -19,12 +19,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeBuilder struct {
@@ -287,6 +289,47 @@ func TestCreateDockerignoreIfNeeded(t *testing.T) {
 			}
 			err := rdc.createDockerignoreIfNeeded(tt.config.wd, "/temp")
 			assert.NoError(t, err)
+		})
+	}
+}
+
+func Test_getOktetoCLIVersion(t *testing.T) {
+	var tests = []struct {
+		name                                 string
+		versionString, expected, cliImageEnv string
+	}{
+		{
+			name:          "no version string and no env return latest",
+			versionString: "",
+			expected:      "okteto/okteto:latest",
+		},
+		{
+			name:          "no version string return env value",
+			versionString: "",
+			cliImageEnv:   "okteto/remote:test",
+			expected:      "okteto/remote:test",
+		},
+		{
+			name:          "found version string",
+			versionString: "2.2.2",
+			expected:      "okteto/okteto:2.2.2",
+		},
+		{
+			name:          "found incorrect version string return latest ",
+			versionString: "2.a.2",
+			expected:      "okteto/okteto:latest",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.cliImageEnv != "" {
+				t.Setenv(constants.OKtetoDeployRemoteImage, tt.cliImageEnv)
+			}
+
+			version := getOktetoCLIVersion(tt.versionString)
+			require.Equal(t, version, tt.expected)
 		})
 	}
 }

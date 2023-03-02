@@ -20,6 +20,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -27,6 +28,7 @@ import (
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -164,7 +166,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
 
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:     constants.OktetoCLIImageForRemote,
+		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
 		UserDeployImage:    opts.Manifest.Deploy.Image,
 		OktetoBuildEnvVars: rd.builderV2.GetBuildEnvVars(),
 		ContextEnvVar:      model.OktetoContextEnvVar,
@@ -249,4 +251,20 @@ func (rd *remoteDeployCommand) getOriginalCWD(manifestPath string) (string, erro
 	}
 	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
 	return strings.TrimSuffix(cwd, manifestPathDir), nil
+}
+
+func getOktetoCLIVersion(versionString string) string {
+	var version string
+	if match, _ := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
+		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
+	} else {
+		remoteOktetoImage := os.Getenv(constants.OKtetoDeployRemoteImage)
+		if remoteOktetoImage != "" {
+			version = remoteOktetoImage
+		} else {
+			version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, "latest")
+		}
+	}
+
+	return version
 }
