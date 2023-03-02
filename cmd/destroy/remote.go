@@ -10,8 +10,10 @@ import (
 	"strings"
 	"text/template"
 
+	builder "github.com/okteto/okteto/cmd/build"
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
@@ -23,7 +25,10 @@ import (
 )
 
 const (
-	dockerfileTemplate = `
+	templateName           = "destroy-dockerfile"
+	dockerfileTemporalNane = "deploy"
+	oktetoDockerignoreName = ".oktetodeployignore"
+	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
 FROM alpine as certs
@@ -68,14 +73,21 @@ type dockerfileTemplateProperties struct {
 }
 
 type remoteDestroyCommand struct {
-	manifest *model.Manifest
-	fs       afero.Fs
+	builder              builder.Builder
+	manifest             *model.Manifest
+	fs                   afero.Fs
+	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
+	temporalCtrl         filesystem.TemporalDirectoryInterface
 }
 
 func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
+	fs := afero.NewOsFs()
 	return &remoteDestroyCommand{
-		manifest: manifest,
-		fs:       afero.NewOsFs(),
+		builder:              remoteBuild.NewBuilderFromScratch(),
+		manifest:             manifest,
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 	}
 }
 
@@ -85,16 +97,61 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		rd.manifest.Destroy.Image = constants.OktetoPipelineRunnerImage
 	}
 
-	cwd, err := os.Getwd()
+	cwd, err := rd.workingDirectoryCtrl.Get()
 	if err != nil {
 		return err
 	}
 
-	tmpl, err := template.New("dockerfile").Parse(dockerfileTemplate)
+	tmpDir, err := rd.temporalCtrl.Create()
 	if err != nil {
 		return err
 	}
 
+	dockerfile, err := rd.createDockerfile(tmpDir, opts)
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := rd.fs.Remove(dockerfile); err != nil {
+			oktetoLog.Infof("error removing dockerfile: %w", err)
+		}
+	}()
+
+	buildInfo := &model.BuildInfo{
+		Dockerfile: dockerfile,
+	}
+
+	// undo modification of CWD for Build command
+	if err := rd.workingDirectoryCtrl.Change(cwd); err != nil {
+		return err
+	}
+
+	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
+	buildOptions.Tag = ""
+
+	// we need to call Build() method using a remote builder. This Builder will have
+	// the same behavior as the V1 builder but with a different output taking into
+	// account that we must not confuse the user with build messages since this logic is
+	// executed in the deploy command.
+	if err := rd.builder.Build(ctx, buildOptions); err != nil {
+		return oktetoErrors.UserError{
+			E: fmt.Errorf("error during development environment deployment"),
+		}
+	}
+	oktetoLog.SetStage("done")
+	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
+
+	return nil
+}
+
+func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) (string, error) {
+	cwd, err := rd.workingDirectoryCtrl.Get()
+	if err != nil {
+		return "", err
+	}
+
+	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
 	dockerfileSyntax := dockerfileTemplateProperties{
 		OktetoCLIImage:     constants.OktetoCLIImageForRemote,
 		UserDestroyImage:   rd.manifest.Destroy.Image,
@@ -109,53 +166,21 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		DestroyFlags:       strings.Join(getDestroyFlags(opts), " "),
 	}
 
-	tmpDir, err := afero.TempDir(rd.fs, "", "")
+	dockerfile, err := rd.fs.Create(filepath.Join(tempDir, "deploy"))
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, "deploy"))
+	err = rd.createDockerignoreIfNeeded(cwd, tempDir)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	err = rd.createDockerignoreIfNeeded(cwd, tmpDir)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		if err := rd.fs.Remove(dockerfile.Name()); err != nil {
-			oktetoLog.Infof("error removing dockerfile: %w", err)
-		}
-	}()
 	if err := tmpl.Execute(dockerfile, dockerfileSyntax); err != nil {
-		return err
+		return "", err
 	}
+	return dockerfile.Name(), nil
 
-	buildInfo := &model.BuildInfo{
-		Dockerfile: dockerfile.Name(),
-	}
-
-	// undo modification of CWD for Build command
-	os.Chdir(cwd)
-
-	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
-	buildOptions.Tag = ""
-
-	// we need to call Build() method using a remote builder. This Builder will have
-	// the same behavior as the V1 builder but with a different output taking into
-	// account that we must not confuse the user with build messages since this logic is
-	// executed in the deploy command.
-	if err := remoteBuild.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
-		return oktetoErrors.UserError{
-			E: fmt.Errorf("Error during development environment deployment."),
-		}
-	}
-	oktetoLog.SetStage("done")
-	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
-
-	return nil
 }
 
 func (rd *remoteDestroyCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
