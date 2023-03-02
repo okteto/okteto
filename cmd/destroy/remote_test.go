@@ -231,7 +231,7 @@ func TestCreateDockerfile(t *testing.T) {
 				opts: &Options{},
 			},
 			expected: expected{
-				dockerfileName: "/test/deploy",
+				dockerfileName: filepath.Clean("/test/deploy"),
 			},
 		},
 	}
