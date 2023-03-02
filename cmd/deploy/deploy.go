@@ -177,7 +177,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			k8sClientProvider := okteto.NewK8sClientProvider()
 			pc, err := pipelineCMD.NewCommand()
 			if err != nil {
-				return err
+				return fmt.Errorf("could not create pipeline command: %w", err)
 			}
 			c := &DeployCommand{
 				GetManifest: model.GetManifestV2,
