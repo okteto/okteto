@@ -19,8 +19,6 @@ import (
 	"os"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
-	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -29,23 +27,20 @@ import (
 
 func KubeToken() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "kubetoken",
+		Use:   "kubetoken [context]",
 		Short: "Print Kubernetes cluster credentials in ExecCredential format.",
 		Long: `Print Kubernetes cluster credentials in ExecCredential format.
 You can find more information on 'ExecCredential' and 'client side authentication' at (https://kubernetes.io/docs/reference/config-api/client-authentication.v1/) and  https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins`,
 		Hidden: true,
+		Args:   cobra.ExactArgs(1),
 	}
 
-	cmd.RunE = func(*cobra.Command, []string) error {
+	cmd.RunE = func(_ *cobra.Command, args []string) error {
 		ctx := context.Background()
-
-		cfg := kubeconfig.Get(config.GetKubeconfigPath())
-		if cfg == nil {
-			return fmt.Errorf("failed to get the kubeconfig file. Please, check that your kubeconfig file is valid and in path")
-		}
+		context := args[0]
 
 		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
-			Context: cfg.CurrentContext,
+			Context: context,
 		})
 		if err != nil {
 			return err
