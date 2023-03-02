@@ -33,7 +33,7 @@ type fakeBuilder struct {
 	err error
 }
 
-func (f fakeBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
+func (f fakeBuilder) Build(_ context.Context, _ *types.BuildOptions) error {
 	return f.err
 }
 
