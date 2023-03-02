@@ -203,7 +203,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 }
 
 func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
-	dockerignoreFilePath := fmt.Sprintf("%s/%s", cwd, oktetoDockerignoreName)
+	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
 	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return err
