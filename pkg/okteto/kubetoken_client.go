@@ -37,7 +37,7 @@ func NewKubeTokenClient(contextName, token string) (*KubeTokenClient, error) {
 		return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, contextName)
 	}
 	if contextName == "" {
-		return nil, fmt.Errorf("the okteto URL is not set")
+		return nil, oktetoErrors.ErrCtxNotSet
 	}
 
 	parsed, err := parseOktetoURLWithPath(contextName, kubetokenPath)
