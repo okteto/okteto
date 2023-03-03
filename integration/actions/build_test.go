@@ -34,7 +34,7 @@ const buildPath = "okteto/build"
 func TestBuildActionPipeline(t *testing.T) {
 	integration.SkipIfWindows(t)
 
-	namespace := getTestNamespace()
+	namespace := integration.GetTestNamespace("buildaction", user)
 
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 

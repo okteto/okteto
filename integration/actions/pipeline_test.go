@@ -45,7 +45,7 @@ const (
 func TestPipelineActions(t *testing.T) {
 	integration.SkipIfWindows(t)
 
-	namespace := getTestNamespace()
+	namespace := integration.GetTestNamespace("PipelineActions", user)
 
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, executeDeployPipelineAction(t, namespace))
@@ -56,7 +56,7 @@ func TestPipelineActions(t *testing.T) {
 func TestPipelineActionsWithCompose(t *testing.T) {
 	integration.SkipIfWindows(t)
 
-	namespace := getTestNamespace()
+	namespace := integration.GetTestNamespace("pipelinecomposeaction", user)
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, executeDeployWithComposePipelineAction(namespace))
 	assert.NoError(t, executeDestroyPipelineAction(namespace))

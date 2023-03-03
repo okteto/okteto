@@ -39,7 +39,7 @@ const pushPath = "okteto/push"
 func TestPushAction(t *testing.T) {
 	integration.SkipIfWindows(t)
 
-	namespace := getTestNamespace()
+	namespace := integration.GetTestNamespace("pushactions", user)
 	oktetoPath, err := integration.GetOktetoPath()
 	if err != nil {
 		t.Fatal(err)
