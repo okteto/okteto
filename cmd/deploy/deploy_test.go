@@ -18,8 +18,10 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
@@ -927,6 +929,82 @@ func TestValidateK8sResources(t *testing.T) {
 			} else {
 				assert.NoError(t, ld.validateK8sResources(ctx, tc.manifest))
 			}
+		})
+	}
+}
+
+func TestGetDefaultTimeout(t *testing.T) {
+	tt := []struct {
+		name       string
+		envarValue string
+		expected   time.Duration
+	}{
+		{
+			name:       "env var not set",
+			envarValue: "",
+			expected:   5 * time.Minute,
+		},
+		{
+			name:       "env var set with not the proper syntax",
+			envarValue: "hello world",
+			expected:   5 * time.Minute,
+		},
+		{
+			name:       "env var set",
+			envarValue: "10m",
+			expected:   10 * time.Minute,
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(model.OktetoTimeoutEnvVar, tc.envarValue)
+			assert.Equal(t, tc.expected, getDefaultTimeout())
+		})
+	}
+}
+
+type fakePipelineDeployer struct {
+	err error
+}
+
+func (fd fakePipelineDeployer) ExecuteDeployPipeline(_ context.Context, _ *pipelineCMD.DeployOptions) error {
+	return fd.err
+}
+
+func TestDeployDependencies(t *testing.T) {
+	fakeManifest := &model.Manifest{
+		Dependencies: model.ManifestDependencies{
+			"a": &model.Dependency{
+				Namespace: "b",
+			},
+			"b": &model.Dependency{},
+		},
+	}
+	type config struct {
+		pipelineErr error
+	}
+	tt := []struct {
+		name     string
+		config   config
+		expected error
+	}{
+		{
+			name:     "error deploying dependency",
+			config:   config{pipelineErr: assert.AnError},
+			expected: assert.AnError,
+		},
+		{
+			name: "successful",
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			dc := &DeployCommand{
+				PipelineCMD: fakePipelineDeployer{tc.config.pipelineErr},
+			}
+			assert.ErrorIs(t, tc.expected, dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifest}))
 		})
 	}
 }

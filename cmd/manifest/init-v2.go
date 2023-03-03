@@ -25,6 +25,7 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -268,6 +269,10 @@ func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Mani
 }
 
 func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
+	pc, err := pipelineCMD.NewCommand()
+	if err != nil {
+		return err
+	}
 	c := &deploy.DeployCommand{
 		GetManifest:        mc.getManifest,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
@@ -276,9 +281,10 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		GetExternalControl: deploy.GetExternalControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
+		PipelineCMD:        pc,
 	}
 
-	err := c.RunDeploy(ctx, &deploy.Options{
+	err = c.RunDeploy(ctx, &deploy.Options{
 		Name:         mc.manifest.Name,
 		ManifestPath: opts.DevPath,
 		Timeout:      5 * time.Minute,

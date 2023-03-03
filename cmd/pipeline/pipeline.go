@@ -22,6 +22,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type PipelineDeployerInterface interface {
+	ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error
+}
+type PipelineInterface interface {
+	PipelineDeployerInterface
+}
+
 // Command has all the pipeline subcommands
 type Command struct {
 	okClient types.OktetoInterface
