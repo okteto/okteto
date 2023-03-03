@@ -21,10 +21,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -40,7 +38,7 @@ const (
 func TestNamespaceActionsPipeline(t *testing.T) {
 	integration.SkipIfWindows(t)
 
-	namespace := getTestNamespace()
+	namespace := integration.GetTestNamespace("namespaceaction", user)
 
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, executeChangeNamespaceAction(namespace))
@@ -138,11 +136,4 @@ func executeDeleteNamespaceAction(namespace string) error {
 
 	log.Printf("deleting namespace output: \n%s\n", string(o))
 	return nil
-}
-
-func getTestNamespace() string {
-	tName := fmt.Sprintf("TestAction-%s", runtime.GOOS)
-	name := strings.ToLower(fmt.Sprintf("%s-%d", tName, time.Now().Unix()))
-	namespace := fmt.Sprintf("%s-%s", name, user)
-	return namespace
 }
