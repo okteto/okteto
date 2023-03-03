@@ -1273,7 +1273,7 @@ func (dev *Dev) translateDeprecatedMetadataFields() {
 }
 
 func (service *Dev) validateForExtraFields() error {
-	errorMessage := "%q is not supported in Services. Please visit https://www.okteto.com/docs/0.10/reference/manifest/#services-object-optional for documentation"
+	errorMessage := "%q is not supported in Services. Please visit https://www.okteto.com/docs/reference/manifest/#services-object-optional for documentation"
 	if service.Username != "" {
 		return fmt.Errorf(errorMessage, "username")
 	}
