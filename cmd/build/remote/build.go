@@ -66,3 +66,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	analytics.TrackBuild(okteto.Context().Builder, true)
 	return nil
 }
+
+func (bc *OktetoBuilder) IsV1() bool {
+	return true
+}
