@@ -131,6 +131,8 @@ func Test_RemoveSchema(t *testing.T) {
 }
 
 func Test_AddOktetoCredentialsToCfg(t *testing.T) {
+	t.Parallel()
+
 	cfg := clientcmdapi.NewConfig()
 	namespace := "namespace"
 	username := "cindy"
