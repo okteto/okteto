@@ -72,12 +72,30 @@ func TestGetKubeToken(t *testing.T) {
 	defer s.Close()
 
 	c := &KubeTokenClient{
-		httpClient:  s.Client(),
-		url:         s.URL,
-		contextName: "test",
+		httpClient: s.Client(),
+		url:        s.URL,
 	}
 
 	token, err := c.GetKubeToken()
 	require.NoError(t, err)
 	require.Equal(t, expectedToken, token)
+}
+
+func TestGetKubeTokenUnauthorizedErr(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+	}))
+
+	defer s.Close()
+
+	context := "testctx"
+
+	c := &KubeTokenClient{
+		httpClient:  s.Client(),
+		url:         s.URL,
+		contextName: context,
+	}
+
+	_, err := c.GetKubeToken()
+	require.Equal(t, fmt.Errorf(oktetoErrors.ErrNotLogged, context), err)
 }
