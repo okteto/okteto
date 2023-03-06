@@ -360,7 +360,7 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 		}
 	} else {
 		// fallback for okteto API before client authentication support
-		// TODO: remove once we stop supporting token based authentication
+		// TODO: remove once we stop supporting token based authentication https://github.com/okteto/okteto/pull/3409
 		user.Token = cred.Token
 		user.Exec = nil
 	}
