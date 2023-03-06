@@ -240,6 +240,10 @@ func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) 
 			}
 		}
 
+		if err := manifest.ExpandEnvVars(); err != nil {
+			oktetoLog.Infof("could not expand manifest envs: %v", err)
+		}
+
 		isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
 
 		destroyImage := ""

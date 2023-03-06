@@ -944,6 +944,12 @@ func (manifest *Manifest) ExpandEnvVars() error {
 		}
 	}
 	if manifest.Destroy != nil {
+		if manifest.Destroy.Image != "" {
+			manifest.Destroy.Image, err = envsubst.String(manifest.Destroy.Image)
+			if err != nil {
+				return errors.New("could not parse env vars for an image used for remote destroy")
+			}
+		}
 		for idx, cmd := range manifest.Destroy.Commands {
 			cmd.Command, err = envsubst.String(cmd.Command)
 			if err != nil {
