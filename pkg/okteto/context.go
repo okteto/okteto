@@ -327,6 +327,11 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 		return nil
 	}
 
+	hasKubeToken, err := hasKubeTokenCapabily(oktetoURL)
+	if err != nil {
+		return err
+	}
+
 	clusterName := UrlToKubernetesContext(oktetoURL)
 	// create cluster
 	cluster, ok := cfg.Clusters[clusterName]
@@ -344,10 +349,6 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 		user = clientcmdapi.NewAuthInfo()
 	}
 
-	hasKubeToken, err := hasKubeTokenCapabily(oktetoURL)
-	if err != nil {
-		return err
-	}
 	if hasKubeToken {
 		user.Token = ""
 		user.Exec = &clientcmdapi.ExecConfig{

@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -136,53 +137,116 @@ func Test_AddOktetoCredentialsToCfg(t *testing.T) {
 	cred := &types.Credential{
 		Server:      "https://ip.ip.ip.ip",
 		Certificate: "cred-cert",
+		Token:       "cred-token",
 	}
 
-	hasKubeTokenCapabily := func(oktetoURL string) (bool, error) {
-		return true, nil
-	}
 	oktetoURL := "https://cloud.okteto.com"
 	clusterAndContextName := "cloud_okteto_com"
-	AddOktetoCredentialsToCfg(cfg, cred, namespace, username, oktetoURL, hasKubeTokenCapabily)
 
-	expectedCfg := &clientcmdapi.Config{
-		Extensions: map[string]runtime.Object{},
-		Clusters: map[string]*clientcmdapi.Cluster{
-			clusterAndContextName: {
-				Server:                   cred.Server,
-				CertificateAuthorityData: []byte(cred.Certificate),
-				Extensions:               map[string]runtime.Object{},
-			},
-		},
-		Contexts: map[string]*clientcmdapi.Context{
-			clusterAndContextName: {
-				Cluster:   clusterAndContextName,
-				AuthInfo:  username,
-				Namespace: namespace,
-				Extensions: map[string]runtime.Object{
-					constants.OktetoExtension: nil,
+	tt := []struct {
+		name          string
+		hasKubeToken  bool
+		expectedCfg   *clientcmdapi.Config
+		err           error
+		expectedError error
+	}{
+		{
+			name:         "has-kube-token",
+			hasKubeToken: true,
+			expectedCfg: &clientcmdapi.Config{
+				Extensions: map[string]runtime.Object{},
+				Clusters: map[string]*clientcmdapi.Cluster{
+					clusterAndContextName: {
+						Server:                   cred.Server,
+						CertificateAuthorityData: []byte(cred.Certificate),
+						Extensions:               map[string]runtime.Object{},
+					},
+				},
+				Contexts: map[string]*clientcmdapi.Context{
+					clusterAndContextName: {
+						Cluster:   clusterAndContextName,
+						AuthInfo:  username,
+						Namespace: namespace,
+						Extensions: map[string]runtime.Object{
+							constants.OktetoExtension: nil,
+						},
+					},
+				},
+				AuthInfos: map[string]*clientcmdapi.AuthInfo{
+					username: {
+						Exec: &clientcmdapi.ExecConfig{
+							Command:            "okteto",
+							Args:               []string{"kubetoken", clusterAndContextName},
+							APIVersion:         "client.authentication.k8s.io/v1",
+							InstallHint:        "Okteto needs to be installed and in your PATH to use this context. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
+							ProvideClusterInfo: true,
+							InteractiveMode:    "IfAvailable",
+						},
+						Extensions:           map[string]runtime.Object{},
+						ImpersonateUserExtra: map[string][]string{},
+					},
+				},
+				CurrentContext: clusterAndContextName,
+				Preferences: clientcmdapi.Preferences{
+					Extensions: map[string]runtime.Object{},
 				},
 			},
 		},
-		AuthInfos: map[string]*clientcmdapi.AuthInfo{
-			username: {
-				Exec: &clientcmdapi.ExecConfig{
-					Command:            "okteto",
-					Args:               []string{"kubetoken", clusterAndContextName},
-					APIVersion:         "client.authentication.k8s.io/v1",
-					InstallHint:        "Okteto needs to be installed and in your PATH to use this context. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
-					ProvideClusterInfo: true,
-					InteractiveMode:    "IfAvailable",
+		{
+			name:         "no-kube-token",
+			hasKubeToken: false,
+			expectedCfg: &clientcmdapi.Config{
+				Extensions: map[string]runtime.Object{},
+				Clusters: map[string]*clientcmdapi.Cluster{
+					clusterAndContextName: {
+						Server:                   cred.Server,
+						CertificateAuthorityData: []byte(cred.Certificate),
+						Extensions:               map[string]runtime.Object{},
+					},
 				},
-				Extensions:           map[string]runtime.Object{},
-				ImpersonateUserExtra: map[string][]string{},
+				Contexts: map[string]*clientcmdapi.Context{
+					clusterAndContextName: {
+						Cluster:   clusterAndContextName,
+						AuthInfo:  username,
+						Namespace: namespace,
+						Extensions: map[string]runtime.Object{
+							constants.OktetoExtension: nil,
+						},
+					},
+				},
+				AuthInfos: map[string]*clientcmdapi.AuthInfo{
+					username: {
+						Token:                cred.Token,
+						Extensions:           map[string]runtime.Object{},
+						ImpersonateUserExtra: map[string][]string{},
+					},
+				},
+				CurrentContext: clusterAndContextName,
+				Preferences: clientcmdapi.Preferences{
+					Extensions: map[string]runtime.Object{},
+				},
 			},
 		},
-		CurrentContext: clusterAndContextName,
-		Preferences: clientcmdapi.Preferences{
-			Extensions: map[string]runtime.Object{},
+		{
+			name:          "error",
+			err:           fmt.Errorf("error"),
+			expectedError: fmt.Errorf("error"),
+			expectedCfg:   clientcmdapi.NewConfig(),
 		},
 	}
 
-	require.Equal(t, expectedCfg, cfg)
+	for _, testCase := range tt {
+		cfg := cfg.DeepCopy()
+		testCase := testCase
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			hasKubeTokenCapabily := func(oktetoURL string) (bool, error) {
+				return testCase.hasKubeToken, testCase.err
+			}
+			err := AddOktetoCredentialsToCfg(cfg, cred, namespace, username, oktetoURL, hasKubeTokenCapabily)
+			require.Equal(t, testCase.expectedCfg, cfg)
+			require.Equal(t, testCase.expectedError, err)
+		})
+	}
+
 }
