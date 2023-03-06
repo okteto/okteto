@@ -14,14 +14,11 @@
 package okteto
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	oktetoHttp "github.com/okteto/okteto/pkg/http"
-	"golang.org/x/oauth2"
 )
 
 const kubetokenPath = "auth/kubetoken"
@@ -33,38 +30,18 @@ type KubeTokenClient struct {
 }
 
 func NewKubeTokenClient(contextName, token string) (*KubeTokenClient, error) {
-	if token == "" {
-		return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, contextName)
-	}
 	if contextName == "" {
 		return nil, oktetoErrors.ErrCtxNotSet
 	}
 
-	parsed, err := parseOktetoURLWithPath(contextName, kubetokenPath)
+	httpClient, url, err := newOktetoHttpClient(contextName, token, kubetokenPath)
 	if err != nil {
 		return nil, err
 	}
 
-	src := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: token,
-			TokenType: "Bearer"},
-	)
-
-	ctxHttpClient := http.DefaultClient
-
-	if insecureSkipTLSVerify {
-		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
-	} else if cert, err := GetContextCertificate(); err == nil {
-		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
-	}
-
-	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
-
-	httpClient := oauth2.NewClient(ctx, src)
-
 	return &KubeTokenClient{
 		httpClient:  httpClient,
-		url:         parsed,
+		url:         url,
 		contextName: contextName,
 	}, nil
 }
