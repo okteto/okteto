@@ -33,6 +33,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	reg2 "github.com/okteto/okteto/pkg/registry/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
 )
@@ -141,7 +142,7 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 	if err != nil {
 		oktetoLog.Infof("Failed to build image: %s", err.Error())
 	}
-	if registry.IsTransientError(err) {
+	if isTransientError(err) {
 		oktetoLog.Yellow(`Failed to push '%s' to the registry:
   %s,
   Retrying ...`, buildOptions.Tag, err.Error())
@@ -151,7 +152,7 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 			success = false
 			oktetoLog.Infof("Failed to build image: %s", err.Error())
 		}
-		err = registry.GetErrorMessage(err, buildOptions.Tag)
+		err = getErrorMessage(err, buildOptions.Tag)
 		analytics.TrackBuildTransientError(okteto.Context().Builder, success)
 		return err
 	}
@@ -167,13 +168,13 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 				success = false
 				oktetoLog.Infof("Failed to build image: %s", err.Error())
 			}
-			err = registry.GetErrorMessage(err, buildOptions.Tag)
+			err = getErrorMessage(err, buildOptions.Tag)
 			analytics.TrackBuildPullError(okteto.Context().Builder, success)
 			return err
 		}
 	}
 
-	err = registry.GetErrorMessage(err, buildOptions.Tag)
+	err = getErrorMessage(err, buildOptions.Tag)
 	return err
 }
 
@@ -202,10 +203,11 @@ func buildWithDocker(ctx context.Context, buildOptions *types.BuildOptions) erro
 }
 
 func validateImage(imageTag string) error {
+	reg := reg2.NewOktetoRegistry(okteto.Config{})
 	if strings.HasPrefix(imageTag, okteto.Context().Registry) && strings.Count(imageTag, "/") == 2 {
 		return nil
 	}
-	if (registry.IsOktetoRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {
+	if (reg.IsOktetoRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {
 		prefix := constants.DevRegistry
 		if registry.IsGlobalRegistry(imageTag) {
 			prefix = constants.GlobalRegistry
@@ -265,7 +267,8 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
 	}
 
-	if registry.IsOktetoRegistry(b.Image) {
+	reg := reg2.NewOktetoRegistry(okteto.Config{})
+	if reg.IsOktetoRegistry(b.Image) {
 		defaultBuildArgs := map[string]string{
 			model.OktetoContextEnvVar:   okteto.Context().Name,
 			model.OktetoNamespaceEnvVar: okteto.Context().Namespace,
