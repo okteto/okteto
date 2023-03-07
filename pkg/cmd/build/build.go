@@ -32,7 +32,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
 	reg2 "github.com/okteto/okteto/pkg/registry/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
@@ -210,7 +209,7 @@ func validateImage(imageTag string) error {
 	}
 	if (reg.IsOktetoRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {
 		prefix := constants.DevRegistry
-		if registry.IsGlobalRegistry(imageTag) {
+		if strings.HasPrefix(imageTag, constants.GlobalRegistry) {
 			prefix = constants.GlobalRegistry
 		}
 		return oktetoErrors.UserError{

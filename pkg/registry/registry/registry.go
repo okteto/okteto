@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
@@ -27,6 +28,7 @@ type OktetoRegistryInterface interface {
 	GetImageMetadata(image string) (ImageMetadata, error)
 	IsOktetoRegistry(image string) bool
 	GetImageTag(image, service, namespace string) string
+	GetImageReference(image string) (OktetoImageReference, error)
 }
 
 type configInterface interface {
@@ -40,11 +42,18 @@ type configInterface interface {
 	GetContextCertificate() (*x509.Certificate, error)
 }
 
-// OktetoRegistry represents the
+// OktetoRegistry represents the registry
 type OktetoRegistry struct {
 	client    clientInterface
 	imageCtrl imageCtrl
 	config    configInterface
+}
+
+type OktetoImageReference struct {
+	Registry string
+	Repo     string
+	Tag      string
+	Image    string
 }
 
 func NewOktetoRegistry(config configInterface) OktetoRegistry {
@@ -108,4 +117,18 @@ func (or OktetoRegistry) GetImageTag(image, service, namespace string) string {
 	}
 	imageWithoutTag, _ := or.imageCtrl.getRepoNameAndTag(image)
 	return fmt.Sprintf("%s:okteto", imageWithoutTag)
+}
+
+// GetReferecenceEnvs returns the values to setup the image environment variables
+func (or OktetoRegistry) GetImageReference(image string) (OktetoImageReference, error) {
+	ref, err := name.ParseReference(image)
+	if err != nil {
+		return OktetoImageReference{}, err
+	}
+	return OktetoImageReference{
+		Registry: ref.Context().RegistryStr(),
+		Repo:     ref.Context().RepositoryStr(),
+		Tag:      ref.Identifier(),
+		Image:    ref.Name(),
+	}, nil
 }

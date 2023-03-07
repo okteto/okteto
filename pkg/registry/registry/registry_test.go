@@ -380,3 +380,51 @@ func Test_GetImageTag(t *testing.T) {
 		})
 	}
 }
+
+func TestGetImageReference(t *testing.T) {
+	var tests = []struct {
+		name     string
+		input    string
+		expected OktetoImageReference
+	}{
+		{
+			name:  "with registry",
+			input: "my-registry.com/okteto/hello:okteto",
+			expected: OktetoImageReference{
+				Registry: "my-registry.com",
+				Repo:     "okteto/hello",
+				Tag:      "okteto",
+				Image:    "my-registry.com/okteto/hello:okteto",
+			},
+		},
+		{
+			name:  "without registry",
+			input: "okteto/hello:okteto",
+			expected: OktetoImageReference{
+				Registry: "index.docker.io",
+				Repo:     "okteto/hello",
+				Tag:      "okteto",
+				Image:    "index.docker.io/okteto/hello:okteto",
+			},
+		},
+		{
+			name:  "without tag",
+			input: "my-registry.com/okteto/hello",
+			expected: OktetoImageReference{
+				Registry: "my-registry.com",
+				Repo:     "okteto/hello",
+				Tag:      "latest",
+				Image:    "my-registry.com/okteto/hello:latest",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			or := OktetoRegistry{}
+			result, err := or.GetImageReference(tt.input)
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
