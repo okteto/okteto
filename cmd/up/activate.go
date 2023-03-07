@@ -33,7 +33,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -86,7 +85,7 @@ func (up *upContext) activate() error {
 	}
 
 	buildDevImage := false
-	if _, err := registry.NewOktetoRegistry().GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
+	if _, err := up.Registry.GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
 		oktetoLog.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
 		path := up.Dev.Image.GetDockerfilePath()
 		if _, err := os.Stat(path); err != nil {
