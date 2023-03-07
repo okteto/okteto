@@ -86,51 +86,7 @@ func ExpandOktetoGlobalRegistry(tag string) string {
 
 // ExpandOktetoDevRegistry translates okteto.dev
 func ExpandOktetoDevRegistry(tag string) string {
-	return replaceRegistry(tag, okteto.DevRegistry, okteto.Context().Namespace)
-}
-
-// GetImageConfigFromImage gets information from the image
-func GetImageConfigFromImage(imageRef string) (*ImageConfig, error) {
-	imageConfig := &ImageConfig{
-		CMD:          []string{},
-		ExposedPorts: []int{},
-	}
-
-	imageRef = ExpandOktetoDevRegistry(imageRef)
-	imageRef = ExpandOktetoGlobalRegistry(imageRef)
-
-	image, err := imageForReference(imageRef)
-	if err != nil {
-		return nil, err
-	}
-
-	configFile, err := image.ConfigFile()
-	if err != nil {
-		return nil, err
-	}
-
-	if configFile.Config.ExposedPorts != nil {
-		for port := range configFile.Config.ExposedPorts {
-			slashIndx := strings.Index(port, "/")
-			if slashIndx != -1 {
-				port = port[:slashIndx]
-				portInt, err := strconv.Atoi(port)
-				if err != nil {
-					continue
-				}
-				imageConfig.ExposedPorts = append(imageConfig.ExposedPorts, portInt)
-
-			}
-		}
-	}
-	if configFile.Config.WorkingDir != "" {
-		imageConfig.Workdir = configFile.Config.WorkingDir
-	}
-
-	if len(configFile.Config.Cmd) > 0 {
-		imageConfig.CMD = configFile.Config.Cmd
-	}
-	return imageConfig, nil
+	return replaceRegistry(tag, constants.DevRegistry, okteto.Context().Namespace)
 }
 
 // GetRegistryAndRepo returns image tag and the registry to push the image

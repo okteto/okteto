@@ -40,7 +40,8 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
-	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry/registry"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -829,13 +830,19 @@ func addImageMetadataToStack(s *model.Stack, options *StackDeployOptions) {
 
 func addImageMetadataToSvc(svc *model.Service) {
 	if svc.Image != "" {
-		imageMetadata := registry.GetImageMetadata(svc.Image)
-		if registry.IsOktetoRegistry(svc.Image) {
+		reg := registry.NewOktetoRegistry(okteto.Config{})
+		imageMetadata, err := reg.GetImageMetadata(svc.Image)
+		if err != nil {
+			oktetoLog.Infof("could not add image metadata: %w", err)
+			return
+		}
+
+		if reg.IsOktetoRegistry(svc.Image) {
 			svc.Image = imageMetadata.Image
 		}
 		for _, port := range imageMetadata.Ports {
 			if !model.IsAlreadyAdded(port, svc.Ports) {
-				svc.Ports = append(svc.Ports, port)
+				svc.Ports = append(svc.Ports, model.Port{ContainerPort: port.ContainerPort, Protocol: port.Protocol})
 			}
 		}
 	}
