@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registry
+package build
 
 import (
 	"bufio"
@@ -26,6 +26,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry/registry"
 	"github.com/pkg/errors"
 )
 
@@ -123,9 +124,9 @@ func translateCacheHandler(input, userID string) string {
 }
 
 func translateOktetoRegistryImage(input string) string {
-
+	replacer := registry.NewRegistryReplacer(okteto.Context().Registry)
 	if strings.Contains(input, constants.DevRegistry) {
-		tag := replaceRegistry(input, constants.DevRegistry, okteto.Context().Namespace)
+		tag := replacer.Replace(input, constants.DevRegistry, okteto.Context().Namespace)
 		return tag
 	}
 
@@ -134,7 +135,7 @@ func translateOktetoRegistryImage(input string) string {
 		if okteto.Context().GlobalNamespace != "" {
 			globalNamespace = okteto.Context().GlobalNamespace
 		}
-		tag := replaceRegistry(input, constants.GlobalRegistry, globalNamespace)
+		tag := replacer.Replace(input, constants.GlobalRegistry, globalNamespace)
 		return tag
 	}
 

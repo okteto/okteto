@@ -94,7 +94,7 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 	}
 
 	if buildOptions.File != "" {
-		buildOptions.File, err = registry.GetDockerfile(buildOptions.File)
+		buildOptions.File, err = GetDockerfile(buildOptions.File)
 		if err != nil {
 			return err
 		}

@@ -50,7 +50,7 @@ type OktetoRegistry struct {
 func NewOktetoRegistry(config configInterface) OktetoRegistry {
 	return OktetoRegistry{
 		client:    newOktetoRegistryClient(config),
-		imageCtrl: newImageCtrl(config),
+		imageCtrl: NewImageCtrl(config),
 		config:    config,
 	}
 }
@@ -58,7 +58,7 @@ func NewOktetoRegistry(config configInterface) OktetoRegistry {
 func (or OktetoRegistry) GetImageTagWithDigest(image string) (string, error) {
 	expandedImage := or.imageCtrl.expandImageRegistries(image)
 
-	registry, repositoryWithTag := or.imageCtrl.getRegistryAndRepo(expandedImage)
+	registry, repositoryWithTag := or.imageCtrl.GetRegistryAndRepo(expandedImage)
 	repository, _ := or.imageCtrl.getRepoNameAndTag(repositoryWithTag)
 
 	digest, err := or.client.GetDigest(expandedImage)

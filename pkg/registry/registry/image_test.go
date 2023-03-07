@@ -99,7 +99,7 @@ func TestExpandRegistry(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			iCtrl := newImageCtrl(tt.input.config)
+			iCtrl := NewImageCtrl(tt.input.config)
 			image := iCtrl.expandImageRegistries(tt.input.image)
 			assert.Equal(t, tt.expected, image)
 		})
@@ -161,7 +161,7 @@ func Test_GetRegistryAndRepo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			iCtrl := imageCtrl{}
-			registry, image := iCtrl.getRegistryAndRepo(tt.tag)
+			registry, image := iCtrl.GetRegistryAndRepo(tt.tag)
 			assert.Equal(t, tt.expected.registry, registry)
 			assert.Equal(t, tt.expected.image, image)
 		})

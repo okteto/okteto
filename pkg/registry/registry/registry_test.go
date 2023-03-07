@@ -82,7 +82,7 @@ func TestGetImageTagWithDigest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			or := OktetoRegistry{
-				imageCtrl: newImageCtrl(tt.input.config),
+				imageCtrl: NewImageCtrl(tt.input.config),
 				client: fake.FakeClient{
 					GetImageDigest: fake.GetDigest{
 						Result: tt.input.clientConfig.digest,
@@ -210,7 +210,7 @@ func TestGetImageMetadata(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			or := OktetoRegistry{
-				imageCtrl: newImageCtrl(tt.input.config),
+				imageCtrl: NewImageCtrl(tt.input.config),
 				client: fake.FakeClient{
 					GetImageDigest: fake.GetDigest{
 						Result: tt.input.clientConfig.getDigest.digest,

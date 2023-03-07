@@ -15,7 +15,6 @@ package registry
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -42,12 +41,14 @@ func (p Port) GetContainerPort() int32     { return p.ContainerPort }
 func (p Port) GetProtocol() apiv1.Protocol { return p.Protocol }
 
 type imageCtrl struct {
-	config configInterface
+	config           configInterface
+	registryReplacer Replacer
 }
 
-func newImageCtrl(config configInterface) imageCtrl {
+func NewImageCtrl(config configInterface) imageCtrl {
 	return imageCtrl{
-		config: config,
+		config:           config,
+		registryReplacer: NewRegistryReplacer(config.GetRegistryURL()),
 	}
 }
 
@@ -65,26 +66,16 @@ func (ic imageCtrl) expandOktetoGlobalRegistry(tag string) string {
 	if ic.config.GetGlobalNamespace() != "" {
 		globalNamespace = ic.config.GetGlobalNamespace()
 	}
-	return ic.replaceRegistry(tag, constants.GlobalRegistry, globalNamespace)
+	return ic.registryReplacer.Replace(tag, constants.GlobalRegistry, globalNamespace)
 }
 
 // ExpandOktetoDevRegistry translates okteto.dev
 func (ic imageCtrl) expandOktetoDevRegistry(tag string) string {
-	return ic.replaceRegistry(tag, constants.DevRegistry, ic.config.GetNamespace())
-}
-
-// replaceRegistry replaces the short registry url with the okteto registry url
-func (ic imageCtrl) replaceRegistry(input, registryType, namespace string) string {
-	// Check if the registryType is the start of the sentence or has a whitespace before it
-	var re = regexp.MustCompile(fmt.Sprintf(`(^|\s)(%s)`, registryType))
-	if re.MatchString(input) {
-		return strings.Replace(input, registryType, fmt.Sprintf("%s/%s", ic.config.GetRegistryURL(), namespace), 1)
-	}
-	return input
+	return ic.registryReplacer.Replace(tag, constants.DevRegistry, ic.config.GetNamespace())
 }
 
 // GetRegistryAndRepo returns image tag and the registry to push the image
-func (imageCtrl) getRegistryAndRepo(tag string) (string, string) {
+func (imageCtrl) GetRegistryAndRepo(tag string) (string, string) {
 	var imageTag string
 	registryTag := "docker.io"
 	splittedImage := strings.Split(tag, "/")
