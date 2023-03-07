@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -107,7 +108,7 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 }
 
 func getToBuildTag(manifestName, svcName string, b *model.BuildInfo) string {
-	targetRegistry := okteto.DevRegistry
+	targetRegistry := constants.DevRegistry
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	switch {

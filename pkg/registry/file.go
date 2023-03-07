@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -123,17 +124,17 @@ func translateCacheHandler(input, userID string) string {
 
 func translateOktetoRegistryImage(input string) string {
 
-	if strings.Contains(input, okteto.DevRegistry) {
-		tag := replaceRegistry(input, okteto.DevRegistry, okteto.Context().Namespace)
+	if strings.Contains(input, constants.DevRegistry) {
+		tag := replaceRegistry(input, constants.DevRegistry, okteto.Context().Namespace)
 		return tag
 	}
 
-	if strings.Contains(input, okteto.GlobalRegistry) {
-		globalNamespace := okteto.DefaultGlobalNamespace
+	if strings.Contains(input, constants.GlobalRegistry) {
+		globalNamespace := constants.DefaultGlobalNamespace
 		if okteto.Context().GlobalNamespace != "" {
 			globalNamespace = okteto.Context().GlobalNamespace
 		}
-		tag := replaceRegistry(input, okteto.GlobalRegistry, globalNamespace)
+		tag := replaceRegistry(input, constants.GlobalRegistry, globalNamespace)
 		return tag
 	}
 

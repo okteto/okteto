@@ -25,6 +25,7 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/format"
@@ -205,9 +206,9 @@ func validateImage(imageTag string) error {
 		return nil
 	}
 	if (registry.IsOktetoRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {
-		prefix := okteto.DevRegistry
+		prefix := constants.DevRegistry
 		if registry.IsGlobalRegistry(imageTag) {
-			prefix = okteto.GlobalRegistry
+			prefix = constants.GlobalRegistry
 		}
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("'%s' isn't a valid image tag", imageTag),
@@ -249,9 +250,9 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	if okteto.Context().IsOkteto && b.Image == "" {
 		// if flag --global, point to global registry
-		targetRegistry := okteto.DevRegistry
+		targetRegistry := constants.DevRegistry
 		if o != nil && o.BuildToGlobal {
-			targetRegistry = okteto.GlobalRegistry
+			targetRegistry = constants.GlobalRegistry
 		}
 		b.Image = fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
 		if len(b.VolumesToInclude) > 0 {

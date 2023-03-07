@@ -17,6 +17,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
@@ -190,7 +191,7 @@ func (c *userClient) deprecatedGetUserContext(ctx context.Context) (*types.UserC
 			Registry:        string(queryStruct.User.Registry),
 			Buildkit:        string(queryStruct.User.Buildkit),
 			Certificate:     string(queryStruct.User.Certificate),
-			GlobalNamespace: DefaultGlobalNamespace,
+			GlobalNamespace: constants.DefaultGlobalNamespace,
 			Analytics:       true,
 		},
 		Secrets: secrets,

@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -463,7 +464,7 @@ func getPullingMessage(message, namespace string) string {
 		return message
 	}
 	toReplace := fmt.Sprintf("%s/%s", registry, namespace)
-	return strings.Replace(message, toReplace, okteto.DevRegistry, 1)
+	return strings.Replace(message, toReplace, constants.DevRegistry, 1)
 }
 
 // waitUntilAppIsAwaken waits until the app is awaken checking if the annotation dev.okteto.com/state-before-sleeping is present in the app resource
