@@ -33,7 +33,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/registry/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -43,7 +43,7 @@ type Command struct {
 	GetManifest func(path string) (*model.Manifest, error)
 
 	Builder  build.OktetoBuilderInterface
-	Registry build.OktetoRegistryInterface
+	Registry registry.OktetoRegistryInterface
 }
 
 // NewBuildCommand creates a struct to run all build methods
@@ -51,7 +51,7 @@ func NewBuildCommand() *Command {
 	return &Command{
 		GetManifest: model.GetManifestV2,
 		Builder:     &build.OktetoBuilder{},
-		Registry:    registry.NewOktetoRegistry(),
+		Registry:    registry.NewOktetoRegistry(okteto.Config{}),
 	}
 }
 

@@ -21,6 +21,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/registry/registry"
 	"github.com/okteto/okteto/pkg/syncthing"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -30,6 +31,7 @@ import (
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
 	Cancel                context.CancelFunc
+	Registry              registry.OktetoRegistryInterface
 	ShutdownCompleted     chan bool
 	Manifest              *model.Manifest
 	Dev                   *model.Dev

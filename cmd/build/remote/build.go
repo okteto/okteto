@@ -10,7 +10,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/registry/registry"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -22,13 +22,13 @@ type oktetoBuilderInterface interface {
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
 	Builder  oktetoBuilderInterface
-	Registry build.OktetoRegistryInterface
+	Registry registry.OktetoRegistryInterface
 }
 
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch() *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
-	registry := registry.NewOktetoRegistry()
+	registry := registry.NewOktetoRegistry(okteto.Config{})
 	return &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,

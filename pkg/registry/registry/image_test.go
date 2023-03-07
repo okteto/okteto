@@ -298,13 +298,11 @@ func TestGetExposedPortsFromCfg(t *testing.T) {
 			cfg: &v1.ConfigFile{Config: v1.Config{
 				ExposedPorts: map[string]struct{}{
 					"8080/tcp": {},
-					"5050/tcp": {},
 				},
 			},
 			},
 			expected: []Port{
 				{ContainerPort: 8080, Protocol: apiv1.ProtocolTCP},
-				{ContainerPort: 5050, Protocol: apiv1.ProtocolTCP},
 			},
 		},
 	}

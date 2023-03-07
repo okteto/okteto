@@ -16,8 +16,6 @@ package registry
 import (
 	"fmt"
 	"strings"
-
-	"github.com/okteto/okteto/pkg/model"
 )
 
 // GetRepoNameAndTag returns the image repo and the tag separated
@@ -41,24 +39,4 @@ func GetRepoNameAndTag(name string) (string, string) {
 		return remainder[:i], remainder[i+1:]
 	}
 	return fmt.Sprintf("%s/%s", domain, remainder[:i]), remainder[i+1:]
-}
-
-// GetImageTag returns the image tag to build for a given services
-func GetImageTag(image, service, namespace, oktetoRegistryURL string) string {
-	if oktetoRegistryURL != "" {
-		if IsOktetoRegistry(image) {
-			return image
-		}
-		return fmt.Sprintf("%s/%s/%s:okteto", oktetoRegistryURL, namespace, service)
-	}
-	imageWithoutTag, _ := GetRepoNameAndTag(image)
-	return fmt.Sprintf("%s:okteto", imageWithoutTag)
-}
-
-// GetDevImageTag returns the image tag to build and push
-func GetDevImageTag(dev *model.Dev, imageTag, imageFromDeployment, oktetoRegistryURL string) string {
-	if imageTag != "" && imageTag != model.DefaultImage {
-		return imageTag
-	}
-	return GetImageTag(imageFromDeployment, dev.Name, dev.Namespace, oktetoRegistryURL)
 }

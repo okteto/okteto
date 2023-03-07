@@ -229,3 +229,154 @@ func TestGetImageMetadata(t *testing.T) {
 		})
 	}
 }
+
+func Test_IsOktetoRegistry(t *testing.T) {
+	type input struct {
+		image  string
+		config configInterface
+	}
+	var tests = []struct {
+		name  string
+		input input
+		want  bool
+	}{
+		{
+			name: "is-dev-registry",
+			input: input{
+				image: "okteto.dev/image",
+				config: fake.FakeConfig{
+					RegistryURL:        "this.is.my.okteto.registry",
+					IsOktetoClusterCfg: true,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "is-global-registry",
+			input: input{
+				image: "okteto.global/image",
+				config: fake.FakeConfig{
+					RegistryURL:        "this.is.my.okteto.registry",
+					IsOktetoClusterCfg: true,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "is-expanded-dev-registry",
+			input: input{
+				image: "this.is.my.okteto.registry/user/image",
+				config: fake.FakeConfig{
+					RegistryURL:        "this.is.my.okteto.registry",
+					IsOktetoClusterCfg: true,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "is-not-dev-registry",
+			input: input{
+				image: "other-image/image",
+				config: fake.FakeConfig{
+					RegistryURL:        "this.is.my.okteto.registry",
+					IsOktetoClusterCfg: true,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "is-dev-registry but cluster is not managed by okteto",
+			input: input{
+				image: "okteto.dev/image",
+				config: fake.FakeConfig{
+					RegistryURL:        "this.is.my.okteto.registry",
+					IsOktetoClusterCfg: false,
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			or := NewOktetoRegistry(tt.input.config)
+
+			result := or.IsOktetoRegistry(tt.input.image)
+			assert.Equal(t, tt.want, result)
+		})
+	}
+
+}
+
+func Test_GetImageTag(t *testing.T) {
+	type input struct {
+		image     string
+		service   string
+		namespace string
+		config    configInterface
+	}
+	var tests = []struct {
+		name     string
+		input    input
+		expected string
+	}{
+		{
+			name: "not-in-okteto",
+			input: input{
+				image:     "okteto/hello",
+				service:   "service",
+				namespace: "namespace",
+				config: fake.FakeConfig{
+					RegistryURL: "",
+				},
+			},
+			expected: "okteto/hello:okteto",
+		},
+		{
+			name: "in-okteto-image-in-okteto",
+			input: input{
+				image:     "my-registry.com/hello",
+				service:   "service",
+				namespace: "namespace",
+				config: fake.FakeConfig{
+					RegistryURL:        "my-registry.com",
+					IsOktetoClusterCfg: true,
+				},
+			},
+			expected: "my-registry.com/hello",
+		},
+		{
+			name: "in-okteto-image-in-okteto",
+			input: input{
+				image:     "hello",
+				service:   "service",
+				namespace: "namespace",
+				config: fake.FakeConfig{
+					RegistryURL:        "my-registry.com",
+					IsOktetoClusterCfg: true,
+				},
+			},
+			expected: "my-registry.com/namespace/service:okteto",
+		},
+		{
+			name: "in-okteto-image-not-in-okteto",
+			input: input{
+				image:     "okteto/hello",
+				service:   "service",
+				namespace: "namespace",
+				config: fake.FakeConfig{
+					RegistryURL: "my-registry.com",
+				},
+			},
+			expected: "my-registry.com/namespace/service:okteto",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			or := NewOktetoRegistry(tt.input.config)
+			result := or.GetImageTag(tt.input.image, tt.input.service, tt.input.namespace)
+
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

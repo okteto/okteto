@@ -21,6 +21,14 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
+// OktetoRegistryInterface represents the interface to interact with the registry
+type OktetoRegistryInterface interface {
+	GetImageTagWithDigest(image string) (string, error)
+	GetImageMetadata(image string) (ImageMetadata, error)
+	IsOktetoRegistry(image string) bool
+	GetImageTag(image, service, namespace string) string
+}
+
 type configInterface interface {
 	IsOktetoCluster() bool
 	GetGlobalNamespace() string
@@ -88,4 +96,16 @@ func (or OktetoRegistry) GetImageMetadata(image string) (ImageMetadata, error) {
 func (or OktetoRegistry) IsOktetoRegistry(image string) bool {
 	expandedImage := or.imageCtrl.expandImageRegistries(image)
 	return or.config.IsOktetoCluster() && strings.HasPrefix(expandedImage, or.config.GetRegistryURL())
+}
+
+// GetImageTag returns the image tag to build for a given services
+func (or OktetoRegistry) GetImageTag(image, service, namespace string) string {
+	if or.config.GetRegistryURL() != "" {
+		if or.IsOktetoRegistry(image) {
+			return image
+		}
+		return fmt.Sprintf("%s/%s/%s:okteto", or.config.GetRegistryURL(), namespace, service)
+	}
+	imageWithoutTag, _ := or.imageCtrl.getRepoNameAndTag(image)
+	return fmt.Sprintf("%s:okteto", imageWithoutTag)
 }
