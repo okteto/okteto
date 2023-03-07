@@ -153,51 +153,6 @@ func GetRegistryAndRepo(tag string) (string, string) {
 	return registryTag, imageTag
 }
 
-// GetImageMetadata returns the ports exposed at the image
-func GetImageMetadata(imageRef string) *ImageMetadata {
-	result := &ImageMetadata{}
-	result.Image = imageRef
-	result.Ports = make([]model.Port, 0)
-
-	imageRef = ExpandOktetoDevRegistry(imageRef)
-	imageRef = ExpandOktetoGlobalRegistry(imageRef)
-
-	image, err := imageForReference(imageRef)
-	if err != nil {
-		oktetoLog.Debugf("error in GetImageMetadata.imageForReference: %s", err.Error())
-		return result
-	}
-
-	digest, err := image.Digest()
-	if err != nil {
-		oktetoLog.Debugf("error in GetImageMetadata.Digest: %s", err.Error())
-		return result
-	}
-	registry, tag := GetRegistryAndRepo(imageRef)
-	repository, _ := GetRepoNameAndTag(tag)
-	result.Image = fmt.Sprintf("%s/%s@%s", registry, repository, digest.String())
-
-	configFile, err := image.ConfigFile()
-	if err != nil {
-		oktetoLog.Debugf("error in GetImageMetadata.ConfigFile: %s", err.Error())
-		return result
-	}
-	if configFile.Config.ExposedPorts != nil {
-		for port := range configFile.Config.ExposedPorts {
-			slashIndx := strings.Index(port, "/")
-			if slashIndx != -1 {
-				port = port[:slashIndx]
-				portInt, err := strconv.ParseInt(port, 10, 32)
-				if err != nil {
-					continue
-				}
-				result.Ports = append(result.Ports, model.Port{ContainerPort: int32(portInt), Protocol: v1.ProtocolTCP})
-			}
-		}
-	}
-	return result
-}
-
 func getRegistryURL(image string) string {
 	registry, _ := GetRegistryAndRepo(image)
 	if registry == "docker.io" {

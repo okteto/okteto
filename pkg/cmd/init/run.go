@@ -30,7 +30,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/registry/registry"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/client-go/kubernetes"
@@ -46,10 +46,10 @@ const (
 )
 
 // GetDevDefaultsFromImage sets dev defaults from a image
-func GetDevDefaultsFromImage(app apps.App) (*registry.ImageConfig, error) {
+func GetDevDefaultsFromImage(app apps.App) (registry.ImageMetadata, error) {
 	image := app.PodSpec().Containers[0].Image
-	return registry.GetImageConfigFromImage(image)
-
+	reg := registry.NewOktetoRegistry(okteto.Config{})
+	return reg.GetImageMetadata(image)
 }
 
 // SetImage sets dev defaults from a running app

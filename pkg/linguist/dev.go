@@ -22,7 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/registry/registry"
 	apiv1 "k8s.io/api/core/v1"
 )
 
@@ -303,7 +303,7 @@ func GetSupportedLanguages() []string {
 }
 
 // GetDevDefaults gets default values for the specified language
-func GetDevDefaults(language, workdir string, imageConfig *registry.ImageConfig) (*model.Dev, error) {
+func GetDevDefaults(language, workdir string, imageConfig registry.ImageMetadata) (*model.Dev, error) {
 	language = NormalizeLanguage(language)
 	vals := languageDefaults[language]
 
