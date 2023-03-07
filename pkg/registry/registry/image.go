@@ -54,14 +54,14 @@ func NewImageCtrl(config configInterface) imageCtrl {
 
 func (ic imageCtrl) expandImageRegistries(image string) string {
 	if ic.config.IsOktetoCluster() {
-		image = ic.expandOktetoDevRegistry(image)
-		image = ic.expandOktetoGlobalRegistry(image)
+		image = ic.ExpandOktetoDevRegistry(image)
+		image = ic.ExpandOktetoGlobalRegistry(image)
 	}
 	return image
 }
 
 // ExpandOktetoGlobalRegistry translates okteto.global
-func (ic imageCtrl) expandOktetoGlobalRegistry(tag string) string {
+func (ic imageCtrl) ExpandOktetoGlobalRegistry(tag string) string {
 	globalNamespace := constants.DefaultGlobalNamespace
 	if ic.config.GetGlobalNamespace() != "" {
 		globalNamespace = ic.config.GetGlobalNamespace()
@@ -70,7 +70,7 @@ func (ic imageCtrl) expandOktetoGlobalRegistry(tag string) string {
 }
 
 // ExpandOktetoDevRegistry translates okteto.dev
-func (ic imageCtrl) expandOktetoDevRegistry(tag string) string {
+func (ic imageCtrl) ExpandOktetoDevRegistry(tag string) string {
 	return ic.registryReplacer.Replace(tag, constants.DevRegistry, ic.config.GetNamespace())
 }
 

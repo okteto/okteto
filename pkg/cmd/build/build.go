@@ -108,16 +108,17 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 		}
 	}
 
+	imageCtrl := reg2.NewImageCtrl(okteto.Config{})
 	if okteto.IsOkteto() {
-		buildOptions.Tag = registry.ExpandOktetoDevRegistry(buildOptions.Tag)
-		buildOptions.Tag = registry.ExpandOktetoGlobalRegistry(buildOptions.Tag)
+		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
+		buildOptions.Tag = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.Tag)
 		for i := range buildOptions.CacheFrom {
-			buildOptions.CacheFrom[i] = registry.ExpandOktetoDevRegistry(buildOptions.CacheFrom[i])
-			buildOptions.CacheFrom[i] = registry.ExpandOktetoGlobalRegistry(buildOptions.CacheFrom[i])
+			buildOptions.CacheFrom[i] = imageCtrl.ExpandOktetoDevRegistry(buildOptions.CacheFrom[i])
+			buildOptions.CacheFrom[i] = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.CacheFrom[i])
 		}
 		if buildOptions.ExportCache != "" {
-			buildOptions.ExportCache = registry.ExpandOktetoDevRegistry(buildOptions.ExportCache)
-			buildOptions.ExportCache = registry.ExpandOktetoGlobalRegistry(buildOptions.ExportCache)
+			buildOptions.ExportCache = imageCtrl.ExpandOktetoDevRegistry(buildOptions.ExportCache)
+			buildOptions.ExportCache = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.ExportCache)
 		}
 	}
 
