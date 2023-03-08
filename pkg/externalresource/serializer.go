@@ -2,6 +2,8 @@ package externalresource
 
 import (
 	"fmt"
+
+	"github.com/a8m/envsubst"
 )
 
 type externalResourceUnmarshaller struct {
@@ -44,9 +46,17 @@ func (er *ExternalResource) UnmarshalYAML(unmarshal func(interface{}) error) err
 	}
 
 	for _, endpoint := range result.Endpoints {
+		name, err := envsubst.String(endpoint.Name)
+		if err != nil {
+			return fmt.Errorf("error expanding environment on '%s': %w", endpoint.Name, err)
+		}
+		url, err := envsubst.String(endpoint.Url)
+		if err != nil {
+			return fmt.Errorf("error expanding environment on '%s': %w", endpoint.Name, err)
+		}
 		er.Endpoints = append(er.Endpoints, &ExternalEndpoint{
-			Name: endpoint.Name,
-			Url:  endpoint.Url,
+			Name: name,
+			Url:  url,
 		})
 	}
 
