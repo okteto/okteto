@@ -21,17 +21,21 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
-	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/syncthing"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
+type registryInterface interface {
+	GetImageTagWithDigest(imageTag string) (string, error)
+	GetImageTag(image, service, namespace string) string
+}
+
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
 	Cancel                context.CancelFunc
-	Registry              registry.OktetoRegistryInterface
+	Registry              registryInterface
 	ShutdownCompleted     chan bool
 	Manifest              *model.Manifest
 	Dev                   *model.Dev

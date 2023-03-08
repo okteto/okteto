@@ -22,6 +22,28 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
+type FakeConfig struct {
+	IsOktetoClusterCfg          bool
+	GlobalNamespace             string
+	Namespace                   string
+	RegistryURL                 string
+	UserID                      string
+	Token                       string
+	InsecureSkipTLSVerifyPolicy bool
+	ContextCertificate          *x509.Certificate
+}
+
+func (fc FakeConfig) IsOktetoCluster() bool               { return fc.IsOktetoClusterCfg }
+func (fc FakeConfig) GetGlobalNamespace() string          { return fc.GlobalNamespace }
+func (fc FakeConfig) GetNamespace() string                { return fc.Namespace }
+func (fc FakeConfig) GetRegistryURL() string              { return fc.RegistryURL }
+func (fc FakeConfig) GetUserID() string                   { return fc.UserID }
+func (fc FakeConfig) GetToken() string                    { return fc.Token }
+func (fc FakeConfig) IsInsecureSkipTLSVerifyPolicy() bool { return fc.InsecureSkipTLSVerifyPolicy }
+func (fc FakeConfig) GetContextCertificate() (*x509.Certificate, error) {
+	return fc.ContextCertificate, nil
+}
+
 func TestGetImageTagWithDigest(t *testing.T) {
 	type expected struct {
 		imageTag string
@@ -82,8 +104,8 @@ func TestGetImageTagWithDigest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			or := OktetoRegistry{
 				imageCtrl: NewImageCtrl(tt.input.config),
-				client: FakeClient{
-					GetImageDigest: GetDigest{
+				client: fakeClient{
+					GetImageDigest: getDigest{
 						Result: tt.input.clientConfig.digest,
 						Err:    tt.input.clientConfig.err,
 					},
@@ -101,14 +123,6 @@ func TestGetImageMetadata(t *testing.T) {
 	type expected struct {
 		metadata ImageMetadata
 		err      error
-	}
-	type getDigest struct {
-		digest string
-		err    error
-	}
-	type getConfig struct {
-		cfg *v1.ConfigFile
-		err error
 	}
 	type clientConfig struct {
 		getDigest getDigest
@@ -134,11 +148,11 @@ func TestGetImageMetadata(t *testing.T) {
 				},
 				clientConfig: clientConfig{
 					getDigest: getDigest{
-						digest: "thisisatest",
-						err:    nil,
+						Result: "thisisatest",
+						Err:    nil,
 					},
 					getConfig: getConfig{
-						cfg: &v1.ConfigFile{
+						Result: &v1.ConfigFile{
 							Config: v1.Config{
 								ExposedPorts: map[string]struct{}{
 									"8080/tcp": {},
@@ -147,7 +161,7 @@ func TestGetImageMetadata(t *testing.T) {
 								WorkingDir: "/usr/src/app",
 							},
 						},
-						err: nil,
+						Err: nil,
 					},
 				},
 			},
@@ -171,8 +185,8 @@ func TestGetImageMetadata(t *testing.T) {
 				},
 				clientConfig: clientConfig{
 					getDigest: getDigest{
-						digest: "",
-						err:    assert.AnError,
+						Result: "",
+						Err:    assert.AnError,
 					},
 				},
 			},
@@ -191,12 +205,12 @@ func TestGetImageMetadata(t *testing.T) {
 				},
 				clientConfig: clientConfig{
 					getDigest: getDigest{
-						digest: "thisisatest",
-						err:    nil,
+						Result: "thisisatest",
+						Err:    nil,
 					},
 					getConfig: getConfig{
-						cfg: nil,
-						err: assert.AnError,
+						Result: nil,
+						Err:    assert.AnError,
 					},
 				},
 			},
@@ -210,15 +224,9 @@ func TestGetImageMetadata(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			or := OktetoRegistry{
 				imageCtrl: NewImageCtrl(tt.input.config),
-				client: FakeClient{
-					GetImageDigest: GetDigest{
-						Result: tt.input.clientConfig.getDigest.digest,
-						Err:    tt.input.clientConfig.getDigest.err,
-					},
-					GetConfig: GetConfig{
-						Result: tt.input.clientConfig.getConfig.cfg,
-						Err:    tt.input.clientConfig.getConfig.err,
-					},
+				client: fakeClient{
+					GetImageDigest: tt.input.clientConfig.getDigest,
+					GetConfig:      tt.input.clientConfig.getConfig,
 				},
 			}
 
@@ -403,7 +411,7 @@ func TestGetImageReference(t *testing.T) {
 				Registry: "index.docker.io",
 				Repo:     "okteto/hello",
 				Tag:      "okteto",
-				Image:    "index.docker.io/okteto/hello:okteto",
+				Image:    "okteto/hello:okteto",
 			},
 		},
 		{
@@ -413,7 +421,7 @@ func TestGetImageReference(t *testing.T) {
 				Registry: "my-registry.com",
 				Repo:     "okteto/hello",
 				Tag:      "latest",
-				Image:    "my-registry.com/okteto/hello:latest",
+				Image:    "my-registry.com/okteto/hello",
 			},
 		},
 	}

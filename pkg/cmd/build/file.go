@@ -124,7 +124,7 @@ func translateCacheHandler(input, userID string) string {
 }
 
 func translateOktetoRegistryImage(input string) string {
-	replacer := registry.NewRegistryReplacer(okteto.Context().Registry)
+	replacer := registry.NewRegistryReplacer(okteto.Config{})
 	if strings.Contains(input, constants.DevRegistry) {
 		tag := replacer.Replace(input, constants.DevRegistry, okteto.Context().Namespace)
 		return tag

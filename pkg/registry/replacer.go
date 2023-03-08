@@ -20,12 +20,16 @@ import (
 )
 
 type Replacer struct {
-	registryURL string
+	config ReplacerConfigInterface
 }
 
-func NewRegistryReplacer(registryURL string) Replacer {
+type ReplacerConfigInterface interface {
+	GetRegistryURL() string
+}
+
+func NewRegistryReplacer(config ReplacerConfigInterface) Replacer {
 	return Replacer{
-		registryURL: registryURL,
+		config: config,
 	}
 }
 
@@ -33,7 +37,7 @@ func (r Replacer) Replace(image, registryType, namespace string) string {
 	// Check if the registryType is the start of the sentence or has a whitespace before it
 	var re = regexp.MustCompile(fmt.Sprintf(`(^|\s)(%s)`, registryType))
 	if re.MatchString(image) {
-		return strings.Replace(image, registryType, fmt.Sprintf("%s/%s", r.registryURL, namespace), 1)
+		return strings.Replace(image, registryType, fmt.Sprintf("%s/%s", r.config.GetRegistryURL(), namespace), 1)
 	}
 	return image
 }

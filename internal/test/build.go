@@ -22,11 +22,15 @@ import (
 // FakeOktetoBuilder emulates an okteto image builder
 type FakeOktetoBuilder struct {
 	Err      []error
-	Registry *fake.FakeOktetoRegistry
+	Registry fakeOktetoRegistryInterface
+}
+
+type fakeOktetoRegistryInterface interface {
+	AddImageByOpts(opts *types.BuildOptions) error
 }
 
 // NewFakeOktetoBuilder creates a FakeOktetoBuilder
-func NewFakeOktetoBuilder(registry *fake.FakeOktetoRegistry, errors ...error) *FakeOktetoBuilder {
+func NewFakeOktetoBuilder(registry fakeOktetoRegistryInterface, errors ...error) *FakeOktetoBuilder {
 	return &FakeOktetoBuilder{
 		Err:      errors,
 		Registry: registry,

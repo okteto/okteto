@@ -14,6 +14,7 @@
 package registry
 
 import (
+	"crypto/x509"
 	"errors"
 	"fmt"
 
@@ -32,13 +33,21 @@ type clientInterface interface {
 	GetImageConfig(image string) (*v1.ConfigFile, error)
 }
 
+type ClientConfigInterface interface {
+	GetRegistryURL() string
+	GetUserID() string
+	GetToken() string
+	IsInsecureSkipTLSVerifyPolicy() bool
+	GetContextCertificate() (*x509.Certificate, error)
+}
+
 // client connects with the
 type client struct {
-	config configInterface
+	config ClientConfigInterface
 	get    func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error)
 }
 
-func newOktetoRegistryClient(config configInterface) client {
+func newOktetoRegistryClient(config ClientConfigInterface) client {
 	return client{
 		config: config,
 		get:    remote.Get,

@@ -37,10 +37,16 @@ type OktetoBuilderInterface interface {
 	Run(ctx context.Context, buildOptions *types.BuildOptions) error
 }
 
+type oktetoRegistryInterface interface {
+	GetImageTagWithDigest(imageTag string) (string, error)
+	IsOktetoRegistry(image string) bool
+	GetImageReference(image string) (registry.OktetoImageReference, error)
+}
+
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
 	Builder   OktetoBuilderInterface
-	Registry  registry.OktetoRegistryInterface
+	Registry  oktetoRegistryInterface
 	V1Builder *buildv1.OktetoBuilder
 
 	// buildEnvironments are the environment variables created by the build steps
@@ -54,7 +60,7 @@ type OktetoBuilder struct {
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry registry.OktetoRegistryInterface) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface) *OktetoBuilder {
 	b := NewBuilderFromScratch()
 	b.Builder = builder
 	b.Registry = registry

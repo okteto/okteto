@@ -33,14 +33,18 @@ type OktetoBuilderInterface interface {
 	Run(ctx context.Context, buildOptions *types.BuildOptions) error
 }
 
+type oktetoRegistryInterface interface {
+	GetImageTagWithDigest(imageTag string) (string, error)
+}
+
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
 	Builder  OktetoBuilderInterface
-	Registry registry.OktetoRegistryInterface
+	Registry oktetoRegistryInterface
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry registry.OktetoRegistryInterface) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface) *OktetoBuilder {
 	return &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,

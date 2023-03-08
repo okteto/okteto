@@ -21,9 +21,21 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 )
 
+type fakeImageConfig struct {
+	registryURL string
+	isOkteto    bool
+	globalNs    string
+	ns          string
+}
+
+func (f fakeImageConfig) GetRegistryURL() string     { return f.registryURL }
+func (f fakeImageConfig) IsOktetoCluster() bool      { return f.isOkteto }
+func (f fakeImageConfig) GetGlobalNamespace() string { return f.globalNs }
+func (f fakeImageConfig) GetNamespace() string       { return f.ns }
+
 func TestExpandRegistry(t *testing.T) {
 	type input struct {
-		config FakeConfig
+		config fakeImageConfig
 		image  string
 	}
 	var tests = []struct {
@@ -34,8 +46,8 @@ func TestExpandRegistry(t *testing.T) {
 		{
 			name: "no need to expand registry - Vanilla",
 			input: input{
-				config: FakeConfig{
-					IsOktetoClusterCfg: false,
+				config: fakeImageConfig{
+					isOkteto: false,
 				},
 				image: "okteto/okteto:latest",
 			},
@@ -44,8 +56,8 @@ func TestExpandRegistry(t *testing.T) {
 		{
 			name: "no need to expand registry - Okteto",
 			input: input{
-				config: FakeConfig{
-					IsOktetoClusterCfg: true,
+				config: fakeImageConfig{
+					isOkteto: true,
 				},
 				image: "okteto/okteto:latest",
 			},
@@ -54,10 +66,10 @@ func TestExpandRegistry(t *testing.T) {
 		{
 			name: "okteto dev should expansion - Okteto",
 			input: input{
-				config: FakeConfig{
-					IsOktetoClusterCfg: true,
-					Namespace:          "test",
-					RegistryURL:        "https://my-registry",
+				config: fakeImageConfig{
+					isOkteto:    true,
+					ns:          "test",
+					registryURL: "https://my-registry",
 				},
 				image: "okteto.dev/okteto:latest",
 			},
@@ -66,8 +78,8 @@ func TestExpandRegistry(t *testing.T) {
 		{
 			name: "no need to expand registry - Okteto",
 			input: input{
-				config: FakeConfig{
-					IsOktetoClusterCfg: false,
+				config: fakeImageConfig{
+					isOkteto: false,
 				},
 				image: "okteto.dev/okteto:latest",
 			},
@@ -76,10 +88,10 @@ func TestExpandRegistry(t *testing.T) {
 		{
 			name: "okteto global should expansion - Okteto",
 			input: input{
-				config: FakeConfig{
-					IsOktetoClusterCfg: true,
-					GlobalNamespace:    "test",
-					RegistryURL:        "https://my-registry",
+				config: fakeImageConfig{
+					isOkteto:    true,
+					globalNs:    "test",
+					registryURL: "https://my-registry",
 				},
 				image: "okteto.global/okteto:latest",
 			},
@@ -88,8 +100,8 @@ func TestExpandRegistry(t *testing.T) {
 		{
 			name: "no need to expand registry - Okteto",
 			input: input{
-				config: FakeConfig{
-					IsOktetoClusterCfg: false,
+				config: fakeImageConfig{
+					isOkteto: false,
 				},
 				image: "okteto.global/okteto:latest",
 			},

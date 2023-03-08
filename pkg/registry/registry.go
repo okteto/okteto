@@ -22,15 +22,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-// OktetoRegistryInterface represents the interface to interact with the registry
-type OktetoRegistryInterface interface {
-	GetImageTagWithDigest(image string) (string, error)
-	GetImageMetadata(image string) (ImageMetadata, error)
-	IsOktetoRegistry(image string) bool
-	GetImageTag(image, service, namespace string) string
-	GetImageReference(image string) (OktetoImageReference, error)
-}
-
 type configInterface interface {
 	IsOktetoCluster() bool
 	GetGlobalNamespace() string
@@ -42,11 +33,16 @@ type configInterface interface {
 	GetContextCertificate() (*x509.Certificate, error)
 }
 
+type registryConfig interface {
+	IsOktetoCluster() bool
+	GetRegistryURL() string
+}
+
 // OktetoRegistry represents the registry
 type OktetoRegistry struct {
 	client    clientInterface
 	imageCtrl imageCtrl
-	config    configInterface
+	config    registryConfig
 }
 
 type OktetoImageReference struct {
@@ -129,6 +125,6 @@ func (or OktetoRegistry) GetImageReference(image string) (OktetoImageReference, 
 		Registry: ref.Context().RegistryStr(),
 		Repo:     ref.Context().RepositoryStr(),
 		Tag:      ref.Identifier(),
-		Image:    ref.Name(),
+		Image:    image,
 	}, nil
 }

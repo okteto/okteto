@@ -41,14 +41,21 @@ func (p Port) GetContainerPort() int32     { return p.ContainerPort }
 func (p Port) GetProtocol() apiv1.Protocol { return p.Protocol }
 
 type imageCtrl struct {
-	config           configInterface
+	config           imageConfig
 	registryReplacer Replacer
 }
 
-func NewImageCtrl(config configInterface) imageCtrl {
+type imageConfig interface {
+	IsOktetoCluster() bool
+	GetGlobalNamespace() string
+	GetNamespace() string
+	GetRegistryURL() string
+}
+
+func NewImageCtrl(config imageConfig) imageCtrl {
 	return imageCtrl{
 		config:           config,
-		registryReplacer: NewRegistryReplacer(config.GetRegistryURL()),
+		registryReplacer: NewRegistryReplacer(config),
 	}
 }
 

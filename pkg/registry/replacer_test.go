@@ -20,6 +20,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type fakeReplacerConfig struct {
+	registryURL string
+}
+
+func (f fakeReplacerConfig) GetRegistryURL() string { return f.registryURL }
+
 func TestReplace(t *testing.T) {
 	type input struct {
 		image        string
@@ -65,7 +71,7 @@ func TestReplace(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			replacer := NewRegistryReplacer(tt.input.registryURL)
+			replacer := NewRegistryReplacer(fakeReplacerConfig{tt.input.registryURL})
 
 			result := replacer.Replace(tt.input.image, tt.input.registryType, tt.input.ns)
 			assert.Equal(t, tt.expected, result)
