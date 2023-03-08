@@ -19,7 +19,6 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	containerv1 "github.com/google/go-containerregistry/pkg/v1"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -44,11 +43,11 @@ type getConfig struct {
 	Err    error
 }
 
-func (fc fakeClient) GetDigest(image string) (string, error) {
+func (fc fakeClient) GetDigest(_ string) (string, error) {
 	return fc.GetImageDigest.Result, fc.GetImageDigest.Err
 }
 
-func (fc fakeClient) GetImageConfig(image string) (*containerv1.ConfigFile, error) {
+func (fc fakeClient) GetImageConfig(_ string) (*containerv1.ConfigFile, error) {
 	return fc.GetConfig.Result, fc.GetConfig.Err
 }
 
@@ -103,8 +102,8 @@ func TestGetDigest(t *testing.T) {
 			},
 			getConfig: getConfig{
 				descriptor: &remote.Descriptor{
-					Descriptor: v1.Descriptor{
-						Digest: v1.Hash{
+					Descriptor: containerv1.Descriptor{
+						Digest: containerv1.Hash{
 							Hex: "testtestest",
 						},
 					},

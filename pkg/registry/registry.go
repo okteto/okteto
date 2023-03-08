@@ -41,7 +41,7 @@ type registryConfig interface {
 // OktetoRegistry represents the registry
 type OktetoRegistry struct {
 	client    clientInterface
-	imageCtrl imageCtrl
+	imageCtrl ImageCtrl
 	config    registryConfig
 }
 
@@ -115,7 +115,7 @@ func (or OktetoRegistry) GetImageTag(image, service, namespace string) string {
 	return fmt.Sprintf("%s:okteto", imageWithoutTag)
 }
 
-// GetReferecenceEnvs returns the values to setup the image environment variables
+// GetImageReference returns the values to setup the image environment variables
 func (or OktetoRegistry) GetImageReference(image string) (OktetoImageReference, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {

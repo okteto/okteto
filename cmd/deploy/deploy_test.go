@@ -29,7 +29,6 @@ import (
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -104,7 +103,7 @@ func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageRefe
 	}, nil
 }
 
-func (fr fakeRegistry) IsOktetoRegistry(image string) bool { return false }
+func (fr fakeRegistry) IsOktetoRegistry(_ string) bool { return false }
 
 func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
 	fr.registry[opts.Tag] = fakeImage{Args: opts.BuildArgs}
@@ -338,7 +337,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	expectedCfg.Data["output"] = cfg.Data["output"]
 
-	assert.True(t, strings.Contains(oktetoLog.GetOutputBuffer().String(), errors.InvalidDockerfile))
+	assert.True(t, strings.Contains(oktetoLog.GetOutputBuffer().String(), oktetoErrors.InvalidDockerfile))
 
 	assert.Equal(t, expectedCfg.Name, cfg.Name)
 	assert.Equal(t, expectedCfg.Namespace, cfg.Namespace)

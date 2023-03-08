@@ -68,7 +68,7 @@ func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
 	}
 	return imageTag, nil
 }
-func (fr fakeRegistry) IsOktetoRegistry(image string) bool { return false }
+func (fr fakeRegistry) IsOktetoRegistry(_ string) bool { return false }
 
 func (fr fakeRegistry) AddImageByName(images ...string) error {
 	for _, image := range images {

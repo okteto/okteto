@@ -171,7 +171,7 @@ func Test_GetRegistryAndRepo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			iCtrl := imageCtrl{}
+			iCtrl := ImageCtrl{}
 			registry, image := iCtrl.GetRegistryAndRepo(tt.tag)
 			assert.Equal(t, tt.expected.registry, registry)
 			assert.Equal(t, tt.expected.image, image)
@@ -264,7 +264,7 @@ func Test_GetRepoNameAndTag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo, tag := imageCtrl{}.getRepoNameAndTag(tt.image)
+			repo, tag := ImageCtrl{}.getRepoNameAndTag(tt.image)
 			assert.Equal(t, tt.expected.repo, repo)
 			assert.Equal(t, tt.expected.tag, tag)
 		})
@@ -319,7 +319,7 @@ func TestGetExposedPortsFromCfg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ports := imageCtrl{}.getExposedPortsFromCfg(tt.cfg)
+			ports := ImageCtrl{}.getExposedPortsFromCfg(tt.cfg)
 			assert.Equal(t, tt.expected, ports)
 		})
 	}

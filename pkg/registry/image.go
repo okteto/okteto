@@ -40,7 +40,7 @@ func (p Port) GetHostPort() int32          { return 0 }
 func (p Port) GetContainerPort() int32     { return p.ContainerPort }
 func (p Port) GetProtocol() apiv1.Protocol { return p.Protocol }
 
-type imageCtrl struct {
+type ImageCtrl struct {
 	config           imageConfig
 	registryReplacer Replacer
 }
@@ -52,14 +52,14 @@ type imageConfig interface {
 	GetRegistryURL() string
 }
 
-func NewImageCtrl(config imageConfig) imageCtrl {
-	return imageCtrl{
+func NewImageCtrl(config imageConfig) ImageCtrl {
+	return ImageCtrl{
 		config:           config,
 		registryReplacer: NewRegistryReplacer(config),
 	}
 }
 
-func (ic imageCtrl) expandImageRegistries(image string) string {
+func (ic ImageCtrl) expandImageRegistries(image string) string {
 	if ic.config.IsOktetoCluster() {
 		image = ic.ExpandOktetoDevRegistry(image)
 		image = ic.ExpandOktetoGlobalRegistry(image)
@@ -68,7 +68,7 @@ func (ic imageCtrl) expandImageRegistries(image string) string {
 }
 
 // ExpandOktetoGlobalRegistry translates okteto.global
-func (ic imageCtrl) ExpandOktetoGlobalRegistry(tag string) string {
+func (ic ImageCtrl) ExpandOktetoGlobalRegistry(tag string) string {
 	globalNamespace := constants.DefaultGlobalNamespace
 	if ic.config.GetGlobalNamespace() != "" {
 		globalNamespace = ic.config.GetGlobalNamespace()
@@ -77,12 +77,12 @@ func (ic imageCtrl) ExpandOktetoGlobalRegistry(tag string) string {
 }
 
 // ExpandOktetoDevRegistry translates okteto.dev
-func (ic imageCtrl) ExpandOktetoDevRegistry(tag string) string {
+func (ic ImageCtrl) ExpandOktetoDevRegistry(tag string) string {
 	return ic.registryReplacer.Replace(tag, constants.DevRegistry, ic.config.GetNamespace())
 }
 
 // GetRegistryAndRepo returns image tag and the registry to push the image
-func (imageCtrl) GetRegistryAndRepo(tag string) (string, string) {
+func (ImageCtrl) GetRegistryAndRepo(tag string) (string, string) {
 	var imageTag string
 	registryTag := "docker.io"
 	splittedImage := strings.Split(tag, "/")
@@ -102,7 +102,7 @@ func (imageCtrl) GetRegistryAndRepo(tag string) (string, string) {
 }
 
 // GetRepoNameAndTag returns the image repo and the tag separated
-func (imageCtrl) getRepoNameAndTag(image string) (string, string) {
+func (ImageCtrl) getRepoNameAndTag(image string) (string, string) {
 	var domain, remainder string
 	i := strings.IndexRune(image, '@')
 	if i != -1 {
@@ -124,7 +124,7 @@ func (imageCtrl) getRepoNameAndTag(image string) (string, string) {
 	return fmt.Sprintf("%s/%s", domain, remainder[:i]), remainder[i+1:]
 }
 
-func (imageCtrl) getExposedPortsFromCfg(cfg *containerv1.ConfigFile) []Port {
+func (ImageCtrl) getExposedPortsFromCfg(cfg *containerv1.ConfigFile) []Port {
 	result := []Port{}
 	if cfg.Config.ExposedPorts == nil {
 		return result
