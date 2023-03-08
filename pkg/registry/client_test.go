@@ -22,7 +22,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/registry/registry/fake"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,7 +35,7 @@ func TestGetDigest(t *testing.T) {
 	}
 
 	type input struct {
-		config fake.FakeConfig
+		config FakeConfig
 		image  string
 	}
 	type getConfig struct {
@@ -56,7 +55,7 @@ func TestGetDigest(t *testing.T) {
 		{
 			name: "no error",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					ContextCertificate: &x509.Certificate{},
 				},
 				image: "okteto/test:latest",
@@ -79,7 +78,7 @@ func TestGetDigest(t *testing.T) {
 		{
 			name: "unauthorised error",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					ContextCertificate: &x509.Certificate{},
 				},
 				image: "okteto/test:latest",
@@ -96,7 +95,7 @@ func TestGetDigest(t *testing.T) {
 		{
 			name: "unauthorised error",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					ContextCertificate: &x509.Certificate{},
 				},
 				image: "okteto/test:latest",
@@ -134,7 +133,7 @@ func TestGetDigest(t *testing.T) {
 
 func TestGetOptions(t *testing.T) {
 	type input struct {
-		config fake.FakeConfig
+		config FakeConfig
 		image  string
 	}
 	var tests = []struct {
@@ -145,7 +144,7 @@ func TestGetOptions(t *testing.T) {
 		{
 			name: "our registry with own cert",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL:        "my-registry.com",
 					UserID:             "test",
 					Token:              "token",
@@ -157,7 +156,7 @@ func TestGetOptions(t *testing.T) {
 		{
 			name: "another registry with own cert",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL:        "my-registry.com",
 					UserID:             "test",
 					Token:              "token",
@@ -169,7 +168,7 @@ func TestGetOptions(t *testing.T) {
 		{
 			name: "our registry with insecure cert",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL:                 "my-registry.com",
 					UserID:                      "test",
 					Token:                       "token",
@@ -182,7 +181,7 @@ func TestGetOptions(t *testing.T) {
 		{
 			name: "another registry with insecure cert",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL:                 "my-registry.com",
 					UserID:                      "test",
 					InsecureSkipTLSVerifyPolicy: true,

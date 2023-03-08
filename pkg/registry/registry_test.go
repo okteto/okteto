@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/okteto/okteto/pkg/registry/registry/fake"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 )
@@ -46,7 +45,7 @@ func TestGetImageTagWithDigest(t *testing.T) {
 			name: "get no error",
 			input: config{
 				input: "okteto/test",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					IsOktetoClusterCfg: false,
 					ContextCertificate: &x509.Certificate{},
 				},
@@ -64,7 +63,7 @@ func TestGetImageTagWithDigest(t *testing.T) {
 			name: "get with error",
 			input: config{
 				input: "okteto/test",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					IsOktetoClusterCfg: false,
 					ContextCertificate: &x509.Certificate{},
 				},
@@ -83,8 +82,8 @@ func TestGetImageTagWithDigest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			or := OktetoRegistry{
 				imageCtrl: NewImageCtrl(tt.input.config),
-				client: fake.FakeClient{
-					GetImageDigest: fake.GetDigest{
+				client: FakeClient{
+					GetImageDigest: GetDigest{
 						Result: tt.input.clientConfig.digest,
 						Err:    tt.input.clientConfig.err,
 					},
@@ -129,7 +128,7 @@ func TestGetImageMetadata(t *testing.T) {
 			name: "getDigest/getImageMetadata no error",
 			input: config{
 				input: "okteto/test",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					IsOktetoClusterCfg: false,
 					ContextCertificate: &x509.Certificate{},
 				},
@@ -166,7 +165,7 @@ func TestGetImageMetadata(t *testing.T) {
 			name: "getDigest with error",
 			input: config{
 				input: "okteto/test",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					IsOktetoClusterCfg: false,
 					ContextCertificate: &x509.Certificate{},
 				},
@@ -186,7 +185,7 @@ func TestGetImageMetadata(t *testing.T) {
 			name: "getDigest/getImageMetadata no error",
 			input: config{
 				input: "okteto/test",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					IsOktetoClusterCfg: false,
 					ContextCertificate: &x509.Certificate{},
 				},
@@ -211,12 +210,12 @@ func TestGetImageMetadata(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			or := OktetoRegistry{
 				imageCtrl: NewImageCtrl(tt.input.config),
-				client: fake.FakeClient{
-					GetImageDigest: fake.GetDigest{
+				client: FakeClient{
+					GetImageDigest: GetDigest{
 						Result: tt.input.clientConfig.getDigest.digest,
 						Err:    tt.input.clientConfig.getDigest.err,
 					},
-					GetConfig: fake.GetConfig{
+					GetConfig: GetConfig{
 						Result: tt.input.clientConfig.getConfig.cfg,
 						Err:    tt.input.clientConfig.getConfig.err,
 					},
@@ -244,7 +243,7 @@ func Test_IsOktetoRegistry(t *testing.T) {
 			name: "is-dev-registry",
 			input: input{
 				image: "okteto.dev/image",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL:        "this.is.my.okteto.registry",
 					IsOktetoClusterCfg: true,
 				},
@@ -255,7 +254,7 @@ func Test_IsOktetoRegistry(t *testing.T) {
 			name: "is-global-registry",
 			input: input{
 				image: "okteto.global/image",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL:        "this.is.my.okteto.registry",
 					IsOktetoClusterCfg: true,
 				},
@@ -266,7 +265,7 @@ func Test_IsOktetoRegistry(t *testing.T) {
 			name: "is-expanded-dev-registry",
 			input: input{
 				image: "this.is.my.okteto.registry/user/image",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL:        "this.is.my.okteto.registry",
 					IsOktetoClusterCfg: true,
 				},
@@ -277,7 +276,7 @@ func Test_IsOktetoRegistry(t *testing.T) {
 			name: "is-not-dev-registry",
 			input: input{
 				image: "other-image/image",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL:        "this.is.my.okteto.registry",
 					IsOktetoClusterCfg: true,
 				},
@@ -288,7 +287,7 @@ func Test_IsOktetoRegistry(t *testing.T) {
 			name: "is-dev-registry but cluster is not managed by okteto",
 			input: input{
 				image: "okteto.dev/image",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL:        "this.is.my.okteto.registry",
 					IsOktetoClusterCfg: false,
 				},
@@ -326,7 +325,7 @@ func Test_GetImageTag(t *testing.T) {
 				image:     "okteto/hello",
 				service:   "service",
 				namespace: "namespace",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL: "",
 				},
 			},
@@ -338,7 +337,7 @@ func Test_GetImageTag(t *testing.T) {
 				image:     "my-registry.com/hello",
 				service:   "service",
 				namespace: "namespace",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL:        "my-registry.com",
 					IsOktetoClusterCfg: true,
 				},
@@ -351,7 +350,7 @@ func Test_GetImageTag(t *testing.T) {
 				image:     "hello",
 				service:   "service",
 				namespace: "namespace",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL:        "my-registry.com",
 					IsOktetoClusterCfg: true,
 				},
@@ -364,7 +363,7 @@ func Test_GetImageTag(t *testing.T) {
 				image:     "okteto/hello",
 				service:   "service",
 				namespace: "namespace",
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					RegistryURL: "my-registry.com",
 				},
 			},

@@ -17,14 +17,13 @@ import (
 	"testing"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/okteto/okteto/pkg/registry/registry/fake"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 )
 
 func TestExpandRegistry(t *testing.T) {
 	type input struct {
-		config fake.FakeConfig
+		config FakeConfig
 		image  string
 	}
 	var tests = []struct {
@@ -35,7 +34,7 @@ func TestExpandRegistry(t *testing.T) {
 		{
 			name: "no need to expand registry - Vanilla",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					IsOktetoClusterCfg: false,
 				},
 				image: "okteto/okteto:latest",
@@ -45,7 +44,7 @@ func TestExpandRegistry(t *testing.T) {
 		{
 			name: "no need to expand registry - Okteto",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					IsOktetoClusterCfg: true,
 				},
 				image: "okteto/okteto:latest",
@@ -55,7 +54,7 @@ func TestExpandRegistry(t *testing.T) {
 		{
 			name: "okteto dev should expansion - Okteto",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					IsOktetoClusterCfg: true,
 					Namespace:          "test",
 					RegistryURL:        "https://my-registry",
@@ -67,7 +66,7 @@ func TestExpandRegistry(t *testing.T) {
 		{
 			name: "no need to expand registry - Okteto",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					IsOktetoClusterCfg: false,
 				},
 				image: "okteto.dev/okteto:latest",
@@ -77,7 +76,7 @@ func TestExpandRegistry(t *testing.T) {
 		{
 			name: "okteto global should expansion - Okteto",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					IsOktetoClusterCfg: true,
 					GlobalNamespace:    "test",
 					RegistryURL:        "https://my-registry",
@@ -89,7 +88,7 @@ func TestExpandRegistry(t *testing.T) {
 		{
 			name: "no need to expand registry - Okteto",
 			input: input{
-				config: fake.FakeConfig{
+				config: FakeConfig{
 					IsOktetoClusterCfg: false,
 				},
 				image: "okteto.global/okteto:latest",
