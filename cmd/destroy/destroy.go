@@ -240,20 +240,19 @@ func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) 
 			}
 		}
 
-		if err := manifest.ExpandEnvVars(); err != nil {
-			oktetoLog.Infof("could not expand manifest envs: %v", err)
-		}
-
 		isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
 
 		destroyImage := ""
 		if manifest.Destroy != nil {
-			destroyImage = manifest.Destroy.Image
+			destroyImage, err = model.ExpandEnv(manifest.Destroy.Image, false)
+			if err != nil {
+				return nil, err
+			}
 		}
 		runInRemote := !isRemote && (destroyImage != "" || opts.RunInRemote)
 
 		if runInRemote {
-			deployer = newRemoteDestroyer(manifest)
+			deployer = newRemoteDestroyer(destroyImage)
 			oktetoLog.Info("Destroying remotely...")
 		} else {
 			destroyerAll, err := newLocalDestroyerAll(dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)

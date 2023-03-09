@@ -77,17 +77,17 @@ type dockerfileTemplateProperties struct {
 
 type remoteDestroyCommand struct {
 	builder              builder.Builder
-	manifest             *model.Manifest
+	destroyImage         string
 	fs                   afero.Fs
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
 }
 
-func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
+func newRemoteDestroyer(destroyImage string) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
 	return &remoteDestroyCommand{
 		builder:              remoteBuild.NewBuilderFromScratch(),
-		manifest:             manifest,
+		destroyImage:         destroyImage,
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
@@ -96,8 +96,8 @@ func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
 
 func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) error {
 
-	if rd.manifest.Destroy.Image == "" {
-		rd.manifest.Destroy.Image = constants.OktetoPipelineRunnerImage
+	if rd.destroyImage == "" {
+		rd.destroyImage = constants.OktetoPipelineRunnerImage
 	}
 
 	cwd, err := rd.workingDirectoryCtrl.Get()
@@ -162,7 +162,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
 	dockerfileSyntax := dockerfileTemplateProperties{
 		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
-		UserDestroyImage:   rd.manifest.Destroy.Image,
+		UserDestroyImage:   rd.destroyImage,
 		ContextEnvVar:      model.OktetoContextEnvVar,
 		ContextValue:       okteto.Context().Name,
 		NamespaceEnvVar:    model.OktetoNamespaceEnvVar,
