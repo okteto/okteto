@@ -61,8 +61,6 @@ func Test_translateIngress(t *testing.T) {
 					Annotations: map[string]string{
 						model.OktetoAutoCreateAnnotation: "true",
 						"a1":                             "v1",
-						model.OktetoDivertIngressInjectionAnnotation:    "cindy",
-						model.OktetoNginxConfigurationSnippetAnnotation: divertTextBlockParser.WriteBlock("proxy_set_header x-okteto-dvrt cindy;"),
 					},
 				},
 				Spec: networkingv1.IngressSpec{
@@ -99,9 +97,7 @@ func Test_translateIngress(t *testing.T) {
 						model.DeployedByLabel: "test",
 					},
 					Annotations: map[string]string{
-						model.OktetoAutoCreateAnnotation:                "true",
-						model.OktetoDivertIngressInjectionAnnotation:    "cindy",
-						model.OktetoNginxConfigurationSnippetAnnotation: divertTextBlockParser.WriteBlock("proxy_set_header x-okteto-dvrt cindy;"),
+						model.OktetoAutoCreateAnnotation: "true",
 					},
 				},
 				Spec: networkingv1.IngressSpec{
@@ -112,19 +108,9 @@ func Test_translateIngress(t *testing.T) {
 		},
 	}
 
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-			},
-		},
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := translateIngress(m, tt.in)
+			result := translateIngress("test", "cindy", tt.in)
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Fatalf("test %s failed: %v", tt.name, result)
 			}

@@ -100,15 +100,6 @@ func Test_translateEndpoints(t *testing.T) {
 			},
 		},
 	}
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-			},
-		},
-	}
-	result := translateEndpoints(m, s)
+	result := translateEndpoints("test", "cindy", s)
 	assert.True(t, reflect.DeepEqual(result, expected))
 }

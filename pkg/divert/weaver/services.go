@@ -15,7 +15,6 @@ package weaver
 
 import (
 	"context"
-	"encoding/json"
 	"reflect"
 
 	"github.com/okteto/okteto/pkg/format"
@@ -25,15 +24,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
-
-// PortMapping represents the divert original port mappings
-type PortMapping struct {
-	ProxyPort          int32 `json:"proxy_port,omitempty" yaml:"proxy_port,omitempty"`
-	OriginalPort       int32 `json:"original_port,omitempty" yaml:"original_port,omitempty"`
-	OriginalTargetPort int32 `json:"original_target_port,omitempty" yaml:"original_target_port,omitempty"`
-}
 
 func (d *Driver) divertService(ctx context.Context, name string) error {
 	from, ok := d.cache.divertServices[name]
@@ -43,12 +34,12 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 	}
 	s, ok := d.cache.developerServices[name]
 	if !ok {
-		newS, err := translateService(d.manifest, from)
+		newS, err := translateService(d.name, d.namespace, from)
 		if err != nil {
 			return err
 		}
 		oktetoLog.Infof("creating service %s/%s", newS.Namespace, newS.Name)
-		if _, err := d.client.CoreV1().Services(d.manifest.Namespace).Create(ctx, newS, metav1.CreateOptions{}); err != nil {
+		if _, err := d.client.CoreV1().Services(d.namespace).Create(ctx, newS, metav1.CreateOptions{}); err != nil {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
@@ -61,13 +52,13 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 		return nil
 	}
 
-	updatedS, err := translateService(d.manifest, from)
+	updatedS, err := translateService(d.name, d.namespace, from)
 	if err != nil {
 		return err
 	}
 	if !isEqualService(s, updatedS) {
 		oktetoLog.Infof("updating service %s/%s", updatedS.Namespace, updatedS.Name)
-		if _, err := d.client.CoreV1().Services(d.manifest.Namespace).Update(ctx, updatedS, metav1.UpdateOptions{}); err != nil {
+		if _, err := d.client.CoreV1().Services(d.namespace).Update(ctx, updatedS, metav1.UpdateOptions{}); err != nil {
 			if !k8sErrors.IsConflict(err) {
 				return err
 			}
@@ -77,17 +68,17 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 	return d.divertEndpoints(ctx, name)
 }
 
-func translateService(m *model.Manifest, s *apiv1.Service) (*apiv1.Service, error) {
+func translateService(name, namespace string, s *apiv1.Service) (*apiv1.Service, error) {
 	result := &apiv1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        s.Name,
-			Namespace:   m.Namespace,
+			Namespace:   namespace,
 			Labels:      s.Labels,
 			Annotations: s.Annotations,
 		},
 		Spec: s.Spec,
 	}
-	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(m.Name))
+	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(name))
 	// create a headless service pointing to an endpoints object that resolves to service cluster ip in the diverted namespace
 	result.Spec.ClusterIP = apiv1.ClusterIPNone
 	result.Spec.ClusterIPs = nil
@@ -96,20 +87,6 @@ func translateService(m *model.Manifest, s *apiv1.Service) (*apiv1.Service, erro
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
-
-	if v := result.Annotations[model.OktetoDivertServiceAnnotation]; v != "" {
-		divertMapping := PortMapping{}
-		if err := json.Unmarshal([]byte(v), &divertMapping); err != nil {
-			return nil, err
-		}
-		for i := range result.Spec.Ports {
-			if result.Spec.Ports[i].TargetPort.IntVal == divertMapping.ProxyPort {
-				result.Spec.Ports[i].TargetPort = intstr.IntOrString{IntVal: divertMapping.OriginalTargetPort}
-			}
-		}
-		delete(result.Annotations, model.OktetoDivertServiceAnnotation)
-	}
-
 	return result, nil
 }
 

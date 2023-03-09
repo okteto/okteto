@@ -17,46 +17,30 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/k8s/diverts"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/textblock"
 	"k8s.io/client-go/kubernetes"
-)
-
-const (
-	divertTextBlockHeader = "# ---- START DIVERT ----"
-	divertTextBlockFooter = "# ---- END DIVERT ----"
-)
-
-var (
-	divertTextBlockParser = textblock.NewTextBlock(divertTextBlockHeader, divertTextBlockFooter)
 )
 
 // Driver weaver struct for the divert driver
 type Driver struct {
-	manifest     *model.Manifest
-	client       kubernetes.Interface
-	divertClient *diverts.DivertV1Client
-	cache        *cache
+	name      string
+	namespace string
+	divert    model.DivertDeploy
+	client    kubernetes.Interface
+	cache     *cache
 }
 
-func New(m *model.Manifest, c kubernetes.Interface, dc *diverts.DivertV1Client) *Driver {
+func New(m *model.Manifest, c kubernetes.Interface) *Driver {
 	return &Driver{
-		manifest:     m,
-		client:       c,
-		divertClient: dc,
+		name:      m.Name,
+		namespace: m.Namespace,
+		divert:    *m.Deploy.Divert,
+		client:    c,
 	}
 }
 
 func (d *Driver) Deploy(ctx context.Context) error {
-	if err := d.divertIngresses(ctx); err != nil {
-		return err
-	}
-	return d.createDivertCRD(ctx)
-}
-
-func (d *Driver) divertIngresses(ctx context.Context) error {
 	if err := d.initCache(ctx); err != nil {
 		return err
 	}
@@ -80,8 +64,8 @@ func (*Driver) Destroy(_ context.Context) error {
 }
 
 func (d *Driver) GetDivertNamespace() string {
-	if d.manifest.Deploy.Divert.Namespace == d.manifest.Namespace {
+	if d.divert.Namespace == d.namespace {
 		return ""
 	}
-	return d.manifest.Deploy.Divert.Namespace
+	return d.divert.Namespace
 }
