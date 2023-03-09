@@ -31,6 +31,7 @@ import (
 type clientInterface interface {
 	GetDigest(image string) (string, error)
 	GetImageConfig(image string) (*v1.ConfigFile, error)
+	HasPushAccess(image string) (bool, error)
 }
 
 type ClientConfigInterface interface {
@@ -39,6 +40,25 @@ type ClientConfigInterface interface {
 	GetToken() string
 	IsInsecureSkipTLSVerifyPolicy() bool
 	GetContextCertificate() (*x509.Certificate, error)
+}
+
+type oktetoHelperConfig interface {
+	GetUserID() string
+	GetToken() string
+}
+
+type oktetoHelper struct {
+	config oktetoHelperConfig
+}
+
+func newOktetoHelper(config oktetoHelperConfig) oktetoHelper {
+	return oktetoHelper{
+		config: config,
+	}
+}
+
+func (oh oktetoHelper) Get(serverURL string) (string, string, error) {
+	return oh.config.GetUserID(), oh.config.GetToken(), nil
 }
 
 // client connects with the
@@ -99,6 +119,15 @@ func (c client) GetImageConfig(image string) (*v1.ConfigFile, error) {
 	return cfg, nil
 }
 
+func (c client) HasPushAccess(image string) (bool, error) {
+	ref, err := name.ParseReference(image)
+	if err != nil {
+		return false, fmt.Errorf("error checking push access: %w", err)
+	}
+	err = remote.CheckPushPermission(ref, c.getAuthHelper(ref), oktetoHttp.DefaultTransport())
+	return err == nil, err
+}
+
 func (c client) isNotFound(err error) bool {
 	var transportErr *transport.Error
 	if errors.As(err, &transportErr) {
@@ -113,6 +142,11 @@ func (c client) isNotFound(err error) bool {
 
 func (c client) getOptions(ref name.Reference) []remote.Option {
 	return []remote.Option{c.getAuthentication(ref), c.getTransport()}
+}
+
+func (c client) getAuthHelper(ref name.Reference) authn.Keychain {
+	helper := newOktetoHelper(c.config)
+	return authn.NewKeychainFromHelper(helper)
 }
 
 func (c client) getAuthentication(ref name.Reference) remote.Option {

@@ -103,6 +103,8 @@ func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageRefe
 	}, nil
 }
 
+func (fr fakeRegistry) HasGlobalPushAcces() (bool, error) { return false, nil }
+
 func (fr fakeRegistry) IsOktetoRegistry(_ string) bool { return false }
 
 func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {

@@ -29,6 +29,7 @@ import (
 type fakeClient struct {
 	GetImageDigest getDigest
 	GetConfig      getConfig
+	HasPushAcces   hasPushAccess
 }
 
 // GetDigest has everything needed to mock a getDigest API call
@@ -43,12 +44,21 @@ type getConfig struct {
 	Err    error
 }
 
+type hasPushAccess struct {
+	Result bool
+	Err    error
+}
+
 func (fc fakeClient) GetDigest(_ string) (string, error) {
 	return fc.GetImageDigest.Result, fc.GetImageDigest.Err
 }
 
 func (fc fakeClient) GetImageConfig(_ string) (*containerv1.ConfigFile, error) {
 	return fc.GetConfig.Result, fc.GetConfig.Err
+}
+
+func (fc fakeClient) HasPushAccess(image string) (bool, error) {
+	return fc.HasPushAcces.Result, fc.HasPushAcces.Err
 }
 
 type fakeClientConfig struct {

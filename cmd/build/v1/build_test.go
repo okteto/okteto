@@ -59,6 +59,8 @@ func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
 	return nil
 }
 
+func (fr fakeRegistry) HasGlobalPushAcces() (bool, error) { return false, nil }
+
 func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
 	okteto.CurrentStore = &okteto.OktetoContextStore{

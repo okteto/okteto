@@ -35,19 +35,28 @@ type OktetoBuilderInterface interface {
 
 type oktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
+	HasGlobalPushAcces() (bool, error)
+}
+
+type oktetoBuilderConfig struct {
+	hasGlobalAccess bool
 }
 
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
 	Builder  OktetoBuilderInterface
 	Registry oktetoRegistryInterface
+
+	config oktetoBuilderConfig
+
 }
 
 // NewBuilder creates a new okteto builder
 func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface) *OktetoBuilder {
 	return &OktetoBuilder{
-		Builder:  builder,
-		Registry: registry,
+		Builder:              builder,
+		Registry:             registry,
+		config: getConfig(registry, gitRepo),
 	}
 }
 
@@ -55,10 +64,22 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 func NewBuilderFromScratch() *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
-	return &OktetoBuilder{
-		Builder:  builder,
-		Registry: registry,
+	return NewBuilder(builder, registry)
+}
+
+func getConfig(registry oktetoRegistryInterface, gitRepo repository.Repository) oktetoBuilderConfig {
+	hasAccess, err := registry.HasGlobalPushAcces()
+	if err != nil {
+		oktetoLog.Infof("error trying to access globalPushAccess: %w", err)
 	}
+	return oktetoBuilderConfig{
+		hasGlobalAccess: hasAccess,
+	}
+}
+
+// HasGlobalAccess checks if the user has access to global registry
+func (ob *OktetoBuilder) HasGlobalAccess() bool {
+	return ob.config.hasGlobalAccess
 }
 
 // IsV1 returns true since it is a builder v1
