@@ -32,9 +32,9 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 	from := d.cache.divertIngresses[name]
 	in, ok := d.cache.developerIngresses[name]
 	if !ok {
-		in = translateIngress(d.manifest, from)
+		in = translateIngress(d.name, d.namespace, from)
 		oktetoLog.Infof("creating ingress %s/%s", in.Namespace, in.Name)
-		if _, err := d.client.NetworkingV1().Ingresses(d.manifest.Namespace).Create(ctx, in, metav1.CreateOptions{}); err != nil {
+		if _, err := d.client.NetworkingV1().Ingresses(d.namespace).Create(ctx, in, metav1.CreateOptions{}); err != nil {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
@@ -44,18 +44,11 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 		updatedIn := in.DeepCopy()
 		if in.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
 			// ingress was created by divert
-			updatedIn = translateIngress(d.manifest, d.cache.divertIngresses[name])
-		} else if in.Annotations[model.OktetoDivertIngressInjectionAnnotation] != d.manifest.Namespace {
-			// ingress wasn't created by divert, check header injection
-			if updatedIn.Annotations == nil {
-				updatedIn.Annotations = map[string]string{}
-			}
-			updatedIn.Annotations[model.OktetoDivertIngressInjectionAnnotation] = d.manifest.Namespace
-			updatedIn.Annotations[model.OktetoNginxConfigurationSnippetAnnotation] = divertTextBlockParser.WriteBlock(fmt.Sprintf("proxy_set_header x-okteto-dvrt %s;", d.manifest.Namespace))
+			updatedIn = translateIngress(d.name, d.namespace, d.cache.divertIngresses[name])
 		}
 		if !isEqualIngress(in, updatedIn) {
 			oktetoLog.Infof("updating ingress %s/%s", updatedIn.Namespace, updatedIn.Name)
-			if _, err := d.client.NetworkingV1().Ingresses(d.manifest.Namespace).Update(ctx, updatedIn, metav1.UpdateOptions{}); err != nil {
+			if _, err := d.client.NetworkingV1().Ingresses(d.namespace).Update(ctx, updatedIn, metav1.UpdateOptions{}); err != nil {
 				if !k8sErrors.IsConflict(err) {
 					return err
 				}
@@ -75,11 +68,11 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 	return nil
 }
 
-func translateIngress(m *model.Manifest, from *networkingv1.Ingress) *networkingv1.Ingress {
+func translateIngress(name, namespace string, from *networkingv1.Ingress) *networkingv1.Ingress {
 	result := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        from.Name,
-			Namespace:   m.Namespace,
+			Namespace:   namespace,
 			Labels:      from.Labels,
 			Annotations: from.Annotations,
 		},
@@ -89,16 +82,14 @@ func translateIngress(m *model.Manifest, from *networkingv1.Ingress) *networking
 		result.Annotations = map[string]string{}
 	}
 	result.Annotations[model.OktetoAutoCreateAnnotation] = "true"
-	result.Annotations[model.OktetoDivertIngressInjectionAnnotation] = m.Namespace
-	result.Annotations[model.OktetoNginxConfigurationSnippetAnnotation] = divertTextBlockParser.WriteBlock(fmt.Sprintf("proxy_set_header x-okteto-dvrt %s;", m.Namespace))
 
-	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(m.Name))
+	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(name))
 	for i := range result.Spec.Rules {
-		result.Spec.Rules[i].Host = strings.ReplaceAll(result.Spec.Rules[i].Host, from.Namespace, m.Namespace)
+		result.Spec.Rules[i].Host = strings.ReplaceAll(result.Spec.Rules[i].Host, from.Namespace, namespace)
 	}
 	for i := range result.Spec.TLS {
 		for j := range result.Spec.TLS[i].Hosts {
-			result.Spec.TLS[i].Hosts[j] = strings.ReplaceAll(result.Spec.TLS[i].Hosts[j], from.Namespace, m.Namespace)
+			result.Spec.TLS[i].Hosts[j] = strings.ReplaceAll(result.Spec.TLS[i].Hosts[j], from.Namespace, namespace)
 		}
 	}
 	return result

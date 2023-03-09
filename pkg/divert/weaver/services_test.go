@@ -20,7 +20,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 func Test_translateService(t *testing.T) {
@@ -79,70 +78,6 @@ func Test_translateService(t *testing.T) {
 			},
 		},
 		{
-			name: "diverted",
-			s: &apiv1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "name",
-					Namespace: "staging",
-					Labels:    map[string]string{"l1": "v1"},
-					Annotations: map[string]string{
-						"a1":                                "v1",
-						model.OktetoDivertServiceAnnotation: "{\"proxy_port\":1024,\"original_port\":3000,\"original_target_port\":3000}",
-					},
-				},
-				Spec: apiv1.ServiceSpec{
-					Type: apiv1.ServiceTypeClusterIP,
-					Ports: []apiv1.ServicePort{
-						{
-							Name:       "port1",
-							Port:       8080,
-							TargetPort: intstr.IntOrString{IntVal: 8080},
-						},
-						{
-							Name:       "port2",
-							Port:       3000,
-							TargetPort: intstr.IntOrString{IntVal: 1024},
-						},
-					},
-					ClusterIP:  "my-ip",
-					ClusterIPs: []string{"my-ip"},
-					Selector:   map[string]string{"label": "value"},
-				},
-			},
-			expected: &apiv1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "name",
-					Namespace: "cindy",
-					Labels: map[string]string{
-						model.DeployedByLabel: "test",
-						"l1":                  "v1",
-					},
-					Annotations: map[string]string{
-						model.OktetoAutoCreateAnnotation: "true",
-						"a1":                             "v1",
-					},
-				},
-				Spec: apiv1.ServiceSpec{
-					Type: apiv1.ServiceTypeClusterIP,
-					Ports: []apiv1.ServicePort{
-						{
-							Name:       "port1",
-							Port:       8080,
-							TargetPort: intstr.IntOrString{IntVal: 8080},
-						},
-						{
-							Name:       "port2",
-							Port:       3000,
-							TargetPort: intstr.IntOrString{IntVal: 3000},
-						},
-					},
-					ClusterIP:  apiv1.ClusterIPNone,
-					ClusterIPs: nil,
-					Selector:   nil,
-				},
-			},
-		},
-		{
 			name: "empty",
 			s: &apiv1.Service{
 				ObjectMeta: metav1.ObjectMeta{
@@ -177,21 +112,11 @@ func Test_translateService(t *testing.T) {
 		},
 	}
 
-	m := &model.Manifest{
-		Name:      "test",
-		Namespace: "cindy",
-		Deploy: &model.DeployInfo{
-			Divert: &model.DivertDeploy{
-				Namespace: "staging",
-			},
-		},
-	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, _ := translateService(m, tt.s)
+			result, _ := translateService("test", "cindy", tt.s)
 			if !reflect.DeepEqual(result, tt.expected) {
-				t.Fatalf("test %s failed: %v", tt.name, result)
+				t.Fatalf("test %s failed: %v vs %s", tt.name, result, tt.expected)
 			}
 		})
 	}
