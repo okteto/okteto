@@ -71,10 +71,10 @@ const (
 	// NamespaceStatusSleeping indicates that the namespace is sleeping
 	NamespaceStatusSleeping = "Sleeping"
 
-	// DevRegistry fake url for okteto registry
+	// DevRegistry alias url for okteto registry
 	DevRegistry = "okteto.dev"
 
-	// GlobalRegistry fake url for okteto global registry
+	// GlobalRegistry alias url for okteto global registry
 	GlobalRegistry = "okteto.global"
 
 	// DefaultGlobalNamespace namespace where okteto app is running
