@@ -175,7 +175,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		return nil, ErrNoDevSelected
 	}
 
-	options := []string{}
+	var options []string
 	for name, dev := range manifest.Dev {
 		if name == devName {
 			return dev, nil
@@ -197,7 +197,7 @@ func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInte
 		}
 		return devs[i] < devs[j]
 	})
-	items := []SelectorItem{}
+	var items []SelectorItem
 	for _, dev := range devs {
 		items = append(items, SelectorItem{
 			Name:   dev,
@@ -396,7 +396,7 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 			return apps.NewDeploymentApp(deployments.Sandbox(dev)), true, nil
 		}
 		if len(dev.Selector) > 0 {
-			if err == oktetoErrors.ErrNotFound {
+			if oktetoErrors.IsNotFound(err) {
 				err = oktetoErrors.UserError{
 					E:    fmt.Errorf("didn't find an application in namespace %s that matches the labels in your Okteto manifest", dev.Namespace),
 					Hint: "Update the labels or point your context to a different namespace and try again"}
