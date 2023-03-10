@@ -22,11 +22,9 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
-	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -40,37 +38,17 @@ type oktetoRegistryInterface interface {
 	HasGlobalPushAcces() (bool, error)
 }
 
-type oktetoBuilderConfig struct {
-	hasGlobalAccess bool
-	isCleanProject  bool
-}
-
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
 	Builder  OktetoBuilderInterface
 	Registry oktetoRegistryInterface
-
-	config oktetoBuilderConfig
-
-	gitRepository        repository.Repository
-	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 }
 
 // NewBuilder creates a new okteto builder
 func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface) *OktetoBuilder {
-	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
-	wd, err := wdCtrl.Get()
-	if err != nil {
-		oktetoLog.Infof("could not get working dir: %w", err)
-	}
-	gitRepo := repository.NewRepository(wd)
 	return &OktetoBuilder{
-		Builder:              builder,
-		Registry:             registry,
-		gitRepository:        gitRepo,
-		workingDirectoryCtrl: wdCtrl,
-
-		config: getConfig(registry, gitRepo),
+		Builder:  builder,
+		Registry: registry,
 	}
 }
 
@@ -79,32 +57,6 @@ func NewBuilderFromScratch() *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
 	return NewBuilder(builder, registry)
-}
-
-func getConfig(registry oktetoRegistryInterface, gitRepo repository.Repository) oktetoBuilderConfig {
-	hasAccess, err := registry.HasGlobalPushAcces()
-	if err != nil {
-		oktetoLog.Infof("error trying to access globalPushAccess: %w", err)
-	}
-
-	isClean, err := gitRepo.IsClean()
-	if err != nil {
-		oktetoLog.Infof("error trying to get directory: %w", err)
-	}
-	return oktetoBuilderConfig{
-		hasGlobalAccess: hasAccess,
-		isCleanProject:  isClean,
-	}
-}
-
-// HasGlobalAccess checks if the user has access to global registry
-func (ob *OktetoBuilder) HasGlobalAccess() bool {
-	return ob.config.hasGlobalAccess
-}
-
-// IsCleanProject checks if the repository is clean(no changes over the last commit)
-func (ob *OktetoBuilder) IsCleanProject() bool {
-	return ob.config.isCleanProject
 }
 
 // IsV1 returns true since it is a builder v1

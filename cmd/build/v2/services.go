@@ -80,20 +80,21 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 	if isStack && okteto.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
 		buildInfo.Image = ""
 	}
-	tag := getToBuildTag(manifest.Name, service, buildInfo)
-	if tag == "" {
+
+	tagsToCheck := bc.tagsToCheck(manifest.Name, service, buildInfo)
+	if len(tagsToCheck) == 0 {
 		return fmt.Errorf("error getting the image name for the service '%s'. Please specify the full name of the image when using a cluster that doesn't have Okteto installed", service)
 	}
 
-	imageWithDigest, err := bc.Registry.GetImageTagWithDigest(tag)
+	imageWithDigest, err := bc.isImageBuilt(tagsToCheck)
 	if oktetoErrors.IsNotFound(err) {
 		oktetoLog.Debug("image not found, building image")
 		ch <- service
 		return nil
 	} else if err != nil {
-		return fmt.Errorf("error checking image at registry %s: %v", tag, err)
+		return err
 	}
-	oktetoLog.Debug("Skipping build for image for service")
+	oktetoLog.Debug("Skipping build for image for service: %s", service)
 
 	bc.SetServiceEnvVars(service, imageWithDigest)
 
@@ -106,23 +107,53 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 	return nil
 }
 
-func getToBuildTag(manifestName, svcName string, b *model.BuildInfo) string {
-	targetRegistry := constants.DevRegistry
+// isImageBuilt checks a list of tags that the same image can refer to
+// if one of them is found it returns the image with the digest
+func (bc *OktetoBuilder) isImageBuilt(tags []string) (string, error) {
+	for _, tag := range tags {
+		imageWithDigest, err := bc.Registry.GetImageTagWithDigest(tag)
+		if oktetoErrors.IsNotFound(err) {
+			continue
+		} else if err != nil {
+			// return error if the registry doesn't send a not found error
+			return "", fmt.Errorf("error checking image at registry %s: %v", tag, err)
+		}
+		return imageWithDigest, nil
+	}
+	return "", fmt.Errorf("not found")
+}
+
+func (bc *OktetoBuilder) tagsToCheck(manifestName, svcName string, b *model.BuildInfo) []string {
+	targetRegistries := []string{constants.DevRegistry}
+	if bc.Config.HasGlobalAccess() && bc.Config.IsCleanProject() {
+		targetRegistries = []string{constants.GlobalRegistry, constants.DevRegistry}
+	}
+
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
+	tagsToCheck := []string{}
 	switch {
 	case !okteto.IsOkteto():
-		return b.Image
+		tagsToCheck = append(tagsToCheck, b.Image)
+		return tagsToCheck
 	case (shouldBuildFromDockerfile(b) && shouldAddVolumeMounts(b)) || shouldAddVolumeMounts(b):
-		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
+		for _, targetRegistry := range targetRegistries {
+			tagsToCheck = append(tagsToCheck, fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes))
+		}
+		return tagsToCheck
 	case b.Image != "" && shouldBuildFromDockerfile(b):
-		return b.Image
+		tagsToCheck = append(tagsToCheck, b.Image)
+		return tagsToCheck
 	case shouldBuildFromDockerfile(b):
-		return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag)
+		for _, targetRegistry := range targetRegistries {
+			tagsToCheck = append(tagsToCheck, fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag))
+		}
+		return tagsToCheck
 	case b.Image != "":
-		return b.Image
+		tagsToCheck = append(tagsToCheck, b.Image)
+		return tagsToCheck
 	default:
 		oktetoLog.Infof("could not build service %s, due to not having Dockerfile defined or volumes to include", svcName)
 	}
-	return ""
+	return tagsToCheck
 }

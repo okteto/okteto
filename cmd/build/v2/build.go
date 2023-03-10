@@ -25,10 +25,12 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -44,12 +46,18 @@ type oktetoRegistryInterface interface {
 	HasGlobalPushAcces() (bool, error)
 }
 
+type OktetoBuilderConfigInterface interface {
+	HasGlobalAccess() bool
+	IsCleanProject() bool
+}
+
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
 	Builder   OktetoBuilderInterface
 	Registry  oktetoRegistryInterface
 	V1Builder *buildv1.OktetoBuilder
 
+	Config OktetoBuilderConfigInterface
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
 
@@ -65,6 +73,13 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 	b := NewBuilderFromScratch()
 	b.Builder = builder
 	b.Registry = registry
+	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
+	wd, err := wdCtrl.Get()
+	if err != nil {
+		oktetoLog.Infof("could not get working dir: %w", err)
+	}
+	gitRepo := repository.NewRepository(wd)
+	b.Config = getConfig(registry, gitRepo)
 	b.V1Builder = buildv1.NewBuilder(builder, registry)
 	return b
 }
