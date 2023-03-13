@@ -21,6 +21,7 @@ import (
 type oktetoBuilderConfig struct {
 	hasGlobalAccess bool
 	isCleanProject  bool
+	repository      repository.Repository
 }
 
 func getConfig(registry oktetoRegistryInterface, gitRepo repository.Repository) OktetoBuilderConfigInterface {
@@ -34,6 +35,7 @@ func getConfig(registry oktetoRegistryInterface, gitRepo repository.Repository) 
 		oktetoLog.Infof("error trying to get directory: %w", err)
 	}
 	return oktetoBuilderConfig{
+		repository:      gitRepo,
 		hasGlobalAccess: hasAccess,
 		isCleanProject:  isClean,
 	}
@@ -47,4 +49,12 @@ func (oc oktetoBuilderConfig) HasGlobalAccess() bool {
 // IsCleanProject checks if the repository is clean(no changes over the last commit)
 func (oc oktetoBuilderConfig) IsCleanProject() bool {
 	return oc.isCleanProject
+}
+
+func (oc oktetoBuilderConfig) GetHash() string {
+	sha, err := oc.repository.GetSHA()
+	if err != nil {
+		oktetoLog.Infof("could not get repository sha: %w", err)
+	}
+	return sha
 }

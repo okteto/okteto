@@ -24,6 +24,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -125,28 +126,41 @@ func (bc *OktetoBuilder) isImageBuilt(tags []string) (string, error) {
 
 func (bc *OktetoBuilder) tagsToCheck(manifestName, svcName string, b *model.BuildInfo) []string {
 	targetRegistries := []string{constants.DevRegistry}
+	sha := ""
 	if bc.Config.HasGlobalAccess() && bc.Config.IsCleanProject() {
 		targetRegistries = []string{constants.GlobalRegistry, constants.DevRegistry}
+		sha = bc.Config.GetHash()
 	}
 
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	tagsToCheck := []string{}
+
 	switch {
 	case !okteto.IsOkteto():
 		tagsToCheck = append(tagsToCheck, b.Image)
 		return tagsToCheck
 	case (shouldBuildFromDockerfile(b) && shouldAddVolumeMounts(b)) || shouldAddVolumeMounts(b):
+		if sha != "" {
+			for _, targetRegistry := range targetRegistries {
+				tagsToCheck = append(tagsToCheck, getImageFromTmpl(targetRegistry, sanitizedName, svcName, sha))
+			}
+		}
 		for _, targetRegistry := range targetRegistries {
-			tagsToCheck = append(tagsToCheck, fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes))
+			tagsToCheck = append(tagsToCheck, getImageFromTmpl(targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes))
 		}
 		return tagsToCheck
 	case b.Image != "" && shouldBuildFromDockerfile(b):
 		tagsToCheck = append(tagsToCheck, b.Image)
 		return tagsToCheck
 	case shouldBuildFromDockerfile(b):
+		if sha != "" {
+			for _, targetRegistry := range targetRegistries {
+				tagsToCheck = append(tagsToCheck, getImageFromTmpl(targetRegistry, sanitizedName, svcName, sha))
+			}
+		}
 		for _, targetRegistry := range targetRegistries {
-			tagsToCheck = append(tagsToCheck, fmt.Sprintf("%s/%s-%s:%s", targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag))
+			tagsToCheck = append(tagsToCheck, getImageFromTmpl(targetRegistry, sanitizedName, svcName, model.OktetoDefaultImageTag))
 		}
 		return tagsToCheck
 	case b.Image != "":
@@ -156,4 +170,31 @@ func (bc *OktetoBuilder) tagsToCheck(manifestName, svcName string, b *model.Buil
 		oktetoLog.Infof("could not build service %s, due to not having Dockerfile defined or volumes to include", svcName)
 	}
 	return tagsToCheck
+}
+
+func getImageFromTmpl(targetRegistry, repoName, svcName, tag string) string {
+	return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, repoName, svcName, tag)
+}
+
+func (bc *OktetoBuilder) checkIfCommitIsAlreadyBuilt(ctx context.Context, manifestName, svcName string, options *types.BuildOptions) (string, bool) {
+	if !bc.Config.IsCleanProject() {
+		return "", false
+	}
+	if options.NoCache {
+		return "", false
+	}
+	sha := bc.Config.GetHash()
+
+	targetRegistries := []string{constants.GlobalRegistry, constants.DevRegistry}
+	tagsToCheck := []string{}
+	// manifestName can be not sanitized when option name is used at deploy
+	sanitizedName := format.ResourceK8sMetaString(manifestName)
+	for _, targetRegistry := range targetRegistries {
+		tagsToCheck = append(tagsToCheck, getImageFromTmpl(targetRegistry, sanitizedName, svcName, sha))
+	}
+	imageTag, err := bc.isImageBuilt(tagsToCheck)
+	if err != nil {
+		return "", false
+	}
+	return imageTag, true
 }

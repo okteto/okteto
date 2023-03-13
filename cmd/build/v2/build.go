@@ -49,6 +49,7 @@ type oktetoRegistryInterface interface {
 type OktetoBuilderConfigInterface interface {
 	HasGlobalAccess() bool
 	IsCleanProject() bool
+	GetHash() string
 }
 
 // OktetoBuilder builds the images
@@ -73,13 +74,6 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 	b := NewBuilderFromScratch()
 	b.Builder = builder
 	b.Registry = registry
-	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
-	wd, err := wdCtrl.Get()
-	if err != nil {
-		oktetoLog.Infof("could not get working dir: %w", err)
-	}
-	gitRepo := repository.NewRepository(wd)
-	b.Config = getConfig(registry, gitRepo)
 	b.V1Builder = buildv1.NewBuilder(builder, registry)
 	return b
 }
@@ -88,12 +82,19 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 func NewBuilderFromScratch() *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
+	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
+	wd, err := wdCtrl.Get()
+	if err != nil {
+		oktetoLog.Infof("could not get working dir: %w", err)
+	}
+	gitRepo := repository.NewRepository(wd)
 	return &OktetoBuilder{
 		Builder:           builder,
 		Registry:          registry,
 		V1Builder:         buildv1.NewBuilder(builder, registry),
 		buildEnvironments: map[string]string{},
 		builtImages:       map[string]bool{},
+		Config:            getConfig(registry, gitRepo),
 	}
 }
 
@@ -147,6 +148,11 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			}
 			if options.EnableStages {
 				oktetoLog.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
+			}
+			if imageTag, isBuilt := bc.checkIfCommitIsAlreadyBuilt(ctx, options.Manifest.Name, svcToBuild, options); isBuilt {
+				bc.SetServiceEnvVars(svcToBuild, imageTag)
+				bc.builtImages[svcToBuild] = true
+				continue
 			}
 
 			buildSvcInfo := buildManifest[svcToBuild]
@@ -243,6 +249,11 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	if err != nil {
 		return "", err
 	}
+	tagToBuild := bc.tagsToCheck(manifest.Name, svcName, buildSvcInfo)
+	if len(tagToBuild) != 0 {
+		buildSvcInfo.Image = tagToBuild[0]
+	}
+
 	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options)
 
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {

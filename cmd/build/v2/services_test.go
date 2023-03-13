@@ -19,6 +19,8 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -131,10 +133,12 @@ func TestNoServiceBuiltWithSubset(t *testing.T) {
 type fakeConfig struct {
 	isClean   bool
 	hasAccess bool
+	sha       string
 }
 
 func (fc fakeConfig) HasGlobalAccess() bool { return fc.hasAccess }
 func (fc fakeConfig) IsCleanProject() bool  { return fc.isClean }
+func (fc fakeConfig) GetHash() string       { return fc.sha }
 
 func TestGetToBuildTag(t *testing.T) {
 	okteto.CurrentStore = &okteto.OktetoContextStore{
@@ -231,6 +235,7 @@ func TestGetToBuildTag(t *testing.T) {
 			buildConfig: fakeConfig{
 				hasAccess: true,
 				isClean:   true,
+				sha:       "hello-this-is-a-test",
 			},
 			buildInfo: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -238,13 +243,19 @@ func TestGetToBuildTag(t *testing.T) {
 			},
 			manifestName: "test",
 			svcName:      "test",
-			output:       []string{"okteto.global/test-test:okteto", "okteto.dev/test-test:okteto"},
+			output: []string{
+				"okteto.global/test-test:hello-this-is-a-test",
+				"okteto.dev/test-test:hello-this-is-a-test",
+				"okteto.global/test-test:okteto",
+				"okteto.dev/test-test:okteto",
+			},
 		},
 		{
 			name: "access to global and isClean with volumes",
 			buildConfig: fakeConfig{
 				hasAccess: true,
 				isClean:   true,
+				sha:       "hello-this-is-a-test",
 			},
 			buildInfo: &model.BuildInfo{
 				Dockerfile: "Dockerfile",
@@ -259,7 +270,12 @@ func TestGetToBuildTag(t *testing.T) {
 			},
 			manifestName: "test",
 			svcName:      "test",
-			output:       []string{"okteto.global/test-test:okteto-with-volume-mounts", "okteto.dev/test-test:okteto-with-volume-mounts"},
+			output: []string{
+				"okteto.global/test-test:hello-this-is-a-test",
+				"okteto.dev/test-test:hello-this-is-a-test",
+				"okteto.global/test-test:okteto-with-volume-mounts",
+				"okteto.dev/test-test:okteto-with-volume-mounts",
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -269,6 +285,128 @@ func TestGetToBuildTag(t *testing.T) {
 			}
 			result := ob.tagsToCheck(tt.manifestName, tt.svcName, tt.buildInfo)
 			require.Equal(t, tt.output, result)
+		})
+	}
+}
+
+func TestCheckIfCommitIsAlreadyBuilt(t *testing.T) {
+	type config struct {
+		cfg        OktetoBuilderConfigInterface
+		cmdOptions types.BuildOptions
+	}
+	type expected struct {
+		image     string
+		hasAccess bool
+	}
+	tests := []struct {
+		name     string
+		config   config
+		expected expected
+	}{
+		{
+			name: "no access",
+			config: config{
+				cfg: fakeConfig{
+					isClean:   true,
+					hasAccess: false,
+					sha:       "",
+				},
+			},
+			expected: expected{
+				image:     "",
+				hasAccess: false,
+			},
+		},
+		{
+			name: "no clean commit",
+			config: config{
+				cfg: fakeConfig{
+					isClean:   false,
+					hasAccess: true,
+					sha:       "",
+				},
+			},
+			expected: expected{
+				image:     "",
+				hasAccess: false,
+			},
+		},
+		{
+			name: "no access no clean commit",
+			config: config{
+				cfg: fakeConfig{
+					isClean:   false,
+					hasAccess: false,
+					sha:       "",
+				},
+			},
+			expected: expected{
+				image:     "",
+				hasAccess: false,
+			},
+		},
+		{
+			name: "no cache option enabled",
+			config: config{
+				cfg: fakeConfig{
+					isClean:   true,
+					hasAccess: true,
+					sha:       "",
+				},
+				cmdOptions: types.BuildOptions{
+					NoCache: true,
+				},
+			},
+			expected: expected{
+				image:     "",
+				hasAccess: false,
+			},
+		},
+		{
+			name: "registry find image",
+			config: config{
+				cfg: fakeConfig{
+					isClean:   true,
+					hasAccess: true,
+					sha:       "thishashexists",
+				},
+				cmdOptions: types.BuildOptions{
+					NoCache: false,
+				},
+			},
+			expected: expected{
+				image:     "",
+				hasAccess: true,
+			},
+		},
+		{
+			name: "registry doesn't find image",
+			config: config{
+				cfg: fakeConfig{
+					isClean:   true,
+					hasAccess: true,
+					sha:       "thishashdoesntexist",
+				},
+				cmdOptions: types.BuildOptions{
+					NoCache: false,
+				},
+			},
+			expected: expected{
+				image:     "",
+				hasAccess: false,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ob := OktetoBuilder{
+				Registry: fakeRegistry{registry: map[string]fakeImage{
+					"okteto.global/test-test:thishashexists": {},
+				}},
+				Config: tt.config.cfg,
+			}
+			_, hasAccess := ob.checkIfCommitIsAlreadyBuilt(context.Background(), "test", "test", &tt.config.cmdOptions)
+			assert.Equal(t, tt.expected.hasAccess, hasAccess)
 		})
 	}
 }
