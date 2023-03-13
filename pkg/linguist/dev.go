@@ -303,7 +303,7 @@ func GetSupportedLanguages() []string {
 }
 
 // GetDevDefaults gets default values for the specified language
-func GetDevDefaults(language, workdir string, imageConfig *registry.ImageConfig) (*model.Dev, error) {
+func GetDevDefaults(language, workdir string, imageConfig registry.ImageMetadata) (*model.Dev, error) {
 	language = NormalizeLanguage(language)
 	vals := languageDefaults[language]
 

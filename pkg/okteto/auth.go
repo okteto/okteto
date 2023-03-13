@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/types"
@@ -164,7 +165,7 @@ func (c *OktetoClient) deprecatedAuthUser(ctx context.Context, code string) (*ty
 		Registry:        string(mutation.User.Registry),
 		Buildkit:        string(mutation.User.Buildkit),
 		Certificate:     string(mutation.User.Certificate),
-		GlobalNamespace: DefaultGlobalNamespace,
+		GlobalNamespace: constants.DefaultGlobalNamespace,
 		Analytics:       true,
 	}
 
@@ -189,7 +190,7 @@ func getTokenFromOktetoHome() (*Token, error) {
 
 func getGlobalNamespace(g string) string {
 	if g == "" {
-		return DefaultGlobalNamespace
+		return constants.DefaultGlobalNamespace
 	}
 	return g
 }

@@ -393,7 +393,7 @@ func TestDeployRemoteOktetoManifest(t *testing.T) {
 }
 
 func isImageBuilt(image string) bool {
-	reg := registry.NewOktetoRegistry()
+	reg := registry.NewOktetoRegistry(okteto.Config{})
 	if _, err := reg.GetImageTagWithDigest(image); err == nil {
 		return true
 	}

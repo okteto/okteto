@@ -107,7 +107,7 @@ func (*ManifestCommand) RunInitV1(ctx context.Context, opts *InitOpts) error {
 		return err
 	}
 
-	dev, err := linguist.GetDevDefaults(opts.Language, opts.Workdir, &registry.ImageConfig{})
+	dev, err := linguist.GetDevDefaults(opts.Language, opts.Workdir, registry.ImageMetadata{})
 	if err != nil {
 		return err
 	}

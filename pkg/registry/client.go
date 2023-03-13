@@ -14,83 +14,129 @@
 package registry
 
 import (
+	"crypto/x509"
+	"errors"
+	"fmt"
+
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/okteto"
 )
 
-func clientOptions(ref name.Reference) []remote.Option {
-	registry := ref.Context().RegistryStr()
-	oktetoLog.Debugf("calling registry %s", registry)
-
-	var options []remote.Option
-
-	okRegistry := okteto.Context().Registry
-	if okRegistry == registry {
-		username := okteto.Context().UserID
-		password := okteto.Context().Token
-
-		authenticator := &authn.Basic{
-			Username: username,
-			Password: password,
-		}
-
-		options = append(options, remote.WithAuth(authenticator))
-	} else {
-		options = append(options, remote.WithAuthFromKeychain(authn.DefaultKeychain))
-	}
-
-	transport := oktetoHttp.DefaultTransport()
-
-	if okteto.IsInsecureSkipTLSVerifyPolicy() {
-		transport = oktetoHttp.InsecureTransport()
-	} else if cert, err := okteto.GetContextCertificate(); err == nil {
-		transport = oktetoHttp.StrictSSLTransport(cert)
-	}
-
-	options = append(options, remote.WithTransport(transport))
-
-	return options
+type clientInterface interface {
+	GetDigest(image string) (string, error)
+	GetImageConfig(image string) (*v1.ConfigFile, error)
 }
 
-func digestForReference(reference string) (string, error) {
-	ref, err := name.ParseReference(reference)
-	if err != nil {
-		return "", err
-	}
-
-	options := clientOptions(ref)
-
-	img, err := remote.Get(ref, options...)
-	if err != nil {
-		return "", err
-	}
-
-	return img.Digest.String(), nil
+type ClientConfigInterface interface {
+	GetRegistryURL() string
+	GetUserID() string
+	GetToken() string
+	IsInsecureSkipTLSVerifyPolicy() bool
+	GetContextCertificate() (*x509.Certificate, error)
 }
 
-func imageForReference(reference string) (v1.Image, error) {
-	ref, err := name.ParseReference(reference)
+// client operates with the registry API
+type client struct {
+	config ClientConfigInterface
+	get    func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error)
+}
+
+func newOktetoRegistryClient(config ClientConfigInterface) client {
+	return client{
+		config: config,
+		get:    remote.Get,
+	}
+}
+
+func (c client) getDescriptor(image string) (*remote.Descriptor, error) {
+	ref, err := name.ParseReference(image)
 	if err != nil {
 		return nil, err
 	}
 
-	options := clientOptions(ref)
+	options := c.getOptions(ref)
 
-	return remote.Image(ref, options...)
+	descriptor, err := c.get(ref, options...)
+	if err != nil {
+		if c.isNotFound(err) {
+			return nil, fmt.Errorf("error getting image descriptor: %w", oktetoErrors.ErrNotFound)
+		}
+		return nil, fmt.Errorf("error getting image descriptor: %w", err)
+	}
+	return descriptor, nil
 }
 
-// GetReferecenceEnvs returns the values to setup the image environment variables
-func GetReferecenceEnvs(reference string) (reg, repo, tag, image string) {
-	ref, err := name.ParseReference(reference)
+// GetDigest returns the digest of an image
+func (c client) GetDigest(image string) (string, error) {
+	descriptor, err := c.getDescriptor(image)
 	if err != nil {
-		oktetoLog.Debugf("error parsing reference: %s - %v", reference, err)
-		return "", "", "", reference
+		return "", fmt.Errorf("error getting image digest: %w", err)
+	}
+	return descriptor.Digest.String(), nil
+}
+
+// GetImageConfig returns the config of an image
+func (c client) GetImageConfig(image string) (*v1.ConfigFile, error) {
+	descriptor, err := c.getDescriptor(image)
+	if err != nil {
+		return nil, fmt.Errorf("error getting image configuration: %w", err)
 	}
 
-	return ref.Context().RegistryStr(), ref.Context().RepositoryStr(), ref.Identifier(), ref.Name()
+	img, err := descriptor.Image()
+	if err != nil {
+		return nil, fmt.Errorf("error getting image configuration: %w", err)
+	}
+	cfg, err := img.ConfigFile()
+	if err != nil {
+		return nil, fmt.Errorf("error getting image configuration: %w", err)
+	}
+	return cfg, nil
+}
+
+func (c client) isNotFound(err error) bool {
+	var transportErr *transport.Error
+	if errors.As(err, &transportErr) {
+		for _, err := range transportErr.Errors {
+			if err.Code == transport.ManifestUnknownErrorCode {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (c client) getOptions(ref name.Reference) []remote.Option {
+	return []remote.Option{c.getAuthentication(ref), c.getTransport()}
+}
+
+func (c client) getAuthentication(ref name.Reference) remote.Option {
+	registry := ref.Context().RegistryStr()
+	oktetoLog.Debugf("calling registry %s", registry)
+
+	okRegistry := c.config.GetRegistryURL()
+	if okRegistry == registry {
+		authenticator := &authn.Basic{
+			Username: c.config.GetUserID(),
+			Password: c.config.GetToken(),
+		}
+		return remote.WithAuth(authenticator)
+	}
+	return remote.WithAuthFromKeychain(authn.DefaultKeychain)
+}
+
+func (c client) getTransport() remote.Option {
+	transport := oktetoHttp.DefaultTransport()
+
+	if c.config.IsInsecureSkipTLSVerifyPolicy() {
+		transport = oktetoHttp.InsecureTransport()
+	} else if cert, err := c.config.GetContextCertificate(); err == nil {
+		transport = oktetoHttp.StrictSSLTransport(cert)
+	}
+	return remote.WithTransport(transport)
 }
