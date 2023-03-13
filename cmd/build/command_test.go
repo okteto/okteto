@@ -23,6 +23,7 @@ import (
 	buildV2 "github.com/okteto/okteto/cmd/build/v2"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
@@ -227,6 +228,14 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 
 func TestBuilderIsProperlyGenerated(t *testing.T) {
 	dir := t.TempDir()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	malformedDockerfile := filepath.Join(dir, "malformedDockerfile")
 	dockerfile := filepath.Join(dir, "Dockerfile")
 	assert.NoError(t, os.WriteFile(dockerfile, []byte(`FROM alpine`), 0600))
