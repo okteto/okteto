@@ -16,8 +16,6 @@ package v2
 import (
 	"context"
 	"fmt"
-	"strings"
-
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
@@ -25,6 +23,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/sync/errgroup"
+	"strings"
 )
 
 // GetServicesToBuild returns the services it has to build if they are not already built
@@ -35,6 +34,15 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 		oktetoLog.Information("Build section is not defined in your okteto manifest")
 		return nil, nil
 	}
+
+	// create a spinner to be loaded before checking if images needs to be built
+	oktetoLog.Spinner("Building images...")
+
+	// start the spinner
+	oktetoLog.StartSpinner()
+
+	// stop the spinner
+	defer oktetoLog.StopSpinner()
 
 	// check if images are at registry (global or dev) and set envs or send to build
 	toBuild := make(chan string, len(buildManifest))
