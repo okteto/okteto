@@ -399,7 +399,75 @@ func Test_IsOktetoRegistry(t *testing.T) {
 			assert.Equal(t, tt.want, result)
 		})
 	}
+}
 
+func Test_IsGlobal(t *testing.T) {
+	type input struct {
+		image  string
+		config configInterface
+	}
+	var tests = []struct {
+		name  string
+		input input
+		want  bool
+	}{
+		{
+			name: "is-dev-registry",
+			input: input{
+				image: "okteto.dev/image",
+				config: FakeConfig{
+					RegistryURL:        "this.is.my.okteto.registry",
+					GlobalNamespace:    "test",
+					IsOktetoClusterCfg: true,
+				},
+			},
+			want: false,
+		},
+		{
+			name: "is-global-registry",
+			input: input{
+				image: "okteto.global/image",
+				config: FakeConfig{
+					RegistryURL:        "this.is.my.okteto.registry",
+					GlobalNamespace:    "test",
+					IsOktetoClusterCfg: true,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "is-expanded-global-registry",
+			input: input{
+				image: "this.is.my.okteto.registry/test/image",
+				config: FakeConfig{
+					RegistryURL:        "this.is.my.okteto.registry",
+					GlobalNamespace:    "test",
+					IsOktetoClusterCfg: true,
+				},
+			},
+			want: true,
+		},
+		{
+			name: "is-not-dev-registry",
+			input: input{
+				image: "other-image/image",
+				config: FakeConfig{
+					RegistryURL:        "this.is.my.okteto.registry",
+					GlobalNamespace:    "test",
+					IsOktetoClusterCfg: true,
+				},
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			or := NewOktetoRegistry(tt.input.config)
+
+			result := or.IsGlobalRegistry(tt.input.image)
+			assert.Equal(t, tt.want, result)
+		})
+	}
 }
 
 func Test_GetImageTag(t *testing.T) {

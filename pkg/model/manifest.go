@@ -194,13 +194,13 @@ type DestroyInfo struct {
 
 // DivertDeploy represents information about the deploy divert configuration
 type DivertDeploy struct {
-	Driver         string       `json:"driver,omitempty" yaml:"driver,omitempty"`
-	Namespace      string       `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Service        string       `json:"service,omitempty" yaml:"service,omitempty"`
-	Port           int          `json:"port,omitempty" yaml:"port,omitempty"`
-	Deployment     string       `json:"deployment,omitempty" yaml:"deployment,omitempty"`
-	VirtualService string       `json:"virtualService,omitempty" yaml:"virtualService,omitempty"`
-	Hosts          []DivertHost `json:"hosts,omitempty" yaml:"hosts,omitempty"`
+	Driver               string       `json:"driver,omitempty" yaml:"driver,omitempty"`
+	Namespace            string       `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Service              string       `json:"service,omitempty" yaml:"service,omitempty"`
+	DeprecatedPort       int          `json:"port,omitempty" yaml:"port,omitempty"`
+	DeprecatedDeployment string       `json:"deployment,omitempty" yaml:"deployment,omitempty"`
+	VirtualService       string       `json:"virtualService,omitempty" yaml:"virtualService,omitempty"`
+	Hosts                []DivertHost `json:"hosts,omitempty" yaml:"hosts,omitempty"`
 }
 
 // DivertHost represents a host from a virtual service in a namespace to be diverted
@@ -788,12 +788,6 @@ func (m *Manifest) validateDivert() error {
 
 	switch m.Deploy.Divert.Driver {
 	case OktetoDivertWeaverDriver:
-		if m.Deploy.Divert.Service == "" {
-			return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
-		}
-		if m.Deploy.Divert.Deployment == "" {
-			return fmt.Errorf("the field 'deploy.divert.deployment' is mandatory")
-		}
 	case OktetoDivertIstioDriver:
 		if m.Deploy.Divert.Service == "" {
 			return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
@@ -817,11 +811,15 @@ func (m *Manifest) validateDivert() error {
 
 func (m *Manifest) setDefaults() error {
 	if m.Deploy != nil && m.Deploy.Divert != nil {
+		var err error
 		if m.Deploy.Divert.Driver == "" {
 			m.Deploy.Divert.Driver = OktetoDivertWeaverDriver
 		}
+		m.Deploy.Divert.Namespace, err = ExpandEnv(m.Deploy.Divert.Namespace, false)
+		if err != nil {
+			return err
+		}
 		for i := range m.Deploy.Divert.Hosts {
-			var err error
 			m.Deploy.Divert.Hosts[i].VirtualService, err = ExpandEnv(m.Deploy.Divert.Hosts[i].VirtualService, false)
 			if err != nil {
 				return err

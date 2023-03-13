@@ -30,9 +30,9 @@ func (d *Driver) divertEndpoints(ctx context.Context, name string) error {
 	from := d.cache.divertServices[name]
 	e, ok := d.cache.developerEndpoints[name]
 	if !ok {
-		newE := translateEndpoints(d.manifest, from)
+		newE := translateEndpoints(d.name, d.namespace, from)
 		oktetoLog.Infof("creating endpoint %s/%s", newE.Namespace, newE.Name)
-		if _, err := d.client.CoreV1().Endpoints(d.manifest.Namespace).Create(ctx, newE, metav1.CreateOptions{}); err != nil {
+		if _, err := d.client.CoreV1().Endpoints(d.namespace).Create(ctx, newE, metav1.CreateOptions{}); err != nil {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
@@ -43,12 +43,12 @@ func (d *Driver) divertEndpoints(ctx context.Context, name string) error {
 	if e.Annotations[model.OktetoAutoCreateAnnotation] != "true" {
 		return nil
 	}
-	updatedE := translateEndpoints(d.manifest, from)
+	updatedE := translateEndpoints(d.name, d.namespace, from)
 	if isEqualEndpoints(e, updatedE) {
 		return nil
 	}
 	oktetoLog.Infof("updating endpoints %s/%s", updatedE.Namespace, updatedE.Name)
-	if _, err := d.client.CoreV1().Endpoints(d.manifest.Namespace).Update(ctx, updatedE, metav1.UpdateOptions{}); err != nil {
+	if _, err := d.client.CoreV1().Endpoints(d.namespace).Update(ctx, updatedE, metav1.UpdateOptions{}); err != nil {
 		if !k8sErrors.IsConflict(err) {
 			return err
 		}
@@ -57,11 +57,11 @@ func (d *Driver) divertEndpoints(ctx context.Context, name string) error {
 	return nil
 }
 
-func translateEndpoints(m *model.Manifest, s *apiv1.Service) *apiv1.Endpoints {
+func translateEndpoints(name, namespace string, s *apiv1.Service) *apiv1.Endpoints {
 	result := &apiv1.Endpoints{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        s.Name,
-			Namespace:   m.Namespace,
+			Namespace:   namespace,
 			Labels:      s.Labels,
 			Annotations: s.Annotations,
 		},
@@ -84,7 +84,7 @@ func translateEndpoints(m *model.Manifest, s *apiv1.Service) *apiv1.Endpoints {
 			},
 		},
 	}
-	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(m.Name))
+	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, format.ResourceK8sMetaString(name))
 	if result.Annotations == nil {
 		result.Annotations = map[string]string{}
 	}

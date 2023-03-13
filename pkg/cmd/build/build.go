@@ -209,7 +209,7 @@ func validateImage(imageTag string) error {
 	}
 	if (reg.IsOktetoRegistry(imageTag)) && strings.Count(imageTag, "/") != 1 {
 		prefix := constants.DevRegistry
-		if strings.HasPrefix(imageTag, constants.GlobalRegistry) {
+		if reg.IsGlobalRegistry(imageTag) {
 			prefix = constants.GlobalRegistry
 		}
 		return oktetoErrors.UserError{

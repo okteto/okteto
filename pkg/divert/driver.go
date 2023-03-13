@@ -20,7 +20,6 @@ import (
 	"github.com/okteto/okteto/pkg/divert/istio"
 	"github.com/okteto/okteto/pkg/divert/weaver"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/k8s/diverts"
 	"github.com/okteto/okteto/pkg/k8s/virtualservices"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -39,11 +38,7 @@ func New(m *model.Manifest, c kubernetes.Interface) (Driver, error) {
 	}
 
 	if m.Deploy.Divert.Driver == model.OktetoDivertWeaverDriver {
-		dc, err := diverts.GetDivertClient()
-		if err != nil {
-			return nil, fmt.Errorf("error creating weaver client: %w", err)
-		}
-		return weaver.New(m, c, dc), nil
+		return weaver.New(m, c), nil
 	}
 
 	ic, err := virtualservices.GetIstioClient()

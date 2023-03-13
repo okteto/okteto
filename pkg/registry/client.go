@@ -61,7 +61,7 @@ func (oh oktetoHelper) Get(serverURL string) (string, string, error) {
 	return oh.config.GetUserID(), oh.config.GetToken(), nil
 }
 
-// client connects with the
+// client operates with the registry API
 type client struct {
 	config ClientConfigInterface
 	get    func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error)

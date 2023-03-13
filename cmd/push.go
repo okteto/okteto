@@ -181,7 +181,8 @@ func runPush(ctx context.Context, dev *model.Dev, pushOpts *pushOptions, c *kube
 		exists = false
 
 		if pushOpts.ImageTag == "" {
-			if okteto.Context().Registry == "" {
+			registryURL := okteto.Config{}.GetRegistryURL()
+			if registryURL == "" {
 				return fmt.Errorf("you need to specify the image tag to build with the '-t' argument")
 			}
 			pushOpts.ImageTag = reg.GetImageTag("", dev.Name, dev.Namespace)

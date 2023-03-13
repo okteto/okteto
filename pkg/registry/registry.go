@@ -105,6 +105,12 @@ func (or OktetoRegistry) IsOktetoRegistry(image string) bool {
 	return or.config.IsOktetoCluster() && strings.HasPrefix(expandedImage, or.config.GetRegistryURL())
 }
 
+func (or OktetoRegistry) IsGlobalRegistry(image string) bool {
+	expandedImage := or.imageCtrl.expandImageRegistries(image)
+	expandedGlobalImage := fmt.Sprintf("%s/%s", or.config.GetRegistryURL(), or.imageCtrl.config.GetGlobalNamespace())
+	return strings.HasPrefix(expandedImage, expandedGlobalImage)
+}
+
 // GetImageTag returns the image tag to build for a given services
 func (or OktetoRegistry) GetImageTag(image, service, namespace string) string {
 	if or.config.GetRegistryURL() != "" {
