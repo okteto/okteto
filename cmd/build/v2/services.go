@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -77,7 +77,7 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Manifest, ch chan string) error {
 	buildInfo := manifest.Build[service].Copy()
 	isStack := manifest.Type == model.StackType
-	if isStack && okteto.IsOkteto() && !registry.IsOktetoRegistry(buildInfo.Image) {
+	if isStack && okteto.IsOkteto() && !bc.Registry.IsOktetoRegistry(buildInfo.Image) {
 		buildInfo.Image = ""
 	}
 	tag := getToBuildTag(manifest.Name, service, buildInfo)
@@ -107,7 +107,7 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 }
 
 func getToBuildTag(manifestName, svcName string, b *model.BuildInfo) string {
-	targetRegistry := okteto.DevRegistry
+	targetRegistry := constants.DevRegistry
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	switch {

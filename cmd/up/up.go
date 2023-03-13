@@ -226,6 +226,7 @@ func Up() *cobra.Command {
 				Exit:           make(chan error, 1),
 				resetSyncthing: upOptions.Reset,
 				StartTime:      time.Now(),
+				Registry:       registry.NewOktetoRegistry(okteto.Config{}),
 				Options:        upOptions,
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
@@ -749,7 +750,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 
 	oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
 
-	imageTag := registry.GetImageTag(image, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
+	imageTag := up.Registry.GetImageTag(image, up.Dev.Name, up.Dev.Namespace)
 	oktetoLog.Infof("building dev image tag %s", imageTag)
 
 	buildArgs := model.SerializeBuildArgs(args)

@@ -27,9 +27,15 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+type registryInterface interface {
+	GetImageTagWithDigest(imageTag string) (string, error)
+	GetImageTag(image, service, namespace string) string
+}
+
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
 	Cancel                context.CancelFunc
+	Registry              registryInterface
 	ShutdownCompleted     chan bool
 	Manifest              *model.Manifest
 	Dev                   *model.Dev

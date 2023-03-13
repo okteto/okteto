@@ -151,11 +151,21 @@ type Quantity struct {
 	Value resource.Quantity
 }
 
+type PortInterface interface {
+	GetHostPort() int32
+	GetContainerPort() int32
+	GetProtocol() apiv1.Protocol
+}
+
 type Port struct {
 	HostPort      int32
 	ContainerPort int32
 	Protocol      apiv1.Protocol
 }
+
+func (p Port) GetHostPort() int32          { return p.HostPort }
+func (p Port) GetContainerPort() int32     { return p.ContainerPort }
+func (p Port) GetProtocol() apiv1.Protocol { return p.Protocol }
 
 type EndpointSpec map[string]Endpoint
 
@@ -272,13 +282,13 @@ func GetStackFromPath(name, stackPath string, isCompose bool) (*Stack, error) {
 }
 
 // getStackName it returns the stack name based in the following criteria
-//    - If `name` is set, that value is used as stack name. This represents the value provided by
-//    the user with `--name`
-//    - If `actualStackName` is provided, that is the value used. This represents the value provided
-//    in the okteto-stack file with the property `name`
-//    - If none of them is provided, we get the name from the repository (if any) in the folder where
-//    the stack/compose file is (`stackPath`)
-//    - If no repository is found, we get the name from the folder where the stack/compose file is (`stackPath`)
+//   - If `name` is set, that value is used as stack name. This represents the value provided by
+//     the user with `--name`
+//   - If `actualStackName` is provided, that is the value used. This represents the value provided
+//     in the okteto-stack file with the property `name`
+//   - If none of them is provided, we get the name from the repository (if any) in the folder where
+//     the stack/compose file is (`stackPath`)
+//   - If no repository is found, we get the name from the folder where the stack/compose file is (`stackPath`)
 func getStackName(name, stackPath, actualStackName string) (string, error) {
 	if name != "" {
 		if err := os.Setenv(constants.OktetoNameEnvVar, name); err != nil {
@@ -537,10 +547,10 @@ func (svc *Service) SetLastBuiltAnnotation() {
 }
 
 // IsAlreadyAdded checks if a port is already on port list
-func IsAlreadyAdded(p Port, ports []Port) bool {
+func IsAlreadyAdded(p PortInterface, ports []Port) bool {
 	for _, port := range ports {
-		if port.ContainerPort == p.ContainerPort {
-			oktetoLog.Infof("Port '%d:%d' is already declared on port '%d:%d'", p.HostPort, p.HostPort, port.HostPort, port.ContainerPort)
+		if port.GetContainerPort() == p.GetContainerPort() {
+			oktetoLog.Infof("Port '%d:%d' is already declared on port '%d:%d'", p.GetHostPort(), p.GetContainerPort(), port.GetHostPort(), port.GetContainerPort())
 			return true
 		}
 	}

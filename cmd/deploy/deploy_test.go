@@ -20,12 +20,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/registry"
+
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -58,6 +61,53 @@ var errorManifest *model.Manifest = &model.Manifest{
 			},
 		},
 	},
+}
+
+type fakeRegistry struct {
+	err      error
+	registry map[string]fakeImage
+}
+
+// fakeImage represents the data from an image
+type fakeImage struct {
+	Registry string
+	Repo     string
+	Tag      string
+	ImageRef string
+	Args     []string
+}
+
+func newFakeRegistry() fakeRegistry {
+	return fakeRegistry{
+		registry: map[string]fakeImage{},
+	}
+}
+
+func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
+	if _, ok := fr.registry[imageTag]; !ok {
+		return "", oktetoErrors.ErrNotFound
+	}
+	return imageTag, nil
+}
+
+func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageReference, error) {
+	ref, err := name.ParseReference(image)
+	if err != nil {
+		return registry.OktetoImageReference{}, err
+	}
+	return registry.OktetoImageReference{
+		Registry: ref.Context().RegistryStr(),
+		Repo:     ref.Context().RepositoryStr(),
+		Tag:      ref.Identifier(),
+		Image:    image,
+	}, nil
+}
+
+func (fr fakeRegistry) IsOktetoRegistry(_ string) bool { return false }
+
+func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
+	fr.registry[opts.Tag] = fakeImage{Args: opts.BuildArgs}
+	return nil
 }
 
 var fakeManifest *model.Manifest = &model.Manifest{
@@ -231,7 +281,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	clientProvider := test.NewFakeK8sProvider()
 
-	registry := test.NewFakeOktetoRegistry(nil)
+	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
 	c := &DeployCommand{
 		GetManifest: getErrorManifest,
@@ -287,7 +337,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	expectedCfg.Data["output"] = cfg.Data["output"]
 
-	assert.True(t, strings.Contains(oktetoLog.GetOutputBuffer().String(), errors.InvalidDockerfile))
+	assert.True(t, strings.Contains(oktetoLog.GetOutputBuffer().String(), oktetoErrors.InvalidDockerfile))
 
 	assert.Equal(t, expectedCfg.Name, cfg.Name)
 	assert.Equal(t, expectedCfg.Namespace, cfg.Namespace)

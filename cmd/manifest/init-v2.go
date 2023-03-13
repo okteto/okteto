@@ -357,7 +357,7 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 	return nil
 }
 
-func setFromImageConfig(dev *model.Dev, imageConfig *registry.ImageConfig) {
+func setFromImageConfig(dev *model.Dev, imageConfig registry.ImageMetadata) {
 	if len(dev.Command.Values) == 0 && len(imageConfig.CMD) > 0 {
 		dev.Command = model.Command{Values: imageConfig.CMD}
 	}
@@ -584,7 +584,7 @@ func configureAutoCreateDev(manifest *model.Manifest) error {
 		return err
 	}
 
-	dev, err := linguist.GetDevDefaults(language, wd, &registry.ImageConfig{})
+	dev, err := linguist.GetDevDefaults(language, wd, registry.ImageMetadata{})
 	if err != nil {
 		return err
 	}

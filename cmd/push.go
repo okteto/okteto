@@ -119,8 +119,6 @@ func Push(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			oktetoRegistryURL := okteto.Context().Registry
-
 			if pushOpts.AutoDeploy {
 				oktetoLog.Warning(`The 'deploy' flag is deprecated and will be removed in a future version.
     Set the 'autocreate' field in your okteto manifest to get the same behavior.
@@ -131,15 +129,15 @@ func Push(ctx context.Context) *cobra.Command {
 				dev.Autocreate = pushOpts.AutoDeploy
 			}
 
-			if err := runPush(ctx, dev, oktetoRegistryURL, pushOpts, c); err != nil {
-				analytics.TrackPush(false, oktetoRegistryURL)
+			if err := runPush(ctx, dev, pushOpts, c); err != nil {
+				analytics.TrackPush(false, okteto.Context().Registry)
 				return err
 			}
 
 			oktetoLog.Success("Source code pushed to '%s'", dev.Name)
 			oktetoLog.Println()
 
-			analytics.TrackPush(true, oktetoRegistryURL)
+			analytics.TrackPush(true, okteto.Context().Registry)
 			return nil
 		},
 	}
@@ -155,10 +153,10 @@ func Push(ctx context.Context) *cobra.Command {
 	return cmd
 }
 
-func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, pushOpts *pushOptions, c *kubernetes.Clientset) error {
+func runPush(ctx context.Context, dev *model.Dev, pushOpts *pushOptions, c *kubernetes.Clientset) error {
 	exists := true
 	app, err := apps.Get(ctx, dev, dev.Namespace, c)
-
+	reg := registry.NewOktetoRegistry(okteto.Config{})
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
 			return err
@@ -183,10 +181,11 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 		exists = false
 
 		if pushOpts.ImageTag == "" {
-			if oktetoRegistryURL == "" {
+			registryURL := okteto.Config{}.GetRegistryURL()
+			if registryURL == "" {
 				return fmt.Errorf("you need to specify the image tag to build with the '-t' argument")
 			}
-			pushOpts.ImageTag = registry.GetImageTag("", dev.Name, dev.Namespace, oktetoRegistryURL)
+			pushOpts.ImageTag = reg.GetImageTag("", dev.Name, dev.Namespace)
 		}
 	}
 
@@ -200,7 +199,7 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 		return err
 	}
 
-	pushOpts.ImageTag, err = buildImage(ctx, dev, imageFromApp, oktetoRegistryURL, pushOpts)
+	pushOpts.ImageTag, err = buildImage(ctx, dev, imageFromApp, pushOpts)
 	if err != nil {
 		return err
 	}
@@ -279,13 +278,17 @@ func runPush(ctx context.Context, dev *model.Dev, oktetoRegistryURL string, push
 
 }
 
-func buildImage(ctx context.Context, dev *model.Dev, imageFromApp, oktetoRegistryURL string, pushOpts *pushOptions) (string, error) {
+func buildImage(ctx context.Context, dev *model.Dev, imageFromApp string, pushOpts *pushOptions) (string, error) {
 	oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
 
+	reg := registry.NewOktetoRegistry(okteto.Config{})
 	if pushOpts.ImageTag == "" {
 		pushOpts.ImageTag = dev.Push.Name
 	}
-	buildTag := registry.GetDevImageTag(dev, pushOpts.ImageTag, imageFromApp, oktetoRegistryURL)
+	buildTag := pushOpts.ImageTag
+	if pushOpts.ImageTag == "" || pushOpts.ImageTag == model.DefaultImage {
+		buildTag = reg.GetImageTag(imageFromApp, dev.Name, dev.Namespace)
+	}
 	oktetoLog.Infof("pushing with image tag %s", buildTag)
 
 	buildArgs := model.SerializeBuildArgs(dev.Push.Args)

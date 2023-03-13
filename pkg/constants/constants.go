@@ -53,7 +53,7 @@ const (
 	// OKtetoDeployRemote defines if deployment is executed remotely
 	OKtetoDeployRemote = "OKTETO_DEPLOY_REMOTE"
 
-	// OKtetoDeployRemoteImage defines okteto cli image used for deploy an evironment remotely
+	// OKtetoDeployRemoteImage defines okteto cli image used for deploy an environment remotely
 	OKtetoDeployRemoteImage = "OKTETO_REMOTE_CLI_IMAGE"
 
 	// OktetoCLIImageForRemoteTemplate defines okteto CLI image template to use for remote deployments
@@ -70,4 +70,13 @@ const (
 
 	// NamespaceStatusSleeping indicates that the namespace is sleeping
 	NamespaceStatusSleeping = "Sleeping"
+
+	// DevRegistry alias url for okteto registry
+	DevRegistry = "okteto.dev"
+
+	// GlobalRegistry alias url for okteto global registry
+	GlobalRegistry = "okteto.global"
+
+	// DefaultGlobalNamespace namespace where okteto app is running
+	DefaultGlobalNamespace = "okteto"
 )
