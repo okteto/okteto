@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 )
 
 type Repository struct {
@@ -50,6 +51,10 @@ func (ogr oktetoGitRepository) Worktree() (gitWorktreeInterface, error) {
 	return oktetoGitWorktree{worktree: worktree}, nil
 }
 
+func (ogr oktetoGitRepository) Head() (*plumbing.Reference, error) {
+	return ogr.repo.Head()
+}
+
 type oktetoGitWorktree struct {
 	worktree *git.Worktree
 }
@@ -72,6 +77,7 @@ func (ogs oktetoGitStatus) IsClean() bool {
 
 type gitRepositoryInterface interface {
 	Worktree() (gitWorktreeInterface, error)
+	Head() (*plumbing.Reference, error)
 }
 type gitWorktreeInterface interface {
 	Status() (gitStatusInterface, error)
@@ -104,4 +110,17 @@ func (r Repository) IsClean() (bool, error) {
 	}
 
 	return status.IsClean(), nil
+}
+
+// GetSHA returns the last commit sha of the repository
+func (r Repository) GetSHA() (string, error) {
+	repo, err := r.repositoryGetter.get(r.path)
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+	head, err := repo.Head()
+	if err != nil {
+		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+	return head.Hash().String(), nil
 }

@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,11 +32,16 @@ func (frg fakeRepositoryGetter) get(path string) (gitRepositoryInterface, error)
 
 type fakeRepository struct {
 	worktree *fakeWorktree
+	head     *plumbing.Reference
 	err      error
 }
 
 func (fr fakeRepository) Worktree() (gitWorktreeInterface, error) {
 	return fr.worktree, fr.err
+}
+
+func (fr fakeRepository) Head() (*plumbing.Reference, error) {
+	return fr.head, fr.err
 }
 
 type fakeWorktree struct {
@@ -163,6 +169,74 @@ func TestIsClean(t *testing.T) {
 			isClean, err := repo.IsClean()
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.isClean, isClean)
+		})
+	}
+}
+
+func TestGetSHA(t *testing.T) {
+	type config struct {
+		repositoryGetter fakeRepositoryGetter
+	}
+	type expected struct {
+		sha string
+		err error
+	}
+	var tests = []struct {
+		name     string
+		config   config
+		expected expected
+	}{
+		{
+			name: "get sha without any problem",
+			config: config{
+				repositoryGetter: fakeRepositoryGetter{
+					repository: &fakeRepository{
+						head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
+					},
+				},
+			},
+			expected: expected{
+				sha: plumbing.NewHash("test").String(),
+				err: nil,
+			},
+		},
+		{
+			name: "error getting repository",
+			config: config{
+				repositoryGetter: fakeRepositoryGetter{
+					repository: nil,
+					err:        assert.AnError,
+				},
+			},
+			expected: expected{
+				sha: "",
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "error getting Head",
+			config: config{
+				repositoryGetter: fakeRepositoryGetter{
+					repository: &fakeRepository{
+						head: nil,
+						err:  assert.AnError,
+					},
+				},
+			},
+			expected: expected{
+				sha: "",
+				err: assert.AnError,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := Repository{
+				repositoryGetter: tt.config.repositoryGetter,
+			}
+			sha, err := repo.GetSHA()
+			assert.ErrorIs(t, err, tt.expected.err)
+			assert.Equal(t, tt.expected.sha, sha)
 		})
 	}
 }
