@@ -24,7 +24,7 @@ type oktetoBuilderConfig struct {
 	repository      repository.Repository
 }
 
-func getConfig(registry oktetoRegistryInterface, gitRepo repository.Repository) OktetoBuilderConfigInterface {
+func getConfig(registry oktetoRegistryInterface, gitRepo repository.Repository) oktetoBuilderConfigInterface {
 	hasAccess, err := registry.HasGlobalPushAccess()
 	if err != nil {
 		oktetoLog.Infof("error trying to access globalPushAccess: %w", err)

@@ -152,7 +152,7 @@ func TestGetToBuildTag(t *testing.T) {
 	}
 	tests := []struct {
 		name         string
-		buildConfig  OktetoBuilderConfigInterface
+		buildConfig  oktetoBuilderConfigInterface
 		buildInfo    *model.BuildInfo
 		manifestName string
 		svcName      string
@@ -279,7 +279,7 @@ func TestGetToBuildTag(t *testing.T) {
 
 func TestCheckIfCommitIsAlreadyBuilt(t *testing.T) {
 	type config struct {
-		cfg        OktetoBuilderConfigInterface
+		cfg        oktetoBuilderConfigInterface
 		cmdOptions types.BuildOptions
 	}
 	type expected struct {

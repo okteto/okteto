@@ -46,7 +46,8 @@ type oktetoRegistryInterface interface {
 	HasGlobalPushAccess() (bool, error)
 }
 
-type OktetoBuilderConfigInterface interface {
+// oktetoBuilderConfigInterface returns the configuration that the builder has for the registry and project
+type oktetoBuilderConfigInterface interface {
 	HasGlobalAccess() bool
 	IsCleanProject() bool
 	GetHash() string
@@ -58,7 +59,7 @@ type OktetoBuilder struct {
 	Registry  oktetoRegistryInterface
 	V1Builder *buildv1.OktetoBuilder
 
-	Config OktetoBuilderConfigInterface
+	Config oktetoBuilderConfigInterface
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
 
