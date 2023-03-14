@@ -221,7 +221,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
 	}
 
-	tagToBuild := bc.tagsToCheck(manifest.Name, svcName, buildSvcInfo)[0]
+	tagToBuild := bc.getTagToBuild(manifest.Name, svcName, buildSvcInfo)
 	buildSvcInfo.Image = tagToBuild
 
 	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options)

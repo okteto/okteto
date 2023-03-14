@@ -126,6 +126,12 @@ func (bc *OktetoBuilder) isImageBuilt(tags []string) (string, error) {
 	return "", fmt.Errorf("not found")
 }
 
+// getTagToBuild gets all the possible tags that could be built and builts the one with more priority
+// okteto.global + hash / okteto.dev + hash / okteto.global + tag / okteto.dev + tag
+func (bc *OktetoBuilder) getTagToBuild(manifestName, svcName string, b *model.BuildInfo) string {
+	return bc.tagsToCheck(manifestName, svcName, b)[0]
+}
+
 func (bc *OktetoBuilder) tagsToCheck(manifestName, svcName string, b *model.BuildInfo) []string {
 	targetRegistries := []string{constants.DevRegistry}
 	sha := ""
