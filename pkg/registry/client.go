@@ -17,6 +17,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -124,7 +125,7 @@ func (c client) HasPushAccess(image string) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("error checking push access: %w", err)
 	}
-	err = remote.CheckPushPermission(ref, c.getAuthHelper(ref), oktetoHttp.DefaultTransport())
+	err = remote.CheckPushPermission(ref, c.getAuthHelper(ref), c.getTransport())
 	return err == nil, err
 }
 
@@ -141,7 +142,7 @@ func (c client) isNotFound(err error) bool {
 }
 
 func (c client) getOptions(ref name.Reference) []remote.Option {
-	return []remote.Option{c.getAuthentication(ref), c.getTransport()}
+	return []remote.Option{c.getAuthentication(ref), c.getTransportOption()}
 }
 
 func (c client) getAuthHelper(ref name.Reference) authn.Keychain {
@@ -164,7 +165,10 @@ func (c client) getAuthentication(ref name.Reference) remote.Option {
 	return remote.WithAuthFromKeychain(authn.DefaultKeychain)
 }
 
-func (c client) getTransport() remote.Option {
+func (c client) getTransportOption() remote.Option {
+	return remote.WithTransport(c.getTransport())
+}
+func (c client) getTransport() http.RoundTripper {
 	transport := oktetoHttp.DefaultTransport()
 
 	if c.config.IsInsecureSkipTLSVerifyPolicy() {
@@ -172,5 +176,5 @@ func (c client) getTransport() remote.Option {
 	} else if cert, err := c.config.GetContextCertificate(); err == nil {
 		transport = oktetoHttp.StrictSSLTransport(cert)
 	}
-	return remote.WithTransport(transport)
+	return transport
 }
