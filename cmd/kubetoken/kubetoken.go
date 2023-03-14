@@ -27,20 +27,22 @@ import (
 
 func KubeToken() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "kubetoken [context]",
+		Use:   "kubetoken <context> <namespace>",
 		Short: "Print Kubernetes cluster credentials in ExecCredential format.",
 		Long: `Print Kubernetes cluster credentials in ExecCredential format.
 You can find more information on 'ExecCredential' and 'client side authentication' at (https://kubernetes.io/docs/reference/config-api/client-authentication.v1/) and  https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins`,
 		Hidden: true,
-		Args:   cobra.ExactArgs(1),
+		Args:   cobra.ExactArgs(2),
 	}
 
 	cmd.RunE = func(_ *cobra.Command, args []string) error {
 		ctx := context.Background()
 		context := args[0]
+		namespace := args[1]
 
 		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
-			Context: context,
+			Context:   context,
+			Namespace: namespace,
 		})
 		if err != nil {
 			return err
@@ -50,7 +52,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			return errors.ErrContextIsNotOktetoCluster
 		}
 
-		c, err := okteto.NewKubeTokenClient(okteto.Context().Name, okteto.Context().Token)
+		c, err := okteto.NewKubeTokenClient(okteto.Context().Name, okteto.Context().Token, namespace)
 		if err != nil {
 			return fmt.Errorf("failed to initialize the kubetoken client: %w", err)
 		}

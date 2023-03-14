@@ -29,12 +29,12 @@ type KubeTokenClient struct {
 	contextName string
 }
 
-func NewKubeTokenClient(contextName, token string) (*KubeTokenClient, error) {
+func NewKubeTokenClient(contextName, token, namespace string) (*KubeTokenClient, error) {
 	if contextName == "" {
 		return nil, oktetoErrors.ErrCtxNotSet
 	}
 
-	httpClient, url, err := newOktetoHttpClient(contextName, token, kubetokenPath)
+	httpClient, url, err := newOktetoHttpClient(contextName, token, fmt.Sprintf("%s/%s", kubetokenPath, namespace))
 	if err != nil {
 		return nil, err
 	}
