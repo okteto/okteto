@@ -103,7 +103,7 @@ func TestIsClean(t *testing.T) {
 			},
 		},
 		{
-			name: "repository could not access worktree",
+			name: "worktree could not access status",
 			config: config{
 				repositoryGetter: fakeRepositoryGetter{
 					repository: &fakeRepository{

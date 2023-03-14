@@ -20,6 +20,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
+// Repository is the struct to check everything related to Git Repo
+// like checking the commit or if the project has changes over it
 type Repository struct {
 	path string
 

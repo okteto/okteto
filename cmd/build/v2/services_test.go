@@ -206,19 +206,7 @@ func TestGetToBuildTag(t *testing.T) {
 			output:       []string{"okteto.dev/test:test"},
 		},
 		{
-			name:        "image is set without volume mounts",
-			buildConfig: fakeConfig{},
-			buildInfo: &model.BuildInfo{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-				Image:      "okteto.dev/test:test",
-			},
-			manifestName: "test",
-			svcName:      "test",
-			output:       []string{"okteto.dev/test:test"},
-		},
-		{
-			name: "access to global",
+			name: "access to global but no repo clean",
 			buildConfig: fakeConfig{
 				hasAccess: true,
 			},

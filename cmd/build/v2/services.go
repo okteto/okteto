@@ -113,9 +113,11 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 func (bc *OktetoBuilder) isImageBuilt(tags []string) (string, error) {
 	for _, tag := range tags {
 		imageWithDigest, err := bc.Registry.GetImageTagWithDigest(tag)
-		if oktetoErrors.IsNotFound(err) {
-			continue
-		} else if err != nil {
+
+		if err != nil {
+			if oktetoErrors.IsNotFound(err) {
+				continue
+			}
 			// return error if the registry doesn't send a not found error
 			return "", fmt.Errorf("error checking image at registry %s: %v", tag, err)
 		}
