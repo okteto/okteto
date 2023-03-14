@@ -58,7 +58,7 @@ func newOktetoHelper(config oktetoHelperConfig) oktetoHelper {
 	}
 }
 
-func (oh oktetoHelper) Get(serverURL string) (string, string, error) {
+func (oh oktetoHelper) Get(_ string) (string, string, error) {
 	return oh.config.GetUserID(), oh.config.GetToken(), nil
 }
 
@@ -145,7 +145,7 @@ func (c client) getOptions(ref name.Reference) []remote.Option {
 	return []remote.Option{c.getAuthentication(ref), c.getTransportOption()}
 }
 
-func (c client) getAuthHelper(ref name.Reference) authn.Keychain {
+func (c client) getAuthHelper(_ name.Reference) authn.Keychain {
 	helper := newOktetoHelper(c.config)
 	return authn.NewKeychainFromHelper(helper)
 }

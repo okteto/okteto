@@ -57,7 +57,7 @@ func (fc fakeClient) GetImageConfig(_ string) (*containerv1.ConfigFile, error) {
 	return fc.GetConfig.Result, fc.GetConfig.Err
 }
 
-func (fc fakeClient) HasPushAccess(image string) (bool, error) {
+func (fc fakeClient) HasPushAccess(_ string) (bool, error) {
 	return fc.HasPushAcces.Result, fc.HasPushAcces.Err
 }
 

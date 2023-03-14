@@ -26,7 +26,7 @@ type fakeRepositoryGetter struct {
 	err        error
 }
 
-func (frg fakeRepositoryGetter) get(path string) (gitRepositoryInterface, error) {
+func (frg fakeRepositoryGetter) get(_ string) (gitRepositoryInterface, error) {
 	return frg.repository, frg.err
 }
 
