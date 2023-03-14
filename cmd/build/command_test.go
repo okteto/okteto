@@ -65,17 +65,12 @@ func (fr fakeRegistry) AddImageByName(images ...string) error {
 	}
 	return nil
 }
+
 func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
 	fr.registry[opts.Tag] = fakeImage{Args: opts.BuildArgs}
 	return nil
 }
-func (fr fakeRegistry) getFakeImage(image string) fakeImage {
-	v, ok := fr.registry[image]
-	if ok {
-		return v
-	}
-	return fakeImage{}
-}
+
 func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageReference, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {
