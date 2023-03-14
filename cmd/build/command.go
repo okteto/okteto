@@ -50,7 +50,7 @@ type registryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
 	IsOktetoRegistry(image string) bool
 	GetImageReference(image string) (registry.OktetoImageReference, error)
-	HasGlobalPushAcces() (bool, error)
+	HasGlobalPushAccess() (bool, error)
 }
 
 // NewBuildCommand creates a struct to run all build methods

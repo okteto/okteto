@@ -43,7 +43,7 @@ type oktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
 	IsOktetoRegistry(image string) bool
 	GetImageReference(image string) (registry.OktetoImageReference, error)
-	HasGlobalPushAcces() (bool, error)
+	HasGlobalPushAccess() (bool, error)
 }
 
 type OktetoBuilderConfigInterface interface {

@@ -59,7 +59,7 @@ func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
 	return nil
 }
 
-func (fr fakeRegistry) HasGlobalPushAcces() (bool, error) { return false, nil }
+func (fr fakeRegistry) HasGlobalPushAccess() (bool, error) { return false, nil }
 
 func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()

@@ -63,7 +63,7 @@ func newFakeRegistry() fakeRegistry {
 	}
 }
 
-func (fr fakeRegistry) HasGlobalPushAcces() (bool, error) { return false, nil }
+func (fr fakeRegistry) HasGlobalPushAccess() (bool, error) { return false, nil }
 
 func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
 	if _, ok := fr.registry[imageTag]; !ok {

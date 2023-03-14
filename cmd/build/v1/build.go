@@ -35,7 +35,7 @@ type OktetoBuilderInterface interface {
 
 type oktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
-	HasGlobalPushAcces() (bool, error)
+	HasGlobalPushAccess() (bool, error)
 }
 
 // OktetoBuilder builds the images

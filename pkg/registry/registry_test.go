@@ -199,7 +199,7 @@ func TestHasPushAccess(t *testing.T) {
 				},
 			}
 
-			result, err := or.HasGlobalPushAcces()
+			result, err := or.HasGlobalPushAccess()
 			assert.Equal(t, tt.expected.hasAccess, result)
 			assert.ErrorIs(t, err, tt.expected.err)
 		})

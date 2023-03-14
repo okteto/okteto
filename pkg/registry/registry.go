@@ -137,8 +137,8 @@ func (or OktetoRegistry) GetImageReference(image string) (OktetoImageReference, 
 	}, nil
 }
 
-// HasGlobalPushAcces checks if the user has push access to the global registry
-func (or OktetoRegistry) HasGlobalPushAcces() (bool, error) {
+// HasGlobalPushAccess checks if the user has push access to the global registry
+func (or OktetoRegistry) HasGlobalPushAccess() (bool, error) {
 	if !or.config.IsOktetoCluster() {
 		return false, nil
 	}
