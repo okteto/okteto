@@ -942,6 +942,12 @@ func (manifest *Manifest) ExpandEnvVars() error {
 		}
 	}
 	if manifest.Destroy != nil {
+		if manifest.Destroy.Image != "" {
+			manifest.Destroy.Image, err = ExpandEnv(manifest.Destroy.Image, true)
+			if err != nil {
+				return err
+			}
+		}
 		for idx, cmd := range manifest.Destroy.Commands {
 			cmd.Command, err = envsubst.String(cmd.Command)
 			if err != nil {

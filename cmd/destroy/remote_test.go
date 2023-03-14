@@ -22,7 +22,6 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -41,9 +40,6 @@ func (f fakeBuilder) IsV1() bool { return true }
 
 func TestRemoteTest(t *testing.T) {
 	ctx := context.Background()
-	fakeManifest := &model.Manifest{
-		Destroy: &model.DestroyInfo{},
-	}
 	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
 	fs := afero.NewMemMapFs()
 	tempCreator := filesystem.NewTemporalDirectoryCtrl(fs)
@@ -114,7 +110,7 @@ func TestRemoteTest(t *testing.T) {
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
-				manifest:             fakeManifest,
+				destroyImage:         "",
 			}
 			err := rdc.destroy(ctx, tt.config.options)
 			assert.Equal(t, tt.expected, err)
@@ -195,11 +191,6 @@ func TestGetDestroyFlags(t *testing.T) {
 func TestCreateDockerfile(t *testing.T) {
 	wdCtrl := filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/"))
 	fs := afero.NewMemMapFs()
-	fakeManifest := &model.Manifest{
-		Destroy: &model.DestroyInfo{
-			Image: "test-image",
-		},
-	}
 	type config struct {
 		wd   filesystem.FakeWorkingDirectoryCtrlErrors
 		opts *Options
@@ -241,7 +232,7 @@ func TestCreateDockerfile(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
 			rdc := remoteDestroyCommand{
 				fs:                   fs,
-				manifest:             fakeManifest,
+				destroyImage:         "test-image",
 				workingDirectoryCtrl: wdCtrl,
 			}
 			dockerfileName, err := rdc.createDockerfile("/test", tt.config.opts)
