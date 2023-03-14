@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -1346,13 +1345,6 @@ func (service *Dev) validateForExtraFields() error {
 // DevCloneName returns the name of the mirrored version of a given resource
 func DevCloneName(name string) string {
 	return fmt.Sprintf("%s-okteto", name)
-}
-
-func getLocalhost() string {
-	if runtime.GOOS != "windows" {
-		return PrivilegedLocalhost
-	}
-	return Localhost
 }
 
 // Copy clones the buildInfo without the pointers

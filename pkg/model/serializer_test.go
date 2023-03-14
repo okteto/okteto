@@ -1133,7 +1133,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1198,7 +1198,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1282,7 +1282,7 @@ sync:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1367,7 +1367,7 @@ services:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1499,7 +1499,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1587,7 +1587,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1652,7 +1652,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
