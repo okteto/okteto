@@ -393,7 +393,7 @@ func TestCheckIfCommitIsAlreadyBuilt(t *testing.T) {
 				}},
 				Config: tt.config.cfg,
 			}
-			_, hasAccess := ob.checkIfCommitIsAlreadyBuilt(context.Background(), "test", "test", &tt.config.cmdOptions)
+			_, hasAccess := ob.checkIfCommitIsAlreadyBuilt("test", "test", tt.config.cfg.GetHash(), tt.config.cmdOptions.NoCache)
 			assert.Equal(t, tt.expected.hasAccess, hasAccess)
 		})
 	}

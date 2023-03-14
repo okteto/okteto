@@ -24,7 +24,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/types"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -184,14 +183,13 @@ func getImageFromTmpl(targetRegistry, repoName, svcName, tag string) string {
 	return fmt.Sprintf("%s/%s-%s:%s", targetRegistry, repoName, svcName, tag)
 }
 
-func (bc *OktetoBuilder) checkIfCommitIsAlreadyBuilt(ctx context.Context, manifestName, svcName string, options *types.BuildOptions) (string, bool) {
+func (bc *OktetoBuilder) checkIfCommitIsAlreadyBuilt(manifestName, svcName, sha string, noCache bool) (string, bool) {
 	if !bc.Config.IsCleanProject() {
 		return "", false
 	}
-	if options.NoCache {
+	if noCache {
 		return "", false
 	}
-	sha := bc.Config.GetHash()
 
 	targetRegistries := []string{constants.GlobalRegistry, constants.DevRegistry}
 	tagsToCheck := []string{}

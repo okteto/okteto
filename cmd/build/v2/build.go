@@ -150,7 +150,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			if options.EnableStages {
 				oktetoLog.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
 			}
-			if imageTag, isBuilt := bc.checkIfCommitIsAlreadyBuilt(ctx, options.Manifest.Name, svcToBuild, options); isBuilt {
+			if imageTag, isBuilt := bc.checkIfCommitIsAlreadyBuilt(options.Manifest.Name, svcToBuild, bc.Config.GetHash(), options.NoCache); isBuilt {
 				bc.SetServiceEnvVars(svcToBuild, imageTag)
 				bc.builtImages[svcToBuild] = true
 				continue
