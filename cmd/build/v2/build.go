@@ -151,6 +151,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				oktetoLog.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
 			}
 			if imageTag, isBuilt := bc.checkIfCommitIsAlreadyBuilt(options.Manifest.Name, svcToBuild, bc.Config.GetHash(), options.NoCache); isBuilt {
+				oktetoLog.Warning("Skipping build of '%s' svc because it's commit is already built", svcToBuild)
 				bc.SetServiceEnvVars(svcToBuild, imageTag)
 				bc.builtImages[svcToBuild] = true
 				continue
