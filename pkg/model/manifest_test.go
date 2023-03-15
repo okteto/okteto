@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -381,10 +380,7 @@ func Test_validateManifestBuild(t *testing.T) {
 
 func TestInferFromStack(t *testing.T) {
 	dirtest := filepath.Clean("/stack/dir/")
-	devInterface := PrivilegedLocalhost
-	if runtime.GOOS == "windows" {
-		devInterface = Localhost
-	}
+	devInterface := Localhost
 	stack := &Stack{
 		Services: map[string]*Service{
 			"test": {
