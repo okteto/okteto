@@ -62,7 +62,7 @@ func (o *ContextOptions) initFromEnvVars() {
 	usedEnvVars := []string{}
 
 	envToken := os.Getenv(model.OktetoTokenEnvVar)
-	if o.Token == "" && envToken != "" && okteto.Context().Token != envToken {
+	if o.Token == "" && envToken != "" && okteto.Context().Token != "" && okteto.Context().Token != envToken {
 		o.Token = envToken
 		usedEnvVars = append(usedEnvVars, model.OktetoTokenEnvVar)
 	}
