@@ -14,11 +14,11 @@
 package context
 
 import (
-	"os"
 	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_initFromContext(t *testing.T) {
@@ -121,12 +121,24 @@ func Test_initFromEnvVars(t *testing.T) {
 		{
 			name: "all-empty",
 			in:   &ContextOptions{},
+			env: map[string]string{
+				"OKTETO_URL":       "",
+				"OKTETO_CONTEXT":   "",
+				"OKTETO_TOKEN":     "",
+				"OKTETO_NAMESPACE": "",
+			},
 			want: &ContextOptions{},
 		},
 		{
 			name: "token-in-options-no-context",
 			in: &ContextOptions{
 				Token: "token",
+			},
+			env: map[string]string{
+				"OKTETO_URL":       "",
+				"OKTETO_CONTEXT":   "",
+				"OKTETO_TOKEN":     "",
+				"OKTETO_NAMESPACE": "",
 			},
 			want: &ContextOptions{
 				Token:    "token",
@@ -139,7 +151,12 @@ func Test_initFromEnvVars(t *testing.T) {
 			in: &ContextOptions{
 				Token: "token",
 			},
-			env: map[string]string{"OKTETO_TOKEN": "bad-token"},
+			env: map[string]string{
+				"OKTETO_URL":       "",
+				"OKTETO_CONTEXT":   "",
+				"OKTETO_TOKEN":     "bad-token",
+				"OKTETO_NAMESPACE": "",
+			},
 			want: &ContextOptions{
 				Token:    "token",
 				Context:  okteto.CloudURL,
@@ -149,7 +166,12 @@ func Test_initFromEnvVars(t *testing.T) {
 		{
 			name: "token-notin-options-with-envar",
 			in:   &ContextOptions{},
-			env:  map[string]string{"OKTETO_TOKEN": "token"},
+			env: map[string]string{
+				"OKTETO_URL":       "",
+				"OKTETO_CONTEXT":   "",
+				"OKTETO_TOKEN":     "token",
+				"OKTETO_NAMESPACE": "",
+			},
 			want: &ContextOptions{
 				Token:    "token",
 				Context:  okteto.CloudURL,
@@ -161,6 +183,12 @@ func Test_initFromEnvVars(t *testing.T) {
 			in: &ContextOptions{
 				Context: "context",
 			},
+			env: map[string]string{
+				"OKTETO_URL":       "",
+				"OKTETO_CONTEXT":   "",
+				"OKTETO_TOKEN":     "",
+				"OKTETO_NAMESPACE": "",
+			},
 			want: &ContextOptions{
 				Context: "context",
 			},
@@ -170,7 +198,12 @@ func Test_initFromEnvVars(t *testing.T) {
 			in: &ContextOptions{
 				Context: "context",
 			},
-			env: map[string]string{"OKTETO_URL": "okteto-url", "OKTETO_CONTEXT": "okteto-context"},
+			env: map[string]string{
+				"OKTETO_URL":       "okteto-url",
+				"OKTETO_CONTEXT":   "okteto-context",
+				"OKTETO_TOKEN":     "",
+				"OKTETO_NAMESPACE": "",
+			},
 			want: &ContextOptions{
 				Context: "context",
 			},
@@ -178,7 +211,12 @@ func Test_initFromEnvVars(t *testing.T) {
 		{
 			name: "context-notin-options-with-envar-context",
 			in:   &ContextOptions{},
-			env:  map[string]string{"OKTETO_CONTEXT": "okteto-context"},
+			env: map[string]string{
+				"OKTETO_URL":       "",
+				"OKTETO_CONTEXT":   "okteto-context",
+				"OKTETO_TOKEN":     "",
+				"OKTETO_NAMESPACE": "",
+			},
 			want: &ContextOptions{
 				Context: "okteto-context",
 			},
@@ -186,7 +224,12 @@ func Test_initFromEnvVars(t *testing.T) {
 		{
 			name: "context-notin-options-with-envar-url",
 			in:   &ContextOptions{},
-			env:  map[string]string{"OKTETO_URL": "okteto-url"},
+			env: map[string]string{
+				"OKTETO_URL":       "okteto-url",
+				"OKTETO_CONTEXT":   "",
+				"OKTETO_TOKEN":     "",
+				"OKTETO_NAMESPACE": "",
+			},
 			want: &ContextOptions{
 				Context:  "okteto-url",
 				IsOkteto: true,
@@ -197,7 +240,12 @@ func Test_initFromEnvVars(t *testing.T) {
 			in: &ContextOptions{
 				Token: "token",
 			},
-			env: map[string]string{"OKTETO_URL": "okteto-url"},
+			env: map[string]string{
+				"OKTETO_URL":       "okteto-url",
+				"OKTETO_CONTEXT":   "",
+				"OKTETO_TOKEN":     "",
+				"OKTETO_NAMESPACE": "",
+			},
 			want: &ContextOptions{
 				Token:    "token",
 				Context:  "okteto-url",
@@ -207,7 +255,12 @@ func Test_initFromEnvVars(t *testing.T) {
 		{
 			name: "context-notin-options-and-with-envar-url-and-token",
 			in:   &ContextOptions{},
-			env:  map[string]string{"OKTETO_URL": "okteto-url", "OKTETO_TOKEN": "token-envvar"},
+			env: map[string]string{
+				"OKTETO_URL":       "okteto-url",
+				"OKTETO_CONTEXT":   "",
+				"OKTETO_TOKEN":     "token-envvar",
+				"OKTETO_NAMESPACE": "",
+			},
 			want: &ContextOptions{
 				Token:    "token-envvar",
 				Context:  "okteto-url",
@@ -219,6 +272,12 @@ func Test_initFromEnvVars(t *testing.T) {
 			in: &ContextOptions{
 				Namespace: "namespace",
 			},
+			env: map[string]string{
+				"OKTETO_URL":       "",
+				"OKTETO_CONTEXT":   "",
+				"OKTETO_TOKEN":     "",
+				"OKTETO_NAMESPACE": "",
+			},
 			want: &ContextOptions{
 				Namespace: "namespace",
 			},
@@ -228,7 +287,12 @@ func Test_initFromEnvVars(t *testing.T) {
 			in: &ContextOptions{
 				Namespace: "namespace",
 			},
-			env: map[string]string{"OKTETO_NAMESPACE": "okteto-ns"},
+			env: map[string]string{
+				"OKTETO_URL":       "",
+				"OKTETO_CONTEXT":   "",
+				"OKTETO_TOKEN":     "",
+				"OKTETO_NAMESPACE": "okteto-ns",
+			},
 			want: &ContextOptions{
 				Namespace: "namespace",
 			},
@@ -236,7 +300,12 @@ func Test_initFromEnvVars(t *testing.T) {
 		{
 			name: "namespace-notin-options-with-envar",
 			in:   &ContextOptions{},
-			env:  map[string]string{"OKTETO_NAMESPACE": "okteto-ns"},
+			env: map[string]string{
+				"OKTETO_URL":       "",
+				"OKTETO_CONTEXT":   "",
+				"OKTETO_TOKEN":     "",
+				"OKTETO_NAMESPACE": "okteto-ns",
+			},
 			want: &ContextOptions{
 				Namespace: "okteto-ns",
 			},
@@ -246,15 +315,10 @@ func Test_initFromEnvVars(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for k, v := range tt.env {
-				os.Setenv(k, v)
+				t.Setenv(k, v)
 			}
 			tt.in.initFromEnvVars()
-			if !reflect.DeepEqual(tt.in, tt.want) {
-				t.Errorf("Test '%s' failed: %+v", tt.name, tt.in)
-			}
-			for k := range tt.env {
-				os.Unsetenv(k)
-			}
+			assert.Equal(t, tt.in, tt.want)
 		})
 	}
 }
