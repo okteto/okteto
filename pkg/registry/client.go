@@ -17,6 +17,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -31,6 +32,7 @@ import (
 type clientInterface interface {
 	GetDigest(image string) (string, error)
 	GetImageConfig(image string) (*v1.ConfigFile, error)
+	HasPushAccess(image string) (bool, error)
 }
 
 type ClientConfigInterface interface {
@@ -39,6 +41,25 @@ type ClientConfigInterface interface {
 	GetToken() string
 	IsInsecureSkipTLSVerifyPolicy() bool
 	GetContextCertificate() (*x509.Certificate, error)
+}
+
+type oktetoHelperConfig interface {
+	GetUserID() string
+	GetToken() string
+}
+
+type oktetoHelper struct {
+	config oktetoHelperConfig
+}
+
+func newOktetoHelper(config oktetoHelperConfig) oktetoHelper {
+	return oktetoHelper{
+		config: config,
+	}
+}
+
+func (oh oktetoHelper) Get(_ string) (string, string, error) {
+	return oh.config.GetUserID(), oh.config.GetToken(), nil
 }
 
 // client operates with the registry API
@@ -99,6 +120,15 @@ func (c client) GetImageConfig(image string) (*v1.ConfigFile, error) {
 	return cfg, nil
 }
 
+func (c client) HasPushAccess(image string) (bool, error) {
+	ref, err := name.ParseReference(image)
+	if err != nil {
+		return false, fmt.Errorf("error checking push access: %w", err)
+	}
+	err = remote.CheckPushPermission(ref, c.getAuthHelper(ref), c.getTransport())
+	return err == nil, err
+}
+
 func (c client) isNotFound(err error) bool {
 	var transportErr *transport.Error
 	if errors.As(err, &transportErr) {
@@ -112,7 +142,12 @@ func (c client) isNotFound(err error) bool {
 }
 
 func (c client) getOptions(ref name.Reference) []remote.Option {
-	return []remote.Option{c.getAuthentication(ref), c.getTransport()}
+	return []remote.Option{c.getAuthentication(ref), c.getTransportOption()}
+}
+
+func (c client) getAuthHelper(_ name.Reference) authn.Keychain {
+	helper := newOktetoHelper(c.config)
+	return authn.NewKeychainFromHelper(helper)
 }
 
 func (c client) getAuthentication(ref name.Reference) remote.Option {
@@ -130,7 +165,10 @@ func (c client) getAuthentication(ref name.Reference) remote.Option {
 	return remote.WithAuthFromKeychain(authn.DefaultKeychain)
 }
 
-func (c client) getTransport() remote.Option {
+func (c client) getTransportOption() remote.Option {
+	return remote.WithTransport(c.getTransport())
+}
+func (c client) getTransport() http.RoundTripper {
 	transport := oktetoHttp.DefaultTransport()
 
 	if c.config.IsInsecureSkipTLSVerifyPolicy() {
@@ -138,5 +176,5 @@ func (c client) getTransport() remote.Option {
 	} else if cert, err := c.config.GetContextCertificate(); err == nil {
 		transport = oktetoHttp.StrictSSLTransport(cert)
 	}
-	return remote.WithTransport(transport)
+	return transport
 }

@@ -119,6 +119,93 @@ func TestGetImageTagWithDigest(t *testing.T) {
 	}
 }
 
+func TestHasPushAccess(t *testing.T) {
+	type expected struct {
+		hasAccess bool
+		err       error
+	}
+	type clientConfig struct {
+		hasAccess bool
+		err       error
+	}
+	type config struct {
+		clientConfig   clientConfig
+		registryConfig FakeConfig
+	}
+	var tests = []struct {
+		name     string
+		config   config
+		expected expected
+	}{
+		{
+			name: "not in okteto",
+			config: config{
+				registryConfig: FakeConfig{
+					IsOktetoClusterCfg: false,
+				},
+				clientConfig: clientConfig{
+					hasAccess: false,
+					err:       nil,
+				},
+			},
+			expected: expected{
+				hasAccess: false,
+				err:       nil,
+			},
+		},
+		{
+			name: "in okteto - with access",
+			config: config{
+				registryConfig: FakeConfig{
+					IsOktetoClusterCfg: true,
+				},
+				clientConfig: clientConfig{
+					hasAccess: true,
+					err:       nil,
+				},
+			},
+			expected: expected{
+				hasAccess: true,
+				err:       nil,
+			},
+		},
+		{
+			name: "in okteto - no access",
+			config: config{
+				registryConfig: FakeConfig{
+					IsOktetoClusterCfg: true,
+				},
+				clientConfig: clientConfig{
+					hasAccess: false,
+					err:       assert.AnError,
+				},
+			},
+			expected: expected{
+				hasAccess: false,
+				err:       assert.AnError,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			or := OktetoRegistry{
+				imageCtrl: NewImageCtrl(tt.config.registryConfig),
+				config:    tt.config.registryConfig,
+				client: fakeClient{
+					HasPushAcces: hasPushAccess{
+						Result: tt.config.clientConfig.hasAccess,
+						Err:    tt.config.clientConfig.err,
+					},
+				},
+			}
+
+			result, err := or.HasGlobalPushAccess()
+			assert.Equal(t, tt.expected.hasAccess, result)
+			assert.ErrorIs(t, err, tt.expected.err)
+		})
+	}
+}
+
 func TestGetImageMetadata(t *testing.T) {
 	type expected struct {
 		metadata ImageMetadata
@@ -373,7 +460,6 @@ func Test_IsGlobal(t *testing.T) {
 			want: false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			or := NewOktetoRegistry(tt.input.config)
