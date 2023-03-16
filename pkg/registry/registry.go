@@ -22,6 +22,8 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
+const globalTestImage = "okteto.global/test"
+
 type configInterface interface {
 	IsOktetoCluster() bool
 	GetGlobalNamespace() string
@@ -133,4 +135,13 @@ func (or OktetoRegistry) GetImageReference(image string) (OktetoImageReference, 
 		Tag:      ref.Identifier(),
 		Image:    image,
 	}, nil
+}
+
+// HasGlobalPushAccess checks if the user has push access to the global registry
+func (or OktetoRegistry) HasGlobalPushAccess() (bool, error) {
+	if !or.config.IsOktetoCluster() {
+		return false, nil
+	}
+	image := or.imageCtrl.ExpandOktetoGlobalRegistry(globalTestImage)
+	return or.client.HasPushAccess(image)
 }
