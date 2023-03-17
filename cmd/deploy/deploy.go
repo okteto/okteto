@@ -355,14 +355,14 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	// Not sure of the value for the `deployed-by` label
 	pods, err := c.CoreV1().Pods(okteto.Context().Namespace).List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", model.DeployedByLabel, deployOptions.Name)})
 	if err != nil {
-		//return err
+		// return err
 		oktetoLog.Infof("could not list pods %s", err)
 	}
 	for _, pod := range pods.Items {
 		if pod.Status.Phase == "Failed" {
 			err := c.CoreV1().Pods(okteto.Context().Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
 			if err != nil {
-				//return err
+				// return err
 				oktetoLog.Infof("could not delete pod %s", err)
 			}
 		}
