@@ -55,7 +55,9 @@ func NewContextCommand() *ContextCommand {
 		OktetoClientProvider: okteto.NewOktetoClientProvider(),
 		OktetoContextWriter:  okteto.NewContextConfigWriter(),
 		IsOktetoKubeTokenPresent: func(oktetoURL string) (bool, error) {
-			kubeTokenURL, err := okteto.ParseOktetoURLWithPath(oktetoURL, "auth/kubetoken")
+			// this is a hack to check if the server was upgraded to a version that supports the /auth/kubetoken/{namespace} endpoint
+			// if the endpoint is not present, the server will return a 401 unauthorized error
+			kubeTokenURL, err := okteto.ParseOktetoURLWithPath(oktetoURL, "auth/kubetoken/default")
 			if err != nil {
 				return false, fmt.Errorf("failed to parse kubetoken url: %w", err)
 			}
