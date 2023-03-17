@@ -31,32 +31,6 @@ func newUserClient(client *graphql.Client) *userClient {
 }
 
 // GetSecrets returns the secrets from Okteto API
-func (c *OktetoClient) GetSecrets(ctx context.Context) ([]types.Secret, error) {
-	var queryStruct struct {
-		Secrets []struct {
-			Name  graphql.String
-			Value graphql.String
-		} `graphql:"getGitDeploySecrets"`
-	}
-
-	err := query(ctx, &queryStruct, nil, c.client)
-	if err != nil {
-		return nil, err
-	}
-
-	secrets := make([]types.Secret, 0)
-	for _, secret := range queryStruct.Secrets {
-		if !strings.Contains(string(secret.Name), ".") {
-			secrets = append(secrets, types.Secret{
-				Name:  string(secret.Name),
-				Value: string(secret.Value),
-			})
-		}
-	}
-	return secrets, nil
-}
-
-// GetSecrets returns the secrets from Okteto API
 func (c *userClient) GetContext(ctx context.Context) (*types.UserContext, error) {
 	var queryStruct struct {
 		User struct {
