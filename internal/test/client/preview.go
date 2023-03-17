@@ -65,3 +65,7 @@ func (c *FakePreviewsClient) Destroy(_ context.Context, _ string) error {
 	c.response.DestroySuccessCount++
 	return nil
 }
+
+func (c *FakePreviewsClient) AddMembers(_ context.Context, _ string, _ []string) error {
+	return nil
+}

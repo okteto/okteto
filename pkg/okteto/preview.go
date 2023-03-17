@@ -337,6 +337,30 @@ func (c *previewClient) GetResourcesStatusFromPreview(ctx context.Context, previ
 	return status, nil
 }
 
+// AddMembers adds members to a preview deploy
+func (c *previewClient) AddMembers(ctx context.Context, previewName string, members []string) error {
+	var mutation struct {
+		Space struct {
+			Id graphql.String
+		} `graphql:"updatePreview(id: $id, members: $members)"`
+	}
+
+	membersVariable := make([]graphql.String, 0)
+	for _, m := range members {
+		membersVariable = append(membersVariable, graphql.String(m))
+	}
+	variables := map[string]interface{}{
+		"id":      graphql.String(previewName),
+		"members": membersVariable,
+	}
+	err := mutate(ctx, &mutation, variables, c.client)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func translatePreviewAPIErr(err error, name string) error {
 	if err.Error() == "conflict" {
 		return fmt.Errorf("preview '%s' already exists with a different scope. Please use a different name", name)
