@@ -210,7 +210,7 @@ func translateAPIErr(err error) error {
 		}
 
 		oktetoLog.Infof("Unrecognized API error: %s", err)
-		return fmt.Errorf(e)
+		return fmt.Errorf("%s: %w", e, err)
 	}
 
 }
