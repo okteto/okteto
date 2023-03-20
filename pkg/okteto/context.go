@@ -49,8 +49,9 @@ type OktetoContextStore struct {
 }
 
 const (
-	localClusterType  = "local"
-	remoteClusterType = "remote"
+	localClusterType           = "local"
+	remoteClusterType          = "remote"
+	noKubetokenCapabilityError = "your Okteto Cluster version doesn't support kubetoken authentication. Please upgrade to the latest version"
 )
 
 var (
@@ -331,6 +332,9 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	if err != nil {
 		return err
 	}
+	if !hasKubeToken {
+		return fmt.Errorf(noKubetokenCapabilityError)
+	}
 
 	clusterName := UrlToKubernetesContext(oktetoURL)
 	// create cluster
@@ -349,19 +353,14 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 		user = clientcmdapi.NewAuthInfo()
 	}
 
-	if hasKubeToken {
-		user.Token = ""
-		user.Exec = &clientcmdapi.ExecConfig{
-			Command:            "okteto",
-			Args:               []string{"kubetoken", oktetoURL, namespace},
-			APIVersion:         "client.authentication.k8s.io/v1",
-			InstallHint:        "Okteto needs to be installed and in your PATH to use this context. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
-			ProvideClusterInfo: true,
-			InteractiveMode:    "IfAvailable",
-		}
-	} else {
-		// TODO: return error
-		user.Exec = nil
+	user.Token = ""
+	user.Exec = &clientcmdapi.ExecConfig{
+		Command:            "okteto",
+		Args:               []string{"kubetoken", oktetoURL, namespace},
+		APIVersion:         "client.authentication.k8s.io/v1",
+		InstallHint:        "Okteto needs to be installed and in your PATH to use this context. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
+		ProvideClusterInfo: true,
+		InteractiveMode:    "IfAvailable",
 	}
 	cfg.AuthInfos[userName] = user
 

@@ -139,7 +139,6 @@ func Test_AddOktetoCredentialsToCfg(t *testing.T) {
 	cred := &types.Credential{
 		Server:      "https://ip.ip.ip.ip",
 		Certificate: "cred-cert",
-		Token:       "cred-token",
 	}
 
 	oktetoURL := "https://cloud.okteto.com"
@@ -195,39 +194,10 @@ func Test_AddOktetoCredentialsToCfg(t *testing.T) {
 			},
 		},
 		{
-			name:         "no-kube-token",
-			hasKubeToken: false,
-			expectedCfg: &clientcmdapi.Config{
-				Extensions: map[string]runtime.Object{},
-				Clusters: map[string]*clientcmdapi.Cluster{
-					clusterAndContextName: {
-						Server:                   cred.Server,
-						CertificateAuthorityData: []byte(cred.Certificate),
-						Extensions:               map[string]runtime.Object{},
-					},
-				},
-				Contexts: map[string]*clientcmdapi.Context{
-					clusterAndContextName: {
-						Cluster:   clusterAndContextName,
-						AuthInfo:  username,
-						Namespace: namespace,
-						Extensions: map[string]runtime.Object{
-							constants.OktetoExtension: nil,
-						},
-					},
-				},
-				AuthInfos: map[string]*clientcmdapi.AuthInfo{
-					username: {
-						Token:                cred.Token,
-						Extensions:           map[string]runtime.Object{},
-						ImpersonateUserExtra: map[string][]string{},
-					},
-				},
-				CurrentContext: clusterAndContextName,
-				Preferences: clientcmdapi.Preferences{
-					Extensions: map[string]runtime.Object{},
-				},
-			},
+			name:          "no-kube-token",
+			hasKubeToken:  false,
+			expectedCfg:   clientcmdapi.NewConfig(),
+			expectedError: fmt.Errorf(noKubetokenCapabilityError),
 		},
 		{
 			name:          "error",
