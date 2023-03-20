@@ -27,7 +27,6 @@ func (c *OktetoClient) GetCredentials(ctx context.Context) (*types.Credential, e
 		Space struct {
 			Server      graphql.String
 			Certificate graphql.String
-			Token       graphql.String
 			Namespace   graphql.String
 		} `graphql:"credentials(space: $cred)"`
 	}
@@ -43,7 +42,6 @@ func (c *OktetoClient) GetCredentials(ctx context.Context) (*types.Credential, e
 	cred := &types.Credential{
 		Server:      string(queryStruct.Space.Server),
 		Certificate: string(queryStruct.Space.Certificate),
-		Token:       string(queryStruct.Space.Token),
 		Namespace:   string(queryStruct.Space.Namespace),
 	}
 
