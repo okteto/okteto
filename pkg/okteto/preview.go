@@ -16,6 +16,7 @@ package okteto
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -346,4 +347,22 @@ func translatePreviewAPIErr(err error, name string) error {
 			Hint: "Please log in with an administrator account or use a personal preview environment"}
 	}
 	return err
+}
+
+// validateNamespace checks if the new ns exceeds the max chars allowed by k8s and if t
+func validateNamespace(namespace, object string) error {
+	if len(namespace) > MAX_ALLOWED_CHARS {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("invalid %s name", object),
+			Hint: fmt.Sprintf("%s name must be shorter than 63 characters.", object),
+		}
+	}
+	nameValidationRegex := regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
+	if !nameValidationRegex.MatchString(namespace) {
+		return oktetoErrors.UserError{
+			E:    fmt.Errorf("invalid %s name", object),
+			Hint: fmt.Sprintf("%s name must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character", object),
+		}
+	}
+	return nil
 }
