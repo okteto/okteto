@@ -47,7 +47,7 @@ type NamespaceInterface interface {
 type PreviewInterface interface {
 	List(ctx context.Context) ([]Preview, error)
 	DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewResponse, error)
-	GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error)
+	GetResourcesStatus(ctx context.Context, previewName, devName string) (map[string]string, error)
 	Destroy(ctx context.Context, previewName string) error
 	ListEndpoints(ctx context.Context, previewName string) ([]Endpoint, error)
 }

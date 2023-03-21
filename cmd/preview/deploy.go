@@ -210,7 +210,7 @@ func (pw *Command) waitForResourcesToBeRunning(ctx context.Context, name string,
 		case <-to.C:
 			return fmt.Errorf("'%s' %w - timeout %s", name, ErrWaitResourcesTimeout, timeout.String())
 		case <-ticker.C:
-			resourceStatus, err := pw.okClient.Previews().GetResourcesStatusFromPreview(ctx, name, "")
+			resourceStatus, err := pw.okClient.Previews().GetResourcesStatus(ctx, name, "")
 			if err != nil {
 				return err
 			}

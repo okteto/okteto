@@ -53,8 +53,8 @@ func (c *FakePreviewsClient) DeployPreview(_ context.Context, _, _, _, _, _, _ s
 	return c.response.Preview, c.response.ErrDeployPreview
 }
 
-// GetResourcesStatusFromPreview gets resources from a fake preview
-func (c *FakePreviewsClient) GetResourcesStatusFromPreview(_ context.Context, _, _ string) (map[string]string, error) {
+// GetResourcesStatus gets resources from a fake preview
+func (c *FakePreviewsClient) GetResourcesStatus(_ context.Context, _, _ string) (map[string]string, error) {
 	return c.response.ResourceStatus, c.response.ErrResources
 }
 

@@ -64,6 +64,23 @@ type listPreviewEndpoints struct {
 	Response previewEndpoints `graphql:"preview(id: $id)"`
 }
 
+type getPreviewResources struct {
+	Response previewResourcesStatus `graphql:"preview(id: $id)"`
+}
+
+type previewResourcesStatus struct {
+	Deployments  []resourceInfo
+	Statefulsets []resourceInfo
+	Jobs         []resourceInfo
+	Cronjobs     []resourceInfo
+}
+
+type resourceInfo struct {
+	ID         graphql.String
+	Name       graphql.String
+	Status     graphql.String
+	DeployedBy graphql.String
+}
 type previewEndpoints struct {
 	Deployments  []deploymentEndpoint
 	Statefulsets []statefulsetEdnpoint
@@ -137,7 +154,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 		}
 		err := mutate(ctx, &mutationStruct, queryVariables, c.client)
 		if err != nil {
-			return nil, translatePreviewAPIErr(err, name)
+			return nil, c.translateErr(err, name)
 		}
 		previewResponse.Action = &types.Action{
 			ID:     string(mutationStruct.Response.Action.Id),
@@ -162,7 +179,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 		}
 		err := mutate(ctx, &mutationStruct, queryVariables, c.client)
 		if err != nil {
-			return nil, translatePreviewAPIErr(err, name)
+			return nil, c.translateErr(err, name)
 		}
 		previewResponse.Action = &types.Action{
 			ID:     string(mutationStruct.Response.Action.Id),
@@ -239,35 +256,8 @@ func (c *previewClient) ListEndpoints(ctx context.Context, previewName string) (
 	return endpoints, nil
 }
 
-func (c *previewClient) GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error) {
-	var queryStruct struct {
-		Preview struct {
-			Deployments []struct {
-				ID         graphql.String
-				Name       graphql.String
-				Status     graphql.String
-				DeployedBy graphql.String
-			}
-			Statefulsets []struct {
-				ID         graphql.String
-				Name       graphql.String
-				Status     graphql.String
-				DeployedBy graphql.String
-			}
-			Jobs []struct {
-				ID         graphql.String
-				Name       graphql.String
-				Status     graphql.String
-				DeployedBy graphql.String
-			}
-			Cronjobs []struct {
-				ID         graphql.String
-				Name       graphql.String
-				Status     graphql.String
-				DeployedBy graphql.String
-			}
-		} `graphql:"preview(id: $id)"`
-	}
+func (c *previewClient) GetResourcesStatus(ctx context.Context, previewName, devName string) (map[string]string, error) {
+	queryStruct := getPreviewResources{}
 	variables := map[string]interface{}{
 		"id": graphql.String(previewName),
 	}
@@ -278,25 +268,25 @@ func (c *previewClient) GetResourcesStatusFromPreview(ctx context.Context, previ
 	}
 
 	status := make(map[string]string)
-	for _, d := range queryStruct.Preview.Deployments {
+	for _, d := range queryStruct.Response.Deployments {
 		if devName == "" || string(d.DeployedBy) == devName {
 			resourceName := getResourceFullName(Deployment, string(d.Name))
 			status[resourceName] = string(d.Status)
 		}
 	}
-	for _, sfs := range queryStruct.Preview.Statefulsets {
+	for _, sfs := range queryStruct.Response.Statefulsets {
 		if devName == "" || string(sfs.DeployedBy) == devName {
 			resourceName := getResourceFullName(StatefulSet, string(sfs.Name))
 			status[resourceName] = string(sfs.Status)
 		}
 	}
-	for _, j := range queryStruct.Preview.Jobs {
+	for _, j := range queryStruct.Response.Jobs {
 		if devName == "" || string(j.DeployedBy) == devName {
 			resourceName := getResourceFullName(Job, string(j.Name))
 			status[resourceName] = string(j.Status)
 		}
 	}
-	for _, cj := range queryStruct.Preview.Cronjobs {
+	for _, cj := range queryStruct.Response.Cronjobs {
 		if devName == "" || string(cj.DeployedBy) == devName {
 			resourceName := getResourceFullName(CronJob, string(cj.Name))
 			status[resourceName] = string(cj.Status)
@@ -305,7 +295,7 @@ func (c *previewClient) GetResourcesStatusFromPreview(ctx context.Context, previ
 	return status, nil
 }
 
-func translatePreviewAPIErr(err error, name string) error {
+func (c *previewClient) translateErr(err error, name string) error {
 	if err.Error() == "conflict" {
 		return fmt.Errorf("preview '%s' already exists with a different scope. Please use a different name", name)
 	}

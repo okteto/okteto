@@ -385,6 +385,260 @@ func TestListEndpoints(t *testing.T) {
 	}
 }
 
+func TestGetResourcesStatus(t *testing.T) {
+	type input struct {
+		client     *fakeGraphQLClient
+		namespace  string
+		devenvName string
+	}
+	type expected struct {
+		response map[string]string
+		err      error
+	}
+	testCases := []struct {
+		name     string
+		input    input
+		expected expected
+	}{
+		{
+			name: "error",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: nil,
+					err:         assert.AnError,
+				},
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "no error - empty devenv - return all the resources",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getPreviewResources{
+						Response: previewResourcesStatus{
+							Deployments: []resourceInfo{
+								{
+									ID:         "test",
+									Name:       "error",
+									Status:     "error",
+									DeployedBy: "test",
+								},
+								{
+									ID:         "test",
+									Name:       "queued",
+									Status:     "queued",
+									DeployedBy: "test",
+								},
+								{
+									ID:         "test",
+									Name:       "progressing",
+									Status:     "progressing",
+									DeployedBy: "test",
+								},
+							},
+							Statefulsets: []resourceInfo{
+								{
+									ID:         "test",
+									Name:       "error",
+									Status:     "error",
+									DeployedBy: "test",
+								},
+								{
+									ID:         "test",
+									Name:       "queued",
+									Status:     "queued",
+									DeployedBy: "test",
+								},
+								{
+									ID:         "test",
+									Name:       "progressing",
+									Status:     "progressing",
+									DeployedBy: "test",
+								},
+							},
+							Jobs: []resourceInfo{
+								{
+									ID:         "test",
+									Name:       "error",
+									Status:     "error",
+									DeployedBy: "test",
+								},
+								{
+									ID:         "test",
+									Name:       "queued",
+									Status:     "queued",
+									DeployedBy: "test",
+								},
+								{
+									ID:         "test",
+									Name:       "progressing",
+									Status:     "progressing",
+									DeployedBy: "test",
+								},
+							},
+							Cronjobs: []resourceInfo{
+								{
+									ID:         "test",
+									Name:       "error",
+									Status:     "error",
+									DeployedBy: "test",
+								},
+								{
+									ID:         "test",
+									Name:       "queued",
+									Status:     "queued",
+									DeployedBy: "test",
+								},
+								{
+									ID:         "test",
+									Name:       "progressing",
+									Status:     "progressing",
+									DeployedBy: "test",
+								},
+							},
+						},
+					},
+					err: nil,
+				},
+				namespace:  "test",
+				devenvName: "test",
+			},
+			expected: expected{
+				response: map[string]string{
+					"deployment/error":        "error",
+					"deployment/queued":       "queued",
+					"deployment/progressing":  "progressing",
+					"statefulset/error":       "error",
+					"statefulset/queued":      "queued",
+					"statefulset/progressing": "progressing",
+					"job/error":               "error",
+					"job/queued":              "queued",
+					"job/progressing":         "progressing",
+					"cronjob/error":           "error",
+					"cronjob/queued":          "queued",
+					"cronjob/progressing":     "progressing",
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "no error - devenv only deploy errors",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getPreviewResources{
+						Response: previewResourcesStatus{
+							Deployments: []resourceInfo{
+								{
+									ID:         "test",
+									Name:       "error",
+									Status:     "error",
+									DeployedBy: "1",
+								},
+								{
+									ID:         "test",
+									Name:       "queued",
+									Status:     "queued",
+									DeployedBy: "2",
+								},
+								{
+									ID:         "test",
+									Name:       "progressing",
+									Status:     "progressing",
+									DeployedBy: "3",
+								},
+							},
+							Statefulsets: []resourceInfo{
+								{
+									ID:         "test",
+									Name:       "error",
+									Status:     "error",
+									DeployedBy: "1",
+								},
+								{
+									ID:         "test",
+									Name:       "queued",
+									Status:     "queued",
+									DeployedBy: "2",
+								},
+								{
+									ID:         "test",
+									Name:       "progressing",
+									Status:     "progressing",
+									DeployedBy: "3",
+								},
+							},
+							Jobs: []resourceInfo{
+								{
+									ID:         "test",
+									Name:       "error",
+									Status:     "error",
+									DeployedBy: "1",
+								},
+								{
+									ID:         "test",
+									Name:       "queued",
+									Status:     "queued",
+									DeployedBy: "2",
+								},
+								{
+									ID:         "test",
+									Name:       "progressing",
+									Status:     "progressing",
+									DeployedBy: "3",
+								},
+							},
+							Cronjobs: []resourceInfo{
+								{
+									ID:         "test",
+									Name:       "error",
+									Status:     "error",
+									DeployedBy: "1",
+								},
+								{
+									ID:         "test",
+									Name:       "queued",
+									Status:     "queued",
+									DeployedBy: "2",
+								},
+								{
+									ID:         "test",
+									Name:       "progressing",
+									Status:     "progressing",
+									DeployedBy: "3",
+								},
+							},
+						},
+					},
+					err: nil,
+				},
+				namespace:  "test",
+				devenvName: "1",
+			},
+			expected: expected{
+				response: map[string]string{
+					"deployment/error":  "error",
+					"statefulset/error": "error",
+					"job/error":         "error",
+					"cronjob/error":     "error",
+				},
+				err: nil,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pc := previewClient{
+				client: tc.input.client,
+			}
+			response, err := pc.GetResourcesStatus(context.Background(), tc.input.namespace, tc.input.devenvName)
+			assert.ErrorIs(t, err, tc.expected.err)
+			assert.Equal(t, tc.expected.response, response)
+		})
+	}
+}
+
 func Test_validateNamespaceName(t *testing.T) {
 	tests := []struct {
 		name          string
