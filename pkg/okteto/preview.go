@@ -56,6 +56,16 @@ type destroyPreviewMutation struct {
 	Response previewIDStruct `graphql:"destroyPreview(id: $id)"`
 }
 
+type listPreviewQuery struct {
+	Response []previewEnv `graphql:"previews"`
+}
+
+type previewEnv struct {
+	Id       graphql.String
+	Sleeping graphql.Boolean
+	Scope    graphql.String
+}
+
 type deployPreviewResponse struct {
 	Action  actionStruct
 	Preview previewIDStruct
@@ -158,13 +168,7 @@ func (c *previewClient) Destroy(ctx context.Context, name string) error {
 
 // ListPreviews list preview environments
 func (c *previewClient) List(ctx context.Context) ([]types.Preview, error) {
-	var queryStruct struct {
-		PreviewEnvs []struct {
-			Id       graphql.String
-			Sleeping graphql.Boolean
-			Scope    graphql.String
-		} `graphql:"previews"`
-	}
+	queryStruct := listPreviewQuery{}
 
 	err := query(ctx, &queryStruct, nil, c.client)
 	if err != nil {
@@ -172,7 +176,7 @@ func (c *previewClient) List(ctx context.Context) ([]types.Preview, error) {
 	}
 
 	result := make([]types.Preview, 0)
-	for _, previewEnv := range queryStruct.PreviewEnvs {
+	for _, previewEnv := range queryStruct.Response {
 		result = append(result, types.Preview{
 			ID:       string(previewEnv.Id),
 			Sleeping: bool(previewEnv.Sleeping),
