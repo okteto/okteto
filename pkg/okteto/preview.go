@@ -239,40 +239,6 @@ func (c *previewClient) ListEndpoints(ctx context.Context, previewName string) (
 	return endpoints, nil
 }
 
-// GetPreviewEnvByName gets a preview environment given its name
-func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*types.GitDeploy, error) {
-	var queryStruct struct {
-		Preview struct {
-			GitDeploys []struct {
-				Id     graphql.String
-				Name   graphql.String
-				Status graphql.String
-			}
-		} `graphql:"preview(id: $id)"`
-	}
-
-	variables := map[string]interface{}{
-		"id": graphql.String(Context().Namespace),
-	}
-	err := query(ctx, &queryStruct, variables, c.client)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, gitDeploy := range queryStruct.Preview.GitDeploys {
-		if string(gitDeploy.Name) == name {
-			pipeline := &types.GitDeploy{
-				ID:     string(gitDeploy.Id),
-				Name:   string(gitDeploy.Name),
-				Status: string(gitDeploy.Status),
-			}
-			return pipeline, nil
-		}
-	}
-
-	return nil, oktetoErrors.ErrNotFound
-}
-
 func (c *previewClient) GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error) {
 	var queryStruct struct {
 		Preview struct {
