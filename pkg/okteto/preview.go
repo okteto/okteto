@@ -26,7 +26,7 @@ import (
 )
 
 type previewClient struct {
-	client *graphql.Client
+	client graphqlClientInterface
 }
 
 func newPreviewClient(client *graphql.Client) *previewClient {
@@ -48,6 +48,19 @@ type InputVariable struct {
 
 type PreviewScope graphql.String
 
+type deployPreviewMutation struct {
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename)"`
+}
+
+type deployPreviewResponse struct {
+	Action  actionStruct
+	Preview previewIDStruct
+}
+
+type previewIDStruct struct {
+	Id graphql.String
+}
+
 // DeployPreview creates a preview environment
 func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
 	if err := validateNamespace(name, "preview environment"); err != nil {
@@ -57,19 +70,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 	previewResponse := &types.PreviewResponse{}
 
 	if len(variables) > 0 {
-		var mutation struct {
-			Preview struct {
-				Action struct {
-					Id     graphql.String
-					Name   graphql.String
-					Status graphql.String
-				}
-				Preview struct {
-					Id graphql.String
-				}
-			} `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename)"`
-		}
-
+		mutationStruct := deployPreviewMutation{}
 		variablesVariable := make([]InputVariable, 0)
 		for _, v := range variables {
 			variablesVariable = append(variablesVariable, InputVariable{
@@ -99,32 +100,20 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 			"variables":  variablesVariable,
 			"filename":   graphql.String(filename),
 		}
-		err := mutate(ctx, &mutation, queryVariables, c.client)
+		err := mutate(ctx, &mutationStruct, queryVariables, c.client)
 		if err != nil {
 			return nil, translatePreviewAPIErr(err, name)
 		}
 		previewResponse.Action = &types.Action{
-			ID:     string(mutation.Preview.Action.Id),
-			Name:   string(mutation.Preview.Action.Name),
-			Status: string(mutation.Preview.Action.Status),
+			ID:     string(mutationStruct.Response.Action.Id),
+			Name:   string(mutationStruct.Response.Action.Name),
+			Status: string(mutationStruct.Response.Action.Status),
 		}
 		previewResponse.Preview = &types.Preview{
-			ID: string(mutation.Preview.Preview.Id),
+			ID: string(mutationStruct.Response.Preview.Id),
 		}
 	} else {
-		var mutation struct {
-			Preview struct {
-				Action struct {
-					Id     graphql.String
-					Name   graphql.String
-					Status graphql.String
-				}
-				Preview struct {
-					Id graphql.String
-				}
-			} `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, filename: $filename, variables: $variables)"`
-		}
-
+		mutationStruct := deployPreviewMutation{}
 		queryVariables := map[string]interface{}{
 			"name":       graphql.String(name),
 			"scope":      PreviewScope(scope),
@@ -136,17 +125,17 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 				{Name: graphql.String("OKTETO_ORIGIN"), Value: graphql.String(origin)},
 			},
 		}
-		err := mutate(ctx, &mutation, queryVariables, c.client)
+		err := mutate(ctx, &mutationStruct, queryVariables, c.client)
 		if err != nil {
 			return nil, translatePreviewAPIErr(err, name)
 		}
 		previewResponse.Action = &types.Action{
-			ID:     string(mutation.Preview.Action.Id),
-			Name:   string(mutation.Preview.Action.Name),
-			Status: string(mutation.Preview.Action.Status),
+			ID:     string(mutationStruct.Response.Action.Id),
+			Name:   string(mutationStruct.Response.Action.Name),
+			Status: string(mutationStruct.Response.Action.Status),
 		}
 		previewResponse.Preview = &types.Preview{
-			ID: string(mutation.Preview.Preview.Id),
+			ID: string(mutationStruct.Response.Preview.Id),
 		}
 	}
 	return previewResponse, nil
@@ -353,14 +342,18 @@ func translatePreviewAPIErr(err error, name string) error {
 func validateNamespace(namespace, object string) error {
 	if len(namespace) > MAX_ALLOWED_CHARS {
 		return oktetoErrors.UserError{
-			E:    fmt.Errorf("invalid %s name", object),
+			E: namespaceValidationError{
+				object: object,
+			},
 			Hint: fmt.Sprintf("%s name must be shorter than 63 characters.", object),
 		}
 	}
 	nameValidationRegex := regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
 	if !nameValidationRegex.MatchString(namespace) {
 		return oktetoErrors.UserError{
-			E:    fmt.Errorf("invalid %s name", object),
+			E: namespaceValidationError{
+				object: object,
+			},
 			Hint: fmt.Sprintf("%s name must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character", object),
 		}
 	}

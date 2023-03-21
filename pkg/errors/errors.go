@@ -29,6 +29,7 @@ type UserError struct {
 func (u UserError) Error() string {
 	return u.E.Error()
 }
+func (e UserError) Unwrap() error { return e.E }
 
 // CommandError is meant for errors displayed to the user. It can include a message and a hint
 type CommandError struct {

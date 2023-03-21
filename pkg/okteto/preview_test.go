@@ -23,6 +23,165 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestDeployPreview(t *testing.T) {
+	type input struct {
+		client    *fakeGraphQLClient
+		name      string
+		variables []types.Variable
+	}
+	type expected struct {
+		response *types.PreviewResponse
+		err      error
+	}
+	testCases := []struct {
+		name     string
+		input    input
+		expected expected
+	}{
+		{
+			name: "namespace validator length exceeds",
+			input: input{
+				name: strings.Repeat("a", 100),
+			},
+			expected: expected{
+				response: nil,
+				err: namespaceValidationError{
+					object: "preview environment",
+				},
+			},
+		},
+		{
+			name: "namespace validator length exceeds",
+			input: input{
+				name: "-",
+			},
+			expected: expected{
+				response: nil,
+				err: namespaceValidationError{
+					object: "preview environment",
+				},
+			},
+		},
+		{
+			name: "with variables - error",
+			input: input{
+				client: &fakeGraphQLClient{
+					err: assert.AnError,
+				},
+				name: "test",
+				variables: []types.Variable{
+					{
+						Name:  "OKTETO_ORIGIN",
+						Value: "VALUE",
+					},
+				},
+			},
+			expected: expected{
+				response: nil,
+				err:      assert.AnError,
+			},
+		},
+		{
+			name: "with variables - no error",
+			input: input{
+				client: &fakeGraphQLClient{
+					mutationResult: &deployPreviewMutation{
+						Response: deployPreviewResponse{
+							Action: actionStruct{
+								Id:     "test",
+								Name:   "test",
+								Status: ProgressingStatus,
+							},
+							Preview: previewIDStruct{
+								Id: "test",
+							},
+						},
+					},
+					err: nil,
+				},
+				name: "test",
+				variables: []types.Variable{
+					{
+						Name:  "KEY",
+						Value: "VALUE",
+					},
+				},
+			},
+			expected: expected{
+				response: &types.PreviewResponse{
+					Action: &types.Action{
+						ID:     "test",
+						Name:   "test",
+						Status: progressingStatus,
+					},
+					Preview: &types.Preview{
+						ID: "test",
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "without variables - error",
+			input: input{
+				client: &fakeGraphQLClient{
+					err: assert.AnError,
+				},
+				name:      "test",
+				variables: []types.Variable{},
+			},
+			expected: expected{
+				response: nil,
+				err:      assert.AnError,
+			},
+		},
+		{
+			name: "without variables - no error",
+			input: input{
+				client: &fakeGraphQLClient{
+					mutationResult: &deployPreviewMutation{
+						Response: deployPreviewResponse{
+							Action: actionStruct{
+								Id:     "test",
+								Name:   "test",
+								Status: ProgressingStatus,
+							},
+							Preview: previewIDStruct{
+								Id: "test",
+							},
+						},
+					},
+					err: nil,
+				},
+				name:      "test",
+				variables: []types.Variable{},
+			},
+			expected: expected{
+				response: &types.PreviewResponse{
+					Action: &types.Action{
+						ID:     "test",
+						Name:   "test",
+						Status: progressingStatus,
+					},
+					Preview: &types.Preview{
+						ID: "test",
+					},
+				},
+				err: nil,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pc := previewClient{
+				client: tc.input.client,
+			}
+			response, err := pc.DeployPreview(context.Background(), tc.input.name, "", "", "", "", "", tc.input.variables)
+			assert.ErrorIs(t, err, tc.expected.err)
+			assert.Equal(t, tc.expected.response, response)
+		})
+	}
+}
 
 func Test_validateNamespaceName(t *testing.T) {
 	tests := []struct {

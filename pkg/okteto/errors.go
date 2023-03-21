@@ -28,6 +28,14 @@ func (pe pipelineFailedError) Error() string {
 	return fmt.Sprintf("pipeline '%s' failed", pe.pipelineName)
 }
 
+type namespaceValidationError struct {
+	object string
+}
+
+func (ne namespaceValidationError) Error() string {
+	return fmt.Sprintf("invalid %s name", ne.object)
+}
+
 // IsErrGithubMissingBusinessEmail returns true if the error is ErrGithubMissingBusinessEmail
 func IsErrGithubMissingBusinessEmail(err error) bool {
 	return err.Error() == ErrGithubMissingBusinessEmail.Error()
