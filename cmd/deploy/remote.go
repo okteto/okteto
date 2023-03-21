@@ -140,6 +140,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
 	buildOptions.Tag = ""
+	buildOptions.Manifest = deployOptions.Manifest
 
 	// we need to call Build() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
@@ -147,7 +148,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	// executed in the deploy command.
 	if err := rd.builderV1.Build(ctx, buildOptions); err != nil {
 		return oktetoErrors.UserError{
-			E: fmt.Errorf("Error during development environment deployment."),
+			E: fmt.Errorf("Error during development environment deployment: %w", err),
 		}
 	}
 	oktetoLog.SetStage("done")
