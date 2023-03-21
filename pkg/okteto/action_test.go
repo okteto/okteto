@@ -334,7 +334,41 @@ func TestWaitForActionProgressing(t *testing.T) {
 			},
 		},
 		{
-			name: " successful",
+			name: "queued -> progressing -> successful",
+			cfg: input{
+				client: &fakeGraphQLMultipleCallsClient{
+					queryResults: []interface{}{
+						&getActionQueryStruct{
+							Action: actionStruct{
+								Id:     "id",
+								Name:   "name",
+								Status: "queued",
+							},
+						},
+						&getActionQueryStruct{
+							Action: actionStruct{
+								Id:     "id",
+								Name:   "name",
+								Status: "progressing",
+							},
+						},
+						&getActionQueryStruct{
+							Action: actionStruct{
+								Id:     "id",
+								Name:   "name",
+								Status: "deployed",
+							},
+						},
+					},
+					errs: []error{},
+				},
+			},
+			expected: expected{
+				err: nil,
+			},
+		},
+		{
+			name: "successful",
 			cfg: input{
 				client: &fakeGraphQLMultipleCallsClient{
 					queryResults: []interface{}{
