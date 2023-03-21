@@ -183,6 +183,61 @@ func TestDeployPreview(t *testing.T) {
 	}
 }
 
+func TestDestroyPreview(t *testing.T) {
+	type input struct {
+		client *fakeGraphQLClient
+		name   string
+	}
+	type expected struct {
+		err error
+	}
+	testCases := []struct {
+		name     string
+		input    input
+		expected expected
+	}{
+		{
+			name: "no error",
+			input: input{
+				client: &fakeGraphQLClient{
+					mutationResult: &destroyPreviewMutation{
+						Response: previewIDStruct{
+							Id: "test",
+						},
+					},
+					err: nil,
+				},
+				name: "test",
+			},
+			expected: expected{
+				err: nil,
+			},
+		},
+		{
+			name: "error",
+			input: input{
+				client: &fakeGraphQLClient{
+					mutationResult: nil,
+					err:            assert.AnError,
+				},
+				name: "test",
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pc := previewClient{
+				client: tc.input.client,
+			}
+			err := pc.Destroy(context.Background(), tc.input.name)
+			assert.ErrorIs(t, err, tc.expected.err)
+		})
+	}
+}
+
 func Test_validateNamespaceName(t *testing.T) {
 	tests := []struct {
 		name          string

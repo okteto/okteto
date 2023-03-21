@@ -52,6 +52,10 @@ type deployPreviewMutation struct {
 	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename)"`
 }
 
+type destroyPreviewMutation struct {
+	Response previewIDStruct `graphql:"destroyPreview(id: $id)"`
+}
+
 type deployPreviewResponse struct {
 	Action  actionStruct
 	Preview previewIDStruct
@@ -143,16 +147,12 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 
 // DestroyPreview destroy a preview environment
 func (c *previewClient) Destroy(ctx context.Context, name string) error {
-	var mutation struct {
-		Preview struct {
-			Id graphql.String
-		} `graphql:"destroyPreview(id: $id)"`
-	}
+	mutationStruct := destroyPreviewMutation{}
 	variables := map[string]interface{}{
 		"id": graphql.String(name),
 	}
 
-	err := mutate(ctx, &mutation, variables, c.client)
+	err := mutate(ctx, &mutationStruct, variables, c.client)
 	return err
 }
 
