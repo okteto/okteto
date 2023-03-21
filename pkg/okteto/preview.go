@@ -60,6 +60,27 @@ type listPreviewQuery struct {
 	Response []previewEnv `graphql:"previews"`
 }
 
+type listPreviewEndpoints struct {
+	Response previewEndpoints `graphql:"preview(id: $id)"`
+}
+
+type previewEndpoints struct {
+	Deployments  []deploymentEndpoint
+	Statefulsets []statefulsetEdnpoint
+}
+
+type deploymentEndpoint struct {
+	Endpoints []endpointURL
+}
+
+type statefulsetEdnpoint struct {
+	Endpoints []endpointURL
+}
+
+type endpointURL struct {
+	Url graphql.String
+}
+
 type previewEnv struct {
 	Id       graphql.String
 	Sleeping graphql.Boolean
@@ -187,22 +208,9 @@ func (c *previewClient) List(ctx context.Context) ([]types.Preview, error) {
 	return result, nil
 }
 
-func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName string) ([]types.Endpoint, error) {
-	var queryStruct struct {
-		Preview struct {
-			Deployments []struct {
-				Endpoints []struct {
-					Url graphql.String
-				}
-			}
-			Statefulsets []struct {
-				Endpoints []struct {
-					Url graphql.String
-				}
-			}
-		} `graphql:"preview(id: $id)"`
-	}
-
+// ListEndpoints lists all the endpoints from a preview environment
+func (c *previewClient) ListEndpoints(ctx context.Context, previewName string) ([]types.Endpoint, error) {
+	queryStruct := listPreviewEndpoints{}
 	variables := map[string]interface{}{
 		"id": graphql.String(previewName),
 	}
@@ -213,7 +221,7 @@ func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName st
 		return nil, err
 	}
 
-	for _, d := range queryStruct.Preview.Deployments {
+	for _, d := range queryStruct.Response.Deployments {
 		for _, endpoint := range d.Endpoints {
 			endpoints = append(endpoints, types.Endpoint{
 				URL: string(endpoint.Url),
@@ -221,7 +229,7 @@ func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName st
 		}
 	}
 
-	for _, sfs := range queryStruct.Preview.Statefulsets {
+	for _, sfs := range queryStruct.Response.Statefulsets {
 		for _, endpoint := range sfs.Endpoints {
 			endpoints = append(endpoints, types.Endpoint{
 				URL: string(endpoint.Url),

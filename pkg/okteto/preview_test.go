@@ -303,6 +303,88 @@ func TestListPreview(t *testing.T) {
 	}
 }
 
+func TestListEndpoints(t *testing.T) {
+	type input struct {
+		client *fakeGraphQLClient
+		name   string
+	}
+	type expected struct {
+		response []types.Endpoint
+		err      error
+	}
+	testCases := []struct {
+		name     string
+		input    input
+		expected expected
+	}{
+		{
+			name: "no error",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: &listPreviewEndpoints{
+						Response: previewEndpoints{
+							Deployments: []deploymentEndpoint{
+								{
+									Endpoints: []endpointURL{
+										{
+											Url: "https://test.test",
+										},
+									},
+								},
+							},
+							Statefulsets: []statefulsetEdnpoint{
+								{
+									Endpoints: []endpointURL{
+										{
+											Url: "https://test.test",
+										},
+									},
+								},
+							},
+						},
+					},
+					err: nil,
+				},
+				name: "test",
+			},
+			expected: expected{
+				response: []types.Endpoint{
+					{
+						URL: "https://test.test",
+					},
+					{
+						URL: "https://test.test",
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "error",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: nil,
+					err:         assert.AnError,
+				},
+				name: "test",
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pc := previewClient{
+				client: tc.input.client,
+			}
+			response, err := pc.ListEndpoints(context.Background(), tc.input.name)
+			assert.ErrorIs(t, err, tc.expected.err)
+			assert.Equal(t, tc.expected.response, response)
+		})
+	}
+}
+
 func Test_validateNamespaceName(t *testing.T) {
 	tests := []struct {
 		name          string
