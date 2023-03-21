@@ -10,6 +10,13 @@ import (
 	"github.com/shurcooL/graphql"
 )
 
+const (
+	progressingStatus string = "progressing"
+	queuedStatus      string = "queued"
+	errorStatus       string = "error"
+	destroyErrStatus  string = "destroy-error"
+)
+
 type getActionQueryStruct struct {
 	Action actionStruct `graphql:"action(name: $name, space: $space)"`
 }
@@ -60,9 +67,9 @@ func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName
 
 			oktetoLog.Infof("action '%s' is '%s'", actionName, a.Status)
 			switch a.Status {
-			case "progressing", "queued":
+			case progressingStatus, queuedStatus:
 				continue
-			case "error", "destroy-error":
+			case errorStatus, destroyErrStatus:
 				oktetoLog.Infof("action '%s' failed", actionName)
 				return pipelineFailedError{
 					pipelineName: pipelineName,
@@ -94,11 +101,11 @@ func (c *pipelineClient) WaitForActionProgressing(ctx context.Context, pipelineN
 
 			oktetoLog.Infof("action '%s' is '%s'", actionName, a.Status)
 			switch a.Status {
-			case "progressing":
+			case progressingStatus:
 				return nil
-			case "queued":
+			case queuedStatus:
 				continue
-			case "error", "destroy-error":
+			case errorStatus, destroyErrStatus:
 				oktetoLog.Infof("action '%s' failed", actionName)
 				return pipelineFailedError{
 					pipelineName: pipelineName,
