@@ -191,8 +191,8 @@ func TestWaitForActionToFinish(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			numberOfCalls := len(tc.cfg.client.queryResults)
-			timerChannel := make(chan time.Time, 1)
-			tickerChannel := make(chan time.Time, 1)
+			timerChannel := make(chan time.Time)
+			tickerChannel := make(chan time.Time)
 			pc := pipelineClient{
 				client: tc.cfg.client,
 				provideTicker: func(_ time.Duration) *time.Ticker {
@@ -210,12 +210,6 @@ func TestWaitForActionToFinish(t *testing.T) {
 			go func() {
 				for i := 0; i < numberOfCalls; i++ {
 					tickerChannel <- time.Now()
-					// Wait until the ticker has been read
-					for {
-						if len(tickerChannel) == 0 {
-							break
-						}
-					}
 				}
 				timerChannel <- time.Now()
 			}()
@@ -388,8 +382,8 @@ func TestWaitForActionProgressing(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			numberOfCalls := len(tc.cfg.client.queryResults)
-			timerChannel := make(chan time.Time, 1)
-			tickerChannel := make(chan time.Time, 1)
+			timerChannel := make(chan time.Time)
+			tickerChannel := make(chan time.Time)
 			pc := pipelineClient{
 				client: tc.cfg.client,
 				provideTicker: func(_ time.Duration) *time.Ticker {
@@ -407,12 +401,6 @@ func TestWaitForActionProgressing(t *testing.T) {
 			go func() {
 				for i := 0; i < numberOfCalls; i++ {
 					tickerChannel <- time.Now()
-					// Wait until the ticker has been read
-					for {
-						if len(tickerChannel) == 0 {
-							break
-						}
-					}
 				}
 				timerChannel <- time.Now()
 			}()
