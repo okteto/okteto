@@ -15,6 +15,8 @@ const (
 	queuedStatus      string = "queued"
 	errorStatus       string = "error"
 	destroyErrStatus  string = "destroy-error"
+
+	tickerInterval time.Duration = 1 * time.Second
 )
 
 type getActionQueryStruct struct {
@@ -49,16 +51,17 @@ func (c *pipelineClient) GetAction(ctx context.Context, name, namespace string) 
 }
 
 func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error {
-	t := c.tickerWithTimeoutProvider(1*time.Second, timeout)
+	timeoutTimer := c.provideTimer(timeout)
+	ticker := c.provideTicker(tickerInterval)
 	for {
 		select {
-		case <-t.TimeoutTick():
+		case <-timeoutTimer.C:
 			oktetoLog.Infof("action '%s' didn't finish after %s", actionName, timeout.String())
 			return pipelineTimeoutError{
 				pipelineName: actionName,
 				timeout:      timeout,
 			}
-		case <-t.TickerTick():
+		case <-ticker.C:
 			a, err := c.GetAction(ctx, actionName, namespace)
 			if err != nil {
 				oktetoLog.Infof("action '%s' failed", actionName)
@@ -82,17 +85,17 @@ func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName
 }
 
 func (c *pipelineClient) WaitForActionProgressing(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error {
-	t := c.tickerWithTimeoutProvider(1*time.Second, timeout)
-
+	timeoutTimer := c.provideTimer(timeout)
+	ticker := c.provideTicker(tickerInterval)
 	for {
 		select {
-		case <-t.TimeoutTick():
+		case <-timeoutTimer.C:
 			oktetoLog.Infof("action '%s' didn't progress after %s", actionName, timeout.String())
 			return pipelineTimeoutError{
 				pipelineName: actionName,
 				timeout:      timeout,
 			}
-		case <-t.TickerTick():
+		case <-ticker.C:
 			a, err := c.GetAction(ctx, actionName, namespace)
 			if err != nil {
 				oktetoLog.Infof("action '%s' failed", actionName)
