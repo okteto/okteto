@@ -17,6 +17,7 @@ import (
 	"context"
 	"testing"
 
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -66,7 +67,7 @@ func TestDeployPipeline(t *testing.T) {
 								Name:   "test",
 								Status: ProgressingStatus,
 							},
-							GitDeploy: gitDeployInfo{
+							GitDeploy: gitDeployInfoWithRepoInfo{
 								Id:         "test",
 								Name:       "test",
 								Status:     ProgressingStatus,
@@ -126,7 +127,7 @@ func TestDeployPipeline(t *testing.T) {
 								Name:   "test",
 								Status: ProgressingStatus,
 							},
-							GitDeploy: gitDeployInfo{
+							GitDeploy: gitDeployInfoWithRepoInfo{
 								Id:         "test",
 								Name:       "test",
 								Status:     ProgressingStatus,
@@ -166,6 +167,108 @@ func TestDeployPipeline(t *testing.T) {
 				Name:      tc.input.name,
 				Variables: tc.input.variables,
 			})
+			assert.ErrorIs(t, err, tc.expected.err)
+			assert.Equal(t, tc.expected.response, response)
+		})
+	}
+}
+
+func TestGetPipelineByName(t *testing.T) {
+	type input struct {
+		client *fakeGraphQLClient
+		name   string
+	}
+	type expected struct {
+		response *types.GitDeploy
+		err      error
+	}
+	testCases := []struct {
+		name     string
+		input    input
+		expected expected
+	}{
+		{
+			name: "error",
+			input: input{
+				client: &fakeGraphQLClient{
+					err: assert.AnError,
+				},
+				name: "test",
+			},
+			expected: expected{
+				response: nil,
+				err:      assert.AnError,
+			},
+		},
+		{
+			name: "not found",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getPipelineByNameQuery{
+						Response: getPipelineByNameResponse{
+							GitDeploys: []gitDeployInfo{
+								{
+									Id:     "",
+									Name:   "test1",
+									Status: ProgressingStatus,
+								},
+								{
+									Id:     "",
+									Name:   "test2",
+									Status: ProgressingStatus,
+								},
+							},
+						},
+					},
+					err: nil,
+				},
+				name: "not found",
+			},
+			expected: expected{
+				response: nil,
+				err:      oktetoErrors.ErrNotFound,
+			},
+		},
+		{
+			name: "not found",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getPipelineByNameQuery{
+						Response: getPipelineByNameResponse{
+							GitDeploys: []gitDeployInfo{
+								{
+									Id:     "",
+									Name:   "test1",
+									Status: ProgressingStatus,
+								},
+								{
+									Id:     "",
+									Name:   "test2",
+									Status: ProgressingStatus,
+								},
+							},
+						},
+					},
+					err: nil,
+				},
+				name: "test1",
+			},
+			expected: expected{
+				response: &types.GitDeploy{
+					ID:     "",
+					Name:   "test1",
+					Status: progressingStatus,
+				},
+				err: nil,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pc := pipelineClient{
+				client: tc.input.client,
+			}
+			response, err := pc.GetByName(context.Background(), tc.input.name, "")
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
 		})

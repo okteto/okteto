@@ -47,16 +47,30 @@ type deployPipelineMutation struct {
 	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename)"`
 }
 
-type deployPipelineResponse struct {
-	Action    actionStruct
-	GitDeploy gitDeployInfo
+type getPipelineByNameQuery struct {
+	Response getPipelineByNameResponse `graphql:"space(id: $id)"`
 }
 
-type gitDeployInfo struct {
+type deployPipelineResponse struct {
+	Action    actionStruct
+	GitDeploy gitDeployInfoWithRepoInfo
+}
+
+type gitDeployInfoWithRepoInfo struct {
 	Id         graphql.String
 	Name       graphql.String
 	Status     graphql.String
 	Repository graphql.String
+}
+
+type getPipelineByNameResponse struct {
+	GitDeploys []gitDeployInfo
+}
+
+type gitDeployInfo struct {
+	Id     graphql.String
+	Name   graphql.String
+	Status graphql.String
 }
 
 // Deploy creates a pipeline
@@ -150,15 +164,7 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 
 // GetByName gets a pipeline given its name
 func (c *pipelineClient) GetByName(ctx context.Context, name, namespace string) (*types.GitDeploy, error) {
-	var queryStruct struct {
-		Space struct {
-			GitDeploys []struct {
-				Id     graphql.String
-				Name   graphql.String
-				Status graphql.String
-			}
-		} `graphql:"space(id: $id)"`
-	}
+	var queryStruct getPipelineByNameQuery
 	variables := map[string]interface{}{
 		"id": graphql.String(namespace),
 	}
@@ -167,7 +173,7 @@ func (c *pipelineClient) GetByName(ctx context.Context, name, namespace string) 
 		return nil, err
 	}
 
-	for _, gitDeploy := range queryStruct.Space.GitDeploys {
+	for _, gitDeploy := range queryStruct.Response.GitDeploys {
 		if string(gitDeploy.Name) == name {
 			return &types.GitDeploy{
 				ID:     string(gitDeploy.Id),
