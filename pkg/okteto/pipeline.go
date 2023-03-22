@@ -43,6 +43,22 @@ func newPipelineClient(client *graphql.Client, url string) *pipelineClient {
 	}
 }
 
+type deployPipelineMutation struct {
+	Response deployPipelineResponse `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename)"`
+}
+
+type deployPipelineResponse struct {
+	Action    actionStruct
+	GitDeploy gitDeployInfo
+}
+
+type gitDeployInfo struct {
+	Id         graphql.String
+	Name       graphql.String
+	Status     graphql.String
+	Repository graphql.String
+}
+
 // Deploy creates a pipeline
 func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOptions) (*types.GitDeployResponse, error) {
 	origin := config.GetDeployOrigin()
@@ -50,21 +66,7 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 	gitDeployResponse := &types.GitDeployResponse{}
 
 	if len(opts.Variables) > 0 {
-		var mutation struct {
-			GitDeployResponse struct {
-				Action struct {
-					Id     graphql.String
-					Name   graphql.String
-					Status graphql.String
-				}
-				GitDeploy struct {
-					Id         graphql.String
-					Name       graphql.String
-					Status     graphql.String
-					Repository graphql.String
-				}
-			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, variables: $variables, filename: $filename)"`
-		}
+		var mutation deployPipelineMutation
 
 		variablesArg := []InputVariable{}
 		for _, v := range opts.Variables {
@@ -101,34 +103,19 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 		}
 
 		gitDeployResponse.Action = &types.Action{
-			ID:     string(mutation.GitDeployResponse.Action.Id),
-			Name:   string(mutation.GitDeployResponse.Action.Name),
-			Status: string(mutation.GitDeployResponse.Action.Status),
+			ID:     string(mutation.Response.Action.Id),
+			Name:   string(mutation.Response.Action.Name),
+			Status: string(mutation.Response.Action.Status),
 		}
 		gitDeployResponse.GitDeploy = &types.GitDeploy{
-			ID:         string(mutation.GitDeployResponse.GitDeploy.Id),
-			Name:       string(mutation.GitDeployResponse.GitDeploy.Name),
-			Repository: string(mutation.GitDeployResponse.GitDeploy.Repository),
-			Status:     string(mutation.GitDeployResponse.GitDeploy.Status),
+			ID:         string(mutation.Response.GitDeploy.Id),
+			Name:       string(mutation.Response.GitDeploy.Name),
+			Repository: string(mutation.Response.GitDeploy.Repository),
+			Status:     string(mutation.Response.GitDeploy.Status),
 		}
 
 	} else {
-		var mutation struct {
-			GitDeployResponse struct {
-				Action struct {
-					Id     graphql.String
-					Name   graphql.String
-					Status graphql.String
-				}
-				GitDeploy struct {
-					Id         graphql.String
-					Name       graphql.String
-					Status     graphql.String
-					Repository graphql.String
-				}
-			} `graphql:"deployGitRepository(name: $name, repository: $repository, space: $space, branch: $branch, filename: $filename, variables: $variables)"`
-		}
-
+		var mutation deployPipelineMutation
 		queryVariables := map[string]interface{}{
 			"name":       graphql.String(opts.Name),
 			"repository": graphql.String(opts.Repository),
@@ -146,15 +133,15 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 		}
 
 		gitDeployResponse.Action = &types.Action{
-			ID:     string(mutation.GitDeployResponse.Action.Id),
-			Name:   string(mutation.GitDeployResponse.Action.Name),
-			Status: string(mutation.GitDeployResponse.Action.Status),
+			ID:     string(mutation.Response.Action.Id),
+			Name:   string(mutation.Response.Action.Name),
+			Status: string(mutation.Response.Action.Status),
 		}
 		gitDeployResponse.GitDeploy = &types.GitDeploy{
-			ID:         string(mutation.GitDeployResponse.GitDeploy.Id),
-			Name:       string(mutation.GitDeployResponse.GitDeploy.Name),
-			Repository: string(mutation.GitDeployResponse.GitDeploy.Repository),
-			Status:     string(mutation.GitDeployResponse.GitDeploy.Status),
+			ID:         string(mutation.Response.GitDeploy.Id),
+			Name:       string(mutation.Response.GitDeploy.Name),
+			Repository: string(mutation.Response.GitDeploy.Repository),
+			Status:     string(mutation.Response.GitDeploy.Status),
 		}
 
 	}
