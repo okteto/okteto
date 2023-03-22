@@ -47,6 +47,12 @@ type OktetoClientProvider struct{}
 var insecureSkipTLSVerify bool
 var strictTLSOnce sync.Once
 
+// graphqlClientInterface contains the functions that a graphqlClient must have
+type graphqlClientInterface interface {
+	Query(ctx context.Context, q interface{}, variables map[string]interface{}) error
+	Mutate(ctx context.Context, m interface{}, variables map[string]interface{}) error
+}
+
 func NewOktetoClientProvider() *OktetoClientProvider {
 	return &OktetoClientProvider{}
 }
@@ -204,7 +210,7 @@ func translateAPIErr(err error) error {
 		}
 
 		oktetoLog.Infof("Unrecognized API error: %s", err)
-		return fmt.Errorf(e)
+		return err
 	}
 
 }
@@ -245,7 +251,7 @@ func InDevContainer() bool {
 	return false
 }
 
-func query(ctx context.Context, query interface{}, variables map[string]interface{}, client *graphql.Client) error {
+func query(ctx context.Context, query interface{}, variables map[string]interface{}, client graphqlClientInterface) error {
 	err := client.Query(ctx, query, variables)
 	if err != nil {
 		if isAPITransientErr(err) {
@@ -258,7 +264,7 @@ func query(ctx context.Context, query interface{}, variables map[string]interfac
 	return nil
 }
 
-func mutate(ctx context.Context, mutation interface{}, variables map[string]interface{}, client *graphql.Client) error {
+func mutate(ctx context.Context, mutation interface{}, variables map[string]interface{}, client graphqlClientInterface) error {
 	err := client.Mutate(ctx, mutation, variables)
 	if err != nil {
 		return translateAPIErr(err)
