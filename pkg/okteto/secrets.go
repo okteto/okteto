@@ -23,41 +23,69 @@ import (
 )
 
 type userClient struct {
-	client *graphql.Client
+	client graphqlClientInterface
 }
 
 func newUserClient(client *graphql.Client) *userClient {
 	return &userClient{client: client}
 }
 
+type getContextQuery struct {
+	User    userQuery     `graphql:"user"`
+	Secrets []secretQuery `graphql:"getGitDeploySecrets"`
+	Cred    credQuery     `graphql:"credentials(space: $cred)"`
+}
+
+type getDeprecatedContextQuery struct {
+	User    deprecatedUserQuery `graphql:"user"`
+	Secrets []secretQuery       `graphql:"getGitDeploySecrets"`
+	Cred    credQuery           `graphql:"credentials(space: $cred)"`
+}
+
+type userQuery struct {
+	Id              graphql.String
+	Name            graphql.String
+	Namespace       graphql.String
+	Email           graphql.String
+	ExternalID      graphql.String `graphql:"externalID"`
+	Token           graphql.String
+	New             graphql.Boolean
+	Registry        graphql.String
+	Buildkit        graphql.String
+	Certificate     graphql.String
+	GlobalNamespace graphql.String  `graphql:"globalNamespace"`
+	Analytics       graphql.Boolean `graphql:"telemetryEnabled"`
+}
+
+// TODO: Remove this code when users are in okteto chart > 0.10.8
+type deprecatedUserQuery struct {
+	Id          graphql.String
+	Name        graphql.String
+	Namespace   graphql.String
+	Email       graphql.String
+	ExternalID  graphql.String `graphql:"externalID"`
+	Token       graphql.String
+	New         graphql.Boolean
+	Registry    graphql.String
+	Buildkit    graphql.String
+	Certificate graphql.String
+}
+
+type secretQuery struct {
+	Name  graphql.String
+	Value graphql.String
+}
+
+type credQuery struct {
+	Server      graphql.String
+	Certificate graphql.String
+	Token       graphql.String
+	Namespace   graphql.String
+}
+
 // GetSecrets returns the secrets from Okteto API
 func (c *userClient) GetContext(ctx context.Context) (*types.UserContext, error) {
-	var queryStruct struct {
-		User struct {
-			Id              graphql.String
-			Name            graphql.String
-			Namespace       graphql.String
-			Email           graphql.String
-			ExternalID      graphql.String `graphql:"externalID"`
-			Token           graphql.String
-			New             graphql.Boolean
-			Registry        graphql.String
-			Buildkit        graphql.String
-			Certificate     graphql.String
-			GlobalNamespace graphql.String  `graphql:"globalNamespace"`
-			Analytics       graphql.Boolean `graphql:"telemetryEnabled"`
-		} `graphql:"user"`
-		Secrets []struct {
-			Name  graphql.String
-			Value graphql.String
-		} `graphql:"getGitDeploySecrets"`
-		Cred struct {
-			Server      graphql.String
-			Certificate graphql.String
-			Token       graphql.String
-			Namespace   graphql.String
-		} `graphql:"credentials(space: $cred)"`
-	}
+	var queryStruct getContextQuery
 	variables := map[string]interface{}{
 		"cred": graphql.String(""),
 	}
@@ -111,31 +139,9 @@ func (c *userClient) GetContext(ctx context.Context) (*types.UserContext, error)
 	return result, nil
 }
 
+// TODO: Remove this code when users are in okteto chart > 0.10.8
 func (c *userClient) deprecatedGetUserContext(ctx context.Context) (*types.UserContext, error) {
-	var queryStruct struct {
-		User struct {
-			Id          graphql.String
-			Name        graphql.String
-			Namespace   graphql.String
-			Email       graphql.String
-			ExternalID  graphql.String `graphql:"externalID"`
-			Token       graphql.String
-			New         graphql.Boolean
-			Registry    graphql.String
-			Buildkit    graphql.String
-			Certificate graphql.String
-		} `graphql:"user"`
-		Secrets []struct {
-			Name  graphql.String
-			Value graphql.String
-		} `graphql:"getGitDeploySecrets"`
-		Cred struct {
-			Server      graphql.String
-			Certificate graphql.String
-			Token       graphql.String
-			Namespace   graphql.String
-		} `graphql:"credentials(space: $cred)"`
-	}
+	var queryStruct getDeprecatedContextQuery
 	variables := map[string]interface{}{
 		"cred": graphql.String(""),
 	}
