@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
@@ -59,6 +60,11 @@ type fakeStatus struct {
 
 func (fs fakeStatus) IsClean() bool {
 	return fs.isClean
+}
+
+func TestNewRepo(t *testing.T) {
+	r := NewRepository("https://my-repo/okteto/okteto")
+	assert.Equal(t, "/okteto/okteto", r.url.Path)
 }
 
 func TestIsClean(t *testing.T) {
@@ -237,6 +243,103 @@ func TestGetSHA(t *testing.T) {
 			sha, err := repo.GetSHA()
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.sha, sha)
+		})
+	}
+}
+
+func TestIsEqual(t *testing.T) {
+	type input struct {
+		r Repository
+		o Repository
+	}
+	var tests = []struct {
+		name     string
+		input    input
+		expected bool
+	}{
+		{
+			name: "r is nil -> false",
+			input: input{
+				r: Repository{},
+				o: Repository{url: &url.URL{}},
+			},
+			expected: false,
+		},
+		{
+			name: "o is nil -> false",
+			input: input{
+				r: Repository{url: &url.URL{}},
+				o: Repository{},
+			},
+			expected: false,
+		},
+		{
+			name: "r and o are nil -> false",
+			input: input{
+				r: Repository{},
+				o: Repository{},
+			},
+			expected: false,
+		},
+		{
+			name: "different hostname -> false",
+			input: input{
+				r: Repository{url: &url.URL{Host: "my-hub"}},
+				o: Repository{url: &url.URL{Host: "my-hub2"}},
+			},
+			expected: false,
+		},
+		{
+			name: "different path -> false",
+			input: input{
+				r: Repository{url: &url.URL{Host: "my-hub", Path: "okteto/repo1"}},
+				o: Repository{url: &url.URL{Host: "my-hub", Path: "okteto/repo2"}},
+			},
+			expected: false,
+		},
+		{
+			name: "equal -> true",
+			input: input{
+				r: Repository{url: &url.URL{Host: "my-hub", Path: "okteto/repo1"}},
+				o: Repository{url: &url.URL{Host: "my-hub", Path: "okteto/repo2"}},
+			},
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.input.r.IsEqual(tt.input.o)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestCleanPath(t *testing.T) {
+	var tests = []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "path starts with /",
+			input:    "/okteto/okteto",
+			expected: "okteto/okteto",
+		},
+		{
+			name:     "path ends with .git",
+			input:    "okteto/okteto.git",
+			expected: "okteto/okteto",
+		},
+		{
+			name:     "path starts with / and ends with .git",
+			input:    "/okteto/okteto.git",
+			expected: "okteto/okteto",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := cleanPath(tt.input)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

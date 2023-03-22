@@ -22,9 +22,9 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
-	giturls "github.com/whilp/git-urls"
 )
 
 type pipelineClient struct {
@@ -180,7 +180,7 @@ func (c *pipelineClient) GetByName(ctx context.Context, name, namespace string) 
 }
 
 // GetByRepository gets a pipeline given its repo url
-func (c *pipelineClient) GetByRepository(ctx context.Context, repository string) (*types.GitDeployResponse, error) {
+func (c *pipelineClient) GetByRepository(ctx context.Context, repo string) (*types.GitDeployResponse, error) {
 	var queryStruct struct {
 		Pipeline struct {
 			GitDeploys []struct {
@@ -198,8 +198,10 @@ func (c *pipelineClient) GetByRepository(ctx context.Context, repository string)
 		return nil, err
 	}
 
+	inputRepo := repository.NewRepository(repo)
 	for _, gitDeploy := range queryStruct.Pipeline.GitDeploys {
-		if AreSameRepository(string(gitDeploy.Repository), repository) {
+		responseRepo := repository.NewRepository(string(gitDeploy.Repository))
+		if inputRepo.IsEqual(responseRepo) {
 			pipeline := &types.GitDeployResponse{
 				GitDeploy: &types.GitDeploy{
 					ID:         string(gitDeploy.Id),
@@ -211,28 +213,6 @@ func (c *pipelineClient) GetByRepository(ctx context.Context, repository string)
 		}
 	}
 	return nil, oktetoErrors.ErrNotFound
-}
-
-func AreSameRepository(repoA, repoB string) bool {
-	parsedRepoA, err := giturls.Parse(repoA)
-	if err != nil {
-		return false
-	}
-	parsedRepoB, err := giturls.Parse(repoB)
-	if err != nil {
-		return false
-	}
-
-	if parsedRepoA.Hostname() != parsedRepoB.Hostname() {
-		return false
-	}
-
-	// In short SSH URLs like git@github.com:okteto/movies.git, path doesn't start with '/', so we need to remove it
-	// in case it exists. It also happens with '.git' suffix. You don't have to specify it, so we remove in both cases
-	repoPathA := strings.TrimSuffix(strings.TrimPrefix(parsedRepoA.Path, "/"), ".git")
-	repoPathB := strings.TrimSuffix(strings.TrimPrefix(parsedRepoB.Path, "/"), ".git")
-
-	return repoPathA == repoPathB
 }
 
 // Destroy destroys a pipeline
