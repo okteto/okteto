@@ -227,7 +227,7 @@ func getDeployFlags(opts *Options) []string {
 	var deployFlags []string
 
 	if opts.Name != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--name %s", opts.Name))
+		deployFlags = append(deployFlags, fmt.Sprintf("--name \"%s\"", opts.Name))
 	}
 
 	if opts.Namespace != "" {
