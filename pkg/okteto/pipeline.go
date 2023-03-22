@@ -22,7 +22,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 )
@@ -64,10 +63,10 @@ type gitDeployInfoWithRepoInfo struct {
 }
 
 type getPipelineByNameResponse struct {
-	GitDeploys []gitDeployInfo
+	GitDeploys []gitDeployInfoIdNameStatus
 }
 
-type gitDeployInfo struct {
+type gitDeployInfoIdNameStatus struct {
 	Id     graphql.String
 	Name   graphql.String
 	Status graphql.String
@@ -180,42 +179,6 @@ func (c *pipelineClient) GetByName(ctx context.Context, name, namespace string) 
 				Name:   string(gitDeploy.Name),
 				Status: string(gitDeploy.Status),
 			}, nil
-		}
-	}
-	return nil, oktetoErrors.ErrNotFound
-}
-
-// GetByRepository gets a pipeline given its repo url
-func (c *pipelineClient) GetByRepository(ctx context.Context, repo string) (*types.GitDeployResponse, error) {
-	var queryStruct struct {
-		Pipeline struct {
-			GitDeploys []struct {
-				Id         graphql.String
-				Repository graphql.String
-				Status     graphql.String
-			}
-		} `graphql:"space(id: $id)"`
-	}
-	variables := map[string]interface{}{
-		"id": graphql.String(Context().Namespace),
-	}
-	err := query(ctx, &queryStruct, variables, c.client)
-	if err != nil {
-		return nil, err
-	}
-
-	inputRepo := repository.NewRepository(repo)
-	for _, gitDeploy := range queryStruct.Pipeline.GitDeploys {
-		responseRepo := repository.NewRepository(string(gitDeploy.Repository))
-		if inputRepo.IsEqual(responseRepo) {
-			pipeline := &types.GitDeployResponse{
-				GitDeploy: &types.GitDeploy{
-					ID:         string(gitDeploy.Id),
-					Repository: string(gitDeploy.Repository),
-					Status:     string(gitDeploy.Status),
-				},
-			}
-			return pipeline, nil
 		}
 	}
 	return nil, oktetoErrors.ErrNotFound

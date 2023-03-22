@@ -206,7 +206,7 @@ func TestGetPipelineByName(t *testing.T) {
 				client: &fakeGraphQLClient{
 					queryResult: &getPipelineByNameQuery{
 						Response: getPipelineByNameResponse{
-							GitDeploys: []gitDeployInfo{
+							GitDeploys: []gitDeployInfoIdNameStatus{
 								{
 									Id:     "",
 									Name:   "test1",
@@ -230,12 +230,12 @@ func TestGetPipelineByName(t *testing.T) {
 			},
 		},
 		{
-			name: "not found",
+			name: "found",
 			input: input{
 				client: &fakeGraphQLClient{
 					queryResult: &getPipelineByNameQuery{
 						Response: getPipelineByNameResponse{
-							GitDeploys: []gitDeployInfo{
+							GitDeploys: []gitDeployInfoIdNameStatus{
 								{
 									Id:     "",
 									Name:   "test1",
