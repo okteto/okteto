@@ -25,6 +25,7 @@ func Test_validateImage(t *testing.T) {
 			"test": {
 				Namespace: "test",
 				Registry:  "this.is.my.okteto.registry",
+				IsOkteto:  true,
 			},
 		},
 		CurrentContext: "test",

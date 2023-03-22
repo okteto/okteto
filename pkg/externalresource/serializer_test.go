@@ -9,6 +9,8 @@ import (
 )
 
 func TestExternalResource_UnmarshalYAML(t *testing.T) {
+	t.Setenv("NAME", "test")
+	t.Setenv("URL_PATH", "test")
 	tests := []struct {
 		name        string
 		data        []byte
@@ -78,6 +80,27 @@ endpoints:
 					{
 						Name: "endpoint1",
 						Url:  "/some/url/1",
+					},
+				},
+			},
+		},
+		{
+			name: "valid external resource expanding variables",
+			data: []byte(`
+icon: default
+notes: /path/to/file
+endpoints:
+- name: ${NAME}
+  url: /some/url/${URL_PATH}`),
+			expected: ExternalResource{
+				Icon: "default",
+				Notes: &Notes{
+					Path: "/path/to/file",
+				},
+				Endpoints: []*ExternalEndpoint{
+					{
+						Name: "test",
+						Url:  "/some/url/test",
 					},
 				},
 			},

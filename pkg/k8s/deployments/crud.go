@@ -132,6 +132,9 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 			validDeployments = append(validDeployments, &dList.Items[i])
 		}
 	}
+	if len(validDeployments) == 0 {
+		return nil, oktetoErrors.ErrNotFound
+	}
 	if len(validDeployments) > 1 {
 		return nil, fmt.Errorf("found '%d' deployments for labels '%s' instead of 1", len(validDeployments), dev.LabelsSelector())
 	}

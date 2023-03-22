@@ -2,16 +2,21 @@ package destroy
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
+	builder "github.com/okteto/okteto/cmd/build"
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
+	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
@@ -23,7 +28,10 @@ import (
 )
 
 const (
-	dockerfileTemplate = `
+	templateName           = "destroy-dockerfile"
+	dockerfileTemporalNane = "deploy"
+	oktetoDockerignoreName = ".oktetodeployignore"
+	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
 FROM alpine as certs
@@ -68,77 +76,59 @@ type dockerfileTemplateProperties struct {
 }
 
 type remoteDestroyCommand struct {
-	manifest *model.Manifest
-	fs       afero.Fs
+	builder              builder.Builder
+	destroyImage         string
+	fs                   afero.Fs
+	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
+	temporalCtrl         filesystem.TemporalDirectoryInterface
 }
 
-func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
+func newRemoteDestroyer(destroyImage string) *remoteDestroyCommand {
+	fs := afero.NewOsFs()
 	return &remoteDestroyCommand{
-		manifest: manifest,
-		fs:       afero.NewOsFs(),
+		builder:              remoteBuild.NewBuilderFromScratch(),
+		destroyImage:         destroyImage,
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 	}
 }
 
 func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) error {
 
-	if rd.manifest.Destroy.Image == "" {
-		rd.manifest.Destroy.Image = constants.OktetoPipelineRunnerImage
+	if rd.destroyImage == "" {
+		rd.destroyImage = constants.OktetoPipelineRunnerImage
 	}
 
-	cwd, err := os.Getwd()
+	cwd, err := rd.workingDirectoryCtrl.Get()
 	if err != nil {
 		return err
 	}
 
-	tmpl, err := template.New("dockerfile").Parse(dockerfileTemplate)
+	tmpDir, err := rd.temporalCtrl.Create()
 	if err != nil {
 		return err
 	}
 
-	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:     constants.OktetoCLIImageForRemote,
-		UserDestroyImage:   rd.manifest.Destroy.Image,
-		ContextEnvVar:      model.OktetoContextEnvVar,
-		ContextValue:       okteto.Context().Name,
-		NamespaceEnvVar:    model.OktetoNamespaceEnvVar,
-		NamespaceValue:     okteto.Context().Namespace,
-		TokenEnvVar:        model.OktetoTokenEnvVar,
-		TokenValue:         okteto.Context().Token,
-		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
-		RandomInt:          rand.Intn(1000),
-		DestroyFlags:       strings.Join(getDestroyFlags(opts), " "),
-	}
-
-	tmpDir, err := afero.TempDir(rd.fs, "", "")
-	if err != nil {
-		return err
-	}
-
-	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, "deploy"))
-	if err != nil {
-		return err
-	}
-
-	err = rd.createDockerignoreIfNeeded(cwd, tmpDir)
+	dockerfile, err := rd.createDockerfile(tmpDir, opts)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
-		if err := rd.fs.Remove(dockerfile.Name()); err != nil {
+		if err := rd.fs.Remove(dockerfile); err != nil {
 			oktetoLog.Infof("error removing dockerfile: %w", err)
 		}
 	}()
-	if err := tmpl.Execute(dockerfile, dockerfileSyntax); err != nil {
-		return err
-	}
 
 	buildInfo := &model.BuildInfo{
-		Dockerfile: dockerfile.Name(),
+		Dockerfile: dockerfile,
 	}
 
 	// undo modification of CWD for Build command
-	os.Chdir(cwd)
+	if err := rd.workingDirectoryCtrl.Change(cwd); err != nil {
+		return err
+	}
 
 	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
 	buildOptions.Tag = ""
@@ -147,15 +137,58 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
-	if err := remoteBuild.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
+	if err := rd.builder.Build(ctx, buildOptions); err != nil {
 		return oktetoErrors.UserError{
-			E: fmt.Errorf("Error during development environment deployment."),
+			E: fmt.Errorf("error during development environment deployment"),
 		}
 	}
 	oktetoLog.SetStage("done")
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
 
 	return nil
+}
+
+func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) (string, error) {
+	cwd, err := rd.workingDirectoryCtrl.Get()
+	if err != nil {
+		return "", err
+	}
+
+	randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000))
+	if err != nil {
+		return "", err
+	}
+
+	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
+	dockerfileSyntax := dockerfileTemplateProperties{
+		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
+		UserDestroyImage:   rd.destroyImage,
+		ContextEnvVar:      model.OktetoContextEnvVar,
+		ContextValue:       okteto.Context().Name,
+		NamespaceEnvVar:    model.OktetoNamespaceEnvVar,
+		NamespaceValue:     okteto.Context().Namespace,
+		TokenEnvVar:        model.OktetoTokenEnvVar,
+		TokenValue:         okteto.Context().Token,
+		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
+		RandomInt:          int(randomNumber.Int64()),
+		DestroyFlags:       strings.Join(getDestroyFlags(opts), " "),
+	}
+
+	dockerfile, err := rd.fs.Create(filepath.Join(tempDir, "deploy"))
+	if err != nil {
+		return "", err
+	}
+
+	err = rd.createDockerignoreIfNeeded(cwd, tempDir)
+	if err != nil {
+		return "", err
+	}
+
+	if err := tmpl.Execute(dockerfile, dockerfileSyntax); err != nil {
+		return "", err
+	}
+	return dockerfile.Name(), nil
+
 }
 
 func (rd *remoteDestroyCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
@@ -203,4 +236,20 @@ func getDestroyFlags(opts *Options) []string {
 	}
 
 	return deployFlags
+}
+
+func getOktetoCLIVersion(versionString string) string {
+	var version string
+	if match, _ := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
+		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
+	} else {
+		remoteOktetoImage := os.Getenv(constants.OKtetoDeployRemoteImage)
+		if remoteOktetoImage != "" {
+			version = remoteOktetoImage
+		} else {
+			version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, "latest")
+		}
+	}
+
+	return version
 }

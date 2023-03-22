@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -27,14 +28,18 @@ import (
 )
 
 type pipelineClient struct {
-	client *graphql.Client
-	url    string
+	client        graphqlClientInterface
+	url           string
+	provideTicker func(time.Duration) *time.Ticker
+	provideTimer  func(time.Duration) *time.Timer
 }
 
 func newPipelineClient(client *graphql.Client, url string) *pipelineClient {
 	return &pipelineClient{
-		client: client,
-		url:    url,
+		client:        client,
+		url:           url,
+		provideTicker: time.NewTicker,
+		provideTimer:  time.NewTimer,
 	}
 }
 

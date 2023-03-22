@@ -35,8 +35,7 @@ const (
 
 func TestPreviewActions(t *testing.T) {
 	integration.SkipIfWindows(t)
-
-	namespace := getTestNamespace()
+	namespace := integration.GetTestNamespace("PreviewActions", user)
 
 	assert.NoError(t, executeDeployPreviewAction(namespace))
 	assert.NoError(t, executeDestroyPreviewAction(namespace))

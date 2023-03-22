@@ -1133,7 +1133,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1198,7 +1198,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1282,7 +1282,7 @@ sync:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1367,7 +1367,7 @@ services:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1499,7 +1499,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1587,7 +1587,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1652,7 +1652,7 @@ dev:
 							Dockerfile: "Dockerfile",
 							Target:     "",
 						},
-						Interface: getLocalhost(),
+						Interface: Localhost,
 						PersistentVolumeInfo: &PersistentVolumeInfo{
 							Enabled: true,
 						},
@@ -1794,6 +1794,211 @@ devs:
 
 			if !assert.Equal(t, tt.expected, manifest) {
 
+				t.Fatal("Failed")
+			}
+		})
+	}
+}
+
+func TestManifestMarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest *Manifest
+		expected string
+	}{
+		{
+			name: "destroy not empty",
+			manifest: &Manifest{
+				Destroy: &DestroyInfo{
+					Commands: []DeployCommand{
+						{
+							Name:    "hello",
+							Command: "hello",
+						},
+					},
+				},
+			},
+			expected: "destroy:\n- hello\n",
+		},
+		{
+			name:     "destroy empty",
+			manifest: &Manifest{},
+			expected: "{}\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshalled, err := yaml.Marshal(tt.manifest)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(marshalled) != tt.expected {
+				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDestroyInfoMarshalling(t *testing.T) {
+	tests := []struct {
+		name        string
+		destroyInfo *DestroyInfo
+		expected    string
+	}{
+		{
+			name: "same-name-and-cmd",
+			destroyInfo: &DestroyInfo{Commands: []DeployCommand{
+				{
+					Name:    "okteto build",
+					Command: "okteto build",
+				},
+				{
+					Name:    "okteto deploy",
+					Command: "okteto deploy",
+				},
+			}},
+			expected: "- okteto build\n- okteto deploy\n",
+		},
+		{
+			name: "full",
+			destroyInfo: &DestroyInfo{
+				Image: "test",
+				Commands: []DeployCommand{
+					{
+						Name:    "build",
+						Command: "okteto build",
+					},
+					{
+						Name:    "deploy",
+						Command: "okteto deploy",
+					},
+				}},
+			expected: "image: test\ncommands:\n- name: build\n  command: okteto build\n- name: deploy\n  command: okteto deploy\n",
+		},
+		{
+			name: "different-name-cmd",
+			destroyInfo: &DestroyInfo{Commands: []DeployCommand{
+				{
+					Name:    "build",
+					Command: "okteto build",
+				},
+				{
+					Name:    "deploy",
+					Command: "okteto deploy",
+				},
+			}},
+			expected: "commands:\n- name: build\n  command: okteto build\n- name: deploy\n  command: okteto deploy\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			marshalled, err := yaml.Marshal(tt.destroyInfo)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(marshalled) != tt.expected {
+				t.Errorf("didn't marshal correctly. Actual %s, Expected %s", marshalled, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDestroyInfoUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name            string
+		input           []byte
+		expected        *DestroyInfo
+		isErrorExpected bool
+	}{
+		{
+			name: "list of commands",
+			input: []byte(`
+- okteto stack deploy`),
+			expected: &DestroyInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "okteto stack deploy",
+						Command: "okteto stack deploy",
+					},
+				},
+			},
+		},
+		{
+			name: "list of commands extended",
+			input: []byte(`
+- name: deploy stack
+  command: okteto stack deploy`),
+			expected: &DestroyInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "deploy stack",
+						Command: "okteto stack deploy",
+					},
+				},
+			},
+		},
+		{
+			name: "commands",
+			input: []byte(`commands:
+- okteto stack deploy`),
+			expected: &DestroyInfo{
+				Commands: []DeployCommand{
+					{
+						Name:    "okteto stack deploy",
+						Command: "okteto stack deploy",
+					},
+				},
+			},
+		},
+		{
+			name: "compose with endpoints",
+			input: []byte(`compose:
+  manifest: path
+  endpoints:
+    - path: /
+      service: app
+      port: 80`),
+			expected: &DestroyInfo{
+				Commands: []DeployCommand{},
+			},
+			isErrorExpected: true,
+		},
+		{
+			name: "all together",
+			input: []byte(`commands:
+- kubectl apply -f manifest.yml
+compose:
+  manifest: ./docker-compose.yml
+  endpoints:
+  - path: /
+    service: frontend
+    port: 80
+  - path: /api
+    service: api
+    port: 8080`),
+			expected: &DestroyInfo{
+				Commands: []DeployCommand{},
+			},
+			isErrorExpected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NewDestroyInfo()
+
+			err := yaml.UnmarshalStrict(tt.input, &result)
+			if err != nil && !tt.isErrorExpected {
+				t.Fatalf("Not expecting error but got %s", err)
+			} else if tt.isErrorExpected && err == nil {
+				t.Fatal("Expected error but got none")
+			}
+
+			if !assert.Equal(t, tt.expected, result) {
 				t.Fatal("Failed")
 			}
 		})

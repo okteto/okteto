@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -577,9 +576,6 @@ func (dev *Dev) SetDefaults() error {
 	}
 	if dev.Interface == "" {
 		dev.Interface = Localhost
-		if runtime.GOOS != "windows" {
-			dev.Interface = PrivilegedLocalhost
-		}
 	}
 	if dev.SSHServerPort == 0 {
 		dev.SSHServerPort = oktetoDefaultSSHServerPort
@@ -1273,7 +1269,7 @@ func (dev *Dev) translateDeprecatedMetadataFields() {
 }
 
 func (service *Dev) validateForExtraFields() error {
-	errorMessage := "%q is not supported in Services. Please visit https://www.okteto.com/docs/0.10/reference/manifest/#services-object-optional for documentation"
+	errorMessage := "%q is not supported in Services. Please visit https://www.okteto.com/docs/reference/manifest/#services-object-optional for documentation"
 	if service.Username != "" {
 		return fmt.Errorf(errorMessage, "username")
 	}
@@ -1349,13 +1345,6 @@ func (service *Dev) validateForExtraFields() error {
 // DevCloneName returns the name of the mirrored version of a given resource
 func DevCloneName(name string) string {
 	return fmt.Sprintf("%s-okteto", name)
-}
-
-func getLocalhost() string {
-	if runtime.GOOS != "windows" {
-		return PrivilegedLocalhost
-	}
-	return Localhost
 }
 
 // Copy clones the buildInfo without the pointers

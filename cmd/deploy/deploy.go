@@ -85,15 +85,20 @@ type DeployCommand struct {
 	CfgMapHandler      configMapHandler
 	Fs                 afero.Fs
 	DivertDriver       divert.Driver
+	PipelineCMD        pipelineCMD.PipelineDeployerInterface
 
 	PipelineType model.Archetype
 	isRemote     bool
 }
 
+type ExternalResourceValidatorInterface interface {
+	Validate(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
+}
+
 type ExternalResourceInterface interface {
 	Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
 	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
-	Validate(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
+	ExternalResourceValidatorInterface
 }
 
 type deployerInterface interface {
@@ -170,6 +175,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 			options.servicesToDeploy = args
 
 			k8sClientProvider := okteto.NewK8sClientProvider()
+			pc, err := pipelineCMD.NewCommand()
+			if err != nil {
+				return fmt.Errorf("could not create pipeline command: %w", err)
+			}
 			c := &DeployCommand{
 				GetManifest: model.GetManifestV2,
 
@@ -181,6 +190,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				isRemote:           utils.LoadBoolean(constants.OKtetoDeployRemote),
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider),
 				Fs:                 afero.NewOsFs(),
+				PipelineCMD:        pc,
 			}
 			startTime := time.Now()
 
@@ -282,7 +292,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	// the configmap without the deployedByLabel
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
 
-	dc.addEnvVars(ctx, cwd)
+	dc.addEnvVars(cwd)
 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
@@ -531,11 +541,8 @@ func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *
 			SkipIfExists: !deployOptions.Dependencies,
 			Namespace:    namespace,
 		}
-		pc, err := pipelineCMD.NewCommand()
-		if err != nil {
-			return fmt.Errorf("could not create pipeline command: %w", err)
-		}
-		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+
+		if err := dc.PipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
 			return err
 		}
 	}

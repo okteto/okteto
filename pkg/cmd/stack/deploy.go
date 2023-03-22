@@ -16,7 +16,6 @@ package stack
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -25,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/okteto/okteto/pkg/divert/weaver"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -40,11 +38,10 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
-	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -589,7 +586,6 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 	}
 
 	svcK8s.ObjectMeta.ResourceVersion = old.ObjectMeta.ResourceVersion
-	keepDivertInService(svcK8s, old)
 	if err := services.Deploy(ctx, svcK8s, c); err != nil {
 		return err
 	}
@@ -622,7 +618,6 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 				d.Labels[model.DeployedByLabel] = format.ResourceK8sMetaString(s.Name)
 			}
 		}
-		keepDivertInDeployment(d, old)
 	}
 
 	if !isNewDeployment && old.Labels[model.StackNameLabel] == "okteto" {
@@ -829,13 +824,19 @@ func addImageMetadataToStack(s *model.Stack, options *StackDeployOptions) {
 
 func addImageMetadataToSvc(svc *model.Service) {
 	if svc.Image != "" {
-		imageMetadata := registry.GetImageMetadata(svc.Image)
-		if registry.IsOktetoRegistry(svc.Image) {
+		reg := registry.NewOktetoRegistry(okteto.Config{})
+		imageMetadata, err := reg.GetImageMetadata(svc.Image)
+		if err != nil {
+			oktetoLog.Infof("could not add image metadata: %w", err)
+			return
+		}
+
+		if reg.IsOktetoRegistry(svc.Image) {
 			svc.Image = imageMetadata.Image
 		}
 		for _, port := range imageMetadata.Ports {
 			if !model.IsAlreadyAdded(port, svc.Ports) {
-				svc.Ports = append(svc.Ports, port)
+				svc.Ports = append(svc.Ports, model.Port{ContainerPort: port.ContainerPort, Protocol: port.Protocol})
 			}
 		}
 	}
@@ -912,40 +913,4 @@ func getAddedSvcs(initialSvcsToDeploy, svcsToDeployWithDependencies []string) []
 		}
 	}
 	return added
-}
-
-func keepDivertInDeployment(new *appsv1.Deployment, old *appsv1.Deployment) {
-	if old.Spec.Template.Labels == nil {
-		return
-	}
-	if old.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] == "" {
-		return
-	}
-	if new.Spec.Template.Labels == nil {
-		new.Spec.Template.Labels = map[string]string{}
-	}
-	new.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel] = old.Spec.Template.Labels[model.OktetoDivertInjectSidecarLabel]
-}
-
-func keepDivertInService(new *apiv1.Service, old *apiv1.Service) {
-	if old.Annotations[model.OktetoDivertServiceAnnotation] == "" {
-		return
-	}
-	if old.Annotations[model.OktetoAutoCreateAnnotation] == "true" {
-		return
-	}
-	if new.Annotations == nil {
-		new.Annotations = map[string]string{}
-	}
-	new.Annotations[model.OktetoDivertServiceAnnotation] = old.Annotations[model.OktetoDivertServiceAnnotation]
-	divertMapping := weaver.PortMapping{}
-	if err := json.Unmarshal([]byte(old.Annotations[model.OktetoDivertServiceAnnotation]), &divertMapping); err != nil {
-		oktetoLog.Warning("skipping apply divert to service '%s': %s", new.Name, err.Error())
-		return
-	}
-	for i := range new.Spec.Ports {
-		if new.Spec.Ports[i].Port == divertMapping.OriginalPort {
-			new.Spec.Ports[i].TargetPort = intstr.IntOrString{IntVal: divertMapping.ProxyPort}
-		}
-	}
 }

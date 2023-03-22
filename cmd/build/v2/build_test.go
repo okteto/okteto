@@ -20,9 +20,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/okteto/okteto/cmd/build/v1"
 	"github.com/okteto/okteto/internal/test"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -37,6 +41,80 @@ var fakeManifest *model.Manifest = &model.Manifest{
 		},
 	},
 	IsV2: true,
+}
+
+type fakeRegistry struct {
+	err      error
+	registry map[string]fakeImage
+}
+
+// fakeImage represents the data from an image
+type fakeImage struct {
+	Registry string
+	Repo     string
+	Tag      string
+	ImageRef string
+	Args     []string
+}
+
+func newFakeRegistry() fakeRegistry {
+	return fakeRegistry{
+		registry: map[string]fakeImage{},
+	}
+}
+
+func (fr fakeRegistry) HasGlobalPushAccess() (bool, error) { return false, nil }
+
+func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
+	if _, ok := fr.registry[imageTag]; !ok {
+		return "", oktetoErrors.ErrNotFound
+	}
+	return imageTag, nil
+}
+func (fr fakeRegistry) IsOktetoRegistry(_ string) bool { return false }
+
+func (fr fakeRegistry) AddImageByName(images ...string) error {
+	for _, image := range images {
+		fr.registry[image] = fakeImage{}
+	}
+	return nil
+}
+func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
+	fr.registry[opts.Tag] = fakeImage{Args: opts.BuildArgs}
+	return nil
+}
+func (fr fakeRegistry) getFakeImage(image string) fakeImage {
+	v, ok := fr.registry[image]
+	if ok {
+		return v
+	}
+	return fakeImage{}
+}
+func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageReference, error) {
+	ref, err := name.ParseReference(image)
+	if err != nil {
+		return registry.OktetoImageReference{}, err
+	}
+	return registry.OktetoImageReference{
+		Registry: ref.Context().RegistryStr(),
+		Repo:     ref.Context().RepositoryStr(),
+		Tag:      ref.Identifier(),
+		Image:    image,
+	}, nil
+}
+
+func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface) *OktetoBuilder {
+	return &OktetoBuilder{
+		Registry:          registry,
+		Builder:           builder,
+		buildEnvironments: make(map[string]string),
+		builtImages:       make(map[string]bool),
+		V1Builder: &v1.OktetoBuilder{
+			Builder:  builder,
+			Registry: registry,
+		},
+		Config: fakeConfig{},
+	}
 }
 
 func TestValidateOptions(t *testing.T) {
@@ -121,9 +199,9 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 	}
 	dir := t.TempDir()
 
-	registry := test.NewFakeOktetoRegistry(nil)
+	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewBuilder(builder, registry)
+	bc := NewFakeBuilder(builder, registry)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -165,9 +243,9 @@ func TestTwoStepsBuild(t *testing.T) {
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
-	registry := test.NewFakeOktetoRegistry(nil)
+	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewBuilder(builder, registry)
+	bc := NewFakeBuilder(builder, registry)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -213,9 +291,9 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
-	registry := test.NewFakeOktetoRegistry(nil)
+	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewBuilder(builder, registry)
+	bc := NewFakeBuilder(builder, registry)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -252,9 +330,9 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
-	registry := test.NewFakeOktetoRegistry(nil)
+	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewBuilder(builder, registry)
+	bc := NewFakeBuilder(builder, registry)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -293,9 +371,9 @@ func TestBuildWithStack(t *testing.T) {
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
-	registry := test.NewFakeOktetoRegistry(nil)
+	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewBuilder(builder, registry)
+	bc := NewFakeBuilder(builder, registry)
 	manifest := &model.Manifest{
 		Name: "test",
 		Type: model.StackType,
@@ -366,9 +444,9 @@ func TestBuildWithDependsOn(t *testing.T) {
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
-	registry := test.NewFakeOktetoRegistry(nil)
+	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewBuilder(builder, registry)
+	bc := NewFakeBuilder(builder, registry)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -406,7 +484,7 @@ func TestBuildWithDependsOn(t *testing.T) {
 		"OKTETO_BUILD_A_TAG":        false,
 		"OKTETO_BUILD_A_SHA":        false,
 	}
-	for _, arg := range registry.Registry[secondImage].Args {
+	for _, arg := range registry.getFakeImage(secondImage).Args {
 		parts := strings.SplitN(arg, "=", 2)
 		if _, ok := expectedKeys[parts[0]]; ok {
 			expectedKeys[parts[0]] = true

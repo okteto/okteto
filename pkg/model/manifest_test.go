@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
@@ -233,56 +232,56 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ok-with-port",
 			divert: DivertDeploy{
-				Driver:     OktetoDivertWeaverDriver,
-				Namespace:  "namespace",
-				Service:    "service",
-				Port:       8080,
-				Deployment: "deployment",
+				Driver:               OktetoDivertWeaverDriver,
+				Namespace:            "namespace",
+				Service:              "service",
+				DeprecatedPort:       8080,
+				DeprecatedDeployment: "deployment",
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "divert-ok-without-service",
+			divert: DivertDeploy{
+				Driver:               OktetoDivertWeaverDriver,
+				Namespace:            "namespace",
+				Service:              "",
+				DeprecatedPort:       8080,
+				DeprecatedDeployment: "deployment",
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "divert-ok-without-deployment",
+			divert: DivertDeploy{
+				Driver:               OktetoDivertWeaverDriver,
+				Namespace:            "namespace",
+				Service:              "service",
+				DeprecatedPort:       8080,
+				DeprecatedDeployment: "",
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "divert-ok-without-port",
 			divert: DivertDeploy{
-				Driver:     OktetoDivertWeaverDriver,
-				Namespace:  "namespace",
-				Service:    "service",
-				Deployment: "deployment",
+				Driver:               OktetoDivertWeaverDriver,
+				Namespace:            "namespace",
+				Service:              "service",
+				DeprecatedDeployment: "deployment",
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "divert-ko-without-namespace",
 			divert: DivertDeploy{
-				Driver:     OktetoDivertWeaverDriver,
-				Namespace:  "",
-				Service:    "service",
-				Port:       8080,
-				Deployment: "deployment",
+				Driver:               OktetoDivertWeaverDriver,
+				Namespace:            "",
+				Service:              "service",
+				DeprecatedPort:       8080,
+				DeprecatedDeployment: "deployment",
 			},
 			expectedErr: fmt.Errorf("the field 'deploy.divert.namespace' is mandatory"),
-		},
-		{
-			name: "divert-ko-without-service",
-			divert: DivertDeploy{
-				Driver:     OktetoDivertWeaverDriver,
-				Namespace:  "namespace",
-				Service:    "",
-				Port:       8080,
-				Deployment: "deployment",
-			},
-			expectedErr: fmt.Errorf("the field 'deploy.divert.service' is mandatory"),
-		},
-		{
-			name: "divert-ko-without-deployment",
-			divert: DivertDeploy{
-				Driver:     OktetoDivertWeaverDriver,
-				Namespace:  "namespace",
-				Service:    "service",
-				Port:       8080,
-				Deployment: "",
-			},
-			expectedErr: fmt.Errorf("the field 'deploy.divert.deployment' is mandatory"),
 		},
 	}
 
@@ -381,10 +380,7 @@ func Test_validateManifestBuild(t *testing.T) {
 
 func TestInferFromStack(t *testing.T) {
 	dirtest := filepath.Clean("/stack/dir/")
-	devInterface := PrivilegedLocalhost
-	if runtime.GOOS == "windows" {
-		devInterface = Localhost
-	}
+	devInterface := Localhost
 	stack := &Stack{
 		Services: map[string]*Service{
 			"test": {

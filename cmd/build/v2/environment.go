@@ -20,43 +20,46 @@ import (
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/registry"
 )
 
 // SetServiceEnvVars set okteto build env vars
 func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
-	reg, repo, tag, image := registry.GetReferecenceEnvs(reference)
+	ref, err := bc.Registry.GetImageReference(reference)
+	if err != nil {
+		oktetoLog.Debugf("could not set service env vars: %w", err)
+		return
+	}
 
-	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", reg, repo, image, tag)
+	oktetoLog.Debugf("envs registry=%s repository=%s image=%s tag=%s", ref.Registry, ref.Repo, ref.Image, ref.Tag)
 
 	// Can't add env vars with -
 	sanitizedSvc := strings.ToUpper(strings.ReplaceAll(service, "-", "_"))
 
 	registryKey := fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", sanitizedSvc)
 	bc.lock.Lock()
-	bc.buildEnvironments[registryKey] = reg
-	os.Setenv(registryKey, reg)
+	bc.buildEnvironments[registryKey] = ref.Registry
+	os.Setenv(registryKey, ref.Registry)
 	bc.lock.Unlock()
 
 	repositoryKey := fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", sanitizedSvc)
 	bc.lock.Lock()
-	bc.buildEnvironments[repositoryKey] = repo
-	os.Setenv(repositoryKey, repo)
+	bc.buildEnvironments[repositoryKey] = ref.Repo
+	os.Setenv(repositoryKey, ref.Repo)
 	bc.lock.Unlock()
 
 	imageKey := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", sanitizedSvc)
 	bc.lock.Lock()
-	bc.buildEnvironments[imageKey] = reference
-	os.Setenv(imageKey, reference)
+	bc.buildEnvironments[imageKey] = ref.Image
+	os.Setenv(imageKey, ref.Image)
 	bc.lock.Unlock()
 
 	tagKey := fmt.Sprintf("OKTETO_BUILD_%s_TAG", sanitizedSvc)
 	bc.lock.Lock()
-	bc.buildEnvironments[tagKey] = tag
-	os.Setenv(tagKey, tag)
+	bc.buildEnvironments[tagKey] = ref.Tag
+	os.Setenv(tagKey, ref.Tag)
 	bc.lock.Unlock()
 
-	sha := tag
+	sha := ref.Tag
 	if strings.HasPrefix(sha, "sha256:") {
 		sha = fmt.Sprintf("%s@%s", model.OktetoDefaultImageTag, sha)
 	}

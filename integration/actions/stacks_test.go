@@ -46,7 +46,7 @@ services:
 func TestStacksActions(t *testing.T) {
 	integration.SkipIfWindows(t)
 
-	namespace := getTestNamespace()
+	namespace := integration.GetTestNamespace("stackaction", user)
 
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 

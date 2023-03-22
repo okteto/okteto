@@ -1,11 +1,32 @@
 package okteto
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"time"
+)
 
 var (
 	// ErrGithubMissingBusinessEmail is raised when the user does not have a business email
 	ErrGithubMissingBusinessEmail = errors.New("github-missing-business-email")
 )
+
+type pipelineTimeoutError struct {
+	pipelineName string
+	timeout      time.Duration
+}
+
+func (pte pipelineTimeoutError) Error() string {
+	return fmt.Sprintf("'%s' didn't finish after %s", pte.pipelineName, pte.timeout.String())
+}
+
+type pipelineFailedError struct {
+	pipelineName string
+}
+
+func (pe pipelineFailedError) Error() string {
+	return fmt.Sprintf("pipeline '%s' failed", pe.pipelineName)
+}
 
 // IsErrGithubMissingBusinessEmail returns true if the error is ErrGithubMissingBusinessEmail
 func IsErrGithubMissingBusinessEmail(err error) bool {

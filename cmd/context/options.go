@@ -60,10 +60,6 @@ func (o *ContextOptions) initFromContext() {
 
 func (o *ContextOptions) initFromEnvVars() {
 	usedEnvVars := []string{}
-	if o.Token == "" && os.Getenv(model.OktetoTokenEnvVar) != "" {
-		o.Token = os.Getenv(model.OktetoTokenEnvVar)
-		usedEnvVars = append(usedEnvVars, model.OktetoTokenEnvVar)
-	}
 
 	if o.Context == "" && os.Getenv(model.OktetoURLEnvVar) != "" {
 		o.Context = os.Getenv(model.OktetoURLEnvVar)
@@ -76,11 +72,19 @@ func (o *ContextOptions) initFromEnvVars() {
 		usedEnvVars = append(usedEnvVars, model.OktetoContextEnvVar)
 	}
 
-	if o.Token != "" {
+	envToken := os.Getenv(model.OktetoTokenEnvVar)
+	if o.Token != "" || envToken != "" {
 		o.IsOkteto = true
 		if o.Context == "" {
 			o.Context = okteto.CloudURL
 		}
+	}
+
+	if o.Token == "" && envToken != "" {
+		if !okteto.HasBeenLogged(o.Context) || okteto.Context().Token != envToken {
+			usedEnvVars = append(usedEnvVars, model.OktetoTokenEnvVar)
+		}
+		o.Token = envToken
 	}
 
 	if o.Namespace == "" && os.Getenv(model.OktetoNamespaceEnvVar) != "" {

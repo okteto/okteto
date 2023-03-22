@@ -25,6 +25,7 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -116,7 +117,7 @@ func Init() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Context, "context", "c", "", "context target for generating the okteto manifest")
 	cmd.Flags().StringVarP(&opts.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&opts.Overwrite, "replace", "r", false, "overwrite existing manifest file")
-	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: https://www.okteto.com/docs/0.10/reference/manifest/")
+	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: https://www.okteto.com/docs/reference/manifest/")
 	cmd.Flags().BoolVarP(&opts.AutoDeploy, "deploy", "", false, "deploy the application after generate the okteto manifest if it's not running already")
 	cmd.Flags().BoolVarP(&opts.AutoConfigureDev, "configure-devs", "", false, "configure devs after deploying the application")
 	return cmd
@@ -268,6 +269,10 @@ func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Mani
 }
 
 func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
+	pc, err := pipelineCMD.NewCommand()
+	if err != nil {
+		return err
+	}
 	c := &deploy.DeployCommand{
 		GetManifest:        mc.getManifest,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
@@ -276,9 +281,10 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		GetExternalControl: deploy.GetExternalControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
+		PipelineCMD:        pc,
 	}
 
-	err := c.RunDeploy(ctx, &deploy.Options{
+	err = c.RunDeploy(ctx, &deploy.Options{
 		Name:         mc.manifest.Name,
 		ManifestPath: opts.DevPath,
 		Timeout:      5 * time.Minute,
@@ -351,7 +357,7 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 	return nil
 }
 
-func setFromImageConfig(dev *model.Dev, imageConfig *registry.ImageConfig) {
+func setFromImageConfig(dev *model.Dev, imageConfig registry.ImageMetadata) {
 	if len(dev.Command.Values) == 0 && len(imageConfig.CMD) > 0 {
 		dev.Command = model.Command{Values: imageConfig.CMD}
 	}
@@ -578,7 +584,7 @@ func configureAutoCreateDev(manifest *model.Manifest) error {
 		return err
 	}
 
-	dev, err := linguist.GetDevDefaults(language, wd, &registry.ImageConfig{})
+	dev, err := linguist.GetDevDefaults(language, wd, registry.ImageMetadata{})
 	if err != nil {
 		return err
 	}

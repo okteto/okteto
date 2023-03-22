@@ -43,7 +43,14 @@ type Command struct {
 	GetManifest func(path string) (*model.Manifest, error)
 
 	Builder  build.OktetoBuilderInterface
-	Registry build.OktetoRegistryInterface
+	Registry registryInterface
+}
+
+type registryInterface interface {
+	GetImageTagWithDigest(imageTag string) (string, error)
+	IsOktetoRegistry(image string) bool
+	GetImageReference(image string) (registry.OktetoImageReference, error)
+	HasGlobalPushAccess() (bool, error)
 }
 
 // NewBuildCommand creates a struct to run all build methods
@@ -51,7 +58,7 @@ func NewBuildCommand() *Command {
 	return &Command{
 		GetManifest: model.GetManifestV2,
 		Builder:     &build.OktetoBuilder{},
-		Registry:    registry.NewOktetoRegistry(),
+		Registry:    registry.NewOktetoRegistry(okteto.Config{}),
 	}
 }
 
