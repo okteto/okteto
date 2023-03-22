@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -269,6 +270,244 @@ func TestGetPipelineByName(t *testing.T) {
 				client: tc.input.client,
 			}
 			response, err := pc.GetByName(context.Background(), tc.input.name, "")
+			assert.ErrorIs(t, err, tc.expected.err)
+			assert.Equal(t, tc.expected.response, response)
+		})
+	}
+}
+
+func TestDestroyPipeline(t *testing.T) {
+	type input struct {
+		client         *fakeGraphQLMultipleCallsClient
+		name           string
+		destroyVolumes bool
+	}
+	type expected struct {
+		response *types.GitDeployResponse
+		err      error
+	}
+	testCases := []struct {
+		name     string
+		input    input
+		expected expected
+	}{
+		{
+			name: "destroy volumes - error",
+			input: input{
+				client: &fakeGraphQLMultipleCallsClient{
+					errs: []error{assert.AnError},
+				},
+				name:           "test",
+				destroyVolumes: true,
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "destroy no volumes - error",
+			input: input{
+				client: &fakeGraphQLMultipleCallsClient{
+					errs: []error{assert.AnError},
+				},
+				name:           "test",
+				destroyVolumes: false,
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "destroy volumes - no error",
+			input: input{
+				client: &fakeGraphQLMultipleCallsClient{
+					mutationResult: []interface{}{
+						&destroyPipelineWithVolumesMutation{
+							Response: destroyPipelineResponse{
+								Action: actionStruct{
+									Id:     "test",
+									Name:   "test",
+									Status: ProgressingStatus,
+								},
+								GitDeploy: gitDeployInfoWithRepoInfo{
+									Id:         "test",
+									Name:       "test",
+									Status:     ProgressingStatus,
+									Repository: "repo",
+								},
+							},
+						},
+					},
+				},
+				name:           "test",
+				destroyVolumes: true,
+			},
+			expected: expected{
+				response: &types.GitDeployResponse{
+					Action: &types.Action{
+						ID:     "test",
+						Name:   "test",
+						Status: progressingStatus,
+					},
+					GitDeploy: &types.GitDeploy{
+						ID:         "test",
+						Name:       "test",
+						Repository: "repo",
+						Status:     progressingStatus,
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "destroy no volumes - no error",
+			input: input{
+				client: &fakeGraphQLMultipleCallsClient{
+					mutationResult: []interface{}{
+						&destroyPipelineWithoutVolumesMutation{
+							Response: destroyPipelineResponse{
+								Action: actionStruct{
+									Id:     "test",
+									Name:   "test",
+									Status: ProgressingStatus,
+								},
+								GitDeploy: gitDeployInfoWithRepoInfo{
+									Id:         "test",
+									Name:       "test",
+									Status:     ProgressingStatus,
+									Repository: "repo",
+								},
+							},
+						},
+					},
+				},
+				name:           "test",
+				destroyVolumes: false,
+			},
+			expected: expected{
+				response: &types.GitDeployResponse{
+					Action: &types.Action{
+						ID:     "test",
+						Name:   "test",
+						Status: progressingStatus,
+					},
+					GitDeploy: &types.GitDeploy{
+						ID:         "test",
+						Name:       "test",
+						Repository: "repo",
+						Status:     progressingStatus,
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "destroy volumes ->  deprecated error -> error",
+			input: input{
+				client: &fakeGraphQLMultipleCallsClient{
+					errs: []error{
+						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
+						assert.AnError,
+					},
+				},
+				name:           "test",
+				destroyVolumes: true,
+			},
+			expected: expected{
+				response: nil,
+				err:      assert.AnError,
+			},
+		},
+		{
+			name: "destroy no volumes ->  deprecated error -> error",
+			input: input{
+				client: &fakeGraphQLMultipleCallsClient{
+					errs: []error{
+						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
+						assert.AnError,
+					},
+				},
+				name:           "test",
+				destroyVolumes: false,
+			},
+			expected: expected{
+				response: nil,
+				err:      assert.AnError,
+			},
+		},
+		{
+			name: "destroy volumes ->  deprecated error -> error",
+			input: input{
+				client: &fakeGraphQLMultipleCallsClient{
+					errs: []error{
+						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
+					},
+					mutationResult: []interface{}{
+						nil,
+						&deprecatedDestroyPipelineWithVolumesMutation{
+							Response: deprecatedDestroyPipelineResponse{
+								GitDeploy: gitDeployInfoWithRepoInfo{
+									Id:         "test",
+									Name:       "test",
+									Status:     ProgressingStatus,
+									Repository: "my-repo",
+								},
+							},
+						},
+					},
+				},
+				name:           "test",
+				destroyVolumes: true,
+			},
+			expected: expected{
+				response: &types.GitDeployResponse{
+					GitDeploy: &types.GitDeploy{
+						ID:     "test",
+						Status: progressingStatus,
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "destroy no volumes ->  deprecated error -> no error",
+			input: input{
+				client: &fakeGraphQLMultipleCallsClient{
+					errs: []error{
+						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
+					},
+					mutationResult: []interface{}{
+						nil,
+						&deprecatedDestroyPipelineWithoutVolumesMutation{
+							Response: deprecatedDestroyPipelineResponse{
+								GitDeploy: gitDeployInfoWithRepoInfo{
+									Id:     "test",
+									Status: ProgressingStatus,
+								},
+							},
+						},
+					},
+				},
+				name:           "test",
+				destroyVolumes: false,
+			},
+			expected: expected{
+				response: &types.GitDeployResponse{
+					GitDeploy: &types.GitDeploy{
+						ID:     "test",
+						Status: progressingStatus,
+					},
+				},
+				err: nil,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pc := pipelineClient{
+				client: tc.input.client,
+			}
+			response, err := pc.Destroy(context.Background(), tc.input.name, "", tc.input.destroyVolumes)
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
 		})

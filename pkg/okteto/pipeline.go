@@ -50,6 +50,22 @@ type getPipelineByNameQuery struct {
 	Response getPipelineByNameResponse `graphql:"space(id: $id)"`
 }
 
+type destroyPipelineWithVolumesMutation struct {
+	Response destroyPipelineResponse `graphql:"destroyGitRepository(name: $name, space: $space, destroyVolumes: $destroyVolumes)"`
+}
+
+type deprecatedDestroyPipelineWithVolumesMutation struct {
+	Response deprecatedDestroyPipelineResponse `graphql:"destroyGitRepository(name: $name, space: $space, destroyVolumes: $destroyVolumes)"`
+}
+
+type destroyPipelineWithoutVolumesMutation struct {
+	Response destroyPipelineResponse `graphql:"destroyGitRepository(name: $name, space: $space)"`
+}
+
+type deprecatedDestroyPipelineWithoutVolumesMutation struct {
+	Response deprecatedDestroyPipelineResponse `graphql:"destroyGitRepository(name: $name, space: $space)"`
+}
+
 type deployPipelineResponse struct {
 	Action    actionStruct
 	GitDeploy gitDeployInfoWithRepoInfo
@@ -70,6 +86,15 @@ type gitDeployInfoIdNameStatus struct {
 	Id     graphql.String
 	Name   graphql.String
 	Status graphql.String
+}
+
+type destroyPipelineResponse struct {
+	Action    actionStruct
+	GitDeploy gitDeployInfoWithRepoInfo
+}
+
+type deprecatedDestroyPipelineResponse struct {
+	GitDeploy gitDeployInfoWithRepoInfo
 }
 
 // Deploy creates a pipeline
@@ -189,21 +214,7 @@ func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, de
 	oktetoLog.Infof("destroy pipeline: %s/%s", namespace, name)
 	gitDeployResponse := &types.GitDeployResponse{}
 	if destroyVolumes {
-		var mutation struct {
-			GitDeployResponse struct {
-				Action struct {
-					Id     graphql.String
-					Name   graphql.String
-					Status graphql.String
-				}
-				GitDeploy struct {
-					Id         graphql.String
-					Name       graphql.String
-					Status     graphql.String
-					Repository graphql.String
-				}
-			} `graphql:"destroyGitRepository(name: $name, space: $space, destroyVolumes: $destroyVolumes)"`
-		}
+		var mutation destroyPipelineWithVolumesMutation
 
 		queryVariables := map[string]interface{}{
 			"name":           graphql.String(name),
@@ -218,33 +229,18 @@ func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, de
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 		gitDeployResponse.Action = &types.Action{
-			ID:     string(mutation.GitDeployResponse.Action.Id),
-			Name:   string(mutation.GitDeployResponse.Action.Name),
-			Status: string(mutation.GitDeployResponse.Action.Status),
+			ID:     string(mutation.Response.Action.Id),
+			Name:   string(mutation.Response.Action.Name),
+			Status: string(mutation.Response.Action.Status),
 		}
 		gitDeployResponse.GitDeploy = &types.GitDeploy{
-			ID:         string(mutation.GitDeployResponse.GitDeploy.Id),
-			Name:       string(mutation.GitDeployResponse.GitDeploy.Name),
-			Repository: string(mutation.GitDeployResponse.GitDeploy.Repository),
-			Status:     string(mutation.GitDeployResponse.GitDeploy.Status),
+			ID:         string(mutation.Response.GitDeploy.Id),
+			Name:       string(mutation.Response.GitDeploy.Name),
+			Repository: string(mutation.Response.GitDeploy.Repository),
+			Status:     string(mutation.Response.GitDeploy.Status),
 		}
 	} else {
-		var mutation struct {
-			GitDeployResponse struct {
-				Action struct {
-					Id     graphql.String
-					Name   graphql.String
-					Status graphql.String
-				}
-				GitDeploy struct {
-					Id         graphql.String
-					Name       graphql.String
-					Status     graphql.String
-					Repository graphql.String
-				}
-			} `graphql:"destroyGitRepository(name: $name, space: $space)"`
-		}
-
+		var mutation destroyPipelineWithoutVolumesMutation
 		queryVariables := map[string]interface{}{
 			"name":  graphql.String(name),
 			"space": graphql.String(Context().Namespace),
@@ -257,15 +253,15 @@ func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, de
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 		gitDeployResponse.Action = &types.Action{
-			ID:     string(mutation.GitDeployResponse.Action.Id),
-			Name:   string(mutation.GitDeployResponse.Action.Name),
-			Status: string(mutation.GitDeployResponse.Action.Status),
+			ID:     string(mutation.Response.Action.Id),
+			Name:   string(mutation.Response.Action.Name),
+			Status: string(mutation.Response.Action.Status),
 		}
 		gitDeployResponse.GitDeploy = &types.GitDeploy{
-			ID:         string(mutation.GitDeployResponse.GitDeploy.Id),
-			Name:       string(mutation.GitDeployResponse.GitDeploy.Name),
-			Repository: string(mutation.GitDeployResponse.GitDeploy.Repository),
-			Status:     string(mutation.GitDeployResponse.GitDeploy.Status),
+			ID:         string(mutation.Response.GitDeploy.Id),
+			Name:       string(mutation.Response.GitDeploy.Name),
+			Repository: string(mutation.Response.GitDeploy.Repository),
+			Status:     string(mutation.Response.GitDeploy.Status),
 		}
 	}
 
@@ -273,16 +269,12 @@ func (c *pipelineClient) Destroy(ctx context.Context, name, namespace string, de
 	return gitDeployResponse, nil
 }
 
+// TODO: Remove this function when okteto chart 0.10.8 is no longer supported
 func (c *pipelineClient) deprecatedDestroy(ctx context.Context, name, namespace string, destroyVolumes bool) (*types.GitDeployResponse, error) {
 	oktetoLog.Infof("destroy pipeline: %s/%s", namespace, name)
 	gitDeployResponse := &types.GitDeployResponse{}
 	if destroyVolumes {
-		var mutation struct {
-			GitDeployResponse struct {
-				Id     graphql.String
-				Status graphql.String
-			} `graphql:"destroyGitRepository(name: $name, space: $space, destroyVolumes: $destroyVolumes)"`
-		}
+		var mutation deprecatedDestroyPipelineWithVolumesMutation
 
 		queryVariables := map[string]interface{}{
 			"name":           graphql.String(name),
@@ -294,31 +286,22 @@ func (c *pipelineClient) deprecatedDestroy(ctx context.Context, name, namespace 
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 		gitDeployResponse.GitDeploy = &types.GitDeploy{
-			ID:     string(mutation.GitDeployResponse.Id),
-			Status: string(mutation.GitDeployResponse.Status),
+			ID:     string(mutation.Response.GitDeploy.Id),
+			Status: string(mutation.Response.GitDeploy.Status),
 		}
 	} else {
-		var mutation struct {
-			GitDeployResponse struct {
-				Id     graphql.String
-				Status graphql.String
-			} `graphql:"destroyGitRepository(name: $name, space: $space)"`
-		}
-
+		var mutation deprecatedDestroyPipelineWithoutVolumesMutation
 		queryVariables := map[string]interface{}{
 			"name":  graphql.String(name),
 			"space": graphql.String(namespace),
 		}
 		err := mutate(ctx, &mutation, queryVariables, c.client)
 		if err != nil {
-			if strings.Contains(err.Error(), "Cannot query field \"action\" on type \"GitDeploy\"") {
-				return c.deprecatedDestroy(ctx, name, namespace, destroyVolumes)
-			}
 			return nil, fmt.Errorf("failed to deploy pipeline: %w", err)
 		}
 		gitDeployResponse.GitDeploy = &types.GitDeploy{
-			ID:     string(mutation.GitDeployResponse.Id),
-			Status: string(mutation.GitDeployResponse.Status),
+			ID:     string(mutation.Response.GitDeploy.Id),
+			Status: string(mutation.Response.GitDeploy.Status),
 		}
 	}
 
