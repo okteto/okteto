@@ -297,10 +297,10 @@ func (c *previewClient) GetResourcesStatus(ctx context.Context, previewName, dev
 
 func (c *previewClient) translateErr(err error, name string) error {
 	if err.Error() == "conflict" {
-		return fmt.Errorf("preview '%s' already exists with a different scope. Please use a different name", name)
+		return previewConflictErr{name: name}
 	}
 	if strings.Contains(err.Error(), "operation-not-permitted") {
-		return oktetoErrors.UserError{E: fmt.Errorf("you are not authorized to create a global preview env"),
+		return oktetoErrors.UserError{E: ErrUnauthorizedGlobalCreation,
 			Hint: "Please log in with an administrator account or use a personal preview environment"}
 	}
 	return err

@@ -9,6 +9,9 @@ import (
 var (
 	// ErrGithubMissingBusinessEmail is raised when the user does not have a business email
 	ErrGithubMissingBusinessEmail = errors.New("github-missing-business-email")
+
+	// ErrUnauthorizedGlobalCreation is raised when the user try to create a global preview without permission
+	ErrUnauthorizedGlobalCreation = errors.New("you are not authorized to create a global preview env")
 )
 
 type pipelineTimeoutError struct {
@@ -26,6 +29,14 @@ type pipelineFailedError struct {
 
 func (pe pipelineFailedError) Error() string {
 	return fmt.Sprintf("pipeline '%s' failed", pe.pipelineName)
+}
+
+type previewConflictErr struct {
+	name string
+}
+
+func (pe previewConflictErr) Error() string {
+	return fmt.Sprintf("preview '%s' already exists with a different scope. Please use a different name", pe.name)
 }
 
 type namespaceValidationError struct {

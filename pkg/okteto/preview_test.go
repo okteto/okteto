@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -635,6 +636,61 @@ func TestGetResourcesStatus(t *testing.T) {
 			response, err := pc.GetResourcesStatus(context.Background(), tc.input.namespace, tc.input.devenvName)
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
+		})
+	}
+}
+
+func TestTranslatePreviewErr(t *testing.T) {
+	type input struct {
+		err  error
+		name string
+	}
+	type expected struct {
+		err error
+	}
+	testCases := []struct {
+		name     string
+		input    input
+		expected expected
+	}{
+		{
+			name: "another error",
+			input: input{
+				err:  assert.AnError,
+				name: "test",
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "conflict",
+			input: input{
+				err:  errors.New("conflict"),
+				name: "test",
+			},
+			expected: expected{
+				err: previewConflictErr{
+					name: "test",
+				},
+			},
+		},
+		{
+			name: "operation-not-permitted",
+			input: input{
+				err:  errors.New("operation-not-permitted"),
+				name: "test",
+			},
+			expected: expected{
+				err: ErrUnauthorizedGlobalCreation,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pc := previewClient{}
+			err := pc.translateErr(tc.input.err, tc.input.name)
+			assert.ErrorIs(t, err, tc.expected.err)
 		})
 	}
 }
