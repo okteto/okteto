@@ -22,23 +22,24 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	oktetoTime "github.com/okteto/okteto/pkg/time"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 	giturls "github.com/whilp/git-urls"
 )
 
 type pipelineClient struct {
-	client                    graphqlClientInterface
-	url                       string
-	tickerWithTimeoutProvider func(ticker, timeout time.Duration) oktetoTime.TickerWithTimeoutInterface
+	client        graphqlClientInterface
+	url           string
+	provideTicker func(time.Duration) *time.Ticker
+	provideTimer  func(time.Duration) *time.Timer
 }
 
 func newPipelineClient(client *graphql.Client, url string) *pipelineClient {
 	return &pipelineClient{
-		client:                    client,
-		url:                       url,
-		tickerWithTimeoutProvider: oktetoTime.NewTickerWithTimeout,
+		client:        client,
+		url:           url,
+		provideTicker: time.NewTicker,
+		provideTimer:  time.NewTimer,
 	}
 }
 

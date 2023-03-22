@@ -18,31 +18,9 @@ import (
 	"testing"
 	"time"
 
-	oktetoTime "github.com/okteto/okteto/pkg/time"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
-
-type fakeTickerWithTimeout struct {
-	numberOfCallsBeforeTimeout int
-	tickerC                    chan time.Time
-	timeoutC                   chan time.Time
-}
-
-func (ft *fakeTickerWithTimeout) TickerTick() <-chan time.Time {
-	if ft.numberOfCallsBeforeTimeout > 0 {
-		ft.numberOfCallsBeforeTimeout--
-		ft.tickerC <- time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC)
-	}
-	return ft.tickerC
-}
-func (ft *fakeTickerWithTimeout) TimeoutTick() <-chan time.Time {
-	if ft.numberOfCallsBeforeTimeout <= 0 {
-		ft.timeoutC <- time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC)
-		return ft.timeoutC
-	}
-	return ft.timeoutC
-}
 
 func TestGetAction(t *testing.T) {
 	type input struct {
@@ -212,16 +190,29 @@ func TestWaitForActionToFinish(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			numberOfCalls := len(tc.cfg.client.queryResults)
+			timerChannel := make(chan time.Time)
+			tickerChannel := make(chan time.Time)
 			pc := pipelineClient{
 				client: tc.cfg.client,
-				tickerWithTimeoutProvider: func(_, _ time.Duration) oktetoTime.TickerWithTimeoutInterface {
-					return &fakeTickerWithTimeout{
-						numberOfCallsBeforeTimeout: len(tc.cfg.client.queryResults),
-						tickerC:                    make(chan time.Time, 1),
-						timeoutC:                   make(chan time.Time, 1),
+				provideTicker: func(_ time.Duration) *time.Ticker {
+					return &time.Ticker{
+						C: tickerChannel,
+					}
+				},
+				provideTimer: func(d time.Duration) *time.Timer {
+					return &time.Timer{
+						C: timerChannel,
 					}
 				},
 			}
+
+			go func() {
+				for i := 0; i < numberOfCalls; i++ {
+					tickerChannel <- time.Now()
+				}
+				timerChannel <- time.Now()
+			}()
 			err := pc.WaitForActionToFinish(context.Background(), "", "", "", 5*time.Second)
 			assert.ErrorIs(t, err, tc.expected.err)
 		})
@@ -334,7 +325,41 @@ func TestWaitForActionProgressing(t *testing.T) {
 			},
 		},
 		{
-			name: " successful",
+			name: "queued -> progressing -> successful",
+			cfg: input{
+				client: &fakeGraphQLMultipleCallsClient{
+					queryResults: []interface{}{
+						&getActionQueryStruct{
+							Action: actionStruct{
+								Id:     "id",
+								Name:   "name",
+								Status: "queued",
+							},
+						},
+						&getActionQueryStruct{
+							Action: actionStruct{
+								Id:     "id",
+								Name:   "name",
+								Status: "progressing",
+							},
+						},
+						&getActionQueryStruct{
+							Action: actionStruct{
+								Id:     "id",
+								Name:   "name",
+								Status: "deployed",
+							},
+						},
+					},
+					errs: []error{},
+				},
+			},
+			expected: expected{
+				err: nil,
+			},
+		},
+		{
+			name: "successful",
 			cfg: input{
 				client: &fakeGraphQLMultipleCallsClient{
 					queryResults: []interface{}{
@@ -356,16 +381,29 @@ func TestWaitForActionProgressing(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			numberOfCalls := len(tc.cfg.client.queryResults)
+			timerChannel := make(chan time.Time)
+			tickerChannel := make(chan time.Time)
 			pc := pipelineClient{
 				client: tc.cfg.client,
-				tickerWithTimeoutProvider: func(_, _ time.Duration) oktetoTime.TickerWithTimeoutInterface {
-					return &fakeTickerWithTimeout{
-						numberOfCallsBeforeTimeout: len(tc.cfg.client.queryResults),
-						tickerC:                    make(chan time.Time, 1),
-						timeoutC:                   make(chan time.Time, 1),
+				provideTicker: func(_ time.Duration) *time.Ticker {
+					return &time.Ticker{
+						C: tickerChannel,
+					}
+				},
+				provideTimer: func(d time.Duration) *time.Timer {
+					return &time.Timer{
+						C: timerChannel,
 					}
 				},
 			}
+
+			go func() {
+				for i := 0; i < numberOfCalls; i++ {
+					tickerChannel <- time.Now()
+				}
+				timerChannel <- time.Now()
+			}()
 			err := pc.WaitForActionProgressing(context.Background(), "", "", "", 5*time.Second)
 			assert.ErrorIs(t, err, tc.expected.err)
 		})

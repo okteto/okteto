@@ -18,13 +18,71 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	buildV1 "github.com/okteto/okteto/cmd/build/v1"
 	buildV2 "github.com/okteto/okteto/cmd/build/v2"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
+
+type fakeRegistry struct {
+	err      error
+	registry map[string]fakeImage
+}
+
+// fakeImage represents the data from an image
+type fakeImage struct {
+	Registry string
+	Repo     string
+	Tag      string
+	ImageRef string
+	Args     []string
+}
+
+func newFakeRegistry() fakeRegistry {
+	return fakeRegistry{
+		registry: map[string]fakeImage{},
+	}
+}
+
+func (fr fakeRegistry) HasGlobalPushAccess() (bool, error) { return false, nil }
+
+func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
+	if _, ok := fr.registry[imageTag]; !ok {
+		return "", oktetoErrors.ErrNotFound
+	}
+	return imageTag, nil
+}
+func (fr fakeRegistry) IsOktetoRegistry(_ string) bool { return false }
+
+func (fr fakeRegistry) AddImageByName(images ...string) error {
+	for _, image := range images {
+		fr.registry[image] = fakeImage{}
+	}
+	return nil
+}
+
+func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
+	fr.registry[opts.Tag] = fakeImage{Args: opts.BuildArgs}
+	return nil
+}
+
+func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageReference, error) {
+	ref, err := name.ParseReference(image)
+	if err != nil {
+		return registry.OktetoImageReference{}, err
+	}
+	return registry.OktetoImageReference{
+		Registry: ref.Context().RegistryStr(),
+		Repo:     ref.Context().RepositoryStr(),
+		Tag:      ref.Identifier(),
+		Image:    image,
+	}, nil
+}
 
 var fakeManifestV2 *model.Manifest = &model.Manifest{
 	Build: model.ManifestBuild{
@@ -165,6 +223,14 @@ func TestBuildErrIfInvalidManifest(t *testing.T) {
 
 func TestBuilderIsProperlyGenerated(t *testing.T) {
 	dir := t.TempDir()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
 	malformedDockerfile := filepath.Join(dir, "malformedDockerfile")
 	dockerfile := filepath.Join(dir, "Dockerfile")
 	assert.NoError(t, os.WriteFile(dockerfile, []byte(`FROM alpine`), 0600))
@@ -180,6 +246,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			name: "Manifest error fallback to v1",
 			buildCommand: &Command{
 				GetManifest: getManifestWithInvalidManifestError,
+				Registry:    newFakeRegistry(),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -189,6 +256,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			name: "Manifest error",
 			buildCommand: &Command{
 				GetManifest: getManifestWithInvalidManifestError,
+				Registry:    newFakeRegistry(),
 			},
 			options: &types.BuildOptions{
 				File: "okteto.yml",
@@ -200,6 +268,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			name: "Builder error. Dockerfile malformed",
 			buildCommand: &Command{
 				GetManifest: getManifestWithInvalidManifestError,
+				Registry:    newFakeRegistry(),
 			},
 			options: &types.BuildOptions{
 				File: malformedDockerfile,
@@ -211,6 +280,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			name: "Builder error. Invalid manifest/Dockerfile correct",
 			buildCommand: &Command{
 				GetManifest: getManifestWithInvalidManifestError,
+				Registry:    newFakeRegistry(),
 			},
 			options: &types.BuildOptions{
 				File: dockerfile,
@@ -222,6 +292,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			name: "BuilderV2 called.",
 			buildCommand: &Command{
 				GetManifest: getFakeManifestV2,
+				Registry:    newFakeRegistry(),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -231,6 +302,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			name: "Manifest valid but BuilderV1 fallback.",
 			buildCommand: &Command{
 				GetManifest: getFakeManifestV1,
+				Registry:    newFakeRegistry(),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,
@@ -240,6 +312,7 @@ func TestBuilderIsProperlyGenerated(t *testing.T) {
 			name: "Manifest error. BuilderV1 fallback.",
 			buildCommand: &Command{
 				GetManifest: getManifestWithError,
+				Registry:    newFakeRegistry(),
 			},
 			options:           &types.BuildOptions{},
 			expectedError:     false,

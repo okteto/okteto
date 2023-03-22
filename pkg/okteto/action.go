@@ -10,6 +10,15 @@ import (
 	"github.com/shurcooL/graphql"
 )
 
+const (
+	progressingStatus string = "progressing"
+	queuedStatus      string = "queued"
+	errorStatus       string = "error"
+	destroyErrStatus  string = "destroy-error"
+
+	tickerInterval time.Duration = 1 * time.Second
+)
+
 type getActionQueryStruct struct {
 	Action actionStruct `graphql:"action(name: $name, space: $space)"`
 }
@@ -42,16 +51,17 @@ func (c *pipelineClient) GetAction(ctx context.Context, name, namespace string) 
 }
 
 func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error {
-	t := c.tickerWithTimeoutProvider(1*time.Second, timeout)
+	timeoutTimer := c.provideTimer(timeout)
+	ticker := c.provideTicker(tickerInterval)
 	for {
 		select {
-		case <-t.TimeoutTick():
+		case <-timeoutTimer.C:
 			oktetoLog.Infof("action '%s' didn't finish after %s", actionName, timeout.String())
 			return pipelineTimeoutError{
 				pipelineName: actionName,
 				timeout:      timeout,
 			}
-		case <-t.TickerTick():
+		case <-ticker.C:
 			a, err := c.GetAction(ctx, actionName, namespace)
 			if err != nil {
 				oktetoLog.Infof("action '%s' failed", actionName)
@@ -60,9 +70,9 @@ func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName
 
 			oktetoLog.Infof("action '%s' is '%s'", actionName, a.Status)
 			switch a.Status {
-			case "progressing", "queued":
+			case progressingStatus, queuedStatus:
 				continue
-			case "error", "destroy-error":
+			case errorStatus, destroyErrStatus:
 				oktetoLog.Infof("action '%s' failed", actionName)
 				return pipelineFailedError{
 					pipelineName: pipelineName,
@@ -75,17 +85,17 @@ func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName
 }
 
 func (c *pipelineClient) WaitForActionProgressing(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error {
-	t := c.tickerWithTimeoutProvider(1*time.Second, timeout)
-
+	timeoutTimer := c.provideTimer(timeout)
+	ticker := c.provideTicker(tickerInterval)
 	for {
 		select {
-		case <-t.TimeoutTick():
+		case <-timeoutTimer.C:
 			oktetoLog.Infof("action '%s' didn't progress after %s", actionName, timeout.String())
 			return pipelineTimeoutError{
 				pipelineName: actionName,
 				timeout:      timeout,
 			}
-		case <-t.TickerTick():
+		case <-ticker.C:
 			a, err := c.GetAction(ctx, actionName, namespace)
 			if err != nil {
 				oktetoLog.Infof("action '%s' failed", actionName)
@@ -94,11 +104,11 @@ func (c *pipelineClient) WaitForActionProgressing(ctx context.Context, pipelineN
 
 			oktetoLog.Infof("action '%s' is '%s'", actionName, a.Status)
 			switch a.Status {
-			case "progressing":
+			case progressingStatus:
 				return nil
-			case "queued":
+			case queuedStatus:
 				continue
-			case "error", "destroy-error":
+			case errorStatus, destroyErrStatus:
 				oktetoLog.Infof("action '%s' failed", actionName)
 				return pipelineFailedError{
 					pipelineName: pipelineName,

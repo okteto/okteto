@@ -35,6 +35,7 @@ type OktetoBuilderInterface interface {
 
 type oktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
+	HasGlobalPushAccess() (bool, error)
 }
 
 // OktetoBuilder builds the images
@@ -55,10 +56,7 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 func NewBuilderFromScratch() *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
-	return &OktetoBuilder{
-		Builder:  builder,
-		Registry: registry,
-	}
+	return NewBuilder(builder, registry)
 }
 
 // IsV1 returns true since it is a builder v1
