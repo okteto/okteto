@@ -25,10 +25,12 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -41,6 +43,14 @@ type oktetoRegistryInterface interface {
 	GetImageTagWithDigest(imageTag string) (string, error)
 	IsOktetoRegistry(image string) bool
 	GetImageReference(image string) (registry.OktetoImageReference, error)
+	HasGlobalPushAccess() (bool, error)
+}
+
+// oktetoBuilderConfigInterface returns the configuration that the builder has for the registry and project
+type oktetoBuilderConfigInterface interface {
+	HasGlobalAccess() bool
+	IsCleanProject() bool
+	GetHash() string
 }
 
 // OktetoBuilder builds the images
@@ -49,6 +59,7 @@ type OktetoBuilder struct {
 	Registry  oktetoRegistryInterface
 	V1Builder *buildv1.OktetoBuilder
 
+	Config oktetoBuilderConfigInterface
 	// buildEnvironments are the environment variables created by the build steps
 	buildEnvironments map[string]string
 
@@ -72,12 +83,19 @@ func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface
 func NewBuilderFromScratch() *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
 	registry := registry.NewOktetoRegistry(okteto.Config{})
+	wdCtrl := filesystem.NewOsWorkingDirectoryCtrl()
+	wd, err := wdCtrl.Get()
+	if err != nil {
+		oktetoLog.Infof("could not get working dir: %w", err)
+	}
+	gitRepo := repository.NewRepository(wd)
 	return &OktetoBuilder{
 		Builder:           builder,
 		Registry:          registry,
 		V1Builder:         buildv1.NewBuilder(builder, registry),
 		buildEnvironments: map[string]string{},
 		builtImages:       map[string]bool{},
+		Config:            getConfig(registry, gitRepo),
 	}
 }
 
@@ -131,6 +149,12 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			}
 			if options.EnableStages {
 				oktetoLog.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
+			}
+			if imageTag, isBuilt := bc.checkIfCommitIsAlreadyBuilt(options.Manifest.Name, svcToBuild, bc.Config.GetHash(), options.NoCache); isBuilt {
+				oktetoLog.Warning("Skipping build of '%s' svc because it's commit is already built", svcToBuild)
+				bc.SetServiceEnvVars(svcToBuild, imageTag)
+				bc.builtImages[svcToBuild] = true
+				continue
 			}
 
 			buildSvcInfo := buildManifest[svcToBuild]
@@ -199,6 +223,9 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
 	}
 
+	tagToBuild := bc.getTagToBuild(manifest.Name, svcName, buildSvcInfo)
+	buildSvcInfo.Image = tagToBuild
+
 	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options)
 
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
@@ -224,6 +251,11 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	if err != nil {
 		return "", err
 	}
+	tagToBuild := bc.tagsToCheck(manifest.Name, svcName, buildSvcInfo)
+	if len(tagToBuild) != 0 {
+		buildSvcInfo.Image = tagToBuild[0]
+	}
+
 	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options)
 
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {

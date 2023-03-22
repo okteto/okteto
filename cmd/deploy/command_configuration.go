@@ -26,6 +26,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/repository"
 	giturls "github.com/whilp/git-urls"
 	"k8s.io/client-go/kubernetes"
 )
@@ -124,7 +125,7 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 }
 
-func (dc *DeployCommand) addEnvVars(ctx context.Context, cwd string) {
+func (dc *DeployCommand) addEnvVars(cwd string) {
 	if os.Getenv(model.OktetoGitBranchEnvVar) == "" {
 		branch, err := utils.GetBranch(cwd)
 		if err != nil {
@@ -152,13 +153,13 @@ func (dc *DeployCommand) addEnvVars(ctx context.Context, cwd string) {
 	}
 
 	if os.Getenv(model.OktetoGitCommitEnvVar) == "" {
-		sha, err := utils.GetGitCommit(cwd)
+		sha, err := repository.NewRepository(cwd).GetSHA()
 		if err != nil {
 			oktetoLog.Infof("could not retrieve sha: %s", err)
 		}
 		isClean := true
 		if !dc.isRemote {
-			isClean, err = utils.IsCleanDirectory(ctx, cwd)
+			isClean, err = repository.NewRepository(cwd).IsClean()
 			if err != nil {
 				oktetoLog.Infof("could not status: %s", err)
 			}

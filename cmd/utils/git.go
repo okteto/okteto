@@ -14,7 +14,6 @@
 package utils
 
 import (
-	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -53,40 +52,6 @@ func GetBranch(path string) (string, error) {
 
 	name := strings.TrimPrefix(branch.String(), "refs/heads/")
 	return name, nil
-}
-
-func GetGitCommit(path string) (string, error) {
-	repo, err := git.PlainOpen(path)
-	if err != nil {
-		return "", fmt.Errorf("failed to analyze git repo: %w", err)
-	}
-
-	head, err := repo.Head()
-	if err != nil {
-		return "", fmt.Errorf("failed to infer the git repo's current branch: %w", err)
-	}
-
-	hash := head.Hash()
-	return hash.String(), nil
-}
-
-func IsCleanDirectory(ctx context.Context, path string) (bool, error) {
-	repo, err := git.PlainOpen(path)
-	if err != nil {
-		return false, fmt.Errorf("failed to analyze git repo: %w", err)
-	}
-
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
-	}
-
-	status, err := worktree.Status()
-	if err != nil {
-		return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
-	}
-
-	return status.IsClean(), nil
 }
 
 // GetRandomSHA returns a random sha generated in the fly
