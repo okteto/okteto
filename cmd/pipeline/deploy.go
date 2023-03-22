@@ -375,7 +375,7 @@ func (o *DeployOptions) setDefaults() error {
 }
 
 func (o *DeployOptions) toPipelineDeployClientOptions() (types.PipelineDeployOptions, error) {
-	varList := []types.Variable{}
+	var varList []types.Variable
 	for _, v := range o.Variables {
 		kv := strings.SplitN(v, "=", 2)
 		if len(kv) != 2 {

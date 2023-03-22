@@ -295,7 +295,7 @@ func (c *previewClient) GetResourcesStatus(ctx context.Context, previewName, dev
 	return status, nil
 }
 
-func (c *previewClient) translateErr(err error, name string) error {
+func (*previewClient) translateErr(err error, name string) error {
 	if err.Error() == "conflict" {
 		return previewConflictErr{name: name}
 	}
