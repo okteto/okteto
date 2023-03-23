@@ -29,6 +29,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/destroy"
+	"github.com/okteto/okteto/cmd/kubetoken"
 	"github.com/okteto/okteto/cmd/logs"
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/pipeline"
@@ -117,6 +118,7 @@ func main() {
 	root.AddCommand(cmd.Login())
 	root.AddCommand(contextCMD.Context())
 	root.AddCommand(cmd.Kubeconfig())
+	root.AddCommand(kubetoken.KubeToken())
 	root.AddCommand(build.Build(ctx))
 
 	root.AddCommand(namespace.Namespace(ctx))

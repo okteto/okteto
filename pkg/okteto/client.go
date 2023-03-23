@@ -67,13 +67,21 @@ func (*OktetoClientProvider) Provide() (types.OktetoInterface, error) {
 
 // NewOktetoClient creates a new client to connect with Okteto API
 func NewOktetoClient() (*OktetoClient, error) {
-	token := Context().Token
-	if token == "" {
-		return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, Context().Name)
-	}
-	u, err := parseOktetoURL(Context().Name)
+	httpClient, u, err := newOktetoHttpClient(Context().Name, Context().Token, "graphql")
 	if err != nil {
 		return nil, err
+	}
+
+	return newOktetoClientFromGraphqlClient(u, httpClient)
+}
+
+func newOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client, string, error) {
+	if token == "" {
+		return nil, "", fmt.Errorf(oktetoErrors.ErrNotLogged, contextName)
+	}
+	u, err := parseOktetoURLWithPath(contextName, oktetoUrlPath)
+	if err != nil {
+		return nil, "", err
 	}
 
 	src := oauth2.StaticTokenSource(
@@ -93,7 +101,7 @@ func NewOktetoClient() (*OktetoClient, error) {
 
 	httpClient := oauth2.NewClient(ctx, src)
 
-	return newOktetoClientFromGraphqlClient(u, httpClient)
+	return httpClient, u, err
 }
 
 // NewOktetoClientFromUrlAndToken creates a new client to connect with Okteto API provided url and token
@@ -167,6 +175,10 @@ func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*Okt
 }
 
 func parseOktetoURL(u string) (string, error) {
+	return parseOktetoURLWithPath(u, "graphql")
+}
+
+func parseOktetoURLWithPath(u, path string) (string, error) {
 	if u == "" {
 		return "", fmt.Errorf("the okteto URL is not set")
 	}
@@ -181,7 +193,7 @@ func parseOktetoURL(u string) (string, error) {
 		parsed.Host = parsed.Path
 	}
 
-	parsed.Path = "graphql"
+	parsed.Path = path
 	return parsed.String(), nil
 }
 
