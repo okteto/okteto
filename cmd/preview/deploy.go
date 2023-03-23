@@ -127,7 +127,7 @@ func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*typ
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	varList := []types.Variable{}
+	var varList []types.Variable
 	for _, v := range opts.variables {
 		kv := strings.SplitN(v, "=", 2)
 		if len(kv) != 2 {

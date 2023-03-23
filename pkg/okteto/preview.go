@@ -26,11 +26,15 @@ import (
 )
 
 type previewClient struct {
-	client graphqlClientInterface
+	client             graphqlClientInterface
+	namespaceValidator namespaceValidator
 }
 
 func newPreviewClient(client *graphql.Client) *previewClient {
-	return &previewClient{client: client}
+	return &previewClient{
+		client:             client,
+		namespaceValidator: newNamespaceValidator(),
+	}
 }
 
 // PreviewEnv represents an Okteto preview environment
@@ -115,7 +119,7 @@ type previewIDStruct struct {
 
 // DeployPreview creates a preview environment
 func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
-	if err := validateNamespace(name, "preview environment"); err != nil {
+	if err := c.namespaceValidator.validate(name, previewEnvObject); err != nil {
 		return nil, err
 	}
 	origin := config.GetDeployOrigin()
@@ -295,7 +299,7 @@ func (c *previewClient) GetResourcesStatus(ctx context.Context, previewName, dev
 	return status, nil
 }
 
-func (c *previewClient) translateErr(err error, name string) error {
+func (*previewClient) translateErr(err error, name string) error {
 	if err.Error() == "conflict" {
 		return previewConflictErr{name: name}
 	}

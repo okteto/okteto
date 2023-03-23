@@ -65,3 +65,7 @@ func (c *FakePreviewsClient) Destroy(_ context.Context, _ string) error {
 	c.response.DestroySuccessCount++
 	return nil
 }
+
+func (*FakePreviewsClient) ListEndpoints(_ context.Context, _ string) ([]types.Endpoint, error) {
+	return nil, nil
+}
