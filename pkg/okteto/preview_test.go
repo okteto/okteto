@@ -46,19 +46,19 @@ func TestDeployPreview(t *testing.T) {
 			expected: expected{
 				response: nil,
 				err: namespaceValidationError{
-					object: "preview environment",
+					object: previewEnvObject,
 				},
 			},
 		},
 		{
-			name: "namespace validator length exceeds",
+			name: "namespace validator does not match regexp",
 			input: input{
 				name: "-",
 			},
 			expected: expected{
 				response: nil,
 				err: namespaceValidationError{
-					object: "preview environment",
+					object: previewEnvObject,
 				},
 			},
 		},

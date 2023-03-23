@@ -25,6 +25,10 @@ type namespaceValidator struct {
 	nameValidationRegex *regexp.Regexp
 }
 
+const (
+	previewEnvObject = "preview environment"
+)
+
 func newNamespaceValidator() namespaceValidator {
 	return namespaceValidator{
 		maxAllowedChars:     63,

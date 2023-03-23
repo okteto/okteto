@@ -117,7 +117,7 @@ type previewIDStruct struct {
 
 // DeployPreview creates a preview environment
 func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
-	if err := c.namespaceValidator.validate(name, "preview environment"); err != nil {
+	if err := c.namespaceValidator.validate(name, previewEnvObject); err != nil {
 		return nil, err
 	}
 	origin := config.GetDeployOrigin()

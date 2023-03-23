@@ -61,7 +61,7 @@ func Test_validateNamespaceName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			nv := newNamespaceValidator()
-			err := nv.validate(tt.namespace, "namespace")
+			err := nv.validate(tt.namespace, previewEnvObject)
 			if err != nil && !tt.expectedError {
 				t.Errorf("Expected error but no error found")
 			}
