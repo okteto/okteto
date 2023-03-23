@@ -83,7 +83,7 @@ func executeListPreviewEndpoints(ctx context.Context, name, output string) error
 	if err != nil {
 		return err
 	}
-	endpointList, err := oktetoClient.ListPreviewsEndpoints(ctx, name)
+	endpointList, err := oktetoClient.Previews().ListEndpoints(ctx, name)
 	if err != nil {
 		return fmt.Errorf("failed to get preview environments: %s", err)
 	}
