@@ -15,8 +15,6 @@ package okteto
 
 import (
 	"context"
-	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -26,11 +24,15 @@ import (
 )
 
 type previewClient struct {
-	client graphqlClientInterface
+	client             graphqlClientInterface
+	namespaceValidator namespaceValidator
 }
 
 func newPreviewClient(client *graphql.Client) *previewClient {
-	return &previewClient{client: client}
+	return &previewClient{
+		client:             client,
+		namespaceValidator: newNamespaceValidator(),
+	}
 }
 
 // PreviewEnv represents an Okteto preview environment
@@ -115,7 +117,7 @@ type previewIDStruct struct {
 
 // DeployPreview creates a preview environment
 func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
-	if err := validateNamespace(name, "preview environment"); err != nil {
+	if err := c.namespaceValidator.validate(name, "preview environment"); err != nil {
 		return nil, err
 	}
 	origin := config.GetDeployOrigin()
@@ -304,26 +306,4 @@ func (*previewClient) translateErr(err error, name string) error {
 			Hint: "Please log in with an administrator account or use a personal preview environment"}
 	}
 	return err
-}
-
-// validateNamespace checks if the new ns exceeds the max chars allowed by k8s and if t
-func validateNamespace(namespace, object string) error {
-	if len(namespace) > MAX_ALLOWED_CHARS {
-		return oktetoErrors.UserError{
-			E: namespaceValidationError{
-				object: object,
-			},
-			Hint: fmt.Sprintf("%s name must be shorter than 63 characters.", object),
-		}
-	}
-	nameValidationRegex := regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
-	if !nameValidationRegex.MatchString(namespace) {
-		return oktetoErrors.UserError{
-			E: namespaceValidationError{
-				object: object,
-			},
-			Hint: fmt.Sprintf("%s name must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character", object),
-		}
-	}
-	return nil
 }
