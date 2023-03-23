@@ -28,7 +28,7 @@ type previewClient struct {
 	namespaceValidator namespaceValidator
 }
 
-func newPreviewClient(client *graphql.Client) *previewClient {
+func newPreviewClient(client graphqlClientInterface) *previewClient {
 	return &previewClient{
 		client:             client,
 		namespaceValidator: newNamespaceValidator(),

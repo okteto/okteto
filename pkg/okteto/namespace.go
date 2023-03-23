@@ -39,10 +39,10 @@ var TransitionStatus = map[string]bool{
 }
 
 type namespaceClient struct {
-	client *graphql.Client
+	client graphqlClientInterface
 }
 
-func newNamespaceClient(client *graphql.Client) *namespaceClient {
+func newNamespaceClient(client graphqlClientInterface) *namespaceClient {
 	return &namespaceClient{client: client}
 }
 
