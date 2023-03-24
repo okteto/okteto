@@ -129,6 +129,9 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
 				BuildArgs:  []string{namespaceEnvVar.String()},
+				CacheFrom: []string{
+					"okteto.dev/movies-service:cache",
+				},
 			},
 		},
 		{
@@ -166,8 +169,11 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				File:       filepath.Join(serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
-				CacheFrom:  []string{"cache-image"},
-				BuildArgs:  []string{namespaceEnvVar.String(), "arg1=value1"},
+				CacheFrom: []string{
+					"cache-image",
+					"okteto.dev/movies-service:cache",
+				},
+				BuildArgs: []string{namespaceEnvVar.String(), "arg1=value1"},
 			},
 		},
 		{
@@ -201,8 +207,11 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				File:       filepath.Join(serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
-				CacheFrom:  []string{"cache-image"},
-				BuildArgs:  []string{namespaceEnvVar.String(), "arg1=value1"},
+				CacheFrom: []string{
+					"cache-image",
+					"okteto.dev/movies-service:cache",
+				},
+				BuildArgs: []string{namespaceEnvVar.String(), "arg1=value1"},
 			},
 		},
 		{
@@ -231,12 +240,15 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			},
 			isOkteto: true,
 			expected: &types.BuildOptions{
-				OutputMode:  oktetoLog.TTYFormat,
-				Tag:         "okteto.dev/mycustomimage:dev",
-				File:        filepath.Join(serviceContext, serviceDockerfile),
-				Target:      "build",
-				Path:        "service",
-				CacheFrom:   []string{"cache-image"},
+				OutputMode: oktetoLog.TTYFormat,
+				Tag:        "okteto.dev/mycustomimage:dev",
+				File:       filepath.Join(serviceContext, serviceDockerfile),
+				Target:     "build",
+				Path:       "service",
+				CacheFrom: []string{
+					"cache-image",
+					"okteto.dev/mycustomimage:cache",
+				},
 				BuildArgs:   []string{namespaceEnvVar.String(), "arg1=value1"},
 				Secrets:     []string{"id=mysecret,src=source"},
 				ExportCache: "export-image",
@@ -250,9 +262,10 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Platform: "linux/amd64"},
 			isOkteto: true,
 			expected: &types.BuildOptions{
-				BuildArgs: []string{namespaceEnvVar.String()},
-				Platform:  "linux/amd64",
-				Tag:       "okteto.dev/movies-service:okteto",
+				CacheFrom:  []string{"okteto.dev/movies-service:cache"},
+				BuildArgs:  []string{namespaceEnvVar.String()},
+				Platform:   "linux/amd64",
+				Tag:        "okteto.dev/movies-service:okteto",
 				OutputMode: "tty",
 			},
 		},

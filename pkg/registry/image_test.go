@@ -264,7 +264,7 @@ func Test_GetRepoNameAndTag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo, tag := ImageCtrl{}.getRepoNameAndTag(tt.image)
+			repo, tag := ImageCtrl{}.GetRepoNameAndTag(tt.image)
 			assert.Equal(t, tt.expected.repo, repo)
 			assert.Equal(t, tt.expected.tag, tag)
 		})
@@ -280,7 +280,7 @@ func TestGetExposedPortsFromCfg(t *testing.T) {
 		{
 			name:     "cfg is nil",
 			cfg:      &v1.ConfigFile{},
-			expected: []Port{},
+			expected: nil,
 		},
 		{
 			name: "cfg is empty",
@@ -288,7 +288,7 @@ func TestGetExposedPortsFromCfg(t *testing.T) {
 				ExposedPorts: map[string]struct{}{},
 			},
 			},
-			expected: []Port{},
+			expected: nil,
 		},
 		{
 			name: "cfg-with-ports-one-malformed",
