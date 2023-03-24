@@ -43,7 +43,7 @@ type registryConfig interface {
 // OktetoRegistry represents the registry
 type OktetoRegistry struct {
 	client    clientInterface
-	imageCtrl ImageCtrl
+	ImageCtrl ImageCtrl
 	config    registryConfig
 }
 
@@ -57,16 +57,16 @@ type OktetoImageReference struct {
 func NewOktetoRegistry(config configInterface) OktetoRegistry {
 	return OktetoRegistry{
 		client:    newOktetoRegistryClient(config),
-		imageCtrl: NewImageCtrl(config),
+		ImageCtrl: NewImageCtrl(config),
 		config:    config,
 	}
 }
 
 func (or OktetoRegistry) GetImageTagWithDigest(image string) (string, error) {
-	expandedImage := or.imageCtrl.expandImageRegistries(image)
+	expandedImage := or.ImageCtrl.expandImageRegistries(image)
 
-	registry, repositoryWithTag := or.imageCtrl.GetRegistryAndRepo(expandedImage)
-	repository, _ := or.imageCtrl.getRepoNameAndTag(repositoryWithTag)
+	registry, repositoryWithTag := or.ImageCtrl.GetRegistryAndRepo(expandedImage)
+	repository, _ := or.ImageCtrl.GetRepoNameAndTag(repositoryWithTag)
 
 	digest, err := or.client.GetDigest(expandedImage)
 	if err != nil {
@@ -87,7 +87,7 @@ func (or OktetoRegistry) GetImageMetadata(image string) (ImageMetadata, error) {
 	if err != nil {
 		return ImageMetadata{}, fmt.Errorf("error getting image metadata: %w", err)
 	}
-	ports := or.imageCtrl.getExposedPortsFromCfg(cfgFile)
+	ports := or.ImageCtrl.getExposedPortsFromCfg(cfgFile)
 	workdir := cfgFile.Config.WorkingDir
 	cmd := cfgFile.Config.Cmd
 
@@ -101,13 +101,13 @@ func (or OktetoRegistry) GetImageMetadata(image string) (ImageMetadata, error) {
 
 // IsOktetoRegistry returns if an image tag is pointing to the okteto registry
 func (or OktetoRegistry) IsOktetoRegistry(image string) bool {
-	expandedImage := or.imageCtrl.expandImageRegistries(image)
+	expandedImage := or.ImageCtrl.expandImageRegistries(image)
 	return or.config.IsOktetoCluster() && strings.HasPrefix(expandedImage, or.config.GetRegistryURL())
 }
 
 func (or OktetoRegistry) IsGlobalRegistry(image string) bool {
-	expandedImage := or.imageCtrl.expandImageRegistries(image)
-	expandedGlobalImage := fmt.Sprintf("%s/%s", or.config.GetRegistryURL(), or.imageCtrl.config.GetGlobalNamespace())
+	expandedImage := or.ImageCtrl.expandImageRegistries(image)
+	expandedGlobalImage := fmt.Sprintf("%s/%s", or.config.GetRegistryURL(), or.ImageCtrl.config.GetGlobalNamespace())
 	return strings.HasPrefix(expandedImage, expandedGlobalImage)
 }
 
@@ -119,7 +119,7 @@ func (or OktetoRegistry) GetImageTag(image, service, namespace string) string {
 		}
 		return fmt.Sprintf("%s/%s/%s:okteto", or.config.GetRegistryURL(), namespace, service)
 	}
-	imageWithoutTag, _ := or.imageCtrl.getRepoNameAndTag(image)
+	imageWithoutTag, _ := or.ImageCtrl.GetRepoNameAndTag(image)
 	return fmt.Sprintf("%s:okteto", imageWithoutTag)
 }
 
@@ -142,6 +142,6 @@ func (or OktetoRegistry) HasGlobalPushAccess() (bool, error) {
 	if !or.config.IsOktetoCluster() {
 		return false, nil
 	}
-	image := or.imageCtrl.ExpandOktetoGlobalRegistry(globalTestImage)
+	image := or.ImageCtrl.ExpandOktetoGlobalRegistry(globalTestImage)
 	return or.client.HasPushAccess(image)
 }

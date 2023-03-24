@@ -264,7 +264,7 @@ func Test_GetRepoNameAndTag(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo, tag := ImageCtrl{}.getRepoNameAndTag(tt.image)
+			repo, tag := ImageCtrl{}.GetRepoNameAndTag(tt.image)
 			assert.Equal(t, tt.expected.repo, repo)
 			assert.Equal(t, tt.expected.tag, tag)
 		})
