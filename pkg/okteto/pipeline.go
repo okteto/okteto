@@ -324,7 +324,7 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name, namespace
 		if oktetoErrors.IsNotFound(err) {
 			okClient, err := NewOktetoClientFromUrlAndToken(c.url, Context().Token)
 			if err != nil {
-				return nil, fmt.Errorf("could not create okteto client")
+				return nil, err
 			}
 			return okClient.Previews().GetResourcesStatus(ctx, namespace, name)
 		}

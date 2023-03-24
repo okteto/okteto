@@ -755,6 +755,21 @@ func TestGetPipelineResourcesStatus(t *testing.T) {
 				err: nil,
 			},
 		},
+		{
+			name: "not found -> ",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: nil,
+					err:         oktetoErrors.ErrNotFound,
+				},
+				namespace:  "test",
+				devenvName: "non-existing",
+			},
+			expected: expected{
+				response: nil,
+				err:      errURLNotSet,
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
