@@ -115,9 +115,9 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 			buildOptions.CacheFrom[i] = imageCtrl.ExpandOktetoDevRegistry(buildOptions.CacheFrom[i])
 			buildOptions.CacheFrom[i] = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.CacheFrom[i])
 		}
-		if buildOptions.ExportCache != "" {
-			buildOptions.ExportCache = imageCtrl.ExpandOktetoDevRegistry(buildOptions.ExportCache)
-			buildOptions.ExportCache = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.ExportCache)
+		for i := range buildOptions.ExportCache {
+			buildOptions.ExportCache[i] = imageCtrl.ExpandOktetoDevRegistry(buildOptions.ExportCache[i])
+			buildOptions.ExportCache[i] = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.ExportCache[i])
 		}
 	}
 

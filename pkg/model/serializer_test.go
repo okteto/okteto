@@ -2604,3 +2604,70 @@ timeout: 15m`),
 		})
 	}
 }
+
+func TestUnmarshalExportCache(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected *ExportCache
+	}{
+		{
+			name: "single line",
+			data: []byte(`"okteto/okteto:cache"`),
+			expected: &ExportCache{
+				"okteto/okteto:cache",
+			},
+		},
+		{
+			name: "export cache list",
+			data: []byte(`- "okteto/okteto:cache"
+- "okteto/test:cache"`),
+			expected: &ExportCache{
+				"okteto/okteto:cache",
+				"okteto/test:cache",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var result *ExportCache
+			err := yaml.UnmarshalStrict(tt.data, &result)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestMarshalExportCache(t *testing.T) {
+	tests := []struct {
+		name        string
+		exportCache *ExportCache
+		result      []byte
+	}{
+		{
+			name: "only one image",
+			exportCache: &ExportCache{
+				"okteto/okteto:cache",
+			},
+			result: []byte(`okteto/okteto:cache
+`),
+		},
+		{
+			name: "several images on the cache",
+			exportCache: &ExportCache{
+				"okteto/okteto:cache",
+				"okteto/test:cache",
+			},
+			result: []byte(`- okteto/okteto:cache
+- okteto/test:cache
+`),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := yaml.Marshal(tt.exportCache)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.result, result)
+		})
+	}
+}

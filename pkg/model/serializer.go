@@ -45,7 +45,7 @@ type buildInfoRaw struct {
 	Args             BuildArgs      `yaml:"args,omitempty"`
 	Image            string         `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume  `yaml:"-"`
-	ExportCache      string         `yaml:"export_cache,omitempty"`
+	ExportCache      ExportCache    `yaml:"export_cache,omitempty"`
 	DependsOn        BuildDependsOn `yaml:"depends_on,omitempty"`
 	Secrets          BuildSecrets   `yaml:"secrets,omitempty"`
 }
@@ -170,6 +170,34 @@ func (cf CacheFrom) MarshalYAML() (interface{}, error) {
 	}
 
 	return cf, nil
+}
+
+// UnmarshalYAML implements the Unmarshaler interface of the yaml pkg.
+func (ec *ExportCache) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var single string
+	err := unmarshal(&single)
+	if err == nil {
+		*ec = ExportCache{single}
+		return nil
+	}
+
+	var multi []string
+	err = unmarshal(&multi)
+	if err == nil {
+		*ec = multi
+		return nil
+	}
+
+	return err
+}
+
+// MarshalYAML implements the marshaler interface of the yaml pkg.
+func (ec ExportCache) MarshalYAML() (interface{}, error) {
+	if len(ec) == 1 {
+		return ec[0], nil
+	}
+
+	return ec, nil
 }
 
 // UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.

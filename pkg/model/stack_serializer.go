@@ -245,7 +245,7 @@ type composeBuildInfo struct {
 	Args             BuildArgs     `yaml:"args,omitempty"`
 	Image            string        `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume `yaml:"-"`
-	ExportCache      string        `yaml:"export_cache,omitempty"`
+	ExportCache      ExportCache   `yaml:"export_cache,omitempty"`
 }
 
 func (c *composeBuildInfo) toBuildInfo() *BuildInfo {

@@ -126,13 +126,16 @@ type BuildInfo struct {
 	Args             BuildArgs      `yaml:"args,omitempty"`
 	Image            string         `yaml:"image,omitempty"`
 	VolumesToInclude []StackVolume  `yaml:"-"`
-	ExportCache      string         `yaml:"export_cache,omitempty"`
+	ExportCache      ExportCache    `yaml:"export_cache,omitempty"`
 	DependsOn        BuildDependsOn `yaml:"depends_on,omitempty"`
 	Secrets          BuildSecrets   `yaml:"secrets,omitempty"`
 }
 
 // CacheFrom is a list of images to import cache from.
 type CacheFrom []string
+
+// ExportCache is a list of images to export cache to.
+type ExportCache []string
 
 // BuildArg is an argument used on the build step.
 type BuildArg struct {
