@@ -47,7 +47,12 @@ func (h *Handler) handle() http.Handler {
 		}
 
 		ctx := r.Context()
-		u, err := okteto.Auth(ctx, code, h.baseURL)
+		oktetoClient, err := okteto.NewOktetoClientFromUrl(h.baseURL)
+		if err != nil {
+			h.errChan <- err
+			return
+		}
+		u, err := oktetoClient.Auth(ctx, code)
 		if err != nil {
 			if err := html.ExecuteError(w, err); err != nil {
 				h.errChan <- err
