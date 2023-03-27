@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -46,6 +47,7 @@ type OktetoClientProvider struct{}
 
 var insecureSkipTLSVerify bool
 var strictTLSOnce sync.Once
+var errURLNotSet = errors.New("the okteto URL is not set")
 
 // graphqlClientInterface contains the functions that a graphqlClient must have
 type graphqlClientInterface interface {
@@ -108,7 +110,7 @@ func newOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client
 func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 	u, err := parseOktetoURL(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not create okteto client: %w", err)
 	}
 
 	src := oauth2.StaticTokenSource(
@@ -180,7 +182,7 @@ func parseOktetoURL(u string) (string, error) {
 
 func parseOktetoURLWithPath(u, path string) (string, error) {
 	if u == "" {
-		return "", fmt.Errorf("the okteto URL is not set")
+		return "", errURLNotSet
 	}
 
 	parsed, err := url.Parse(u)
