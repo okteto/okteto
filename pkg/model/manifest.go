@@ -948,13 +948,6 @@ func (manifest *Manifest) ExpandEnvVars() error {
 				return err
 			}
 		}
-		for idx, cmd := range manifest.Destroy.Commands {
-			cmd.Command, err = envsubst.String(cmd.Command)
-			if err != nil {
-				return errors.New("could not parse env vars")
-			}
-			manifest.Destroy.Commands[idx] = cmd
-		}
 	}
 
 	for devName, devInfo := range manifest.Dev {

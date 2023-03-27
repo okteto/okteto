@@ -16,21 +16,21 @@ package okteto
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDeployPipeline(t *testing.T) {
+func TestDeployPreview(t *testing.T) {
 	type input struct {
 		client    *fakeGraphQLClient
 		name      string
 		variables []types.Variable
 	}
 	type expected struct {
-		response *types.GitDeployResponse
+		response *types.PreviewResponse
 		err      error
 	}
 	testCases := []struct {
@@ -38,6 +38,30 @@ func TestDeployPipeline(t *testing.T) {
 		input    input
 		expected expected
 	}{
+		{
+			name: "namespace validator length exceeds",
+			input: input{
+				name: strings.Repeat("a", 100),
+			},
+			expected: expected{
+				response: nil,
+				err: namespaceValidationError{
+					object: previewEnvObject,
+				},
+			},
+		},
+		{
+			name: "namespace validator does not match regexp",
+			input: input{
+				name: "-",
+			},
+			expected: expected{
+				response: nil,
+				err: namespaceValidationError{
+					object: previewEnvObject,
+				},
+			},
+		},
 		{
 			name: "with variables - error",
 			input: input{
@@ -61,18 +85,15 @@ func TestDeployPipeline(t *testing.T) {
 			name: "with variables - no error",
 			input: input{
 				client: &fakeGraphQLClient{
-					mutationResult: &deployPipelineMutation{
-						Response: deployPipelineResponse{
+					mutationResult: &deployPreviewMutation{
+						Response: deployPreviewResponse{
 							Action: actionStruct{
 								Id:     "test",
 								Name:   "test",
 								Status: ProgressingStatus,
 							},
-							GitDeploy: gitDeployInfoWithRepoInfo{
-								Id:         "test",
-								Name:       "test",
-								Status:     ProgressingStatus,
-								Repository: "my-repo",
+							Preview: previewIDStruct{
+								Id: "test",
 							},
 						},
 					},
@@ -87,17 +108,14 @@ func TestDeployPipeline(t *testing.T) {
 				},
 			},
 			expected: expected{
-				response: &types.GitDeployResponse{
+				response: &types.PreviewResponse{
 					Action: &types.Action{
 						ID:     "test",
 						Name:   "test",
 						Status: progressingStatus,
 					},
-					GitDeploy: &types.GitDeploy{
-						ID:         "test",
-						Name:       "test",
-						Repository: "my-repo",
-						Status:     progressingStatus,
+					Preview: &types.Preview{
+						ID: "test",
 					},
 				},
 				err: nil,
@@ -121,18 +139,15 @@ func TestDeployPipeline(t *testing.T) {
 			name: "without variables - no error",
 			input: input{
 				client: &fakeGraphQLClient{
-					mutationResult: &deployPipelineMutation{
-						Response: deployPipelineResponse{
+					mutationResult: &deployPreviewMutation{
+						Response: deployPreviewResponse{
 							Action: actionStruct{
 								Id:     "test",
 								Name:   "test",
 								Status: ProgressingStatus,
 							},
-							GitDeploy: gitDeployInfoWithRepoInfo{
-								Id:         "test",
-								Name:       "test",
-								Status:     ProgressingStatus,
-								Repository: "my-repo",
+							Preview: previewIDStruct{
+								Id: "test",
 							},
 						},
 					},
@@ -142,17 +157,14 @@ func TestDeployPipeline(t *testing.T) {
 				variables: []types.Variable{},
 			},
 			expected: expected{
-				response: &types.GitDeployResponse{
+				response: &types.PreviewResponse{
 					Action: &types.Action{
 						ID:     "test",
 						Name:   "test",
 						Status: progressingStatus,
 					},
-					GitDeploy: &types.GitDeploy{
-						ID:         "test",
-						Name:       "test",
-						Status:     ProgressingStatus,
-						Repository: "my-repo",
+					Preview: &types.Preview{
+						ID: "test",
 					},
 				},
 				err: nil,
@@ -161,27 +173,24 @@ func TestDeployPipeline(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			pc := pipelineClient{
-				client: tc.input.client,
+			pc := previewClient{
+				client:             tc.input.client,
+				namespaceValidator: newNamespaceValidator(),
 			}
-			response, err := pc.Deploy(context.Background(), types.PipelineDeployOptions{
-				Name:      tc.input.name,
-				Variables: tc.input.variables,
-			})
+			response, err := pc.DeployPreview(context.Background(), tc.input.name, "", "", "", "", "", tc.input.variables)
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
 		})
 	}
 }
 
-func TestGetPipelineByName(t *testing.T) {
+func TestDestroyPreview(t *testing.T) {
 	type input struct {
 		client *fakeGraphQLClient
 		name   string
 	}
 	type expected struct {
-		response *types.GitDeploy
-		err      error
+		err error
 	}
 	testCases := []struct {
 		name     string
@@ -189,101 +198,53 @@ func TestGetPipelineByName(t *testing.T) {
 		expected expected
 	}{
 		{
-			name: "error",
+			name: "no error",
 			input: input{
 				client: &fakeGraphQLClient{
-					err: assert.AnError,
+					mutationResult: &destroyPreviewMutation{
+						Response: previewIDStruct{
+							Id: "test",
+						},
+					},
+					err: nil,
 				},
 				name: "test",
 			},
 			expected: expected{
-				response: nil,
-				err:      assert.AnError,
-			},
-		},
-		{
-			name: "not found",
-			input: input{
-				client: &fakeGraphQLClient{
-					queryResult: &getPipelineByNameQuery{
-						Response: getPipelineByNameResponse{
-							GitDeploys: []gitDeployInfoIdNameStatus{
-								{
-									Id:     "",
-									Name:   "test1",
-									Status: ProgressingStatus,
-								},
-								{
-									Id:     "",
-									Name:   "test2",
-									Status: ProgressingStatus,
-								},
-							},
-						},
-					},
-					err: nil,
-				},
-				name: "not found",
-			},
-			expected: expected{
-				response: nil,
-				err:      oktetoErrors.ErrNotFound,
-			},
-		},
-		{
-			name: "found",
-			input: input{
-				client: &fakeGraphQLClient{
-					queryResult: &getPipelineByNameQuery{
-						Response: getPipelineByNameResponse{
-							GitDeploys: []gitDeployInfoIdNameStatus{
-								{
-									Id:     "",
-									Name:   "test1",
-									Status: ProgressingStatus,
-								},
-								{
-									Id:     "",
-									Name:   "test2",
-									Status: ProgressingStatus,
-								},
-							},
-						},
-					},
-					err: nil,
-				},
-				name: "test1",
-			},
-			expected: expected{
-				response: &types.GitDeploy{
-					ID:     "",
-					Name:   "test1",
-					Status: progressingStatus,
-				},
 				err: nil,
+			},
+		},
+		{
+			name: "error",
+			input: input{
+				client: &fakeGraphQLClient{
+					mutationResult: nil,
+					err:            assert.AnError,
+				},
+				name: "test",
+			},
+			expected: expected{
+				err: assert.AnError,
 			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			pc := pipelineClient{
+			pc := previewClient{
 				client: tc.input.client,
 			}
-			response, err := pc.GetByName(context.Background(), tc.input.name, "")
+			err := pc.Destroy(context.Background(), tc.input.name)
 			assert.ErrorIs(t, err, tc.expected.err)
-			assert.Equal(t, tc.expected.response, response)
 		})
 	}
 }
 
-func TestDestroyPipeline(t *testing.T) {
+func TestListPreview(t *testing.T) {
 	type input struct {
-		client         *fakeGraphQLMultipleCallsClient
-		name           string
-		destroyVolumes bool
+		client *fakeGraphQLClient
 	}
 	type expected struct {
-		response *types.GitDeployResponse
+		response []types.Preview
 		err      error
 	}
 	testCases := []struct {
@@ -292,229 +253,140 @@ func TestDestroyPipeline(t *testing.T) {
 		expected expected
 	}{
 		{
-			name: "destroy volumes - error",
+			name: "no error",
 			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					errs: []error{assert.AnError},
+				client: &fakeGraphQLClient{
+					queryResult: &listPreviewQuery{
+						Response: []previewEnv{
+							{
+								Id:       "test",
+								Sleeping: false,
+								Scope:    "test",
+							},
+						},
+					},
+					err: nil,
 				},
-				name:           "test",
-				destroyVolumes: true,
+			},
+			expected: expected{
+				response: []types.Preview{
+					{
+						ID:       "test",
+						Sleeping: false,
+						Scope:    "test",
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "error",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: nil,
+					err:         assert.AnError,
+				},
 			},
 			expected: expected{
 				err: assert.AnError,
-			},
-		},
-		{
-			name: "destroy no volumes - error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					errs: []error{assert.AnError},
-				},
-				name:           "test",
-				destroyVolumes: false,
-			},
-			expected: expected{
-				err: assert.AnError,
-			},
-		},
-		{
-			name: "destroy volumes - no error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					mutationResult: []interface{}{
-						&destroyPipelineWithVolumesMutation{
-							Response: destroyPipelineResponse{
-								Action: actionStruct{
-									Id:     "test",
-									Name:   "test",
-									Status: ProgressingStatus,
-								},
-								GitDeploy: gitDeployInfoWithRepoInfo{
-									Id:         "test",
-									Name:       "test",
-									Status:     ProgressingStatus,
-									Repository: "repo",
-								},
-							},
-						},
-					},
-				},
-				name:           "test",
-				destroyVolumes: true,
-			},
-			expected: expected{
-				response: &types.GitDeployResponse{
-					Action: &types.Action{
-						ID:     "test",
-						Name:   "test",
-						Status: progressingStatus,
-					},
-					GitDeploy: &types.GitDeploy{
-						ID:         "test",
-						Name:       "test",
-						Repository: "repo",
-						Status:     progressingStatus,
-					},
-				},
-				err: nil,
-			},
-		},
-		{
-			name: "destroy no volumes - no error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					mutationResult: []interface{}{
-						&destroyPipelineWithoutVolumesMutation{
-							Response: destroyPipelineResponse{
-								Action: actionStruct{
-									Id:     "test",
-									Name:   "test",
-									Status: ProgressingStatus,
-								},
-								GitDeploy: gitDeployInfoWithRepoInfo{
-									Id:         "test",
-									Name:       "test",
-									Status:     ProgressingStatus,
-									Repository: "repo",
-								},
-							},
-						},
-					},
-				},
-				name:           "test",
-				destroyVolumes: false,
-			},
-			expected: expected{
-				response: &types.GitDeployResponse{
-					Action: &types.Action{
-						ID:     "test",
-						Name:   "test",
-						Status: progressingStatus,
-					},
-					GitDeploy: &types.GitDeploy{
-						ID:         "test",
-						Name:       "test",
-						Repository: "repo",
-						Status:     progressingStatus,
-					},
-				},
-				err: nil,
-			},
-		},
-		{
-			name: "destroy volumes ->  deprecated error -> error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					errs: []error{
-						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
-						assert.AnError,
-					},
-				},
-				name:           "test",
-				destroyVolumes: true,
-			},
-			expected: expected{
-				response: nil,
-				err:      assert.AnError,
-			},
-		},
-		{
-			name: "destroy no volumes ->  deprecated error -> error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					errs: []error{
-						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
-						assert.AnError,
-					},
-				},
-				name:           "test",
-				destroyVolumes: false,
-			},
-			expected: expected{
-				response: nil,
-				err:      assert.AnError,
-			},
-		},
-		{
-			name: "destroy volumes ->  deprecated error -> error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					errs: []error{
-						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
-					},
-					mutationResult: []interface{}{
-						nil,
-						&deprecatedDestroyPipelineWithVolumesMutation{
-							Response: deprecatedDestroyPipelineResponse{
-								GitDeploy: gitDeployInfoWithRepoInfo{
-									Id:         "test",
-									Name:       "test",
-									Status:     ProgressingStatus,
-									Repository: "my-repo",
-								},
-							},
-						},
-					},
-				},
-				name:           "test",
-				destroyVolumes: true,
-			},
-			expected: expected{
-				response: &types.GitDeployResponse{
-					GitDeploy: &types.GitDeploy{
-						ID:     "test",
-						Status: progressingStatus,
-					},
-				},
-				err: nil,
-			},
-		},
-		{
-			name: "destroy no volumes ->  deprecated error -> no error",
-			input: input{
-				client: &fakeGraphQLMultipleCallsClient{
-					errs: []error{
-						errors.New("Cannot query field \"action\" on type \"GitDeploy\""),
-					},
-					mutationResult: []interface{}{
-						nil,
-						&deprecatedDestroyPipelineWithoutVolumesMutation{
-							Response: deprecatedDestroyPipelineResponse{
-								GitDeploy: gitDeployInfoWithRepoInfo{
-									Id:     "test",
-									Status: ProgressingStatus,
-								},
-							},
-						},
-					},
-				},
-				name:           "test",
-				destroyVolumes: false,
-			},
-			expected: expected{
-				response: &types.GitDeployResponse{
-					GitDeploy: &types.GitDeploy{
-						ID:     "test",
-						Status: progressingStatus,
-					},
-				},
-				err: nil,
 			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			pc := pipelineClient{
+			pc := previewClient{
 				client: tc.input.client,
 			}
-			response, err := pc.Destroy(context.Background(), tc.input.name, "", tc.input.destroyVolumes)
+			response, err := pc.List(context.Background())
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
 		})
 	}
 }
 
-func TestGetPipelineResourcesStatus(t *testing.T) {
+func TestListEndpoints(t *testing.T) {
+	type input struct {
+		client *fakeGraphQLClient
+		name   string
+	}
+	type expected struct {
+		response []types.Endpoint
+		err      error
+	}
+	testCases := []struct {
+		name     string
+		input    input
+		expected expected
+	}{
+		{
+			name: "no error",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: &listPreviewEndpoints{
+						Response: previewEndpoints{
+							Deployments: []deploymentEndpoint{
+								{
+									Endpoints: []endpointURL{
+										{
+											Url: "https://test.test",
+										},
+									},
+								},
+							},
+							Statefulsets: []statefulsetEdnpoint{
+								{
+									Endpoints: []endpointURL{
+										{
+											Url: "https://test.test",
+										},
+									},
+								},
+							},
+						},
+					},
+					err: nil,
+				},
+				name: "test",
+			},
+			expected: expected{
+				response: []types.Endpoint{
+					{
+						URL: "https://test.test",
+					},
+					{
+						URL: "https://test.test",
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "error",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: nil,
+					err:         assert.AnError,
+				},
+				name: "test",
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pc := previewClient{
+				client: tc.input.client,
+			}
+			response, err := pc.ListEndpoints(context.Background(), tc.input.name)
+			assert.ErrorIs(t, err, tc.expected.err)
+			assert.Equal(t, tc.expected.response, response)
+		})
+	}
+}
+
+func TestGetResourcesStatus(t *testing.T) {
 	type input struct {
 		client     *fakeGraphQLClient
 		namespace  string
@@ -545,7 +417,7 @@ func TestGetPipelineResourcesStatus(t *testing.T) {
 			name: "no error - empty devenv - return all the resources",
 			input: input{
 				client: &fakeGraphQLClient{
-					queryResult: &getPipelineResources{
+					queryResult: &getPreviewResources{
 						Response: previewResourcesStatus{
 							Deployments: []resourceInfo{
 								{
@@ -656,7 +528,7 @@ func TestGetPipelineResourcesStatus(t *testing.T) {
 			name: "no error - devenv only deploy errors",
 			input: input{
 				client: &fakeGraphQLClient{
-					queryResult: &getPipelineResources{
+					queryResult: &getPreviewResources{
 						Response: previewResourcesStatus{
 							Deployments: []resourceInfo{
 								{
@@ -755,73 +627,70 @@ func TestGetPipelineResourcesStatus(t *testing.T) {
 				err: nil,
 			},
 		},
-		{
-			name: "not found -> ",
-			input: input{
-				client: &fakeGraphQLClient{
-					queryResult: nil,
-					err:         oktetoErrors.ErrNotFound,
-				},
-				namespace:  "test",
-				devenvName: "non-existing",
-			},
-			expected: expected{
-				response: nil,
-				err:      errURLNotSet,
-			},
-		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			pc := pipelineClient{
+			pc := previewClient{
 				client: tc.input.client,
 			}
-			response, err := pc.GetResourcesStatus(context.Background(), tc.input.devenvName, tc.input.namespace)
+			response, err := pc.GetResourcesStatus(context.Background(), tc.input.namespace, tc.input.devenvName)
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
 		})
 	}
 }
 
-func Test_getResourceFullName(t *testing.T) {
-	tests := []struct {
-		name    string
-		kindArg string
-		nameArg string
-		result  string
+func TestTranslatePreviewErr(t *testing.T) {
+	type input struct {
+		err  error
+		name string
+	}
+	type expected struct {
+		err error
+	}
+	testCases := []struct {
+		name     string
+		input    input
+		expected expected
 	}{
 		{
-			name:    "deployment",
-			kindArg: Deployment,
-			nameArg: "name",
-			result:  "deployment/name",
+			name: "another error",
+			input: input{
+				err:  assert.AnError,
+				name: "test",
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
 		},
 		{
-			name:    "statefulset",
-			kindArg: StatefulSet,
-			nameArg: "name",
-			result:  "statefulset/name",
+			name: "conflict",
+			input: input{
+				err:  errors.New("conflict"),
+				name: "test",
+			},
+			expected: expected{
+				err: previewConflictErr{
+					name: "test",
+				},
+			},
 		},
 		{
-			name:    "job",
-			kindArg: Job,
-			nameArg: "name",
-			result:  "job/name",
-		},
-		{
-			name:    "cronjob",
-			kindArg: CronJob,
-			nameArg: "name",
-			result:  "cronjob/name",
+			name: "operation-not-permitted",
+			input: input{
+				err:  errors.New("operation-not-permitted"),
+				name: "test",
+			},
+			expected: expected{
+				err: ErrUnauthorizedGlobalCreation,
+			},
 		},
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := getResourceFullName(tt.kindArg, tt.nameArg)
-			if result != tt.result {
-				t.Errorf("Test %s: expected %s, but got %s", tt.name, tt.result, result)
-			}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pc := previewClient{}
+			err := pc.translateErr(tc.input.err, tc.input.name)
+			assert.ErrorIs(t, err, tc.expected.err)
 		})
 	}
 }

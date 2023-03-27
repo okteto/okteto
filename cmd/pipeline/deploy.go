@@ -32,6 +32,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/repository"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -398,12 +399,14 @@ func (o *DeployOptions) setDefaults() error {
 		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), o.Repository, okteto.Context().Namespace, o.File)
 	}
 
-	currentRepo, err := model.GetRepositoryURL(cwd)
+	currentRepoURL, err := model.GetRepositoryURL(cwd)
 	if err != nil {
 		oktetoLog.Debug("cwd does not have .git folder")
 	}
 
-	if o.Branch == "" && okteto.AreSameRepository(o.Repository, currentRepo) {
+	currentRepo := repository.NewRepository(currentRepoURL)
+	optsRepo := repository.NewRepository(o.Repository)
+	if o.Branch == "" && currentRepo.IsEqual(optsRepo) {
 
 		oktetoLog.Info("inferring git repository branch")
 		b, err := utils.GetBranch(cwd)

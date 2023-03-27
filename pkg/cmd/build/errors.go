@@ -45,6 +45,11 @@ func getErrorMessage(err error, tag string) error {
 			E:    fmt.Errorf("buildkit service is not available at the moment"),
 			Hint: "Please try again later.",
 		}
+	case isPullAccessDenied(err):
+		err = oktetoErrors.UserError{
+			E:    fmt.Errorf("error building image: failed to pull image '%s'. The repository is not accessible or it does not exist.", imageTag),
+			Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
+		}
 	default:
 		err = oktetoErrors.UserError{
 			E: fmt.Errorf("error building image '%s': %s", tag, err.Error()),
@@ -86,7 +91,7 @@ func isTransientError(err error) bool {
 
 // IsLoggedIntoRegistryButDontHavePermissions returns true when the error is because the user is logged into the registry but doesn't have permissions to push the image
 func isLoggedIntoRegistryButDontHavePermissions(err error) bool {
-	return strings.Contains(err.Error(), "insufficient_scope: authorization failed")
+	return strings.Contains(err.Error(), "insufficient_scope: authorization failed") && !isPullAccessDenied(err)
 }
 
 // IsNotLoggedIntoRegistry returns true when the error is because the user is not logged into the registry
@@ -98,4 +103,9 @@ func isNotLoggedIntoRegistry(err error) bool {
 // IsBuildkitServiceUnavailable returns true when an error is because buildkit is unavailable
 func isBuildkitServiceUnavailable(err error) bool {
 	return strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "500 Internal Server Error") || strings.Contains(err.Error(), "context canceled")
+}
+
+// IsPullAccessDenied returns true pulling an image fails (e.g: image does not exist)
+func isPullAccessDenied(err error) bool {
+	return strings.Contains(err.Error(), "pull access denied")
 }

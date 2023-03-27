@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_isErrCredentialsHelperNotAccessiblee(t *testing.T) {
+func Test_isErrCredentialsHelperNotAccessible(t *testing.T) {
 	tests := []struct {
 		name     string
 		err      error

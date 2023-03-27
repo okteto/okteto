@@ -101,7 +101,7 @@ func TestRemoteTest(t *testing.T) {
 				builderErr: assert.AnError,
 			},
 			expected: oktetoErrors.UserError{
-				E: fmt.Errorf("Error during development environment deployment."),
+				E: fmt.Errorf("Error during development environment deployment: %w", assert.AnError),
 			},
 		},
 		{
@@ -126,7 +126,11 @@ func TestRemoteTest(t *testing.T) {
 				temporalCtrl:         tempCreator,
 			}
 			err := rdc.deploy(ctx, tt.config.options)
-			assert.Equal(t, tt.expected, err)
+			if tt.expected != nil {
+				assert.EqualError(t, err, tt.expected.Error())
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }

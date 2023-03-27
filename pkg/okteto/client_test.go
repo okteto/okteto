@@ -50,7 +50,7 @@ func (fc fakeGraphQLClient) Mutate(ctx context.Context, m interface{}, _ map[str
 		for i := 0; i < entityType.NumField(); i++ {
 			value := entityType.Field(i)
 			oldField := reflect.ValueOf(m).Elem().Field(i)
-			newField := reflect.ValueOf(fc.queryResult).Elem().FieldByName(value.Name)
+			newField := reflect.ValueOf(fc.mutationResult).Elem().FieldByName(value.Name)
 			oldField.Set(newField)
 		}
 	}
@@ -98,7 +98,7 @@ func (fc *fakeGraphQLMultipleCallsClient) Mutate(ctx context.Context, m interfac
 	return fakeGraphQLClient{
 		err:            err,
 		mutationResult: mutation,
-	}.Mutate(ctx, mutation, vars)
+	}.Mutate(ctx, m, vars)
 }
 
 func TestInDevContainer(t *testing.T) {
