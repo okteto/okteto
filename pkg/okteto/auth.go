@@ -42,10 +42,10 @@ type authenticationErr struct {
 	E error
 }
 
-func (authenticationErr) Error() string {
+func (*authenticationErr) Error() string {
 	return "authentication error, please try again"
 }
-func (e authenticationErr) Unwrap() error {
+func (e *authenticationErr) Unwrap() error {
 	return e.E
 }
 
@@ -112,7 +112,7 @@ func (c *OktetoClient) Auth(ctx context.Context, code string) (*types.User, erro
 		if err != nil && oktetoErrors.IsX509(err) {
 			return nil, err
 		}
-		err = newAuthenticationErr(err)
+		err := newAuthenticationErr(err)
 		return nil, err
 	}
 
