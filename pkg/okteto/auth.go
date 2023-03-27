@@ -49,8 +49,8 @@ func (e authenticationErr) Unwrap() error {
 	return e.E
 }
 
-func newAuthenticationErr(err error) authenticationErr {
-	return authenticationErr{
+func newAuthenticationErr(err error) *authenticationErr {
+	return &authenticationErr{
 		E: err,
 	}
 }
