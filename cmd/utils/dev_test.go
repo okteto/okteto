@@ -456,6 +456,18 @@ func Test_AskYesNo(t *testing.T) {
 			answer:   "\n",
 			expected: true,
 		},
+		{
+			name:     "ignores-default-when-answer",
+			def:      YesNoDefault_No,
+			answer:   "Y\n",
+			expected: true,
+		},
+		{
+			name:     "ignores-default-when-answer",
+			def:      YesNoDefault_No,
+			answer:   "N\n",
+			expected: false,
+		},
 	}
 	for _, tt := range tests {
 		// Create a temp dir for files used to mock stdin
