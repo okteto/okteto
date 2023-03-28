@@ -52,9 +52,6 @@ commands:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:1.18.0
-  golang-ci-new:
-    docker:
       - image: okteto/golang-ci:2.2.2
 
 jobs:
@@ -118,7 +115,7 @@ jobs:
             go version
             go test ./...
   test-integration:
-    executor: golang-ci-new
+    executor: golang-ci
     resource_class: large
     environment:
       OKTETO_URL: https://staging.okteto.dev/
