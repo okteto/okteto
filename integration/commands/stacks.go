@@ -78,6 +78,7 @@ func RunOktetoStackDeploy(oktetoPath string, deployOptions *StackDeployOptions) 
 // RunOktetoStackDestroy runs an okteto deploy command
 func RunOktetoStackDestroy(oktetoPath string, deployOptions *StackDestroyOptions) error {
 	cmd := exec.Command(oktetoPath, "stack", "destroy")
+	cmd.Env = os.Environ()
 	if deployOptions.Workdir != "" {
 		cmd.Dir = deployOptions.Workdir
 	}
