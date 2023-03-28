@@ -139,11 +139,11 @@ jobs:
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
              /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
+      - integration-deprecated
       - integration-deploy
       - integration-up
       - integration-actions
       - integration-okteto
-      - integration-deprecated
       - integration-build
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
