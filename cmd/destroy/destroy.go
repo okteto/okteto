@@ -135,18 +135,18 @@ func Destroy(ctx context.Context) *cobra.Command {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
 			}
 
+			name := options.Name
 			if options.Name == "" {
 				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
 				if err != nil {
 					return err
 				}
 				inferer := devenvironment.NewNameInferer(c)
-				options.Name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPathFlag)
+				name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPathFlag)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}
 			}
-			name := options.Name
 
 			dynClient, _, err := okteto.GetDynamicClient()
 			if err != nil {
