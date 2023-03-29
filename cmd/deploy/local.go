@@ -45,8 +45,7 @@ type localDeployer struct {
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
 
-	GetExternalControlForValidator func(cp okteto.K8sClientProvider) (ExternalResourceValidatorInterface, error)
-	GetExternalControl             func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
+	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
 
 	cwd          string
 	deployWaiter deployWaiter
@@ -84,16 +83,15 @@ func newLocalDeployer(ctx context.Context, cwd string, options *Options) (*local
 
 	clientProvider := okteto.NewK8sClientProvider()
 	return &localDeployer{
-		Kubeconfig:                     kubeconfig,
-		Executor:                       executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
-		Proxy:                          proxy,
-		TempKubeconfigFile:             GetTempKubeConfigFile(tempKubeconfigName),
-		K8sClientProvider:              clientProvider,
-		GetExternalControlForValidator: getExternalControlForValidator,
-		GetExternalControl:             getExternalControlFromCtx,
-		deployWaiter:                   newDeployWaiter(clientProvider),
-		isRemote:                       true,
-		Fs:                             afero.NewOsFs(),
+		Kubeconfig:         kubeconfig,
+		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
+		Proxy:              proxy,
+		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),
+		K8sClientProvider:  clientProvider,
+		GetExternalControl: getExternalControlFromCtx,
+		deployWaiter:       newDeployWaiter(clientProvider),
+		isRemote:           true,
+		Fs:                 afero.NewOsFs(),
 	}, nil
 }
 
@@ -113,10 +111,6 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", ld.TempKubeconfigFile)
 	if err := ld.Kubeconfig.Modify(ld.Proxy.GetPort(), ld.Proxy.GetToken(), ld.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
-		return err
-	}
-
-	if err := ld.validateK8sResources(ctx, deployOptions.Manifest); err != nil {
 		return err
 	}
 
@@ -381,27 +375,6 @@ func (ld *localDeployer) cleanUp(ctx context.Context, err error) {
 	if ld.Executor != nil {
 		ld.Executor.CleanUp(err)
 	}
-}
-
-func (ld *localDeployer) validateK8sResources(ctx context.Context, manifest *model.Manifest) error {
-	if manifest.External != nil {
-		// In a cluster not managed by Okteto it is not necessary to validate the externals
-		// because they will not be deployed.
-		if okteto.IsOkteto() {
-			control, err := ld.GetExternalControlForValidator(ld.K8sClientProvider)
-			if err != nil {
-				return err
-			}
-
-			for externalName, externalInfo := range manifest.External {
-				err := control.Validate(ctx, externalName, manifest.Namespace, externalInfo)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
 }
 
 func GetExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
