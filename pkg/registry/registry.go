@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	cache "github.com/okteto/okteto/pkg/cache"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
@@ -43,7 +44,7 @@ type registryConfig interface {
 // OktetoRegistry represents the registry
 type OktetoRegistry struct {
 	client    clientInterface
-	ImageCtrl ImageCtrl
+	imageCtrl ImageCtrl
 	config    registryConfig
 }
 
@@ -57,16 +58,16 @@ type OktetoImageReference struct {
 func NewOktetoRegistry(config configInterface) OktetoRegistry {
 	return OktetoRegistry{
 		client:    newOktetoRegistryClient(config),
-		ImageCtrl: NewImageCtrl(config),
+		imageCtrl: NewImageCtrl(config),
 		config:    config,
 	}
 }
 
 func (or OktetoRegistry) GetImageTagWithDigest(image string) (string, error) {
-	expandedImage := or.ImageCtrl.expandImageRegistries(image)
+	expandedImage := or.imageCtrl.expandImageRegistries(image)
 
-	registry, repositoryWithTag := or.ImageCtrl.GetRegistryAndRepo(expandedImage)
-	repository, _ := or.ImageCtrl.GetRepoNameAndTag(repositoryWithTag)
+	registry, repositoryWithTag := or.imageCtrl.GetRegistryAndRepo(expandedImage)
+	repository, _ := or.imageCtrl.GetRepoNameAndTag(repositoryWithTag)
 
 	digest, err := or.client.GetDigest(expandedImage)
 	if err != nil {
@@ -87,7 +88,7 @@ func (or OktetoRegistry) GetImageMetadata(image string) (ImageMetadata, error) {
 	if err != nil {
 		return ImageMetadata{}, fmt.Errorf("error getting image metadata: %w", err)
 	}
-	ports := or.ImageCtrl.getExposedPortsFromCfg(cfgFile)
+	ports := or.imageCtrl.getExposedPortsFromCfg(cfgFile)
 	workdir := cfgFile.Config.WorkingDir
 	cmd := cfgFile.Config.Cmd
 
@@ -101,13 +102,13 @@ func (or OktetoRegistry) GetImageMetadata(image string) (ImageMetadata, error) {
 
 // IsOktetoRegistry returns if an image tag is pointing to the okteto registry
 func (or OktetoRegistry) IsOktetoRegistry(image string) bool {
-	expandedImage := or.ImageCtrl.expandImageRegistries(image)
+	expandedImage := or.imageCtrl.expandImageRegistries(image)
 	return or.config.IsOktetoCluster() && strings.HasPrefix(expandedImage, or.config.GetRegistryURL())
 }
 
 func (or OktetoRegistry) IsGlobalRegistry(image string) bool {
-	expandedImage := or.ImageCtrl.expandImageRegistries(image)
-	expandedGlobalImage := fmt.Sprintf("%s/%s", or.config.GetRegistryURL(), or.ImageCtrl.config.GetGlobalNamespace())
+	expandedImage := or.imageCtrl.expandImageRegistries(image)
+	expandedGlobalImage := fmt.Sprintf("%s/%s", or.config.GetRegistryURL(), or.imageCtrl.config.GetGlobalNamespace())
 	return strings.HasPrefix(expandedImage, expandedGlobalImage)
 }
 
@@ -119,12 +120,12 @@ func (or OktetoRegistry) GetImageTag(image, service, namespace string) string {
 		}
 		return fmt.Sprintf("%s/%s/%s:okteto", or.config.GetRegistryURL(), namespace, service)
 	}
-	imageWithoutTag, _ := or.ImageCtrl.GetRepoNameAndTag(image)
+	imageWithoutTag, _ := or.imageCtrl.GetRepoNameAndTag(image)
 	return fmt.Sprintf("%s:okteto", imageWithoutTag)
 }
 
 // GetImageReference returns the values to setup the image environment variables
-func (or OktetoRegistry) GetImageReference(image string) (OktetoImageReference, error) {
+func (OktetoRegistry) GetImageReference(image string) (OktetoImageReference, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {
 		return OktetoImageReference{}, err
@@ -142,6 +143,11 @@ func (or OktetoRegistry) HasGlobalPushAccess() (bool, error) {
 	if !or.config.IsOktetoCluster() {
 		return false, nil
 	}
-	image := or.ImageCtrl.ExpandOktetoGlobalRegistry(globalTestImage)
+	image := or.imageCtrl.ExpandOktetoGlobalRegistry(globalTestImage)
 	return or.client.HasPushAccess(image)
+}
+
+// GetImageCtrl returns the image controller
+func (or OktetoRegistry) GetImageCtrl() cache.ImageCtrlInterface {
+	return or.imageCtrl
 }

@@ -103,7 +103,7 @@ func TestGetImageTagWithDigest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			or := OktetoRegistry{
-				ImageCtrl: NewImageCtrl(tt.input.config),
+				imageCtrl: NewImageCtrl(tt.input.config),
 				client: fakeClient{
 					GetImageDigest: getDigest{
 						Result: tt.input.clientConfig.digest,
@@ -189,7 +189,7 @@ func TestHasPushAccess(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			or := OktetoRegistry{
-				ImageCtrl: NewImageCtrl(tt.config.registryConfig),
+				imageCtrl: NewImageCtrl(tt.config.registryConfig),
 				config:    tt.config.registryConfig,
 				client: fakeClient{
 					HasPushAcces: hasPushAccess{
@@ -310,7 +310,7 @@ func TestGetImageMetadata(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			or := OktetoRegistry{
-				ImageCtrl: NewImageCtrl(tt.input.config),
+				imageCtrl: NewImageCtrl(tt.input.config),
 				client: fakeClient{
 					GetImageDigest: tt.input.clientConfig.getDigest,
 					GetConfig:      tt.input.clientConfig.getConfig,

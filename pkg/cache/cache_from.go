@@ -18,11 +18,20 @@ import (
 
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/registry"
 )
 
 // CacheFrom is a list of images to import cache from.
 type CacheFrom []string
+
+type ImageCtrlInterface interface {
+	GetRegistryAndRepo(image string) (string, string)
+	GetRepoNameAndTag(repo string) (string, string)
+}
+
+type oktetoRegistryInterface interface {
+	GetImageCtrl() ImageCtrlInterface
+	HasGlobalPushAccess() (bool, error)
+}
 
 // UnmarshalYAML implements the Unmarshaler interface of the yaml pkg.
 func (cf *CacheFrom) UnmarshalYAML(unmarshal func(interface{}) error) error {
@@ -52,33 +61,36 @@ func (cf CacheFrom) MarshalYAML() (interface{}, error) {
 	return cf, nil
 }
 
-// Appends the default cache layers for a given image
-func (cf *CacheFrom) AddDefaultPullCache(reg registry.OktetoRegistry, image string) {
+// AddDefaultPullCache appends the default cache layers for a given image
+func (cf *CacheFrom) AddDefaultPullCache(reg oktetoRegistryInterface, image string) {
 	hasAccess, err := reg.HasGlobalPushAccess()
 	if err != nil {
 		oktetoLog.Infof("error trying to access globalPushAccess: %w", err)
 	}
 
-	_, repo := reg.ImageCtrl.GetRegistryAndRepo(image)
-	imageName, _ := reg.ImageCtrl.GetRepoNameAndTag(repo)
+	imageCtrl := reg.GetImageCtrl()
+	_, repo := imageCtrl.GetRegistryAndRepo(image)
+	imageName, _ := imageCtrl.GetRepoNameAndTag(repo)
 
 	if hasAccess {
 		globalCacheImage := fmt.Sprintf("%s/%s:cache", constants.GlobalRegistry, imageName)
 		cf.addCacheFromImage(globalCacheImage)
+		oktetoLog.Debugf("Dynamically adding cache_from: %s", globalCacheImage)
 	}
 
 	devCacheImage := fmt.Sprintf("%s/%s:cache", constants.DevRegistry, imageName)
 	cf.addCacheFromImage(devCacheImage)
+	oktetoLog.Debugf("Dynamically adding cache_from: %s", devCacheImage)
 }
 
-// Append a cache image to the list if it's not already there
+// addCacheFromImage appends a cache image to the list if it's not already there
 func (cf *CacheFrom) addCacheFromImage(imageName string) {
 	if !cf.hasCacheFromImage(imageName) {
 		*cf = append(*cf, imageName)
 	}
 }
 
-// Check if a cache image is already in the list
+// hasCacheFromImage checks if a cache image is already in the list
 func (cf *CacheFrom) hasCacheFromImage(imageName string) bool {
 	for _, cacheFrom := range *cf {
 		if cacheFrom == imageName {

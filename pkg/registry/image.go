@@ -36,7 +36,7 @@ type Port struct {
 	Protocol      apiv1.Protocol
 }
 
-func (p Port) GetHostPort() int32          { return 0 }
+func (Port) GetHostPort() int32            { return 0 }
 func (p Port) GetContainerPort() int32     { return p.ContainerPort }
 func (p Port) GetProtocol() apiv1.Protocol { return p.Protocol }
 
@@ -125,7 +125,7 @@ func (ImageCtrl) GetRepoNameAndTag(image string) (string, string) {
 }
 
 func (ImageCtrl) getExposedPortsFromCfg(cfg *containerv1.ConfigFile) []Port {
-	result := []Port{}
+	var result []Port
 	if cfg.Config.ExposedPorts == nil {
 		return result
 	}

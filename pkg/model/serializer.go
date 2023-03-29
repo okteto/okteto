@@ -877,7 +877,7 @@ func (d *DeployInfo) MarshalYAML() (interface{}, error) {
 		}
 	}
 	if isCommandList {
-		result := []string{}
+		var result []string
 		for _, cmd := range d.Commands {
 			result = append(result, cmd.Command)
 		}
@@ -1089,7 +1089,7 @@ func (d *DestroyInfo) MarshalYAML() (interface{}, error) {
 		}
 	}
 	if isCommandList {
-		result := []string{}
+		var result []string
 		for _, cmd := range d.Commands {
 			result = append(result, cmd.Command)
 		}

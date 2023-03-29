@@ -351,7 +351,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 
 // GetVolumesToInclude checks if the path exists, if it doesn't it skip it
 func GetVolumesToInclude(volumesToInclude []model.StackVolume) []model.StackVolume {
-	result := []model.StackVolume{}
+	var result []model.StackVolume
 	for _, p := range volumesToInclude {
 		if _, err := os.Stat(p.LocalPath); err == nil {
 			result = append(result, p)

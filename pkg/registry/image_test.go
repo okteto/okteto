@@ -280,7 +280,7 @@ func TestGetExposedPortsFromCfg(t *testing.T) {
 		{
 			name:     "cfg is nil",
 			cfg:      &v1.ConfigFile{},
-			expected: []Port{},
+			expected: nil,
 		},
 		{
 			name: "cfg is empty",
@@ -288,7 +288,7 @@ func TestGetExposedPortsFromCfg(t *testing.T) {
 				ExposedPorts: map[string]struct{}{},
 			},
 			},
-			expected: []Port{},
+			expected: nil,
 		},
 		{
 			name: "cfg-with-ports-one-malformed",

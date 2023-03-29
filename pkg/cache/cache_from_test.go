@@ -13,76 +13,209 @@
 
 package cache
 
-// func Test_AddDefaultPullCache(t *testing.T) {
-// 	tests := []struct {
-// 		name     string
-// 		input    *model.BuildInfo
-// 		expected *model.BuildInfo
-// 	}{
-// 		{
-// 			name: "already with cache image",
-// 			input: &model.BuildInfo{
-// 				Image:     "test-registry/test-account/test-image:1.0.0",
-// 				CacheFrom: []string{"okteto.global/test-account/test-image:cache", "okteto.dev/test-account/test-image:cache"},
-// 			},
-// 			expected: &model.BuildInfo{
-// 				Image:     "test-registry/test-account/test-image:1.0.0",
-// 				CacheFrom: []string{"okteto.global/test-account/test-image:cache", "okteto.dev/test-account/test-image:cache"},
-// 			},
-// 		},
-// 		{
-// 			name: "without cache image",
-// 			input: &model.BuildInfo{
-// 				Name:  "test",
-// 				Image: "test-registry/test-account/test-image:1.0.0",
-// 			},
-// 			expected: &model.BuildInfo{
-// 				Name:      "test",
-// 				Image:     "test-registry/test-account/test-image:1.0.0",
-// 				CacheFrom: []string{"okteto.global/test-account/test-image:cache", "okteto.dev/test-account/test-image:cache"},
-// 			},
-// 		},
-// 	}
+import (
+	"fmt"
+	"testing"
 
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			AddDefaultPullCache(tt.input)
-// 			assert.Equal(t, tt.expected, tt.input)
-// 		})
-// 	}
-// }
+	"github.com/stretchr/testify/assert"
 
-// func Test_hasCacheFromImage(t *testing.T) {
-// 	tests := []struct {
-// 		name     string
-// 		input    string
-// 		manifest *model.BuildInfo
-// 		expected bool
-// 	}{
-// 		{
-// 			name:  "not found",
-// 			input: "test-registry/test-image:cache",
-// 			manifest: &model.BuildInfo{
-// 				Name:      "test",
-// 				CacheFrom: []string{"test-registry/test-image:test-tag"},
-// 			},
-// 			expected: false,
-// 		},
-// 		{
-// 			name:  "found",
-// 			input: "test-registry/test-image:cache",
-// 			manifest: &model.BuildInfo{
-// 				Name:      "test",
-// 				CacheFrom: []string{"test-registry/test-image:cache"},
-// 			},
-// 			expected: true,
-// 		},
-// 	}
+	yaml "gopkg.in/yaml.v2"
+)
 
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			result := hasCacheFromImage(tt.manifest, tt.input)
-// 			assert.Equal(t, tt.expected, result)
-// 		})
-// 	}
-// }
+type mockRegistry struct {
+	imageCtrl ImageCtrlInterface
+}
+
+func (m *mockRegistry) GetImageCtrl() ImageCtrlInterface {
+	return m.imageCtrl
+}
+
+func (*mockRegistry) HasGlobalPushAccess() (bool, error) {
+	return true, nil
+}
+
+type mockRegistryWithError struct {
+	imageCtrl ImageCtrlInterface
+}
+
+func (m *mockRegistryWithError) GetImageCtrl() ImageCtrlInterface {
+	return m.imageCtrl
+}
+
+func (*mockRegistryWithError) HasGlobalPushAccess() (bool, error) {
+	return false, assert.AnError
+}
+
+type mockImageCtrl struct{}
+
+func (*mockImageCtrl) GetRegistryAndRepo(_ string) (string, string) {
+	return "registry", "test-account/test-image:x.y.z"
+}
+
+func (*mockImageCtrl) GetRepoNameAndTag(_ string) (string, string) {
+	return "test-account/test-image", "x.y.z"
+}
+
+func Test_AddDefaultPullCache(t *testing.T) {
+	imageCtrl := &mockImageCtrl{}
+	reg := &mockRegistry{imageCtrl: imageCtrl}
+
+	tests := []struct {
+		name     string
+		image    string
+		cf       CacheFrom
+		expected CacheFrom
+	}{
+		{
+			name:     "already with cache image",
+			image:    "test-account/test-image:1.0.0",
+			cf:       CacheFrom{"okteto.global/test-account/test-image:cache", "okteto.dev/test-account/test-image:cache"},
+			expected: CacheFrom{"okteto.global/test-account/test-image:cache", "okteto.dev/test-account/test-image:cache"},
+		},
+		{
+			name:     "without cache image",
+			image:    "test-account/test-image:1.0.0",
+			cf:       CacheFrom{},
+			expected: CacheFrom{"okteto.global/test-account/test-image:cache", "okteto.dev/test-account/test-image:cache"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.cf.AddDefaultPullCache(reg, tt.image)
+			assert.Equal(t, tt.expected, tt.cf)
+		})
+	}
+}
+
+func Test_AddDefaultPullCache_WithError(t *testing.T) {
+	image := "test-account/test-image:x.y.z"
+	cf := CacheFrom{}
+	expected := CacheFrom{"okteto.dev/test-account/test-image:cache"}
+
+	imageCtrl := &mockImageCtrl{}
+	registry := &mockRegistryWithError{imageCtrl: imageCtrl}
+
+	cf.AddDefaultPullCache(registry, image)
+
+	assert.Equal(t, cf, expected)
+}
+
+func Test_hasCacheFromImage(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		cf       CacheFrom
+		expected bool
+	}{
+		{
+			name:     "not found",
+			input:    "test-registry/test-image:cache",
+			cf:       CacheFrom{"test-registry/test-image:test-tag"},
+			expected: false,
+		},
+		{
+			name:     "found",
+			input:    "test-registry/test-image:cache",
+			cf:       CacheFrom{"test-registry/test-image:cache"},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.cf.hasCacheFromImage(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_UnmarshalYAML(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected interface{}
+	}{
+		{
+			name:     "empty",
+			data:     []byte("[]"),
+			expected: CacheFrom{},
+		},
+		{
+			name:     "one item",
+			data:     []byte(`["test-registry/test-image:cache"]`),
+			expected: CacheFrom{"test-registry/test-image:cache"},
+		},
+		{
+			name: "two items",
+			data: []byte(`
+- test-registry/test-image:1.0.0
+- test-registry/another-image:1.0.0`),
+			expected: CacheFrom{"test-registry/test-image:1.0.0", "test-registry/another-image:1.0.0"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cf CacheFrom
+			err := yaml.Unmarshal([]byte(tt.data), &cf)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, cf)
+		})
+	}
+}
+
+func Test_UnmarshalYAML_WithError(t *testing.T) {
+	tests := []struct {
+		name        string
+		data        []byte
+		expectedErr error
+	}{
+		{
+			name:        "invalid type",
+			data:        []byte("some: invalid: yaml"),
+			expectedErr: fmt.Errorf("yaml: mapping values are not allowed in this context"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cf CacheFrom
+			err := yaml.Unmarshal([]byte(tt.data), &cf)
+			assert.Error(t, err)
+			assert.Equal(t, tt.expectedErr, err)
+		})
+	}
+}
+
+func Test_MarshalYAML(t *testing.T) {
+	tests := []struct {
+		name     string
+		cf       CacheFrom
+		expected string
+	}{
+		{
+			name:     "empty",
+			cf:       CacheFrom{},
+			expected: "[]\n",
+		},
+		{
+			name:     "one image",
+			cf:       CacheFrom{"test-registry/test-image:cache"},
+			expected: "test-registry/test-image:cache\n",
+		},
+		{
+			name:     "two images",
+			cf:       CacheFrom{"test-registry/test-image-1:cache", "test-registry/test-image-2:cache"},
+			expected: "- test-registry/test-image-1:cache\n- test-registry/test-image-2:cache\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := yaml.Marshal(tt.cf)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expected, string(result))
+		})
+	}
+}
