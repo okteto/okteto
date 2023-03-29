@@ -26,7 +26,7 @@ type userClient struct {
 	client graphqlClientInterface
 }
 
-func newUserClient(client *graphql.Client) *userClient {
+func newUserClient(client graphqlClientInterface) *userClient {
 	return &userClient{client: client}
 }
 

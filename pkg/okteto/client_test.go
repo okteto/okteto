@@ -98,7 +98,7 @@ func (fc *fakeGraphQLMultipleCallsClient) Mutate(ctx context.Context, m interfac
 	return fakeGraphQLClient{
 		err:            err,
 		mutationResult: mutation,
-	}.Mutate(ctx, mutation, vars)
+	}.Mutate(ctx, m, vars)
 }
 
 func TestInDevContainer(t *testing.T) {

@@ -15,15 +15,20 @@ package repository
 
 import (
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+	giturls "github.com/whilp/git-urls"
 )
 
 // Repository is the struct to check everything related to Git Repo
 // like checking the commit or if the project has changes over it
 type Repository struct {
 	path string
+	url  *url.URL
 
 	repositoryGetter repositoryGetterInterface
 }
@@ -89,8 +94,13 @@ type gitStatusInterface interface {
 }
 
 func NewRepository(path string) Repository {
+	url, err := giturls.Parse(path)
+	if err != nil {
+		oktetoLog.Infof("could not parse url: %w", err)
+	}
 	return Repository{
 		path:             path,
+		url:              url,
 		repositoryGetter: repositoryGetter{},
 	}
 }
@@ -125,4 +135,26 @@ func (r Repository) GetSHA() (string, error) {
 		return "", fmt.Errorf("failed to analyze git repo: %w", err)
 	}
 	return head.Hash().String(), nil
+}
+
+// IsEqual checks if another repository is the same from the one calling the function
+func (r Repository) IsEqual(otherRepo Repository) bool {
+	if r.url == nil || otherRepo.url == nil {
+		return false
+	}
+
+	if r.url.Hostname() != otherRepo.url.Hostname() {
+		return false
+	}
+
+	// In short SSH URLs like git@github.com:okteto/movies.git, path doesn't start with '/', so we need to remove it
+	// in case it exists. It also happens with '.git' suffix. You don't have to specify it, so we remove in both cases
+	repoPathA := cleanPath(r.url.Path)
+	repoPathB := cleanPath(otherRepo.url.Path)
+
+	return repoPathA == repoPathB
+}
+
+func cleanPath(path string) string {
+	return strings.TrimSuffix(strings.TrimPrefix(path, "/"), ".git")
 }

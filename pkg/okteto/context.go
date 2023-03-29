@@ -24,6 +24,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -55,6 +56,7 @@ const (
 
 var (
 	CurrentStore *OktetoContextStore
+	reg          = regexp.MustCompile("[^A-Za-z0-9]+")
 )
 
 // OktetoContext contains the information related to an okteto context
@@ -129,6 +131,22 @@ func InitContextWithDeprecatedToken() {
 	if err := NewContextConfigWriter().Write(); err != nil {
 		oktetoLog.Infof("error writing okteto context: %v", err)
 	}
+}
+
+func getTokenFromOktetoHome() (*Token, error) {
+	p := config.GetTokenPathDeprecated()
+
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return nil, err
+	}
+
+	currentToken := &Token{}
+	if err := json.Unmarshal(b, currentToken); err != nil {
+		return nil, err
+	}
+
+	return currentToken, nil
 }
 
 // ContextExists checks if an okteto context has been created

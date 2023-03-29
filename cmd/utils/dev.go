@@ -254,14 +254,17 @@ func AskYesNo(q string, d YesNoDefault) (bool, error) {
 			break
 		}
 
-		if answer == "y" || answer == "n" {
+		if answer == "y" || answer == "Y" || answer == "n" || answer == "N" {
 			break
 		}
 
-		oktetoLog.Fail("input must be 'y' or 'n'")
+		oktetoLog.Fail("input must be 'Y/y' or 'N/n'")
 	}
 
-	return answer == "y", nil
+	if answer == "y" || answer == "Y" {
+		return true, nil
+	}
+	return false, nil
 }
 
 func AskForOptions(options []string, label string) (string, error) {
