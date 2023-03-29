@@ -50,6 +50,7 @@ ENV {{ .NamespaceEnvVar }} {{ .NamespaceValue }}
 ENV {{ .ContextEnvVar }} {{ .ContextValue }}
 ENV {{ .TokenEnvVar }} {{ .TokenValue }}
 ENV {{ .RemoteDeployEnvVar }} true
+ENV {{ .ActionNameEnvVar }} {{ .ActionNameValue }}
 
 COPY . /okteto/src
 WORKDIR /okteto/src
@@ -69,6 +70,8 @@ type dockerfileTemplateProperties struct {
 	NamespaceValue     string
 	TokenEnvVar        string
 	TokenValue         string
+	ActionNameEnvVar   string
+	ActionNameValue    string
 	RemoteDeployEnvVar string
 	DeployFlags        string
 	RandomInt          int
@@ -169,6 +172,8 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		NamespaceValue:     okteto.Context().Namespace,
 		TokenEnvVar:        model.OktetoTokenEnvVar,
 		TokenValue:         okteto.Context().Token,
+		ActionNameEnvVar:   model.OktetoActionNameEnvVar,
+		ActionNameValue:    os.Getenv(model.OktetoActionNameEnvVar),
 		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
 		RandomInt:          int(randomNumber.Int64()),
 		DestroyFlags:       strings.Join(getDestroyFlags(opts), " "),
