@@ -46,7 +46,7 @@ func (bc buildCtrl) buildImageIfNecessary(ctx context.Context, manifest *model.M
 	oktetoLog.Debug("checking if destroy.image is already built")
 	imageToBuild := manifest.Destroy.Image
 
-	reg := regexp.MustCompile(`OKTETO_BUILD_(\w+)_IMAGE`)
+	reg := regexp.MustCompile(`OKTETO_BUILD_(\w+)_`)
 	matches := reg.FindStringSubmatch(imageToBuild)
 	if len(matches) == 0 {
 		oktetoLog.Debugf("image '%s' is not an okteto build variable", imageToBuild)

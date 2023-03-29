@@ -51,11 +51,12 @@ func TestBuildNecessaryImages(t *testing.T) {
 		expected error
 	}{
 		{
-			name: "no images to build -> skip build",
+			name: "image is not okteto env variable",
 			input: input{
 				manifest: &model.Manifest{
-					Build: model.ManifestBuild{
-						"service1": {},
+					Build: model.ManifestBuild{},
+					Destroy: &model.DestroyInfo{
+						Image: "image",
 					},
 				},
 				builder: fakeBuilderV2{
@@ -67,34 +68,76 @@ func TestBuildNecessaryImages(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "get services failed",
+			name: "image is okteto variable but not defined in build section",
 			input: input{
 				manifest: &model.Manifest{
 					Build: model.ManifestBuild{
-						"service1": {},
+						"okteto": {},
+					},
+					Destroy: &model.DestroyInfo{
+						Image: "$OKTETO_BUILD_TEST_IMAGE",
 					},
 				},
 				builder: fakeBuilderV2{
 					getSvcs: fakeGetSvcs{
 						svcs: []string{},
-						err:  assert.AnError,
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "image is okteto variable/fails to get services",
+			input: input{
+				manifest: &model.Manifest{
+					Build: model.ManifestBuild{
+						"test": {},
+					},
+					Destroy: &model.DestroyInfo{
+						Image: "$OKTETO_BUILD_TEST_IMAGE",
+					},
+				},
+				builder: fakeBuilderV2{
+					getSvcs: fakeGetSvcs{
+						err: assert.AnError,
 					},
 				},
 			},
 			expected: assert.AnError,
 		},
 		{
-			name: "build failed",
+			name: "image is okteto variable/is already build",
 			input: input{
 				manifest: &model.Manifest{
 					Build: model.ManifestBuild{
-						"service1": {},
+						"test": {},
+					},
+					Destroy: &model.DestroyInfo{
+						Image: "$OKTETO_BUILD_TEST_IMAGE",
 					},
 				},
 				builder: fakeBuilderV2{
 					getSvcs: fakeGetSvcs{
-						svcs: []string{"service1"},
-						err:  nil,
+						svcs: []string{},
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "image is okteto variable/build fails",
+			input: input{
+				manifest: &model.Manifest{
+					Build: model.ManifestBuild{
+						"test": {},
+					},
+					Destroy: &model.DestroyInfo{
+						Image: "$OKTETO_BUILD_TEST_IMAGE",
+					},
+				},
+				builder: fakeBuilderV2{
+					getSvcs: fakeGetSvcs{
+						svcs: []string{"test"},
 					},
 					build: assert.AnError,
 				},
@@ -102,18 +145,19 @@ func TestBuildNecessaryImages(t *testing.T) {
 			expected: assert.AnError,
 		},
 		{
-			name: "build all the services correctly",
+			name: "image is okteto variable/build succeeds",
 			input: input{
 				manifest: &model.Manifest{
 					Build: model.ManifestBuild{
-						"service1": {},
-						"service2": {},
+						"test": {},
+					},
+					Destroy: &model.DestroyInfo{
+						Image: "$OKTETO_BUILD_TEST_IMAGE",
 					},
 				},
 				builder: fakeBuilderV2{
 					getSvcs: fakeGetSvcs{
-						svcs: []string{"service1", "service2"},
-						err:  nil,
+						svcs: []string{"test"},
 					},
 					build: nil,
 				},
@@ -128,7 +172,6 @@ func TestBuildNecessaryImages(t *testing.T) {
 			}
 			err := buildCtrl.buildImageIfNecessary(context.Background(), tc.input.manifest)
 			assert.ErrorIs(t, err, tc.expected)
-
 		})
 	}
 
