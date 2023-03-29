@@ -207,8 +207,9 @@ jobs:
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
-            & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_STAGING_TOKEN
-            & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' kubeconfig
+            copy C:\Users\circleci\project\artifacts\bin\okteto.exe C:\Windows\system32\okteto.exe
+            & okteto login --token $env:API_STAGING_TOKEN
+            & okteto kubeconfig
       - run:
           name: Run deprecated integration tests
           environment:
