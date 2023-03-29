@@ -26,7 +26,6 @@ import (
 // RunOktetoPush runs an okteto push command
 func RunOktetoPush(oktetoPath, workdir string) error {
 	cmd := exec.Command(oktetoPath, "push")
-	cmd.Env = os.Environ()
 	if workdir != "" {
 		cmd.Dir = workdir
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", constants.OktetoHomeEnvVar, workdir))
