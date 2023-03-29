@@ -16,6 +16,8 @@ package v2
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
@@ -23,7 +25,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/sync/errgroup"
-	"strings"
 )
 
 // GetServicesToBuild returns the services it has to build if they are not already built
@@ -36,7 +37,7 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	}
 
 	// create a spinner to be loaded before checking if images needs to be built
-	oktetoLog.Spinner("Building images...")
+	oktetoLog.Spinner("Checking images to build...")
 
 	// start the spinner
 	oktetoLog.StartSpinner()
