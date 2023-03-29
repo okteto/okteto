@@ -110,7 +110,21 @@ This will create the `okteto` binary in the `bin` folder. You can execute the bi
 bin/okteto
 ```
 
-After you make more changes, simply run `make` again to recompile your changes.
+After you make more changes, simply run `make` again to recompile your changes. 
+
+### Executing
+
+In order to execute the `okteto` binary locally, you can do this manually by creating a copy of it to your project directory. 
+
+However, there's an easy and preferred way for doing this by creating an `alias` using the following command:
+
+```
+alias <alias-name> = /path/to/okteto/binary
+```
+
+This will make sure the `alias-name` is in sync with your okteto binary. However, this is a temporary alias. If you'd like to create a permanent alias, you can read more about it [here](https://www.freecodecamp.org/news/how-to-create-your-own-command-in-linux/).
+
+**Note:** Don't use `alias-name` as *okteto* since the actual okteto CLI tool installed locally will get in conflict with executable `okteto` binary.  
 
 ### Testing
 
