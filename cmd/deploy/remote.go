@@ -64,7 +64,7 @@ ENV {{ .ContextEnvVar }} {{ .ContextValue }}
 ENV {{ .TokenEnvVar }} {{ .TokenValue }}
 ENV {{ .RemoteDeployEnvVar }} true
 {{ if ne .ActionNameValue "" }}
-	ENV {{ .ActionNameEnvVar }} {{ .ActionNameValue }}
+ENV {{ .ActionNameEnvVar }} {{ .ActionNameValue }}
 {{ end }}
 
 COPY . /okteto/src
