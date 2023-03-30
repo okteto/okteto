@@ -10,15 +10,28 @@ import (
 	"github.com/shurcooL/graphql"
 )
 
+const (
+	progressingStatus string = "progressing"
+	queuedStatus      string = "queued"
+	errorStatus       string = "error"
+	destroyErrStatus  string = "destroy-error"
+
+	tickerInterval time.Duration = 1 * time.Second
+)
+
+type getActionQueryStruct struct {
+	Action actionStruct `graphql:"action(name: $name, space: $space)"`
+}
+
+type actionStruct struct {
+	Id     graphql.String
+	Name   graphql.String
+	Status graphql.String
+}
+
 // GetAction gets a installer job given its name
 func (c *pipelineClient) GetAction(ctx context.Context, name, namespace string) (*types.Action, error) {
-	var queryStruct struct {
-		Action struct {
-			Id     graphql.String
-			Name   graphql.String
-			Status graphql.String
-		} `graphql:"action(name: $name, space: $space)"`
-	}
+	queryStruct := getActionQueryStruct{}
 	variables := map[string]interface{}{
 		"name":  graphql.String(name),
 		"space": graphql.String(namespace),
@@ -38,28 +51,68 @@ func (c *pipelineClient) GetAction(ctx context.Context, name, namespace string) 
 }
 
 func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error {
-	t := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(timeout)
-
+	timeoutTimer := c.provideTimer(timeout)
+	ticker := c.provideTicker(tickerInterval)
 	for {
 		select {
-		case <-to.C:
+		case <-timeoutTimer.C:
 			oktetoLog.Infof("action '%s' didn't finish after %s", actionName, timeout.String())
-			return fmt.Errorf("'%s' didn't finish after %s", pipelineName, timeout.String())
-		case <-t.C:
+			return pipelineTimeoutError{
+				pipelineName: actionName,
+				timeout:      timeout,
+			}
+		case <-ticker.C:
 			a, err := c.GetAction(ctx, actionName, namespace)
 			if err != nil {
 				oktetoLog.Infof("action '%s' failed", actionName)
-				return fmt.Errorf("pipeline '%s' failed", pipelineName)
+				return fmt.Errorf("pipeline '%s' failed: %w", pipelineName, err)
 			}
 
 			oktetoLog.Infof("action '%s' is '%s'", actionName, a.Status)
 			switch a.Status {
-			case "progressing", "queued":
+			case progressingStatus, queuedStatus:
 				continue
-			case "error", "destroy-error":
+			case errorStatus, destroyErrStatus:
 				oktetoLog.Infof("action '%s' failed", actionName)
-				return fmt.Errorf("pipeline '%s' failed", pipelineName)
+				return pipelineFailedError{
+					pipelineName: pipelineName,
+				}
+			default:
+				return nil
+			}
+		}
+	}
+}
+
+func (c *pipelineClient) WaitForActionProgressing(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error {
+	timeoutTimer := c.provideTimer(timeout)
+	ticker := c.provideTicker(tickerInterval)
+	for {
+		select {
+		case <-timeoutTimer.C:
+			oktetoLog.Infof("action '%s' didn't progress after %s", actionName, timeout.String())
+			return pipelineTimeoutError{
+				pipelineName: actionName,
+				timeout:      timeout,
+			}
+		case <-ticker.C:
+			a, err := c.GetAction(ctx, actionName, namespace)
+			if err != nil {
+				oktetoLog.Infof("action '%s' failed", actionName)
+				return fmt.Errorf("pipeline '%s' failed: %w", pipelineName, err)
+			}
+
+			oktetoLog.Infof("action '%s' is '%s'", actionName, a.Status)
+			switch a.Status {
+			case progressingStatus:
+				return nil
+			case queuedStatus:
+				continue
+			case errorStatus, destroyErrStatus:
+				oktetoLog.Infof("action '%s' failed", actionName)
+				return pipelineFailedError{
+					pipelineName: pipelineName,
+				}
 			default:
 				return nil
 			}

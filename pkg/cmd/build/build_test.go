@@ -16,7 +16,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_validateImage(t *testing.T) {
@@ -25,6 +25,7 @@ func Test_validateImage(t *testing.T) {
 			"test": {
 				Namespace: "test",
 				Registry:  "this.is.my.okteto.registry",
+				IsOkteto:  true,
 			},
 		},
 		CurrentContext: "test",
@@ -96,26 +97,20 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 
 	dir := t.TempDir()
 
-	os.Chdir(dir)
-	defer os.Chdir(originalWd)
-
-	err := os.Mkdir(serviceContext, os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.Chdir(dir))
+	defer func() {
+		require.NoError(t, os.Chdir(originalWd))
+	}()
+	require.NoError(t, os.Mkdir(serviceContext, os.ModePerm))
 
 	df := filepath.Join(serviceContext, serviceDockerfile)
 	dockerfile, errCreate := os.Create(df)
-	if errCreate != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, errCreate)
 
-	t.Cleanup(func() {
-		if err := dockerfile.Close(); err != nil {
-			t.Fatal(err)
-		}
-		removeFile(df)
-	})
+	defer func() {
+		require.NoError(t, dockerfile.Close())
+		require.NoError(t, removeFile(df))
+	}()
 
 	tests := []struct {
 		name        string
@@ -266,7 +261,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				},
 			}
 			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts)
-			assert.Equal(t, tt.expected, result)
+			require.Equal(t, tt.expected, result)
 		})
 	}
 }
@@ -276,24 +271,18 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 	mockDir := "mockDir"
 
 	originalWd, errwd := os.Getwd()
-	if errwd != nil {
-		t.Fatal(errwd)
-	}
+	require.NoError(t, errwd)
 
 	dir := t.TempDir()
 
-	os.Chdir(dir)
-	defer os.Chdir(originalWd)
+	require.NoError(t, os.Chdir(dir))
+	defer func() {
+		require.NoError(t, os.Chdir(originalWd))
+	}()
 
-	err := os.Mkdir(buildName, os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.Mkdir(buildName, os.ModePerm))
 
-	err = os.Mkdir(mockDir, os.ModePerm)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.Mkdir(mockDir, os.ModePerm))
 
 	contextPath := filepath.Join(dir, buildName)
 	log.Printf("created context dir: %s", contextPath)
@@ -365,17 +354,16 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 
 			if tt.dockerfilesCreated != nil {
 				for _, df := range tt.dockerfilesCreated {
-					defer removeFile(df)
+					df := df
 					dfFile, err := os.Create(df)
-					if err != nil {
-						t.Fatal(err)
-					}
+					require.NoError(t, err)
 
 					log.Printf("created docker file: %s", df)
 
-					if err := dfFile.Close(); err != nil {
-						t.Fatal(err)
-					}
+					require.NoError(t, dfFile.Close())
+					defer func() {
+						require.NoError(t, removeFile(df))
+					}()
 				}
 			}
 
@@ -406,13 +394,7 @@ func TestExtractFromContextAndDockerfile(t *testing.T) {
 				t.Fatalf("Error expected '%s', does not match error thrown: '%s'", tt.expectedError, warningErr)
 			}
 
-			assert.Equal(t, tt.fileExpected, file)
-
-			if tt.dockerfilesCreated != nil {
-				for _, df := range tt.dockerfilesCreated {
-					removeFile(df)
-				}
-			}
+			require.Equal(t, tt.fileExpected, file)
 
 		})
 	}
@@ -431,9 +413,7 @@ func removeFile(s string) error {
 func Test_parseTempSecrets(t *testing.T) {
 	secretDir := t.TempDir()
 	tmpTestSecretFile, err := os.CreateTemp(secretDir, "")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	writer := bufio.NewWriter(tmpTestSecretFile)
 	_, _ = writer.Write([]byte(fmt.Sprintf("%s\n", "content for ${SECRET_ENV}")))
@@ -449,22 +429,17 @@ func Test_parseTempSecrets(t *testing.T) {
 		},
 	}
 
-	if err := parseTempSecrets(tempFolder, buildOpts); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, parseTempSecrets(tempFolder, buildOpts))
 
-	if err := tmpTestSecretFile.Close(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, tmpTestSecretFile.Close())
 
-	assert.NotContains(t, buildOpts.Secrets[0], tmpTestSecretFile.Name())
-	assert.Contains(t, buildOpts.Secrets[0], "secret-")
+	require.NotContains(t, buildOpts.Secrets[0], tmpTestSecretFile.Name())
+	require.Contains(t, buildOpts.Secrets[0], "secret-")
 
 	newSecretPath := strings.SplitN(buildOpts.Secrets[0], "id=mysecret,src=", 2)
 	b, err := os.ReadFile(newSecretPath[1])
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Contains(t, string(b), envValue)
+	require.NoError(t, err)
+
+	require.Contains(t, string(b), envValue)
 
 }

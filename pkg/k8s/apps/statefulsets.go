@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -191,4 +191,14 @@ func (i *StatefulSetApp) PatchAnnotations(ctx context.Context, c kubernetes.Inte
 
 func (i *StatefulSetApp) Destroy(ctx context.Context, c kubernetes.Interface) error {
 	return statefulsets.Destroy(ctx, i.sfs.Name, i.sfs.Namespace, c)
+}
+
+// GetCloned Returns from Kubernetes the cloned statefulset
+func (i *StatefulSetApp) GetDevClone(ctx context.Context, c kubernetes.Interface) (App, error) {
+	clonedName := model.DevCloneName(i.sfs.Name)
+	sfs, err := statefulsets.Get(ctx, clonedName, i.sfs.Namespace, c)
+	if err == nil {
+		return NewStatefulSetApp(sfs), nil
+	}
+	return nil, err
 }

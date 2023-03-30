@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -52,13 +52,15 @@ deploy:
 deploy:
   - kubectl apply -f k8s.yml
 `
-	oktetoManifestWithDestroyContent = `build:
-app:
-  context: app
+	oktetoManifestWithDeployRemote = `build:
+  app:
+    context: app
+    image: okteto.dev/app:dev
 deploy:
-- okteto destroy
-- kubectl apply -f k8s.yml
-`
+  image: okteto/installer:1.7.5
+  commands:
+  - name: deploy nginx
+    command: kubectl create deployment my-dep --image=busybox`
 
 	appDockerfileWithCache = `FROM python:alpine
 EXPOSE 2931
@@ -344,12 +346,67 @@ func TestDeployOktetoManifestExportCache(t *testing.T) {
 	require.True(t, k8sErrors.IsNotFound(err))
 }
 
+// TestDeployRemoteOktetoManifest tests the following scenario:
+// - Deploying a okteto manifest in remote with a build locally
+func TestDeployRemoteOktetoManifest(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+
+	testNamespace := integration.GetTestNamespace("TestDeployRemote", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+
+	require.NoError(t, createOktetoManifestWithDeployRemote(dir))
+	require.NoError(t, createAppDockerfileWithCache(dir))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	// Test that image has been built
+	require.NotEmpty(t, getImageWithSHA(fmt.Sprintf("%s/%s/app:dev", okteto.Context().Registry, testNamespace)))
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroyRemote(oktetoPath, destroyOptions))
+
+	_, err = integration.GetDeployment(context.Background(), testNamespace, "my-dep", c)
+	require.NoError(t, err)
+}
+
 func isImageBuilt(image string) bool {
-	reg := registry.NewOktetoRegistry()
+	reg := registry.NewOktetoRegistry(okteto.Config{})
 	if _, err := reg.GetImageTagWithDigest(image); err == nil {
 		return true
 	}
 	return false
+}
+
+func createOktetoManifestWithDeployRemote(dir string) error {
+	dockerfilePath := filepath.Join(dir, oktetoManifestName)
+	dockerfileContent := []byte(oktetoManifestWithDeployRemote)
+	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
+		return err
+	}
+	return nil
 }
 
 func createOktetoManifestWithCache(dir string) error {

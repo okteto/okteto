@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -85,6 +85,31 @@ func Test_createContext(t *testing.T) {
 				CurrentContext: "https://okteto.cloud.com",
 			},
 			ctxOptions: &ContextOptions{
+				IsOkteto:             true,
+				Save:                 true,
+				Context:              "https://okteto.cloud.com",
+				Namespace:            "not-found",
+				CheckNamespaceAccess: true,
+			},
+			user: &types.User{
+				Token: "test",
+			},
+			kubeconfigCtx: test.KubeconfigFields{
+				Name:           []string{"cloud_okteto_com"},
+				Namespace:      []string{"test"},
+				CurrentContext: "",
+			},
+			expectedErr: true,
+		},
+		{
+			name: "change to personal namespace if namespace is not found",
+			ctxStore: &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"https://okteto.cloud.com": {},
+				},
+				CurrentContext: "https://okteto.cloud.com",
+			},
+			ctxOptions: &ContextOptions{
 				IsOkteto:  true,
 				Save:      true,
 				Context:   "https://okteto.cloud.com",
@@ -98,7 +123,7 @@ func Test_createContext(t *testing.T) {
 				Namespace:      []string{"test"},
 				CurrentContext: "",
 			},
-			expectedErr: true,
+			expectedErr: false,
 		},
 		{
 			name: "transform k8s to url and create okteto context -> namespace with label",
@@ -368,6 +393,8 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 }
 
 func TestCheckAccessToNamespace(t *testing.T) {
+	t.Parallel()
+
 	ctx := context.Background()
 	user := &types.User{
 		Token: "test",

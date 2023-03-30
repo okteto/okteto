@@ -19,7 +19,9 @@ type TranslateOptions struct {
 
 // Translate translates the endpoints spec at compose or okteto manifest and returns an ingress
 func Translate(endpointName string, endpoint model.Endpoint, opts *TranslateOptions) *Ingress {
+	// endpointName could not be sanitized
 	if endpointName == "" {
+		// opts.Name is already sanitized- this should be clean version of name
 		endpointName = opts.Name
 	}
 	return &Ingress{
@@ -31,7 +33,7 @@ func Translate(endpointName string, endpoint model.Endpoint, opts *TranslateOpti
 func translateV1(ingressName string, endpoint model.Endpoint, opts *TranslateOptions) *networkingv1.Ingress {
 	return &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        ingressName,
+			Name:        format.ResourceK8sMetaString(ingressName),
 			Namespace:   opts.Namespace,
 			Labels:      setLabels(endpoint, opts),
 			Annotations: setAnnotations(endpoint),
@@ -53,7 +55,7 @@ func translateV1(ingressName string, endpoint model.Endpoint, opts *TranslateOpt
 func translateV1Beta1(ingressName string, endpoint model.Endpoint, opts *TranslateOptions) *networkingv1beta1.Ingress {
 	return &networkingv1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        ingressName,
+			Name:        format.ResourceK8sMetaString(ingressName),
 			Namespace:   opts.Namespace,
 			Labels:      setLabels(endpoint, opts),
 			Annotations: setAnnotations(endpoint),

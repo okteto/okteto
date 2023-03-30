@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,6 +23,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/pods"
@@ -32,7 +33,6 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -85,7 +85,7 @@ func (up *upContext) activate() error {
 	}
 
 	buildDevImage := false
-	if _, err := registry.NewOktetoRegistry().GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
+	if _, err := up.Registry.GetImageTagWithDigest(up.Dev.Image.Name); err == oktetoErrors.ErrNotFound {
 		oktetoLog.Infof("image '%s' not found, building it: %s", up.Dev.Image.Name, err.Error())
 		path := up.Dev.Image.GetDockerfilePath()
 		if _, err := os.Stat(path); err != nil {
@@ -103,8 +103,11 @@ func (up *upContext) activate() error {
 		}
 	}
 
-	go up.initializeSyncthing()
-
+	go func() {
+		if err := up.initializeSyncthing(); err != nil {
+			oktetoLog.Infof("could not initialize syncthing: %s", err)
+		}
+	}()
 	if err := up.setDevContainer(app); err != nil {
 		return err
 	}
@@ -113,6 +116,11 @@ func (up *upContext) activate() error {
 	if up.Pod != nil {
 		// if up.Pod exists save the UID before devMode to compare when retry
 		lastPodUID = up.Pod.UID
+	}
+
+	if err := up.waitUntilAppIsAwaken(ctx, app); err != nil {
+		oktetoLog.Infof("error waiting for the original %s to be awaken: %s", app.Kind(), err.Error())
+		return err
 	}
 
 	if err := up.devMode(ctx, app, create); err != nil {
@@ -455,5 +463,53 @@ func getPullingMessage(message, namespace string) string {
 		return message
 	}
 	toReplace := fmt.Sprintf("%s/%s", registry, namespace)
-	return strings.Replace(message, toReplace, okteto.DevRegistry, 1)
+	return strings.Replace(message, toReplace, constants.DevRegistry, 1)
+}
+
+// waitUntilAppIsAwaken waits until the app is awaken checking if the annotation dev.okteto.com/state-before-sleeping is present in the app resource
+func (up *upContext) waitUntilAppIsAwaken(ctx context.Context, app apps.App) error {
+	// If it is auto create, we don't need to wait for the app to wake up
+	if up.Dev.Autocreate {
+		return nil
+	}
+
+	appToCheck := app
+	// If the app is already in dev mode, we need to check the cloned app to see if it is awaken
+	if apps.IsDevModeOn(app) {
+		var err error
+		appToCheck, err = app.GetDevClone(ctx, up.Client)
+		if err != nil {
+			return err
+		}
+	}
+
+	if _, ok := appToCheck.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]; !ok {
+		return nil
+	}
+
+	timeout := 5 * time.Minute
+	to := time.NewTicker(timeout)
+	ticker := time.NewTicker(2 * time.Second)
+	defer to.Stop()
+	defer ticker.Stop()
+	oktetoLog.Spinner(fmt.Sprintf("Dev environment '%s' is sleeping. Waiting for it to wake up...", appToCheck.ObjectMeta().Name))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
+	for {
+		select {
+		case <-to.C:
+			// In case of timeout, we just print a warning to avoid the command to fail
+			oktetoLog.Warning("Dev environment '%s' didn't wake up after %s", appToCheck.ObjectMeta().Name, timeout.String())
+			return nil
+		case <-ticker.C:
+			if err := appToCheck.Refresh(ctx, up.Client); err != nil {
+				return err
+			}
+
+			// If the app is not sleeping anymore, we are done
+			if _, ok := appToCheck.ObjectMeta().Annotations[model.StateBeforeSleepingAnnontation]; !ok {
+				return nil
+			}
+		}
+	}
 }

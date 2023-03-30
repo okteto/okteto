@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -43,4 +43,40 @@ const (
 
 	// OktetoAutodiscoveryReleaseName defines the name used for helm release when autodiscovery
 	OktetoAutodiscoveryReleaseName = "OKTETO_AUTODISCOVERY_RELEASE_NAME"
+
+	// LastUpdatedAnnotation indicates update timestamp
+	LastUpdatedAnnotation = "dev.okteto.com/last-updated"
+
+	// TimeFormat is the format to use when storing timestamps as a string
+	TimeFormat = "2006-01-02T15:04:05"
+
+	// OKtetoDeployRemote defines if deployment is executed remotely
+	OKtetoDeployRemote = "OKTETO_DEPLOY_REMOTE"
+
+	// OKtetoDeployRemoteImage defines okteto cli image used for deploy an environment remotely
+	OKtetoDeployRemoteImage = "OKTETO_REMOTE_CLI_IMAGE"
+
+	// OktetoCLIImageForRemoteTemplate defines okteto CLI image template to use for remote deployments
+	OktetoCLIImageForRemoteTemplate = "okteto/okteto:%s"
+
+	// OktetoPipelineRunnerImage defines image to use for remote deployments if empty
+	OktetoPipelineRunnerImage = "okteto/installer:1.7.6"
+
+	// OktetoEnvFile defines the name for okteto env file
+	OktetoEnvFile = "OKTETO_ENV"
+
+	// NamespaceStatusLabel label added to namespaces to indicate its status
+	NamespaceStatusLabel = "space.okteto.com/status"
+
+	// NamespaceStatusSleeping indicates that the namespace is sleeping
+	NamespaceStatusSleeping = "Sleeping"
+
+	// DevRegistry alias url for okteto registry
+	DevRegistry = "okteto.dev"
+
+	// GlobalRegistry alias url for okteto global registry
+	GlobalRegistry = "okteto.global"
+
+	// DefaultGlobalNamespace namespace where okteto app is running
+	DefaultGlobalNamespace = "okteto"
 )

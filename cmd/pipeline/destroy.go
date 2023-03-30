@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,6 +23,7 @@ import (
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
@@ -170,7 +171,7 @@ func (pc *Command) waitUntilDestroyed(ctx context.Context, name, namespace strin
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name)
+		err := pc.streamPipelineLogs(waitCtx, name, namespace, action.Name, timeout)
 		if err != nil {
 			oktetoLog.Warning("there was an error streaming pipeline logs: %v", err)
 		}
@@ -229,7 +230,13 @@ func (o *DestroyOptions) setDefaults() error {
 			return err
 		}
 
-		o.Name = getPipelineName(repo)
+		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+		if err != nil {
+			return err
+		}
+		inferer := devenvironment.NewNameInferer(c)
+		// okteto pipeline destroy doesn't have a -f flag to specify the path, so we pass empty string
+		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), repo, okteto.Context().Namespace, "")
 	}
 
 	if o.Namespace == "" {

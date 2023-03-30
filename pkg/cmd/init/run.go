@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -46,10 +46,10 @@ const (
 )
 
 // GetDevDefaultsFromImage sets dev defaults from a image
-func GetDevDefaultsFromImage(app apps.App) (*registry.ImageConfig, error) {
+func GetDevDefaultsFromImage(app apps.App) (registry.ImageMetadata, error) {
 	image := app.PodSpec().Containers[0].Image
-	return registry.GetImageConfigFromImage(image)
-
+	reg := registry.NewOktetoRegistry(okteto.Config{})
+	return reg.GetImageMetadata(image)
 }
 
 // SetImage sets dev defaults from a running app

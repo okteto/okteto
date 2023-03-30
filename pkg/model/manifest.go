@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -28,9 +28,11 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v2"
 	yaml3 "gopkg.in/yaml.v3"
 )
@@ -90,16 +92,17 @@ var (
 
 // Manifest represents an okteto manifest
 type Manifest struct {
-	Name          string                  `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace     string                  `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context       string                  `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon          string                  `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy        *DeployInfo             `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev           ManifestDevs            `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy       []DeployCommand         `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build         ManifestBuild           `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies  ManifestDependencies    `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Name          string                                   `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace     string                                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context       string                                   `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon          string                                   `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy        *DeployInfo                              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build         ManifestBuild                            `json:"build,omitempty" yaml:"build,omitempty"`
+	Dependencies  ManifestDependencies                     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
+	External      externalresource.ExternalResourceSection `json:"external,omitempty" yaml:"external,omitempty"`
 
 	Type     Archetype `json:"-" yaml:"-"`
 	Manifest []byte    `json:"-" yaml:"-"`
@@ -123,6 +126,7 @@ func NewManifest() *Manifest {
 		Dependencies:  map[string]*Dependency{},
 		Deploy:        &DeployInfo{},
 		GlobalForward: []forward.GlobalForward{},
+		External:      externalresource.ExternalResourceSection{},
 	}
 }
 
@@ -175,18 +179,34 @@ func NewManifestFromDev(dev *Dev) *Manifest {
 
 // DeployInfo represents what must be deployed for the app to work
 type DeployInfo struct {
+	Image          string              `json:"image,omitempty" yaml:"image,omitempty"`
 	Commands       []DeployCommand     `json:"commands,omitempty" yaml:"commands,omitempty"`
 	ComposeSection *ComposeSectionInfo `json:"compose,omitempty" yaml:"compose,omitempty"`
 	Endpoints      EndpointSpec        `json:"endpoints,omitempty" yaml:"endpoints,omitempty"`
 	Divert         *DivertDeploy       `json:"divert,omitempty" yaml:"divert,omitempty"`
 }
 
+// DestroyInfo represents what must be destroyed for the app
+type DestroyInfo struct {
+	Image    string          `json:"image,omitempty" yaml:"image,omitempty"`
+	Commands []DeployCommand `json:"commands,omitempty" yaml:"commands,omitempty"`
+}
+
 // DivertDeploy represents information about the deploy divert configuration
 type DivertDeploy struct {
-	Namespace  string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Service    string `json:"service,omitempty" yaml:"service,omitempty"`
-	Port       int    `json:"port,omitempty" yaml:"port,omitempty"`
-	Deployment string `json:"deployment,omitempty" yaml:"deployment,omitempty"`
+	Driver               string       `json:"driver,omitempty" yaml:"driver,omitempty"`
+	Namespace            string       `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Service              string       `json:"service,omitempty" yaml:"service,omitempty"`
+	DeprecatedPort       int          `json:"port,omitempty" yaml:"port,omitempty"`
+	DeprecatedDeployment string       `json:"deployment,omitempty" yaml:"deployment,omitempty"`
+	VirtualService       string       `json:"virtualService,omitempty" yaml:"virtualService,omitempty"`
+	Hosts                []DivertHost `json:"hosts,omitempty" yaml:"hosts,omitempty"`
+}
+
+// DivertHost represents a host from a virtual service in a namespace to be diverted
+type DivertHost struct {
+	VirtualService string `json:"virtualService,omitempty" yaml:"virtualService,omitempty"`
+	Namespace      string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 }
 
 // ComposeSectionInfo represents information about compose file
@@ -213,6 +233,13 @@ type DeployCommand struct {
 // NewDeployInfo creates a deploy Info
 func NewDeployInfo() *DeployInfo {
 	return &DeployInfo{
+		Commands: []DeployCommand{},
+	}
+}
+
+// NewDeployInfo creates a deploy Info
+func NewDestroyInfo() *DestroyInfo {
+	return &DestroyInfo{
 		Commands: []DeployCommand{},
 	}
 }
@@ -585,6 +612,16 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, err.Error())
 	}
 
+	ef := externalresource.ERFilesystemManager{
+		Fs: afero.NewOsFs(),
+	}
+
+	for name, external := range manifest.External {
+		external.SetDefaults(name)
+		ef.ExternalResource = *external
+		ef.LoadMarkdownContent(devPath)
+	}
+
 	for _, dev := range manifest.Dev {
 
 		if err := dev.loadAbsPaths(devPath); err != nil {
@@ -748,16 +785,51 @@ func (m *Manifest) validateDivert() error {
 	if m.Deploy.Divert.Namespace == "" {
 		return fmt.Errorf("the field 'deploy.divert.namespace' is mandatory")
 	}
-	if m.Deploy.Divert.Service == "" {
-		return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
-	}
-	if m.Deploy.Divert.Deployment == "" {
-		return fmt.Errorf("the field 'deploy.divert.deployment' is mandatory")
+
+	switch m.Deploy.Divert.Driver {
+	case OktetoDivertWeaverDriver:
+	case OktetoDivertIstioDriver:
+		if m.Deploy.Divert.Service == "" {
+			return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
+		}
+		if m.Deploy.Divert.VirtualService == "" {
+			return fmt.Errorf("the field 'deploy.divert.virtualService' is mandatory")
+		}
+		for i := range m.Deploy.Divert.Hosts {
+			if m.Deploy.Divert.Hosts[i].VirtualService == "" {
+				return fmt.Errorf("the field 'deploy.divert.hosts.virtualService' is mandatory")
+			}
+			if m.Deploy.Divert.Hosts[i].Namespace == "" {
+				return fmt.Errorf("the field 'deploy.divert.hosts.namespace' is mandatory")
+			}
+		}
+	default:
+		return fmt.Errorf("the divert driver '%s' isn't supported", m.Deploy.Divert.Driver)
 	}
 	return nil
 }
 
 func (m *Manifest) setDefaults() error {
+	if m.Deploy != nil && m.Deploy.Divert != nil {
+		var err error
+		if m.Deploy.Divert.Driver == "" {
+			m.Deploy.Divert.Driver = OktetoDivertWeaverDriver
+		}
+		m.Deploy.Divert.Namespace, err = ExpandEnv(m.Deploy.Divert.Namespace, false)
+		if err != nil {
+			return err
+		}
+		for i := range m.Deploy.Divert.Hosts {
+			m.Deploy.Divert.Hosts[i].VirtualService, err = ExpandEnv(m.Deploy.Divert.Hosts[i].VirtualService, false)
+			if err != nil {
+				return err
+			}
+			m.Deploy.Divert.Hosts[i].Namespace, err = ExpandEnv(m.Deploy.Divert.Hosts[i].Namespace, false)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	for dName, d := range m.Dev {
 		if d.Name == "" {
 			d.Name = dName
@@ -804,6 +876,10 @@ func (m *Manifest) setDefaults() error {
 		}
 	}
 
+	if m.Destroy == nil {
+		m.Destroy = &DestroyInfo{}
+	}
+
 	return nil
 }
 
@@ -817,6 +893,12 @@ func (m *Manifest) mergeWithOktetoManifest(other *Manifest) {
 func (manifest *Manifest) ExpandEnvVars() error {
 	var err error
 	if manifest.Deploy != nil {
+		if manifest.Deploy.Image != "" {
+			manifest.Deploy.Image, err = envsubst.String(manifest.Deploy.Image)
+			if err != nil {
+				return errors.New("could not parse env vars for an image used for remote deploy")
+			}
+		}
 		if manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 			var stackFiles []string
 			for _, composeInfo := range manifest.Deploy.ComposeSection.ComposesInfo {
@@ -860,12 +942,11 @@ func (manifest *Manifest) ExpandEnvVars() error {
 		}
 	}
 	if manifest.Destroy != nil {
-		for idx, cmd := range manifest.Destroy {
-			cmd.Command, err = envsubst.String(cmd.Command)
+		if manifest.Destroy.Image != "" {
+			manifest.Destroy.Image, err = ExpandEnv(manifest.Destroy.Image, true)
 			if err != nil {
-				return errors.New("could not parse env vars")
+				return err
 			}
-			manifest.Destroy[idx] = cmd
 		}
 	}
 
@@ -971,7 +1052,9 @@ func (m *Manifest) InferFromStack(cwd string) (*Manifest, error) {
 			m.Build[svcName] = buildInfo
 		}
 	}
-	m.setDefaults()
+	if err := m.setDefaults(); err != nil {
+		oktetoLog.Infof("failed to set defaults: %s", err)
+	}
 	return m, nil
 }
 

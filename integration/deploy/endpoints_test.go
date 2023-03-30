@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -422,6 +422,104 @@ func Test_EndpointsFromStackAndManifest(t *testing.T) {
 		Workdir:    dir,
 		Namespace:  testNamespace,
 		OktetoHome: dir,
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+}
+
+// Test_EndpointsFromOktetoManifest_NameOption tests the following scenario:
+// - Deploying a okteto manifest locally
+// - K8s Service manifest has auto-ingress, endpoints are automatically created when kubectl apply
+// - The endpoints declared at the manifest deploy section are accessible and have name of deploy option
+func Test_EndpointsFromOktetoManifest_NameOption(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	require.NoError(t, createEndpointsFromOktetoManifestInferredName(dir))
+	require.NoError(t, createAppDockerfile(dir))
+	require.NoError(t, createK8sManifest(dir))
+
+	testNamespace := integration.GetTestNamespace("EndpointManifestNameOp", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		Name:       "my test",
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	// Test that endpoint works - created by auto-ingress at k8s manifest
+	autoIngressURL := fmt.Sprintf("https://e2etest-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(autoIngressURL, timeout))
+
+	// Test that endpoint works - created by okteto manifest
+	manifestEndpointURL := fmt.Sprintf("https://my-test-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(manifestEndpointURL, timeout))
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Name:       "my test",
+	}
+	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
+
+	_, err = integration.GetService(context.Background(), testNamespace, "e2etest", c)
+	require.True(t, k8sErrors.IsNotFound(err))
+}
+
+// Test_EndpointsFromStackWithEndpoints_InferredName tests the following scenario:
+// - Deploying a stack manifest locally from a compose file with endpoints section
+// - The endpoints generated are accessible and name from deploy option
+func Test_EndpointsFromStackWith_NameOption(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	require.NoError(t, createStackWithEndpointsInferredNameScenario(dir))
+
+	testNamespace := integration.GetTestNamespace("TEpStackNameOpt", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		Name:       "my test",
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	// Test endpoints are accessible
+	nginxURL := fmt.Sprintf("https://my-test-%s.%s", testNamespace, appsSubdomain)
+	require.NotEmpty(t, integration.GetContentFromURL(nginxURL, timeout))
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Name:       "my test",
 	}
 	require.NoError(t, commands.RunOktetoDestroy(oktetoPath, destroyOptions))
 }

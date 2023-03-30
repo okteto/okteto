@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -247,6 +247,7 @@ func TestDeployPipelineSuccesfulWithWait(t *testing.T) {
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
+			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 		},
 	}
 	opts := &DeployOptions{
@@ -303,12 +304,12 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 			"svc":  okteto.CompletedStatus,
 			"svc2": okteto.RunningStatus,
 		},
-		StreamErr: errors.New("error"),
 	}
 
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
+			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{StreamErr: errors.New("error")}),
 		},
 	}
 	opts := &DeployOptions{

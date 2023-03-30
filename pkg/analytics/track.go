@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -175,6 +175,7 @@ type TrackUpMetadata struct {
 	HasBuildSection        bool
 	HasDeploySection       bool
 	Success                bool
+	HasReverse             bool
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
@@ -187,6 +188,7 @@ func TrackUp(m TrackUpMetadata) {
 		"hasDependenciesSection": m.HasDependenciesSection,
 		"hasBuildSection":        m.HasBuildSection,
 		"hasDeploySection":       m.HasDeploySection,
+		"hasReverse":             m.HasReverse,
 	}
 	track(upEvent, m.Success, props)
 }
@@ -335,8 +337,11 @@ func TrackDeploy(m TrackDeployMetadata) {
 }
 
 // TrackDestroy sends a tracking event to mixpanel when the user destroys a pipeline from local
-func TrackDestroy(success bool) {
-	track(destroyEvent, success, nil)
+func TrackDestroy(success bool, isDestroyAll bool) {
+	props := map[string]interface{}{
+		"isDestroyAll": isDestroyAll,
+	}
+	track(destroyEvent, success, props)
 }
 
 // TrackLogin sends a tracking event to mixpanel when the user logs in

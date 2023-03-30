@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -30,6 +30,7 @@ type App interface {
 	TemplateObjectMeta() metav1.ObjectMeta
 	PodSpec() *apiv1.PodSpec
 
+	// DevClone() creates in memory a clone of the app for dev mode
 	DevClone() App
 
 	CheckConditionErrors(dev *model.Dev) error
@@ -38,6 +39,8 @@ type App interface {
 	// TODO: remove after people move to CLI >= 1.14
 	RestoreOriginal() error
 
+	// GetDevClone returns the cloned app from Kubernetes
+	GetDevClone(ctx context.Context, c kubernetes.Interface) (App, error)
 	Refresh(ctx context.Context, c kubernetes.Interface) error
 	Watch(ctx context.Context, result chan error, c kubernetes.Interface)
 	Deploy(ctx context.Context, c kubernetes.Interface) error

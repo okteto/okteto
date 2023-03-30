@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,10 +17,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
@@ -136,6 +136,52 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 			manifest:         &Manifest{},
 			expectedManifest: &Manifest{},
 		},
+		{
+			name: "expand image for remote deploy",
+			envs: map[string]string{
+				"myImage": "test",
+			},
+			manifest: &Manifest{
+				Deploy: &DeployInfo{
+					Image: "${myImage}",
+				},
+			},
+			expectedManifest: &Manifest{
+				Deploy: &DeployInfo{
+					Image: "test",
+				},
+			},
+		},
+		{
+			name: "does not expand vars in destroy command",
+			envs: map[string]string{
+				"TEST_VAR": "test",
+			},
+			manifest: &Manifest{
+				Destroy: &DestroyInfo{
+					Image: "",
+					Commands: []DeployCommand{
+						{
+							Name: "test",
+							Command: `TEST_VAR="do-not-expand-me"
+echo $TEST_VAR`,
+						},
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Destroy: &DestroyInfo{
+					Image: "",
+					Commands: []DeployCommand{
+						{
+							Name: "test",
+							Command: `TEST_VAR="do-not-expand-me"
+echo $TEST_VAR`,
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -216,51 +262,56 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ok-with-port",
 			divert: DivertDeploy{
-				Namespace:  "namespace",
-				Service:    "service",
-				Port:       8080,
-				Deployment: "deployment",
+				Driver:               OktetoDivertWeaverDriver,
+				Namespace:            "namespace",
+				Service:              "service",
+				DeprecatedPort:       8080,
+				DeprecatedDeployment: "deployment",
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "divert-ok-without-service",
+			divert: DivertDeploy{
+				Driver:               OktetoDivertWeaverDriver,
+				Namespace:            "namespace",
+				Service:              "",
+				DeprecatedPort:       8080,
+				DeprecatedDeployment: "deployment",
+			},
+			expectedErr: nil,
+		},
+		{
+			name: "divert-ok-without-deployment",
+			divert: DivertDeploy{
+				Driver:               OktetoDivertWeaverDriver,
+				Namespace:            "namespace",
+				Service:              "service",
+				DeprecatedPort:       8080,
+				DeprecatedDeployment: "",
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "divert-ok-without-port",
 			divert: DivertDeploy{
-				Namespace:  "namespace",
-				Service:    "service",
-				Deployment: "deployment",
+				Driver:               OktetoDivertWeaverDriver,
+				Namespace:            "namespace",
+				Service:              "service",
+				DeprecatedDeployment: "deployment",
 			},
 			expectedErr: nil,
 		},
 		{
 			name: "divert-ko-without-namespace",
 			divert: DivertDeploy{
-				Namespace:  "",
-				Service:    "service",
-				Port:       8080,
-				Deployment: "deployment",
+				Driver:               OktetoDivertWeaverDriver,
+				Namespace:            "",
+				Service:              "service",
+				DeprecatedPort:       8080,
+				DeprecatedDeployment: "deployment",
 			},
 			expectedErr: fmt.Errorf("the field 'deploy.divert.namespace' is mandatory"),
-		},
-		{
-			name: "divert-ko-without-service",
-			divert: DivertDeploy{
-				Namespace:  "namespace",
-				Service:    "",
-				Port:       8080,
-				Deployment: "deployment",
-			},
-			expectedErr: fmt.Errorf("the field 'deploy.divert.service' is mandatory"),
-		},
-		{
-			name: "divert-ko-without-deployment",
-			divert: DivertDeploy{
-				Namespace:  "namespace",
-				Service:    "service",
-				Port:       8080,
-				Deployment: "",
-			},
-			expectedErr: fmt.Errorf("the field 'deploy.divert.deployment' is mandatory"),
 		},
 	}
 
@@ -359,10 +410,7 @@ func Test_validateManifestBuild(t *testing.T) {
 
 func TestInferFromStack(t *testing.T) {
 	dirtest := filepath.Clean("/stack/dir/")
-	devInterface := PrivilegedLocalhost
-	if runtime.GOOS == "windows" {
-		devInterface = Localhost
-	}
+	devInterface := Localhost
 	stack := &Stack{
 		Services: map[string]*Service{
 			"test": {
@@ -391,6 +439,7 @@ func TestInferFromStack(t *testing.T) {
 				Dev:   ManifestDevs{},
 				Build: ManifestBuild{},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: &Stack{
 							Services: map[string]*Service{
@@ -421,10 +470,12 @@ func TestInferFromStack(t *testing.T) {
 				},
 				Dev: ManifestDevs{},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: stack,
 					},
 				},
+				Destroy: &DestroyInfo{},
 			},
 		},
 		{
@@ -438,6 +489,7 @@ func TestInferFromStack(t *testing.T) {
 					},
 				},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: &Stack{
 							Services: map[string]*Service{
@@ -466,8 +518,10 @@ func TestInferFromStack(t *testing.T) {
 						Dockerfile: filepath.Join("test-1", "Dockerfile"),
 					},
 				},
-				Dev: ManifestDevs{},
+				Dev:     ManifestDevs{},
+				Destroy: &DestroyInfo{},
 				Deploy: &DeployInfo{
+					Image: constants.OktetoPipelineRunnerImage,
 					ComposeSection: &ComposeSectionInfo{
 						Stack: &Stack{
 							Services: map[string]*Service{
@@ -529,6 +583,7 @@ func TestInferFromStack(t *testing.T) {
 						Dockerfile: "Dockerfile",
 					},
 				},
+				Destroy: &DestroyInfo{},
 				Dev: ManifestDevs{
 					"test": &Dev{
 						Name:      "one",

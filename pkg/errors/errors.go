@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -28,6 +28,9 @@ type UserError struct {
 // Error returns the error message
 func (u UserError) Error() string {
 	return u.E.Error()
+}
+func (e UserError) Unwrap() error {
+	return e.E
 }
 
 // CommandError is meant for errors displayed to the user. It can include a message and a hint
@@ -105,7 +108,7 @@ var (
 	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in clusters that have Okteto installed")
 
 	// ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
-	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available on Okteto Cloud or Okteto Enterprise")
+	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available in clusters where Okteto is installed.\n Follow this link to know more about configuring Okteto at your cluster: https://www.okteto.com/docs/self-hosted/")
 
 	// ErrTokenFlagNeeded is raised when the command is executed from inside a pod from a ctx command
 	ErrTokenFlagNeeded = fmt.Errorf("this command is not supported without the '--token' flag from inside a container")
@@ -184,6 +187,9 @@ var (
 
 	// ErrX509Hint should be included within a UserError.Hint when IsX509() return true
 	ErrX509Hint = "Add the flag '--insecure-skip-tls-verify' to skip certificate verification.\n    Follow this link to know more about configuring your own certificates with Okteto:\n    https://www.okteto.com/docs/self-hosted/administration/certificates/"
+
+	// ErrTimeout is raised when an operation has timed out
+	ErrTimeout = fmt.Errorf("operation timed out")
 )
 
 // IsAlreadyExists raised if the Kubernetes API returns AlreadyExists

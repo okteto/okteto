@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -25,19 +25,22 @@ import (
 
 // NamespaceCommand has all the namespaces subcommands
 type NamespaceCommand struct {
-	ctxCmd   *contextCMD.ContextCommand
-	okClient types.OktetoInterface
+	ctxCmd            *contextCMD.ContextCommand
+	okClient          types.OktetoInterface
+	k8sClientProvider okteto.K8sClientProvider
 }
 
-// NewCommand creates a namespace command to
+// NewCommand creates a namespace command for use in further operations
 func NewCommand() (*NamespaceCommand, error) {
 	c, err := okteto.NewOktetoClient()
 	if err != nil {
 		return nil, err
 	}
+
 	return &NamespaceCommand{
-		ctxCmd:   contextCMD.NewContextCommand(),
-		okClient: c,
+		ctxCmd:            contextCMD.NewContextCommand(),
+		okClient:          c,
+		k8sClientProvider: okteto.NewK8sClientProvider(),
 	}, nil
 }
 

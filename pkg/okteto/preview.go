@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,7 +15,6 @@ package okteto
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
@@ -25,11 +24,15 @@ import (
 )
 
 type previewClient struct {
-	client *graphql.Client
+	client             graphqlClientInterface
+	namespaceValidator namespaceValidator
 }
 
-func newPreviewClient(client *graphql.Client) *previewClient {
-	return &previewClient{client: client}
+func newPreviewClient(client graphqlClientInterface) *previewClient {
+	return &previewClient{
+		client:             client,
+		namespaceValidator: newNamespaceValidator(),
+	}
 }
 
 // PreviewEnv represents an Okteto preview environment
@@ -47,28 +50,81 @@ type InputVariable struct {
 
 type PreviewScope graphql.String
 
+type deployPreviewMutation struct {
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename)"`
+}
+
+type destroyPreviewMutation struct {
+	Response previewIDStruct `graphql:"destroyPreview(id: $id)"`
+}
+
+type listPreviewQuery struct {
+	Response []previewEnv `graphql:"previews"`
+}
+
+type listPreviewEndpoints struct {
+	Response previewEndpoints `graphql:"preview(id: $id)"`
+}
+
+type getPreviewResources struct {
+	Response previewResourcesStatus `graphql:"preview(id: $id)"`
+}
+
+type previewResourcesStatus struct {
+	Deployments  []resourceInfo
+	Statefulsets []resourceInfo
+	Jobs         []resourceInfo
+	Cronjobs     []resourceInfo
+}
+
+type resourceInfo struct {
+	ID         graphql.String
+	Name       graphql.String
+	Status     graphql.String
+	DeployedBy graphql.String
+}
+type previewEndpoints struct {
+	Deployments  []deploymentEndpoint
+	Statefulsets []statefulsetEdnpoint
+}
+
+type deploymentEndpoint struct {
+	Endpoints []endpointURL
+}
+
+type statefulsetEdnpoint struct {
+	Endpoints []endpointURL
+}
+
+type endpointURL struct {
+	Url graphql.String
+}
+
+type previewEnv struct {
+	Id       graphql.String
+	Sleeping graphql.Boolean
+	Scope    graphql.String
+}
+
+type deployPreviewResponse struct {
+	Action  actionStruct
+	Preview previewIDStruct
+}
+
+type previewIDStruct struct {
+	Id graphql.String
+}
+
 // DeployPreview creates a preview environment
 func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
-	if err := validateNamespace(name, "preview environment"); err != nil {
+	if err := c.namespaceValidator.validate(name, previewEnvObject); err != nil {
 		return nil, err
 	}
 	origin := config.GetDeployOrigin()
 	previewResponse := &types.PreviewResponse{}
 
 	if len(variables) > 0 {
-		var mutation struct {
-			Preview struct {
-				Action struct {
-					Id     graphql.String
-					Name   graphql.String
-					Status graphql.String
-				}
-				Preview struct {
-					Id graphql.String
-				}
-			} `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename)"`
-		}
-
+		mutationStruct := deployPreviewMutation{}
 		variablesVariable := make([]InputVariable, 0)
 		for _, v := range variables {
 			variablesVariable = append(variablesVariable, InputVariable{
@@ -98,32 +154,20 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 			"variables":  variablesVariable,
 			"filename":   graphql.String(filename),
 		}
-		err := mutate(ctx, &mutation, queryVariables, c.client)
+		err := mutate(ctx, &mutationStruct, queryVariables, c.client)
 		if err != nil {
-			return nil, translatePreviewAPIErr(err, name)
+			return nil, c.translateErr(err, name)
 		}
 		previewResponse.Action = &types.Action{
-			ID:     string(mutation.Preview.Action.Id),
-			Name:   string(mutation.Preview.Action.Name),
-			Status: string(mutation.Preview.Action.Status),
+			ID:     string(mutationStruct.Response.Action.Id),
+			Name:   string(mutationStruct.Response.Action.Name),
+			Status: string(mutationStruct.Response.Action.Status),
 		}
 		previewResponse.Preview = &types.Preview{
-			ID: string(mutation.Preview.Preview.Id),
+			ID: string(mutationStruct.Response.Preview.Id),
 		}
 	} else {
-		var mutation struct {
-			Preview struct {
-				Action struct {
-					Id     graphql.String
-					Name   graphql.String
-					Status graphql.String
-				}
-				Preview struct {
-					Id graphql.String
-				}
-			} `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, filename: $filename, variables: $variables)"`
-		}
-
+		mutationStruct := deployPreviewMutation{}
 		queryVariables := map[string]interface{}{
 			"name":       graphql.String(name),
 			"scope":      PreviewScope(scope),
@@ -135,46 +179,36 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 				{Name: graphql.String("OKTETO_ORIGIN"), Value: graphql.String(origin)},
 			},
 		}
-		err := mutate(ctx, &mutation, queryVariables, c.client)
+		err := mutate(ctx, &mutationStruct, queryVariables, c.client)
 		if err != nil {
-			return nil, translatePreviewAPIErr(err, name)
+			return nil, c.translateErr(err, name)
 		}
 		previewResponse.Action = &types.Action{
-			ID:     string(mutation.Preview.Action.Id),
-			Name:   string(mutation.Preview.Action.Name),
-			Status: string(mutation.Preview.Action.Status),
+			ID:     string(mutationStruct.Response.Action.Id),
+			Name:   string(mutationStruct.Response.Action.Name),
+			Status: string(mutationStruct.Response.Action.Status),
 		}
 		previewResponse.Preview = &types.Preview{
-			ID: string(mutation.Preview.Preview.Id),
+			ID: string(mutationStruct.Response.Preview.Id),
 		}
 	}
 	return previewResponse, nil
 }
 
 // DestroyPreview destroy a preview environment
-func (c *OktetoClient) DestroyPreview(ctx context.Context, name string) error {
-	var mutation struct {
-		Preview struct {
-			Id graphql.String
-		} `graphql:"destroyPreview(id: $id)"`
-	}
+func (c *previewClient) Destroy(ctx context.Context, name string) error {
+	mutationStruct := destroyPreviewMutation{}
 	variables := map[string]interface{}{
 		"id": graphql.String(name),
 	}
 
-	err := mutate(ctx, &mutation, variables, c.client)
+	err := mutate(ctx, &mutationStruct, variables, c.client)
 	return err
 }
 
 // ListPreviews list preview environments
 func (c *previewClient) List(ctx context.Context) ([]types.Preview, error) {
-	var queryStruct struct {
-		PreviewEnvs []struct {
-			Id       graphql.String
-			Sleeping graphql.Boolean
-			Scope    graphql.String
-		} `graphql:"previews"`
-	}
+	queryStruct := listPreviewQuery{}
 
 	err := query(ctx, &queryStruct, nil, c.client)
 	if err != nil {
@@ -182,7 +216,7 @@ func (c *previewClient) List(ctx context.Context) ([]types.Preview, error) {
 	}
 
 	result := make([]types.Preview, 0)
-	for _, previewEnv := range queryStruct.PreviewEnvs {
+	for _, previewEnv := range queryStruct.Response {
 		result = append(result, types.Preview{
 			ID:       string(previewEnv.Id),
 			Sleeping: bool(previewEnv.Sleeping),
@@ -193,22 +227,9 @@ func (c *previewClient) List(ctx context.Context) ([]types.Preview, error) {
 	return result, nil
 }
 
-func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName string) ([]types.Endpoint, error) {
-	var queryStruct struct {
-		Preview struct {
-			Deployments []struct {
-				Endpoints []struct {
-					Url graphql.String
-				}
-			}
-			Statefulsets []struct {
-				Endpoints []struct {
-					Url graphql.String
-				}
-			}
-		} `graphql:"preview(id: $id)"`
-	}
-
+// ListEndpoints lists all the endpoints from a preview environment
+func (c *previewClient) ListEndpoints(ctx context.Context, previewName string) ([]types.Endpoint, error) {
+	queryStruct := listPreviewEndpoints{}
 	variables := map[string]interface{}{
 		"id": graphql.String(previewName),
 	}
@@ -219,7 +240,7 @@ func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName st
 		return nil, err
 	}
 
-	for _, d := range queryStruct.Preview.Deployments {
+	for _, d := range queryStruct.Response.Deployments {
 		for _, endpoint := range d.Endpoints {
 			endpoints = append(endpoints, types.Endpoint{
 				URL: string(endpoint.Url),
@@ -227,7 +248,7 @@ func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName st
 		}
 	}
 
-	for _, sfs := range queryStruct.Preview.Statefulsets {
+	for _, sfs := range queryStruct.Response.Statefulsets {
 		for _, endpoint := range sfs.Endpoints {
 			endpoints = append(endpoints, types.Endpoint{
 				URL: string(endpoint.Url),
@@ -237,63 +258,8 @@ func (c *OktetoClient) ListPreviewsEndpoints(ctx context.Context, previewName st
 	return endpoints, nil
 }
 
-// GetPreviewEnvByName gets a preview environment given its name
-func (c *OktetoClient) GetPreviewEnvByName(ctx context.Context, name string) (*types.GitDeploy, error) {
-	var queryStruct struct {
-		Preview struct {
-			GitDeploys []struct {
-				Id     graphql.String
-				Name   graphql.String
-				Status graphql.String
-			}
-		} `graphql:"preview(id: $id)"`
-	}
-
-	variables := map[string]interface{}{
-		"id": graphql.String(Context().Namespace),
-	}
-	err := query(ctx, &queryStruct, variables, c.client)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, gitDeploy := range queryStruct.Preview.GitDeploys {
-		if string(gitDeploy.Name) == name {
-			pipeline := &types.GitDeploy{
-				ID:     string(gitDeploy.Id),
-				Name:   string(gitDeploy.Name),
-				Status: string(gitDeploy.Status),
-			}
-			return pipeline, nil
-		}
-	}
-
-	return nil, oktetoErrors.ErrNotFound
-}
-
-func (c *previewClient) GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error) {
-	var queryStruct struct {
-		Preview struct {
-			Deployments []struct {
-				ID         graphql.String
-				Name       graphql.String
-				Status     graphql.String
-				DeployedBy graphql.String
-			}
-			Statefulsets []struct {
-				ID         graphql.String
-				Name       graphql.String
-				Status     graphql.String
-				DeployedBy graphql.String
-			}
-			Jobs []struct {
-				ID         graphql.String
-				Name       graphql.String
-				Status     graphql.String
-				DeployedBy graphql.String
-			}
-		} `graphql:"preview(id: $id)"`
-	}
+func (c *previewClient) GetResourcesStatus(ctx context.Context, previewName, devName string) (map[string]string, error) {
+	queryStruct := getPreviewResources{}
 	variables := map[string]interface{}{
 		"id": graphql.String(previewName),
 	}
@@ -304,33 +270,39 @@ func (c *previewClient) GetResourcesStatusFromPreview(ctx context.Context, previ
 	}
 
 	status := make(map[string]string)
-	for _, d := range queryStruct.Preview.Deployments {
+	for _, d := range queryStruct.Response.Deployments {
 		if devName == "" || string(d.DeployedBy) == devName {
 			resourceName := getResourceFullName(Deployment, string(d.Name))
 			status[resourceName] = string(d.Status)
 		}
 	}
-	for _, sfs := range queryStruct.Preview.Statefulsets {
+	for _, sfs := range queryStruct.Response.Statefulsets {
 		if devName == "" || string(sfs.DeployedBy) == devName {
 			resourceName := getResourceFullName(StatefulSet, string(sfs.Name))
 			status[resourceName] = string(sfs.Status)
 		}
 	}
-	for _, j := range queryStruct.Preview.Jobs {
+	for _, j := range queryStruct.Response.Jobs {
 		if devName == "" || string(j.DeployedBy) == devName {
-			resourceName := getResourceFullName(job, string(j.Name))
+			resourceName := getResourceFullName(Job, string(j.Name))
 			status[resourceName] = string(j.Status)
+		}
+	}
+	for _, cj := range queryStruct.Response.Cronjobs {
+		if devName == "" || string(cj.DeployedBy) == devName {
+			resourceName := getResourceFullName(CronJob, string(cj.Name))
+			status[resourceName] = string(cj.Status)
 		}
 	}
 	return status, nil
 }
 
-func translatePreviewAPIErr(err error, name string) error {
+func (*previewClient) translateErr(err error, name string) error {
 	if err.Error() == "conflict" {
-		return fmt.Errorf("preview '%s' already exists with a different scope. Please use a different name", name)
+		return previewConflictErr{name: name}
 	}
 	if strings.Contains(err.Error(), "operation-not-permitted") {
-		return oktetoErrors.UserError{E: fmt.Errorf("you are not authorized to create a global preview env"),
+		return oktetoErrors.UserError{E: ErrUnauthorizedGlobalCreation,
 			Hint: "Please log in with an administrator account or use a personal preview environment"}
 	}
 	return err

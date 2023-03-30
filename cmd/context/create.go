@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -173,9 +173,22 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 		}
 
 		if !hasAccess {
-			return oktetoErrors.UserError{E: fmt.Errorf("namespace '%s' not found on context '%s'", ctxOptions.Namespace, ctxOptions.Context),
-				Hint: "Please verify that the namespace exists and that you have access to it.",
+			if ctxOptions.CheckNamespaceAccess {
+				return oktetoErrors.UserError{
+					E:    fmt.Errorf("namespace '%s' not found on context '%s'", ctxOptions.Namespace, ctxOptions.Context),
+					Hint: "Please verify that the namespace exists and that you have access to it.",
+				}
 			}
+
+			// if using a new context, our cached namespace may have been removed
+			// so swap over to the personal namespace instead of erroring
+			oktetoLog.Warning(
+				"No access to namespace '%s' switching to personal namespace '%s'",
+				ctxOptions.Namespace,
+				okteto.Context().PersonalNamespace,
+			)
+			currentCtx := ctxStore.Contexts[ctxOptions.Context]
+			currentCtx.Namespace = currentCtx.PersonalNamespace
 		}
 
 		if err := c.OktetoContextWriter.Write(); err != nil {
@@ -188,7 +201,7 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 	}
 
 	if ctxOptions.IsCtxCommand {
-		oktetoLog.Success("Using context %s @ %s", okteto.Context().Namespace, okteto.RemoveSchema(ctxStore.CurrentContext))
+		oktetoLog.Success("Using %s @ %s", okteto.Context().Namespace, okteto.RemoveSchema(ctxStore.CurrentContext))
 		if oktetoLog.GetOutputFormat() == oktetoLog.JSONFormat {
 			if err := showCurrentCtxJSON(); err != nil {
 				return err

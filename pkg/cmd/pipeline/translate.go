@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/apps"
@@ -178,7 +179,7 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 			Namespace: data.Namespace,
 			Name:      TranslatePipelineName(format.ResourceK8sMetaString(data.Name)),
 			Annotations: map[string]string{
-				model.LastUpdatedAnnotation: time.Now().UTC().Format(model.TimeFormat),
+				constants.LastUpdatedAnnotation: time.Now().UTC().Format(constants.TimeFormat),
 			},
 			Labels: map[string]string{
 				model.GitDeployLabel: "true",
@@ -208,7 +209,7 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 	if cmap.Annotations == nil {
 		cmap.Annotations = map[string]string{}
 	}
-	cmap.Annotations[model.LastUpdatedAnnotation] = time.Now().UTC().Format(model.TimeFormat)
+	cmap.Annotations[constants.LastUpdatedAnnotation] = time.Now().UTC().Format(constants.TimeFormat)
 
 	actionName := os.Getenv(model.OktetoActionNameEnvVar)
 	if actionName == "" {

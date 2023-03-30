@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -85,7 +85,7 @@ func WithBrowser(ctx context.Context, oktetoURL string) (*types.User, error) {
 		if strings.Contains(err.Error(), "executable file not found in $PATH") {
 			return nil, oktetoErrors.UserError{
 				E:    fmt.Errorf("no browser could be found"),
-				Hint: "Use the '--token' flag to run this command in server mode. More information can be found here: https://www.okteto.com/docs/0.10/reference/cli/#login",
+				Hint: "Use the '--token' flag to run this command in server mode. More information can be found here: https://www.okteto.com/docs/reference/cli/#context",
 			}
 		}
 		oktetoLog.Errorf("Something went wrong opening your browser: %s\n", err)

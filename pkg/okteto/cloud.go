@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -14,15 +14,6 @@
 package okteto
 
 const (
-	// DevRegistry fake url for okteto registry
-	DevRegistry = "okteto.dev"
-
-	// GlobalRegistry fake url for okteto global registry
-	GlobalRegistry = "okteto.global"
-
-	// DefaultGlobalNamespace namespace where okteto app is running
-	DefaultGlobalNamespace = "okteto"
-
 	// CloudURL is the default URL of okteto
 	CloudURL = "https://cloud.okteto.com"
 

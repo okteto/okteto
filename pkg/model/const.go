@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -16,8 +16,6 @@ package model
 import apiv1 "k8s.io/api/core/v1"
 
 const (
-	// TimeFormat is the format to use when storing timestamps as a string
-	TimeFormat = "2006-01-02T15:04:05"
 
 	// DevCloneLabel indicates it is a dev pod clone
 	DevCloneLabel = "dev.okteto.com/clone"
@@ -51,9 +49,6 @@ const (
 
 	// LastBuiltAnnotation indicates the timestamp of an operation
 	LastBuiltAnnotation = "dev.okteto.com/last-built"
-
-	// LastUpdatedAnnotation indicates update timestamp
-	LastUpdatedAnnotation = "dev.okteto.com/last-updated"
 
 	// TranslationAnnotation sets the translation rules
 	TranslationAnnotation = "dev.okteto.com/translation"
@@ -209,6 +204,9 @@ const (
 	// OktetoNamespaceEnvVar defines the namespace the user is using
 	OktetoNamespaceEnvVar = "OKTETO_NAMESPACE"
 
+	// OktetoDomainEnvVar defines the domain the user is using
+	OktetoDomainEnvVar = "OKTETO_DOMAIN"
+
 	// OktetoLanguageEnvVar defines the language of the dev
 	OktetoLanguageEnvVar = "OKTETO_LANGUAGE"
 
@@ -279,15 +277,12 @@ const (
 	// OktetoImageTagWithVolumes is the tag assigned to an image with volume mounts
 	OktetoImageTagWithVolumes = "okteto-with-volume-mounts"
 
-	// OktetoDivertServiceAnnotation service annotation used by divert to keep track of port mappings
-	OktetoDivertServiceAnnotation = "divert.okteto.com/modification"
+	// OktetoDivertWeaverDriver is the divert driver for weaver
+	OktetoDivertWeaverDriver = "weaver"
 
-	// OktetoDivertInjectSidecarLabel pod label used by divert to inject envoy sidecar
-	OktetoDivertInjectSidecarLabel = "divert.okteto.com/inject-sidecar"
+	// OktetoDivertIstioDriver is the divert driver for istio
+	OktetoDivertIstioDriver = "istio"
 
-	// OktetoNginxConfigurationSnippetAnnotation annotation for nginx configuration snippet
-	OktetoNginxConfigurationSnippetAnnotation = "nginx.ingress.kubernetes.io/configuration-snippet"
-
-	// OktetoDivertIngressInjectionAnnotation annotation for nginx header injection
-	OktetoDivertIngressInjectionAnnotation = "divert.okteto.com/injection"
+	// OktetoDivertHeader the header used by okteto to divert traffic
+	OktetoDivertHeader = "x-okteto-divert"
 )

@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -228,7 +228,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			case ss, ok := <-ch:
 				if ok {
 					plainChannel <- ss
-					if progress == oktetoLog.TTYFormat {
+					if progress == oktetoLog.TTYFormat || progress == "deploy" {
 						ttyChannel <- ss
 					}
 				} else {
@@ -247,20 +247,32 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 	})
 
 	eg.Go(func() error {
-		var c console.Console
+
 		w := &buildWriter{}
-		if progress == oktetoLog.TTYFormat {
+		switch progress {
+		case oktetoLog.TTYFormat:
+			var c console.Console
+
 			if cn, err := console.ConsoleFromFile(os.Stdout); err == nil {
 				c = cn
 			} else {
 				oktetoLog.Debugf("could not create console from file: %s ", err)
 			}
-			go progressui.DisplaySolveStatus(context.TODO(), "", c, oktetoLog.GetOutputWriter(), ttyChannel)
+			go func() {
+				if err := progressui.DisplaySolveStatus(context.TODO(), "", c, oktetoLog.GetOutputWriter(), ttyChannel); err != nil {
+					oktetoLog.Infof("could not display solve status: %s", err)
+				}
+			}()
 			// not using shared context to not disrupt display but let it finish reporting errors
 			return progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
+		case "deploy":
+			go deployDisplayer(context.TODO(), ttyChannel)
+			return progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
+		default:
+			// not using shared context to not disrupt display but let it finish reporting errors
+			return progressui.DisplaySolveStatus(context.TODO(), "", nil, oktetoLog.GetOutputWriter(), plainChannel)
 		}
-		// not using shared context to not disrupt display but let it finish reporting errors
-		return progressui.DisplaySolveStatus(context.TODO(), "", nil, oktetoLog.GetOutputWriter(), plainChannel)
+
 	})
 
 	return eg.Wait()

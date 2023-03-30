@@ -22,6 +22,9 @@ import (
 type FakeNamespaceClient struct {
 	namespaces []types.Namespace
 	err        error
+
+	// WakeCalls is the number of times Wake was called
+	WakeCalls int
 }
 
 func NewFakeNamespaceClient(ns []types.Namespace, err error) *FakeNamespaceClient {
@@ -46,22 +49,37 @@ func (c *FakeNamespaceClient) AddMembers(_ context.Context, _ string, _ []string
 
 // Delete deletes a namespace
 func (c *FakeNamespaceClient) Delete(_ context.Context, namespace string) error {
-	toRemove := -1
-	for idx, ns := range c.namespaces {
-		if ns.ID == namespace {
-			toRemove = idx
-			break
+	var updatedNamespaces []types.Namespace
+	for _, ns := range c.namespaces {
+		if ns.ID != namespace {
+			updatedNamespaces = append(updatedNamespaces, ns)
 		}
 	}
-	if toRemove != -1 {
-		c.namespaces[toRemove] = c.namespaces[len(c.namespaces)-1]
-		c.namespaces = c.namespaces[:len(c.namespaces)-1]
-		return nil
+	// if updated are same as current, namespace was not found
+	if len(updatedNamespaces) == len(c.namespaces) {
+		return fmt.Errorf("not found")
 	}
-	return fmt.Errorf("not found")
+	// override with updated
+	c.namespaces = updatedNamespaces
+	return nil
 }
 
-// SleepNamespace deletes a namespace
-func (*FakeNamespaceClient) SleepNamespace(_ context.Context, _ string) error {
+// Sleep deletes a namespace
+func (*FakeNamespaceClient) Sleep(_ context.Context, _ string) error {
+	return nil
+}
+
+// DestroyAll deletes a namespace
+func (*FakeNamespaceClient) DestroyAll(_ context.Context, _ string, _ bool) error {
+	return nil
+}
+
+// Wake wakes up a namespace
+func (c *FakeNamespaceClient) Wake(_ context.Context, _ string) error {
+	if c.err != nil {
+		return c.err
+	}
+
+	c.WakeCalls++
 	return nil
 }

@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -22,6 +22,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type PipelineDeployerInterface interface {
+	ExecuteDeployPipeline(ctx context.Context, opts *DeployOptions) error
+}
+type PipelineInterface interface {
+	PipelineDeployerInterface
+}
+
 // Command has all the pipeline subcommands
 type Command struct {
 	okClient types.OktetoInterface
@@ -29,12 +36,16 @@ type Command struct {
 
 // NewCommand creates a namespace command to
 func NewCommand() (*Command, error) {
-	c, err := okteto.NewOktetoClient()
-	if err != nil {
-		return nil, err
+	var okClient = &okteto.OktetoClient{}
+	if okteto.IsOkteto() {
+		c, err := okteto.NewOktetoClient()
+		if err != nil {
+			return nil, err
+		}
+		okClient = c
 	}
 	return &Command{
-		okClient: c,
+		okClient: okClient,
 	}, nil
 }
 

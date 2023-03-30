@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -18,34 +18,28 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"time"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/namespace"
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
-	stackCMD "github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
-	"github.com/okteto/okteto/pkg/cmd/stack"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
-	"github.com/okteto/okteto/pkg/k8s/diverts"
-	"github.com/okteto/okteto/pkg/k8s/ingresses"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -69,6 +63,7 @@ type Options struct {
 	Build            bool
 	Dependencies     bool
 	RunWithoutBash   bool
+	RunInRemote      bool
 	servicesToDeploy []string
 
 	Repository string
@@ -83,14 +78,34 @@ type Options struct {
 type DeployCommand struct {
 	GetManifest func(path string) (*model.Manifest, error)
 
-	Proxy              proxyInterface
-	Kubeconfig         kubeConfigHandler
-	Executor           executor.ManifestExecutor
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
+	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
+	GetDeployer        func(context.Context, *model.Manifest, *Options, string, *buildv2.OktetoBuilder) (deployerInterface, error)
+	deployWaiter       deployWaiter
+	CfgMapHandler      configMapHandler
+	Fs                 afero.Fs
+	DivertDriver       divert.Driver
+	PipelineCMD        pipelineCMD.PipelineDeployerInterface
 
 	PipelineType model.Archetype
+	isRemote     bool
+}
+
+type ExternalResourceValidatorInterface interface {
+	Validate(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
+}
+
+type ExternalResourceInterface interface {
+	Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
+	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
+	ExternalResourceValidatorInterface
+}
+
+type deployerInterface interface {
+	deploy(context.Context, *Options) error
+	cleanUp(context.Context, error)
 }
 
 // Deploy deploys the okteto manifest
@@ -101,7 +116,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 		Use:   "deploy [service...]",
 		Short: "Execute locally the list of commands specified in the 'deploy' section of your okteto manifest",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
 			// validate cmd options
 			if options.Dependencies && !okteto.IsOkteto() {
 				return fmt.Errorf("'dependencies' is only supported in clusters that have Okteto installed")
@@ -155,41 +169,32 @@ func Deploy(ctx context.Context) *cobra.Command {
 					if err != nil {
 						return err
 					}
-					nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.Context().Namespace})
-				}
-			}
-
-			cwd, err := os.Getwd()
-			if err != nil {
-				return fmt.Errorf("failed to get the current working directory: %w", err)
-			}
-			name := options.Name
-			if options.Name == "" {
-				name = utils.InferName(cwd)
-				if err != nil {
-					return fmt.Errorf("could not infer environment name")
+					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.Context().Namespace}); err != nil {
+						return err
+					}
 				}
 			}
 
 			options.ShowCTA = oktetoLog.IsInteractive()
 			options.servicesToDeploy = args
 
-			kubeconfig := NewKubeConfig()
-
-			proxy, err := NewProxy(kubeconfig)
+			k8sClientProvider := okteto.NewK8sClientProvider()
+			pc, err := pipelineCMD.NewCommand()
 			if err != nil {
-				oktetoLog.Infof("could not configure local proxy: %s", err)
-				return err
+				return fmt.Errorf("could not create pipeline command: %w", err)
 			}
-
 			c := &DeployCommand{
-				GetManifest:        model.GetManifestV2,
-				Kubeconfig:         kubeconfig,
-				Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
-				Proxy:              proxy,
-				TempKubeconfigFile: GetTempKubeConfigFile(name),
-				K8sClientProvider:  okteto.NewK8sClientProvider(),
+				GetManifest: model.GetManifestV2,
+
+				GetExternalControl: getExternalControlFromCtx,
+				K8sClientProvider:  k8sClientProvider,
+				GetDeployer:        GetDeployer,
 				Builder:            buildv2.NewBuilderFromScratch(),
+				deployWaiter:       newDeployWaiter(k8sClientProvider),
+				isRemote:           utils.LoadBoolean(constants.OKtetoDeployRemote),
+				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider),
+				Fs:                 afero.NewOsFs(),
+				PipelineCMD:        pc,
 			}
 			startTime := time.Now()
 
@@ -198,7 +203,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			exit := make(chan error, 1)
 
 			go func() {
-				err = c.RunDeploy(ctx, options)
+				err := c.RunDeploy(ctx, options)
 
 				deployType := "custom"
 				hasDependencySection := false
@@ -236,7 +241,11 @@ func Deploy(ctx context.Context) *cobra.Command {
 				oktetoLog.StartSpinner()
 				defer oktetoLog.StopSpinner()
 
-				c.Executor.CleanUp(oktetoErrors.ErrIntSig)
+				deployer, err := c.GetDeployer(ctx, options.Manifest, options, "", nil)
+				if err != nil {
+					return err
+				}
+				deployer.cleanUp(ctx, oktetoErrors.ErrIntSig)
 				return oktetoErrors.ErrIntSig
 			case err := <-exit:
 				return err
@@ -252,6 +261,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the development environment")
 	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")
+	cmd.Flags().BoolVarP(&options.RunInRemote, "remote", "", false, "force run deploy commands in remote")
 
 	cmd.Flags().BoolVarP(&options.Wait, "wait", "w", false, "wait until the development environment is deployed (defaults to false)")
 	cmd.Flags().DurationVarP(&options.Timeout, "timeout", "t", getDefaultTimeout(), "the length of time to wait for completion, zero means never. Any other values should contain a corresponding time unit e.g. 1s, 2m, 3h ")
@@ -261,6 +271,22 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 // RunDeploy runs the deploy sequence
 func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
+	var err error
+	oktetoLog.SetStage("Load manifest")
+	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
+	if err != nil {
+		return err
+	}
+	oktetoLog.Debug("found okteto manifest")
+	dc.PipelineType = deployOptions.Manifest.Type
+
+	if deployOptions.Manifest.Deploy == nil {
+		return oktetoErrors.ErrManifestFoundButNoDeployCommands
+	}
+	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy.ComposeSection == nil {
+		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
+	}
+
 	cwd, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get the current working directory: %w", err)
@@ -272,28 +298,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	if err != nil {
 		return err
 	}
-
-	addEnvVars(ctx, cwd)
-
-	// Injecting the PROXY into the kubeconfig file
-	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
-	if err := dc.Kubeconfig.Modify(dc.Proxy.GetPort(), dc.Proxy.GetToken(), dc.TempKubeconfigFile); err != nil {
-		oktetoLog.Infof("could not create temporal kubeconfig %s", err)
-		return err
-	}
-	oktetoLog.SetStage("Load manifest")
-	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
-	if err != nil {
-		return err
-	}
-	oktetoLog.Debug("found okteto manifest")
-
-	if deployOptions.Manifest.Deploy == nil {
-		return oktetoErrors.ErrManifestFoundButNoDeployCommands
-	}
-	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy.ComposeSection == nil {
-		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
-	}
+	dc.addEnvVars(cwd)
 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
@@ -314,93 +319,34 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
-	dc.Proxy.SetName(format.ResourceK8sMetaString(deployOptions.Name))
-	// don't divert if current namespace is the diverted namespace
-	if deployOptions.Manifest.Deploy.Divert != nil {
-		if !okteto.IsOkteto() {
-			return oktetoErrors.ErrDivertNotSupported
-		}
-		if deployOptions.Manifest.Deploy.Divert.Namespace != deployOptions.Manifest.Namespace {
-			dc.Proxy.SetDivert(deployOptions.Manifest.Deploy.Divert.Namespace)
-		}
+	cfg, err := dc.CfgMapHandler.translateConfigMapAndDeploy(ctx, data)
+	if err != nil {
+		return err
 	}
-
-	dc.PipelineType = deployOptions.Manifest.Type
 
 	os.Setenv(constants.OktetoNameEnvVar, deployOptions.Name)
 
-	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
+	if err := dc.deployDependencies(ctx, deployOptions); err != nil {
+		if errStatus := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
+			return errStatus
+		}
 		return err
 	}
-
-	oktetoLog.SetStage("")
-
-	// starting PROXY
-	oktetoLog.Debugf("starting server on %d", dc.Proxy.GetPort())
-	dc.Proxy.Start()
-
-	cfg, err := getConfigMapFromData(ctx, data, c)
-	if err != nil {
-		return err
-	}
-
-	dc.deployDependencies(ctx, deployOptions, data, c, cfg)
-
-	oktetoLog.SetStage("")
 
 	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
-		return updateConfigMapStatusError(ctx, cfg, c, data, err)
+		return dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err)
 	}
 
-	// Not sure of the value for the `deployed-by` label
-	pods, err := c.CoreV1().Pods(okteto.Context().Namespace).List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", model.DeployedByLabel, deployOptions.Name)})
+	if err := dc.recreateFailedPods(ctx, deployOptions.Name); err != nil {
+		oktetoLog.Infof("failed to recreate failed pods: %s", err.Error())
+	}
+
+	deployer, err := dc.GetDeployer(ctx, deployOptions.Manifest, deployOptions, cwd, dc.Builder)
 	if err != nil {
-		// return err
-		oktetoLog.Infof("could not list pods %s", err)
-	}
-	for _, pod := range pods.Items {
-		if pod.Status.Phase == "Failed" {
-			err := c.CoreV1().Pods(okteto.Context().Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
-			if err != nil {
-				// return err
-				oktetoLog.Infof("could not delete pod %s", err)
-			}
-		}
+		return err
 	}
 
-	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Deploying '%s'...", deployOptions.Name)
-
-	defer dc.cleanUp(ctx)
-
-	for _, variable := range deployOptions.Variables {
-		value := strings.SplitN(variable, "=", 2)[1]
-		if strings.TrimSpace(value) != "" {
-			oktetoLog.AddMaskedWord(value)
-		}
-	}
-	deployOptions.Variables = append(
-		deployOptions.Variables,
-		// Set KUBECONFIG environment variable as environment for the commands to be executed
-		fmt.Sprintf("%s=%s", constants.KubeConfigEnvVar, dc.TempKubeconfigFile),
-		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all okteto commands ran inside this deploy
-		// know they are running inside another okteto deploy
-		fmt.Sprintf("%s=true", constants.OktetoWithinDeployCommandContextEnvVar),
-		// Set OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE env variable, so all the Okteto commands executed within this command execution
-		// should not overwrite the server and the credentials in the kubeconfig
-		fmt.Sprintf("%s=true", constants.OktetoSkipConfigCredentialsUpdate),
-		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
-		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
-		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
-		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
-		// Set OKTETO_AUTODISCOVERY_RELEASE_NAME=sanitized name, so the release name in case of autodiscovery of helm is valid
-		fmt.Sprintf("%s=%s", constants.OktetoAutodiscoveryReleaseName, format.ResourceK8sMetaString(deployOptions.Name)),
-	)
-	oktetoLog.EnableMasking()
-	err = dc.deploy(ctx, deployOptions)
-	oktetoLog.DisableMasking()
-	oktetoLog.SetStage("done")
-	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
-
+	err = deployer.deploy(ctx, deployOptions)
 	if err != nil {
 		if err == oktetoErrors.ErrIntSig {
 			return nil
@@ -416,12 +362,17 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 		if hasDeployed {
 			if deployOptions.Wait {
-				if err := dc.wait(ctx, deployOptions); err != nil {
+				if err := dc.deployWaiter.wait(ctx, deployOptions); err != nil {
 					return err
 				}
 			}
 			if !utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
-				if err := dc.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: deployOptions.Manifest.Namespace}); err != nil {
+				eg := &endpointGetter{
+					K8sClientProvider:  dc.K8sClientProvider,
+					GetExternalControl: dc.GetExternalControl,
+					TempKubeconfigFile: dc.TempKubeconfigFile,
+				}
+				if err := eg.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: deployOptions.Manifest.Namespace}); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
 				}
 			}
@@ -436,196 +387,11 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Status = pipeline.DeployedStatus
 	}
 
-	if err := pipeline.UpdateConfigMap(ctx, cfg, data, c); err != nil {
+	if err := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); err != nil {
 		return err
 	}
 
 	return err
-}
-
-func (dc *DeployCommand) deployDependencies(ctx context.Context, opts *Options, data *pipeline.CfgData, c kubernetes.Interface, cfg *corev1.ConfigMap) error {
-
-	for depName, dep := range opts.Manifest.Dependencies {
-		oktetoLog.Information("Deploying dependency '%s'", depName)
-		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
-		dep.Variables = append(dep.Variables, model.EnvVar{
-			Name:  "OKTETO_ORIGIN",
-			Value: "okteto-deploy",
-		})
-		namespace := okteto.Context().Namespace
-		if dep.Namespace != "" {
-			namespace = dep.Namespace
-		}
-		pipOpts := &pipelineCMD.DeployOptions{
-			Name:         depName,
-			Repository:   dep.Repository,
-			Branch:       dep.Branch,
-			File:         dep.ManifestPath,
-			Variables:    model.SerializeEnvironmentVars(dep.Variables),
-			Wait:         dep.Wait,
-			Timeout:      dep.GetTimeout(opts.Timeout),
-			SkipIfExists: !opts.Dependencies,
-			Namespace:    namespace,
-		}
-		pc, err := pipelineCMD.NewCommand()
-		if err != nil {
-			return fmt.Errorf("could not create pipeline command: %w", err)
-		}
-		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
-			if errStatus := updateConfigMapStatus(ctx, cfg, c, data, err); errStatus != nil {
-				return errStatus
-			}
-
-			return err
-		}
-	}
-	return nil
-}
-
-func (dc *DeployCommand) deploy(ctx context.Context, opts *Options) error {
-	// deploy commands if any
-	for _, command := range opts.Manifest.Deploy.Commands {
-		oktetoLog.Information("Running '%s'", command.Name)
-		oktetoLog.SetStage(command.Name)
-		if err := dc.Executor.Execute(command, opts.Variables); err != nil {
-			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
-			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
-		}
-		oktetoLog.SetStage("")
-	}
-
-	// deploy compose if any
-	if opts.Manifest.Deploy.ComposeSection != nil {
-		oktetoLog.SetStage("Deploying compose")
-		if err := dc.deployStack(ctx, opts); err != nil {
-			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())
-			return err
-		}
-		oktetoLog.SetStage("")
-	}
-
-	// deploy endpoits if any
-	if opts.Manifest.Deploy.Endpoints != nil {
-		oktetoLog.SetStage("Endpoints configuration")
-		if err := dc.deployEndpoints(ctx, opts); err != nil {
-			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error generating endpoints: %s", err.Error())
-			return err
-		}
-		oktetoLog.SetStage("")
-	}
-
-	// deploy diver if any
-	if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
-		oktetoLog.SetStage("Divert configuration")
-		if err := dc.deployDivert(ctx, opts); err != nil {
-			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
-			return err
-		}
-		oktetoLog.Success("Divert from '%s' successfully configured", opts.Manifest.Deploy.Divert.Namespace)
-		oktetoLog.SetStage("")
-	}
-
-	return nil
-
-}
-
-func (dc *DeployCommand) deployStack(ctx context.Context, opts *Options) error {
-	composeSectionInfo := opts.Manifest.Deploy.ComposeSection
-	composeSectionInfo.Stack.Namespace = okteto.Context().Namespace
-
-	var composeFiles []string
-	for _, composeInfo := range composeSectionInfo.ComposesInfo {
-		composeFiles = append(composeFiles, composeInfo.File)
-	}
-	stackOpts := &stack.StackDeployOptions{
-		StackPaths:       composeFiles,
-		ForceBuild:       false,
-		Wait:             opts.Wait,
-		Timeout:          opts.Timeout,
-		ServicesToDeploy: opts.servicesToDeploy,
-		InsidePipeline:   true,
-	}
-
-	c, cfg, err := dc.K8sClientProvider.Provide(kubeconfig.Get([]string{dc.TempKubeconfigFile}))
-	if err != nil {
-		return err
-	}
-	stackCommand := stackCMD.DeployCommand{
-		K8sClient:      c,
-		Config:         cfg,
-		IsInsideDeploy: true,
-	}
-	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
-}
-
-func (dc *DeployCommand) deployDivert(ctx context.Context, opts *Options) error {
-
-	oktetoLog.Spinner(fmt.Sprintf("Diverting namespace %s...", opts.Manifest.Deploy.Divert.Namespace))
-	oktetoLog.StartSpinner()
-	defer oktetoLog.StopSpinner()
-
-	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
-	if err != nil {
-		return err
-	}
-
-	cache, err := diverts.InitDivertCache(ctx, opts.Manifest, c)
-	if err != nil {
-		return err
-	}
-
-	for name, in := range cache.DivertIngresses {
-		select {
-		case <-ctx.Done():
-			oktetoLog.Infof("deployDivert context cancelled")
-			return ctx.Err()
-		default:
-			oktetoLog.Spinner(fmt.Sprintf("Diverting ingress %s/%s...", in.Namespace, in.Name))
-			if err := diverts.DivertIngress(ctx, opts.Manifest, name, cache, c); err != nil {
-				return err
-			}
-		}
-	}
-	return diverts.CreateDivertCRD(ctx, opts.Manifest)
-}
-
-func (dc *DeployCommand) deployEndpoints(ctx context.Context, opts *Options) error {
-
-	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
-	if err != nil {
-		return err
-	}
-
-	iClient, err := ingresses.GetClient(c)
-	if err != nil {
-		return fmt.Errorf("error getting ingress client: %s", err.Error())
-	}
-
-	translateOptions := &ingresses.TranslateOptions{
-		Namespace: opts.Manifest.Namespace,
-		Name:      format.ResourceK8sMetaString(opts.Manifest.Name),
-	}
-
-	for name, endpoint := range opts.Manifest.Deploy.Endpoints {
-		ingress := ingresses.Translate(name, endpoint, translateOptions)
-		if err := iClient.Deploy(ctx, ingress); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (dc *DeployCommand) cleanUp(ctx context.Context) {
-	oktetoLog.Debugf("removing temporal kubeconfig file '%s'", dc.TempKubeconfigFile)
-	if err := os.Remove(dc.TempKubeconfigFile); err != nil {
-		oktetoLog.Infof("could not remove temporal kubeconfig file: %s", err)
-	}
-
-	oktetoLog.Debugf("stopping local server...")
-	if err := dc.Proxy.Shutdown(ctx); err != nil {
-		oktetoLog.Infof("could not stop local server: %s", err)
-	}
 }
 
 func buildImages(ctx context.Context, build func(context.Context, *types.BuildOptions) error, getServicesToBuild func(context.Context, *model.Manifest, []string) ([]string, error), deployOptions *Options) error {
@@ -738,4 +504,79 @@ func getDefaultTimeout() time.Duration {
 	}
 
 	return parsed
+}
+
+func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, cwd string, builder *buildv2.OktetoBuilder) (deployerInterface, error) {
+	var (
+		deployer deployerInterface
+		err      error
+	)
+
+	isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
+
+	if isRemote || manifest.Deploy.Image == "" {
+		deployer, err = newLocalDeployer(ctx, cwd, opts)
+		if err != nil {
+			return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
+		}
+		oktetoLog.Info("Deploying locally...")
+	} else {
+		deployer = newRemoteDeployer(builder)
+		oktetoLog.Info("Deploying remotely...")
+	}
+	return deployer, nil
+}
+
+// deployDependencies deploy the dependencies in the manifest
+func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *Options) error {
+	for depName, dep := range deployOptions.Manifest.Dependencies {
+		oktetoLog.Information("Deploying dependency '%s'", depName)
+		oktetoLog.SetStage(fmt.Sprintf("Deploying dependency %s", depName))
+		dep.Variables = append(dep.Variables, model.EnvVar{
+			Name:  "OKTETO_ORIGIN",
+			Value: "okteto-deploy",
+		})
+		namespace := okteto.Context().Namespace
+		if dep.Namespace != "" {
+			namespace = dep.Namespace
+		}
+		pipOpts := &pipelineCMD.DeployOptions{
+			Name:         depName,
+			Repository:   dep.Repository,
+			Branch:       dep.Branch,
+			File:         dep.ManifestPath,
+			Variables:    model.SerializeEnvironmentVars(dep.Variables),
+			Wait:         dep.Wait,
+			Timeout:      dep.GetTimeout(deployOptions.Timeout),
+			SkipIfExists: !deployOptions.Dependencies,
+			Namespace:    namespace,
+		}
+
+		if err := dc.PipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+			return err
+		}
+	}
+	oktetoLog.SetStage("")
+	return nil
+}
+
+func (dc *DeployCommand) recreateFailedPods(ctx context.Context, name string) error {
+	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return fmt.Errorf("could not get kubernetes client: %s", err)
+	}
+
+	pods, err := c.CoreV1().Pods(okteto.Context().Namespace).List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", model.DeployedByLabel, format.ResourceK8sMetaString(name))})
+	if err != nil {
+		return fmt.Errorf("could not list pods: %s", err)
+	}
+	for _, pod := range pods.Items {
+		if pod.Status.Phase == "Failed" {
+			err := c.CoreV1().Pods(okteto.Context().Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+			if err != nil {
+				return fmt.Errorf("could not delete pod %s: %s", pod.Name, err)
+			}
+		}
+	}
+	return nil
 }

@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -37,6 +37,7 @@ type FakeOktetoClient struct {
 	Users          types.UserInterface
 	Preview        types.PreviewInterface
 	PipelineClient types.PipelineInterface
+	StreamClient   types.StreamInterface
 }
 
 func NewFakeOktetoClient() *FakeOktetoClient {
@@ -61,4 +62,9 @@ func (c *FakeOktetoClient) User() types.UserInterface {
 // Pipeline retrieves the PipelineClient
 func (c *FakeOktetoClient) Pipeline() types.PipelineInterface {
 	return c.PipelineClient
+}
+
+// Stream retrieves the SSE client
+func (c *FakeOktetoClient) Stream() types.StreamInterface {
+	return c.StreamClient
 }

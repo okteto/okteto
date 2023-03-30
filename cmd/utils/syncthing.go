@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io"
 
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/vbauerster/mpb/v7"
 	decor "github.com/vbauerster/mpb/v7/decor"
 )
@@ -75,11 +76,15 @@ func (s *SyncthingProgress) Finish() {
 
 func NewLineBarFiller(filler mpb.BarFiller) mpb.BarFiller {
 	return mpb.BarFillerFunc(func(w io.Writer, reqWidth int, st decor.Statistics) {
-		w.Write([]byte("   "))
+		if _, err := w.Write([]byte("   ")); err != nil {
+			oktetoLog.Infof("error writing to writer: %s", err)
+		}
 		filler.Fill(w, reqWidth, st)
 		percentage := Percentage(st.Total, st.Current, 100)
 		afterBarText := fmt.Sprintf(" %d%%\n", int(percentage))
-		w.Write([]byte(afterBarText))
+		if _, err := w.Write([]byte(afterBarText)); err != nil {
+			oktetoLog.Infof("error writing to writer: %s", err)
+		}
 	})
 }
 

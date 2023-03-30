@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -104,7 +104,7 @@ func addStignoreSecrets(dev *model.Dev) error {
 			model.Secret{
 				LocalPath:  transformedStignorePath,
 				RemotePath: path.Join(folder.RemotePath, ".stignore"),
-				Mode:       0600,
+				Mode:       0644,
 			},
 		)
 	}
@@ -137,7 +137,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 			continue
 		}
 
-		if err := askIfUpdatingStignore(stignorePath); err != nil {
+		if err := checkIfStignoreHasGitFolder(stignorePath); err != nil {
 			return err
 		}
 	}
@@ -187,7 +187,7 @@ func askIfCreateStignoreDefaults(folder, stignorePath string) error {
 	return nil
 }
 
-func askIfUpdatingStignore(stignorePath string) error {
+func checkIfStignoreHasGitFolder(stignorePath string) error {
 	stignoreBytes, err := os.ReadFile(stignorePath)
 	if err != nil {
 		return fmt.Errorf("failed to read '%s': %s", stignorePath, err.Error())
@@ -197,19 +197,6 @@ func askIfUpdatingStignore(stignorePath string) error {
 		return nil
 	}
 
-	oktetoLog.Information("The synchronization service performance is degraded if the '.git' folder is synchronized.")
-	ignoreGit, err := utils.AskYesNo("Do you want to ignore the '.git' folder in your '.stignore' file?", utils.YesNoDefault_Yes)
-	if err != nil {
-		return fmt.Errorf("failed to ask for adding '.git' to '%s': %s", stignorePath, err.Error())
-	}
-	oktetoLog.Infof("adding '.git' to '%s'", stignorePath)
-	if ignoreGit {
-		stignoreContent = fmt.Sprintf(".git\n%s", stignoreContent)
-	} else {
-		stignoreContent = fmt.Sprintf("// .git\n%s", stignoreContent)
-	}
-	if err := os.WriteFile(stignorePath, []byte(stignoreContent), 0600); err != nil {
-		return fmt.Errorf("failed to update '%s': %s", stignorePath, err.Error())
-	}
+	oktetoLog.Warning("The synchronization service performance could be degraded if the '.git' folder is synchronized. Please add '.git' to the '.stignore' file.")
 	return nil
 }

@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
+	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -66,7 +66,7 @@ func Test_deploySvc(t *testing.T) {
 				Services: map[string]*model.Service{
 					"test": {
 						Image:         "test_image",
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 					},
 				},
 			},
@@ -80,7 +80,7 @@ func Test_deploySvc(t *testing.T) {
 				Services: map[string]*model.Service{
 					"test": {
 						Image:         "test_image",
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 						Volumes: []model.StackVolume{
 							{
 								LocalPath:  "a",
@@ -103,7 +103,7 @@ func Test_deploySvc(t *testing.T) {
 				Services: map[string]*model.Service{
 					"test": {
 						Image:         "test_image",
-						RestartPolicy: corev1.RestartPolicyNever,
+						RestartPolicy: apiv1.RestartPolicyNever,
 					},
 				},
 			},
@@ -175,7 +175,7 @@ func Test_reDeploySvc(t *testing.T) {
 				Services: map[string]*model.Service{
 					"serviceName": {
 						Image:         "test_image",
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 					},
 				},
 			},
@@ -190,7 +190,7 @@ func Test_reDeploySvc(t *testing.T) {
 				Services: map[string]*model.Service{
 					"serviceName": {
 						Image:         "test_image",
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 						Volumes: []model.StackVolume{
 							{
 								LocalPath:  "a",
@@ -214,7 +214,7 @@ func Test_reDeploySvc(t *testing.T) {
 				Services: map[string]*model.Service{
 					"serviceName": {
 						Image:         "test_image",
-						RestartPolicy: corev1.RestartPolicyNever,
+						RestartPolicy: apiv1.RestartPolicyNever,
 					},
 				},
 			},
@@ -273,7 +273,7 @@ func Test_deployDeployment(t *testing.T) {
 		Services: map[string]*model.Service{
 			"test": {
 				Image:         "test_image",
-				RestartPolicy: corev1.RestartPolicyAlways,
+				RestartPolicy: apiv1.RestartPolicyAlways,
 			},
 		},
 	}
@@ -298,7 +298,7 @@ func Test_deployVolumes(t *testing.T) {
 		Services: map[string]*model.Service{
 			"test": {
 				Image:         "test_image",
-				RestartPolicy: corev1.RestartPolicyAlways,
+				RestartPolicy: apiv1.RestartPolicyAlways,
 				Volumes: []model.StackVolume{
 					{
 						LocalPath:  "a",
@@ -332,7 +332,7 @@ func Test_deploySfs(t *testing.T) {
 		Services: map[string]*model.Service{
 			"test": {
 				Image:         "test_image",
-				RestartPolicy: corev1.RestartPolicyAlways,
+				RestartPolicy: apiv1.RestartPolicyAlways,
 				Volumes: []model.StackVolume{
 					{
 						LocalPath:  "a",
@@ -366,7 +366,7 @@ func Test_deployJob(t *testing.T) {
 		Services: map[string]*model.Service{
 			"test": {
 				Image:         "test_image",
-				RestartPolicy: corev1.RestartPolicyNever,
+				RestartPolicy: apiv1.RestartPolicyNever,
 			},
 		},
 	}
@@ -487,7 +487,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"job-not-running": {
-						RestartPolicy: corev1.RestartPolicyNever,
+						RestartPolicy: apiv1.RestartPolicyNever,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"job-not-running": model.DependsOnConditionSpec{},
@@ -509,7 +509,7 @@ func Test_AddSomeServices(t *testing.T) {
 								RemotePath: "/",
 							},
 						},
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"sfs-not-running": model.DependsOnConditionSpec{},
@@ -525,7 +525,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"dep-not-running": {
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"dep-not-running": model.DependsOnConditionSpec{},
@@ -541,7 +541,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"job-active": {
-						RestartPolicy: corev1.RestartPolicyNever,
+						RestartPolicy: apiv1.RestartPolicyNever,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"job-active": model.DependsOnConditionSpec{},
@@ -557,7 +557,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"job-failed": {
-						RestartPolicy: corev1.RestartPolicyNever,
+						RestartPolicy: apiv1.RestartPolicyNever,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"job-failed": model.DependsOnConditionSpec{},
@@ -573,7 +573,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"job-succeeded": {
-						RestartPolicy: corev1.RestartPolicyNever,
+						RestartPolicy: apiv1.RestartPolicyNever,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"job-succeeded": model.DependsOnConditionSpec{},
@@ -595,7 +595,7 @@ func Test_AddSomeServices(t *testing.T) {
 								RemotePath: "/",
 							},
 						},
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"sfs": model.DependsOnConditionSpec{},
@@ -611,7 +611,7 @@ func Test_AddSomeServices(t *testing.T) {
 				Namespace: "default",
 				Services: map[string]*model.Service{
 					"dep": {
-						RestartPolicy: corev1.RestartPolicyAlways,
+						RestartPolicy: apiv1.RestartPolicyAlways,
 					},
 					"app": {DependsOn: model.DependsOn{
 						"dep": model.DependsOnConditionSpec{},
@@ -783,7 +783,7 @@ func TestDeployK8sService(t *testing.T) {
 		{
 			name: "skip service",
 			k8sObjects: []runtime.Object{
-				&corev1.Service{
+				&apiv1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "ns",
@@ -809,7 +809,7 @@ func TestDeployK8sService(t *testing.T) {
 		{
 			name: "update service",
 			k8sObjects: []runtime.Object{
-				&corev1.Service{
+				&apiv1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "ns",
@@ -882,15 +882,15 @@ func TestGetErrorDueToRestartLimit(t *testing.T) {
 		{
 			name: "dependent svc without reaching backoff",
 			k8sObjects: []runtime.Object{
-				&corev1.Pod{
+				&apiv1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
 							model.StackNameLabel:        "test",
 							model.StackServiceNameLabel: "test1",
 						},
 					},
-					Status: corev1.PodStatus{
-						ContainerStatuses: []corev1.ContainerStatus{
+					Status: apiv1.PodStatus{
+						ContainerStatuses: []apiv1.ContainerStatus{
 							{
 								RestartCount: 1,
 							},
@@ -919,15 +919,15 @@ func TestGetErrorDueToRestartLimit(t *testing.T) {
 		{
 			name: "dependent svc reaching backoff",
 			k8sObjects: []runtime.Object{
-				&corev1.Pod{
+				&apiv1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Labels: map[string]string{
 							model.StackNameLabel:        "test",
 							model.StackServiceNameLabel: "test1",
 						},
 					},
-					Status: corev1.PodStatus{
-						ContainerStatuses: []corev1.ContainerStatus{
+					Status: apiv1.PodStatus{
+						ContainerStatuses: []apiv1.ContainerStatus{
 							{
 								RestartCount: 5,
 							},

@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -68,6 +68,7 @@ Or a Kubernetes context:
 
 			ctxOptions.IsCtxCommand = true
 			ctxOptions.Save = true
+			ctxOptions.CheckNamespaceAccess = ctxOptions.Namespace != ""
 
 			err := NewContextCommand().Run(ctx, ctxOptions)
 			analytics.TrackContext(err == nil)
@@ -84,12 +85,21 @@ Or a Kubernetes context:
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
 	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")
 	cmd.Flags().BoolVarP(&ctxOptions.OnlyOkteto, "okteto", "", false, "only shows okteto cluster options")
-	cmd.Flags().MarkHidden("okteto")
+	if err := cmd.Flags().MarkHidden("okteto"); err != nil {
+		oktetoLog.Infof("failed to mark 'okteto' flag as hidden: %s", err)
+	}
 	return cmd
 }
 
 func (c *ContextCommand) Run(ctx context.Context, ctxOptions *ContextOptions) error {
 	ctxStore := okteto.ContextStore()
+	if len(ctxStore.Contexts) == 0 {
+		// if the context store has no context stored, set flag to save the
+		// new one generated. This is necessary for any command other than
+		// 'okteto context' because by default the option is false
+		// for it.
+		ctxOptions.Save = true
+	}
 
 	// We have to maintain this order to not break some commands
 	// See https://github.com/okteto/okteto/issues/3247 for more information

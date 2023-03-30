@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -33,14 +33,19 @@ type OktetoBuilderInterface interface {
 	Run(ctx context.Context, buildOptions *types.BuildOptions) error
 }
 
+type oktetoRegistryInterface interface {
+	GetImageTagWithDigest(imageTag string) (string, error)
+	HasGlobalPushAccess() (bool, error)
+}
+
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
 	Builder  OktetoBuilderInterface
-	Registry build.OktetoRegistryInterface
+	Registry oktetoRegistryInterface
 }
 
 // NewBuilder creates a new okteto builder
-func NewBuilder(builder OktetoBuilderInterface, registry build.OktetoRegistryInterface) *OktetoBuilder {
+func NewBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface) *OktetoBuilder {
 	return &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
@@ -50,11 +55,8 @@ func NewBuilder(builder OktetoBuilderInterface, registry build.OktetoRegistryInt
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch() *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
-	registry := registry.NewOktetoRegistry()
-	return &OktetoBuilder{
-		Builder:  builder,
-		Registry: registry,
-	}
+	registry := registry.NewOktetoRegistry(okteto.Config{})
+	return NewBuilder(builder, registry)
 }
 
 // IsV1 returns true since it is a builder v1

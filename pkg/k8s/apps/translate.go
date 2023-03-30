@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -52,8 +52,9 @@ type Translation struct {
 }
 
 func (tr *Translation) translate() error {
-	tr.DevModeOff()
-
+	if err := tr.DevModeOff(); err != nil {
+		oktetoLog.Infof("failed to translate dev mode off: %s", err)
+	}
 	replicas := getPreviousAppReplicas(tr.App)
 	delete(tr.App.ObjectMeta().Annotations, model.StateBeforeSleepingAnnontation)
 
@@ -452,6 +453,10 @@ func TranslateContainerSecurityContext(c *apiv1.Container, s *model.SecurityCont
 
 	if s.RunAsNonRoot != nil {
 		c.SecurityContext.RunAsNonRoot = s.RunAsNonRoot
+	}
+
+	if s.AllowPrivilegeEscalation != nil {
+		c.SecurityContext.AllowPrivilegeEscalation = s.AllowPrivilegeEscalation
 	}
 
 	if s.Capabilities == nil {

@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,6 +15,7 @@ package context
 
 import (
 	"github.com/okteto/okteto/cmd/utils"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
@@ -58,6 +59,8 @@ This will prompt you to select one of your existing contexts or to create a new 
 	cmd.Flags().StringVarP(&ctxOptions.Namespace, "namespace", "n", "", "namespace of your okteto context")
 	cmd.Flags().StringVarP(&ctxOptions.Builder, "builder", "b", "", "url of the builder service")
 	cmd.Flags().BoolVarP(&ctxOptions.OnlyOkteto, "okteto", "", false, "only shows okteto cluster options")
-	cmd.Flags().MarkHidden("okteto")
+	if err := cmd.Flags().MarkHidden("okteto"); err != nil {
+		oktetoLog.Infof("failed to mark 'okteto' flag as hidden: %s", err)
+	}
 	return cmd
 }

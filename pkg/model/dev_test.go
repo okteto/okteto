@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -1280,6 +1280,7 @@ func Test_validateForExtraFields(t *testing.T) {
                runAsUser: 1000
                runAsGroup: 2000
                fsGroup: 3000
+               allowPrivilegeEscalation: false
                capabilities:
                  add:
                  - SYS_PTRACE`,
@@ -1398,7 +1399,7 @@ services:
         cpu: "500m"
     workdir: /app
     %s`, tt.value))
-			expected := fmt.Sprintf("Error on dev 'deployment': %q is not supported in Services. Please visit https://www.okteto.com/docs/0.10/reference/manifest/#services-object-optional for documentation", tt.name)
+			expected := fmt.Sprintf("Error on dev 'deployment': %q is not supported in Services. Please visit https://www.okteto.com/docs/reference/manifest/#services-object-optional for documentation", tt.name)
 
 			_, err := Read(manifest)
 			if err == nil {

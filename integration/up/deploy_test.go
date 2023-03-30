@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -137,7 +137,7 @@ func TestUpWithDeploy(t *testing.T) {
 }
 
 func getImageWithSHA(devImage string) string {
-	reg := registry.NewOktetoRegistry()
+	reg := registry.NewOktetoRegistry(okteto.Config{})
 	tag, err := reg.GetImageTagWithDigest(devImage)
 	if err != nil {
 		log.Printf("could not get %s from registry", devImage)

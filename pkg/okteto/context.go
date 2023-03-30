@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -24,6 +24,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -55,6 +56,7 @@ const (
 
 var (
 	CurrentStore *OktetoContextStore
+	reg          = regexp.MustCompile("[^A-Za-z0-9]+")
 )
 
 // OktetoContext contains the information related to an okteto context
@@ -129,6 +131,22 @@ func InitContextWithDeprecatedToken() {
 	if err := NewContextConfigWriter().Write(); err != nil {
 		oktetoLog.Infof("error writing okteto context: %v", err)
 	}
+}
+
+func getTokenFromOktetoHome() (*Token, error) {
+	p := config.GetTokenPathDeprecated()
+
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return nil, err
+	}
+
+	currentToken := &Token{}
+	if err := json.Unmarshal(b, currentToken); err != nil {
+		return nil, err
+	}
+
+	return currentToken, nil
 }
 
 // ContextExists checks if an okteto context has been created
@@ -491,6 +509,10 @@ func IsOktetoContext(contextName string) bool {
 		return false
 	}
 	return selectedCtx.IsOkteto
+}
+
+func GetSubdomain() string {
+	return strings.Replace(Context().Registry, "registry.", "", 1)
 }
 
 func GetContextCertificate() (*x509.Certificate, error) {

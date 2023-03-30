@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -34,18 +34,20 @@ import (
 )
 
 var fakeManifest *model.Manifest = &model.Manifest{
-	Destroy: []model.DeployCommand{
-		{
-			Name:    "printenv",
-			Command: "printenv",
-		},
-		{
-			Name:    "ls -la",
-			Command: "ls -la",
-		},
-		{
-			Name:    "cat /tmp/test.txt",
-			Command: "cat /tmp/test.txt",
+	Destroy: &model.DestroyInfo{
+		Commands: []model.DeployCommand{
+			{
+				Name:    "printenv",
+				Command: "printenv",
+			},
+			{
+				Name:    "ls -la",
+				Command: "ls -la",
+			},
+			{
+				Name:    "cat /tmp/test.txt",
+				Command: "cat /tmp/test.txt",
+			},
 		},
 	},
 }
@@ -147,15 +149,18 @@ func TestDestroyWithErrorDeletingVolumes(t *testing.T) {
 		},
 		CurrentContext: "test",
 	}
-	cmd := &destroyCommand{
-		getManifest:       getFakeManifest,
-		nsDestroyer:       destroyer,
-		executor:          executor,
-		k8sClientProvider: k8sClientProvider,
-		configMapHandler:  newConfigmapHandler(fakeClient),
+
+	ld := localDestroyCommand{
+		&localDestroyAllCommand{
+			ConfigMapHandler:  NewConfigmapHandler(fakeClient),
+			nsDestroyer:       destroyer,
+			executor:          executor,
+			k8sClientProvider: k8sClientProvider,
+		},
+		fakeManifest,
 	}
 
-	err = cmd.runDestroy(ctx, opts)
+	err = ld.runDestroy(ctx, opts)
 
 	assert.Error(t, err)
 	assert.Equal(t, 3, len(executor.executed))
@@ -181,19 +186,21 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 		CurrentContext: "test",
 	}
 	tests := []struct {
-		name        string
-		getManifest func(path string) (*model.Manifest, error)
-		want        int
+		name     string
+		manifest *model.Manifest
+		want     int
 	}{
 		{
-			name:        "AndWithoutManifest",
-			getManifest: getManifestWithError,
-			want:        0,
+			name: "AndWithoutManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
+			want: 0,
 		},
 		{
-			name:        "AndWithManifest",
-			getManifest: getFakeManifest,
-			want:        3,
+			name:     "AndWithManifest",
+			manifest: fakeManifest,
+			want:     3,
 		},
 	}
 
@@ -208,16 +215,19 @@ func TestDestroyWithErrorListingSecrets(t *testing.T) {
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
 			}
-			cmd := &destroyCommand{
-				getManifest:       tt.getManifest,
-				secrets:           &secretHandler,
-				configMapHandler:  newConfigmapHandler(fakeClient),
-				nsDestroyer:       &fakeDestroyer{},
-				executor:          executor,
-				k8sClientProvider: k8sClientProvider,
+
+			ld := localDestroyCommand{
+				&localDestroyAllCommand{
+					ConfigMapHandler:  NewConfigmapHandler(fakeClient),
+					nsDestroyer:       &fakeDestroyer{},
+					executor:          executor,
+					k8sClientProvider: k8sClientProvider,
+					secrets:           &secretHandler,
+				},
+				tt.manifest,
 			}
 
-			err = cmd.runDestroy(ctx, opts)
+			err = ld.runDestroy(ctx, opts)
 
 			assert.Error(t, err)
 			assert.Equal(t, tt.want, len(executor.executed))
@@ -240,26 +250,30 @@ func TestDestroyWithError(t *testing.T) {
 		CurrentContext: "test",
 	}
 	tests := []struct {
-		name        string
-		getManifest func(path string) (*model.Manifest, error)
-		secrets     []v1.Secret
-		want        []model.DeployCommand
+		name     string
+		manifest *model.Manifest
+		secrets  []v1.Secret
+		want     []model.DeployCommand
 	}{
 		{
-			name:        "WithoutSecretsWithoutManifest",
-			getManifest: getManifestWithError,
-			secrets:     []v1.Secret{},
-			want:        []model.DeployCommand{},
+			name: "WithoutSecretsWithoutManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
+			secrets: []v1.Secret{},
+			want:    []model.DeployCommand{},
 		},
 		{
-			name:        "WithoutSecretsWithManifest",
-			getManifest: getFakeManifest,
-			secrets:     []v1.Secret{},
-			want:        fakeManifest.Destroy,
+			name:     "WithoutSecretsWithManifest",
+			manifest: fakeManifest,
+			secrets:  []v1.Secret{},
+			want:     fakeManifest.Destroy.Commands,
 		},
 		{
-			name:        "WithSecretsWithoutManifest",
-			getManifest: getManifestWithError,
+			name: "WithSecretsWithoutManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -270,8 +284,8 @@ func TestDestroyWithError(t *testing.T) {
 			want: []model.DeployCommand{},
 		},
 		{
-			name:        "WithSecretsWithManifest",
-			getManifest: getFakeManifest,
+			name:     "WithSecretsWithManifest",
+			manifest: fakeManifest,
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -279,11 +293,13 @@ func TestDestroyWithError(t *testing.T) {
 					},
 				},
 			},
-			want: fakeManifest.Destroy,
+			want: fakeManifest.Destroy.Commands,
 		},
 		{
-			name:        "WithHelmSecretsWithoutManifest",
-			getManifest: getManifestWithError,
+			name: "WithHelmSecretsWithoutManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -304,8 +320,8 @@ func TestDestroyWithError(t *testing.T) {
 			},
 		},
 		{
-			name:        "WithHelmSecretsWithManifest",
-			getManifest: getFakeManifest,
+			name:     "WithHelmSecretsWithManifest",
+			manifest: fakeManifest,
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -318,7 +334,7 @@ func TestDestroyWithError(t *testing.T) {
 					Type: model.HelmSecretType,
 				},
 			},
-			want: append(fakeManifest.Destroy, model.DeployCommand{
+			want: append(fakeManifest.Destroy.Commands, model.DeployCommand{
 				Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),
 				Command: fmt.Sprintf(helmUninstallCommand, "helm-app"),
 			}),
@@ -343,16 +359,18 @@ func TestDestroyWithError(t *testing.T) {
 				t.Fatal("could not create fake k8s client")
 			}
 
-			cmd := &destroyCommand{
-				getManifest:       tt.getManifest,
-				secrets:           &secretHandler,
-				executor:          executor,
-				nsDestroyer:       destroyer,
-				k8sClientProvider: k8sClientProvider,
-				configMapHandler:  newConfigmapHandler(fakeClient),
+			ld := localDestroyCommand{
+				&localDestroyAllCommand{
+					ConfigMapHandler:  NewConfigmapHandler(fakeClient),
+					nsDestroyer:       destroyer,
+					executor:          executor,
+					k8sClientProvider: k8sClientProvider,
+					secrets:           &secretHandler,
+				},
+				tt.manifest,
 			}
 
-			err = cmd.runDestroy(ctx, opts)
+			err = ld.runDestroy(ctx, opts)
 
 			assert.Error(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
@@ -377,26 +395,30 @@ func TestDestroyWithoutError(t *testing.T) {
 		CurrentContext: "test",
 	}
 	tests := []struct {
-		name        string
-		getManifest func(path string) (*model.Manifest, error)
-		secrets     []v1.Secret
-		want        []model.DeployCommand
+		name     string
+		manifest *model.Manifest
+		secrets  []v1.Secret
+		want     []model.DeployCommand
 	}{
 		{
-			name:        "WithoutSecretsWithoutManifest",
-			getManifest: getManifestWithError,
-			secrets:     []v1.Secret{},
-			want:        []model.DeployCommand{},
+			name: "WithoutSecretsWithoutManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
+			secrets: []v1.Secret{},
+			want:    []model.DeployCommand{},
 		},
 		{
-			name:        "WithoutSecretsWithManifest",
-			getManifest: getFakeManifest,
-			secrets:     []v1.Secret{},
-			want:        fakeManifest.Destroy,
+			name:     "WithoutSecretsWithManifest",
+			manifest: fakeManifest,
+			secrets:  []v1.Secret{},
+			want:     fakeManifest.Destroy.Commands,
 		},
 		{
-			name:        "WithSecretsWithoutManifest",
-			getManifest: getManifestWithError,
+			name: "WithSecretsWithoutManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -407,8 +429,8 @@ func TestDestroyWithoutError(t *testing.T) {
 			want: []model.DeployCommand{},
 		},
 		{
-			name:        "WithSecretsWithManifest",
-			getManifest: getFakeManifest,
+			name:     "WithSecretsWithManifest",
+			manifest: fakeManifest,
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -416,11 +438,13 @@ func TestDestroyWithoutError(t *testing.T) {
 					},
 				},
 			},
-			want: fakeManifest.Destroy,
+			want: fakeManifest.Destroy.Commands,
 		},
 		{
-			name:        "WithHelmSecretsWithoutManifest",
-			getManifest: getManifestWithError,
+			name: "WithHelmSecretsWithoutManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -441,8 +465,10 @@ func TestDestroyWithoutError(t *testing.T) {
 			},
 		},
 		{
-			name:        "WithSeveralHelmSecretsWithoutManifest",
-			getManifest: getManifestWithError,
+			name: "WithSeveralHelmSecretsWithoutManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -491,8 +517,8 @@ func TestDestroyWithoutError(t *testing.T) {
 			},
 		},
 		{
-			name:        "WithHelmSecretsWithManifest",
-			getManifest: getFakeManifest,
+			name:     "WithHelmSecretsWithManifest",
+			manifest: fakeManifest,
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -505,11 +531,11 @@ func TestDestroyWithoutError(t *testing.T) {
 					Type: model.HelmSecretType,
 				},
 			},
-			want: append(fakeManifest.Destroy, model.DeployCommand{Name: fmt.Sprintf(helmUninstallCommand, "helm-app"), Command: fmt.Sprintf(helmUninstallCommand, "helm-app")}),
+			want: append(fakeManifest.Destroy.Commands, model.DeployCommand{Name: fmt.Sprintf(helmUninstallCommand, "helm-app"), Command: fmt.Sprintf(helmUninstallCommand, "helm-app")}),
 		},
 		{
-			name:        "WithSeveralHelmSecretsWithManifest",
-			getManifest: getFakeManifest,
+			name:     "WithSeveralHelmSecretsWithManifest",
+			manifest: fakeManifest,
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -543,7 +569,7 @@ func TestDestroyWithoutError(t *testing.T) {
 				},
 			},
 			want: append(
-				fakeManifest.Destroy,
+				fakeManifest.Destroy.Commands,
 				model.DeployCommand{
 					Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),
 					Command: fmt.Sprintf(helmUninstallCommand, "helm-app"),
@@ -575,16 +601,19 @@ func TestDestroyWithoutError(t *testing.T) {
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
 			}
-			cmd := &destroyCommand{
-				getManifest:       tt.getManifest,
-				secrets:           &secretHandler,
-				executor:          executor,
-				nsDestroyer:       destroyer,
-				k8sClientProvider: k8sClientProvider,
-				configMapHandler:  newConfigmapHandler(fakeClient),
+
+			ld := localDestroyCommand{
+				&localDestroyAllCommand{
+					ConfigMapHandler:  NewConfigmapHandler(fakeClient),
+					nsDestroyer:       destroyer,
+					executor:          executor,
+					k8sClientProvider: k8sClientProvider,
+					secrets:           &secretHandler,
+				},
+				tt.manifest,
 			}
 
-			err = cmd.runDestroy(ctx, opts)
+			err = ld.runDestroy(ctx, opts)
 
 			assert.NoError(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
@@ -609,26 +638,32 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 		CurrentContext: "test",
 	}
 	tests := []struct {
-		name        string
-		getManifest func(path string) (*model.Manifest, error)
-		secrets     []v1.Secret
-		want        []model.DeployCommand
+		name     string
+		manifest *model.Manifest
+		secrets  []v1.Secret
+		want     []model.DeployCommand
 	}{
 		{
-			name:        "WithoutSecretsWithoutManifest",
-			getManifest: getManifestWithError,
-			secrets:     []v1.Secret{},
-			want:        []model.DeployCommand{},
+			name: "WithoutSecretsWithoutManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
+			secrets: []v1.Secret{},
+			want:    []model.DeployCommand{},
 		},
 		{
-			name:        "WithoutSecretsWithManifest",
-			getManifest: getFakeManifest,
-			secrets:     []v1.Secret{},
-			want:        fakeManifest.Destroy,
+			name: "WithoutSecretsWithManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
+			secrets: []v1.Secret{},
+			want:    []model.DeployCommand{},
 		},
 		{
-			name:        "WithSecretsWithoutManifest",
-			getManifest: getManifestWithError,
+			name: "WithSecretsWithoutManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -639,8 +674,10 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 			want: []model.DeployCommand{},
 		},
 		{
-			name:        "WithSecretsWithManifest",
-			getManifest: getFakeManifest,
+			name: "WithSecretsWithManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -648,11 +685,13 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 					},
 				},
 			},
-			want: fakeManifest.Destroy,
+			want: []model.DeployCommand{},
 		},
 		{
-			name:        "WithHelmSecretsWithoutManifest",
-			getManifest: getManifestWithError,
+			name: "WithHelmSecretsWithoutManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -673,8 +712,10 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 			},
 		},
 		{
-			name:        "WithSeveralHelmSecretsWithoutManifest",
-			getManifest: getManifestWithError,
+			name: "WithSeveralHelmSecretsWithoutManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -723,8 +764,10 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 			},
 		},
 		{
-			name:        "WithHelmSecretsWithManifest",
-			getManifest: getFakeManifest,
+			name: "WithHelmSecretsWithManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -737,11 +780,13 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 					Type: model.HelmSecretType,
 				},
 			},
-			want: append(fakeManifest.Destroy, model.DeployCommand{Name: fmt.Sprintf(helmUninstallCommand, "helm-app"), Command: fmt.Sprintf(helmUninstallCommand, "helm-app")}),
+			want: append([]model.DeployCommand{}, model.DeployCommand{Name: fmt.Sprintf(helmUninstallCommand, "helm-app"), Command: fmt.Sprintf(helmUninstallCommand, "helm-app")}),
 		},
 		{
-			name:        "WithSeveralHelmSecretsWithManifest",
-			getManifest: getFakeManifest,
+			name: "WithSeveralHelmSecretsWithManifest",
+			manifest: &model.Manifest{
+				Destroy: &model.DestroyInfo{},
+			},
 			secrets: []v1.Secret{
 				{
 					ObjectMeta: metav1.ObjectMeta{
@@ -775,7 +820,7 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 				},
 			},
 			want: append(
-				fakeManifest.Destroy,
+				[]model.DeployCommand{},
 				model.DeployCommand{
 					Name:    fmt.Sprintf(helmUninstallCommand, "helm-app"),
 					Command: fmt.Sprintf(helmUninstallCommand, "helm-app"),
@@ -804,23 +849,26 @@ func TestDestroyWithoutErrorInsideOktetoDeploy(t *testing.T) {
 			}
 			// Set env var destroy inside deploy
 			t.Setenv(constants.OktetoWithinDeployCommandContextEnvVar, "true")
-			cmd := &destroyCommand{
-				getManifest:       tt.getManifest,
-				secrets:           &secretHandler,
-				executor:          executor,
-				nsDestroyer:       destroyer,
-				k8sClientProvider: test.NewFakeK8sProvider(),
-				configMapHandler:  newConfigmapHandler(nil),
+
+			ld := localDestroyCommand{
+				&localDestroyAllCommand{
+					ConfigMapHandler:  NewConfigmapHandler(nil),
+					nsDestroyer:       destroyer,
+					executor:          executor,
+					k8sClientProvider: test.NewFakeK8sProvider(),
+					secrets:           &secretHandler,
+				},
+				tt.manifest,
 			}
 
-			err := cmd.runDestroy(ctx, opts)
+			err := ld.runDestroy(ctx, opts)
 
 			assert.NoError(t, err)
 			assert.ElementsMatch(t, tt.want, executor.executed)
 			assert.True(t, destroyer.destroyed)
 			assert.True(t, destroyer.destroyedVolumes)
 
-			fakeClient, _, err := cmd.k8sClientProvider.Provide(api.NewConfig())
+			fakeClient, _, err := ld.k8sClientProvider.Provide(api.NewConfig())
 			if err != nil {
 				t.Fatal("could not create fake k8s client")
 			}
@@ -858,16 +906,18 @@ func TestDestroyWithoutForceOptionAndFailedCommands(t *testing.T) {
 		t.Fatal("could not create fake k8s client")
 	}
 
-	cmd := &destroyCommand{
-		getManifest:       getFakeManifest,
-		secrets:           &secretHandler,
-		executor:          executor,
-		nsDestroyer:       destroyer,
-		k8sClientProvider: k8sClientProvider,
-		configMapHandler:  newConfigmapHandler(fakeClient),
+	ld := localDestroyCommand{
+		&localDestroyAllCommand{
+			ConfigMapHandler:  NewConfigmapHandler(fakeClient),
+			nsDestroyer:       destroyer,
+			executor:          executor,
+			k8sClientProvider: k8sClientProvider,
+			secrets:           &secretHandler,
+		},
+		fakeManifest,
 	}
 
-	err = cmd.runDestroy(ctx, opts)
+	err = ld.runDestroy(ctx, opts)
 
 	assert.Error(t, err)
 	assert.Equal(t, 1, len(executor.executed))
@@ -905,19 +955,22 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 	if err != nil {
 		t.Fatal("could not create fake k8s client")
 	}
-	cmd := &destroyCommand{
-		getManifest:       getFakeManifest,
-		secrets:           &secretHandler,
-		executor:          executor,
-		nsDestroyer:       destroyer,
-		k8sClientProvider: k8sClientProvider,
-		configMapHandler:  newConfigmapHandler(fakeClient),
+
+	ld := localDestroyCommand{
+		&localDestroyAllCommand{
+			ConfigMapHandler:  NewConfigmapHandler(fakeClient),
+			nsDestroyer:       destroyer,
+			executor:          executor,
+			k8sClientProvider: k8sClientProvider,
+			secrets:           &secretHandler,
+		},
+		fakeManifest,
 	}
 
-	err = cmd.runDestroy(ctx, opts)
+	err = ld.runDestroy(ctx, opts)
 
 	assert.Error(t, err)
-	assert.ElementsMatch(t, fakeManifest.Destroy, executor.executed)
+	assert.ElementsMatch(t, fakeManifest.Destroy.Commands, executor.executed)
 	assert.True(t, destroyer.destroyed)
 	assert.True(t, destroyer.destroyedVolumes)
 

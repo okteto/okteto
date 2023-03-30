@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -667,8 +667,8 @@ func translateResources(svc *model.Service) apiv1.ResourceRequirements {
 		if svc.Resources.Requests.Memory.Value.Cmp(resource.MustParse("0")) > 0 {
 			if result.Requests == nil {
 				result.Requests = apiv1.ResourceList{}
-				result.Requests[apiv1.ResourceMemory] = svc.Resources.Requests.Memory.Value
 			}
+			result.Requests[apiv1.ResourceMemory] = svc.Resources.Requests.Memory.Value
 		}
 	}
 	return result

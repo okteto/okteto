@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,6 +28,7 @@ import (
 	"github.com/a8m/envsubst"
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -41,7 +41,7 @@ import (
 
 var (
 	// OktetoBinImageTag image tag with okteto internal binaries
-	OktetoBinImageTag = "okteto/bin:1.4.1"
+	OktetoBinImageTag = "okteto/bin:1.4.2"
 
 	errBadName = fmt.Errorf("Invalid name: must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character")
 
@@ -275,11 +275,12 @@ type Duration time.Duration
 
 // SecurityContext represents a pod security context
 type SecurityContext struct {
-	RunAsUser    *int64        `json:"runAsUser,omitempty" yaml:"runAsUser,omitempty"`
-	RunAsGroup   *int64        `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
-	FSGroup      *int64        `json:"fsGroup,omitempty" yaml:"fsGroup,omitempty"`
-	Capabilities *Capabilities `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
-	RunAsNonRoot *bool         `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
+	RunAsUser                *int64        `json:"runAsUser,omitempty" yaml:"runAsUser,omitempty"`
+	RunAsGroup               *int64        `json:"runAsGroup,omitempty" yaml:"runAsGroup,omitempty"`
+	FSGroup                  *int64        `json:"fsGroup,omitempty" yaml:"fsGroup,omitempty"`
+	Capabilities             *Capabilities `json:"capabilities,omitempty" yaml:"capabilities,omitempty"`
+	RunAsNonRoot             *bool         `json:"runAsNonRoot,omitempty" yaml:"runAsNonRoot,omitempty"`
+	AllowPrivilegeEscalation *bool         `json:"allowPrivilegeEscalation,omitempty" yaml:"allowPrivilegeEscalation,omitempty"`
 }
 
 // Capabilities sets the linux capabilities of a container
@@ -575,9 +576,6 @@ func (dev *Dev) SetDefaults() error {
 	}
 	if dev.Interface == "" {
 		dev.Interface = Localhost
-		if runtime.GOOS != "windows" {
-			dev.Interface = PrivilegedLocalhost
-		}
 	}
 	if dev.SSHServerPort == 0 {
 		dev.SSHServerPort = oktetoDefaultSSHServerPort
@@ -892,7 +890,7 @@ func (dev *Dev) LoadRemote(pubKeyPath string) {
 	p := Secret{
 		LocalPath:  pubKeyPath,
 		RemotePath: authorizedKeysPath,
-		Mode:       0600,
+		Mode:       0644,
 	}
 
 	oktetoLog.Infof("enabled remote mode")
@@ -961,7 +959,7 @@ func (dev *Dev) SetLastBuiltAnnotation() {
 	if dev.Metadata.Annotations == nil {
 		dev.Metadata.Annotations = Annotations{}
 	}
-	dev.Metadata.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(TimeFormat)
+	dev.Metadata.Annotations[LastBuiltAnnotation] = time.Now().UTC().Format(constants.TimeFormat)
 }
 
 // GetVolumeName returns the okteto volume name for a given development container
@@ -1271,7 +1269,7 @@ func (dev *Dev) translateDeprecatedMetadataFields() {
 }
 
 func (service *Dev) validateForExtraFields() error {
-	errorMessage := "%q is not supported in Services. Please visit https://www.okteto.com/docs/0.10/reference/manifest/#services-object-optional for documentation"
+	errorMessage := "%q is not supported in Services. Please visit https://www.okteto.com/docs/reference/manifest/#services-object-optional for documentation"
 	if service.Username != "" {
 		return fmt.Errorf(errorMessage, "username")
 	}
@@ -1347,13 +1345,6 @@ func (service *Dev) validateForExtraFields() error {
 // DevCloneName returns the name of the mirrored version of a given resource
 func DevCloneName(name string) string {
 	return fmt.Sprintf("%s-okteto", name)
-}
-
-func getLocalhost() string {
-	if runtime.GOOS != "windows" {
-		return PrivilegedLocalhost
-	}
-	return Localhost
 }
 
 // Copy clones the buildInfo without the pointers

@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -27,9 +27,15 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+type registryInterface interface {
+	GetImageTagWithDigest(imageTag string) (string, error)
+	GetImageTag(image, service, namespace string) string
+}
+
 // upContext is the common context of all operations performed during the up command
 type upContext struct {
 	Cancel                context.CancelFunc
+	Registry              registryInterface
 	ShutdownCompleted     chan bool
 	Manifest              *model.Manifest
 	Dev                   *model.Dev

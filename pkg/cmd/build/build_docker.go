@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -171,12 +171,12 @@ func buildWithDockerDaemon(ctx context.Context, buildOptions *types.BuildOptions
 
 	dockerBuildContext, err := getBuildContext(buildOptions.File)
 	if err != nil {
-		errors.Wrap(err, "setting build context failed")
+		return err
 	}
 
 	dockerBuildOptions, err := getDockerOptions(buildOptions)
 	if err != nil {
-		errors.Wrap(err, "setting build options failed")
+		return err
 	}
 	progressOutput := streamformatter.NewProgressOutput(os.Stdout)
 

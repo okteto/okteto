@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -31,6 +31,7 @@ type ContextOptions struct {
 	Show                  bool
 	Save                  bool
 	IsCtxCommand          bool
+	CheckNamespaceAccess  bool
 	IsOkteto              bool
 	raiseNotCtxError      bool
 	InsecureSkipTlsVerify bool
@@ -59,10 +60,6 @@ func (o *ContextOptions) initFromContext() {
 
 func (o *ContextOptions) initFromEnvVars() {
 	usedEnvVars := []string{}
-	if o.Token == "" && os.Getenv(model.OktetoTokenEnvVar) != "" {
-		o.Token = os.Getenv(model.OktetoTokenEnvVar)
-		usedEnvVars = append(usedEnvVars, model.OktetoTokenEnvVar)
-	}
 
 	if o.Context == "" && os.Getenv(model.OktetoURLEnvVar) != "" {
 		o.Context = os.Getenv(model.OktetoURLEnvVar)
@@ -75,11 +72,19 @@ func (o *ContextOptions) initFromEnvVars() {
 		usedEnvVars = append(usedEnvVars, model.OktetoContextEnvVar)
 	}
 
-	if o.Token != "" {
+	envToken := os.Getenv(model.OktetoTokenEnvVar)
+	if o.Token != "" || envToken != "" {
 		o.IsOkteto = true
 		if o.Context == "" {
 			o.Context = okteto.CloudURL
 		}
+	}
+
+	if o.Token == "" && envToken != "" {
+		if !okteto.HasBeenLogged(o.Context) || okteto.Context().Token != envToken {
+			usedEnvVars = append(usedEnvVars, model.OktetoTokenEnvVar)
+		}
+		o.Token = envToken
 	}
 
 	if o.Namespace == "" && os.Getenv(model.OktetoNamespaceEnvVar) != "" {

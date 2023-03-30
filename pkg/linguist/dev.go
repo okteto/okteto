@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -303,7 +303,7 @@ func GetSupportedLanguages() []string {
 }
 
 // GetDevDefaults gets default values for the specified language
-func GetDevDefaults(language, workdir string, imageConfig *registry.ImageConfig) (*model.Dev, error) {
+func GetDevDefaults(language, workdir string, imageConfig registry.ImageMetadata) (*model.Dev, error) {
 	language = NormalizeLanguage(language)
 	vals := languageDefaults[language]
 

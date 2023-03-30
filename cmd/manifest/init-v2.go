@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -25,11 +25,12 @@ import (
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/cmd/utils/executor"
 	initCMD "github.com/okteto/okteto/pkg/cmd/init"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/linguist"
@@ -37,6 +38,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -115,7 +117,7 @@ func Init() *cobra.Command {
 	cmd.Flags().StringVarP(&opts.Context, "context", "c", "", "context target for generating the okteto manifest")
 	cmd.Flags().StringVarP(&opts.DevPath, "file", "f", utils.DefaultManifest, "path to the manifest file")
 	cmd.Flags().BoolVarP(&opts.Overwrite, "replace", "r", false, "overwrite existing manifest file")
-	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: https://www.okteto.com/docs/0.10/reference/manifest/")
+	cmd.Flags().BoolVarP(&opts.Version1, "v1", "", false, "create a v1 okteto manifest: https://www.okteto.com/docs/reference/manifest/")
 	cmd.Flags().BoolVarP(&opts.AutoDeploy, "deploy", "", false, "deploy the application after generate the okteto manifest if it's not running already")
 	cmd.Flags().BoolVarP(&opts.AutoConfigureDev, "configure-devs", "", false, "configure devs after deploying the application")
 	return cmd
@@ -123,7 +125,13 @@ func Init() *cobra.Command {
 
 // RunInitV2 initializes a new okteto manifest
 func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*model.Manifest, error) {
-	os.Setenv(constants.OktetoNameEnvVar, utils.InferName(opts.Workdir))
+	c, _, er := mc.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if er != nil {
+		return nil, er
+	}
+	inferer := devenvironment.NewNameInferer(c)
+	name := inferer.InferName(ctx, opts.Workdir, okteto.Context().Namespace, opts.DevPath)
+	os.Setenv(constants.OktetoNameEnvVar, name)
 	manifest := model.NewManifest()
 	var err error
 	if !opts.Overwrite {
@@ -261,20 +269,19 @@ func (*ManifestCommand) configureManifestDeployAndBuild(cwd string) (*model.Mani
 }
 
 func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
-	kubeconfig := deploy.NewKubeConfig()
-	proxy, err := deploy.NewProxy(kubeconfig)
+	pc, err := pipelineCMD.NewCommand()
 	if err != nil {
 		return err
 	}
-
 	c := &deploy.DeployCommand{
 		GetManifest:        mc.getManifest,
-		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), false),
-		Proxy:              proxy,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
 		Builder:            buildv2.NewBuilderFromScratch(),
+		GetExternalControl: deploy.GetExternalControl,
+		Fs:                 afero.NewOsFs(),
+		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
+		PipelineCMD:        pc,
 	}
 
 	err = c.RunDeploy(ctx, &deploy.Options{
@@ -350,7 +357,7 @@ func (mc *ManifestCommand) configureDevsByResources(ctx context.Context, namespa
 	return nil
 }
 
-func setFromImageConfig(dev *model.Dev, imageConfig *registry.ImageConfig) {
+func setFromImageConfig(dev *model.Dev, imageConfig registry.ImageMetadata) {
 	if len(dev.Command.Values) == 0 && len(imageConfig.CMD) > 0 {
 		dev.Command = model.Command{Values: imageConfig.CMD}
 	}
@@ -472,7 +479,13 @@ func inferBuildSectionFromDockerfiles(cwd string, dockerfiles []string) (model.M
 		var name string
 		var buildInfo *model.BuildInfo
 		if dockerfile == dockerfileName {
-			name = utils.InferName(cwd)
+			c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+			if err != nil {
+				return nil, err
+			}
+			inferer := devenvironment.NewNameInferer(c)
+			// In this case, the path is empty because we are inferring the names from Dockerfiles, so no manifest
+			name = inferer.InferName(context.Background(), cwd, okteto.Context().Namespace, "")
 			buildInfo = &model.BuildInfo{
 				Context:    ".",
 				Dockerfile: dockerfile,
@@ -571,7 +584,7 @@ func configureAutoCreateDev(manifest *model.Manifest) error {
 		return err
 	}
 
-	dev, err := linguist.GetDevDefaults(language, wd, &registry.ImageConfig{})
+	dev, err := linguist.GetDevDefaults(language, wd, registry.ImageMetadata{})
 	if err != nil {
 		return err
 	}

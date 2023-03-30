@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -84,11 +84,12 @@ func (nc *NamespaceCommand) Use(ctx context.Context, namespace string) error {
 	return nc.ctxCmd.Run(
 		ctx,
 		&contextCMD.ContextOptions{
-			Context:      okteto.Context().Name,
-			Namespace:    namespace,
-			Save:         true,
-			Show:         false,
-			IsCtxCommand: true,
+			Context:              okteto.Context().Name,
+			Namespace:            namespace,
+			Save:                 true,
+			Show:                 false,
+			IsCtxCommand:         true,
+			CheckNamespaceAccess: true,
 		},
 	)
 
@@ -106,7 +107,9 @@ func (nc *NamespaceCommand) getNamespaceFromSelector(ctx context.Context) (strin
 		return "", err
 	}
 	if ns == newNamespaceOption {
-		ns = askForOktetoNamespace()
+		if ns, err = askForOktetoNamespace(); err != nil {
+			return "", err
+		}
 		createOptions := &CreateOptions{
 			Namespace: ns,
 			Show:      false,
@@ -153,11 +156,13 @@ func getNamespacesSelection(ctx context.Context) ([]utils.SelectorItem, error) {
 	return namespaces, nil
 }
 
-func askForOktetoNamespace() string {
+func askForOktetoNamespace() (string, error) {
 	var namespace string
-	oktetoLog.Question("Enter the namespace you want to use: ")
+	if err := oktetoLog.Question("Enter the namespace you want to use: "); err != nil {
+		return "", err
+	}
 	fmt.Scanln(&namespace)
-	return namespace
+	return namespace, nil
 }
 
 func getInitialPosition(options []utils.SelectorItem) int {

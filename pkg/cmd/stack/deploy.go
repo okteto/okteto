@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -38,6 +38,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -544,7 +545,9 @@ func isAnyPortAvailable(ctx context.Context, svc *model.Service, stack *model.St
 			continue
 		}
 	}
-	forwarder.Start(podName, stack.Namespace)
+	if err := forwarder.Start(podName, stack.Namespace); err != nil {
+		oktetoLog.Infof("could not start port-forward: %s", err)
+	}
 	defer forwarder.Stop()
 	for _, port := range portsToTest {
 		p := strconv.Itoa(port)
@@ -583,7 +586,6 @@ func deployK8sService(ctx context.Context, svcName string, s *model.Stack, c kub
 	}
 
 	svcK8s.ObjectMeta.ResourceVersion = old.ObjectMeta.ResourceVersion
-	applyDivertToService(svcK8s, old)
 	if err := services.Deploy(ctx, svcK8s, c); err != nil {
 		return err
 	}
@@ -616,7 +618,6 @@ func deployDeployment(ctx context.Context, svcName string, s *model.Stack, c kub
 				d.Labels[model.DeployedByLabel] = format.ResourceK8sMetaString(s.Name)
 			}
 		}
-		applyDivertToDeployment(d, old)
 	}
 
 	if !isNewDeployment && old.Labels[model.StackNameLabel] == "okteto" {
@@ -823,13 +824,19 @@ func addImageMetadataToStack(s *model.Stack, options *StackDeployOptions) {
 
 func addImageMetadataToSvc(svc *model.Service) {
 	if svc.Image != "" {
-		imageMetadata := registry.GetImageMetadata(svc.Image)
-		if registry.IsOktetoRegistry(svc.Image) {
+		reg := registry.NewOktetoRegistry(okteto.Config{})
+		imageMetadata, err := reg.GetImageMetadata(svc.Image)
+		if err != nil {
+			oktetoLog.Infof("could not add image metadata: %w", err)
+			return
+		}
+
+		if reg.IsOktetoRegistry(svc.Image) {
 			svc.Image = imageMetadata.Image
 		}
 		for _, port := range imageMetadata.Ports {
 			if !model.IsAlreadyAdded(port, svc.Ports) {
-				svc.Ports = append(svc.Ports, port)
+				svc.Ports = append(svc.Ports, model.Port{ContainerPort: port.ContainerPort, Protocol: port.Protocol})
 			}
 		}
 	}

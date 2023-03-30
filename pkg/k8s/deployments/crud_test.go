@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -28,28 +28,190 @@ import (
 )
 
 func TestGet(t *testing.T) {
-	ctx := context.Background()
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "fake",
-			Namespace: "test",
+	tests := []struct {
+		name               string
+		deployments        *appsv1.DeploymentList
+		dev                *model.Dev
+		namespace          string
+		expectedErr        error
+		expectedFoundCount int
+	}{
+		{
+			name: "Get by Name: no deployments",
+			dev: &model.Dev{
+				Name: "fake",
+			},
+			namespace: "test",
+			deployments: &appsv1.DeploymentList{
+				Items: []appsv1.Deployment{},
+			},
+			expectedErr:        fmt.Errorf("deployments.apps \"%s\" not found", "fake"),
+			expectedFoundCount: 0,
+		},
+		{
+			name: "Get by Name: found 1 deployment",
+			dev: &model.Dev{
+				Name: "fake",
+			},
+			namespace: "test",
+			deployments: &appsv1.DeploymentList{
+				Items: []appsv1.Deployment{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake",
+							Namespace: "test",
+						},
+					},
+				},
+			},
+			expectedErr:        nil,
+			expectedFoundCount: 1,
+		},
+		{
+			name: "Search by Label: no deployments found",
+			dev: &model.Dev{
+				Selector: map[string]string{
+					"deployed-by": "fake",
+				},
+			},
+			namespace: "test",
+			deployments: &appsv1.DeploymentList{
+				Items: []appsv1.Deployment{},
+			},
+			expectedErr:        oktetoErrors.ErrNotFound,
+			expectedFoundCount: 0,
+		},
+		{
+			name: "Search by Label: cloned deployments are filtered out successfully",
+			dev: &model.Dev{
+				Selector: map[string]string{
+					"deployed-by": "fake",
+				},
+			},
+			namespace: "test",
+			deployments: &appsv1.DeploymentList{
+				Items: []appsv1.Deployment{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake1-clone",
+							Namespace: "test",
+							Labels: map[string]string{
+								model.DevCloneLabel: "id-123",
+								"deployed-by":       "fake",
+							},
+						},
+					},
+				},
+			},
+			expectedErr:        oktetoErrors.ErrNotFound,
+			expectedFoundCount: 0,
+		},
+		{
+			name: "Search by Label: no matching deployments found",
+			dev: &model.Dev{
+				Selector: map[string]string{
+					"deployed-by": "fake",
+				},
+			},
+			namespace: "test",
+			deployments: &appsv1.DeploymentList{
+				Items: []appsv1.Deployment{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "another-fake",
+							Namespace: "test",
+						},
+					},
+				},
+			},
+			expectedErr:        oktetoErrors.ErrNotFound,
+			expectedFoundCount: 0,
+		},
+		{
+			name: "Search by Label: 1 deployment found",
+			dev: &model.Dev{
+				Selector: map[string]string{
+					"deployed-by": "fake",
+				},
+			},
+			namespace: "test",
+			deployments: &appsv1.DeploymentList{
+				Items: []appsv1.Deployment{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "another-fake",
+							Namespace: "test",
+							Labels: map[string]string{
+								"deployed-by": "fake",
+							},
+						},
+					},
+				},
+			},
+			expectedErr:        nil,
+			expectedFoundCount: 1,
+		},
+		{
+			name: "Search by Label: Unexpectedly found 2 deployments",
+			dev: &model.Dev{
+				Selector: map[string]string{
+					"deployed-by": "fake",
+				},
+			},
+			namespace: "test",
+			deployments: &appsv1.DeploymentList{
+				Items: []appsv1.Deployment{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake1",
+							Namespace: "test",
+							Labels: map[string]string{
+								"deployed-by": "fake",
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake2",
+							Namespace: "test",
+							Labels: map[string]string{
+								"deployed-by": "fake",
+							},
+						},
+					},
+				},
+			},
+			expectedErr:        fmt.Errorf("found '%d' deployments for labels '%s' instead of 1", 2, "deployed-by=fake"),
+			expectedFoundCount: 0,
 		},
 	}
 
-	dev := &model.Dev{Name: "fake"}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
 
-	clientset := fake.NewSimpleClientset(deployment)
-	d, err := GetByDev(ctx, dev, deployment.GetNamespace(), clientset)
-	if err != nil {
-		t.Fatal(err)
-	}
+			clientset := fake.NewSimpleClientset(tt.deployments)
+			d, err := GetByDev(ctx, tt.dev, tt.namespace, clientset)
 
-	if d == nil {
-		t.Fatal("empty deployment")
-	}
-
-	if d.Name != deployment.GetName() {
-		t.Fatalf("wrong deployment. Got %s, expected %s", d.Name, deployment.GetName())
+			if err == nil && tt.expectedErr != nil {
+				t.Fatalf("wrong error. Got nil, expected %s", tt.expectedErr.Error())
+			}
+			if err != nil && tt.expectedErr == nil {
+				t.Fatalf("wrong error. Got nil, expected %s", err.Error())
+			}
+			if err != nil && tt.expectedErr != nil && err.Error() != tt.expectedErr.Error() {
+				t.Fatalf("wrong error. Got %s, expected %s", err, tt.expectedErr)
+			}
+			if err == nil && d == nil {
+				t.Fatal("deployment is nil found but no errors were returned")
+			}
+			if tt.expectedFoundCount > 0 && d == nil {
+				t.Fatalf("expected %d deployments, instead found none", tt.expectedFoundCount)
+			}
+			if tt.expectedFoundCount == 0 && d != nil {
+				t.Fatal("expected no deployments, instead found one")
+			}
+		})
 	}
 }
 

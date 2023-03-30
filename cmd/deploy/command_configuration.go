@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -20,13 +20,14 @@ import (
 	"reflect"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/stack"
+	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/repository"
 	giturls "github.com/whilp/git-urls"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -37,6 +38,14 @@ const (
 )
 
 func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
+	if deployOptions.RunInRemote {
+		if deployOptions.Manifest.Deploy != nil {
+			if deployOptions.Manifest.Deploy.Image == "" {
+				deployOptions.Manifest.Deploy.Image = constants.OktetoPipelineRunnerImage
+			}
+		}
+	}
+
 	if deployOptions.Manifest.Context == "" {
 		deployOptions.Manifest.Context = okteto.Context().Name
 	}
@@ -48,7 +57,12 @@ func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Opti
 		if deployOptions.Manifest.Name != "" {
 			deployOptions.Name = deployOptions.Manifest.Name
 		} else {
-			deployOptions.Name = utils.InferName(cwd)
+			c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+			if err != nil {
+				return err
+			}
+			inferer := devenvironment.NewNameInferer(c)
+			deployOptions.Name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, deployOptions.ManifestPathFlag)
 			deployOptions.Manifest.Name = deployOptions.Name
 		}
 
@@ -111,7 +125,7 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 }
 
-func addEnvVars(ctx context.Context, cwd string) {
+func (dc *DeployCommand) addEnvVars(cwd string) {
 	if os.Getenv(model.OktetoGitBranchEnvVar) == "" {
 		branch, err := utils.GetBranch(cwd)
 		if err != nil {
@@ -139,13 +153,16 @@ func addEnvVars(ctx context.Context, cwd string) {
 	}
 
 	if os.Getenv(model.OktetoGitCommitEnvVar) == "" {
-		sha, err := utils.GetGitCommit(cwd)
+		sha, err := repository.NewRepository(cwd).GetSHA()
 		if err != nil {
 			oktetoLog.Infof("could not retrieve sha: %s", err)
 		}
-		isClean, err := utils.IsCleanDirectory(ctx, cwd)
-		if err != nil {
-			oktetoLog.Infof("could not status: %s", err)
+		isClean := true
+		if !dc.isRemote {
+			isClean, err = repository.NewRepository(cwd).IsClean()
+			if err != nil {
+				oktetoLog.Infof("could not status: %s", err)
+			}
 		}
 		if !isClean {
 			sha = utils.GetRandomSHA()
@@ -181,23 +198,4 @@ func switchRepoSchemaToHTTPS(repo string) *url.URL {
 		oktetoLog.Infof("retrieved schema for %s - %s", repo, repoURL.Scheme)
 		return nil
 	}
-}
-
-func updateConfigMapStatusError(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, errMain error) error {
-	if err := updateConfigMapStatus(ctx, cfg, c, data, errMain); err != nil {
-		return err
-	}
-
-	return errMain
-}
-
-func getConfigMapFromData(ctx context.Context, data *pipeline.CfgData, c kubernetes.Interface) (*corev1.ConfigMap, error) {
-	return pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
-}
-
-func updateConfigMapStatus(ctx context.Context, cfg *corev1.ConfigMap, c kubernetes.Interface, data *pipeline.CfgData, err error) error {
-	oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, err.Error())
-	data.Status = pipeline.ErrorStatus
-
-	return pipeline.UpdateConfigMap(ctx, cfg, data, c)
 }

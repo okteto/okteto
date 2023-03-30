@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -26,6 +26,7 @@ import (
 
 	"github.com/manifoldco/promptui"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/k8s/apps"
@@ -60,12 +61,13 @@ func LoadManifestContext(devPath string) (*model.ContextResource, error) {
 	return model.GetContextResource(devPath)
 }
 
-// LoadManifest loads an okteto manifest checking "yml" and "yaml"
-func LoadManifest(devPath string) (*model.Manifest, error) {
+// DeprecatedLoadManifest loads an okteto manifest checking "yml" and "yaml".
+// Deprecated: use model.GetManifestV2 instead
+func DeprecatedLoadManifest(devPath string) (*model.Manifest, error) {
 	if !filesystem.FileExists(devPath) {
 		if devPath == DefaultManifest {
 			if filesystem.FileExists(secondaryManifest) {
-				return LoadManifest(secondaryManifest)
+				return DeprecatedLoadManifest(secondaryManifest)
 			}
 		}
 
@@ -82,7 +84,7 @@ func LoadManifest(devPath string) (*model.Manifest, error) {
 		if err != nil {
 			return nil, err
 		}
-		manifest.Name = InferName(cwd)
+		manifest.Name = devenvironment.DeprecatedInferName(cwd)
 	}
 	if manifest.Namespace == "" {
 		manifest.Namespace = okteto.Context().Namespace
@@ -127,9 +129,10 @@ func LoadManifestRc(dev *model.Dev) error {
 	return nil
 }
 
-// LoadManifestOrDefault loads an okteto manifest or a default one if does not exist
-func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
-	dev, err := LoadManifest(devPath)
+// DeprecatedLoadManifestOrDefault loads an okteto manifest or a default one if does not exist
+// Deprecatd. It should only be used by `push` command that will be deleted on next major version. No new usages should be added
+func DeprecatedLoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
+	dev, err := DeprecatedLoadManifest(devPath)
 	if err == nil {
 		return dev, nil
 	}
@@ -152,7 +155,7 @@ func LoadManifestOrDefault(devPath, name string) (*model.Manifest, error) {
 	return nil, err
 }
 
-// GetDevFromManifest gets a dev from a manifest by
+// GetDevFromManifest gets a dev from a manifest by comparing the given dev name with the dev name in the manifest
 func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, error) {
 	if len(manifest.Dev) == 0 {
 		return nil, oktetoErrors.ErrManifestNoDevSection
@@ -172,7 +175,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		return nil, ErrNoDevSelected
 	}
 
-	options := []string{}
+	var options []string
 	for name, dev := range manifest.Dev {
 		if name == devName {
 			return dev, nil
@@ -194,7 +197,7 @@ func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInte
 		}
 		return devs[i] < devs[j]
 	})
-	items := []SelectorItem{}
+	var items []SelectorItem
 	for _, dev := range devs {
 		items = append(items, SelectorItem{
 			Name:   dev,
@@ -236,9 +239,10 @@ const (
 func AskYesNo(q string, d YesNoDefault) (bool, error) {
 	var answer string
 	for {
-		oktetoLog.Question(fmt.Sprintf("%s %s: ", q, d))
-		_, err := fmt.Scanln(&answer)
-		if err != nil && err.Error() != "unexpected newline" {
+		if err := oktetoLog.Question(fmt.Sprintf("%s %s: ", q, d)); err != nil {
+			return false, err
+		}
+		if _, err := fmt.Scanln(&answer); err != nil && err.Error() != "unexpected newline" {
 			return false, err
 		}
 
@@ -250,14 +254,17 @@ func AskYesNo(q string, d YesNoDefault) (bool, error) {
 			break
 		}
 
-		if answer == "y" || answer == "n" {
+		if answer == "y" || answer == "Y" || answer == "n" || answer == "N" {
 			break
 		}
 
-		oktetoLog.Fail("input must be 'y' or 'n'")
+		oktetoLog.Fail("input must be 'Y/y' or 'N/n'")
 	}
 
-	return answer == "y", nil
+	if answer == "y" || answer == "Y" {
+		return true, nil
+	}
+	return false, nil
 }
 
 func AskForOptions(options []string, label string) (string, error) {
@@ -306,7 +313,9 @@ func AskIfOktetoInit(devPath string) bool {
 func AsksQuestion(q string) (string, error) {
 	var answer string
 
-	oktetoLog.Question(q)
+	if err := oktetoLog.Question(q); err != nil {
+		oktetoLog.Infof("failed to ask question: %s", err)
+	}
 	if _, err := fmt.Scanln(&answer); err != nil {
 		return "", err
 	}
@@ -390,7 +399,7 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 			return apps.NewDeploymentApp(deployments.Sandbox(dev)), true, nil
 		}
 		if len(dev.Selector) > 0 {
-			if err == oktetoErrors.ErrNotFound {
+			if oktetoErrors.IsNotFound(err) {
 				err = oktetoErrors.UserError{
 					E:    fmt.Errorf("didn't find an application in namespace %s that matches the labels in your Okteto manifest", dev.Namespace),
 					Hint: "Update the labels or point your context to a different namespace and try again"}

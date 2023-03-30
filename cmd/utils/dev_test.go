@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -76,7 +76,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			def, err := LoadManifestOrDefault("/tmp/a-path", tt.deployment)
+			def, err := DeprecatedLoadManifestOrDefault("/tmp/a-path", tt.deployment)
 			if tt.expectErr {
 				if err == nil {
 					t.Fatal("expected error when loading")
@@ -112,7 +112,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			loaded, err := LoadManifestOrDefault(f.Name(), "foo")
+			loaded, err := DeprecatedLoadManifestOrDefault(f.Name(), "foo")
 			if err != nil {
 				t.Fatalf("unexpected error when loading existing manifest: %s", err.Error())
 			}
@@ -128,7 +128,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 		})
 	}
 	name := "demo-deployment"
-	def, err := LoadManifestOrDefault("/tmp/bad-path", name)
+	def, err := DeprecatedLoadManifestOrDefault("/tmp/bad-path", name)
 	if err != nil {
 		t.Fatal("default dev was not returned")
 	}
@@ -137,7 +137,7 @@ func Test_LoadManifestOrDefault(t *testing.T) {
 		t.Errorf("expected %s, got %s", name, def.Dev[name].Name)
 	}
 
-	_, err = LoadManifestOrDefault("/tmp/bad-path", "")
+	_, err = DeprecatedLoadManifestOrDefault("/tmp/bad-path", "")
 	if err == nil {
 		t.Error("expected error with empty deployment name")
 	}
@@ -455,6 +455,18 @@ func Test_AskYesNo(t *testing.T) {
 			def:      YesNoDefault_Yes,
 			answer:   "\n",
 			expected: true,
+		},
+		{
+			name:     "ignores-default-when-answer",
+			def:      YesNoDefault_No,
+			answer:   "Y\n",
+			expected: true,
+		},
+		{
+			name:     "ignores-default-when-answer",
+			def:      YesNoDefault_No,
+			answer:   "N\n",
+			expected: false,
 		},
 	}
 	for _, tt := range tests {

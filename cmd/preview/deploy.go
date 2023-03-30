@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -96,7 +96,9 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "relative path within the repository to the okteto manifest (default to okteto.yaml or .okteto/okteto.yaml)")
 
 	cmd.Flags().StringVarP(&opts.deprecatedFilename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
-	cmd.Flags().MarkHidden("filename")
+	if err := cmd.Flags().MarkHidden("filename"); err != nil {
+		oktetoLog.Infof("failed to hide deprecated flag: %s", err)
+	}
 	return cmd
 }
 
@@ -125,7 +127,7 @@ func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*typ
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	varList := []types.Variable{}
+	var varList []types.Variable
 	for _, v := range opts.variables {
 		kv := strings.SplitN(v, "=", 2)
 		if len(kv) != 2 {
@@ -157,7 +159,7 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-		err := pw.okClient.Pipeline().StreamLogs(waitCtx, name, namespace, a.Name)
+		err := pw.okClient.Stream().PipelineLogs(waitCtx, name, namespace, a.Name)
 		if err != nil {
 			oktetoLog.Warning("preview logs cannot be streamed due to connectivity issues")
 			oktetoLog.Infof("preview logs cannot be streamed due to connectivity issues: %v", err)
@@ -208,7 +210,7 @@ func (pw *Command) waitForResourcesToBeRunning(ctx context.Context, name string,
 		case <-to.C:
 			return fmt.Errorf("'%s' %w - timeout %s", name, ErrWaitResourcesTimeout, timeout.String())
 		case <-ticker.C:
-			resourceStatus, err := pw.okClient.Previews().GetResourcesStatusFromPreview(ctx, name, "")
+			resourceStatus, err := pw.okClient.Previews().GetResourcesStatus(ctx, name, "")
 			if err != nil {
 				return err
 			}

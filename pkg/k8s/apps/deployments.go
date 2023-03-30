@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -206,4 +206,14 @@ func (i *DeploymentApp) Destroy(ctx context.Context, c kubernetes.Interface) err
 
 func (i *DeploymentApp) PatchAnnotations(ctx context.Context, c kubernetes.Interface) error {
 	return deployments.PatchAnnotations(ctx, i.d, c)
+}
+
+// GetCloned Returns from Kubernetes the cloned deployment
+func (i *DeploymentApp) GetDevClone(ctx context.Context, c kubernetes.Interface) (App, error) {
+	clonedName := model.DevCloneName(i.d.Name)
+	d, err := deployments.Get(ctx, clonedName, i.d.Namespace, c)
+	if err == nil {
+		return NewDeploymentApp(d), nil
+	}
+	return nil, err
 }

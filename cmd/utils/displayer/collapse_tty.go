@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -99,11 +99,15 @@ func (d *TTYCollapseDisplayer) displayCommand(commandChan chan bool) {
 				width, _, _ := term.GetSize(int(os.Stdout.Fd()))
 				commandLines := renderCommand(spinnerChars[i], d.command, width)
 				for _, commandLine := range commandLines {
-					d.screenbuf.Write(commandLine)
+					if _, err := d.screenbuf.Write(commandLine); err != nil {
+						oktetoLog.Infof("Error writing command line: %s", err)
+					}
 				}
 				lines := renderLines(d.linesToDisplay, width)
 				for _, line := range lines {
-					d.screenbuf.Write(line)
+					if _, err := d.screenbuf.Write(line); err != nil {
+						oktetoLog.Infof("Error writing line: %s", err)
+					}
 				}
 				d.screenbuf.Flush()
 			case <-d.commandContext.Done():
@@ -202,20 +206,34 @@ func (d *TTYCollapseDisplayer) CleanUp(err error) {
 	if err == nil {
 		message = renderSuccessCommand(d.command)
 		d.screenbuf.Reset()
-		d.screenbuf.Clear()
-		d.screenbuf.Flush()
-		d.screenbuf.Write(message)
+		if err := d.screenbuf.Clear(); err != nil {
+			oktetoLog.Infof("Error clearing screen: %s", err)
+		}
+		if err := d.screenbuf.Flush(); err != nil {
+			oktetoLog.Infof("Error flushing screen: %s", err)
+		}
+		if _, err := d.screenbuf.Write(message); err != nil {
+			oktetoLog.Infof("Error writing success message: %s", err)
+		}
 		d.screenbuf.Flush()
 	} else {
 		message = renderFailCommand(d.command, err)
 		d.screenbuf.Reset()
-		d.screenbuf.Clear()
-		d.screenbuf.Flush()
-		d.screenbuf.Write(message)
+		if err := d.screenbuf.Clear(); err != nil {
+			oktetoLog.Infof("Error clearing screen: %s", err)
+		}
+		if err := d.screenbuf.Flush(); err != nil {
+			oktetoLog.Infof("Error flushing screen: %s", err)
+		}
+		if _, err := d.screenbuf.Write(message); err != nil {
+			oktetoLog.Infof("Error writing fail message: %s", err)
+		}
 		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
 		lines := renderLines(d.linesToDisplay, width)
 		for _, line := range lines {
-			d.screenbuf.Write([]byte(line))
+			if _, err := d.screenbuf.Write([]byte(line)); err != nil {
+				oktetoLog.Infof("Error writing line: %s", err)
+			}
 		}
 		d.screenbuf.Flush()
 	}

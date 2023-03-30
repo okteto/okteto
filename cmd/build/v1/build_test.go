@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -27,6 +27,40 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type fakeRegistry struct {
+	err      error
+	registry map[string]fakeImage
+}
+
+// fakeImage represents the data from an image
+type fakeImage struct {
+	Registry string
+	Repo     string
+	Tag      string
+	ImageRef string
+	Args     []string
+}
+
+func newFakeRegistry() fakeRegistry {
+	return fakeRegistry{
+		registry: map[string]fakeImage{},
+	}
+}
+
+func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
+	if _, ok := fr.registry[imageTag]; !ok {
+		return "", oktetoErrors.ErrNotFound
+	}
+	return imageTag, nil
+}
+
+func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
+	fr.registry[opts.Tag] = fakeImage{Args: opts.BuildArgs}
+	return nil
+}
+
+func (fr fakeRegistry) HasGlobalPushAccess() (bool, error) { return false, nil }
+
 func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
 	okteto.CurrentStore = &okteto.OktetoContextStore{
@@ -38,7 +72,7 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	registry := test.NewFakeOktetoRegistry(nil)
+	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry, fmt.Errorf("failed to build error"))
 	bc := &OktetoBuilder{
 		Builder:  builder,
@@ -72,7 +106,7 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	registry := test.NewFakeOktetoRegistry(nil)
+	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
 	bc := &OktetoBuilder{
 		Builder:  builder,
@@ -106,7 +140,7 @@ func TestBuildWithNoErrorFromDockerfileAndNoTag(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	registry := test.NewFakeOktetoRegistry(nil)
+	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
 	bc := &OktetoBuilder{
 		Builder:  builder,

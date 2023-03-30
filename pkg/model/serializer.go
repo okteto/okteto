@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/kballard/go-shellquote"
+	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
 	giturls "github.com/whilp/git-urls"
@@ -760,16 +761,17 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 type manifestRaw struct {
-	Name          string                  `json:"name,omitempty" yaml:"name,omitempty"`
-	Namespace     string                  `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Context       string                  `json:"context,omitempty" yaml:"context,omitempty"`
-	Icon          string                  `json:"icon,omitempty" yaml:"icon,omitempty"`
-	Deploy        *DeployInfo             `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	Dev           ManifestDevs            `json:"dev,omitempty" yaml:"dev,omitempty"`
-	Destroy       []DeployCommand         `json:"destroy,omitempty" yaml:"destroy,omitempty"`
-	Build         ManifestBuild           `json:"build,omitempty" yaml:"build,omitempty"`
-	Dependencies  ManifestDependencies    `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
-	GlobalForward []forward.GlobalForward `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Name          string                                   `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace     string                                   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Context       string                                   `json:"context,omitempty" yaml:"context,omitempty"`
+	Icon          string                                   `json:"icon,omitempty" yaml:"icon,omitempty"`
+	Deploy        *DeployInfo                              `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Dev           ManifestDevs                             `json:"dev,omitempty" yaml:"dev,omitempty"`
+	Destroy       *DestroyInfo                             `json:"destroy,omitempty" yaml:"destroy,omitempty"`
+	Build         ManifestBuild                            `json:"build,omitempty" yaml:"build,omitempty"`
+	Dependencies  ManifestDependencies                     `json:"dependencies,omitempty" yaml:"dependencies,omitempty"`
+	GlobalForward []forward.GlobalForward                  `json:"forward,omitempty" yaml:"forward,omitempty"`
+	External      externalresource.ExternalResourceSection `json:"external,omitempty" yaml:"external,omitempty"`
 
 	DeprecatedDevs []string `yaml:"devs"`
 }
@@ -844,6 +846,7 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		Dev:          map[string]*Dev{},
 		Build:        map[string]*BuildInfo{},
 		Dependencies: map[string]*Dependency{},
+		External:     externalresource.ExternalResourceSection{},
 	}
 	err = unmarshal(&manifest)
 	if err != nil {
@@ -860,6 +863,7 @@ func (m *Manifest) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	m.Dependencies = manifest.Dependencies
 	m.Name = manifest.Name
 	m.GlobalForward = manifest.GlobalForward
+	m.External = manifest.External
 
 	err = m.SanitizeSvcNames()
 	if err != nil {
@@ -934,6 +938,7 @@ func (d *DeployInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	if err != nil {
 		return err
 	}
+
 	*d = DeployInfo(deploy)
 	return nil
 }
@@ -1071,6 +1076,61 @@ func isManifestFieldNotFound(err error) bool {
 		}
 	}
 	return false
+}
+
+func (d *DestroyInfo) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var commandsString []string
+	err := unmarshal(&commandsString)
+	if err == nil {
+		d.Commands = []DeployCommand{}
+		for _, cmdString := range commandsString {
+			d.Commands = append(d.Commands, DeployCommand{
+				Name:    cmdString,
+				Command: cmdString,
+			})
+		}
+		return nil
+	}
+	var commands []DeployCommand
+	err = unmarshal(&commands)
+	if err == nil {
+		d.Commands = commands
+		return nil
+	}
+	type destroyInfoRaw DestroyInfo
+	var destroy destroyInfoRaw
+	err = unmarshal(&destroy)
+	if err != nil {
+		return err
+	}
+
+	*d = DestroyInfo(destroy)
+	return nil
+}
+
+func (d *DestroyInfo) MarshalYAML() (interface{}, error) {
+	isCommandList := true
+	for _, cmd := range d.Commands {
+		if cmd.Command != cmd.Name {
+			isCommandList = false
+		}
+	}
+	if isCommandList {
+		result := []string{}
+		for _, cmd := range d.Commands {
+			result = append(result, cmd.Command)
+		}
+		return result, nil
+	}
+	return d, nil
+}
+
+func (m *Manifest) MarshalYAML() (interface{}, error) {
+	if m.Destroy == nil || len(m.Destroy.Commands) == 0 {
+		m.Destroy = nil
+		return m, nil
+	}
+	return m, nil
 }
 
 func (d *Dev) MarshalYAML() (interface{}, error) {

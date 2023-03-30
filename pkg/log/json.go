@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -294,7 +294,9 @@ func (w *JSONWriter) Write(p []byte) (n int, err error) {
 	msg := string(p)
 	msg = convertToJSON(InfoLevel, log.stage, msg)
 	if msg != "" {
-		w.out.Out.Write([]byte(""))
+		if _, err := w.out.Out.Write([]byte("")); err != nil {
+			return 0, err
+		}
 	}
 	if !strings.HasSuffix(msg, "\n") {
 		msg += "\n"

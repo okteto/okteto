@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -131,6 +131,9 @@ func GetByDev(ctx context.Context, dev *model.Dev, namespace string, c kubernete
 		if dList.Items[i].Labels[model.DevCloneLabel] == "" {
 			validDeployments = append(validDeployments, &dList.Items[i])
 		}
+	}
+	if len(validDeployments) == 0 {
+		return nil, oktetoErrors.ErrNotFound
 	}
 	if len(validDeployments) > 1 {
 		return nil, fmt.Errorf("found '%d' deployments for labels '%s' instead of 1", len(validDeployments), dev.LabelsSelector())

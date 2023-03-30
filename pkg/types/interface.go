@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -24,6 +24,7 @@ type OktetoInterface interface {
 	Namespaces() NamespaceInterface
 	Previews() PreviewInterface
 	Pipeline() PipelineInterface
+	Stream() StreamInterface
 }
 
 // UserInterface represents the client that connects to the user functions
@@ -37,14 +38,18 @@ type NamespaceInterface interface {
 	List(ctx context.Context) ([]Namespace, error)
 	Delete(ctx context.Context, namespace string) error
 	AddMembers(ctx context.Context, namespace string, members []string) error
-	SleepNamespace(ctx context.Context, namespace string) error
+	Sleep(ctx context.Context, namespace string) error
+	DestroyAll(ctx context.Context, namespace string, destroyVolumes bool) error
+	Wake(ctx context.Context, namespace string) error
 }
 
 // PreviewInterface represents the client that connects to the preview functions
 type PreviewInterface interface {
 	List(ctx context.Context) ([]Preview, error)
 	DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []Variable) (*PreviewResponse, error)
-	GetResourcesStatusFromPreview(ctx context.Context, previewName, devName string) (map[string]string, error)
+	GetResourcesStatus(ctx context.Context, previewName, devName string) (map[string]string, error)
+	Destroy(ctx context.Context, previewName string) error
+	ListEndpoints(ctx context.Context, previewName string) ([]Endpoint, error)
 }
 
 // PipelineInterface represents the client that connects to the pipeline functions
@@ -54,10 +59,16 @@ type PipelineInterface interface {
 	Destroy(ctx context.Context, name, namespace string, destroyVolumes bool) (*GitDeployResponse, error)
 	GetResourcesStatus(ctx context.Context, name, namespace string) (map[string]string, error)
 	GetByName(ctx context.Context, name, namespace string) (*GitDeploy, error)
-	StreamLogs(ctx context.Context, name, namespace, actionName string) error
+	WaitForActionProgressing(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error
 }
 
 // OktetoClientProvider provides an okteto client ready to use or fail
 type OktetoClientProvider interface {
 	Provide() (OktetoInterface, error)
+}
+
+// StreamInterface represents the streaming client
+type StreamInterface interface {
+	PipelineLogs(ctx context.Context, name, namespace, actionName string) error
+	DestroyAllLogs(ctx context.Context, namespace string) error
 }

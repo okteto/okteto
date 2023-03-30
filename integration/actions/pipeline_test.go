@@ -1,7 +1,7 @@
 //go:build actions
 // +build actions
 
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -45,7 +45,7 @@ const (
 func TestPipelineActions(t *testing.T) {
 	integration.SkipIfWindows(t)
 
-	namespace := getTestNamespace()
+	namespace := integration.GetTestNamespace("PipelineActions", user)
 
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, executeDeployPipelineAction(t, namespace))
@@ -56,7 +56,7 @@ func TestPipelineActions(t *testing.T) {
 func TestPipelineActionsWithCompose(t *testing.T) {
 	integration.SkipIfWindows(t)
 
-	namespace := getTestNamespace()
+	namespace := integration.GetTestNamespace("pipelinecomposeaction", user)
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, executeDeployWithComposePipelineAction(namespace))
 	assert.NoError(t, executeDestroyPipelineAction(namespace))

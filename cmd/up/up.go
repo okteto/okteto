@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -31,11 +31,14 @@ import (
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/manifest"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/discovery"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -49,6 +52,7 @@ import (
 	"github.com/okteto/okteto/pkg/syncthing"
 	"github.com/okteto/okteto/pkg/types"
 
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -64,18 +68,18 @@ type UpOptions struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
 	ManifestPathFlag string
-	// ManifestPath is the patah to the manifest used though the command execution.
+	// ManifestPath is the path to the manifest used though the command execution.
 	// This might change its value during execution
-	ManifestPath string
-	Namespace    string
-	K8sContext   string
-	DevName      string
-	Devs         []string
-	Envs         []string
-	Remote       int
-	Deploy       bool
-	ForcePull    bool
-	Reset        bool
+	ManifestPath     string
+	Namespace        string
+	K8sContext       string
+	DevName          string
+	Envs             []string
+	Remote           int
+	Deploy           bool
+	ForcePull        bool
+	Reset            bool
+	commandToExecute []string
 }
 
 // Up starts a development container
@@ -154,12 +158,19 @@ func Up() *cobra.Command {
 					return err
 				}
 			}
+
 			wd, err := os.Getwd()
 			if err != nil {
 				return err
 			}
 			if oktetoManifest.Name == "" {
-				oktetoManifest.Name = utils.InferName(wd)
+				oktetoLog.Info("okteto manifest doesn't have a name, inferring it...")
+				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
+				if err != nil {
+					return err
+				}
+				inferer := devenvironment.NewNameInferer(c)
+				oktetoManifest.Name = inferer.InferName(ctx, wd, okteto.Context().Namespace, upOptions.ManifestPathFlag)
 			}
 			os.Setenv(constants.OktetoNameEnvVar, oktetoManifest.Name)
 
@@ -215,6 +226,7 @@ func Up() *cobra.Command {
 				Exit:           make(chan error, 1),
 				resetSyncthing: upOptions.Reset,
 				StartTime:      time.Now(),
+				Registry:       registry.NewOktetoRegistry(okteto.Config{}),
 				Options:        upOptions,
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
@@ -275,12 +287,31 @@ func Up() *cobra.Command {
 					return err
 				}
 			}
+			if len(upOptions.commandToExecute) > 0 {
+				dev.Command.Values = upOptions.commandToExecute
+			}
 
 			up.Dev = dev
 			if forceAutocreate {
 				// update autocreate property if needed to be forced
 				oktetoLog.Info("Setting Autocreate to true because manifest v1 and flag --deploy")
 				up.Dev.Autocreate = true
+			}
+
+			// only if the context is an okteto one, we should verify if the namespace has to be woken up
+			if okteto.Context().IsOkteto {
+				// We execute it in a goroutine to not impact the command performance
+				go func() {
+					okClient, err := okteto.NewOktetoClient()
+					if err != nil {
+						oktetoLog.Infof("failed to create okteto client: '%s'", err.Error())
+						return
+					}
+					if err := wakeNamespaceIfApplies(ctx, up.Dev.Namespace, up.Client, okClient); err != nil {
+						// If there is an error waking up namespace, we don't want to fail the up command
+						oktetoLog.Infof("failed to wake up the namespace: %s", err.Error())
+					}
+				}()
 			}
 
 			if err := setBuildEnvVars(ctx, oktetoManifest); err != nil {
@@ -356,8 +387,11 @@ func Up() *cobra.Command {
 	cmd.Flags().IntVarP(&upOptions.Remote, "remote", "r", 0, "configures remote execution on the specified port")
 	cmd.Flags().BoolVarP(&upOptions.Deploy, "deploy", "d", false, "Force execution of the commands in the 'deploy' section of the okteto manifest (defaults to 'false')")
 	cmd.Flags().BoolVarP(&upOptions.ForcePull, "pull", "", false, "force dev image pull")
-	cmd.Flags().MarkHidden("pull")
+	if err := cmd.Flags().MarkHidden("pull"); err != nil {
+		oktetoLog.Infof("failed to mark 'pull' flag as hidden: %s", err)
+	}
 	cmd.Flags().BoolVarP(&upOptions.Reset, "reset", "", false, "reset the file synchronization database")
+	cmd.Flags().StringArrayVarP(&upOptions.commandToExecute, "command", "", []string{}, "external commands to be supplied to 'okteto up'")
 	return cmd
 }
 
@@ -489,20 +523,21 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVar
 }
 
 func (up *upContext) deployApp(ctx context.Context) error {
-	kubeconfig := deploy.NewKubeConfig()
-	proxy, err := deploy.NewProxy(kubeconfig)
+	k8sProvider := okteto.NewK8sClientProvider()
+	pc, err := pipelineCMD.NewCommand()
 	if err != nil {
 		return err
 	}
-
 	c := &deploy.DeployCommand{
 		GetManifest:        up.getManifest,
-		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), false),
-		Proxy:              proxy,
+		GetDeployer:        deploy.GetDeployer,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
 		K8sClientProvider:  okteto.NewK8sClientProvider(),
 		Builder:            buildv2.NewBuilderFromScratch(),
+		GetExternalControl: deploy.GetExternalControl,
+		Fs:                 afero.NewOsFs(),
+		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider),
+		PipelineCMD:        pc,
 	}
 
 	return c.RunDeploy(ctx, &deploy.Options{
@@ -545,6 +580,7 @@ func (up *upContext) start() error {
 		HasDeploySection: (up.Manifest.IsV2 &&
 			up.Manifest.Deploy != nil &&
 			(len(up.Manifest.Deploy.Commands) > 0 || up.Manifest.Deploy.ComposeSection.ComposesInfo != nil)),
+		HasReverse: len(up.Dev.Reverse) > 0,
 	})
 
 	go up.activateLoop()
@@ -575,8 +611,11 @@ func (up *upContext) activateLoop() {
 	iter := 0
 	defer t.Stop()
 
-	defer config.DeleteStateFile(up.Dev.Name, up.Dev.Namespace)
-
+	defer func() {
+		if err := config.DeleteStateFile(up.Dev.Name, up.Dev.Namespace); err != nil {
+			oktetoLog.Infof("failed to delete state file: %s", err)
+		}
+	}()
 	for {
 		if up.isRetry || isTransientError {
 			oktetoLog.Infof("waiting for shutdown sequence to finish")
@@ -711,7 +750,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 
 	oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
 
-	imageTag := registry.GetImageTag(image, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
+	imageTag := up.Registry.GetImageTag(image, up.Dev.Name, up.Dev.Namespace)
 	oktetoLog.Infof("building dev image tag %s", imageTag)
 
 	buildArgs := model.SerializeBuildArgs(args)
@@ -887,4 +926,20 @@ func setBuildEnvVars(ctx context.Context, m *model.Manifest) error {
 		Manifest:    m,
 	}
 	return builder.Build(ctx, buildOptions)
+}
+
+// wakeNamespaceIfApplies wakes the namespace if it is sleeping
+func wakeNamespaceIfApplies(ctx context.Context, ns string, k8sClient kubernetes.Interface, okClient types.OktetoInterface) error {
+	n, err := k8sClient.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	// If the namespace is not sleeping, do nothing
+	if n.Labels[constants.NamespaceStatusLabel] != constants.NamespaceStatusSleeping {
+		return nil
+	}
+
+	oktetoLog.Information("Namespace '%s' is sleeping, waking it up...", ns)
+	return okClient.Namespaces().Wake(ctx, ns)
 }

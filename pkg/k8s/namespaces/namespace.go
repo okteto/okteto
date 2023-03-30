@@ -1,4 +1,4 @@
-// Copyright 2022 The Okteto Authors
+// Copyright 2023 The Okteto Authors
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -23,7 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/volumes"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/rancher/wrangler/pkg/ratelimit"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
@@ -44,6 +43,7 @@ import (
 const (
 	parallelism              int64 = 10
 	volumeKind                     = "PersistentVolumeClaim"
+	volumeSnapshotKind             = "VolumeSnapshot"
 	jobKind                        = "Job"
 	resourcePolicyAnnotation       = "dev.okteto.com/policy"
 	keepPolicy                     = "keep"
@@ -91,6 +91,16 @@ type Trip struct {
 	writeLock  sync.Mutex
 }
 
+// noneRateLimiter noop rate limiter to avoid rate limiting errors on k8s client.
+// We created this to avoid to depend on github.com/rancher/rancher dependency as this is the only place where it was used.
+type noneRateLimiter struct{}
+
+func (*noneRateLimiter) TryAccept() bool              { return true }
+func (*noneRateLimiter) Stop()                        {}
+func (*noneRateLimiter) Accept()                      {}
+func (*noneRateLimiter) QPS() float32                 { return 1 }
+func (*noneRateLimiter) Wait(_ context.Context) error { return nil }
+
 // NewNamespace allows to create a new Namespace object
 func NewNamespace(dynClient dynamic.Interface, discClient discovery.DiscoveryInterface, restConfig *rest.Config, k8s kubernetes.Interface) *Namespaces {
 	return &Namespaces{
@@ -137,8 +147,8 @@ func (n *Namespaces) DestroyWithLabel(ctx context.Context, ns string, opts Delet
 			return err
 		}
 		gvk := obj.GetObjectKind().GroupVersionKind()
-		if gvk.Kind == volumeKind && !opts.IncludeVolumes {
-			oktetoLog.Debugf("skipping deletion of pvc '%s' because of volume flag", m.GetName())
+		if isStorage(gvk.Kind) && !opts.IncludeVolumes {
+			oktetoLog.Debugf("skipping deletion of '%s' '%s' because of volume flag", gvk.Kind, m.GetName())
 			return nil
 		}
 
@@ -181,7 +191,7 @@ func (n *Namespaces) DestroySFSVolumes(ctx context.Context, ns string, opts Dele
 	if !opts.IncludeVolumes {
 		return nil
 	}
-	pvcNames := []string{}
+	var pvcNames []string
 
 	ssList, err := statefulsets.List(ctx, ns, opts.LabelSelector, n.k8sClient)
 	if err != nil {
@@ -237,7 +247,7 @@ func NewTrip(restConfig *rest.Config, opts *Options) (*Trip, error) {
 	}
 
 	if restConfig.RateLimiter == nil {
-		restConfig.RateLimiter = ratelimit.None
+		restConfig.RateLimiter = &noneRateLimiter{}
 	}
 
 	k8s, err := kubernetes.NewForConfig(restConfig)
@@ -318,7 +328,9 @@ func (t *Trip) Wander(ctx context.Context, traveler Traveler) error {
 }
 
 func (t *Trip) listAll(ctx context.Context, traveler Traveler, client dynamic.ResourceInterface, api *metav1.APIResourceList, api2 metav1.APIResource) error {
-	t.sem.Acquire(ctx, 1)
+	if err := t.sem.Acquire(ctx, 1); err != nil {
+		return err
+	}
 	defer t.sem.Release(1)
 
 	pager := pager.New(pager.SimplePageFunc(func(opts metav1.ListOptions) (runtime.Object, error) {
@@ -337,4 +349,13 @@ func (t *Trip) listAll(ctx context.Context, traveler Traveler, client dynamic.Re
 		}
 		return nil
 	})
+}
+
+// isStorage returns if the kind is some of storage kind
+func isStorage(kind string) bool {
+	switch kind {
+	case volumeKind, volumeSnapshotKind:
+		return true
+	}
+	return false
 }
