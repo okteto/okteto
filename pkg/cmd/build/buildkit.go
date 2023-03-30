@@ -211,6 +211,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 	ch := make(chan *client.SolveStatus)
 	ttyChannel := make(chan *client.SolveStatus)
 	plainChannel := make(chan *client.SolveStatus)
+	commandFailChannel := make(chan error, 1)
 
 	eg, ctx := errgroup.WithContext(ctx)
 	eg.Go(func() error {
@@ -237,7 +238,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			}
 			if done {
 				close(plainChannel)
-				if progress == oktetoLog.TTYFormat {
+				if progress == oktetoLog.TTYFormat || progress == "deploy" {
 					close(ttyChannel)
 				}
 				break
@@ -266,16 +267,27 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			// not using shared context to not disrupt display but let it finish reporting errors
 			return progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
 		case "deploy":
-			go deployDisplayer(context.TODO(), ttyChannel)
-			return progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
+			go progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
+			err := deployDisplayer(context.TODO(), ttyChannel)
+			commandFailChannel <- err
+			return err
 		default:
 			// not using shared context to not disrupt display but let it finish reporting errors
 			return progressui.DisplaySolveStatus(context.TODO(), "", nil, oktetoLog.GetOutputWriter(), plainChannel)
 		}
-
 	})
 
-	return eg.Wait()
+	err := eg.Wait()
+	// If the command failed, we want to return the error from the command instead of the buildkit error
+	if err != nil {
+		select {
+		case commandErr := <-commandFailChannel:
+			return commandErr
+		default:
+			return err
+		}
+	}
+	return nil
 }
 
 func (*buildWriter) Write(p []byte) (int, error) {
