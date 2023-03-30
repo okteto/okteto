@@ -84,16 +84,18 @@ type remoteDestroyCommand struct {
 	fs                   afero.Fs
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
+	manifest             *model.Manifest
 }
 
-func newRemoteDestroyer(destroyImage string) *remoteDestroyCommand {
+func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
 	return &remoteDestroyCommand{
 		builder:              remoteBuild.NewBuilderFromScratch(),
-		destroyImage:         destroyImage,
+		destroyImage:         manifest.Destroy.Image,
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
+		manifest:             manifest,
 	}
 }
 
@@ -135,6 +137,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 
 	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
 	buildOptions.Tag = ""
+	buildOptions.Manifest = rd.manifest
 
 	// we need to call Build() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
@@ -142,7 +145,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	// executed in the deploy command.
 	if err := rd.builder.Build(ctx, buildOptions); err != nil {
 		return oktetoErrors.UserError{
-			E: fmt.Errorf("error during development environment deployment"),
+			E: fmt.Errorf("error during destroy of the development environment: %w", err),
 		}
 	}
 	oktetoLog.SetStage("done")
