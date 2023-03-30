@@ -32,7 +32,7 @@ func Sleep(ctx context.Context) *cobra.Command {
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nsToSleep := args[0]
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: nsToSleep, Show: true}); err != nil {
 				return err
 			}
 

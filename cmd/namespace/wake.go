@@ -31,7 +31,7 @@ func Wake(ctx context.Context) *cobra.Command {
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nsToWake := args[0]
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: nsToWake, Show: true}); err != nil {
 				return err
 			}
 
@@ -50,7 +50,7 @@ func Wake(ctx context.Context) *cobra.Command {
 }
 
 func (nc *NamespaceCommand) ExecuteWakeNamespace(ctx context.Context, namespace string) error {
-	// Spinner to be loaded before waking the namespace
+	// Spinner to be loaded before waking a namespace
 	oktetoLog.Spinner(fmt.Sprintf("Waking %s namespace", namespace))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
