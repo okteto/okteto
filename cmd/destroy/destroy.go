@@ -256,7 +256,7 @@ func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) 
 		runInRemote := !isRemote && (destroyImage != "" || opts.RunInRemote)
 
 		if runInRemote {
-			deployer = newRemoteDestroyer(destroyImage)
+			deployer = newRemoteDestroyer(manifest)
 			oktetoLog.Info("Destroying remotely...")
 		} else {
 			destroyerAll, err := newLocalDestroyerAll(dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)
