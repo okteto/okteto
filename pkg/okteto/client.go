@@ -81,7 +81,7 @@ func newOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client
 	if token == "" {
 		return nil, "", fmt.Errorf(oktetoErrors.ErrNotLogged, contextName)
 	}
-	u, err := parseOktetoURLWithPath(contextName, oktetoUrlPath)
+	u, err := ParseOktetoURLWithPath(contextName, oktetoUrlPath)
 	if err != nil {
 		return nil, "", err
 	}
@@ -177,10 +177,10 @@ func newOktetoClientFromGraphqlClient(url string, httpClient *http.Client) (*Okt
 }
 
 func parseOktetoURL(u string) (string, error) {
-	return parseOktetoURLWithPath(u, "graphql")
+	return ParseOktetoURLWithPath(u, "graphql")
 }
 
-func parseOktetoURLWithPath(u, path string) (string, error) {
+func ParseOktetoURLWithPath(u, path string) (string, error) {
 	if u == "" {
 		return "", errURLNotSet
 	}
