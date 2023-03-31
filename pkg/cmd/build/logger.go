@@ -16,9 +16,7 @@ package build
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 
@@ -165,13 +163,12 @@ func (t *trace) display() {
 						t.stages[text.Stage] = true
 					}
 					if text.Level == "error" {
-
-						if v, ok := isOktetoCommandError(text.Message); ok {
+						if text.Stage != "" {
 							t.err = OktetoCommandErr{
 								Stage: text.Stage,
-								Err:   v,
+								Err:   fmt.Errorf(text.Message),
 							}
-							oktetoLog.Fail(v.Error())
+							oktetoLog.Fail(text.Message)
 						} else {
 							oktetoLog.Fail(text.Message)
 						}
@@ -211,13 +208,4 @@ type vertexInfo struct {
 	totalTransferedContext   int64
 	completed                bool
 	logs                     []string
-}
-
-func isOktetoCommandError(message string) (error, bool) {
-	reg := regexp.MustCompile(`.*Error executing command '.*': (.*)`)
-	matches := reg.FindStringSubmatch(message)
-	if len(matches) == 0 {
-		return nil, false
-	}
-	return errors.New(matches[1]), true
 }
