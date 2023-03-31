@@ -79,22 +79,6 @@ func (c *K8sControl) List(ctx context.Context, ns string, labelSelector string) 
 	return result, nil
 }
 
-func (c *K8sControl) Validate(ctx context.Context, name, ns string, externalInfo *ExternalResource) error {
-	k8sclient, err := c.ClientProvider(c.Cfg)
-	if err != nil {
-		return fmt.Errorf("error creating external CRD client: %s", err.Error())
-	}
-
-	externalResourceCRD := translate(name, externalInfo)
-
-	_, err = k8sclient.ExternalResources(ns).Create(ctx, externalResourceCRD, metav1.CreateOptions{DryRun: []string{metav1.DryRunAll}})
-	if err != nil && !k8sErrors.IsAlreadyExists(err) {
-		return fmt.Errorf("error validating external resource CRD '%s': %w", externalResourceCRD.Name, err)
-	}
-
-	return nil
-}
-
 func translate(name string, externalResource *ExternalResource) *k8s.External {
 	var externalEndpointsSpec []k8s.Endpoint
 	for _, endpoint := range externalResource.Endpoints {
