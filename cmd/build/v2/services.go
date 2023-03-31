@@ -16,6 +16,8 @@ package v2
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
@@ -23,11 +25,10 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"golang.org/x/sync/errgroup"
-	"strings"
 )
 
 // GetServicesToBuild returns the services it has to build if they are not already built
-func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcToDeploy []string) ([]string, error) {
+func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model.Manifest, svcsToDeploy []string) ([]string, error) {
 	buildManifest := manifest.Build
 
 	if len(buildManifest) == 0 {
@@ -36,7 +37,7 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	}
 
 	// create a spinner to be loaded before checking if images needs to be built
-	oktetoLog.Spinner("Building images...")
+	oktetoLog.Spinner("Checking images to build...")
 
 	// start the spinner
 	oktetoLog.StartSpinner()
@@ -44,12 +45,20 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	// stop the spinner
 	defer oktetoLog.StopSpinner()
 
+	svcToDeployMap := map[string]bool{}
+	for _, svcToDeploy := range svcsToDeploy {
+		svcToDeployMap[svcToDeploy] = true
+	}
 	// check if images are at registry (global or dev) and set envs or send to build
-	toBuild := make(chan string, len(buildManifest))
+	toBuild := make(chan string, len(svcToDeployMap))
 	g, _ := errgroup.WithContext(ctx)
 	for service := range buildManifest {
-
+		if _, ok := svcToDeployMap[service]; !ok {
+			oktetoLog.Debug("Skipping service '%s' because it is not in the list of services to deploy", service)
+			continue
+		}
 		svc := service
+
 		g.Go(func() error {
 			return bc.checkServicesToBuild(svc, manifest, toBuild)
 		})
@@ -68,13 +77,9 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 		return nil, nil
 	}
 
-	svcToDeployMap := map[string]bool{}
-	for _, svc := range svcToDeploy {
-		svcToDeployMap[svc] = true
-	}
 	svcsToBuildList := []string{}
 	for svc := range toBuild {
-		if _, ok := svcToDeployMap[svc]; len(svcToDeploy) > 0 && !ok {
+		if _, ok := svcToDeployMap[svc]; len(svcsToDeploy) > 0 && !ok {
 			continue
 		}
 		svcsToBuildList = append(svcsToBuildList, svc)

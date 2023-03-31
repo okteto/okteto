@@ -39,7 +39,7 @@ func (f fakeBuilder) Build(_ context.Context, _ *types.BuildOptions) error {
 	return f.err
 }
 
-func (f fakeBuilder) IsV1() bool { return true }
+func (fakeBuilder) IsV1() bool { return true }
 
 func TestRemoteTest(t *testing.T) {
 	ctx := context.Background()
@@ -93,7 +93,7 @@ func TestRemoteTest(t *testing.T) {
 				builderErr: assert.AnError,
 			},
 			expected: oktetoErrors.UserError{
-				E: fmt.Errorf("error during development environment deployment"),
+				E: fmt.Errorf("error during destroy of the development environment: %w", assert.AnError),
 			},
 		},
 		{
