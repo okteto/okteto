@@ -788,10 +788,6 @@ func (f *fakeExternalControlProvider) getFakeExternalControl(cp okteto.K8sClient
 	return f.control, f.err
 }
 
-func (f *fakeExternalControlProvider) getFakeExternalControlValidator(cp okteto.K8sClientProvider) (ExternalResourceValidatorInterface, error) {
-	return f.control, f.err
-}
-
 func TestDeployExternals(t *testing.T) {
 	ctx := context.Background()
 	okteto.CurrentStore = &okteto.OktetoContextStore{
@@ -876,110 +872,6 @@ func TestDeployExternals(t *testing.T) {
 				assert.Error(t, ld.runDeploySection(ctx, tc.options))
 			} else {
 				assert.NoError(t, ld.runDeploySection(ctx, tc.options))
-			}
-		})
-	}
-}
-
-func TestValidateK8sResources(t *testing.T) {
-	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
-	testCases := []struct {
-		name        string
-		manifest    *model.Manifest
-		expectedErr bool
-		providedErr error
-		control     ExternalResourceInterface
-	}{
-		{
-			name: "no externals to validate",
-			manifest: &model.Manifest{
-				Deploy:   &model.DeployInfo{},
-				External: nil,
-			},
-			control: &fakeExternalControl{},
-		},
-		{
-			name: "error getting external control",
-			manifest: &model.Manifest{
-				Deploy: &model.DeployInfo{},
-				External: externalresource.ExternalResourceSection{
-					"test": &externalresource.ExternalResource{
-						Icon: "myIcon",
-						Notes: &externalresource.Notes{
-							Path: "/some/path",
-						},
-						Endpoints: []*externalresource.ExternalEndpoint{},
-					},
-				},
-			},
-			control: &fakeExternalControl{
-				err: assert.AnError,
-			},
-			providedErr: assert.AnError,
-			expectedErr: true,
-		},
-		{
-			name: "error validating external control",
-			manifest: &model.Manifest{
-				Deploy: &model.DeployInfo{},
-				External: externalresource.ExternalResourceSection{
-					"test": &externalresource.ExternalResource{
-						Icon: "myIcon",
-						Notes: &externalresource.Notes{
-							Path: "/some/path",
-						},
-						Endpoints: []*externalresource.ExternalEndpoint{},
-					},
-				},
-			},
-			control: &fakeExternalControl{
-				err: assert.AnError,
-			},
-			expectedErr: true,
-		},
-		{
-			name: "validated external control",
-			manifest: &model.Manifest{
-				Deploy: &model.DeployInfo{},
-				External: externalresource.ExternalResourceSection{
-					"test": &externalresource.ExternalResource{
-						Icon: "myIcon",
-						Notes: &externalresource.Notes{
-							Path: "/some/path",
-						},
-						Endpoints: []*externalresource.ExternalEndpoint{},
-					},
-				},
-			},
-			control: &fakeExternalControl{},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-
-			cp := fakeExternalControlProvider{
-				control: tc.control,
-				err:     tc.providedErr,
-			}
-
-			ld := localDeployer{
-				GetExternalControlForValidator: cp.getFakeExternalControlValidator,
-			}
-
-			if tc.expectedErr {
-				assert.Error(t, ld.validateK8sResources(ctx, tc.manifest))
-			} else {
-				assert.NoError(t, ld.validateK8sResources(ctx, tc.manifest))
 			}
 		})
 	}
