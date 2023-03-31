@@ -156,7 +156,16 @@ func TestGetDestroyFlags(t *testing.T) {
 					Name: "test",
 				},
 			},
-			expected: []string{"--name test"},
+			expected: []string{"--name \"test\""},
+		},
+		{
+			name: "name multiple words",
+			config: config{
+				opts: &Options{
+					Name: "this is a test",
+				},
+			},
+			expected: []string{"--name \"this is a test\""},
 		},
 		{
 			name: "namespace set",
