@@ -12,7 +12,6 @@ import (
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/format"
@@ -57,24 +56,7 @@ func (ld *localDestroyCommand) destroy(ctx context.Context, opts *Options) error
 }
 
 func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get the current working directory: %w", err)
-	}
-	name := opts.Name
-	if opts.Name == "" {
-		c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
-		if err != nil {
-			return err
-		}
-		inferer := devenvironment.NewNameInferer(c)
-		name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, opts.ManifestPathFlag)
-		if err != nil {
-			return fmt.Errorf("could not infer environment name")
-		}
-
-	}
-	err = ld.manifest.ExpandEnvVars()
+	err := ld.manifest.ExpandEnvVars()
 	if err != nil {
 		return err
 	}
@@ -95,7 +77,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destroying...")
 
 	data := &pipeline.CfgData{
-		Name:      name,
+		Name:      opts.Name,
 		Namespace: namespace,
 		Status:    pipeline.DestroyingStatus,
 		Filename:  opts.ManifestPathFlag,
@@ -112,7 +94,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 	if ld.manifest.Namespace == "" {
 		ld.manifest.Namespace = namespace
 	}
-	os.Setenv(constants.OktetoNameEnvVar, name)
+	os.Setenv(constants.OktetoNameEnvVar, opts.Name)
 
 	if opts.DestroyDependencies {
 		for depName, depInfo := range ld.manifest.Dependencies {
@@ -204,14 +186,14 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 	oktetoLog.SetStage("")
 	oktetoLog.DisableMasking()
 
-	oktetoLog.Spinner(fmt.Sprintf("Destroying development environment '%s'...", name))
+	oktetoLog.Spinner(fmt.Sprintf("Destroying development environment '%s'...", opts.Name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
 	deployedByLs, err := labels.NewRequirement(
 		model.DeployedByLabel,
 		selection.Equals,
-		[]string{format.ResourceK8sMetaString(name)},
+		[]string{format.ResourceK8sMetaString(opts.Name)},
 	)
 	if err != nil {
 		if err := ld.ConfigMapHandler.setErrorStatus(ctx, cfg, data, err); err != nil {
