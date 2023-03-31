@@ -87,6 +87,7 @@ type destroyCommand struct {
 	k8sClientProvider okteto.K8sClientProvider
 	ConfigMapHandler  configMapHandler
 	oktetoClient      *okteto.OktetoClient
+	buildCtrl         buildCtrl
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -176,6 +177,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProvider(),
 				oktetoClient:      okClient,
+				buildCtrl:         newBuildCtrl(name),
 			}
 
 			kubeconfigPath := getTempKubeConfigFile(name)
@@ -185,7 +187,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			os.Setenv("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
-			destroyer, err := c.getDestroyer(options)
+			destroyer, err := c.getDestroyer(ctx, options)
 			if err != nil {
 				return err
 			}
@@ -213,7 +215,7 @@ func getTempKubeConfigFile(name string) string {
 	return filepath.Join(config.GetOktetoHome(), tempKubeconfigFileName)
 }
 
-func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) {
+func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (destroyInterface, error) {
 	var (
 		deployer destroyInterface
 		err      error
@@ -230,7 +232,6 @@ func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) 
 
 		oktetoLog.Info("Destroying all...")
 	} else {
-
 		manifest, err := model.GetManifestV2(opts.ManifestPath)
 		if err != nil {
 			// Log error message but application can still be deleted
@@ -244,6 +245,16 @@ func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) 
 
 		destroyImage := ""
 		if manifest.Destroy != nil {
+			if opts.Name == "" {
+				if manifest.Name == "" {
+					manifest.Name = dc.buildCtrl.name
+				}
+			} else {
+				manifest.Name = opts.Name
+			}
+			if err := dc.buildCtrl.buildImageIfNecessary(ctx, manifest); err != nil {
+				return nil, err
+			}
 			destroyImage, err = model.ExpandEnv(manifest.Destroy.Image, false)
 			if err != nil {
 				return nil, err
