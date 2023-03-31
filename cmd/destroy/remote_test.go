@@ -17,11 +17,13 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -36,7 +38,7 @@ func (f fakeBuilder) Build(_ context.Context, _ *types.BuildOptions) error {
 	return f.err
 }
 
-func (f fakeBuilder) IsV1() bool { return true }
+func (fakeBuilder) IsV1() bool { return true }
 
 func TestRemoteTest(t *testing.T) {
 	ctx := context.Background()
@@ -90,7 +92,7 @@ func TestRemoteTest(t *testing.T) {
 				builderErr: assert.AnError,
 			},
 			expected: oktetoErrors.UserError{
-				E: fmt.Errorf("error during development environment deployment"),
+				E: fmt.Errorf("error during destroy of the development environment: %w", assert.AnError),
 			},
 		},
 		{
@@ -200,9 +202,10 @@ func TestCreateDockerfile(t *testing.T) {
 		err            error
 	}
 	var tests = []struct {
-		name     string
-		config   config
-		expected expected
+		name            string
+		config          config
+		expected        expected
+		actionNameValue string
 	}{
 		{
 			name: "OS can't access working directory",
@@ -224,6 +227,7 @@ func TestCreateDockerfile(t *testing.T) {
 			expected: expected{
 				dockerfileName: filepath.Clean("/test/deploy"),
 			},
+			actionNameValue: "test",
 		},
 	}
 
@@ -235,6 +239,7 @@ func TestCreateDockerfile(t *testing.T) {
 				destroyImage:         "test-image",
 				workingDirectoryCtrl: wdCtrl,
 			}
+			t.Setenv(model.OktetoActionNameEnvVar, tt.actionNameValue)
 			dockerfileName, err := rdc.createDockerfile("/test", tt.config.opts)
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.dockerfileName, dockerfileName)
@@ -242,6 +247,8 @@ func TestCreateDockerfile(t *testing.T) {
 			if tt.expected.err == nil {
 				_, err = rdc.fs.Stat(filepath.Join("/test", dockerfileTemporalNane))
 				assert.NoError(t, err)
+				content, _ := afero.ReadFile(rdc.fs, filepath.Join("/test", dockerfileTemporalNane))
+				assert.True(t, strings.Contains(string(content), fmt.Sprintf("ENV %s %s", model.OktetoActionNameEnvVar, tt.actionNameValue)))
 			}
 
 		})
