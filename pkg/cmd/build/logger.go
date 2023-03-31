@@ -61,6 +61,9 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
 			}
 			if done {
 				oktetoLog.StopSpinner()
+				if t.err != nil {
+					return t.err
+				}
 				return nil
 			}
 		}
@@ -71,6 +74,17 @@ type trace struct {
 	ongoing       map[string]*vertexInfo
 	stages        map[string]bool
 	showCtxAdvice bool
+
+	err error
+}
+
+type OktetoCommandErr struct {
+	Stage string
+	Err   error
+}
+
+func (e OktetoCommandErr) Error() string {
+	return fmt.Sprintf("error on stage %s: %s", e.Stage, e.Err.Error())
 }
 
 func newTrace() *trace {
@@ -142,17 +156,25 @@ func (t *trace) display() {
 				switch text.Stage {
 				case "done":
 					continue
-				case "Load manifest":
-					if text.Level == "error" {
-						oktetoLog.Fail(text.Message)
-					}
 				default:
 					// Print the information message about the stage if needed
 					if _, ok := t.stages[text.Stage]; !ok {
 						oktetoLog.Information("Running stage '%s'", text.Stage)
 						t.stages[text.Stage] = true
 					}
-					oktetoLog.Println(text.Message)
+					if text.Level == "error" {
+						if text.Stage != "" {
+							t.err = OktetoCommandErr{
+								Stage: text.Stage,
+								Err:   fmt.Errorf(text.Message),
+							}
+							oktetoLog.Fail(text.Message)
+						} else {
+							oktetoLog.Fail(text.Message)
+						}
+					} else {
+						oktetoLog.Println(text.Message)
+					}
 
 				}
 			}
