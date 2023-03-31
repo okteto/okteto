@@ -135,6 +135,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
 			}
+
 			name := options.Name
 			if options.Name == "" {
 				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
@@ -165,9 +166,12 @@ func Destroy(ctx context.Context) *cobra.Command {
 				options.Namespace = okteto.Context().Namespace
 			}
 
-			okClient, err := okteto.NewOktetoClient()
-			if err != nil {
-				return err
+			var okClient = &okteto.OktetoClient{}
+			if okteto.Context().IsOkteto {
+				okClient, err = okteto.NewOktetoClient()
+				if err != nil {
+					return err
+				}
 			}
 
 			c := &destroyCommand{
@@ -263,7 +267,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 		runInRemote := !isRemote && (destroyImage != "" || opts.RunInRemote)
 
 		if runInRemote {
-			deployer = newRemoteDestroyer(destroyImage)
+			deployer = newRemoteDestroyer(manifest)
 			oktetoLog.Info("Destroying remotely...")
 		} else {
 			destroyerAll, err := newLocalDestroyerAll(dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)

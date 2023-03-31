@@ -152,6 +152,36 @@ func TestManifestExpandDevEnvs(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "does not expand vars in destroy command",
+			envs: map[string]string{
+				"TEST_VAR": "test",
+			},
+			manifest: &Manifest{
+				Destroy: &DestroyInfo{
+					Image: "",
+					Commands: []DeployCommand{
+						{
+							Name: "test",
+							Command: `TEST_VAR="do-not-expand-me"
+echo $TEST_VAR`,
+						},
+					},
+				},
+			},
+			expectedManifest: &Manifest{
+				Destroy: &DestroyInfo{
+					Image: "",
+					Commands: []DeployCommand{
+						{
+							Name: "test",
+							Command: `TEST_VAR="do-not-expand-me"
+echo $TEST_VAR`,
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
