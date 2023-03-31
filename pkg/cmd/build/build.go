@@ -309,6 +309,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		BuildArgs:   model.SerializeBuildArgs(b.Args),
 		NoCache:     o.NoCache,
 		ExportCache: b.ExportCache,
+		Platform:    o.Platform,
 	}
 
 	// if secrets are present at the cmd flag, copy them to opts.Secrets
