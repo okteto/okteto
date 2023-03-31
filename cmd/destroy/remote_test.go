@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
@@ -93,6 +94,19 @@ func TestRemoteTest(t *testing.T) {
 			},
 			expected: oktetoErrors.UserError{
 				E: fmt.Errorf("error during destroy of the development environment: %w", assert.AnError),
+			},
+		},
+		{
+			name: "build with command error",
+			config: config{
+				options: &Options{},
+				builderErr: build.OktetoCommandErr{
+					Stage: "test",
+					Err:   assert.AnError,
+				},
+			},
+			expected: oktetoErrors.UserError{
+				E: fmt.Errorf("error during development environment deployment: %w", assert.AnError),
 			},
 		},
 		{
