@@ -46,8 +46,14 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 	defer oktetoLog.StopSpinner()
 
 	svcToDeployMap := map[string]bool{}
-	for _, svcToDeploy := range svcsToDeploy {
-		svcToDeployMap[svcToDeploy] = true
+	if len(svcsToDeploy) == 0 {
+		for svc := range buildManifest {
+			svcToDeployMap[svc] = true
+		}
+	} else {
+		for _, svcToDeploy := range svcsToDeploy {
+			svcToDeployMap[svcToDeploy] = true
+		}
 	}
 	// check if images are at registry (global or dev) and set envs or send to build
 	toBuild := make(chan string, len(svcToDeployMap))

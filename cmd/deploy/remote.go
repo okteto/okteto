@@ -152,6 +152,13 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
 	if err := rd.builderV1.Build(ctx, buildOptions); err != nil {
+		var cmdErr build.OktetoCommandErr
+		if errors.As(err, &cmdErr) {
+			oktetoLog.SetStage(cmdErr.Stage)
+			return oktetoErrors.UserError{
+				E: fmt.Errorf("error during development environment deployment: %w", cmdErr.Err),
+			}
+		}
 		return oktetoErrors.UserError{
 			E: fmt.Errorf("Error during development environment deployment: %w", err),
 		}
