@@ -282,7 +282,10 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 	if err != nil {
 		select {
 		case commandErr := <-commandFailChannel:
-			return commandErr
+			if commandErr != nil {
+				return commandErr
+			}
+			return err
 		default:
 			return err
 		}
