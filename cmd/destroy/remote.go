@@ -50,7 +50,9 @@ ENV {{ .NamespaceEnvVar }} {{ .NamespaceValue }}
 ENV {{ .ContextEnvVar }} {{ .ContextValue }}
 ENV {{ .TokenEnvVar }} {{ .TokenValue }}
 ENV {{ .RemoteDeployEnvVar }} true
+{{ if ne .ActionNameValue "" }}
 ENV {{ .ActionNameEnvVar }} {{ .ActionNameValue }}
+{{ end }}
 
 COPY . /okteto/src
 WORKDIR /okteto/src
