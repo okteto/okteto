@@ -153,6 +153,11 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 				E: fmt.Errorf("error during development environment deployment: %w", cmdErr.Err),
 			}
 		}
+		oktetoLog.SetStage("remote deploy")
+		var userErr oktetoErrors.UserError
+		if errors.As(err, &userErr) {
+			return userErr
+		}
 		return oktetoErrors.UserError{
 			E: fmt.Errorf("error during destroy of the development environment: %w", err),
 		}
