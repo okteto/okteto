@@ -309,6 +309,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		BuildArgs:   model.SerializeBuildArgs(b.Args),
 		NoCache:     o.NoCache,
 		ExportCache: b.ExportCache,
+		Platform:    o.Platform,
 	}
 
 	// if secrets are present at the cmd flag, copy them to opts.Secrets
@@ -349,7 +350,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 
 // GetVolumesToInclude checks if the path exists, if it doesn't it skip it
 func GetVolumesToInclude(volumesToInclude []model.StackVolume) []model.StackVolume {
-	result := []model.StackVolume{}
+	result := make([]model.StackVolume, 0)
 	for _, p := range volumesToInclude {
 		if _, err := os.Stat(p.LocalPath); err == nil {
 			result = append(result, p)
