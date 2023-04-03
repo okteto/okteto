@@ -33,7 +33,7 @@ type pipelineClient struct {
 	provideTimer  func(time.Duration) *time.Timer
 }
 
-func newPipelineClient(client *graphql.Client, url string) *pipelineClient {
+func newPipelineClient(client graphqlClientInterface, url string) *pipelineClient {
 	return &pipelineClient{
 		client:        client,
 		url:           url,

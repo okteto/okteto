@@ -34,7 +34,7 @@ import (
 
 // OktetoClient implementation to connect to Okteto API
 type OktetoClient struct {
-	client *graphql.Client
+	client graphqlClientInterface
 
 	namespace types.NamespaceInterface
 	user      types.UserInterface
