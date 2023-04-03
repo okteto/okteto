@@ -83,7 +83,7 @@ func (d *jsonDisplayer) Display(_ string) {
 				case <-d.commandContext.Done():
 				default:
 					line := d.stderrScanner.Text()
-					oktetoLog.FWarning(os.Stdout, line)
+					oktetoLog.FPrintln(os.Stdout, line)
 					continue
 				}
 				break
