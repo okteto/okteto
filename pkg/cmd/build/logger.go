@@ -156,6 +156,10 @@ func (t *trace) display() {
 				switch text.Stage {
 				case "done":
 					continue
+				case "Load manifest":
+					if text.Level == "error" {
+						oktetoLog.Fail(text.Message)
+					}
 				default:
 					// Print the information message about the stage if needed
 					if _, ok := t.stages[text.Stage]; !ok {
