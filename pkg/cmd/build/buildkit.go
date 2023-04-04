@@ -229,7 +229,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			case ss, ok := <-ch:
 				if ok {
 					plainChannel <- ss
-					if progress == oktetoLog.TTYFormat || progress == "deploy" {
+					if progress == oktetoLog.TTYFormat {
 						ttyChannel <- ss
 					}
 				} else {
@@ -238,7 +238,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			}
 			if done {
 				close(plainChannel)
-				if progress == oktetoLog.TTYFormat || progress == "deploy" {
+				if progress == oktetoLog.TTYFormat {
 					close(ttyChannel)
 				}
 				break
@@ -267,8 +267,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			// not using shared context to not disrupt display but let it finish reporting errors
 			return progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
 		case "deploy":
-			go progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
-			err := deployDisplayer(context.TODO(), ttyChannel)
+			err := deployDisplayer(context.TODO(), plainChannel)
 			commandFailChannel <- err
 			return err
 		default:
