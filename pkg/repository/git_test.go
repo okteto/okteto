@@ -124,7 +124,7 @@ func TestIsClean(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := Repository{
-				repoCtrl: gitRepoController{
+				control: gitRepoController{
 					repoGetter: tt.config.repositoryGetter,
 				},
 			}
@@ -199,7 +199,7 @@ func TestGetSHA(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := Repository{
-				repoCtrl: gitRepoController{
+				control: gitRepoController{
 					repoGetter: tt.config.repositoryGetter,
 				},
 			}

@@ -13,20 +13,20 @@
 
 package repository
 
-type oktetoInsideRemoteDeployRepositoryController struct {
+type oktetoRemoteRepoController struct {
 	gitCommit string
 }
 
-func newOktetoInsideRemoteDeployRepositoryController(localCommit string) oktetoInsideRemoteDeployRepositoryController {
-	return oktetoInsideRemoteDeployRepositoryController{
+func newOktetoRemoteRepoController(localCommit string) oktetoRemoteRepoController {
+	return oktetoRemoteRepoController{
 		gitCommit: localCommit,
 	}
 }
 
-func (or oktetoInsideRemoteDeployRepositoryController) isClean() (bool, error) {
+func (or oktetoRemoteRepoController) isClean() (bool, error) {
 	return or.gitCommit != "", nil
 }
 
-func (or oktetoInsideRemoteDeployRepositoryController) getSHA() (string, error) {
+func (or oktetoRemoteRepoController) getSHA() (string, error) {
 	return or.gitCommit, nil
 }

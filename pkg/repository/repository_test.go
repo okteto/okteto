@@ -87,7 +87,7 @@ func TestNewRepo(t *testing.T) {
 			name:         "GitCommit is not empty in remote deploy",
 			GitCommit:    "1234567890",
 			remoteDeploy: "true",
-			expectedControl: oktetoInsideRemoteDeployRepositoryController{
+			expectedControl: oktetoRemoteRepoController{
 				gitCommit: "1234567890",
 			},
 		},
@@ -98,7 +98,7 @@ func TestNewRepo(t *testing.T) {
 			t.Setenv(constants.OKtetoDeployRemote, string(tc.remoteDeploy))
 			r := NewRepository("https://my-repo/okteto/okteto")
 			assert.Equal(t, "/okteto/okteto", r.url.Path)
-			assert.IsType(t, tc.expectedControl, r.repoCtrl)
+			assert.IsType(t, tc.expectedControl, r.control)
 		})
 	}
 }

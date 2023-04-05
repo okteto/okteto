@@ -20,7 +20,7 @@ import (
 )
 
 func TestRemoteIsCleanTrue(t *testing.T) {
-	remote := oktetoInsideRemoteDeployRepositoryController{
+	remote := oktetoRemoteRepoController{
 		gitCommit: "123",
 	}
 	isClean, err := remote.isClean()
@@ -29,7 +29,7 @@ func TestRemoteIsCleanTrue(t *testing.T) {
 }
 
 func TestRemoteIsCleanFalse(t *testing.T) {
-	remote := oktetoInsideRemoteDeployRepositoryController{
+	remote := oktetoRemoteRepoController{
 		gitCommit: "",
 	}
 	isClean, err := remote.isClean()
@@ -38,7 +38,7 @@ func TestRemoteIsCleanFalse(t *testing.T) {
 }
 
 func TestRemoteGetSHA(t *testing.T) {
-	remote := oktetoInsideRemoteDeployRepositoryController{
+	remote := oktetoRemoteRepoController{
 		gitCommit: "123",
 	}
 	sha, err := remote.getSHA()

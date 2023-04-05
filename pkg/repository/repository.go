@@ -29,7 +29,7 @@ type Repository struct {
 	path string
 	url  *url.URL
 
-	repoCtrl repositoryInterface
+	control repositoryInterface
 }
 
 type repositoryInterface interface {
@@ -44,27 +44,27 @@ func NewRepository(path string) Repository {
 		oktetoLog.Infof("could not parse url: %w", err)
 	}
 
-	var repoCtrl repositoryInterface = newGitRepoController()
+	var controller repositoryInterface = newGitRepoController()
 	// check if we are inside a remote deploy
 	if v := os.Getenv(constants.OKtetoDeployRemote); v != "" {
 		sha := os.Getenv(constants.OktetoGitCommitEnvVar)
-		repoCtrl = newOktetoInsideRemoteDeployRepositoryController(sha)
+		controller = newOktetoRemoteRepoController(sha)
 	}
 	return Repository{
-		path:     path,
-		url:      url,
-		repoCtrl: repoCtrl,
+		path:    path,
+		url:     url,
+		control: controller,
 	}
 }
 
 // IsClean checks if the repository have changes over the commit
 func (r Repository) IsClean() (bool, error) {
-	return r.repoCtrl.isClean()
+	return r.control.isClean()
 }
 
 // GetSHA returns the last commit sha of the repository
 func (r Repository) GetSHA() (string, error) {
-	return r.repoCtrl.getSHA()
+	return r.control.getSHA()
 }
 
 // IsEqual checks if another repository is the same from the one calling the function
