@@ -22,32 +22,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestRunDeploySection(t *testing.T) {
+func TestDeployNotRemovingEnvFile(t *testing.T) {
 	fs := afero.NewMemMapFs()
 
 	_, err := fs.Create(".env")
 	require.NoError(t, err)
-	tt := []struct {
-		name string
-		opts *Options
-	}{
-		{
-			name: "check that deploy doesn't remove .env file",
-			opts: &Options{
-				Manifest: &model.Manifest{
-					Deploy: &model.DeployInfo{},
-				},
-			},
+	opts := &Options{
+		Manifest: &model.Manifest{
+			Deploy: &model.DeployInfo{},
 		},
 	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			localDeployer := localDeployer{
-				Fs: fs,
-			}
-			localDeployer.runDeploySection(context.Background(), tc.opts)
-			_, err := fs.Stat(".env")
-			require.NoError(t, err)
-		})
+	localDeployer := localDeployer{
+		Fs: fs,
 	}
+	localDeployer.runDeploySection(context.Background(), opts)
+	_, err = fs.Stat(".env")
+	require.NoError(t, err)
+
 }
