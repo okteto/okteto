@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5/plumbing"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -65,6 +66,7 @@ func TestNewRepo(t *testing.T) {
 	tt := []struct {
 		name            string
 		GitCommit       string
+		remoteDeploy    string
 		expectedControl repositoryInterface
 	}{
 		{
@@ -77,6 +79,14 @@ func TestNewRepo(t *testing.T) {
 		{
 			name:      "GitCommit is not empty",
 			GitCommit: "1234567890",
+			expectedControl: gitRepoController{
+				repoGetter: gitRepositoryGetter{},
+			},
+		},
+		{
+			name:         "GitCommit is not empty in remote deploy",
+			GitCommit:    "1234567890",
+			remoteDeploy: "true",
 			expectedControl: oktetoInsideRemoteDeployRepositoryController{
 				gitCommit: "1234567890",
 			},
@@ -84,10 +94,11 @@ func TestNewRepo(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv("OKTETO_GIT_COMMIT", tc.GitCommit)
+			t.Setenv(constants.OktetoGitCommitEnvVar, tc.GitCommit)
+			t.Setenv(constants.OKtetoDeployRemote, string(tc.remoteDeploy))
 			r := NewRepository("https://my-repo/okteto/okteto")
 			assert.Equal(t, "/okteto/okteto", r.url.Path)
-			assert.Equal(t, tc.expectedControl, r.repoCtrl)
+			assert.IsType(t, tc.expectedControl, r.repoCtrl)
 		})
 	}
 }

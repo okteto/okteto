@@ -153,6 +153,11 @@ func TestGetSHA(t *testing.T) {
 			config: config{
 				repositoryGetter: fakeRepositoryGetter{
 					repository: &fakeRepository{
+						worktree: &fakeWorktree{
+							status: &fakeStatus{
+								isClean: true,
+							},
+						},
 						head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
 					},
 				},
