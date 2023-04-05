@@ -223,21 +223,22 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 }
 
 func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
+	dockerignoreContent := []byte(``)
 	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
 	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-	} else {
-		dockerignoreContent, err := afero.ReadFile(rd.fs, dockerignoreFilePath)
-		if err != nil {
-			return err
-		}
 
-		err = afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
+	} else {
+		dockerignoreContent, err = afero.ReadFile(rd.fs, dockerignoreFilePath)
 		if err != nil {
 			return err
 		}
+	}
+	err := afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
+	if err != nil {
+		return err
 	}
 
 	return nil
