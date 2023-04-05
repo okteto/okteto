@@ -18,6 +18,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	giturls "github.com/whilp/git-urls"
 )
@@ -44,8 +45,10 @@ func NewRepository(path string) Repository {
 	}
 
 	var repoCtrl repositoryInterface = newGitRepoController()
-	if v := os.Getenv("OKTETO_GIT_COMMIT"); v != "" {
-		repoCtrl = newOktetoInsideRemoteDeployRepositoryController(v)
+	// check if we are inside a remote deploy
+	if v := os.Getenv(constants.OKtetoDeployRemote); v != "" {
+		sha := os.Getenv(constants.OktetoGitCommitEnvVar)
+		repoCtrl = newOktetoInsideRemoteDeployRepositoryController(sha)
 	}
 	return Repository{
 		path:     path,
