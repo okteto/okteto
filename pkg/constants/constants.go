@@ -79,4 +79,10 @@ const (
 
 	// DefaultGlobalNamespace namespace where okteto app is running
 	DefaultGlobalNamespace = "okteto"
+
+	// OktetoGitBranchEnvVar is the name of the Git branch currently being deployed.
+	OktetoGitBranchEnvVar = "OKTETO_GIT_BRANCH"
+
+	// OktetoGitCommitEnvVar is the SHA1 hash of the last commit of the branch.
+	OktetoGitCommitEnvVar = "OKTETO_GIT_COMMIT"
 )

@@ -189,7 +189,7 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 	}
 
 	defer func() {
-		if err := ld.Fs.RemoveAll(filepath.Base(oktetoEnvFile.Name())); err != nil {
+		if err := ld.Fs.RemoveAll(filepath.Dir(oktetoEnvFile.Name())); err != nil {
 			oktetoLog.Infof("error removing okteto env file dir: %w", err)
 		}
 	}()
