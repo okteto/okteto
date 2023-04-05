@@ -110,7 +110,7 @@ func Test_AddDevAnnotations(t *testing.T) {
 	assert.Equal(t,
 		d.Annotations,
 		map[string]string{
-			model.OktetoRepositoryAnnotation: "git-repo",
+			model.OktetoRepositoryAnnotation: "file://git-repo",
 			model.OktetoDevNameAnnotation:    "deployment",
 		},
 	)
