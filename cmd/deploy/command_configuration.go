@@ -126,12 +126,12 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 }
 
 func (dc *DeployCommand) addEnvVars(cwd string) {
-	if os.Getenv(model.OktetoGitBranchEnvVar) == "" {
+	if os.Getenv(constants.OktetoGitBranchEnvVar) == "" {
 		branch, err := utils.GetBranch(cwd)
 		if err != nil {
 			oktetoLog.Infof("could not retrieve branch name: %s", err)
 		}
-		os.Setenv(model.OktetoGitBranchEnvVar, branch)
+		os.Setenv(constants.OktetoGitBranchEnvVar, branch)
 	}
 
 	if os.Getenv(model.GithubRepositoryEnvVar) == "" {
@@ -152,7 +152,7 @@ func (dc *DeployCommand) addEnvVars(cwd string) {
 		os.Setenv(model.GithubRepositoryEnvVar, repo)
 	}
 
-	if os.Getenv(model.OktetoGitCommitEnvVar) == "" {
+	if os.Getenv(constants.OktetoGitCommitEnvVar) == "" {
 		sha, err := repository.NewRepository(cwd).GetSHA()
 		if err != nil {
 			oktetoLog.Infof("could not retrieve sha: %s", err)
@@ -167,7 +167,7 @@ func (dc *DeployCommand) addEnvVars(cwd string) {
 		if !isClean {
 			sha = utils.GetRandomSHA()
 		}
-		os.Setenv(model.OktetoGitCommitEnvVar, sha)
+		os.Setenv(constants.OktetoGitCommitEnvVar, sha)
 	}
 	if os.Getenv(model.OktetoRegistryURLEnvVar) == "" {
 		os.Setenv(model.OktetoRegistryURLEnvVar, okteto.Context().Registry)
