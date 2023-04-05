@@ -300,6 +300,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		}
 
 		b.CacheFrom.AddDefaultPullCache(reg, b.Image)
+		b.ExportCache.AddDefaultPushCache(reg, b.Image)
 	}
 
 	opts := &types.BuildOptions{

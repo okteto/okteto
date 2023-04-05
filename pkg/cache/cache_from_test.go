@@ -24,6 +24,7 @@ import (
 
 type mockRegistry struct {
 	imageCtrl ImageCtrlInterface
+	isGlobal  bool
 }
 
 func (m *mockRegistry) GetImageCtrl() ImageCtrlInterface {
@@ -32,6 +33,10 @@ func (m *mockRegistry) GetImageCtrl() ImageCtrlInterface {
 
 func (*mockRegistry) HasGlobalPushAccess() (bool, error) {
 	return true, nil
+}
+
+func (mr *mockRegistry) IsGlobalRegistry(image string) bool {
+	return mr.isGlobal
 }
 
 type mockRegistryWithError struct {
@@ -44,6 +49,10 @@ func (m *mockRegistryWithError) GetImageCtrl() ImageCtrlInterface {
 
 func (*mockRegistryWithError) HasGlobalPushAccess() (bool, error) {
 	return false, assert.AnError
+}
+
+func (*mockRegistryWithError) IsGlobalRegistry(image string) bool {
+	return true
 }
 
 type mockImageCtrl struct{}

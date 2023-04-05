@@ -31,6 +31,7 @@ type ImageCtrlInterface interface {
 type oktetoRegistryInterface interface {
 	GetImageCtrl() ImageCtrlInterface
 	HasGlobalPushAccess() (bool, error)
+	IsGlobalRegistry(image string) bool
 }
 
 // UnmarshalYAML implements the Unmarshaler interface of the yaml pkg.

@@ -233,7 +233,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Secrets: map[string]string{
 					"mysecret": "source",
 				},
-				ExportCache: model.ExportCache{"export-image"},
+				ExportCache: []string{"export-image"},
 			},
 			initialOpts: &types.BuildOptions{
 				OutputMode: "tty",
@@ -251,7 +251,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				},
 				BuildArgs:   []string{namespaceEnvVar.String(), "arg1=value1"},
 				Secrets:     []string{"id=mysecret,src=source"},
-				ExportCache: model.ExportCache{"export-image"},
+				ExportCache: []string{"export-image"},
 			},
 		},
 	}
