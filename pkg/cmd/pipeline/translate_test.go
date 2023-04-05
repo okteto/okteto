@@ -110,8 +110,49 @@ func Test_AddDevAnnotations(t *testing.T) {
 	assert.Equal(t,
 		d.Annotations,
 		map[string]string{
-			model.OktetoRepositoryAnnotation: "git-repo",
+			model.OktetoRepositoryAnnotation: "file://git-repo",
 			model.OktetoDevNameAnnotation:    "deployment",
 		},
 	)
+}
+
+func Test_removeSensitiveDataFromGitURL(t *testing.T) {
+	tests := []struct {
+		name     string
+		gitURL   string
+		expected string
+	}{
+		{
+			name:     "empty-url",
+			gitURL:   "",
+			expected: "",
+		},
+		{
+			name:     "without-user-information",
+			gitURL:   "https://github.com/okteto/movies",
+			expected: "https://github.com/okteto/movies",
+		},
+		{
+			name:     "with-user-and-password",
+			gitURL:   "https://my-user:my-strong-pass@github.com:80/okteto/movies",
+			expected: "https://github.com:80/okteto/movies",
+		},
+		{
+			name:     "with-auth-token-long",
+			gitURL:   "https://adsoifq9389qnjasd:x-oauth-basic@github.com/okteto/movies",
+			expected: "https://github.com/okteto/movies",
+		},
+		{
+			name:     "with-auth-token-short",
+			gitURL:   "https://adsoifq9389qnjasd@github.com/okteto/movies",
+			expected: "https://github.com/okteto/movies",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := removeSensitiveDataFromGitURL(tt.gitURL)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
