@@ -14,12 +14,10 @@
 package repository
 
 import (
-	"fmt"
 	"net/url"
+	"os"
 	"strings"
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	giturls "github.com/whilp/git-urls"
 )
@@ -30,111 +28,40 @@ type Repository struct {
 	path string
 	url  *url.URL
 
-	repositoryGetter repositoryGetterInterface
-}
-type repositoryGetterInterface interface {
-	get(path string) (gitRepositoryInterface, error)
+	repoCtrl repositoryInterface
 }
 
-type repositoryGetter struct{}
-
-func (repositoryGetter) get(path string) (gitRepositoryInterface, error) {
-	repo, err := git.PlainOpen(path)
-	if err != nil {
-		return nil, err
-	}
-	return oktetoGitRepository{repo: repo}, nil
+type repositoryInterface interface {
+	isClean() (bool, error)
+	getSHA() (string, error)
 }
 
-type oktetoGitRepository struct {
-	repo *git.Repository
-}
-
-func (ogr oktetoGitRepository) Worktree() (gitWorktreeInterface, error) {
-	worktree, err := ogr.repo.Worktree()
-	if err != nil {
-		return nil, err
-	}
-	return oktetoGitWorktree{worktree: worktree}, nil
-}
-
-func (ogr oktetoGitRepository) Head() (*plumbing.Reference, error) {
-	return ogr.repo.Head()
-}
-
-type oktetoGitWorktree struct {
-	worktree *git.Worktree
-}
-
-func (ogr oktetoGitWorktree) Status() (gitStatusInterface, error) {
-	status, err := ogr.worktree.Status()
-	if err != nil {
-		return nil, err
-	}
-	return oktetoGitStatus{status: status}, nil
-}
-
-type oktetoGitStatus struct {
-	status git.Status
-}
-
-func (ogs oktetoGitStatus) IsClean() bool {
-	return ogs.status.IsClean()
-}
-
-type gitRepositoryInterface interface {
-	Worktree() (gitWorktreeInterface, error)
-	Head() (*plumbing.Reference, error)
-}
-type gitWorktreeInterface interface {
-	Status() (gitStatusInterface, error)
-}
-type gitStatusInterface interface {
-	IsClean() bool
-}
-
+// NewRepository creates a repository controller
 func NewRepository(path string) Repository {
 	url, err := giturls.Parse(path)
 	if err != nil {
 		oktetoLog.Infof("could not parse url: %w", err)
 	}
+
+	var repoCtrl repositoryInterface = newGitRepoController()
+	if v := os.Getenv("OKTETO_GIT_COMMIT"); v != "" {
+		repoCtrl = newOktetoInsideRemoteDeployRepositoryController(v)
+	}
 	return Repository{
-		path:             path,
-		url:              url,
-		repositoryGetter: repositoryGetter{},
+		path:     path,
+		url:      url,
+		repoCtrl: repoCtrl,
 	}
 }
 
 // IsClean checks if the repository have changes over the commit
 func (r Repository) IsClean() (bool, error) {
-	repo, err := r.repositoryGetter.get(r.path)
-	if err != nil {
-		return false, fmt.Errorf("failed to analyze git repo: %w", err)
-	}
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
-	}
-
-	status, err := worktree.Status()
-	if err != nil {
-		return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
-	}
-
-	return status.IsClean(), nil
+	return r.repoCtrl.isClean()
 }
 
 // GetSHA returns the last commit sha of the repository
 func (r Repository) GetSHA() (string, error) {
-	repo, err := r.repositoryGetter.get(r.path)
-	if err != nil {
-		return "", fmt.Errorf("failed to analyze git repo: %w", err)
-	}
-	head, err := repo.Head()
-	if err != nil {
-		return "", fmt.Errorf("failed to analyze git repo: %w", err)
-	}
-	return head.Hash().String(), nil
+	return r.repoCtrl.getSHA()
 }
 
 // IsEqual checks if another repository is the same from the one calling the function
