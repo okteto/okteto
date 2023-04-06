@@ -208,6 +208,13 @@ func getClientForOktetoCluster(ctx context.Context) (*client.Client, error) {
 }
 
 func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, progress string) error {
+	logFilterRules := []Rule{
+		{
+			condition:   BuildKitMissingCacheCondition,
+			transformer: BuildKitMissingCacheTransformer,
+		},
+	}
+	logFilter := NewBuildKitLogsFilter(logFilterRules)
 	ch := make(chan *client.SolveStatus)
 	ttyChannel := make(chan *client.SolveStatus)
 	plainChannel := make(chan *client.SolveStatus)
@@ -228,6 +235,7 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 				return ctx.Err()
 			case ss, ok := <-ch:
 				if ok {
+					logFilter.Run(ss, progress)
 					plainChannel <- ss
 					if progress == oktetoLog.TTYFormat {
 						ttyChannel <- ss
