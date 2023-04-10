@@ -7,7 +7,7 @@ import (
 	"regexp"
 )
 
-type ConditionFunc func(vertex *client.Vertex, ss *client.SolveStatus) bool
+type ConditionFunc func(vertex *client.Vertex) bool
 type TransformerFunc func(vertex *client.Vertex, ss *client.SolveStatus, progress string)
 
 type Rule struct {
@@ -28,7 +28,7 @@ func NewBuildKitLogsFilter(rules []Rule) *BuildKitLogsFilter {
 func (lf *BuildKitLogsFilter) Run(ss *client.SolveStatus, progress string) {
 	for _, vertex := range ss.Vertexes {
 		for _, rule := range lf.rules {
-			if rule.condition(vertex, ss) {
+			if rule.condition(vertex) {
 				rule.transformer(vertex, ss, progress)
 			}
 		}
@@ -36,7 +36,7 @@ func (lf *BuildKitLogsFilter) Run(ss *client.SolveStatus, progress string) {
 }
 
 // BuildKitMissingCacheCondition checks if the log contains a missing cache error
-var BuildKitMissingCacheCondition ConditionFunc = func(vertex *client.Vertex, ss *client.SolveStatus) bool {
+var BuildKitMissingCacheCondition ConditionFunc = func(vertex *client.Vertex) bool {
 	importPattern := `importing cache manifest from .*`
 
 	if !regexp.MustCompile(importPattern).MatchString(vertex.Name) {

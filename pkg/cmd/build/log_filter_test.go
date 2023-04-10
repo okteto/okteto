@@ -71,7 +71,6 @@ func TestBuildKitMissingCacheCondition(t *testing.T) {
 	tests := []struct {
 		name     string
 		v        *client.Vertex
-		ss       *client.SolveStatus
 		expected bool
 	}{
 		{
@@ -80,7 +79,6 @@ func TestBuildKitMissingCacheCondition(t *testing.T) {
 				Name:  "importing cache manifest from test-registry.com/test-account/test-repo",
 				Error: "",
 			},
-			ss:       &client.SolveStatus{},
 			expected: false,
 		},
 		{
@@ -89,7 +87,6 @@ func TestBuildKitMissingCacheCondition(t *testing.T) {
 				Name:  "something else",
 				Error: "test-registry.com/test-account/test-repo: not found",
 			},
-			ss:       &client.SolveStatus{},
 			expected: false,
 		},
 		{
@@ -98,14 +95,13 @@ func TestBuildKitMissingCacheCondition(t *testing.T) {
 				Name:  "importing cache manifest from test-registry.com/test-account/test-repo",
 				Error: "test-registry.com/test-account/test-repo: not found",
 			},
-			ss:       &client.SolveStatus{},
 			expected: true,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result := BuildKitMissingCacheCondition(tc.v, tc.ss)
+			result := BuildKitMissingCacheCondition(tc.v)
 			assert.Equal(t, tc.expected, result)
 		})
 	}
