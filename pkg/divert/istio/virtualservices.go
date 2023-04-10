@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func (d *Driver) translateDivertService(vs *istioV1beta1.VirtualService) *istioV1beta1.VirtualService {
+func (d *Driver) translateDivertVirtualService(vs *istioV1beta1.VirtualService, routes []string) *istioV1beta1.VirtualService {
 	result := vs.DeepCopy()
 	httpRoutes := []*istioNetworkingV1beta1.HTTPRoute{}
 	for i := range result.Spec.Http {
@@ -38,6 +38,9 @@ func (d *Driver) translateDivertService(vs *istioV1beta1.VirtualService) *istioV
 	result.Spec.Http = httpRoutes
 	httpRoutes = []*istioNetworkingV1beta1.HTTPRoute{}
 	for _, httpRoute := range result.Spec.Http {
+		if !matchHTTPRoute(httpRoute, routes) {
+			continue
+		}
 		httpRoute := httpRoute.DeepCopy()
 		httpRoute.Name = virtualservices.GetHTTPRouteOktetoName(d.namespace, httpRoute)
 		for j := range httpRoute.Match {
@@ -59,24 +62,30 @@ func (d *Driver) translateDivertService(vs *istioV1beta1.VirtualService) *istioV
 				}
 			}
 		}
-		matchService := false
 		for j := range httpRoute.Route {
 			parts := strings.Split(httpRoute.Route[j].Destination.Host, ".")
-			if parts[0] == d.divert.Service {
-				httpRoute.Route[j].Destination.Host = fmt.Sprintf("%s.%s.svc.cluster.local", parts[0], d.namespace)
-				matchService = true
-			}
+			httpRoute.Route[j].Destination.Host = fmt.Sprintf("%s.%s.svc.cluster.local", parts[0], d.namespace)
 		}
-		if matchService {
-			httpRoutes = append(httpRoutes, httpRoute)
-		}
+		httpRoutes = append(httpRoutes, httpRoute)
 	}
 	httpRoutes = append(httpRoutes, result.Spec.Http...)
 	result.Spec.Http = httpRoutes
 	return result
 }
 
-func (d *Driver) restoreDivertService(vs *istioV1beta1.VirtualService) *istioV1beta1.VirtualService {
+func matchHTTPRoute(r *istioNetworkingV1beta1.HTTPRoute, routes []string) bool {
+	if len(routes) == 0 {
+		return true
+	}
+	for _, routeName := range routes {
+		if r.Name == routeName {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *Driver) restoreDivertVirtualService(vs *istioV1beta1.VirtualService) *istioV1beta1.VirtualService {
 	result := vs.DeepCopy()
 	httpRoutes := []*istioNetworkingV1beta1.HTTPRoute{}
 	for i := range result.Spec.Http {

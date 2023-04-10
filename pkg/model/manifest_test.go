@@ -264,7 +264,7 @@ func Test_validateDivert(t *testing.T) {
 			divert: DivertDeploy{
 				Driver:               OktetoDivertWeaverDriver,
 				Namespace:            "namespace",
-				Service:              "service",
+				DeprecatedService:    "service",
 				DeprecatedPort:       8080,
 				DeprecatedDeployment: "deployment",
 			},
@@ -275,7 +275,7 @@ func Test_validateDivert(t *testing.T) {
 			divert: DivertDeploy{
 				Driver:               OktetoDivertWeaverDriver,
 				Namespace:            "namespace",
-				Service:              "",
+				DeprecatedService:    "",
 				DeprecatedPort:       8080,
 				DeprecatedDeployment: "deployment",
 			},
@@ -286,7 +286,7 @@ func Test_validateDivert(t *testing.T) {
 			divert: DivertDeploy{
 				Driver:               OktetoDivertWeaverDriver,
 				Namespace:            "namespace",
-				Service:              "service",
+				DeprecatedService:    "service",
 				DeprecatedPort:       8080,
 				DeprecatedDeployment: "",
 			},
@@ -297,7 +297,7 @@ func Test_validateDivert(t *testing.T) {
 			divert: DivertDeploy{
 				Driver:               OktetoDivertWeaverDriver,
 				Namespace:            "namespace",
-				Service:              "service",
+				DeprecatedService:    "service",
 				DeprecatedDeployment: "deployment",
 			},
 			expectedErr: nil,
@@ -307,7 +307,7 @@ func Test_validateDivert(t *testing.T) {
 			divert: DivertDeploy{
 				Driver:               OktetoDivertWeaverDriver,
 				Namespace:            "",
-				Service:              "service",
+				DeprecatedService:    "service",
 				DeprecatedPort:       8080,
 				DeprecatedDeployment: "deployment",
 			},

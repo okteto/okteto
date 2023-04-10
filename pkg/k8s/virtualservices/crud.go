@@ -17,7 +17,7 @@ import (
 	"context"
 	"fmt"
 
-	istioNetowrkingV1beta1 "istio.io/api/networking/v1beta1"
+	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
 	istioV1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	istioclientset "istio.io/client-go/pkg/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,7 +54,7 @@ func GetHTTPRoutePrefixOktetoName(ns string) string {
 	return fmt.Sprintf("okteto-divert-%s", ns)
 }
 
-func GetHTTPRouteOktetoName(ns string, r *istioNetowrkingV1beta1.HTTPRoute) string {
+func GetHTTPRouteOktetoName(ns string, r *istioNetworkingV1beta1.HTTPRoute) string {
 	if r.Name == "" {
 		return fmt.Sprintf("okteto-divert-%s", ns)
 	}
