@@ -30,10 +30,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/divert"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	apiv1 "k8s.io/api/core/v1"
@@ -47,7 +49,7 @@ type proxyInterface interface {
 	GetPort() int
 	GetToken() string
 	SetName(name string)
-	SetDivert(divertedNamespace string)
+	SetDivert(driver divert.Driver)
 }
 
 type proxyConfig struct {
@@ -64,8 +66,8 @@ type Proxy struct {
 
 type proxyHandler struct {
 	// Name is sanitized version of the pipeline name
-	Name              string
-	DivertedNamespace string
+	Name         string
+	DivertDriver divert.Driver
 }
 
 // NewProxy creates a new proxy
@@ -172,9 +174,9 @@ func (p *Proxy) SetName(name string) {
 	p.proxyHandler.SetName(name)
 }
 
-// SetDivert sets the namespace used for divert
-func (p *Proxy) SetDivert(divertedNamespace string) {
-	p.proxyHandler.SetDivert(divertedNamespace)
+// SetDivert sets the divert driver
+func (p *Proxy) SetDivert(driver divert.Driver) {
+	p.proxyHandler.SetDivert(driver)
 }
 
 func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config) (http.Handler, error) {
@@ -265,8 +267,8 @@ func (ph *proxyHandler) SetName(name string) {
 	ph.Name = name
 }
 
-func (ph *proxyHandler) SetDivert(divertedNamespace string) {
-	ph.DivertedNamespace = divertedNamespace
+func (ph *proxyHandler) SetDivert(driver divert.Driver) {
+	ph.DivertDriver = driver
 }
 
 func (ph *proxyHandler) translateBody(b []byte) ([]byte, error) {
@@ -315,6 +317,10 @@ func (ph *proxyHandler) translateBody(b []byte) ([]byte, error) {
 		if err := ph.translateReplicaSetSpec(body); err != nil {
 			return nil, err
 		}
+	case "VirtualService":
+		if err := ph.translateVirtualServiceSpec(body); err != nil {
+			return nil, err
+		}
 	}
 
 	return json.Marshal(body)
@@ -358,7 +364,7 @@ func (ph *proxyHandler) translateDeploymentSpec(body map[string]json.RawMessage)
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.Template.Spec)
+	spec.Template.Spec = ph.applyDivertToPod(spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process deployment's spec: %s", err)
@@ -374,7 +380,7 @@ func (ph *proxyHandler) translateStatefulSetSpec(body map[string]json.RawMessage
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.Template.Spec)
+	spec.Template.Spec = ph.applyDivertToPod(spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process statefulset's spec: %s", err)
@@ -390,7 +396,7 @@ func (ph *proxyHandler) translateJobSpec(body map[string]json.RawMessage) error 
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.Template.Spec)
+	spec.Template.Spec = ph.applyDivertToPod(spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process job's spec: %s", err)
@@ -406,7 +412,7 @@ func (ph *proxyHandler) translateCronJobSpec(body map[string]json.RawMessage) er
 		return nil
 	}
 	labels.SetInMetadata(&spec.JobTemplate.Spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.JobTemplate.Spec.Template.Spec)
+	spec.JobTemplate.Spec.Template.Spec = ph.applyDivertToPod(spec.JobTemplate.Spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process cronjob's spec: %s", err)
@@ -422,7 +428,7 @@ func (ph *proxyHandler) translateDaemonSetSpec(body map[string]json.RawMessage) 
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.Template.Spec)
+	spec.Template.Spec = ph.applyDivertToPod(spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process daemonset's spec: %s", err)
@@ -438,7 +444,7 @@ func (ph *proxyHandler) translateReplicationControllerSpec(body map[string]json.
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.Template.Spec)
+	spec.Template.Spec = ph.applyDivertToPod(spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process replicationcontroller's spec: %s", err)
@@ -454,7 +460,7 @@ func (ph *proxyHandler) translateReplicaSetSpec(body map[string]json.RawMessage)
 		return nil
 	}
 	labels.SetInMetadata(&spec.Template.ObjectMeta, model.DeployedByLabel, ph.Name)
-	ph.applyDivert(&spec.Template.Spec)
+	spec.Template.Spec = ph.applyDivertToPod(spec.Template.Spec)
 	specAsByte, err := json.Marshal(spec)
 	if err != nil {
 		return fmt.Errorf("could not process replicaset's spec: %s", err)
@@ -463,19 +469,30 @@ func (ph *proxyHandler) translateReplicaSetSpec(body map[string]json.RawMessage)
 	return nil
 }
 
-func (ph *proxyHandler) applyDivert(podSpec *apiv1.PodSpec) {
-	if ph.DivertedNamespace == "" {
-		return
+func (ph *proxyHandler) applyDivertToPod(podSpec apiv1.PodSpec) apiv1.PodSpec {
+	if ph.DivertDriver == nil {
+		return podSpec
 	}
-	if podSpec.DNSConfig == nil {
-		podSpec.DNSConfig = &apiv1.PodDNSConfig{}
+	return ph.DivertDriver.UpdatePod(podSpec)
+}
+
+func (ph *proxyHandler) translateVirtualServiceSpec(body map[string]json.RawMessage) error {
+	if ph.DivertDriver == nil {
+		return nil
 	}
-	if podSpec.DNSConfig.Searches == nil {
-		podSpec.DNSConfig.Searches = []string{}
+
+	var spec istioNetworkingV1beta1.VirtualService
+	if err := json.Unmarshal(body["spec"], &spec); err != nil {
+		oktetoLog.Infof("error unmarshalling replicaset on proxy: %s", err.Error())
+		return nil
 	}
-	searches := []string{fmt.Sprintf("%s.svc.cluster.local", ph.DivertedNamespace)}
-	searches = append(searches, podSpec.DNSConfig.Searches...)
-	podSpec.DNSConfig.Searches = searches
+	spec = ph.DivertDriver.UpdateVirtualService(spec)
+	specAsByte, err := json.Marshal(spec)
+	if err != nil {
+		return fmt.Errorf("could not process virtual service's spec: %s", err)
+	}
+	body["spec"] = specAsByte
+	return nil
 }
 
 func newProtocolTransport(clusterConfig *rest.Config, disableHTTP2 bool) (http.RoundTripper, error) {

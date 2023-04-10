@@ -20,7 +20,9 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/virtualservices"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
 	istioclientset "istio.io/client-go/pkg/clientset/versioned"
+	apiv1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 )
@@ -91,8 +93,12 @@ func (d *Driver) Destroy(ctx context.Context) error {
 	return err
 }
 
-func (d *Driver) GetDivertNamespace() string {
-	return ""
+func (d *Driver) UpdatePod(pod apiv1.PodSpec) apiv1.PodSpec {
+	return pod
+}
+
+func (d *Driver) UpdateVirtualService(vs istioNetworkingV1beta1.VirtualService) istioNetworkingV1beta1.VirtualService {
+	return d.injectDivertHeader(vs)
 }
 
 func (d *Driver) retryTranslateDivertService(ctx context.Context) error {
@@ -133,6 +139,11 @@ func (d *Driver) retryTranslateDivertHost(ctx context.Context, divertHost model.
 				return nil
 			}
 			return err
+		}
+
+		if devVS.Labels[model.OktetoAutoCreateAnnotation] != "true" {
+			oktetoLog.Infof("Ignoring host '%s/%s', virtual service '%s/%s'", divertHost.Namespace, divertHost.VirtualService, d.namespace, divertHost.VirtualService)
+			return nil
 		}
 
 		translatedVS.ResourceVersion = devVS.ResourceVersion

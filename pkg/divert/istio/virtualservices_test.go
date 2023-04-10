@@ -386,7 +386,7 @@ func Test_translateDivertHost(t *testing.T) {
 		expected *istioV1beta1.VirtualService
 	}{
 		{
-			name: "divert-host-different-namespace",
+			name: "divert-host-service-same-namespace",
 			vs: &istioV1beta1.VirtualService{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:            "service-a",
@@ -413,16 +413,6 @@ func Test_translateDivertHost(t *testing.T) {
 							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
 								{
 									Destination: &istioNetworkingV1beta1.Destination{
-										Host: "service-a.staging.svc.cluster.local",
-										Port: &istioNetworkingV1beta1.PortSelector{
-											Number: 80,
-										},
-										Subset: "stable",
-									},
-									Weight: 100,
-								},
-								{
-									Destination: &istioNetworkingV1beta1.Destination{
 										Host: "service-a",
 										Port: &istioNetworkingV1beta1.PortSelector{
 											Number: 80,
@@ -441,8 +431,9 @@ func Test_translateDivertHost(t *testing.T) {
 					Name:      "service-a",
 					Namespace: "cindy",
 					Labels: map[string]string{
-						"l1":                         "v1",
-						"dev.okteto.com/deployed-by": "test",
+						"l1":                             "v1",
+						"dev.okteto.com/deployed-by":     "test",
+						model.OktetoAutoCreateAnnotation: "true",
 					},
 					Annotations: map[string]string{"a1": "v1"},
 				},
@@ -467,16 +458,6 @@ func Test_translateDivertHost(t *testing.T) {
 								},
 							},
 							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
-								{
-									Destination: &istioNetworkingV1beta1.Destination{
-										Host: "service-a.staging.svc.cluster.local",
-										Port: &istioNetworkingV1beta1.PortSelector{
-											Number: 80,
-										},
-										Subset: "stable",
-									},
-									Weight: 100,
-								},
 								{
 									Destination: &istioNetworkingV1beta1.Destination{
 										Host: "service-a.staging.svc.cluster.local",
@@ -494,20 +475,20 @@ func Test_translateDivertHost(t *testing.T) {
 			},
 		},
 		{
-			name: "divert-host-same-namespace",
+			name: "divert-host-service-different-namespace",
 			vs: &istioV1beta1.VirtualService{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:        "service-a",
-					Namespace:   "cindy",
-					Labels:      map[string]string{"l1": "v1"},
-					Annotations: map[string]string{"a1": "v1"},
+					Name:            "service-a",
+					Namespace:       "staging",
+					Labels:          map[string]string{"l1": "v1"},
+					Annotations:     map[string]string{"a1": "v1"},
+					ResourceVersion: "version",
 				},
 				Spec: istioNetworkingV1beta1.VirtualService{
 					Gateways: []string{"ingress-http"},
 					Hosts: []string{
-						"service-a-cindy.demo.okteto.dev",
-						"service-a.cindy.svc.cluster.local",
-						"service-a.cindy.com",
+						"service-a.staging.svc.cluster.local",
+						"service-a.staging.com",
 					},
 					Http: []*istioNetworkingV1beta1.HTTPRoute{
 						{
@@ -521,7 +502,7 @@ func Test_translateDivertHost(t *testing.T) {
 							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
 								{
 									Destination: &istioNetworkingV1beta1.Destination{
-										Host: "service-a",
+										Host: "service-a.staging2.svc.cluster.local",
 										Port: &istioNetworkingV1beta1.PortSelector{
 											Number: 80,
 										},
@@ -539,8 +520,9 @@ func Test_translateDivertHost(t *testing.T) {
 					Name:      "service-a",
 					Namespace: "cindy",
 					Labels: map[string]string{
-						"l1":                         "v1",
-						"dev.okteto.com/deployed-by": "test",
+						"l1":                             "v1",
+						"dev.okteto.com/deployed-by":     "test",
+						model.OktetoAutoCreateAnnotation: "true",
 					},
 					Annotations: map[string]string{"a1": "v1"},
 				},
@@ -549,7 +531,6 @@ func Test_translateDivertHost(t *testing.T) {
 					Hosts: []string{
 						"service-a-cindy.demo.okteto.dev",
 						"service-a.cindy.svc.cluster.local",
-						"service-a.cindy.com",
 					},
 					Http: []*istioNetworkingV1beta1.HTTPRoute{
 						{
@@ -568,7 +549,7 @@ func Test_translateDivertHost(t *testing.T) {
 							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
 								{
 									Destination: &istioNetworkingV1beta1.Destination{
-										Host: "service-a",
+										Host: "service-a.staging2.svc.cluster.local",
 										Port: &istioNetworkingV1beta1.PortSelector{
 											Number: 80,
 										},

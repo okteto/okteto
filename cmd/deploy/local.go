@@ -124,7 +124,7 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 		if err != nil {
 			return err
 		}
-		ld.Proxy.SetDivert(driver.GetDivertNamespace())
+		ld.Proxy.SetDivert(driver)
 		ld.DivertDriver = driver
 	}
 

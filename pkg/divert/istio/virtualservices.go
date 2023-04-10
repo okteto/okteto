@@ -80,37 +80,42 @@ func (d *Driver) restoreDivertService(vs *istioV1beta1.VirtualService) *istioV1b
 
 func (d *Driver) translateDivertHost(vs *istioV1beta1.VirtualService) *istioV1beta1.VirtualService {
 	result := vs.DeepCopy()
+	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, d.name)
+	labels.SetInMetadata(&result.ObjectMeta, model.OktetoAutoCreateAnnotation, "true")
 	result.Namespace = d.namespace
 	result.ResourceVersion = ""
 	result.UID = types.UID("")
-	labels.SetInMetadata(&result.ObjectMeta, model.DeployedByLabel, d.name)
-	if vs.Namespace != d.namespace {
-		result.Spec.Hosts = []string{
-			fmt.Sprintf("%s-%s.%s", result.Name, d.namespace, okteto.GetSubdomain()),
-			fmt.Sprintf("%s.%s.svc.cluster.local", result.Name, d.namespace),
-		}
-	}
 	result.Spec.Tls = nil
+	result.Spec.Hosts = []string{
+		fmt.Sprintf("%s-%s.%s", result.Name, d.namespace, okteto.GetSubdomain()),
+		fmt.Sprintf("%s.%s.svc.cluster.local", result.Name, d.namespace),
+	}
+
+	result.Spec = d.injectDivertHeader(result.Spec)
 
 	for i := range result.Spec.Http {
-		if result.Spec.Http[i].Headers == nil {
-			result.Spec.Http[i].Headers = &istioNetworkingV1beta1.Headers{}
-		}
-		if result.Spec.Http[i].Headers.Request == nil {
-			result.Spec.Http[i].Headers.Request = &istioNetworkingV1beta1.Headers_HeaderOperations{}
-		}
-		if result.Spec.Http[i].Headers.Request.Set == nil {
-			result.Spec.Http[i].Headers.Request.Set = map[string]string{}
-		}
-		result.Spec.Http[i].Headers.Request.Set[model.OktetoDivertHeader] = d.namespace
 
-		if vs.Namespace != d.namespace {
-			for j := range result.Spec.Http[i].Route {
-				if !strings.Contains(result.Spec.Http[i].Route[j].Destination.Host, ".") {
-					result.Spec.Http[i].Route[j].Destination.Host = fmt.Sprintf("%s.%s.svc.cluster.local", result.Spec.Http[i].Route[j].Destination.Host, vs.Namespace)
-				}
+		for j := range result.Spec.Http[i].Route {
+			if !strings.Contains(result.Spec.Http[i].Route[j].Destination.Host, ".") {
+				result.Spec.Http[i].Route[j].Destination.Host = fmt.Sprintf("%s.%s.svc.cluster.local", result.Spec.Http[i].Route[j].Destination.Host, vs.Namespace)
 			}
 		}
 	}
 	return result
+}
+
+func (d *Driver) injectDivertHeader(vsSpec istioNetworkingV1beta1.VirtualService) istioNetworkingV1beta1.VirtualService {
+	for i := range vsSpec.Http {
+		if vsSpec.Http[i].Headers == nil {
+			vsSpec.Http[i].Headers = &istioNetworkingV1beta1.Headers{}
+		}
+		if vsSpec.Http[i].Headers.Request == nil {
+			vsSpec.Http[i].Headers.Request = &istioNetworkingV1beta1.Headers_HeaderOperations{}
+		}
+		if vsSpec.Http[i].Headers.Request.Set == nil {
+			vsSpec.Http[i].Headers.Request.Set = map[string]string{}
+		}
+		vsSpec.Http[i].Headers.Request.Set[model.OktetoDivertHeader] = d.namespace
+	}
+	return vsSpec
 }

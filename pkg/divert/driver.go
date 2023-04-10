@@ -23,13 +23,16 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/virtualservices"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
 type Driver interface {
 	Deploy(ctx context.Context) error
 	Destroy(ctx context.Context) error
-	GetDivertNamespace() string
+	UpdatePod(spec apiv1.PodSpec) apiv1.PodSpec
+	UpdateVirtualService(vs istioNetworkingV1beta1.VirtualService) istioNetworkingV1beta1.VirtualService
 }
 
 func New(m *model.Manifest, c kubernetes.Interface) (Driver, error) {

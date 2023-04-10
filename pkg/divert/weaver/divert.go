@@ -19,6 +19,8 @@ import (
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -63,9 +65,19 @@ func (*Driver) Destroy(_ context.Context) error {
 	return nil
 }
 
-func (d *Driver) GetDivertNamespace() string {
-	if d.divert.Namespace == d.namespace {
-		return ""
+func (d *Driver) UpdatePod(pod apiv1.PodSpec) apiv1.PodSpec {
+	if pod.DNSConfig == nil {
+		pod.DNSConfig = &apiv1.PodDNSConfig{}
 	}
-	return d.divert.Namespace
+	if pod.DNSConfig.Searches == nil {
+		pod.DNSConfig.Searches = []string{}
+	}
+	searches := []string{fmt.Sprintf("%s.svc.cluster.local", d.divert.Namespace)}
+	searches = append(searches, pod.DNSConfig.Searches...)
+	pod.DNSConfig.Searches = searches
+	return pod
+}
+
+func (d *Driver) UpdateVirtualService(vs istioNetworkingV1beta1.VirtualService) istioNetworkingV1beta1.VirtualService {
+	return vs
 }
