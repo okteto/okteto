@@ -30,10 +30,11 @@ func Test_translateDivertService(t *testing.T) {
 	tests := []struct {
 		name     string
 		vs       *istioV1beta1.VirtualService
+		header   model.DivertHeader
 		expected *istioV1beta1.VirtualService
 	}{
 		{
-			name: "match",
+			name: "match-default-header",
 			vs: &istioV1beta1.VirtualService{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "service-a",
@@ -72,6 +73,11 @@ func Test_translateDivertService(t *testing.T) {
 					},
 				},
 			},
+			header: model.DivertHeader{
+				Name:  model.OktetoDivertDefaultHeaderName,
+				Match: model.OktetoDivertIstioExactMatch,
+				Value: "cindy",
+			},
 			expected: &istioV1beta1.VirtualService{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "service-a",
@@ -94,6 +100,116 @@ func Test_translateDivertService(t *testing.T) {
 									Headers: map[string]*istioNetworkingV1beta1.StringMatch{
 										"x-okteto-divert": {
 											MatchType: &istioNetworkingV1beta1.StringMatch_Exact{Exact: "cindy"},
+										},
+									},
+									Port: 80,
+								},
+							},
+							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
+								{
+									Destination: &istioNetworkingV1beta1.Destination{
+										Host: "service-a.cindy.svc.cluster.local",
+										Port: &istioNetworkingV1beta1.PortSelector{
+											Number: 80,
+										},
+										Subset: "stable",
+									},
+									Weight: 100,
+								},
+							},
+						},
+						{
+							Name: "ingress-gateway-http-app-service",
+							Match: []*istioNetworkingV1beta1.HTTPMatchRequest{
+								{
+									Gateways: []string{"ingress-http"},
+									Port:     80,
+								},
+							},
+							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
+								{
+									Destination: &istioNetworkingV1beta1.Destination{
+										Host: "service-a.staging.svc.cluster.local",
+										Port: &istioNetworkingV1beta1.PortSelector{
+											Number: 80,
+										},
+										Subset: "stable",
+									},
+									Weight: 100,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "match-custom-header",
+			vs: &istioV1beta1.VirtualService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "service-a",
+					Namespace:   "staging",
+					Labels:      map[string]string{"l1": "v1"},
+					Annotations: map[string]string{"a1": "v1"},
+				},
+				Spec: istioNetworkingV1beta1.VirtualService{
+					Gateways: []string{"ingress-http"},
+					Hosts: []string{
+						"service-a.staging.svc.cluster.local",
+						"service-a.staging.com",
+					},
+					Http: []*istioNetworkingV1beta1.HTTPRoute{
+						{
+							Name: "ingress-gateway-http-app-service",
+							Match: []*istioNetworkingV1beta1.HTTPMatchRequest{
+								{
+									Gateways: []string{"ingress-http"},
+									Port:     80,
+								},
+							},
+							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
+								{
+									Destination: &istioNetworkingV1beta1.Destination{
+										Host: "service-a.staging.svc.cluster.local",
+										Port: &istioNetworkingV1beta1.PortSelector{
+											Number: 80,
+										},
+										Subset: "stable",
+									},
+									Weight: 100,
+								},
+							},
+						},
+					},
+				},
+			},
+			header: model.DivertHeader{
+				Name:  "custom-name",
+				Match: "prefix",
+				Value: "custom-prefix",
+			},
+			expected: &istioV1beta1.VirtualService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "service-a",
+					Namespace:   "staging",
+					Labels:      map[string]string{"l1": "v1"},
+					Annotations: map[string]string{"a1": "v1"},
+				},
+				Spec: istioNetworkingV1beta1.VirtualService{
+					Gateways: []string{"ingress-http"},
+					Hosts: []string{
+						"service-a.staging.svc.cluster.local",
+						"service-a.staging.com",
+					},
+					Http: []*istioNetworkingV1beta1.HTTPRoute{
+						{
+							Name: "okteto-divert-cindy-ingress-gateway-http-app-service",
+							Match: []*istioNetworkingV1beta1.HTTPMatchRequest{
+								{
+									Gateways: []string{"ingress-http"},
+									Headers: map[string]*istioNetworkingV1beta1.StringMatch{
+										"custom-name": {
+											MatchType: &istioNetworkingV1beta1.StringMatch_Prefix{Prefix: "custom-prefix"},
 										},
 									},
 									Port: 80,
@@ -177,6 +293,11 @@ func Test_translateDivertService(t *testing.T) {
 					},
 				},
 			},
+			header: model.DivertHeader{
+				Name:  model.OktetoDivertDefaultHeaderName,
+				Match: model.OktetoDivertIstioExactMatch,
+				Value: "cindy",
+			},
 			expected: &istioV1beta1.VirtualService{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:        "service-b",
@@ -227,15 +348,17 @@ func Test_translateDivertService(t *testing.T) {
 			VirtualService: "virtual-service-a",
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			d.divert.Header = tt.header
 			result := d.translateDivertService(tt.vs)
 			assert.True(t, reflect.DeepEqual(result.ObjectMeta, tt.expected.ObjectMeta))
 			assert.True(t, reflect.DeepEqual(result.Spec.Hosts, tt.expected.Spec.Hosts))
 			assert.True(t, reflect.DeepEqual(result.Spec.Gateways, tt.expected.Spec.Gateways))
 			for i := range tt.expected.Spec.Http {
-				assert.True(t, reflect.DeepEqual(result.Spec.Http[i].Headers, tt.expected.Spec.Http[i].Headers))
+				for j := range tt.expected.Spec.Http[i].Match {
+					assert.True(t, reflect.DeepEqual(result.Spec.Http[i].Match[j].Headers, tt.expected.Spec.Http[i].Match[j].Headers))
+				}
 				assert.True(t, reflect.DeepEqual(result.Spec.Http[i].Route, tt.expected.Spec.Http[i].Route))
 			}
 		})
@@ -454,7 +577,7 @@ func Test_translateDivertHost(t *testing.T) {
 							},
 							Headers: &istioNetworkingV1beta1.Headers{
 								Request: &istioNetworkingV1beta1.Headers_HeaderOperations{
-									Set: map[string]string{model.OktetoDivertHeader: "cindy"},
+									Set: map[string]string{model.OktetoDivertDefaultHeaderName: "cindy"},
 								},
 							},
 							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
@@ -543,7 +666,7 @@ func Test_translateDivertHost(t *testing.T) {
 							},
 							Headers: &istioNetworkingV1beta1.Headers{
 								Request: &istioNetworkingV1beta1.Headers_HeaderOperations{
-									Set: map[string]string{model.OktetoDivertHeader: "cindy"},
+									Set: map[string]string{model.OktetoDivertDefaultHeaderName: "cindy"},
 								},
 							},
 							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{

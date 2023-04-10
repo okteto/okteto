@@ -277,6 +277,18 @@ const (
 	// OktetoDivertIstioDriver is the divert driver for istio
 	OktetoDivertIstioDriver = "istio"
 
-	// OktetoDivertHeader the header used by okteto to divert traffic
-	OktetoDivertHeader = "x-okteto-divert"
+	// OktetoDivertIstioExactMatch represents the exact header match type
+	OktetoDivertIstioExactMatch = "exact"
+
+	// OktetoDivertIstioRegexMatch represents the regexp header match type
+	OktetoDivertIstioRegexMatch = "regex"
+
+	// OktetoDivertIstioPrefixMatch represents the prefix header match type
+	OktetoDivertIstioPrefixMatch = "prefix"
+
+	// OktetoDivertDefaultHeaderName the default header name used by okteto to divert traffic
+	OktetoDivertDefaultHeaderName = "x-okteto-divert"
+
+	// OktetoDivertDefaultHeaderValue the default divert header value
+	OktetoDivertDefaultHeaderValue = "${OKTETO_NAMESPACE}"
 )

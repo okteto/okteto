@@ -44,8 +44,19 @@ func (d *Driver) translateDivertService(vs *istioV1beta1.VirtualService) *istioV
 			if httpRoute.Match[j].Headers == nil {
 				httpRoute.Match[j].Headers = map[string]*istioNetworkingV1beta1.StringMatch{}
 			}
-			httpRoute.Match[j].Headers[model.OktetoDivertHeader] = &istioNetworkingV1beta1.StringMatch{
-				MatchType: &istioNetworkingV1beta1.StringMatch_Exact{Exact: d.namespace},
+			switch d.divert.Header.Match {
+			case model.OktetoDivertIstioExactMatch:
+				httpRoute.Match[j].Headers[d.divert.Header.Name] = &istioNetworkingV1beta1.StringMatch{
+					MatchType: &istioNetworkingV1beta1.StringMatch_Exact{Exact: d.divert.Header.Value},
+				}
+			case model.OktetoDivertIstioRegexMatch:
+				httpRoute.Match[j].Headers[d.divert.Header.Name] = &istioNetworkingV1beta1.StringMatch{
+					MatchType: &istioNetworkingV1beta1.StringMatch_Regex{Regex: d.divert.Header.Value},
+				}
+			case model.OktetoDivertIstioPrefixMatch:
+				httpRoute.Match[j].Headers[d.divert.Header.Name] = &istioNetworkingV1beta1.StringMatch{
+					MatchType: &istioNetworkingV1beta1.StringMatch_Prefix{Prefix: d.divert.Header.Value},
+				}
 			}
 		}
 		matchService := false
@@ -115,7 +126,7 @@ func (d *Driver) injectDivertHeader(vsSpec istioNetworkingV1beta1.VirtualService
 		if vsSpec.Http[i].Headers.Request.Set == nil {
 			vsSpec.Http[i].Headers.Request.Set = map[string]string{}
 		}
-		vsSpec.Http[i].Headers.Request.Set[model.OktetoDivertHeader] = d.namespace
+		vsSpec.Http[i].Headers.Request.Set[model.OktetoDivertDefaultHeaderName] = d.namespace
 	}
 	return vsSpec
 }
