@@ -15,9 +15,7 @@ package virtualservices
 
 import (
 	"context"
-	"fmt"
 
-	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
 	istioV1beta1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	istioclientset "istio.io/client-go/pkg/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,15 +46,4 @@ func List(ctx context.Context, namespace string, c istioclientset.Interface) ([]
 	}
 
 	return vsList.Items, nil
-}
-
-func GetHTTPRoutePrefixOktetoName(ns string) string {
-	return fmt.Sprintf("okteto-divert-%s", ns)
-}
-
-func GetHTTPRouteOktetoName(ns string, r *istioNetworkingV1beta1.HTTPRoute) string {
-	if r.Name == "" {
-		return fmt.Sprintf("okteto-divert-%s", ns)
-	}
-	return fmt.Sprintf("okteto-divert-%s-%s", ns, r.Name)
 }
