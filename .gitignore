@@ -2,6 +2,7 @@
 
 # IDEs
 .vscode
+.idea
 
 # Golang binary
 cli
