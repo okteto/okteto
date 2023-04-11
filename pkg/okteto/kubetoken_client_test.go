@@ -1,12 +1,15 @@
 package okteto
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	authenticationv1 "k8s.io/api/authentication/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -67,101 +70,112 @@ func TestNewKubeTokenClient(t *testing.T) {
 
 		require.Equal(t, "https://cloud.okteto.com/auth/kubetoken/testns", client.url)
 		require.Equal(t, "cloud.okteto.com", client.contextName)
+		require.Equal(t, "testns", client.namespace)
 	})
 }
 
 type mockCache struct {
 	token    *authenticationv1.TokenRequest
-	err      error
+	getErr   error
+	setErr   error
 	getCount int
 	setCount int
 }
 
 func (m *mockCache) Get(_, _ string) (*authenticationv1.TokenRequest, error) {
 	m.getCount++
-	return m.token, m.err
+	return m.token, m.getErr
 }
 
 func (m *mockCache) Set(_, _ string, token *authenticationv1.TokenRequest) error {
 	m.setCount++
 	m.token = token
-	return nil
+	return m.setErr
 }
 
 func TestGetKubeTokenCache(t *testing.T) {
 	t.Parallel()
 
-	expectedToken := "token"
+	expectedToken := &authenticationv1.TokenRequest{
+		Spec: authenticationv1.TokenRequestSpec{
+			Audiences: []string{"test"},
+		},
+		Status: authenticationv1.TokenRequestStatus{
+			Token: "jwt.token.test",
+			ExpirationTimestamp: metav1.Time{
+				Time: time.Now().Add(time.Hour),
+			},
+		},
+	}
+
+	expectedTokenBytes, err := json.Marshal(expectedToken)
+	require.NoError(t, err)
+	expectedTokenString := string(expectedTokenBytes)
+
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(expectedToken))
+		w.Write(expectedTokenBytes)
 	}))
 
 	defer s.Close()
 
-	cache := &mockCache{}
+	// TODO: the tests should have better checks for the cache
 
-	c := &KubeTokenClient{
-		httpClient: s.Client(),
-		url:        s.URL,
-		cache:      cache,
+	tt := []struct {
+		name             string
+		cache            *mockCache
+		expectedGetCount int
+		expectedSetCount int
+	}{
+		{
+			name:             "Cache get error",
+			cache:            &mockCache{getErr: assert.AnError},
+			expectedGetCount: 1,
+			expectedSetCount: 1,
+		},
+		{
+			name:             "Cache set error",
+			cache:            &mockCache{setErr: assert.AnError},
+			expectedGetCount: 1,
+			expectedSetCount: 1,
+		},
+		{
+			name:             "Cache get and set error",
+			cache:            &mockCache{getErr: assert.AnError, setErr: assert.AnError},
+			expectedGetCount: 1,
+			expectedSetCount: 1,
+		},
+		{
+			name:             "Cache hit",
+			cache:            &mockCache{token: expectedToken},
+			expectedGetCount: 1,
+			expectedSetCount: 0,
+		},
+		{
+			name:             "Cache miss",
+			cache:            &mockCache{token: nil},
+			expectedGetCount: 1,
+			expectedSetCount: 1,
+		},
 	}
 
-	// TODO: the tests should have better checks for the cache
-	t.Run("Cache get error", func(t *testing.T) {
-		cache.token = nil
-		cache.err = assert.AnError
+	for _, tc := range tt {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			c := &KubeTokenClient{
+				httpClient: s.Client(),
+				url:        s.URL,
+				cache:      tc.cache,
+			}
 
-		token, err := c.GetKubeToken()
-		require.NoError(t, err)
-		require.Equal(t, expectedToken, token)
-		require.Equal(t, 1, cache.getCount)
-		require.Equal(t, 1, cache.setCount)
-	})
+			token, err := c.GetKubeToken()
+			require.NoError(t, err)
+			require.Equal(t, expectedTokenString, token)
 
-	t.Run("Cache set error", func(t *testing.T) {
-		cache.token = nil
-		cache.err = assert.AnError
-
-		token, err := c.GetKubeToken()
-		require.NoError(t, err)
-		require.Equal(t, expectedToken, token)
-		require.Equal(t, 1, cache.getCount)
-		require.Equal(t, 1, cache.setCount)
-	})
-
-	t.Run("Cache get and set error", func(t *testing.T) {
-		cache.token = nil
-		cache.err = assert.AnError
-
-		token, err := c.GetKubeToken()
-		require.NoError(t, err)
-		require.Equal(t, expectedToken, token)
-		require.Equal(t, 1, cache.getCount)
-		require.Equal(t, 1, cache.setCount)
-	})
-
-	t.Run("Cache hit", func(t *testing.T) {
-		cache.token = nil
-		cache.err = nil
-
-		token, err := c.GetKubeToken()
-		require.NoError(t, err)
-		require.Equal(t, expectedToken, token)
-		require.Equal(t, 1, cache.getCount)
-		require.Equal(t, 0, cache.setCount)
-	})
-
-	t.Run("Cache miss", func(t *testing.T) {
-		cache.token = nil
-		cache.err = nil
-
-		token, err := c.GetKubeToken()
-		require.NoError(t, err)
-		require.Equal(t, expectedToken, token)
-		require.Equal(t, 1, cache.getCount)
-		require.Equal(t, 1, cache.setCount)
-	})
+			require.Equal(t, tc.expectedGetCount, tc.cache.getCount)
+			require.Equal(t, tc.expectedSetCount, tc.cache.setCount)
+		})
+	}
 
 }
 
@@ -180,6 +194,7 @@ func TestGetKubeTokenUnauthorizedErr(t *testing.T) {
 		httpClient:  s.Client(),
 		url:         s.URL,
 		contextName: context,
+		cache:       &mockCache{},
 	}
 
 	_, err := c.GetKubeToken()

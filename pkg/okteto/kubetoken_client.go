@@ -14,6 +14,7 @@
 package okteto
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -46,6 +47,7 @@ type KubeTokenClient struct {
 	httpClient  *http.Client
 	url         string
 	contextName string
+	namespace   string
 	cache       cache
 }
 
@@ -63,10 +65,22 @@ func NewKubeTokenClient(contextName, token, namespace string) (*KubeTokenClient,
 		httpClient:  httpClient,
 		url:         url,
 		contextName: contextName,
+		namespace:   namespace,
 	}, nil
 }
 
 func (c *KubeTokenClient) GetKubeToken() (string, error) {
+	token, err := c.cache.Get(c.contextName, c.namespace)
+	if err != nil {
+		// skippping cache
+		// TODO: log this
+	}
+
+	if token != nil {
+		tokenString, _ := json.Marshal(token)
+		return string(tokenString), nil
+	}
+
 	resp, err := c.httpClient.Get(c.url)
 	if err != nil {
 		return "", fmt.Errorf("failed GET request: %w", err)
@@ -83,6 +97,17 @@ func (c *KubeTokenClient) GetKubeToken() (string, error) {
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read kubetoken response: %w", err)
+	}
+
+	token = &authenticationv1.TokenRequest{}
+
+	if err := json.Unmarshal(body, token); err != nil {
+		return "", fmt.Errorf("failed to unmarshal kubetoken response: %w", err) // TODO check this error
+	}
+
+	if err := c.cache.Set(c.contextName, c.namespace, token); err != nil {
+		// skippping cache
+		// TODO: log this
 	}
 
 	return string(body), nil
