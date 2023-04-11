@@ -66,8 +66,8 @@ func (cf *CacheFrom) AddDefaultPullCache(reg oktetoRegistryInterface, image stri
 		oktetoLog.Infof("error trying to access globalPushAccess: %w", err)
 	}
 
-	_, repo := reg.GetRegistryAndRepo(image)
-	imageName, _ := reg.GetRepoNameAndTag(repo)
+	_, imageRepo := reg.GetRegistryAndRepo(image)
+	imageName, _ := reg.GetRepoNameAndTag(imageRepo)
 
 	if hasAccess {
 		globalCacheImage := fmt.Sprintf("%s/%s:%s", constants.GlobalRegistry, imageName, defaultCacheTag)

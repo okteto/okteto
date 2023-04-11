@@ -28,8 +28,8 @@ type mockRegistry struct {
 	tag      string
 }
 
-func (*mockRegistry) HasGlobalPushAccess() (bool, error) {
-	return true, nil
+func (mr *mockRegistry) HasGlobalPushAccess() (bool, error) {
+	return mr.isGlobal, nil
 }
 
 func (mr *mockRegistry) IsGlobalRegistry(image string) bool {
@@ -68,6 +68,7 @@ func (mr *mockRegistryWithError) GetRepoNameAndTag(_ string) (string, string) {
 
 func Test_AddDefaultPullCache(t *testing.T) {
 	reg := &mockRegistry{
+		isGlobal: true,
 		registry: "registry",
 		repo:     "test-account/test-image",
 		tag:      "1.0.0",
