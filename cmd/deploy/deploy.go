@@ -332,12 +332,14 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	err = deployer.deploy(ctx, deployOptions)
+	if _, ok := deployer.(*remoteDeployCommand); ok {
+		err = nil
+	}
 	if err != nil {
 		if err == oktetoErrors.ErrIntSig {
 			return nil
 		}
 		err = oktetoErrors.UserError{E: err}
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, err.Error())
 		data.Status = pipeline.ErrorStatus
 	} else {
 		oktetoLog.SetStage("")
