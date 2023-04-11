@@ -51,6 +51,10 @@ type registryInterface interface {
 	IsOktetoRegistry(image string) bool
 	GetImageReference(image string) (registry.OktetoImageReference, error)
 	HasGlobalPushAccess() (bool, error)
+	IsGlobalRegistry(image string) bool
+
+	GetRegistryAndRepo(image string) (string, string)
+	GetRepoNameAndTag(repo string) (string, string)
 }
 
 // NewBuildCommand creates a struct to run all build methods

@@ -19,7 +19,6 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	cache "github.com/okteto/okteto/pkg/cache"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
@@ -147,7 +146,10 @@ func (or OktetoRegistry) HasGlobalPushAccess() (bool, error) {
 	return or.client.HasPushAccess(image)
 }
 
-// GetImageCtrl returns the image controller
-func (or OktetoRegistry) GetImageCtrl() cache.ImageCtrlInterface {
-	return or.imageCtrl
+func (or OktetoRegistry) GetRegistryAndRepo(image string) (string, string) {
+	return or.imageCtrl.GetRegistryAndRepo(image)
+}
+
+func (or OktetoRegistry) GetRepoNameAndTag(repo string) (string, string) {
+	return or.imageCtrl.GetRepoNameAndTag(repo)
 }

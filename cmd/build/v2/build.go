@@ -44,6 +44,10 @@ type oktetoRegistryInterface interface {
 	IsOktetoRegistry(image string) bool
 	GetImageReference(image string) (registry.OktetoImageReference, error)
 	HasGlobalPushAccess() (bool, error)
+	IsGlobalRegistry(image string) bool
+
+	GetRegistryAndRepo(image string) (string, string)
+	GetRepoNameAndTag(repo string) (string, string)
 }
 
 // oktetoBuilderConfigInterface returns the configuration that the builder has for the registry and project
@@ -226,7 +230,7 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	tagToBuild := bc.getTagToBuild(manifest.Name, svcName, buildSvcInfo)
 	buildSvcInfo.Image = tagToBuild
 
-	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options)
+	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options, bc.Registry)
 
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
 		return "", err
@@ -256,7 +260,7 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 		buildSvcInfo.Image = tagToBuild[0]
 	}
 
-	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options)
+	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options, bc.Registry)
 
 	if err := bc.V1Builder.Build(ctx, buildOptions); err != nil {
 		return "", err

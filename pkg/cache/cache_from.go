@@ -23,15 +23,12 @@ import (
 // CacheFrom is a list of images to import cache from.
 type CacheFrom []string
 
-type ImageCtrlInterface interface {
-	GetRegistryAndRepo(image string) (string, string)
-	GetRepoNameAndTag(repo string) (string, string)
-}
-
 type oktetoRegistryInterface interface {
-	GetImageCtrl() ImageCtrlInterface
 	HasGlobalPushAccess() (bool, error)
 	IsGlobalRegistry(image string) bool
+
+	GetRegistryAndRepo(image string) (string, string)
+	GetRepoNameAndTag(repo string) (string, string)
 }
 
 // UnmarshalYAML implements the Unmarshaler interface of the yaml pkg.
@@ -69,9 +66,8 @@ func (cf *CacheFrom) AddDefaultPullCache(reg oktetoRegistryInterface, image stri
 		oktetoLog.Infof("error trying to access globalPushAccess: %w", err)
 	}
 
-	imageCtrl := reg.GetImageCtrl()
-	_, repo := imageCtrl.GetRegistryAndRepo(image)
-	imageName, _ := imageCtrl.GetRepoNameAndTag(repo)
+	_, repo := reg.GetRegistryAndRepo(image)
+	imageName, _ := reg.GetRepoNameAndTag(repo)
 
 	if hasAccess {
 		globalCacheImage := fmt.Sprintf("%s/%s:%s", constants.GlobalRegistry, imageName, defaultCacheTag)

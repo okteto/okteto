@@ -92,11 +92,12 @@ func Test_ExportCacheMarshalYAML(t *testing.T) {
 }
 
 func Test_AddDefaultPushCache(t *testing.T) {
-	imageCtrl := &mockImageCtrl{}
 	tests := []struct {
 		name     string
 		image    string
 		isGlobal bool
+		repo     string
+		registry string
 		ec       ExportCache
 		expected ExportCache
 	}{
@@ -104,6 +105,7 @@ func Test_AddDefaultPushCache(t *testing.T) {
 			name:     "already with cache image",
 			image:    "test-account/test-image:1.0.0",
 			isGlobal: true,
+			repo:     "test-image",
 			ec:       ExportCache{"okteto.global/test-image:cache", "okteto.dev/test-image:cache"},
 			expected: ExportCache{"okteto.global/test-image:cache", "okteto.dev/test-image:cache"},
 		},
@@ -111,6 +113,7 @@ func Test_AddDefaultPushCache(t *testing.T) {
 			name:     "without cache image",
 			image:    "okteto.global/test-image:1.0.0",
 			isGlobal: true,
+			repo:     "test-image",
 			ec:       ExportCache{},
 			expected: ExportCache{"okteto.global/test-image:cache"},
 		},
@@ -118,6 +121,8 @@ func Test_AddDefaultPushCache(t *testing.T) {
 			name:     "without cache image not in global",
 			image:    "okteto.dev/test-image:1.0.0",
 			isGlobal: false,
+			repo:     "test-image",
+			registry: "okteto.dev",
 			ec:       ExportCache{},
 			expected: ExportCache{"okteto.dev/test-image:cache"},
 		},
@@ -125,6 +130,7 @@ func Test_AddDefaultPushCache(t *testing.T) {
 			name:     "already defined cache image",
 			image:    "okteto.global/test-image:1.0.0",
 			isGlobal: true,
+			repo:     "test-image",
 			ec:       ExportCache{"okteto.global/test-image:cache"},
 			expected: ExportCache{"okteto.global/test-image:cache"},
 		},
@@ -133,8 +139,10 @@ func Test_AddDefaultPushCache(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reg := &mockRegistry{
-				imageCtrl: imageCtrl,
-				isGlobal:  tt.isGlobal,
+				isGlobal: tt.isGlobal,
+				registry: tt.registry,
+				repo:     tt.repo,
+				tag:      "",
 			}
 			tt.ec.AddDefaultPushCache(reg, tt.image)
 			assert.Equal(t, tt.expected, tt.ec)
