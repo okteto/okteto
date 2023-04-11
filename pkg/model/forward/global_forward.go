@@ -19,7 +19,7 @@ import (
 
 const malformedGlobalForward = "Wrong global forward syntax '%s', must be of the form 'localPort:serviceName:remotePort'"
 
-// Forward represents a port forwarding definition
+// GlobalForward forwards represents a port forwarding definition
 type GlobalForward struct {
 	Local       int               `json:"localPort" yaml:"localPort"`
 	Remote      int               `json:"remotePort" yaml:"remotePort"`

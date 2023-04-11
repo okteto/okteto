@@ -262,12 +262,12 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 // RunDeploy runs the deploy sequence
 func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
-	var err error
 	oktetoLog.SetStage("Load manifest")
-	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
+	manifest, err := dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
 		return err
 	}
+	deployOptions.Manifest = manifest
 	oktetoLog.Debug("found okteto manifest")
 	dc.PipelineType = deployOptions.Manifest.Type
 

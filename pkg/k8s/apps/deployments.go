@@ -208,7 +208,7 @@ func (i *DeploymentApp) PatchAnnotations(ctx context.Context, c kubernetes.Inter
 	return deployments.PatchAnnotations(ctx, i.d, c)
 }
 
-// GetCloned Returns from Kubernetes the cloned deployment
+// GetDevClone Returns from Kubernetes the cloned deployment
 func (i *DeploymentApp) GetDevClone(ctx context.Context, c kubernetes.Interface) (App, error) {
 	clonedName := model.DevCloneName(i.d.Name)
 	d, err := deployments.Get(ctx, clonedName, i.d.Namespace, c)
