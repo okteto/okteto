@@ -121,6 +121,13 @@ func Test_AddDefaultPushCache(t *testing.T) {
 			ec:       ExportCache{},
 			expected: ExportCache{"okteto.dev/test-image:cache"},
 		},
+		{
+			name:     "already defined cache image",
+			image:    "okteto.global/test-image:1.0.0",
+			isGlobal: true,
+			ec:       ExportCache{"okteto.global/test-image:cache"},
+			expected: ExportCache{"okteto.global/test-image:cache"},
+		},
 	}
 
 	for _, tt := range tests {
