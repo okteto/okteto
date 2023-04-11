@@ -74,12 +74,12 @@ func (cf *CacheFrom) AddDefaultPullCache(reg oktetoRegistryInterface, image stri
 	imageName, _ := imageCtrl.GetRepoNameAndTag(repo)
 
 	if hasAccess {
-		globalCacheImage := fmt.Sprintf("%s/%s:cache", constants.GlobalRegistry, imageName)
+		globalCacheImage := fmt.Sprintf("%s/%s:%s", constants.GlobalRegistry, imageName, defaultCacheTag)
 		cf.addCacheFromImage(globalCacheImage)
 		oktetoLog.Debugf("Dynamically adding cache_from: %s", globalCacheImage)
 	}
 
-	devCacheImage := fmt.Sprintf("%s/%s:cache", constants.DevRegistry, imageName)
+	devCacheImage := fmt.Sprintf("%s/%s:%s", constants.DevRegistry, imageName, defaultCacheTag)
 	cf.addCacheFromImage(devCacheImage)
 	oktetoLog.Debugf("Dynamically adding cache_from: %s", devCacheImage)
 }

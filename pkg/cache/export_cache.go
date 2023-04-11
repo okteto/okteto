@@ -58,11 +58,11 @@ func (pec *ExportCache) AddDefaultPushCache(reg oktetoRegistryInterface, image s
 	imageName, _ := imageCtrl.GetRepoNameAndTag(imageRepo)
 
 	if reg.IsGlobalRegistry(image) {
-		newCache := fmt.Sprintf("%s/%s:cache", constants.GlobalRegistry, imageName)
+		newCache := fmt.Sprintf("%s/%s:%s", constants.GlobalRegistry, imageName, defaultCacheTag)
 		pec.add(newCache)
 		return
 	}
-	newDevCache := fmt.Sprintf("%s/%s:cache", imageReg, imageName)
+	newDevCache := fmt.Sprintf("%s/%s:%s", imageReg, imageName, defaultCacheTag)
 	pec.add(newDevCache)
 
 }
