@@ -87,6 +87,7 @@ type destroyCommand struct {
 	k8sClientProvider okteto.K8sClientProvider
 	ConfigMapHandler  configMapHandler
 	oktetoClient      *okteto.OktetoClient
+	buildCtrl         buildCtrl
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -134,14 +135,14 @@ func Destroy(ctx context.Context) *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
 			}
-			name := options.Name
+
 			if options.Name == "" {
 				c, _, err := okteto.NewK8sClientProvider().Provide(okteto.Context().Cfg)
 				if err != nil {
 					return err
 				}
 				inferer := devenvironment.NewNameInferer(c)
-				name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPathFlag)
+				options.Name = inferer.InferName(ctx, cwd, okteto.Context().Namespace, options.ManifestPathFlag)
 				if err != nil {
 					return fmt.Errorf("could not infer environment name")
 				}
@@ -164,9 +165,12 @@ func Destroy(ctx context.Context) *cobra.Command {
 				options.Namespace = okteto.Context().Namespace
 			}
 
-			okClient, err := okteto.NewOktetoClient()
-			if err != nil {
-				return err
+			var okClient = &okteto.OktetoClient{}
+			if okteto.Context().IsOkteto {
+				okClient, err = okteto.NewOktetoClient()
+				if err != nil {
+					return err
+				}
 			}
 
 			c := &destroyCommand{
@@ -176,16 +180,17 @@ func Destroy(ctx context.Context) *cobra.Command {
 				secrets:           secrets.NewSecrets(k8sClient),
 				k8sClientProvider: okteto.NewK8sClientProvider(),
 				oktetoClient:      okClient,
+				buildCtrl:         newBuildCtrl(options.Name),
 			}
 
-			kubeconfigPath := getTempKubeConfigFile(name)
+			kubeconfigPath := getTempKubeConfigFile(options.Name)
 			if err := kubeconfig.Write(okteto.Context().Cfg, kubeconfigPath); err != nil {
 				return err
 			}
 			os.Setenv("KUBECONFIG", kubeconfigPath)
 			defer os.Remove(kubeconfigPath)
 
-			destroyer, err := c.getDestroyer(options)
+			destroyer, err := c.getDestroyer(ctx, options)
 			if err != nil {
 				return err
 			}
@@ -213,7 +218,7 @@ func getTempKubeConfigFile(name string) string {
 	return filepath.Join(config.GetOktetoHome(), tempKubeconfigFileName)
 }
 
-func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) {
+func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (destroyInterface, error) {
 	var (
 		deployer destroyInterface
 		err      error
@@ -230,7 +235,6 @@ func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) 
 
 		oktetoLog.Info("Destroying all...")
 	} else {
-
 		manifest, err := model.GetManifestV2(opts.ManifestPath)
 		if err != nil {
 			// Log error message but application can still be deleted
@@ -244,6 +248,16 @@ func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) 
 
 		destroyImage := ""
 		if manifest.Destroy != nil {
+			if opts.Name == "" {
+				if manifest.Name == "" {
+					manifest.Name = dc.buildCtrl.name
+				}
+			} else {
+				manifest.Name = opts.Name
+			}
+			if err := dc.buildCtrl.buildImageIfNecessary(ctx, manifest); err != nil {
+				return nil, err
+			}
 			destroyImage, err = model.ExpandEnv(manifest.Destroy.Image, false)
 			if err != nil {
 				return nil, err
@@ -252,7 +266,7 @@ func (dc *destroyCommand) getDestroyer(opts *Options) (destroyInterface, error) 
 		runInRemote := !isRemote && (destroyImage != "" || opts.RunInRemote)
 
 		if runInRemote {
-			deployer = newRemoteDestroyer(destroyImage)
+			deployer = newRemoteDestroyer(manifest)
 			oktetoLog.Info("Destroying remotely...")
 		} else {
 			destroyerAll, err := newLocalDestroyerAll(dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)

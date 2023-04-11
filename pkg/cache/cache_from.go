@@ -54,9 +54,9 @@ func (cf *CacheFrom) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // MarshalYAML implements the marshaler interface of the yaml pkg.
-func (cf CacheFrom) MarshalYAML() (interface{}, error) {
-	if len(cf) == 1 {
-		return cf[0], nil
+func (cf *CacheFrom) MarshalYAML() (interface{}, error) {
+	if len(*cf) == 1 {
+		return (*cf)[0], nil
 	}
 
 	return cf, nil

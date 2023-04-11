@@ -63,6 +63,9 @@ ENV {{ .NamespaceEnvVar }} {{ .NamespaceValue }}
 ENV {{ .ContextEnvVar }} {{ .ContextValue }}
 ENV {{ .TokenEnvVar }} {{ .TokenValue }}
 ENV {{ .RemoteDeployEnvVar }} true
+{{ if ne .ActionNameValue "" }}
+ENV {{ .ActionNameEnvVar }} {{ .ActionNameValue }}
+{{ end }}
 
 COPY . /okteto/src
 WORKDIR /okteto/src
@@ -82,6 +85,8 @@ type dockerfileTemplateProperties struct {
 	NamespaceValue     string
 	TokenEnvVar        string
 	TokenValue         string
+	ActionNameEnvVar   string
+	ActionNameValue    string
 	RemoteDeployEnvVar string
 	DeployFlags        string
 	RandomInt          int
@@ -147,6 +152,18 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
 	if err := rd.builderV1.Build(ctx, buildOptions); err != nil {
+		var cmdErr build.OktetoCommandErr
+		if errors.As(err, &cmdErr) {
+			oktetoLog.SetStage(cmdErr.Stage)
+			return oktetoErrors.UserError{
+				E: fmt.Errorf("error during development environment deployment: %w", cmdErr.Err),
+			}
+		}
+		oktetoLog.SetStage("remote deploy")
+		var userErr oktetoErrors.UserError
+		if errors.As(err, &userErr) {
+			return userErr
+		}
 		return oktetoErrors.UserError{
 			E: fmt.Errorf("Error during development environment deployment: %w", err),
 		}
@@ -182,6 +199,8 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		NamespaceValue:     okteto.Context().Namespace,
 		TokenEnvVar:        model.OktetoTokenEnvVar,
 		TokenValue:         okteto.Context().Token,
+		ActionNameEnvVar:   model.OktetoActionNameEnvVar,
+		ActionNameValue:    os.Getenv(model.OktetoActionNameEnvVar),
 		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
 		RandomInt:          int(randomNumber.Int64()),
 		DeployFlags:        strings.Join(getDeployFlags(opts), " "),

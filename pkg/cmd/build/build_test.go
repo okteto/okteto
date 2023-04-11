@@ -254,6 +254,21 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				ExportCache: []string{"export-image"},
 			},
 		},
+		{
+			name:        "has-platform-option",
+			serviceName: "service",
+			buildInfo:   &model.BuildInfo{},
+			initialOpts: &types.BuildOptions{
+				Platform: "linux/amd64"},
+			isOkteto: true,
+			expected: &types.BuildOptions{
+				CacheFrom:  []string{"okteto.dev/movies-service:cache"},
+				BuildArgs:  []string{namespaceEnvVar.String()},
+				Platform:   "linux/amd64",
+				Tag:        "okteto.dev/movies-service:okteto",
+				OutputMode: "tty",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

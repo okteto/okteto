@@ -14,7 +14,6 @@
 package cache
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -151,7 +150,17 @@ func Test_UnmarshalYAML(t *testing.T) {
 			expected: CacheFrom{},
 		},
 		{
-			name:     "one item",
+			name:     "one single item",
+			data:     []byte("test-registry/test-image:cache"),
+			expected: CacheFrom{"test-registry/test-image:cache"},
+		},
+		{
+			name:     "one item as list",
+			data:     []byte(`["test-registry/test-image:cache"]`),
+			expected: CacheFrom{"test-registry/test-image:cache"},
+		},
+		{
+			name:     "one item as list",
 			data:     []byte(`["test-registry/test-image:cache"]`),
 			expected: CacheFrom{"test-registry/test-image:cache"},
 		},
@@ -175,26 +184,13 @@ func Test_UnmarshalYAML(t *testing.T) {
 }
 
 func Test_UnmarshalYAML_WithError(t *testing.T) {
-	tests := []struct {
-		name        string
-		data        []byte
-		expectedErr error
-	}{
-		{
-			name:        "invalid type",
-			data:        []byte("some: invalid: yaml"),
-			expectedErr: fmt.Errorf("yaml: mapping values are not allowed in this context"),
-		},
-	}
+	var cf CacheFrom
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var cf CacheFrom
-			err := yaml.Unmarshal([]byte(tt.data), &cf)
-			assert.Error(t, err)
-			assert.Equal(t, tt.expectedErr, err)
-		})
-	}
+	err := cf.UnmarshalYAML(func(interface{}) error {
+		return assert.AnError
+	})
+
+	assert.ErrorIs(t, err, assert.AnError)
 }
 
 func Test_MarshalYAML(t *testing.T) {
@@ -211,7 +207,7 @@ func Test_MarshalYAML(t *testing.T) {
 		{
 			name:     "one image",
 			cf:       CacheFrom{"test-registry/test-image:cache"},
-			expected: "test-registry/test-image:cache\n",
+			expected: "- test-registry/test-image:cache\n",
 		},
 		{
 			name:     "two images",

@@ -50,6 +50,9 @@ ENV {{ .NamespaceEnvVar }} {{ .NamespaceValue }}
 ENV {{ .ContextEnvVar }} {{ .ContextValue }}
 ENV {{ .TokenEnvVar }} {{ .TokenValue }}
 ENV {{ .RemoteDeployEnvVar }} true
+{{ if ne .ActionNameValue "" }}
+ENV {{ .ActionNameEnvVar }} {{ .ActionNameValue }}
+{{ end }}
 
 COPY . /okteto/src
 WORKDIR /okteto/src
@@ -69,6 +72,8 @@ type dockerfileTemplateProperties struct {
 	NamespaceValue     string
 	TokenEnvVar        string
 	TokenValue         string
+	ActionNameEnvVar   string
+	ActionNameValue    string
 	RemoteDeployEnvVar string
 	DeployFlags        string
 	RandomInt          int
@@ -81,16 +86,18 @@ type remoteDestroyCommand struct {
 	fs                   afero.Fs
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
+	manifest             *model.Manifest
 }
 
-func newRemoteDestroyer(destroyImage string) *remoteDestroyCommand {
+func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
 	return &remoteDestroyCommand{
 		builder:              remoteBuild.NewBuilderFromScratch(),
-		destroyImage:         destroyImage,
+		destroyImage:         manifest.Destroy.Image,
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
+		manifest:             manifest,
 	}
 }
 
@@ -132,14 +139,27 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 
 	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
 	buildOptions.Tag = ""
+	buildOptions.Manifest = rd.manifest
 
 	// we need to call Build() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
 	if err := rd.builder.Build(ctx, buildOptions); err != nil {
+		var cmdErr build.OktetoCommandErr
+		if errors.As(err, &cmdErr) {
+			oktetoLog.SetStage(cmdErr.Stage)
+			return oktetoErrors.UserError{
+				E: fmt.Errorf("error during development environment deployment: %w", cmdErr.Err),
+			}
+		}
+		oktetoLog.SetStage("remote deploy")
+		var userErr oktetoErrors.UserError
+		if errors.As(err, &userErr) {
+			return userErr
+		}
 		return oktetoErrors.UserError{
-			E: fmt.Errorf("error during development environment deployment"),
+			E: fmt.Errorf("error during destroy of the development environment: %w", err),
 		}
 	}
 	oktetoLog.SetStage("done")
@@ -169,6 +189,8 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		NamespaceValue:     okteto.Context().Namespace,
 		TokenEnvVar:        model.OktetoTokenEnvVar,
 		TokenValue:         okteto.Context().Token,
+		ActionNameEnvVar:   model.OktetoActionNameEnvVar,
+		ActionNameValue:    os.Getenv(model.OktetoActionNameEnvVar),
 		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
 		RandomInt:          int(randomNumber.Int64()),
 		DestroyFlags:       strings.Join(getDestroyFlags(opts), " "),
@@ -216,7 +238,7 @@ func getDestroyFlags(opts *Options) []string {
 	var deployFlags []string
 
 	if opts.Name != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--name %s", opts.Name))
+		deployFlags = append(deployFlags, fmt.Sprintf("--name \"%s\"", opts.Name))
 	}
 
 	if opts.Namespace != "" {

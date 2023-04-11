@@ -347,6 +347,7 @@ func TestUpAutocreateV2WithBuild(t *testing.T) {
 		ManifestPath: upOptions.ManifestPath,
 		Workdir:      dir,
 		Token:        token,
+		OktetoHome:   dir,
 	}
 	require.NoError(t, commands.RunOktetoDown(oktetoPath, downOpts))
 

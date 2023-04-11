@@ -229,17 +229,6 @@ func (dc *endpointGetter) showEndpoints(ctx context.Context, opts *EndpointsOpti
 	return nil
 }
 
-func getExternalControlForValidator(cp okteto.K8sClientProvider) (ExternalResourceValidatorInterface, error) {
-	_, cfg, err := cp.Provide(okteto.Context().Cfg)
-	if err != nil {
-		return nil, err
-	}
-	return &externalresource.K8sControl{
-		ClientProvider: k8sExternalResources.GetExternalClient,
-		Cfg:            cfg,
-	}, nil
-}
-
 func getExternalControlFromCtx(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
 	_, proxyConfig, err := cp.Provide(kconfig.Get([]string{filename}))
 	if err != nil {

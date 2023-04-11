@@ -14,6 +14,7 @@
 package build
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -27,6 +28,7 @@ func getErrorMessage(err error, tag string) error {
 	if err == nil {
 		return nil
 	}
+
 	imageCtrl := registry.NewImageCtrl(okteto.Config{})
 	imageRegistry, imageTag := imageCtrl.GetRegistryAndRepo(tag)
 	switch {
@@ -51,6 +53,10 @@ func getErrorMessage(err error, tag string) error {
 			Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
 		}
 	default:
+		var cmdErr OktetoCommandErr
+		if errors.As(err, &cmdErr) {
+			return cmdErr
+		}
 		err = oktetoErrors.UserError{
 			E: fmt.Errorf("error building image '%s': %s", tag, err.Error()),
 		}

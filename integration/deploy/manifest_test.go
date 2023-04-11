@@ -389,7 +389,7 @@ func TestDeployRemoteOktetoManifest(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDestroyRemote(oktetoPath, destroyOptions))
 
 	_, err = integration.GetDeployment(context.Background(), testNamespace, "my-dep", c)
-	require.NoError(t, err)
+	require.True(t, k8sErrors.IsNotFound(err))
 }
 
 func isImageBuilt(image string) bool {
