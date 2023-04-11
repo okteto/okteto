@@ -18,15 +18,35 @@ import (
 	"io"
 	"net/http"
 
+	authenticationv1 "k8s.io/api/authentication/v1"
+
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 )
 
 const kubetokenPath = "auth/kubetoken"
 
+type fileCache struct {
+	file string
+}
+
+func (c *fileCache) Get(contextName, namespace string) (*authenticationv1.TokenRequest, error) {
+	return nil, nil
+}
+
+func (c *fileCache) Set(contextName, namespace string, token *authenticationv1.TokenRequest) error {
+	return nil
+}
+
+type cache interface {
+	Get(contextName, namespace string) (*authenticationv1.TokenRequest, error)
+	Set(contextName, namespace string, token *authenticationv1.TokenRequest) error
+}
+
 type KubeTokenClient struct {
 	httpClient  *http.Client
 	url         string
 	contextName string
+	cache       cache
 }
 
 func NewKubeTokenClient(contextName, token, namespace string) (*KubeTokenClient, error) {
