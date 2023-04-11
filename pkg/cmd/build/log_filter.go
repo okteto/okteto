@@ -76,4 +76,6 @@ var BuildKitMissingCacheTransformer TransformerFunc = func(vertex *client.Vertex
 
 		ss.Vertexes = append(ss.Vertexes, newVertex)
 	}
+
+	oktetoLog.Info(msg)
 }
