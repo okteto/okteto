@@ -53,7 +53,7 @@ func (pec *ExportCache) MarshalYAML() (interface{}, error) {
 
 // AddDefaultPushCache appends the default cache layers for a given image
 func (pec *ExportCache) AddDefaultPushCache(reg oktetoRegistryInterface, image string) {
-	imageReg, imageRepo := reg.GetRegistryAndRepo(image)
+	_, imageRepo := reg.GetRegistryAndRepo(image)
 	imageName, _ := reg.GetRepoNameAndTag(imageRepo)
 
 	if reg.IsGlobalRegistry(image) {
@@ -61,7 +61,7 @@ func (pec *ExportCache) AddDefaultPushCache(reg oktetoRegistryInterface, image s
 		pec.add(newCache)
 		return
 	}
-	newDevCache := fmt.Sprintf("%s/%s:%s", imageReg, imageName, defaultCacheTag)
+	newDevCache := fmt.Sprintf("%s/%s:%s", constants.DevRegistry, imageName, defaultCacheTag)
 	pec.add(newDevCache)
 
 }
