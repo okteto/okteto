@@ -130,9 +130,9 @@ func getSolveOpt(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 		)
 	}
 
-	if buildOptions.ExportCache != "" {
+	for _, exportCacheTo := range buildOptions.ExportCache {
 		exportType := "inline"
-		if buildOptions.ExportCache != buildOptions.Tag {
+		if exportCacheTo != buildOptions.Tag {
 			exportType = "registry"
 		}
 		opt.CacheExports = append(
@@ -140,7 +140,7 @@ func getSolveOpt(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 			client.CacheOptionsEntry{
 				Type: exportType,
 				Attrs: map[string]string{
-					"ref":  buildOptions.ExportCache,
+					"ref":  exportCacheTo,
 					"mode": "max",
 				},
 			},

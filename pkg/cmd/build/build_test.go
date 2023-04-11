@@ -70,6 +70,34 @@ func Test_validateImage(t *testing.T) {
 	}
 }
 
+type mockRegistry struct {
+	isGlobal         bool
+	isOktetoRegistry bool
+	registry         string
+	repo             string
+	tag              string
+}
+
+func (*mockRegistry) HasGlobalPushAccess() (bool, error) {
+	return false, nil
+}
+
+func (mr *mockRegistry) IsOktetoRegistry(image string) bool {
+	return mr.isOktetoRegistry
+}
+
+func (mr *mockRegistry) IsGlobalRegistry(image string) bool {
+	return mr.isGlobal
+}
+
+func (mr *mockRegistry) GetRegistryAndRepo(_ string) (string, string) {
+	return mr.registry, mr.repo
+}
+
+func (mr *mockRegistry) GetRepoNameAndTag(_ string) (string, string) {
+	return mr.repo, mr.tag
+}
+
 func Test_OptsFromBuildInfo(t *testing.T) {
 	context := okteto.OktetoContext{
 		Namespace: "test",
@@ -117,6 +145,7 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 		serviceName string
 		buildInfo   *model.BuildInfo
 		isOkteto    bool
+		mr          mockRegistry
 		initialOpts *types.BuildOptions
 		expected    *types.BuildOptions
 	}{
@@ -124,12 +153,20 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			name:        "is-okteto-empty-buildInfo",
 			serviceName: "service",
 			buildInfo:   &model.BuildInfo{},
-			isOkteto:    true,
+			mr: mockRegistry{
+				isOktetoRegistry: true,
+				registry:         "okteto.dev",
+				repo:             "movies-service",
+			},
+			isOkteto: true,
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
 				BuildArgs:  []string{namespaceEnvVar.String()},
 				CacheFrom: []string{
+					"okteto.dev/movies-service:cache",
+				},
+				ExportCache: []string{
 					"okteto.dev/movies-service:cache",
 				},
 			},
@@ -162,6 +199,11 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			initialOpts: &types.BuildOptions{
 				OutputMode: "tty",
 			},
+			mr: mockRegistry{
+				isOktetoRegistry: true,
+				registry:         "okteto.dev",
+				repo:             "movies-service",
+			},
 			isOkteto: true,
 			expected: &types.BuildOptions{
 				OutputMode: oktetoLog.TTYFormat,
@@ -174,6 +216,9 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 					"okteto.dev/movies-service:cache",
 				},
 				BuildArgs: []string{namespaceEnvVar.String(), "arg1=value1"},
+				ExportCache: []string{
+					"okteto.dev/movies-service:cache",
+				},
 			},
 		},
 		{
@@ -197,6 +242,11 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 					},
 				},
 			},
+			mr: mockRegistry{
+				isOktetoRegistry: true,
+				registry:         "okteto.dev",
+				repo:             "movies-service",
+			},
 			initialOpts: &types.BuildOptions{
 				OutputMode: "tty",
 			},
@@ -212,6 +262,9 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 					"okteto.dev/movies-service:cache",
 				},
 				BuildArgs: []string{namespaceEnvVar.String(), "arg1=value1"},
+				ExportCache: []string{
+					"okteto.dev/movies-service:cache",
+				},
 			},
 		},
 		{
@@ -233,7 +286,12 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Secrets: map[string]string{
 					"mysecret": "source",
 				},
-				ExportCache: "export-image",
+				ExportCache: []string{"export-image"},
+			},
+			mr: mockRegistry{
+				isOktetoRegistry: true,
+				registry:         "okteto.dev",
+				repo:             "mycustomimage",
 			},
 			initialOpts: &types.BuildOptions{
 				OutputMode: "tty",
@@ -249,9 +307,12 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 					"cache-image",
 					"okteto.dev/mycustomimage:cache",
 				},
-				BuildArgs:   []string{namespaceEnvVar.String(), "arg1=value1"},
-				Secrets:     []string{"id=mysecret,src=source"},
-				ExportCache: "export-image",
+				BuildArgs: []string{namespaceEnvVar.String(), "arg1=value1"},
+				Secrets:   []string{"id=mysecret,src=source"},
+				ExportCache: []string{
+					"export-image",
+					"okteto.dev/mycustomimage:cache",
+				},
 			},
 		},
 		{
@@ -261,12 +322,20 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 			initialOpts: &types.BuildOptions{
 				Platform: "linux/amd64"},
 			isOkteto: true,
+			mr: mockRegistry{
+				isOktetoRegistry: true,
+				registry:         "okteto.dev",
+				repo:             "movies-service",
+			},
 			expected: &types.BuildOptions{
 				CacheFrom:  []string{"okteto.dev/movies-service:cache"},
 				BuildArgs:  []string{namespaceEnvVar.String()},
 				Platform:   "linux/amd64",
 				Tag:        "okteto.dev/movies-service:okteto",
 				OutputMode: "tty",
+				ExportCache: []string{
+					"okteto.dev/movies-service:cache",
+				},
 			},
 		},
 	}
@@ -287,7 +356,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 					tt.serviceName: tt.buildInfo,
 				},
 			}
-			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts)
+
+			result := OptsFromBuildInfo(manifest.Name, tt.serviceName, manifest.Build[tt.serviceName], tt.initialOpts, &tt.mr)
 			require.Equal(t, tt.expected, result)
 		})
 	}

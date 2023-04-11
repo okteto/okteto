@@ -238,15 +238,15 @@ type RawMessage struct {
 }
 
 type composeBuildInfo struct {
-	Name             string          `yaml:"name,omitempty"`
-	Context          string          `yaml:"context,omitempty"`
-	Dockerfile       string          `yaml:"dockerfile,omitempty"`
-	CacheFrom        cache.CacheFrom `yaml:"cache_from,omitempty"`
-	Target           string          `yaml:"target,omitempty"`
-	Args             BuildArgs       `yaml:"args,omitempty"`
-	Image            string          `yaml:"image,omitempty"`
-	VolumesToInclude []StackVolume   `yaml:"-"`
-	ExportCache      string          `yaml:"export_cache,omitempty"`
+	Name             string            `yaml:"name,omitempty"`
+	Context          string            `yaml:"context,omitempty"`
+	Dockerfile       string            `yaml:"dockerfile,omitempty"`
+	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
+	Target           string            `yaml:"target,omitempty"`
+	Args             BuildArgs         `yaml:"args,omitempty"`
+	Image            string            `yaml:"image,omitempty"`
+	VolumesToInclude []StackVolume     `yaml:"-"`
+	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
 }
 
 func (c *composeBuildInfo) toBuildInfo() *BuildInfo {

@@ -193,7 +193,7 @@ func (i *StatefulSetApp) Destroy(ctx context.Context, c kubernetes.Interface) er
 	return statefulsets.Destroy(ctx, i.sfs.Name, i.sfs.Namespace, c)
 }
 
-// GetCloned Returns from Kubernetes the cloned statefulset
+// GetDevClone Returns from Kubernetes the cloned statefulset
 func (i *StatefulSetApp) GetDevClone(ctx context.Context, c kubernetes.Interface) (App, error) {
 	clonedName := model.DevCloneName(i.sfs.Name)
 	sfs, err := statefulsets.Get(ctx, clonedName, i.sfs.Namespace, c)

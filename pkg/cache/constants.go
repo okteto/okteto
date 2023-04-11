@@ -11,29 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package cache
 
-import "github.com/okteto/okteto/pkg/model"
-
-// BuildOptions define the options available for build
-type BuildOptions struct {
-	BuildArgs     []string
-	CacheFrom     []string
-	File          string
-	NoCache       bool
-	OutputMode    string
-	Path          string
-	Secrets       []string
-	Platform      string
-	Tag           string
-	Target        string
-	Namespace     string
-	BuildToGlobal bool
-	K8sContext    string
-	ExportCache   []string
-	// CommandArgs comes from the user input on the command
-	CommandArgs  []string
-	EnableStages bool
-
-	Manifest *model.Manifest
-}
+const (
+	// defaultCacheTag is the default tag used for the cache image
+	defaultCacheTag = "cache"
+)

@@ -20,11 +20,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	filesystem "github.com/okteto/okteto/pkg/filesystem/fake"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
@@ -40,6 +42,71 @@ func (f fakeBuilder) Build(_ context.Context, _ *types.BuildOptions) error {
 }
 
 func (fakeBuilder) IsV1() bool { return true }
+
+type fakeRegistry struct {
+	err      error
+	registry map[string]fakeImage
+}
+
+// fakeImage represents the data from an image
+type fakeImage struct {
+	Registry string
+	Repo     string
+	Tag      string
+	ImageRef string
+	Args     []string
+}
+
+func newFakeRegistry() fakeRegistry {
+	return fakeRegistry{
+		registry: map[string]fakeImage{},
+	}
+}
+
+func (fr fakeRegistry) HasGlobalPushAccess() (bool, error) { return false, nil }
+
+func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
+	if _, ok := fr.registry[imageTag]; !ok {
+		return "", oktetoErrors.ErrNotFound
+	}
+	return imageTag, nil
+}
+func (fr fakeRegistry) IsOktetoRegistry(_ string) bool { return false }
+
+func (fr fakeRegistry) AddImageByName(images ...string) error {
+	for _, image := range images {
+		fr.registry[image] = fakeImage{}
+	}
+	return nil
+}
+func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
+	fr.registry[opts.Tag] = fakeImage{Args: opts.BuildArgs}
+	return nil
+}
+func (fr fakeRegistry) getFakeImage(image string) fakeImage {
+	v, ok := fr.registry[image]
+	if ok {
+		return v
+	}
+	return fakeImage{}
+}
+func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageReference, error) {
+	ref, err := name.ParseReference(image)
+	if err != nil {
+		return registry.OktetoImageReference{}, err
+	}
+	return registry.OktetoImageReference{
+		Registry: ref.Context().RegistryStr(),
+		Repo:     ref.Context().RepositoryStr(),
+		Tag:      ref.Identifier(),
+		Image:    image,
+	}, nil
+}
+
+func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
+
+func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
+func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
 
 func TestRemoteTest(t *testing.T) {
 	ctx := context.Background()
@@ -127,6 +194,7 @@ func TestRemoteTest(t *testing.T) {
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
 				destroyImage:         "",
+				registry:             newFakeRegistry(),
 			}
 			err := rdc.destroy(ctx, tt.config.options)
 			assert.Equal(t, tt.expected, err)
@@ -261,6 +329,7 @@ func TestCreateDockerfile(t *testing.T) {
 				fs:                   fs,
 				destroyImage:         "test-image",
 				workingDirectoryCtrl: wdCtrl,
+				registry:             newFakeRegistry(),
 			}
 			t.Setenv(model.OktetoActionNameEnvVar, tt.actionNameValue)
 			dockerfileName, err := rdc.createDockerfile("/test", tt.config.opts)
@@ -306,7 +375,8 @@ func TestCreateDockerignoreIfNeeded(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rdc := remoteDestroyCommand{
-				fs: fs,
+				fs:       fs,
+				registry: newFakeRegistry(),
 			}
 			err := rdc.createDockerignoreIfNeeded(tt.config.wd, "/temp")
 			assert.NoError(t, err)

@@ -22,42 +22,56 @@ import (
 )
 
 type mockRegistry struct {
-	imageCtrl ImageCtrlInterface
-}
-
-func (m *mockRegistry) GetImageCtrl() ImageCtrlInterface {
-	return m.imageCtrl
+	isGlobal bool
+	registry string
+	repo     string
+	tag      string
 }
 
 func (*mockRegistry) HasGlobalPushAccess() (bool, error) {
 	return true, nil
 }
 
-type mockRegistryWithError struct {
-	imageCtrl ImageCtrlInterface
+func (mr *mockRegistry) IsGlobalRegistry(image string) bool {
+	return mr.isGlobal
 }
 
-func (m *mockRegistryWithError) GetImageCtrl() ImageCtrlInterface {
-	return m.imageCtrl
+func (mr *mockRegistry) GetRegistryAndRepo(_ string) (string, string) {
+	return mr.registry, mr.repo
+}
+
+func (mr *mockRegistry) GetRepoNameAndTag(_ string) (string, string) {
+	return mr.repo, mr.tag
+}
+
+type mockRegistryWithError struct {
+	registry string
+	repo     string
+	tag      string
 }
 
 func (*mockRegistryWithError) HasGlobalPushAccess() (bool, error) {
 	return false, assert.AnError
 }
 
-type mockImageCtrl struct{}
-
-func (*mockImageCtrl) GetRegistryAndRepo(_ string) (string, string) {
-	return "registry", "test-account/test-image:x.y.z"
+func (*mockRegistryWithError) IsGlobalRegistry(image string) bool {
+	return true
 }
 
-func (*mockImageCtrl) GetRepoNameAndTag(_ string) (string, string) {
-	return "test-account/test-image", "x.y.z"
+func (mr *mockRegistryWithError) GetRegistryAndRepo(_ string) (string, string) {
+	return mr.registry, mr.repo
+}
+
+func (mr *mockRegistryWithError) GetRepoNameAndTag(_ string) (string, string) {
+	return mr.repo, mr.tag
 }
 
 func Test_AddDefaultPullCache(t *testing.T) {
-	imageCtrl := &mockImageCtrl{}
-	reg := &mockRegistry{imageCtrl: imageCtrl}
+	reg := &mockRegistry{
+		registry: "registry",
+		repo:     "test-account/test-image",
+		tag:      "1.0.0",
+	}
 
 	tests := []struct {
 		name     string
@@ -92,8 +106,11 @@ func Test_AddDefaultPullCache_WithError(t *testing.T) {
 	cf := CacheFrom{}
 	expected := CacheFrom{"okteto.dev/test-account/test-image:cache"}
 
-	imageCtrl := &mockImageCtrl{}
-	registry := &mockRegistryWithError{imageCtrl: imageCtrl}
+	registry := &mockRegistryWithError{
+		registry: "registry",
+		repo:     "test-account/test-image",
+		tag:      "1.0.0",
+	}
 
 	cf.AddDefaultPullCache(registry, image)
 
