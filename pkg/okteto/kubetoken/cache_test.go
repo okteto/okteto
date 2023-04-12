@@ -177,29 +177,12 @@ func TestUpdateStore(t *testing.T) {
 		},
 	}
 
-	store := []storeRegister{
-		{
-			ContextName: "c1",
-			Namespace:   "n1",
-			Token:       t1,
-		},
-		{
-			ContextName: "c2",
-			Namespace:   "n2",
-			Token:       t2,
-		},
-		{
-			ContextName: "c3",
-			Namespace:   "n3",
-			Token:       t3,
-		},
-	}
-
 	tt := []struct {
 		name      string
 		context   string
 		ns        string
 		token     authenticationv1.TokenRequest
+		store     []storeRegister
 		wantStore []storeRegister
 	}{
 		{
@@ -207,17 +190,67 @@ func TestUpdateStore(t *testing.T) {
 			context: "c4",
 			ns:      "n4",
 			token:   t4,
-			wantStore: append(store, storeRegister{
-				ContextName: "c4",
-				Namespace:   "n4",
-				Token:       t4,
-			}),
+			store: []storeRegister{
+				{
+					ContextName: "c1",
+					Namespace:   "n1",
+					Token:       t1,
+				},
+				{
+					ContextName: "c2",
+					Namespace:   "n2",
+					Token:       t2,
+				},
+				{
+					ContextName: "c3",
+					Namespace:   "n3",
+					Token:       t3,
+				},
+			},
+			wantStore: []storeRegister{
+				{
+					ContextName: "c1",
+					Namespace:   "n1",
+					Token:       t1,
+				},
+				{
+					ContextName: "c2",
+					Namespace:   "n2",
+					Token:       t2,
+				},
+				{
+					ContextName: "c3",
+					Namespace:   "n3",
+					Token:       t3,
+				},
+				{
+					ContextName: "c4",
+					Namespace:   "n4",
+					Token:       t4,
+				}},
 		},
 		{
 			name:    "update entry",
 			context: "c2",
 			ns:      "n2",
 			token:   t4,
+			store: []storeRegister{
+				{
+					ContextName: "c1",
+					Namespace:   "n1",
+					Token:       t1,
+				},
+				{
+					ContextName: "c2",
+					Namespace:   "n2",
+					Token:       t2,
+				},
+				{
+					ContextName: "c3",
+					Namespace:   "n3",
+					Token:       t3,
+				},
+			},
 			wantStore: []storeRegister{
 				{
 					ContextName: "c1",
@@ -236,11 +269,25 @@ func TestUpdateStore(t *testing.T) {
 				},
 			},
 		},
+		{
+			name:    "empty store",
+			context: "c1",
+			ns:      "n1",
+			token:   t1,
+			store:   []storeRegister{},
+			wantStore: []storeRegister{
+				{
+					ContextName: "c1",
+					Namespace:   "n1",
+					Token:       t1,
+				},
+			},
+		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			result := updateStore(store, tc.context, tc.ns, tc.token)
+			result := updateStore(tc.store, tc.context, tc.ns, tc.token)
 			require.ElementsMatch(t, tc.wantStore, result)
 		})
 	}
