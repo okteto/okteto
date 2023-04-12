@@ -45,8 +45,9 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 		namespace := args[1]
 
 		cacheFileName := path.Join(config.GetDotKubeFolder(), oktetoTokenCacheFileName)
-		cache := &okteto.KubeTokenFileCache{File: cacheFileName}
-		if token, err := cache.Get(context, namespace); err == nil {
+		cache := &okteto.KubeTokenCache{StringStore: &okteto.FileByteStore{FileName: cacheFileName}}
+		// Return early if we have a valid token in the cache before we run the context command to improve performance
+		if token, err := cache.Get(context, namespace); err == nil && token != "" {
 			cmd.Print(token)
 			return nil
 		}

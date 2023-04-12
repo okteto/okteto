@@ -35,38 +35,58 @@ type storeRegister struct {
 	Token       authenticationv1.TokenRequest `json:"token"`
 }
 
-type KubeTokenFileCache struct {
-	File string
+type FileByteStore struct {
+	FileName string
 }
 
-func (c *KubeTokenFileCache) read() ([]storeRegister, error) {
-	if _, err := os.Stat(c.File); err != nil {
+func (s *FileByteStore) Get() ([]byte, error) {
+	if _, err := os.Stat(s.FileName); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return nil, fmt.Errorf("error checking if file exists: %w", err)
 		}
 
-		if err := os.WriteFile(c.File, []byte("[]"), 0600); err != nil {
+		if err := os.WriteFile(s.FileName, []byte("[]"), 0600); err != nil {
 			return nil, fmt.Errorf("error creating file: %w", err)
 		}
 	}
 
-	file, err := os.Open(c.File)
+	contents, err := os.ReadFile(s.FileName)
 	if err != nil {
-		return nil, fmt.Errorf("error opening file: %w", err)
+		return nil, fmt.Errorf("error reading file: %w", err)
 	}
 
-	defer file.Close()
+	return contents, nil
+}
+
+func (s *FileByteStore) Set(value []byte) error {
+	return os.WriteFile(s.FileName, value, 0600)
+}
+
+type stringStore interface {
+	Get() ([]byte, error)
+	Set([]byte) error
+}
+
+type KubeTokenCache struct {
+	StringStore stringStore
+}
+
+func (c *KubeTokenCache) read() ([]storeRegister, error) {
+	contents, err := c.StringStore.Get()
+	if err != nil {
+		return nil, err
+	}
 
 	var store []storeRegister
 
-	if err := json.NewDecoder(file).Decode(&store); err != nil {
+	if err := json.Unmarshal(contents, &store); err != nil {
 		return nil, fmt.Errorf("error decoding") // TODO: we should probably delete the file contents
 	}
 
 	return store, nil
 }
 
-func (c *KubeTokenFileCache) Get(contextName, namespace string) (string, error) {
+func (c *KubeTokenCache) Get(contextName, namespace string) (string, error) {
 	store, err := c.read()
 	if err != nil {
 		return "", err
@@ -75,7 +95,6 @@ func (c *KubeTokenFileCache) Get(contextName, namespace string) (string, error) 
 	for _, register := range store {
 		if register.ContextName == contextName && register.Namespace == namespace {
 			now := time.Now() // TODO: inject this
-			fmt.Printf("token expiration time: %v, now: %v\n\n", register.Token.Status.ExpirationTimestamp.Time, now)
 			if register.Token.Status.ExpirationTimestamp.Time.After(now) {
 				tokenString, _ := json.MarshalIndent(register.Token, "", "\t")
 
@@ -90,7 +109,7 @@ func (c *KubeTokenFileCache) Get(contextName, namespace string) (string, error) 
 	return "", nil
 }
 
-func (c *KubeTokenFileCache) setWithErr(contextName, namespace string, token authenticationv1.TokenRequest) error {
+func (c *KubeTokenCache) setWithErr(contextName, namespace string, token authenticationv1.TokenRequest) error {
 	store, err := c.read()
 	if err != nil {
 		return err
@@ -116,13 +135,10 @@ func (c *KubeTokenFileCache) setWithErr(contextName, namespace string, token aut
 		return err
 	}
 
-	fmt.Printf("new store: %s", string(newStore))
-	fmt.Printf("writing to file: %s", c.File)
-
-	return os.WriteFile(c.File, newStore, 0600)
+	return c.StringStore.Set(newStore)
 }
 
-func (c *KubeTokenFileCache) Set(contextName, namespace string, token authenticationv1.TokenRequest) {
+func (c *KubeTokenCache) Set(contextName, namespace string, token authenticationv1.TokenRequest) {
 	if err := c.setWithErr(contextName, namespace, token); err != nil {
 		// TODO: log this
 	}
