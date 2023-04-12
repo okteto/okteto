@@ -27,12 +27,6 @@ import (
 
 const kubetokenPath = "auth/kubetoken"
 
-type storeRegister struct {
-	ContextName string                        `json:"context"`
-	Namespace   string                        `json:"namespace"`
-	Token       authenticationv1.TokenRequest `json:"token"`
-}
-
 type cacheSetter interface {
 	Set(contextName, namespace string, token authenticationv1.TokenRequest)
 }

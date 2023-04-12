@@ -17,6 +17,12 @@ type Cache struct {
 	StringStore stringStore
 }
 
+type storeRegister struct {
+	ContextName string                        `json:"context"`
+	Namespace   string                        `json:"namespace"`
+	Token       authenticationv1.TokenRequest `json:"token"`
+}
+
 func (c *Cache) read() ([]storeRegister, error) {
 	contents, err := c.StringStore.Get()
 	if err != nil {
