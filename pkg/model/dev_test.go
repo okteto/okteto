@@ -1584,7 +1584,7 @@ func Test_BuildInfoCopy(t *testing.T) {
 		Target:      "target",
 		Image:       "image",
 		CacheFrom:   []string{"cache"},
-		ExportCache: "export",
+		ExportCache: []string{"export"},
 		Args: BuildArgs{
 			BuildArg{
 				Name:  "env",

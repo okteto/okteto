@@ -135,7 +135,9 @@ func TestRemoteTest(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
 			tempCreator.SetError(tt.config.tempFsCreator)
 			rdc := remoteDeployCommand{
-				builderV2:            &v2.OktetoBuilder{},
+				builderV2: &v2.OktetoBuilder{
+					Registry: newFakeRegistry(),
+				},
 				builderV1:            fakeBuilder{tt.config.builderErr},
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,

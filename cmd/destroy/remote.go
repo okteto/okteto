@@ -13,6 +13,7 @@ import (
 	"text/template"
 
 	builder "github.com/okteto/okteto/cmd/build"
+
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -92,17 +93,20 @@ type remoteDestroyCommand struct {
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
 	manifest             *model.Manifest
+	registry             remoteBuild.OktetoRegistryInterface
 }
 
 func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
+	builder := remoteBuild.NewBuilderFromScratch()
 	return &remoteDestroyCommand{
-		builder:              remoteBuild.NewBuilderFromScratch(),
+		builder:              builder,
 		destroyImage:         manifest.Destroy.Image,
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		manifest:             manifest,
+		registry:             builder.Registry,
 	}
 }
 
@@ -142,7 +146,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		return err
 	}
 
-	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
+	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"}, rd.registry)
 	buildOptions.Tag = ""
 	buildOptions.Manifest = rd.manifest
 

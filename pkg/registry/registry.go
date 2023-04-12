@@ -66,7 +66,7 @@ func (or OktetoRegistry) GetImageTagWithDigest(image string) (string, error) {
 	expandedImage := or.imageCtrl.expandImageRegistries(image)
 
 	registry, repositoryWithTag := or.imageCtrl.GetRegistryAndRepo(expandedImage)
-	repository, _ := or.imageCtrl.getRepoNameAndTag(repositoryWithTag)
+	repository, _ := or.imageCtrl.GetRepoNameAndTag(repositoryWithTag)
 
 	digest, err := or.client.GetDigest(expandedImage)
 	if err != nil {
@@ -119,12 +119,12 @@ func (or OktetoRegistry) GetImageTag(image, service, namespace string) string {
 		}
 		return fmt.Sprintf("%s/%s/%s:okteto", or.config.GetRegistryURL(), namespace, service)
 	}
-	imageWithoutTag, _ := or.imageCtrl.getRepoNameAndTag(image)
+	imageWithoutTag, _ := or.imageCtrl.GetRepoNameAndTag(image)
 	return fmt.Sprintf("%s:okteto", imageWithoutTag)
 }
 
 // GetImageReference returns the values to setup the image environment variables
-func (or OktetoRegistry) GetImageReference(image string) (OktetoImageReference, error) {
+func (OktetoRegistry) GetImageReference(image string) (OktetoImageReference, error) {
 	ref, err := name.ParseReference(image)
 	if err != nil {
 		return OktetoImageReference{}, err
@@ -144,4 +144,12 @@ func (or OktetoRegistry) HasGlobalPushAccess() (bool, error) {
 	}
 	image := or.imageCtrl.ExpandOktetoGlobalRegistry(globalTestImage)
 	return or.client.HasPushAccess(image)
+}
+
+func (or OktetoRegistry) GetRegistryAndRepo(image string) (string, string) {
+	return or.imageCtrl.GetRegistryAndRepo(image)
+}
+
+func (or OktetoRegistry) GetRepoNameAndTag(repo string) (string, string) {
+	return or.imageCtrl.GetRepoNameAndTag(repo)
 }

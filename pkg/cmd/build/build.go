@@ -32,7 +32,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
-	reg2 "github.com/okteto/okteto/pkg/registry"
+	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
 )
@@ -107,7 +107,7 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 		}
 	}
 
-	imageCtrl := reg2.NewImageCtrl(okteto.Config{})
+	imageCtrl := registry.NewImageCtrl(okteto.Config{})
 	if okteto.IsOkteto() {
 		buildOptions.Tag = imageCtrl.ExpandOktetoDevRegistry(buildOptions.Tag)
 		buildOptions.Tag = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.Tag)
@@ -115,9 +115,9 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 			buildOptions.CacheFrom[i] = imageCtrl.ExpandOktetoDevRegistry(buildOptions.CacheFrom[i])
 			buildOptions.CacheFrom[i] = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.CacheFrom[i])
 		}
-		if buildOptions.ExportCache != "" {
-			buildOptions.ExportCache = imageCtrl.ExpandOktetoDevRegistry(buildOptions.ExportCache)
-			buildOptions.ExportCache = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.ExportCache)
+		for i := range buildOptions.ExportCache {
+			buildOptions.ExportCache[i] = imageCtrl.ExpandOktetoDevRegistry(buildOptions.ExportCache[i])
+			buildOptions.ExportCache[i] = imageCtrl.ExpandOktetoGlobalRegistry(buildOptions.ExportCache[i])
 		}
 	}
 
@@ -158,7 +158,7 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 	}
 
 	if err == nil && buildOptions.Tag != "" {
-		if _, err := reg2.NewOktetoRegistry(okteto.Config{}).GetImageTagWithDigest(buildOptions.Tag); err != nil {
+		if _, err := registry.NewOktetoRegistry(okteto.Config{}).GetImageTagWithDigest(buildOptions.Tag); err != nil {
 			oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
 	  %s,
 	  Retrying ...`, buildOptions.Tag, err.Error())
@@ -210,7 +210,7 @@ func buildWithDocker(ctx context.Context, buildOptions *types.BuildOptions) erro
 }
 
 func validateImage(imageTag string) error {
-	reg := reg2.NewOktetoRegistry(okteto.Config{})
+	reg := registry.NewOktetoRegistry(okteto.Config{})
 	if strings.HasPrefix(imageTag, okteto.Context().Registry) && strings.Count(imageTag, "/") == 2 {
 		return nil
 	}
@@ -240,8 +240,17 @@ func translateDockerErr(err error) error {
 	return err
 }
 
+type regInterface interface {
+	IsOktetoRegistry(image string) bool
+	HasGlobalPushAccess() (bool, error)
+	IsGlobalRegistry(image string) bool
+
+	GetRegistryAndRepo(image string) (string, string)
+	GetRepoNameAndTag(repo string) (string, string)
+}
+
 // OptsFromBuildInfo returns the parsed options for the build from the manifest
-func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions) *types.BuildOptions {
+func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *types.BuildOptions, reg regInterface) *types.BuildOptions {
 	if o == nil {
 		o = &types.BuildOptions{}
 	}
@@ -274,7 +283,6 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
 	}
 
-	reg := reg2.NewOktetoRegistry(okteto.Config{})
 	if reg.IsOktetoRegistry(b.Image) {
 		defaultBuildArgs := map[string]string{
 			model.OktetoContextEnvVar:   okteto.Context().Name,
@@ -298,6 +306,9 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 				Name: key, Value: val,
 			})
 		}
+
+		b.CacheFrom.AddDefaultPullCache(reg, b.Image)
+		b.ExportCache.AddDefaultPushCache(reg, b.Image)
 	}
 
 	opts := &types.BuildOptions{
@@ -350,7 +361,7 @@ func extractFromContextAndDockerfile(context, dockerfile, svcName string) string
 
 // GetVolumesToInclude checks if the path exists, if it doesn't it skip it
 func GetVolumesToInclude(volumesToInclude []model.StackVolume) []model.StackVolume {
-	result := make([]model.StackVolume, 0)
+	var result []model.StackVolume
 	for _, p := range volumesToInclude {
 		if _, err := os.Stat(p.LocalPath); err == nil {
 			result = append(result, p)

@@ -23,7 +23,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Namespace changes your current context namespace.
+// UseNamespace changes your current context namespace.
 func UseNamespace() *cobra.Command {
 	ctxOptions := &ContextOptions{}
 	cmd := &cobra.Command{

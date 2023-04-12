@@ -237,7 +237,7 @@ func NewDeployInfo() *DeployInfo {
 	}
 }
 
-// NewDeployInfo creates a deploy Info
+// NewDestroyInfo creates a deploy Info
 func NewDestroyInfo() *DestroyInfo {
 	return &DestroyInfo{
 		Commands: []DeployCommand{},

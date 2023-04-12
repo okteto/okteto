@@ -46,6 +46,13 @@ func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
 	return nil
 }
 
+func (fr fakeRegistry) IsOktetoRegistry(image string) bool { return false }
+func (fr fakeRegistry) HasGlobalPushAccess() (bool, error) { return false, nil }
+func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
+
+func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
+func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
+
 func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
 	okteto.CurrentStore = &okteto.OktetoContextStore{

@@ -103,6 +103,11 @@ func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageRefe
 	}, nil
 }
 
+func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
+
+func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
+func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
+
 func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface) *OktetoBuilder {
 	return &OktetoBuilder{
 		Registry:          registry,

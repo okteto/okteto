@@ -32,7 +32,7 @@ type DevRC struct {
 	Timeout              Timeout               `json:"timeout,omitempty" yaml:"timeout,omitempty"`
 }
 
-// Get returns a Dev object from a given file
+// GetRc returns a Dev object from a given file
 func GetRc(devPath string) (*DevRC, error) {
 	b, err := os.ReadFile(devPath)
 	if err != nil {
@@ -47,7 +47,7 @@ func GetRc(devPath string) (*DevRC, error) {
 	return dev, nil
 }
 
-// Read reads an okteto manifests
+// ReadRC reads an okteto manifests
 func ReadRC(bytes []byte) (*DevRC, error) {
 	dev := &DevRC{}
 
