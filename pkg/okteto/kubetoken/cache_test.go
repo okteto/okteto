@@ -25,7 +25,7 @@ func (s *mockStore) Set(value []byte) error {
 	return s.setError
 }
 
-func TestFileCache(t *testing.T) {
+func TestFileCacheGet(t *testing.T) {
 
 	// TODO: Test file has corrupted data
 
@@ -117,5 +117,35 @@ func TestFileCache(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestFileCacheSet(t *testing.T) {
+	stringStore := &mockStore{}
+	c := Cache{
+		StringStore: stringStore,
+	}
+
+	token := authenticationv1.TokenRequest{}
+
+	context := "context"
+	namespace := "namespace"
+	expectedStore := []storeRegister{
+		{
+			ContextName: context,
+			Namespace:   namespace,
+			Token:       token,
+		},
+	}
+
+	expectedStoreString, err := json.Marshal(expectedStore)
+	require.NoError(t, err)
+
+	err = c.setWithErr("context", "namespace", token)
+	require.NoError(t, err)
+
+	require.JSONEq(t, string(expectedStoreString), string(stringStore.data))
+
+}
+
+func TestFileCacheInteractions(t *testing.T) {
 }

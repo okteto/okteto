@@ -66,12 +66,7 @@ func (c *Cache) Get(contextName, namespace string) (string, error) {
 	return "", nil
 }
 
-func (c *Cache) setWithErr(contextName, namespace string, token authenticationv1.TokenRequest) error {
-	store, err := c.read()
-	if err != nil {
-		return err
-	}
-
+func updateStore(store []storeRegister, contextName, namespace string, token authenticationv1.TokenRequest) []storeRegister {
 	existed := false
 	for i, r := range store {
 		if r.ContextName == contextName && r.Namespace == namespace {
@@ -86,6 +81,17 @@ func (c *Cache) setWithErr(contextName, namespace string, token authenticationv1
 			Token:       token,
 		})
 	}
+
+	return store
+}
+
+func (c *Cache) setWithErr(contextName, namespace string, token authenticationv1.TokenRequest) error {
+	store, err := c.read()
+	if err != nil {
+		return err
+	}
+
+	store = updateStore(store, contextName, namespace, token)
 
 	newStore, err := json.MarshalIndent(store, "", "\t")
 	if err != nil {
