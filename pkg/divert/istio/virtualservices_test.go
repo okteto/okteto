@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -46,8 +47,8 @@ func Test_translateDivertVirtualService(t *testing.T) {
 				},
 			},
 			header: model.DivertHeader{
-				Name:  model.OktetoDivertDefaultHeaderName,
-				Match: model.OktetoDivertIstioExactMatch,
+				Name:  constants.OktetoDivertDefaultHeaderName,
+				Match: constants.OktetoDivertIstioExactMatch,
 				Value: "cindy",
 			},
 			expected: &istioV1beta1.VirtualService{
@@ -57,7 +58,7 @@ func Test_translateDivertVirtualService(t *testing.T) {
 					Labels:    map[string]string{"l1": "v1"},
 					Annotations: map[string]string{
 						"a1": "v1",
-						fmt.Sprintf(model.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","header":{"name":"x-okteto-divert","match":"exact","value":"cindy"}}`,
+						fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","header":{"name":"x-okteto-divert","match":"exact","value":"cindy"}}`,
 					},
 				},
 			},
@@ -74,7 +75,7 @@ func Test_translateDivertVirtualService(t *testing.T) {
 			},
 			header: model.DivertHeader{
 				Name:  "custom-header-name",
-				Match: model.OktetoDivertIstioPrefixMatch,
+				Match: constants.OktetoDivertIstioPrefixMatch,
 				Value: "custom-prefix",
 			},
 			expected: &istioV1beta1.VirtualService{
@@ -84,7 +85,7 @@ func Test_translateDivertVirtualService(t *testing.T) {
 					Labels:    map[string]string{"l1": "v1"},
 					Annotations: map[string]string{
 						"a1": "v1",
-						fmt.Sprintf(model.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","header":{"name":"custom-header-name","match":"prefix","value":"custom-prefix"}}`,
+						fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","header":{"name":"custom-header-name","match":"prefix","value":"custom-prefix"}}`,
 					},
 				},
 			},
@@ -100,8 +101,8 @@ func Test_translateDivertVirtualService(t *testing.T) {
 				},
 			},
 			header: model.DivertHeader{
-				Name:  model.OktetoDivertDefaultHeaderName,
-				Match: model.OktetoDivertIstioExactMatch,
+				Name:  constants.OktetoDivertDefaultHeaderName,
+				Match: constants.OktetoDivertIstioExactMatch,
 				Value: "cindy",
 			},
 			routes: []string{"one-route", "another-route"},
@@ -112,7 +113,7 @@ func Test_translateDivertVirtualService(t *testing.T) {
 					Labels:    map[string]string{"l1": "v1"},
 					Annotations: map[string]string{
 						"a1": "v1",
-						fmt.Sprintf(model.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","header":{"name":"x-okteto-divert","match":"exact","value":"cindy"},"routes":["one-route","another-route"]}`,
+						fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","header":{"name":"x-okteto-divert","match":"exact","value":"cindy"},"routes":["one-route","another-route"]}`,
 					},
 				},
 			},
@@ -154,7 +155,7 @@ func Test_restoreDivertVirtualService(t *testing.T) {
 					Namespace: "staging",
 					Annotations: map[string]string{
 						"a1": "v1",
-						fmt.Sprintf(model.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","header":{"name":"x-okteto-divert","match":"exact","value":"cindy"},"routes":null}`,
+						fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","header":{"name":"x-okteto-divert","match":"exact","value":"cindy"},"routes":null}`,
 					},
 				},
 			},
@@ -265,7 +266,7 @@ func Test_translateDivertHost(t *testing.T) {
 							},
 							Headers: &istioNetworkingV1beta1.Headers{
 								Request: &istioNetworkingV1beta1.Headers_HeaderOperations{
-									Set: map[string]string{model.OktetoDivertDefaultHeaderName: "cindy"},
+									Set: map[string]string{constants.OktetoDivertDefaultHeaderName: "cindy"},
 								},
 							},
 							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
@@ -354,7 +355,7 @@ func Test_translateDivertHost(t *testing.T) {
 							},
 							Headers: &istioNetworkingV1beta1.Headers{
 								Request: &istioNetworkingV1beta1.Headers_HeaderOperations{
-									Set: map[string]string{model.OktetoDivertDefaultHeaderName: "cindy"},
+									Set: map[string]string{constants.OktetoDivertDefaultHeaderName: "cindy"},
 								},
 							},
 							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{

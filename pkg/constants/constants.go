@@ -85,4 +85,28 @@ const (
 
 	// OktetoGitCommitEnvVar is the SHA1 hash of the last commit of the branch.
 	OktetoGitCommitEnvVar = "OKTETO_GIT_COMMIT"
+
+	// OktetoDivertWeaverDriver is the divert driver for weaver
+	OktetoDivertWeaverDriver = "weaver"
+
+	// OktetoDivertIstioDriver is the divert driver for istio
+	OktetoDivertIstioDriver = "istio"
+
+	// OktetoDivertIstioExactMatch represents the exact header match type
+	OktetoDivertIstioExactMatch = "exact"
+
+	// OktetoDivertIstioRegexMatch represents the regexp header match type
+	OktetoDivertIstioRegexMatch = "regex"
+
+	// OktetoDivertIstioPrefixMatch represents the prefix header match type
+	OktetoDivertIstioPrefixMatch = "prefix"
+
+	// OktetoDivertDefaultHeaderName the default header name used by okteto to divert traffic
+	OktetoDivertDefaultHeaderName = "x-okteto-divert"
+
+	// OktetoDivertDefaultHeaderValue the default divert header value
+	OktetoDivertDefaultHeaderValue = "${OKTETO_NAMESPACE}"
+
+	//OktetoDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
+	OktetoDivertAnnotationTemplate = "divert.okteto.com/%s-%s"
 )

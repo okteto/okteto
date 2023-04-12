@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/labels"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -27,7 +28,7 @@ import (
 )
 
 func (d *Driver) getDivertAnnotationName() string {
-	return fmt.Sprintf(model.OktetoDivertAnnotationTemplate, d.namespace, d.name)
+	return fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, d.namespace, d.name)
 }
 
 func (d *Driver) translateDivertVirtualService(vs *istioV1beta1.VirtualService, routes []string) (*istioV1beta1.VirtualService, error) {
@@ -94,7 +95,7 @@ func (d *Driver) injectDivertHeader(vsSpec istioNetworkingV1beta1.VirtualService
 		if vsSpec.Http[i].Headers.Request.Set == nil {
 			vsSpec.Http[i].Headers.Request.Set = map[string]string{}
 		}
-		vsSpec.Http[i].Headers.Request.Set[model.OktetoDivertDefaultHeaderName] = d.namespace
+		vsSpec.Http[i].Headers.Request.Set[constants.OktetoDivertDefaultHeaderName] = d.namespace
 	}
 	return vsSpec
 }
