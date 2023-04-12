@@ -158,17 +158,3 @@ func TestGetKubeTokenUnauthorizedErr(t *testing.T) {
 	_, err := c.GetKubeToken()
 	require.Equal(t, fmt.Errorf(oktetoErrors.ErrNotLogged, context), err)
 }
-
-func TestFileCache(t *testing.T) {
-
-	// Test file does not exist
-
-	// Test file has corrupted data
-
-	// Test error while writing file
-
-	// Test error while stat file
-
-	// Test token expiration
-
-}
