@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
 	"reflect"
@@ -1845,5 +1846,46 @@ func Test_translateAnnotations(t *testing.T) {
 			require.Equal(t, previousAppTemplateAnnotations, tt.tr.App.TemplateObjectMeta().Annotations)
 		})
 	}
+}
 
+func Test_getDevName(t *testing.T) {
+	var tests = []struct {
+		name     string
+		tr       Translation
+		expected string
+	}{
+		{
+			name: "missing name",
+			tr: Translation{
+				Dev: &model.Dev{},
+			},
+			expected: "",
+		},
+		{
+			name: "use-dev-name",
+			tr: Translation{
+				Dev: &model.Dev{
+					Name: "test-name",
+				},
+			},
+			expected: "test-name",
+		},
+		{
+			name: "use-selector",
+			tr: Translation{
+				Dev: &model.Dev{
+					Selector: map[string]string{
+						"app.kubernetes.io/component": "test-name",
+					},
+				},
+			},
+			expected: "test-name",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.tr.getDevName()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
