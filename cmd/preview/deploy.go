@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -68,12 +67,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
-				Namespace: opts.name,
-				Show:      true,
-			}); err != nil {
-				return err
-			}
+			oktetoLog.Information("Using %s @ %s as context", opts.name, okteto.RemoveSchema(okteto.Context().Name))
 
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
