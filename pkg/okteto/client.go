@@ -69,7 +69,7 @@ func (*OktetoClientProvider) Provide() (types.OktetoInterface, error) {
 
 // NewOktetoClient creates a new client to connect with Okteto API
 func NewOktetoClient() (*OktetoClient, error) {
-	httpClient, u, err := newOktetoHttpClient(Context().Name, Context().Token, "graphql")
+	httpClient, u, err := NewOktetoHttpClient(Context().Name, Context().Token, "graphql")
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func NewOktetoClient() (*OktetoClient, error) {
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
-func newOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client, string, error) {
+func NewOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client, string, error) {
 	if token == "" {
 		return nil, "", fmt.Errorf(oktetoErrors.ErrNotLogged, contextName)
 	}

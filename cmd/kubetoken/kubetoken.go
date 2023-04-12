@@ -24,6 +24,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/okteto/kubetoken"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +46,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 		namespace := args[1]
 
 		cacheFileName := path.Join(config.GetDotKubeFolder(), oktetoTokenCacheFileName)
-		cache := &okteto.KubeTokenCache{StringStore: &okteto.FileByteStore{FileName: cacheFileName}}
+		cache := &kubetoken.Cache{StringStore: &kubetoken.FileByteStore{FileName: cacheFileName}}
 		// Return early if we have a valid token in the cache before we run the context command to improve performance
 		if token, err := cache.Get(context, namespace); err == nil && token != "" {
 			cmd.Print(token)
@@ -64,7 +65,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			return errors.ErrContextIsNotOktetoCluster
 		}
 
-		c, err := okteto.NewKubeTokenClient(okteto.Context().Name, okteto.Context().Token, namespace, cache)
+		c, err := kubetoken.NewClient(okteto.Context().Name, okteto.Context().Token, namespace, cache)
 		if err != nil {
 			return fmt.Errorf("failed to initialize the kubetoken client: %w", err)
 		}

@@ -1,4 +1,4 @@
-package okteto
+package kubetoken
 
 import (
 	"encoding/json"
@@ -23,7 +23,7 @@ func TestNewKubeTokenClient(t *testing.T) {
 		contextName    string
 		token          string
 		expectedError  error
-		expectedClient *KubeTokenClient
+		expectedClient *Client
 	}{
 		{
 
@@ -47,7 +47,7 @@ func TestNewKubeTokenClient(t *testing.T) {
 		t.Run(tc.testName, func(t *testing.T) {
 			t.Parallel()
 
-			client, err := NewKubeTokenClient(tc.contextName, tc.token, "test", &mockCache{})
+			client, err := NewClient(tc.contextName, tc.token, "test", &mockCache{})
 
 			require.Equal(t, tc.expectedError, err)
 			require.Equal(t, tc.expectedClient, client)
@@ -58,14 +58,14 @@ func TestNewKubeTokenClient(t *testing.T) {
 	t.Run("Parse error", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := NewKubeTokenClient("not!!://a.url", "mytoken", "test", &mockCache{})
+		_, err := NewClient("not!!://a.url", "mytoken", "test", &mockCache{})
 		require.Error(t, err)
 	})
 
 	t.Run("No error", func(t *testing.T) {
 		t.Parallel()
 
-		client, err := NewKubeTokenClient("cloud.okteto.com", "mytoken", "testns", &mockCache{})
+		client, err := NewClient("cloud.okteto.com", "mytoken", "testns", &mockCache{})
 		require.NoError(t, err)
 
 		require.Equal(t, "https://cloud.okteto.com/auth/kubetoken/testns", client.url)
@@ -123,7 +123,7 @@ func TestGetKubeTokenCache(t *testing.T) {
 	for _, tc := range tt {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			c := &KubeTokenClient{
+			c := &Client{
 				httpClient: s.Client(),
 				url:        s.URL,
 				cache:      tc.cache,
@@ -148,7 +148,7 @@ func TestGetKubeTokenUnauthorizedErr(t *testing.T) {
 
 	context := "testctx"
 
-	c := &KubeTokenClient{
+	c := &Client{
 		httpClient:  s.Client(),
 		url:         s.URL,
 		contextName: context,

@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package okteto
+package kubetoken
 
 import (
 	"encoding/json"
@@ -25,6 +25,7 @@ import (
 	authenticationv1 "k8s.io/api/authentication/v1"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 const kubetokenPath = "auth/kubetoken"
@@ -67,11 +68,11 @@ type stringStore interface {
 	Set([]byte) error
 }
 
-type KubeTokenCache struct {
+type Cache struct {
 	StringStore stringStore
 }
 
-func (c *KubeTokenCache) read() ([]storeRegister, error) {
+func (c *Cache) read() ([]storeRegister, error) {
 	contents, err := c.StringStore.Get()
 	if err != nil {
 		return nil, err
@@ -86,7 +87,7 @@ func (c *KubeTokenCache) read() ([]storeRegister, error) {
 	return store, nil
 }
 
-func (c *KubeTokenCache) Get(contextName, namespace string) (string, error) {
+func (c *Cache) Get(contextName, namespace string) (string, error) {
 	store, err := c.read()
 	if err != nil {
 		return "", err
@@ -109,7 +110,7 @@ func (c *KubeTokenCache) Get(contextName, namespace string) (string, error) {
 	return "", nil
 }
 
-func (c *KubeTokenCache) setWithErr(contextName, namespace string, token authenticationv1.TokenRequest) error {
+func (c *Cache) setWithErr(contextName, namespace string, token authenticationv1.TokenRequest) error {
 	store, err := c.read()
 	if err != nil {
 		return err
@@ -138,7 +139,7 @@ func (c *KubeTokenCache) setWithErr(contextName, namespace string, token authent
 	return c.StringStore.Set(newStore)
 }
 
-func (c *KubeTokenCache) Set(contextName, namespace string, token authenticationv1.TokenRequest) {
+func (c *Cache) Set(contextName, namespace string, token authenticationv1.TokenRequest) {
 	if err := c.setWithErr(contextName, namespace, token); err != nil {
 		// TODO: log this
 	}
@@ -148,7 +149,7 @@ type cacheSetter interface {
 	Set(contextName, namespace string, token authenticationv1.TokenRequest)
 }
 
-type KubeTokenClient struct {
+type Client struct {
 	httpClient  *http.Client
 	url         string
 	contextName string
@@ -156,17 +157,17 @@ type KubeTokenClient struct {
 	cache       cacheSetter
 }
 
-func NewKubeTokenClient(contextName, token, namespace string, cache cacheSetter) (*KubeTokenClient, error) {
+func NewClient(contextName, token, namespace string, cache cacheSetter) (*Client, error) {
 	if contextName == "" {
 		return nil, oktetoErrors.ErrCtxNotSet
 	}
 
-	httpClient, url, err := newOktetoHttpClient(contextName, token, fmt.Sprintf("%s/%s", kubetokenPath, namespace))
+	httpClient, url, err := okteto.NewOktetoHttpClient(contextName, token, fmt.Sprintf("%s/%s", kubetokenPath, namespace))
 	if err != nil {
 		return nil, err
 	}
 
-	return &KubeTokenClient{
+	return &Client{
 		httpClient:  httpClient,
 		url:         url,
 		contextName: contextName,
@@ -175,7 +176,7 @@ func NewKubeTokenClient(contextName, token, namespace string, cache cacheSetter)
 	}, nil
 }
 
-func (c *KubeTokenClient) GetKubeToken() (string, error) {
+func (c *Client) GetKubeToken() (string, error) {
 	resp, err := c.httpClient.Get(c.url)
 	if err != nil {
 		return "", fmt.Errorf("failed GET request: %w", err)
