@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -45,6 +46,9 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+				return err
+			}
 			oktetoLog.Information("Using %s @ %s as context", previewName, okteto.RemoveSchema(okteto.Context().Name))
 
 			if !okteto.IsOkteto() {
