@@ -75,10 +75,10 @@ func TestNewKubeTokenClient(t *testing.T) {
 }
 
 type mockCache struct {
-	token *authenticationv1.TokenRequest
+	token authenticationv1.TokenRequest
 }
 
-func (m *mockCache) Set(_, _ string, token *authenticationv1.TokenRequest) {
+func (m *mockCache) Set(_, _ string, token authenticationv1.TokenRequest) {
 	m.token = token
 }
 

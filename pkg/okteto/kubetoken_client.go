@@ -30,9 +30,9 @@ import (
 const kubetokenPath = "auth/kubetoken"
 
 type storeRegister struct {
-	ContextName string                         `json:"context"`
-	Namespace   string                         `json:"namespace"`
-	Token       *authenticationv1.TokenRequest `json:"token"`
+	ContextName string                        `json:"context"`
+	Namespace   string                        `json:"namespace"`
+	Token       authenticationv1.TokenRequest `json:"token"`
 }
 
 type KubeTokenFileCache struct {
@@ -66,10 +66,10 @@ func (c *KubeTokenFileCache) read() ([]storeRegister, error) {
 	return store, nil
 }
 
-func (c *KubeTokenFileCache) Get(contextName, namespace string) (*authenticationv1.TokenRequest, error) {
+func (c *KubeTokenFileCache) Get(contextName, namespace string) (string, error) {
 	store, err := c.read()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	for _, register := range store {
@@ -77,18 +77,20 @@ func (c *KubeTokenFileCache) Get(contextName, namespace string) (*authentication
 			now := time.Now() // TODO: inject this
 			fmt.Printf("token expiration time: %v, now: %v\n\n", register.Token.Status.ExpirationTimestamp.Time, now)
 			if register.Token.Status.ExpirationTimestamp.Time.After(now) {
-				return register.Token, nil
+				tokenString, _ := json.MarshalIndent(register.Token, "", "\t")
+
+				return string(tokenString), nil
 			} else {
 				// TODO: we could invalidate this cache here
-				return nil, nil
+				return "", nil
 			}
 		}
 	}
 
-	return nil, nil
+	return "", nil
 }
 
-func (c *KubeTokenFileCache) setWithErr(contextName, namespace string, token *authenticationv1.TokenRequest) error {
+func (c *KubeTokenFileCache) setWithErr(contextName, namespace string, token authenticationv1.TokenRequest) error {
 	store, err := c.read()
 	if err != nil {
 		return err
@@ -120,14 +122,14 @@ func (c *KubeTokenFileCache) setWithErr(contextName, namespace string, token *au
 	return os.WriteFile(c.File, newStore, 0600)
 }
 
-func (c *KubeTokenFileCache) Set(contextName, namespace string, token *authenticationv1.TokenRequest) {
+func (c *KubeTokenFileCache) Set(contextName, namespace string, token authenticationv1.TokenRequest) {
 	if err := c.setWithErr(contextName, namespace, token); err != nil {
 		// TODO: log this
 	}
 }
 
 type cacheSetter interface {
-	Set(contextName, namespace string, token *authenticationv1.TokenRequest)
+	Set(contextName, namespace string, token authenticationv1.TokenRequest)
 }
 
 type KubeTokenClient struct {
@@ -176,9 +178,9 @@ func (c *KubeTokenClient) GetKubeToken() (string, error) {
 		return "", fmt.Errorf("failed to read kubetoken response: %w", err)
 	}
 
-	token := &authenticationv1.TokenRequest{}
+	token := authenticationv1.TokenRequest{}
 
-	if err := json.Unmarshal(body, token); err != nil {
+	if err := json.Unmarshal(body, &token); err != nil {
 		return "", fmt.Errorf("failed to unmarshal kubetoken response: %w", err) // TODO check this error
 	}
 

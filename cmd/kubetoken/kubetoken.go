@@ -15,7 +15,6 @@ package kubetoken
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
@@ -47,10 +46,8 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 
 		cacheFileName := path.Join(config.GetDotKubeFolder(), oktetoTokenCacheFileName)
 		cache := &okteto.KubeTokenFileCache{File: cacheFileName}
-		if token, err := cache.Get(context, namespace); err == nil && token != nil {
-			tokenString, _ := json.MarshalIndent(token, "", "\t")
-
-			cmd.Print(string(tokenString))
+		if token, err := cache.Get(context, namespace); err == nil {
+			cmd.Print(token)
 			return nil
 		}
 
