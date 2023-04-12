@@ -43,44 +43,37 @@ func (ec *ExportCache) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 // MarshalYAML implements the marshaller interface of the yaml pkg.
-func (pec *ExportCache) MarshalYAML() (interface{}, error) {
-	ec := *pec
-	if len(ec) == 1 {
-		return ec[0], nil
+func (ec *ExportCache) MarshalYAML() (interface{}, error) {
+	if len(*ec) == 1 {
+		return (*ec)[0], nil
 	}
 
 	return ec, nil
 }
 
 // AddDefaultPushCache appends the default cache layers for a given image
-func (pec *ExportCache) AddDefaultPushCache(reg oktetoRegistryInterface, image string) {
-	hasAccess, err := reg.HasGlobalPushAccess()
-	if err != nil {
-		oktetoLog.Infof("error trying to access globalPushAccess: %w", err)
-	}
-
+func (ec *ExportCache) AddDefaultPushCache(reg oktetoRegistryInterface, image string) {
 	_, imageRepo := reg.GetRegistryAndRepo(image)
 	imageName, _ := reg.GetRepoNameAndTag(imageRepo)
 
-	if hasAccess {
+	if reg.IsGlobalRegistry(image) {
 		globalCacheImage := fmt.Sprintf("%s/%s:%s", constants.GlobalRegistry, imageName, defaultCacheTag)
-		pec.add(globalCacheImage)
+		ec.add(globalCacheImage)
 		oktetoLog.Debugf("Dynamically adding export_cache: %s", globalCacheImage)
 		return
 	}
 
 	devCacheImage := fmt.Sprintf("%s/%s:%s", constants.DevRegistry, imageName, defaultCacheTag)
-	pec.add(devCacheImage)
+	ec.add(devCacheImage)
 	oktetoLog.Debugf("Dynamically adding export_cache: %s", devCacheImage)
-
 }
 
 // add appends the image to the list of export cache images
-func (pec *ExportCache) add(image string) {
-	for _, c := range *pec {
+func (ec *ExportCache) add(image string) {
+	for _, c := range *ec {
 		if c == image {
 			return
 		}
 	}
-	*pec = append(*pec, image)
+	*ec = append(*ec, image)
 }

@@ -23,7 +23,7 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 		username          string
 		pipelineResponses *client.FakePipelineResponses
 		previewResponses  *client.FakePreviewResponse
-		streamResponses      *client.FakeStreamResponse
+		streamResponses   *client.FakeStreamResponse
 		opts              *DeployOptions
 		expectedErr       error
 	}{
@@ -122,7 +122,7 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 				},
 			},
 			streamResponses: &client.FakeStreamResponse{},
-			expectedErr:  errWait,
+			expectedErr:     errWait,
 		},
 		{
 			name:     "err-wait-resources",
@@ -144,7 +144,7 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 				ErrResources: errResources,
 			},
 			streamResponses: &client.FakeStreamResponse{},
-			expectedErr:  errResources,
+			expectedErr:     errResources,
 		},
 		{
 			name:     "err-wait-resources-timeout",
@@ -165,7 +165,7 @@ func Test_ExecuteDeployPreview(t *testing.T) {
 				},
 			},
 			streamResponses: &client.FakeStreamResponse{},
-			expectedErr:  ErrWaitResourcesTimeout,
+			expectedErr:     ErrWaitResourcesTimeout,
 		},
 	}
 
