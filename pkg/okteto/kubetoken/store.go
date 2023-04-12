@@ -6,24 +6,40 @@ import (
 	"os"
 )
 
+func NewFileByteStore(fileName string) *FileByteStore {
+	return &FileByteStore{
+		FileName:   fileName,
+		osStat:     os.Stat,
+		osCreate:   os.Create,
+		osReadFile: os.ReadFile,
+		writeFile: func(filename string, data []byte) error {
+			return os.WriteFile(filename, data, 0600)
+		},
+	}
+}
+
 type FileByteStore struct {
-	FileName string
+	FileName   string
+	osStat     func(name string) (os.FileInfo, error)
+	osCreate   func(name string) (*os.File, error)
+	osReadFile func(filename string) ([]byte, error)
+	writeFile  func(filename string, data []byte) error
 }
 
 func (s *FileByteStore) Get() ([]byte, error) {
-	if _, err := os.Stat(s.FileName); err != nil {
+	if _, err := s.osStat(s.FileName); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return nil, fmt.Errorf("error checking if file exists: %w", err)
 		}
 
-		f, err := os.Create(s.FileName)
+		f, err := s.osCreate(s.FileName)
 		if err != nil {
 			return nil, fmt.Errorf("error creating file: %w", err)
 		}
 		defer f.Close()
 	}
 
-	contents, err := os.ReadFile(s.FileName)
+	contents, err := s.osReadFile(s.FileName)
 	if err != nil {
 		return nil, fmt.Errorf("error reading file: %w", err)
 	}
@@ -32,5 +48,5 @@ func (s *FileByteStore) Get() ([]byte, error) {
 }
 
 func (s *FileByteStore) Set(value []byte) error {
-	return os.WriteFile(s.FileName, value, 0600)
+	return s.writeFile(s.FileName, value)
 }
