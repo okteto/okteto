@@ -29,12 +29,7 @@ func TestFileCache(t *testing.T) {
 
 	// Test file has corrupted data
 
-	// Test token expiration
-
-	// Test token not expired
-
-	now := time.Now()
-	expirationTime := now.Add(time.Minute)
+	expirationTime := time.Now()
 
 	token := authenticationv1.TokenRequest{
 		Status: authenticationv1.TokenRequestStatus{
@@ -43,6 +38,8 @@ func TestFileCache(t *testing.T) {
 			},
 		},
 	}
+	tokenString, err := json.Marshal(token)
+	require.NoError(t, err)
 
 	context := "context"
 	namespace := "namespace"
@@ -53,22 +50,72 @@ func TestFileCache(t *testing.T) {
 			Namespace:   namespace,
 			Token:       token,
 		},
+		{
+			ContextName: "other-context",
+			Namespace:   "other-namespace",
+		},
 	}
 
 	storeString, err := json.Marshal(store)
 	require.NoError(t, err)
 
-	c := Cache{
-		StringStore: &mockStore{data: storeString},
-		Now: func() time.Time {
-			return now
+	tt := []struct {
+		name      string
+		context   string
+		ns        string
+		storeData []byte
+		want      string
+		now       time.Time
+	}{
+		{
+			name:      "cache hit",
+			want:      string(tokenString),
+			context:   context,
+			ns:        namespace,
+			storeData: storeString,
+			now:       expirationTime.Add(-time.Minute),
+		},
+		{
+			name:      "cache miss",
+			want:      "",
+			context:   "other-context",
+			ns:        "other-namespace",
+			storeData: storeString,
+		},
+		{
+			name:    "empty cache",
+			want:    "",
+			context: context,
+			ns:      namespace,
+		},
+		{
+			name:      "expired",
+			want:      "",
+			context:   context,
+			ns:        namespace,
+			storeData: storeString,
+			now:       expirationTime,
 		},
 	}
 
-	result, err := c.Get(context, namespace)
-	require.NoError(t, err)
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			c := Cache{
+				StringStore: &mockStore{data: tc.storeData},
+				Now: func() time.Time {
+					return tc.now
+				},
+			}
 
-	tokenString, err := json.Marshal(token)
-	require.NoError(t, err)
-	require.JSONEq(t, string(tokenString), result)
+			result, err := c.Get(tc.context, tc.ns)
+			require.NoError(t, err)
+
+			if len(tc.want) == 0 {
+				require.Empty(t, result)
+			} else {
+				require.JSONEq(t, string(tc.want), result)
+			}
+		})
+	}
+
 }
