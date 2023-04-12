@@ -332,9 +332,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	err = deployer.deploy(ctx, deployOptions)
-	if _, ok := deployer.(*remoteDeployCommand); ok {
-		err = nil
-	}
+	// if _, ok := deployer.(*remoteDeployCommand); ok {
+	// 	err = nil
+	// }
 	if err != nil {
 		if err == oktetoErrors.ErrIntSig {
 			return nil
