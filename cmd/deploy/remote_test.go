@@ -15,7 +15,6 @@ package deploy
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -102,7 +101,7 @@ func TestRemoteTest(t *testing.T) {
 				builderErr: assert.AnError,
 			},
 			expected: oktetoErrors.UserError{
-				E: fmt.Errorf("Error during development environment deployment: %w", assert.AnError),
+				E: assert.AnError,
 			},
 		},
 		{
@@ -117,7 +116,7 @@ func TestRemoteTest(t *testing.T) {
 				},
 			},
 			expected: oktetoErrors.UserError{
-				E: fmt.Errorf("error during development environment deployment: %w", assert.AnError),
+				E: assert.AnError,
 			},
 		},
 		{
