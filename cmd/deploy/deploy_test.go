@@ -16,6 +16,7 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -304,7 +305,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	err := c.RunDeploy(ctx, opts)
 
 	// we should get a build error because Dockerfile does not exist
-	assert.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), oktetoErrors.InvalidDockerfile))
 
 	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
 	if err != nil {
