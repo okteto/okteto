@@ -16,9 +16,11 @@ func (s *FileByteStore) Get() ([]byte, error) {
 			return nil, fmt.Errorf("error checking if file exists: %w", err)
 		}
 
-		if err := os.WriteFile(s.FileName, []byte("[]"), 0600); err != nil {
+		f, err := os.Create(s.FileName)
+		if err != nil {
 			return nil, fmt.Errorf("error creating file: %w", err)
 		}
+		defer f.Close()
 	}
 
 	contents, err := os.ReadFile(s.FileName)

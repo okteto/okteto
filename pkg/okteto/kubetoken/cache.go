@@ -29,6 +29,10 @@ func (c *Cache) read() ([]storeRegister, error) {
 		return nil, err
 	}
 
+	if len(contents) == 0 {
+		return []storeRegister{}, nil
+	}
+
 	var store []storeRegister
 
 	if err := json.Unmarshal(contents, &store); err != nil {
