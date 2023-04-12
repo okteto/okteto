@@ -228,10 +228,14 @@ func homedirWindows() (string, error) {
 	return home, nil
 }
 
+func GetDotKubeFolder() string {
+	return filepath.Join(GetUserHomeDir(), ".kube")
+}
+
 // GetKubeconfigPath returns the path to the kubeconfig file, taking the KUBECONFIG env var into consideration
 func GetKubeconfigPath() []string {
-	home := GetUserHomeDir()
-	kubeconfig := []string{filepath.Join(home, ".kube", "config")}
+	kubeFolder := GetDotKubeFolder()
+	kubeconfig := []string{filepath.Join(kubeFolder, "config")}
 	kubeconfigEnv := os.Getenv(constants.KubeConfigEnvVar)
 	if len(kubeconfigEnv) > 0 {
 		kubeconfig = splitKubeConfigEnv(kubeconfigEnv)

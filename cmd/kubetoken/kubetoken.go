@@ -15,15 +15,20 @@ package kubetoken
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
+
+const oktetoTokenCacheFileName = "okteto_auth_plugin_cache.json"
 
 func KubeToken() *cobra.Command {
 	cmd := &cobra.Command{
@@ -40,6 +45,15 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 		context := args[0]
 		namespace := args[1]
 
+		cacheFile := path.Join(config.GetDotKubeFolder(), oktetoTokenCacheFileName)
+		cache := &okteto.FileCache{File: cacheFile}
+		if token, err := cache.Get(context, namespace); err == nil && token != nil {
+			tokenString, _ := json.MarshalIndent(token, "", "\t")
+
+			cmd.Print(string(tokenString))
+			return nil
+		}
+
 		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
 			Context:   context,
 			Namespace: namespace,
@@ -52,7 +66,7 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			return errors.ErrContextIsNotOktetoCluster
 		}
 
-		c, err := okteto.NewKubeTokenClient(okteto.Context().Name, okteto.Context().Token, namespace)
+		c, err := okteto.NewKubeTokenClient(okteto.Context().Name, okteto.Context().Token, namespace, cache)
 		if err != nil {
 			return fmt.Errorf("failed to initialize the kubetoken client: %w", err)
 		}
