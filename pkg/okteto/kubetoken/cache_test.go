@@ -147,5 +147,104 @@ func TestFileCacheSet(t *testing.T) {
 
 }
 
+func TestUpdateStore(t *testing.T) {
+	t1 := authenticationv1.TokenRequest{
+		Status: authenticationv1.TokenRequestStatus{
+			ExpirationTimestamp: metav1.Time{
+				Time: time.Now(),
+			},
+		},
+	}
+	t2 := authenticationv1.TokenRequest{
+		Status: authenticationv1.TokenRequestStatus{
+			ExpirationTimestamp: metav1.Time{
+				Time: time.Now().Add(time.Hour),
+			},
+		},
+	}
+	t3 := authenticationv1.TokenRequest{
+		Status: authenticationv1.TokenRequestStatus{
+			ExpirationTimestamp: metav1.Time{
+				Time: time.Now().Add(time.Hour * 2),
+			},
+		},
+	}
+	t4 := authenticationv1.TokenRequest{
+		Status: authenticationv1.TokenRequestStatus{
+			ExpirationTimestamp: metav1.Time{
+				Time: time.Now().Add(time.Hour * 3),
+			},
+		},
+	}
+
+	store := []storeRegister{
+		{
+			ContextName: "c1",
+			Namespace:   "n1",
+			Token:       t1,
+		},
+		{
+			ContextName: "c2",
+			Namespace:   "n2",
+			Token:       t2,
+		},
+		{
+			ContextName: "c3",
+			Namespace:   "n3",
+			Token:       t3,
+		},
+	}
+
+	tt := []struct {
+		name      string
+		context   string
+		ns        string
+		token     authenticationv1.TokenRequest
+		wantStore []storeRegister
+	}{
+		{
+			name:    "new entry",
+			context: "c4",
+			ns:      "n4",
+			token:   t4,
+			wantStore: append(store, storeRegister{
+				ContextName: "c4",
+				Namespace:   "n4",
+				Token:       t4,
+			}),
+		},
+		{
+			name:    "update entry",
+			context: "c2",
+			ns:      "n2",
+			token:   t4,
+			wantStore: []storeRegister{
+				{
+					ContextName: "c1",
+					Namespace:   "n1",
+					Token:       t1,
+				},
+				{
+					ContextName: "c2",
+					Namespace:   "n2",
+					Token:       t4,
+				},
+				{
+					ContextName: "c3",
+					Namespace:   "n3",
+					Token:       t3,
+				},
+			},
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			result := updateStore(store, tc.context, tc.ns, tc.token)
+			require.ElementsMatch(t, tc.wantStore, result)
+		})
+	}
+}
+
 func TestFileCacheInteractions(t *testing.T) {
 }
