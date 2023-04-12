@@ -15,6 +15,7 @@ type stringStore interface {
 
 type Cache struct {
 	StringStore stringStore
+	Now         func() time.Time
 }
 
 type storeRegister struct {
@@ -50,7 +51,7 @@ func (c *Cache) Get(contextName, namespace string) (string, error) {
 
 	for _, register := range store {
 		if register.ContextName == contextName && register.Namespace == namespace {
-			now := time.Now() // TODO: inject this
+			now := c.Now()
 			if register.Token.Status.ExpirationTimestamp.Time.After(now) {
 				tokenString, _ := json.MarshalIndent(register.Token, "", "\t")
 
