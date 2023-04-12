@@ -27,7 +27,7 @@ func (s *mockStore) Set(value []byte) error {
 
 func TestFileCache(t *testing.T) {
 
-	// Test file has corrupted data
+	// TODO: Test file has corrupted data
 
 	expirationTime := time.Now()
 

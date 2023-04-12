@@ -57,7 +57,7 @@ func (c *Cache) Get(contextName, namespace string) (string, error) {
 
 				return string(tokenString), nil
 			} else {
-				// TODO: we could invalidate this cache here
+				// TODO: we could remove this cache register here
 				return "", nil
 			}
 		}
