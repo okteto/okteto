@@ -51,7 +51,6 @@ func TestNewKubeTokenClient(t *testing.T) {
 
 			require.Equal(t, tc.expectedError, err)
 			require.Equal(t, tc.expectedClient, client)
-			require.Equal(t, tc.contextName, client.contextName)
 		})
 	}
 
