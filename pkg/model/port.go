@@ -23,9 +23,10 @@ import (
 
 // GetAvailablePort returns a random port that's available
 func GetAvailablePort(iface string) (int, error) {
-	address, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(iface, strconv.Itoa(0)))
+	hostAndPort := net.JoinHostPort(iface, strconv.Itoa(0))
+	address, err := net.ResolveTCPAddr("tcp", hostAndPort)
 	if err != nil {
-		return 0, fmt.Errorf("error resolving address %s: %w", address, err)
+		return 0, fmt.Errorf("error resolving address for %s: %w", hostAndPort, err)
 	}
 
 	listener, err := net.ListenTCP("tcp", address)
