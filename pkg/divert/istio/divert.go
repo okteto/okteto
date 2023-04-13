@@ -40,6 +40,13 @@ type Driver struct {
 	istioClient istioclientset.Interface
 }
 
+// DivertTransformation represents the annotation for the okteto mutation webhook to divert a virtual service
+type DivertTransformation struct {
+	Namespace string             `json:"namespace"`
+	Header    model.DivertHeader `json:"header"`
+	Routes    []string           `json:"routes,omitempty"`
+}
+
 func New(m *model.Manifest, c kubernetes.Interface, ic istioclientset.Interface) *Driver {
 	return &Driver{
 		name:        m.Name,
@@ -128,7 +135,10 @@ func (d *Driver) retryTranslateDivertVirtualService(ctx context.Context, divertV
 		if err != nil {
 			return err
 		}
-		translatedVS := d.translateDivertVirtualService(vs, divertVS.Routes)
+		translatedVS, err := d.translateDivertVirtualService(vs, divertVS.Routes)
+		if err != nil {
+			return err
+		}
 		err = virtualservices.Update(ctx, translatedVS, d.istioClient)
 		if err == nil {
 			return nil

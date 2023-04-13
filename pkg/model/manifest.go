@@ -799,7 +799,7 @@ func (m *Manifest) validateDivert() error {
 	}
 
 	switch m.Deploy.Divert.Driver {
-	case OktetoDivertWeaverDriver:
+	case constants.OktetoDivertWeaverDriver:
 		if m.Deploy.Divert.Namespace == "" {
 			return fmt.Errorf("the field 'deploy.divert.namespace' is mandatory")
 		}
@@ -809,7 +809,7 @@ func (m *Manifest) validateDivert() error {
 		if len(m.Deploy.Divert.Hosts) > 0 {
 			return fmt.Errorf("the field 'deploy.divert.host' is not supported with the weaver driver")
 		}
-	case OktetoDivertIstioDriver:
+	case constants.OktetoDivertIstioDriver:
 		if m.Deploy.Divert.DeprecatedService != "" {
 			return fmt.Errorf("the field 'deploy.divert.service' is not supported with the istio driver")
 		}
@@ -817,9 +817,13 @@ func (m *Manifest) validateDivert() error {
 			return fmt.Errorf("the field 'deploy.divert.namespace' is not supported with the istio driver")
 		}
 		switch m.Deploy.Divert.Header.Match {
-		case OktetoDivertIstioExactMatch, OktetoDivertIstioRegexMatch, OktetoDivertIstioPrefixMatch:
+		case constants.OktetoDivertIstioExactMatch, constants.OktetoDivertIstioRegexMatch, constants.OktetoDivertIstioPrefixMatch:
 		default:
-			return fmt.Errorf("supported divert header match types are %s, %s and %s", OktetoDivertIstioExactMatch, OktetoDivertIstioRegexMatch, OktetoDivertIstioPrefixMatch)
+			return fmt.Errorf("supported divert header match types are %s, %s and %s",
+				constants.OktetoDivertIstioExactMatch,
+				constants.OktetoDivertIstioRegexMatch,
+				constants.OktetoDivertIstioPrefixMatch,
+			)
 		}
 		if len(m.Deploy.Divert.VirtualServices) == 0 {
 			return fmt.Errorf("the field 'deploy.divert.virtualServices' is mandatory")
@@ -850,16 +854,16 @@ func (m *Manifest) setDefaults() error {
 	if m.Deploy != nil && m.Deploy.Divert != nil {
 		var err error
 		if m.Deploy.Divert.Driver == "" {
-			m.Deploy.Divert.Driver = OktetoDivertWeaverDriver
+			m.Deploy.Divert.Driver = constants.OktetoDivertWeaverDriver
 		}
 		if m.Deploy.Divert.Header.Name == "" {
-			m.Deploy.Divert.Header.Name = OktetoDivertDefaultHeaderName
+			m.Deploy.Divert.Header.Name = constants.OktetoDivertDefaultHeaderName
 		}
 		if m.Deploy.Divert.Header.Match == "" {
-			m.Deploy.Divert.Header.Match = OktetoDivertIstioExactMatch
+			m.Deploy.Divert.Header.Match = constants.OktetoDivertIstioExactMatch
 		}
 		if m.Deploy.Divert.Header.Value == "" {
-			m.Deploy.Divert.Header.Value = OktetoDivertDefaultHeaderValue
+			m.Deploy.Divert.Header.Value = constants.OktetoDivertDefaultHeaderValue
 		}
 		m.Deploy.Divert.Header.Value, err = ExpandEnv(m.Deploy.Divert.Header.Value, false)
 		if err != nil {
