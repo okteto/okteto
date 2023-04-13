@@ -80,7 +80,7 @@ func (c *Client) GetKubeToken() (string, error) {
 	token := authenticationv1.TokenRequest{}
 
 	if err := json.Unmarshal(body, &token); err != nil {
-		return "", fmt.Errorf("failed to unmarshal kubetoken response: %w", err) // TODO check this error
+		return "", fmt.Errorf("failed to unmarshal kubetoken response: %w", err)
 	}
 
 	c.cache.Set(c.contextName, c.namespace, token)

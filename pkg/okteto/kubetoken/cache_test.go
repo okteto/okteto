@@ -26,9 +26,6 @@ func (s *mockStore) Set(value []byte) error {
 }
 
 func TestFileCacheGet(t *testing.T) {
-
-	// TODO: Test file has corrupted data
-
 	expirationTime := time.Now()
 
 	token := authenticationv1.TokenRequest{
@@ -293,7 +290,4 @@ func TestUpdateStore(t *testing.T) {
 			require.ElementsMatch(t, tc.wantStore, result)
 		})
 	}
-}
-
-func TestFileCacheInteractions(t *testing.T) {
 }
