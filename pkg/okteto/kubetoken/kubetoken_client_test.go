@@ -82,7 +82,6 @@ func (m *mockCache) Set(_, _ string, token authenticationv1.TokenRequest) {
 }
 
 func TestGetKubeTokenCache(t *testing.T) {
-	t.Parallel()
 
 	expectedToken := &authenticationv1.TokenRequest{
 		Spec: authenticationv1.TokenRequestSpec{
