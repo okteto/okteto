@@ -270,13 +270,4 @@ const (
 
 	// OktetoImageTagWithVolumes is the tag assigned to an image with volume mounts
 	OktetoImageTagWithVolumes = "okteto-with-volume-mounts"
-
-	// OktetoDivertWeaverDriver is the divert driver for weaver
-	OktetoDivertWeaverDriver = "weaver"
-
-	// OktetoDivertIstioDriver is the divert driver for istio
-	OktetoDivertIstioDriver = "istio"
-
-	// OktetoDivertHeader the header used by okteto to divert traffic
-	OktetoDivertHeader = "x-okteto-divert"
 )

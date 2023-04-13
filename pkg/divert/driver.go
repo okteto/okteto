@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert/istio"
 	"github.com/okteto/okteto/pkg/divert/weaver"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -40,7 +41,7 @@ func New(m *model.Manifest, c kubernetes.Interface) (Driver, error) {
 		return nil, oktetoErrors.ErrDivertNotSupported
 	}
 
-	if m.Deploy.Divert.Driver == model.OktetoDivertWeaverDriver {
+	if m.Deploy.Divert.Driver == constants.OktetoDivertWeaverDriver {
 		return weaver.New(m, c), nil
 	}
 

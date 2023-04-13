@@ -194,13 +194,28 @@ type DestroyInfo struct {
 
 // DivertDeploy represents information about the deploy divert configuration
 type DivertDeploy struct {
-	Driver               string       `json:"driver,omitempty" yaml:"driver,omitempty"`
-	Namespace            string       `json:"namespace,omitempty" yaml:"namespace,omitempty"`
-	Service              string       `json:"service,omitempty" yaml:"service,omitempty"`
-	DeprecatedPort       int          `json:"port,omitempty" yaml:"port,omitempty"`
-	DeprecatedDeployment string       `json:"deployment,omitempty" yaml:"deployment,omitempty"`
-	VirtualService       string       `json:"virtualService,omitempty" yaml:"virtualService,omitempty"`
-	Hosts                []DivertHost `json:"hosts,omitempty" yaml:"hosts,omitempty"`
+	Driver               string                 `json:"driver,omitempty" yaml:"driver,omitempty"`
+	Header               DivertHeader           `json:"header,omitempty" yaml:"header,omitempty"`
+	Namespace            string                 `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	DeprecatedService    string                 `json:"service,omitempty" yaml:"service,omitempty"`
+	DeprecatedPort       int                    `json:"port,omitempty" yaml:"port,omitempty"`
+	DeprecatedDeployment string                 `json:"deployment,omitempty" yaml:"deployment,omitempty"`
+	VirtualServices      []DivertVirtualService `json:"virtualServices,omitempty" yaml:"virtualServices,omitempty"`
+	Hosts                []DivertHost           `json:"hosts,omitempty" yaml:"hosts,omitempty"`
+}
+
+// DivertHeader represents the header used for redirecting a virtual service
+type DivertHeader struct {
+	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
+	Match string `json:"match,omitempty" yaml:"match,omitempty"`
+	Value string `json:"value,omitempty" yaml:"value,omitempty"`
+}
+
+// DivertVirtualService represents a virtual service in a namespace to be diverted
+type DivertVirtualService struct {
+	Name      string   `json:"name,omitempty" yaml:"name,omitempty"`
+	Namespace string   `json:"namespace,omitempty" yaml:"namespace,omitempty"`
+	Routes    []string `json:"routes,omitempty" yaml:"routes,omitempty"`
 }
 
 // DivertHost represents a host from a virtual service in a namespace to be diverted
@@ -782,25 +797,51 @@ func (m *Manifest) validateDivert() error {
 	if m.Deploy.Divert == nil {
 		return nil
 	}
-	if m.Deploy.Divert.Namespace == "" {
-		return fmt.Errorf("the field 'deploy.divert.namespace' is mandatory")
-	}
 
 	switch m.Deploy.Divert.Driver {
-	case OktetoDivertWeaverDriver:
-	case OktetoDivertIstioDriver:
-		if m.Deploy.Divert.Service == "" {
-			return fmt.Errorf("the field 'deploy.divert.service' is mandatory")
+	case constants.OktetoDivertWeaverDriver:
+		if m.Deploy.Divert.Namespace == "" {
+			return fmt.Errorf("the field 'deploy.divert.namespace' is mandatory")
 		}
-		if m.Deploy.Divert.VirtualService == "" {
-			return fmt.Errorf("the field 'deploy.divert.virtualService' is mandatory")
+		if len(m.Deploy.Divert.VirtualServices) > 0 {
+			return fmt.Errorf("the field 'deploy.divert.virtualServices' is not supported with the weaver driver")
+		}
+		if len(m.Deploy.Divert.Hosts) > 0 {
+			return fmt.Errorf("the field 'deploy.divert.host' is not supported with the weaver driver")
+		}
+	case constants.OktetoDivertIstioDriver:
+		if m.Deploy.Divert.DeprecatedService != "" {
+			return fmt.Errorf("the field 'deploy.divert.service' is not supported with the istio driver")
+		}
+		if m.Deploy.Divert.Namespace != "" {
+			return fmt.Errorf("the field 'deploy.divert.namespace' is not supported with the istio driver")
+		}
+		switch m.Deploy.Divert.Header.Match {
+		case constants.OktetoDivertIstioExactMatch, constants.OktetoDivertIstioRegexMatch, constants.OktetoDivertIstioPrefixMatch:
+		default:
+			return fmt.Errorf("supported divert header match types are %s, %s and %s",
+				constants.OktetoDivertIstioExactMatch,
+				constants.OktetoDivertIstioRegexMatch,
+				constants.OktetoDivertIstioPrefixMatch,
+			)
+		}
+		if len(m.Deploy.Divert.VirtualServices) == 0 {
+			return fmt.Errorf("the field 'deploy.divert.virtualServices' is mandatory")
+		}
+		for i := range m.Deploy.Divert.VirtualServices {
+			if m.Deploy.Divert.VirtualServices[i].Name == "" {
+				return fmt.Errorf("the field 'deploy.divert.virtualServices[%d].name' is mandatory", i)
+			}
+			if m.Deploy.Divert.VirtualServices[i].Namespace == "" {
+				return fmt.Errorf("the field 'deploy.divert.virtualServices[%d].namespace' is mandatory", i)
+			}
 		}
 		for i := range m.Deploy.Divert.Hosts {
 			if m.Deploy.Divert.Hosts[i].VirtualService == "" {
-				return fmt.Errorf("the field 'deploy.divert.hosts.virtualService' is mandatory")
+				return fmt.Errorf("the field 'deploy.divert.hosts[%d].virtualService' is mandatory", i)
 			}
 			if m.Deploy.Divert.Hosts[i].Namespace == "" {
-				return fmt.Errorf("the field 'deploy.divert.hosts.namespace' is mandatory")
+				return fmt.Errorf("the field 'deploy.divert.hosts[%d].namespace' is mandatory", i)
 			}
 		}
 	default:
@@ -813,7 +854,20 @@ func (m *Manifest) setDefaults() error {
 	if m.Deploy != nil && m.Deploy.Divert != nil {
 		var err error
 		if m.Deploy.Divert.Driver == "" {
-			m.Deploy.Divert.Driver = OktetoDivertWeaverDriver
+			m.Deploy.Divert.Driver = constants.OktetoDivertWeaverDriver
+		}
+		if m.Deploy.Divert.Header.Name == "" {
+			m.Deploy.Divert.Header.Name = constants.OktetoDivertDefaultHeaderName
+		}
+		if m.Deploy.Divert.Header.Match == "" {
+			m.Deploy.Divert.Header.Match = constants.OktetoDivertIstioExactMatch
+		}
+		if m.Deploy.Divert.Header.Value == "" {
+			m.Deploy.Divert.Header.Value = constants.OktetoDivertDefaultHeaderValue
+		}
+		m.Deploy.Divert.Header.Value, err = ExpandEnv(m.Deploy.Divert.Header.Value, false)
+		if err != nil {
+			return err
 		}
 		m.Deploy.Divert.Namespace, err = ExpandEnv(m.Deploy.Divert.Namespace, false)
 		if err != nil {
