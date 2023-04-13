@@ -43,6 +43,9 @@ func New(m *model.Manifest, c kubernetes.Interface) *Driver {
 }
 
 func (d *Driver) Deploy(ctx context.Context) error {
+	oktetoLog.Spinner(fmt.Sprintf("Diverting namespace %s...", d.divert.Namespace))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 	if err := d.initCache(ctx); err != nil {
 		return err
 	}
@@ -53,15 +56,20 @@ func (d *Driver) Deploy(ctx context.Context) error {
 			return ctx.Err()
 		default:
 			oktetoLog.Spinner(fmt.Sprintf("Diverting ingress %s/%s...", in.Namespace, in.Name))
+			oktetoLog.StartSpinner()
+			defer oktetoLog.StopSpinner()
 			if err := d.divertIngress(ctx, name); err != nil {
 				return err
 			}
+			oktetoLog.StopSpinner()
+			oktetoLog.Success("Ingress '%s/%s' successfully diverted", in.Namespace, in.Name)
 		}
 	}
 	return nil
 }
 
-func (*Driver) Destroy(_ context.Context) error {
+func (d *Driver) Destroy(_ context.Context) error {
+	oktetoLog.Success("Divert from '%s' successfully destroyed", d.divert.Namespace)
 	return nil
 }
 

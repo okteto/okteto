@@ -270,25 +270,4 @@ const (
 
 	// OktetoImageTagWithVolumes is the tag assigned to an image with volume mounts
 	OktetoImageTagWithVolumes = "okteto-with-volume-mounts"
-
-	// OktetoDivertWeaverDriver is the divert driver for weaver
-	OktetoDivertWeaverDriver = "weaver"
-
-	// OktetoDivertIstioDriver is the divert driver for istio
-	OktetoDivertIstioDriver = "istio"
-
-	// OktetoDivertIstioExactMatch represents the exact header match type
-	OktetoDivertIstioExactMatch = "exact"
-
-	// OktetoDivertIstioRegexMatch represents the regexp header match type
-	OktetoDivertIstioRegexMatch = "regex"
-
-	// OktetoDivertIstioPrefixMatch represents the prefix header match type
-	OktetoDivertIstioPrefixMatch = "prefix"
-
-	// OktetoDivertDefaultHeaderName the default header name used by okteto to divert traffic
-	OktetoDivertDefaultHeaderName = "x-okteto-divert"
-
-	// OktetoDivertDefaultHeaderValue the default divert header value
-	OktetoDivertDefaultHeaderValue = "${OKTETO_NAMESPACE}"
 )

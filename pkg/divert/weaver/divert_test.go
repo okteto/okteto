@@ -628,7 +628,6 @@ func Test_divertIngresses(t *testing.T) {
 		Deploy: &model.DeployInfo{
 			Divert: &model.DivertDeploy{
 				Namespace: "staging",
-				Service:   "s1",
 			},
 		},
 	}

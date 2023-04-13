@@ -262,9 +262,9 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ok-with-port",
 			divert: DivertDeploy{
-				Driver:               OktetoDivertWeaverDriver,
+				Driver:               constants.OktetoDivertWeaverDriver,
 				Namespace:            "namespace",
-				Service:              "service",
+				DeprecatedService:    "service",
 				DeprecatedPort:       8080,
 				DeprecatedDeployment: "deployment",
 			},
@@ -273,9 +273,9 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ok-without-service",
 			divert: DivertDeploy{
-				Driver:               OktetoDivertWeaverDriver,
+				Driver:               constants.OktetoDivertWeaverDriver,
 				Namespace:            "namespace",
-				Service:              "",
+				DeprecatedService:    "",
 				DeprecatedPort:       8080,
 				DeprecatedDeployment: "deployment",
 			},
@@ -284,9 +284,9 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ok-without-deployment",
 			divert: DivertDeploy{
-				Driver:               OktetoDivertWeaverDriver,
+				Driver:               constants.OktetoDivertWeaverDriver,
 				Namespace:            "namespace",
-				Service:              "service",
+				DeprecatedService:    "service",
 				DeprecatedPort:       8080,
 				DeprecatedDeployment: "",
 			},
@@ -295,9 +295,9 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ok-without-port",
 			divert: DivertDeploy{
-				Driver:               OktetoDivertWeaverDriver,
+				Driver:               constants.OktetoDivertWeaverDriver,
 				Namespace:            "namespace",
-				Service:              "service",
+				DeprecatedService:    "service",
 				DeprecatedDeployment: "deployment",
 			},
 			expectedErr: nil,
@@ -305,9 +305,9 @@ func Test_validateDivert(t *testing.T) {
 		{
 			name: "divert-ko-without-namespace",
 			divert: DivertDeploy{
-				Driver:               OktetoDivertWeaverDriver,
+				Driver:               constants.OktetoDivertWeaverDriver,
 				Namespace:            "",
-				Service:              "service",
+				DeprecatedService:    "service",
 				DeprecatedPort:       8080,
 				DeprecatedDeployment: "deployment",
 			},
