@@ -21,6 +21,13 @@ type Cache struct {
 	Now         func() time.Time
 }
 
+func NewCache(fileName string) *Cache {
+	return &Cache{
+		StringStore: NewFileByteStore(fileName),
+		Now:         time.Now,
+	}
+}
+
 type storeRegister struct {
 	ContextName string                        `json:"context"`
 	Namespace   string                        `json:"namespace"`
