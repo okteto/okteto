@@ -120,7 +120,9 @@ func TestFileCacheGet(t *testing.T) {
 }
 
 func TestFileCacheSet(t *testing.T) {
-	stringStore := &mockStore{}
+	stringStore := &mockStore{
+		data: []byte("[{\" corrupted data"),
+	}
 	c := Cache{
 		StringStore: stringStore,
 	}
