@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/okteto/okteto/pkg/log"
 	authenticationv1 "k8s.io/api/authentication/v1"
 )
 
@@ -19,12 +20,14 @@ type stringStore interface {
 type Cache struct {
 	StringStore stringStore
 	Now         func() time.Time
+	Debug       func(string, ...interface{})
 }
 
 func NewCache(fileName string) *Cache {
 	return &Cache{
 		StringStore: NewFileByteStore(fileName),
 		Now:         time.Now,
+		Debug:       log.Debugf,
 	}
 }
 
@@ -114,6 +117,6 @@ func (c *Cache) setWithErr(contextName, namespace string, token authenticationv1
 
 func (c *Cache) Set(contextName, namespace string, token authenticationv1.TokenRequest) {
 	if err := c.setWithErr(contextName, namespace, token); err != nil {
-		// TODO: log this
+		c.Debug("failed to write kubetoken cache: %w", err)
 	}
 }

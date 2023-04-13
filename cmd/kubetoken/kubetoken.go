@@ -23,6 +23,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/okteto/kubetoken"
 	"github.com/spf13/cobra"
@@ -51,6 +52,8 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 		if token, err := cache.Get(context, namespace); err == nil && token != "" {
 			cmd.Print(token)
 			return nil
+		} else {
+			log.Debugf("failed to get token from cache: %w", err)
 		}
 
 		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
