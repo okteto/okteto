@@ -19,6 +19,8 @@ import (
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -41,6 +43,9 @@ func New(m *model.Manifest, c kubernetes.Interface) *Driver {
 }
 
 func (d *Driver) Deploy(ctx context.Context) error {
+	oktetoLog.Spinner(fmt.Sprintf("Diverting namespace %s...", d.divert.Namespace))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 	if err := d.initCache(ctx); err != nil {
 		return err
 	}
@@ -51,21 +56,36 @@ func (d *Driver) Deploy(ctx context.Context) error {
 			return ctx.Err()
 		default:
 			oktetoLog.Spinner(fmt.Sprintf("Diverting ingress %s/%s...", in.Namespace, in.Name))
+			oktetoLog.StartSpinner()
+			defer oktetoLog.StopSpinner()
 			if err := d.divertIngress(ctx, name); err != nil {
 				return err
 			}
+			oktetoLog.StopSpinner()
+			oktetoLog.Success("Ingress '%s/%s' successfully diverted", in.Namespace, in.Name)
 		}
 	}
 	return nil
 }
 
-func (*Driver) Destroy(_ context.Context) error {
+func (d *Driver) Destroy(_ context.Context) error {
+	oktetoLog.Success("Divert from '%s' successfully destroyed", d.divert.Namespace)
 	return nil
 }
 
-func (d *Driver) GetDivertNamespace() string {
-	if d.divert.Namespace == d.namespace {
-		return ""
+func (d *Driver) UpdatePod(pod apiv1.PodSpec) apiv1.PodSpec {
+	if pod.DNSConfig == nil {
+		pod.DNSConfig = &apiv1.PodDNSConfig{}
 	}
-	return d.divert.Namespace
+	if pod.DNSConfig.Searches == nil {
+		pod.DNSConfig.Searches = []string{}
+	}
+	searches := []string{fmt.Sprintf("%s.svc.cluster.local", d.divert.Namespace)}
+	searches = append(searches, pod.DNSConfig.Searches...)
+	pod.DNSConfig.Searches = searches
+	return pod
+}
+
+func (d *Driver) UpdateVirtualService(vs istioNetworkingV1beta1.VirtualService) istioNetworkingV1beta1.VirtualService {
+	return vs
 }

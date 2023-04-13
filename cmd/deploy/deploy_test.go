@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/registry"
 
@@ -169,7 +170,7 @@ func (fk *fakeProxy) Start() {
 
 func (*fakeProxy) SetName(_ string) {}
 
-func (*fakeProxy) SetDivert(_ string) {}
+func (*fakeProxy) SetDivert(_ divert.Driver) {}
 
 func (fk *fakeProxy) Shutdown(_ context.Context) error {
 	if fk.errOnShutdown != nil {
