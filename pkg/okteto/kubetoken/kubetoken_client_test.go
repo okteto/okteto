@@ -16,8 +16,6 @@ import (
 )
 
 func TestNewKubeTokenClient(t *testing.T) {
-	t.Parallel()
-
 	tt := []struct {
 		testName       string
 		contextName    string
@@ -45,8 +43,6 @@ func TestNewKubeTokenClient(t *testing.T) {
 	for _, tc := range tt {
 		tc := tc
 		t.Run(tc.testName, func(t *testing.T) {
-			t.Parallel()
-
 			client, err := NewClient(tc.contextName, tc.token, "test", &mockCache{})
 
 			require.Equal(t, tc.expectedError, err)
@@ -55,15 +51,11 @@ func TestNewKubeTokenClient(t *testing.T) {
 	}
 
 	t.Run("Parse error", func(t *testing.T) {
-		t.Parallel()
-
 		_, err := NewClient("not!!://a.url", "mytoken", "test", &mockCache{})
 		require.Error(t, err)
 	})
 
 	t.Run("No error", func(t *testing.T) {
-		t.Parallel()
-
 		client, err := NewClient("cloud.okteto.com", "mytoken", "testns", &mockCache{})
 		require.NoError(t, err)
 
@@ -136,8 +128,6 @@ func TestGetKubeTokenCache(t *testing.T) {
 }
 
 func TestGetKubeTokenUnauthorizedErr(t *testing.T) {
-	t.Parallel()
-
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 	}))
