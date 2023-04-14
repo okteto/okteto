@@ -341,6 +341,16 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	return opts
 }
 
+func OptsFromBuildInfoForRemoteDeploy(b *model.BuildInfo, o *types.BuildOptions) *types.BuildOptions {
+	opts := &types.BuildOptions{
+		Path:       b.Context,
+		OutputMode: o.OutputMode,
+		File:       b.Dockerfile,
+		Platform:   o.Platform,
+	}
+	return opts
+}
+
 func extractFromContextAndDockerfile(context, dockerfile, svcName string) string {
 	if filepath.IsAbs(dockerfile) {
 		return dockerfile
