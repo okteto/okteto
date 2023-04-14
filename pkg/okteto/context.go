@@ -515,9 +515,8 @@ func GetSubdomain() string {
 	return strings.Replace(Context().Registry, "registry.", "", 1)
 }
 
-func GetContextCertificate() (*x509.Certificate, error) {
-	certB64 := Context().Certificate
-	certPEM, err := base64.StdEncoding.DecodeString(certB64)
+func GetContextCertificate(certificateBase64Encoded string, isInsecure bool) (*x509.Certificate, error) {
+	certPEM, err := base64.StdEncoding.DecodeString(certificateBase64Encoded)
 
 	if err != nil {
 		oktetoLog.Debugf("couldn't decode context certificate from base64: %s", err)
@@ -542,7 +541,7 @@ func GetContextCertificate() (*x509.Certificate, error) {
 		strictTLSOnce.Do(func() {
 			oktetoLog.Debugf("certificate issuer %s", cert.Issuer)
 			oktetoLog.Debugf("context certificate not trusted by system roots: %s", err)
-			if !Context().IsInsecure {
+			if !isInsecure {
 				return
 			}
 			if cert.Issuer.CommonName == config.OktetoDefaultSelfSignedIssuer {

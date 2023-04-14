@@ -39,12 +39,12 @@ type Client struct {
 	cache       cacheSetter
 }
 
-func NewClient(contextName, token, namespace string, cache cacheSetter) (*Client, error) {
+func NewClient(contextName, token, namespace, certificate string, isInsecure bool, cache cacheSetter) (*Client, error) {
 	if contextName == "" {
 		return nil, oktetoErrors.ErrCtxNotSet
 	}
 
-	httpClient, url, err := okteto.NewOktetoHttpClient(contextName, token, fmt.Sprintf("%s/%s", kubetokenPath, namespace))
+	httpClient, url, err := okteto.NewOktetoHttpClient(contextName, token, fmt.Sprintf("%s/%s", kubetokenPath, namespace), certificate, isInsecure)
 	if err != nil {
 		return nil, err
 	}

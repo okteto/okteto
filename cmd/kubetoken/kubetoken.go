@@ -43,13 +43,13 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 
 	cmd.RunE = func(_ *cobra.Command, args []string) error {
 		ctx := context.Background()
-		context := args[0]
+		contextName := args[0]
 		namespace := args[1]
 
 		cacheFileName := path.Join(config.GetDotKubeFolder(), oktetoTokenCacheFileName)
 		cache := kubetoken.NewCache(cacheFileName)
 		// Return early if we have a valid token in the cache before we run the context command to improve performance
-		if token, err := cache.Get(context, namespace); err == nil && token != "" {
+		if token, err := cache.Get(contextName, namespace); err == nil && token != "" {
 			cmd.Print(token)
 			return nil
 		} else {
@@ -57,18 +57,19 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 		}
 
 		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
-			Context:   context,
+			Context:   contextName,
 			Namespace: namespace,
 		})
 		if err != nil {
 			return err
 		}
 
-		if !okteto.Context().IsOkteto {
+		okctx := okteto.Context()
+		if !okctx.IsOkteto {
 			return errors.ErrContextIsNotOktetoCluster
 		}
 
-		c, err := kubetoken.NewClient(okteto.Context().Name, okteto.Context().Token, namespace, cache)
+		c, err := kubetoken.NewClient(okctx.Name, okctx.Token, namespace, okctx.Certificate, okctx.IsInsecure, cache)
 		if err != nil {
 			return fmt.Errorf("failed to initialize the kubetoken client: %w", err)
 		}

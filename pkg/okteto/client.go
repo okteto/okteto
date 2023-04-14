@@ -69,7 +69,7 @@ func (*OktetoClientProvider) Provide() (types.OktetoInterface, error) {
 
 // NewOktetoClient creates a new client to connect with Okteto API
 func NewOktetoClient() (*OktetoClient, error) {
-	httpClient, u, err := NewOktetoHttpClient(Context().Name, Context().Token, "graphql")
+	httpClient, u, err := NewOktetoHttpClient(Context().Name, Context().Token, "graphql", Context().Certificate, Context().IsInsecure)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func NewOktetoClient() (*OktetoClient, error) {
 	return newOktetoClientFromGraphqlClient(u, httpClient)
 }
 
-func NewOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client, string, error) {
+func NewOktetoHttpClient(contextName, token, oktetoUrlPath, certificate string, isInsecure bool) (*http.Client, string, error) {
 	if token == "" {
 		return nil, "", fmt.Errorf(oktetoErrors.ErrNotLogged, contextName)
 	}
@@ -95,7 +95,7 @@ func NewOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client
 
 	if insecureSkipTLSVerify {
 		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
-	} else if cert, err := GetContextCertificate(); err == nil {
+	} else if cert, err := GetContextCertificate(certificate, isInsecure); err == nil {
 		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
 	}
 
@@ -122,7 +122,7 @@ func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 
 	if insecureSkipTLSVerify {
 		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
-	} else if cert, err := GetContextCertificate(); err == nil {
+	} else if cert, err := GetContextCertificate(Context().Certificate, Context().IsInsecure); err == nil {
 		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
 	}
 
@@ -144,7 +144,7 @@ func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
 
 	if insecureSkipTLSVerify {
 		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
-	} else if cert, err := GetContextCertificate(); err == nil {
+	} else if cert, err := GetContextCertificate(Context().Certificate, Context().IsInsecure); err == nil {
 		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
 	}
 

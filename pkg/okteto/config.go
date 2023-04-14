@@ -17,11 +17,13 @@ import "crypto/x509"
 
 type Config struct{}
 
-func (Config) IsOktetoCluster() bool                             { return IsOkteto() }
-func (Config) GetGlobalNamespace() string                        { return Context().GlobalNamespace }
-func (Config) GetNamespace() string                              { return Context().Namespace }
-func (Config) GetRegistryURL() string                            { return Context().Registry }
-func (Config) GetUserID() string                                 { return Context().UserID }
-func (Config) GetToken() string                                  { return Context().Token }
-func (Config) GetContextCertificate() (*x509.Certificate, error) { return GetContextCertificate() }
-func (Config) IsInsecureSkipTLSVerifyPolicy() bool               { return Context().IsInsecure }
+func (Config) IsOktetoCluster() bool      { return IsOkteto() }
+func (Config) GetGlobalNamespace() string { return Context().GlobalNamespace }
+func (Config) GetNamespace() string       { return Context().Namespace }
+func (Config) GetRegistryURL() string     { return Context().Registry }
+func (Config) GetUserID() string          { return Context().UserID }
+func (Config) GetToken() string           { return Context().Token }
+func (Config) GetContextCertificate() (*x509.Certificate, error) {
+	return GetContextCertificate(Context().Certificate, Context().IsInsecure)
+}
+func (Config) IsInsecureSkipTLSVerifyPolicy() bool { return Context().IsInsecure }

@@ -43,7 +43,7 @@ func TestNewKubeTokenClient(t *testing.T) {
 	for _, tc := range tt {
 		tc := tc
 		t.Run(tc.testName, func(t *testing.T) {
-			client, err := NewClient(tc.contextName, tc.token, "test", &mockCache{})
+			client, err := NewClient(tc.contextName, tc.token, "test", "", false, &mockCache{})
 
 			require.Equal(t, tc.expectedError, err)
 			require.Equal(t, tc.expectedClient, client)
@@ -51,12 +51,12 @@ func TestNewKubeTokenClient(t *testing.T) {
 	}
 
 	t.Run("Parse error", func(t *testing.T) {
-		_, err := NewClient("not!!://a.url", "mytoken", "test", &mockCache{})
+		_, err := NewClient("not!!://a.url", "mytoken", "test", "", false, &mockCache{})
 		require.Error(t, err)
 	})
 
 	t.Run("No error", func(t *testing.T) {
-		client, err := NewClient("cloud.okteto.com", "mytoken", "testns", &mockCache{})
+		client, err := NewClient("cloud.okteto.com", "mytoken", "testns", "", false, &mockCache{})
 		require.NoError(t, err)
 
 		require.Equal(t, "https://cloud.okteto.com/auth/kubetoken/testns", client.url)
