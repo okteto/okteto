@@ -204,6 +204,9 @@ jobs:
           name: Prepare env
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
+            - OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+            - OKTETO_SKIP_CLEANUP: 'true'
+            - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
@@ -214,9 +217,6 @@ jobs:
           name: Run deploy integration tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
-            - OKTETO_SKIP_CLEANUP: 'true'
-            - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
       - run:
           name: Run deprecated integration tests
