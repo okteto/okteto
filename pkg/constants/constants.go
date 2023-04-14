@@ -96,7 +96,7 @@ const (
 	OktetoDivertBaggageHeader = "baggage"
 
 	// OktetoDivertHeaderName the default header name used by okteto to divert traffic
-	OktetoDivertHeaderName = "x-okteto-divert"
+	OktetoDivertHeaderName = "okteto-divert"
 
 	//OktetoDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
 	OktetoDivertAnnotationTemplate = "divert.okteto.com/%s-%s"

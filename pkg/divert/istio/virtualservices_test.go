@@ -116,7 +116,7 @@ func Test_restoreDivertVirtualService(t *testing.T) {
 					Namespace: "staging",
 					Annotations: map[string]string{
 						"a1": "v1",
-						fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","header":{"name":"x-okteto-divert","match":"exact","value":"cindy"},"routes":null}`,
+						fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","header":{"name":"okteto-divert","match":"exact","value":"cindy"},"routes":null}`,
 					},
 				},
 			},
@@ -227,7 +227,7 @@ func Test_translateDivertHost(t *testing.T) {
 							},
 							Headers: &istioNetworkingV1beta1.Headers{
 								Request: &istioNetworkingV1beta1.Headers_HeaderOperations{
-									Add: map[string]string{constants.OktetoDivertBaggageHeader: "x-okteto-divert=cindy"},
+									Add: map[string]string{constants.OktetoDivertBaggageHeader: "okteto-divert=cindy"},
 								},
 							},
 							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
@@ -316,7 +316,7 @@ func Test_translateDivertHost(t *testing.T) {
 							},
 							Headers: &istioNetworkingV1beta1.Headers{
 								Request: &istioNetworkingV1beta1.Headers_HeaderOperations{
-									Add: map[string]string{constants.OktetoDivertBaggageHeader: "x-okteto-divert=cindy"},
+									Add: map[string]string{constants.OktetoDivertBaggageHeader: "okteto-divert=cindy"},
 								},
 							},
 							Route: []*istioNetworkingV1beta1.HTTPRouteDestination{
