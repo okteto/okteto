@@ -195,20 +195,12 @@ type DestroyInfo struct {
 // DivertDeploy represents information about the deploy divert configuration
 type DivertDeploy struct {
 	Driver               string                 `json:"driver,omitempty" yaml:"driver,omitempty"`
-	Header               DivertHeader           `json:"header,omitempty" yaml:"header,omitempty"`
 	Namespace            string                 `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 	DeprecatedService    string                 `json:"service,omitempty" yaml:"service,omitempty"`
 	DeprecatedPort       int                    `json:"port,omitempty" yaml:"port,omitempty"`
 	DeprecatedDeployment string                 `json:"deployment,omitempty" yaml:"deployment,omitempty"`
 	VirtualServices      []DivertVirtualService `json:"virtualServices,omitempty" yaml:"virtualServices,omitempty"`
 	Hosts                []DivertHost           `json:"hosts,omitempty" yaml:"hosts,omitempty"`
-}
-
-// DivertHeader represents the header used for redirecting a virtual service
-type DivertHeader struct {
-	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
-	Match string `json:"match,omitempty" yaml:"match,omitempty"`
-	Value string `json:"value,omitempty" yaml:"value,omitempty"`
 }
 
 // DivertVirtualService represents a virtual service in a namespace to be diverted
@@ -816,15 +808,6 @@ func (m *Manifest) validateDivert() error {
 		if m.Deploy.Divert.Namespace != "" {
 			return fmt.Errorf("the field 'deploy.divert.namespace' is not supported with the istio driver")
 		}
-		switch m.Deploy.Divert.Header.Match {
-		case constants.OktetoDivertIstioExactMatch, constants.OktetoDivertIstioRegexMatch, constants.OktetoDivertIstioPrefixMatch:
-		default:
-			return fmt.Errorf("supported divert header match types are %s, %s and %s",
-				constants.OktetoDivertIstioExactMatch,
-				constants.OktetoDivertIstioRegexMatch,
-				constants.OktetoDivertIstioPrefixMatch,
-			)
-		}
 		if len(m.Deploy.Divert.VirtualServices) == 0 {
 			return fmt.Errorf("the field 'deploy.divert.virtualServices' is mandatory")
 		}
@@ -855,19 +838,6 @@ func (m *Manifest) setDefaults() error {
 		var err error
 		if m.Deploy.Divert.Driver == "" {
 			m.Deploy.Divert.Driver = constants.OktetoDivertWeaverDriver
-		}
-		if m.Deploy.Divert.Header.Name == "" {
-			m.Deploy.Divert.Header.Name = constants.OktetoDivertDefaultHeaderName
-		}
-		if m.Deploy.Divert.Header.Match == "" {
-			m.Deploy.Divert.Header.Match = constants.OktetoDivertIstioExactMatch
-		}
-		if m.Deploy.Divert.Header.Value == "" {
-			m.Deploy.Divert.Header.Value = constants.OktetoDivertDefaultHeaderValue
-		}
-		m.Deploy.Divert.Header.Value, err = ExpandEnv(m.Deploy.Divert.Header.Value, false)
-		if err != nil {
-			return err
 		}
 		m.Deploy.Divert.Namespace, err = ExpandEnv(m.Deploy.Divert.Namespace, false)
 		if err != nil {

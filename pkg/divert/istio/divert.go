@@ -42,9 +42,8 @@ type Driver struct {
 
 // DivertTransformation represents the annotation for the okteto mutation webhook to divert a virtual service
 type DivertTransformation struct {
-	Namespace string             `json:"namespace"`
-	Header    model.DivertHeader `json:"header"`
-	Routes    []string           `json:"routes,omitempty"`
+	Namespace string   `json:"namespace"`
+	Routes    []string `json:"routes,omitempty"`
 }
 
 func New(m *model.Manifest, c kubernetes.Interface, ic istioclientset.Interface) *Driver {

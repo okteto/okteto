@@ -92,20 +92,11 @@ const (
 	// OktetoDivertIstioDriver is the divert driver for istio
 	OktetoDivertIstioDriver = "istio"
 
-	// OktetoDivertIstioExactMatch represents the exact header match type
-	OktetoDivertIstioExactMatch = "exact"
+	// OktetoDivertBaggageHeader represents the baggage header
+	OktetoDivertBaggageHeader = "baggage"
 
-	// OktetoDivertIstioRegexMatch represents the regexp header match type
-	OktetoDivertIstioRegexMatch = "regex"
-
-	// OktetoDivertIstioPrefixMatch represents the prefix header match type
-	OktetoDivertIstioPrefixMatch = "prefix"
-
-	// OktetoDivertDefaultHeaderName the default header name used by okteto to divert traffic
-	OktetoDivertDefaultHeaderName = "x-okteto-divert"
-
-	// OktetoDivertDefaultHeaderValue the default divert header value
-	OktetoDivertDefaultHeaderValue = "${OKTETO_NAMESPACE}"
+	// OktetoDivertHeaderName the default header name used by okteto to divert traffic
+	OktetoDivertHeaderName = "okteto-divert"
 
 	//OktetoDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
 	OktetoDivertAnnotationTemplate = "divert.okteto.com/%s-%s"
