@@ -204,9 +204,6 @@ jobs:
           name: Prepare env
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
-            - OKTETO_SKIP_CLEANUP: 'true'
-            - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
