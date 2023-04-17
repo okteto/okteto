@@ -153,6 +153,22 @@ type fakeKubeConfig struct {
 	errOnModify error
 }
 
+type fakeCmapHandler struct {
+	errUpdatingWithEnvs error
+}
+
+func (*fakeCmapHandler) translateConfigMapAndDeploy(context.Context, *pipeline.CfgData) (*apiv1.ConfigMap, error) {
+	return nil, nil
+}
+
+func (f *fakeCmapHandler) updateConfigMap(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error {
+	return nil
+}
+
+func (f *fakeCmapHandler) updateEnvs(context.Context, string, string, []string) error {
+	return f.errUpdatingWithEnvs
+}
+
 func (*fakeKubeConfig) Read() (*rest.Config, error) {
 	return nil, nil
 }
@@ -511,6 +527,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 				Proxy:              p,
 				Executor:           e,
 				Kubeconfig:         &fakeKubeConfig{},
+				ConfigMapHandler:   &fakeCmapHandler{},
 				K8sClientProvider:  clientProvider,
 				GetExternalControl: cp.getFakeExternalControl,
 				Fs:                 afero.NewMemMapFs(),
@@ -587,6 +604,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 				Proxy:              p,
 				Executor:           e,
 				Kubeconfig:         &fakeKubeConfig{},
+				ConfigMapHandler:   &fakeCmapHandler{},
 				K8sClientProvider:  clientProvider,
 				GetExternalControl: cp.getFakeExternalControl,
 				Fs:                 afero.NewMemMapFs(),
@@ -867,6 +885,7 @@ func TestDeployExternals(t *testing.T) {
 			}
 
 			ld := localDeployer{
+				ConfigMapHandler:   &fakeCmapHandler{},
 				GetExternalControl: cp.getFakeExternalControl,
 				Fs:                 afero.NewMemMapFs(),
 			}

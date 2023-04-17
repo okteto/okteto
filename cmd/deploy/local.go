@@ -226,7 +226,7 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 		oktetoLog.SetStage("")
 	}
 
-	ld.ConfigMapHandler.updateEnvs(ctx, opts.Name, opts.Manifest.Namespace, opts.Variables)
+	err = ld.ConfigMapHandler.updateEnvs(ctx, opts.Name, opts.Manifest.Namespace, opts.Variables)
 	if err != nil {
 		return fmt.Errorf("could not update config map with environment variables: %w", err)
 	}

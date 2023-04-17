@@ -33,7 +33,8 @@ func TestDeployNotRemovingEnvFile(t *testing.T) {
 		},
 	}
 	localDeployer := localDeployer{
-		Fs: fs,
+		ConfigMapHandler: &fakeCmapHandler{},
+		Fs:               fs,
 	}
 	localDeployer.runDeploySection(context.Background(), opts)
 	_, err = fs.Stat(".env")
