@@ -79,7 +79,7 @@ func (c *K8sControl) List(ctx context.Context, ns string, labelSelector string) 
 	return result, nil
 }
 
-func translate(name, ns string, externalResource *ExternalResource, now time.Time) *k8s.External {
+func translate(name, namespace string, externalResource *ExternalResource, now time.Time) *k8s.External {
 	var externalEndpointsSpec []k8s.Endpoint
 	for _, endpoint := range externalResource.Endpoints {
 		externalEndpointsSpec = append(externalEndpointsSpec, k8s.Endpoint(*endpoint))
@@ -100,12 +100,12 @@ func translate(name, ns string, externalResource *ExternalResource, now time.Tim
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      format.ResourceK8sMetaString(name),
-			Namespace: ns,
+			Namespace: namespace,
 			Annotations: map[string]string{
 				constants.LastUpdatedAnnotation: now.UTC().Format(constants.TimeFormat),
 			},
 			Labels: map[string]string{
-				constants.OktetoNamespaceLabel: ns,
+				constants.OktetoNamespaceLabel: namespace,
 			},
 		},
 		Spec: k8s.ExternalResourceSpec{
