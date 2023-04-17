@@ -48,7 +48,11 @@ func (ld *localDestroyCommand) destroy(ctx context.Context, opts *Options) error
 
 	err := ld.runDestroy(ctx, opts)
 	if err == nil {
-		oktetoLog.Success("Development environment '%s' successfully destroyed", opts.Name)
+		if opts.Name == "" {
+			oktetoLog.Success("Development environment successfully destroyed")
+		} else {
+			oktetoLog.Success("Development environment '%s' successfully destroyed", opts.Name)
+		}
 	}
 	analytics.TrackDestroy(err == nil, opts.DestroyAll)
 
