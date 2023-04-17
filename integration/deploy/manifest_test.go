@@ -57,7 +57,7 @@ deploy:
     context: app
     image: okteto.dev/app:dev
 deploy:
-  image: okteto/installer:1.7.5
+  image: okteto/installer:1.8.9
   commands:
   - name: deploy nginx
     command: kubectl create deployment my-dep --image=busybox`
