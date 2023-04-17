@@ -136,6 +136,26 @@ func UpdateConfigMap(ctx context.Context, cmap *apiv1.ConfigMap, data *CfgData, 
 	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 }
 
+// UpdateConfigMap updates the configmaps fields
+func UpdateEnvs(ctx context.Context, name, namespace string, envs []string, c kubernetes.Interface) error {
+	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
+	if err != nil {
+		return err
+	}
+
+	if cmap != nil {
+		for _, env := range envs {
+			result := strings.Split(env, "=")
+			if len(result) != 2 {
+				return fmt.Errorf("invalid env format: '%s'", env)
+			}
+			cmap.Data[result[0]] = result[1]
+		}
+		return configmaps.Update(ctx, cmap, cmap.Namespace, c)
+	}
+	return nil
+}
+
 // TranslatePipelineName translate the name into the configmap name
 func TranslatePipelineName(name string) string {
 	return fmt.Sprintf("okteto-git-%s", format.ResourceK8sMetaString(name))

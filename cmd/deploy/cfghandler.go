@@ -29,6 +29,7 @@ import (
 type configMapHandler interface {
 	translateConfigMapAndDeploy(context.Context, *pipeline.CfgData) (*apiv1.ConfigMap, error)
 	updateConfigMap(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error
+	updateEnvs(context.Context, string, string, []string) error
 }
 
 // deployInsideDeployConfigMapHandler is the runner used when the okteto is executed
@@ -81,6 +82,18 @@ func (ch *defaultConfigMapHandler) updateConfigMap(ctx context.Context, cfg *api
 	return errMain
 }
 
+func (h *defaultConfigMapHandler) updateEnvs(ctx context.Context, name, namespace string, envs []string) error {
+	c, _, err := h.k8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return err
+	}
+
+	if err := pipeline.UpdateEnvs(ctx, name, namespace, envs, c); err != nil {
+		return err
+	}
+	return nil
+}
+
 // translateConfigMapAndDeploy with the receiver deployInsideDeployConfigMapHandler doesn't do anything
 // because we have to  control the cfmap in the main execution. If both handled the configmap we will be
 // overwritten the cfmap and leave it in a inconsistent status
@@ -92,5 +105,12 @@ func (*deployInsideDeployConfigMapHandler) translateConfigMapAndDeploy(_ context
 // because we have to  control the cfmap in the main execution. If both handled the configmap we will be
 // overwritten the cfmap and leave it in a inconsistent status
 func (*deployInsideDeployConfigMapHandler) updateConfigMap(_ context.Context, _ *apiv1.ConfigMap, _ *pipeline.CfgData, err error) error {
+	return nil
+}
+
+// updateEnvs with the receiver deployInsideDeployConfigMapHandler doesn't do anything
+// because we have to  control the cfmap in the main execution. If both handled the configmap we will be
+// overwritten the cfmap and leave it in a inconsistent status
+func (*deployInsideDeployConfigMapHandler) updateEnvs(_ context.Context, _ string, _ string, _ []string) error {
 	return nil
 }
