@@ -341,6 +341,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	return opts
 }
 
+// OptsFromBuildInfoForRemoteDeploy returns the options for the remote deploy
 func OptsFromBuildInfoForRemoteDeploy(b *model.BuildInfo, o *types.BuildOptions) *types.BuildOptions {
 	opts := &types.BuildOptions{
 		Path:       b.Context,
