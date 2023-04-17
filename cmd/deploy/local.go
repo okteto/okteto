@@ -124,7 +124,7 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 		if err != nil {
 			return err
 		}
-		ld.Proxy.SetDivert(driver.GetDivertNamespace())
+		ld.Proxy.SetDivert(driver)
 		ld.DivertDriver = driver
 	}
 
@@ -247,11 +247,10 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 	// deploy divert if any
 	if opts.Manifest.Deploy.Divert != nil && opts.Manifest.Deploy.Divert.Namespace != opts.Manifest.Namespace {
 		oktetoLog.SetStage("Deploy Divert")
-		if err := ld.deployDivert(ctx, opts); err != nil {
+		if err := ld.DivertDriver.Deploy(ctx); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error creating divert: %s", err.Error())
 			return err
 		}
-		oktetoLog.Success("Divert from '%s' successfully configured", opts.Manifest.Deploy.Divert.Namespace)
 		oktetoLog.SetStage("")
 	}
 
@@ -300,15 +299,6 @@ func (ld *localDeployer) deployStack(ctx context.Context, opts *Options) error {
 		IsInsideDeploy: true,
 	}
 	return stackCommand.RunDeploy(ctx, composeSectionInfo.Stack, stackOpts)
-}
-
-func (ld *localDeployer) deployDivert(ctx context.Context, opts *Options) error {
-
-	oktetoLog.Spinner(fmt.Sprintf("Deploying divert in namespace %s...", opts.Manifest.Deploy.Divert.Namespace))
-	oktetoLog.StartSpinner()
-	defer oktetoLog.StopSpinner()
-
-	return ld.DivertDriver.Deploy(ctx)
 }
 
 func (ld *localDeployer) deployEndpoints(ctx context.Context, opts *Options) error {

@@ -172,9 +172,6 @@ func (t *trace) display() {
 								Stage: text.Stage,
 								Err:   fmt.Errorf(text.Message),
 							}
-							oktetoLog.Fail(text.Message)
-						} else {
-							oktetoLog.Fail(text.Message)
 						}
 					} else {
 						oktetoLog.Println(text.Message)

@@ -337,7 +337,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return nil
 		}
 		err = oktetoErrors.UserError{E: err}
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, err.Error())
 		data.Status = pipeline.ErrorStatus
 	} else {
 		oktetoLog.SetStage("")

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/registry"
 
@@ -32,7 +33,6 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -170,7 +170,7 @@ func (fk *fakeProxy) Start() {
 
 func (*fakeProxy) SetName(_ string) {}
 
-func (*fakeProxy) SetDivert(_ string) {}
+func (*fakeProxy) SetDivert(_ divert.Driver) {}
 
 func (fk *fakeProxy) Shutdown(_ context.Context) error {
 	if fk.errOnShutdown != nil {
@@ -311,7 +311,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	err := c.RunDeploy(ctx, opts)
 
 	// we should get a build error because Dockerfile does not exist
-	assert.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), oktetoErrors.InvalidDockerfile))
 
 	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
 	if err != nil {
@@ -343,8 +343,6 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	}
 
 	expectedCfg.Data["output"] = cfg.Data["output"]
-
-	assert.True(t, strings.Contains(oktetoLog.GetOutputBuffer().String(), oktetoErrors.InvalidDockerfile))
 
 	assert.Equal(t, expectedCfg.Name, cfg.Name)
 	assert.Equal(t, expectedCfg.Namespace, cfg.Namespace)

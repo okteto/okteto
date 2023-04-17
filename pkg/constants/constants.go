@@ -60,7 +60,7 @@ const (
 	OktetoCLIImageForRemoteTemplate = "okteto/okteto:%s"
 
 	// OktetoPipelineRunnerImage defines image to use for remote deployments if empty
-	OktetoPipelineRunnerImage = "okteto/installer:1.7.6"
+	OktetoPipelineRunnerImage = "okteto/installer:1.8.9"
 
 	// OktetoEnvFile defines the name for okteto env file
 	OktetoEnvFile = "OKTETO_ENV"
@@ -88,4 +88,19 @@ const (
 
 	// OktetoNamespaceLabel is the label used to identify the namespace where the resource lives
 	OktetoNamespaceLabel = "dev.okteto.com/namespace"
+
+	// OktetoDivertWeaverDriver is the divert driver for weaver
+	OktetoDivertWeaverDriver = "weaver"
+
+	// OktetoDivertIstioDriver is the divert driver for istio
+	OktetoDivertIstioDriver = "istio"
+
+	// OktetoDivertBaggageHeader represents the baggage header
+	OktetoDivertBaggageHeader = "baggage"
+
+	// OktetoDivertHeaderName the default header name used by okteto to divert traffic
+	OktetoDivertHeaderName = "okteto-divert"
+
+	//OktetoDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
+	OktetoDivertAnnotationTemplate = "divert.okteto.com/%s-%s"
 )

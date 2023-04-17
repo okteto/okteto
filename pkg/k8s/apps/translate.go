@@ -51,6 +51,18 @@ type Translation struct {
 	Rules   []*model.TranslationRule
 }
 
+func (tr *Translation) getDevName() string {
+	if tr.Dev.Selector != nil {
+		for key := range tr.Dev.Selector {
+			if key == "app.kubernetes.io/component" {
+				return tr.Dev.Selector[key]
+			}
+		}
+	}
+
+	return tr.Dev.Name
+}
+
 func (tr *Translation) translate() error {
 	if err := tr.DevModeOff(); err != nil {
 		oktetoLog.Infof("failed to translate dev mode off: %s", err)
@@ -79,10 +91,10 @@ func (tr *Translation) translate() error {
 
 	if tr.MainDev == tr.Dev {
 		tr.DevApp.SetReplicas(1)
-		tr.DevApp.TemplateObjectMeta().Labels[model.InteractiveDevLabel] = tr.Dev.Name
+		tr.DevApp.TemplateObjectMeta().Labels[model.InteractiveDevLabel] = tr.getDevName()
 		TranslateOktetoSyncSecret(tr.DevApp.PodSpec(), tr.Dev.Name)
 	} else {
-		tr.DevApp.TemplateObjectMeta().Labels[model.DetachedDevLabel] = tr.Dev.Name
+		tr.DevApp.TemplateObjectMeta().Labels[model.DetachedDevLabel] = tr.getDevName()
 		TranslatePodAffinity(tr.DevApp.PodSpec(), tr.MainDev.Name)
 	}
 

@@ -48,7 +48,11 @@ func (ld *localDestroyCommand) destroy(ctx context.Context, opts *Options) error
 
 	err := ld.runDestroy(ctx, opts)
 	if err == nil {
-		oktetoLog.Success("Development environment '%s' successfully destroyed", opts.Name)
+		if opts.Name == "" {
+			oktetoLog.Success("Development environment successfully destroyed")
+		} else {
+			oktetoLog.Success("Development environment '%s' successfully destroyed", opts.Name)
+		}
 	}
 	analytics.TrackDestroy(err == nil, opts.DestroyAll)
 
@@ -139,7 +143,6 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error destroying divert: %s", err.Error())
 			return err
 		}
-		oktetoLog.Success("Divert from '%s' successfully destroyed", ld.manifest.Deploy.Divert.Namespace)
 		oktetoLog.SetStage("")
 	}
 
@@ -281,10 +284,6 @@ func (dc *localDestroyCommand) destroyHelmReleasesIfPresent(ctx context.Context,
 }
 
 func (ld *localDestroyCommand) destroyDivert(ctx context.Context, manifest *model.Manifest) error {
-	oktetoLog.Spinner(fmt.Sprintf("Destroying divert in %s...", manifest.Deploy.Divert.Namespace))
-	oktetoLog.StartSpinner()
-	defer oktetoLog.StopSpinner()
-
 	c, _, err := ld.k8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
 		return err
