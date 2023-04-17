@@ -148,8 +148,10 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
-	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
+	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: "deploy"})
 	buildOptions.Manifest = deployOptions.Manifest
+
+	oktetoLog.Printf("%v\n", buildOptions)
 
 	// we need to call Build() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
