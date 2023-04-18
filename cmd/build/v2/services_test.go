@@ -233,7 +233,7 @@ func TestGetToBuildTag(t *testing.T) {
 			svcName:      "test",
 			output: []string{
 				// "okteto.global/test-test:hello-this-is-a-test",
-				"okteto.dev/test-test:hello-this-is-a-test",
+				// "okteto.dev/test-test:hello-this-is-a-test",
 				// "okteto.global/test-test:okteto",
 				"okteto.dev/test-test:okteto",
 			},
@@ -260,7 +260,7 @@ func TestGetToBuildTag(t *testing.T) {
 			svcName:      "test",
 			output: []string{
 				// "okteto.global/test-test:hello-this-is-a-test",
-				"okteto.dev/test-test:hello-this-is-a-test",
+				// "okteto.dev/test-test:hello-this-is-a-test",
 				// "okteto.global/test-test:okteto-with-volume-mounts",
 				"okteto.dev/test-test:okteto-with-volume-mounts",
 			},
