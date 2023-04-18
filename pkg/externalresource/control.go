@@ -27,7 +27,7 @@ func (c *K8sControl) Deploy(ctx context.Context, name, ns string, er *ExternalRe
 		return fmt.Errorf("error creating external CRD client: %s", err.Error())
 	}
 
-	externalResourceCRD := translate(name, er)
+	externalResourceCRD := translate(name, ns, er, time.Now())
 
 	old, err := k8sclient.ExternalResources(ns).Get(ctx, externalResourceCRD.Name, metav1.GetOptions{})
 	if err != nil && !k8sErrors.IsNotFound(err) {
@@ -79,7 +79,7 @@ func (c *K8sControl) List(ctx context.Context, ns string, labelSelector string) 
 	return result, nil
 }
 
-func translate(name string, externalResource *ExternalResource) *k8s.External {
+func translate(name, namespace string, externalResource *ExternalResource, now time.Time) *k8s.External {
 	var externalEndpointsSpec []k8s.Endpoint
 	for _, endpoint := range externalResource.Endpoints {
 		externalEndpointsSpec = append(externalEndpointsSpec, k8s.Endpoint(*endpoint))
@@ -99,9 +99,13 @@ func translate(name string, externalResource *ExternalResource) *k8s.External {
 			APIVersion: fmt.Sprintf("%s/%s", k8s.GroupName, k8s.GroupVersion),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: format.ResourceK8sMetaString(name),
+			Name:      format.ResourceK8sMetaString(name),
+			Namespace: namespace,
 			Annotations: map[string]string{
-				constants.LastUpdatedAnnotation: time.Now().UTC().Format(constants.TimeFormat),
+				constants.LastUpdatedAnnotation: now.UTC().Format(constants.TimeFormat),
+			},
+			Labels: map[string]string{
+				constants.OktetoNamespaceLabel: namespace,
 			},
 		},
 		Spec: k8s.ExternalResourceSpec{

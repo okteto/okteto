@@ -2,11 +2,15 @@ package externalresource
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/externalresource/k8s"
 	"github.com/okteto/okteto/pkg/externalresource/k8s/fake"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -294,4 +298,66 @@ func TestList(t *testing.T) {
 			assert.Len(t, result, tc.len)
 		})
 	}
+}
+
+func TestTranslate(t *testing.T) {
+	now := time.Now()
+	name := "non sanitized name"
+	ns := "test-ns"
+	externalResource := &ExternalResource{
+		Icon: "default",
+		Notes: &Notes{
+			Path:     "hello.md",
+			Markdown: "asdasin",
+		},
+		Endpoints: []*ExternalEndpoint{
+			{
+				Name: "lambda",
+				Url:  "https://test.com",
+			},
+			{
+				Name: "mongodbatlas",
+				Url:  "https://fake-mongodb-test.com",
+			},
+		},
+	}
+
+	expected := &k8s.External{
+		TypeMeta: v1.TypeMeta{
+			Kind:       k8s.ExternalResourceKind,
+			APIVersion: fmt.Sprintf("%s/%s", k8s.GroupName, k8s.GroupVersion),
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Name:      "non-sanitized-name",
+			Namespace: ns,
+			Annotations: map[string]string{
+				constants.LastUpdatedAnnotation: now.UTC().Format(constants.TimeFormat),
+			},
+			Labels: map[string]string{
+				constants.OktetoNamespaceLabel: ns,
+			},
+		},
+		Spec: k8s.ExternalResourceSpec{
+			Icon: "default",
+			Name: "non-sanitized-name",
+			Notes: &k8s.Notes{
+				Path:     "hello.md",
+				Markdown: "asdasin",
+			},
+			Endpoints: []k8s.Endpoint{
+				{
+					Name: "lambda",
+					Url:  "https://test.com",
+				},
+				{
+					Name: "mongodbatlas",
+					Url:  "https://fake-mongodb-test.com",
+				},
+			},
+		},
+	}
+
+	result := translate(name, ns, externalResource, now)
+
+	require.Equal(t, expected, result)
 }

@@ -86,6 +86,9 @@ const (
 	// OktetoGitCommitEnvVar is the SHA1 hash of the last commit of the branch.
 	OktetoGitCommitEnvVar = "OKTETO_GIT_COMMIT"
 
+	// OktetoNamespaceLabel is the label used to identify the namespace where the resource lives
+	OktetoNamespaceLabel = "dev.okteto.com/namespace"
+
 	// OktetoDivertWeaverDriver is the divert driver for weaver
 	OktetoDivertWeaverDriver = "weaver"
 
