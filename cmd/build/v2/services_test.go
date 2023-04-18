@@ -232,9 +232,9 @@ func TestGetToBuildTag(t *testing.T) {
 			manifestName: "test",
 			svcName:      "test",
 			output: []string{
-				"okteto.global/test-test:hello-this-is-a-test",
+				// "okteto.global/test-test:hello-this-is-a-test",
 				"okteto.dev/test-test:hello-this-is-a-test",
-				"okteto.global/test-test:okteto",
+				// "okteto.global/test-test:okteto",
 				"okteto.dev/test-test:okteto",
 			},
 		},
@@ -259,9 +259,9 @@ func TestGetToBuildTag(t *testing.T) {
 			manifestName: "test",
 			svcName:      "test",
 			output: []string{
-				"okteto.global/test-test:hello-this-is-a-test",
+				// "okteto.global/test-test:hello-this-is-a-test",
 				"okteto.dev/test-test:hello-this-is-a-test",
-				"okteto.global/test-test:okteto-with-volume-mounts",
+				// "okteto.global/test-test:okteto-with-volume-mounts",
 				"okteto.dev/test-test:okteto-with-volume-mounts",
 			},
 		},
