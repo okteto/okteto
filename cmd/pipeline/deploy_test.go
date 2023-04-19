@@ -17,16 +17,21 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
 	"github.com/okteto/okteto/internal/test/client"
+	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 func Test_getRepositoryURL(t *testing.T) {
@@ -320,4 +325,63 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 	}
 	err := pc.ExecuteDeployPipeline(ctx, opts)
 	assert.NoError(t, err)
+}
+
+func TestSetEnvsFromDependencyNoError(t *testing.T) {
+	ctx := context.Background()
+	var tests = []struct {
+		name                 string
+		dataToSetInConfigMap map[string]string
+		isEnvsGenerated      bool
+	}{
+		{
+			name: "no envs to set",
+			dataToSetInConfigMap: map[string]string{
+				"TESTSETENVSFROMDEPEN": "VALUE",
+			},
+			isEnvsGenerated: false,
+		},
+		{
+			name: "setting envs",
+			dataToSetInConfigMap: map[string]string{
+				"OKTETO_TESTSETENVSFROMDEPEN_ONE": "an env value",
+				"OKTETO_TESTSETENVSFROMDEPEN_TWO": "another env value",
+			},
+			isEnvsGenerated: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmap := &apiv1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      pipeline.TranslatePipelineName("test"),
+					Namespace: "test",
+					Labels:    map[string]string{},
+				},
+				Data: tt.dataToSetInConfigMap,
+			}
+			fakeClient := fake.NewSimpleClientset(cmap)
+			err := setEnvsFromDependency(ctx, "test", "test", fakeClient)
+			assert.NoError(t, err)
+
+			if tt.isEnvsGenerated {
+				for k := range tt.dataToSetInConfigMap {
+					os.Unsetenv(k)
+				}
+			}
+		})
+	}
+}
+
+func TestSetEnvsFromDependencyWithError(t *testing.T) {
+	ctx := context.Background()
+	cmap := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "test",
+			Labels:    map[string]string{},
+		},
+	}
+	fakeClient := fake.NewSimpleClientset(cmap)
+	assert.Error(t, setEnvsFromDependency(ctx, "test", "test", fakeClient))
 }
