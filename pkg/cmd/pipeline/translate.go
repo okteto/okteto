@@ -150,7 +150,7 @@ func UpdateEnvs(ctx context.Context, name, namespace string, envs []string, c ku
 				return fmt.Errorf("invalid env format: '%s'", env)
 			}
 
-			cmap.Data[fmt.Sprintf("%s_%s", constants.OktetoDependencyEnvPreffix, result[0])] = result[1]
+			cmap.Data[fmt.Sprintf("%s_%s", constants.OktetoDependencyEnvPrefix, result[0])] = result[1]
 		}
 		return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 	}
