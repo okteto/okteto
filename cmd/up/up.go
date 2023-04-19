@@ -30,6 +30,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/manifest"
+	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/constants"
@@ -156,6 +157,22 @@ func Up() *cobra.Command {
 				oktetoManifest, err = LoadManifestWithInit(ctx, upOptions.K8sContext, upOptions.Namespace, upOptions.ManifestPath)
 				if err != nil {
 					return err
+				}
+			}
+
+			if okteto.IsOkteto() {
+				create, err := utils.ShouldCreateNamespace(ctx, okteto.Context().Namespace)
+				if err != nil {
+					return err
+				}
+				if create {
+					nsCmd, err := namespace.NewCommand()
+					if err != nil {
+						return err
+					}
+					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.Context().Namespace}); err != nil {
+						return err
+					}
 				}
 			}
 
