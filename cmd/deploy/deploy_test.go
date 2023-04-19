@@ -165,7 +165,7 @@ func (f *fakeCmapHandler) updateConfigMap(context.Context, *apiv1.ConfigMap, *pi
 	return nil
 }
 
-func (f *fakeCmapHandler) updateEnvs(context.Context, string, string, []string) error {
+func (f *fakeCmapHandler) updateEnvsFromCommands(context.Context, string, string, []string) error {
 	return f.errUpdatingWithEnvs
 }
 
