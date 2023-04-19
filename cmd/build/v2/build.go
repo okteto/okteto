@@ -157,7 +157,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			// TODO: uncomment this when we have the commit + build args hashed
 			// if imageTag, isBuilt := bc.checkIfCommitIsAlreadyBuilt(options.Manifest.Name, svcToBuild, bc.Config.GetHash(), options.NoCache); isBuilt {
-			// 	oktetoLog.Warning("Skipping build of '%s' svc because it's commit is already built", svcToBuild)
+			// 	oktetoLog.Warning("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, bc.Config.GetHash())
 			// 	bc.SetServiceEnvVars(svcToBuild, imageTag)
 			// 	bc.builtImages[svcToBuild] = true
 			// 	continue
