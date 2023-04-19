@@ -107,8 +107,8 @@ type previewEnv struct {
 }
 
 type deployPreviewResponse struct {
-	Action  actionStruct
-	Preview previewIDStruct
+	Id     graphql.String
+	Action actionStruct
 }
 
 type previewIDStruct struct {
@@ -164,7 +164,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 			Status: string(mutationStruct.Response.Action.Status),
 		}
 		previewResponse.Preview = &types.Preview{
-			ID: string(mutationStruct.Response.Preview.Id),
+			ID: string(mutationStruct.Response.Id),
 		}
 	} else {
 		mutationStruct := deployPreviewMutation{}
@@ -189,7 +189,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 			Status: string(mutationStruct.Response.Action.Status),
 		}
 		previewResponse.Preview = &types.Preview{
-			ID: string(mutationStruct.Response.Preview.Id),
+			ID: string(mutationStruct.Response.Id),
 		}
 	}
 	return previewResponse, nil
