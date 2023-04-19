@@ -82,6 +82,7 @@ func (ch *defaultConfigMapHandler) updateConfigMap(ctx context.Context, cfg *api
 	return errMain
 }
 
+// updateEnvsFromCommands update config map by adding envs generated in OKTETO_ENV as data fields
 func (h *defaultConfigMapHandler) updateEnvsFromCommands(ctx context.Context, name, namespace string, envs []string) error {
 	c, _, err := h.k8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {

@@ -136,7 +136,7 @@ func UpdateConfigMap(ctx context.Context, cmap *apiv1.ConfigMap, data *CfgData, 
 	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 }
 
-// UpdateConfigMap updates the configmaps fields
+// UpdateEnvs updates the configmap adding the envs as data fields
 func UpdateEnvs(ctx context.Context, name, namespace string, envs []string, c kubernetes.Interface) error {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
 	if err != nil {
