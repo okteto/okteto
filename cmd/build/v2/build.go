@@ -154,12 +154,14 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			if options.EnableStages {
 				oktetoLog.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
 			}
-			if imageTag, isBuilt := bc.checkIfCommitIsAlreadyBuilt(options.Manifest.Name, svcToBuild, bc.Config.GetHash(), options.NoCache); isBuilt {
-				oktetoLog.Warning("Skipping build of '%s' svc because it's commit is already built", svcToBuild)
-				bc.SetServiceEnvVars(svcToBuild, imageTag)
-				bc.builtImages[svcToBuild] = true
-				continue
-			}
+
+			// TODO: uncomment this when we have the commit + build args hashed
+			// if imageTag, isBuilt := bc.checkIfCommitIsAlreadyBuilt(options.Manifest.Name, svcToBuild, bc.Config.GetHash(), options.NoCache); isBuilt {
+			// 	oktetoLog.Warning("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, bc.Config.GetHash())
+			// 	bc.SetServiceEnvVars(svcToBuild, imageTag)
+			// 	bc.builtImages[svcToBuild] = true
+			// 	continue
+			// }
 
 			buildSvcInfo := buildManifest[svcToBuild]
 			if !okteto.Context().IsOkteto && buildSvcInfo.Image == "" {
