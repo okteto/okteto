@@ -151,7 +151,7 @@ func UpdateEnvs(ctx context.Context, name, namespace string, envs []string, c ku
 			}
 			cmap.Data[result[0]] = result[1]
 		}
-		return configmaps.Update(ctx, cmap, cmap.Namespace, c)
+		return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
 	}
 	return nil
 }

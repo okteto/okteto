@@ -62,7 +62,7 @@ func Deploy(ctx context.Context, cf *apiv1.ConfigMap, namespace string, c kubern
 	if old.Labels[model.OktetoInstallerRunningLabel] == "true" && old.Labels[model.GitDeployLabel] != "true" {
 		return nil
 	}
-	return Update(ctx, cf, namespace, c)
+	return update(ctx, cf, namespace, c)
 }
 
 // Destroy deletes a configmap in a space
@@ -83,7 +83,7 @@ func Create(ctx context.Context, cf *apiv1.ConfigMap, namespace string, c kubern
 	return nil
 }
 
-func Update(ctx context.Context, cf *apiv1.ConfigMap, namespace string, c kubernetes.Interface) error {
+func update(ctx context.Context, cf *apiv1.ConfigMap, namespace string, c kubernetes.Interface) error {
 	_, err := c.CoreV1().ConfigMaps(namespace).Update(ctx, cf, metav1.UpdateOptions{})
 	if err != nil {
 		return err
