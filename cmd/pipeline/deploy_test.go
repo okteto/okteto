@@ -344,8 +344,8 @@ func TestSetEnvsFromDependencyNoError(t *testing.T) {
 		{
 			name: "setting envs",
 			dataToSetInConfigMap: map[string]string{
-				"OKTETO_TESTSETENVSFROMDEPEN_ONE": "an env value",
-				"OKTETO_TESTSETENVSFROMDEPEN_TWO": "another env value",
+				"OKTETO_DEPENDENCY_TESTSETENVSFROMDEPEN_ONE": "an env value",
+				"OKTETO_DEPENDENCY_TESTSETENVSFROMDEPEN_TWO": "another env value",
 			},
 			isEnvsGenerated: true,
 		},

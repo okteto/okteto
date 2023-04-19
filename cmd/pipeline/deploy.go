@@ -26,6 +26,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
@@ -220,7 +221,8 @@ func setEnvsFromDependency(ctx context.Context, name, namespace string, c kubern
 
 	if cmap != nil {
 		for k, v := range cmap.Data {
-			if strings.HasPrefix(k, "OKTETO_") {
+			if strings.HasPrefix(k, constants.OktetoDependencyEnvPreffix) {
+				k = strings.TrimPrefix(k, fmt.Sprintf("%s_", constants.OktetoDependencyEnvPreffix))
 				envName := fmt.Sprintf("OKTETO_DEPENDENCY_%s_VARIABLE_%s", strings.ToUpper(name), k)
 				err := os.Setenv(envName, v)
 				if err != nil {
