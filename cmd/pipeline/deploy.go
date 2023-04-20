@@ -226,25 +226,22 @@ func setEnvsFromDependency(ctx context.Context, name, namespace string, c kubern
 	}
 
 	if cmap != nil {
-		for k, v := range cmap.Data {
-			if strings.HasPrefix(k, constants.OktetoDependencyEnvsKey) {
-				envsToSet := make(map[string]string)
-				decodedEnvs, err := base64.StdEncoding.DecodeString(v)
+		if dependencyEnvs, ok := cmap.Data[constants.OktetoDependencyEnvsKey]; ok {
+			envsToSet := make(map[string]string)
+			decodedEnvs, err := base64.StdEncoding.DecodeString(dependencyEnvs)
+			if err != nil {
+				return err
+			}
+			err = json.Unmarshal(decodedEnvs, &envsToSet)
+			if err != nil {
+				return err
+			}
+			for envKey, envValue := range envsToSet {
+				envName := fmt.Sprintf(dependencyEnvTemplate, strings.ToUpper(name), envKey)
+				err := os.Setenv(envName, envValue)
 				if err != nil {
 					return err
 				}
-				err = json.Unmarshal(decodedEnvs, &envsToSet)
-				if err != nil {
-					return err
-				}
-				for envKey, envValue := range envsToSet {
-					envName := fmt.Sprintf(dependencyEnvTemplate, strings.ToUpper(name), envKey)
-					err := os.Setenv(envName, envValue)
-					if err != nil {
-						return err
-					}
-				}
-				break
 			}
 		}
 	}
