@@ -286,6 +286,9 @@ func getLoggedUserContext(ctx context.Context, c *ContextCommand, ctxOptions *Co
 
 	okteto.Context().Token = user.Token
 
+	if ctxOptions.Namespace == "" {
+		ctxOptions.Namespace = user.Namespace
+	}
 	userContext, err := c.getUserContext(ctx, ctxOptions.Namespace)
 	if err != nil {
 		return nil, err
