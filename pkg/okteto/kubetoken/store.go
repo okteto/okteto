@@ -20,7 +20,7 @@ func NewFileByteStore(fileName string) *FileByteStore {
 		},
 		osReadFile: os.ReadFile,
 		writeFile: func(filename string, data []byte) error {
-			return os.WriteFile(filename, data, 0764)
+			return os.WriteFile(filename, data, 0664)
 		},
 	}
 }
