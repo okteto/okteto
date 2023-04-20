@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	giturls "github.com/whilp/git-urls"
 	apiv1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -87,8 +88,8 @@ type CfgData struct {
 	Icon       string
 }
 
-// TranslateConfigMapAndDeploy translates the app into a configMap
-// name param is the pipeline sanitized name
+// TranslateConfigMapAndDeploy translates the app into a configMap.
+// Name param is the pipeline sanitized name
 func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(data.Name), data.Namespace, c)
 	if err != nil {
@@ -260,11 +261,27 @@ func AddDevAnnotations(ctx context.Context, manifest *model.Manifest, c kubernet
 			continue
 		}
 		if repo != "" {
-			app.ObjectMeta().Annotations[model.OktetoRepositoryAnnotation] = repo
+			app.ObjectMeta().Annotations[model.OktetoRepositoryAnnotation] = removeSensitiveDataFromGitURL(repo)
 		}
 		app.ObjectMeta().Annotations[model.OktetoDevNameAnnotation] = devName
 		if err := app.PatchAnnotations(ctx, c); err != nil {
 			oktetoLog.Infof("could not add %s dev annotations due to: %s", devName, err.Error())
 		}
 	}
+}
+
+func removeSensitiveDataFromGitURL(gitURL string) string {
+	if gitURL == "" {
+		return gitURL
+	}
+
+	parsedRepo, err := giturls.Parse(gitURL)
+	if err != nil {
+		return ""
+	}
+
+	if parsedRepo.User.Username() != "" {
+		parsedRepo.User = nil
+	}
+	return parsedRepo.String()
 }

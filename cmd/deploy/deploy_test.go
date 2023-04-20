@@ -18,16 +18,21 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/okteto/okteto/pkg/divert"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/registry"
 
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -57,6 +62,60 @@ var errorManifest *model.Manifest = &model.Manifest{
 		},
 	},
 }
+
+type fakeRegistry struct {
+	err      error
+	registry map[string]fakeImage
+}
+
+// fakeImage represents the data from an image
+type fakeImage struct {
+	Registry string
+	Repo     string
+	Tag      string
+	ImageRef string
+	Args     []string
+}
+
+func newFakeRegistry() fakeRegistry {
+	return fakeRegistry{
+		registry: map[string]fakeImage{},
+	}
+}
+
+func (fr fakeRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
+	if _, ok := fr.registry[imageTag]; !ok {
+		return "", oktetoErrors.ErrNotFound
+	}
+	return imageTag, nil
+}
+
+func (fr fakeRegistry) GetImageReference(image string) (registry.OktetoImageReference, error) {
+	ref, err := name.ParseReference(image)
+	if err != nil {
+		return registry.OktetoImageReference{}, err
+	}
+	return registry.OktetoImageReference{
+		Registry: ref.Context().RegistryStr(),
+		Repo:     ref.Context().RepositoryStr(),
+		Tag:      ref.Identifier(),
+		Image:    image,
+	}, nil
+}
+
+func (fr fakeRegistry) HasGlobalPushAccess() (bool, error) { return false, nil }
+
+func (fr fakeRegistry) IsOktetoRegistry(_ string) bool { return false }
+
+func (fr fakeRegistry) AddImageByOpts(opts *types.BuildOptions) error {
+	fr.registry[opts.Tag] = fakeImage{Args: opts.BuildArgs}
+	return nil
+}
+
+func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
+
+func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
+func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
 
 var fakeManifest *model.Manifest = &model.Manifest{
 	Deploy: &model.DeployInfo{
@@ -111,7 +170,7 @@ func (fk *fakeProxy) Start() {
 
 func (*fakeProxy) SetName(_ string) {}
 
-func (*fakeProxy) SetDivert(_ string) {}
+func (*fakeProxy) SetDivert(_ divert.Driver) {}
 
 func (fk *fakeProxy) Shutdown(_ context.Context) error {
 	if fk.errOnShutdown != nil {
@@ -229,7 +288,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 
 	clientProvider := test.NewFakeK8sProvider()
 
-	registry := test.NewFakeOktetoRegistry(nil)
+	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
 	c := &DeployCommand{
 		GetManifest: getErrorManifest,
@@ -252,7 +311,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	err := c.RunDeploy(ctx, opts)
 
 	// we should get a build error because Dockerfile does not exist
-	assert.Error(t, err)
+	assert.True(t, strings.Contains(err.Error(), oktetoErrors.InvalidDockerfile))
 
 	fakeClient, _, err := c.K8sClientProvider.Provide(clientcmdapi.NewConfig())
 	if err != nil {
@@ -284,8 +343,6 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	}
 
 	expectedCfg.Data["output"] = cfg.Data["output"]
-
-	assert.True(t, strings.Contains(oktetoLog.GetOutputBuffer().String(), errors.InvalidDockerfile))
 
 	assert.Equal(t, expectedCfg.Name, cfg.Name)
 	assert.Equal(t, expectedCfg.Namespace, cfg.Namespace)
@@ -734,10 +791,6 @@ func (f *fakeExternalControlProvider) getFakeExternalControl(cp okteto.K8sClient
 	return f.control, f.err
 }
 
-func (f *fakeExternalControlProvider) getFakeExternalControlValidator(cp okteto.K8sClientProvider) (ExternalResourceValidatorInterface, error) {
-	return f.control, f.err
-}
-
 func TestDeployExternals(t *testing.T) {
 	ctx := context.Background()
 	okteto.CurrentStore = &okteto.OktetoContextStore{
@@ -827,106 +880,78 @@ func TestDeployExternals(t *testing.T) {
 	}
 }
 
-func TestValidateK8sResources(t *testing.T) {
-	ctx := context.Background()
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
-	testCases := []struct {
-		name        string
-		manifest    *model.Manifest
-		expectedErr bool
-		providedErr error
-		control     ExternalResourceInterface
+func TestGetDefaultTimeout(t *testing.T) {
+	tt := []struct {
+		name       string
+		envarValue string
+		expected   time.Duration
 	}{
 		{
-			name: "no externals to validate",
-			manifest: &model.Manifest{
-				Deploy:   &model.DeployInfo{},
-				External: nil,
-			},
-			control: &fakeExternalControl{},
+			name:       "env var not set",
+			envarValue: "",
+			expected:   5 * time.Minute,
 		},
 		{
-			name: "error getting external control",
-			manifest: &model.Manifest{
-				Deploy: &model.DeployInfo{},
-				External: externalresource.ExternalResourceSection{
-					"test": &externalresource.ExternalResource{
-						Icon: "myIcon",
-						Notes: &externalresource.Notes{
-							Path: "/some/path",
-						},
-						Endpoints: []*externalresource.ExternalEndpoint{},
-					},
-				},
-			},
-			control: &fakeExternalControl{
-				err: assert.AnError,
-			},
-			providedErr: assert.AnError,
-			expectedErr: true,
+			name:       "env var set with not the proper syntax",
+			envarValue: "hello world",
+			expected:   5 * time.Minute,
 		},
 		{
-			name: "error validating external control",
-			manifest: &model.Manifest{
-				Deploy: &model.DeployInfo{},
-				External: externalresource.ExternalResourceSection{
-					"test": &externalresource.ExternalResource{
-						Icon: "myIcon",
-						Notes: &externalresource.Notes{
-							Path: "/some/path",
-						},
-						Endpoints: []*externalresource.ExternalEndpoint{},
-					},
-				},
-			},
-			control: &fakeExternalControl{
-				err: assert.AnError,
-			},
-			expectedErr: true,
-		},
-		{
-			name: "validated external control",
-			manifest: &model.Manifest{
-				Deploy: &model.DeployInfo{},
-				External: externalresource.ExternalResourceSection{
-					"test": &externalresource.ExternalResource{
-						Icon: "myIcon",
-						Notes: &externalresource.Notes{
-							Path: "/some/path",
-						},
-						Endpoints: []*externalresource.ExternalEndpoint{},
-					},
-				},
-			},
-			control: &fakeExternalControl{},
+			name:       "env var set",
+			envarValue: "10m",
+			expected:   10 * time.Minute,
 		},
 	}
 
-	for _, tc := range testCases {
+	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv(model.OktetoTimeoutEnvVar, tc.envarValue)
+			assert.Equal(t, tc.expected, getDefaultTimeout())
+		})
+	}
+}
 
-			cp := fakeExternalControlProvider{
-				control: tc.control,
-				err:     tc.providedErr,
-			}
+type fakePipelineDeployer struct {
+	err error
+}
 
-			ld := localDeployer{
-				GetExternalControlForValidator: cp.getFakeExternalControlValidator,
-			}
+func (fd fakePipelineDeployer) ExecuteDeployPipeline(_ context.Context, _ *pipelineCMD.DeployOptions) error {
+	return fd.err
+}
 
-			if tc.expectedErr {
-				assert.Error(t, ld.validateK8sResources(ctx, tc.manifest))
-			} else {
-				assert.NoError(t, ld.validateK8sResources(ctx, tc.manifest))
+func TestDeployDependencies(t *testing.T) {
+	fakeManifest := &model.Manifest{
+		Dependencies: model.ManifestDependencies{
+			"a": &model.Dependency{
+				Namespace: "b",
+			},
+			"b": &model.Dependency{},
+		},
+	}
+	type config struct {
+		pipelineErr error
+	}
+	tt := []struct {
+		name     string
+		config   config
+		expected error
+	}{
+		{
+			name:     "error deploying dependency",
+			config:   config{pipelineErr: assert.AnError},
+			expected: assert.AnError,
+		},
+		{
+			name: "successful",
+		},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			dc := &DeployCommand{
+				PipelineCMD: fakePipelineDeployer{tc.config.pipelineErr},
 			}
+			assert.ErrorIs(t, tc.expected, dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifest}))
 		})
 	}
 }

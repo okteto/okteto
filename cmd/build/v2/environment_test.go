@@ -28,45 +28,59 @@ import (
 )
 
 func Test_SetServiceEnvVars(t *testing.T) {
-	tests := []struct {
-		name          string
-		service       string
-		reference     string
+	type input struct {
+		service   string
+		reference string
+	}
+	type expected struct {
 		expRegistry   string
 		expRepository string
 		expImage      string
 		expTag        string
 		expSHA        string
+	}
+	tests := []struct {
+		name     string
+		input    input
+		expected expected
 	}{
 		{
-			name:          "setting-variables",
-			service:       "frontend",
-			reference:     "registry.url/namespace/frontend@sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
-			expRegistry:   "registry.url",
-			expRepository: "namespace/frontend",
-			expImage:      "registry.url/namespace/frontend@sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
-			expTag:        "sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
-			expSHA:        "okteto@sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
+			name: "setting-variables",
+			input: input{
+				service:   "frontend",
+				reference: "registry.url/namespace/frontend@sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
+			},
+			expected: expected{
+				expRegistry:   "registry.url",
+				expRepository: "namespace/frontend",
+				expImage:      "registry.url/namespace/frontend@sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
+				expTag:        "sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
+				expSHA:        "okteto@sha256:7075f1094117e418764bb9b47a5dfc093466e714ec385223fb582d78220c7252",
+			},
 		},
 		{
-			name:          "setting-variables-no-tag",
-			service:       "frontend",
-			reference:     "registry.url/namespace/frontend",
-			expRegistry:   "registry.url",
-			expRepository: "namespace/frontend",
-			expImage:      "registry.url/namespace/frontend",
-			expTag:        "latest",
-			expSHA:        "latest",
+			name: "setting-variables-no-tag",
+			input: input{
+				service:   "frontend",
+				reference: "registry.url/namespace/frontend",
+			},
+			expected: expected{
+				expRegistry:   "registry.url",
+				expRepository: "namespace/frontend",
+				expImage:      "registry.url/namespace/frontend",
+				expTag:        "latest",
+				expSHA:        "latest",
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", strings.ToUpper(tt.service))
-			imageEnv := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(tt.service))
-			repositoryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", strings.ToUpper(tt.service))
-			tagEnv := fmt.Sprintf("OKTETO_BUILD_%s_TAG", strings.ToUpper(tt.service))
-			shaEnv := fmt.Sprintf("OKTETO_BUILD_%s_SHA", strings.ToUpper(tt.service))
+			registryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", strings.ToUpper(tt.input.service))
+			imageEnv := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", strings.ToUpper(tt.input.service))
+			repositoryEnv := fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", strings.ToUpper(tt.input.service))
+			tagEnv := fmt.Sprintf("OKTETO_BUILD_%s_TAG", strings.ToUpper(tt.input.service))
+			shaEnv := fmt.Sprintf("OKTETO_BUILD_%s_SHA", strings.ToUpper(tt.input.service))
 
 			envs := []string{registryEnv, imageEnv, repositoryEnv, tagEnv}
 			for _, e := range envs {
@@ -80,9 +94,9 @@ func Test_SetServiceEnvVars(t *testing.T) {
 				}
 			}
 
-			registry := test.NewFakeOktetoRegistry(nil)
-			bc := NewBuilder(nil, registry)
-			bc.SetServiceEnvVars(tt.service, tt.reference)
+			registry := newFakeRegistry()
+			bc := NewFakeBuilder(nil, registry)
+			bc.SetServiceEnvVars(tt.input.service, tt.input.reference)
 
 			registryEnvValue := os.Getenv(registryEnv)
 			imageEnvValue := os.Getenv(imageEnv)
@@ -90,21 +104,11 @@ func Test_SetServiceEnvVars(t *testing.T) {
 			tagEnvValue := os.Getenv(tagEnv)
 			shaEnvValue := os.Getenv(shaEnv)
 
-			if registryEnvValue != tt.expRegistry {
-				t.Errorf("registry - expected %s , got %s", tt.expRegistry, registryEnvValue)
-			}
-			if imageEnvValue != tt.expImage {
-				t.Errorf("image - expected %s , got %s", tt.expImage, imageEnvValue)
-			}
-			if repositoryEnvValue != tt.expRepository {
-				t.Errorf("repository - expected %s , got %s", tt.expRepository, repositoryEnvValue)
-			}
-			if tagEnvValue != tt.expTag {
-				t.Errorf("tag - expected %s , got %s", tt.expTag, tagEnvValue)
-			}
-			if shaEnvValue != tt.expSHA {
-				t.Errorf("sha - expected %s , got %s", tt.expSHA, shaEnvValue)
-			}
+			assert.Equal(t, tt.expected.expRegistry, registryEnvValue)
+			assert.Equal(t, tt.expected.expImage, imageEnvValue)
+			assert.Equal(t, tt.expected.expRepository, repositoryEnvValue)
+			assert.Equal(t, tt.expected.expTag, tagEnvValue)
+			assert.Equal(t, tt.expected.expSHA, shaEnvValue)
 		})
 	}
 }
@@ -121,9 +125,9 @@ func TestExpandStackVariables(t *testing.T) {
 		CurrentContext: "test",
 	}
 
-	registry := test.NewFakeOktetoRegistry(nil)
+	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewBuilder(builder, registry)
+	bc := NewFakeBuilder(builder, registry)
 	stack := &model.Stack{
 		Services: map[string]*model.Service{
 			"test": {

@@ -30,6 +30,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/cmd/manifest"
+	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/constants"
@@ -38,6 +39,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -158,6 +160,22 @@ func Up() *cobra.Command {
 				}
 			}
 
+			if okteto.IsOkteto() {
+				create, err := utils.ShouldCreateNamespace(ctx, okteto.Context().Namespace)
+				if err != nil {
+					return err
+				}
+				if create {
+					nsCmd, err := namespace.NewCommand()
+					if err != nil {
+						return err
+					}
+					if err := nsCmd.Create(ctx, &namespace.CreateOptions{Namespace: okteto.Context().Namespace}); err != nil {
+						return err
+					}
+				}
+			}
+
 			wd, err := os.Getwd()
 			if err != nil {
 				return err
@@ -225,6 +243,7 @@ func Up() *cobra.Command {
 				Exit:           make(chan error, 1),
 				resetSyncthing: upOptions.Reset,
 				StartTime:      time.Now(),
+				Registry:       registry.NewOktetoRegistry(okteto.Config{}),
 				Options:        upOptions,
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
@@ -522,6 +541,10 @@ func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVar
 
 func (up *upContext) deployApp(ctx context.Context) error {
 	k8sProvider := okteto.NewK8sClientProvider()
+	pc, err := pipelineCMD.NewCommand()
+	if err != nil {
+		return err
+	}
 	c := &deploy.DeployCommand{
 		GetManifest:        up.getManifest,
 		GetDeployer:        deploy.GetDeployer,
@@ -531,6 +554,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		GetExternalControl: deploy.GetExternalControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider),
+		PipelineCMD:        pc,
 	}
 
 	return c.RunDeploy(ctx, &deploy.Options{
@@ -743,7 +767,7 @@ func (up *upContext) buildDevImage(ctx context.Context, app apps.App) error {
 
 	oktetoLog.Information("Running your build in %s...", okteto.Context().Builder)
 
-	imageTag := registry.GetImageTag(image, up.Dev.Name, up.Dev.Namespace, oktetoRegistryURL)
+	imageTag := up.Registry.GetImageTag(image, up.Dev.Name, up.Dev.Namespace)
 	oktetoLog.Infof("building dev image tag %s", imageTag)
 
 	buildArgs := model.SerializeBuildArgs(args)

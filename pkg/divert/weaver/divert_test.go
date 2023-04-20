@@ -65,8 +65,6 @@ func Test_divertIngresses(t *testing.T) {
 		},
 	}
 	expectedI1 := i1.DeepCopy()
-	expectedI1.Annotations[model.OktetoDivertIngressInjectionAnnotation] = "cindy"
-	expectedI1.Annotations[model.OktetoNginxConfigurationSnippetAnnotation] = divertTextBlockParser.WriteBlock("proxy_set_header x-okteto-dvrt cindy;")
 	di1 := &networkingv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "i1",
@@ -115,8 +113,6 @@ func Test_divertIngresses(t *testing.T) {
 			Annotations: map[string]string{
 				model.OktetoAutoCreateAnnotation: "true",
 				"a1":                             "v1",
-				model.OktetoDivertIngressInjectionAnnotation:    "cindy",
-				model.OktetoNginxConfigurationSnippetAnnotation: divertTextBlockParser.WriteBlock("proxy_set_header x-okteto-dvrt cindy;"),
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -156,8 +152,6 @@ func Test_divertIngresses(t *testing.T) {
 			Annotations: map[string]string{
 				model.OktetoAutoCreateAnnotation: "true",
 				"a1":                             "v2",
-				model.OktetoDivertIngressInjectionAnnotation:    "cindy",
-				model.OktetoNginxConfigurationSnippetAnnotation: divertTextBlockParser.WriteBlock("proxy_set_header x-okteto-dvrt cindy;"),
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -234,8 +228,6 @@ func Test_divertIngresses(t *testing.T) {
 			Annotations: map[string]string{
 				model.OktetoAutoCreateAnnotation: "true",
 				"a1":                             "v2",
-				model.OktetoDivertIngressInjectionAnnotation:    "cindy",
-				model.OktetoNginxConfigurationSnippetAnnotation: divertTextBlockParser.WriteBlock("proxy_set_header x-okteto-dvrt cindy;"),
 			},
 		},
 		Spec: networkingv1.IngressSpec{
@@ -635,16 +627,13 @@ func Test_divertIngresses(t *testing.T) {
 		Namespace: "cindy",
 		Deploy: &model.DeployInfo{
 			Divert: &model.DivertDeploy{
-				Namespace:  "staging",
-				Service:    "s1",
-				Deployment: "d1",
-				Port:       8080,
+				Namespace: "staging",
 			},
 		},
 	}
 
-	d := &Driver{client: c, manifest: m}
-	d.divertIngresses(ctx)
+	d := &Driver{client: c, name: m.Name, namespace: m.Namespace, divert: *m.Deploy.Divert}
+	d.Deploy(ctx)
 
 	resultI1, _ := c.NetworkingV1().Ingresses("cindy").Get(ctx, "i1", metav1.GetOptions{})
 	if !reflect.DeepEqual(expectedI1, resultI1) {

@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,6 +28,7 @@ import (
 	"github.com/a8m/envsubst"
 	"github.com/compose-spec/godotenv"
 	"github.com/google/uuid"
+	"github.com/okteto/okteto/pkg/cache"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
@@ -119,21 +119,18 @@ type Args struct {
 
 // BuildInfo represents the build info to generate an image
 type BuildInfo struct {
-	Name             string         `yaml:"name,omitempty"`
-	Context          string         `yaml:"context,omitempty"`
-	Dockerfile       string         `yaml:"dockerfile,omitempty"`
-	CacheFrom        CacheFrom      `yaml:"cache_from,omitempty"`
-	Target           string         `yaml:"target,omitempty"`
-	Args             BuildArgs      `yaml:"args,omitempty"`
-	Image            string         `yaml:"image,omitempty"`
-	VolumesToInclude []StackVolume  `yaml:"-"`
-	ExportCache      string         `yaml:"export_cache,omitempty"`
-	DependsOn        BuildDependsOn `yaml:"depends_on,omitempty"`
-	Secrets          BuildSecrets   `yaml:"secrets,omitempty"`
+	Name             string            `yaml:"name,omitempty"`
+	Context          string            `yaml:"context,omitempty"`
+	Dockerfile       string            `yaml:"dockerfile,omitempty"`
+	CacheFrom        cache.CacheFrom   `yaml:"cache_from,omitempty"`
+	Target           string            `yaml:"target,omitempty"`
+	Args             BuildArgs         `yaml:"args,omitempty"`
+	Image            string            `yaml:"image,omitempty"`
+	VolumesToInclude []StackVolume     `yaml:"-"`
+	ExportCache      cache.ExportCache `yaml:"export_cache,omitempty"`
+	DependsOn        BuildDependsOn    `yaml:"depends_on,omitempty"`
+	Secrets          BuildSecrets      `yaml:"secrets,omitempty"`
 }
-
-// CacheFrom is a list of images to import cache from.
-type CacheFrom []string
 
 // BuildArg is an argument used on the build step.
 type BuildArg struct {
@@ -577,9 +574,6 @@ func (dev *Dev) SetDefaults() error {
 	}
 	if dev.Interface == "" {
 		dev.Interface = Localhost
-		if runtime.GOOS != "windows" {
-			dev.Interface = PrivilegedLocalhost
-		}
 	}
 	if dev.SSHServerPort == 0 {
 		dev.SSHServerPort = oktetoDefaultSSHServerPort
@@ -1273,7 +1267,7 @@ func (dev *Dev) translateDeprecatedMetadataFields() {
 }
 
 func (service *Dev) validateForExtraFields() error {
-	errorMessage := "%q is not supported in Services. Please visit https://www.okteto.com/docs/0.10/reference/manifest/#services-object-optional for documentation"
+	errorMessage := "%q is not supported in Services. Please visit https://www.okteto.com/docs/reference/manifest/#services-object-optional for documentation"
 	if service.Username != "" {
 		return fmt.Errorf(errorMessage, "username")
 	}
@@ -1349,13 +1343,6 @@ func (service *Dev) validateForExtraFields() error {
 // DevCloneName returns the name of the mirrored version of a given resource
 func DevCloneName(name string) string {
 	return fmt.Sprintf("%s-okteto", name)
-}
-
-func getLocalhost() string {
-	if runtime.GOOS != "windows" {
-		return PrivilegedLocalhost
-	}
-	return Localhost
 }
 
 // Copy clones the buildInfo without the pointers

@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDestroyPipelineSuccesful(t *testing.T) {
+func TestDestroyPipelineSuccessful(t *testing.T) {
 	ctx := context.Background()
 	response := &client.FakePipelineResponses{
 		DestroyResponse: &types.GitDeployResponse{
@@ -47,7 +47,7 @@ func TestDestroyPipelineSuccesful(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDestroyPipelineSuccesfulWithWait(t *testing.T) {
+func TestDestroyPipelineSuccessfulWithWait(t *testing.T) {
 	ctx := context.Background()
 	response := &client.FakePipelineResponses{
 		DestroyResponse: &types.GitDeployResponse{
@@ -71,7 +71,7 @@ func TestDestroyPipelineSuccesfulWithWait(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDestroyPipelineSuccesfulWithWaitStreamErr(t *testing.T) {
+func TestDestroyPipelineSuccessfulWithWaitStreamErr(t *testing.T) {
 	ctx := context.Background()
 	response := &client.FakePipelineResponses{
 		DestroyResponse: &types.GitDeployResponse{
@@ -95,7 +95,7 @@ func TestDestroyPipelineSuccesfulWithWaitStreamErr(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDestroyNonExistantPipeline(t *testing.T) {
+func TestDestroyNonExistentPipeline(t *testing.T) {
 	ctx := context.Background()
 	response := &client.FakePipelineResponses{
 		DestroyErr: fmt.Errorf("not found"),
@@ -112,7 +112,7 @@ func TestDestroyNonExistantPipeline(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDestroyNonExistantPipelineWithWait(t *testing.T) {
+func TestDestroyNonExistentPipelineWithWait(t *testing.T) {
 	ctx := context.Background()
 	response := &client.FakePipelineResponses{
 		DestroyErr: fmt.Errorf("not found"),
@@ -135,7 +135,7 @@ func TestDestroyNonExistantPipelineWithWait(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestDestroyExistantPipelineWithError(t *testing.T) {
+func TestDestroyExistentPipelineWithError(t *testing.T) {
 	ctx := context.Background()
 	pipelineErr := fmt.Errorf("test error")
 	response := &client.FakePipelineResponses{
@@ -154,7 +154,7 @@ func TestDestroyExistantPipelineWithError(t *testing.T) {
 	assert.ErrorIs(t, err, pipelineErr)
 }
 
-func TestDestroyExistantPipelineTimeoutError(t *testing.T) {
+func TestDestroyExistentPipelineTimeoutError(t *testing.T) {
 	ctx := context.Background()
 	pipelineErr := fmt.Errorf("test error")
 	response := &client.FakePipelineResponses{

@@ -1399,7 +1399,7 @@ services:
         cpu: "500m"
     workdir: /app
     %s`, tt.value))
-			expected := fmt.Sprintf("Error on dev 'deployment': %q is not supported in Services. Please visit https://www.okteto.com/docs/0.10/reference/manifest/#services-object-optional for documentation", tt.name)
+			expected := fmt.Sprintf("Error on dev 'deployment': %q is not supported in Services. Please visit https://www.okteto.com/docs/reference/manifest/#services-object-optional for documentation", tt.name)
 
 			_, err := Read(manifest)
 			if err == nil {
@@ -1584,7 +1584,7 @@ func Test_BuildInfoCopy(t *testing.T) {
 		Target:      "target",
 		Image:       "image",
 		CacheFrom:   []string{"cache"},
-		ExportCache: "export",
+		ExportCache: []string{"export"},
 		Args: BuildArgs{
 			BuildArg{
 				Name:  "env",

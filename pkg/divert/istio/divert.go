@@ -20,7 +20,9 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/virtualservices"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
 	istioclientset "istio.io/client-go/pkg/clientset/versioned"
+	apiv1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 )
@@ -38,6 +40,12 @@ type Driver struct {
 	istioClient istioclientset.Interface
 }
 
+// DivertTransformation represents the annotation for the okteto mutation webhook to divert a virtual service
+type DivertTransformation struct {
+	Namespace string   `json:"namespace"`
+	Routes    []string `json:"routes,omitempty"`
+}
+
 func New(m *model.Manifest, c kubernetes.Interface, ic istioclientset.Interface) *Driver {
 	return &Driver{
 		name:        m.Name,
@@ -49,9 +57,15 @@ func New(m *model.Manifest, c kubernetes.Interface, ic istioclientset.Interface)
 }
 
 func (d *Driver) Deploy(ctx context.Context) error {
-	oktetoLog.Spinner(fmt.Sprintf("Diverting service %s/%s...", d.divert.Namespace, d.divert.Service))
-	if err := d.retryTranslateDivertService(ctx); err != nil {
-		return err
+	for i := range d.divert.VirtualServices {
+		oktetoLog.Spinner(fmt.Sprintf("Diverting virtual service %s/%s...", d.divert.VirtualServices[i].Namespace, d.divert.VirtualServices[i].Name))
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
+		if err := d.retryTranslateDivertVirtualService(ctx, d.divert.VirtualServices[i]); err != nil {
+			return err
+		}
+		oktetoLog.StopSpinner()
+		oktetoLog.Success("Virtual service '%s/%s' successfully diverted", d.divert.VirtualServices[i].Namespace, d.divert.VirtualServices[i].Name)
 	}
 
 	for i := range d.divert.Hosts {
@@ -61,9 +75,13 @@ func (d *Driver) Deploy(ctx context.Context) error {
 			return ctx.Err()
 		default:
 			oktetoLog.Spinner(fmt.Sprintf("Diverting host %s/%s...", d.divert.Hosts[i].Namespace, d.divert.Hosts[i].VirtualService))
+			oktetoLog.StartSpinner()
+			defer oktetoLog.StopSpinner()
 			if err := d.retryTranslateDivertHost(ctx, d.divert.Hosts[i]); err != nil {
 				return err
 			}
+			oktetoLog.StopSpinner()
+			oktetoLog.Success("Host '%s/%s' successfully diverted", d.divert.Hosts[i].Namespace, d.divert.Hosts[i].VirtualService)
 		}
 	}
 
@@ -71,38 +89,55 @@ func (d *Driver) Deploy(ctx context.Context) error {
 }
 
 func (d *Driver) Destroy(ctx context.Context) error {
-	oktetoLog.Spinner(fmt.Sprintf("Destroying divert service %s/%s ...", d.divert.Namespace, d.divert.Service))
 	var err error
-	for retries := 0; retries < UPDATE_CONFLICT_RETRIES; retries++ {
-		vs, err := virtualservices.Get(ctx, d.divert.VirtualService, d.divert.Namespace, d.istioClient)
-		if err != nil {
-			return err
-		}
-		restoredVS := d.restoreDivertService(vs)
+	for i := range d.divert.VirtualServices {
+		oktetoLog.Spinner(fmt.Sprintf("Restoring virtual service %s/%s...", d.divert.VirtualServices[i].Namespace, d.divert.VirtualServices[i].Name))
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
+		for retries := 0; retries < UPDATE_CONFLICT_RETRIES; retries++ {
+			vs, err := virtualservices.Get(ctx, d.divert.VirtualServices[i].Name, d.divert.VirtualServices[i].Namespace, d.istioClient)
+			if err != nil {
+				return err
+			}
+			restoredVS := d.restoreDivertVirtualService(vs)
 
-		err = virtualservices.Update(ctx, restoredVS, d.istioClient)
-		if err == nil {
-			return nil
+			err = virtualservices.Update(ctx, restoredVS, d.istioClient)
+			if err == nil {
+				oktetoLog.StopSpinner()
+				oktetoLog.Success("Virtual service '%s/%s' successfully restored", d.divert.VirtualServices[i].Namespace, d.divert.VirtualServices[i].Name)
+				break
+			}
+			if !k8sErrors.IsConflict(err) {
+				return err
+			}
 		}
-		if !k8sErrors.IsConflict(err) {
+		if err != nil {
 			return err
 		}
 	}
-	return err
+	return nil
+
 }
 
-func (d *Driver) GetDivertNamespace() string {
-	return ""
+func (d *Driver) UpdatePod(pod apiv1.PodSpec) apiv1.PodSpec {
+	return pod
 }
 
-func (d *Driver) retryTranslateDivertService(ctx context.Context) error {
+func (d *Driver) UpdateVirtualService(vs istioNetworkingV1beta1.VirtualService) istioNetworkingV1beta1.VirtualService {
+	return d.injectDivertHeader(vs)
+}
+
+func (d *Driver) retryTranslateDivertVirtualService(ctx context.Context, divertVS model.DivertVirtualService) error {
 	var err error
 	for retries := 0; retries < UPDATE_CONFLICT_RETRIES; retries++ {
-		vs, err := virtualservices.Get(ctx, d.divert.VirtualService, d.divert.Namespace, d.istioClient)
+		vs, err := virtualservices.Get(ctx, divertVS.Name, divertVS.Namespace, d.istioClient)
 		if err != nil {
 			return err
 		}
-		translatedVS := d.translateDivertService(vs)
+		translatedVS, err := d.translateDivertVirtualService(vs, divertVS.Routes)
+		if err != nil {
+			return err
+		}
 		err = virtualservices.Update(ctx, translatedVS, d.istioClient)
 		if err == nil {
 			return nil
@@ -133,6 +168,11 @@ func (d *Driver) retryTranslateDivertHost(ctx context.Context, divertHost model.
 				return nil
 			}
 			return err
+		}
+
+		if devVS.Labels[model.OktetoAutoCreateAnnotation] != "true" {
+			oktetoLog.Infof("Ignoring host '%s/%s', virtual service '%s/%s'", divertHost.Namespace, divertHost.VirtualService, d.namespace, divertHost.VirtualService)
+			return nil
 		}
 
 		translatedVS.ResourceVersion = devVS.ResourceVersion

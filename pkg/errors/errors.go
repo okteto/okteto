@@ -29,6 +29,9 @@ type UserError struct {
 func (u UserError) Error() string {
 	return u.E.Error()
 }
+func (e UserError) Unwrap() error {
+	return e.E
+}
 
 // CommandError is meant for errors displayed to the user. It can include a message and a hint
 type CommandError struct {
@@ -184,6 +187,9 @@ var (
 
 	// ErrX509Hint should be included within a UserError.Hint when IsX509() return true
 	ErrX509Hint = "Add the flag '--insecure-skip-tls-verify' to skip certificate verification.\n    Follow this link to know more about configuring your own certificates with Okteto:\n    https://www.okteto.com/docs/self-hosted/administration/certificates/"
+
+	// ErrTimeout is raised when an operation has timed out
+	ErrTimeout = fmt.Errorf("operation timed out")
 )
 
 // IsAlreadyExists raised if the Kubernetes API returns AlreadyExists

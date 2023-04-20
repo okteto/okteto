@@ -17,46 +17,35 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okteto/okteto/pkg/k8s/diverts"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/textblock"
+	istioNetworkingV1beta1 "istio.io/api/networking/v1beta1"
+	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
-)
-
-const (
-	divertTextBlockHeader = "# ---- START DIVERT ----"
-	divertTextBlockFooter = "# ---- END DIVERT ----"
-)
-
-var (
-	divertTextBlockParser = textblock.NewTextBlock(divertTextBlockHeader, divertTextBlockFooter)
 )
 
 // Driver weaver struct for the divert driver
 type Driver struct {
-	manifest     *model.Manifest
-	client       kubernetes.Interface
-	divertClient *diverts.DivertV1Client
-	cache        *cache
+	name      string
+	namespace string
+	divert    model.DivertDeploy
+	client    kubernetes.Interface
+	cache     *cache
 }
 
-func New(m *model.Manifest, c kubernetes.Interface, dc *diverts.DivertV1Client) *Driver {
+func New(m *model.Manifest, c kubernetes.Interface) *Driver {
 	return &Driver{
-		manifest:     m,
-		client:       c,
-		divertClient: dc,
+		name:      m.Name,
+		namespace: m.Namespace,
+		divert:    *m.Deploy.Divert,
+		client:    c,
 	}
 }
 
 func (d *Driver) Deploy(ctx context.Context) error {
-	if err := d.divertIngresses(ctx); err != nil {
-		return err
-	}
-	return d.createDivertCRD(ctx)
-}
-
-func (d *Driver) divertIngresses(ctx context.Context) error {
+	oktetoLog.Spinner(fmt.Sprintf("Diverting namespace %s...", d.divert.Namespace))
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 	if err := d.initCache(ctx); err != nil {
 		return err
 	}
@@ -67,21 +56,36 @@ func (d *Driver) divertIngresses(ctx context.Context) error {
 			return ctx.Err()
 		default:
 			oktetoLog.Spinner(fmt.Sprintf("Diverting ingress %s/%s...", in.Namespace, in.Name))
+			oktetoLog.StartSpinner()
+			defer oktetoLog.StopSpinner()
 			if err := d.divertIngress(ctx, name); err != nil {
 				return err
 			}
+			oktetoLog.StopSpinner()
+			oktetoLog.Success("Ingress '%s/%s' successfully diverted", in.Namespace, in.Name)
 		}
 	}
 	return nil
 }
 
-func (*Driver) Destroy(_ context.Context) error {
+func (d *Driver) Destroy(_ context.Context) error {
+	oktetoLog.Success("Divert from '%s' successfully destroyed", d.divert.Namespace)
 	return nil
 }
 
-func (d *Driver) GetDivertNamespace() string {
-	if d.manifest.Deploy.Divert.Namespace == d.manifest.Namespace {
-		return ""
+func (d *Driver) UpdatePod(pod apiv1.PodSpec) apiv1.PodSpec {
+	if pod.DNSConfig == nil {
+		pod.DNSConfig = &apiv1.PodDNSConfig{}
 	}
-	return d.manifest.Deploy.Divert.Namespace
+	if pod.DNSConfig.Searches == nil {
+		pod.DNSConfig.Searches = []string{}
+	}
+	searches := []string{fmt.Sprintf("%s.svc.cluster.local", d.divert.Namespace)}
+	searches = append(searches, pod.DNSConfig.Searches...)
+	pod.DNSConfig.Searches = searches
+	return pod
+}
+
+func (d *Driver) UpdateVirtualService(vs istioNetworkingV1beta1.VirtualService) istioNetworkingV1beta1.VirtualService {
+	return vs
 }

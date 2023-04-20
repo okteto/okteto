@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/tls"
 	"os"
+	"reflect"
 	"testing"
 
 	"net/http"
@@ -24,6 +25,81 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"golang.org/x/oauth2"
 )
+
+type fakeGraphQLClient struct {
+	err            error
+	queryResult    interface{}
+	mutationResult interface{}
+}
+
+func (fc fakeGraphQLClient) Query(ctx context.Context, q interface{}, _ map[string]interface{}) error {
+	if fc.queryResult != nil {
+		entityType := reflect.TypeOf(q).Elem()
+		for i := 0; i < entityType.NumField(); i++ {
+			value := entityType.Field(i)
+			oldField := reflect.ValueOf(q).Elem().Field(i)
+			newField := reflect.ValueOf(fc.queryResult).Elem().FieldByName(value.Name)
+			oldField.Set(newField)
+		}
+	}
+	return fc.err
+}
+func (fc fakeGraphQLClient) Mutate(ctx context.Context, m interface{}, _ map[string]interface{}) error {
+	if fc.mutationResult != nil {
+		entityType := reflect.TypeOf(m).Elem()
+		for i := 0; i < entityType.NumField(); i++ {
+			value := entityType.Field(i)
+			oldField := reflect.ValueOf(m).Elem().Field(i)
+			newField := reflect.ValueOf(fc.mutationResult).Elem().FieldByName(value.Name)
+			oldField.Set(newField)
+		}
+	}
+	return fc.err
+}
+
+type fakeGraphQLMultipleCallsClient struct {
+	errs           []error
+	queryResults   []interface{}
+	mutationResult []interface{}
+}
+
+func (fc *fakeGraphQLMultipleCallsClient) Query(ctx context.Context, q interface{}, vars map[string]interface{}) error {
+	var (
+		err   error
+		query interface{}
+	)
+	if len(fc.errs) != 0 {
+		err = fc.errs[0]
+		newErrs := fc.errs[1:]
+		fc.errs = newErrs
+	}
+	if len(fc.queryResults) != 0 {
+		query = fc.queryResults[0]
+		fc.queryResults = fc.queryResults[1:]
+	}
+	return fakeGraphQLClient{
+		err:         err,
+		queryResult: query,
+	}.Query(ctx, q, vars)
+}
+func (fc *fakeGraphQLMultipleCallsClient) Mutate(ctx context.Context, m interface{}, vars map[string]interface{}) error {
+	var (
+		err      error
+		mutation interface{}
+	)
+	if len(fc.errs) != 0 {
+		err = fc.errs[0]
+		fc.errs = fc.errs[1:]
+	}
+	if len(fc.mutationResult) != 0 {
+		mutation = fc.mutationResult[0]
+		fc.mutationResult = fc.mutationResult[1:]
+	}
+	return fakeGraphQLClient{
+		err:            err,
+		mutationResult: mutation,
+	}.Mutate(ctx, m, vars)
+}
 
 func TestInDevContainer(t *testing.T) {
 	v := os.Getenv(constants.OktetoNameEnvVar)

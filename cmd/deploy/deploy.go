@@ -31,6 +31,7 @@ import (
 	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
+	"github.com/okteto/okteto/pkg/format"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -38,6 +39,7 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -85,19 +87,15 @@ type DeployCommand struct {
 	CfgMapHandler      configMapHandler
 	Fs                 afero.Fs
 	DivertDriver       divert.Driver
+	PipelineCMD        pipelineCMD.PipelineDeployerInterface
 
 	PipelineType model.Archetype
 	isRemote     bool
 }
 
-type ExternalResourceValidatorInterface interface {
-	Validate(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
-}
-
 type ExternalResourceInterface interface {
 	Deploy(ctx context.Context, name string, ns string, externalInfo *externalresource.ExternalResource) error
 	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
-	ExternalResourceValidatorInterface
 }
 
 type deployerInterface interface {
@@ -126,7 +124,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			// deploy command. If not, we could be proxying a proxy and we would be applying the incorrect deployed-by label
 			os.Setenv(constants.OktetoSkipConfigCredentialsUpdate, "false")
 			if options.ManifestPath != "" {
-				// if path is absolute, its transformed to rel from root
+				// if path is absolute, its transformed from root path to a rel path
 				initialCWD, err := os.Getwd()
 				if err != nil {
 					return fmt.Errorf("failed to get the current working directory: %w", err)
@@ -145,6 +143,8 @@ func Deploy(ctx context.Context) *cobra.Command {
 				}
 				options.ManifestPath = uptManifestPath
 			}
+
+			// Loads, updates and uses the context from path. If not found, it creates and uses a new context
 			if err := contextCMD.LoadContextFromPath(ctx, options.Namespace, options.K8sContext, options.ManifestPath); err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
 					return err
@@ -174,6 +174,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 			options.servicesToDeploy = args
 
 			k8sClientProvider := okteto.NewK8sClientProvider()
+			pc, err := pipelineCMD.NewCommand()
+			if err != nil {
+				return fmt.Errorf("could not create pipeline command: %w", err)
+			}
 			c := &DeployCommand{
 				GetManifest: model.GetManifestV2,
 
@@ -185,6 +189,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				isRemote:           utils.LoadBoolean(constants.OKtetoDeployRemote),
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider),
 				Fs:                 afero.NewOsFs(),
+				PipelineCMD:        pc,
 			}
 			startTime := time.Now()
 
@@ -261,12 +266,12 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 // RunDeploy runs the deploy sequence
 func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) error {
-	var err error
 	oktetoLog.SetStage("Load manifest")
-	deployOptions.Manifest, err = dc.GetManifest(deployOptions.ManifestPath)
+	manifest, err := dc.GetManifest(deployOptions.ManifestPath)
 	if err != nil {
 		return err
 	}
+	deployOptions.Manifest = manifest
 	oktetoLog.Debug("found okteto manifest")
 	dc.PipelineType = deployOptions.Manifest.Type
 
@@ -285,8 +290,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
-
-	dc.addEnvVars(ctx, cwd)
+	if err != nil {
+		return err
+	}
+	dc.addEnvVars(cwd)
 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
@@ -296,7 +303,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		Name:       deployOptions.Name,
 		Namespace:  deployOptions.Manifest.Namespace,
 		Repository: os.Getenv(model.GithubRepositoryEnvVar),
-		Branch:     os.Getenv(model.OktetoGitBranchEnvVar),
+		Branch:     os.Getenv(constants.OktetoGitBranchEnvVar),
 		Filename:   deployOptions.ManifestPathFlag,
 		Status:     pipeline.ProgressingStatus,
 		Manifest:   deployOptions.Manifest.Manifest,
@@ -325,6 +332,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		return dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err)
 	}
 
+	if err := dc.recreateFailedPods(ctx, deployOptions.Name); err != nil {
+		oktetoLog.Infof("failed to recreate failed pods: %s", err.Error())
+	}
+
 	deployer, err := dc.GetDeployer(ctx, deployOptions.Manifest, deployOptions, cwd, dc.Builder)
 	if err != nil {
 		return err
@@ -336,7 +347,6 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return nil
 		}
 		err = oktetoErrors.UserError{E: err}
-		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, err.Error())
 		data.Status = pipeline.ErrorStatus
 	} else {
 		oktetoLog.SetStage("")
@@ -535,14 +545,32 @@ func (dc *DeployCommand) deployDependencies(ctx context.Context, deployOptions *
 			SkipIfExists: !deployOptions.Dependencies,
 			Namespace:    namespace,
 		}
-		pc, err := pipelineCMD.NewCommand()
-		if err != nil {
-			return fmt.Errorf("could not create pipeline command: %w", err)
-		}
-		if err := pc.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
+
+		if err := dc.PipelineCMD.ExecuteDeployPipeline(ctx, pipOpts); err != nil {
 			return err
 		}
 	}
 	oktetoLog.SetStage("")
+	return nil
+}
+
+func (dc *DeployCommand) recreateFailedPods(ctx context.Context, name string) error {
+	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return fmt.Errorf("could not get kubernetes client: %s", err)
+	}
+
+	pods, err := c.CoreV1().Pods(okteto.Context().Namespace).List(ctx, metav1.ListOptions{LabelSelector: fmt.Sprintf("%s=%s", model.DeployedByLabel, format.ResourceK8sMetaString(name))})
+	if err != nil {
+		return fmt.Errorf("could not list pods: %s", err)
+	}
+	for _, pod := range pods.Items {
+		if pod.Status.Phase == "Failed" {
+			err := c.CoreV1().Pods(okteto.Context().Namespace).Delete(ctx, pod.Name, metav1.DeleteOptions{})
+			if err != nil {
+				return fmt.Errorf("could not delete pod %s: %s", pod.Name, err)
+			}
+		}
+	}
 	return nil
 }

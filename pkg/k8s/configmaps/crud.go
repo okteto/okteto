@@ -16,6 +16,7 @@ package configmaps
 import (
 	"context"
 	"strings"
+	"time"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model"
@@ -88,4 +89,27 @@ func update(ctx context.Context, cf *apiv1.ConfigMap, namespace string, c kubern
 		return err
 	}
 	return nil
+}
+
+func WaitForStatus(ctx context.Context, name, namespace, targetStatus string, ticker *time.Ticker, timeout time.Duration, c kubernetes.Interface) error {
+	to := time.NewTicker(timeout)
+
+	for {
+		select {
+		case <-to.C:
+			return oktetoErrors.ErrTimeout
+		case <-ticker.C:
+			cfg, err := Get(ctx, name, namespace, c)
+			if err != nil {
+				if oktetoErrors.IsNotFound(err) {
+					return oktetoErrors.ErrNotFound
+				}
+				return err
+			}
+
+			if cfg.Data["status"] == targetStatus {
+				return nil
+			}
+		}
+	}
 }

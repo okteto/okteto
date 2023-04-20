@@ -175,7 +175,7 @@ func GetDevFromManifest(manifest *model.Manifest, devName string) (*model.Dev, e
 		return nil, ErrNoDevSelected
 	}
 
-	options := []string{}
+	var options []string
 	for name, dev := range manifest.Dev {
 		if name == devName {
 			return dev, nil
@@ -197,7 +197,7 @@ func SelectDevFromManifest(manifest *model.Manifest, selector OktetoSelectorInte
 		}
 		return devs[i] < devs[j]
 	})
-	items := []SelectorItem{}
+	var items []SelectorItem
 	for _, dev := range devs {
 		items = append(items, SelectorItem{
 			Name:   dev,
@@ -254,14 +254,17 @@ func AskYesNo(q string, d YesNoDefault) (bool, error) {
 			break
 		}
 
-		if answer == "y" || answer == "n" {
+		if answer == "y" || answer == "Y" || answer == "n" || answer == "N" {
 			break
 		}
 
-		oktetoLog.Fail("input must be 'y' or 'n'")
+		oktetoLog.Fail("input must be 'Y/y' or 'N/n'")
 	}
 
-	return answer == "y", nil
+	if answer == "y" || answer == "Y" {
+		return true, nil
+	}
+	return false, nil
 }
 
 func AskForOptions(options []string, label string) (string, error) {
@@ -396,7 +399,7 @@ func GetApp(ctx context.Context, dev *model.Dev, c kubernetes.Interface, isRetry
 			return apps.NewDeploymentApp(deployments.Sandbox(dev)), true, nil
 		}
 		if len(dev.Selector) > 0 {
-			if err == oktetoErrors.ErrNotFound {
+			if oktetoErrors.IsNotFound(err) {
 				err = oktetoErrors.UserError{
 					E:    fmt.Errorf("didn't find an application in namespace %s that matches the labels in your Okteto manifest", dev.Namespace),
 					Hint: "Update the labels or point your context to a different namespace and try again"}

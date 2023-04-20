@@ -137,7 +137,7 @@ func TestUpWithDeploy(t *testing.T) {
 }
 
 func getImageWithSHA(devImage string) string {
-	reg := registry.NewOktetoRegistry()
+	reg := registry.NewOktetoRegistry(okteto.Config{})
 	tag, err := reg.GetImageTagWithDigest(devImage)
 	if err != nil {
 		log.Printf("could not get %s from registry", devImage)

@@ -16,262 +16,311 @@ package registry
 import (
 	"testing"
 
-	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/stretchr/testify/assert"
+	apiv1 "k8s.io/api/core/v1"
 )
 
+type fakeImageConfig struct {
+	registryURL string
+	isOkteto    bool
+	globalNs    string
+	ns          string
+}
+
+func (f fakeImageConfig) GetRegistryURL() string     { return f.registryURL }
+func (f fakeImageConfig) IsOktetoCluster() bool      { return f.isOkteto }
+func (f fakeImageConfig) GetGlobalNamespace() string { return f.globalNs }
+func (f fakeImageConfig) GetNamespace() string       { return f.ns }
+
+func TestExpandRegistry(t *testing.T) {
+	type input struct {
+		config fakeImageConfig
+		image  string
+	}
+	var tests = []struct {
+		name     string
+		input    input
+		expected string
+	}{
+		{
+			name: "no need to expand registry - Vanilla",
+			input: input{
+				config: fakeImageConfig{
+					isOkteto: false,
+				},
+				image: "okteto/okteto:latest",
+			},
+			expected: "okteto/okteto:latest",
+		},
+		{
+			name: "no need to expand registry - Okteto",
+			input: input{
+				config: fakeImageConfig{
+					isOkteto: true,
+				},
+				image: "okteto/okteto:latest",
+			},
+			expected: "okteto/okteto:latest",
+		},
+		{
+			name: "okteto dev should expansion - Okteto",
+			input: input{
+				config: fakeImageConfig{
+					isOkteto:    true,
+					ns:          "test",
+					registryURL: "https://my-registry",
+				},
+				image: "okteto.dev/okteto:latest",
+			},
+			expected: "https://my-registry/test/okteto:latest",
+		},
+		{
+			name: "no need to expand registry - Okteto",
+			input: input{
+				config: fakeImageConfig{
+					isOkteto: false,
+				},
+				image: "okteto.dev/okteto:latest",
+			},
+			expected: "okteto.dev/okteto:latest",
+		},
+		{
+			name: "okteto global should expansion - Okteto",
+			input: input{
+				config: fakeImageConfig{
+					isOkteto:    true,
+					globalNs:    "test",
+					registryURL: "https://my-registry",
+				},
+				image: "okteto.global/okteto:latest",
+			},
+			expected: "https://my-registry/test/okteto:latest",
+		},
+		{
+			name: "no need to expand registry - Okteto",
+			input: input{
+				config: fakeImageConfig{
+					isOkteto: false,
+				},
+				image: "okteto.global/okteto:latest",
+			},
+			expected: "okteto.global/okteto:latest",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			iCtrl := NewImageCtrl(tt.input.config)
+			image := iCtrl.expandImageRegistries(tt.input.image)
+			assert.Equal(t, tt.expected, image)
+		})
+	}
+}
+
+func Test_GetRegistryAndRepo(t *testing.T) {
+	type expected struct {
+		registry string
+		image    string
+	}
+	var tests = []struct {
+		name     string
+		tag      string
+		expected expected
+	}{
+		{
+			name: "is-splitted-image-not-docker-io",
+			tag:  "registry.url.net/image",
+			expected: expected{
+				registry: "registry.url.net",
+				image:    "image",
+			},
+		},
+		{
+			name: "is-splitted-image-not-docker-io-double-slash",
+			tag:  "registry.url.net/image/other",
+			expected: expected{
+				registry: "registry.url.net",
+				image:    "image/other",
+			},
+		},
+		{
+			name: "is-splitted-image-docker",
+			tag:  "docker.io/image",
+			expected: expected{
+				registry: "docker.io",
+				image:    "image",
+			},
+		},
+		{
+			name: "is-splitted-image-docker",
+			tag:  "image",
+			expected: expected{
+				registry: "docker.io",
+				image:    "image",
+			},
+		},
+		{
+			name: "is-splitted-image-docker",
+			tag:  "image/test",
+			expected: expected{
+				registry: "docker.io",
+				image:    "image/test",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			iCtrl := ImageCtrl{}
+			registry, image := iCtrl.GetRegistryAndRepo(tt.tag)
+			assert.Equal(t, tt.expected.registry, registry)
+			assert.Equal(t, tt.expected.image, image)
+		})
+	}
+}
+
 func Test_GetRepoNameAndTag(t *testing.T) {
+	type expected struct {
+		repo string
+		tag  string
+	}
 	var tests = []struct {
-		name         string
-		image        string
-		expectedRepo string
-		expectedTag  string
+		name     string
+		image    string
+		expected expected
 	}{
 		{
-			name:         "official-with-tag",
-			image:        "ubuntu:2",
-			expectedRepo: "ubuntu",
-			expectedTag:  "2",
+			name:  "official-with-tag",
+			image: "ubuntu:2",
+			expected: expected{
+				repo: "ubuntu",
+				tag:  "2",
+			},
 		},
 		{
-			name:         "official-without-tag",
-			image:        "ubuntu",
-			expectedRepo: "ubuntu",
-			expectedTag:  "latest",
+			name:  "official-without-tag",
+			image: "ubuntu",
+			expected: expected{
+				repo: "ubuntu",
+				tag:  "latest",
+			},
 		},
 		{
-			name:         "repo-with-tag",
-			image:        "test/ubuntu:2",
-			expectedRepo: "test/ubuntu",
-			expectedTag:  "2",
+			name:  "repo-with-tag",
+			image: "test/ubuntu:2",
+			expected: expected{
+				repo: "test/ubuntu",
+				tag:  "2",
+			},
 		},
 		{
-			name:         "repo-without-tag",
-			image:        "test/ubuntu",
-			expectedRepo: "test/ubuntu",
-			expectedTag:  "latest",
+			name:  "repo-without-tag",
+			image: "test/ubuntu",
+			expected: expected{
+				repo: "test/ubuntu",
+				tag:  "latest",
+			},
 		},
 		{
-			name:         "registry-with-tag",
-			image:        "registry/gitlab.com/test/ubuntu:2",
-			expectedRepo: "registry/gitlab.com/test/ubuntu",
-			expectedTag:  "2",
+			name:  "registry-with-tag",
+			image: "registry/gitlab.com/test/ubuntu:2",
+			expected: expected{
+				repo: "registry/gitlab.com/test/ubuntu",
+				tag:  "2",
+			},
 		},
 		{
-			name:         "registry-without-tag",
-			image:        "registry/gitlab.com/test/ubuntu",
-			expectedRepo: "registry/gitlab.com/test/ubuntu",
-			expectedTag:  "latest",
+			name:  "registry-without-tag",
+			image: "registry/gitlab.com/test/ubuntu",
+			expected: expected{
+				repo: "registry/gitlab.com/test/ubuntu",
+				tag:  "latest",
+			},
 		},
 		{
-			name:         "localhost-with-tag",
-			image:        "localhost:5000/test/ubuntu:2",
-			expectedRepo: "localhost:5000/test/ubuntu",
-			expectedTag:  "2",
+			name:  "localhost-with-tag",
+			image: "localhost:5000/test/ubuntu:2",
+			expected: expected{
+				repo: "localhost:5000/test/ubuntu",
+				tag:  "2",
+			},
 		},
 		{
-			name:         "registry-without-tag",
-			image:        "localhost:5000/test/ubuntu",
-			expectedRepo: "localhost:5000/test/ubuntu",
-			expectedTag:  "latest",
+			name:  "registry-without-tag",
+			image: "localhost:5000/test/ubuntu",
+			expected: expected{
+				repo: "localhost:5000/test/ubuntu",
+				tag:  "latest",
+			},
 		},
 		{
-			name:         "sha256",
-			image:        "pchico83/test@sha256:e78ad0d316485b7dbffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
-			expectedRepo: "pchico83/test",
-			expectedTag:  "sha256:e78ad0d316485b7dbffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			name:  "sha256",
+			image: "pchico83/test@sha256:e78ad0d316485b7dbffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			expected: expected{
+				repo: "pchico83/test",
+				tag:  "sha256:e78ad0d316485b7dbffa944a92b29ea4fa26d53c63054605c4fb7a8b787a673c",
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo, tag := GetRepoNameAndTag(tt.image)
-			if tt.expectedRepo != repo {
-				t.Errorf("expected repo %s got %s in test %s", tt.expectedRepo, repo, tt.name)
-			}
-			if tt.expectedTag != tag {
-				t.Errorf("expected tag %s got %s in test %s", tt.expectedTag, tag, tt.name)
-			}
+			repo, tag := ImageCtrl{}.GetRepoNameAndTag(tt.image)
+			assert.Equal(t, tt.expected.repo, repo)
+			assert.Equal(t, tt.expected.tag, tag)
 		})
 	}
 }
 
-func Test_GetImageTag(t *testing.T) {
+func TestGetExposedPortsFromCfg(t *testing.T) {
 	var tests = []struct {
-		name              string
-		image             string
-		service           string
-		namespace         string
-		oktetoRegistryURL string
-		expected          string
+		name     string
+		cfg      *v1.ConfigFile
+		expected []Port
 	}{
 		{
-			name:              "not-in-okteto",
-			image:             "okteto/hello",
-			service:           "service",
-			namespace:         "namespace",
-			oktetoRegistryURL: "",
-			expected:          "okteto/hello:okteto",
+			name:     "cfg is nil",
+			cfg:      &v1.ConfigFile{},
+			expected: nil,
 		},
 		{
-			name:              "in-okteto-image-in-okteto",
-			image:             "okteto.dev/hello",
-			service:           "service",
-			namespace:         "namespace",
-			oktetoRegistryURL: "okteto.dev",
-			expected:          "okteto.dev/hello",
+			name: "cfg is empty",
+			cfg: &v1.ConfigFile{Config: v1.Config{
+				ExposedPorts: map[string]struct{}{},
+			},
+			},
+			expected: nil,
 		},
 		{
-			name:              "in-okteto-image-in-okteto",
-			image:             "okteto.global/hello",
-			service:           "service",
-			namespace:         "namespace",
-			oktetoRegistryURL: "okteto.global",
-			expected:          "okteto.global/hello",
+			name: "cfg-with-ports-one-malformed",
+			cfg: &v1.ConfigFile{Config: v1.Config{
+				ExposedPorts: map[string]struct{}{
+					"8080/tcp":    {},
+					"5050":        {},
+					"my-port/tcp": {},
+				},
+			},
+			},
+			expected: []Port{
+				{ContainerPort: 8080, Protocol: apiv1.ProtocolTCP},
+			},
 		},
 		{
-			name:              "in-okteto-image-not-in-okteto",
-			image:             "okteto/hello",
-			service:           "service",
-			namespace:         "namespace",
-			oktetoRegistryURL: "okteto.dev",
-			expected:          "okteto.dev/namespace/service:okteto",
+			name: "cfg-with-ports",
+			cfg: &v1.ConfigFile{Config: v1.Config{
+				ExposedPorts: map[string]struct{}{
+					"8080/tcp": {},
+				},
+			},
+			},
+			expected: []Port{
+				{ContainerPort: 8080, Protocol: apiv1.ProtocolTCP},
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := GetImageTag(tt.image, tt.service, tt.namespace, tt.oktetoRegistryURL)
-			if tt.expected != result {
-				t.Errorf("Test '%s': expected %s got %s", tt.name, tt.expected, result)
-			}
-		})
-	}
-}
-
-func Test_GetDevImageTag(t *testing.T) {
-	var tests = []struct {
-		name                string
-		dev                 *model.Dev
-		imageTag            string
-		imageFromDeployment string
-		oktetoRegistryURL   string
-		expected            string
-	}{
-		{
-			name:                "imageTag-not-in-okteto",
-			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:            "imageTag",
-			imageFromDeployment: "",
-			oktetoRegistryURL:   "",
-			expected:            "imageTag",
-		},
-		{
-			name:                "imageTag-in-okteto",
-			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:            "imageTag",
-			imageFromDeployment: "",
-			oktetoRegistryURL:   okteto.CloudRegistryURL,
-			expected:            "imageTag",
-		},
-		{
-			name:                "default-image-tag",
-			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:            model.DefaultImage,
-			imageFromDeployment: "",
-			oktetoRegistryURL:   okteto.CloudRegistryURL,
-			expected:            "registry.cloud.okteto.net/ns/dev:okteto",
-		},
-		{
-			name:                "okteto",
-			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:            "",
-			imageFromDeployment: "",
-			oktetoRegistryURL:   okteto.CloudRegistryURL,
-			expected:            "registry.cloud.okteto.net/ns/dev:okteto",
-		},
-		{
-			name:                "not-in-okteto",
-			dev:                 &model.Dev{Name: "dev", Namespace: "ns"},
-			imageTag:            "",
-			imageFromDeployment: "okteto/test:2",
-			oktetoRegistryURL:   "",
-			expected:            "okteto/test:okteto",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := GetDevImageTag(tt.dev, tt.imageTag, tt.imageFromDeployment, tt.oktetoRegistryURL)
-			if tt.expected != result {
-				t.Errorf("expected %s got %s in test %s", tt.expected, result, tt.name)
-			}
-		})
-	}
-}
-
-func Test_GetResgistryAndRepo(t *testing.T) {
-	var tests = []struct {
-		name             string
-		image            string
-		expectedRegistry string
-		expectedRepo     string
-	}{
-		{
-			name:             "official-with-tag",
-			image:            "ubuntu:2",
-			expectedRegistry: "docker.io",
-			expectedRepo:     "ubuntu:2",
-		},
-		{
-			name:             "official-without-tag",
-			image:            "ubuntu",
-			expectedRegistry: "docker.io",
-			expectedRepo:     "ubuntu",
-		},
-		{
-			name:             "repo-with-tag",
-			image:            "test/ubuntu:2",
-			expectedRegistry: "docker.io",
-			expectedRepo:     "test/ubuntu:2",
-		},
-		{
-			name:             "repo-without-tag",
-			image:            "test/ubuntu",
-			expectedRegistry: "docker.io",
-			expectedRepo:     "test/ubuntu",
-		},
-		{
-			name:             "registry-with-tag",
-			image:            "registry/gitlab.com/test/ubuntu:2",
-			expectedRegistry: "registry/gitlab.com",
-			expectedRepo:     "test/ubuntu:2",
-		},
-		{
-			name:             "registry-without-tag",
-			image:            "okteto.dev/test/ubuntu",
-			expectedRegistry: "okteto.dev",
-			expectedRepo:     "test/ubuntu",
-		},
-		{
-			name:             "okteto-registry-only-two",
-			image:            "okteto.dev/ubuntu",
-			expectedRegistry: "okteto.dev",
-			expectedRepo:     "ubuntu",
-		},
-		{
-			name:             "official-with-registry",
-			image:            "docker.io/ubuntu",
-			expectedRegistry: "docker.io",
-			expectedRepo:     "ubuntu",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			registry, image := GetRegistryAndRepo(tt.image)
-			if tt.expectedRepo != image {
-				t.Errorf("expected repo %s got %s in test %s", tt.expectedRepo, image, tt.name)
-			}
-			if tt.expectedRegistry != registry {
-				t.Errorf("expected registry %s got %s in test %s", tt.expectedRegistry, registry, tt.name)
-			}
+			ports := ImageCtrl{}.getExposedPortsFromCfg(tt.cfg)
+			assert.Equal(t, tt.expected, ports)
 		})
 	}
 }

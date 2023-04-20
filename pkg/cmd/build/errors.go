@@ -11,38 +11,52 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registry
+package build
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/registry"
 )
 
-// GetErrorMessage returns the parsed error message
-func GetErrorMessage(err error, tag string) error {
+// getErrorMessage returns the parsed error message
+func getErrorMessage(err error, tag string) error {
 	if err == nil {
 		return nil
 	}
-	imageRegistry, imageTag := GetRegistryAndRepo(tag)
+
+	imageCtrl := registry.NewImageCtrl(okteto.Config{})
+	imageRegistry, imageTag := imageCtrl.GetRegistryAndRepo(tag)
 	switch {
-	case IsLoggedIntoRegistryButDontHavePermissions(err):
+	case isLoggedIntoRegistryButDontHavePermissions(err):
 		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", tag, imageTag),
 			Hint: fmt.Sprintf("Please log in into the registry '%s' with a user with push permissions to '%s' or use another image.", imageRegistry, imageTag),
 		}
-	case IsNotLoggedIntoRegistry(err):
+	case isNotLoggedIntoRegistry(err):
 		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("error building image '%s': You are not authorized to push image '%s'", tag, imageTag),
 			Hint: fmt.Sprintf("Log in into the registry '%s' and verify that you have permissions to push the image '%s'.", imageRegistry, imageTag),
 		}
-	case IsBuildkitServiceUnavailable(err):
+	case isBuildkitServiceUnavailable(err):
 		err = oktetoErrors.UserError{
 			E:    fmt.Errorf("buildkit service is not available at the moment"),
 			Hint: "Please try again later.",
 		}
+	case isPullAccessDenied(err):
+		err = oktetoErrors.UserError{
+			E:    fmt.Errorf("error building image: failed to pull image '%s'. The repository is not accessible or it does not exist.", imageTag),
+			Hint: fmt.Sprintf("Please verify the name of the image '%s' to make sure it exists.", imageTag),
+		}
 	default:
+		var cmdErr OktetoCommandErr
+		if errors.As(err, &cmdErr) {
+			return cmdErr
+		}
 		err = oktetoErrors.UserError{
 			E: fmt.Errorf("error building image '%s': %s", tag, err.Error()),
 		}
@@ -51,7 +65,7 @@ func GetErrorMessage(err error, tag string) error {
 }
 
 // IsTransientError returns true if err represents a transient registry error
-func IsTransientError(err error) bool {
+func isTransientError(err error) bool {
 	if err == nil {
 		return false
 	}
@@ -82,17 +96,22 @@ func IsTransientError(err error) bool {
 }
 
 // IsLoggedIntoRegistryButDontHavePermissions returns true when the error is because the user is logged into the registry but doesn't have permissions to push the image
-func IsLoggedIntoRegistryButDontHavePermissions(err error) bool {
-	return strings.Contains(err.Error(), "insufficient_scope: authorization failed")
+func isLoggedIntoRegistryButDontHavePermissions(err error) bool {
+	return strings.Contains(err.Error(), "insufficient_scope: authorization failed") && !isPullAccessDenied(err)
 }
 
 // IsNotLoggedIntoRegistry returns true when the error is because the user is not logged into the registry
-func IsNotLoggedIntoRegistry(err error) bool {
+func isNotLoggedIntoRegistry(err error) bool {
 	return strings.Contains(err.Error(), "failed to authorize: failed to fetch anonymous token") ||
 		strings.Contains(err.Error(), "UNAUTHORIZED: authentication required")
 }
 
 // IsBuildkitServiceUnavailable returns true when an error is because buildkit is unavailable
-func IsBuildkitServiceUnavailable(err error) bool {
+func isBuildkitServiceUnavailable(err error) bool {
 	return strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "500 Internal Server Error") || strings.Contains(err.Error(), "context canceled")
+}
+
+// IsPullAccessDenied returns true pulling an image fails (e.g: image does not exist)
+func isPullAccessDenied(err error) bool {
+	return strings.Contains(err.Error(), "pull access denied")
 }

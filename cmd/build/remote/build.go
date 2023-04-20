@@ -19,16 +19,26 @@ type oktetoBuilderInterface interface {
 	Run(ctx context.Context, buildOptions *types.BuildOptions) error
 }
 
+type OktetoRegistryInterface interface {
+	GetImageTagWithDigest(imageTag string) (string, error)
+	IsOktetoRegistry(image string) bool
+	HasGlobalPushAccess() (bool, error)
+	IsGlobalRegistry(image string) bool
+
+	GetRegistryAndRepo(image string) (string, string)
+	GetRepoNameAndTag(repo string) (string, string)
+}
+
 // OktetoBuilder builds the images
 type OktetoBuilder struct {
 	Builder  oktetoBuilderInterface
-	Registry build.OktetoRegistryInterface
+	Registry OktetoRegistryInterface
 }
 
 // NewBuilderFromScratch creates a new okteto builder
 func NewBuilderFromScratch() *OktetoBuilder {
 	builder := &build.OktetoBuilder{}
-	registry := registry.NewOktetoRegistry()
+	registry := registry.NewOktetoRegistry(okteto.Config{})
 	return &OktetoBuilder{
 		Builder:  builder,
 		Registry: registry,
@@ -65,4 +75,8 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 	analytics.TrackBuild(okteto.Context().Builder, true)
 	return nil
+}
+
+func (bc *OktetoBuilder) IsV1() bool {
+	return true
 }

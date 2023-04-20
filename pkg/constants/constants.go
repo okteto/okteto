@@ -53,14 +53,14 @@ const (
 	// OKtetoDeployRemote defines if deployment is executed remotely
 	OKtetoDeployRemote = "OKTETO_DEPLOY_REMOTE"
 
-	// OKtetoDeployRemoteImage defines okteto cli image used for deploy an evironment remotely
+	// OKtetoDeployRemoteImage defines okteto cli image used for deploy an environment remotely
 	OKtetoDeployRemoteImage = "OKTETO_REMOTE_CLI_IMAGE"
 
 	// OktetoCLIImageForRemoteTemplate defines okteto CLI image template to use for remote deployments
 	OktetoCLIImageForRemoteTemplate = "okteto/okteto:%s"
 
 	// OktetoPipelineRunnerImage defines image to use for remote deployments if empty
-	OktetoPipelineRunnerImage = "okteto/installer:1.7.6"
+	OktetoPipelineRunnerImage = "okteto/installer:1.8.9"
 
 	// OktetoEnvFile defines the name for okteto env file
 	OktetoEnvFile = "OKTETO_ENV"
@@ -70,4 +70,37 @@ const (
 
 	// NamespaceStatusSleeping indicates that the namespace is sleeping
 	NamespaceStatusSleeping = "Sleeping"
+
+	// DevRegistry alias url for okteto registry
+	DevRegistry = "okteto.dev"
+
+	// GlobalRegistry alias url for okteto global registry
+	GlobalRegistry = "okteto.global"
+
+	// DefaultGlobalNamespace namespace where okteto app is running
+	DefaultGlobalNamespace = "okteto"
+
+	// OktetoGitBranchEnvVar is the name of the Git branch currently being deployed.
+	OktetoGitBranchEnvVar = "OKTETO_GIT_BRANCH"
+
+	// OktetoGitCommitEnvVar is the SHA1 hash of the last commit of the branch.
+	OktetoGitCommitEnvVar = "OKTETO_GIT_COMMIT"
+
+	// OktetoNamespaceLabel is the label used to identify the namespace where the resource lives
+	OktetoNamespaceLabel = "dev.okteto.com/namespace"
+
+	// OktetoDivertWeaverDriver is the divert driver for weaver
+	OktetoDivertWeaverDriver = "weaver"
+
+	// OktetoDivertIstioDriver is the divert driver for istio
+	OktetoDivertIstioDriver = "istio"
+
+	// OktetoDivertBaggageHeader represents the baggage header
+	OktetoDivertBaggageHeader = "baggage"
+
+	// OktetoDivertHeaderName the default header name used by okteto to divert traffic
+	OktetoDivertHeaderName = "okteto-divert"
+
+	//OktetoDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
+	OktetoDivertAnnotationTemplate = "divert.okteto.com/%s-%s"
 )

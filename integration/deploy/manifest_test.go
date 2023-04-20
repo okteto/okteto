@@ -57,7 +57,7 @@ deploy:
     context: app
     image: okteto.dev/app:dev
 deploy:
-  image: okteto/installer:1.7.5
+  image: okteto/installer:1.8.9
   commands:
   - name: deploy nginx
     command: kubectl create deployment my-dep --image=busybox`
@@ -389,11 +389,11 @@ func TestDeployRemoteOktetoManifest(t *testing.T) {
 	require.NoError(t, commands.RunOktetoDestroyRemote(oktetoPath, destroyOptions))
 
 	_, err = integration.GetDeployment(context.Background(), testNamespace, "my-dep", c)
-	require.NoError(t, err)
+	require.True(t, k8sErrors.IsNotFound(err))
 }
 
 func isImageBuilt(image string) bool {
-	reg := registry.NewOktetoRegistry()
+	reg := registry.NewOktetoRegistry(okteto.Config{})
 	if _, err := reg.GetImageTagWithDigest(image); err == nil {
 		return true
 	}

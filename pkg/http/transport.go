@@ -35,7 +35,7 @@ func DefaultTransport() *http.Transport {
 	}
 }
 
-// StrictSSLHTTPClient returns an *http.Transport with RootCAs set with both the SystemCertPool and the given *x509.Certificates
+// StrictSSLTransport returns an *http.Transport with RootCAs set with both the SystemCertPool and the given *x509.Certificates
 // If obtaining SystemCertPool fails, it uses an empty *x509.CertPool as base
 func StrictSSLTransport(certs ...*x509.Certificate) *http.Transport {
 	pool, err := x509.SystemCertPool()

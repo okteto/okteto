@@ -15,21 +15,24 @@ package deploy
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"text/template"
 
+	builder "github.com/okteto/okteto/cmd/build"
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -38,7 +41,10 @@ import (
 )
 
 const (
-	dockerfileTemplate = `
+	templateName           = "dockerfile"
+	dockerfileTemporalNane = "deploy"
+	oktetoDockerignoreName = ".oktetodeployignore"
+	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
 FROM alpine as certs
@@ -57,6 +63,12 @@ ENV {{ .NamespaceEnvVar }} {{ .NamespaceValue }}
 ENV {{ .ContextEnvVar }} {{ .ContextValue }}
 ENV {{ .TokenEnvVar }} {{ .TokenValue }}
 ENV {{ .RemoteDeployEnvVar }} true
+{{ if ne .ActionNameValue "" }}
+ENV {{ .ActionNameEnvVar }} {{ .ActionNameValue }}
+{{ end }}
+{{ if ne .GitCommitValue "" }}
+ENV {{ .GitCommitEnvVar }} {{ .GitCommitValue }}
+{{ end }}
 
 COPY . /okteto/src
 WORKDIR /okteto/src
@@ -76,93 +88,88 @@ type dockerfileTemplateProperties struct {
 	NamespaceValue     string
 	TokenEnvVar        string
 	TokenValue         string
+	ActionNameEnvVar   string
+	ActionNameValue    string
+	GitCommitEnvVar    string
+	GitCommitValue     string
 	RemoteDeployEnvVar string
 	DeployFlags        string
 	RandomInt          int
 }
 
 type remoteDeployCommand struct {
-	builder *buildv2.OktetoBuilder
-	fs      afero.Fs
+	builderV2            *buildv2.OktetoBuilder
+	builderV1            builder.Builder
+	fs                   afero.Fs
+	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
+	temporalCtrl         filesystem.TemporalDirectoryInterface
 }
 
+// newRemoteDeployer creates the remote deployer from a
 func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
+	fs := afero.NewOsFs()
 	return &remoteDeployCommand{
-		builder: builder,
-		fs:      afero.NewOsFs(),
+		builderV2:            builder,
+		builderV1:            remoteBuild.NewBuilderFromScratch(),
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 	}
 }
 
 func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options) error {
-
-	cwd, err := os.Getwd()
+	cwd, err := rd.getOriginalCWD(deployOptions.ManifestPathFlag)
 	if err != nil {
 		return err
 	}
 
-	cwd = getOriginalCWD(cwd, deployOptions.ManifestPathFlag)
-
-	tmpl, err := template.New("dockerfile").Parse(dockerfileTemplate)
+	tmpDir, err := rd.temporalCtrl.Create()
 	if err != nil {
 		return err
 	}
 
-	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
-		UserDeployImage:    deployOptions.Manifest.Deploy.Image,
-		OktetoBuildEnvVars: rd.builder.GetBuildEnvVars(),
-		ContextEnvVar:      model.OktetoContextEnvVar,
-		ContextValue:       okteto.Context().Name,
-		NamespaceEnvVar:    model.OktetoNamespaceEnvVar,
-		NamespaceValue:     okteto.Context().Namespace,
-		TokenEnvVar:        model.OktetoTokenEnvVar,
-		TokenValue:         okteto.Context().Token,
-		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
-		RandomInt:          rand.Intn(1000),
-		DeployFlags:        strings.Join(getDeployFlags(deployOptions), " "),
-	}
-
-	tmpDir, err := afero.TempDir(rd.fs, "", "")
-	if err != nil {
-		return err
-	}
-
-	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, "deploy"))
-	if err != nil {
-		return err
-	}
-
-	err = rd.createDockerignoreIfNeeded(cwd, tmpDir)
+	dockerfile, err := rd.createDockerfile(tmpDir, deployOptions)
 	if err != nil {
 		return err
 	}
 
 	defer func() {
-		if err := rd.fs.Remove(dockerfile.Name()); err != nil {
+		if err := rd.fs.Remove(dockerfile); err != nil {
 			oktetoLog.Infof("error removing dockerfile: %w", err)
 		}
 	}()
-	if err := tmpl.Execute(dockerfile, dockerfileSyntax); err != nil {
-		return err
-	}
 
 	buildInfo := &model.BuildInfo{
-		Dockerfile: dockerfile.Name(),
+		Dockerfile: dockerfile,
 	}
 
 	// undo modification of CWD for Build command
-	os.Chdir(cwd)
+	if err := rd.workingDirectoryCtrl.Change(cwd); err != nil {
+		return err
+	}
 
-	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
-	buildOptions.Tag = ""
+	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: "deploy"})
+	buildOptions.Manifest = deployOptions.Manifest
 
 	// we need to call Build() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
 	// executed in the deploy command.
-	if err := remoteBuild.NewBuilderFromScratch().Build(ctx, buildOptions); err != nil {
+	if err := rd.builderV1.Build(ctx, buildOptions); err != nil {
+		var cmdErr build.OktetoCommandErr
+		if errors.As(err, &cmdErr) {
+			oktetoLog.SetStage(cmdErr.Stage)
+			return oktetoErrors.UserError{
+				E: cmdErr.Err,
+			}
+		}
+		oktetoLog.SetStage("remote deploy")
+		var userErr oktetoErrors.UserError
+		if errors.As(err, &userErr) {
+			return userErr
+		}
 		return oktetoErrors.UserError{
-			E: fmt.Errorf("Error during development environment deployment."),
+			E: err,
 		}
 	}
 	oktetoLog.SetStage("done")
@@ -171,26 +178,78 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	return nil
 }
 
-func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {
-	return
+func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {}
+
+func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (string, error) {
+	cwd, err := rd.workingDirectoryCtrl.Get()
+	if err != nil {
+		return "", err
+	}
+
+	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
+
+	randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000))
+	if err != nil {
+		return "", err
+	}
+
+	dockerfileSyntax := dockerfileTemplateProperties{
+		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
+		UserDeployImage:    opts.Manifest.Deploy.Image,
+		OktetoBuildEnvVars: rd.builderV2.GetBuildEnvVars(),
+		ContextEnvVar:      model.OktetoContextEnvVar,
+		ContextValue:       okteto.Context().Name,
+		NamespaceEnvVar:    model.OktetoNamespaceEnvVar,
+		NamespaceValue:     okteto.Context().Namespace,
+		TokenEnvVar:        model.OktetoTokenEnvVar,
+		TokenValue:         okteto.Context().Token,
+		ActionNameEnvVar:   model.OktetoActionNameEnvVar,
+		ActionNameValue:    os.Getenv(model.OktetoActionNameEnvVar),
+		GitCommitEnvVar:    constants.OktetoGitCommitEnvVar,
+		GitCommitValue:     os.Getenv(constants.OktetoGitCommitEnvVar),
+		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
+		RandomInt:          int(randomNumber.Int64()),
+		DeployFlags:        strings.Join(getDeployFlags(opts), " "),
+	}
+
+	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, dockerfileTemporalNane))
+	if err != nil {
+		return "", err
+	}
+
+	err = rd.createDockerignore(cwd, tmpDir)
+	if err != nil {
+		return "", err
+	}
+
+	if err := tmpl.Execute(dockerfile, dockerfileSyntax); err != nil {
+		return "", err
+	}
+	return dockerfile.Name(), nil
 }
 
-func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
-	dockerignoreFilePath := fmt.Sprintf("%s/%s", cwd, ".oktetodeployignore")
+func (rd *remoteDeployCommand) createDockerignore(cwd, tmpDir string) error {
+	// if we do not create a .dockerignore (with or without content) used to create
+	// the remote executor, we would use the one located in root (the one used to
+	// build the services) so we would create a remote executor without certain files
+	// necessary for the later deployment which would cause an error when deploying
+	// remotely due to the lack of these files.
+	dockerignoreContent := []byte(``)
+	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
 	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-	} else {
-		dockerignoreContent, err := afero.ReadFile(rd.fs, dockerignoreFilePath)
-		if err != nil {
-			return err
-		}
 
-		err = afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
+	} else {
+		dockerignoreContent, err = afero.ReadFile(rd.fs, dockerignoreFilePath)
 		if err != nil {
 			return err
 		}
+	}
+	err := afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -200,7 +259,7 @@ func getDeployFlags(opts *Options) []string {
 	var deployFlags []string
 
 	if opts.Name != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--name %s", opts.Name))
+		deployFlags = append(deployFlags, fmt.Sprintf("--name \"%s\"", opts.Name))
 	}
 
 	if opts.Namespace != "" {
@@ -222,9 +281,14 @@ func getDeployFlags(opts *Options) []string {
 	return deployFlags
 }
 
-func getOriginalCWD(cwd, manifestPath string) string {
-	manifestPathDir := filepath.Dir(fmt.Sprintf("/%s", manifestPath))
-	return strings.TrimSuffix(cwd, manifestPathDir)
+// getOriginalCWD returns the original cwd
+func (rd *remoteDeployCommand) getOriginalCWD(manifestPath string) (string, error) {
+	cwd, err := rd.workingDirectoryCtrl.Get()
+	if err != nil {
+		return "", err
+	}
+	manifestPathDir := filepath.Dir(filepath.Clean(fmt.Sprintf("/%s", manifestPath)))
+	return strings.TrimSuffix(cwd, manifestPathDir), nil
 }
 
 func getOktetoCLIVersion(versionString string) string {

@@ -168,12 +168,6 @@ const (
 	// HelmSecretType indicates the type for secrets created by Helm
 	HelmSecretType = "helm.sh/release.v1"
 
-	// OktetoGitBranchEnvVar is the name of the Git branch currently being deployed.
-	OktetoGitBranchEnvVar = "OKTETO_GIT_BRANCH"
-
-	// OktetoGitCommitEnvVar is the SHA1 hash of the last commit of the branch.
-	OktetoGitCommitEnvVar = "OKTETO_GIT_COMMIT"
-
 	// OktetoRegistryURLEnvVar is the url of the Okteto Registry
 	OktetoRegistryURLEnvVar = "OKTETO_REGISTRY_URL"
 
@@ -276,25 +270,4 @@ const (
 
 	// OktetoImageTagWithVolumes is the tag assigned to an image with volume mounts
 	OktetoImageTagWithVolumes = "okteto-with-volume-mounts"
-
-	// OktetoDivertServiceAnnotation service annotation used by divert to keep track of port mappings
-	OktetoDivertServiceAnnotation = "divert.okteto.com/modification"
-
-	// OktetoDivertInjectSidecarLabel pod label used by divert to inject envoy sidecar
-	OktetoDivertInjectSidecarLabel = "divert.okteto.com/inject-sidecar"
-
-	// OktetoNginxConfigurationSnippetAnnotation annotation for nginx configuration snippet
-	OktetoNginxConfigurationSnippetAnnotation = "nginx.ingress.kubernetes.io/configuration-snippet"
-
-	// OktetoDivertIngressInjectionAnnotation annotation for nginx header injection
-	OktetoDivertIngressInjectionAnnotation = "divert.okteto.com/injection"
-
-	// OktetoDivertWeaverDriver is the divert driver for weaver
-	OktetoDivertWeaverDriver = "weaver"
-
-	// OktetoDivertIstioDriver is the divert driver for istio
-	OktetoDivertIstioDriver = "istio"
-
-	// OktetoDivertHeader the header used by okteto to divert traffic
-	OktetoDivertHeader = "x-okteto-divert"
 )

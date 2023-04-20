@@ -14,223 +14,142 @@
 package registry
 
 import (
+	"crypto/x509"
 	"fmt"
-	"regexp"
-	"strconv"
 	"strings"
 
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/google/go-containerregistry/pkg/name"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
-	v1 "k8s.io/api/core/v1"
 )
 
-const (
-	dockerRegistry = "https://registry.hub.docker.com"
-)
+const globalTestImage = "okteto.global/test"
 
-// OktetoRegistry runs the build of an image
-type OktetoRegistry struct{}
-
-// NewOktetoRegistry creates a okteto registry
-func NewOktetoRegistry() *OktetoRegistry {
-	return &OktetoRegistry{}
+type configInterface interface {
+	IsOktetoCluster() bool
+	GetGlobalNamespace() string
+	GetNamespace() string
+	GetRegistryURL() string
+	GetUserID() string
+	GetToken() string
+	IsInsecureSkipTLSVerifyPolicy() bool
+	GetContextCertificate() (*x509.Certificate, error)
 }
 
-// ImageConfig is the struct of the information that can be inferred from an image
-type ImageConfig struct {
-	CMD          []string
-	Workdir      string
-	ExposedPorts []int
+type registryConfig interface {
+	IsOktetoCluster() bool
+	GetRegistryURL() string
 }
 
-type ImageMetadata struct {
-	Image string
-	Ports []model.Port
+// OktetoRegistry represents the registry
+type OktetoRegistry struct {
+	client    clientInterface
+	imageCtrl ImageCtrl
+	config    registryConfig
 }
 
-// GetImageTagWithDigest returns the image tag digest
-func (*OktetoRegistry) GetImageTagWithDigest(imageTag string) (string, error) {
-	reference := imageTag
+type OktetoImageReference struct {
+	Registry string
+	Repo     string
+	Tag      string
+	Image    string
+}
 
-	if okteto.IsOkteto() {
-		reference = ExpandOktetoDevRegistry(reference)
-		reference = ExpandOktetoGlobalRegistry(reference)
+func NewOktetoRegistry(config configInterface) OktetoRegistry {
+	return OktetoRegistry{
+		client:    newOktetoRegistryClient(config),
+		imageCtrl: NewImageCtrl(config),
+		config:    config,
 	}
+}
 
-	registry, image := GetRegistryAndRepo(reference)
-	repository, _ := GetRepoNameAndTag(image)
+func (or OktetoRegistry) GetImageTagWithDigest(image string) (string, error) {
+	expandedImage := or.imageCtrl.expandImageRegistries(image)
 
-	digest, err := digestForReference(reference)
+	registry, repositoryWithTag := or.imageCtrl.GetRegistryAndRepo(expandedImage)
+	repository, _ := or.imageCtrl.GetRepoNameAndTag(repositoryWithTag)
+
+	digest, err := or.client.GetDigest(expandedImage)
 	if err != nil {
-		oktetoLog.Debugf("error: %s", err.Error())
-		if strings.Contains(err.Error(), "MANIFEST_UNKNOWN") {
-			return "", oktetoErrors.ErrNotFound
-		}
-		return "", fmt.Errorf("error getting image tag digest: %s", err.Error())
+		return "", fmt.Errorf("error getting image tag with digest: %w", err)
 	}
-	imageTag = fmt.Sprintf("%s/%s@%s", registry, repository, digest)
+
+	imageTag := fmt.Sprintf("%s/%s@%s", registry, repository, digest)
 	oktetoLog.Debugf("image with digest: %s", imageTag)
 	return imageTag, nil
 }
 
-// ExpandOktetoGlobalRegistry translates okteto.global
-func ExpandOktetoGlobalRegistry(tag string) string {
-	globalNamespace := okteto.DefaultGlobalNamespace
-	if okteto.Context().GlobalNamespace != "" {
-		globalNamespace = okteto.Context().GlobalNamespace
-	}
-	return replaceRegistry(tag, okteto.GlobalRegistry, globalNamespace)
-}
-
-// ExpandOktetoDevRegistry translates okteto.dev
-func ExpandOktetoDevRegistry(tag string) string {
-	return replaceRegistry(tag, okteto.DevRegistry, okteto.Context().Namespace)
-}
-
-// GetImageConfigFromImage gets information from the image
-func GetImageConfigFromImage(imageRef string) (*ImageConfig, error) {
-	imageConfig := &ImageConfig{
-		CMD:          []string{},
-		ExposedPorts: []int{},
-	}
-
-	imageRef = ExpandOktetoDevRegistry(imageRef)
-	imageRef = ExpandOktetoGlobalRegistry(imageRef)
-
-	image, err := imageForReference(imageRef)
+func (or OktetoRegistry) GetImageMetadata(image string) (ImageMetadata, error) {
+	image, err := or.GetImageTagWithDigest(image)
 	if err != nil {
-		return nil, err
+		return ImageMetadata{}, fmt.Errorf("error getting image metadata: %w", err)
 	}
-
-	configFile, err := image.ConfigFile()
+	cfgFile, err := or.client.GetImageConfig(image)
 	if err != nil {
-		return nil, err
+		return ImageMetadata{}, fmt.Errorf("error getting image metadata: %w", err)
 	}
+	ports := or.imageCtrl.getExposedPortsFromCfg(cfgFile)
+	workdir := cfgFile.Config.WorkingDir
+	cmd := cfgFile.Config.Cmd
 
-	if configFile.Config.ExposedPorts != nil {
-		for port := range configFile.Config.ExposedPorts {
-			slashIndx := strings.Index(port, "/")
-			if slashIndx != -1 {
-				port = port[:slashIndx]
-				portInt, err := strconv.Atoi(port)
-				if err != nil {
-					continue
-				}
-				imageConfig.ExposedPorts = append(imageConfig.ExposedPorts, portInt)
-
-			}
-		}
-	}
-	if configFile.Config.WorkingDir != "" {
-		imageConfig.Workdir = configFile.Config.WorkingDir
-	}
-
-	if len(configFile.Config.Cmd) > 0 {
-		imageConfig.CMD = configFile.Config.Cmd
-	}
-	return imageConfig, nil
-}
-
-// GetRegistryAndRepo returns image tag and the registry to push the image
-func GetRegistryAndRepo(tag string) (string, string) {
-	var imageTag string
-	registryTag := "docker.io"
-	splittedImage := strings.Split(tag, "/")
-
-	if len(splittedImage) == 1 {
-		imageTag = splittedImage[0]
-	} else if len(splittedImage) == 2 {
-		if strings.Contains(splittedImage[0], ".") {
-			return splittedImage[0], splittedImage[1]
-		}
-		imageTag = strings.Join(splittedImage[len(splittedImage)-2:], "/")
-	} else {
-		imageTag = strings.Join(splittedImage[len(splittedImage)-2:], "/")
-		registryTag = strings.Join(splittedImage[:len(splittedImage)-2], "/")
-	}
-	return registryTag, imageTag
-}
-
-// GetImageMetadata returns the ports exposed at the image
-func GetImageMetadata(imageRef string) *ImageMetadata {
-	result := &ImageMetadata{}
-	result.Image = imageRef
-	result.Ports = make([]model.Port, 0)
-
-	imageRef = ExpandOktetoDevRegistry(imageRef)
-	imageRef = ExpandOktetoGlobalRegistry(imageRef)
-
-	image, err := imageForReference(imageRef)
-	if err != nil {
-		oktetoLog.Debugf("error in GetImageMetadata.imageForReference: %s", err.Error())
-		return result
-	}
-
-	digest, err := image.Digest()
-	if err != nil {
-		oktetoLog.Debugf("error in GetImageMetadata.Digest: %s", err.Error())
-		return result
-	}
-	registry, tag := GetRegistryAndRepo(imageRef)
-	repository, _ := GetRepoNameAndTag(tag)
-	result.Image = fmt.Sprintf("%s/%s@%s", registry, repository, digest.String())
-
-	configFile, err := image.ConfigFile()
-	if err != nil {
-		oktetoLog.Debugf("error in GetImageMetadata.ConfigFile: %s", err.Error())
-		return result
-	}
-	if configFile.Config.ExposedPorts != nil {
-		for port := range configFile.Config.ExposedPorts {
-			slashIndx := strings.Index(port, "/")
-			if slashIndx != -1 {
-				port = port[:slashIndx]
-				portInt, err := strconv.ParseInt(port, 10, 32)
-				if err != nil {
-					continue
-				}
-				result.Ports = append(result.Ports, model.Port{ContainerPort: int32(portInt), Protocol: v1.ProtocolTCP})
-			}
-		}
-	}
-	return result
-}
-
-func getRegistryURL(image string) string {
-	registry, _ := GetRegistryAndRepo(image)
-	if registry == "docker.io" {
-		return dockerRegistry
-	}
-	if !strings.HasPrefix(registry, "https://") {
-		registry = fmt.Sprintf("https://%s", registry)
-	}
-	return registry
-
-}
-
-// IsGlobalRegistry returns if an image tag is pointing to the global okteto registry
-func IsGlobalRegistry(tag string) bool {
-	return strings.HasPrefix(tag, okteto.GlobalRegistry)
-}
-
-// IsDevRegistry returns if an image tag is pointing to the dev okteto registry
-func IsDevRegistry(tag string) bool {
-	return strings.HasPrefix(tag, okteto.DevRegistry)
+	return ImageMetadata{
+		Image:   image,
+		CMD:     cmd,
+		Workdir: workdir,
+		Ports:   ports,
+	}, nil
 }
 
 // IsOktetoRegistry returns if an image tag is pointing to the okteto registry
-func IsOktetoRegistry(tag string) bool {
-	return IsDevRegistry(tag) || IsGlobalRegistry(tag) || (okteto.IsOkteto() && strings.HasPrefix(tag, okteto.Context().Registry))
+func (or OktetoRegistry) IsOktetoRegistry(image string) bool {
+	expandedImage := or.imageCtrl.expandImageRegistries(image)
+	return or.config.IsOktetoCluster() && strings.HasPrefix(expandedImage, or.config.GetRegistryURL())
 }
 
-// replaceRegistry replaces the short registry url with the okteto registry url
-func replaceRegistry(input, registryType, namespace string) string {
-	// Check if the registryType is the start of the sentence or has a whitespace before it
-	var re = regexp.MustCompile(fmt.Sprintf(`(^|\s)(%s)`, registryType))
-	if re.MatchString(input) {
-		return strings.Replace(input, registryType, fmt.Sprintf("%s/%s", okteto.Context().Registry, namespace), 1)
+func (or OktetoRegistry) IsGlobalRegistry(image string) bool {
+	expandedImage := or.imageCtrl.expandImageRegistries(image)
+	expandedGlobalImage := fmt.Sprintf("%s/%s", or.config.GetRegistryURL(), or.imageCtrl.config.GetGlobalNamespace())
+	return strings.HasPrefix(expandedImage, expandedGlobalImage)
+}
+
+// GetImageTag returns the image tag to build for a given services
+func (or OktetoRegistry) GetImageTag(image, service, namespace string) string {
+	if or.config.GetRegistryURL() != "" {
+		if or.IsOktetoRegistry(image) {
+			return image
+		}
+		return fmt.Sprintf("%s/%s/%s:okteto", or.config.GetRegistryURL(), namespace, service)
 	}
-	return input
+	imageWithoutTag, _ := or.imageCtrl.GetRepoNameAndTag(image)
+	return fmt.Sprintf("%s:okteto", imageWithoutTag)
+}
+
+// GetImageReference returns the values to setup the image environment variables
+func (OktetoRegistry) GetImageReference(image string) (OktetoImageReference, error) {
+	ref, err := name.ParseReference(image)
+	if err != nil {
+		return OktetoImageReference{}, err
+	}
+	return OktetoImageReference{
+		Registry: ref.Context().RegistryStr(),
+		Repo:     ref.Context().RepositoryStr(),
+		Tag:      ref.Identifier(),
+		Image:    image,
+	}, nil
+}
+
+// HasGlobalPushAccess checks if the user has push access to the global registry
+func (or OktetoRegistry) HasGlobalPushAccess() (bool, error) {
+	if !or.config.IsOktetoCluster() {
+		return false, nil
+	}
+	image := or.imageCtrl.ExpandOktetoGlobalRegistry(globalTestImage)
+	return or.client.HasPushAccess(image)
+}
+
+func (or OktetoRegistry) GetRegistryAndRepo(image string) (string, string) {
+	return or.imageCtrl.GetRegistryAndRepo(image)
+}
+
+func (or OktetoRegistry) GetRepoNameAndTag(repo string) (string, string) {
+	return or.imageCtrl.GetRepoNameAndTag(repo)
 }
