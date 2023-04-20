@@ -43,37 +43,20 @@ type key struct {
 // storeRegistry is a map of key to storeRegister
 type storeRegistry map[key]storeRegister
 
-func (s storeRegistry) MarshalJSON() ([]byte, error) {
-	m := map[string]storeRegister{}
-
-	for k, v := range s {
-		marshaledKey, err := json.Marshal(k)
-		if err != nil {
-			return nil, err
-		}
-
-		m[string(marshaledKey)] = v
-	}
-
-	return json.Marshal(m)
+// These implementations are needed to make the key type marshalable
+// With this we are able to use the key type as a map key in the storeRegistry
+func (k key) MarshalText() (text []byte, err error) {
+	type alias key
+	return json.Marshal(alias(k))
 }
 
-func (s storeRegistry) UnmarshalJSON(data []byte) error {
-	m := map[string]storeRegister{}
-
-	if err := json.Unmarshal(data, &m); err != nil {
+func (k *key) UnmarshalText(data []byte) error {
+	type alias key
+	var receiver alias
+	if err := json.Unmarshal(data, &receiver); err != nil {
 		return err
 	}
-
-	for k, v := range m {
-		var key key
-		if err := json.Unmarshal([]byte(k), &key); err != nil {
-			return err
-		}
-
-		s[key] = v
-	}
-
+	*k = key(receiver)
 	return nil
 }
 
