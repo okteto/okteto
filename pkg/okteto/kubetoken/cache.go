@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/okteto/okteto/pkg/log"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	authenticationv1 "k8s.io/api/authentication/v1"
 )
 
@@ -27,7 +27,7 @@ func NewCache(fileName string) *Cache {
 	return &Cache{
 		StringStore: NewFileByteStore(fileName),
 		Now:         time.Now,
-		Debug:       log.Debugf,
+		Debug:       oktetoLog.Debugf,
 	}
 }
 
