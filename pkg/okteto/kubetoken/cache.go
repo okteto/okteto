@@ -40,7 +40,7 @@ type storeRegister struct {
 func (c *Cache) read() ([]storeRegister, error) {
 	contents, err := c.StringStore.Get()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error while trying to get kubetoken cache: %w", err)
 	}
 
 	if len(contents) == 0 {
