@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -37,40 +36,18 @@ type storeRegister struct {
 }
 
 type key struct {
-	ContextName string
-	Namespace   string
+	ContextName string `json:"context"`
+	Namespace   string `json:"namespace"`
 }
 
-func (k *key) MarshalJSON() ([]byte, error) {
-	marshaled := fmt.Sprintf("%s@%s", k.ContextName, k.Namespace)
-	return json.Marshal(marshaled)
-}
-
-func (k *key) UnmarshalJSON(data []byte) error {
-	var asString string
-	if err := json.Unmarshal(data, &asString); err != nil {
-		return err
-	}
-
-	parts := strings.Split(asString, "@")
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid key: %s", asString)
-	}
-
-	k.ContextName = parts[0]
-	k.Namespace = parts[1]
-
-	return nil
-}
-
-// storeRegistry is a map of contextName to namespace to storeRegister
+// storeRegistry is a map of key to storeRegister
 type storeRegistry map[key]storeRegister
 
 func (s storeRegistry) MarshalJSON() ([]byte, error) {
 	m := map[string]storeRegister{}
 
 	for k, v := range s {
-		marshaledKey, err := k.MarshalJSON()
+		marshaledKey, err := json.Marshal(k)
 		if err != nil {
 			return nil, err
 		}
@@ -90,7 +67,7 @@ func (s storeRegistry) UnmarshalJSON(data []byte) error {
 
 	for k, v := range m {
 		var key key
-		if err := key.UnmarshalJSON([]byte(k)); err != nil {
+		if err := json.Unmarshal([]byte(k), &key); err != nil {
 			return err
 		}
 
