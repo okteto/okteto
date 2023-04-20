@@ -110,6 +110,6 @@ const (
 	//OktetoDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
 	OktetoDivertAnnotationTemplate = "divert.okteto.com/%s-%s"
 
-	//OktetoDependencyEnvsKey the key on the config map that will store OKTETO_ENV values
+	//OktetoDependencyEnvsKey the key on the conqfig map that will store OKTETO_ENV values
 	OktetoDependencyEnvsKey = "dependencyEnvs"
 )
