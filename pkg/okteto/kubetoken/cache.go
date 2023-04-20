@@ -59,7 +59,7 @@ func (c *Cache) read() ([]storeRegister, error) {
 func (c *Cache) Get(contextName, namespace string) (string, error) {
 	store, err := c.read()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error while reading: %w", err)
 	}
 
 	for _, register := range store {
@@ -101,7 +101,7 @@ func updateStore(store []storeRegister, contextName, namespace string, token aut
 
 func (c *Cache) setWithErr(contextName, namespace string, token authenticationv1.TokenRequest) error {
 	store, err := c.read()
-	if err != nil && errors.Is(err, errCacheIsCorrupted) {
+	if err != nil && !errors.Is(err, errCacheIsCorrupted) {
 		return err
 	}
 
