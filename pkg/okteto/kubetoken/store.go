@@ -1,19 +1,26 @@
 package kubetoken
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func NewFileByteStore(fileName string) *FileByteStore {
 	return &FileByteStore{
-		FileName:   fileName,
-		osStat:     os.Stat,
-		osCreate:   os.Create,
+		FileName: fileName,
+		osStat:   os.Stat,
+		createFile: func(filename string) (*os.File, error) {
+			fp := filepath.Dir(filename)
+			folder := filepath.Base(filename)
+			if err := os.MkdirAll(fp, 0764); err != nil {
+				return nil, fmt.Errorf("error creating folder %q for %q: %w", folder, filename, err)
+			}
+			return os.Create(filename)
+		},
 		osReadFile: os.ReadFile,
 		writeFile: func(filename string, data []byte) error {
-			return os.WriteFile(filename, data, 0600)
+			return os.WriteFile(filename, data, 0764)
 		},
 	}
 }
@@ -21,18 +28,18 @@ func NewFileByteStore(fileName string) *FileByteStore {
 type FileByteStore struct {
 	FileName   string
 	osStat     func(name string) (os.FileInfo, error)
-	osCreate   func(name string) (*os.File, error)
+	createFile func(name string) (*os.File, error)
 	osReadFile func(filename string) ([]byte, error)
 	writeFile  func(filename string, data []byte) error
 }
 
 func (s *FileByteStore) Get() ([]byte, error) {
 	if _, err := s.osStat(s.FileName); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
+		if !os.IsNotExist(err) {
 			return nil, fmt.Errorf("error checking if file exists: %w", err)
 		}
 
-		f, err := s.osCreate(s.FileName)
+		f, err := s.createFile(s.FileName)
 		if err != nil {
 			return nil, fmt.Errorf("error creating file: %w", err)
 		}

@@ -23,7 +23,7 @@ func TestByteStore(t *testing.T) {
 				calledStat = true
 				return nil, os.ErrNotExist
 			},
-			osCreate: func(name string) (*os.File, error) {
+			createFile: func(name string) (*os.File, error) {
 				require.Equal(t, fileName, name)
 				calledCreate = true
 				return nil, nil
@@ -78,7 +78,7 @@ func TestByteStore(t *testing.T) {
 				calledStat = true
 				return nil, os.ErrNotExist
 			},
-			osCreate: func(name string) (*os.File, error) {
+			createFile: func(name string) (*os.File, error) {
 				require.Equal(t, fileName, name)
 				calledCreate = true
 				return nil, assert.AnError
