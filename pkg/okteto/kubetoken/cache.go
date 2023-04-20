@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -35,11 +36,68 @@ type storeRegister struct {
 	Token authenticationv1.TokenRequest `json:"token"`
 }
 
-// storeRegistry is a map of "<contextName>:<namespace>" to a storeRegister
-type storeRegistry map[string]storeRegister
+type key struct {
+	ContextName string
+	Namespace   string
+}
 
-func key(contextName, namespace string) string {
-	return fmt.Sprintf("%s@%s", contextName, namespace)
+func (k *key) MarshalJSON() ([]byte, error) {
+	marshaled := fmt.Sprintf("%s@%s", k.ContextName, k.Namespace)
+	return json.Marshal(marshaled)
+}
+
+func (k *key) UnmarshalJSON(data []byte) error {
+	var asString string
+	if err := json.Unmarshal(data, &asString); err != nil {
+		return err
+	}
+
+	parts := strings.Split(asString, "@")
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid key: %s", asString)
+	}
+
+	k.ContextName = parts[0]
+	k.Namespace = parts[1]
+
+	return nil
+}
+
+// storeRegistry is a map of contextName to namespace to storeRegister
+type storeRegistry map[key]storeRegister
+
+func (s storeRegistry) MarshalJSON() ([]byte, error) {
+	m := map[string]storeRegister{}
+
+	for k, v := range s {
+		marshaledKey, err := k.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
+
+		m[string(marshaledKey)] = v
+	}
+
+	return json.Marshal(m)
+}
+
+func (s storeRegistry) UnmarshalJSON(data []byte) error {
+	m := map[string]storeRegister{}
+
+	if err := json.Unmarshal(data, &m); err != nil {
+		return err
+	}
+
+	for k, v := range m {
+		var key key
+		if err := key.UnmarshalJSON([]byte(k)); err != nil {
+			return err
+		}
+
+		s[key] = v
+	}
+
+	return nil
 }
 
 func (c *Cache) read() (storeRegistry, error) {
@@ -52,7 +110,7 @@ func (c *Cache) read() (storeRegistry, error) {
 		return make(storeRegistry), nil
 	}
 
-	var store storeRegistry
+	store := storeRegistry{}
 
 	if err := json.Unmarshal(contents, &store); err != nil {
 		return make(storeRegistry), errCacheIsCorrupted
@@ -67,7 +125,7 @@ func (c *Cache) Get(contextName, namespace string) (string, error) {
 		return "", fmt.Errorf("error while reading: %w", err)
 	}
 
-	register, ok := store[key(contextName, namespace)]
+	register, ok := store[key{contextName, namespace}]
 	if !ok {
 		return "", nil
 	}
@@ -85,7 +143,7 @@ func (c *Cache) Get(contextName, namespace string) (string, error) {
 }
 
 func updateStore(store storeRegistry, contextName, namespace string, token authenticationv1.TokenRequest) {
-	store[key(contextName, namespace)] = storeRegister{
+	store[key{contextName, namespace}] = storeRegister{
 		Token: token,
 	}
 }

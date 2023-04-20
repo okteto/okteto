@@ -42,10 +42,10 @@ func TestFileCacheGet(t *testing.T) {
 	namespace := "namespace"
 
 	store := storeRegistry{
-		key(context, namespace): {
+		key{context, namespace}: {
 			Token: token,
 		},
-		"other": {},
+		key{"oth", "er"}: {},
 	}
 
 	storeString, err := json.Marshal(store)
@@ -124,7 +124,7 @@ func TestFileCacheSet(t *testing.T) {
 	context := "context"
 	namespace := "namespace"
 	expectedStore := storeRegistry{
-		key(context, namespace): {
+		key{context, namespace}: {
 			Token: token,
 		},
 	}
@@ -183,27 +183,27 @@ func TestUpdateStore(t *testing.T) {
 			ns:      "n4",
 			token:   t4,
 			store: storeRegistry{
-				key("c1", "n1"): {
+				key{"c1", "n1"}: {
 					Token: t1,
 				},
-				key("c2", "n2"): {
+				key{"c2", "n2"}: {
 					Token: t2,
 				},
-				key("c3", "n3"): {
+				key{"c3", "n3"}: {
 					Token: t3,
 				},
 			},
 			wantStore: storeRegistry{
-				key("c1", "n1"): {
+				key{"c1", "n1"}: {
 					Token: t1,
 				},
-				key("c2", "n2"): {
+				key{"c2", "n2"}: {
 					Token: t2,
 				},
-				key("c3", "n3"): {
+				key{"c3", "n3"}: {
 					Token: t3,
 				},
-				key("c4", "n4"): {
+				key{"c4", "n4"}: {
 					Token: t4,
 				}},
 		},
@@ -213,24 +213,24 @@ func TestUpdateStore(t *testing.T) {
 			ns:      "n2",
 			token:   t4,
 			store: storeRegistry{
-				key("c1", "n1"): {
+				key{"c1", "n1"}: {
 					Token: t1,
 				},
-				key("c2", "n2"): {
+				key{"c2", "n2"}: {
 					Token: t2,
 				},
-				key("c3", "n3"): {
+				key{"c3", "n3"}: {
 					Token: t3,
 				},
 			},
 			wantStore: storeRegistry{
-				key("c1", "n1"): {
+				key{"c1", "n1"}: {
 					Token: t1,
 				},
-				key("c2", "n2"): {
+				key{"c2", "n2"}: {
 					Token: t4,
 				},
-				key("c3", "n3"): {
+				key{"c3", "n3"}: {
 					Token: t3,
 				},
 			},
@@ -242,7 +242,7 @@ func TestUpdateStore(t *testing.T) {
 			token:   t1,
 			store:   storeRegistry{},
 			wantStore: storeRegistry{
-				key("c1", "n1"): {
+				key{"c1", "n1"}: {
 					Token: t1,
 				},
 			},
