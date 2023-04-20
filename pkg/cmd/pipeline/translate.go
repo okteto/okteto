@@ -88,8 +88,8 @@ type CfgData struct {
 	Icon       string
 }
 
-// TranslateConfigMapAndDeploy translates the app into a configMap
-// name param is the pipeline sanitized name
+// TranslateConfigMapAndDeploy translates the app into a configMap.
+// Name param is the pipeline sanitized name
 func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(data.Name), data.Namespace, c)
 	if err != nil {
