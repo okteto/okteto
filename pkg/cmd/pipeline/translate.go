@@ -36,6 +36,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -144,15 +145,25 @@ func UpdateEnvs(ctx context.Context, name, namespace string, envs []string, c ku
 	}
 
 	if cmap != nil {
+		envsToSet := make(map[string]string, len(envs))
 		for _, env := range envs {
 			result := strings.Split(env, "=")
 			if len(result) != 2 {
 				return fmt.Errorf("invalid env format: '%s'", env)
 			}
 
-			cmap.Data[fmt.Sprintf("%s_%s", constants.OktetoDependencyEnvPrefix, result[0])] = result[1]
+			envsToSet[result[0]] = result[1]
 		}
-		return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
+
+		if len(envsToSet) > 0 {
+			encondedEnvs, err := json.Marshal(envsToSet)
+			if err != nil {
+				return err
+			}
+			cmap.Data[constants.OktetoDependencyEnvsKey] = base64.StdEncoding.EncodeToString(encondedEnvs)
+			return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
+		}
+
 	}
 	return nil
 }

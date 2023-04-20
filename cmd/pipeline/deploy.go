@@ -15,6 +15,8 @@ package pipeline
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -37,6 +39,10 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/kubernetes"
+)
+
+const (
+	dependencyEnvTemplate = "OKTETO_DEPENDENCY_%s_VARIABLE_%s"
 )
 
 // deployFlags represents the user input for a pipeline deploy command
@@ -221,13 +227,24 @@ func setEnvsFromDependency(ctx context.Context, name, namespace string, c kubern
 
 	if cmap != nil {
 		for k, v := range cmap.Data {
-			if strings.HasPrefix(k, constants.OktetoDependencyEnvPrefix) {
-				k = strings.TrimPrefix(k, fmt.Sprintf("%s_", constants.OktetoDependencyEnvPrefix))
-				envName := fmt.Sprintf("OKTETO_DEPENDENCY_%s_VARIABLE_%s", strings.ToUpper(name), k)
-				err := os.Setenv(envName, v)
+			if strings.HasPrefix(k, constants.OktetoDependencyEnvsKey) {
+				envsToSet := make(map[string]string)
+				decodedEnvs, err := base64.StdEncoding.DecodeString(v)
 				if err != nil {
 					return err
 				}
+				err = json.Unmarshal(decodedEnvs, &envsToSet)
+				if err != nil {
+					return err
+				}
+				for envKey, envValue := range envsToSet {
+					envName := fmt.Sprintf(dependencyEnvTemplate, strings.ToUpper(name), envKey)
+					err := os.Setenv(envName, envValue)
+					if err != nil {
+						return err
+					}
+				}
+				break
 			}
 		}
 	}

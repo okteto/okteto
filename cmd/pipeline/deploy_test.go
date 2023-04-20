@@ -15,9 +15,12 @@ package pipeline
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,6 +28,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -329,44 +333,49 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 
 func TestSetEnvsFromDependencyNoError(t *testing.T) {
 	ctx := context.Background()
+	namespace := "test"
+	cmapName := "test"
 	var tests = []struct {
 		name                 string
 		dataToSetInConfigMap map[string]string
-		isEnvsGenerated      bool
 	}{
 		{
 			name: "no envs to set",
-			dataToSetInConfigMap: map[string]string{
-				"TESTSETENVSFROMDEPEN": "VALUE",
-			},
-			isEnvsGenerated: false,
 		},
 		{
 			name: "setting envs",
 			dataToSetInConfigMap: map[string]string{
-				"OKTETO_DEPENDENCY_TESTSETENVSFROMDEPEN_ONE": "an env value",
-				"OKTETO_DEPENDENCY_TESTSETENVSFROMDEPEN_TWO": "another env value",
+				"TESTSETENVSFROMDEPEN_ONE": "an env value",
+				"TESTSETENVSFROMDEPEN_TWO": "another env value",
 			},
-			isEnvsGenerated: true,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			configMapData := make(map[string]string)
+			if tt.dataToSetInConfigMap != nil {
+				encondedEnvs, _ := json.Marshal(tt.dataToSetInConfigMap)
+				encondedEnvsStr := base64.StdEncoding.EncodeToString(encondedEnvs)
+				configMapData[constants.OktetoDependencyEnvsKey] = encondedEnvsStr
+			}
+
 			cmap := &apiv1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      pipeline.TranslatePipelineName("test"),
-					Namespace: "test",
+					Name:      pipeline.TranslatePipelineName(cmapName),
+					Namespace: namespace,
 					Labels:    map[string]string{},
 				},
-				Data: tt.dataToSetInConfigMap,
+				Data: configMapData,
 			}
 			fakeClient := fake.NewSimpleClientset(cmap)
-			err := setEnvsFromDependency(ctx, "test", "test", fakeClient)
+			err := setEnvsFromDependency(ctx, cmapName, namespace, fakeClient)
 			assert.NoError(t, err)
 
-			if tt.isEnvsGenerated {
+			if tt.dataToSetInConfigMap != nil {
 				for k := range tt.dataToSetInConfigMap {
-					os.Unsetenv(k)
+					envKey := fmt.Sprintf(dependencyEnvTemplate, strings.ToUpper(cmapName), k)
+					os.Unsetenv(envKey)
 				}
 			}
 		})
