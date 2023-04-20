@@ -10,7 +10,7 @@ import (
 	authenticationv1 "k8s.io/api/authentication/v1"
 )
 
-const cacheIsCorrupted = "cache is corrupted"
+var errCacheIsCorrupted = fmt.Errorf("cache is corrupted")
 
 type stringStore interface {
 	Get() ([]byte, error)
@@ -50,7 +50,7 @@ func (c *Cache) read() ([]storeRegister, error) {
 	var store []storeRegister
 
 	if err := json.Unmarshal(contents, &store); err != nil {
-		return nil, fmt.Errorf(cacheIsCorrupted)
+		return nil, errCacheIsCorrupted
 	}
 
 	return store, nil
@@ -101,7 +101,7 @@ func updateStore(store []storeRegister, contextName, namespace string, token aut
 
 func (c *Cache) setWithErr(contextName, namespace string, token authenticationv1.TokenRequest) error {
 	store, err := c.read()
-	if err != nil && errors.Is(err, fmt.Errorf(cacheIsCorrupted)) {
+	if err != nil && errors.Is(err, errCacheIsCorrupted) {
 		return err
 	}
 
