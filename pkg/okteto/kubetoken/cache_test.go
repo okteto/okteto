@@ -41,16 +41,11 @@ func TestFileCacheGet(t *testing.T) {
 	context := "context"
 	namespace := "namespace"
 
-	store := []storeRegister{
-		{
-			ContextName: context,
-			Namespace:   namespace,
-			Token:       token,
+	store := storeRegistry{
+		key(context, namespace): {
+			Token: token,
 		},
-		{
-			ContextName: "other-context",
-			Namespace:   "other-namespace",
-		},
+		"other": {},
 	}
 
 	storeString, err := json.Marshal(store)
@@ -128,11 +123,9 @@ func TestFileCacheSet(t *testing.T) {
 
 	context := "context"
 	namespace := "namespace"
-	expectedStore := []storeRegister{
-		{
-			ContextName: context,
-			Namespace:   namespace,
-			Token:       token,
+	expectedStore := storeRegistry{
+		key(context, namespace): {
+			Token: token,
 		},
 	}
 
@@ -181,51 +174,37 @@ func TestUpdateStore(t *testing.T) {
 		context   string
 		ns        string
 		token     authenticationv1.TokenRequest
-		store     []storeRegister
-		wantStore []storeRegister
+		store     storeRegistry
+		wantStore storeRegistry
 	}{
 		{
 			name:    "new entry",
 			context: "c4",
 			ns:      "n4",
 			token:   t4,
-			store: []storeRegister{
-				{
-					ContextName: "c1",
-					Namespace:   "n1",
-					Token:       t1,
+			store: storeRegistry{
+				key("c1", "n1"): {
+					Token: t1,
 				},
-				{
-					ContextName: "c2",
-					Namespace:   "n2",
-					Token:       t2,
+				key("c2", "n2"): {
+					Token: t2,
 				},
-				{
-					ContextName: "c3",
-					Namespace:   "n3",
-					Token:       t3,
+				key("c3", "n3"): {
+					Token: t3,
 				},
 			},
-			wantStore: []storeRegister{
-				{
-					ContextName: "c1",
-					Namespace:   "n1",
-					Token:       t1,
+			wantStore: storeRegistry{
+				key("c1", "n1"): {
+					Token: t1,
 				},
-				{
-					ContextName: "c2",
-					Namespace:   "n2",
-					Token:       t2,
+				key("c2", "n2"): {
+					Token: t2,
 				},
-				{
-					ContextName: "c3",
-					Namespace:   "n3",
-					Token:       t3,
+				key("c3", "n3"): {
+					Token: t3,
 				},
-				{
-					ContextName: "c4",
-					Namespace:   "n4",
-					Token:       t4,
+				key("c4", "n4"): {
+					Token: t4,
 				}},
 		},
 		{
@@ -233,38 +212,26 @@ func TestUpdateStore(t *testing.T) {
 			context: "c2",
 			ns:      "n2",
 			token:   t4,
-			store: []storeRegister{
-				{
-					ContextName: "c1",
-					Namespace:   "n1",
-					Token:       t1,
+			store: storeRegistry{
+				key("c1", "n1"): {
+					Token: t1,
 				},
-				{
-					ContextName: "c2",
-					Namespace:   "n2",
-					Token:       t2,
+				key("c2", "n2"): {
+					Token: t2,
 				},
-				{
-					ContextName: "c3",
-					Namespace:   "n3",
-					Token:       t3,
+				key("c3", "n3"): {
+					Token: t3,
 				},
 			},
-			wantStore: []storeRegister{
-				{
-					ContextName: "c1",
-					Namespace:   "n1",
-					Token:       t1,
+			wantStore: storeRegistry{
+				key("c1", "n1"): {
+					Token: t1,
 				},
-				{
-					ContextName: "c2",
-					Namespace:   "n2",
-					Token:       t4,
+				key("c2", "n2"): {
+					Token: t4,
 				},
-				{
-					ContextName: "c3",
-					Namespace:   "n3",
-					Token:       t3,
+				key("c3", "n3"): {
+					Token: t3,
 				},
 			},
 		},
@@ -273,12 +240,10 @@ func TestUpdateStore(t *testing.T) {
 			context: "c1",
 			ns:      "n1",
 			token:   t1,
-			store:   []storeRegister{},
-			wantStore: []storeRegister{
-				{
-					ContextName: "c1",
-					Namespace:   "n1",
-					Token:       t1,
+			store:   storeRegistry{},
+			wantStore: storeRegistry{
+				key("c1", "n1"): {
+					Token: t1,
 				},
 			},
 		},
@@ -286,8 +251,8 @@ func TestUpdateStore(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			result := updateStore(tc.store, tc.context, tc.ns, tc.token)
-			require.ElementsMatch(t, tc.wantStore, result)
+			updateStore(tc.store, tc.context, tc.ns, tc.token)
+			require.EqualValues(t, tc.wantStore, tc.store)
 		})
 	}
 }

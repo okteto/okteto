@@ -32,25 +32,30 @@ func NewCache(fileName string) *Cache {
 }
 
 type storeRegister struct {
-	ContextName string                        `json:"context"`
-	Namespace   string                        `json:"namespace"`
-	Token       authenticationv1.TokenRequest `json:"token"`
+	Token authenticationv1.TokenRequest `json:"token"`
 }
 
-func (c *Cache) read() ([]storeRegister, error) {
+// storeRegistry is a map of "<contextName>:<namespace>" to a storeRegister
+type storeRegistry map[string]storeRegister
+
+func key(contextName, namespace string) string {
+	return fmt.Sprintf("%s@%s", contextName, namespace)
+}
+
+func (c *Cache) read() (storeRegistry, error) {
 	contents, err := c.StringStore.Get()
 	if err != nil {
 		return nil, fmt.Errorf("error while trying to get kubetoken cache: %w", err)
 	}
 
 	if len(contents) == 0 {
-		return []storeRegister{}, nil
+		return make(storeRegistry), nil
 	}
 
-	var store []storeRegister
+	var store storeRegistry
 
 	if err := json.Unmarshal(contents, &store); err != nil {
-		return nil, errCacheIsCorrupted
+		return make(storeRegistry), errCacheIsCorrupted
 	}
 
 	return store, nil
@@ -62,41 +67,27 @@ func (c *Cache) Get(contextName, namespace string) (string, error) {
 		return "", fmt.Errorf("error while reading: %w", err)
 	}
 
-	for _, register := range store {
-		if register.ContextName == contextName && register.Namespace == namespace {
-			now := c.Now()
-			if register.Token.Status.ExpirationTimestamp.Time.After(now) {
-				tokenString, _ := json.MarshalIndent(register.Token, "", "\t")
-
-				return string(tokenString), nil
-			} else {
-				// This expired token should get overwritten later on a successful request
-				// We won't delete it here so we reduce the number of times we open the file
-				return "", nil
-			}
-		}
+	register, ok := store[key(contextName, namespace)]
+	if !ok {
+		return "", nil
 	}
 
-	return "", nil
+	now := c.Now()
+	if register.Token.Status.ExpirationTimestamp.Time.After(now) {
+		tokenString, _ := json.MarshalIndent(register.Token, "", "\t")
+
+		return string(tokenString), nil
+	} else {
+		// This expired token should get overwritten later on a successful request
+		// We won't delete it here so we reduce the number of times we open the file
+		return "", nil
+	}
 }
 
-func updateStore(store []storeRegister, contextName, namespace string, token authenticationv1.TokenRequest) []storeRegister {
-	existed := false
-	for i, r := range store {
-		if r.ContextName == contextName && r.Namespace == namespace {
-			store[i].Token = token
-			existed = true
-		}
+func updateStore(store storeRegistry, contextName, namespace string, token authenticationv1.TokenRequest) {
+	store[key(contextName, namespace)] = storeRegister{
+		Token: token,
 	}
-	if !existed {
-		store = append(store, storeRegister{
-			ContextName: contextName,
-			Namespace:   namespace,
-			Token:       token,
-		})
-	}
-
-	return store
 }
 
 func (c *Cache) setWithErr(contextName, namespace string, token authenticationv1.TokenRequest) error {
@@ -105,7 +96,7 @@ func (c *Cache) setWithErr(contextName, namespace string, token authenticationv1
 		return err
 	}
 
-	store = updateStore(store, contextName, namespace, token)
+	updateStore(store, contextName, namespace, token)
 
 	newStore, err := json.MarshalIndent(store, "", "\t")
 	if err != nil {
