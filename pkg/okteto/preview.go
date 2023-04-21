@@ -70,6 +70,14 @@ type getPreviewResources struct {
 	Response previewResourcesStatus `graphql:"preview(id: $id)"`
 }
 
+type sleepPreviewMutation struct {
+	Response previewIDStruct `graphql:"sleepPreview(preview: $preview)"`
+}
+
+type wakePreviewMutation struct {
+	Response previewIDStruct `graphql:"wakePreview(preview: $preview)"`
+}
+
 type previewResourcesStatus struct {
 	Deployments  []resourceInfo
 	Statefulsets []resourceInfo
@@ -306,4 +314,32 @@ func (*previewClient) translateErr(err error, name string) error {
 			Hint: "Please log in with an administrator account or use a personal preview environment"}
 	}
 	return err
+}
+
+// Sleep sleeps a preview
+func (c *previewClient) SleepPreview(ctx context.Context, previewName string) error {
+	mutationStruct := sleepPreviewMutation{}
+	variables := map[string]interface{}{
+		"id": graphql.String(previewName),
+	}
+	err := mutate(ctx, &mutationStruct, variables, c.client)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Wake wakes a preview
+func (c *previewClient) WakePreview(ctx context.Context, previewName string) error {
+	mutationStruct := wakePreviewMutation{}
+	variables := map[string]interface{}{
+		"id": graphql.String(previewName),
+	}
+	err := mutate(ctx, &mutationStruct, variables, c.client)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

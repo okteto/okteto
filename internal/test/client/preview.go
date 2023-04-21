@@ -34,6 +34,8 @@ type FakePreviewResponse struct {
 
 	ErrDestroyPreview   error
 	DestroySuccessCount int
+	ErrSleepPreview     error
+	ErrWakePreview      error
 }
 
 // NewFakePreviewClient returns a new fake preview client
@@ -68,4 +70,12 @@ func (c *FakePreviewsClient) Destroy(_ context.Context, _ string) error {
 
 func (*FakePreviewsClient) ListEndpoints(_ context.Context, _ string) ([]types.Endpoint, error) {
 	return nil, nil
+}
+
+func (c *FakePreviewsClient) SleepPreview(_ context.Context, _ string) error {
+	return c.response.ErrSleepPreview
+}
+
+func (c *FakePreviewsClient) WakePreview(_ context.Context, _ string) error {
+	return c.response.ErrWakePreview
 }
