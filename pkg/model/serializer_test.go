@@ -1841,6 +1841,214 @@ func TestManifestMarshalling(t *testing.T) {
 	}
 }
 
+func TestDevModeUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []byte
+		expected *Dev
+	}{
+		{
+			name: "hybrid mode enabled",
+			input: []byte(`mode: hybrid
+selector:
+  app.kubernetes.io/part-of: okteto
+  app.kubernetes.io/component: frontend
+command: ["sh", "-c", "yarn start"]
+reverse:
+  - 8080:8080`),
+			expected: &Dev{
+				Mode: "hybrid",
+				Selector: Selector{
+					"app.kubernetes.io/part-of":   "okteto",
+					"app.kubernetes.io/component": "frontend",
+				},
+				Command: Command{
+					Values: []string{"sh", "-c", "yarn start"},
+				},
+				Reverse: []Reverse{
+					{
+						Remote: 8080,
+						Local:  8080,
+					},
+				},
+				Image:     &BuildInfo{},
+				Push:      &BuildInfo{},
+				Secrets:   []Secret{},
+				Probes:    &Probes{},
+				Lifecycle: &Lifecycle{},
+				Sync: Sync{
+					Folders: []SyncFolder{},
+				},
+				Forward:     []forward.Forward{},
+				Environment: Environment{},
+				Volumes:     []Volume{},
+				Services:    []*Dev{},
+				Metadata: &Metadata{
+					Labels:      Labels{},
+					Annotations: Annotations{},
+				},
+				PersistentVolumeInfo: &PersistentVolumeInfo{
+					Enabled: true,
+				},
+				InitContainer: InitContainer{
+					Image: "okteto/bin:1.4.2",
+				},
+			},
+		},
+		{
+			name: "sync mode enabled",
+			input: []byte(`mode: sync
+selector:
+  app.kubernetes.io/part-of: okteto
+  app.kubernetes.io/component: api
+image: okteto/golang:1
+environment:
+  - LOG_FORMATTER=text
+command: sh
+sync:
+  - ./api:/usr/src/app
+forward:
+  - 2345:2345`),
+			expected: &Dev{
+				Mode: "sync",
+				Selector: Selector{
+					"app.kubernetes.io/part-of":   "okteto",
+					"app.kubernetes.io/component": "api",
+				},
+				Command: Command{
+					Values: []string{"sh"},
+				},
+				Image: &BuildInfo{
+					Name: "okteto/golang:1",
+				},
+				Push:      &BuildInfo{},
+				Secrets:   []Secret{},
+				Probes:    &Probes{},
+				Lifecycle: &Lifecycle{},
+				Sync: Sync{
+					Compression:    true,
+					RescanInterval: 300,
+					Folders: []SyncFolder{
+						{
+							LocalPath:  "./api",
+							RemotePath: "/usr/src/app",
+						},
+					},
+				},
+				Forward: []forward.Forward{
+					{
+						Local:  2345,
+						Remote: 2345,
+					},
+				},
+				Environment: Environment{
+					{
+						Name:  "LOG_FORMATTER",
+						Value: "text",
+					},
+				},
+				Volumes:  []Volume{},
+				Services: []*Dev{},
+				Metadata: &Metadata{
+					Labels:      Labels{},
+					Annotations: Annotations{},
+				},
+				PersistentVolumeInfo: &PersistentVolumeInfo{
+					Enabled: true,
+				},
+				InitContainer: InitContainer{
+					Image: "okteto/bin:1.4.2",
+				},
+			},
+		},
+		{
+			name: "no mode, sync fallback",
+			input: []byte(`
+selector:
+  app.kubernetes.io/part-of: okteto
+  app.kubernetes.io/component: producer
+image: okteto/golang:1
+command: sh
+sync:
+  - ./producer:/usr/src/app
+forward:
+  - 2345:2345`),
+			expected: &Dev{
+				Selector: Selector{
+					"app.kubernetes.io/part-of":   "okteto",
+					"app.kubernetes.io/component": "producer",
+				},
+				Command: Command{
+					Values: []string{"sh"},
+				},
+				Image: &BuildInfo{
+					Name: "okteto/golang:1",
+				},
+				Push:      &BuildInfo{},
+				Secrets:   []Secret{},
+				Probes:    &Probes{},
+				Lifecycle: &Lifecycle{},
+				Sync: Sync{
+					Compression:    true,
+					RescanInterval: 300,
+					Folders: []SyncFolder{
+						{
+							LocalPath:  "./producer",
+							RemotePath: "/usr/src/app",
+						},
+					},
+				},
+				Forward: []forward.Forward{
+					{
+						Local:  2345,
+						Remote: 2345,
+					},
+				},
+				Environment: Environment{},
+				Volumes:     []Volume{},
+				Services:    []*Dev{},
+				Metadata: &Metadata{
+					Labels:      Labels{},
+					Annotations: Annotations{},
+				},
+				PersistentVolumeInfo: &PersistentVolumeInfo{
+					Enabled: true,
+				},
+				InitContainer: InitContainer{
+					Image: "okteto/bin:1.4.2",
+				},
+			},
+		},
+		{
+			name: "mode does not match with declaration",
+			input: []byte(`mode: hybrid
+selector:
+  app.kubernetes.io/part-of: okteto
+  app.kubernetes.io/component: producer
+image: okteto/golang:1
+command: sh
+sync:
+  - ./producer:/usr/src/app
+forward:
+  - 2345:2345`),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NewDev()
+			err := yaml.UnmarshalStrict(tt.input, result)
+			if tt.expected != nil {
+				assert.NoError(t, err)
+				if !assert.Equal(t, tt.expected, result) {
+					t.Fatal("Failed")
+				}
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
 func TestDestroyInfoMarshalling(t *testing.T) {
 	tests := []struct {
 		name        string

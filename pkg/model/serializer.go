@@ -724,10 +724,33 @@ func checkFileAndNotDirectory(path string) error {
 func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type devType Dev // Prevent recursion
 	dev := devType(*d)
-	err := unmarshal(&dev)
-	if err != nil {
-		return fmt.Errorf("Unmarshal error: '%s'", err)
+	type hybridModeInfo struct {
+		Workdir     string            `json:"workdir,omitempty" yaml:"workdir,omitempty"`
+		Selector    Selector          `json:"selector,omitempty" yaml:"selector,omitempty"`
+		Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
+		Environment Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
+		Command     Command           `json:"command,omitempty" yaml:"command,omitempty"`
+		Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
+		Mode        string            `json:"mode,omitempty" yaml:"mode,omitempty"`
 	}
+	hybridModeDev := &hybridModeInfo{}
+	err := unmarshal(hybridModeDev)
+	if err != nil {
+		if hybridModeDev.Mode != "hybrid" {
+			err = unmarshal(&dev)
+			if err != nil {
+				return fmt.Errorf("Unmarshal error: '%s'", err)
+			}
+		} else {
+			return fmt.Errorf("Unmarshal error: '%s'", err)
+		}
+	} else {
+		err = unmarshal(&dev)
+		if err != nil {
+			return fmt.Errorf("Unmarshal error: '%s'", err)
+		}
+	}
+
 	*d = Dev(dev)
 
 	return nil

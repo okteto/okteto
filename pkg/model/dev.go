@@ -94,6 +94,7 @@ type Dev struct {
 	EnvFiles             EnvFiles              `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
+	Mode                 string                `json:"mode,omitempty" yaml:"mode,omitempty"`
 
 	// Deprecated fields
 	Healthchecks bool   `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
