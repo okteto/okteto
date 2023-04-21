@@ -54,7 +54,8 @@ type oktetoRegistryInterface interface {
 type oktetoBuilderConfigInterface interface {
 	HasGlobalAccess() bool
 	IsCleanProject() bool
-	GetHash() string
+	GetBuildHash(*model.BuildInfo) string
+	GetGitCommit() string
 }
 
 // OktetoBuilder builds the images
@@ -155,15 +156,14 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 				oktetoLog.SetStage(fmt.Sprintf("Building service %s", svcToBuild))
 			}
 
-			// TODO: uncomment this when we have the commit + build args hashed
-			// if imageTag, isBuilt := bc.checkIfCommitIsAlreadyBuilt(options.Manifest.Name, svcToBuild, bc.Config.GetHash(), options.NoCache); isBuilt {
-			// 	oktetoLog.Warning("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, bc.Config.GetHash())
-			// 	bc.SetServiceEnvVars(svcToBuild, imageTag)
-			// 	bc.builtImages[svcToBuild] = true
-			// 	continue
-			// }
-
 			buildSvcInfo := buildManifest[svcToBuild]
+			if imageTag, isBuilt := bc.checkIfCommitIsAlreadyBuilt(options.Manifest.Name, svcToBuild, bc.Config.GetBuildHash(buildSvcInfo), options.NoCache); isBuilt {
+				oktetoLog.Warning("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, bc.Config.GetBuildHash(buildSvcInfo))
+				bc.SetServiceEnvVars(svcToBuild, imageTag)
+				bc.builtImages[svcToBuild] = true
+				continue
+			}
+
 			if !okteto.Context().IsOkteto && buildSvcInfo.Image == "" {
 				return fmt.Errorf("'build.%s.image' is required if your cluster doesn't have Okteto installed", svcToBuild)
 			}

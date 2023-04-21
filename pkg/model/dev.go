@@ -34,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
+	"github.com/spf13/afero"
 	yaml "gopkg.in/yaml.v2"
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
@@ -150,6 +151,18 @@ type BuildDependsOn []string
 
 // BuildSecrets represents the secrets to be injected to the build of the image
 type BuildSecrets map[string]string
+
+func (bs BuildSecrets) GetContent(fs afero.Fs) string {
+	result := []string{}
+	for k, v := range bs {
+		b, err := afero.ReadFile(fs, v)
+		if err != nil {
+			return ""
+		}
+		result = append(result, fmt.Sprintf("%s=%s", k, string(b)))
+	}
+	return strings.Join(result, ";")
+}
 
 // GetDockerfilePath returns the path to the Dockerfile
 func (b *BuildInfo) GetDockerfilePath() string {

@@ -136,9 +136,10 @@ type fakeConfig struct {
 	sha       string
 }
 
-func (fc fakeConfig) HasGlobalAccess() bool { return fc.hasAccess }
-func (fc fakeConfig) IsCleanProject() bool  { return fc.isClean }
-func (fc fakeConfig) GetHash() string       { return fc.sha }
+func (fc fakeConfig) HasGlobalAccess() bool                  { return fc.hasAccess }
+func (fc fakeConfig) IsCleanProject() bool                   { return fc.isClean }
+func (fc fakeConfig) GetBuildHash(_ *model.BuildInfo) string { return fc.sha }
+func (fc fakeConfig) GetGitCommit() string                   { return fc.sha }
 
 func TestGetToBuildTag(t *testing.T) {
 	okteto.CurrentStore = &okteto.OktetoContextStore{
@@ -393,7 +394,7 @@ func TestCheckIfCommitIsAlreadyBuilt(t *testing.T) {
 				}},
 				Config: tt.config.cfg,
 			}
-			_, hasAccess := ob.checkIfCommitIsAlreadyBuilt("test", "test", tt.config.cfg.GetHash(), tt.config.cmdOptions.NoCache)
+			_, hasAccess := ob.checkIfCommitIsAlreadyBuilt("test", "test", tt.config.cfg.GetBuildHash(&model.BuildInfo{}), tt.config.cmdOptions.NoCache)
 			assert.Equal(t, tt.expected.hasAccess, hasAccess)
 		})
 	}

@@ -153,11 +153,10 @@ func (bc *OktetoBuilder) getTagToBuild(manifestName, svcName string, b *model.Bu
 func (bc *OktetoBuilder) tagsToCheck(manifestName, svcName string, b *model.BuildInfo) []string {
 	targetRegistries := []string{constants.DevRegistry}
 	sha := ""
-	// TODO: uncomment add support for global registry
-	// if bc.Config.HasGlobalAccess() && bc.Config.IsCleanProject() {
-	// 	targetRegistries = []string{constants.GlobalRegistry, constants.DevRegistry}
-	// 	sha = bc.Config.GetHash()
-	// }
+	if bc.Config.HasGlobalAccess() && bc.Config.IsCleanProject() {
+		targetRegistries = []string{constants.GlobalRegistry, constants.DevRegistry}
+		sha = bc.Config.GetBuildHash(b)
+	}
 
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
