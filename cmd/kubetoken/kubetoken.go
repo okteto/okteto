@@ -10,7 +10,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package kubetoken
 
 import (
@@ -22,6 +21,7 @@ import (
 	contextCMD "github.com/okteto/okteto/cmd/context"
 
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -36,7 +36,7 @@ func KubeToken() *cobra.Command {
 		Use:   "kubetoken <context> <namespace>",
 		Short: "Print Kubernetes cluster credentials in ExecCredential format.",
 		Long: `Print Kubernetes cluster credentials in ExecCredential format.
-You can find more information on 'ExecCredential' and 'client side authentication' at (https://kubernetes.io/docs/reference/config-api/client-authentication.v1/) and  https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins`,
+You can find more information on 'ExecCredential' and 'client side authentication' at (https://kubernetes.io/docs/reference/config-api/client-authentication.v1/) and  https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins. It uses a cache file to store the token, which is located at $HOME/.okteto/okteto_auth_plugin_cache.json. This can be disabled by setting the environment variable 'OKTETO_KUBETOKEN_NO_CACHE' to 'true'.`,
 		Hidden: true,
 		Args:   cobra.ExactArgs(2),
 	}
@@ -46,8 +46,14 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 		contextName := args[0]
 		namespace := args[1]
 
-		cacheFileName := path.Join(config.GetDotKubeFolder(), oktetoTokenCacheFileName)
-		cache := kubetoken.NewCache(cacheFileName)
+		var cache kubetoken.CacheGetSetter
+		if os.Getenv(constants.OktetoKubetokenNoCache) == "true" {
+			cache = kubetoken.NoopCache{}
+		} else {
+			cacheFileName := path.Join(config.GetDotKubeFolder(), oktetoTokenCacheFileName)
+			cache = kubetoken.NewCache(cacheFileName)
+		}
+
 		// Return early if we have a valid token in the cache before we run the context command to improve performance
 		if token, err := cache.Get(contextName, namespace); err == nil && token != "" {
 			cmd.Print(token)

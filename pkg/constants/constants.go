@@ -44,6 +44,9 @@ const (
 	// OktetoAutodiscoveryReleaseName defines the name used for helm release when autodiscovery
 	OktetoAutodiscoveryReleaseName = "OKTETO_AUTODISCOVERY_RELEASE_NAME"
 
+	// OktetoKubetokenNoCache disables the kubetoken cache
+	OktetoKubetokenNoCache = "OKTETO_KUBETOKEN_NO_CACHE"
+
 	// LastUpdatedAnnotation indicates update timestamp
 	LastUpdatedAnnotation = "dev.okteto.com/last-updated"
 

@@ -29,12 +29,27 @@ type stringStore interface {
 	Set([]byte) error
 }
 
+type CacheGetSetter interface {
+	cacheGetter
+	cacheSetter
+}
+
+type cacheGetter interface {
+	Get(contextName, namespace string) (string, error)
+}
+
+type cacheSetter interface {
+	Set(contextName, namespace string, token authenticationv1.TokenRequest)
+}
+
+// Cache is a cache that stores the kubetoken with the underlying store. It handles expiration
 type Cache struct {
 	StringStore stringStore
 	Now         func() time.Time
 	Debug       func(string, ...interface{})
 }
 
+// NewCache returns a new cache which uses the given file as the underlying store
 func NewCache(fileName string) *Cache {
 	return &Cache{
 		StringStore: NewFileByteStore(fileName),

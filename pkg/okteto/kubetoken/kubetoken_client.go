@@ -26,10 +26,7 @@ import (
 
 const kubetokenPath = "auth/kubetoken"
 
-type cacheSetter interface {
-	Set(contextName, namespace string, token authenticationv1.TokenRequest)
-}
-
+// Client is a client to get a kubernetes token from the okteto API
 type Client struct {
 	httpClient  *http.Client
 	url         string

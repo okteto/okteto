@@ -18,6 +18,8 @@ import (
 	"path/filepath"
 )
 
+// NewFileByteStore creates a new FileByteStore that uses a file to store the bytes.
+// The file handling implementations are instantiated with the os package.
 func NewFileByteStore(fileName string) *FileByteStore {
 	return &FileByteStore{
 		FileName: fileName,
