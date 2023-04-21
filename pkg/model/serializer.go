@@ -736,19 +736,13 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	hybridModeDev := &hybridModeInfo{}
 	err := unmarshal(hybridModeDev)
 	if err != nil {
-		if hybridModeDev.Mode != "hybrid" {
-			err = unmarshal(&dev)
-			if err != nil {
-				return fmt.Errorf("Unmarshal error: '%s'", err)
-			}
-		} else {
-			return fmt.Errorf("Unmarshal error: '%s'", err)
+		if hybridModeDev.Mode == "hybrid" {
+			return err
 		}
-	} else {
-		err = unmarshal(&dev)
-		if err != nil {
-			return fmt.Errorf("Unmarshal error: '%s'", err)
-		}
+	}
+	err = unmarshal(&dev)
+	if err != nil {
+		return err
 	}
 
 	*d = Dev(dev)
