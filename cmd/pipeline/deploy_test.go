@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
+	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
@@ -223,6 +224,7 @@ func TestDeployPipelineSuccesful(t *testing.T) {
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
 		},
+		k8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	opts := &DeployOptions{
 		Repository: "test",
@@ -253,15 +255,26 @@ func TestDeployPipelineSuccesfulWithWait(t *testing.T) {
 		},
 	}
 
+	cmap := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pipeline.TranslatePipelineName("test"),
+			Namespace: "test",
+			Labels:    map[string]string{},
+		},
+		Data: nil,
+	}
+
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
 			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 		},
+		k8sClientProvider: test.NewFakeK8sProvider(cmap),
 	}
 	opts := &DeployOptions{
 		Repository: "test",
 		Name:       "test",
+		Namespace:  "test",
 		Wait:       true,
 		Timeout:    2 * time.Second,
 	}
@@ -285,6 +298,7 @@ func TestDeployWithError(t *testing.T) {
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
 		},
+		k8sClientProvider: test.NewFakeK8sProvider(),
 	}
 	opts := &DeployOptions{
 		Repository: "test",
@@ -315,15 +329,26 @@ func TestDeployPipelineSuccesfulWithWaitStreamError(t *testing.T) {
 		},
 	}
 
+	cmap := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      pipeline.TranslatePipelineName("test"),
+			Namespace: "test",
+			Labels:    map[string]string{},
+		},
+		Data: nil,
+	}
+
 	pc := &Command{
 		okClient: &client.FakeOktetoClient{
 			PipelineClient: client.NewFakePipelineClient(response),
 			StreamClient:   client.NewFakeStreamClient(&client.FakeStreamResponse{StreamErr: errors.New("error")}),
 		},
+		k8sClientProvider: test.NewFakeK8sProvider(cmap),
 	}
 	opts := &DeployOptions{
 		Repository: "test",
 		Name:       "test",
+		Namespace:  "test",
 		Wait:       true,
 		Timeout:    2 * time.Second,
 	}

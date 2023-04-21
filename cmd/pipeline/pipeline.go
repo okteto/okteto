@@ -31,7 +31,8 @@ type PipelineInterface interface {
 
 // Command has all the pipeline subcommands
 type Command struct {
-	okClient types.OktetoInterface
+	okClient          types.OktetoInterface
+	k8sClientProvider okteto.K8sClientProvider
 }
 
 // NewCommand creates a namespace command to
