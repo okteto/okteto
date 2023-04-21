@@ -38,7 +38,6 @@ func (d *Driver) translateDivertVirtualService(vs *istioV1beta1.VirtualService, 
 	}
 	annotation := DivertTransformation{
 		Namespace: d.namespace,
-		Header:    d.divert.Header,
 		Routes:    routes,
 	}
 	bytes, err := json.Marshal(annotation)
@@ -92,10 +91,10 @@ func (d *Driver) injectDivertHeader(vsSpec istioNetworkingV1beta1.VirtualService
 		if vsSpec.Http[i].Headers.Request == nil {
 			vsSpec.Http[i].Headers.Request = &istioNetworkingV1beta1.Headers_HeaderOperations{}
 		}
-		if vsSpec.Http[i].Headers.Request.Set == nil {
-			vsSpec.Http[i].Headers.Request.Set = map[string]string{}
+		if vsSpec.Http[i].Headers.Request.Add == nil {
+			vsSpec.Http[i].Headers.Request.Add = map[string]string{}
 		}
-		vsSpec.Http[i].Headers.Request.Set[constants.OktetoDivertDefaultHeaderName] = d.namespace
+		vsSpec.Http[i].Headers.Request.Add[constants.OktetoDivertBaggageHeader] = fmt.Sprintf("%s=%s", constants.OktetoDivertHeaderName, d.namespace)
 	}
 	return vsSpec
 }

@@ -80,7 +80,7 @@ func newNamespaceClient(client graphqlClientInterface) *namespaceClient {
 	return &namespaceClient{client: client}
 }
 
-// CreateNamespace creates a namespace
+// Create creates a namespace
 func (c *namespaceClient) Create(ctx context.Context, namespace string) (string, error) {
 	var mutation createNamespaceMutation
 	variables := map[string]interface{}{
@@ -94,7 +94,7 @@ func (c *namespaceClient) Create(ctx context.Context, namespace string) (string,
 	return string(mutation.Response.Id), nil
 }
 
-// List list namespaces
+// List lists the namespaces
 func (c *namespaceClient) List(ctx context.Context) ([]types.Namespace, error) {
 	var queryStruct listNamespacesQuery
 
@@ -134,7 +134,7 @@ func (c *namespaceClient) AddMembers(ctx context.Context, namespace string, memb
 	return nil
 }
 
-// DeleteNamespace deletes a namespace
+// Delete deletes a namespace
 func (c *namespaceClient) Delete(ctx context.Context, namespace string) error {
 	var mutation deleteNamespaceMutation
 	variables := map[string]interface{}{

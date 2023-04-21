@@ -363,6 +363,55 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 	}
 }
 
+func TestOptsFromBuildInfoForRemoteDeploy(t *testing.T) {
+	tests := []struct {
+		name      string
+		buildInfo *model.BuildInfo
+		expected  *types.BuildOptions
+	}{
+		{
+			name: "all fields set",
+			buildInfo: &model.BuildInfo{
+				Name:        "movies-service",
+				Context:     "service",
+				Dockerfile:  "Dockerfile",
+				Target:      "build",
+				CacheFrom:   []string{"cache-image"},
+				Image:       "okteto.dev/movies-service:dev",
+				ExportCache: []string{"export-image"},
+			},
+			expected: &types.BuildOptions{
+				File:       "Dockerfile",
+				OutputMode: "deploy",
+				Path:       "service",
+			},
+		},
+		{
+			name: "just the fields needed",
+			buildInfo: &model.BuildInfo{
+				Name:        "movies-service",
+				Context:     "service",
+				Dockerfile:  "Dockerfile",
+				Target:      "build",
+				CacheFrom:   []string{"cache-image"},
+				Image:       "okteto.dev/movies-service:dev",
+				ExportCache: []string{"export-image"},
+			},
+			expected: &types.BuildOptions{
+				File:       "Dockerfile",
+				OutputMode: "deploy",
+				Path:       "service",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := OptsFromBuildInfoForRemoteDeploy(tt.buildInfo, &types.BuildOptions{OutputMode: "deploy"})
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestExtractFromContextAndDockerfile(t *testing.T) {
 	buildName := "frontendTest"
 	mockDir := "mockDir"

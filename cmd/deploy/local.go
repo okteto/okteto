@@ -110,6 +110,7 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 		return err
 	}
 
+	// Injecting the PROXY into the kubeconfig file
 	oktetoLog.Debugf("creating temporal kubeconfig file '%s'", ld.TempKubeconfigFile)
 	if err := ld.Kubeconfig.Modify(ld.Proxy.GetPort(), ld.Proxy.GetToken(), ld.TempKubeconfigFile); err != nil {
 		oktetoLog.Infof("could not create temporal kubeconfig %s", err)

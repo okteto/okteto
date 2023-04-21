@@ -148,8 +148,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
-	buildOptions := build.OptsFromBuildInfo("", "", buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"}, rd.builderV2.Registry)
-	buildOptions.Tag = ""
+	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: "deploy"})
 	buildOptions.Manifest = deployOptions.Manifest
 
 	// we need to call Build() method using a remote builder. This Builder will have
@@ -218,7 +217,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		return "", err
 	}
 
-	err = rd.createDockerignoreIfNeeded(cwd, tmpDir)
+	err = rd.createDockerignore(cwd, tmpDir)
 	if err != nil {
 		return "", err
 	}
@@ -229,22 +228,28 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 	return dockerfile.Name(), nil
 }
 
-func (rd *remoteDeployCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
+func (rd *remoteDeployCommand) createDockerignore(cwd, tmpDir string) error {
+	// if we do not create a .dockerignore (with or without content) used to create
+	// the remote executor, we would use the one located in root (the one used to
+	// build the services) so we would create a remote executor without certain files
+	// necessary for the later deployment which would cause an error when deploying
+	// remotely due to the lack of these files.
+	dockerignoreContent := []byte(``)
 	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
 	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-	} else {
-		dockerignoreContent, err := afero.ReadFile(rd.fs, dockerignoreFilePath)
-		if err != nil {
-			return err
-		}
 
-		err = afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
+	} else {
+		dockerignoreContent, err = afero.ReadFile(rd.fs, dockerignoreFilePath)
 		if err != nil {
 			return err
 		}
+	}
+	err := afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
+	if err != nil {
+		return err
 	}
 
 	return nil

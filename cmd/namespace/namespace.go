@@ -60,5 +60,7 @@ func Namespace(ctx context.Context) *cobra.Command {
 	cmd.AddCommand(List(ctx))
 	cmd.AddCommand(Create(ctx))
 	cmd.AddCommand(Delete(ctx))
+	cmd.AddCommand(Sleep(ctx))
+	cmd.AddCommand(Wake(ctx))
 	return cmd
 }

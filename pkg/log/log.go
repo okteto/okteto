@@ -311,7 +311,7 @@ func IsInteractive() bool {
 	return log.writer.IsInteractive()
 }
 
-// AddMaskedWord adds a new
+// AddMaskedWord adds a new word to be redacted
 func AddMaskedWord(word string) {
 	if strings.TrimSpace(word) != "" {
 		log.maskedWords = append(log.maskedWords, word)
