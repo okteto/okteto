@@ -145,7 +145,7 @@ func (t *trace) display() {
 			}
 		}
 		if t.hasCommandLogs(v) {
-			oktetoLog.Spinner("Deploying your development environment...")
+			oktetoLog.Spinner("Destroying your development environment...")
 			for _, log := range v.logs {
 				var text oktetoLog.JSONLogFormat
 				if err := json.Unmarshal([]byte(log), &text); err != nil {
