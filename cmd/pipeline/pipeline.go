@@ -46,7 +46,8 @@ func NewCommand() (*Command, error) {
 		okClient = c
 	}
 	return &Command{
-		okClient: okClient,
+		okClient:          okClient,
+		k8sClientProvider: okteto.NewK8sClientProvider(),
 	}, nil
 }
 
