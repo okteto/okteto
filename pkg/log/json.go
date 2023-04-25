@@ -19,6 +19,7 @@ import (
 	"io"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/sirupsen/logrus"
 )
@@ -264,6 +265,7 @@ func (*JSONWriter) IsInteractive() bool {
 }
 
 func convertToJSON(level, stage, message string) string {
+	message = strings.TrimRightFunc(message, unicode.IsSpace)
 	if stage == "" || message == "" {
 		return ""
 	}
