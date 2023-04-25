@@ -41,6 +41,7 @@ import (
 type localDeployer struct {
 	Proxy              proxyInterface
 	Kubeconfig         kubeConfigHandler
+	ConfigMapHandler   configMapHandler
 	Executor           executor.ManifestExecutor
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
@@ -55,7 +56,7 @@ type localDeployer struct {
 }
 
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not
-func newLocalDeployer(ctx context.Context, cwd string, options *Options) (*localDeployer, error) {
+func newLocalDeployer(ctx context.Context, cwd string, options *Options, cmapHandler configMapHandler) (*localDeployer, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the current working directory: %w", err)
@@ -85,6 +86,7 @@ func newLocalDeployer(ctx context.Context, cwd string, options *Options) (*local
 	return &localDeployer{
 		Kubeconfig:         kubeconfig,
 		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
+		ConfigMapHandler:   cmapHandler,
 		Proxy:              proxy,
 		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),
 		K8sClientProvider:  clientProvider,
@@ -223,6 +225,11 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 		opts.Variables = append(opts.Variables, envsFromOktetoEnvFile...)
 
 		oktetoLog.SetStage("")
+	}
+
+	err = ld.ConfigMapHandler.updateEnvsFromCommands(ctx, opts.Name, opts.Manifest.Namespace, opts.Variables)
+	if err != nil {
+		return fmt.Errorf("could not update config map with environment variables: %w", err)
 	}
 
 	// deploy compose if any
