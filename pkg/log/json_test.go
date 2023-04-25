@@ -21,9 +21,6 @@ import (
 )
 
 func Test_ConvertToJson(t *testing.T) {
-	// TODO test trimming trailing whitespace
-	// TODO test NOT trimming leading whitespace
-
 	defaultLevel := "info"
 	defaultStage := "some stage"
 	mockedTimestamp := int64(123)
