@@ -15,6 +15,7 @@ package v2
 
 import (
 	"crypto/sha512"
+	"encoding/hex"
 	"fmt"
 	"strings"
 
@@ -76,16 +77,16 @@ func (oc oktetoBuilderConfig) GetGitCommit() string {
 }
 
 func (oc oktetoBuilderConfig) GetBuildHash(buildInfo *model.BuildInfo) string {
-	text := oc.getTextToHash(buildInfo)
-	buildHash := sha512.Sum512([]byte(text))
-	return string(buildHash[:])
-}
-
-func (oc oktetoBuilderConfig) getTextToHash(buildInfo *model.BuildInfo) string {
 	commitSHA, err := oc.repository.GetSHA()
 	if err != nil {
-		oktetoLog.Infof("could not get repository sha: %w", err)
+		return ""
 	}
+	text := oc.getTextToHash(buildInfo, commitSHA)
+	buildHash := sha512.Sum512([]byte(text))
+	return hex.EncodeToString(buildHash[:])
+}
+
+func (oc oktetoBuilderConfig) getTextToHash(buildInfo *model.BuildInfo, sha string) string {
 	args := []string{}
 	for _, arg := range buildInfo.Args {
 		args = append(args, arg.String())
@@ -95,7 +96,7 @@ func (oc oktetoBuilderConfig) getTextToHash(buildInfo *model.BuildInfo) string {
 
 	// We use a builder to avoid allocations when building the string
 	var b strings.Builder
-	fmt.Fprintf(&b, "commit:%s;", commitSHA)
+	fmt.Fprintf(&b, "commit:%s;", sha)
 	fmt.Fprintf(&b, "target:%s;", buildInfo.Target)
 	fmt.Fprintf(&b, "build_args:%s;", argsText)
 	fmt.Fprintf(&b, "secrets:%s;", secretsText)

@@ -32,12 +32,37 @@ import (
 )
 
 var fakeManifest *model.Manifest = &model.Manifest{
+	Name: "test",
 	Build: model.ManifestBuild{
 		"test-1": &model.BuildInfo{
-			Image: "test/test-1",
+			Image:      "test/test-1",
+			Context:    ".",
+			Dockerfile: ".",
 		},
 		"test-2": &model.BuildInfo{
-			Image: "test/test-2",
+			Image:      "test/test-2",
+			Context:    ".",
+			Dockerfile: ".",
+			VolumesToInclude: []model.StackVolume{
+				{
+					LocalPath:  "/tmp",
+					RemotePath: "/tmp",
+				},
+			},
+		},
+		"test-3": &model.BuildInfo{
+			Context:    ".",
+			Dockerfile: ".",
+		},
+		"test-4": &model.BuildInfo{
+			Context:    ".",
+			Dockerfile: ".",
+			VolumesToInclude: []model.StackVolume{
+				{
+					LocalPath:  "/tmp",
+					RemotePath: "/tmp",
+				},
+			},
 		},
 	},
 	IsV2: true,

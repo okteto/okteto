@@ -18,19 +18,28 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
-	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestAllServicesAlreadyBuilt(t *testing.T) {
+func TestNoneOfTheServicesBuilt(t *testing.T) {
 	fakeReg := newFakeRegistry()
 	bc := NewFakeBuilder(nil, fakeReg)
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
-	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
+	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{})
+	// should not throw error
+	require.NoError(t, err)
+	require.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
+}
+
+func TestAllServicesAlreadyBuilt(t *testing.T) {
+	fakeReg := newFakeRegistry()
+	bc := NewFakeBuilder(nil, fakeReg)
+	alreadyBuilt := []string{"test/test-1", "okteto.dev/test-test-2:okteto-with-volume-mounts", "okteto.dev/test-test-3:okteto", "okteto.dev/test-test-4:okteto-with-volume-mounts"}
+	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
+	ctx := context.Background()
+	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{})
 	// should not throw error
 	require.NoError(t, err)
 	require.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
@@ -42,22 +51,24 @@ func TestServicesNotAreAlreadyBuilt(t *testing.T) {
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
-	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
+	toBuildSvcsInput := []string{"test-1", "test-2"}
+	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, toBuildSvcsInput)
 	// should not throw error
 	require.NoError(t, err)
-	require.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
+	require.Equal(t, len(toBuildSvcsInput)-len(alreadyBuilt), len(toBuild))
 }
 
 func TestNoServiceBuilt(t *testing.T) {
 	fakeReg := newFakeRegistry()
 	bc := NewFakeBuilder(nil, fakeReg)
-	alreadyBuilt := []string{"test/test-1", "test/test-2"}
+	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
-	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
+	toBuildSvcsInput := []string{"test-1"}
+	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, toBuildSvcsInput)
 	// should not throw error
 	require.NoError(t, err)
-	require.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
+	require.Equal(t, len(toBuildSvcsInput)-len(alreadyBuilt), len(toBuild))
 }
 
 func TestServicesNotInStack(t *testing.T) {
@@ -75,10 +86,12 @@ func TestServicesNotInStack(t *testing.T) {
 	fakeManifest.Deploy = &model.DeployInfo{ComposeSection: &model.ComposeSectionInfo{
 		Stack: stack,
 	}}
-	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, []string{"test-1", "test-2"})
+	toBuildSvcsInput := []string{"test-1"}
+
+	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, toBuildSvcsInput)
 	// should not throw error
 	require.NoError(t, err)
-	require.Equal(t, len(fakeManifest.Build)-len(alreadyBuilt), len(toBuild))
+	require.Equal(t, len(toBuildSvcsInput)-len(alreadyBuilt), len(toBuild))
 }
 
 func TestAllServicesAlreadyBuiltWithSubset(t *testing.T) {
@@ -140,262 +153,3 @@ func (fc fakeConfig) HasGlobalAccess() bool                  { return fc.hasAcce
 func (fc fakeConfig) IsCleanProject() bool                   { return fc.isClean }
 func (fc fakeConfig) GetBuildHash(_ *model.BuildInfo) string { return fc.sha }
 func (fc fakeConfig) GetGitCommit() string                   { return fc.sha }
-
-func TestGetToBuildTag(t *testing.T) {
-	okteto.CurrentStore = &okteto.OktetoContextStore{
-		Contexts: map[string]*okteto.OktetoContext{
-			"test": {
-				Namespace: "test",
-				IsOkteto:  true,
-			},
-		},
-		CurrentContext: "test",
-	}
-	tests := []struct {
-		name         string
-		buildConfig  oktetoBuilderConfigInterface
-		buildInfo    *model.BuildInfo
-		manifestName string
-		svcName      string
-		output       []string
-	}{
-		{
-			name: "image is set",
-			buildInfo: &model.BuildInfo{
-				Image: "nginx",
-			},
-			buildConfig: fakeConfig{},
-			output:      []string{"nginx"},
-		},
-		{
-			name:        "image inferred without volume mounts",
-			buildConfig: fakeConfig{},
-			buildInfo: &model.BuildInfo{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			manifestName: "test",
-			svcName:      "test",
-			output:       []string{"okteto.dev/test-test:okteto"},
-		},
-		{
-			name:        "image inferred with volume mounts",
-			buildConfig: fakeConfig{},
-			buildInfo: &model.BuildInfo{
-				Image: "nginx",
-				VolumesToInclude: []model.StackVolume{
-					{
-						LocalPath:  "",
-						RemotePath: "",
-					},
-				},
-			},
-			manifestName: "test",
-			svcName:      "test",
-			output:       []string{"okteto.dev/test-test:okteto-with-volume-mounts"},
-		},
-		{
-			name:        "image is set without volume mounts",
-			buildConfig: fakeConfig{},
-			buildInfo: &model.BuildInfo{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-				Image:      "okteto.dev/test:test",
-			},
-			manifestName: "test",
-			svcName:      "test",
-			output:       []string{"okteto.dev/test:test"},
-		},
-		{
-			name: "access to global but no repo clean",
-			buildConfig: fakeConfig{
-				hasAccess: true,
-			},
-			buildInfo: &model.BuildInfo{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			manifestName: "test",
-			svcName:      "test",
-			output:       []string{"okteto.dev/test-test:okteto"},
-		},
-		{
-			name: "access to global and isClean",
-			buildConfig: fakeConfig{
-				hasAccess: true,
-				isClean:   true,
-				sha:       "hello-this-is-a-test",
-			},
-			buildInfo: &model.BuildInfo{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-			},
-			manifestName: "test",
-			svcName:      "test",
-			output: []string{
-				// "okteto.global/test-test:hello-this-is-a-test",
-				// "okteto.dev/test-test:hello-this-is-a-test",
-				// "okteto.global/test-test:okteto",
-				"okteto.dev/test-test:okteto",
-			},
-		},
-		{
-			name: "access to global and isClean with volumes",
-			buildConfig: fakeConfig{
-				hasAccess: true,
-				isClean:   true,
-				sha:       "hello-this-is-a-test",
-			},
-			buildInfo: &model.BuildInfo{
-				Dockerfile: "Dockerfile",
-				Context:    ".",
-				Image:      "nginx",
-				VolumesToInclude: []model.StackVolume{
-					{
-						LocalPath:  "",
-						RemotePath: "",
-					},
-				},
-			},
-			manifestName: "test",
-			svcName:      "test",
-			output: []string{
-				// "okteto.global/test-test:hello-this-is-a-test",
-				// "okteto.dev/test-test:hello-this-is-a-test",
-				// "okteto.global/test-test:okteto-with-volume-mounts",
-				"okteto.dev/test-test:okteto-with-volume-mounts",
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ob := OktetoBuilder{
-				Config: tt.buildConfig,
-			}
-			result := ob.tagsToCheck(tt.manifestName, tt.svcName, tt.buildInfo)
-			require.Equal(t, tt.output, result)
-		})
-	}
-}
-
-func TestCheckIfCommitIsAlreadyBuilt(t *testing.T) {
-	type config struct {
-		cfg        oktetoBuilderConfigInterface
-		cmdOptions types.BuildOptions
-	}
-	type expected struct {
-		image     string
-		hasAccess bool
-	}
-	tests := []struct {
-		name     string
-		config   config
-		expected expected
-	}{
-		{
-			name: "no access",
-			config: config{
-				cfg: fakeConfig{
-					isClean:   true,
-					hasAccess: false,
-					sha:       "",
-				},
-			},
-			expected: expected{
-				image:     "",
-				hasAccess: false,
-			},
-		},
-		{
-			name: "no clean commit",
-			config: config{
-				cfg: fakeConfig{
-					isClean:   false,
-					hasAccess: true,
-					sha:       "",
-				},
-			},
-			expected: expected{
-				image:     "",
-				hasAccess: false,
-			},
-		},
-		{
-			name: "no access no clean commit",
-			config: config{
-				cfg: fakeConfig{
-					isClean:   false,
-					hasAccess: false,
-					sha:       "",
-				},
-			},
-			expected: expected{
-				image:     "",
-				hasAccess: false,
-			},
-		},
-		{
-			name: "no cache option enabled",
-			config: config{
-				cfg: fakeConfig{
-					isClean:   true,
-					hasAccess: true,
-					sha:       "",
-				},
-				cmdOptions: types.BuildOptions{
-					NoCache: true,
-				},
-			},
-			expected: expected{
-				image:     "",
-				hasAccess: false,
-			},
-		},
-		{
-			name: "registry find image",
-			config: config{
-				cfg: fakeConfig{
-					isClean:   true,
-					hasAccess: true,
-					sha:       "thishashexists",
-				},
-				cmdOptions: types.BuildOptions{
-					NoCache: false,
-				},
-			},
-			expected: expected{
-				image:     "",
-				hasAccess: true,
-			},
-		},
-		{
-			name: "registry doesn't find image",
-			config: config{
-				cfg: fakeConfig{
-					isClean:   true,
-					hasAccess: true,
-					sha:       "thishashdoesntexist",
-				},
-				cmdOptions: types.BuildOptions{
-					NoCache: false,
-				},
-			},
-			expected: expected{
-				image:     "",
-				hasAccess: false,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ob := OktetoBuilder{
-				Registry: fakeRegistry{registry: map[string]fakeImage{
-					"okteto.global/test-test:thishashexists": {},
-				}},
-				Config: tt.config.cfg,
-			}
-			_, hasAccess := ob.checkIfCommitIsAlreadyBuilt("test", "test", tt.config.cfg.GetBuildHash(&model.BuildInfo{}), tt.config.cmdOptions.NoCache)
-			assert.Equal(t, tt.expected.hasAccess, hasAccess)
-		})
-	}
-}
