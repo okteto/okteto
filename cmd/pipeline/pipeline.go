@@ -31,7 +31,8 @@ type PipelineInterface interface {
 
 // Command has all the pipeline subcommands
 type Command struct {
-	okClient types.OktetoInterface
+	okClient          types.OktetoInterface
+	k8sClientProvider okteto.K8sClientProvider
 }
 
 // NewCommand creates a namespace command to
@@ -45,7 +46,8 @@ func NewCommand() (*Command, error) {
 		okClient = c
 	}
 	return &Command{
-		okClient: okClient,
+		okClient:          okClient,
+		k8sClientProvider: okteto.NewK8sClientProvider(),
 	}, nil
 }
 

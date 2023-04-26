@@ -153,6 +153,22 @@ type fakeKubeConfig struct {
 	errOnModify error
 }
 
+type fakeCmapHandler struct {
+	errUpdatingWithEnvs error
+}
+
+func (*fakeCmapHandler) translateConfigMapAndDeploy(context.Context, *pipeline.CfgData) (*apiv1.ConfigMap, error) {
+	return nil, nil
+}
+
+func (f *fakeCmapHandler) updateConfigMap(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error {
+	return nil
+}
+
+func (f *fakeCmapHandler) updateEnvsFromCommands(context.Context, string, string, []string) error {
+	return f.errUpdatingWithEnvs
+}
+
 func (*fakeKubeConfig) Read() (*rest.Config, error) {
 	return nil, nil
 }
@@ -248,7 +264,7 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getManifestWithError,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:      p,
 				Executor:   e,
@@ -292,7 +308,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 	builder := test.NewFakeOktetoBuilder(registry)
 	c := &DeployCommand{
 		GetManifest: getErrorManifest,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -367,7 +383,7 @@ func TestDeployWithErrorExecutingCommands(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -447,7 +463,7 @@ func TestDeployWithErrorBecauseOtherPipelineRunning(t *testing.T) {
 	clientProvider := test.NewFakeK8sProvider(cmap, deployment)
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:             p,
 				Executor:          e,
@@ -506,11 +522,12 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 	clientProvider := test.NewFakeK8sProvider(deployment)
 	c := &DeployCommand{
 		GetManifest: getFakeManifest,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:              p,
 				Executor:           e,
 				Kubeconfig:         &fakeKubeConfig{},
+				ConfigMapHandler:   &fakeCmapHandler{},
 				K8sClientProvider:  clientProvider,
 				GetExternalControl: cp.getFakeExternalControl,
 				Fs:                 afero.NewMemMapFs(),
@@ -582,11 +599,12 @@ func TestDeployWithoutErrors(t *testing.T) {
 		GetExternalControl: cp.getFakeExternalControl,
 		Fs:                 afero.NewMemMapFs(),
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:              p,
 				Executor:           e,
 				Kubeconfig:         &fakeKubeConfig{},
+				ConfigMapHandler:   &fakeCmapHandler{},
 				K8sClientProvider:  clientProvider,
 				GetExternalControl: cp.getFakeExternalControl,
 				Fs:                 afero.NewMemMapFs(),
@@ -867,6 +885,7 @@ func TestDeployExternals(t *testing.T) {
 			}
 
 			ld := localDeployer{
+				ConfigMapHandler:   &fakeCmapHandler{},
 				GetExternalControl: cp.getFakeExternalControl,
 				Fs:                 afero.NewMemMapFs(),
 			}

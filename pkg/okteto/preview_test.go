@@ -87,13 +87,11 @@ func TestDeployPreview(t *testing.T) {
 				client: &fakeGraphQLClient{
 					mutationResult: &deployPreviewMutation{
 						Response: deployPreviewResponse{
+							Id: "test",
 							Action: actionStruct{
 								Id:     "test",
 								Name:   "test",
 								Status: ProgressingStatus,
-							},
-							Preview: previewIDStruct{
-								Id: "test",
 							},
 						},
 					},
@@ -141,13 +139,11 @@ func TestDeployPreview(t *testing.T) {
 				client: &fakeGraphQLClient{
 					mutationResult: &deployPreviewMutation{
 						Response: deployPreviewResponse{
+							Id: "test",
 							Action: actionStruct{
 								Id:     "test",
 								Name:   "test",
 								Status: ProgressingStatus,
-							},
-							Preview: previewIDStruct{
-								Id: "test",
 							},
 						},
 					},

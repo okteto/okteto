@@ -82,7 +82,7 @@ type DeployCommand struct {
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
 	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
-	GetDeployer        func(context.Context, *model.Manifest, *Options, string, *buildv2.OktetoBuilder) (deployerInterface, error)
+	GetDeployer        func(context.Context, *model.Manifest, *Options, string, *buildv2.OktetoBuilder, configMapHandler) (deployerInterface, error)
 	deployWaiter       deployWaiter
 	CfgMapHandler      configMapHandler
 	Fs                 afero.Fs
@@ -236,7 +236,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				oktetoLog.StartSpinner()
 				defer oktetoLog.StopSpinner()
 
-				deployer, err := c.GetDeployer(ctx, options.Manifest, options, "", nil)
+				deployer, err := c.GetDeployer(ctx, options.Manifest, options, "", nil, nil)
 				if err != nil {
 					return err
 				}
@@ -336,7 +336,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.Infof("failed to recreate failed pods: %s", err.Error())
 	}
 
-	deployer, err := dc.GetDeployer(ctx, deployOptions.Manifest, deployOptions, cwd, dc.Builder)
+	deployer, err := dc.GetDeployer(ctx, deployOptions.Manifest, deployOptions, cwd, dc.Builder, dc.CfgMapHandler)
 	if err != nil {
 		return err
 	}
@@ -500,7 +500,7 @@ func getDefaultTimeout() time.Duration {
 	return parsed
 }
 
-func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, cwd string, builder *buildv2.OktetoBuilder) (deployerInterface, error) {
+func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, cwd string, builder *buildv2.OktetoBuilder, cmapHandler configMapHandler) (deployerInterface, error) {
 	var (
 		deployer deployerInterface
 		err      error
@@ -509,7 +509,7 @@ func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, c
 	isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
 
 	if isRemote || manifest.Deploy.Image == "" {
-		deployer, err = newLocalDeployer(ctx, cwd, opts)
+		deployer, err = newLocalDeployer(ctx, cwd, opts, cmapHandler)
 		if err != nil {
 			return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
 		}

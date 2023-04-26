@@ -79,6 +79,69 @@ func Test_translateConfigMap(t *testing.T) {
 	}
 }
 
+func Test_updateEnvsWithoutError(t *testing.T) {
+	ctx := context.Background()
+	namespace := "test"
+	cmap := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      TranslatePipelineName("test"),
+			Namespace: namespace,
+			Labels:    map[string]string{},
+		},
+		Data: map[string]string{
+			statusField: DeployedStatus,
+		},
+	}
+	fakeClient := fake.NewSimpleClientset(cmap)
+	envs := []string{
+		"ONE=value",
+		"TWO=values",
+	}
+
+	err := UpdateEnvs(ctx, "test", namespace, envs, fakeClient)
+	assert.NoError(t, err)
+}
+
+func Test_updateEnvsWithError(t *testing.T) {
+	ctx := context.Background()
+	namespace := "test"
+	cmap := &apiv1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      TranslatePipelineName("test"),
+			Namespace: namespace,
+			Labels:    map[string]string{},
+		},
+		Data: map[string]string{
+			statusField: DeployedStatus,
+		},
+	}
+	fakeClient := fake.NewSimpleClientset(cmap)
+	var tests = []struct {
+		name    string
+		appName string
+		envs    []string
+	}{
+		{
+			name:    "invalid env in configmap",
+			appName: "test",
+			envs: []string{
+				"ONE INVALID ENV",
+			},
+		},
+		{
+			name:    "not found cmap",
+			appName: "not-test",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := UpdateEnvs(ctx, tt.appName, namespace, tt.envs, fakeClient)
+			assert.Error(t, err)
+		})
+	}
+}
+
 func Test_AddDevAnnotations(t *testing.T) {
 	ctx := context.Background()
 	d := &appsv1.Deployment{
