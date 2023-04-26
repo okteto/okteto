@@ -50,8 +50,6 @@ type PreviewInterface interface {
 	GetResourcesStatus(ctx context.Context, previewName, devName string) (map[string]string, error)
 	Destroy(ctx context.Context, previewName string) error
 	ListEndpoints(ctx context.Context, previewName string) ([]Endpoint, error)
-	SleepPreview(ctx context.Context, previewName string) error
-	WakePreview(ctx context.Context, previewName string) error
 }
 
 // PipelineInterface represents the client that connects to the pipeline functions

@@ -58,7 +58,7 @@ func (pr *Command) ExecuteWakePreview(ctx context.Context, preview string) error
 	defer oktetoLog.StopSpinner()
 
 	// trigger preview to wake
-	if err := pr.okClient.Previews().WakePreview(ctx, preview); err != nil {
+	if err := pr.okClient.Namespaces().Wake(ctx, preview); err != nil {
 		return fmt.Errorf("%w: %v", errFailedWakePreview, err)
 	}
 
