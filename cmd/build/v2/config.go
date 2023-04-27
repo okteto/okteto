@@ -14,7 +14,7 @@
 package v2
 
 import (
-	"crypto/sha512"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -82,7 +82,7 @@ func (oc oktetoBuilderConfig) GetBuildHash(buildInfo *model.BuildInfo) string {
 		return ""
 	}
 	text := oc.getTextToHash(buildInfo, commitSHA)
-	buildHash := sha512.Sum512([]byte(text))
+	buildHash := sha256.Sum256([]byte(text))
 	return hex.EncodeToString(buildHash[:])
 }
 
