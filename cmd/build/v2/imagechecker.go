@@ -50,9 +50,6 @@ func newImageChecker(cfg oktetoBuilderConfigInterface, registry registryImageChe
 }
 
 func (ic imageChecker) checkIfCommitHashIsBuilt(manifestName, svcToBuild string, buildInfo *model.BuildInfo) (string, bool) {
-	if !ic.cfg.IsCleanProject() {
-		return "", false
-	}
 	sha := ic.cfg.GetBuildHash(buildInfo)
 	if sha == "" {
 		return "", false

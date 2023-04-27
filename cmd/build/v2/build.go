@@ -114,7 +114,8 @@ func (*OktetoBuilder) IsV1() bool {
 // Build builds the images defined by a manifest
 func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
 	if utils.LoadBoolean(constants.OKtetoDeployRemote) {
-		// if we are in a remote deploy, we use the environment variables from the local step
+		// Since the local build has already been built,
+		// we have the environment variables set and we can skip this code
 		return nil
 	}
 	if options.File != "" {
@@ -164,8 +165,8 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 
 			buildSvcInfo := buildManifest[svcToBuild]
 
-			// If the noCache field is true we should skip the optimisation
-			if options.NoCache {
+			// We only check that the image is built in the global registry if the noCache option is not set
+			if !options.NoCache && !bc.Config.IsCleanProject() {
 				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry)
 				if imageTag, isBuilt := imageChecker.checkIfCommitHashIsBuilt(options.Manifest.Name, svcToBuild, buildSvcInfo); isBuilt {
 					oktetoLog.Warning("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, bc.Config.GetGitCommit())
@@ -364,9 +365,10 @@ func validateServices(buildSection model.ManifestBuild, svcsToBuild []string) er
 
 func getImageChecker(buildInfo *model.BuildInfo, cfg oktetoBuilderConfigInterface, registry registryImageCheckerInterface) imageCheckerInterface {
 	var tagger imageTaggerInterface
-	tagger = newImageTagger(cfg)
 	if shouldAddVolumeMounts(buildInfo) {
 		tagger = newImageWithVolumesTagger(cfg)
+	} else {
+		tagger = newImageTagger(cfg)
 	}
 	return newImageChecker(cfg, registry, tagger)
 }

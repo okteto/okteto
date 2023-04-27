@@ -1,7 +1,6 @@
 package v2
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -268,8 +267,7 @@ func TestGetTextToHash(t *testing.T) {
 				repository: tc.input.repo,
 				fs:         fs,
 			}
-			fmt.Println(cfg)
-			// assert.Equal(t, tc.expected, cfg.getTextToHash(tc.input.buildInfo))
+			assert.Equal(t, tc.expected, cfg.getTextToHash(tc.input.buildInfo, tc.input.repo.sha))
 		})
 	}
 }

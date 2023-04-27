@@ -152,6 +152,7 @@ type BuildDependsOn []string
 // BuildSecrets represents the secrets to be injected to the build of the image
 type BuildSecrets map[string]string
 
+// GetContent reuturns the secrets as key value pairs separated by ';'
 func (bs BuildSecrets) GetContent(fs afero.Fs) string {
 	result := []string{}
 	for k, v := range bs {
