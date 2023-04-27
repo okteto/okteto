@@ -745,6 +745,10 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
+	if hybridModeDev.Mode == "hybrid" {
+		dev.Image.Name = "busybox"
+	}
+
 	*d = Dev(dev)
 
 	return nil
