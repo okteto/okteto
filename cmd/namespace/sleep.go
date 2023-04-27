@@ -31,20 +31,24 @@ func Sleep(ctx context.Context) *cobra.Command {
 		Short: "Sleeps a namespace",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if !okteto.IsOkteto() {
-				return oktetoErrors.ErrContextIsNotOktetoCluster
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+				return err
 			}
+
 			nsToSleep := okteto.Context().Namespace
 			if len(args) > 0 {
 				nsToSleep = args[0]
 			}
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: nsToSleep, Show: true}); err != nil {
-				return err
+
+			if !okteto.IsOkteto() {
+				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
+
 			nsCmd, err := NewCommand()
 			if err != nil {
 				return err
 			}
+
 			err = nsCmd.ExecuteSleepNamespace(ctx, nsToSleep)
 			return err
 		},
