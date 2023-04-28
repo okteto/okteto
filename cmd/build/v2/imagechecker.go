@@ -78,7 +78,7 @@ func (ic imageChecker) getImageDigestFromAllPossibleTags(manifestName, svcToBuil
 		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, sha)
 	} else if shouldBuildFromDockerfile(buildInfo) && buildInfo.Image == "" {
 		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, sha)
-	} else {
+	} else if buildInfo.Image != "" {
 		possibleTags = []string{buildInfo.Image}
 	}
 
