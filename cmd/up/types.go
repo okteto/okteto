@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/okteto/okteto/pkg/syncthing"
+	"github.com/spf13/afero"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -60,6 +61,7 @@ type upContext struct {
 	StartTime             time.Time
 	Options               *UpOptions
 	pidController         pidController
+	Fs                    afero.Fs
 }
 
 // Forwarder is an interface for the port-forwarding features

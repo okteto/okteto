@@ -245,6 +245,7 @@ func Up() *cobra.Command {
 				StartTime:      time.Now(),
 				Registry:       registry.NewOktetoRegistry(okteto.Config{}),
 				Options:        upOptions,
+				Fs:             afero.NewOsFs(),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -366,6 +367,10 @@ func Up() *cobra.Command {
 			}
 
 			if err := addSyncFieldHash(dev); err != nil {
+				return err
+			}
+
+			if err := setSyncDefaultsByDevMode(dev, up.Fs); err != nil {
 				return err
 			}
 
@@ -503,6 +508,24 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 	return nil
 }
 
+func setSyncDefaultsByDevMode(dev *model.Dev, fs afero.Fs) error {
+	if dev.Mode == "hybrid" {
+		dev.PersistentVolumeInfo.Enabled = false
+		syncTempDir, err := afero.TempDir(fs, "", "")
+		if err != nil || syncTempDir == "" {
+			return err
+		}
+
+		dev.Sync.Folders = []model.SyncFolder{
+			{
+				LocalPath:  syncTempDir,
+				RemotePath: "/okteto",
+			},
+		}
+	}
+	return nil
+}
+
 func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVariables []string) (*model.Environment, error) {
 	envVarsToValues := make(map[string]string)
 	for _, manifestEnv := range manifestEnvVars {
@@ -552,7 +575,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		K8sClientProvider:  okteto.NewK8sClientProvider(),
 		Builder:            buildv2.NewBuilderFromScratch(),
 		GetExternalControl: deploy.GetExternalControl,
-		Fs:                 afero.NewOsFs(),
+		Fs:                 up.Fs,
 		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider),
 		PipelineCMD:        pc,
 	}

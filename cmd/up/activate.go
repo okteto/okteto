@@ -197,7 +197,11 @@ func (up *upContext) activate() error {
 		printDisplayContext(up)
 		durationActivateUp := time.Since(up.StartTime)
 		analytics.TrackDurationActivateUp(durationActivateUp)
-		up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
+		if up.Dev.Mode == "hybrid" {
+			up.CommandResult <- up.runCommand(ctx, []string{"sleep", "100000"})
+		} else {
+			up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
+		}
 	}()
 
 	prevError := up.waitUntilExitOrInterruptOrApply(ctx)
