@@ -166,7 +166,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 			buildSvcInfo := buildManifest[svcToBuild]
 
 			// We only check that the image is built in the global registry if the noCache option is not set
-			if !options.NoCache && !bc.Config.IsCleanProject() {
+			if !options.NoCache && bc.Config.IsCleanProject() {
 				imageChecker := getImageChecker(buildSvcInfo, bc.Config, bc.Registry)
 				if imageTag, isBuilt := imageChecker.checkIfCommitHashIsBuilt(options.Manifest.Name, svcToBuild, buildSvcInfo); isBuilt {
 					oktetoLog.Warning("Skipping build of '%s' image because it's already built for commit %s", svcToBuild, bc.Config.GetGitCommit())
