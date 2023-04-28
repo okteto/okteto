@@ -94,8 +94,9 @@ resources:
   limits:
     cpu: 2
     memory: 1Gi
-    nvidia.com/gpu: 1
     amd.com/gpu: 1
+    sgx.intel.com/epc: 1
+    squat.ai/fuse: 1
 services:
   - name: worker
     container: dev
@@ -303,10 +304,11 @@ services:
 				},
 				Resources: apiv1.ResourceRequirements{
 					Limits: apiv1.ResourceList{
-						"cpu":            resource.MustParse("2"),
-						"memory":         resource.MustParse("1Gi"),
-						"nvidia.com/gpu": resource.MustParse("1"),
-						"amd.com/gpu":    resource.MustParse("1"),
+						"cpu":               resource.MustParse("2"),
+						"memory":            resource.MustParse("1Gi"),
+						"amd.com/gpu":       resource.MustParse("1"),
+						"sgx.intel.com/epc": resource.MustParse("1"),
+						"squat.ai/fuse":     resource.MustParse("1"),
 					},
 				},
 				VolumeMounts: []apiv1.VolumeMount{
@@ -1273,8 +1275,9 @@ resources:
   limits:
     cpu: 2
     memory: 1Gi
-    nvidia.com/gpu: 1
     amd.com/gpu: 1
+    sgx.intel.com/epc: 1
+    squat.ai/fuse: 1
 services:
   - name: worker
     image: worker:latest
@@ -1477,10 +1480,11 @@ services:
 				},
 				Resources: apiv1.ResourceRequirements{
 					Limits: apiv1.ResourceList{
-						"cpu":            resource.MustParse("2"),
-						"memory":         resource.MustParse("1Gi"),
-						"nvidia.com/gpu": resource.MustParse("1"),
-						"amd.com/gpu":    resource.MustParse("1"),
+						"cpu":               resource.MustParse("2"),
+						"memory":            resource.MustParse("1Gi"),
+						"amd.com/gpu":       resource.MustParse("1"),
+						"sgx.intel.com/epc": resource.MustParse("1"),
+						"squat.ai/fuse":     resource.MustParse("1"),
 					},
 				},
 				VolumeMounts: []apiv1.VolumeMount{
