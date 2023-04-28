@@ -237,12 +237,11 @@ func (bc *OktetoBuilder) buildSvcFromDockerfile(ctx context.Context, manifest *m
 	isStackManifest := manifest.Type == model.StackType
 	buildSvcInfo := bc.getBuildInfoWithoutVolumeMounts(manifest.Build[svcName], isStackManifest)
 
+	tagToBuild := newImageTagger(bc.Config).tag(manifest.Name, svcName, buildSvcInfo)
+	buildSvcInfo.Image = tagToBuild
 	if err := buildSvcInfo.AddBuildArgs(bc.buildEnvironments); err != nil {
 		return "", fmt.Errorf("error expanding build args from service '%s': %w", svcName, err)
 	}
-
-	tagToBuild := newImageTagger(bc.Config).tag(manifest.Name, svcName, buildSvcInfo)
-	buildSvcInfo.Image = tagToBuild
 
 	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, buildSvcInfo, options, bc.Registry)
 
