@@ -146,7 +146,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		return err
 	}
 
-	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
+	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "destroy"})
 	buildOptions.Manifest = rd.manifest
 
 	// we need to call Build() method using a remote builder. This Builder will have
