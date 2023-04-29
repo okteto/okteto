@@ -54,7 +54,47 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
 					oktetoLog.Info(err.Error())
 					continue
 				}
-				t.display()
+				t.displayDeploy()
+				t.removeCompletedSteps()
+			} else {
+				done = true
+			}
+			if done {
+				oktetoLog.StopSpinner()
+				if t.err != nil {
+					return t.err
+				}
+				return nil
+			}
+		}
+	}
+}
+
+func destroyDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
+	// TODO: import build timeout
+	timeout := time.NewTicker(10 * time.Minute)
+	defer timeout.Stop()
+
+	oktetoLog.Spinner("Synchronizing context...")
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
+
+	t := newTrace()
+
+	var done bool
+	for {
+		select {
+		case <-ctx.Done():
+			oktetoLog.StopSpinner()
+			return ctx.Err()
+		case <-timeout.C:
+		case ss, ok := <-ch:
+			if ok {
+				if err := t.update(ss); err != nil {
+					oktetoLog.Info(err.Error())
+					continue
+				}
+				t.displayDestroy()
 				t.removeCompletedSteps()
 			} else {
 				done = true
@@ -132,7 +172,7 @@ func (t *trace) update(ss *client.SolveStatus) error {
 	return nil
 }
 
-func (t *trace) display() {
+func (t *trace) displayDestroy() {
 	for _, v := range t.ongoing {
 		if t.isTransferringContext(v.name) {
 			if v.currentTransferedContext != 0 {
@@ -146,6 +186,59 @@ func (t *trace) display() {
 		}
 		if t.hasCommandLogs(v) {
 			oktetoLog.Spinner("Destroying your development environment...")
+			for _, log := range v.logs {
+				var text oktetoLog.JSONLogFormat
+				if err := json.Unmarshal([]byte(log), &text); err != nil {
+					oktetoLog.Infof("could not parse %s: %w", log, err)
+					continue
+				}
+				oktetoLog.SetStage(text.Stage)
+				switch text.Stage {
+				case "done":
+					continue
+				case "Load manifest":
+					if text.Level == "error" {
+						oktetoLog.Fail(text.Message)
+					}
+				default:
+					// Print the information message about the stage if needed
+					if _, ok := t.stages[text.Stage]; !ok {
+						oktetoLog.Information("Running stage '%s'", text.Stage)
+						t.stages[text.Stage] = true
+					}
+					if text.Level == "error" {
+						if text.Stage != "" {
+							t.err = OktetoCommandErr{
+								Stage: text.Stage,
+								Err:   fmt.Errorf(text.Message),
+							}
+						}
+					} else {
+						oktetoLog.Println(text.Message)
+					}
+
+				}
+			}
+			v.logs = []string{}
+			oktetoLog.SetStage("")
+		}
+	}
+}
+
+func (t *trace) displayDeploy() {
+	for _, v := range t.ongoing {
+		if t.isTransferringContext(v.name) {
+			if v.currentTransferedContext != 0 {
+				currentLoadedCtx := units.Bytes(v.currentTransferedContext)
+				if t.showCtxAdvice && currentLoadedCtx > largeContextThreshold {
+					t.showCtxAdvice = false
+					oktetoLog.Information("You can use '.oktetodeployignore' file to optimize the context used to deploy your development environment.")
+				}
+				oktetoLog.Spinner(fmt.Sprintf("Synchronizing context: %.2f", currentLoadedCtx))
+			}
+		}
+		if t.hasCommandLogs(v) {
+			oktetoLog.Spinner("Deploying your development environment...")
 			for _, log := range v.logs {
 				var text oktetoLog.JSONLogFormat
 				if err := json.Unmarshal([]byte(log), &text); err != nil {
