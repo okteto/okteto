@@ -94,9 +94,12 @@ func (tr *Translation) translate() error {
 		tr.DevApp.TemplateObjectMeta().Labels[model.InteractiveDevLabel] = tr.getDevName()
 		TranslateOktetoSyncSecret(tr.DevApp.PodSpec(), tr.Dev.Name)
 	} else {
-		if tr.DevApp.Replicas() == 0 {
+		if tr.Dev.Replicas != nil {
+			tr.DevApp.SetReplicas(int32(*tr.Dev.Replicas))
+		} else if tr.DevApp.Replicas() == 0 {
 			tr.DevApp.SetReplicas(1)
 		}
+
 		tr.DevApp.TemplateObjectMeta().Labels[model.DetachedDevLabel] = tr.getDevName()
 		TranslatePodAffinity(tr.DevApp.PodSpec(), tr.MainDev.Name)
 	}
