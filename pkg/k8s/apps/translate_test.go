@@ -697,7 +697,7 @@ services:
 
 	// checking dev d2 state
 
-	//There should be one replica if Deployment replicas are zero and replicas not specified in manifest
+	// There should be one replica if Deployment replicas are zero and replicas not specified in manifest
 	if tr2.DevApp.Replicas() != 1 {
 		t.Fatalf("dev d2 is running %d replicas", tr2.DevApp.Replicas())
 	}
@@ -712,7 +712,7 @@ services:
 		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
 	}
 
-	//Deployment scale back up to original replicas
+	// Deployment scale back up to original replicas
 	if tr2.App.Replicas() != 0 {
 		t.Fatalf("d2 is running %d replicas after 'okteto down'", tr2.App.Replicas())
 	}
@@ -813,7 +813,7 @@ services:
 
 	// checking dev d2 state
 
-	//Service replicas should be equal to replicas specified in the manifest
+	// Service replicas should be equal to replicas specified in the manifest
 	if tr2.DevApp.Replicas() != 5 {
 		t.Fatalf("dev d2 is running %d replicas", tr2.DevApp.Replicas())
 	}
@@ -828,7 +828,7 @@ services:
 		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
 	}
 
-	//Deployment scale back up to original replicas
+	// Deployment scale back up to original replicas
 	if tr2.App.Replicas() != 3 {
 		t.Fatalf("d2 is running %d replicas after 'okteto down'", tr2.App.Replicas())
 	}
