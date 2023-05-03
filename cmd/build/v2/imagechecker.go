@@ -15,6 +15,7 @@ package v2
 
 import (
 	"fmt"
+	"strings"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -93,7 +94,7 @@ func (ic imageChecker) getImageDigestFromAllPossibleTags(manifestName, svcToBuil
 		}
 		return imageWithDigest, nil
 	}
-	return "", fmt.Errorf("not found")
+	return "", fmt.Errorf("images [%s] not found", strings.Join(possibleTags, ", "))
 }
 
 func getImageSHA(tag string, registry registryImageCheckerInterface) (string, error) {

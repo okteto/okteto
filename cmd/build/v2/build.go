@@ -268,7 +268,7 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	if err != nil {
 		return "", err
 	}
-	tagToBuild := newImageWithVolumesTagger(bc.Config).tag(manifest.Name, svcName, buildSvcInfo)
+	tagToBuild := newImageWithVolumesTagger(bc.Config).tag(manifest.Name, svcName, svcBuild)
 	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options, bc.Registry)
 	buildOptions.Tag = tagToBuild
 
