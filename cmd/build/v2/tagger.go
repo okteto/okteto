@@ -142,5 +142,5 @@ func getImageFromTmpl(targetRegistry, repoName, svcName, tag string) string {
 
 // getImageFromTmpl returns the image name from the template of image sha
 func getImageFromTmplWithVolumesAndSHA(targetRegistry, repoName, svcName, sha string) string {
-	return fmt.Sprintf("%s/%s-%s:%s%s", targetRegistry, repoName, svcName, model.OktetoImageTagWithVolumes, sha)
+	return fmt.Sprintf("%s/%s-%s:%s-%s", targetRegistry, repoName, svcName, model.OktetoImageTagWithVolumes, sha)
 }
