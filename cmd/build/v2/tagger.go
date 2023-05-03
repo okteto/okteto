@@ -98,18 +98,17 @@ func newImageWithVolumesTagger(cfg oktetoBuilderConfigInterface) imageWithVolume
 func (i imageWithVolumesTagger) tag(manifestName, svcName string, b *model.BuildInfo) string {
 	targetRegistry := constants.DevRegistry
 	sha := ""
+	buildCopy := b.Copy()
+	buildCopy.Image = ""
 	if i.cfg.HasGlobalAccess() && i.cfg.IsCleanProject() {
 		targetRegistry = constants.GlobalRegistry
-		sha = i.cfg.GetBuildHash(b)
+		sha = i.cfg.GetBuildHash(buildCopy)
 	}
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	if shouldBuildFromDockerfile(b) && b.Image == "" {
-		if sha != "" {
-			return getImageFromTmplWithVolumesAndSHA(targetRegistry, sanitizedName, svcName, sha)
-		}
-		return getImageFromTmpl(targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
+	if sha != "" {
+		return getImageFromTmplWithVolumesAndSHA(targetRegistry, sanitizedName, svcName, sha)
 	}
-	return b.Image
+	return getImageFromTmpl(targetRegistry, sanitizedName, svcName, model.OktetoImageTagWithVolumes)
 }
 
 // getPossibleHashImages returns all the possible images that can be built from a commit hash

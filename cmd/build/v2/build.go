@@ -262,13 +262,13 @@ func (bc *OktetoBuilder) addVolumeMounts(ctx context.Context, manifest *model.Ma
 	if options.Tag != "" {
 		fromImage = options.Tag
 	}
-	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
 
+	tagToBuild := newImageWithVolumesTagger(bc.Config).tag(manifest.Name, svcName, manifest.Build[svcName])
+	buildSvcInfo := getBuildInfoWithVolumeMounts(manifest.Build[svcName], isStackManifest)
 	svcBuild, err := build.CreateDockerfileWithVolumeMounts(fromImage, buildSvcInfo.VolumesToInclude)
 	if err != nil {
 		return "", err
 	}
-	tagToBuild := newImageWithVolumesTagger(bc.Config).tag(manifest.Name, svcName, svcBuild)
 	buildOptions := build.OptsFromBuildInfo(manifest.Name, svcName, svcBuild, options, bc.Registry)
 	buildOptions.Tag = tagToBuild
 
