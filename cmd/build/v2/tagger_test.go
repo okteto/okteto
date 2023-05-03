@@ -189,7 +189,7 @@ func TestImageTaggerWithVolumesTag(t *testing.T) {
 				Dockerfile: "Dockerfile",
 				Context:    ".",
 			},
-			expectedImage: "okteto.global/test-test:okteto-with-volume-mountssha",
+			expectedImage: "okteto.global/test-test:okteto-with-volume-mounts-sha",
 		},
 	}
 	for _, tc := range tt {
@@ -243,8 +243,8 @@ func TestImageTaggerWithVolumesGetPossibleHashImages(t *testing.T) {
 			name: "sha",
 			sha:  "sha",
 			expectedImages: []string{
-				"okteto.global/test-test:okteto-with-volume-mountssha",
-				"okteto.dev/test-test:okteto-with-volume-mountssha",
+				"okteto.global/test-test:okteto-with-volume-mounts-sha",
+				"okteto.dev/test-test:okteto-with-volume-mounts-sha",
 			},
 		},
 	}
@@ -307,8 +307,8 @@ func TestImageTaggerWithVolumesGetPossibleTags(t *testing.T) {
 			name: "sha",
 			sha:  "sha",
 			expectedImages: []string{
-				"okteto.global/test-test:okteto-with-volume-mountssha",
-				"okteto.dev/test-test:okteto-with-volume-mountssha",
+				"okteto.global/test-test:okteto-with-volume-mounts-sha",
+				"okteto.dev/test-test:okteto-with-volume-mounts-sha",
 				"okteto.global/test-test:okteto-with-volume-mounts",
 				"okteto.dev/test-test:okteto-with-volume-mounts",
 			},
