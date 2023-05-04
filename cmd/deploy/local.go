@@ -55,6 +55,27 @@ type localDeployer struct {
 	DivertDriver divert.Driver
 }
 
+var (
+	defaultVariables = []string{
+		// Set KUBECONFIG environment variable as environment for the commands to be executed
+		constants.KubeConfigEnvVar,
+		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all okteto commands ran inside this deploy
+		// know they are running inside another okteto deploy
+		constants.OktetoWithinDeployCommandContextEnvVar,
+		// Set OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE env variable, so all the Okteto commands executed within this command execution
+		// should not overwrite the server and the credentials in the kubeconfig
+		constants.OktetoSkipConfigCredentialsUpdate,
+		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
+		oktetoLog.OktetoDisableSpinnerEnvVar,
+		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
+		model.OktetoNamespaceEnvVar,
+		// Set OKTETO_AUTODISCOVERY_RELEASE_NAME=sanitized name, so the release name in case of autodiscovery of helm is valid
+		constants.OktetoAutodiscoveryReleaseName,
+		// Set OKTETO_DOMAIN=okteto-subdomain env variable
+		model.OktetoDomainEnvVar,
+	}
+)
+
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not
 func newLocalDeployer(ctx context.Context, cwd string, options *Options, cmapHandler configMapHandler) (*localDeployer, error) {
 	cwd, err := os.Getwd()
@@ -153,36 +174,38 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 			oktetoLog.AddMaskedWord(value)
 		}
 	}
-	deployOptions.Variables = append(
-		deployOptions.Variables,
-		// Set KUBECONFIG environment variable as environment for the commands to be executed
-		fmt.Sprintf("%s=%s", constants.KubeConfigEnvVar, ld.TempKubeconfigFile),
-		// Set OKTETO_WITHIN_DEPLOY_COMMAND_CONTEXT env variable, so all okteto commands ran inside this deploy
-		// know they are running inside another okteto deploy
-		fmt.Sprintf("%s=true", constants.OktetoWithinDeployCommandContextEnvVar),
-		// Set OKTETO_SKIP_CONFIG_CREDENTIALS_UPDATE env variable, so all the Okteto commands executed within this command execution
-		// should not overwrite the server and the credentials in the kubeconfig
-		fmt.Sprintf("%s=true", constants.OktetoSkipConfigCredentialsUpdate),
-		// Set OKTETO_DISABLE_SPINNER=true env variable, so all the Okteto commands disable spinner which leads to errors
-		fmt.Sprintf("%s=true", oktetoLog.OktetoDisableSpinnerEnvVar),
-		// Set OKTETO_NAMESPACE=namespace-name env variable, so all the commandsruns on the same namespace
-		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
-		// Set OKTETO_AUTODISCOVERY_RELEASE_NAME=sanitized name, so the release name in case of autodiscovery of helm is valid
-		fmt.Sprintf("%s=%s", constants.OktetoAutodiscoveryReleaseName, format.ResourceK8sMetaString(deployOptions.Name)),
-	)
-	if okteto.IsOkteto() {
-		deployOptions.Variables = append(
-			deployOptions.Variables,
-			// Set OKTETO_DOMAIN=okteto-subdomain env variable
-			fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
-		)
-	}
+	ld.setDefaultVariables(deployOptions)
+
 	oktetoLog.EnableMasking()
 	err = ld.runDeploySection(ctx, deployOptions)
 	oktetoLog.DisableMasking()
 	oktetoLog.SetStage("done")
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "EOF")
 	return err
+}
+
+func (ld *localDeployer) setDefaultVariables(opts *Options) {
+	for _, k := range defaultVariables {
+		if k == model.OktetoDomainEnvVar {
+			continue
+		}
+		if k == constants.KubeConfigEnvVar {
+			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", constants.KubeConfigEnvVar, ld.TempKubeconfigFile))
+		} else if k == model.OktetoNamespaceEnvVar {
+			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace))
+		} else if k == constants.OktetoAutodiscoveryReleaseName {
+			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", constants.OktetoAutodiscoveryReleaseName, format.ResourceK8sMetaString(opts.Name)))
+
+		} else {
+			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", k, "true"))
+		}
+	}
+
+	if okteto.IsOkteto() {
+		opts.Variables = append(
+			opts.Variables, fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
+		)
+	}
 }
 
 func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) error {
@@ -197,7 +220,7 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 		}
 	}()
 
-	var envMapFromOktetoEnvFile map[string]string
+	addedOktetoEnvs := make(map[string]string)
 	// deploy commands if any
 	for _, command := range opts.Manifest.Deploy.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
@@ -208,26 +231,15 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
 
-		envMapFromOktetoEnvFile, err = godotenv.Read(oktetoEnvFile.Name())
-		if err != nil {
-			oktetoLog.Warning("no valid format used in the okteto env file: %s", err.Error())
+		// we need to set available envs in OKTETO_ENV as deploy variables for next command
+		if err := addOktetoEnvsValuesAsDesployVariables(opts, oktetoEnvFile.Name(), addedOktetoEnvs); err != nil {
+			return fmt.Errorf("error adding deploy variables from OKTETO_ENV: %w", err)
 		}
-
-		envsFromOktetoEnvFile := make([]string, 0, len(envMapFromOktetoEnvFile))
-		for k, v := range envMapFromOktetoEnvFile {
-			envsFromOktetoEnvFile = append(envsFromOktetoEnvFile, fmt.Sprintf("%s=%s", k, v))
-		}
-
-		// the variables in the $OKTETO_ENV file are added as environment variables
-		// to the executor. If there is already a previously set value for that
-		// variable, the executor will use in next command the last one added which
-		// corresponds to those coming from $OKTETO_ENV.
-		opts.Variables = append(opts.Variables, envsFromOktetoEnvFile...)
 
 		oktetoLog.SetStage("")
 	}
 
-	err = ld.ConfigMapHandler.updateEnvsFromCommands(ctx, opts.Name, opts.Manifest.Namespace, opts.Variables)
+	err = ld.ConfigMapHandler.updateEnvsFromCommands(ctx, opts.Name, opts.Manifest.Namespace, removeDefaultVariables(opts.Variables))
 	if err != nil {
 		return fmt.Errorf("could not update config map with environment variables: %w", err)
 	}
@@ -270,7 +282,7 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 			return nil
 		}
 
-		if err := ld.deployExternals(ctx, opts, envMapFromOktetoEnvFile); err != nil {
+		if err := ld.deployExternals(ctx, opts, addedOktetoEnvs); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying external resources: %s", err.Error())
 			return err
 		}
@@ -278,6 +290,43 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 	}
 
 	return nil
+}
+
+func addOktetoEnvsValuesAsDesployVariables(opts *Options, oktetoEnvFile string, addedEnvs map[string]string) error {
+	envMapFromOktetoEnvFile, err := godotenv.Read(oktetoEnvFile)
+	if err != nil {
+		oktetoLog.Warning("no valid format used in the okteto env file: %w", err)
+	}
+
+	for k, v := range envMapFromOktetoEnvFile {
+		if _, ok := addedEnvs[k]; !ok {
+			addedEnvs[k] = v
+
+			// the variables in the $OKTETO_ENV file are added as environment variables
+			// to the executor. If there is already a previously set value for that
+			// variable, the executor will use in next command the last one added which
+			// corresponds to those coming from $OKTETO_ENV.
+			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", k, v))
+		}
+	}
+
+	return nil
+}
+
+func removeDefaultVariables(variables []string) []string {
+	var result []string
+	for _, v := range variables {
+		for i, defaultVars := range defaultVariables {
+			if strings.HasPrefix(v, defaultVars) {
+				break
+			}
+
+			if i == len(defaultVariables)-1 {
+				result = append(result, v)
+			}
+		}
+	}
+	return result
 }
 
 func (ld *localDeployer) deployStack(ctx context.Context, opts *Options) error {
