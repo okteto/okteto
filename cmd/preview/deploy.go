@@ -68,12 +68,10 @@ func Deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
-				Namespace: opts.name,
-				Show:      true,
-			}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
+			oktetoLog.Information("Using %s @ %s as context", opts.name, okteto.RemoveSchema(okteto.Context().Name))
 
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
@@ -115,7 +113,7 @@ func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions
 		return nil
 	}
 
-	if err := pw.waitUntilRunning(ctx, opts.name, okteto.Context().Namespace, resp.Action, opts.timeout); err != nil {
+	if err := pw.waitUntilRunning(ctx, opts.name, opts.name, resp.Action, opts.timeout); err != nil {
 		return err
 	}
 	oktetoLog.Success("Preview environment '%s' successfully deployed", opts.name)
@@ -198,7 +196,7 @@ func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string,
 	return nil
 }
 func (pw *Command) waitToBeDeployed(ctx context.Context, name string, a *types.Action, timeout time.Duration) error {
-	return pw.okClient.Pipeline().WaitForActionToFinish(ctx, name, okteto.Context().Namespace, a.Name, timeout)
+	return pw.okClient.Pipeline().WaitForActionToFinish(ctx, name, name, a.Name, timeout)
 }
 
 func (pw *Command) waitForResourcesToBeRunning(ctx context.Context, name string, timeout time.Duration) error {
