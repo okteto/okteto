@@ -232,14 +232,12 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 		}
 
 		// we need to set available envs in OKTETO_ENV as deploy variables for next command
-		if err := addOktetoEnvsValuesAsDesployVariables(opts, oktetoEnvFile.Name(), addedOktetoEnvs); err != nil {
-			return fmt.Errorf("error adding deploy variables from OKTETO_ENV: %w", err)
-		}
+		addOktetoEnvsValuesAsDesployVariables(opts, oktetoEnvFile.Name(), addedOktetoEnvs)
 
 		oktetoLog.SetStage("")
 	}
 
-	err = ld.ConfigMapHandler.updateEnvsFromCommands(ctx, opts.Name, opts.Manifest.Namespace, removeDefaultVariables(opts.Variables))
+	err = ld.ConfigMapHandler.updateEnvsFromCommands(ctx, opts.Name, opts.Manifest.Namespace, removeDefaultVariables(opts.Variables, defaultVariables))
 	if err != nil {
 		return fmt.Errorf("could not update config map with environment variables: %w", err)
 	}
@@ -292,10 +290,10 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 	return nil
 }
 
-func addOktetoEnvsValuesAsDesployVariables(opts *Options, oktetoEnvFile string, addedEnvs map[string]string) error {
+func addOktetoEnvsValuesAsDesployVariables(opts *Options, oktetoEnvFile string, addedEnvs map[string]string) {
 	envMapFromOktetoEnvFile, err := godotenv.Read(oktetoEnvFile)
 	if err != nil {
-		oktetoLog.Warning("no valid format used in the okteto env file: %w", err)
+		oktetoLog.Warning("no valid format used in the okteto env file: %s", err.Error())
 	}
 
 	for k, v := range envMapFromOktetoEnvFile {
@@ -309,19 +307,17 @@ func addOktetoEnvsValuesAsDesployVariables(opts *Options, oktetoEnvFile string, 
 			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", k, v))
 		}
 	}
-
-	return nil
 }
 
-func removeDefaultVariables(variables []string) []string {
-	var result []string
-	for _, v := range variables {
-		for i, defaultVars := range defaultVariables {
+func removeDefaultVariables(currentVariables []string, variables []string) []string {
+	result := []string{}
+	for _, v := range currentVariables {
+		for i, defaultVars := range variables {
 			if strings.HasPrefix(v, defaultVars) {
 				break
 			}
 
-			if i == len(defaultVariables)-1 {
+			if i == len(variables)-1 {
 				result = append(result, v)
 			}
 		}

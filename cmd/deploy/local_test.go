@@ -15,10 +15,12 @@ package deploy
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,4 +42,79 @@ func TestDeployNotRemovingEnvFile(t *testing.T) {
 	_, err = fs.Stat(".env")
 	require.NoError(t, err)
 
+}
+
+func TestAddOktetoEnvsValuesAsDesployVariables(t *testing.T) {
+
+	fs := afero.NewOsFs()
+	tempDir, err := afero.TempDir(fs, "", "")
+	require.NoError(t, err)
+	tempEnv, err := fs.Create(filepath.Join(tempDir, ".env"))
+	require.NoError(t, err)
+	var tests = []struct {
+		name              string
+		opts              *Options
+		expectedErr       bool
+		expectedVariables []string
+		oktetoEnvContent  []byte
+		currentAddedEnvs  map[string]string
+	}{
+		{
+			name: "add new variables from okteto env",
+			opts: &Options{},
+			oktetoEnvContent: []byte(`ONEKEY=ONEVALUE
+SECONGKEY=SECONDVALUE`),
+			currentAddedEnvs: make(map[string]string, 0),
+			expectedVariables: []string{
+				"ONEKEY=ONEVALUE",
+				"SECONGKEY=SECONDVALUE",
+			},
+		},
+		{
+			name: "variable from OKTETO_ENV already added",
+			opts: &Options{
+				Variables: []string{
+					"ONEKEY=ONEVALUE",
+				},
+			},
+			oktetoEnvContent: []byte(`ONEKEY=ONEVALUE`),
+			currentAddedEnvs: map[string]string{
+				"ONEKEY": "ONEVALUE",
+			},
+			expectedVariables: []string{
+				"ONEKEY=ONEVALUE",
+			},
+		},
+		{
+			name:              "No vars to add",
+			opts:              &Options{},
+			oktetoEnvContent:  []byte(``),
+			currentAddedEnvs:  make(map[string]string, 0),
+			expectedVariables: []string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			afero.WriteFile(fs, tempEnv.Name(), tt.oktetoEnvContent, 0644)
+			addOktetoEnvsValuesAsDesployVariables(tt.opts, tempEnv.Name(), tt.currentAddedEnvs)
+			assert.ElementsMatch(t, tt.opts.Variables, tt.expectedVariables)
+		})
+	}
+}
+
+func TestRemoveDefaultVariables(t *testing.T) {
+	var defaultVars = []string{
+		"VARTOREMOVE",
+		"VARTOREMOVE2",
+		"VARTOREMOVE3",
+	}
+	var currentVars = []string{
+		"VARTOREMOVE",
+		"ANOTHERVAR",
+	}
+	var expectedVars = []string{
+		"ANOTHERVAR",
+	}
+	result := removeDefaultVariables(currentVars, defaultVars)
+	assert.ElementsMatch(t, expectedVars, result)
 }
