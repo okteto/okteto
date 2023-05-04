@@ -252,10 +252,9 @@ func (c *previewClient) ListEndpoints(ctx context.Context, previewName string) (
 	}
 
 	// @francisco - 2023//05/02
-	// The backend Endpoints field was being return empty in some older versions
-	// of the okteto api. Lets make sure we correctly resolve the endpoints from
-	// the known resources. All this below should be safe to remove in newer versions
-	// of the okteto cli
+	// The backend Endpoints field was being return empty in okteto clusters <1.9
+	// Lets make sure we correctly resolve the endpoints from the known resources
+	// All this below should be safe to remove in newer versions of the okteto cli
 	// <-- LEGACY START -->
 	for _, d := range queryStruct.Response.Deployments {
 		for _, endpoint := range d.Endpoints {
