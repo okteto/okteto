@@ -95,7 +95,11 @@ func deploy(ctx context.Context) *cobra.Command {
 				return err
 			}
 			opts := flags.toOptions()
-			return pipelineCmd.ExecuteDeployPipeline(ctx, opts)
+			err = pipelineCmd.ExecuteDeployPipeline(ctx, opts)
+			if err != nil {
+				return fmt.Errorf("pipeline deploy failed: %w", err)
+			}
+			return nil
 		},
 	}
 
@@ -132,7 +136,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 
 		cfg, err := configmaps.Get(ctx, cfgName, opts.Namespace, c)
 		if err != nil && !oktetoErrors.IsNotFound(err) {
-			return err
+			return fmt.Errorf("failed to get pipeline '%s': %w", cfgName, err)
 		}
 		if err == nil {
 			if cfg != nil && cfg.Data != nil {
@@ -158,7 +162,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 						Name: cfg.Data["actionName"],
 					}
 					if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, existingAction, opts.Timeout); err != nil {
-						return err
+						return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
 					}
 					oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
 					return nil
@@ -187,7 +191,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 
 	resp, err := pc.deployPipeline(ctx, opts)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to deploy pipeline '%s': %w", opts.Name, err)
 	}
 
 	if !opts.Wait {
@@ -200,7 +204,7 @@ func (pc *Command) ExecuteDeployPipeline(ctx context.Context, opts *DeployOption
 	defer oktetoLog.StopSpinner()
 
 	if err := pc.waitUntilRunning(ctx, opts.Name, opts.Namespace, resp.Action, opts.Timeout); err != nil {
-		return err
+		return fmt.Errorf("wait for pipeline '%s' to finish failed: %w", opts.Name, err)
 	}
 
 	oktetoLog.Success("Repository '%s' successfully deployed", opts.Name)
