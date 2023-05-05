@@ -24,10 +24,7 @@ type envVar struct {
 }
 
 func validateAndSetVariables(opts *Options, setEnv func(key, value string) error) error {
-	err := cleanEscapedVariables(opts)
-	if err != nil {
-		return err
-	}
+	cleanEscapedVariables(opts)
 	envVars, err := parse(opts.Variables)
 	if err != nil {
 		return err
@@ -35,13 +32,12 @@ func validateAndSetVariables(opts *Options, setEnv func(key, value string) error
 	return setOptionVarsAsEnvs(envVars, setEnv)
 }
 
-func cleanEscapedVariables(opts *Options) error {
+func cleanEscapedVariables(opts *Options) {
 	cleanedVariables := []string{}
 	for _, v := range opts.Variables {
 		cleanedVariables = append(cleanedVariables, strings.ReplaceAll(v, "\"", ""))
 	}
 	opts.Variables = cleanedVariables
-	return nil
 }
 
 func parse(variables []string) ([]envVar, error) {
