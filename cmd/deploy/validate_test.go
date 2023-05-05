@@ -65,7 +65,9 @@ func Test_validateAndSet(t *testing.T) {
 				return nil
 			}
 
-			err := validateAndSet(tt.variables, setEnvStorage)
+			opts := &Options{Variables: tt.variables}
+
+			err := validateAndSetVariables(opts, setEnvStorage)
 
 			assert.Equal(t, tt.expectedError, err)
 			assert.True(t, reflect.DeepEqual(tt.expectedEnvs, envVarStorage))
