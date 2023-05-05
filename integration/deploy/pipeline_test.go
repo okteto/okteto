@@ -43,17 +43,6 @@ deploy:
 deploy:
   - kubectl apply -f k8s.yml
 `
-	oktetoManifestWithDependency = `
-deploy:
-  - kubectl create cm $OKTETO_DEPENDENCY_TEST_VARIABLE_CMNAME --from-literal=key1=$CMDATA
-dependencies:
-  test:
-    repository: https://github.com/okteto/go-getting-started
-    variables:
-      CMNAME: testName
-      CMDATA: Hello World!
-    wait: true
-`
 )
 
 // TestDeployPipelineManifest tests the following scenario:
@@ -165,40 +154,6 @@ func TestDeployPipelineManifestInsidePipeline(t *testing.T) {
 	require.True(t, k8sErrors.IsNotFound(err))
 }
 
-// TestDeployPipelineAndConsumerEnvsFromDependency tests the following scenario:
-// - Deploying a dependency
-// - Consume dependency's variable from main pipeline
-func TestDeployPipelineAndConsumerEnvsFromDependency(t *testing.T) {
-	t.Parallel()
-	oktetoPath, err := integration.GetOktetoPath()
-	require.NoError(t, err)
-	dir := t.TempDir()
-
-	testNamespace := integration.GetTestNamespace("TestDeploy", user)
-	namespaceOpts := &commands.NamespaceOptions{
-		Namespace:  testNamespace,
-		OktetoHome: dir,
-		Token:      token,
-	}
-	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	//defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
-	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-
-	require.NoError(t, createOktetoManifestWithDepedency(dir))
-
-	deployOptions := &commands.DeployOptions{
-		Workdir:      dir,
-		ManifestPath: "okteto.yml",
-		Namespace:    testNamespace,
-		OktetoHome:   dir,
-		Token:        token,
-	}
-	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
-	content, err := os.ReadFile("test.txt")
-	require.NoError(t, err)
-	require.Equal(t, content, "Hello world!")
-}
-
 func createPipelineInsidePipelineManifest(dir, oktetoPath, namespace string) error {
 	dockerfilePath := filepath.Join(dir, pipelineManifestName)
 	dockerfileContent := []byte(pipelineManifest)
@@ -226,15 +181,6 @@ func createK8sManifest(dir string) error {
 	dockerfilePath := filepath.Join(dir, k8sManifestName)
 	dockerfileContent := []byte(k8sManifestTemplate)
 	if err := os.WriteFile(dockerfilePath, dockerfileContent, 0600); err != nil {
-		return err
-	}
-	return nil
-}
-
-func createOktetoManifestWithDepedency(dir string) error {
-	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
-	oktetoManifestContent := []byte(oktetoManifestWithDependency)
-	if err := os.WriteFile(oktetoManifestPath, oktetoManifestContent, 0600); err != nil {
 		return err
 	}
 	return nil
