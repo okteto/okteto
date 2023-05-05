@@ -103,6 +103,7 @@ type deprecatedDestroyPipelineResponse struct {
 
 // Deploy creates a pipeline
 func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOptions) (*types.GitDeployResponse, error) {
+	oktetoLog.Infof("deploying pipeline '%s' mutation on %s", opts.Name, opts.Namespace)
 	origin := config.GetDeployOrigin()
 
 	gitDeployResponse := &types.GitDeployResponse{}
@@ -192,13 +193,14 @@ func (c *pipelineClient) Deploy(ctx context.Context, opts types.PipelineDeployOp
 
 // GetByName gets a pipeline given its name
 func (c *pipelineClient) GetByName(ctx context.Context, name, namespace string) (*types.GitDeploy, error) {
+	oktetoLog.Infof("getting pipeline '%s' in namespace '%s'", name, namespace)
 	var queryStruct getPipelineByNameQuery
 	variables := map[string]interface{}{
 		"id": graphql.String(namespace),
 	}
 	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get pipeline: %w", err)
 	}
 
 	for _, gitDeploy := range queryStruct.Response.GitDeploys {
@@ -315,6 +317,7 @@ func (c *pipelineClient) deprecatedDestroy(ctx context.Context, name, namespace 
 
 // GetResourcesStatus returns the status of deployments statefulsets and jobs
 func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name, namespace string) (map[string]string, error) {
+	oktetoLog.Infof("get resource status started for pipeline: %s/%s", namespace, name)
 	var queryStruct getPipelineResources
 	variables := map[string]interface{}{
 		"id": graphql.String(namespace),
@@ -328,7 +331,7 @@ func (c *pipelineClient) GetResourcesStatus(ctx context.Context, name, namespace
 			}
 			return okClient.Previews().GetResourcesStatus(ctx, namespace, name)
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to get resources status: %w", err)
 	}
 
 	status := make(map[string]string)
