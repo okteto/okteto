@@ -186,25 +186,22 @@ func (ld *localDeployer) deploy(ctx context.Context, deployOptions *Options) err
 
 func (ld *localDeployer) setDefaultVariables(opts *Options) {
 	for _, k := range defaultVariables {
-		if k == model.OktetoDomainEnvVar {
-			continue
-		}
-		if k == constants.KubeConfigEnvVar {
-			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", constants.KubeConfigEnvVar, ld.TempKubeconfigFile))
-		} else if k == model.OktetoNamespaceEnvVar {
-			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace))
-		} else if k == constants.OktetoAutodiscoveryReleaseName {
-			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", constants.OktetoAutodiscoveryReleaseName, format.ResourceK8sMetaString(opts.Name)))
-
-		} else {
+		switch k {
+		case model.OktetoDomainEnvVar:
+			if okteto.IsOkteto() {
+				opts.Variables = append(
+					opts.Variables, fmt.Sprintf("%s=%s", k, okteto.GetSubdomain()),
+				)
+			}
+		case constants.KubeConfigEnvVar:
+			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", k, ld.TempKubeconfigFile))
+		case model.OktetoNamespaceEnvVar:
+			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", k, okteto.Context().Namespace))
+		case constants.OktetoAutodiscoveryReleaseName:
+			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", k, format.ResourceK8sMetaString(opts.Name)))
+		default:
 			opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", k, "true"))
 		}
-	}
-
-	if okteto.IsOkteto() {
-		opts.Variables = append(
-			opts.Variables, fmt.Sprintf("%s=%s", model.OktetoDomainEnvVar, okteto.GetSubdomain()),
-		)
 	}
 }
 
