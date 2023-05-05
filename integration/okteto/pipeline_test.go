@@ -18,6 +18,8 @@ package okteto
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/okteto/okteto/integration"
@@ -26,9 +28,20 @@ import (
 )
 
 const (
-	githubHTTPSURL = "https://github.com"
-	pipelineRepo   = "okteto/movies"
-	pipelineBranch = "cli-e2e"
+	githubHTTPSURL               = "https://github.com"
+	pipelineRepo                 = "okteto/movies"
+	pipelineBranch               = "cli-e2e"
+	oktetoManifestWithDependency = `
+deploy:
+  - env | grep OKTETO_DEPE
+  - kubectl create cm $OKTETO_DEPENDENCY_TEST_VARIABLE_CMNAME --from-literal=key1="$OKTETO_DEPENDENCY_TEST_VARIABLE_MY_DYNAMIC_APP_ENV"
+dependencies:
+  test:
+    repository: https://github.com/okteto/go-getting-started
+    branch: generating-dynamic-envs
+    variables:
+      CMNAME: test
+    wait: true`
 )
 
 func TestPipelineCommand(t *testing.T) {
@@ -67,4 +80,45 @@ func TestPipelineCommand(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoPipelineDestroy(oktetoPath, pipelineDestroyOptions))
+}
+
+// TestDeployPipelineAndConsumerEnvsFromDependency tests the following scenario:
+// - Deploying a dependency
+// - Consume dependency's variable from main pipeline
+func TestDeployPipelineAndConsumerEnvsFromDependency(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+	dir := t.TempDir()
+
+	testNamespace := integration.GetTestNamespace("TestDeploy", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	//defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+
+	require.NoError(t, createOktetoManifestWithDepedency(dir))
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:      dir,
+		ManifestPath: "okteto.yml",
+		Namespace:    testNamespace,
+		OktetoHome:   dir,
+		Token:        token,
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+	require.NoError(t, err)
+}
+
+func createOktetoManifestWithDepedency(dir string) error {
+	oktetoManifestPath := filepath.Join(dir, "okteto.yml")
+	oktetoManifestContent := []byte(oktetoManifestWithDependency)
+	if err := os.WriteFile(oktetoManifestPath, oktetoManifestContent, 0600); err != nil {
+		return err
+	}
+	return nil
 }
