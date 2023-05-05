@@ -65,12 +65,41 @@ func Test_validateAndSet(t *testing.T) {
 				return nil
 			}
 
-			opts := &Options{Variables: tt.variables}
-
-			err := validateAndSetVariables(opts, setEnvStorage)
+			err := validateAndSetVariablesAsEnvs(tt.variables, setEnvStorage)
 
 			assert.Equal(t, tt.expectedError, err)
 			assert.True(t, reflect.DeepEqual(tt.expectedEnvs, envVarStorage))
+		})
+	}
+}
+
+func Test_getVariablesWithoutEscapedValues(t *testing.T) {
+	var tests = []struct {
+		name      string
+		variables []string
+		expected  []string
+	}{
+		{
+			name:      "whitout escaped values",
+			variables: []string{"NAME=test"},
+			expected:  []string{"NAME=test"},
+		},
+		{
+			name:      "no vars to clean escaped values",
+			variables: []string{},
+			expected:  []string{},
+		},
+		{
+			name:      "clean excaped values",
+			variables: []string{"NAME=\"this is a multi word value\""},
+			expected:  []string{"NAME=this is a multi word value"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getVariablesWithoutEscapedValues(tt.variables)
+			assert.ElementsMatch(t, result, tt.expected)
 		})
 	}
 }
