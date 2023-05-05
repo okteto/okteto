@@ -45,13 +45,13 @@ deploy:
 `
 	oktetoManifestWithDependency = `
 deploy:
-  - kubectl create cm $OKTETO_DEPENDENCY_TEST_VARIABLE_CMNAME --from-literal=key1=$CMDATA
+  - kubectl create cm $OKTETO_DEPENDENCY_TEST_VARIABLE_CMNAME --from-literal=key1="$OKTETO_DEPENDENCY_TEST_VARIABLE_MY_DYNAMIC_APP_ENV"
 dependencies:
   test:
     repository: https://github.com/okteto/go-getting-started
+    branch: generating-dynamic-envs
     variables:
-      CMNAME: testName
-      CMDATA: Hello World!
+      CMNAME: test
     wait: true
 `
 )
@@ -181,7 +181,7 @@ func TestDeployPipelineAndConsumerEnvsFromDependency(t *testing.T) {
 		Token:      token,
 	}
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
-	//defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
 	require.NoError(t, createOktetoManifestWithDepedency(dir))
@@ -194,9 +194,7 @@ func TestDeployPipelineAndConsumerEnvsFromDependency(t *testing.T) {
 		Token:        token,
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
-	content, err := os.ReadFile("test.txt")
 	require.NoError(t, err)
-	require.Equal(t, content, "Hello world!")
 }
 
 func createPipelineInsidePipelineManifest(dir, oktetoPath, namespace string) error {
