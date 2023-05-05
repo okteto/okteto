@@ -31,6 +31,7 @@ type actionStruct struct {
 
 // GetAction gets a installer job given its name
 func (c *pipelineClient) GetAction(ctx context.Context, name, namespace string) (*types.Action, error) {
+	oktetoLog.Infof("getting action '%s' on %s", name, namespace)
 	queryStruct := getActionQueryStruct{}
 	variables := map[string]interface{}{
 		"name":  graphql.String(name),
@@ -39,7 +40,7 @@ func (c *pipelineClient) GetAction(ctx context.Context, name, namespace string) 
 
 	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get action '%s': %w", name, err)
 	}
 	action := &types.Action{
 		ID:     string(queryStruct.Action.Id),
@@ -51,6 +52,7 @@ func (c *pipelineClient) GetAction(ctx context.Context, name, namespace string) 
 }
 
 func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error {
+	oktetoLog.Infof("waiting for action '%s' to finish", actionName)
 	timeoutTimer := c.provideTimer(timeout)
 	ticker := c.provideTicker(tickerInterval)
 	for {
@@ -85,6 +87,7 @@ func (c *pipelineClient) WaitForActionToFinish(ctx context.Context, pipelineName
 }
 
 func (c *pipelineClient) WaitForActionProgressing(ctx context.Context, pipelineName, namespace, actionName string, timeout time.Duration) error {
+	oktetoLog.Infof("waiting for action '%s' to start", actionName)
 	timeoutTimer := c.provideTimer(timeout)
 	ticker := c.provideTicker(tickerInterval)
 	for {
