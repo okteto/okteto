@@ -28,7 +28,7 @@ import (
 func Wake(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wake <name>",
-		Short: "Wakes a preview",
+		Short: "Wakes a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prToWake := args[0]
@@ -53,7 +53,7 @@ func Wake(ctx context.Context) *cobra.Command {
 
 func (pr *Command) ExecuteWakePreview(ctx context.Context, preview string) error {
 	// Spinner to be loaded before waking a preview
-	oktetoLog.Spinner(fmt.Sprintf("Waking %s preview", preview))
+	oktetoLog.Spinner(fmt.Sprintf("Waking preview environment '%s'...", preview))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
@@ -62,6 +62,6 @@ func (pr *Command) ExecuteWakePreview(ctx context.Context, preview string) error
 		return fmt.Errorf("%w: %v", errFailedWakePreview, err)
 	}
 
-	oktetoLog.Success("Preview '%s' is awake now", preview)
+	oktetoLog.Success("Preview environment '%s' is awake now", preview)
 	return nil
 }

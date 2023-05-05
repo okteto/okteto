@@ -29,7 +29,7 @@ import (
 func Sleep(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sleep <name>",
-		Short: "Sleeps a preview",
+		Short: "Sleeps a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			prToSleep := args[0]
@@ -54,7 +54,7 @@ func Sleep(ctx context.Context) *cobra.Command {
 
 func (pr *Command) ExecuteSleepPreview(ctx context.Context, preview string) error {
 	// Spinner to be loaded sleeping a preview
-	oktetoLog.Spinner(fmt.Sprintf("Sleeping %s preview", preview))
+	oktetoLog.Spinner(fmt.Sprintf("Sleeping preview environment '%s'...", preview))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
@@ -62,6 +62,6 @@ func (pr *Command) ExecuteSleepPreview(ctx context.Context, preview string) erro
 		return fmt.Errorf("%w: %v", errFailedSleepPreview, err)
 	}
 
-	oktetoLog.Success("Preview '%s' is sleeping", preview)
+	oktetoLog.Success("Preview environment '%s' is sleeping", preview)
 	return nil
 }
