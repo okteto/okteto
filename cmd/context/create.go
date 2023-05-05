@@ -286,7 +286,10 @@ func getLoggedUserContext(ctx context.Context, c *ContextCommand, ctxOptions *Co
 
 	okteto.Context().Token = user.Token
 
-	userContext, err := c.getUserContext(ctx)
+	if ctxOptions.Namespace == "" {
+		ctxOptions.Namespace = user.Namespace
+	}
+	userContext, err := c.getUserContext(ctx, ctxOptions.Namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -323,7 +326,7 @@ func (*ContextCommand) initKubernetesContext(ctxOptions *ContextOptions) error {
 	return nil
 }
 
-func (c ContextCommand) getUserContext(ctx context.Context) (*types.UserContext, error) {
+func (c ContextCommand) getUserContext(ctx context.Context, ns string) (*types.UserContext, error) {
 	client, err := c.OktetoClientProvider.Provide()
 	if err != nil {
 		return nil, err
@@ -331,7 +334,7 @@ func (c ContextCommand) getUserContext(ctx context.Context) (*types.UserContext,
 
 	retries := 0
 	for retries <= 3 {
-		userContext, err := client.User().GetContext(ctx)
+		userContext, err := client.User().GetContext(ctx, ns)
 
 		if err != nil && oktetoErrors.IsForbidden(err) {
 			if err := c.OktetoContextWriter.Write(); err != nil {

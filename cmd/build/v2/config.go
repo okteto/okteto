@@ -14,17 +14,33 @@
 package v2
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"strings"
+
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/repository"
+	"github.com/okteto/okteto/pkg/model"
+	"github.com/spf13/afero"
 )
+
+type configRepositoryInterface interface {
+	GetSHA() (string, error)
+	IsClean() (bool, error)
+}
+
+type configRegistryInterface interface {
+	HasGlobalPushAccess() (bool, error)
+}
 
 type oktetoBuilderConfig struct {
 	hasGlobalAccess bool
 	isCleanProject  bool
-	repository      repository.Repository
+	repository      configRepositoryInterface
+	fs              afero.Fs
 }
 
-func getConfig(registry oktetoRegistryInterface, gitRepo repository.Repository) oktetoBuilderConfigInterface {
+func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterface) oktetoBuilderConfig {
 	hasAccess, err := registry.HasGlobalPushAccess()
 	if err != nil {
 		oktetoLog.Infof("error trying to access globalPushAccess: %w", err)
@@ -38,6 +54,7 @@ func getConfig(registry oktetoRegistryInterface, gitRepo repository.Repository) 
 		repository:      gitRepo,
 		hasGlobalAccess: hasAccess,
 		isCleanProject:  isClean,
+		fs:              afero.NewOsFs(),
 	}
 }
 
@@ -51,10 +68,41 @@ func (oc oktetoBuilderConfig) IsCleanProject() bool {
 	return oc.isCleanProject
 }
 
-func (oc oktetoBuilderConfig) GetHash() string {
-	sha, err := oc.repository.GetSHA()
+func (oc oktetoBuilderConfig) GetGitCommit() string {
+	commitSHA, err := oc.repository.GetSHA()
 	if err != nil {
 		oktetoLog.Infof("could not get repository sha: %w", err)
 	}
-	return sha
+	return commitSHA
+}
+
+// GetBuildTag returns a sha hash of the build info and the commit sha
+func (oc oktetoBuilderConfig) GetBuildHash(buildInfo *model.BuildInfo) string {
+	commitSHA, err := oc.repository.GetSHA()
+	if err != nil {
+		return ""
+	}
+	text := oc.getTextToHash(buildInfo, commitSHA)
+	buildHash := sha256.Sum256([]byte(text))
+	return hex.EncodeToString(buildHash[:])
+}
+
+func (oc oktetoBuilderConfig) getTextToHash(buildInfo *model.BuildInfo, sha string) string {
+	args := []string{}
+	for _, arg := range buildInfo.Args {
+		args = append(args, arg.String())
+	}
+	argsText := strings.Join(args, ";")
+	secretsText := buildInfo.Secrets.GetContent(oc.fs)
+
+	// We use a builder to avoid allocations when building the string
+	var b strings.Builder
+	fmt.Fprintf(&b, "commit:%s;", sha)
+	fmt.Fprintf(&b, "target:%s;", buildInfo.Target)
+	fmt.Fprintf(&b, "build_args:%s;", argsText)
+	fmt.Fprintf(&b, "secrets:%s;", secretsText)
+	fmt.Fprintf(&b, "context:%s;", buildInfo.Context)
+	fmt.Fprintf(&b, "dockerfile:%s;", buildInfo.Dockerfile)
+	fmt.Fprintf(&b, "image:%s;", buildInfo.Image)
+	return b.String()
 }

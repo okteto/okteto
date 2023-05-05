@@ -214,7 +214,7 @@ func TestGetContext(t *testing.T) {
 			uc := &userClient{
 				client: tc.cfg.client,
 			}
-			userContext, err := uc.GetContext(context.Background())
+			userContext, err := uc.GetContext(context.Background(), "")
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.userContext, userContext)
 		})

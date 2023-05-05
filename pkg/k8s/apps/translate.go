@@ -243,53 +243,33 @@ func TranslateLifecycle(c *apiv1.Container, l *model.Lifecycle) {
 }
 
 // TranslateResources translates the resources attached to a container
-func TranslateResources(c *apiv1.Container, r model.ResourceRequirements) {
-	if c.Resources.Requests == nil {
-		c.Resources.Requests = make(map[apiv1.ResourceName]resource.Quantity)
-	}
+func TranslateResources(c *apiv1.Container, rr model.ResourceRequirements) {
 
-	if v, ok := r.Requests[apiv1.ResourceMemory]; ok {
-		c.Resources.Requests[apiv1.ResourceMemory] = v
-	}
+	rrl := []model.ResourceList{rr.Requests, rr.Limits}
+	cr := []*apiv1.ResourceList{&c.Resources.Requests, &c.Resources.Limits}
 
-	if v, ok := r.Requests[apiv1.ResourceCPU]; ok {
-		c.Resources.Requests[apiv1.ResourceCPU] = v
-	}
+	for i, crl := range cr {
+		rl := rrl[i]
 
-	if v, ok := r.Requests[apiv1.ResourceEphemeralStorage]; ok {
-		c.Resources.Requests[apiv1.ResourceEphemeralStorage] = v
-	}
+		if *crl == nil {
+			*crl = make(map[apiv1.ResourceName]resource.Quantity)
+		}
+		if v, ok := rl[apiv1.ResourceMemory]; ok {
+			(*crl)[apiv1.ResourceMemory] = v
+		}
+		if v, ok := rl[apiv1.ResourceCPU]; ok {
+			(*crl)[apiv1.ResourceCPU] = v
+		}
+		if v, ok := rl[apiv1.ResourceEphemeralStorage]; ok {
+			(*crl)[apiv1.ResourceEphemeralStorage] = v
+		}
 
-	if v, ok := r.Requests[model.ResourceAMDGPU]; ok {
-		c.Resources.Requests[model.ResourceAMDGPU] = v
-	}
-
-	if v, ok := r.Requests[model.ResourceNVIDIAGPU]; ok {
-		c.Resources.Requests[model.ResourceNVIDIAGPU] = v
-	}
-
-	if c.Resources.Limits == nil {
-		c.Resources.Limits = make(map[apiv1.ResourceName]resource.Quantity)
-	}
-
-	if v, ok := r.Limits[apiv1.ResourceMemory]; ok {
-		c.Resources.Limits[apiv1.ResourceMemory] = v
-	}
-
-	if v, ok := r.Limits[apiv1.ResourceCPU]; ok {
-		c.Resources.Limits[apiv1.ResourceCPU] = v
-	}
-
-	if v, ok := r.Limits[apiv1.ResourceEphemeralStorage]; ok {
-		c.Resources.Limits[apiv1.ResourceEphemeralStorage] = v
-	}
-
-	if v, ok := r.Limits[model.ResourceAMDGPU]; ok {
-		c.Resources.Limits[model.ResourceAMDGPU] = v
-	}
-
-	if v, ok := r.Limits[model.ResourceNVIDIAGPU]; ok {
-		c.Resources.Limits[model.ResourceNVIDIAGPU] = v
+		// Device Plugin resources (amd.com/gpu, nvidia.com/gpu, squat.ai/fuse etc.)
+		for resname, v := range rl {
+			if strings.Contains(string(resname), "/") {
+				(*crl)[resname] = v
+			}
+		}
 	}
 }
 
