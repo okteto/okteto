@@ -17,11 +17,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
@@ -603,6 +604,237 @@ services:
 	if tr2.App.Replicas() != 3 {
 		t.Fatalf("d2 is running %d replicas after 'okteto down'", tr2.App.Replicas())
 	}
+}
+
+func Test_translateServiceWithZeroDeploymentReplicas(t *testing.T) {
+	file, err := os.CreateTemp("", "okteto-secret-test")
+	require.NoError(t, err)
+	defer os.Remove(file.Name())
+	manifest := []byte(fmt.Sprintf(`name: web
+namespace: n
+container: dev
+image: web:latest
+annotations:
+  key1: value1
+command: ["./run_web.sh"]
+metadata:
+  labels:
+    app: web
+workdir: /app
+securityContext:
+  runAsUser: 100
+  runAsGroup: 101
+  fsGroup: 102
+serviceAccount: sa
+sync:
+  - .:/app
+  - sub:/path
+volumes:
+  - /go/pkg/
+  - /root/.cache/go-build
+tolerations:
+  - key: nvidia/gpu
+    operator: Exists
+nodeSelector:
+  disktype: ssd
+affinity:
+  podAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: role
+          operator: In
+          values:
+          - web-server
+      topologyKey: kubernetes.io/hostname
+secrets:
+  - %s:/remote
+resources:
+  limits:
+    cpu: 2
+    memory: 1Gi
+    nvidia.com/gpu: 1
+    amd.com/gpu: 1
+services:
+  - name: worker
+    container: dev
+    image: worker:latest
+    command: ["./run_worker.sh"]
+    annotations:
+      key2: value2
+    sync:
+       - worker:/src`, file.Name()))
+
+	manifest1, err := model.Read(manifest)
+	require.NoError(t, err)
+
+	dev1 := manifest1.Dev["web"]
+
+	dev2 := dev1.Services[0]
+	d2 := deployments.Sandbox(dev2)
+	d2.UID = types.UID("deploy2")
+	delete(d2.Annotations, model.OktetoAutoCreateAnnotation)
+	d2.Spec.Replicas = pointer.Int32Ptr(0)
+	d2.Namespace = dev1.Namespace
+
+	translationRules := make(map[string]*Translation)
+	ctx := context.Background()
+
+	c := fake.NewSimpleClientset(d2)
+	require.NoError(t, loadServiceTranslations(ctx, dev1, false, translationRules, c))
+	tr2 := translationRules[dev2.Name]
+	require.NoError(t, tr2.translate())
+
+	// checking d2 state
+	d2Orig := deployments.Sandbox(dev2)
+	if tr2.App.Replicas() != 0 {
+		t.Fatalf("d2 is running %d replicas", tr2.App.Replicas())
+	}
+
+	marshalledD2, _ := yaml.Marshal(tr2.App.PodSpec())
+	marshalledD2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
+	if !bytes.Equal(marshalledD2, marshalledD2Orig) {
+		t.Fatalf("Wrong d2 generation.\nActual %+v, \nExpected %+v", string(marshalledD2), string(marshalledD2Orig))
+	}
+
+	// checking dev d2 state
+
+	// There should be one replica if Deployment replicas are zero and replicas not specified in manifest
+	if tr2.DevApp.Replicas() != 1 {
+		t.Fatalf("dev d2 is running %d replicas", tr2.DevApp.Replicas())
+	}
+
+	require.NoError(t, tr2.DevModeOff())
+
+	if _, ok := tr2.App.ObjectMeta().Labels[constants.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
+	}
+
+	if _, ok := tr2.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
+	}
+
+	// Deployment scale back up to original replicas
+	if tr2.App.Replicas() != 0 {
+		t.Fatalf("d2 is running %d replicas after 'okteto down'", tr2.App.Replicas())
+	}
+
+}
+
+func Test_translateServiceWithReplicasSpecifiedInServiceManifest(t *testing.T) {
+	file, err := os.CreateTemp("", "okteto-secret-test")
+	require.NoError(t, err)
+	defer os.Remove(file.Name())
+	manifest := []byte(fmt.Sprintf(`name: web
+namespace: n
+container: dev
+image: web:latest
+annotations:
+  key1: value1
+command: ["./run_web.sh"]
+metadata:
+  labels:
+    app: web
+workdir: /app
+securityContext:
+  runAsUser: 100
+  runAsGroup: 101
+  fsGroup: 102
+serviceAccount: sa
+sync:
+  - .:/app
+  - sub:/path
+volumes:
+  - /go/pkg/
+  - /root/.cache/go-build
+tolerations:
+  - key: nvidia/gpu
+    operator: Exists
+nodeSelector:
+  disktype: ssd
+affinity:
+  podAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+    - labelSelector:
+        matchExpressions:
+        - key: role
+          operator: In
+          values:
+          - web-server
+      topologyKey: kubernetes.io/hostname
+secrets:
+  - %s:/remote
+resources:
+  limits:
+    cpu: 2
+    memory: 1Gi
+    nvidia.com/gpu: 1
+    amd.com/gpu: 1
+services:
+  - name: worker
+    replicas: 5
+    container: dev
+    image: worker:latest
+    command: ["./run_worker.sh"]
+    annotations:
+      key2: value2
+    sync:
+       - worker:/src`, file.Name()))
+
+	manifest1, err := model.Read(manifest)
+	require.NoError(t, err)
+
+	dev1 := manifest1.Dev["web"]
+
+	dev2 := dev1.Services[0]
+	d2 := deployments.Sandbox(dev2)
+	d2.UID = types.UID("deploy2")
+	delete(d2.Annotations, model.OktetoAutoCreateAnnotation)
+	d2.Spec.Replicas = pointer.Int32Ptr(3)
+	d2.Namespace = dev1.Namespace
+
+	translationRules := make(map[string]*Translation)
+	ctx := context.Background()
+
+	c := fake.NewSimpleClientset(d2)
+	require.NoError(t, loadServiceTranslations(ctx, dev1, false, translationRules, c))
+	tr2 := translationRules[dev2.Name]
+	require.NoError(t, tr2.translate())
+
+	// checking d2 state
+	d2Orig := deployments.Sandbox(dev2)
+	if tr2.App.Replicas() != 0 {
+		t.Fatalf("d2 is running %d replicas", tr2.App.Replicas())
+	}
+
+	marshalledD2, _ := yaml.Marshal(tr2.App.PodSpec())
+	marshalledD2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
+	if !bytes.Equal(marshalledD2, marshalledD2Orig) {
+		t.Fatalf("Wrong d2 generation.\nActual %+v, \nExpected %+v", string(marshalledD2), string(marshalledD2Orig))
+	}
+
+	// checking dev d2 state
+
+	// Service replicas should be equal to replicas specified in the manifest
+	if tr2.DevApp.Replicas() != 5 {
+		t.Fatalf("dev d2 is running %d replicas", tr2.DevApp.Replicas())
+	}
+
+	require.NoError(t, tr2.DevModeOff())
+
+	if _, ok := tr2.App.ObjectMeta().Labels[constants.DevLabel]; ok {
+		t.Fatalf("'%s' label not eliminated on 'okteto down'", constants.DevLabel)
+	}
+
+	if _, ok := tr2.App.ObjectMeta().Annotations[model.AppReplicasAnnotation]; ok {
+		t.Fatalf("'%s' annotation not eliminated on 'okteto down'", model.AppReplicasAnnotation)
+	}
+
+	// Deployment scale back up to original replicas
+	if tr2.App.Replicas() != 3 {
+		t.Fatalf("d2 is running %d replicas after 'okteto down'", tr2.App.Replicas())
+	}
+
 }
 
 func Test_translateWithoutVolumes(t *testing.T) {

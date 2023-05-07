@@ -95,7 +95,7 @@ type Dev struct {
 	EnvFiles             EnvFiles              `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-
+	Replicas             *int                  `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	// Deprecated fields
 	Healthchecks bool   `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 	Labels       Labels `json:"labels,omitempty" yaml:"labels,omitempty"`
@@ -749,6 +749,10 @@ func (dev *Dev) Validate() error {
 
 	if dev.Image == nil {
 		dev.Image = &BuildInfo{}
+	}
+
+	if dev.Replicas != nil {
+		return fmt.Errorf("replicas cannot be specified for main dev container")
 	}
 
 	if ValidKubeNameRegex.MatchString(dev.Name) {
