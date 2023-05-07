@@ -531,6 +531,34 @@ func TestDev_validateName(t *testing.T) {
 	}
 }
 
+func TestDev_validateReplicas(t *testing.T) {
+	replicasNumber := 5
+	dev := &Dev{
+		Name:            "test",
+		ImagePullPolicy: apiv1.PullAlways,
+		Image:           &BuildInfo{},
+		Push:            &BuildInfo{},
+		Replicas:        &replicasNumber,
+		Sync: Sync{
+			Folders: []SyncFolder{
+				{
+					LocalPath:  ".",
+					RemotePath: "/app",
+				},
+			},
+		},
+	}
+	// Since dev isn't being unmarshalled through Read, apply defaults
+	// before validating.
+	if err := dev.SetDefaults(); err != nil {
+		t.Fatalf("error applying defaults: %v", err)
+	}
+	if err := dev.Validate(); err == nil {
+		t.Errorf("Dev.validate() error = %v, wantErr %v", err, true)
+	}
+
+}
+
 func TestDev_readImageContext(t *testing.T) {
 	tests := []struct {
 		name     string

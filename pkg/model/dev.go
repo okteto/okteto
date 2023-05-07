@@ -737,6 +737,10 @@ func (dev *Dev) Validate() error {
 		dev.Image = &BuildInfo{}
 	}
 
+	if dev.Replicas != nil {
+		return fmt.Errorf("replicas cannot be specified for main dev container")
+	}
+
 	if ValidKubeNameRegex.MatchString(dev.Name) {
 		return errBadName
 	}
