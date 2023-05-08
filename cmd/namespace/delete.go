@@ -40,12 +40,13 @@ func Delete(ctx context.Context) *cobra.Command {
 		Short: "Delete a namespace",
 		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+				return err
+			}
+
 			nsToDelete := okteto.Context().Namespace
 			if len(args) > 0 {
 				nsToDelete = args[0]
-			}
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
-				return err
 			}
 
 			if !okteto.IsOkteto() {
