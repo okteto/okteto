@@ -724,6 +724,7 @@ func checkFileAndNotDirectory(path string) error {
 func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type devType Dev // Prevent recursion
 	dev := devType(*d)
+
 	type hybridModeInfo struct {
 		Workdir     string            `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 		Selector    Selector          `json:"selector,omitempty" yaml:"selector,omitempty"`

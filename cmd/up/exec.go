@@ -18,17 +18,62 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/ssh"
 )
+
+type devExecutor interface {
+	runCommand(ctx context.Context, cmd []string) error
+}
+
+type hybridExecutor struct {
+	workdir string
+}
+
+func (he *hybridExecutor) runCommand(_ context.Context, cmd []string) error {
+	e := executor.NewExecutor(oktetoLog.GetOutputFormat(), false, he.workdir)
+	command := model.DeployCommand{
+		Name:    "hybrid development command",
+		Command: strings.Join(cmd, " "),
+	}
+	return e.Execute(command, os.Environ())
+}
+
+type syncExecutor struct {
+	iface      string
+	remotePort int
+}
+
+func (se *syncExecutor) runCommand(ctx context.Context, cmd []string) error {
+	return ssh.Exec(ctx, se.iface, se.remotePort, true, os.Stdin, os.Stdout, os.Stderr, cmd)
+}
+
+func newExecutorByDevMode(ctx context.Context, up *upContext) (devExecutor, error) {
+	wd, err := os.Getwd()
+	if err != nil {
+		return nil, err
+	}
+	if up.Dev.Mode == "hybrid" {
+		return &hybridExecutor{
+			workdir: filepath.Join(wd, up.Dev.Workdir),
+		}, nil
+	}
+	return &syncExecutor{
+		iface:      up.Dev.Interface,
+		remotePort: up.Dev.RemotePort,
+	}, nil
+}
 
 func (up *upContext) cleanCommand(ctx context.Context) {
 	in := strings.NewReader("\n")
@@ -64,7 +109,11 @@ func (up *upContext) runCommand(ctx context.Context, cmd []string) error {
 	}
 
 	if up.Dev.RemoteModeEnabled() {
-		return ssh.Exec(ctx, up.Dev.Interface, up.Dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, cmd)
+		executor, err := newExecutorByDevMode(ctx, up)
+		if err != nil {
+			return err
+		}
+		return executor.runCommand(ctx, cmd)
 	}
 
 	return exec.Exec(
