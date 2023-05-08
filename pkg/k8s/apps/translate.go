@@ -96,8 +96,6 @@ func (tr *Translation) translate() error {
 	} else {
 		if tr.Dev.Replicas != nil {
 			tr.DevApp.SetReplicas(int32(*tr.Dev.Replicas))
-		} else if tr.DevApp.Replicas() == 0 {
-			tr.DevApp.SetReplicas(1)
 		}
 
 		tr.DevApp.TemplateObjectMeta().Labels[model.DetachedDevLabel] = tr.getDevName()
