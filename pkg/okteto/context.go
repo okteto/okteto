@@ -371,7 +371,7 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 		user.Token = ""
 		user.Exec = &clientcmdapi.ExecConfig{
 			Command:            "okteto",
-			Args:               []string{"kubetoken", oktetoURL, namespace},
+			Args:               []string{"kubetoken", "--context", oktetoURL, "--namespace", namespace},
 			APIVersion:         "client.authentication.k8s.io/v1",
 			InstallHint:        "Okteto needs to be installed and in your PATH to use this context. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
 			ProvideClusterInfo: true,
