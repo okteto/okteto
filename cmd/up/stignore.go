@@ -122,10 +122,11 @@ func addSyncFieldHash(dev *model.Dev) error {
 }
 
 func checkStignoreConfiguration(dev *model.Dev) error {
+	isHybridModeEnabled := dev.Mode == "hybrid"
 	for _, folder := range dev.Sync.Folders {
 		stignorePath := filepath.Join(folder.LocalPath, ".stignore")
 		gitPath := filepath.Join(folder.LocalPath, ".git")
-		if !filesystem.FileExists(stignorePath) {
+		if !filesystem.FileExists(stignorePath) && !isHybridModeEnabled {
 			if err := askIfCreateStignoreDefaults(folder.LocalPath, stignorePath); err != nil {
 				return err
 			}
@@ -133,7 +134,7 @@ func checkStignoreConfiguration(dev *model.Dev) error {
 		}
 
 		oktetoLog.Infof("'.stignore' exists in folder '%s'", folder.LocalPath)
-		if !filesystem.FileExists(gitPath) {
+		if !filesystem.FileExists(gitPath) || isHybridModeEnabled {
 			continue
 		}
 
