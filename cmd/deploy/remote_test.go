@@ -56,6 +56,7 @@ func TestRemoteTest(t *testing.T) {
 		tempFsCreator error
 		options       *Options
 		builderErr    error
+		cert          []byte
 	}
 	var tests = []struct {
 		name     string
@@ -69,6 +70,7 @@ func TestRemoteTest(t *testing.T) {
 					Getter: assert.AnError,
 				},
 				options: &Options{},
+				cert:    []byte("this-is-my-cert-there-are-many-like-it-but-this-one-is-mine"),
 			},
 			expected: assert.AnError,
 		},
@@ -141,6 +143,9 @@ func TestRemoteTest(t *testing.T) {
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
+				certFetcher: func() ([]byte, error) {
+					return tt.config.cert, nil
+				},
 			}
 			err := rdc.deploy(ctx, tt.config.options)
 			if tt.expected != nil {

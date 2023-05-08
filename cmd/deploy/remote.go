@@ -16,9 +16,13 @@ package deploy
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
+	"encoding/base64"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"math/big"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -74,6 +78,8 @@ COPY . /okteto/src
 WORKDIR /okteto/src
 
 ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
+ARG OKTETO_TLS_CERT_BASE64
+RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
 RUN okteto deploy --log-output=json {{ .DeployFlags }}
 `
 )
@@ -103,6 +109,7 @@ type remoteDeployCommand struct {
 	fs                   afero.Fs
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
+	certFetcher          func() ([]byte, error)
 }
 
 // newRemoteDeployer creates the remote deployer from a
@@ -114,6 +121,7 @@ func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
+		certFetcher:          fetchCertFromContextName,
 	}
 }
 
@@ -148,9 +156,16 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
+	cert, err := rd.certFetcher()
+	if err != nil {
+		return err
+	}
+
 	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: "deploy"})
 	buildOptions.Manifest = deployOptions.Manifest
-
+	buildOptions.BuildArgs = append(
+		buildOptions.BuildArgs, fmt.Sprintf("OKTETO_TLS_CERT_BASE64=%s", base64.StdEncoding.EncodeToString(cert)),
+	)
 	// we need to call Build() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
@@ -305,4 +320,27 @@ func getOktetoCLIVersion(versionString string) string {
 	}
 
 	return version
+}
+
+func fetchCertFromContextName() ([]byte, error) {
+	uri, err := url.Parse(okteto.Context().Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse okteto url from context: %s", err)
+	}
+	host := uri.Host
+	port := uri.Port()
+	if port == "" {
+		port = "443"
+	}
+	addr := fmt.Sprintf("%s:%s", host, port)
+	conn, err := tls.Dial("tcp", addr, &tls.Config{})
+	if err != nil {
+		return nil, err
+	}
+	state := conn.ConnectionState()
+	for _, cert := range state.PeerCertificates {
+		pemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
+		return pemBytes, nil
+	}
+	return nil, fmt.Errorf("could not find any certificates for %s", addr)
 }
