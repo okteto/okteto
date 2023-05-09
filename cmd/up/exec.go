@@ -65,8 +65,7 @@ func newExecutorByDevMode(ctx context.Context, up *upContext) (devExecutor, erro
 		return nil, err
 	}
 
-	// TODO: change this
-	if up.Dev.Mode == "hybrid" {
+	if up.Dev.IsHybridModeEnabled() {
 		return &hybridExecutor{
 			workdir: filepath.Join(wd, up.Dev.Workdir),
 		}, nil

@@ -520,6 +520,10 @@ func (dev *Dev) loadImage() error {
 	return nil
 }
 
+func (dev *Dev) IsHybridModeEnabled() bool {
+	return dev.Mode == constants.OktetoHybridModeFieldValue
+}
+
 func (dev *Dev) SetDefaults() error {
 	if dev.Command.Values == nil {
 		dev.Command.Values = []string{"sh"}

@@ -509,8 +509,7 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 }
 
 func setSyncDefaultsByDevMode(dev *model.Dev, fs afero.Fs) error {
-	// TODO: change this
-	if dev.Mode == "hybrid" {
+	if dev.IsHybridModeEnabled() {
 		dev.PersistentVolumeInfo.Enabled = false
 		syncTempDir, err := afero.TempDir(fs, "", "")
 		if err != nil || syncTempDir == "" {

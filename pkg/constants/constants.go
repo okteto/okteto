@@ -103,4 +103,7 @@ const (
 
 	//OktetoDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
 	OktetoDivertAnnotationTemplate = "divert.okteto.com/%s-%s"
+
+	//OktetoHybridModeFieldValue represents the hybrid mode field value
+	OktetoHybridModeFieldValue = "hybrid"
 )

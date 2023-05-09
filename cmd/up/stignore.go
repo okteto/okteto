@@ -122,7 +122,7 @@ func addSyncFieldHash(dev *model.Dev) error {
 }
 
 func checkStignoreConfiguration(dev *model.Dev) error {
-	isHybridModeEnabled := dev.Mode == "hybrid"
+	isHybridModeEnabled := dev.IsHybridModeEnabled()
 	for _, folder := range dev.Sync.Folders {
 		stignorePath := filepath.Join(folder.LocalPath, ".stignore")
 		gitPath := filepath.Join(folder.LocalPath, ".git")
