@@ -34,7 +34,7 @@ type Executor struct {
 	outputMode     string
 	displayer      executorDisplayer
 	runWithoutBash bool
-	shell, dir     string
+	shell          string
 }
 
 type executorDisplayer interface {
@@ -44,7 +44,7 @@ type executorDisplayer interface {
 }
 
 // NewExecutor returns a new executor
-func NewExecutor(output string, runWithoutBash bool, dir string) *Executor {
+func NewExecutor(output string, runWithoutBash bool) *Executor {
 	var displayer executorDisplayer
 
 	switch output {
@@ -68,7 +68,6 @@ func NewExecutor(output string, runWithoutBash bool, dir string) *Executor {
 		displayer:      displayer,
 		runWithoutBash: runWithoutBash,
 		shell:          shell,
-		dir:            dir,
 	}
 }
 
@@ -80,9 +79,6 @@ func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 		cmd = exec.Command(cmdInfo.Command)
 	}
 	cmd.Env = append(os.Environ(), env...)
-	if e.dir != "" {
-		cmd.Dir = e.dir
-	}
 
 	if err := e.displayer.startCommand(cmd); err != nil {
 		return err

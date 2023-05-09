@@ -17,19 +17,20 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/creack/pty"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/k8s/apps"
-	"github.com/okteto/okteto/pkg/k8s/exec"
+	k8sExec "github.com/okteto/okteto/pkg/k8s/exec"
 	"github.com/okteto/okteto/pkg/k8s/pods"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/ssh"
 )
 
@@ -42,12 +43,16 @@ type hybridExecutor struct {
 }
 
 func (he *hybridExecutor) runCommand(_ context.Context, cmd []string) error {
-	e := executor.NewExecutor(oktetoLog.GetOutputFormat(), false, he.workdir)
-	command := model.DeployCommand{
-		Name:    "hybrid development command",
-		Command: strings.Join(cmd, " "),
+	c := exec.Command("bash", "-c", strings.Join(cmd, " "))
+	c.Dir = he.workdir
+
+	f, err := pty.Start(c)
+	if err != nil {
+		return err
 	}
-	return e.Execute(command, os.Environ())
+
+	io.Copy(os.Stdout, f)
+	return nil
 }
 
 type syncExecutor struct {
@@ -82,7 +87,7 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 
 	cmd := "cat /var/okteto/bin/version.txt; cat /proc/sys/fs/inotify/max_user_watches; /var/okteto/bin/clean >/dev/null 2>&1"
 
-	err := exec.Exec(
+	err := k8sExec.Exec(
 		ctx,
 		up.Client,
 		up.RestConfig,
@@ -117,7 +122,7 @@ func (up *upContext) runCommand(ctx context.Context, cmd []string) error {
 		return executor.runCommand(ctx, cmd)
 	}
 
-	return exec.Exec(
+	return k8sExec.Exec(
 		ctx,
 		up.Client,
 		up.RestConfig,

@@ -84,7 +84,7 @@ func newLocalDeployer(ctx context.Context, cwd string, options *Options) (*local
 	clientProvider := okteto.NewK8sClientProvider()
 	return &localDeployer{
 		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash, ""),
+		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
 		Proxy:              proxy,
 		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),
 		K8sClientProvider:  clientProvider,
