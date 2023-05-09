@@ -143,7 +143,7 @@ func TestRemoteTest(t *testing.T) {
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
-				certFetcher: func() ([]byte, error) {
+				certFetcher: func(context.Context) ([]byte, error) {
 					return tt.config.cert, nil
 				},
 			}

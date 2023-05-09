@@ -16,13 +16,10 @@ package deploy
 import (
 	"context"
 	"crypto/rand"
-	"crypto/tls"
 	"encoding/base64"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"math/big"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -109,7 +106,7 @@ type remoteDeployCommand struct {
 	fs                   afero.Fs
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
-	certFetcher          func() ([]byte, error)
+	certFetcher          func(context.Context) ([]byte, error)
 }
 
 // newRemoteDeployer creates the remote deployer from a
@@ -121,7 +118,7 @@ func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
-		certFetcher:          fetchCertFromContextName,
+		certFetcher:          fetchCertFromOkteto,
 	}
 }
 
@@ -156,7 +153,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
-	cert, err := rd.certFetcher()
+	cert, err := rd.certFetcher(ctx)
 	if err != nil {
 		return err
 	}
@@ -322,25 +319,15 @@ func getOktetoCLIVersion(versionString string) string {
 	return version
 }
 
-func fetchCertFromContextName() ([]byte, error) {
-	uri, err := url.Parse(okteto.Context().Name)
+func fetchCertFromOkteto(ctx context.Context) ([]byte, error) {
+	cp := okteto.NewOktetoClientProvider()
+	c, err := cp.Provide()
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse okteto url from context: %s", err)
+		return nil, fmt.Errorf("failed to provide okteto client for fetching certs: %s", err)
 	}
-	host := uri.Host
-	port := uri.Port()
-	if port == "" {
-		port = "443"
-	}
-	addr := fmt.Sprintf("%s:%s", host, port)
-	conn, err := tls.Dial("tcp", addr, &tls.Config{})
+	cert, err := c.User().GetClusterCertificate(ctx, okteto.Context().Name, okteto.Context().Namespace)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get context for fetching certs: %s", err)
 	}
-	state := conn.ConnectionState()
-	for _, cert := range state.PeerCertificates {
-		pemBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
-		return pemBytes, nil
-	}
-	return nil, fmt.Errorf("could not find any certificates for %s", addr)
+	return cert, nil
 }
