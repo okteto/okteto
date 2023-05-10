@@ -163,6 +163,11 @@ func getEnvsFromContext(ctx context.Context, dev *model.Dev, c kubernetes.Interf
 		envs = append(envs, env)
 
 	}
+
+	for _, env := range app.PodSpec().Containers[0].Env {
+		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
+	}
+
 	return envs, nil
 }
 
