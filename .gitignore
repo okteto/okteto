@@ -3,6 +3,7 @@
 # IDEs
 .vscode
 .idea
+.atom
 
 # Golang binary
 cli
@@ -11,3 +12,4 @@ bin/*
 coverage.txt
 coverage.html
 dist
+okteto
