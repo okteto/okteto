@@ -19,8 +19,9 @@ import (
 
 // FakeUserClient is used to mock the userClient interface
 type FakeUserClient struct {
-	userCtx *types.UserContext
-	err     []error
+	userCtx     *types.UserContext
+	userSecrets []types.Secret
+	err         []error
 }
 
 func NewFakeUsersClient(user *types.User, err ...error) *FakeUserClient {
@@ -35,4 +36,8 @@ func (c *FakeUserClient) GetContext(_ context.Context) (*types.UserContext, erro
 	}
 
 	return c.userCtx, nil
+}
+
+func (c *FakeUserClient) GetUserSecrets(_ context.Context) ([]types.Secret, error) {
+	return c.userSecrets, nil
 }

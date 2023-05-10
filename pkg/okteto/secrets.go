@@ -36,6 +36,10 @@ type getContextQuery struct {
 	Cred    credQuery     `graphql:"credentials(space: $cred)"`
 }
 
+type getSecretsQuery struct {
+	Secrets []secretQuery `graphql:"getGitDeploySecrets"`
+}
+
 type getDeprecatedContextQuery struct {
 	User    deprecatedUserQuery `graphql:"user"`
 	Secrets []secretQuery       `graphql:"getGitDeploySecrets"`
@@ -137,6 +141,27 @@ func (c *userClient) GetContext(ctx context.Context) (*types.UserContext, error)
 		},
 	}
 	return result, nil
+}
+
+// GetSecrets returns the secrets from Okteto API
+func (c *userClient) GetUserSecrets(ctx context.Context) ([]types.Secret, error) {
+	var queryStruct getSecretsQuery
+	err := query(ctx, &queryStruct, nil, c.client)
+	if err != nil {
+		return nil, err
+	}
+
+	secrets := make([]types.Secret, 0)
+	for _, secret := range queryStruct.Secrets {
+		if !strings.Contains(string(secret.Name), ".") {
+			secrets = append(secrets, types.Secret{
+				Name:  string(secret.Name),
+				Value: string(secret.Value),
+			})
+		}
+	}
+
+	return secrets, nil
 }
 
 // TODO: Remove this code when users are in okteto chart > 0.10.8
