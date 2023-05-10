@@ -346,7 +346,7 @@ func (*ContextCommand) initKubernetesContext(ctxOptions *ContextOptions) error {
 	return nil
 }
 
-func (c ContextCommand) getUserContext(ctx context.Context, ns string) (*types.UserContext, error) {
+func (c *ContextCommand) getUserContext(ctx context.Context, ns string) (*types.UserContext, error) {
 	client, err := c.OktetoClientProvider.Provide()
 	if err != nil {
 		return nil, err
