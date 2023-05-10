@@ -1871,7 +1871,9 @@ reverse:
 						Local:  8080,
 					},
 				},
-				Image:     &BuildInfo{},
+				Image: &BuildInfo{
+					Name: "busybox",
+				},
 				Push:      &BuildInfo{},
 				Secrets:   []Secret{},
 				Probes:    &Probes{},
