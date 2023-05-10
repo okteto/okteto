@@ -208,6 +208,7 @@ func (c *userClient) GetClusterCertificate(ctx context.Context, cluster, ns stri
 	if err != nil {
 		return nil, fmt.Errorf("failed to base64 decode credentials file: %w", err)
 	}
+
 	var file contextFileJSON
 	if err := yaml.Unmarshal(payload, &file); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal credentials file: %w", err)

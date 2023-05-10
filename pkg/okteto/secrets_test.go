@@ -15,6 +15,7 @@ package okteto
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"testing"
 
@@ -319,6 +320,113 @@ func TestGetDeprecatedContext(t *testing.T) {
 			userContext, err := uc.deprecatedGetUserContext(context.Background())
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.userContext, userContext)
+		})
+	}
+}
+
+func TestGetClusterCertificate(t *testing.T) {
+	ctx := context.Background()
+
+	cluster := "https://okteto.mycluster.dev.okteto.net"
+	testCert := []byte("this-is-my-cert")
+
+	contextFile := func(cluster string, cert []byte) string {
+		testCertBase64 := base64.StdEncoding.EncodeToString(cert)
+		f := fmt.Sprintf(`{"contexts": {"%s": {"certificate": "%s"}}}`, cluster, testCertBase64)
+		return base64.StdEncoding.EncodeToString([]byte(f))
+	}
+	type input struct {
+		client *fakeGraphQLClient
+	}
+	type expected struct {
+		cert      []byte
+		expectErr bool
+	}
+	testCases := []struct {
+		name     string
+		cfg      input
+		expected expected
+	}{
+		{
+			name: "happy path",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getContextFileQuery{
+						ContextFileJSON: contextFile(cluster, testCert),
+					},
+				},
+			},
+			expected: expected{
+				cert: testCert,
+			},
+		},
+		{
+			name: "cluster not found",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getContextFileQuery{
+						ContextFileJSON: contextFile("incorrect-cluster", testCert),
+					},
+				},
+			},
+			expected: expected{
+				expectErr: true,
+			},
+		},
+		{
+			name: "query error",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					err: fmt.Errorf("some error"),
+					queryResult: &getContextFileQuery{
+						ContextFileJSON: contextFile(cluster, testCert),
+					},
+				},
+			},
+			expected: expected{
+				expectErr: true,
+			},
+		},
+		{
+			name: "bad base 64 payload",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getContextFileQuery{
+						ContextFileJSON: "bad-base64-format",
+					},
+				},
+			},
+			expected: expected{
+				expectErr: true,
+			},
+		},
+		{
+			name: "no cert",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getContextFileQuery{
+						ContextFileJSON: contextFile("incorrect-cluster", nil),
+					},
+				},
+			},
+			expected: expected{
+				expectErr: true,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			uc := &userClient{
+				client: tc.cfg.client,
+			}
+			result, err := uc.GetClusterCertificate(ctx, cluster, "")
+			if tc.expected.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tc.expected.cert, result)
 		})
 	}
 }
