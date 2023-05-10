@@ -29,8 +29,8 @@ type OktetoInterface interface {
 
 // UserInterface represents the client that connects to the user functions
 type UserInterface interface {
-	GetContext(ctx context.Context) (*UserContext, error)
 	GetUserSecrets(ctx context.Context) ([]Secret, error)
+	GetContext(ctx context.Context, ns string) (*UserContext, error)
 }
 
 // NamespaceInterface represents the client that connects to the namespace functions

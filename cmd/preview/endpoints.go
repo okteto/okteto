@@ -46,12 +46,10 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			ctxOptions := &contextCMD.ContextOptions{
-				Namespace: ctxResource.Namespace,
-			}
-			if err := contextCMD.NewContextCommand().Run(ctx, ctxOptions); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
+			oktetoLog.Information("Using %s @ %s as context", previewName, okteto.RemoveSchema(okteto.Context().Name))
 
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster

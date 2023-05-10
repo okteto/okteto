@@ -28,7 +28,7 @@ func NewFakeUsersClient(user *types.User, err ...error) *FakeUserClient {
 	return &FakeUserClient{userCtx: &types.UserContext{User: *user}, err: err}
 }
 
-func (c *FakeUserClient) GetContext(_ context.Context) (*types.UserContext, error) {
+func (c *FakeUserClient) GetContext(_ context.Context, ns string) (*types.UserContext, error) {
 	if c.err != nil && len(c.err) > 0 {
 		err := c.err[0]
 		c.err = c.err[1:]

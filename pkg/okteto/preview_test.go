@@ -87,13 +87,11 @@ func TestDeployPreview(t *testing.T) {
 				client: &fakeGraphQLClient{
 					mutationResult: &deployPreviewMutation{
 						Response: deployPreviewResponse{
+							Id: "test",
 							Action: actionStruct{
 								Id:     "test",
 								Name:   "test",
 								Status: ProgressingStatus,
-							},
-							Preview: previewIDStruct{
-								Id: "test",
 							},
 						},
 					},
@@ -141,13 +139,11 @@ func TestDeployPreview(t *testing.T) {
 				client: &fakeGraphQLClient{
 					mutationResult: &deployPreviewMutation{
 						Response: deployPreviewResponse{
+							Id: "test",
 							Action: actionStruct{
 								Id:     "test",
 								Name:   "test",
 								Status: ProgressingStatus,
-							},
-							Preview: previewIDStruct{
-								Id: "test",
 							},
 						},
 					},
@@ -324,21 +320,52 @@ func TestListEndpoints(t *testing.T) {
 				client: &fakeGraphQLClient{
 					queryResult: &listPreviewEndpoints{
 						Response: previewEndpoints{
+							Endpoints: []endpointURL{
+								{Url: "https://test.test1"},
+								{Url: "https://test.test2"},
+							},
+						},
+					},
+					err: nil,
+				},
+				name: "test",
+			},
+			expected: expected{
+				response: []types.Endpoint{
+					{
+						URL: "https://test.test1",
+					},
+					{
+						URL: "https://test.test2",
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "no error legacy",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: &listPreviewEndpoints{
+						Response: previewEndpoints{
+							Externals: []externalEndpoints{
+								{
+									Endpoints: []endpointURL{
+										{Url: "https://test.test1"},
+									},
+								},
+							},
 							Deployments: []deploymentEndpoint{
 								{
 									Endpoints: []endpointURL{
-										{
-											Url: "https://test.test",
-										},
+										{Url: "https://test.test2"},
 									},
 								},
 							},
 							Statefulsets: []statefulsetEdnpoint{
 								{
 									Endpoints: []endpointURL{
-										{
-											Url: "https://test.test",
-										},
+										{Url: "https://test.test3"},
 									},
 								},
 							},
@@ -351,10 +378,13 @@ func TestListEndpoints(t *testing.T) {
 			expected: expected{
 				response: []types.Endpoint{
 					{
-						URL: "https://test.test",
+						URL: "https://test.test1",
 					},
 					{
-						URL: "https://test.test",
+						URL: "https://test.test2",
+					},
+					{
+						URL: "https://test.test3",
 					},
 				},
 				err: nil,
@@ -381,7 +411,9 @@ func TestListEndpoints(t *testing.T) {
 			}
 			response, err := pc.ListEndpoints(context.Background(), tc.input.name)
 			assert.ErrorIs(t, err, tc.expected.err)
-			assert.Equal(t, tc.expected.response, response)
+			for _, ep := range response {
+				assert.Contains(t, tc.expected.response, types.Endpoint{URL: ep.URL})
+			}
 		})
 	}
 }

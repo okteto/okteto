@@ -88,10 +88,10 @@ type credQuery struct {
 }
 
 // GetSecrets returns the secrets from Okteto API
-func (c *userClient) GetContext(ctx context.Context) (*types.UserContext, error) {
+func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserContext, error) {
 	var queryStruct getContextQuery
 	variables := map[string]interface{}{
-		"cred": graphql.String(""),
+		"cred": graphql.String(ns),
 	}
 	err := query(ctx, &queryStruct, variables, c.client)
 	if err != nil {

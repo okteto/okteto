@@ -84,8 +84,10 @@ type resourceInfo struct {
 	DeployedBy graphql.String
 }
 type previewEndpoints struct {
+	Endpoints    []endpointURL
 	Deployments  []deploymentEndpoint
 	Statefulsets []statefulsetEdnpoint
+	Externals    []externalEndpoints
 }
 
 type deploymentEndpoint struct {
@@ -93,6 +95,9 @@ type deploymentEndpoint struct {
 }
 
 type statefulsetEdnpoint struct {
+	Endpoints []endpointURL
+}
+type externalEndpoints struct {
 	Endpoints []endpointURL
 }
 
@@ -107,8 +112,8 @@ type previewEnv struct {
 }
 
 type deployPreviewResponse struct {
-	Action  actionStruct
-	Preview previewIDStruct
+	Id     graphql.String
+	Action actionStruct
 }
 
 type previewIDStruct struct {
@@ -164,7 +169,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 			Status: string(mutationStruct.Response.Action.Status),
 		}
 		previewResponse.Preview = &types.Preview{
-			ID: string(mutationStruct.Response.Preview.Id),
+			ID: string(mutationStruct.Response.Id),
 		}
 	} else {
 		mutationStruct := deployPreviewMutation{}
@@ -189,7 +194,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 			Status: string(mutationStruct.Response.Action.Status),
 		}
 		previewResponse.Preview = &types.Preview{
-			ID: string(mutationStruct.Response.Preview.Id),
+			ID: string(mutationStruct.Response.Id),
 		}
 	}
 	return previewResponse, nil
@@ -240,20 +245,38 @@ func (c *previewClient) ListEndpoints(ctx context.Context, previewName string) (
 		return nil, err
 	}
 
-	for _, d := range queryStruct.Response.Deployments {
-		for _, endpoint := range d.Endpoints {
-			endpoints = append(endpoints, types.Endpoint{
-				URL: string(endpoint.Url),
-			})
-		}
+	var endpointsMap = map[graphql.String]bool{}
+
+	for _, endpoint := range queryStruct.Response.Endpoints {
+		endpointsMap[endpoint.Url] = true
 	}
 
+	// @francisco - 2023//05/02
+	// The backend Endpoints field was being return empty in okteto clusters <1.9
+	// Lets make sure we correctly resolve the endpoints from the known resources
+	// All this below should be safe to remove in newer versions of the okteto cli
+	// <-- LEGACY START -->
+	for _, d := range queryStruct.Response.Deployments {
+		for _, endpoint := range d.Endpoints {
+			endpointsMap[endpoint.Url] = true
+		}
+	}
 	for _, sfs := range queryStruct.Response.Statefulsets {
 		for _, endpoint := range sfs.Endpoints {
-			endpoints = append(endpoints, types.Endpoint{
-				URL: string(endpoint.Url),
-			})
+			endpointsMap[endpoint.Url] = true
 		}
+	}
+	for _, ext := range queryStruct.Response.Externals {
+		for _, endpoint := range ext.Endpoints {
+			endpointsMap[endpoint.Url] = true
+		}
+	}
+	// <-- LEGACY END -->
+
+	for url := range endpointsMap {
+		endpoints = append(endpoints, types.Endpoint{
+			URL: string(url),
+		})
 	}
 	return endpoints, nil
 }

@@ -28,9 +28,12 @@ func Wake(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wake <name>",
 		Short: "Wakes a namespace",
-		Args:  utils.ExactArgsAccepted(1, ""),
+		Args:  utils.MaximumNArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			nsToWake := args[0]
+			nsToWake := okteto.Context().Namespace
+			if len(args) > 0 {
+				nsToWake = args[0]
+			}
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{Namespace: nsToWake, Show: true}); err != nil {
 				return err
 			}

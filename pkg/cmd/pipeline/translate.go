@@ -36,6 +36,7 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/json"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -134,6 +135,37 @@ func UpdateConfigMap(ctx context.Context, cmap *apiv1.ConfigMap, data *CfgData, 
 		return err
 	}
 	return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
+}
+
+// UpdateEnvs updates the configmap adding the envs as data fields
+func UpdateEnvs(ctx context.Context, name, namespace string, envs []string, c kubernetes.Interface) error {
+	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
+	if err != nil {
+		return err
+	}
+
+	if cmap != nil {
+		envsToSet := make(map[string]string, len(envs))
+		for _, env := range envs {
+			result := strings.Split(env, "=")
+			if len(result) != 2 {
+				return fmt.Errorf("invalid env format: '%s'", env)
+			}
+
+			envsToSet[result[0]] = result[1]
+		}
+
+		if len(envsToSet) > 0 {
+			encondedEnvs, err := json.Marshal(envsToSet)
+			if err != nil {
+				return err
+			}
+			cmap.Data[constants.OktetoDependencyEnvsKey] = base64.StdEncoding.EncodeToString(encondedEnvs)
+			return configmaps.Deploy(ctx, cmap, cmap.Namespace, c)
+		}
+
+	}
+	return nil
 }
 
 // TranslatePipelineName translate the name into the configmap name

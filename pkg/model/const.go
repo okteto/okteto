@@ -13,8 +13,6 @@
 
 package model
 
-import apiv1 "k8s.io/api/core/v1"
-
 const (
 
 	// DevCloneLabel indicates it is a dev pod clone
@@ -155,15 +153,10 @@ const (
 	// DefaultImage default image for sandboxes
 	DefaultImage = "okteto/dev:latest"
 
-	// ResourceAMDGPU amd.com/gpu resource
-	ResourceAMDGPU apiv1.ResourceName = "amd.com/gpu"
-	// ResourceNVIDIAGPU nvidia.com/gpu resource
-	ResourceNVIDIAGPU apiv1.ResourceName = "nvidia.com/gpu"
-
 	// this path is expected by remote
 	authorizedKeysPath = "/var/okteto/remote/authorized_keys"
 
-	syncFieldDocsURL = "https:// okteto.com/docs/reference/manifest/#sync-string-required"
+	syncFieldDocsURL = "https://okteto.com/docs/reference/manifest/#sync-string-required"
 
 	// HelmSecretType indicates the type for secrets created by Helm
 	HelmSecretType = "helm.sh/release.v1"

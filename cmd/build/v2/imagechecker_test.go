@@ -11,33 +11,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package deploy
-
-import (
-	"context"
-	"testing"
-
-	"github.com/okteto/okteto/pkg/model"
-	"github.com/spf13/afero"
-	"github.com/stretchr/testify/require"
-)
-
-func TestDeployNotRemovingEnvFile(t *testing.T) {
-	fs := afero.NewMemMapFs()
-
-	_, err := fs.Create(".env")
-	require.NoError(t, err)
-	opts := &Options{
-		Manifest: &model.Manifest{
-			Deploy: &model.DeployInfo{},
-		},
-	}
-	localDeployer := localDeployer{
-		ConfigMapHandler: &fakeCmapHandler{},
-		Fs:               fs,
-	}
-	localDeployer.runDeploySection(context.Background(), opts)
-	_, err = fs.Stat(".env")
-	require.NoError(t, err)
-
-}
+package v2
