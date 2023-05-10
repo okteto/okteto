@@ -74,7 +74,7 @@ func Test_SleepNamespace(t *testing.T) {
 			toSleepNs:                       "test-non-existing",
 			initialNamespacesAtOktetoClient: initNamespaces,
 			fakeOkClient: &client.FakeOktetoClient{
-				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
+				Namespace:    client.NewFakeNamespaceClient(initNamespaces, assert.AnError),
 				Users:        client.NewFakeUsersClient(usr),
 				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 			},
@@ -101,7 +101,7 @@ func Test_SleepNamespace(t *testing.T) {
 			nsFakeCommand := newFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
 			err := nsFakeCommand.ExecuteSleepNamespace(ctx, tt.toSleepNs)
 			if tt.err != nil {
-				assert.EqualError(t, err, tt.err.Error())
+				assert.ErrorIs(t, err, tt.err)
 			} else {
 				assert.NoError(t, err)
 			}
