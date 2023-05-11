@@ -50,8 +50,26 @@ type InputVariable struct {
 
 type PreviewScope graphql.String
 
+type labelList []graphql.String
+
+type deployPreviewResponseInterface interface {
+	response() deployPreviewResponse
+}
+
 type deployPreviewMutation struct {
 	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename)"`
+}
+
+func (d *deployPreviewMutation) response() deployPreviewResponse {
+	return d.Response
+}
+
+type deployPreviewMutatioWithLabels struct {
+	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, labels: $labels)"`
+}
+
+func (d *deployPreviewMutatioWithLabels) response() deployPreviewResponse {
+	return d.Response
 }
 
 type destroyPreviewMutation struct {
@@ -121,83 +139,74 @@ type previewIDStruct struct {
 }
 
 // DeployPreview creates a preview environment
-func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable) (*types.PreviewResponse, error) {
+func (c *previewClient) DeployPreview(ctx context.Context, name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string) (*types.PreviewResponse, error) {
 	if err := c.namespaceValidator.validate(name, previewEnvObject); err != nil {
 		return nil, err
 	}
-	origin := config.GetDeployOrigin()
-	previewResponse := &types.PreviewResponse{}
+	var mutationStruct deployPreviewResponseInterface
+	mutationStruct = &deployPreviewMutation{}
+	if len(labels) > 0 {
+		mutationStruct = &deployPreviewMutatioWithLabels{}
+	}
+	mutationVariables := c.getDeployVariables(name, scope, repository, branch, sourceUrl, filename, variables, labels)
 
-	if len(variables) > 0 {
-		mutationStruct := deployPreviewMutation{}
-		variablesVariable := make([]InputVariable, 0)
-		for _, v := range variables {
-			variablesVariable = append(variablesVariable, InputVariable{
-				Name:  graphql.String(v.Name),
-				Value: graphql.String(v.Value),
-			})
-		}
-		// if OKTETO_ORIGIN was provided don't override it
-		injectOrigin := true
-		for _, v := range variablesVariable {
-			if v.Name == "OKTETO_ORIGIN" {
-				injectOrigin = false
-			}
-		}
-		if injectOrigin {
-			variablesVariable = append(variablesVariable, InputVariable{
-				Name:  graphql.String("OKTETO_ORIGIN"),
-				Value: graphql.String(origin),
-			})
-		}
-		queryVariables := map[string]interface{}{
-			"name":       graphql.String(name),
-			"scope":      PreviewScope(scope),
-			"repository": graphql.String(repository),
-			"branch":     graphql.String(branch),
-			"sourceURL":  graphql.String(sourceUrl),
-			"variables":  variablesVariable,
-			"filename":   graphql.String(filename),
-		}
-		err := mutate(ctx, &mutationStruct, queryVariables, c.client)
-		if err != nil {
-			return nil, c.translateErr(err, name)
-		}
-		previewResponse.Action = &types.Action{
-			ID:     string(mutationStruct.Response.Action.Id),
-			Name:   string(mutationStruct.Response.Action.Name),
-			Status: string(mutationStruct.Response.Action.Status),
-		}
-		previewResponse.Preview = &types.Preview{
-			ID: string(mutationStruct.Response.Id),
-		}
-	} else {
-		mutationStruct := deployPreviewMutation{}
-		queryVariables := map[string]interface{}{
-			"name":       graphql.String(name),
-			"scope":      PreviewScope(scope),
-			"repository": graphql.String(repository),
-			"branch":     graphql.String(branch),
-			"sourceURL":  graphql.String(sourceUrl),
-			"filename":   graphql.String(filename),
-			"variables": []InputVariable{
-				{Name: graphql.String("OKTETO_ORIGIN"), Value: graphql.String(origin)},
-			},
-		}
-		err := mutate(ctx, &mutationStruct, queryVariables, c.client)
-		if err != nil {
-			return nil, c.translateErr(err, name)
-		}
-		previewResponse.Action = &types.Action{
-			ID:     string(mutationStruct.Response.Action.Id),
-			Name:   string(mutationStruct.Response.Action.Name),
-			Status: string(mutationStruct.Response.Action.Status),
-		}
-		previewResponse.Preview = &types.Preview{
-			ID: string(mutationStruct.Response.Id),
-		}
+	err := mutate(ctx, &mutationStruct, mutationVariables, c.client)
+	if err != nil {
+		return nil, c.translateErr(err, name)
+	}
+
+	response := mutationStruct.response()
+	previewResponse := &types.PreviewResponse{}
+	previewResponse.Action = &types.Action{
+		ID:     string(response.Action.Id),
+		Name:   string(response.Action.Name),
+		Status: string(response.Action.Status),
+	}
+	previewResponse.Preview = &types.Preview{
+		ID: string(response.Id),
 	}
 	return previewResponse, nil
+}
+
+func (c *previewClient) getDeployVariables(name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string) map[string]interface{} {
+	variablesVariable := make([]InputVariable, 0)
+	for _, v := range variables {
+		variablesVariable = append(variablesVariable, InputVariable{
+			Name:  graphql.String(v.Name),
+			Value: graphql.String(v.Value),
+		})
+	}
+	injectOrigin := true
+	for _, v := range variablesVariable {
+		if v.Name == "OKTETO_ORIGIN" {
+			injectOrigin = false
+		}
+	}
+	if injectOrigin {
+		origin := config.GetDeployOrigin()
+		variablesVariable = append(variablesVariable, InputVariable{
+			Name:  graphql.String("OKTETO_ORIGIN"),
+			Value: graphql.String(origin),
+		})
+	}
+	vars := map[string]interface{}{
+		"name":       graphql.String(name),
+		"scope":      PreviewScope(scope),
+		"repository": graphql.String(repository),
+		"branch":     graphql.String(branch),
+		"sourceURL":  graphql.String(sourceUrl),
+		"variables":  variablesVariable,
+		"filename":   graphql.String(filename),
+	}
+
+	if len(labels) > 0 {
+		labelsVariable := make(labelList, 0)
+		for _, l := range labels {
+			labelsVariable = append(labelsVariable, graphql.String(l))
+		}
+		vars["labels"] = labelsVariable
+	}
+	return vars
 }
 
 // DestroyPreview destroy a preview environment
