@@ -46,6 +46,9 @@ func (fc fakeGraphQLClient) Query(ctx context.Context, q interface{}, _ map[stri
 }
 func (fc fakeGraphQLClient) Mutate(ctx context.Context, m interface{}, _ map[string]interface{}) error {
 	if fc.mutationResult != nil {
+		if isAnInterface(m) {
+			m = reflect.ValueOf(m).Elem().Interface()
+		}
 		entityType := reflect.TypeOf(m).Elem()
 		for i := 0; i < entityType.NumField(); i++ {
 			value := entityType.Field(i)
@@ -55,6 +58,10 @@ func (fc fakeGraphQLClient) Mutate(ctx context.Context, m interface{}, _ map[str
 		}
 	}
 	return fc.err
+}
+
+func isAnInterface(m interface{}) bool {
+	return reflect.TypeOf(m).Kind() == reflect.Ptr && reflect.TypeOf(m).Elem().Kind() == reflect.Interface
 }
 
 type fakeGraphQLMultipleCallsClient struct {
