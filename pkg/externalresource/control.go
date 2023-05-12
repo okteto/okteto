@@ -21,6 +21,13 @@ type K8sControl struct {
 	Cfg            *rest.Config
 }
 
+func NewExternalK8sControl(cfg *rest.Config) *K8sControl {
+	return &K8sControl{
+		ClientProvider: k8s.GetExternalClient,
+		Cfg:            cfg,
+	}
+}
+
 func (c *K8sControl) Deploy(ctx context.Context, name, ns string, er *ExternalResource) error {
 	k8sclient, err := c.ClientProvider(c.Cfg)
 	if err != nil {

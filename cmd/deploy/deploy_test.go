@@ -805,8 +805,8 @@ func (f *fakeExternalControl) Validate(_ context.Context, _ string, _ string, _ 
 	return f.err
 }
 
-func (f *fakeExternalControlProvider) getFakeExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
-	return f.control, f.err
+func (f *fakeExternalControlProvider) getFakeExternalControl(_ *rest.Config) ExternalResourceInterface {
+	return f.control
 }
 
 func TestDeployExternals(t *testing.T) {
