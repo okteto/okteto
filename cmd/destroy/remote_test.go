@@ -195,6 +195,9 @@ func TestRemoteTest(t *testing.T) {
 				temporalCtrl:         tempCreator,
 				destroyImage:         "",
 				registry:             newFakeRegistry(),
+				certFetcher: func(ctx context.Context) ([]byte, error) {
+					return []byte("cert"), nil
+				},
 			}
 			err := rdc.destroy(ctx, tt.config.options)
 			assert.Equal(t, tt.expected, err)

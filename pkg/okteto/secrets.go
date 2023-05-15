@@ -15,11 +15,14 @@ package okteto
 
 import (
 	"context"
+	"encoding/base64"
+	"fmt"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
+	"gopkg.in/yaml.v3"
 )
 
 type userClient struct {
@@ -34,6 +37,10 @@ type getContextQuery struct {
 	User    userQuery     `graphql:"user"`
 	Secrets []secretQuery `graphql:"getGitDeploySecrets"`
 	Cred    credQuery     `graphql:"credentials(space: $cred)"`
+}
+
+type getContextFileQuery struct {
+	ContextFileJSON string `graphql:"contextFile"`
 }
 
 type getDeprecatedContextQuery struct {
@@ -81,6 +88,12 @@ type credQuery struct {
 	Certificate graphql.String
 	Token       graphql.String
 	Namespace   graphql.String
+}
+
+type contextFileJSON struct {
+	Contexts map[string]struct {
+		Certificate string `yaml:"certificate"`
+	} `yaml:"contexts"`
 }
 
 // GetSecrets returns the secrets from Okteto API
@@ -183,4 +196,36 @@ func (c *userClient) deprecatedGetUserContext(ctx context.Context) (*types.UserC
 		},
 	}
 	return result, nil
+}
+
+func (c *userClient) GetClusterCertificate(ctx context.Context, cluster, ns string) ([]byte, error) {
+	var queryStruct getContextFileQuery
+	if err := query(ctx, &queryStruct, nil, c.client); err != nil {
+		return nil, err
+	}
+
+	payload, err := base64.StdEncoding.DecodeString(queryStruct.ContextFileJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed to base64 decode credentials file: %w", err)
+	}
+
+	var file contextFileJSON
+	if err := yaml.Unmarshal(payload, &file); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal credentials file: %w", err)
+	}
+
+	conf, ok := file.Contexts[cluster]
+	if !ok {
+		return nil, fmt.Errorf("cluster-not-found")
+	}
+	if conf.Certificate == "" {
+		return nil, fmt.Errorf("cluster has no certificate")
+	}
+
+	b, err := base64.StdEncoding.DecodeString(conf.Certificate)
+	if err != nil {
+		return nil, fmt.Errorf("failed to base64 decode cluster certificate: %w", err)
+	}
+
+	return b, nil
 }
