@@ -60,7 +60,7 @@ const (
 	OktetoCLIImageForRemoteTemplate = "okteto/okteto:%s"
 
 	// OktetoPipelineRunnerImage defines image to use for remote deployments if empty
-	OktetoPipelineRunnerImage = "okteto/installer:1.8.9"
+	OktetoPipelineRunnerImage = "okteto/pipeline-runner:1.0.1"
 
 	// OktetoEnvFile defines the name for okteto env file
 	OktetoEnvFile = "OKTETO_ENV"
