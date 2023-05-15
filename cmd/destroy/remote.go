@@ -64,8 +64,9 @@ WORKDIR /okteto/src
 
 ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
 ARG OKTETO_TLS_CERT_BASE64
+ARG INTERNAL_SERVER_NAME=""
 RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
-RUN okteto destroy --log-output=json {{ .DestroyFlags }}
+RUN okteto destroy --log-output=json --server-name="$INTERNAL_SERVER_NAME" {{ .DestroyFlags }}
 `
 )
 
@@ -97,7 +98,7 @@ type remoteDestroyCommand struct {
 	temporalCtrl         filesystem.TemporalDirectoryInterface
 	manifest             *model.Manifest
 	registry             remoteBuild.OktetoRegistryInterface
-	certFetcher          func(context.Context) ([]byte, error)
+	clusterMetadata      func(context.Context) (*types.ClusterMetadata, error)
 }
 
 func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
@@ -111,7 +112,7 @@ func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
 		manifest:             manifest,
 		registry:             builder.Registry,
-		certFetcher:          fetchCertFromOkteto,
+		clusterMetadata:      fetchClusterMetadata,
 	}
 }
 
@@ -151,7 +152,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		return err
 	}
 
-	cert, err := rd.certFetcher(ctx)
+	sc, err := rd.clusterMetadata(ctx)
 	if err != nil {
 		return err
 	}
@@ -159,7 +160,9 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "deploy"})
 	buildOptions.Manifest = rd.manifest
 	buildOptions.BuildArgs = append(
-		buildOptions.BuildArgs, fmt.Sprintf("OKTETO_TLS_CERT_BASE64=%s", base64.StdEncoding.EncodeToString(cert)),
+		buildOptions.BuildArgs,
+		fmt.Sprintf("OKTETO_TLS_CERT_BASE64=%s", base64.StdEncoding.EncodeToString(sc.Certificate)),
+		fmt.Sprintf("INTERNAL_SERVER_NAME=%s", sc.ServerName),
 	)
 
 	// we need to call Build() method using a remote builder. This Builder will have
@@ -299,15 +302,22 @@ func getOktetoCLIVersion(versionString string) string {
 	return version
 }
 
-func fetchCertFromOkteto(ctx context.Context) ([]byte, error) {
+func fetchClusterMetadata(ctx context.Context) (*types.ClusterMetadata, error) {
 	cp := okteto.NewOktetoClientProvider()
 	c, err := cp.Provide()
 	if err != nil {
 		return nil, fmt.Errorf("failed to provide okteto client for fetching certs: %s", err)
 	}
-	cert, err := c.User().GetClusterCertificate(ctx, okteto.Context().Name, okteto.Context().Namespace)
+	uc := c.User()
+
+	metadata, err := uc.GetClusterMetadata(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get context for fetching certs: %s", err)
+		return nil, err
 	}
-	return cert, nil
+
+	if metadata.Certificate == nil {
+		metadata.Certificate, err = uc.GetClusterCertificate(ctx, okteto.Context().Name, okteto.Context().Namespace)
+	}
+
+	return &metadata, err
 }

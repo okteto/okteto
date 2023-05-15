@@ -21,6 +21,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/shurcooL/graphql"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -322,6 +323,87 @@ func TestGetDeprecatedContext(t *testing.T) {
 			assert.Equal(t, tc.expected.userContext, userContext)
 		})
 	}
+}
+
+func TestGetClusterMetadata(t *testing.T) {
+	ctx := context.Background()
+	type input struct {
+		client *fakeGraphQLClient
+	}
+	type expected struct {
+		metadata  types.ClusterMetadata
+		expectErr bool
+	}
+	testCases := []struct {
+		name     string
+		cfg      input
+		expected expected
+	}{
+		{
+			name: "skips error if schema does not match",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					err: fmt.Errorf("Cannot query field \"metadata\" on type \"Query\""),
+				},
+			},
+			expected: expected{
+				metadata: types.ClusterMetadata{},
+			},
+		},
+		{
+			name: "returns other errors",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					err: fmt.Errorf("this is my error. There are many like it but this one is mine"),
+				},
+			},
+			expected: expected{
+				expectErr: true,
+			},
+		},
+		{
+			name: "internalCertificateBase64",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &metadataQuery{
+						Metadata: []metadataQueryItem{
+							{
+								Name:  "internalCertificateBase64",
+								Value: graphql.String(base64.StdEncoding.EncodeToString([]byte("cert"))),
+							},
+							{
+								Name:  "internalIngressControllerIP",
+								Value: "1.1.1.1",
+							},
+						},
+					},
+				},
+			},
+			expected: expected{
+				metadata: types.ClusterMetadata{
+					Certificate: []byte("cert"),
+					ServerName:  "1.1.1.1",
+				},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			uc := &userClient{
+				client: tc.cfg.client,
+			}
+			result, err := uc.GetClusterMetadata(ctx)
+			if tc.expected.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tc.expected.metadata.Certificate, result.Certificate)
+			assert.Equal(t, tc.expected.metadata.ServerName, result.ServerName)
+		})
+	}
+
 }
 
 func TestGetClusterCertificate(t *testing.T) {

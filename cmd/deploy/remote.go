@@ -76,8 +76,9 @@ WORKDIR /okteto/src
 
 ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
 ARG OKTETO_TLS_CERT_BASE64
+ARG INTERNAL_SERVER_NAME=""
 RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
-RUN okteto deploy --log-output=json {{ .DeployFlags }}
+RUN okteto deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" {{ .DeployFlags }}
 `
 )
 
@@ -106,7 +107,7 @@ type remoteDeployCommand struct {
 	fs                   afero.Fs
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
-	certFetcher          func(context.Context) ([]byte, error)
+	clusterMetadata      func(context.Context) (*types.ClusterMetadata, error)
 }
 
 // newRemoteDeployer creates the remote deployer from a
@@ -118,7 +119,7 @@ func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
-		certFetcher:          fetchCertFromOkteto,
+		clusterMetadata:      fetchRemoteServerConfig,
 	}
 }
 
@@ -153,7 +154,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
-	cert, err := rd.certFetcher(ctx)
+	sc, err := rd.clusterMetadata(ctx)
 	if err != nil {
 		return err
 	}
@@ -161,7 +162,9 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: "deploy"})
 	buildOptions.Manifest = deployOptions.Manifest
 	buildOptions.BuildArgs = append(
-		buildOptions.BuildArgs, fmt.Sprintf("OKTETO_TLS_CERT_BASE64=%s", base64.StdEncoding.EncodeToString(cert)),
+		buildOptions.BuildArgs,
+		fmt.Sprintf("OKTETO_TLS_CERT_BASE64=%s", base64.StdEncoding.EncodeToString(sc.Certificate)),
+		fmt.Sprintf("INTERNAL_SERVER_NAME=%s", sc.ServerName),
 	)
 	// we need to call Build() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
@@ -319,15 +322,22 @@ func getOktetoCLIVersion(versionString string) string {
 	return version
 }
 
-func fetchCertFromOkteto(ctx context.Context) ([]byte, error) {
+func fetchRemoteServerConfig(ctx context.Context) (*types.ClusterMetadata, error) {
 	cp := okteto.NewOktetoClientProvider()
 	c, err := cp.Provide()
 	if err != nil {
 		return nil, fmt.Errorf("failed to provide okteto client for fetching certs: %s", err)
 	}
-	cert, err := c.User().GetClusterCertificate(ctx, okteto.Context().Name, okteto.Context().Namespace)
+	uc := c.User()
+
+	metadata, err := uc.GetClusterMetadata(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get context for fetching certs: %s", err)
+		return nil, err
 	}
-	return cert, nil
+
+	if metadata.Certificate == nil {
+		metadata.Certificate, err = uc.GetClusterCertificate(ctx, okteto.Context().Name, okteto.Context().Namespace)
+	}
+
+	return &metadata, err
 }
