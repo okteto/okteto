@@ -1,8 +1,10 @@
 package http
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -37,18 +39,45 @@ func DefaultTransport() *http.Transport {
 
 // StrictSSLTransport returns an *http.Transport with RootCAs set with both the SystemCertPool and the given *x509.Certificates
 // If obtaining SystemCertPool fails, it uses an empty *x509.CertPool as base
-func StrictSSLTransport(certs ...*x509.Certificate) *http.Transport {
+func StrictSSLTransport(opts *SSLTransportOption) *http.Transport {
 	pool, err := x509.SystemCertPool()
 	if err != nil {
 		pool = x509.NewCertPool()
 	}
 
-	for _, cert := range certs {
+	if opts == nil {
+		opts = &SSLTransportOption{}
+	}
+
+	for _, cert := range opts.Certs {
 		pool.AddCert(cert)
 	}
 
+	toIntercept := Intercept{}
+	toIntercept.AppendURLs(opts.URLsToIntercept...)
+
 	transport := DefaultTransport()
 	transport.TLSClientConfig.RootCAs = pool
+
+	transport.DialTLSContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+		if toIntercept.ShouldInterceptAddr(addr) && opts.ServerName != "" {
+			host, _, err := net.SplitHostPort(addr)
+			if err != nil {
+				return nil, err
+			}
+			transport.TLSClientConfig.ServerName = host
+			addr = opts.ServerName
+		}
+
+		conn, err := tls.Dial("tcp", addr, transport.TLSClientConfig)
+		if err != nil {
+			return nil, fmt.Errorf("tcp dial failed for %s: %w", addr, err)
+		}
+		if err := conn.Handshake(); err != nil {
+			return nil, fmt.Errorf("tls handshake failed for %s: %w", addr, err)
+		}
+		return conn, err
+	}
 
 	return transport
 }

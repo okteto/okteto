@@ -41,6 +41,7 @@ type ClientConfigInterface interface {
 	GetToken() string
 	IsInsecureSkipTLSVerifyPolicy() bool
 	GetContextCertificate() (*x509.Certificate, error)
+	GetServerNameOverride() string
 }
 
 type oktetoHelperConfig interface {
@@ -169,12 +170,20 @@ func (c client) getTransportOption() remote.Option {
 	return remote.WithTransport(c.getTransport())
 }
 func (c client) getTransport() http.RoundTripper {
-	transport := oktetoHttp.DefaultTransport()
+	sslTransportOption := &oktetoHttp.SSLTransportOption{}
+
+	if serverName := c.config.GetServerNameOverride(); serverName != "" {
+		sslTransportOption.ServerName = serverName
+		sslTransportOption.URLsToIntercept = []string{c.config.GetRegistryURL()}
+	}
+
+	transport := oktetoHttp.StrictSSLTransport(sslTransportOption)
 
 	if c.config.IsInsecureSkipTLSVerifyPolicy() {
 		transport = oktetoHttp.InsecureTransport()
 	} else if cert, err := c.config.GetContextCertificate(); err == nil {
-		transport = oktetoHttp.StrictSSLTransport(cert)
+		sslTransportOption.Certs = []*x509.Certificate{cert}
+		transport = oktetoHttp.StrictSSLTransport(sslTransportOption)
 	}
 	return transport
 }
