@@ -115,7 +115,7 @@ func main() {
 	root.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "amount of information outputted (debug, info, warn, error)")
 	root.PersistentFlags().StringVar(&outputMode, "log-output", oktetoLog.TTYFormat, "output format for logs (tty, plain, json)")
 
-	root.PersistentFlags().StringVarP(&serverNameOverride, "server-name", "s", "", "The address and port of the Okteto Ingress server")
+	root.PersistentFlags().StringVarP(&serverNameOverride, "server-name", "", "", "The address and port of the Okteto Ingress server")
 	_ = root.PersistentFlags().MarkHidden("server-name")
 
 	root.AddCommand(cmd.Analytics())
