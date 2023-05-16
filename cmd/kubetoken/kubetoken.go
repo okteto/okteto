@@ -32,27 +32,28 @@ func KubeToken() *cobra.Command {
 		Long: `Print Kubernetes cluster credentials in ExecCredential format.
 You can find more information on 'ExecCredential' and 'client side authentication' at (https://kubernetes.io/docs/reference/config-api/client-authentication.v1/) and  https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins`,
 		Hidden: true,
-		Args:   cobra.ExactArgs(2),
+		Args:   cobra.NoArgs,
 	}
 
+	var namespace string
+	var contextName string
 	cmd.RunE = func(_ *cobra.Command, args []string) error {
 		ctx := context.Background()
-		context := args[0]
-		namespace := args[1]
 
 		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
-			Context:   context,
+			Context:   contextName,
 			Namespace: namespace,
 		})
 		if err != nil {
 			return err
 		}
 
-		if !okteto.Context().IsOkteto {
+		octx := okteto.Context()
+		if !octx.IsOkteto {
 			return errors.ErrContextIsNotOktetoCluster
 		}
 
-		c, err := okteto.NewKubeTokenClient(okteto.Context().Name, okteto.Context().Token, namespace)
+		c, err := okteto.NewKubeTokenClient(octx.Name, octx.Token, octx.Namespace)
 		if err != nil {
 			return fmt.Errorf("failed to initialize the kubetoken client: %w", err)
 		}
@@ -65,6 +66,9 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 		cmd.Print(out)
 		return nil
 	}
+
+	cmd.Flags().StringVarP(&namespace, "namespace", "n", "", "okteto context's namespace")
+	cmd.Flags().StringVarP(&contextName, "context", "c", "", "okteto context's name")
 
 	cmd.SetOut(os.Stdout)
 

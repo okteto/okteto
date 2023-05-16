@@ -87,6 +87,7 @@ func main() {
 	oktetoLog.Init(logrus.WarnLevel)
 	var logLevel string
 	var outputMode string
+	var serverNameOverride string
 
 	if err := analytics.Init(); err != nil {
 		oktetoLog.Infof("error initializing okteto analytics: %s", err)
@@ -103,6 +104,7 @@ func main() {
 			ccmd.SilenceUsage = true
 			oktetoLog.SetLevel(logLevel)
 			oktetoLog.SetOutputFormat(outputMode)
+			okteto.SetServerNameOverride(serverNameOverride)
 			oktetoLog.Infof("started %s", strings.Join(os.Args, " "))
 		},
 		PersistentPostRun: func(ccmd *cobra.Command, args []string) {
@@ -112,6 +114,9 @@ func main() {
 
 	root.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "warn", "amount of information outputted (debug, info, warn, error)")
 	root.PersistentFlags().StringVar(&outputMode, "log-output", oktetoLog.TTYFormat, "output format for logs (tty, plain, json)")
+
+	root.PersistentFlags().StringVarP(&serverNameOverride, "server-name", "", "", "The address and port of the Okteto Ingress server")
+	_ = root.PersistentFlags().MarkHidden("server-name")
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
