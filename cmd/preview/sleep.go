@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Sleep sleeps a preview
+// Sleep sleeps a preview environment
 func Sleep(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "sleep <name>",
@@ -53,11 +53,12 @@ func Sleep(ctx context.Context) *cobra.Command {
 }
 
 func (pr *Command) ExecuteSleepPreview(ctx context.Context, preview string) error {
-	// Spinner to be loaded sleeping a preview
+	// Spinner to be loaded sleeping a preview environment
 	oktetoLog.Spinner(fmt.Sprintf("Sleeping preview environment '%s'...", preview))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
+	// trigger preview environment to sleep
 	if err := pr.okClient.Namespaces().Sleep(ctx, preview); err != nil {
 		return fmt.Errorf("%w: %v", errFailedSleepPreview, err)
 	}

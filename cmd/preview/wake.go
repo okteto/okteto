@@ -25,6 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Wake wakes a preview environment
 func Wake(ctx context.Context) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "wake <name>",
@@ -52,12 +53,12 @@ func Wake(ctx context.Context) *cobra.Command {
 }
 
 func (pr *Command) ExecuteWakePreview(ctx context.Context, preview string) error {
-	// Spinner to be loaded before waking a preview
+	// Spinner to be loaded before waking a preview environment
 	oktetoLog.Spinner(fmt.Sprintf("Waking preview environment '%s'...", preview))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	// trigger preview to wake
+	// trigger preview environment to wake
 	if err := pr.okClient.Namespaces().Wake(ctx, preview); err != nil {
 		return fmt.Errorf("%w: %v", errFailedWakePreview, err)
 	}
