@@ -264,7 +264,7 @@ func (c *userClient) GetClusterMetadata(ctx context.Context) (types.ClusterMetad
 				return metadata, err
 			}
 			metadata.Certificate = cert
-		case "internalIngressControllerIP":
+		case "internalIngressControllerNetworkAddress":
 			metadata.ServerName = string(v.Value)
 		}
 	}
