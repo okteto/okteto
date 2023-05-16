@@ -330,7 +330,7 @@ func fetchRemoteServerConfig(ctx context.Context) (*types.ClusterMetadata, error
 	}
 	uc := c.User()
 
-	metadata, err := uc.GetClusterMetadata(ctx)
+	metadata, err := uc.GetClusterMetadata(ctx, okteto.Context().Namespace)
 	if err != nil {
 		return nil, err
 	}

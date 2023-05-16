@@ -393,7 +393,7 @@ func TestGetClusterMetadata(t *testing.T) {
 			uc := &userClient{
 				client: tc.cfg.client,
 			}
-			result, err := uc.GetClusterMetadata(ctx)
+			result, err := uc.GetClusterMetadata(ctx, "")
 			if tc.expected.expectErr {
 				assert.Error(t, err)
 			} else {

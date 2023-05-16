@@ -91,7 +91,7 @@ type credQuery struct {
 }
 
 type metadataQuery struct {
-	Metadata []metadataQueryItem
+	Metadata []metadataQueryItem `graphql:"metadata(namespace: $namespace)"`
 }
 
 type metadataQueryItem struct {
@@ -239,9 +239,13 @@ func (c *userClient) GetClusterCertificate(ctx context.Context, cluster, ns stri
 	return b, nil
 }
 
-func (c *userClient) GetClusterMetadata(ctx context.Context) (types.ClusterMetadata, error) {
+func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.ClusterMetadata, error) {
 	var queryStruct metadataQuery
-	err := query(ctx, &queryStruct, nil, c.client)
+	vars := map[string]interface{}{
+		"namespace": graphql.String(ns),
+	}
+
+	err := query(ctx, &queryStruct, vars, c.client)
 
 	if err != nil {
 		if strings.Contains(err.Error(), "Cannot query field \"metadata\" on type \"Query\"") {

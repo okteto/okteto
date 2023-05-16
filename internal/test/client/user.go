@@ -40,6 +40,6 @@ func (c *FakeUserClient) GetContext(_ context.Context, ns string) (*types.UserCo
 func (c *FakeUserClient) GetClusterCertificate(_ context.Context, cluster, ns string) ([]byte, error) {
 	return nil, nil
 }
-func (c *FakeUserClient) GetClusterMetadata(ctx context.Context) (types.ClusterMetadata, error) {
+func (c *FakeUserClient) GetClusterMetadata(ctx context.Context, ns string) (types.ClusterMetadata, error) {
 	return types.ClusterMetadata{}, nil
 }
