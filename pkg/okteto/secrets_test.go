@@ -221,6 +221,73 @@ func TestGetContext(t *testing.T) {
 	}
 }
 
+func TestGetUserSecrets(t *testing.T) {
+	type input struct {
+		client *fakeGraphQLClient
+	}
+	type expected struct {
+		userSecrets []types.Secret
+		err         error
+	}
+	testCases := []struct {
+		name     string
+		cfg      input
+		expected expected
+	}{
+		{
+			name: "error in graphql",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					err: assert.AnError,
+				},
+			},
+			expected: expected{
+				userSecrets: nil,
+				err:         assert.AnError,
+			},
+		},
+		{
+			name: "query get user secrets",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getSecretsQuery{
+						Secrets: []secretQuery{
+							{
+								Name:  "password",
+								Value: "test",
+							},
+							{
+								Name:  "pass.word",
+								Value: "test",
+							},
+						},
+					},
+				},
+			},
+			expected: expected{
+				userSecrets: []types.Secret{
+					{
+						Name:  "password",
+						Value: "test",
+					},
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			uc := &userClient{
+				client: tc.cfg.client,
+			}
+			userSecrets, err := uc.GetUserSecrets(ctx)
+			assert.ErrorIs(t, err, tc.expected.err)
+			assert.Equal(t, tc.expected.userSecrets, userSecrets)
+		})
+	}
+}
+
 func TestGetDeprecatedContext(t *testing.T) {
 	type input struct {
 		client *fakeGraphQLClient
