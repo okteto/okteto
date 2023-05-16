@@ -370,7 +370,7 @@ func Up() *cobra.Command {
 				return err
 			}
 
-			if err := setSyncDefaultsByDevMode(dev, up.Fs); err != nil {
+			if err := setSyncDefaultsByDevMode(dev, up.getSyncTempDir); err != nil {
 				return err
 			}
 
@@ -508,14 +508,14 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 	return nil
 }
 
-func setSyncDefaultsByDevMode(dev *model.Dev, fs afero.Fs) error {
+func setSyncDefaultsByDevMode(dev *model.Dev, getSyncTempDir func() (string, error)) error {
 	if dev.IsHybridModeEnabled() {
-		dev.PersistentVolumeInfo.Enabled = false
-		syncTempDir, err := afero.TempDir(fs, "", "")
+		syncTempDir, err := getSyncTempDir()
 		if err != nil || syncTempDir == "" {
 			return err
 		}
 
+		dev.PersistentVolumeInfo.Enabled = false
 		dev.Sync.Folders = []model.SyncFolder{
 			{
 				LocalPath:  syncTempDir,
