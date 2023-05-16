@@ -84,6 +84,7 @@ type DeployCommand struct {
 	Builder            *buildv2.OktetoBuilder
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 	GetDeployer        func(context.Context, *model.Manifest, *Options, string, *buildv2.OktetoBuilder, configMapHandler) (deployerInterface, error)
+	endpointGetter     func() (endpointGetter, error)
 	deployWaiter       deployWaiter
 	CfgMapHandler      configMapHandler
 	Fs                 afero.Fs
@@ -195,6 +196,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider),
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
+				endpointGetter:     newEndpointGetter,
 			}
 			startTime := time.Now()
 
@@ -366,7 +368,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 				}
 			}
 			if !utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
-				eg, err := newEndpointGetter()
+				eg, err := dc.endpointGetter()
 				if err != nil {
 					oktetoLog.Infof("could not create endpoint getter: %s", err)
 				}
