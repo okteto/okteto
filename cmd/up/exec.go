@@ -75,27 +75,28 @@ func (se *syncExecutor) runCommand(ctx context.Context, cmd []string) error {
 	return ssh.Exec(ctx, se.iface, se.remotePort, true, os.Stdin, os.Stdout, os.Stderr, cmd)
 }
 
-func newExecutorByDevMode(ctx context.Context, up *upContext) (devExecutor, error) {
+func newHybridExecutor(ctx context.Context, up *upContext) (*hybridExecutor, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return nil, err
 	}
 
-	if up.Dev.IsHybridModeEnabled() {
-		envs, err := getEnvsFromContext(ctx, up.Dev, up.Client, up.Manifest.Name, up.Manifest.Namespace)
-		if err != nil {
-			return nil, err
-		}
-
-		return &hybridExecutor{
-			workdir: filepath.Join(wd, up.Dev.Workdir),
-			envs:    envs,
-		}, nil
+	envs, err := getEnvsFromContext(ctx, up.Dev, up.Client, up.Manifest.Name, up.Manifest.Namespace)
+	if err != nil {
+		return nil, err
 	}
+
+	return &hybridExecutor{
+		workdir: filepath.Join(wd, up.Dev.Workdir),
+		envs:    envs,
+	}, nil
+}
+
+func newSyncExecutor(up *upContext) *syncExecutor {
 	return &syncExecutor{
 		iface:      up.Dev.Interface,
 		remotePort: up.Dev.RemotePort,
-	}, nil
+	}
 }
 
 func getEnvsFromContext(ctx context.Context, dev *model.Dev, c kubernetes.Interface, name string, namespace string) ([]string, error) {
@@ -205,10 +206,17 @@ func (up *upContext) runCommand(ctx context.Context, cmd []string) error {
 	}
 
 	if up.Dev.RemoteModeEnabled() {
-		executor, err := newExecutorByDevMode(ctx, up)
-		if err != nil {
-			return err
+		var executor devExecutor
+		if up.Dev.IsHybridModeEnabled() {
+			var err error
+			executor, err = newHybridExecutor(ctx, up)
+			if err != nil {
+				return err
+			}
+		} else {
+			executor = newSyncExecutor(up)
 		}
+
 		return executor.runCommand(ctx, cmd)
 	}
 
