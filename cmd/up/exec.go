@@ -40,6 +40,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
+	"github.com/okteto/okteto/pkg/types"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -81,7 +82,12 @@ func newHybridExecutor(ctx context.Context, up *upContext) (*hybridExecutor, err
 		return nil, err
 	}
 
-	envs, err := getEnvsFromContext(ctx, up.Dev, up.Client, up.Manifest.Name, up.Manifest.Namespace)
+	envsGetter, err := newEnvsGetter(up)
+	if err != nil {
+		return nil, err
+	}
+
+	envs, err := envsGetter.getEnvs(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -99,11 +105,107 @@ func newSyncExecutor(up *upContext) *syncExecutor {
 	}
 }
 
-func getEnvsFromContext(ctx context.Context, dev *model.Dev, c kubernetes.Interface, name string, namespace string) ([]string, error) {
+type configMapEnvsGetterInterface interface {
+	getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error)
+}
+
+type secretsEnvsGetterInterface interface {
+	getEnvsFromSecrets(context.Context) ([]string, error)
+}
+
+type imageEnvsGetterInterface interface {
+	getEnvsFromImage(string) ([]string, error)
+}
+
+type imageGetterInterface interface {
+	GetImageMetadata(string) (registry.ImageMetadata, error)
+}
+
+type secretsGetterInterface interface {
+	GetUserSecrets(context.Context) ([]types.Secret, error)
+}
+
+type configMapGetter struct {
+}
+type secretsEnvsGetter struct {
+	secretsGetter secretsGetterInterface
+}
+type imageEnvsGetter struct {
+	imageGetter imageGetterInterface
+}
+
+type envsGetter struct {
+	dev                 *model.Dev
+	name, namespace     string
+	client              kubernetes.Interface
+	configMapEnvsGetter configMapEnvsGetterInterface
+	secretsEnvsGetter   secretsEnvsGetterInterface
+	imageEnvsGetter     imageEnvsGetterInterface
+}
+
+func newEnvsGetter(up *upContext) (*envsGetter, error) {
+
+	var secretsGetter secretsGetterInterface
+	if okteto.IsOkteto() {
+		oc, err := okteto.NewOktetoClient()
+		if err != nil {
+			return nil, err
+		}
+		secretsGetter = oc.User()
+	}
+
+	return &envsGetter{
+		dev:                 up.Dev,
+		name:                up.Manifest.Name,
+		namespace:           up.Manifest.Namespace,
+		client:              up.Client,
+		configMapEnvsGetter: &configMapGetter{},
+		secretsEnvsGetter: &secretsEnvsGetter{
+			secretsGetter: secretsGetter,
+		},
+		imageEnvsGetter: &imageEnvsGetter{
+			imageGetter: registry.NewOktetoRegistry(okteto.Config{}),
+		},
+	}, nil
+}
+
+func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 	var envs []string
 
-	// get config map variables
-	devCmap, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(name), namespace, c)
+	configMapEnvs, err := eg.configMapEnvsGetter.getEnvsFromConfigMap(ctx, eg.name, eg.namespace, eg.client)
+	if err != nil {
+		return nil, err
+	}
+	envs = append(envs, configMapEnvs...)
+
+	secretsEnvs, err := eg.secretsEnvsGetter.getEnvsFromSecrets(ctx)
+	if err != nil {
+		return nil, err
+	}
+	envs = append(envs, secretsEnvs...)
+
+	app, err := apps.Get(ctx, eg.dev, eg.namespace, eg.client)
+	if err != nil {
+		return nil, err
+	}
+
+	imageEnvs, err := eg.imageEnvsGetter.getEnvsFromImage(app.PodSpec().Containers[0].Image)
+	if err != nil {
+		return nil, err
+	}
+	envs = append(envs, imageEnvs...)
+
+	for _, env := range app.PodSpec().Containers[0].Env {
+		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
+	}
+
+	return envs, nil
+}
+
+func (cmg *configMapGetter) getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error) {
+	var envs []string
+
+	devCmap, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(name), namespace, client)
 	if err != nil && !oktetoErrors.IsNotFound(err) {
 		return nil, err
 	}
@@ -127,14 +229,14 @@ func getEnvsFromContext(ctx context.Context, dev *model.Dev, c kubernetes.Interf
 		}
 	}
 
-	// get envs from secrets
-	if okteto.IsOkteto() {
-		c, err := okteto.NewOktetoClient()
-		if err != nil {
-			return nil, err
-		}
+	return envs, nil
+}
 
-		secrets, err := c.User().GetUserSecrets(ctx)
+func (sg *secretsEnvsGetter) getEnvsFromSecrets(ctx context.Context) ([]string, error) {
+	var envs []string
+
+	if okteto.IsOkteto() {
+		secrets, err := sg.secretsGetter.GetUserSecrets(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -144,15 +246,13 @@ func getEnvsFromContext(ctx context.Context, dev *model.Dev, c kubernetes.Interf
 		}
 	}
 
-	// get image envs
-	app, err := apps.Get(ctx, dev, dev.Namespace, c)
-	if err != nil {
-		return nil, err
-	}
+	return envs, nil
+}
 
-	imageTag := app.PodSpec().Containers[0].Image
-	reg := registry.NewOktetoRegistry(okteto.Config{})
-	imageMetadata, err := reg.GetImageMetadata(imageTag)
+func (ig *imageEnvsGetter) getEnvsFromImage(imageTag string) ([]string, error) {
+	var envs []string
+
+	imageMetadata, err := ig.imageGetter.GetImageMetadata(imageTag)
 	if err != nil {
 		return nil, err
 	}
@@ -163,10 +263,6 @@ func getEnvsFromContext(ctx context.Context, dev *model.Dev, c kubernetes.Interf
 		}
 		envs = append(envs, env)
 
-	}
-
-	for _, env := range app.PodSpec().Containers[0].Env {
-		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
 	}
 
 	return envs, nil
