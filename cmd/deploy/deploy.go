@@ -83,7 +83,7 @@ type DeployCommand struct {
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
-	GetDeployer        func(context.Context, *model.Manifest, *Options, string, *buildv2.OktetoBuilder, configMapHandler) (deployerInterface, error)
+	GetDeployer        func(context.Context, *model.Manifest, *Options, *buildv2.OktetoBuilder, configMapHandler) (deployerInterface, error)
 	EndpointGetter     func() (EndpointGetter, error)
 	DeployWaiter       DeployWaiter
 	CfgMapHandler      configMapHandler
@@ -243,7 +243,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				oktetoLog.StartSpinner()
 				defer oktetoLog.StopSpinner()
 
-				deployer, err := c.GetDeployer(ctx, options.Manifest, options, "", nil, nil)
+				deployer, err := c.GetDeployer(ctx, options.Manifest, options, nil, nil)
 				if err != nil {
 					return err
 				}
@@ -347,7 +347,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		oktetoLog.Infof("failed to recreate failed pods: %s", err.Error())
 	}
 
-	deployer, err := dc.GetDeployer(ctx, deployOptions.Manifest, deployOptions, cwd, dc.Builder, dc.CfgMapHandler)
+	deployer, err := dc.GetDeployer(ctx, deployOptions.Manifest, deployOptions, dc.Builder, dc.CfgMapHandler)
 	if err != nil {
 		return err
 	}
@@ -510,7 +510,7 @@ func getDefaultTimeout() time.Duration {
 	return parsed
 }
 
-func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, cwd string, builder *buildv2.OktetoBuilder, cmapHandler configMapHandler) (deployerInterface, error) {
+func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, builder *buildv2.OktetoBuilder, cmapHandler configMapHandler) (deployerInterface, error) {
 
 	// isDeployRemote represents wheather the process is comming from a remote deploy
 	// if true it should get the local deployer
@@ -526,7 +526,7 @@ func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, c
 	// run local
 	oktetoLog.Info("Deploying locally...")
 
-	deployer, err := newLocalDeployer(ctx, cwd, opts, cmapHandler)
+	deployer, err := newLocalDeployer(ctx, opts, cmapHandler)
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
 	}
