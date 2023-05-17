@@ -43,7 +43,7 @@ import (
 
 const (
 	templateName           = "dockerfile"
-	dockerfileTemporalNane = "deploy"
+	dockerfileTemporalName = "deploy"
 	oktetoDockerignoreName = ".oktetodeployignore"
 	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
@@ -227,7 +227,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		DeployFlags:        strings.Join(getDeployFlags(opts), " "),
 	}
 
-	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, dockerfileTemporalNane))
+	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, dockerfileTemporalName))
 	if err != nil {
 		return "", err
 	}
