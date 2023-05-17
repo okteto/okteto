@@ -516,9 +516,9 @@ func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, c
 		err      error
 	)
 
-	isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
+	isDeployRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
 
-	if isRemote || manifest.Deploy.Image == "" {
+	if isDeployRemote || manifest.Deploy.Image == "" {
 		deployer, err = newLocalDeployer(ctx, cwd, opts, cmapHandler)
 		if err != nil {
 			return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
