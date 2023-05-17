@@ -125,7 +125,7 @@ func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
 
 func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options) error {
 
-	if deployOptions.Manifest.Deploy.Image == "" {
+	if deployOptions.Manifest != nil && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.Image == "" {
 		deployOptions.Manifest.Deploy.Image = constants.OktetoPipelineRunnerImage
 	}
 
