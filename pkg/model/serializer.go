@@ -725,22 +725,32 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type devType Dev // Prevent recursion
 	dev := devType(*d)
 
-	type hybridModeInfo struct {
-		Workdir     string            `json:"workdir,omitempty" yaml:"workdir,omitempty"`
-		Selector    Selector          `json:"selector,omitempty" yaml:"selector,omitempty"`
-		Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
-		Environment Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
-		Command     Command           `json:"command,omitempty" yaml:"command,omitempty"`
-		Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
-		Mode        string            `json:"mode,omitempty" yaml:"mode,omitempty"`
+	type modeInfo struct {
+		Mode string `json:"mode,omitempty" yaml:"mode,omitempty"`
 	}
-	hybridModeDev := &hybridModeInfo{}
-	err := unmarshal(hybridModeDev)
+
+	mode := &modeInfo{}
+	err := unmarshal(mode)
 	if err != nil {
-		if hybridModeDev.Mode == "hybrid" {
-			return err
+		if mode.Mode == "hybrid" {
+			type hybridModeInfo struct {
+				Workdir     string            `json:"workdir,omitempty" yaml:"workdir,omitempty"`
+				Selector    Selector          `json:"selector,omitempty" yaml:"selector,omitempty"`
+				Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
+				Environment Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
+				Command     Command           `json:"command,omitempty" yaml:"command,omitempty"`
+				Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
+				Mode        string            `json:"mode,omitempty" yaml:"mode,omitempty"`
+			}
+
+			hybridModeDev := &hybridModeInfo{}
+			err := unmarshal(hybridModeDev)
+			if err != nil {
+				return err
+			}
 		}
 	}
+
 	err = unmarshal(&dev)
 	if err != nil {
 		return err
