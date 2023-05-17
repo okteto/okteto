@@ -511,22 +511,24 @@ func getDefaultTimeout() time.Duration {
 }
 
 func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, cwd string, builder *buildv2.OktetoBuilder, cmapHandler configMapHandler) (deployerInterface, error) {
-	var (
-		deployer deployerInterface
-		err      error
-	)
 
+	// isDeployRemote represents wheather the process is comming from a remote deploy
+	// if true it should get the local deployer
 	isDeployRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
 
-	if isDeployRemote || !opts.RunInRemote {
-		deployer, err = newLocalDeployer(ctx, cwd, opts, cmapHandler)
-		if err != nil {
-			return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
-		}
-		oktetoLog.Info("Deploying locally...")
-	} else {
-		deployer = newRemoteDeployer(builder)
+	// remote deployment should be done when flag RunInRemote is active OR deploy.image is fulfilled
+	if !isDeployRemote && (opts.RunInRemote || opts.Manifest.Deploy.Image != "") {
+		// run remote
 		oktetoLog.Info("Deploying remotely...")
+		return newRemoteDeployer(builder), nil
+	}
+
+	// run local
+	oktetoLog.Info("Deploying locally...")
+
+	deployer, err := newLocalDeployer(ctx, cwd, opts, cmapHandler)
+	if err != nil {
+		return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
 	}
 	return deployer, nil
 }
