@@ -570,6 +570,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		Contexts: map[string]*okteto.OktetoContext{
 			"test": {
 				Namespace: "test",
+				Cfg:       clientcmdapi.NewConfig(),
 			},
 		},
 		CurrentContext: "test",
@@ -593,6 +594,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		},
 		GetExternalControl: cp.getFakeExternalControl,
 		K8sClientProvider:  clientProvider,
+		endpointGetter:     getFakeEndpoint,
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
 		Fs:                 afero.NewMemMapFs(),
 	}
@@ -654,6 +656,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	c := &DeployCommand{
 		GetManifest:        getFakeManifest,
 		K8sClientProvider:  clientProvider,
+		endpointGetter:     getFakeEndpoint,
 		GetExternalControl: cp.getFakeExternalControl,
 		Fs:                 afero.NewMemMapFs(),
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
@@ -871,8 +874,15 @@ func (f *fakeExternalControl) Validate(_ context.Context, _ string, _ string, _ 
 	return f.err
 }
 
-func (f *fakeExternalControlProvider) getFakeExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
-	return f.control, f.err
+func (f *fakeExternalControlProvider) getFakeExternalControl(_ *rest.Config) ExternalResourceInterface {
+	return f.control
+}
+
+func getFakeEndpoint() (endpointGetter, error) {
+	return endpointGetter{
+		K8sClientProvider: test.NewFakeK8sProvider(),
+		endpointControl:   &fakeExternalControl{},
+	}, nil
 }
 
 func TestDeployExternals(t *testing.T) {
@@ -954,6 +964,7 @@ func TestDeployExternals(t *testing.T) {
 				ConfigMapHandler:   &fakeCmapHandler{},
 				GetExternalControl: cp.getFakeExternalControl,
 				Fs:                 afero.NewMemMapFs(),
+				K8sClientProvider:  test.NewFakeK8sProvider(),
 			}
 
 			if tc.expectedErr {
