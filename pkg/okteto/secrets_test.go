@@ -362,7 +362,7 @@ func TestGetClusterMetadata(t *testing.T) {
 			},
 		},
 		{
-			name: "internalCertificateBase64",
+			name: "certificate and servername",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &metadataQuery{
@@ -372,7 +372,7 @@ func TestGetClusterMetadata(t *testing.T) {
 								Value: graphql.String(base64.StdEncoding.EncodeToString([]byte("cert"))),
 							},
 							{
-								Name:  "internalIngressControllerIP",
+								Name:  "internalIngressControllerNetworkAddress",
 								Value: "1.1.1.1",
 							},
 						},
