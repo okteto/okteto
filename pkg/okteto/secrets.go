@@ -270,6 +270,10 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 			metadata.Certificate = cert
 		case "internalIngressControllerNetworkAddress":
 			metadata.ServerName = string(v.Value)
+		case "pipelineInstallerImage":
+			metadata.PipelineInstallerImage = string(v.Value)
+		case "pipelineRunnerImage":
+			metadata.PipelineRunnerImage = string(v.Value)
 		}
 	}
 	return metadata, nil
