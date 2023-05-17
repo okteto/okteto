@@ -143,8 +143,8 @@ func TestRemoteTest(t *testing.T) {
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
-				certFetcher: func(context.Context) ([]byte, error) {
-					return tt.config.cert, nil
+				clusterMetadata: func(context.Context) (*types.ClusterMetadata, error) {
+					return &types.ClusterMetadata{Certificate: tt.config.cert}, nil
 				},
 			}
 			err := rdc.deploy(ctx, tt.config.options)
