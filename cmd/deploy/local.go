@@ -27,8 +27,6 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	"github.com/okteto/okteto/pkg/divert"
-	"github.com/okteto/okteto/pkg/externalresource"
-	k8sExternalResources "github.com/okteto/okteto/pkg/externalresource/k8s"
 	"github.com/okteto/okteto/pkg/format"
 	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	kconfig "github.com/okteto/okteto/pkg/k8s/kubeconfig"
@@ -36,6 +34,7 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
+	"k8s.io/client-go/rest"
 )
 
 type localDeployer struct {
@@ -45,7 +44,7 @@ type localDeployer struct {
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
 
-	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
+	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 
 	cwd          string
 	deployWaiter deployWaiter
@@ -88,7 +87,7 @@ func newLocalDeployer(ctx context.Context, cwd string, options *Options) (*local
 		Proxy:              proxy,
 		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),
 		K8sClientProvider:  clientProvider,
-		GetExternalControl: getExternalControlFromCtx,
+		GetExternalControl: NewDeployExternalK8sControl,
 		deployWaiter:       newDeployWaiter(clientProvider),
 		isRemote:           true,
 		Fs:                 afero.NewOsFs(),
@@ -329,7 +328,12 @@ func (ld *localDeployer) deployEndpoints(ctx context.Context, opts *Options) err
 }
 
 func (ld *localDeployer) deployExternals(ctx context.Context, opts *Options, dynamicEnvs map[string]string) error {
-	control, err := ld.GetExternalControl(ld.K8sClientProvider, ld.TempKubeconfigFile)
+
+	_, cfg, err := ld.K8sClientProvider.Provide(kconfig.Get([]string{ld.TempKubeconfigFile}))
+	if err != nil {
+		return fmt.Errorf("error getting kubernetes client: %w", err)
+	}
+	control := ld.GetExternalControl(cfg)
 	if err != nil {
 		return err
 	}
@@ -364,18 +368,6 @@ func (ld *localDeployer) cleanUp(ctx context.Context, err error) {
 	if ld.Executor != nil {
 		ld.Executor.CleanUp(err)
 	}
-}
-
-func GetExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
-	_, proxyConfig, err := cp.Provide(kconfig.Get([]string{filename}))
-	if err != nil {
-		return nil, err
-	}
-
-	return &externalresource.K8sControl{
-		ClientProvider: k8sExternalResources.GetExternalClient,
-		Cfg:            proxyConfig,
-	}, nil
 }
 
 func (ld *localDeployer) createTempOktetoEnvFile() (afero.File, error) {
