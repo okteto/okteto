@@ -19,6 +19,7 @@ package deploy
 import (
 	"context"
 	b64 "encoding/base64"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -26,6 +27,7 @@ import (
 	"github.com/okteto/okteto/cmd/deploy"
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
 )
@@ -75,8 +77,10 @@ func Test_ExternalsFromOktetoManifestWithNotesContent(t *testing.T) {
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
-	externalControl, err := deploy.GetExternalControl(okteto.NewK8sClientProvider(), filepath.Join(dir, ".kube", "config"))
+	_, cfg, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
+
+	externalControl := deploy.NewDeployExternalK8sControl(cfg)
 
 	externals, err := externalControl.List(ctx, namespaceOpts.Namespace, "")
 
@@ -87,6 +91,23 @@ func Test_ExternalsFromOktetoManifestWithNotesContent(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, string(decodedContent), notesContent)
+
+	// Check the endpoints command
+	opts := &commands.EndpointOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Output:     "json",
+	}
+
+	output, err := commands.RunOktetoEndpoints(oktetoPath, opts)
+	require.NoError(t, err)
+
+	var endpoints []string
+	err = json.Unmarshal([]byte(output), &endpoints)
+	require.NoError(t, err)
+
+	require.Greater(t, len(endpoints), 0)
 
 	destroyOptions := &commands.DestroyOptions{
 		Workdir:    dir,
