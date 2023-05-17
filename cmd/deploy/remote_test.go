@@ -289,7 +289,7 @@ func TestCreateDockerfile(t *testing.T) {
 			assert.Equal(t, tt.expected.dockerfileName, dockerfileName)
 
 			if tt.expected.err == nil {
-				_, err = rdc.fs.Stat(filepath.Join("/test", dockerfileTemporalNane))
+				_, err = rdc.fs.Stat(filepath.Join("/test", dockerfileTemporalName))
 				assert.NoError(t, err)
 			}
 
