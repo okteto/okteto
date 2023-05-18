@@ -197,7 +197,7 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 
-	imageEnvs, err := eg.imageEnvsGetter.getEnvsFromImage(app.PodSpec().Containers[0].Image)
+	imageEnvs, err := eg.imageEnvsGetter.getEnvsFromImage(apps.GetDevContainer(app.PodSpec(), "").Image)
 	if err != nil {
 		return nil, err
 	}
