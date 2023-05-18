@@ -47,7 +47,6 @@ dev:
 ENV ENV_IN_IMAGE value_from_image`
 	localProcess = `for x in ENV_IN_POD,value_from_pod ENV_IN_IMAGE,value_from_image ; do
   IFS=, read name value <<< "$x"
-  echo "$name $value" >> /Users/adrianpedriza/Remove/test/aa.txt
   if [ "${!name}" != "$value" ]; then
     echo "env '$name' not found. Expected value '$value'"
     exit 1
