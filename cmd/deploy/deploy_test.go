@@ -322,7 +322,7 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getManifestWithNoDeployNorDependency,
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:      p,
 				Executor:   e,
@@ -1083,7 +1083,7 @@ func TestDeployOnlyDependencies(t *testing.T) {
 		GetExternalControl: cp.getFakeExternalControl,
 		Fs:                 afero.NewMemMapFs(),
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
-		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:              p,
 				Executor:           e,
