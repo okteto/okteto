@@ -11,12 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package namespace
+package preview
 
 import (
 	"context"
 	"testing"
 
+	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -24,15 +25,15 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 )
 
-func Test_WakeNamespace(t *testing.T) {
+func Test_WakePreview(t *testing.T) {
 	ctx := context.Background()
-	currentNamespace := "current"
+	currentPreview := "current"
 	usr := &types.User{
 		Token: "test-token",
 	}
-	initNamespaces := []types.Namespace{
+	initPreviews := []types.Namespace{
 		{
-			ID: currentNamespace,
+			ID: currentPreview,
 		},
 		{
 			ID: "test-1",
@@ -40,46 +41,46 @@ func Test_WakeNamespace(t *testing.T) {
 	}
 	var tests = []struct {
 		name string
-		// toWakeNs the namespace to wake
-		toWakeNs                        string
+		// toWakePr the namespace to wake
+		toWakePr                        string
 		initialNamespacesAtOktetoClient []types.Namespace
 		fakeOkClient                    *client.FakeOktetoClient
 		fakeK8sClient                   *fake.Clientset
 		err                             error
 	}{
 		{
-			name:                            "wakes existing ns, the current one",
-			toWakeNs:                        currentNamespace,
-			initialNamespacesAtOktetoClient: initNamespaces,
+			name:                            "wakes existing preview, the current one",
+			toWakePr:                        currentPreview,
+			initialNamespacesAtOktetoClient: initPreviews,
 			fakeOkClient: &client.FakeOktetoClient{
-				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
+				Namespace:    client.NewFakeNamespaceClient(initPreviews, nil),
 				Users:        client.NewFakeUsersClient(usr),
 				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
 		},
 		{
-			name:                            "wakes existing ns, not the current one",
-			toWakeNs:                        "test-1",
-			initialNamespacesAtOktetoClient: initNamespaces,
+			name:                            "wakes existing preview, not the current one",
+			toWakePr:                        "test-1",
+			initialNamespacesAtOktetoClient: initPreviews,
 			fakeOkClient: &client.FakeOktetoClient{
-				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
+				Namespace:    client.NewFakeNamespaceClient(initPreviews, nil),
 				Users:        client.NewFakeUsersClient(usr),
 				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
 		},
 		{
-			name:                            "wakes a non existing ns",
-			toWakeNs:                        "test-non-existing",
-			initialNamespacesAtOktetoClient: initNamespaces,
+			name:                            "wakes a non existing preview",
+			toWakePr:                        "test-non-existing",
+			initialNamespacesAtOktetoClient: initPreviews,
 			fakeOkClient: &client.FakeOktetoClient{
-				Namespace:    client.NewFakeNamespaceClient(initNamespaces, assert.AnError),
+				Namespace:    client.NewFakeNamespaceClient(initPreviews, assert.AnError),
 				Users:        client.NewFakeUsersClient(usr),
 				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
-			err:           errFailedWakeNamespace,
+			err:           errFailedWakePreview,
 		},
 	}
 
@@ -92,16 +93,16 @@ func Test_WakeNamespace(t *testing.T) {
 						Name:      "test-context",
 						Token:     "test-token",
 						IsOkteto:  true,
-						Namespace: currentNamespace,
+						Namespace: currentPreview,
 						UserID:    "1",
 					},
 				},
 				CurrentContext: "test-context",
 			}
-			nsFakeCommand := NewFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
-			err := nsFakeCommand.ExecuteWakeNamespace(ctx, tt.toWakeNs)
+			nsFakeCommand := namespace.NewFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
+			err := nsFakeCommand.ExecuteWakeNamespace(ctx, tt.toWakePr)
 			if tt.err != nil {
-				assert.ErrorIs(t, err, tt.err)
+				assert.ErrorIs(t, errFailedWakePreview, tt.err)
 			} else {
 				assert.NoError(t, err)
 			}

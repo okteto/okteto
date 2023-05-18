@@ -17,23 +17,11 @@ import (
 	"context"
 	"testing"
 
-	contextCMD "github.com/okteto/okteto/cmd/context"
-
-	"github.com/okteto/okteto/internal/test"
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
-
-func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User) *contextCMD.ContextCommand {
-	return &contextCMD.ContextCommand{
-		OktetoClientProvider: client.NewFakeOktetoClientProvider(c),
-		K8sClientProvider:    test.NewFakeK8sProvider(nil),
-		LoginController:      test.NewFakeLoginController(user, nil),
-		OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
-	}
-}
 
 func Test_createNamespace(t *testing.T) {
 	ctx := context.Background()

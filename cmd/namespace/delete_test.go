@@ -19,39 +19,14 @@ import (
 
 	"github.com/okteto/okteto/internal/test/client"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/k8s/ingresses"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
-	"k8s.io/client-go/rest"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+
 )
-
-type fakeK8sProvider struct {
-	k8sClient kubernetes.Interface
-}
-
-func (p *fakeK8sProvider) Provide(_ *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error) {
-	return p.k8sClient, nil, nil
-}
-
-func (*fakeK8sProvider) GetIngressClient() (*ingresses.Client, error) {
-	return nil, nil
-}
-
-func newFakeNamespaceCommand(okClient *client.FakeOktetoClient, k8sClient kubernetes.Interface, user *types.User) *NamespaceCommand {
-	return &NamespaceCommand{
-		okClient: okClient,
-		ctxCmd:   newFakeContextCommand(okClient, user),
-		k8sClientProvider: &fakeK8sProvider{
-			k8sClient: k8sClient,
-		},
-	}
-}
 
 func Test_deleteNamespace(t *testing.T) {
 	ctx := context.Background()
@@ -171,7 +146,7 @@ func Test_deleteNamespace(t *testing.T) {
 				CurrentContext: "test-context",
 			}
 
-			nsFakeCommand := newFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
+			nsFakeCommand := NewFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
 			err := nsFakeCommand.ExecuteDeleteNamespace(ctx, tt.toDeleteNs)
 			assert.ErrorIs(t, err, tt.err)
 			assert.Equal(t, tt.finalNs, okteto.Context().Namespace)
