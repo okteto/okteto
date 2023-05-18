@@ -90,6 +90,15 @@ type credQuery struct {
 	Namespace   graphql.String
 }
 
+type metadataQuery struct {
+	Metadata []metadataQueryItem `graphql:"metadata(namespace: $namespace)"`
+}
+
+type metadataQueryItem struct {
+	Name  graphql.String
+	Value graphql.String
+}
+
 type contextFileJSON struct {
 	Contexts map[string]struct {
 		Certificate string `yaml:"certificate"`
@@ -228,4 +237,40 @@ func (c *userClient) GetClusterCertificate(ctx context.Context, cluster, ns stri
 	}
 
 	return b, nil
+}
+
+func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.ClusterMetadata, error) {
+	var queryStruct metadataQuery
+	vars := map[string]interface{}{
+		"namespace": graphql.String(ns),
+	}
+
+	err := query(ctx, &queryStruct, vars, c.client)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "Cannot query field \"metadata\" on type \"Query\"") {
+			return types.ClusterMetadata{}, nil
+		}
+		return types.ClusterMetadata{}, err
+	}
+
+	metadata := types.ClusterMetadata{}
+
+	// metadata := make(types.ClusterMetadata, len(queryStruct.Metadata))
+	for _, v := range queryStruct.Metadata {
+		if v.Value == "" {
+			continue
+		}
+		switch v.Name {
+		case "internalCertificateBase64":
+			cert, err := base64.StdEncoding.DecodeString(string(v.Value))
+			if err != nil {
+				return metadata, err
+			}
+			metadata.Certificate = cert
+		case "internalIngressControllerNetworkAddress":
+			metadata.ServerName = string(v.Value)
+		}
+	}
+	return metadata, nil
 }
