@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
@@ -116,11 +115,6 @@ func (se *syncExecutor) runCommand(ctx context.Context, cmd []string) error {
 }
 
 func newHybridExecutor(ctx context.Context, up *upContext) (*hybridExecutor, error) {
-	wd, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
 	envsGetter, err := newEnvsGetter(up)
 	if err != nil {
 		return nil, err
@@ -132,7 +126,7 @@ func newHybridExecutor(ctx context.Context, up *upContext) (*hybridExecutor, err
 	}
 
 	return &hybridExecutor{
-		workdir: filepath.Join(wd, up.Dev.Workdir),
+		workdir: up.Dev.Workdir,
 		envs:    envs,
 	}, nil
 }

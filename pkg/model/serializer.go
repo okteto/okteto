@@ -757,7 +757,17 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	if dev.Mode == "hybrid" {
+		localDir, _ := filepath.Abs(dev.Workdir)
+		info, err := os.Stat(localDir)
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("dev workdir is not a dir")
+		}
+		dev.Workdir = localDir
 		dev.Image.Name = "busybox"
+
 	}
 
 	*d = Dev(dev)
