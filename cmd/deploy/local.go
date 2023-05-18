@@ -48,7 +48,7 @@ type localDeployer struct {
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 
 	cwd          string
-	deployWaiter deployWaiter
+	deployWaiter DeployWaiter
 	isRemote     bool
 	Fs           afero.Fs
 	DivertDriver divert.Driver
@@ -90,7 +90,7 @@ func newLocalDeployer(ctx context.Context, cwd string, options *Options, cmapHan
 		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),
 		K8sClientProvider:  clientProvider,
 		GetExternalControl: NewDeployExternalK8sControl,
-		deployWaiter:       newDeployWaiter(clientProvider),
+		deployWaiter:       NewDeployWaiter(clientProvider),
 		isRemote:           true,
 		Fs:                 afero.NewOsFs(),
 	}, nil
