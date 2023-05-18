@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/creack/pty"
@@ -55,6 +56,10 @@ type hybridExecutor struct {
 
 func (he *hybridExecutor) runCommand(_ context.Context, cmd []string) error {
 	c := exec.Command("bash", "-c", strings.Join(cmd, " "))
+	if runtime.GOOS == "windows" {
+		c = exec.Command(strings.Join(cmd, " "))
+	}
+
 	c.Dir = he.workdir
 
 	pathValue := os.Getenv("PATH")
