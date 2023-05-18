@@ -59,12 +59,15 @@ func (he *hybridExecutor) runCommand(_ context.Context, cmd []string) error {
 	c.Env = append(os.Environ(), he.envs...)
 
 	f, err := pty.Start(c)
+	defer func() {
+		_ = f.Close()
+	}()
 	if err != nil {
 		return err
 	}
 
 	io.Copy(os.Stdout, f)
-	return nil
+	return c.Wait()
 }
 
 type syncExecutor struct {
