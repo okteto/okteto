@@ -56,6 +56,11 @@ type hybridExecutor struct {
 func (he *hybridExecutor) runCommand(_ context.Context, cmd []string) error {
 	c := exec.Command("bash", "-c", strings.Join(cmd, " "))
 	c.Dir = he.workdir
+
+	pathValue := os.Getenv("PATH")
+	if pathValue != "" {
+		c.Env = append(c.Env, fmt.Sprintf("PATH=%s", pathValue))
+	}
 	c.Env = append(c.Env, he.envs...)
 
 	f, err := pty.Start(c)
