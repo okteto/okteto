@@ -534,7 +534,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
 		K8sClientProvider:  okteto.NewK8sClientProvider(),
 		Builder:            buildv2.NewBuilderFromScratch(),
-		GetExternalControl: deploy.GetExternalControl,
+		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider),
 		PipelineCMD:        pc,
