@@ -12,4 +12,6 @@ bin/*
 coverage.txt
 coverage.html
 dist
-okteto
+
+# don't add the binary created by running go build from the root of the repo
+/okteto

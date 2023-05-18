@@ -40,6 +40,7 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 )
 
 const (
@@ -81,8 +82,9 @@ type DeployCommand struct {
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
-	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
+	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 	GetDeployer        func(context.Context, *model.Manifest, *Options, string, *buildv2.OktetoBuilder, configMapHandler) (deployerInterface, error)
+	endpointGetter     func() (endpointGetter, error)
 	deployWaiter       deployWaiter
 	CfgMapHandler      configMapHandler
 	Fs                 afero.Fs
@@ -101,6 +103,10 @@ type ExternalResourceInterface interface {
 type deployerInterface interface {
 	deploy(context.Context, *Options) error
 	cleanUp(context.Context, error)
+}
+
+func NewDeployExternalK8sControl(cfg *rest.Config) ExternalResourceInterface {
+	return externalresource.NewExternalK8sControl(cfg)
 }
 
 // Deploy deploys the okteto manifest
@@ -181,7 +187,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			c := &DeployCommand{
 				GetManifest: model.GetManifestV2,
 
-				GetExternalControl: getExternalControlFromCtx,
+				GetExternalControl: NewDeployExternalK8sControl,
 				K8sClientProvider:  k8sClientProvider,
 				GetDeployer:        GetDeployer,
 				Builder:            buildv2.NewBuilderFromScratch(),
@@ -190,6 +196,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider),
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
+				endpointGetter:     newEndpointGetter,
 			}
 			startTime := time.Now()
 
@@ -275,10 +282,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.Debug("found okteto manifest")
 	dc.PipelineType = deployOptions.Manifest.Type
 
-	if deployOptions.Manifest.Deploy == nil {
-		return oktetoErrors.ErrManifestFoundButNoDeployCommands
+	if deployOptions.Manifest.Deploy == nil && deployOptions.Manifest.Dependencies == nil {
+		return oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands
 	}
-	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy.ComposeSection == nil {
+	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection == nil {
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
 
@@ -310,7 +317,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		Icon:       deployOptions.Manifest.Icon,
 	}
 
-	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType {
+	if !deployOptions.Manifest.IsV2 && deployOptions.Manifest.Type == model.StackType && deployOptions.Manifest.Deploy != nil {
 		data.Manifest = deployOptions.Manifest.Deploy.ComposeSection.Stack.Manifest
 	}
 
@@ -326,6 +333,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 			return errStatus
 		}
 		return err
+	}
+
+	if deployOptions.Manifest.Deploy == nil {
+		return nil
 	}
 
 	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
@@ -361,10 +372,9 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 				}
 			}
 			if !utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
-				eg := &endpointGetter{
-					K8sClientProvider:  dc.K8sClientProvider,
-					GetExternalControl: dc.GetExternalControl,
-					TempKubeconfigFile: dc.TempKubeconfigFile,
+				eg, err := dc.endpointGetter()
+				if err != nil {
+					oktetoLog.Infof("could not create endpoint getter: %s", err)
 				}
 				if err := eg.showEndpoints(ctx, &EndpointsOptions{Name: deployOptions.Name, Namespace: deployOptions.Manifest.Namespace}); err != nil {
 					oktetoLog.Infof("could not retrieve endpoints: %s", err)
