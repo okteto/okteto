@@ -284,7 +284,7 @@ func TestCreateDockerfile(t *testing.T) {
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 			}
-			dockerfileName, err := rdc.createDockerfile("/test", tt.config.opts)
+			dockerfileName, err := rdc.createDockerfile("/test", tt.config.opts, "")
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.dockerfileName, dockerfileName)
 

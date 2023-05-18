@@ -51,10 +51,13 @@ FROM {{ .OktetoCLIImage }} as okteto-cli
 FROM alpine as certs
 RUN apk update && apk add ca-certificates
 
+FROM {{ .InstallerImage }} as installer
+
 FROM {{ .UserDeployImage }} as deploy
 
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=certs /etc/ssl/certs /etc/ssl/certs
+COPY --from=installer /app/bin/* /okteto/bin/
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 {{range $key, $val := .OktetoBuildEnvVars }}
@@ -84,6 +87,7 @@ RUN okteto deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" {{ .De
 
 type dockerfileTemplateProperties struct {
 	OktetoCLIImage     string
+	InstallerImage     string
 	UserDeployImage    string
 	OktetoBuildEnvVars map[string]string
 	ContextEnvVar      string
@@ -125,8 +129,13 @@ func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
 
 func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options) error {
 
+	sc, err := rd.clusterMetadata(ctx)
+	if err != nil {
+		return err
+	}
+
 	if deployOptions.Manifest != nil && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.Image == "" {
-		deployOptions.Manifest.Deploy.Image = constants.OktetoPipelineRunnerImage
+		deployOptions.Manifest.Deploy.Image = sc.PipelineRunnerImage
 	}
 
 	cwd, err := rd.getOriginalCWD(deployOptions.ManifestPathFlag)
@@ -139,7 +148,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
-	dockerfile, err := rd.createDockerfile(tmpDir, deployOptions)
+	dockerfile, err := rd.createDockerfile(tmpDir, deployOptions, sc.PipelineInstallerImage)
 	if err != nil {
 		return err
 	}
@@ -156,11 +165,6 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 	// undo modification of CWD for Build command
 	if err := rd.workingDirectoryCtrl.Change(cwd); err != nil {
-		return err
-	}
-
-	sc, err := rd.clusterMetadata(ctx)
-	if err != nil {
 		return err
 	}
 
@@ -200,7 +204,7 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 
 func (rd *remoteDeployCommand) cleanUp(ctx context.Context, err error) {}
 
-func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (string, error) {
+func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options, installerImage string) (string, error) {
 	cwd, err := rd.workingDirectoryCtrl.Get()
 	if err != nil {
 		return "", err
@@ -216,6 +220,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 	dockerfileSyntax := dockerfileTemplateProperties{
 		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
 		UserDeployImage:    opts.Manifest.Deploy.Image,
+		InstallerImage:     installerImage,
 		OktetoBuildEnvVars: rd.builderV2.GetBuildEnvVars(),
 		ContextEnvVar:      model.OktetoContextEnvVar,
 		ContextValue:       okteto.Context().Name,
