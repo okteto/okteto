@@ -203,3 +203,27 @@ func getListDiff(l1, l2 []string) []string {
 	}
 	return added
 }
+
+// snapshotEnv takes a snapshot of the current environment variables
+func snapshotEnv() map[string]string {
+	env := os.Environ()
+	snapshot := make(map[string]string, len(env))
+	for _, e := range env {
+		pair := strings.SplitN(e, "=", 2)
+		snapshot[pair[0]] = pair[1]
+	}
+	return snapshot
+}
+
+// restoreEnv restores the environment variables from a given snapshot
+func restoreEnv(snapshot map[string]string) error {
+	os.Clearenv()
+
+	for key, value := range snapshot {
+		err := os.Setenv(key, value)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
