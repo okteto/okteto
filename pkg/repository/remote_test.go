@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,7 +24,7 @@ func TestRemoteIsCleanTrue(t *testing.T) {
 	remote := oktetoRemoteRepoController{
 		gitCommit: "123",
 	}
-	isClean, err := remote.isClean()
+	isClean, err := remote.isClean(context.Background())
 	assert.NoError(t, err)
 	assert.True(t, isClean)
 }
@@ -32,7 +33,7 @@ func TestRemoteIsCleanFalse(t *testing.T) {
 	remote := oktetoRemoteRepoController{
 		gitCommit: "",
 	}
-	isClean, err := remote.isClean()
+	isClean, err := remote.isClean(context.Background())
 	assert.NoError(t, err)
 	assert.False(t, isClean)
 }
