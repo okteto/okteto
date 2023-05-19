@@ -2520,17 +2520,13 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 		},
 	}
 
-	env := snapshotEnv()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			os.Clearenv()
-			assert.NoError(t, restoreEnv(env))
+			for k, v := range tt.env {
+				t.Setenv(k, v)
+			}
 
 			var buildArgs BuildArgs
-
-			for k, v := range tt.env {
-				assert.NoError(t, os.Setenv(k, v))
-			}
 			if err := yaml.UnmarshalStrict(tt.data, &buildArgs); err != nil {
 				t.Fatal(err)
 			}
