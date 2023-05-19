@@ -35,7 +35,6 @@ dev:
     command: ["chmod +x ./checker.sh && ./checker.sh"]
     reverse:
     - 8080:8080
-    workdir: /
 `
 	hybridCompose = `services:
  svc:
