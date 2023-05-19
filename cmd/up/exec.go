@@ -216,7 +216,7 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 	}
 	envs = append(envs, imageEnvs...)
 
-	for _, env := range app.PodSpec().Containers[0].Env {
+	for _, env := range apps.GetDevContainer(app.PodSpec(), "").Env {
 		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
 	}
 
