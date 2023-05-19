@@ -2462,7 +2462,7 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 					Value: "actual-value",
 				},
 			},
-			env: map[string]string{"VALUE": "actual-value"},
+			env: map[string]string{"KEY": "actual-value"},
 		},
 		{
 			name: "list with env var unset",
