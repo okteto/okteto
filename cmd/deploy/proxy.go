@@ -255,6 +255,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			r.Body = io.NopCloser(bytes.NewBuffer(b))
 		}
 
+		r.Host = destinationURL.Host
 		// Redirect request to the k8s server (based on the transport HTTP generated from the config)
 		reverseProxy.ServeHTTP(rw, r)
 	})
