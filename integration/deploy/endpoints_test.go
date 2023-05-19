@@ -166,6 +166,7 @@ func Test_EndpointsFromOktetoManifest_InferredName(t *testing.T) {
 		Namespace:  testNamespace,
 		OktetoHome: dir,
 		Token:      token,
+		LogOutput:  "info",
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -226,6 +227,7 @@ func Test_EndpointsFromOktetoManifest_Name(t *testing.T) {
 		Namespace:  testNamespace,
 		OktetoHome: dir,
 		Token:      token,
+		LogOutput:  "info",
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 
@@ -280,6 +282,7 @@ func Test_EndpointsFromStackWith_InferredName(t *testing.T) {
 		Namespace:  testNamespace,
 		OktetoHome: dir,
 		Token:      token,
+		LogOutput:  "info",
 	}
 	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
 

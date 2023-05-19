@@ -46,21 +46,21 @@ type endpointGetterInterface interface {
 	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
 }
 
-type endpointGetter struct {
+type EndpointGetter struct {
 	GetManifest       func(path string) (*model.Manifest, error)
 	endpointControl   endpointGetterInterface
 	K8sClientProvider okteto.K8sClientProvider
 }
 
-func newEndpointGetter() (endpointGetter, error) {
+func NewEndpointGetter() (EndpointGetter, error) {
 	k8sProvider := okteto.NewK8sClientProvider()
 	_, cfg, err := k8sProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
-		return endpointGetter{}, fmt.Errorf("error getting kubernetes client: %w", err)
+		return EndpointGetter{}, fmt.Errorf("error getting kubernetes client: %w", err)
 	}
 
 	ec := externalresource.NewExternalK8sControl(cfg)
-	return endpointGetter{
+	return EndpointGetter{
 		GetManifest:       model.GetManifestV2,
 		endpointControl:   ec,
 		K8sClientProvider: k8sProvider,
@@ -109,7 +109,7 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			eg, err := newEndpointGetter()
+			eg, err := NewEndpointGetter()
 			if err != nil {
 				return err
 			}
@@ -166,7 +166,7 @@ func validateOutput(output string) error {
 	}
 }
 
-func (eg *endpointGetter) getEndpoints(ctx context.Context, opts *EndpointsOptions) ([]string, error) {
+func (eg *EndpointGetter) getEndpoints(ctx context.Context, opts *EndpointsOptions) ([]string, error) {
 	if opts.Output == "" {
 		oktetoLog.Spinner("Retrieving endpoints...")
 		oktetoLog.StartSpinner()
@@ -203,7 +203,7 @@ func (eg *endpointGetter) getEndpoints(ctx context.Context, opts *EndpointsOptio
 	return eps, nil
 }
 
-func (dc *endpointGetter) showEndpoints(ctx context.Context, opts *EndpointsOptions) error {
+func (dc *EndpointGetter) showEndpoints(ctx context.Context, opts *EndpointsOptions) error {
 	eps, err := dc.getEndpoints(ctx, opts)
 	if err != nil {
 		return err
