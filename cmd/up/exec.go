@@ -19,17 +19,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
-	"os/signal"
 	"runtime"
 	"strings"
-	"syscall"
 
-	"github.com/creack/pty"
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -44,7 +39,6 @@ import (
 	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/ssh"
 	"github.com/okteto/okteto/pkg/types"
-	"golang.org/x/term"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -66,53 +60,32 @@ type HybridExecCtx struct {
 }
 
 func (he *hybridExecutor) RunCommand(ctx context.Context, cmd []string) error {
-	if runtime.GOOS == "windows" {
-		e := executor.NewExecutor(oktetoLog.GetOutputFormat(), true, false, he.workdir)
-		e.Execute(model.DeployCommand{Name: "", Command: strings.Join(cmd, " ")}, he.envs)
+	var c *exec.Cmd
+	if runtime.GOOS != "windows" {
+		c = exec.Command("bash", "-c", strings.Join(cmd, " "))
 	} else {
-		return he.executeInPTY(cmd)
+		c = exec.Command(strings.Join(cmd, " "))
+	}
+
+	c.Env = he.envs
+
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+
+	c.Dir = he.workdir
+
+	err := c.Start()
+	if err != nil {
+		return err
+	}
+
+	err = c.Wait()
+	if err != nil {
+		return err
 	}
 
 	return nil
-}
-
-func (he *hybridExecutor) executeInPTY(cmd []string) error {
-	c := exec.Command("bash", "-c", strings.Join(cmd, " "))
-	c.Dir = he.workdir
-	c.Env = he.envs
-
-	// Start the command with a pty.
-	ptmx, err := pty.Start(c)
-	if err != nil {
-		return err
-	}
-	// Make sure to close the pty at the end.
-	defer func() { _ = ptmx.Close() }() // Best effort.
-
-	// Handle pty size.
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, syscall.SIGWINCH)
-	go func() {
-		for range ch {
-			pty.InheritSize(os.Stdin, ptmx)
-		}
-	}()
-
-	ch <- syscall.SIGWINCH                        // Initial resize.
-	defer func() { signal.Stop(ch); close(ch) }() // Cleanup signals when done.
-
-	// Set stdin in raw mode.
-	oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		return err
-	}
-	defer func() { _ = term.Restore(int(os.Stdin.Fd()), oldState) }() // Best effort.
-
-	// Copy stdin to the pty and the pty to stdout.
-	// NOTE: The goroutine will keep reading until the next keystroke before returning.
-	go func() { _, _ = io.Copy(ptmx, os.Stdin) }()
-	_, _ = io.Copy(os.Stdout, ptmx)
-	return c.Wait()
 }
 
 type syncExecutor struct {

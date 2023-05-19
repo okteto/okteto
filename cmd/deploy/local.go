@@ -85,7 +85,7 @@ func newLocalDeployer(ctx context.Context, cwd string, options *Options, cmapHan
 	clientProvider := okteto.NewK8sClientProvider()
 	return &localDeployer{
 		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash, false, ""),
+		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash, ""),
 		ConfigMapHandler:   cmapHandler,
 		Proxy:              proxy,
 		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),

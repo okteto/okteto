@@ -44,7 +44,7 @@ type executorDisplayer interface {
 }
 
 // NewExecutor returns a new executor
-func NewExecutor(output string, runWithoutBash, runOktetoExec bool, dir string) *Executor {
+func NewExecutor(output string, runWithoutBash bool, dir string) *Executor {
 	var displayer executorDisplayer
 
 	switch output {
@@ -59,7 +59,7 @@ func NewExecutor(output string, runWithoutBash, runOktetoExec bool, dir string) 
 	}
 
 	shell := "bash"
-	if utils.LoadBoolean(constants.OKtetoDeployRemote) || runOktetoExec {
+	if utils.LoadBoolean(constants.OKtetoDeployRemote) {
 		shell = "sh"
 	}
 
