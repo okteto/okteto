@@ -13,6 +13,8 @@
 
 package repository
 
+import "context"
+
 type oktetoRemoteRepoController struct {
 	gitCommit string
 }
@@ -23,7 +25,7 @@ func newOktetoRemoteRepoController(localCommit string) oktetoRemoteRepoControlle
 	}
 }
 
-func (or oktetoRemoteRepoController) isClean() (bool, error) {
+func (or oktetoRemoteRepoController) isClean(_ context.Context) (bool, error) {
 	return or.gitCommit != "", nil
 }
 

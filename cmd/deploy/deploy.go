@@ -82,8 +82,8 @@ type DeployCommand struct {
 	Builder            *buildv2.OktetoBuilder
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 	GetDeployer        func(context.Context, *model.Manifest, *Options, string, *buildv2.OktetoBuilder) (deployerInterface, error)
-	endpointGetter     func() (endpointGetter, error)
-	deployWaiter       deployWaiter
+	EndpointGetter     func() (EndpointGetter, error)
+	DeployWaiter       DeployWaiter
 	CfgMapHandler      configMapHandler
 	Fs                 afero.Fs
 	DivertDriver       divert.Driver
@@ -187,12 +187,12 @@ func Deploy(ctx context.Context) *cobra.Command {
 				K8sClientProvider:  k8sClientProvider,
 				GetDeployer:        GetDeployer,
 				Builder:            buildv2.NewBuilderFromScratch(),
-				deployWaiter:       newDeployWaiter(k8sClientProvider),
+				DeployWaiter:       NewDeployWaiter(k8sClientProvider),
+				EndpointGetter:     NewEndpointGetter,
 				isRemote:           utils.LoadBoolean(constants.OKtetoDeployRemote),
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider),
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
-				endpointGetter:     newEndpointGetter,
 			}
 			startTime := time.Now()
 
@@ -293,8 +293,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	// We need to create a client that doesn't go through the proxy to create
 	// the configmap without the deployedByLabel
 	c, _, err := dc.K8sClientProvider.Provide(okteto.Context().Cfg)
-
-	dc.addEnvVars(cwd)
+	if err != nil {
+		return err
+	}
+	dc.addEnvVars(ctx, cwd)
 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
@@ -353,12 +355,12 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		}
 		if hasDeployed {
 			if deployOptions.Wait {
-				if err := dc.deployWaiter.wait(ctx, deployOptions); err != nil {
+				if err := dc.DeployWaiter.wait(ctx, deployOptions); err != nil {
 					return err
 				}
 			}
 			if !utils.LoadBoolean(constants.OktetoWithinDeployCommandContextEnvVar) {
-				eg, err := dc.endpointGetter()
+				eg, err := dc.EndpointGetter()
 				if err != nil {
 					oktetoLog.Infof("could not create endpoint getter: %s", err)
 				}
