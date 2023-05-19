@@ -14,6 +14,7 @@
 package commands
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -53,12 +54,25 @@ func RunOktetoDeploy(oktetoPath string, deployOptions *DeployOptions) error {
 	cmd := getDeployCmd(oktetoPath, deployOptions)
 	log.Printf("Running '%s'", cmd.String())
 
-	o, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("okteto deploy failed: %s - %s", string(o), err)
+	if err := cmd.Start(); err != nil {
+		return err
 	}
+	go func() {
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			log.Printf("error getting stdout pipe: %s", err)
+			return
+		}
+
+		scanner := bufio.NewScanner(stdout)
+		// optionally, resize scanner's capacity for lines over 64K, see next example
+		for scanner.Scan() {
+			log.Println(scanner.Text())
+		}
+	}()
+	err := cmd.Wait()
 	log.Printf("okteto deploy success")
-	return nil
+	return err
 }
 
 // RunOktetoDeployAndGetOutput runs an okteto deploy command and returns the output
