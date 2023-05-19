@@ -14,6 +14,7 @@
 package repository
 
 import (
+	"context"
 	"net/url"
 	"os"
 	"strings"
@@ -33,7 +34,7 @@ type Repository struct {
 }
 
 type repositoryInterface interface {
-	isClean() (bool, error)
+	isClean(ctx context.Context) (bool, error)
 	getSHA() (string, error)
 }
 
@@ -59,7 +60,7 @@ func NewRepository(path string) Repository {
 
 // IsClean checks if the repository have changes over the commit
 func (r Repository) IsClean() (bool, error) {
-	return r.control.isClean()
+	return r.control.isClean(context.TODO())
 }
 
 // GetSHA returns the last commit sha of the repository
