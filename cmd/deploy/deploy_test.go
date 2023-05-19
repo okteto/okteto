@@ -536,7 +536,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		},
 		GetExternalControl: cp.getFakeExternalControl,
 		K8sClientProvider:  clientProvider,
-		endpointGetter:     getFakeEndpoint,
+		EndpointGetter:     getFakeEndpoint,
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
 		Fs:                 afero.NewMemMapFs(),
 	}
@@ -598,7 +598,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	c := &DeployCommand{
 		GetManifest:        getFakeManifest,
 		K8sClientProvider:  clientProvider,
-		endpointGetter:     getFakeEndpoint,
+		EndpointGetter:     getFakeEndpoint,
 		GetExternalControl: cp.getFakeExternalControl,
 		Fs:                 afero.NewMemMapFs(),
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
@@ -812,8 +812,8 @@ func (f *fakeExternalControlProvider) getFakeExternalControl(_ *rest.Config) Ext
 	return f.control
 }
 
-func getFakeEndpoint() (endpointGetter, error) {
-	return endpointGetter{
+func getFakeEndpoint() (EndpointGetter, error) {
+	return EndpointGetter{
 		K8sClientProvider: test.NewFakeK8sProvider(),
 		endpointControl:   &fakeExternalControl{},
 	}, nil
