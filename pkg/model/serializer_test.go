@@ -2455,14 +2455,14 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 		},
 		{
 			name: "list with env var set",
-			data: []byte("- KEY=${VALUE}"),
+			data: []byte("- KEY=${VALUE2}"),
 			expected: BuildArgs{
 				{
 					Name:  "KEY",
 					Value: "actual-value",
 				},
 			},
-			env: map[string]string{"VALUE": "actual-value"},
+			env: map[string]string{"VALUE2": "actual-value"},
 		},
 		{
 			name: "list with env var unset",
