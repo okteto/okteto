@@ -108,6 +108,11 @@ func NewHybridExecutor(ctx context.Context, hybridCtx *HybridExecCtx) (*hybridEx
 		return nil, err
 	}
 
+	pathValue := os.Getenv("PATH")
+	if pathValue != "" {
+		envs = append(envs, fmt.Sprintf("PATH=%s", pathValue))
+	}
+
 	return &hybridExecutor{
 		workdir: hybridCtx.Workdir,
 		envs:    envs,
@@ -213,11 +218,6 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 
 	for _, env := range app.PodSpec().Containers[0].Env {
 		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
-	}
-
-	pathValue := os.Getenv("PATH")
-	if pathValue != "" {
-		envs = append(envs, fmt.Sprintf("PATH=%s", pathValue))
 	}
 
 	return envs, nil

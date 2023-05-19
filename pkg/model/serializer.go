@@ -757,7 +757,10 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	if dev.Mode == "hybrid" {
-		localDir, _ := filepath.Abs(dev.Workdir)
+		localDir, err := filepath.Abs(dev.Workdir)
+		if err != nil {
+			return err
+		}
 		info, err := os.Stat(localDir)
 		if err != nil {
 			return err

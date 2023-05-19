@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -1842,6 +1843,9 @@ func TestManifestMarshalling(t *testing.T) {
 }
 
 func TestDevModeUnmarshalling(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+
 	tests := []struct {
 		name     string
 		input    []byte
@@ -1857,7 +1861,8 @@ command: ["sh", "-c", "yarn start"]
 reverse:
   - 8080:8080`),
 			expected: &Dev{
-				Mode: "hybrid",
+				Mode:    "hybrid",
+				Workdir: wd,
 				Selector: Selector{
 					"app.kubernetes.io/part-of":   "okteto",
 					"app.kubernetes.io/component": "frontend",
