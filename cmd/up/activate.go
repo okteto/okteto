@@ -198,7 +198,7 @@ func (up *upContext) activate() error {
 		durationActivateUp := time.Since(up.StartTime)
 		analytics.TrackDurationActivateUp(durationActivateUp)
 
-		up.CommandResult <- up.runCommand(ctx, up.Dev.Command.Values)
+		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
 	}()
 
 	prevError := up.waitUntilExitOrInterruptOrApply(ctx)

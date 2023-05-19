@@ -174,7 +174,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 
 			c := &destroyCommand{
-				executor:          executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
+				executor:          executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash, false, ""),
 				ConfigMapHandler:  NewConfigmapHandler(k8sClient),
 				nsDestroyer:       namespaces.NewNamespace(dynClient, discClient, cfg, k8sClient),
 				secrets:           secrets.NewSecrets(k8sClient),

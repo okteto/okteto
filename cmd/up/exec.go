@@ -29,6 +29,7 @@ import (
 
 	"github.com/creack/pty"
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/cmd/utils/executor"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -48,7 +49,7 @@ import (
 )
 
 type devExecutor interface {
-	runCommand(ctx context.Context, cmd []string) error
+	RunCommand(ctx context.Context, cmd []string) error
 }
 
 type hybridExecutor struct {
@@ -56,19 +57,29 @@ type hybridExecutor struct {
 	envs    []string
 }
 
-func (he *hybridExecutor) runCommand(_ context.Context, cmd []string) error {
-	c := exec.Command("bash", "-c", strings.Join(cmd, " "))
+type HybridExecCtx struct {
+	Workdir         string
+	Dev             *model.Dev
+	Name, Namespace string
+	Client          kubernetes.Interface
+	RunOktetoExec   bool
+}
+
+func (he *hybridExecutor) RunCommand(ctx context.Context, cmd []string) error {
 	if runtime.GOOS == "windows" {
-		c = exec.Command(strings.Join(cmd, " "))
+		e := executor.NewExecutor(oktetoLog.GetOutputFormat(), true, false, he.workdir)
+		e.Execute(model.DeployCommand{Name: "", Command: strings.Join(cmd, " ")}, he.envs)
+	} else {
+		return he.executeInPTY(cmd)
 	}
 
+	return nil
+}
+
+func (he *hybridExecutor) executeInPTY(cmd []string) error {
+	c := exec.Command("bash", "-c", strings.Join(cmd, " "))
 	c.Dir = he.workdir
-
-	pathValue := os.Getenv("PATH")
-	if pathValue != "" {
-		c.Env = append(c.Env, fmt.Sprintf("PATH=%s", pathValue))
-	}
-	c.Env = append(c.Env, he.envs...)
+	c.Env = he.envs
 
 	// Start the command with a pty.
 	ptmx, err := pty.Start(c)
@@ -101,7 +112,6 @@ func (he *hybridExecutor) runCommand(_ context.Context, cmd []string) error {
 	// NOTE: The goroutine will keep reading until the next keystroke before returning.
 	go func() { _, _ = io.Copy(ptmx, os.Stdin) }()
 	_, _ = io.Copy(os.Stdout, ptmx)
-
 	return c.Wait()
 }
 
@@ -110,12 +120,12 @@ type syncExecutor struct {
 	remotePort int
 }
 
-func (se *syncExecutor) runCommand(ctx context.Context, cmd []string) error {
+func (se *syncExecutor) RunCommand(ctx context.Context, cmd []string) error {
 	return ssh.Exec(ctx, se.iface, se.remotePort, true, os.Stdin, os.Stdout, os.Stderr, cmd)
 }
 
-func newHybridExecutor(ctx context.Context, up *upContext) (*hybridExecutor, error) {
-	envsGetter, err := newEnvsGetter(up)
+func NewHybridExecutor(ctx context.Context, hybridCtx *HybridExecCtx) (*hybridExecutor, error) {
+	envsGetter, err := newEnvsGetter(hybridCtx)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +136,7 @@ func newHybridExecutor(ctx context.Context, up *upContext) (*hybridExecutor, err
 	}
 
 	return &hybridExecutor{
-		workdir: up.Dev.Workdir,
+		workdir: hybridCtx.Workdir,
 		envs:    envs,
 	}, nil
 }
@@ -176,7 +186,7 @@ type envsGetter struct {
 	imageEnvsGetter     imageEnvsGetterInterface
 }
 
-func newEnvsGetter(up *upContext) (*envsGetter, error) {
+func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 
 	var secretsGetter secretsGetterInterface
 	if okteto.IsOkteto() {
@@ -188,10 +198,10 @@ func newEnvsGetter(up *upContext) (*envsGetter, error) {
 	}
 
 	return &envsGetter{
-		dev:                 up.Dev,
-		name:                up.Manifest.Name,
-		namespace:           up.Manifest.Namespace,
-		client:              up.Client,
+		dev:                 hybridCtx.Dev,
+		name:                hybridCtx.Name,
+		namespace:           hybridCtx.Namespace,
+		client:              hybridCtx.Client,
 		configMapEnvsGetter: &configMapGetter{},
 		secretsEnvsGetter: &secretsEnvsGetter{
 			secretsGetter: secretsGetter,
@@ -230,6 +240,11 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 
 	for _, env := range app.PodSpec().Containers[0].Env {
 		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
+	}
+
+	pathValue := os.Getenv("PATH")
+	if pathValue != "" {
+		envs = append(envs, fmt.Sprintf("PATH=%s", pathValue))
 	}
 
 	return envs, nil
@@ -328,7 +343,7 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 	up.cleaned <- out.String()
 }
 
-func (up *upContext) runCommand(ctx context.Context, cmd []string) error {
+func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 	oktetoLog.Infof("starting remote command")
 	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Ready); err != nil {
 		return err
@@ -338,7 +353,15 @@ func (up *upContext) runCommand(ctx context.Context, cmd []string) error {
 		var executor devExecutor
 		if up.Dev.IsHybridModeEnabled() {
 			var err error
-			executor, err = newHybridExecutor(ctx, up)
+			hybridCtx := &HybridExecCtx{
+				Dev:           up.Dev,
+				Name:          up.Manifest.Name,
+				Namespace:     up.Manifest.Namespace,
+				Client:        up.Client,
+				Workdir:       up.Dev.Workdir,
+				RunOktetoExec: false,
+			}
+			executor, err = NewHybridExecutor(ctx, hybridCtx)
 			if err != nil {
 				return err
 			}
@@ -346,7 +369,7 @@ func (up *upContext) runCommand(ctx context.Context, cmd []string) error {
 			executor = newSyncExecutor(up)
 		}
 
-		return executor.runCommand(ctx, cmd)
+		return executor.RunCommand(ctx, cmd)
 	}
 
 	return k8sExec.Exec(
