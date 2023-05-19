@@ -53,16 +53,15 @@ type DestroyOptions struct {
 func RunOktetoDeploy(oktetoPath string, deployOptions *DeployOptions) error {
 	cmd := getDeployCmd(oktetoPath, deployOptions)
 	log.Printf("Running '%s'", cmd.String())
-
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Printf("error getting stdout pipe: %s", err)
+		return err
+	}
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 	go func() {
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			log.Printf("error getting stdout pipe: %s", err)
-			return
-		}
 
 		scanner := bufio.NewScanner(stdout)
 		// optionally, resize scanner's capacity for lines over 64K, see next example
@@ -70,7 +69,7 @@ func RunOktetoDeploy(oktetoPath string, deployOptions *DeployOptions) error {
 			log.Println(scanner.Text())
 		}
 	}()
-	err := cmd.Wait()
+	err = cmd.Wait()
 	log.Printf("okteto deploy success")
 	return err
 }
