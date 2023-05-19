@@ -108,11 +108,6 @@ func NewHybridExecutor(ctx context.Context, hybridCtx *HybridExecCtx) (*hybridEx
 		return nil, err
 	}
 
-	pathValue := os.Getenv("PATH")
-	if pathValue != "" {
-		envs = append(envs, fmt.Sprintf("PATH=%s", pathValue))
-	}
-
 	return &hybridExecutor{
 		workdir: hybridCtx.Workdir,
 		envs:    envs,
@@ -162,6 +157,7 @@ type envsGetter struct {
 	configMapEnvsGetter configMapEnvsGetterInterface
 	secretsEnvsGetter   secretsEnvsGetterInterface
 	imageEnvsGetter     imageEnvsGetterInterface
+	pathGetter          func(string) string
 }
 
 func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
@@ -187,6 +183,7 @@ func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 		imageEnvsGetter: &imageEnvsGetter{
 			imageGetter: registry.NewOktetoRegistry(okteto.Config{}),
 		},
+		pathGetter: os.Getenv,
 	}, nil
 }
 
@@ -218,6 +215,11 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 
 	for _, env := range apps.GetDevContainer(app.PodSpec(), "").Env {
 		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
+	}
+
+	pathValue := eg.pathGetter("PATH")
+	if pathValue != "" {
+		envs = append(envs, fmt.Sprintf("PATH=%s", pathValue))
 	}
 
 	return envs, nil
