@@ -14,7 +14,9 @@
 package repository
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -32,27 +34,34 @@ func newGitRepoController() gitRepoController {
 }
 
 // IsClean checks if the repository have changes over the commit
-func (r gitRepoController) isClean() (bool, error) {
-	repo, err := r.repoGetter.get(r.path)
-	if err != nil {
-		return false, fmt.Errorf("failed to analyze git repo: %w", err)
-	}
-	worktree, err := repo.Worktree()
-	if err != nil {
-		return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
-	}
+func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+	select {
+	case <-ctxWithTimeout.Done():
+		return false, nil
+	default:
+		repo, err := r.repoGetter.get(r.path)
+		if err != nil {
+			return false, fmt.Errorf("failed to analyze git repo: %w", err)
+		}
+		worktree, err := repo.Worktree()
+		if err != nil {
+			return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+		}
 
-	status, err := worktree.Status()
-	if err != nil {
-		return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
-	}
+		status, err := worktree.Status()
+		if err != nil {
+			return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
+		}
 
-	return status.IsClean(), nil
+		return status.IsClean(), nil
+	}
 }
 
 // GetSHA returns the last commit sha of the repository
 func (r gitRepoController) getSHA() (string, error) {
-	isClean, err := r.isClean()
+	isClean, err := r.isClean(context.TODO())
 	if err != nil {
 		return "", fmt.Errorf("failed to check if repo is clean: %w", err)
 	}

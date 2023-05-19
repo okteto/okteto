@@ -282,6 +282,8 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
 		PipelineCMD:        pc,
+		DeployWaiter:       deploy.NewDeployWaiter(mc.K8sClientProvider),
+		EndpointGetter:     deploy.NewEndpointGetter,
 	}
 
 	err = c.RunDeploy(ctx, &deploy.Options{
