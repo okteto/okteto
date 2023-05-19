@@ -14,6 +14,7 @@
 package model
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -125,4 +126,58 @@ func TestGetCycles(t *testing.T) {
 		})
 	}
 
+}
+
+func Test_snapshotEnv(t *testing.T) {
+	os.Clearenv()
+
+	vars := map[string]string{
+		"TEST_1": "1",
+		"TEST_2": "2",
+	}
+	for k, v := range vars {
+		assert.NoError(t, os.Setenv(k, v))
+	}
+
+	env := snapshotEnv()
+
+	expected := map[string]string{
+		"TEST_1": "1",
+		"TEST_2": "2",
+	}
+	assert.Equal(t, expected, env)
+}
+
+func Test_restoreEnv(t *testing.T) {
+	os.Clearenv()
+
+	vars := map[string]string{
+		"TEST_1": "1",
+		"TEST_2": "2",
+	}
+	for k, v := range vars {
+		assert.NoError(t, os.Setenv(k, v))
+	}
+
+	env := snapshotEnv()
+	os.Clearenv()
+
+	assert.Equal(t, os.Environ(), []string{})
+
+	assert.NoError(t, os.Setenv("TEST_3", "3"))
+	assert.NoError(t, restoreEnv(env))
+
+	checks := []struct {
+		key    string
+		exists bool
+	}{
+		{"TEST_1", true},
+		{"TEST_2", true},
+		{"TEST_3", false},
+	}
+
+	for _, c := range checks {
+		_, has := os.LookupEnv(c.key)
+		assert.Equal(t, has, c.exists)
+	}
 }

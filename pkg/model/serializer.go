@@ -1279,7 +1279,11 @@ func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) 
 	err := unmarshal(&rawList)
 	if err == nil {
 		for _, buildArg := range rawList {
-			result[buildArg.Name] = buildArg.Value
+			value, err := ExpandEnv(buildArg.Value, true)
+			if err != nil {
+				return nil, err
+			}
+			result[buildArg.Name] = value
 		}
 		return result, nil
 	}
