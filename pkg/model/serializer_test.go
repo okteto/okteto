@@ -2655,6 +2655,7 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 		name     string
 		data     []byte
 		expected BuildArgs
+		env      map[string]string
 	}{
 		{
 			name: "list",
@@ -2665,16 +2666,50 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 					Value: "VALUE",
 				},
 			},
+			env: map[string]string{},
 		},
 		{
-			name: "list with env var",
+			name: "list with env var set",
+			data: []byte("- KEY=${VALUE2}"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "actual-value",
+				},
+			},
+			env: map[string]string{"VALUE2": "actual-value"},
+		},
+		{
+			name: "list with env var unset",
 			data: []byte("- KEY=$VALUE"),
 			expected: BuildArgs{
 				{
 					Name:  "KEY",
-					Value: "$VALUE",
+					Value: "",
 				},
 			},
+			env: map[string]string{},
+		},
+		{
+			name: "list with multiple env vars",
+			data: []byte(`- KEY=$VALUE
+- KEY2=$VALUE2
+- KEY3=${VALUE3}`),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "",
+				},
+				{
+					Name:  "KEY2",
+					Value: "actual-value-2",
+				},
+				{
+					Name:  "KEY3",
+					Value: "actual-value-3",
+				},
+			},
+			env: map[string]string{"VALUE2": "actual-value-2", "VALUE3": "actual-value-3"},
 		},
 		{
 			name: "map",
@@ -2685,6 +2720,7 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 					Value: "VALUE",
 				},
 			},
+			env: map[string]string{},
 		},
 		{
 			name: "map with env var",
@@ -2695,11 +2731,16 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 					Value: "$VALUE",
 				},
 			},
+			env: map[string]string{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			for k, v := range tt.env {
+				t.Setenv(k, v)
+			}
+
 			var buildArgs BuildArgs
 			if err := yaml.UnmarshalStrict(tt.data, &buildArgs); err != nil {
 				t.Fatal(err)

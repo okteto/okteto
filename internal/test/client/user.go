@@ -41,3 +41,11 @@ func (c *FakeUserClient) GetContext(_ context.Context, ns string) (*types.UserCo
 func (c *FakeUserClient) GetUserSecrets(_ context.Context) ([]types.Secret, error) {
 	return c.userSecrets, nil
 }
+
+func (c *FakeUserClient) GetClusterCertificate(_ context.Context, cluster, ns string) ([]byte, error) {
+	return nil, nil
+}
+
+func (c *FakeUserClient) GetClusterMetadata(ctx context.Context, ns string) (types.ClusterMetadata, error) {
+	return types.ClusterMetadata{}, nil
+}

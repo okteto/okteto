@@ -136,6 +136,25 @@ var fakeManifest *model.Manifest = &model.Manifest{
 	},
 }
 
+var fakeManifestWithDependency *model.Manifest = &model.Manifest{
+	Dependencies: model.ManifestDependencies{
+		"a": &model.Dependency{
+			Namespace: "b",
+		},
+		"b": &model.Dependency{},
+	},
+}
+
+var noDeployNorDependenciesManifest *model.Manifest = &model.Manifest{
+	Name: "testManifest",
+	Build: model.ManifestBuild{
+		"service1": &model.BuildInfo{
+			Dockerfile: "Dockerfile",
+			Image:      "testImage",
+		},
+	},
+}
+
 type fakeProxy struct {
 	errOnShutdown error
 	port          int
@@ -264,6 +283,45 @@ func TestDeployWithErrorReadingManifestFile(t *testing.T) {
 	}
 	c := &DeployCommand{
 		GetManifest: getManifestWithError,
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
+			return &localDeployer{
+				Proxy:      p,
+				Executor:   e,
+				Kubeconfig: &fakeKubeConfig{},
+				Fs:         afero.NewMemMapFs(),
+			}, nil
+		},
+		K8sClientProvider: test.NewFakeK8sProvider(),
+	}
+	ctx := context.Background()
+	opts := &Options{
+		Name:         "movies",
+		ManifestPath: "",
+		Variables:    []string{},
+	}
+
+	err := c.RunDeploy(ctx, opts)
+
+	assert.Error(t, err)
+	// No command was executed
+	assert.Len(t, e.executed, 0)
+	// Proxy wasn't started
+	assert.False(t, p.started)
+}
+
+func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
+	p := &fakeProxy{}
+	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
+	c := &DeployCommand{
+		GetManifest: getManifestWithNoDeployNorDependency,
 		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
 			return &localDeployer{
 				Proxy:      p,
@@ -512,6 +570,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		Contexts: map[string]*okteto.OktetoContext{
 			"test": {
 				Namespace: "test",
+				Cfg:       clientcmdapi.NewConfig(),
 			},
 		},
 		CurrentContext: "test",
@@ -535,6 +594,7 @@ func TestDeployWithErrorShuttingdownProxy(t *testing.T) {
 		},
 		GetExternalControl: cp.getFakeExternalControl,
 		K8sClientProvider:  clientProvider,
+		EndpointGetter:     getFakeEndpoint,
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
 		Fs:                 afero.NewMemMapFs(),
 	}
@@ -596,6 +656,7 @@ func TestDeployWithoutErrors(t *testing.T) {
 	c := &DeployCommand{
 		GetManifest:        getFakeManifest,
 		K8sClientProvider:  clientProvider,
+		EndpointGetter:     getFakeEndpoint,
 		GetExternalControl: cp.getFakeExternalControl,
 		Fs:                 afero.NewMemMapFs(),
 		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
@@ -651,6 +712,14 @@ func getFakeManifest(_ string) (*model.Manifest, error) {
 
 func getErrorManifest(_ string) (*model.Manifest, error) {
 	return errorManifest, nil
+}
+
+func getManifestWithNoDeployNorDependency(_ string) (*model.Manifest, error) {
+	return noDeployNorDependenciesManifest, nil
+}
+
+func getFakeManifestWithDependency(_ string) (*model.Manifest, error) {
+	return fakeManifestWithDependency, nil
 }
 
 func TestBuildImages(t *testing.T) {
@@ -805,8 +874,15 @@ func (f *fakeExternalControl) Validate(_ context.Context, _ string, _ string, _ 
 	return f.err
 }
 
-func (f *fakeExternalControlProvider) getFakeExternalControl(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
-	return f.control, f.err
+func (f *fakeExternalControlProvider) getFakeExternalControl(_ *rest.Config) ExternalResourceInterface {
+	return f.control
+}
+
+func getFakeEndpoint() (EndpointGetter, error) {
+	return EndpointGetter{
+		K8sClientProvider: test.NewFakeK8sProvider(),
+		endpointControl:   &fakeExternalControl{},
+	}, nil
 }
 
 func TestDeployExternals(t *testing.T) {
@@ -888,6 +964,7 @@ func TestDeployExternals(t *testing.T) {
 				ConfigMapHandler:   &fakeCmapHandler{},
 				GetExternalControl: cp.getFakeExternalControl,
 				Fs:                 afero.NewMemMapFs(),
+				K8sClientProvider:  test.NewFakeK8sProvider(),
 			}
 
 			if tc.expectedErr {
@@ -973,4 +1050,59 @@ func TestDeployDependencies(t *testing.T) {
 			assert.ErrorIs(t, tc.expected, dc.deployDependencies(context.Background(), &Options{Manifest: fakeManifest}))
 		})
 	}
+}
+
+func TestDeployOnlyDependencies(t *testing.T) {
+	p := &fakeProxy{}
+	e := &fakeExecutor{}
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
+	deployment := &v1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				model.DeployedByLabel: "movies",
+			},
+			Namespace: "test",
+		},
+	}
+
+	cp := fakeExternalControlProvider{
+		control: &fakeExternalControl{},
+	}
+	clientProvider := test.NewFakeK8sProvider(deployment)
+	c := &DeployCommand{
+		PipelineCMD:        fakePipelineDeployer{nil},
+		GetManifest:        getFakeManifestWithDependency,
+		K8sClientProvider:  clientProvider,
+		GetExternalControl: cp.getFakeExternalControl,
+		Fs:                 afero.NewMemMapFs(),
+		CfgMapHandler:      newDefaultConfigMapHandler(clientProvider),
+		GetDeployer: func(ctx context.Context, manifest *model.Manifest, opts *Options, _ string, _ *buildv2.OktetoBuilder, _ configMapHandler) (deployerInterface, error) {
+			return &localDeployer{
+				Proxy:              p,
+				Executor:           e,
+				Kubeconfig:         &fakeKubeConfig{},
+				ConfigMapHandler:   &fakeCmapHandler{},
+				K8sClientProvider:  clientProvider,
+				GetExternalControl: cp.getFakeExternalControl,
+				Fs:                 afero.NewMemMapFs(),
+			}, nil
+		},
+	}
+	ctx := context.Background()
+	opts := &Options{
+		Name:         "movies",
+		ManifestPath: "",
+		Variables:    []string{},
+	}
+
+	err := c.RunDeploy(ctx, opts)
+
+	assert.NoError(t, err)
 }

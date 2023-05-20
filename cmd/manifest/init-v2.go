@@ -278,10 +278,12 @@ func (mc *ManifestCommand) deploy(ctx context.Context, opts *InitOpts) error {
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(mc.manifest.Name),
 		K8sClientProvider:  mc.K8sClientProvider,
 		Builder:            buildv2.NewBuilderFromScratch(),
-		GetExternalControl: deploy.GetExternalControl,
+		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(mc.K8sClientProvider),
 		PipelineCMD:        pc,
+		DeployWaiter:       deploy.NewDeployWaiter(mc.K8sClientProvider),
+		EndpointGetter:     deploy.NewEndpointGetter,
 	}
 
 	err = c.RunDeploy(ctx, &deploy.Options{

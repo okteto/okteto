@@ -143,6 +143,9 @@ var (
 	// ErrManifestFoundButNoDeployCommands raised when a manifest is found but no deploy commands are defined
 	ErrManifestFoundButNoDeployCommands = errors.New("found okteto manifest, but no deploy commands where defined")
 
+	// ErrManifestFoundButNoDeployAndDependenciesCommands raised when a manifest is found but no deploy or dependencies commands are defined
+	ErrManifestFoundButNoDeployAndDependenciesCommands = errors.New("found okteto manifest, but no deploy or dependencies commands were defined")
+
 	// ErrDeployCantDeploySvcsIfNotCompose raised when a manifest is found but no compose info is detected and args are passed to deploy command
 	ErrDeployCantDeploySvcsIfNotCompose = errors.New("services args are can only be used while trying to deploy a compose")
 

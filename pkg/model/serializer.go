@@ -1088,7 +1088,7 @@ func (d *ManifestDevs) UnmarshalYAML(unmarshal func(interface{}) error) error {
 }
 
 func isManifestFieldNotFound(err error) bool {
-	manifestFields := []string{"devs", "dev", "name", "icon", "variables", "deploy", "destroy", "build", "namespace", "context"}
+	manifestFields := []string{"devs", "dev", "name", "icon", "variables", "deploy", "destroy", "build", "namespace", "context", "dependencies"}
 	for _, field := range manifestFields {
 		if strings.Contains(err.Error(), fmt.Sprintf("field %s not found", field)) {
 			return true
@@ -1325,7 +1325,11 @@ func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) 
 	err := unmarshal(&rawList)
 	if err == nil {
 		for _, buildArg := range rawList {
-			result[buildArg.Name] = buildArg.Value
+			value, err := ExpandEnv(buildArg.Value, true)
+			if err != nil {
+				return nil, err
+			}
+			result[buildArg.Name] = value
 		}
 		return result, nil
 	}

@@ -31,6 +31,8 @@ type OktetoInterface interface {
 type UserInterface interface {
 	GetUserSecrets(ctx context.Context) ([]Secret, error)
 	GetContext(ctx context.Context, ns string) (*UserContext, error)
+	GetClusterCertificate(ctx context.Context, cluster, ns string) ([]byte, error)
+	GetClusterMetadata(ctx context.Context, ns string) (ClusterMetadata, error)
 }
 
 // NamespaceInterface represents the client that connects to the namespace functions
