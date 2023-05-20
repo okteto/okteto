@@ -27,6 +27,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	"github.com/okteto/okteto/pkg/cache"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -732,7 +733,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	mode := &modeInfo{}
 	err := unmarshal(mode)
 	if err != nil {
-		if mode.Mode == "hybrid" {
+		if mode.Mode == constants.OktetoHybridModeFieldValue {
 			type hybridModeInfo struct {
 				Workdir     string            `json:"workdir,omitempty" yaml:"workdir,omitempty"`
 				Selector    Selector          `json:"selector,omitempty" yaml:"selector,omitempty"`
@@ -756,7 +757,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
-	if dev.Mode == "hybrid" {
+	if dev.Mode == constants.OktetoHybridModeFieldValue {
 		localDir, err := filepath.Abs(dev.Workdir)
 		if err != nil {
 			return err
