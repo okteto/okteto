@@ -143,19 +143,25 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 	if err := c.namespaceValidator.validate(name, previewEnvObject); err != nil {
 		return nil, err
 	}
-	var mutationStruct deployPreviewResponseInterface
-	mutationStruct = &deployPreviewMutation{}
-	if len(labels) > 0 {
-		mutationStruct = &deployPreviewMutatioWithLabels{}
-	}
+
 	mutationVariables := c.getDeployVariables(name, scope, repository, branch, sourceUrl, filename, variables, labels)
-
-	err := mutate(ctx, &mutationStruct, mutationVariables, c.client)
-	if err != nil {
-		return nil, c.translateErr(err, name)
+	var response deployPreviewResponse
+	if len(labels) == 0 {
+		mutationStruct := &deployPreviewMutation{}
+		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
+		if err != nil {
+			return nil, c.translateErr(err, name)
+		}
+		response = mutationStruct.response()
+	} else {
+		mutationStruct := &deployPreviewMutatioWithLabels{}
+		err := mutate(ctx, &mutationStruct, mutationVariables, c.client)
+		if err != nil {
+			return nil, c.translateErr(err, name)
+		}
+		response = mutationStruct.response()
 	}
 
-	response := mutationStruct.response()
 	previewResponse := &types.PreviewResponse{}
 	previewResponse.Action = &types.Action{
 		ID:     string(response.Action.Id),
