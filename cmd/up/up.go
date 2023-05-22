@@ -545,16 +545,19 @@ func (up *upContext) deployApp(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	k8sClientProvider := okteto.NewK8sClientProvider()
 	c := &deploy.DeployCommand{
 		GetManifest:        up.getManifest,
 		GetDeployer:        deploy.GetDeployer,
 		TempKubeconfigFile: deploy.GetTempKubeConfigFile(up.Manifest.Name),
-		K8sClientProvider:  okteto.NewK8sClientProvider(),
+		K8sClientProvider:  k8sClientProvider,
 		Builder:            buildv2.NewBuilderFromScratch(),
-		GetExternalControl: deploy.GetExternalControl,
+		GetExternalControl: deploy.NewDeployExternalK8sControl,
 		Fs:                 afero.NewOsFs(),
 		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider),
 		PipelineCMD:        pc,
+		DeployWaiter:       deploy.NewDeployWaiter(k8sClientProvider),
+		EndpointGetter:     deploy.NewEndpointGetter,
 	}
 
 	return c.RunDeploy(ctx, &deploy.Options{

@@ -13,7 +13,7 @@ require (
 	github.com/containerd/console v1.0.3
 	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/docker/cli v20.10.12+incompatible
-	github.com/docker/distribution v2.8.1+incompatible
+	github.com/docker/distribution v2.8.2+incompatible
 	github.com/docker/docker v20.10.24+incompatible
 	github.com/dukex/mixpanel v0.0.0-20180925151559-f8d5594f958e
 	github.com/fatih/color v1.13.0
@@ -231,7 +231,7 @@ require (
 replace (
 	github.com/Sirupsen/logrus => github.com/sirupsen/logrus v1.8.0
 	github.com/jaguilar/vt100 => github.com/tonistiigi/vt100 v0.0.0-20190402012908-ad4c4a574305
-	github.com/moby/buildkit => github.com/okteto/buildkit v0.9.2-okteto2
+	github.com/moby/buildkit => github.com/okteto/buildkit v0.9.2-okteto3.systemcerts
 
 	// https://github.com/okteto/okteto/issues/2129
 	google.golang.org/grpc => google.golang.org/grpc v1.40.0

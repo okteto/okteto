@@ -26,9 +26,7 @@ import (
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
-	k8sExternalResources "github.com/okteto/okteto/pkg/externalresource/k8s"
 	"github.com/okteto/okteto/pkg/format"
-	kconfig "github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -44,20 +42,30 @@ type EndpointsOptions struct {
 	K8sContext   string
 }
 
-type endpointGetter struct {
-	GetManifest        func(path string) (*model.Manifest, error)
-	K8sClientProvider  okteto.K8sClientProvider
-	GetExternalControl func(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error)
-	TempKubeconfigFile string
+type endpointGetterInterface interface {
+	List(ctx context.Context, ns string, labelSelector string) ([]externalresource.ExternalResource, error)
 }
 
-func newEndpointGetter(tempKubeconfig string) endpointGetter {
-	return endpointGetter{
-		GetManifest:        model.GetManifestV2,
-		K8sClientProvider:  okteto.NewK8sClientProvider(),
-		GetExternalControl: getExternalControlFromCtx,
-		TempKubeconfigFile: tempKubeconfig,
+type EndpointGetter struct {
+	GetManifest       func(path string) (*model.Manifest, error)
+	endpointControl   endpointGetterInterface
+	K8sClientProvider okteto.K8sClientProvider
+}
+
+func NewEndpointGetter() (EndpointGetter, error) {
+	k8sProvider := okteto.NewK8sClientProvider()
+	_, cfg, err := k8sProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return EndpointGetter{}, fmt.Errorf("error getting kubernetes client: %w", err)
 	}
+
+	ec := externalresource.NewExternalK8sControl(cfg)
+	return EndpointGetter{
+		GetManifest:       model.GetManifestV2,
+		endpointControl:   ec,
+		K8sClientProvider: k8sProvider,
+	}, nil
+
 }
 
 // Endpoints deploys the okteto manifest
@@ -101,7 +109,10 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			eg := newEndpointGetter("")
+			eg, err := NewEndpointGetter()
+			if err != nil {
+				return err
+			}
 			cwd, err := os.Getwd()
 			if err != nil {
 				return fmt.Errorf("failed to get the current working directory: %w", err)
@@ -155,7 +166,7 @@ func validateOutput(output string) error {
 	}
 }
 
-func (eg *endpointGetter) getEndpoints(ctx context.Context, opts *EndpointsOptions) ([]string, error) {
+func (eg *EndpointGetter) getEndpoints(ctx context.Context, opts *EndpointsOptions) ([]string, error) {
 	if opts.Output == "" {
 		oktetoLog.Spinner("Retrieving endpoints...")
 		oktetoLog.StartSpinner()
@@ -173,11 +184,7 @@ func (eg *endpointGetter) getEndpoints(ctx context.Context, opts *EndpointsOptio
 		return nil, err
 	}
 
-	externalCtrl, err := eg.GetExternalControl(eg.K8sClientProvider, eg.TempKubeconfigFile)
-	if err != nil {
-		return nil, err
-	}
-	externalEps, err := externalCtrl.List(ctx, opts.Namespace, labelSelector)
+	externalEps, err := eg.endpointControl.List(ctx, opts.Namespace, labelSelector)
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +203,7 @@ func (eg *endpointGetter) getEndpoints(ctx context.Context, opts *EndpointsOptio
 	return eps, nil
 }
 
-func (dc *endpointGetter) showEndpoints(ctx context.Context, opts *EndpointsOptions) error {
+func (dc *EndpointGetter) showEndpoints(ctx context.Context, opts *EndpointsOptions) error {
 	eps, err := dc.getEndpoints(ctx, opts)
 	if err != nil {
 		return err
@@ -227,16 +234,4 @@ func (dc *endpointGetter) showEndpoints(ctx context.Context, opts *EndpointsOpti
 		}
 	}
 	return nil
-}
-
-func getExternalControlFromCtx(cp okteto.K8sClientProvider, filename string) (ExternalResourceInterface, error) {
-	_, proxyConfig, err := cp.Provide(kconfig.Get([]string{filename}))
-	if err != nil {
-		return nil, err
-	}
-
-	return &externalresource.K8sControl{
-		ClientProvider: k8sExternalResources.GetExternalClient,
-		Cfg:            proxyConfig,
-	}, nil
 }

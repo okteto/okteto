@@ -15,8 +15,10 @@ package okteto
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -46,6 +48,7 @@ type OktetoClient struct {
 type OktetoClientProvider struct{}
 
 var insecureSkipTLSVerify bool
+var serverName string
 var strictTLSOnce sync.Once
 var errURLNotSet = errors.New("the okteto URL is not set")
 
@@ -91,12 +94,20 @@ func newOktetoHttpClient(contextName, token, oktetoUrlPath string) (*http.Client
 			TokenType: "Bearer"},
 	)
 
-	ctxHttpClient := http.DefaultClient
+	sslTransportOption := &oktetoHttp.SSLTransportOption{}
+
+	if serverName != "" {
+		sslTransportOption.ServerName = serverName
+		sslTransportOption.URLsToIntercept = []string{u}
+	}
+
+	ctxHttpClient := oktetoHttp.StrictSSLHTTPClient(sslTransportOption)
 
 	if insecureSkipTLSVerify {
 		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
 	} else if cert, err := GetContextCertificate(); err == nil {
-		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
+		sslTransportOption.Certs = []*x509.Certificate{cert}
+		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(sslTransportOption)
 	}
 
 	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
@@ -118,12 +129,20 @@ func NewOktetoClientFromUrlAndToken(url, token string) (*OktetoClient, error) {
 			TokenType: "Bearer"},
 	)
 
-	ctxHttpClient := http.DefaultClient
+	sslTransportOption := &oktetoHttp.SSLTransportOption{}
+
+	if serverName != "" {
+		sslTransportOption.ServerName = serverName
+		sslTransportOption.URLsToIntercept = []string{u}
+	}
+
+	ctxHttpClient := oktetoHttp.StrictSSLHTTPClient(sslTransportOption)
 
 	if insecureSkipTLSVerify {
 		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
 	} else if cert, err := GetContextCertificate(); err == nil {
-		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
+		sslTransportOption.Certs = []*x509.Certificate{cert}
+		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(sslTransportOption)
 	}
 
 	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
@@ -140,12 +159,20 @@ func NewOktetoClientFromUrl(url string) (*OktetoClient, error) {
 		return nil, err
 	}
 
-	ctxHttpClient := http.DefaultClient
+	sslTransportOption := &oktetoHttp.SSLTransportOption{}
+
+	if serverName != "" {
+		sslTransportOption.ServerName = serverName
+		sslTransportOption.URLsToIntercept = []string{u}
+	}
+
+	ctxHttpClient := oktetoHttp.StrictSSLHTTPClient(sslTransportOption)
 
 	if insecureSkipTLSVerify {
 		ctxHttpClient = oktetoHttp.InsecureHTTPClient()
 	} else if cert, err := GetContextCertificate(); err == nil {
-		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(cert)
+		sslTransportOption.Certs = []*x509.Certificate{cert}
+		ctxHttpClient = oktetoHttp.StrictSSLHTTPClient(sslTransportOption)
 	}
 
 	ctx := contextWithOauth2HttpClient(context.Background(), ctxHttpClient)
@@ -321,4 +348,22 @@ func SetInsecureSkipTLSVerifyPolicy(isInsecure bool) {
 
 func IsInsecureSkipTLSVerifyPolicy() bool {
 	return insecureSkipTLSVerify
+}
+
+func SetServerNameOverride(serverNameOverride string) {
+	oktetoLog.Debugf("server name override: %q", serverNameOverride)
+	if serverNameOverride == "" {
+		return
+	}
+	host, port, err := net.SplitHostPort(serverNameOverride)
+	if err != nil {
+		oktetoLog.Fatalf("invalid server name %q: %s", serverNameOverride, err)
+		return
+	}
+	oktetoLog.Warning("Server name overriden to host=%s port=%s", host, port)
+	serverName = net.JoinHostPort(host, port)
+}
+
+func GetServerNameOverride() string {
+	return serverName
 }

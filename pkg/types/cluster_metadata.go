@@ -11,24 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package repository
+package types
 
-import "context"
-
-type oktetoRemoteRepoController struct {
-	gitCommit string
-}
-
-func newOktetoRemoteRepoController(localCommit string) oktetoRemoteRepoController {
-	return oktetoRemoteRepoController{
-		gitCommit: localCommit,
-	}
-}
-
-func (or oktetoRemoteRepoController) isClean(_ context.Context) (bool, error) {
-	return or.gitCommit != "", nil
-}
-
-func (or oktetoRemoteRepoController) getSHA() (string, error) {
-	return or.gitCommit, nil
+// ClusterMetadata represents the okteto cluster metadata
+type ClusterMetadata struct {
+	Certificate []byte
+	ServerName  string
 }
