@@ -50,12 +50,13 @@ type fakeWorktree struct {
 	err    error
 }
 
-func (fw fakeWorktree) Status() (gitStatusInterface, error) {
+func (fw fakeWorktree) Status() (oktetoGitStatus, error) {
 	return fw.status, fw.err
 }
 
 type fakeStatus struct {
 	isClean bool
+	getRoot string
 }
 
 func (fs fakeStatus) IsClean() bool {

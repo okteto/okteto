@@ -15,7 +15,10 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -33,29 +36,42 @@ func newGitRepoController() gitRepoController {
 	}
 }
 
+type CleanStatus struct {
+	IsClean bool
+	Err     error
+}
+
 // IsClean checks if the repository have changes over the commit
 func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
-	select {
-	case <-ctxWithTimeout.Done():
-		return false, nil
-	default:
+
+	ch := make(chan CleanStatus)
+
+	go func() {
 		repo, err := r.repoGetter.get(r.path)
 		if err != nil {
-			return false, fmt.Errorf("failed to analyze git repo: %w", err)
+			ch <- CleanStatus{false, fmt.Errorf("failed to analyze git repo: %w", err)}
 		}
 		worktree, err := repo.Worktree()
 		if err != nil {
-			return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+			ch <- CleanStatus{false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)}
 		}
 
 		status, err := worktree.Status()
 		if err != nil {
-			return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
+			ch <- CleanStatus{false, fmt.Errorf("failed to infer the git repo's status: %w", err)}
 		}
 
-		return status.IsClean(), nil
+		ch <- CleanStatus{status.IsClean(), nil}
+	}()
+
+	select {
+	case <-ctxWithTimeout.Done():
+		return false, ctxWithTimeout.Err()
+	case res := <-ch:
+		return res.IsClean, res.Err
+
 	}
 }
 
@@ -113,12 +129,55 @@ type oktetoGitWorktree struct {
 	worktree *git.Worktree
 }
 
-func (ogr oktetoGitWorktree) Status() (gitStatusInterface, error) {
-	status, err := ogr.worktree.Status()
-	if err != nil {
-		return nil, err
+func (ogr oktetoGitWorktree) GetRoot() string {
+	return ogr.worktree.Filesystem.Root()
+}
+
+func fixDubiousOwnershipConfig(path string) error {
+	c := exec.Command("git", "config", "--global", "--add", "safe.directory", path)
+	c.Dir = path
+	return c.Run()
+}
+
+func runGitStatusCommand(path string, fixAttempt int) (string, error) {
+	if fixAttempt > 0 {
+		return "", fmt.Errorf("failed to get status: too many attempts")
 	}
-	return oktetoGitStatus{status: status}, nil
+	c := exec.Command("git", "status", "--porcelain", "-z")
+	c.Dir = path
+	output, err := c.Output()
+
+	if errors.Is(err, errors.New("detected dubious ownership in repository")) {
+		err = fixDubiousOwnershipConfig(path)
+		if err != nil {
+			return "", fmt.Errorf("failed to get status: cannot recover")
+		}
+		fixAttempt++
+		return runGitStatusCommand(path, fixAttempt)
+	}
+
+	return string(output), err
+}
+
+func (ogr oktetoGitWorktree) Status() (oktetoGitStatus, error) {
+	output, err := runGitStatusCommand(ogr.GetRoot(), 0)
+	if err != nil {
+		return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
+	}
+
+	lines := strings.Split(string(output), "\000")
+	stat := make(map[string]*git.FileStatus, len(lines))
+	for _, line := range lines {
+		// line example values can be: "M modified-file.go", "?? new-file.go", etc
+		parts := strings.SplitN(strings.TrimLeft(line, " "), " ", 2)
+		if len(parts) == 2 {
+			stat[strings.Trim(parts[1], " ")] = &git.FileStatus{
+				Staging: git.StatusCode([]byte(parts[0])[0]),
+			}
+		}
+	}
+
+	return oktetoGitStatus{status: stat}, err
 }
 
 type oktetoGitStatus struct {
@@ -134,8 +193,6 @@ type gitRepositoryInterface interface {
 	Head() (*plumbing.Reference, error)
 }
 type gitWorktreeInterface interface {
-	Status() (gitStatusInterface, error)
-}
-type gitStatusInterface interface {
-	IsClean() bool
+	Status() (oktetoGitStatus, error)
+	GetRoot() string
 }
