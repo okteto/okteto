@@ -179,6 +179,39 @@ func (p *Proxy) SetDivert(driver divert.Driver) {
 	p.proxyHandler.SetDivert(driver)
 }
 
+// getReverseProxy returns the http proxy use for deploying. It's the same as
+// the director from httputil.SingleHostReverseProxy except that it rewrites the
+// host header. This is needed for when kubernetes is exposed behind the okteto
+// ingress
+func (ph *proxyHandler) getReverseProxy(target *url.URL, transport http.RoundTripper) *httputil.ReverseProxy {
+	targetQuery := target.RawQuery
+	director := func(req *http.Request) {
+		req.URL.Scheme = target.Scheme
+		req.URL.Host = target.Host
+		req.URL.Path, req.URL.RawPath = joinURLPath(target, req.URL)
+		if targetQuery == "" || req.URL.RawQuery == "" {
+			req.URL.RawQuery = targetQuery + req.URL.RawQuery
+		} else {
+			req.URL.RawQuery = targetQuery + "&" + req.URL.RawQuery
+		}
+		if _, ok := req.Header["User-Agent"]; !ok {
+			// explicitly disable User-Agent so it's not set to default value
+			req.Header.Set("User-Agent", "")
+		}
+
+		// Rewrite host header
+		req.Host = target.Host
+	}
+
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
+
+	return &httputil.ReverseProxy{
+		Director:  director,
+		Transport: transport,
+	}
+}
 func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config) (http.Handler, error) {
 	// By default we don't disable HTTP/2
 	trans, err := newProtocolTransport(clusterConfig, false)
@@ -193,8 +226,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 		Host:   strings.TrimPrefix(clusterConfig.Host, "https://"),
 		Scheme: "https",
 	}
-	proxy := httputil.NewSingleHostReverseProxy(destinationURL)
-	proxy.Transport = trans
+	proxy := ph.getReverseProxy(destinationURL, trans)
 
 	oktetoLog.Debugf("forwarding host: %s", clusterConfig.Host)
 
@@ -225,8 +257,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 				rw.WriteHeader(500)
 				return
 			}
-			reverseProxy = httputil.NewSingleHostReverseProxy(destinationURL)
-			reverseProxy.Transport = t
+			reverseProxy = ph.getReverseProxy(destinationURL, t)
 		}
 
 		// Modify all resources updated or created to include the label.
@@ -509,4 +540,37 @@ func newProtocolTransport(clusterConfig *rest.Config, disableHTTP2 bool) (http.R
 
 func isSPDY(r *http.Request) bool {
 	return strings.HasPrefix(strings.ToLower(r.Header.Get(headerUpgrade)), "spdy/")
+}
+
+func singleJoiningSlash(a, b string) string {
+	aslash := strings.HasSuffix(a, "/")
+	bslash := strings.HasPrefix(b, "/")
+	switch {
+	case aslash && bslash:
+		return a + b[1:]
+	case !aslash && !bslash:
+		return a + "/" + b
+	}
+	return a + b
+}
+
+func joinURLPath(a, b *url.URL) (path, rawpath string) {
+	if a.RawPath == "" && b.RawPath == "" {
+		return singleJoiningSlash(a.Path, b.Path), ""
+	}
+	// Same as singleJoiningSlash, but uses EscapedPath to determine
+	// whether a slash should be added
+	apath := a.EscapedPath()
+	bpath := b.EscapedPath()
+
+	aslash := strings.HasSuffix(apath, "/")
+	bslash := strings.HasPrefix(bpath, "/")
+
+	switch {
+	case aslash && bslash:
+		return a.Path + b.Path[1:], apath + bpath[1:]
+	case !aslash && !bslash:
+		return a.Path + "/" + b.Path, apath + "/" + bpath
+	}
+	return a.Path + b.Path, apath + bpath
 }
