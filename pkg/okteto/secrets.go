@@ -239,6 +239,7 @@ func (c *userClient) GetClusterCertificate(ctx context.Context, cluster, ns stri
 	return b, nil
 }
 
+// GetClusterMetadata returns the metadata with the cluster configuration
 func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.ClusterMetadata, error) {
 	var queryStruct metadataQuery
 	vars := map[string]interface{}{
@@ -249,7 +250,11 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 
 	if err != nil {
 		if strings.Contains(err.Error(), "Cannot query field \"metadata\" on type \"Query\"") {
-			return types.ClusterMetadata{}, nil
+			// when query is not present by backend return the default cluster metadata
+			return types.ClusterMetadata{
+				PipelineInstallerImage: constants.OktetoPipelineInstallerImage,
+				PipelineRunnerImage:    constants.OktetoPipelineRunnerImage,
+			}, nil
 		}
 		return types.ClusterMetadata{}, err
 	}
@@ -275,6 +280,9 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 		case "pipelineRunnerImage":
 			metadata.PipelineRunnerImage = string(v.Value)
 		}
+	}
+	if metadata.PipelineInstallerImage == "" || metadata.PipelineRunnerImage == "" {
+		return metadata, fmt.Errorf("missing metadata")
 	}
 	return metadata, nil
 }
