@@ -36,6 +36,11 @@ func (d *Driver) divertEndpoints(ctx context.Context, name string) error {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
+			// the endpoint was created, refresh the cache
+			newE, err = d.client.CoreV1().Endpoints(d.namespace).Get(ctx, newE.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil
+			}
 		}
 		d.cache.developerEndpoints[name] = newE
 		return nil
@@ -51,6 +56,11 @@ func (d *Driver) divertEndpoints(ctx context.Context, name string) error {
 	if _, err := d.client.CoreV1().Endpoints(d.namespace).Update(ctx, updatedE, metav1.UpdateOptions{}); err != nil {
 		if !k8sErrors.IsConflict(err) {
 			return err
+		}
+		// the endpoint was updated, refresh the cache
+		updatedE, err = d.client.CoreV1().Endpoints(d.namespace).Get(ctx, updatedE.Name, metav1.GetOptions{})
+		if err != nil {
+			return nil
 		}
 	}
 	d.cache.developerEndpoints[name] = updatedE

@@ -679,4 +679,55 @@ func Test_divertIngresses(t *testing.T) {
 	if !reflect.DeepEqual(expectedE3, resultE3) {
 		t.Fatalf("Didn't compute e3 correctly: \n%v\n%v", expectedE3, resultE3)
 	}
+
+	// Eliminate elements from the cache to force RCs
+	d.cache.developerIngresses = map[string]*networkingv1.Ingress{}
+	d.cache.developerServices = map[string]*apiv1.Service{}
+	d.cache.developerEndpoints = map[string]*apiv1.Endpoints{}
+	d.Deploy(ctx)
+
+	resultI1, _ = c.NetworkingV1().Ingresses("cindy").Get(ctx, "i1", metav1.GetOptions{})
+	if !reflect.DeepEqual(expectedI1, resultI1) {
+		t.Fatalf("Didn't compute i1 correctly: \n%v\n%v", expectedI1, resultI1)
+	}
+
+	resultS1, _ = c.CoreV1().Services("cindy").Get(ctx, "s1", metav1.GetOptions{})
+	if !reflect.DeepEqual(s1, resultS1) {
+		t.Fatalf("Didn't compute s1 correctly: \n%v\n%v", s1, resultS1)
+	}
+
+	resultE1, _ = c.CoreV1().Endpoints("cindy").Get(ctx, "s1", metav1.GetOptions{})
+	if !reflect.DeepEqual(e1, resultE1) {
+		t.Fatalf("Didn't compute e1 correctly: \n%v\n%v", e1, resultE1)
+	}
+
+	resultI2, _ = c.NetworkingV1().Ingresses("cindy").Get(ctx, "i2", metav1.GetOptions{})
+	if !reflect.DeepEqual(expectedI2, resultI2) {
+		t.Fatalf("Didn't compute i2 correctly: \n%v\n%v", expectedI2, resultI2)
+	}
+
+	resultS2, _ = c.CoreV1().Services("cindy").Get(ctx, "s2", metav1.GetOptions{})
+	if !reflect.DeepEqual(expectedS2, resultS2) {
+		t.Fatalf("Didn't compute s2 correctly: \n%v\n%v", expectedS2, resultS2)
+	}
+
+	resultE2, _ = c.CoreV1().Endpoints("cindy").Get(ctx, "s2", metav1.GetOptions{})
+	if !reflect.DeepEqual(expectedE2, resultE2) {
+		t.Fatalf("Didn't compute e2 correctly: \n%v\n%v", expectedE2, resultE2)
+	}
+
+	resultI3, _ = c.NetworkingV1().Ingresses("cindy").Get(ctx, "i3", metav1.GetOptions{})
+	if !reflect.DeepEqual(expectedI3, resultI3) {
+		t.Fatalf("Didn't compute i3 correctly: \n%v\n%v", expectedI3, resultI3)
+	}
+
+	resultS3, _ = c.CoreV1().Services("cindy").Get(ctx, "s3", metav1.GetOptions{})
+	if !reflect.DeepEqual(expectedS3, resultS3) {
+		t.Fatalf("Didn't compute s3 correctly: \n%v\n%v", expectedS3, resultS3)
+	}
+
+	resultE3, _ = c.CoreV1().Endpoints("cindy").Get(ctx, "s3", metav1.GetOptions{})
+	if !reflect.DeepEqual(expectedE3, resultE3) {
+		t.Fatalf("Didn't compute e3 correctly: \n%v\n%v", expectedE3, resultE3)
+	}
 }
