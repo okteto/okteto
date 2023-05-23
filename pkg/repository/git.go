@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"os/exec"
 	"strings"
 	"time"
@@ -36,7 +37,7 @@ func newGitRepoController() gitRepoController {
 	}
 }
 
-type CleanStatus struct {
+type cleanStatus struct {
 	IsClean bool
 	Err     error
 }
@@ -46,28 +47,35 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	ch := make(chan CleanStatus)
+	ch := make(chan cleanStatus)
+	defer close(ch)
 
 	go func() {
 		repo, err := r.repoGetter.get(r.path)
 		if err != nil {
-			ch <- CleanStatus{false, fmt.Errorf("failed to analyze git repo: %w", err)}
+			ch <- cleanStatus{false, fmt.Errorf("failed to analyze git repo: %w", err)}
+			return
 		}
+
 		worktree, err := repo.Worktree()
 		if err != nil {
-			ch <- CleanStatus{false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)}
+			ch <- cleanStatus{false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)}
+			return
 		}
 
-		status, err := worktree.Status()
+		status, err := worktree.Status(ctx)
 		if err != nil {
-			ch <- CleanStatus{false, fmt.Errorf("failed to infer the git repo's status: %w", err)}
+			ch <- cleanStatus{false, fmt.Errorf("failed to infer the git repo's status: %w", err)}
+			return
 		}
 
-		ch <- CleanStatus{status.IsClean(), nil}
+		ch <- cleanStatus{status.IsClean(), nil}
+		return
 	}()
 
 	select {
 	case <-ctxWithTimeout.Done():
+		oktetoLog.Warning("Timeout exceeded calculating git status: assuming dirty commit")
 		return false, ctxWithTimeout.Err()
 	case res := <-ch:
 		return res.IsClean, res.Err
@@ -139,28 +147,41 @@ func fixDubiousOwnershipConfig(path string) error {
 	return c.Run()
 }
 
-func runGitStatusCommand(path string, fixAttempt int) (string, error) {
+func runGitStatusCommand(ctx context.Context, gitPath string, dirPath string, fixAttempt int) (string, error) {
 	if fixAttempt > 0 {
 		return "", fmt.Errorf("failed to get status: too many attempts")
 	}
-	c := exec.Command("git", "status", "--porcelain", "-z")
-	c.Dir = path
+	c := exec.CommandContext(ctx, gitPath, "status", "--porcelain", "-z")
+	c.Dir = dirPath
 	output, err := c.Output()
 
 	if errors.Is(err, errors.New("detected dubious ownership in repository")) {
-		err = fixDubiousOwnershipConfig(path)
+		err = fixDubiousOwnershipConfig(dirPath)
 		if err != nil {
 			return "", fmt.Errorf("failed to get status: cannot recover")
 		}
 		fixAttempt++
-		return runGitStatusCommand(path, fixAttempt)
+		return runGitStatusCommand(ctx, gitPath, dirPath, fixAttempt)
 	}
 
 	return string(output), err
 }
 
-func (ogr oktetoGitWorktree) Status() (oktetoGitStatus, error) {
-	output, err := runGitStatusCommand(ogr.GetRoot(), 0)
+func (ogr oktetoGitWorktree) Status(ctx context.Context) (oktetoGitStatus, error) {
+	// using git directly is faster, so we check if it's available
+	gitPath, err := exec.LookPath("git")
+	if err != nil {
+		// git is not available, so we fall back on git-go
+		oktetoLog.Warning("Calculating git status: git is not installed, for better performances consider installing it")
+		status, err := ogr.worktree.Status()
+		if err != nil {
+			return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
+		}
+
+		return oktetoGitStatus{status: status}, nil
+	}
+
+	output, err := runGitStatusCommand(ctx, gitPath, ogr.GetRoot(), 0)
 	if err != nil {
 		return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
 	}
@@ -174,10 +195,12 @@ func (ogr oktetoGitWorktree) Status() (oktetoGitStatus, error) {
 			stat[strings.Trim(parts[1], " ")] = &git.FileStatus{
 				Staging: git.StatusCode([]byte(parts[0])[0]),
 			}
+		} else {
+			return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: unexpected status line")
 		}
 	}
 
-	return oktetoGitStatus{status: stat}, err
+	return oktetoGitStatus{status: stat}, nil
 }
 
 type oktetoGitStatus struct {
@@ -193,6 +216,6 @@ type gitRepositoryInterface interface {
 	Head() (*plumbing.Reference, error)
 }
 type gitWorktreeInterface interface {
-	Status() (oktetoGitStatus, error)
+	Status(context.Context) (oktetoGitStatus, error)
 	GetRoot() string
 }
