@@ -229,6 +229,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			reverseProxy.Transport = t
 		}
 
+		r.Host = destinationURL.Host
 		// Modify all resources updated or created to include the label.
 		if r.Method == "PUT" || r.Method == "POST" {
 			b, err := io.ReadAll(r.Body)
@@ -255,7 +256,6 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			r.Body = io.NopCloser(bytes.NewBuffer(b))
 		}
 
-		r.Host = destinationURL.Host
 		// Redirect request to the k8s server (based on the transport HTTP generated from the config)
 		reverseProxy.ServeHTTP(rw, r)
 	})
