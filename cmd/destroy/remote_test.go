@@ -335,7 +335,7 @@ func TestCreateDockerfile(t *testing.T) {
 				registry:             newFakeRegistry(),
 			}
 			t.Setenv(model.OktetoActionNameEnvVar, tt.actionNameValue)
-			dockerfileName, err := rdc.createDockerfile("/test", tt.config.opts)
+			dockerfileName, err := rdc.createDockerfile("/test", tt.config.opts, "")
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.dockerfileName, dockerfileName)
 

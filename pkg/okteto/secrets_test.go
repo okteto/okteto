@@ -340,14 +340,17 @@ func TestGetClusterMetadata(t *testing.T) {
 		expected expected
 	}{
 		{
-			name: "skips error if schema does not match",
+			name: "skips error if schema does not match and return default values",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					err: fmt.Errorf("Cannot query field \"metadata\" on type \"Query\""),
 				},
 			},
 			expected: expected{
-				metadata: types.ClusterMetadata{},
+				metadata: types.ClusterMetadata{
+					PipelineInstallerImage: "okteto/installer:1.8.9",
+					PipelineRunnerImage:    "okteto/pipeline-runner:1.0.0",
+				},
 			},
 		},
 		{
@@ -362,7 +365,42 @@ func TestGetClusterMetadata(t *testing.T) {
 			},
 		},
 		{
-			name: "certificate and servername",
+			name: "all properties are returned",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &metadataQuery{
+						Metadata: []metadataQueryItem{
+							{
+								Name:  "internalCertificateBase64",
+								Value: graphql.String(base64.StdEncoding.EncodeToString([]byte("cert"))),
+							},
+							{
+								Name:  "internalIngressControllerNetworkAddress",
+								Value: "1.1.1.1",
+							},
+							{
+								Name:  "pipelineInstallerImage",
+								Value: "installer-image",
+							},
+							{
+								Name:  "pipelineRunnerImage",
+								Value: "installer-runner-image",
+							},
+						},
+					},
+				},
+			},
+			expected: expected{
+				metadata: types.ClusterMetadata{
+					Certificate:            []byte("cert"),
+					ServerName:             "1.1.1.1",
+					PipelineInstallerImage: "installer-image",
+					PipelineRunnerImage:    "installer-runner-image",
+				},
+			},
+		},
+		{
+			name: "pipelineInstallerImage and pipelineRunnerImage cant be empty",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &metadataQuery{
@@ -384,6 +422,7 @@ func TestGetClusterMetadata(t *testing.T) {
 					Certificate: []byte("cert"),
 					ServerName:  "1.1.1.1",
 				},
+				expectErr: true,
 			},
 		},
 	}
@@ -401,6 +440,8 @@ func TestGetClusterMetadata(t *testing.T) {
 			}
 			assert.Equal(t, tc.expected.metadata.Certificate, result.Certificate)
 			assert.Equal(t, tc.expected.metadata.ServerName, result.ServerName)
+			assert.Equal(t, tc.expected.metadata.PipelineInstallerImage, result.PipelineInstallerImage)
+			assert.Equal(t, tc.expected.metadata.PipelineRunnerImage, result.PipelineRunnerImage)
 		})
 	}
 

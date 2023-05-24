@@ -36,6 +36,8 @@ const (
 	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
+FROM {{ .InstallerImage }} as installer
+
 FROM alpine as certs
 RUN apk update && apk add ca-certificates
 
@@ -43,6 +45,7 @@ FROM {{ .UserDestroyImage }} as deploy
 
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=certs /etc/ssl/certs /etc/ssl/certs
+COPY --from=installer /app/bin/* /okteto/bin/
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
 {{range $key, $val := .OktetoBuildEnvVars }}
@@ -73,6 +76,7 @@ RUN okteto destroy --log-output=json --server-name="$INTERNAL_SERVER_NAME" {{ .D
 type dockerfileTemplateProperties struct {
 	OktetoCLIImage     string
 	UserDestroyImage   string
+	InstallerImage     string
 	OktetoBuildEnvVars map[string]string
 	ContextEnvVar      string
 	ContextValue       string
@@ -117,9 +121,13 @@ func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
 }
 
 func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) error {
+	sc, err := rd.clusterMetadata(ctx)
+	if err != nil {
+		return err
+	}
 
 	if rd.destroyImage == "" {
-		rd.destroyImage = constants.OktetoPipelineRunnerImage
+		rd.destroyImage = sc.PipelineRunnerImage
 	}
 
 	cwd, err := rd.workingDirectoryCtrl.Get()
@@ -132,7 +140,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		return err
 	}
 
-	dockerfile, err := rd.createDockerfile(tmpDir, opts)
+	dockerfile, err := rd.createDockerfile(tmpDir, opts, sc.PipelineInstallerImage)
 	if err != nil {
 		return err
 	}
@@ -149,11 +157,6 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 
 	// undo modification of CWD for Build command
 	if err := rd.workingDirectoryCtrl.Change(cwd); err != nil {
-		return err
-	}
-
-	sc, err := rd.clusterMetadata(ctx)
-	if err != nil {
 		return err
 	}
 
@@ -192,7 +195,7 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	return nil
 }
 
-func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) (string, error) {
+func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options, installerImage string) (string, error) {
 	cwd, err := rd.workingDirectoryCtrl.Get()
 	if err != nil {
 		return "", err
@@ -206,6 +209,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
 	dockerfileSyntax := dockerfileTemplateProperties{
 		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
+		InstallerImage:     installerImage,
 		UserDestroyImage:   rd.destroyImage,
 		ContextEnvVar:      model.OktetoContextEnvVar,
 		ContextValue:       okteto.Context().Name,
