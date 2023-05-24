@@ -107,6 +107,11 @@ const (
 	//OktetoDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
 	OktetoDivertAnnotationTemplate = "divert.okteto.com/%s-%s"
 
+	//OktetoHybridModeFieldValue represents the hybrid mode field value
+	OktetoHybridModeFieldValue = "hybrid"
+
+	//OktetoConfigMapVariablesField represents the field name related to variables seetion in config map
+	OktetoConfigMapVariablesField = "variables"
 	//OktetoDependencyEnvsKey the key on the conqfig map that will store OKTETO_ENV values
 	OktetoDependencyEnvsKey = "dependencyEnvs"
 )

@@ -27,6 +27,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	"github.com/okteto/okteto/pkg/cache"
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -724,10 +725,55 @@ func checkFileAndNotDirectory(path string) error {
 func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type devType Dev // Prevent recursion
 	dev := devType(*d)
-	err := unmarshal(&dev)
-	if err != nil {
-		return fmt.Errorf("Unmarshal error: '%s'", err)
+
+	type modeInfo struct {
+		Mode string `json:"mode,omitempty" yaml:"mode,omitempty"`
 	}
+
+	mode := &modeInfo{}
+	err := unmarshal(mode)
+	if err != nil {
+		if mode.Mode == constants.OktetoHybridModeFieldValue {
+			type hybridModeInfo struct {
+				Workdir     string            `json:"workdir,omitempty" yaml:"workdir,omitempty"`
+				Selector    Selector          `json:"selector,omitempty" yaml:"selector,omitempty"`
+				Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
+				Environment Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
+				Command     Command           `json:"command,omitempty" yaml:"command,omitempty"`
+				Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
+				Mode        string            `json:"mode,omitempty" yaml:"mode,omitempty"`
+			}
+
+			hybridModeDev := &hybridModeInfo{}
+			err := unmarshal(hybridModeDev)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	err = unmarshal(&dev)
+	if err != nil {
+		return err
+	}
+
+	if dev.Mode == constants.OktetoHybridModeFieldValue {
+		localDir, err := filepath.Abs(dev.Workdir)
+		if err != nil {
+			return err
+		}
+		info, err := os.Stat(localDir)
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return fmt.Errorf("dev workdir is not a dir")
+		}
+		dev.Workdir = localDir
+		dev.Image.Name = "busybox"
+
+	}
+
 	*d = Dev(dev)
 
 	return nil

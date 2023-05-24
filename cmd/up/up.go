@@ -245,6 +245,7 @@ func Up() *cobra.Command {
 				StartTime:      time.Now(),
 				Registry:       registry.NewOktetoRegistry(okteto.Config{}),
 				Options:        upOptions,
+				Fs:             afero.NewOsFs(),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -366,6 +367,10 @@ func Up() *cobra.Command {
 			}
 
 			if err := addSyncFieldHash(dev); err != nil {
+				return err
+			}
+
+			if err := setSyncDefaultsByDevMode(dev, up.getSyncTempDir); err != nil {
 				return err
 			}
 
@@ -503,6 +508,24 @@ func loadManifestOverrides(dev *model.Dev, upOptions *UpOptions) error {
 	return nil
 }
 
+func setSyncDefaultsByDevMode(dev *model.Dev, getSyncTempDir func() (string, error)) error {
+	if dev.IsHybridModeEnabled() {
+		syncTempDir, err := getSyncTempDir()
+		if err != nil || syncTempDir == "" {
+			return err
+		}
+
+		dev.PersistentVolumeInfo.Enabled = false
+		dev.Sync.Folders = []model.SyncFolder{
+			{
+				LocalPath:  syncTempDir,
+				RemotePath: "/okteto",
+			},
+		}
+	}
+	return nil
+}
+
 func getOverridedEnvVarsFromCmd(manifestEnvVars model.Environment, commandEnvVariables []string) (*model.Environment, error) {
 	envVarsToValues := make(map[string]string)
 	for _, manifestEnv := range manifestEnvVars {
@@ -553,7 +576,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		K8sClientProvider:  k8sClientProvider,
 		Builder:            buildv2.NewBuilderFromScratch(),
 		GetExternalControl: deploy.NewDeployExternalK8sControl,
-		Fs:                 afero.NewOsFs(),
+		Fs:                 up.Fs,
 		CfgMapHandler:      deploy.NewConfigmapHandler(k8sProvider),
 		PipelineCMD:        pc,
 		DeployWaiter:       deploy.NewDeployWaiter(k8sClientProvider),
@@ -600,7 +623,8 @@ func (up *upContext) start() error {
 		HasDeploySection: (up.Manifest.IsV2 &&
 			up.Manifest.Deploy != nil &&
 			(len(up.Manifest.Deploy.Commands) > 0 || up.Manifest.Deploy.ComposeSection.ComposesInfo != nil)),
-		HasReverse: len(up.Dev.Reverse) > 0,
+		HasReverse:  len(up.Dev.Reverse) > 0,
+		IsHybridDev: up.Dev.IsHybridModeEnabled(),
 	})
 
 	go up.activateLoop()

@@ -91,12 +91,14 @@ func (or OktetoRegistry) GetImageMetadata(image string) (ImageMetadata, error) {
 	ports := or.imageCtrl.getExposedPortsFromCfg(cfgFile)
 	workdir := cfgFile.Config.WorkingDir
 	cmd := cfgFile.Config.Cmd
+	envs := cfgFile.Config.Env
 
 	return ImageMetadata{
 		Image:   image,
 		CMD:     cmd,
 		Workdir: workdir,
 		Ports:   ports,
+		Envs:    envs,
 	}, nil
 }
 

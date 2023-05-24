@@ -29,6 +29,7 @@ type ImageMetadata struct {
 	CMD     []string
 	Workdir string
 	Ports   []Port
+	Envs    []string
 }
 
 type Port struct {
