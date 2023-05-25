@@ -48,14 +48,14 @@ type localDeployer struct {
 	GetExternalControl func(cfg *rest.Config) ExternalResourceInterface
 
 	cwd          string
-	deployWaiter deployWaiter
+	deployWaiter DeployWaiter
 	isRemote     bool
 	Fs           afero.Fs
 	DivertDriver divert.Driver
 }
 
 // newLocalDeployer initializes a local deployer from a name and a boolean indicating if we should run with bash or not
-func newLocalDeployer(ctx context.Context, cwd string, options *Options, cmapHandler configMapHandler) (*localDeployer, error) {
+func newLocalDeployer(ctx context.Context, options *Options, cmapHandler configMapHandler) (*localDeployer, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the current working directory: %w", err)
@@ -84,13 +84,13 @@ func newLocalDeployer(ctx context.Context, cwd string, options *Options, cmapHan
 	clientProvider := okteto.NewK8sClientProvider()
 	return &localDeployer{
 		Kubeconfig:         kubeconfig,
-		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash),
+		Executor:           executor.NewExecutor(oktetoLog.GetOutputFormat(), options.RunWithoutBash, ""),
 		ConfigMapHandler:   cmapHandler,
 		Proxy:              proxy,
 		TempKubeconfigFile: GetTempKubeConfigFile(tempKubeconfigName),
 		K8sClientProvider:  clientProvider,
 		GetExternalControl: NewDeployExternalK8sControl,
-		deployWaiter:       newDeployWaiter(clientProvider),
+		deployWaiter:       NewDeployWaiter(clientProvider),
 		isRemote:           true,
 		Fs:                 afero.NewOsFs(),
 	}, nil

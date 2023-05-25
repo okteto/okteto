@@ -87,6 +87,21 @@ func RunOktetoUp(oktetoPath string, upOptions *UpOptions) (*UpCommandProcessResu
 	}, nil
 }
 
+func RunOktetoUpAndWait(oktetoPath string, upOptions *UpOptions) error {
+
+	cmd := getUpCmd(oktetoPath, upOptions)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &out
+
+	log.Printf("Running up command: %s", cmd.String())
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("okteto up failed to start: %s", err)
+	}
+
+	return cmd.Wait()
+}
+
 func getUpCmd(oktetoPath string, upOptions *UpOptions) *exec.Cmd {
 	cmd := exec.Command(oktetoPath, "up")
 	cmd.Env = os.Environ()

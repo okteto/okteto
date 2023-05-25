@@ -25,6 +25,7 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -1841,6 +1842,220 @@ func TestManifestMarshalling(t *testing.T) {
 	}
 }
 
+func TestDevModeUnmarshalling(t *testing.T) {
+	wd, err := os.Getwd()
+	require.NoError(t, err)
+
+	tests := []struct {
+		name     string
+		input    []byte
+		expected *Dev
+	}{
+		{
+			name: "hybrid mode enabled",
+			input: []byte(`mode: hybrid
+selector:
+  app.kubernetes.io/part-of: okteto
+  app.kubernetes.io/component: frontend
+command: ["sh", "-c", "yarn start"]
+reverse:
+  - 8080:8080`),
+			expected: &Dev{
+				Mode:    "hybrid",
+				Workdir: wd,
+				Selector: Selector{
+					"app.kubernetes.io/part-of":   "okteto",
+					"app.kubernetes.io/component": "frontend",
+				},
+				Command: Command{
+					Values: []string{"sh", "-c", "yarn start"},
+				},
+				Reverse: []Reverse{
+					{
+						Remote: 8080,
+						Local:  8080,
+					},
+				},
+				Image: &BuildInfo{
+					Name: "busybox",
+				},
+				Push:      &BuildInfo{},
+				Secrets:   []Secret{},
+				Probes:    &Probes{},
+				Lifecycle: &Lifecycle{},
+				Sync: Sync{
+					Folders: []SyncFolder{},
+				},
+				Forward:     []forward.Forward{},
+				Environment: Environment{},
+				Volumes:     []Volume{},
+				Services:    []*Dev{},
+				Metadata: &Metadata{
+					Labels:      Labels{},
+					Annotations: Annotations{},
+				},
+				PersistentVolumeInfo: &PersistentVolumeInfo{
+					Enabled: true,
+				},
+				InitContainer: InitContainer{
+					Image: "okteto/bin:1.4.2",
+				},
+			},
+		},
+		{
+			name: "sync mode enabled",
+			input: []byte(`mode: sync
+selector:
+  app.kubernetes.io/part-of: okteto
+  app.kubernetes.io/component: api
+image: okteto/golang:1
+environment:
+  - LOG_FORMATTER=text
+command: sh
+sync:
+  - ./api:/usr/src/app
+forward:
+  - 2345:2345`),
+			expected: &Dev{
+				Mode: "sync",
+				Selector: Selector{
+					"app.kubernetes.io/part-of":   "okteto",
+					"app.kubernetes.io/component": "api",
+				},
+				Command: Command{
+					Values: []string{"sh"},
+				},
+				Image: &BuildInfo{
+					Name: "okteto/golang:1",
+				},
+				Push:      &BuildInfo{},
+				Secrets:   []Secret{},
+				Probes:    &Probes{},
+				Lifecycle: &Lifecycle{},
+				Sync: Sync{
+					Compression:    true,
+					RescanInterval: 300,
+					Folders: []SyncFolder{
+						{
+							LocalPath:  "./api",
+							RemotePath: "/usr/src/app",
+						},
+					},
+				},
+				Forward: []forward.Forward{
+					{
+						Local:  2345,
+						Remote: 2345,
+					},
+				},
+				Environment: Environment{
+					{
+						Name:  "LOG_FORMATTER",
+						Value: "text",
+					},
+				},
+				Volumes:  []Volume{},
+				Services: []*Dev{},
+				Metadata: &Metadata{
+					Labels:      Labels{},
+					Annotations: Annotations{},
+				},
+				PersistentVolumeInfo: &PersistentVolumeInfo{
+					Enabled: true,
+				},
+				InitContainer: InitContainer{
+					Image: "okteto/bin:1.4.2",
+				},
+			},
+		},
+		{
+			name: "no mode, sync fallback",
+			input: []byte(`
+selector:
+  app.kubernetes.io/part-of: okteto
+  app.kubernetes.io/component: producer
+image: okteto/golang:1
+command: sh
+sync:
+  - ./producer:/usr/src/app
+forward:
+  - 2345:2345`),
+			expected: &Dev{
+				Selector: Selector{
+					"app.kubernetes.io/part-of":   "okteto",
+					"app.kubernetes.io/component": "producer",
+				},
+				Command: Command{
+					Values: []string{"sh"},
+				},
+				Image: &BuildInfo{
+					Name: "okteto/golang:1",
+				},
+				Push:      &BuildInfo{},
+				Secrets:   []Secret{},
+				Probes:    &Probes{},
+				Lifecycle: &Lifecycle{},
+				Sync: Sync{
+					Compression:    true,
+					RescanInterval: 300,
+					Folders: []SyncFolder{
+						{
+							LocalPath:  "./producer",
+							RemotePath: "/usr/src/app",
+						},
+					},
+				},
+				Forward: []forward.Forward{
+					{
+						Local:  2345,
+						Remote: 2345,
+					},
+				},
+				Environment: Environment{},
+				Volumes:     []Volume{},
+				Services:    []*Dev{},
+				Metadata: &Metadata{
+					Labels:      Labels{},
+					Annotations: Annotations{},
+				},
+				PersistentVolumeInfo: &PersistentVolumeInfo{
+					Enabled: true,
+				},
+				InitContainer: InitContainer{
+					Image: "okteto/bin:1.4.2",
+				},
+			},
+		},
+		{
+			name: "mode does not match with declaration",
+			input: []byte(`mode: hybrid
+selector:
+  app.kubernetes.io/part-of: okteto
+  app.kubernetes.io/component: producer
+image: okteto/golang:1
+command: sh
+sync:
+  - ./producer:/usr/src/app
+forward:
+  - 2345:2345`),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NewDev()
+			err := yaml.UnmarshalStrict(tt.input, result)
+			if tt.expected != nil {
+				assert.NoError(t, err)
+				if !assert.Equal(t, tt.expected, result) {
+					t.Fatal("Failed")
+				}
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
+}
+
 func TestDestroyInfoMarshalling(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -2440,6 +2655,7 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 		name     string
 		data     []byte
 		expected BuildArgs
+		env      map[string]string
 	}{
 		{
 			name: "list",
@@ -2450,16 +2666,50 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 					Value: "VALUE",
 				},
 			},
+			env: map[string]string{},
 		},
 		{
-			name: "list with env var",
+			name: "list with env var set",
+			data: []byte("- KEY=${VALUE2}"),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "actual-value",
+				},
+			},
+			env: map[string]string{"VALUE2": "actual-value"},
+		},
+		{
+			name: "list with env var unset",
 			data: []byte("- KEY=$VALUE"),
 			expected: BuildArgs{
 				{
 					Name:  "KEY",
-					Value: "$VALUE",
+					Value: "",
 				},
 			},
+			env: map[string]string{},
+		},
+		{
+			name: "list with multiple env vars",
+			data: []byte(`- KEY=$VALUE
+- KEY2=$VALUE2
+- KEY3=${VALUE3}`),
+			expected: BuildArgs{
+				{
+					Name:  "KEY",
+					Value: "",
+				},
+				{
+					Name:  "KEY2",
+					Value: "actual-value-2",
+				},
+				{
+					Name:  "KEY3",
+					Value: "actual-value-3",
+				},
+			},
+			env: map[string]string{"VALUE2": "actual-value-2", "VALUE3": "actual-value-3"},
 		},
 		{
 			name: "map",
@@ -2470,21 +2720,29 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 					Value: "VALUE",
 				},
 			},
+			env: map[string]string{},
 		},
 		{
 			name: "map with env var",
-			data: []byte("KEY: $VALUE"),
+			data: []byte("KEY: $MYVAR"),
 			expected: BuildArgs{
 				{
 					Name:  "KEY",
-					Value: "$VALUE",
+					Value: "actual-value",
 				},
+			},
+			env: map[string]string{
+				"MYVAR": "actual-value",
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			for k, v := range tt.env {
+				t.Setenv(k, v)
+			}
+
 			var buildArgs BuildArgs
 			if err := yaml.UnmarshalStrict(tt.data, &buildArgs); err != nil {
 				t.Fatal(err)

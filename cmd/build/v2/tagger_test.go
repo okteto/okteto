@@ -14,6 +14,7 @@
 package v2
 
 import (
+	"github.com/okteto/okteto/pkg/okteto"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -318,6 +319,42 @@ func TestImageTaggerWithVolumesGetPossibleTags(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tagger := newImageWithVolumesTagger(fakeConfig{})
 			assert.Equal(t, tc.expectedImages, tagger.getPossibleTags("test", "test", tc.sha))
+		})
+	}
+}
+
+func Test_getTargetRegistries(t *testing.T) {
+	tt := []struct {
+		name     string
+		isOkteto bool
+		expected []string
+	}{
+		{
+			name:     "vanilla-cluster",
+			isOkteto: false,
+			expected: []string{},
+		},
+		{
+			name:     "okteto-cluster",
+			isOkteto: true,
+			expected: []string{
+				"okteto.global",
+				"okteto.dev",
+			},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			okteto.CurrentStore = &okteto.OktetoContextStore{
+				Contexts: map[string]*okteto.OktetoContext{
+					"test": {
+						Namespace: "test",
+						IsOkteto:  tc.isOkteto,
+					},
+				},
+				CurrentContext: "test",
+			}
+			assert.Equal(t, tc.expected, getTargetRegistries())
 		})
 	}
 }

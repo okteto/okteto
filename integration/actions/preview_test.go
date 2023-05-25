@@ -60,7 +60,7 @@ func executeDeployPreviewAction(namespace string) error {
 
 	log.Printf("Deploying preview %s", namespace)
 	command := oktetoPath
-	args := []string{"preview", "deploy", namespace, "--scope", "personal", "--branch", "master", "--repository", fmt.Sprintf("%s%s", githubHTTPSURL, pipelineRepo), "--wait"}
+	args := []string{"preview", "deploy", namespace, "--scope", "personal", "--branch", "cli-e2e", "--repository", fmt.Sprintf("%s%s", githubHTTPSURL, pipelineRepo), "--wait"}
 	cmd := exec.Command(command, args...)
 	cmd.Env = os.Environ()
 	o, err := cmd.CombinedOutput()

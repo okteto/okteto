@@ -21,6 +21,7 @@ import (
 	"time"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
+	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/status"
@@ -194,6 +195,28 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 
 		dev.LoadRemote(ssh.GetPublicKey())
 		oktetoLog.StopSpinner()
+		if dev.IsHybridModeEnabled() {
+			var err error
+
+			k8sClient, _, err := okteto.GetK8sClient()
+			if err != nil {
+				return err
+			}
+
+			hybridCtx := &up.HybridExecCtx{
+				Dev:           dev,
+				Workdir:       dev.Workdir,
+				Name:          dev.Name,
+				Namespace:     dev.Namespace,
+				RunOktetoExec: true,
+				Client:        k8sClient,
+			}
+			executor, err := up.NewHybridExecutor(ctx, hybridCtx)
+			if err != nil {
+				return err
+			}
+			return executor.RunCommand(ctx, wrapped)
+		}
 		return ssh.Exec(ctx, dev.Interface, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 	}
 	oktetoLog.StopSpinner()

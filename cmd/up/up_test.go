@@ -399,3 +399,76 @@ func TestWakeNamespaceIfAppliesWithoutErrors(t *testing.T) {
 		})
 	}
 }
+
+func TestSetSyncDefaultsByDevMode(t *testing.T) {
+	fakeSyncFolderName := "test"
+	tests := []struct {
+		name           string
+		dev            *model.Dev
+		expectedDev    *model.Dev
+		syncFolderName string
+		expectedError  error
+	}{
+		{
+			name: "hybrid mode not enabled: return nil",
+			dev: &model.Dev{
+				Mode: "sync",
+			},
+			expectedDev: &model.Dev{
+				Mode: "sync",
+			},
+		},
+		{
+			name:           "hybrid mode enabled: return dev modified",
+			syncFolderName: fakeSyncFolderName,
+			dev: &model.Dev{
+				Mode: "hybrid",
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Enabled: true,
+				},
+			},
+			expectedDev: &model.Dev{
+				Mode: "hybrid",
+				Sync: model.Sync{
+					Folders: []model.SyncFolder{
+						{
+							LocalPath:  fakeSyncFolderName,
+							RemotePath: "/okteto",
+						},
+					},
+				},
+				PersistentVolumeInfo: &model.PersistentVolumeInfo{
+					Enabled: false,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			getSyncTempDirFake := func() (string, error) {
+				return tt.syncFolderName, tt.expectedError
+			}
+			err := setSyncDefaultsByDevMode(tt.dev, getSyncTempDirFake)
+			require.NoError(t, err)
+			require.Equal(t, tt.dev, tt.expectedDev)
+		})
+	}
+}
+
+func TestSetSyncDefaultsByDevModeError(t *testing.T) {
+	dev := &model.Dev{
+		Mode: "hybrid",
+		PersistentVolumeInfo: &model.PersistentVolumeInfo{
+			Enabled: true,
+		},
+	}
+
+	expectedDev := *dev
+	getSyncTempDirFake := func() (string, error) {
+		return "", assert.AnError
+	}
+	err := setSyncDefaultsByDevMode(dev, getSyncTempDirFake)
+	require.Error(t, err)
+	require.Equal(t, *dev, expectedDev)
+}

@@ -95,7 +95,9 @@ type Dev struct {
 	EnvFiles             EnvFiles              `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
 	Environment          Environment           `json:"environment,omitempty" yaml:"environment,omitempty"`
 	Volumes              []Volume              `json:"volumes,omitempty" yaml:"volumes,omitempty"`
-	Replicas             *int                  `json:"replicas,omitempty" yaml:"replicas,omitempty"`
+	Mode                 string                `json:"mode,omitempty" yaml:"mode,omitempty"`
+
+	Replicas *int `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 	// Deprecated fields
 	Healthchecks bool   `json:"healthchecks,omitempty" yaml:"healthchecks,omitempty"`
 	Labels       Labels `json:"labels,omitempty" yaml:"labels,omitempty"`
@@ -531,6 +533,10 @@ func (dev *Dev) loadImage() error {
 		dev.EmptyImage = true
 	}
 	return nil
+}
+
+func (dev *Dev) IsHybridModeEnabled() bool {
+	return dev.Mode == constants.OktetoHybridModeFieldValue
 }
 
 func (dev *Dev) SetDefaults() error {

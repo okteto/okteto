@@ -38,13 +38,6 @@ const (
 )
 
 func setDeployOptionsValuesFromManifest(ctx context.Context, deployOptions *Options, cwd string, c kubernetes.Interface) error {
-	if deployOptions.RunInRemote {
-		if deployOptions.Manifest.Deploy != nil {
-			if deployOptions.Manifest.Deploy.Image == "" {
-				deployOptions.Manifest.Deploy.Image = constants.OktetoPipelineRunnerImage
-			}
-		}
-	}
 
 	if deployOptions.Manifest.Context == "" {
 		deployOptions.Manifest.Context = okteto.Context().Name
@@ -125,7 +118,7 @@ func mergeServicesToDeployFromOptionsAndManifest(deployOptions *Options) {
 	}
 }
 
-func (dc *DeployCommand) addEnvVars(cwd string) {
+func (dc *DeployCommand) addEnvVars(ctx context.Context, cwd string) {
 	if os.Getenv(constants.OktetoGitBranchEnvVar) == "" {
 		branch, err := utils.GetBranch(cwd)
 		if err != nil {

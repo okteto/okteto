@@ -229,6 +229,7 @@ func (ph *proxyHandler) getProxyHandler(token string, clusterConfig *rest.Config
 			reverseProxy.Transport = t
 		}
 
+		r.Host = destinationURL.Host
 		// Modify all resources updated or created to include the label.
 		if r.Method == "PUT" || r.Method == "POST" {
 			b, err := io.ReadAll(r.Body)

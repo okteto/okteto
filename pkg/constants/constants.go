@@ -60,7 +60,10 @@ const (
 	OktetoCLIImageForRemoteTemplate = "okteto/okteto:%s"
 
 	// OktetoPipelineRunnerImage defines image to use for remote deployments if empty
-	OktetoPipelineRunnerImage = "okteto/installer:1.8.9"
+	OktetoPipelineRunnerImage = "okteto/pipeline-runner:1.0.0"
+
+	// OktetoPipelineInstallerImage defines image to use for binaries at remote deployment
+	OktetoPipelineInstallerImage = "okteto/installer:1.8.9"
 
 	// OktetoEnvFile defines the name for okteto env file
 	OktetoEnvFile = "OKTETO_ENV"
@@ -104,6 +107,11 @@ const (
 	//OktetoDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
 	OktetoDivertAnnotationTemplate = "divert.okteto.com/%s-%s"
 
+	//OktetoHybridModeFieldValue represents the hybrid mode field value
+	OktetoHybridModeFieldValue = "hybrid"
+
+	//OktetoConfigMapVariablesField represents the field name related to variables seetion in config map
+	OktetoConfigMapVariablesField = "variables"
 	//OktetoDependencyEnvsKey the key on the conqfig map that will store OKTETO_ENV values
 	OktetoDependencyEnvsKey = "dependencyEnvs"
 )

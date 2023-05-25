@@ -223,6 +223,73 @@ func TestGetContext(t *testing.T) {
 	}
 }
 
+func TestGetUserSecrets(t *testing.T) {
+	type input struct {
+		client *fakeGraphQLClient
+	}
+	type expected struct {
+		userSecrets []types.Secret
+		err         error
+	}
+	testCases := []struct {
+		name     string
+		cfg      input
+		expected expected
+	}{
+		{
+			name: "error in graphql",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					err: assert.AnError,
+				},
+			},
+			expected: expected{
+				userSecrets: nil,
+				err:         assert.AnError,
+			},
+		},
+		{
+			name: "query get user secrets",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &getSecretsQuery{
+						Secrets: []secretQuery{
+							{
+								Name:  "password",
+								Value: "test",
+							},
+							{
+								Name:  "pass.word",
+								Value: "test",
+							},
+						},
+					},
+				},
+			},
+			expected: expected{
+				userSecrets: []types.Secret{
+					{
+						Name:  "password",
+						Value: "test",
+					},
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			uc := &userClient{
+				client: tc.cfg.client,
+			}
+			userSecrets, err := uc.GetUserSecrets(ctx)
+			assert.ErrorIs(t, err, tc.expected.err)
+			assert.Equal(t, tc.expected.userSecrets, userSecrets)
+		})
+	}
+}
+
 func TestGetDeprecatedContext(t *testing.T) {
 	type input struct {
 		client *fakeGraphQLClient
@@ -340,14 +407,17 @@ func TestGetClusterMetadata(t *testing.T) {
 		expected expected
 	}{
 		{
-			name: "skips error if schema does not match",
+			name: "skips error if schema does not match and return default values",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					err: fmt.Errorf("Cannot query field \"metadata\" on type \"Query\""),
 				},
 			},
 			expected: expected{
-				metadata: types.ClusterMetadata{},
+				metadata: types.ClusterMetadata{
+					PipelineInstallerImage: "okteto/installer:1.8.9",
+					PipelineRunnerImage:    "okteto/pipeline-runner:1.0.0",
+				},
 			},
 		},
 		{
@@ -362,7 +432,42 @@ func TestGetClusterMetadata(t *testing.T) {
 			},
 		},
 		{
-			name: "certificate and servername",
+			name: "all properties are returned",
+			cfg: input{
+				client: &fakeGraphQLClient{
+					queryResult: &metadataQuery{
+						Metadata: []metadataQueryItem{
+							{
+								Name:  "internalCertificateBase64",
+								Value: graphql.String(base64.StdEncoding.EncodeToString([]byte("cert"))),
+							},
+							{
+								Name:  "internalIngressControllerNetworkAddress",
+								Value: "1.1.1.1",
+							},
+							{
+								Name:  "pipelineInstallerImage",
+								Value: "installer-image",
+							},
+							{
+								Name:  "pipelineRunnerImage",
+								Value: "installer-runner-image",
+							},
+						},
+					},
+				},
+			},
+			expected: expected{
+				metadata: types.ClusterMetadata{
+					Certificate:            []byte("cert"),
+					ServerName:             "1.1.1.1",
+					PipelineInstallerImage: "installer-image",
+					PipelineRunnerImage:    "installer-runner-image",
+				},
+			},
+		},
+		{
+			name: "pipelineInstallerImage and pipelineRunnerImage cant be empty",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &metadataQuery{
@@ -384,6 +489,7 @@ func TestGetClusterMetadata(t *testing.T) {
 					Certificate: []byte("cert"),
 					ServerName:  "1.1.1.1",
 				},
+				expectErr: true,
 			},
 		},
 	}
@@ -401,6 +507,8 @@ func TestGetClusterMetadata(t *testing.T) {
 			}
 			assert.Equal(t, tc.expected.metadata.Certificate, result.Certificate)
 			assert.Equal(t, tc.expected.metadata.ServerName, result.ServerName)
+			assert.Equal(t, tc.expected.metadata.PipelineInstallerImage, result.PipelineInstallerImage)
+			assert.Equal(t, tc.expected.metadata.PipelineRunnerImage, result.PipelineRunnerImage)
 		})
 	}
 

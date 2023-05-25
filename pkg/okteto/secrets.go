@@ -39,6 +39,10 @@ type getContextQuery struct {
 	Cred    credQuery     `graphql:"credentials(space: $cred)"`
 }
 
+type getSecretsQuery struct {
+	Secrets []secretQuery `graphql:"getGitDeploySecrets"`
+}
+
 type getContextFileQuery struct {
 	ContextFileJSON string `graphql:"contextFile"`
 }
@@ -161,6 +165,27 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 	return result, nil
 }
 
+// GetSecrets returns the secrets from Okteto API
+func (c *userClient) GetUserSecrets(ctx context.Context) ([]types.Secret, error) {
+	var queryStruct getSecretsQuery
+	err := query(ctx, &queryStruct, nil, c.client)
+	if err != nil {
+		return nil, err
+	}
+
+	secrets := make([]types.Secret, 0)
+	for _, secret := range queryStruct.Secrets {
+		if !strings.Contains(string(secret.Name), ".") {
+			secrets = append(secrets, types.Secret{
+				Name:  string(secret.Name),
+				Value: string(secret.Value),
+			})
+		}
+	}
+
+	return secrets, nil
+}
+
 // TODO: Remove this code when users are in okteto chart > 0.10.8
 func (c *userClient) deprecatedGetUserContext(ctx context.Context) (*types.UserContext, error) {
 	var queryStruct getDeprecatedContextQuery
@@ -239,6 +264,7 @@ func (c *userClient) GetClusterCertificate(ctx context.Context, cluster, ns stri
 	return b, nil
 }
 
+// GetClusterMetadata returns the metadata with the cluster configuration
 func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.ClusterMetadata, error) {
 	var queryStruct metadataQuery
 	vars := map[string]interface{}{
@@ -249,7 +275,11 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 
 	if err != nil {
 		if strings.Contains(err.Error(), "Cannot query field \"metadata\" on type \"Query\"") {
-			return types.ClusterMetadata{}, nil
+			// when query is not present by backend return the default cluster metadata
+			return types.ClusterMetadata{
+				PipelineInstallerImage: constants.OktetoPipelineInstallerImage,
+				PipelineRunnerImage:    constants.OktetoPipelineRunnerImage,
+			}, nil
 		}
 		return types.ClusterMetadata{}, err
 	}
@@ -270,7 +300,14 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 			metadata.Certificate = cert
 		case "internalIngressControllerNetworkAddress":
 			metadata.ServerName = string(v.Value)
+		case "pipelineInstallerImage":
+			metadata.PipelineInstallerImage = string(v.Value)
+		case "pipelineRunnerImage":
+			metadata.PipelineRunnerImage = string(v.Value)
 		}
+	}
+	if metadata.PipelineInstallerImage == "" || metadata.PipelineRunnerImage == "" {
+		return metadata, fmt.Errorf("missing metadata")
 	}
 	return metadata, nil
 }

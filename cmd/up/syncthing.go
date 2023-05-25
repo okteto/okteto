@@ -24,6 +24,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/syncthing"
+	"github.com/spf13/afero"
 )
 
 func (up *upContext) initializeSyncthing() error {
@@ -189,4 +190,8 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	progressBar.SetCurrent(100)
 
 	return nil
+}
+
+func (up *upContext) getSyncTempDir() (string, error) {
+	return afero.TempDir(up.Fs, "", "")
 }
