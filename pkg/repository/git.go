@@ -70,7 +70,6 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 		}
 
 		ch <- cleanStatus{status.IsClean(), nil}
-		return
 	}()
 
 	select {
@@ -186,7 +185,7 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context) (oktetoGitStatus, error
 		return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
 	}
 
-	lines := strings.Split(string(output), "\000")
+	lines := strings.Split(output, "\000")
 	stat := make(map[string]*git.FileStatus, len(lines))
 	for _, line := range lines {
 		// line example values can be: "M modified-file.go", "?? new-file.go", etc
