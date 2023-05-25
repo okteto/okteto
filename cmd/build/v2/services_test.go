@@ -23,7 +23,10 @@ import (
 
 func TestNoneOfTheServicesBuilt(t *testing.T) {
 	fakeReg := newFakeRegistry()
-	bc := NewFakeBuilder(nil, fakeReg)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -35,7 +38,10 @@ func TestNoneOfTheServicesBuilt(t *testing.T) {
 
 func TestAllServicesAlreadyBuilt(t *testing.T) {
 	fakeReg := newFakeRegistry()
-	bc := NewFakeBuilder(nil, fakeReg)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
 	alreadyBuilt := []string{"test/test-1", "okteto.dev/test-test-2:okteto-with-volume-mounts", "okteto.dev/test-test-3:okteto", "okteto.dev/test-test-4:okteto-with-volume-mounts"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -47,7 +53,10 @@ func TestAllServicesAlreadyBuilt(t *testing.T) {
 
 func TestServicesNotAreAlreadyBuilt(t *testing.T) {
 	fakeReg := newFakeRegistry()
-	bc := NewFakeBuilder(nil, fakeReg)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -60,7 +69,10 @@ func TestServicesNotAreAlreadyBuilt(t *testing.T) {
 
 func TestNoServiceBuilt(t *testing.T) {
 	fakeReg := newFakeRegistry()
-	bc := NewFakeBuilder(nil, fakeReg)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -73,7 +85,54 @@ func TestNoServiceBuilt(t *testing.T) {
 
 func TestServicesNotInStack(t *testing.T) {
 	fakeReg := newFakeRegistry()
-	bc := NewFakeBuilder(nil, fakeReg)
+	fakeConfig := fakeConfig{
+		isOkteto: false,
+	}
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
+	alreadyBuilt := []string{}
+	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
+	ctx := context.Background()
+	stack := &model.Stack{
+		Services: map[string]*model.Service{
+			"test-not-stack": {
+				Build: &model.BuildInfo{
+					Image:   "test",
+					Context: ".",
+				},
+			},
+			"test-1": {
+				Build: &model.BuildInfo{
+					Image:   "test-2",
+					Context: ".",
+					VolumesToInclude: []model.StackVolume{
+						{
+							LocalPath:  "test",
+							RemotePath: "test",
+						},
+					},
+				},
+			},
+		},
+	}
+	fakeManifest := &model.Manifest{
+		Deploy: &model.DeployInfo{ComposeSection: &model.ComposeSectionInfo{
+			Stack: stack,
+		}},
+	}
+	toBuildSvcsInput := []string{}
+
+	toBuild, err := bc.GetServicesToBuild(ctx, fakeManifest, toBuildSvcsInput)
+	// should not throw error
+	require.NoError(t, err)
+	require.Equal(t, 0, len(toBuild))
+}
+
+func TestServicesNotOktetoWithStack(t *testing.T) {
+	fakeReg := newFakeRegistry()
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -96,7 +155,10 @@ func TestServicesNotInStack(t *testing.T) {
 
 func TestAllServicesAlreadyBuiltWithSubset(t *testing.T) {
 	fakeReg := newFakeRegistry()
-	bc := NewFakeBuilder(nil, fakeReg)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -108,7 +170,10 @@ func TestAllServicesAlreadyBuiltWithSubset(t *testing.T) {
 
 func TestServicesNotAreAlreadyBuiltWithSubset(t *testing.T) {
 	fakeReg := newFakeRegistry()
-	bc := NewFakeBuilder(nil, fakeReg)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
 	alreadyBuilt := []string{"test/test-1"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -120,7 +185,10 @@ func TestServicesNotAreAlreadyBuiltWithSubset(t *testing.T) {
 
 func TestServicesBuildSection(t *testing.T) {
 	fakeReg := newFakeRegistry()
-	bc := NewFakeBuilder(nil, fakeReg)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
 	alreadyBuilt := []string{}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -133,7 +201,10 @@ func TestServicesBuildSection(t *testing.T) {
 
 func TestNoServiceBuiltWithSubset(t *testing.T) {
 	fakeReg := newFakeRegistry()
-	bc := NewFakeBuilder(nil, fakeReg)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(nil, fakeReg, fakeConfig)
 	alreadyBuilt := []string{"test/test-1", "test/test-2"}
 	require.NoError(t, fakeReg.AddImageByName(alreadyBuilt...))
 	ctx := context.Background()
@@ -147,9 +218,11 @@ type fakeConfig struct {
 	isClean   bool
 	hasAccess bool
 	sha       string
+	isOkteto  bool
 }
 
 func (fc fakeConfig) HasGlobalAccess() bool                  { return fc.hasAccess }
 func (fc fakeConfig) IsCleanProject() bool                   { return fc.isClean }
 func (fc fakeConfig) GetBuildHash(_ *model.BuildInfo) string { return fc.sha }
 func (fc fakeConfig) GetGitCommit() string                   { return fc.sha }
+func (fc fakeConfig) IsOkteto() bool                         { return fc.isOkteto }
