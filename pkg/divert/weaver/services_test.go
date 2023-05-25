@@ -14,10 +14,10 @@
 package weaver
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -115,9 +115,7 @@ func Test_translateService(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, _ := translateService("test", "cindy", tt.s)
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Fatalf("test %s failed: %v vs %s", tt.name, result, tt.expected)
-			}
+			assert.Equal(t, result, tt.expected)
 		})
 	}
 }
