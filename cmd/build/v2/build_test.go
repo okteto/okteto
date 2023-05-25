@@ -133,7 +133,7 @@ func (fr fakeRegistry) IsGlobalRegistry(image string) bool { return false }
 func (fr fakeRegistry) GetRegistryAndRepo(image string) (string, string) { return "", "" }
 func (fr fakeRegistry) GetRepoNameAndTag(repo string) (string, string)   { return "", "" }
 
-func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface) *OktetoBuilder {
+func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInterface, cfg oktetoBuilderConfigInterface) *OktetoBuilder {
 	return &OktetoBuilder{
 		Registry:          registry,
 		Builder:           builder,
@@ -143,7 +143,7 @@ func NewFakeBuilder(builder OktetoBuilderInterface, registry oktetoRegistryInter
 			Builder:  builder,
 			Registry: registry,
 		},
-		Config: fakeConfig{},
+		Config: cfg,
 	}
 }
 
@@ -231,7 +231,10 @@ func TestOnlyInjectVolumeMountsInOkteto(t *testing.T) {
 
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewFakeBuilder(builder, registry)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -275,7 +278,10 @@ func TestTwoStepsBuild(t *testing.T) {
 
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewFakeBuilder(builder, registry)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -323,7 +329,10 @@ func TestBuildWithoutVolumeMountWithoutImage(t *testing.T) {
 
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewFakeBuilder(builder, registry)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -362,7 +371,10 @@ func TestBuildWithoutVolumeMountWithImage(t *testing.T) {
 
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewFakeBuilder(builder, registry)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{
@@ -403,7 +415,10 @@ func TestBuildWithStack(t *testing.T) {
 
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewFakeBuilder(builder, registry)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	manifest := &model.Manifest{
 		Name: "test",
 		Type: model.StackType,
@@ -476,7 +491,10 @@ func TestBuildWithDependsOn(t *testing.T) {
 
 	registry := newFakeRegistry()
 	builder := test.NewFakeOktetoBuilder(registry)
-	bc := NewFakeBuilder(builder, registry)
+	fakeConfig := fakeConfig{
+		isOkteto: true,
+	}
+	bc := NewFakeBuilder(builder, registry, fakeConfig)
 	manifest := &model.Manifest{
 		Name: "test",
 		Build: model.ManifestBuild{

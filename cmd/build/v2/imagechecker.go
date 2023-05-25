@@ -75,7 +75,9 @@ func (ic imageChecker) getImageDigestFromAllPossibleTags(manifestName, svcToBuil
 	sha := ic.cfg.GetBuildHash(buildInfo)
 
 	var possibleTags []string
-	if shouldAddVolumeMounts(buildInfo) {
+	if !ic.cfg.IsOkteto() && shouldAddVolumeMounts(buildInfo) {
+		possibleTags = []string{buildInfo.Image}
+	} else if shouldAddVolumeMounts(buildInfo) {
 		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, sha)
 	} else if shouldBuildFromDockerfile(buildInfo) && buildInfo.Image == "" {
 		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, sha)
