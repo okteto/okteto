@@ -53,7 +53,8 @@ func TestGetConfig(t *testing.T) {
 					isClean: true,
 					err:     nil,
 				},
-				fs: afero.NewOsFs(),
+				fs:       afero.NewOsFs(),
+				isOkteto: true,
 			},
 		},
 		{
@@ -75,7 +76,8 @@ func TestGetConfig(t *testing.T) {
 					isClean: true,
 					err:     nil,
 				},
-				fs: afero.NewOsFs(),
+				fs:       afero.NewOsFs(),
+				isOkteto: true,
 			},
 		},
 		{
@@ -97,7 +99,8 @@ func TestGetConfig(t *testing.T) {
 					isClean: true,
 					err:     nil,
 				},
-				fs: afero.NewOsFs(),
+				fs:       afero.NewOsFs(),
+				isOkteto: true,
 			},
 		},
 		{
@@ -119,7 +122,8 @@ func TestGetConfig(t *testing.T) {
 					isClean: false,
 					err:     assert.AnError,
 				},
-				fs: afero.NewOsFs(),
+				fs:       afero.NewOsFs(),
+				isOkteto: true,
 			},
 		},
 	}

@@ -58,6 +58,7 @@ type oktetoBuilderConfigInterface interface {
 	IsCleanProject() bool
 	GetBuildHash(*model.BuildInfo) string
 	GetGitCommit() string
+	IsOkteto() bool
 }
 
 // OktetoBuilder builds the images
