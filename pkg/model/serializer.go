@@ -1293,7 +1293,10 @@ func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) 
 		return nil, err
 	}
 	for key, value := range rawMap {
-		result[key] = value
+		result[key], err = ExpandEnv(value, true)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return result, nil
 }
