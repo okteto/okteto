@@ -43,6 +43,11 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
+			// the service was created, refresh the cache
+			newS, err = d.client.CoreV1().Services(d.namespace).Get(ctx, newS.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil
+			}
 		}
 		d.cache.developerServices[name] = newS
 		return d.divertEndpoints(ctx, name)
@@ -61,6 +66,11 @@ func (d *Driver) divertService(ctx context.Context, name string) error {
 		if _, err := d.client.CoreV1().Services(d.namespace).Update(ctx, updatedS, metav1.UpdateOptions{}); err != nil {
 			if !k8sErrors.IsConflict(err) {
 				return err
+			}
+			// the service was updated, refresh the cache
+			updatedS, err = d.client.CoreV1().Services(d.namespace).Get(ctx, updatedS.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil
 			}
 		}
 		d.cache.developerServices[name] = updatedS
@@ -91,5 +101,5 @@ func translateService(name, namespace string, s *apiv1.Service) (*apiv1.Service,
 }
 
 func isEqualService(s1 *apiv1.Service, s2 *apiv1.Service) bool {
-	return reflect.DeepEqual(s1.Spec.Ports, s2.Spec.Ports) && reflect.DeepEqual(s1.Labels, s2.Labels) && reflect.DeepEqual(s1.Annotations, s2.Annotations)
+	return reflect.DeepEqual(s1.Spec.Ports, s2.Spec.Ports) && reflect.DeepEqual(s1.Labels, s2.Labels) && reflect.DeepEqual(s1.Annotations, s2.Annotations) && reflect.DeepEqual(s1.Spec.Selector, s2.Spec.Selector)
 }

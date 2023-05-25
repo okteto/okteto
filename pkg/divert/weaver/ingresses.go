@@ -38,6 +38,11 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 			if !k8sErrors.IsAlreadyExists(err) {
 				return err
 			}
+			in, err = d.client.NetworkingV1().Ingresses(d.namespace).Get(ctx, in.Name, metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+			// the ingress was created, refresh the cache
 			d.cache.developerIngresses[name] = in
 		}
 	} else {
@@ -50,6 +55,11 @@ func (d *Driver) divertIngress(ctx context.Context, name string) error {
 			oktetoLog.Infof("updating ingress %s/%s", updatedIn.Namespace, updatedIn.Name)
 			if _, err := d.client.NetworkingV1().Ingresses(d.namespace).Update(ctx, updatedIn, metav1.UpdateOptions{}); err != nil {
 				if !k8sErrors.IsConflict(err) {
+					return err
+				}
+				// the ingress was updated, refresh the cache
+				updatedIn, err = d.client.NetworkingV1().Ingresses(d.namespace).Get(ctx, in.Name, metav1.GetOptions{})
+				if err != nil {
 					return err
 				}
 			}
