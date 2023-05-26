@@ -21,6 +21,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -63,7 +64,7 @@ func (ld *localDestroyCommand) destroy(ctx context.Context, opts *Options) error
 }
 
 // getVariablesFromCfgmap given a cfgmap this returns the variables as []EnvVar in it
-func getVariablesFromCfgmap(cfgmap *v1.ConfigMap) []model.EnvVar {
+func getVariablesFromCfgmap(cfgmap *v1.ConfigMap) []types.DeployVariable {
 	if cfgmap == nil {
 		return nil
 	}
@@ -77,7 +78,7 @@ func getVariablesFromCfgmap(cfgmap *v1.ConfigMap) []model.EnvVar {
 		return nil
 	}
 
-	var variables []model.EnvVar
+	var variables []types.DeployVariable
 	if err := json.Unmarshal(decodedStringVariables, &variables); err != nil {
 		return nil
 	}
