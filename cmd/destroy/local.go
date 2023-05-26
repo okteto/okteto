@@ -2,6 +2,8 @@ package destroy
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -19,6 +21,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -59,19 +62,34 @@ func (ld *localDestroyCommand) destroy(ctx context.Context, opts *Options) error
 	return err
 }
 
+// getVariablesFromCfgmap given a cfgmap this returns the variables as []EnvVar in it
+func getVariablesFromCfgmap(cfgmap *v1.ConfigMap) []model.EnvVar {
+	if cfgmap == nil {
+		return nil
+	}
+	b64Variables, ok := cfgmap.Data["variables"]
+	if !ok {
+		return nil
+	}
+
+	decodedStringVariables, err := base64.StdEncoding.DecodeString(b64Variables)
+	if err != nil {
+		return nil
+	}
+
+	var variables []model.EnvVar
+	if err := json.Unmarshal(decodedStringVariables, &variables); err != nil {
+		return nil
+	}
+
+	return variables
+}
+
 func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	err := ld.manifest.ExpandEnvVars()
 	if err != nil {
 		return err
 	}
-
-	for _, variable := range opts.Variables {
-		value := strings.SplitN(variable, "=", 2)[1]
-		if strings.TrimSpace(value) != "" {
-			oktetoLog.AddMaskedWord(value)
-		}
-	}
-	oktetoLog.EnableMasking()
 
 	namespace := opts.Namespace
 	if namespace == "" {
@@ -91,6 +109,15 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 	if err != nil {
 		return err
 	}
+
+	cfgVariables := getVariablesFromCfgmap(cfg)
+	for _, variable := range cfgVariables {
+		opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", variable.Name, variable.Value))
+		if strings.TrimSpace(variable.Value) != "" {
+			oktetoLog.AddMaskedWord(variable.Value)
+		}
+	}
+	oktetoLog.EnableMasking()
 
 	if ld.manifest.Context == "" {
 		ld.manifest.Context = okteto.Context().Name
