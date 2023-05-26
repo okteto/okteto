@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"strings"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -76,7 +75,6 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 		return false, ctxWithTimeout.Err()
 	case res := <-ch:
 		return res.IsClean, res.Err
-
 	}
 }
 
@@ -169,24 +167,10 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context, localGit LocalGitInterf
 		return oktetoGitStatus{status: status}, nil
 	}
 
-	output, err := localGit.Status(ctx, ogr.GetRoot(), 0)
+	status, err := localGit.Status(ctx, ogr.GetRoot(), 0)
 	if err != nil {
 		return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
 	}
 
-	lines := strings.Split(output, "\000")
-	stat := make(map[string]*git.FileStatus, len(lines))
-	for _, line := range lines {
-		// line example values can be: "M modified-file.go", "?? new-file.go", etc
-		parts := strings.SplitN(strings.TrimLeft(line, " "), " ", 2)
-		if len(parts) == 2 {
-			stat[strings.Trim(parts[1], " ")] = &git.FileStatus{
-				Staging: git.StatusCode([]byte(parts[0])[0]),
-			}
-		} else {
-			return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: unexpected status line")
-		}
-	}
-
-	return oktetoGitStatus{status: stat}, nil
+	return oktetoGitStatus{status: status}, nil
 }

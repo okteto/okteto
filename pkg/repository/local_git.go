@@ -3,8 +3,16 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
+	"github.com/go-git/go-git/v5"
 	"os/exec"
+	"strings"
+)
+
+var (
+	errLocalGitCannotGetStatusDubiousOwner    = errors.New("detected dubious ownership in repository")
+	errLocalGitCannotGetStatusTooManyAttempts = errors.New("failed to get status: too many attempts")
+	errLocalGitCannotGetStatusCannotRecover   = errors.New("failed to get status: cannot recover")
+	errLocalGitInvalidStatusOutput            = errors.New("failed to get git status: unexpected status line")
 )
 
 type CommandExecutor interface {
@@ -25,9 +33,10 @@ func (le *LocalExec) LookPath(file string) (string, error) {
 }
 
 type LocalGitInterface interface {
-	Status(ctx context.Context, dirPath string, fixAttempt int) (string, error)
+	Status(ctx context.Context, dirPath string, fixAttempt int) (git.Status, error)
 	Exists() (string, error)
 	FixDubiousOwnershipConfig(path string) error
+	parseGitStatus(string) (git.Status, error)
 }
 
 type LocalGit struct {
@@ -42,24 +51,29 @@ func NewLocalGit(gitPath string, exec CommandExecutor) *LocalGit {
 	}
 }
 
-func (lg *LocalGit) Status(ctx context.Context, dirPath string, fixAttempt int) (string, error) {
+func (lg *LocalGit) Status(ctx context.Context, dirPath string, fixAttempt int) (git.Status, error) {
 	if fixAttempt > 0 {
-		return "", fmt.Errorf("failed to get status: too many attempts")
+		return git.Status{}, errLocalGitCannotGetStatusTooManyAttempts
 	}
 
 	output, err := lg.exec.RunCommand(ctx, lg.gitPath, "status", "--porcelain", "-z")
 	if err != nil {
-		if errors.Is(err, errors.New("detected dubious ownership in repository")) {
+		if errors.Is(err, errLocalGitCannotGetStatusDubiousOwner) {
 			err = lg.FixDubiousOwnershipConfig(dirPath)
 			if err != nil {
-				return "", fmt.Errorf("failed to get status: cannot recover")
+				return git.Status{}, errLocalGitCannotGetStatusCannotRecover
 			}
 			fixAttempt++
 			return lg.Status(ctx, dirPath, fixAttempt)
 		}
 	}
 
-	return string(output), err
+	status, err := lg.parseGitStatus(string(output))
+	if err != nil {
+		return git.Status{}, err
+	}
+
+	return status, err
 }
 
 func (lg *LocalGit) FixDubiousOwnershipConfig(path string) error {
@@ -68,5 +82,24 @@ func (lg *LocalGit) FixDubiousOwnershipConfig(path string) error {
 }
 
 func (lg *LocalGit) Exists() (string, error) {
-	return exec.LookPath("git")
+	return lg.exec.LookPath("git")
+}
+
+func (lg *LocalGit) parseGitStatus(gitStatusOutput string) (git.Status, error) {
+	lines := strings.Split(gitStatusOutput, "\000")
+	status := make(map[string]*git.FileStatus, len(lines))
+
+	for _, line := range lines {
+		// line example values can be: "M modified-file.go", "?? new-file.go", etc
+		parts := strings.SplitN(strings.TrimLeft(line, " "), " ", 2)
+		if len(parts) == 2 {
+			status[strings.Trim(parts[1], " ")] = &git.FileStatus{
+				Staging: git.StatusCode([]byte(parts[0])[0]),
+			}
+		} else {
+			return git.Status{}, errLocalGitInvalidStatusOutput
+		}
+	}
+
+	return status, nil
 }
