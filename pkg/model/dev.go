@@ -1023,6 +1023,10 @@ func (dev *Dev) ToTranslationRule(main *Dev, reset bool) *TranslationRule {
 		Affinity:         (*apiv1.Affinity)(dev.Affinity),
 	}
 
+	if dev.IsHybridModeEnabled() {
+		rule.WorkDir = "/okteto"
+	}
+
 	if !dev.EmptyImage {
 		rule.Image = dev.Image.Name
 	}
