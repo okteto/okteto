@@ -32,7 +32,7 @@ deploy:
 dev:
   svc:
     mode: hybrid
-    command: ["chmod +x ./checker.sh && ./checker.sh"]
+    command: ["bash checker.sh"]
     reverse:
     - 8080:8080
 `
