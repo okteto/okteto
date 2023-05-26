@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/types"
 	giturls "github.com/whilp/git-urls"
 	apiv1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -51,6 +52,7 @@ const (
 	iconField       = "icon"
 	actionLockField = "actionLock"
 	actionNameField = "actionName"
+	variablesField  = "variables"
 
 	actionDefaultName = "cli"
 
@@ -87,6 +89,7 @@ type CfgData struct {
 	Filename   string
 	Manifest   []byte
 	Icon       string
+	Variables  []string
 }
 
 // TranslateConfigMapAndDeploy translates the app into a configMap.
@@ -232,6 +235,10 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 		cmap.Data[filenameField] = data.Filename
 	}
 
+	variables := translateVariables(data.Variables)
+	if variables != "" {
+		cmap.Data[variablesField] = variables
+	}
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
 	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
@@ -272,6 +279,11 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 
 	if data.Branch != "" {
 		cmap.Data[branchField] = data.Branch
+	}
+
+	variables := translateVariables(data.Variables)
+	if variables != "" {
+		cmap.Data[variablesField] = variables
 	}
 
 	output := oktetoLog.GetOutputBuffer()
@@ -316,4 +328,25 @@ func removeSensitiveDataFromGitURL(gitURL string) string {
 		parsedRepo.User = nil
 	}
 	return parsedRepo.String()
+}
+
+func translateVariables(variables []string) string {
+	v := []types.DeployVariable{}
+	for _, item := range variables {
+		splitV := strings.SplitN(item, "=", 2)
+		if len(splitV) != 2 {
+			continue
+		}
+		v = append(v, types.DeployVariable{
+			Name:  splitV[0],
+			Value: splitV[1],
+		})
+	}
+
+	if len(v) > 0 {
+		encodedVars, _ := json.Marshal(variables)
+		return base64.StdEncoding.EncodeToString(encodedVars)
+	}
+
+	return ""
 }

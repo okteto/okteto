@@ -219,3 +219,40 @@ func Test_removeSensitiveDataFromGitURL(t *testing.T) {
 		})
 	}
 }
+
+func Test_translateVariables(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []string
+		expected string
+	}{
+		{
+			name:     "nil input",
+			expected: "",
+		},
+		{
+			name:     "empty input",
+			input:    []string{},
+			expected: "",
+		},
+		{
+			name:     "invalid input",
+			input:    []string{"test"},
+			expected: "",
+		},
+		{
+			name:     "valid input",
+			input:    []string{"test=value"},
+			expected: "WyJ0ZXN0PXZhbHVlIl0=",
+		},
+	}
+
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+			res := translateVariables(tt.input)
+			assert.Equal(t, tt.expected, res)
+		})
+
+	}
+}
