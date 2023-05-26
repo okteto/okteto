@@ -155,7 +155,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 		response = mutationStruct.response()
 	} else {
 		mutationStruct := &deployPreviewMutatioWithLabels{}
-		err := mutate(ctx, &mutationStruct, mutationVariables, c.client)
+		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
 		if err != nil {
 			return nil, c.translateErr(err, name)
 		}
