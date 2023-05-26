@@ -157,7 +157,7 @@ type envsGetter struct {
 	configMapEnvsGetter configMapEnvsGetterInterface
 	secretsEnvsGetter   secretsEnvsGetterInterface
 	imageEnvsGetter     imageEnvsGetterInterface
-	pathGetter          func(string) string
+	getLocalEnvs        func() []string
 }
 
 func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
@@ -183,7 +183,7 @@ func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 		imageEnvsGetter: &imageEnvsGetter{
 			imageGetter: registry.NewOktetoRegistry(okteto.Config{}),
 		},
-		pathGetter: os.Getenv,
+		getLocalEnvs: os.Environ,
 	}, nil
 }
 
@@ -217,10 +217,7 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
 	}
 
-	pathValue := eg.pathGetter("PATH")
-	if pathValue != "" {
-		envs = append(envs, fmt.Sprintf("PATH=%s", pathValue))
-	}
+	envs = append(envs, eg.getLocalEnvs()...)
 
 	return envs, nil
 }
