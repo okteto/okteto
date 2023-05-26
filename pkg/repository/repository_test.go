@@ -30,7 +30,7 @@ type fakeRepositoryGetter struct {
 	callCount  int
 }
 
-func (frg fakeRepositoryGetter) get(_ string) (gitRepositoryInterface, error) {
+func (frg *fakeRepositoryGetter) get(_ string) (gitRepositoryInterface, error) {
 	i := frg.callCount
 	frg.callCount++
 	if frg.err != nil && frg.err[i] != nil {
