@@ -96,7 +96,7 @@ func TestUpUsingHybridMode(t *testing.T) {
 	}
 
 	shell := "bash"
-	if runtime.GOOS != "windows" {
+	if runtime.GOOS == "windows" {
 		shell = "sh"
 	}
 	oktetoManifestSintax := oktetoManifestTemplate{
