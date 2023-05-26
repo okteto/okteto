@@ -33,7 +33,7 @@ type fakeRepositoryGetter struct {
 func (frg fakeRepositoryGetter) get(_ string) (gitRepositoryInterface, error) {
 	i := frg.callCount
 	frg.callCount++
-	if frg.err[i] != nil {
+	if frg.err != nil && frg.err[i] != nil {
 		return nil, frg.err[i]
 	}
 	return frg.repository[i], nil

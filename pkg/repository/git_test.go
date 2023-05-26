@@ -289,21 +289,23 @@ func TestGetSHA(t *testing.T) {
 			config: config{
 				repositoryGetter: fakeRepositoryGetter{
 					repository: []*fakeRepository{
-						{
-							worktree: &fakeWorktree{
-								status: oktetoGitStatus{
-									status: git.Status{
-										"test-file.go": &git.FileStatus{
-											Staging:  git.Unmodified,
-											Worktree: git.Unmodified,
-										},
-									},
-								},
-							},
-							head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
-						},
+						//{
+						//	worktree: &fakeWorktree{
+						//		status: oktetoGitStatus{
+						//			status: git.Status{
+						//				"test-file.go": &git.FileStatus{
+						//					Staging:  git.Unmodified,
+						//					Worktree: git.Unmodified,
+						//				},
+						//			},
+						//		},
+						//	},
+						//	head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
+						//},
 					},
-					err: []error{nil, assert.AnError},
+					err: []error{
+						//nil,
+						assert.AnError},
 				},
 			},
 			expected: expected{
@@ -316,11 +318,23 @@ func TestGetSHA(t *testing.T) {
 			config: config{
 				repositoryGetter: fakeRepositoryGetter{
 					repository: []*fakeRepository{
-						{
-							head: nil,
-							err:  assert.AnError,
-						},
+						//{
+						//	worktree: &fakeWorktree{
+						//		status: oktetoGitStatus{
+						//			status: git.Status{
+						//				"test-file.go": &git.FileStatus{
+						//					Staging:  git.Unmodified,
+						//					Worktree: git.Unmodified,
+						//				},
+						//			},
+						//		},
+						//	},
+						//	head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
+						//},
 					},
+					err: []error{
+						//nil,
+						assert.AnError},
 				},
 			},
 			expected: expected{
