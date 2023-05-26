@@ -15,66 +15,11 @@ package repository
 
 import (
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/stretchr/testify/mock"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/stretchr/testify/assert"
 )
-
-// CommandContextMock is a mock for the exec.CommandContext.
-type CommandContextMock struct {
-	mock.Mock
-}
-
-func (m *CommandContextMock) Output() ([]byte, error) {
-	args := m.Called()
-	return args.Get(0).([]byte), args.Error(1)
-}
-
-// fixDubiousOwnershipConfigMock is a mock for the fixDubiousOwnershipConfig.
-func fixDubiousOwnershipConfigMock(dirPath string) error {
-	// You could add some logic here to simulate different scenarios.
-	return nil
-}
-
-//func TestRunGitStatusCommand(t *testing.T) {
-//	ctx := context.Background()
-
-//// Test when fixAttempt is more than 0
-//gitPath, dirPath := "/usr/bin/git", "/path/to/repo"
-//output, err := runGitStatusCommand(ctx, gitPath, dirPath, 1)
-//assert.Equal(t, "", output)
-//assert.EqualError(t, err, "failed to get status: too many attempts")
-
-// Test when command execution returns "detected dubious ownership in repository" error
-//mockCmd := new(CommandContextMock)
-//mockCmd.On("Output").Return(nil, errors.New("detected dubious ownership in repository"))
-//output, err := runGitStatusCommand(ctx, gitPath, dirPath, 0)
-//assert.Equal(t, "", output)
-//assert.Nil(t, err)
-//mockCmd.AssertCalled(t, "Output")
-
-// Test when fixDubiousOwnershipConfig fails
-// (you'd need to implement this part yourself)
-
-//// Test when command executes without any error
-//mockCmd = new(CommandContextMock)
-//mockCmd.On("Output").Return([]byte("M file1.txt\n"), nil)
-//output, err = runGitStatusCommand(ctx, gitPath, dirPath, 0)
-//assert.Equal(t, "M file1.txt\n", output)
-//assert.Nil(t, err)
-//mockCmd.AssertCalled(t, "Output")
-//}
-
-//func TestIsClean_Timeout(t *testing.T) {
-//	repo := Repository{
-//		control: gitRepoController{
-//			repoGetter: tt.config.repositoryGetter,
-//		},
-//	}
-//	isClean, err := repo.IsClean()
-//}
 
 func TestIsClean(t *testing.T) {
 	type config struct {
@@ -90,7 +35,6 @@ func TestIsClean(t *testing.T) {
 		expected expected
 	}{
 		{
-			// TODO: verify this test
 			name: "dir is not a repository",
 			config: config{
 				repositoryGetter: &fakeRepositoryGetter{
@@ -128,11 +72,7 @@ func TestIsClean(t *testing.T) {
 						{
 							worktree: &fakeWorktree{
 								status: oktetoGitStatus{
-									status: git.Status{
-										//"test-file.go": &git.FileStatus{
-										//	Worktree: nil,
-										//},
-									},
+									status: git.Status{},
 								},
 								err: assert.AnError,
 							},

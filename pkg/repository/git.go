@@ -15,10 +15,8 @@ package repository
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -63,7 +61,7 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 			return
 		}
 
-		status, err := worktree.Status(ctx)
+		status, err := worktree.Status(ctx, NewLocalGit("git", &LocalExec{}))
 		if err != nil {
 			ch <- cleanStatus{false, fmt.Errorf("failed to infer the git repo's status: %w", err)}
 			return
@@ -140,35 +138,26 @@ func (ogr oktetoGitWorktree) GetRoot() string {
 	return ogr.worktree.Filesystem.Root()
 }
 
-func fixDubiousOwnershipConfig(path string) error {
-	c := exec.Command("git", "config", "--global", "--add", "safe.directory", path)
-	c.Dir = path
-	return c.Run()
+type oktetoGitStatus struct {
+	status git.Status
 }
 
-func runGitStatusCommand(ctx context.Context, gitPath string, dirPath string, fixAttempt int) (string, error) {
-	if fixAttempt > 0 {
-		return "", fmt.Errorf("failed to get status: too many attempts")
-	}
-	c := exec.CommandContext(ctx, gitPath, "status", "--porcelain", "-z")
-	c.Dir = dirPath
-	output, err := c.Output()
-
-	if errors.Is(err, errors.New("detected dubious ownership in repository")) {
-		err = fixDubiousOwnershipConfig(dirPath)
-		if err != nil {
-			return "", fmt.Errorf("failed to get status: cannot recover")
-		}
-		fixAttempt++
-		return runGitStatusCommand(ctx, gitPath, dirPath, fixAttempt)
-	}
-
-	return string(output), err
+func (ogs oktetoGitStatus) IsClean() bool {
+	return ogs.status.IsClean()
 }
 
-func (ogr oktetoGitWorktree) Status(ctx context.Context) (oktetoGitStatus, error) {
+type gitRepositoryInterface interface {
+	Worktree() (gitWorktreeInterface, error)
+	Head() (*plumbing.Reference, error)
+}
+type gitWorktreeInterface interface {
+	Status(context.Context, LocalGitInterface) (oktetoGitStatus, error)
+	GetRoot() string
+}
+
+func (ogr oktetoGitWorktree) Status(ctx context.Context, localGit LocalGitInterface) (oktetoGitStatus, error) {
 	// using git directly is faster, so we check if it's available
-	gitPath, err := exec.LookPath("git")
+	_, err := localGit.Exists()
 	if err != nil {
 		// git is not available, so we fall back on git-go
 		oktetoLog.Warning("Calculating git status: git is not installed, for better performances consider installing it")
@@ -180,7 +169,7 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context) (oktetoGitStatus, error
 		return oktetoGitStatus{status: status}, nil
 	}
 
-	output, err := runGitStatusCommand(ctx, gitPath, ogr.GetRoot(), 0)
+	output, err := localGit.Status(ctx, ogr.GetRoot(), 0)
 	if err != nil {
 		return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
 	}
@@ -200,21 +189,4 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context) (oktetoGitStatus, error
 	}
 
 	return oktetoGitStatus{status: stat}, nil
-}
-
-type oktetoGitStatus struct {
-	status git.Status
-}
-
-func (ogs oktetoGitStatus) IsClean() bool {
-	return ogs.status.IsClean()
-}
-
-type gitRepositoryInterface interface {
-	Worktree() (gitWorktreeInterface, error)
-	Head() (*plumbing.Reference, error)
-}
-type gitWorktreeInterface interface {
-	Status(context.Context) (oktetoGitStatus, error)
-	GetRoot() string
 }

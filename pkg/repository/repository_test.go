@@ -63,7 +63,7 @@ func (fw fakeWorktree) GetRoot() string {
 	return fw.root
 }
 
-func (fw fakeWorktree) Status(context.Context) (oktetoGitStatus, error) {
+func (fw fakeWorktree) Status(context.Context, LocalGitInterface) (oktetoGitStatus, error) {
 	return fw.status, fw.err
 }
 
