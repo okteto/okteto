@@ -31,7 +31,6 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/registry"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
@@ -121,11 +120,7 @@ func getSolveOpt(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 			},
 		}
 	}
-	reg := registry.NewOktetoRegistry(okteto.Config{})
 	for _, cacheFromImage := range buildOptions.CacheFrom {
-		if _, err := reg.GetImageTagWithDigest(cacheFromImage); err != nil {
-			continue
-		}
 		opt.CacheImports = append(
 			opt.CacheImports,
 			client.CacheOptionsEntry{
@@ -286,7 +281,11 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 			// not using shared context to not disrupt display but let it finish reporting errors
 			return progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
 		case "deploy":
-			err := deployDisplayer(context.TODO(), plainChannel)
+			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: "deploy"})
+			commandFailChannel <- err
+			return err
+		case "destroy":
+			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: "destroy"})
 			commandFailChannel <- err
 			return err
 		default:
