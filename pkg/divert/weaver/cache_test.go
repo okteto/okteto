@@ -15,10 +15,10 @@ package weaver
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,21 +89,9 @@ func Test_initCache(t *testing.T) {
 	d := &Driver{client: c, name: m.Name, namespace: m.Namespace, divert: *m.Deploy.Divert}
 	d.initCache(ctx)
 
-	if !reflect.DeepEqual(map[string]*networkingv1.Ingress{"i1": i1}, d.cache.developerIngresses) {
-		t.Errorf("failed developerIngresses: %v", d.cache.developerIngresses)
-	}
-	if !reflect.DeepEqual(map[string]*networkingv1.Ingress{"i3": i3}, d.cache.divertIngresses) {
-		t.Errorf("failed divertIngresses: %v", d.cache.divertIngresses)
-	}
-
-	if !reflect.DeepEqual(map[string]*apiv1.Service{"s1": s1}, d.cache.developerServices) {
-		t.Errorf("failed developerServices: %v", d.cache.developerServices)
-	}
-	if !reflect.DeepEqual(map[string]*apiv1.Service{"s3": s3}, d.cache.divertServices) {
-		t.Errorf("failed divertServices: %v", d.cache.divertServices)
-	}
-
-	if !reflect.DeepEqual(map[string]*apiv1.Endpoints{"e1": e1}, d.cache.developerEndpoints) {
-		t.Errorf("failed developerEndpoints: %v", d.cache.developerEndpoints)
-	}
+	assert.Equal(t, map[string]*networkingv1.Ingress{"i1": i1}, d.cache.developerIngresses)
+	assert.Equal(t, map[string]*networkingv1.Ingress{"i3": i3}, d.cache.divertIngresses)
+	assert.Equal(t, map[string]*apiv1.Service{"s1": s1}, d.cache.developerServices)
+	assert.Equal(t, map[string]*apiv1.Service{"s3": s3}, d.cache.divertServices)
+	assert.Equal(t, map[string]*apiv1.Endpoints{"e1": e1}, d.cache.developerEndpoints)
 }

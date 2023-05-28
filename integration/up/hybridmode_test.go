@@ -18,10 +18,13 @@ package up
 
 import (
 	"path/filepath"
+	"runtime"
 	"testing"
+	"text/template"
 
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
+	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,7 +35,7 @@ deploy:
 dev:
   svc:
     mode: hybrid
-    command: ["chmod +x ./checker.sh && ./checker.sh"]
+    command: "{{ .Shell }} checker.sh"
     reverse:
     - 8080:8080
 `
@@ -44,7 +47,10 @@ dev:
 
 	svcDockerfile = `FROM busybox
 ENV ENV_IN_IMAGE value_from_image`
-	localProcess = `for x in ENV_IN_POD,value_from_pod ENV_IN_IMAGE,value_from_image ; do
+	localProcess = `
+#!/bin/bash
+
+for x in ENV_IN_POD,value_from_pod ENV_IN_IMAGE,value_from_image ; do
   IFS=, read name value <<< "$x"
   if [ "${!name}" != "$value" ]; then
     echo "env '$name' not found. Expected value '$value'"
@@ -78,8 +84,27 @@ func TestUpUsingHybridMode(t *testing.T) {
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 
+	tmpl := template.Must(template.New("okteto.yml").Parse(hybridManifest))
+
+	oktetoManifestFileName := filepath.Join(dir, "okteto.yml")
+	fs := afero.NewOsFs()
+	oktetoManifstFile, err := fs.Create(oktetoManifestFileName)
+	require.NoError(t, err)
+
+	type oktetoManifestTemplate struct {
+		Shell string
+	}
+
+	shell := "bash"
+	if runtime.GOOS == "windows" {
+		shell = "sh"
+	}
+	oktetoManifestSintax := oktetoManifestTemplate{
+		Shell: shell,
+	}
+
+	require.NoError(t, tmpl.Execute(oktetoManifstFile, oktetoManifestSintax))
 	require.NoError(t, writeFile(filepath.Join(dir, "docker-compose.yml"), hybridCompose))
-	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), hybridManifest))
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 	require.NoError(t, writeFile(filepath.Join(dir, "Dockerfile"), svcDockerfile))
 	require.NoError(t, writeFile(filepath.Join(dir, "checker.sh"), localProcess))

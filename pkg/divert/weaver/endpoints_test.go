@@ -14,7 +14,6 @@
 package weaver
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -101,5 +100,5 @@ func Test_translateEndpoints(t *testing.T) {
 		},
 	}
 	result := translateEndpoints("test", "cindy", s)
-	assert.True(t, reflect.DeepEqual(result, expected))
+	assert.Equal(t, result, expected)
 }

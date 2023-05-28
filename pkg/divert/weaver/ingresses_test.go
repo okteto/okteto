@@ -14,10 +14,10 @@
 package weaver
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/stretchr/testify/assert"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -111,9 +111,7 @@ func Test_translateIngress(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := translateIngress("test", "cindy", tt.in)
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Fatalf("test %s failed: %v", tt.name, result)
-			}
+			assert.Equal(t, result, tt.expected)
 		})
 	}
 }
