@@ -31,6 +31,7 @@ type configMapHandler interface {
 	translateConfigMapAndDeploy(context.Context, *pipeline.CfgData) (*apiv1.ConfigMap, error)
 	destroyConfigMap(context.Context, *apiv1.ConfigMap, string) error
 	setErrorStatus(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error
+	getConfigmap(ctx context.Context, name, namespace string) (*apiv1.ConfigMap, error)
 }
 
 // destroyInsideDeployConfigMapHandler is the runner used when the okteto is executed
@@ -64,6 +65,10 @@ func (ch *defaultConfigMapHandler) translateConfigMapAndDeploy(ctx context.Conte
 	return pipeline.TranslateConfigMapAndDeploy(ctx, data, ch.k8sClient)
 }
 
+func (ch *defaultConfigMapHandler) getConfigmap(ctx context.Context, name, namespace string) (*apiv1.ConfigMap, error) {
+	return pipeline.GetConfigmap(ctx, name, namespace, ch.k8sClient)
+}
+
 func (ch *defaultConfigMapHandler) destroyConfigMap(ctx context.Context, cfg *apiv1.ConfigMap, namespace string) error {
 	return configmaps.Destroy(ctx, cfg.Name, namespace, ch.k8sClient)
 }
@@ -75,6 +80,10 @@ func (ch *defaultConfigMapHandler) setErrorStatus(ctx context.Context, cfg *apiv
 }
 
 func (*destroyInsideDeployConfigMapHandler) translateConfigMapAndDeploy(_ context.Context, _ *pipeline.CfgData) (*apiv1.ConfigMap, error) {
+	return nil, nil
+}
+
+func (ch *destroyInsideDeployConfigMapHandler) getConfigmap(_ context.Context, _, _ string) (*apiv1.ConfigMap, error) {
 	return nil, nil
 }
 

@@ -92,6 +92,10 @@ type CfgData struct {
 	Variables  []string
 }
 
+func GetConfigmap(ctx context.Context, name, namespace string, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
+	return configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
+}
+
 // TranslateConfigMapAndDeploy translates the app into a configMap.
 // Name param is the pipeline sanitized name
 func TranslateConfigMapAndDeploy(ctx context.Context, data *CfgData, c kubernetes.Interface) (*apiv1.ConfigMap, error) {
