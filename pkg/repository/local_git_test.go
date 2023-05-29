@@ -26,8 +26,6 @@ func (mle *mockLocalExec) LookPath(file string) (string, error) {
 }
 
 func TestLocalGit_Exists(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name     string
 		mockExec func() *mockLocalExec
@@ -67,8 +65,6 @@ func TestLocalGit_Exists(t *testing.T) {
 }
 
 func TestLocalGit_FixDubiousOwnershipConfig(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name     string
 		mockExec func() *mockLocalExec
@@ -109,8 +105,6 @@ func TestLocalGit_FixDubiousOwnershipConfig(t *testing.T) {
 }
 
 func TestLocalGit_Status(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		name        string
 		fixAttempts int
