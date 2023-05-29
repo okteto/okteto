@@ -332,7 +332,7 @@ func removeSensitiveDataFromGitURL(gitURL string) string {
 }
 
 func translateVariables(variables []string) string {
-	v := []types.DeployVariable{}
+	var v []types.DeployVariable
 	for _, item := range variables {
 		splitV := strings.SplitN(item, "=", 2)
 		if len(splitV) != 2 {
