@@ -35,11 +35,11 @@ func newGitRepoController() gitRepoController {
 }
 
 type cleanStatus struct {
-	IsClean bool
-	Err     error
+	isClean bool
+	err     error
 }
 
-// IsClean checks if the repository have changes over the commit
+// isClean checks if the repository have changes over the commit
 func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -74,7 +74,7 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 		oktetoLog.Warning("Timeout exceeded calculating git status: assuming dirty commit")
 		return false, ctxWithTimeout.Err()
 	case res := <-ch:
-		return res.IsClean, res.Err
+		return res.isClean, res.err
 	}
 }
 
