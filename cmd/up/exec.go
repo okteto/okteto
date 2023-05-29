@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -64,7 +65,11 @@ func (he *hybridExecutor) RunCommand(ctx context.Context, cmd []string) error {
 	if runtime.GOOS != "windows" {
 		c = exec.Command("bash", "-c", strings.Join(cmd, " "))
 	} else {
-		c = exec.Command(strings.Join(cmd, " "))
+		binary, err := expandExecutableInCurrentDirectory(cmd[0], he.workdir)
+		if err != nil {
+			return err
+		}
+		c = exec.Command(binary, cmd[1:]...)
 	}
 
 	c.Env = he.envs
@@ -86,6 +91,26 @@ func (he *hybridExecutor) RunCommand(ctx context.Context, cmd []string) error {
 	}
 
 	return nil
+}
+
+func expandExecutableInCurrentDirectory(args0, dir string) (string, error) {
+	// Works around a restriction added in go1.19 that executables in the
+	// current directory are not resolved when specifying just an executable
+	// name (like e.g. "okteto")
+	if !strings.ContainsRune(args0, os.PathSeparator) {
+		// Check if it's in PATH
+		_, err := exec.LookPath(args0)
+		if err != nil {
+			// Try to get the path to the current executable
+			executable := filepath.Join(dir, args0)
+			_, err := exec.LookPath(executable)
+			if err != nil {
+				return "", fmt.Errorf("could not determine the script file")
+			}
+			return executable, nil
+		}
+	}
+	return args0, nil
 }
 
 type syncExecutor struct {
