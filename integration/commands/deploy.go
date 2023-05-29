@@ -99,7 +99,7 @@ func RunOktetoDestroy(oktetoPath string, destroyOptions *DestroyOptions) error {
 	return nil
 }
 
-// RunOktetoDeployAndGetOutput runs an okteto destroy command and returns the output
+// RunOktetoDestroyAndGetOutput runs an okteto destroy command and returns the output
 func RunOktetoDestroyAndGetOutput(oktetoPath string, destroyOptions *DestroyOptions) (string, error) {
 	cmd := getDestroyCmd(oktetoPath, destroyOptions)
 	log.Printf("Running '%s'", cmd.String())
