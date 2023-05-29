@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/okteto/okteto/pkg/types"
 	"strings"
 	"time"
 
@@ -30,7 +31,7 @@ const (
 	largeContextThreshold = 50000000
 )
 
-func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
+func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus, o *types.BuildOptions) error {
 	// TODO: import build timeout
 	timeout := time.NewTicker(10 * time.Minute)
 	defer timeout.Stop()
@@ -42,6 +43,13 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
 	t := newTrace()
 
 	var done bool
+	var outputMode string
+
+	if o.OutputMode == "destroy" {
+		outputMode = "destroy"
+	} else {
+		outputMode = "deploy"
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -54,7 +62,7 @@ func deployDisplayer(ctx context.Context, ch chan *client.SolveStatus) error {
 					oktetoLog.Info(err.Error())
 					continue
 				}
-				t.display()
+				t.display(outputMode)
 				t.removeCompletedSteps()
 			} else {
 				done = true
@@ -132,7 +140,7 @@ func (t *trace) update(ss *client.SolveStatus) error {
 	return nil
 }
 
-func (t *trace) display() {
+func (t *trace) display(progress string) {
 	for _, v := range t.ongoing {
 		if t.isTransferringContext(v.name) {
 			if v.currentTransferedContext != 0 {
@@ -145,7 +153,11 @@ func (t *trace) display() {
 			}
 		}
 		if t.hasCommandLogs(v) {
-			oktetoLog.Spinner("Destroying your development environment...")
+			if progress == "deploy" {
+				oktetoLog.Spinner("Deploying your development environment...")
+			} else {
+				oktetoLog.Spinner("Destroying your development environment...")
+			}
 			for _, log := range v.logs {
 				var text oktetoLog.JSONLogFormat
 				if err := json.Unmarshal([]byte(log), &text); err != nil {
