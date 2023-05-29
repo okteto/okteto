@@ -19,6 +19,7 @@ package deploy
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -35,9 +36,14 @@ import (
 
 var (
 	oktetoManifestWithEnvContent = `deploy:
-  - echo "printing deploy external variable... ${EXTERNAL_VARIABLE}"
+  - echo "%s ${EXTERNAL_VARIABLE}"
 destroy:
-- echo "printing destroy external variable... ${EXTERNAL_VARIABLE}"`
+- echo "%s ${EXTERNAL_VARIABLE}"`
+)
+
+const (
+	echoDeployMessage  = "printing deploy external variable..."
+	echoDestroyMessage = "printing destroy external variable..."
 )
 
 // TestDeployAndDestroyOktetoManifestWithEnv tests the following scenario:
@@ -99,7 +105,7 @@ func TestDeployAndDestroyOktetoManifestWithEnv(t *testing.T) {
 }
 
 func expectMaskedVariableAtDeploy(o string) error {
-	if ok := strings.Contains(o, "printing deploy external variable... ***"); !ok {
+	if ok := strings.Contains(o, fmt.Sprintf("%s ***", echoDeployMessage)); !ok {
 		log.Print(o)
 		return errors.New("external variable at deploy is not being masked")
 	}
@@ -107,7 +113,7 @@ func expectMaskedVariableAtDeploy(o string) error {
 }
 
 func expectMaskedVariableAtDestroy(o string) error {
-	if ok := strings.Contains(o, "printing destroy external variable... ***"); !ok {
+	if ok := strings.Contains(o, fmt.Sprintf("%s ***", echoDestroyMessage)); !ok {
 		log.Print(o)
 		return errors.New("external variable at destroy is not being masked")
 	}
@@ -129,7 +135,7 @@ func expectConfigMapToIncludeVariables(cfgmap *v1.ConfigMap) error {
 
 func createOktetoManifestwithEnv(dir string) error {
 	manifestPath := filepath.Join(dir, oktetoManifestName)
-	manifestContent := []byte(oktetoManifestWithEnvContent)
+	manifestContent := []byte(fmt.Sprintf(oktetoManifestWithEnvContent, echoDeployMessage, echoDestroyMessage))
 	if err := os.WriteFile(manifestPath, manifestContent, 0600); err != nil {
 		return err
 	}
