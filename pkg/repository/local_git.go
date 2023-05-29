@@ -22,13 +22,13 @@ type CommandExecutor interface {
 
 type LocalExec struct{}
 
-func (le *LocalExec) RunCommand(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+func (*LocalExec) RunCommand(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
 	c := exec.CommandContext(ctx, name, arg...)
 	c.Dir = dir
 	return c.Output()
 }
 
-func (le *LocalExec) LookPath(file string) (string, error) {
+func (*LocalExec) LookPath(file string) (string, error) {
 	return exec.LookPath(file)
 }
 
@@ -85,7 +85,7 @@ func (lg *LocalGit) Exists() (string, error) {
 	return lg.exec.LookPath("git")
 }
 
-func (lg *LocalGit) parseGitStatus(gitStatusOutput string) (git.Status, error) {
+func (*LocalGit) parseGitStatus(gitStatusOutput string) (git.Status, error) {
 	lines := strings.Split(gitStatusOutput, "\000")
 	status := make(map[string]*git.FileStatus, len(lines))
 
