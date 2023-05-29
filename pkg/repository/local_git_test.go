@@ -74,7 +74,7 @@ func TestLocalGit_FixDubiousOwnershipConfig(t *testing.T) {
 			name: "success",
 			mockExec: func() *mockLocalExec {
 				return &mockLocalExec{
-					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+					runCommand: func(_ context.Context, _ string, _ string, _ ...string) ([]byte, error) {
 						return []byte(""), nil
 					},
 				}
