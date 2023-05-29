@@ -5,45 +5,27 @@ import (
 
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
 )
 
-func Test_getVariablesFromCfgmap(t *testing.T) {
+func Test_decodeConfigMapVariables(t *testing.T) {
 	tests := []struct {
 		name     string
-		cfgmap   *v1.ConfigMap
+		input    string
 		expected []types.DeployVariable
 	}{
 		{
-			name:     "nil cfgmap",
-			cfgmap:   nil,
+			name:     "empty variable",
+			input:    "",
 			expected: nil,
 		},
 		{
-			name: "no variables at cfgmap",
-			cfgmap: &v1.ConfigMap{
-				Data: map[string]string{
-					"test": "test",
-				},
-			},
+			name:     "error decoding variables",
+			input:    "test",
 			expected: nil,
 		},
 		{
-			name: "error decoding variables",
-			cfgmap: &v1.ConfigMap{
-				Data: map[string]string{
-					"variables": "test",
-				},
-			},
-			expected: nil,
-		},
-		{
-			name: "success decoding variables",
-			cfgmap: &v1.ConfigMap{
-				Data: map[string]string{
-					"variables": "W3sibmFtZSI6InRlc3QiLCJ2YWx1ZSI6InZhbHVlIn1d",
-				},
-			},
+			name:  "success decoding variables",
+			input: "W3sibmFtZSI6InRlc3QiLCJ2YWx1ZSI6InZhbHVlIn1d",
 			expected: []types.DeployVariable{
 				{
 					Name:  "test",
@@ -55,7 +37,7 @@ func Test_getVariablesFromCfgmap(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := getVariablesFromCfgmap(tt.cfgmap)
+			res := decodeConfigMapVariables(tt.input)
 			assert.Equal(t, tt.expected, res)
 		})
 	}

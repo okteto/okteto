@@ -22,7 +22,6 @@ import (
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
-	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -64,16 +63,8 @@ func (ld *localDestroyCommand) destroy(ctx context.Context, opts *Options) error
 }
 
 // getVariablesFromCfgmap given a cfgmap this returns the variables as []EnvVar in it
-func getVariablesFromCfgmap(cfgmap *v1.ConfigMap) []types.DeployVariable {
-	if cfgmap == nil {
-		return nil
-	}
-	b64Variables, ok := cfgmap.Data["variables"]
-	if !ok {
-		return nil
-	}
-
-	decodedStringVariables, err := base64.StdEncoding.DecodeString(b64Variables)
+func decodeConfigMapVariables(stringVariables string) []types.DeployVariable {
+	decodedStringVariables, err := base64.StdEncoding.DecodeString(stringVariables)
 	if err != nil {
 		return nil
 	}
@@ -99,12 +90,12 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destroying...")
 
-	cfg, err := ld.ConfigMapHandler.getConfigmap(ctx, opts.Name, namespace)
+	cfgVariablesString, err := ld.ConfigMapHandler.getConfigmapVariables(ctx, opts.Name, namespace)
 	if err != nil {
 		return err
 	}
 
-	cfgVariables := getVariablesFromCfgmap(cfg)
+	cfgVariables := decodeConfigMapVariables(cfgVariablesString)
 	for _, variable := range cfgVariables {
 		opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", variable.Name, variable.Value))
 		if strings.TrimSpace(variable.Value) != "" {
@@ -121,7 +112,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 		Filename:  opts.ManifestPathFlag,
 		Variables: opts.Variables,
 	}
-	cfg, err = ld.ConfigMapHandler.translateConfigMapAndDeploy(ctx, data)
+	cfg, err := ld.ConfigMapHandler.translateConfigMapAndDeploy(ctx, data)
 	if err != nil {
 		return err
 	}
