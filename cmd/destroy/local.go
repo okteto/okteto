@@ -99,14 +99,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destroying...")
 
-	data := &pipeline.CfgData{
-		Name:      opts.Name,
-		Namespace: namespace,
-		Status:    pipeline.DestroyingStatus,
-		Filename:  opts.ManifestPathFlag,
-	}
-
-	cfg, err := ld.ConfigMapHandler.translateConfigMapAndDeploy(ctx, data)
+	cfg, err := ld.ConfigMapHandler.getConfigmap(ctx, opts.Name, namespace)
 	if err != nil {
 		return err
 	}
@@ -119,6 +112,19 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 		}
 	}
 	oktetoLog.EnableMasking()
+
+	// update to change status
+	data := &pipeline.CfgData{
+		Name:      opts.Name,
+		Namespace: namespace,
+		Status:    pipeline.DestroyingStatus,
+		Filename:  opts.ManifestPathFlag,
+		Variables: opts.Variables,
+	}
+	cfg, err = ld.ConfigMapHandler.translateConfigMapAndDeploy(ctx, data)
+	if err != nil {
+		return err
+	}
 
 	if ld.manifest.Context == "" {
 		ld.manifest.Context = okteto.Context().Name
