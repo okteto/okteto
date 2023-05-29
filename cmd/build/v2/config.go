@@ -101,7 +101,12 @@ func (oc oktetoBuilderConfig) getTextToHash(buildInfo *model.BuildInfo, sha stri
 		args = append(args, arg.String())
 	}
 	argsText := strings.Join(args, ";")
-	secretsText := buildInfo.Secrets.GetContent(oc.fs)
+
+	secrets := []string{}
+	for key, value := range buildInfo.Secrets {
+		secrets = append(secrets, fmt.Sprintf("%s=%s", key, value))
+	}
+	secretsText := strings.Join(secrets, ";")
 
 	// We use a builder to avoid allocations when building the string
 	var b strings.Builder

@@ -211,7 +211,7 @@ func TestGetTextToHash(t *testing.T) {
 					Image:      "image",
 				},
 			},
-			expected: "commit:1234567890;target:target;build_args:foo=bar;key=value;secrets:secret=bar;context:context;dockerfile:dockerfile;image:image;",
+			expected: "commit:1234567890;target:target;build_args:foo=bar;key=value;secrets:secret=secret;context:context;dockerfile:dockerfile;image:image;",
 		},
 		{
 			name: "invalid commit",
@@ -241,7 +241,7 @@ func TestGetTextToHash(t *testing.T) {
 					Image:      "image",
 				},
 			},
-			expected: "commit:;target:target;build_args:foo=bar;key=value;secrets:secret=bar;context:context;dockerfile:dockerfile;image:image;",
+			expected: "commit:;target:target;build_args:foo=bar;key=value;secrets:secret=secret;context:context;dockerfile:dockerfile;image:image;",
 		},
 		{
 			name: "invalid commit and no args",
@@ -262,7 +262,7 @@ func TestGetTextToHash(t *testing.T) {
 					Image:      "image",
 				},
 			},
-			expected: "commit:;target:target;build_args:;secrets:secret=bar;context:context;dockerfile:dockerfile;image:image;",
+			expected: "commit:;target:target;build_args:;secrets:secret=secret;context:context;dockerfile:dockerfile;image:image;",
 		},
 	}
 	for _, tc := range tt {
