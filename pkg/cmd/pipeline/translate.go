@@ -285,7 +285,13 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 		cmap.Data[branchField] = data.Branch
 	}
 
-	cmap.Data[variablesField] = translateVariables(data.Variables)
+	currentVariables := cmap.Data[variablesField]
+	variables := translateVariables(data.Variables)
+	if currentVariables != "" && variables == "" {
+		delete(cmap.Data, variablesField)
+	} else if variables != "" {
+		cmap.Data[variablesField] = variables
+	}
 
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
