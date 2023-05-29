@@ -21,6 +21,7 @@ import (
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/afero"
 )
 
@@ -38,6 +39,7 @@ type oktetoBuilderConfig struct {
 	isCleanProject  bool
 	repository      configRepositoryInterface
 	fs              afero.Fs
+	isOkteto        bool
 }
 
 func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterface) oktetoBuilderConfig {
@@ -55,7 +57,13 @@ func getConfig(registry configRegistryInterface, gitRepo configRepositoryInterfa
 		hasGlobalAccess: hasAccess,
 		isCleanProject:  isClean,
 		fs:              afero.NewOsFs(),
+		isOkteto:        okteto.Context().IsOkteto,
 	}
+}
+
+// IsOkteto checks if the context is an okteto managed context
+func (oc oktetoBuilderConfig) IsOkteto() bool {
+	return oc.isOkteto
 }
 
 // HasGlobalAccess checks if the user has access to global registry
