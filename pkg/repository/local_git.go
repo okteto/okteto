@@ -51,6 +51,7 @@ func NewLocalGit(gitPath string, exec CommandExecutor) *LocalGit {
 	}
 }
 
+// Status returns the status of the repository at the given path
 func (lg *LocalGit) Status(ctx context.Context, dirPath string, fixAttempt int) (git.Status, error) {
 	if fixAttempt > 0 {
 		return git.Status{}, errLocalGitCannotGetStatusTooManyAttempts
@@ -76,11 +77,13 @@ func (lg *LocalGit) Status(ctx context.Context, dirPath string, fixAttempt int) 
 	return status, err
 }
 
+// FixDubiousOwnershipConfig adds the given path to the git config safe.directory to avoid the dubious ownership error
 func (lg *LocalGit) FixDubiousOwnershipConfig(path string) error {
 	_, err := lg.exec.RunCommand(context.Background(), lg.gitPath, "config", "--global", "--add", "safe.directory", path)
 	return err
 }
 
+// Exists checks if git binary exists in the system
 func (lg *LocalGit) Exists() (string, error) {
 	return lg.exec.LookPath("git")
 }
