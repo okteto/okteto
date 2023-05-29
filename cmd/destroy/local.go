@@ -90,7 +90,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destroying...")
 
-	cfgVariablesString, err := ld.ConfigMapHandler.getConfigmapVariables(ctx, opts.Name, namespace)
+	cfgVariablesString, err := ld.ConfigMapHandler.getConfigmapVariablesEncoded(ctx, opts.Name, namespace)
 	if err != nil {
 		return err
 	}

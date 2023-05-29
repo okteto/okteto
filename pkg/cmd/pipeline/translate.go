@@ -92,8 +92,8 @@ type CfgData struct {
 	Variables  []string
 }
 
-// GetConfigmapVariables returns Data["variables"] content from Configmap
-func GetConfigmapVariables(ctx context.Context, name, namespace string, c kubernetes.Interface) (string, error) {
+// GetConfigmapVariablesEncoded returns Data["variables"] content from Configmap
+func GetConfigmapVariablesEncoded(ctx context.Context, name, namespace string, c kubernetes.Interface) (string, error) {
 	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
 	if err != nil {
 		if !oktetoErrors.IsNotFound(err) {
