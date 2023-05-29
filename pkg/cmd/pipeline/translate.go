@@ -197,7 +197,7 @@ func translateOutput(output *bytes.Buffer) []byte {
 	var data []byte
 	if output.Len() > maxLogOutputRaw {
 		scanner := bufio.NewScanner(output)
-		linesInReverse := []string{}
+		var linesInReverse []string
 		for scanner.Scan() {
 			linesInReverse = append([]string{scanner.Text()}, linesInReverse...)
 		}
