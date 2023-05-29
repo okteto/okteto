@@ -182,7 +182,7 @@ type envsGetter struct {
 	configMapEnvsGetter configMapEnvsGetterInterface
 	secretsEnvsGetter   secretsEnvsGetterInterface
 	imageEnvsGetter     imageEnvsGetterInterface
-	getLocalEnvs        func() []string
+	getDefaultLocalEnvs func() []string
 }
 
 func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
@@ -208,7 +208,7 @@ func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 		imageEnvsGetter: &imageEnvsGetter{
 			imageGetter: registry.NewOktetoRegistry(okteto.Config{}),
 		},
-		getLocalEnvs: os.Environ,
+		getDefaultLocalEnvs: getDefaultLocalEnvs,
 	}, nil
 }
 
@@ -242,9 +242,25 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
 	}
 
-	envs = append(envs, eg.getLocalEnvs()...)
+	envs = append(envs, eg.getDefaultLocalEnvs()...)
 
 	return envs, nil
+}
+
+func getDefaultLocalEnvs() []string {
+	var envs []string
+
+	path := os.Getenv("PATH")
+	if path != "" {
+		envs = append(envs, fmt.Sprintf("PATH=%s", path))
+	}
+
+	term := os.Getenv("TERM")
+	if term != "" {
+		envs = append(envs, fmt.Sprintf("TERM=%s", term))
+	}
+
+	return envs
 }
 
 func (cmg *configMapGetter) getEnvsFromConfigMap(ctx context.Context, name string, namespace string, client kubernetes.Interface) ([]string, error) {
