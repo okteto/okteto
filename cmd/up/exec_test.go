@@ -163,7 +163,7 @@ func TestGetEnvs(t *testing.T) {
 				configMapEnvsGetter: &tt.fakeConfigMapEnvsGetter,
 				secretsEnvsGetter:   &tt.fakeSecretEnvsGetter,
 				imageEnvsGetter:     &tt.fakeImageEnvsGetter,
-				pathGetter:          func(_ string) string { return "" },
+				getDefaultLocalEnvs: func() []string { return []string{} },
 			}
 
 			envs, err := eg.getEnvs(ctx)
