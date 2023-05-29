@@ -107,7 +107,7 @@ func expectMaskedVariableAtDeploy(o string) error {
 }
 
 func expectMaskedVariableAtDestroy(o string) error {
-	if ok := strings.Contains(o, "printing deploy external variable... ***"); !ok {
+	if ok := strings.Contains(o, "printing destroy external variable... ***"); !ok {
 		log.Print(o)
 		return errors.New("external variable at destroy is not being masked")
 	}
