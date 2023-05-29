@@ -281,10 +281,7 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 		cmap.Data[branchField] = data.Branch
 	}
 
-	variables := translateVariables(data.Variables)
-	if variables != "" {
-		cmap.Data[variablesField] = variables
-	}
+	cmap.Data[variablesField] = translateVariables(data.Variables)
 
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
@@ -344,7 +341,7 @@ func translateVariables(variables []string) string {
 	}
 
 	if len(v) > 0 {
-		encodedVars, _ := json.Marshal(variables)
+		encodedVars, _ := json.Marshal(v)
 		return base64.StdEncoding.EncodeToString(encodedVars)
 	}
 

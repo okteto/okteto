@@ -15,6 +15,7 @@ package pipeline
 
 import (
 	"context"
+	"encoding/base64"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/constants"
@@ -243,7 +244,7 @@ func Test_translateVariables(t *testing.T) {
 		{
 			name:     "valid input",
 			input:    []string{"test=value"},
-			expected: "WyJ0ZXN0PXZhbHVlIl0=",
+			expected: base64.StdEncoding.EncodeToString([]byte("[{\"name\":\"test\",\"value\":\"value\"}]")),
 		},
 	}
 
