@@ -2,6 +2,8 @@ package destroy
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -19,6 +21,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -59,19 +62,26 @@ func (ld *localDestroyCommand) destroy(ctx context.Context, opts *Options) error
 	return err
 }
 
+// getVariablesFromCfgmap given a cfgmap this returns the variables as []EnvVar in it
+func decodeConfigMapVariables(stringVariables string) []types.DeployVariable {
+	decodedStringVariables, err := base64.StdEncoding.DecodeString(stringVariables)
+	if err != nil {
+		return nil
+	}
+
+	var variables []types.DeployVariable
+	if err := json.Unmarshal(decodedStringVariables, &variables); err != nil {
+		return nil
+	}
+
+	return variables
+}
+
 func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	err := ld.manifest.ExpandEnvVars()
 	if err != nil {
 		return err
 	}
-
-	for _, variable := range opts.Variables {
-		value := strings.SplitN(variable, "=", 2)[1]
-		if strings.TrimSpace(value) != "" {
-			oktetoLog.AddMaskedWord(value)
-		}
-	}
-	oktetoLog.EnableMasking()
 
 	namespace := opts.Namespace
 	if namespace == "" {
@@ -80,13 +90,28 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 
 	oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Destroying...")
 
+	cfgVariablesString, err := ld.ConfigMapHandler.getConfigmapVariablesEncoded(ctx, opts.Name, namespace)
+	if err != nil {
+		return err
+	}
+
+	cfgVariables := decodeConfigMapVariables(cfgVariablesString)
+	for _, variable := range cfgVariables {
+		opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", variable.Name, variable.Value))
+		if strings.TrimSpace(variable.Value) != "" {
+			oktetoLog.AddMaskedWord(variable.Value)
+		}
+	}
+	oktetoLog.EnableMasking()
+
+	// update to change status
 	data := &pipeline.CfgData{
 		Name:      opts.Name,
 		Namespace: namespace,
 		Status:    pipeline.DestroyingStatus,
 		Filename:  opts.ManifestPathFlag,
+		Variables: opts.Variables,
 	}
-
 	cfg, err := ld.ConfigMapHandler.translateConfigMapAndDeploy(ctx, data)
 	if err != nil {
 		return err
