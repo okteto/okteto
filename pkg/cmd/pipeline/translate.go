@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
+	"github.com/okteto/okteto/pkg/types"
 	giturls "github.com/whilp/git-urls"
 	apiv1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -51,6 +52,7 @@ const (
 	iconField       = "icon"
 	actionLockField = "actionLock"
 	actionNameField = "actionName"
+	variablesField  = "variables"
 
 	actionDefaultName = "cli"
 
@@ -87,6 +89,21 @@ type CfgData struct {
 	Filename   string
 	Manifest   []byte
 	Icon       string
+	Variables  []string
+}
+
+// GetConfigmapVariablesEncoded returns Data["variables"] content from Configmap
+func GetConfigmapVariablesEncoded(ctx context.Context, name, namespace string, c kubernetes.Interface) (string, error) {
+	cmap, err := configmaps.Get(ctx, TranslatePipelineName(name), namespace, c)
+	if err != nil {
+		if !oktetoErrors.IsNotFound(err) {
+			return "", err
+		}
+		// if err Not Found, return empty variables but no error
+		return "", nil
+	}
+
+	return cmap.Data[variablesField], nil
 }
 
 // TranslateConfigMapAndDeploy translates the app into a configMap.
@@ -180,7 +197,7 @@ func translateOutput(output *bytes.Buffer) []byte {
 	var data []byte
 	if output.Len() > maxLogOutputRaw {
 		scanner := bufio.NewScanner(output)
-		linesInReverse := []string{}
+		var linesInReverse []string
 		for scanner.Scan() {
 			linesInReverse = append([]string{scanner.Text()}, linesInReverse...)
 		}
@@ -232,6 +249,10 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 		cmap.Data[filenameField] = data.Filename
 	}
 
+	variables := translateVariables(data.Variables)
+	if variables != "" {
+		cmap.Data[variablesField] = variables
+	}
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
 	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
@@ -272,6 +293,14 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 
 	if data.Branch != "" {
 		cmap.Data[branchField] = data.Branch
+	}
+
+	currentVariables := cmap.Data[variablesField]
+	variables := translateVariables(data.Variables)
+	if currentVariables != "" && variables == "" {
+		delete(cmap.Data, variablesField)
+	} else if variables != "" {
+		cmap.Data[variablesField] = variables
 	}
 
 	output := oktetoLog.GetOutputBuffer()
@@ -316,4 +345,25 @@ func removeSensitiveDataFromGitURL(gitURL string) string {
 		parsedRepo.User = nil
 	}
 	return parsedRepo.String()
+}
+
+func translateVariables(variables []string) string {
+	var v []types.DeployVariable
+	for _, item := range variables {
+		splitV := strings.SplitN(item, "=", 2)
+		if len(splitV) != 2 {
+			continue
+		}
+		v = append(v, types.DeployVariable{
+			Name:  splitV[0],
+			Value: splitV[1],
+		})
+	}
+
+	if len(v) > 0 {
+		encodedVars, _ := json.Marshal(v)
+		return base64.StdEncoding.EncodeToString(encodedVars)
+	}
+
+	return ""
 }
