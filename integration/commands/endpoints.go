@@ -16,6 +16,7 @@ package commands
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 )
 
@@ -30,6 +31,7 @@ type EndpointOptions struct {
 // RunOktetoDeploy runs an okteto deploy command
 func RunOktetoEndpoints(oktetoPath string, endpointsOptions *EndpointOptions) ([]byte, error) {
 	cmd := exec.Command(oktetoPath, "endpoints")
+	cmd.Env = os.Environ()
 	if endpointsOptions.Workdir != "" {
 		cmd.Dir = endpointsOptions.Workdir
 	}
