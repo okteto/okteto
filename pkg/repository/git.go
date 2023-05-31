@@ -15,9 +15,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"time"
+
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -39,43 +41,59 @@ type cleanStatus struct {
 	err     error
 }
 
+func (r gitRepoController) calculateIsClean(ctx context.Context) (bool, error) {
+	repo, err := r.repoGetter.get(r.path)
+	if err != nil {
+		return false, fmt.Errorf("failed to analyze git repo: %w", err)
+	}
+
+	worktree, err := repo.Worktree()
+	if err != nil {
+		return false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)
+	}
+
+	status, err := worktree.Status(ctx, NewLocalGit("git", &LocalExec{}))
+	if err != nil {
+		return false, fmt.Errorf("failed to infer the git repo's status: %w", err)
+	}
+
+	return status.IsClean(), nil
+}
+
 // isClean checks if the repository have changes over the commit
 func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
+	// We use context.TODO() in a few places to call isClean, so let's make sure
+	// we set proper internal timeouts to not leak goroutines
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	timeoutCh := make(chan struct{})
 	ch := make(chan cleanStatus)
-	defer close(ch)
+
+	timeoutErr := errors.New("timeout exceeded")
 
 	go func() {
-		repo, err := r.repoGetter.get(r.path)
-		if err != nil {
-			ch <- cleanStatus{false, fmt.Errorf("failed to analyze git repo: %w", err)}
-			return
-		}
-
-		worktree, err := repo.Worktree()
-		if err != nil {
-			ch <- cleanStatus{false, fmt.Errorf("failed to infer the git repo's current branch: %w", err)}
-			return
-		}
-
-		status, err := worktree.Status(ctx, NewLocalGit("git", &LocalExec{}))
-		if err != nil {
-			ch <- cleanStatus{false, fmt.Errorf("failed to infer the git repo's status: %w", err)}
-			return
-		}
-
-		ch <- cleanStatus{status.IsClean(), nil}
+		time.Sleep(time.Second)
+		close(timeoutCh)
+		cancel()
+		ch <- cleanStatus{false, timeoutErr}
 	}()
 
-	select {
-	case <-ctxWithTimeout.Done():
+	go func() {
+		clean, err := r.calculateIsClean(ctx)
+		select {
+		case <-timeoutCh:
+		case ch <- cleanStatus{clean, err}:
+		}
+	}()
+
+	s := <-ch
+
+	if s.err == timeoutErr {
 		oktetoLog.Warning("Timeout exceeded calculating git status: assuming dirty commit")
-		return false, ctxWithTimeout.Err()
-	case res := <-ch:
-		return res.isClean, res.err
 	}
+
+	return s.isClean, s.err
 }
 
 // GetSHA returns the last commit sha of the repository
