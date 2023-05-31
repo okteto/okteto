@@ -14,8 +14,6 @@
 package repository
 
 import (
-	"context"
-	"github.com/go-git/go-git/v5"
 	"net/url"
 	"testing"
 
@@ -25,18 +23,12 @@ import (
 )
 
 type fakeRepositoryGetter struct {
-	repository []*fakeRepository
-	err        []error
-	callCount  int
+	repository *fakeRepository
+	err        error
 }
 
-func (frg *fakeRepositoryGetter) get(_ string) (gitRepositoryInterface, error) {
-	i := frg.callCount
-	frg.callCount++
-	if frg.err != nil && frg.err[i] != nil {
-		return nil, frg.err[i]
-	}
-	return frg.repository[i], nil
+func (frg fakeRepositoryGetter) get(_ string) (gitRepositoryInterface, error) {
+	return frg.repository, frg.err
 }
 
 type fakeRepository struct {
@@ -54,26 +46,16 @@ func (fr fakeRepository) Head() (*plumbing.Reference, error) {
 }
 
 type fakeWorktree struct {
-	status oktetoGitStatus
-	root   string
+	status *fakeStatus
 	err    error
 }
 
-func (fw fakeWorktree) GetRoot() string {
-	return fw.root
-}
-
-func (fw fakeWorktree) Status(context.Context, LocalGitInterface) (oktetoGitStatus, error) {
+func (fw fakeWorktree) Status() (gitStatusInterface, error) {
 	return fw.status, fw.err
-}
-
-func (fs fakeStatus) Status() git.Status {
-	return fs.status
 }
 
 type fakeStatus struct {
 	isClean bool
-	status  git.Status
 }
 
 func (fs fakeStatus) IsClean() bool {

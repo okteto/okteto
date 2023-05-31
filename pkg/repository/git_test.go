@@ -14,16 +14,16 @@
 package repository
 
 import (
-	"github.com/go-git/go-git/v5/plumbing"
 	"testing"
 
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestIsClean(t *testing.T) {
 	type config struct {
-		repositoryGetter *fakeRepositoryGetter
+		repositoryGetter fakeRepositoryGetter
 	}
 	type expected struct {
 		isClean bool
@@ -37,9 +37,9 @@ func TestIsClean(t *testing.T) {
 		{
 			name: "dir is not a repository",
 			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
+				repositoryGetter: fakeRepositoryGetter{
 					repository: nil,
-					err:        []error{git.ErrRepositoryNotExists},
+					err:        git.ErrRepositoryNotExists,
 				},
 			},
 			expected: expected{
@@ -50,12 +50,10 @@ func TestIsClean(t *testing.T) {
 		{
 			name: "repository could not access worktree",
 			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
-					repository: []*fakeRepository{
-						{
-							worktree: nil,
-							err:      assert.AnError,
-						},
+				repositoryGetter: fakeRepositoryGetter{
+					repository: &fakeRepository{
+						worktree: nil,
+						err:      assert.AnError,
 					},
 				},
 			},
@@ -67,17 +65,13 @@ func TestIsClean(t *testing.T) {
 		{
 			name: "worktree could not access status",
 			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
-					repository: []*fakeRepository{
-						{
-							worktree: &fakeWorktree{
-								status: oktetoGitStatus{
-									status: git.Status{},
-								},
-								err: assert.AnError,
-							},
-							err: nil,
+				repositoryGetter: fakeRepositoryGetter{
+					repository: &fakeRepository{
+						worktree: &fakeWorktree{
+							status: nil,
+							err:    assert.AnError,
 						},
+						err: nil,
 					},
 				},
 			},
@@ -89,22 +83,15 @@ func TestIsClean(t *testing.T) {
 		{
 			name: "repository is not clean",
 			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
-					repository: []*fakeRepository{
-						{
-							worktree: &fakeWorktree{
-								status: oktetoGitStatus{
-									status: git.Status{
-										"test-file.go": &git.FileStatus{
-											Staging:  git.Modified,
-											Worktree: git.Unmodified,
-										},
-									},
-								},
-								err: nil,
+				repositoryGetter: fakeRepositoryGetter{
+					repository: &fakeRepository{
+						worktree: &fakeWorktree{
+							status: &fakeStatus{
+								isClean: false,
 							},
 							err: nil,
 						},
+						err: nil,
 					},
 				},
 			},
@@ -116,26 +103,15 @@ func TestIsClean(t *testing.T) {
 		{
 			name: "repository is clean",
 			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
-					repository: []*fakeRepository{
-						{
-							worktree: &fakeWorktree{
-								status: oktetoGitStatus{
-									status: git.Status{
-										"test-file.go": &git.FileStatus{
-											Staging:  git.Unmodified,
-											Worktree: git.Unmodified,
-										},
-										"test-file-2.go": &git.FileStatus{
-											Staging:  git.Unmodified,
-											Worktree: git.Unmodified,
-										},
-									},
-								},
-								err: nil,
+				repositoryGetter: fakeRepositoryGetter{
+					repository: &fakeRepository{
+						worktree: &fakeWorktree{
+							status: &fakeStatus{
+								isClean: true,
 							},
 							err: nil,
 						},
+						err: nil,
 					},
 				},
 			},
@@ -160,36 +136,8 @@ func TestIsClean(t *testing.T) {
 }
 
 func TestGetSHA(t *testing.T) {
-	cleanRepo := &fakeRepository{worktree: &fakeWorktree{
-		status: oktetoGitStatus{
-			status: git.Status{
-				"test-file.go": &git.FileStatus{
-					Staging:  git.Unmodified,
-					Worktree: git.Unmodified,
-				},
-			},
-		},
-	},
-		head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
-		err:  nil,
-	}
-
-	repoWithHeadErr := &fakeRepository{worktree: &fakeWorktree{
-		status: oktetoGitStatus{
-			status: git.Status{
-				"test-file.go": &git.FileStatus{
-					Staging:  git.Unmodified,
-					Worktree: git.Unmodified,
-				},
-			},
-		},
-	},
-		head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
-		err:  assert.AnError,
-	}
-
 	type config struct {
-		repositoryGetter *fakeRepositoryGetter
+		repositoryGetter fakeRepositoryGetter
 	}
 	type expected struct {
 		sha string
@@ -203,8 +151,15 @@ func TestGetSHA(t *testing.T) {
 		{
 			name: "get sha without any problem",
 			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
-					repository: []*fakeRepository{cleanRepo, cleanRepo},
+				repositoryGetter: fakeRepositoryGetter{
+					repository: &fakeRepository{
+						worktree: &fakeWorktree{
+							status: &fakeStatus{
+								isClean: true,
+							},
+						},
+						head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
+					},
 				},
 			},
 			expected: expected{
@@ -213,39 +168,11 @@ func TestGetSHA(t *testing.T) {
 			},
 		},
 		{
-			name: "get empty sha when not clean",
-			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
-					repository: []*fakeRepository{
-						{
-							worktree: &fakeWorktree{
-								status: oktetoGitStatus{
-									status: git.Status{
-										"test-file.go": &git.FileStatus{
-											Staging:  git.Modified,
-											Worktree: git.Unmodified,
-										},
-									},
-								},
-							},
-							head: plumbing.NewHashReference("test", plumbing.NewHash("test")),
-						},
-					},
-				},
-			},
-			expected: expected{
-				sha: "",
-				err: nil,
-			},
-		},
-		{
 			name: "error getting repository",
 			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
-					repository: []*fakeRepository{cleanRepo},
-					err: []error{
-						nil,
-						assert.AnError},
+				repositoryGetter: fakeRepositoryGetter{
+					repository: nil,
+					err:        assert.AnError,
 				},
 			},
 			expected: expected{
@@ -256,24 +183,11 @@ func TestGetSHA(t *testing.T) {
 		{
 			name: "error getting Head",
 			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
-					repository: []*fakeRepository{cleanRepo, repoWithHeadErr},
-					err: []error{
-						nil,
-						nil},
-				},
-			},
-			expected: expected{
-				sha: "",
-				err: assert.AnError,
-			},
-		},
-		{
-			name: "error calling isClean",
-			config: config{
-				repositoryGetter: &fakeRepositoryGetter{
-					repository: []*fakeRepository{},
-					err:        []error{assert.AnError},
+				repositoryGetter: fakeRepositoryGetter{
+					repository: &fakeRepository{
+						head: nil,
+						err:  assert.AnError,
+					},
 				},
 			},
 			expected: expected{

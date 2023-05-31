@@ -40,7 +40,7 @@ type repositoryInterface interface {
 
 // NewRepository creates a repository controller
 func NewRepository(path string) Repository {
-	repoUrl, err := giturls.Parse(path)
+	url, err := giturls.Parse(path)
 	if err != nil {
 		oktetoLog.Infof("could not parse url: %w", err)
 	}
@@ -53,7 +53,7 @@ func NewRepository(path string) Repository {
 	}
 	return Repository{
 		path:    path,
-		url:     repoUrl,
+		url:     url,
 		control: controller,
 	}
 }
