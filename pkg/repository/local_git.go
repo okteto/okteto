@@ -62,15 +62,18 @@ func (lg *LocalGit) Status(ctx context.Context, dirPath string, fixAttempt int) 
 	if err != nil {
 		var exitError *exec.ExitError
 		errors.As(err, &exitError)
-		exitErr := string(exitError.Stderr)
-		if strings.Contains(exitErr, "detected dubious ownership in repository") {
-			err = lg.FixDubiousOwnershipConfig(dirPath)
-			if err != nil {
-				return git.Status{}, errLocalGitCannotGetStatusCannotRecover
+		if exitError != nil {
+			exitErr := string(exitError.Stderr)
+			if strings.Contains(exitErr, "detected dubious ownership in repository") {
+				err = lg.FixDubiousOwnershipConfig(dirPath)
+				if err != nil {
+					return git.Status{}, errLocalGitCannotGetStatusCannotRecover
+				}
+				fixAttempt++
+				return lg.Status(ctx, dirPath, fixAttempt)
 			}
-			fixAttempt++
-			return lg.Status(ctx, dirPath, fixAttempt)
 		}
+		return git.Status{}, errLocalGitCannotGetStatusCannotRecover
 	}
 
 	status, err := lg.parseGitStatus(string(output))
