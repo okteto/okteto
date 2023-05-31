@@ -29,15 +29,16 @@ import (
 
 // CreateOptions represents the options that namespace create has
 type CreateOptions struct {
-	Members   *[]string
-	Namespace string
-	Show      bool
+	Members      *[]string
+	Namespace    string
+	Show         bool
+	SetCurrentNs bool
 }
 
 // Create creates a namespace
 func Create(ctx context.Context) *cobra.Command {
 	options := &CreateOptions{
-		Show: true,
+		Show: false,
 	}
 	cmd := &cobra.Command{
 		Use:   "create <name>",
@@ -46,12 +47,10 @@ func Create(ctx context.Context) *cobra.Command {
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
-
 			options.Namespace = args[0]
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
-
 			nsCmd, err := NewCommand()
 			if err != nil {
 				return err
@@ -64,6 +63,7 @@ func Create(ctx context.Context) *cobra.Command {
 	}
 
 	options.Members = cmd.Flags().StringArrayP("members", "m", []string{}, "members of the namespace, it can the username or email")
+	cmd.Flags().BoolVarP(&options.SetCurrentNs, "use", "", true, "use the newly created namespace as the current namespace")
 	return cmd
 }
 
@@ -84,11 +84,17 @@ func (nc *NamespaceCommand) Create(ctx context.Context, opts *CreateOptions) err
 	ctxOptions := &contextCMD.ContextOptions{
 		IsCtxCommand: opts.Show,
 		IsOkteto:     true,
-		Save:         true,
-		Show:         false,
 		Token:        okteto.Context().Token,
 		Namespace:    oktetoNS,
 		Context:      okteto.Context().Name,
+	}
+
+	if opts.SetCurrentNs == true {
+		ctxOptions.Save = true
+		ctxOptions.Show = true
+	} else {
+		ctxOptions.Save = false
+		ctxOptions.Show = false
 	}
 
 	if err := nc.ctxCmd.Run(ctx, ctxOptions); err != nil {

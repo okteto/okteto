@@ -30,6 +30,7 @@ type ContextOptions struct {
 	OnlyOkteto            bool
 	Show                  bool
 	Save                  bool
+	SetCurrentNs          bool
 	IsCtxCommand          bool
 	CheckNamespaceAccess  bool
 	IsOkteto              bool
