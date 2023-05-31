@@ -49,7 +49,9 @@ func Endpoints(ctx context.Context) *cobra.Command {
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
-			oktetoLog.Information("Using %s @ %s as context", previewName, okteto.RemoveSchema(okteto.Context().Name))
+			if output != "json" {
+				oktetoLog.Information("Using %s @ %s as context", previewName, okteto.RemoveSchema(okteto.Context().Name))
+			}
 
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
