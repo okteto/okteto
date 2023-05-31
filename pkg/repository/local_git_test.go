@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"os/exec"
 	"testing"
 )
 
@@ -136,8 +137,29 @@ func TestLocalGit_Status(t *testing.T) {
 			expectedErr: errLocalGitInvalidStatusOutput,
 		},
 		{
+			name:        "recover from dubious ownership",
+			fixAttempts: 0,
+			mock: func() *mockLocalExec {
+				var currentFixAttempt int
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						if currentFixAttempt == 0 {
+							currentFixAttempt++
+							return nil, &exec.ExitError{
+								Stderr: []byte("fatal: detected dubious ownership in repository at <path>"),
+							}
+						}
+
+						return []byte(""), nil
+
+					},
+				}
+			},
+			expectedErr: nil,
+		},
+		{
 			name:        "failure due to too many attempts",
-			fixAttempts: 1,
+			fixAttempts: 2,
 			mock: func() *mockLocalExec {
 				return &mockLocalExec{
 					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
@@ -146,6 +168,18 @@ func TestLocalGit_Status(t *testing.T) {
 				}
 			},
 			expectedErr: errLocalGitCannotGetStatusTooManyAttempts,
+		},
+		{
+			name:        "cannot recover",
+			fixAttempts: 1,
+			mock: func() *mockLocalExec {
+				return &mockLocalExec{
+					runCommand: func(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
+						return nil, assert.AnError
+					},
+				}
+			},
+			expectedErr: errLocalGitCannotGetStatusCannotRecover,
 		},
 	}
 
