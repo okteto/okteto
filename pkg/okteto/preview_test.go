@@ -121,6 +121,21 @@ func TestDeployPreview(t *testing.T) {
 			},
 		},
 		{
+			name: "with variables - feature not enabled",
+			input: input{
+				client: &fakeGraphQLClient{
+					err: errors.New("Unknown argument \"labels\" on field \"deployPreview\" of type \"Mutation\""),
+				},
+				name: "test",
+				labels: []string{
+					"key=value",
+				},
+			},
+			expected: expected{
+				err: ErrLabelsFeatureNotSupported,
+			},
+		},
+		{
 			name: "without variables - error",
 			input: input{
 				client: &fakeGraphQLClient{
