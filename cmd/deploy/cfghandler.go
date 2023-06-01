@@ -30,6 +30,7 @@ type configMapHandler interface {
 	translateConfigMapAndDeploy(context.Context, *pipeline.CfgData) (*apiv1.ConfigMap, error)
 	updateConfigMap(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error
 	updateEnvsFromCommands(context.Context, string, string, []string) error
+	getConfigmapVariablesEncoded(ctx context.Context, name, namespace string) (string, error)
 }
 
 // deployInsideDeployConfigMapHandler is the runner used when the okteto is executed
@@ -67,6 +68,14 @@ func (ch *defaultConfigMapHandler) translateConfigMapAndDeploy(ctx context.Conte
 	return pipeline.TranslateConfigMapAndDeploy(ctx, data, c)
 }
 
+func (ch *defaultConfigMapHandler) getConfigmapVariablesEncoded(ctx context.Context, name, namespace string) (string, error) {
+	c, _, err := ch.k8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return "", err
+	}
+	return pipeline.GetConfigmapVariablesEncoded(ctx, name, namespace, c)
+}
+
 func (ch *defaultConfigMapHandler) updateConfigMap(ctx context.Context, cfg *apiv1.ConfigMap, data *pipeline.CfgData, errMain error) error {
 	c, _, err := ch.k8sClientProvider.Provide(okteto.Context().Cfg)
 	if err != nil {
@@ -100,6 +109,10 @@ func (h *defaultConfigMapHandler) updateEnvsFromCommands(ctx context.Context, na
 // overwritten the cfmap and leave it in a inconsistent status
 func (*deployInsideDeployConfigMapHandler) translateConfigMapAndDeploy(_ context.Context, _ *pipeline.CfgData) (*apiv1.ConfigMap, error) {
 	return nil, nil
+}
+
+func (*deployInsideDeployConfigMapHandler) getConfigmapVariablesEncoded(_ context.Context, _, _ string) (string, error) {
+	return "", nil
 }
 
 // updateConfigMap with the receiver deployInsideDeployConfigMapHandler doesn't do anything
