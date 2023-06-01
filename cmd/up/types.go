@@ -15,6 +15,7 @@ package up
 
 import (
 	"context"
+	"os/exec"
 	"time"
 
 	"github.com/moby/term"
@@ -62,6 +63,7 @@ type upContext struct {
 	Options               *UpOptions
 	pidController         pidController
 	Fs                    afero.Fs
+	hybridCommand         *exec.Cmd
 }
 
 // Forwarder is an interface for the port-forwarding features

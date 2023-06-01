@@ -22,8 +22,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
+	"github.com/mitchellh/go-ps"
 	"github.com/moby/term"
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -642,6 +644,9 @@ func (up *upContext) start() error {
 			return err
 		}
 	case err := <-pidFileCh:
+		if up.Dev.IsHybridModeEnabled() {
+			shutdownHybridMode(up.hybridCommand.Process.Pid)
+		}
 		oktetoLog.Infof("exit signal received due to pid file modification: %s", err)
 		return err
 	}
@@ -669,6 +674,9 @@ func (up *upContext) activateLoop() {
 				oktetoLog.Infof("error getting pid: %w")
 			}
 			if pidFromFile != strconv.Itoa(os.Getpid()) {
+				if up.Dev.IsHybridModeEnabled() {
+					shutdownHybridMode(up.hybridCommand.Process.Pid)
+				}
 				up.Exit <- oktetoErrors.UserError{
 					E:    fmt.Errorf("development container has been deactivated by another 'okteto up' command"),
 					Hint: "Use 'okteto exec' to open another terminal to your development container",
@@ -904,9 +912,52 @@ func (up *upContext) shutdown() {
 		up.Forwarder.Stop()
 	}
 
+	if up.Dev.IsHybridModeEnabled() {
+		oktetoLog.Infof("stopping local process...")
+		shutdownHybridMode(up.hybridCommand.Process.Pid)
+	}
+
 	oktetoLog.Info("completed shutdown sequence")
 	up.ShutdownCompleted <- true
 
+}
+
+func shutdownHybridMode(pid int) {
+	if existProcess(pid) {
+		if err := syscall.Kill(-pid, syscall.SIGINT); err != nil {
+			oktetoLog.Warning("failed to stop gracefully local process related to command executed in hybrid mode: %s", err.Error())
+		}
+
+		waitTimeout := 15 * time.Second
+		hasFinished := hasHybridCommandFinishes(pid, waitTimeout)
+		if !hasFinished {
+			oktetoLog.Warning("timeout waiting to finish hybrid command gracefully")
+		}
+	}
+}
+
+func existProcess(pid int) bool {
+	found, err := ps.FindProcess(pid)
+	if err == nil && found == nil {
+		return false
+	}
+	return true
+}
+
+func hasHybridCommandFinishes(pid int, timeout time.Duration) bool {
+	ticker := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(timeout)
+	for {
+		select {
+		case <-to.C:
+			return false
+		case <-ticker.C:
+			existProcess := existProcess(pid)
+			if !existProcess {
+				return true
+			}
+		}
+	}
 }
 
 func printDisplayContext(up *upContext) {
