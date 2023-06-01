@@ -52,7 +52,16 @@ func (up *upContext) activate() error {
 	up.ShutdownCompleted = make(chan bool, 1)
 	up.Sy = nil
 	up.Forwarder = nil
-	defer up.shutdown()
+	defer func() {
+		if up.Dev.IsHybridModeEnabled() {
+			// interrupt signal handler already performs a gracefull shutdown
+			if !up.interruptReceived {
+				up.shutdown()
+			}
+		} else {
+			up.shutdown()
+		}
+	}()
 
 	up.Disconnect = make(chan error, 1)
 	up.CommandResult = make(chan error, 1)

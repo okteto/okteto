@@ -64,6 +64,7 @@ type upContext struct {
 	pidController         pidController
 	Fs                    afero.Fs
 	hybridCommand         *exec.Cmd
+	interruptReceived     bool
 }
 
 // Forwarder is an interface for the port-forwarding features

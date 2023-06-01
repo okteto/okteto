@@ -636,6 +636,7 @@ func (up *upContext) start() error {
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+		up.interruptReceived = true
 		up.shutdown()
 		oktetoLog.Println()
 	case err := <-up.Exit:
