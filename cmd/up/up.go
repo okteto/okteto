@@ -612,7 +612,7 @@ func (up *upContext) start() error {
 	defer up.pidController.delete()
 
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	pidFileCh := make(chan error, 1)
 
