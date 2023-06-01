@@ -118,7 +118,6 @@ func executeApply(namespace string) error {
 	if _, err := os.Stat(kubepath); err != nil {
 		log.Printf("could not get kubepath: %s", err)
 	}
-	cmd.Env = os.Environ()
 	cmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG=%s", kubepath))
 	o, err := cmd.CombinedOutput()
 	if err != nil {

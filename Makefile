@@ -65,9 +65,8 @@ integration-up:
 
 .PHONY: integration-deprecated
 integration-deprecated:
-	go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m && \
-	go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m
-	
+	go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m && go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
+
 .PHONY: build
 build:
 	$(BUILDCOMMAND) -o ${BINDIR}/okteto

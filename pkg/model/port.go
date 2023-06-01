@@ -14,7 +14,6 @@
 package model
 
 import (
-	"fmt"
 	"net"
 	"strconv"
 
@@ -23,20 +22,19 @@ import (
 
 // GetAvailablePort returns a random port that's available
 func GetAvailablePort(iface string) (int, error) {
-	hostAndPort := net.JoinHostPort(iface, strconv.Itoa(0))
-	address, err := net.ResolveTCPAddr("tcp", hostAndPort)
+	address, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(iface, strconv.Itoa(0)))
 	if err != nil {
-		return 0, fmt.Errorf("error resolving address for %q: %w", hostAndPort, err)
+		return 0, err
 	}
 
 	listener, err := net.ListenTCP("tcp", address)
 	if err != nil {
-		return 0, fmt.Errorf("error listening on port %q: %w", address, err)
+		return 0, err
 	}
 
 	defer func() {
 		if err := listener.Close(); err != nil {
-			oktetoLog.Debugf("Error closing listener: %w", err)
+			oktetoLog.Debugf("Error closing listener: %s", err)
 		}
 	}()
 	return listener.Addr().(*net.TCPAddr).Port, nil
