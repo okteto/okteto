@@ -15,6 +15,8 @@ package deploy
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -27,6 +29,7 @@ import (
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
+	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -91,8 +94,9 @@ type DeployCommand struct {
 	DivertDriver       divert.Driver
 	PipelineCMD        pipelineCMD.PipelineDeployerInterface
 
-	PipelineType model.Archetype
-	isRemote     bool
+	PipelineType       model.Archetype
+	isRemote           bool
+	runningInInstaller bool
 }
 
 type ExternalResourceInterface interface {
@@ -197,6 +201,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider),
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
+				runningInInstaller: config.RunningInInstaller(),
 			}
 			startTime := time.Now()
 
@@ -304,6 +309,19 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 	if err := setDeployOptionsValuesFromManifest(ctx, deployOptions, cwd, c); err != nil {
 		return err
+	}
+
+	if dc.isRemote || dc.runningInInstaller {
+		currentVars, err := dc.CfgMapHandler.getConfigmapVariablesEncoded(ctx, deployOptions.Name, deployOptions.Manifest.Namespace)
+		if err != nil {
+			return err
+		}
+
+		// when running in remote or installer variables should be retrieved from the saved value at configmap
+		deployOptions.Variables = []string{}
+		for _, v := range decodeConfigMapVariables(currentVars) {
+			deployOptions.Variables = append(deployOptions.Variables, fmt.Sprintf("%s=%s", v.Name, v.Value))
+		}
 	}
 
 	data := &pipeline.CfgData{
@@ -586,4 +604,19 @@ func (dc *DeployCommand) recreateFailedPods(ctx context.Context, name string) er
 		}
 	}
 	return nil
+}
+
+// getVariablesFromCfgmap given a cfgmap this returns the variables as []EnvVar in it
+func decodeConfigMapVariables(stringVariables string) []types.DeployVariable {
+	decodedStringVariables, err := base64.StdEncoding.DecodeString(stringVariables)
+	if err != nil {
+		return nil
+	}
+
+	var variables []types.DeployVariable
+	if err := json.Unmarshal(decodedStringVariables, &variables); err != nil {
+		return nil
+	}
+
+	return variables
 }
