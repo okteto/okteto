@@ -2470,7 +2470,7 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 			expected: BuildArgs{
 				{
 					Name:  "KEY",
-					Value: "",
+					Value: "$VALUE",
 				},
 			},
 			env: map[string]string{},
@@ -2483,7 +2483,7 @@ func TestBuildArgsUnmarshalling(t *testing.T) {
 			expected: BuildArgs{
 				{
 					Name:  "KEY",
-					Value: "",
+					Value: "$VALUE",
 				},
 				{
 					Name:  "KEY2",
