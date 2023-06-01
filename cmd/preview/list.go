@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
@@ -25,14 +26,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ListFlags are the flags available for list commands
+type ListFlags struct {
+	labels []string
+}
+
 // List lists all the previews
 func List(ctx context.Context) *cobra.Command {
+	flags := &ListFlags{}
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List all preview environments",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
+			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
+				Show: true,
+			}); err != nil {
 				return err
 			}
 
@@ -40,28 +49,36 @@ func List(ctx context.Context) *cobra.Command {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
 			}
 
-			err := executeListPreviews(ctx)
+			err := executeListPreviews(ctx, *flags)
 			return err
 
 		},
 	}
+	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "set a preview environment label (can be set more than once)")
 
 	return cmd
 }
 
-func executeListPreviews(ctx context.Context) error {
+func executeListPreviews(ctx context.Context, opts ListFlags) error {
 	oktetoClient, err := okteto.NewOktetoClient()
 	if err != nil {
 		return err
 	}
-	previewList, err := oktetoClient.Previews().List(ctx)
+	previewList, err := oktetoClient.Previews().List(ctx, opts.labels)
 	if err != nil {
+		if uErr, ok := err.(oktetoErrors.UserError); ok {
+			return uErr
+		}
 		return fmt.Errorf("failed to get preview environments: %s", err)
 	}
 	w := tabwriter.NewWriter(os.Stdout, 1, 1, 2, ' ', 0)
-	fmt.Fprintf(w, "Name\tScope\tSleeping\n")
+	fmt.Fprintf(w, "Name\tScope\tSleeping\tLabels\n")
 	for _, preview := range previewList {
-		fmt.Fprintf(w, "%s\t%s\t%v\n", preview.ID, preview.Scope, preview.Sleeping)
+		previewLabels := "-"
+		if len(preview.PreviewLabels) > 0 {
+			previewLabels = strings.Join(preview.PreviewLabels, ",")
+		}
+		fmt.Fprintf(w, "%s\t%s\t%v\t%s\n", preview.ID, preview.Scope, preview.Sleeping, previewLabels)
 	}
 
 	w.Flush()

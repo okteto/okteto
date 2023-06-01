@@ -360,7 +360,7 @@ func SetServerNameOverride(serverNameOverride string) {
 		oktetoLog.Fatalf("invalid server name %q: %s", serverNameOverride, err)
 		return
 	}
-	oktetoLog.Warning("Server name overriden to host=%s port=%s", host, port)
+	oktetoLog.Warning("Server name overridden to host=%s port=%s", host, port)
 	serverName = net.JoinHostPort(host, port)
 }
 

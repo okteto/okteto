@@ -81,7 +81,11 @@ type destroyPreviewMutation struct {
 	Response previewIDStruct `graphql:"destroyPreview(id: $id)"`
 }
 
-type listPreviewQuery struct {
+type listPreviewQueryWithLabels struct {
+	Response []previewEnvWithLabels `graphql:"previews(labels: $labels)"`
+}
+
+type listPreviewQueryDeprecated struct {
 	Response []previewEnv `graphql:"previews"`
 }
 
@@ -132,6 +136,13 @@ type previewEnv struct {
 	Id       graphql.String
 	Sleeping graphql.Boolean
 	Scope    graphql.String
+}
+
+type previewEnvWithLabels struct {
+	Id            graphql.String
+	Sleeping      graphql.Boolean
+	Scope         graphql.String
+	PreviewLabels []graphql.String
 }
 
 type deployPreviewResponse struct {
@@ -235,9 +246,46 @@ func (c *previewClient) Destroy(ctx context.Context, name string) error {
 }
 
 // ListPreviews list preview environments
-func (c *previewClient) List(ctx context.Context) ([]types.Preview, error) {
-	queryStruct := listPreviewQuery{}
+func (c *previewClient) List(ctx context.Context, labels []string) ([]types.Preview, error) {
+	queryStruct := listPreviewQueryWithLabels{}
 
+	variables := map[string]interface{}{}
+	labelsVariable := make(labelList, 0)
+	for _, l := range labels {
+		labelsVariable = append(labelsVariable, graphql.String(l))
+	}
+	variables["labels"] = labelsVariable
+	err := query(ctx, &queryStruct, variables, c.client)
+	if err != nil {
+		if strings.Contains(err.Error(), "Unknown argument \"labels\" on field \"previews\" of type \"Query\"") {
+			if len(labels) > 0 {
+				return nil, oktetoErrors.UserError{E: ErrLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
+			}
+			return c.deprecatedList(ctx)
+		}
+		return nil, err
+	}
+
+	result := make([]types.Preview, 0)
+	for _, previewEnv := range queryStruct.Response {
+		labels := make([]string, 0)
+		for _, l := range previewEnv.PreviewLabels {
+			labels = append(labels, string(l))
+		}
+		result = append(result, types.Preview{
+			ID:            string(previewEnv.Id),
+			Sleeping:      bool(previewEnv.Sleeping),
+			Scope:         string(previewEnv.Scope),
+			PreviewLabels: labels,
+		})
+	}
+
+	return result, nil
+}
+
+// TODO: Remove it when all charts are updated to 1.9
+func (c *previewClient) deprecatedList(ctx context.Context) ([]types.Preview, error) {
+	queryStruct := listPreviewQueryDeprecated{}
 	err := query(ctx, &queryStruct, nil, c.client)
 	if err != nil {
 		return nil, err
@@ -251,7 +299,6 @@ func (c *previewClient) List(ctx context.Context) ([]types.Preview, error) {
 			Scope:    string(previewEnv.Scope),
 		})
 	}
-
 	return result, nil
 }
 
