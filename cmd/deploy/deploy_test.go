@@ -161,6 +161,10 @@ func (*fakeCmapHandler) translateConfigMapAndDeploy(context.Context, *pipeline.C
 	return nil, nil
 }
 
+func (f *fakeCmapHandler) getConfigmapVariablesEncoded(context.Context, string, string) (string, error) {
+	return "", nil
+}
+
 func (f *fakeCmapHandler) updateConfigMap(context.Context, *apiv1.ConfigMap, *pipeline.CfgData, error) error {
 	return nil
 }
@@ -355,6 +359,7 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 			"icon":       "",
 			"repository": "",
 			"yaml":       "",
+			"variables":  "",
 		},
 	}
 

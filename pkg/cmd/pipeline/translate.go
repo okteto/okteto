@@ -236,23 +236,20 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 			},
 		},
 		Data: map[string]string{
-			nameField:     data.Name,
-			statusField:   data.Status,
-			repoField:     data.Repository,
-			branchField:   data.Branch,
-			filenameField: "",
-			yamlField:     base64.StdEncoding.EncodeToString(data.Manifest),
-			iconField:     data.Icon,
+			nameField:      data.Name,
+			statusField:    data.Status,
+			repoField:      data.Repository,
+			branchField:    data.Branch,
+			filenameField:  "",
+			yamlField:      base64.StdEncoding.EncodeToString(data.Manifest),
+			iconField:      data.Icon,
+			variablesField: translateVariables(data.Variables),
 		},
 	}
 	if data.Repository != "" {
 		cmap.Data[filenameField] = data.Filename
 	}
 
-	variables := translateVariables(data.Variables)
-	if variables != "" {
-		cmap.Data[variablesField] = variables
-	}
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
 	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
@@ -278,6 +275,7 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 	cmap.Data[yamlField] = base64.StdEncoding.EncodeToString(data.Manifest)
 	cmap.Data[iconField] = data.Icon
 	cmap.Data[actionNameField] = actionName
+	cmap.Data[variablesField] = translateVariables(data.Variables)
 	if data.Repository != "" {
 		// the filename at the cfgmap is used by the installer to re-deploy the app from the ui
 		// this parameter is just saved if a repository is being detected
@@ -293,14 +291,6 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 
 	if data.Branch != "" {
 		cmap.Data[branchField] = data.Branch
-	}
-
-	currentVariables := cmap.Data[variablesField]
-	variables := translateVariables(data.Variables)
-	if currentVariables != "" && variables == "" {
-		delete(cmap.Data, variablesField)
-	} else if variables != "" {
-		cmap.Data[variablesField] = variables
 	}
 
 	output := oktetoLog.GetOutputBuffer()

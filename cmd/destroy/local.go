@@ -2,8 +2,6 @@ package destroy
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -62,21 +60,6 @@ func (ld *localDestroyCommand) destroy(ctx context.Context, opts *Options) error
 	return err
 }
 
-// getVariablesFromCfgmap given a cfgmap this returns the variables as []EnvVar in it
-func decodeConfigMapVariables(stringVariables string) []types.DeployVariable {
-	decodedStringVariables, err := base64.StdEncoding.DecodeString(stringVariables)
-	if err != nil {
-		return nil
-	}
-
-	var variables []types.DeployVariable
-	if err := json.Unmarshal(decodedStringVariables, &variables); err != nil {
-		return nil
-	}
-
-	return variables
-}
-
 func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) error {
 	err := ld.manifest.ExpandEnvVars()
 	if err != nil {
@@ -95,7 +78,7 @@ func (ld *localDestroyCommand) runDestroy(ctx context.Context, opts *Options) er
 		return err
 	}
 
-	cfgVariables := decodeConfigMapVariables(cfgVariablesString)
+	cfgVariables := types.DecodeStringToDeployVariable(cfgVariablesString)
 	for _, variable := range cfgVariables {
 		opts.Variables = append(opts.Variables, fmt.Sprintf("%s=%s", variable.Name, variable.Value))
 		if strings.TrimSpace(variable.Value) != "" {
