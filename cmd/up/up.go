@@ -640,6 +640,9 @@ func (up *upContext) start() error {
 		up.shutdown()
 		oktetoLog.Println()
 	case err := <-up.Exit:
+		if up.Dev.IsHybridModeEnabled() {
+			shutdownHybridMode(up.hybridCommand.Process.Pid)
+		}
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
