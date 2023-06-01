@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	ErrLabelsFeatureNotSupported = fmt.Errorf("labels feature not supported")
+	ErrLabelsFeatureNotSupported = fmt.Errorf("Labels feature not supported in version of this context")
 )
 
 type previewClient struct {
@@ -163,7 +163,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
 		if err != nil {
 			if strings.Contains(err.Error(), "Unknown argument \"labels\" on field \"deployPreview\" of type \"Mutation\"") {
-				return nil, oktetoErrors.UserError{E: ErrLabelsFeatureNotSupported, Hint: "Your Okteto Enterprise version doesn't support preview environments labels. Please upgrade to the latest version or remove the labels flag"}
+				return nil, oktetoErrors.UserError{E: ErrLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
 			}
 			return nil, c.translateErr(err, name)
 		}
