@@ -1057,38 +1057,50 @@ func TestPersistentVolumeEnabled(t *testing.T) {
 }
 
 func Test_ExpandEnv(t *testing.T) {
-	os.Setenv("BAR", "bar")
+	t.Setenv("BAR", "bar")
 	tests := []struct {
-		name   string
-		value  string
-		result string
+		name          string
+		value         string
+		expandIfEmpty bool
+		result        string
 	}{
 		{
-			name:   "no-var",
-			value:  "value",
-			result: "value",
+			name:          "no-var",
+			value:         "value",
+			expandIfEmpty: true,
+			result:        "value",
 		},
 		{
-			name:   "var",
-			value:  "value-${BAR}-value",
-			result: "value-bar-value",
+			name:          "var",
+			value:         "value-${BAR}-value",
+			expandIfEmpty: true,
+			result:        "value-bar-value",
 		},
 		{
-			name:   "default",
-			value:  "value-${FOO:-foo}-value",
-			result: "value-foo-value",
+			name:          "default",
+			value:         "value-${FOO:-foo}-value",
+			expandIfEmpty: true,
+			result:        "value-foo-value",
+		},
+		{
+			name:          "only bar expanded",
+			value:         "${BAR}",
+			expandIfEmpty: true,
+			result:        "bar",
+		},
+		{
+			name:          "only bar not expand if empty",
+			value:         "${FOO}",
+			expandIfEmpty: false,
+			result:        "${FOO}",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := ExpandEnv(tt.value, true)
-			if err != nil {
-				t.Errorf("error in test '%s': %s", tt.name, err.Error())
-			}
-			if result != tt.result {
-				t.Errorf("error in test '%s': '%s', expected: '%s'", tt.name, result, tt.result)
-			}
+			result, err := ExpandEnv(tt.value, tt.expandIfEmpty)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.result, result)
 		})
 	}
 }

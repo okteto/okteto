@@ -1325,7 +1325,7 @@ func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) 
 	err := unmarshal(&rawList)
 	if err == nil {
 		for _, buildArg := range rawList {
-			value, err := ExpandEnv(buildArg.Value, true)
+			value, err := ExpandEnv(buildArg.Value, false)
 			if err != nil {
 				return nil, err
 			}
@@ -1339,7 +1339,7 @@ func getBuildArgs(unmarshal func(interface{}) error) (map[string]string, error) 
 		return nil, err
 	}
 	for key, value := range rawMap {
-		result[key], err = ExpandEnv(value, true)
+		result[key], err = ExpandEnv(value, false)
 		if err != nil {
 			return nil, err
 		}

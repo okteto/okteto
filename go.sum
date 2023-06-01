@@ -121,8 +121,8 @@ github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d/go.mod h1:H
 github.com/VividCortex/ewma v1.1.1/go.mod h1:2Tkkvm3sRDVXaiyucHiACn4cqf7DpdyLvmxzcbUokwA=
 github.com/VividCortex/ewma v1.2.0 h1:f58SaIzcDXrSy3kWaHNvuJgJ3Nmz59Zji6XoJR/q1ow=
 github.com/VividCortex/ewma v1.2.0/go.mod h1:nz4BbCtbLyFDeC9SUHbtcT5644juEuWfUAUnGx7j5l4=
-github.com/a8m/envsubst v1.3.0 h1:GmXKmVssap0YtlU3E230W98RWtWCyIZzjtf1apWWyAg=
-github.com/a8m/envsubst v1.3.0/go.mod h1:MVUTQNGQ3tsjOOtKCNd+fl8RzhsXcDvvAEzkhGtlsbY=
+github.com/a8m/envsubst v1.4.2 h1:4yWIHXOLEJHQEFd4UjrWDrYeYlV7ncFWJOCBRLOZHQg=
+github.com/a8m/envsubst v1.4.2/go.mod h1:MVUTQNGQ3tsjOOtKCNd+fl8RzhsXcDvvAEzkhGtlsbY=
 github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d h1:licZJFw2RwpHMqeKTCYkitsPqHNxTmd4SNR5r94FGM8=
 github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d/go.mod h1:asat636LX7Bqt5lYEZ27JNDcqxfjdBQuJ/MM4CN/Lzo=
 github.com/acomagu/bufpipe v1.0.3 h1:fxAGrHZTgQ9w5QqVItgzwj235/uYZYgbXitB+dLupOk=
