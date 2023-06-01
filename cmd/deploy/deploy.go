@@ -15,8 +15,6 @@ package deploy
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -319,7 +317,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 
 		// when running in remote or installer variables should be retrieved from the saved value at configmap
 		deployOptions.Variables = []string{}
-		for _, v := range decodeConfigMapVariables(currentVars) {
+		for _, v := range types.DecodeStringToDeployVariable(currentVars) {
 			deployOptions.Variables = append(deployOptions.Variables, fmt.Sprintf("%s=%s", v.Name, v.Value))
 		}
 	}
@@ -604,19 +602,4 @@ func (dc *DeployCommand) recreateFailedPods(ctx context.Context, name string) er
 		}
 	}
 	return nil
-}
-
-// getVariablesFromCfgmap given a cfgmap this returns the variables as []EnvVar in it
-func decodeConfigMapVariables(stringVariables string) []types.DeployVariable {
-	decodedStringVariables, err := base64.StdEncoding.DecodeString(stringVariables)
-	if err != nil {
-		return nil
-	}
-
-	var variables []types.DeployVariable
-	if err := json.Unmarshal(decodedStringVariables, &variables); err != nil {
-		return nil
-	}
-
-	return variables
 }
