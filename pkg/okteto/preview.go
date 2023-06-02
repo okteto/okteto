@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	ErrLabelsFeatureNotSupported = fmt.Errorf("Labels feature not supported in version of this context")
+	ErrLabelsFeatureNotSupported = fmt.Errorf("Labels are not supported in the version of this Okteto context")
 )
 
 type previewClient struct {
