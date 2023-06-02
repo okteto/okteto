@@ -82,7 +82,7 @@ func (up *upContext) activate() error {
 
 	if up.isRetry && !apps.IsDevModeOn(app) {
 		if up.Dev.IsHybridModeEnabled() {
-			shutdownHybridMode(up.hybridCommand.Process.Pid)
+			up.shutdownHybridMode()
 		}
 		oktetoLog.Information("Development container has been deactivated")
 		return nil

@@ -641,7 +641,7 @@ func (up *upContext) start() error {
 		oktetoLog.Println()
 	case err := <-up.Exit:
 		if up.Dev.IsHybridModeEnabled() {
-			shutdownHybridMode(up.hybridCommand.Process.Pid)
+			up.shutdownHybridMode()
 		}
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
@@ -649,7 +649,7 @@ func (up *upContext) start() error {
 		}
 	case err := <-pidFileCh:
 		if up.Dev.IsHybridModeEnabled() {
-			shutdownHybridMode(up.hybridCommand.Process.Pid)
+			up.shutdownHybridMode()
 		}
 		oktetoLog.Infof("exit signal received due to pid file modification: %s", err)
 		return err
@@ -679,7 +679,7 @@ func (up *upContext) activateLoop() {
 			}
 			if pidFromFile != strconv.Itoa(os.Getpid()) {
 				if up.Dev.IsHybridModeEnabled() {
-					shutdownHybridMode(up.hybridCommand.Process.Pid)
+					up.shutdownHybridMode()
 				}
 				up.Exit <- oktetoErrors.UserError{
 					E:    fmt.Errorf("development container has been deactivated by another 'okteto up' command"),
@@ -918,7 +918,7 @@ func (up *upContext) shutdown() {
 
 	if up.Dev.IsHybridModeEnabled() {
 		oktetoLog.Infof("stopping local process...")
-		shutdownHybridMode(up.hybridCommand.Process.Pid)
+		up.shutdownHybridMode()
 	}
 
 	oktetoLog.Info("completed shutdown sequence")
@@ -926,16 +926,19 @@ func (up *upContext) shutdown() {
 
 }
 
-func shutdownHybridMode(pid int) {
-	if existProcess(pid) {
-		if err := syscall.Kill(-pid, syscall.SIGINT); err != nil {
-			oktetoLog.Warning("failed to stop gracefully local process related to command executed in hybrid mode: %s", err.Error())
-		}
+func (up *upContext) shutdownHybridMode() {
+	if up.hybridCommand != nil {
+		pid := up.hybridCommand.Process.Pid
+		if existProcess(pid) {
+			if err := syscall.Kill(-pid, syscall.SIGINT); err != nil {
+				oktetoLog.Warning("failed to stop gracefully local process related to command executed in hybrid mode: %s", err.Error())
+			}
 
-		waitTimeout := 15 * time.Second
-		hasFinished := hasHybridCommandFinishes(pid, waitTimeout)
-		if !hasFinished {
-			oktetoLog.Warning("timeout waiting to finish hybrid command gracefully")
+			waitTimeout := 15 * time.Second
+			hasFinished := hasHybridCommandFinishes(pid, waitTimeout)
+			if !hasFinished {
+				oktetoLog.Warning("timeout waiting to finish hybrid command gracefully")
+			}
 		}
 	}
 }
