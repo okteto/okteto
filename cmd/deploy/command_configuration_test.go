@@ -82,7 +82,6 @@ devs:
 			"repository": "https://github.com/okteto/movies",
 			"status":     "progressing",
 			"yaml":       "aWNvbjogaHR0cHM6Ly9hcHBzLm9rdGV0by5jb20vbW92aWVzL2ljb24ucG5nCmRlcGxveToKICAgIC0gb2t0ZXRvIGJ1aWxkIC10IG9rdGV0by5kZXYvYXBpOiR7T0tURVRPX0dJVF9DT01NSVR9IGFwaQogICAgLSBva3RldG8gYnVpbGQgLXQgb2t0ZXRvLmRldi9mcm9udGVuZDoke09LVEVUT19HSVRfQ09NTUlUfSBmcm9udGVuZAogICAgLSBoZWxtIHVwZ3JhZGUgLS1pbnN0YWxsIG1vdmllcyBjaGFydCAtLXNldCB0YWc9JHtPS1RFVE9fR0lUX0NPTU1JVH0KZGV2czoKICAgIC0gYXBpL29rdGV0by55bWwKICAgIC0gZnJvbnRlbmQvb2t0ZXRvLnltbA==",
-			"variables":  "",
 		},
 	}
 
