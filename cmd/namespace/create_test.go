@@ -32,9 +32,6 @@ func newFakeContextCommand(c *client.FakeOktetoClient, user *types.User) *contex
 		K8sClientProvider:    test.NewFakeK8sProvider(nil),
 		LoginController:      test.NewFakeLoginController(user, nil),
 		OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
-		IsOktetoKubeTokenPresent: func(url string) (bool, error) {
-			return false, nil
-		},
 	}
 }
 
