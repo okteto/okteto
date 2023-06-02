@@ -236,16 +236,21 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 			},
 		},
 		Data: map[string]string{
-			nameField:      data.Name,
-			statusField:    data.Status,
-			repoField:      data.Repository,
-			branchField:    data.Branch,
-			filenameField:  "",
-			yamlField:      base64.StdEncoding.EncodeToString(data.Manifest),
-			iconField:      data.Icon,
-			variablesField: translateVariables(data.Variables),
+			nameField:     data.Name,
+			statusField:   data.Status,
+			repoField:     data.Repository,
+			branchField:   data.Branch,
+			filenameField: "",
+			yamlField:     base64.StdEncoding.EncodeToString(data.Manifest),
+			iconField:     data.Icon,
 		},
 	}
+
+	// only include field when variables exist
+	if len(data.Variables) > 0 {
+		cmap.Data[variablesField] = translateVariables(data.Variables)
+	}
+
 	if data.Repository != "" {
 		cmap.Data[filenameField] = data.Filename
 	}
@@ -275,7 +280,6 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 	cmap.Data[yamlField] = base64.StdEncoding.EncodeToString(data.Manifest)
 	cmap.Data[iconField] = data.Icon
 	cmap.Data[actionNameField] = actionName
-	cmap.Data[variablesField] = translateVariables(data.Variables)
 	if data.Repository != "" {
 		// the filename at the cfgmap is used by the installer to re-deploy the app from the ui
 		// this parameter is just saved if a repository is being detected
@@ -291,6 +295,14 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 
 	if data.Branch != "" {
 		cmap.Data[branchField] = data.Branch
+	}
+
+	// only update field when variables exist
+	if len(data.Variables) > 0 {
+		cmap.Data[variablesField] = translateVariables(data.Variables)
+	} else {
+		// if data.Variables is empty, update cmap by removing the field
+		delete(cmap.Data, variablesField)
 	}
 
 	output := oktetoLog.GetOutputBuffer()

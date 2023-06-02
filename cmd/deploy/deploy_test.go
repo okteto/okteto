@@ -417,7 +417,6 @@ func TestCreateConfigMapWithBuildError(t *testing.T) {
 			"icon":       "",
 			"repository": "",
 			"yaml":       "",
-			"variables":  "",
 		},
 	}
 
