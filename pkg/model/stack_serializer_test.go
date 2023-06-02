@@ -434,6 +434,49 @@ func Test_HealthcheckUnmarshalling(t *testing.T) {
 	}
 }
 
+func Test_NodeSelectorUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name          string
+		manifest      []byte
+		expected      Selector
+		expectedError bool
+	}{
+		{
+			name:          "empty node selector",
+			manifest:      []byte("services:\n  app:\n\n    image: okteto/vote:1"),
+			expected:      nil,
+			expectedError: false,
+		},
+		{
+			name:          "node selector",
+			manifest:      []byte("services:\n  app:\n    image: okteto/vote:1\n    x-node-selector:\n      label: value"),
+			expected:      Selector{"label": "value"},
+			expectedError: false,
+		},
+		{
+			name:          "wrong selector",
+			manifest:      []byte("services:\n  app:\n    image: okteto/vote:1\n    x-node-selector: value"),
+			expected:      nil,
+			expectedError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := ReadStack(tt.manifest, true)
+			if err != nil && !tt.expectedError {
+				t.Fatal(err)
+			} else if err == nil && tt.expectedError {
+				t.Fatal("error not thrown")
+			}
+
+			if !tt.expectedError {
+				assert.Equal(t, tt.expected, s.Services["app"].NodeSelector)
+			}
+
+		})
+	}
+}
+
 func TestComposeBuildSectionUnmarshalling(t *testing.T) {
 	tests := []struct {
 		name     string

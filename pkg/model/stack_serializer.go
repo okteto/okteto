@@ -79,6 +79,7 @@ type ServiceRaw struct {
 	Image                    string                `yaml:"image,omitempty"`
 	Labels                   Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations              Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	NodeSelector             Selector              `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
 	MemLimit                 Quantity              `yaml:"mem_limit,omitempty"`
 	MemReservation           Quantity              `yaml:"mem_reservation,omitempty"`
 	Ports                    []PortRaw             `yaml:"ports,omitempty"`
@@ -416,6 +417,7 @@ func (serviceRaw *ServiceRaw) ToService(svcName string, stack *Stack) (*Service,
 	if svc.Annotations == nil {
 		svc.Annotations = make(Annotations)
 	}
+	svc.NodeSelector = serviceRaw.NodeSelector
 
 	if stack.IsCompose {
 		if len(serviceRaw.Args.Values) > 0 {
