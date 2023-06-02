@@ -1,17 +1,16 @@
-package destroy
+package types
 
 import (
 	"testing"
 
-	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_decodeConfigMapVariables(t *testing.T) {
+func Test_DecodeStringToDeployVariable(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
-		expected []types.DeployVariable
+		expected []DeployVariable
 	}{
 		{
 			name:     "empty variable",
@@ -26,7 +25,7 @@ func Test_decodeConfigMapVariables(t *testing.T) {
 		{
 			name:  "success decoding variables",
 			input: "W3sibmFtZSI6InRlc3QiLCJ2YWx1ZSI6InZhbHVlIn1d",
-			expected: []types.DeployVariable{
+			expected: []DeployVariable{
 				{
 					Name:  "test",
 					Value: "value",
@@ -37,7 +36,7 @@ func Test_decodeConfigMapVariables(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res := decodeConfigMapVariables(tt.input)
+			res := DecodeStringToDeployVariable(tt.input)
 			assert.Equal(t, tt.expected, res)
 		})
 	}

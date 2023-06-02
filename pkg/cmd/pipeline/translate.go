@@ -245,14 +245,16 @@ func translateConfigMapSandBox(data *CfgData) *apiv1.ConfigMap {
 			iconField:     data.Icon,
 		},
 	}
+
+	// only include field when variables exist
+	if len(data.Variables) > 0 {
+		cmap.Data[variablesField] = translateVariables(data.Variables)
+	}
+
 	if data.Repository != "" {
 		cmap.Data[filenameField] = data.Filename
 	}
 
-	variables := translateVariables(data.Variables)
-	if variables != "" {
-		cmap.Data[variablesField] = variables
-	}
 	output := oktetoLog.GetOutputBuffer()
 	outputData := translateOutput(output)
 	cmap.Data[outputField] = base64.StdEncoding.EncodeToString([]byte(outputData))
@@ -295,12 +297,12 @@ func updateCmap(cmap *apiv1.ConfigMap, data *CfgData) error {
 		cmap.Data[branchField] = data.Branch
 	}
 
-	currentVariables := cmap.Data[variablesField]
-	variables := translateVariables(data.Variables)
-	if currentVariables != "" && variables == "" {
+	// only update field when variables exist
+	if len(data.Variables) > 0 {
+		cmap.Data[variablesField] = translateVariables(data.Variables)
+	} else {
+		// if data.Variables is empty, update cmap by removing the field
 		delete(cmap.Data, variablesField)
-	} else if variables != "" {
-		cmap.Data[variablesField] = variables
 	}
 
 	output := oktetoLog.GetOutputBuffer()
