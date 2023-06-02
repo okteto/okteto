@@ -81,7 +81,7 @@ type destroyPreviewMutation struct {
 	Response previewIDStruct `graphql:"destroyPreview(id: $id)"`
 }
 
-type listPreviewQueryWithLabels struct {
+type listPreviewQuery struct {
 	Response []previewEnvWithLabels `graphql:"previews(labels: $labels)"`
 }
 
@@ -247,7 +247,7 @@ func (c *previewClient) Destroy(ctx context.Context, name string) error {
 
 // ListPreviews list preview environments
 func (c *previewClient) List(ctx context.Context, labels []string) ([]types.Preview, error) {
-	queryStruct := listPreviewQueryWithLabels{}
+	queryStruct := listPreviewQuery{}
 
 	variables := map[string]interface{}{}
 	labelsVariable := make(labelList, 0)

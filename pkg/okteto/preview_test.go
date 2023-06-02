@@ -304,7 +304,7 @@ func TestListPreview(t *testing.T) {
 			name: "no error",
 			input: input{
 				client: &fakeGraphQLClient{
-					queryResult: &listPreviewQueryWithLabels{
+					queryResult: &listPreviewQuery{
 						Response: []previewEnvWithLabels{
 							{
 								Id:       "test",
@@ -333,7 +333,7 @@ func TestListPreview(t *testing.T) {
 			input: input{
 				labels: []string{"value", "key"},
 				client: &fakeGraphQLClient{
-					queryResult: &listPreviewQueryWithLabels{
+					queryResult: &listPreviewQuery{
 						Response: []previewEnvWithLabels{
 							{
 								Id:       "test",
@@ -393,7 +393,7 @@ func TestListPreview(t *testing.T) {
 				labels: []string{"value", "key"},
 				client: &fakeGraphQLClient{
 					queryResult: nil,
-					err:         errors.New("Cannot query field \"previewLabels\" on type \"Preview\""),
+					err:         errors.New("Unknown argument \"labels\" on field \"previews\" of type \"Query\""),
 				},
 			},
 			expected: expected{
