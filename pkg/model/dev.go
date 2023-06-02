@@ -140,7 +140,11 @@ type BuildArg struct {
 }
 
 func (v *BuildArg) String() string {
-	return fmt.Sprintf("%s=%s", v.Name, v.Value)
+	value, err := ExpandEnv(v.Value, true)
+	if err != nil {
+		return fmt.Sprintf("%s=%s", v.Name, v.Value)
+	}
+	return fmt.Sprintf("%s=%s", v.Name, value)
 }
 
 // BuildArgs is a list of arguments used on the build step.
