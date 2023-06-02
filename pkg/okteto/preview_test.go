@@ -305,7 +305,7 @@ func TestListPreview(t *testing.T) {
 			input: input{
 				client: &fakeGraphQLClient{
 					queryResult: &listPreviewQuery{
-						Response: []previewEnvWithLabels{
+						Response: []previewEnv{
 							{
 								Id:       "test",
 								Sleeping: false,
@@ -334,7 +334,7 @@ func TestListPreview(t *testing.T) {
 				labels: []string{"value", "key"},
 				client: &fakeGraphQLClient{
 					queryResult: &listPreviewQuery{
-						Response: []previewEnvWithLabels{
+						Response: []previewEnv{
 							{
 								Id:       "test",
 								Sleeping: false,
@@ -431,7 +431,7 @@ func TestDeprecatedListPreview(t *testing.T) {
 			input: input{
 				client: &fakeGraphQLClient{
 					queryResult: &listPreviewQueryDeprecated{
-						Response: []previewEnv{
+						Response: []deprecatedPreviewEnv{
 							{
 								Id:       "test",
 								Sleeping: false,

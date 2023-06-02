@@ -82,11 +82,11 @@ type destroyPreviewMutation struct {
 }
 
 type listPreviewQuery struct {
-	Response []previewEnvWithLabels `graphql:"previews(labels: $labels)"`
+	Response []previewEnv `graphql:"previews(labels: $labels)"`
 }
 
 type listPreviewQueryDeprecated struct {
-	Response []previewEnv `graphql:"previews"`
+	Response []deprecatedPreviewEnv `graphql:"previews"`
 }
 
 type listPreviewEndpoints struct {
@@ -132,13 +132,13 @@ type endpointURL struct {
 	Url graphql.String
 }
 
-type previewEnv struct {
+type deprecatedPreviewEnv struct {
 	Id       graphql.String
 	Sleeping graphql.Boolean
 	Scope    graphql.String
 }
 
-type previewEnvWithLabels struct {
+type previewEnv struct {
 	Id            graphql.String
 	Sleeping      graphql.Boolean
 	Scope         graphql.String
