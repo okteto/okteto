@@ -13,27 +13,7 @@
 
 package types
 
-import (
-	"encoding/base64"
-	"encoding/json"
-)
-
 type DeployVariable struct {
 	Name  string `json:"name,omitempty" yaml:"name,omitempty"`
 	Value string `json:"value,omitempty" yaml:"value,omitempty"`
-}
-
-// DecodeStringToDeployVariable given an encoded string it returns the DeployVariables
-func DecodeStringToDeployVariable(s string) []DeployVariable {
-	decodedStringVariables, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
-		return nil
-	}
-
-	var variables []DeployVariable
-	if err := json.Unmarshal(decodedStringVariables, &variables); err != nil {
-		return nil
-	}
-
-	return variables
 }
