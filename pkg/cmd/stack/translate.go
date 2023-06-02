@@ -139,6 +139,7 @@ func translateDeployment(svcName string, s *model.Stack) *appsv1.Deployment {
 				},
 				Spec: apiv1.PodSpec{
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
+					NodeSelector:                  svc.NodeSelector,
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,
@@ -213,6 +214,7 @@ func translateStatefulSet(svcName string, s *model.Stack) *appsv1.StatefulSet {
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					InitContainers:                initContainers,
 					Affinity:                      translateAffinity(svc),
+					NodeSelector:                  svc.NodeSelector,
 					Volumes:                       translateVolumes(svc),
 					Containers: []apiv1.Container{
 						{
@@ -263,6 +265,7 @@ func translateJob(svcName string, s *model.Stack) *batchv1.Job {
 					TerminationGracePeriodSeconds: pointer.Int64Ptr(svc.StopGracePeriod),
 					InitContainers:                initContainers,
 					Affinity:                      translateAffinity(svc),
+					NodeSelector:                  svc.NodeSelector,
 					Containers: []apiv1.Container{
 						{
 							Name:            svcName,

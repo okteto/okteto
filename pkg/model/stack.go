@@ -72,6 +72,7 @@ type Service struct {
 	Image           string                `yaml:"image,omitempty"`
 	Labels          Labels                `json:"labels,omitempty" yaml:"labels,omitempty"`
 	Annotations     Annotations           `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+	NodeSelector    Selector              `json:"x-node-selector,omitempty" yaml:"x-node-selector,omitempty"`
 	Ports           []Port                `yaml:"ports,omitempty"`
 	RestartPolicy   apiv1.RestartPolicy   `yaml:"restart,omitempty"`
 	StopGracePeriod int64                 `yaml:"stop_grace_period,omitempty"`
@@ -694,6 +695,9 @@ func (stack *Stack) mergeServices(otherStack *Stack) *Stack {
 		}
 		if len(svc.Annotations) > 0 {
 			resultSvc.Annotations = svc.Annotations
+		}
+		if len(svc.NodeSelector) > 0 {
+			resultSvc.NodeSelector = svc.NodeSelector
 		}
 		if len(svc.Ports) > 0 {
 			resultSvc.Ports = svc.Ports

@@ -728,8 +728,9 @@ func TestStack_Merge(t *testing.T) {
 								Value: "ok",
 							},
 						},
-						Labels:      Labels{"test": "ok"},
-						Annotations: Annotations{"test": "ok"},
+						Labels:       Labels{"test": "ok"},
+						Annotations:  Annotations{"test": "ok"},
+						NodeSelector: Selector{"test": "ok"},
 						Ports: []Port{
 							{
 								HostPort:      8080,
@@ -757,8 +758,9 @@ func TestStack_Merge(t *testing.T) {
 								Value: "overwrite",
 							},
 						},
-						Labels:      Labels{"test": "overwrite"},
-						Annotations: Annotations{"test": "overwrite"},
+						Labels:       Labels{"test": "overwrite"},
+						Annotations:  Annotations{"test": "overwrite"},
+						NodeSelector: Selector{"test": "overwrite"},
 						Ports: []Port{
 							{
 								HostPort:      3000,
@@ -786,8 +788,9 @@ func TestStack_Merge(t *testing.T) {
 								Value: "overwrite",
 							},
 						},
-						Labels:      Labels{"test": "overwrite"},
-						Annotations: Annotations{"test": "overwrite"},
+						Labels:       Labels{"test": "overwrite"},
+						Annotations:  Annotations{"test": "overwrite"},
+						NodeSelector: Selector{"test": "overwrite"},
 						Ports: []Port{
 							{
 								HostPort:      3000,

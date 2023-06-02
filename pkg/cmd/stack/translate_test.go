@@ -68,6 +68,10 @@ func Test_translateDeployment(t *testing.T) {
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
+				NodeSelector: model.Selector{
+					"node1": "value1",
+					"node2": "value2",
+				},
 				Image:           "image",
 				Replicas:        3,
 				StopGracePeriod: 20,
@@ -97,16 +101,18 @@ func Test_translateDeployment(t *testing.T) {
 		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
 	}
-	if !reflect.DeepEqual(result.Labels, labels) {
-		t.Errorf("Wrong deployment labels: '%s'", result.Labels)
-	}
+	assert.Equal(t, result.Labels, labels)
 	annotations := map[string]string{
 		"annotation1": "value1",
 		"annotation2": "value2",
 	}
-	if !reflect.DeepEqual(result.Annotations, annotations) {
-		t.Errorf("Wrong deployment annotations: '%s'", result.Annotations)
+	assert.Equal(t, result.Annotations, annotations)
+	nodeSelector := map[string]string{
+		"node1": "value1",
+		"node2": "value2",
 	}
+	assert.Equal(t, result.Spec.Template.Spec.NodeSelector, nodeSelector)
+
 	if *result.Spec.Replicas != 3 {
 		t.Errorf("Wrong deployment spec.replicas: '%d'", *result.Spec.Replicas)
 	}
@@ -169,6 +175,10 @@ func Test_translateStatefulSet(t *testing.T) {
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
+				NodeSelector: model.Selector{
+					"node1": "value1",
+					"node2": "value2",
+				},
 				Image:           "image",
 				Replicas:        3,
 				StopGracePeriod: 20,
@@ -215,14 +225,17 @@ func Test_translateStatefulSet(t *testing.T) {
 		model.StackServiceNameLabel: "svcName",
 	}
 	assert.Equal(t, labels, result.Labels)
-
 	annotations := map[string]string{
 		"annotation1": "value1",
 		"annotation2": "value2",
 	}
-	if !reflect.DeepEqual(result.Annotations, annotations) {
-		t.Errorf("Wrong statefulset annotations: '%s'", result.Annotations)
+	assert.Equal(t, result.Annotations, annotations)
+	nodeSelector := map[string]string{
+		"node1": "value1",
+		"node2": "value2",
 	}
+	assert.Equal(t, result.Spec.Template.Spec.NodeSelector, nodeSelector)
+
 	if *result.Spec.Replicas != 3 {
 		t.Errorf("Wrong statefulset spec.replicas: '%d'", *result.Spec.Replicas)
 	}
@@ -363,6 +376,10 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
+				NodeSelector: model.Selector{
+					"node1": "value1",
+					"node2": "value2",
+				},
 				Image:           "image",
 				StopGracePeriod: 20,
 				Replicas:        3,
@@ -408,16 +425,17 @@ func Test_translateJobWithoutVolumes(t *testing.T) {
 		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
 	}
-	if !reflect.DeepEqual(result.Labels, labels) {
-		t.Errorf("Wrong job labels: '%s'", result.Labels)
-	}
+	assert.Equal(t, labels, result.Labels)
 	annotations := map[string]string{
 		"annotation1": "value1",
 		"annotation2": "value2",
 	}
-	if !reflect.DeepEqual(result.Annotations, annotations) {
-		t.Errorf("Wrong job annotations: '%s'", result.Annotations)
+	assert.Equal(t, result.Annotations, annotations)
+	nodeSelector := map[string]string{
+		"node1": "value1",
+		"node2": "value2",
 	}
+	assert.Equal(t, result.Spec.Template.Spec.NodeSelector, nodeSelector)
 	if *result.Spec.Completions != 3 {
 		t.Errorf("Wrong job spec.completions: '%d'", *result.Spec.Completions)
 	}
@@ -496,6 +514,10 @@ func Test_translateJobWithVolumes(t *testing.T) {
 					"annotation1": "value1",
 					"annotation2": "value2",
 				},
+				NodeSelector: model.Selector{
+					"node1": "value1",
+					"node2": "value2",
+				},
 				Image:           "image",
 				StopGracePeriod: 20,
 				Replicas:        3,
@@ -542,13 +564,17 @@ func Test_translateJobWithVolumes(t *testing.T) {
 		model.StackNameLabel:        "stackname",
 		model.StackServiceNameLabel: "svcName",
 	}
-	if !reflect.DeepEqual(result.Labels, labels) {
-		t.Errorf("Wrong job labels: '%s'", result.Labels)
-	}
+	assert.Equal(t, labels, result.Labels)
 	annotations := map[string]string{
 		"annotation1": "value1",
 		"annotation2": "value2",
 	}
+	assert.Equal(t, result.Annotations, annotations)
+	nodeSelector := map[string]string{
+		"node1": "value1",
+		"node2": "value2",
+	}
+	assert.Equal(t, result.Spec.Template.Spec.NodeSelector, nodeSelector)
 	if !reflect.DeepEqual(result.Annotations, annotations) {
 		t.Errorf("Wrong job annotations: '%s'", result.Annotations)
 	}
