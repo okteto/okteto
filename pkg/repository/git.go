@@ -90,7 +90,7 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 	s := <-ch
 
 	if s.err == timeoutErr {
-		oktetoLog.Warning("Timeout exceeded calculating git status: assuming dirty commit")
+		oktetoLog.Debug("Timeout exceeded calculating git status: assuming dirty commit")
 	}
 
 	return s.isClean, s.err
@@ -176,7 +176,7 @@ func (ogr oktetoGitWorktree) Status(ctx context.Context, localGit LocalGitInterf
 	_, err := localGit.Exists()
 	if err != nil {
 		// git is not available, so we fall back on git-go
-		oktetoLog.Warning("Calculating git status: git is not installed, for better performances consider installing it")
+		oktetoLog.Debug("Calculating git status: git is not installed, for better performances consider installing it")
 		status, err := ogr.worktree.Status()
 		if err != nil {
 			return oktetoGitStatus{status: git.Status{}}, fmt.Errorf("failed to get git status: %w", err)
