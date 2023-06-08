@@ -201,11 +201,13 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 	for _, command := range opts.Manifest.Deploy.Commands {
 		oktetoLog.Information("Running '%s'", command.Name)
 		oktetoLog.SetStage(command.Name)
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Executing command '%s'...", command.Name)
 
 		if err := ld.Executor.Execute(command, opts.Variables); err != nil {
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error executing command '%s': %s", command.Name, err.Error())
 			return fmt.Errorf("error executing command '%s': %s", command.Name, err.Error())
 		}
+		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Command '%s' successfully executed", command.Name)
 
 		envMapFromOktetoEnvFile, err = godotenv.Read(oktetoEnvFile.Name())
 		if err != nil {
@@ -222,8 +224,8 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 		// variable, the executor will use in next command the last one added which
 		// corresponds to those coming from $OKTETO_ENV.
 		opts.Variables = append(opts.Variables, envsFromOktetoEnvFile...)
-
 		oktetoLog.SetStage("")
+		oktetoLog.SetLevel("")
 	}
 
 	err = ld.ConfigMapHandler.updateEnvsFromCommands(ctx, opts.Name, opts.Manifest.Namespace, opts.Variables)
@@ -238,10 +240,9 @@ func (ld *localDeployer) runDeploySection(ctx context.Context, opts *Options) er
 			oktetoLog.AddToBuffer(oktetoLog.ErrorLevel, "error deploying compose: %s", err.Error())
 			return err
 		}
-		oktetoLog.SetStage("")
 	}
 
-	// deploy endpoits if any
+	// deploy endpoints if any
 	if opts.Manifest.Deploy.Endpoints != nil {
 		oktetoLog.SetStage("Endpoints configuration")
 		if err := ld.deployEndpoints(ctx, opts); err != nil {
