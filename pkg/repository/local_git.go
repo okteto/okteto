@@ -3,10 +3,12 @@ package repository
 import (
 	"context"
 	"errors"
-	"github.com/go-git/go-git/v5"
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
+
+	"github.com/go-git/go-git/v5"
 )
 
 var (
@@ -24,6 +26,10 @@ type LocalExec struct{}
 
 func (*LocalExec) RunCommand(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
 	c := exec.CommandContext(ctx, name, arg...)
+	c.Cancel = func() error {
+		return c.Process.Signal(syscall.SIGTERM)
+	}
+
 	c.Dir = dir
 	c.Env = os.Environ()
 	return c.Output()
