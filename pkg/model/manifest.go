@@ -410,12 +410,9 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 		for _, composeInfo := range stackManifest.Deploy.ComposeSection.ComposesInfo {
 			composeFiles = append(composeFiles, composeInfo.File)
 		}
-		s, stackErr := LoadStack("", composeFiles, false)
-
-		// We failed to load a stack file and a manifest file, so we need to return
-		// only the original manifest error
+		s, stackErr := LoadStack("", composeFiles, true)
 		if stackErr != nil {
-			return nil, err
+			return nil, stackErr
 		}
 		stackManifest.Deploy.ComposeSection.Stack = s
 		if stackManifest.Deploy.ComposeSection.Stack.Name != "" {
