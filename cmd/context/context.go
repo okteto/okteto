@@ -40,9 +40,12 @@ To set your default context, run the ` + "`okteto context`" + ` command:
 This will prompt you to select one of your existing contexts or to create a new one.
 `,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// TODO @jpf-okteto: Context().PersistentPreRun overrides Context().Root().PersistentPreRun()
-			// https://github.com/okteto/okteto/issues/3617
-			cmd.Root().PersistentPreRun(cmd, args)
+			// read parent PersistentPreRun if any and run them before current PersistentPreRun
+			if parent := cmd.Parent(); parent != nil {
+				if parent.PersistentPreRun != nil {
+					parent.PersistentPreRun(parent, args)
+				}
+			}
 			okteto.SetInsecureSkipTLSVerifyPolicy(ctxOptions.InsecureSkipTlsVerify)
 		},
 		RunE: Use().RunE,
