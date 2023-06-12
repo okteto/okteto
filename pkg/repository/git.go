@@ -73,7 +73,7 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 	timeoutErr := errors.New("timeout exceeded")
 
 	go func() {
-		time.Sleep(time.Second)
+		time.Sleep(5 * time.Second)
 		close(timeoutCh)
 		cancel()
 		ch <- cleanStatus{false, timeoutErr}
