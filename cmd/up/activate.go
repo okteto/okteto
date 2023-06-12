@@ -310,8 +310,6 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 		if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Attaching); err != nil {
 			oktetoLog.Infof("error updating state: %s", err.Error())
 		}
-	} else {
-		return fmt.Errorf("'persistentVolume.enabled' must be true to use the 'services' field")
 	}
 
 	oktetoLog.Spinner(msg)
