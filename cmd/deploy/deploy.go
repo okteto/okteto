@@ -54,7 +54,7 @@ type Options struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
 	ManifestPathFlag string
-	// ManifestPath is the patah to the manifest used though the command execution.
+	// ManifestPath is the path to the manifest used though the command execution.
 	// This might change its value during execution
 	ManifestPath     string
 	Name             string
@@ -78,8 +78,7 @@ type Options struct {
 
 // DeployCommand defines the config for deploying an app
 type DeployCommand struct {
-	GetManifest func(path string) (*model.Manifest, error)
-
+	GetManifest        func(path string) (*model.Manifest, error)
 	TempKubeconfigFile string
 	K8sClientProvider  okteto.K8sClientProvider
 	Builder            *buildv2.OktetoBuilder
