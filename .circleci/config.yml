@@ -52,11 +52,14 @@ commands:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:1.18.0
+      - image: okteto/golang-ci:2.2.2
+  builder:
+    docker:
+      - image: golang:1.18.10-bullseye
 
 jobs:
   build-binaries:
-    executor: golang-ci
+    executor: builder
     resource_class: large
     steps:
       - checkout
@@ -139,11 +142,11 @@ jobs:
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
              /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
+      - integration-deprecated
       - integration-deploy
       - integration-up
       - integration-actions
       - integration-okteto
-      - integration-deprecated
       - integration-build
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
@@ -207,8 +210,9 @@ jobs:
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
-            & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_STAGING_TOKEN
-            & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' kubeconfig
+            copy C:\Users\circleci\project\artifacts\bin\okteto.exe C:\Windows\system32\okteto.exe
+            & okteto login --token $env:API_STAGING_TOKEN
+            & okteto kubeconfig
       - run:
           name: Run deprecated integration tests
           environment:

@@ -338,11 +338,16 @@ func (*ContextConfigWriter) Write() error {
 	return nil
 }
 
-func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName, oktetoURL string) {
+func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName, oktetoURL string, hasKubeTokenCapabily func(oktetoURL string) (bool, error)) error {
 	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
 	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings
 	if os.Getenv(constants.OktetoSkipConfigCredentialsUpdate) == "true" {
-		return
+		return nil
+	}
+
+	hasKubeToken, err := hasKubeTokenCapabily(oktetoURL)
+	if err != nil {
+		return err
 	}
 
 	clusterName := UrlToKubernetesContext(oktetoURL)
@@ -361,7 +366,23 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	if !ok {
 		user = clientcmdapi.NewAuthInfo()
 	}
-	user.Token = cred.Token
+
+	if hasKubeToken {
+		user.Token = ""
+		user.Exec = &clientcmdapi.ExecConfig{
+			Command:            "okteto",
+			Args:               []string{"kubetoken", "--context", oktetoURL, "--namespace", namespace},
+			APIVersion:         "client.authentication.k8s.io/v1",
+			InstallHint:        "Okteto needs to be installed and in your PATH to use this context. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
+			ProvideClusterInfo: true,
+			InteractiveMode:    "IfAvailable",
+		}
+	} else {
+		// fallback for okteto API before client authentication support
+		// TODO: remove once we stop supporting token based authentication https://github.com/okteto/okteto/pull/3409
+		user.Token = cred.Token
+		user.Exec = nil
+	}
 	cfg.AuthInfos[userName] = user
 
 	// create context
@@ -379,6 +400,7 @@ func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential,
 	cfg.Contexts[clusterName] = context
 
 	cfg.CurrentContext = clusterName
+	return nil
 }
 
 func GetK8sClient() (*kubernetes.Clientset, *rest.Config, error) {

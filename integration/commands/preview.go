@@ -90,6 +90,7 @@ func RunOktetoDeployPreview(oktetoPath string, deployOptions *DeployPreviewOptio
 func RunOktetoPreviewDestroy(oktetoPath string, destroyOptions *DestroyPreviewOptions) error {
 	log.Printf("okteto destroy %s", oktetoPath)
 	cmd := exec.Command(oktetoPath, "preview", "destroy", destroyOptions.Namespace)
+	cmd.Env = os.Environ()
 	if destroyOptions.Workdir != "" {
 		cmd.Dir = destroyOptions.Workdir
 	}
