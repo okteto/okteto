@@ -28,6 +28,7 @@ func TestDeployPreview(t *testing.T) {
 		client    *fakeGraphQLClient
 		name      string
 		variables []types.Variable
+		labels    []string
 	}
 	type expected struct {
 		response *types.PreviewResponse
@@ -166,6 +167,40 @@ func TestDeployPreview(t *testing.T) {
 				err: nil,
 			},
 		},
+		{
+			name: "with labels - no error",
+			input: input{
+				client: &fakeGraphQLClient{
+					mutationResult: &deployPreviewMutation{
+						Response: deployPreviewResponse{
+							Id: "test",
+							Action: actionStruct{
+								Id:     "test",
+								Name:   "test",
+								Status: ProgressingStatus,
+							},
+						},
+					},
+					err: nil,
+				},
+				name:      "test",
+				variables: []types.Variable{},
+				labels:    []string{"value", "key"},
+			},
+			expected: expected{
+				response: &types.PreviewResponse{
+					Action: &types.Action{
+						ID:     "test",
+						Name:   "test",
+						Status: progressingStatus,
+					},
+					Preview: &types.Preview{
+						ID: "test",
+					},
+				},
+				err: nil,
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -173,7 +208,7 @@ func TestDeployPreview(t *testing.T) {
 				client:             tc.input.client,
 				namespaceValidator: newNamespaceValidator(),
 			}
-			response, err := pc.DeployPreview(context.Background(), tc.input.name, "", "", "", "", "", tc.input.variables)
+			response, err := pc.DeployPreview(context.Background(), tc.input.name, "", "", "", "", "", tc.input.variables, tc.input.labels)
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
 		})

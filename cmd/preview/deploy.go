@@ -49,6 +49,7 @@ type DeployOptions struct {
 	timeout            time.Duration
 	variables          []string
 	wait               bool
+	labels             []string
 }
 
 // Deploy Deploy a preview environment
@@ -92,6 +93,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringArrayVarP(&opts.variables, "var", "v", []string{}, "set a preview environment variable (can be set more than once)")
 	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", false, "wait until the preview environment deployment finishes (defaults to false)")
 	cmd.Flags().StringVarP(&opts.file, "file", "f", "", "relative path within the repository to the okteto manifest (default to okteto.yaml or .okteto/okteto.yaml)")
+	cmd.Flags().StringArrayVarP(&opts.labels, "label", "", []string{}, "set a preview environment label (can be set more than once)")
 
 	cmd.Flags().StringVarP(&opts.deprecatedFilename, "filename", "", "", "relative path within the repository to the manifest file (default to okteto-pipeline.yaml or .okteto/okteto-pipeline.yaml)")
 	if err := cmd.Flags().MarkHidden("filename"); err != nil {
@@ -137,7 +139,7 @@ func (pw *Command) deployPreview(ctx context.Context, opts *DeployOptions) (*typ
 		})
 	}
 
-	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, varList)
+	return pw.okClient.Previews().DeployPreview(ctx, opts.name, opts.scope, opts.repository, opts.branch, opts.sourceUrl, opts.file, varList, opts.labels)
 }
 
 func (pw *Command) waitUntilRunning(ctx context.Context, name, namespace string, a *types.Action, timeout time.Duration) error {
