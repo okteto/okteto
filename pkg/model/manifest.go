@@ -387,6 +387,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	return nil, discovery.ErrOktetoManifestNotFound
 }
 
+// getManifestFromFile retrieves the manifest from a given file, okteto manifest or docker-compose
 func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 	devManifest, err := getOktetoManifest(manifestPath)
 	if err != nil {
@@ -439,7 +440,8 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			for _, composeInfo := range devManifest.Deploy.ComposeSection.ComposesInfo {
 				stackFiles = append(stackFiles, composeInfo.File)
 			}
-			s, err := LoadStack("", stackFiles, false)
+			// LoadStack should perform validation of the stack read from the file on compose section
+			s, err := LoadStack("", stackFiles, true)
 			if err != nil {
 				return nil, err
 			}
