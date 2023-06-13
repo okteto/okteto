@@ -30,7 +30,7 @@ type LocalExec struct{}
 func (*LocalExec) RunCommand(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
 	c := exec.CommandContext(ctx, name, arg...)
 	c.Cancel = func() error {
-		oktetoLog.Debugf("terminating %s...", c.String())
+		oktetoLog.Debugf("terminating %s - %s/%s", c.String(), dir, name)
 		if err := c.Process.Signal(syscall.SIGTERM); err != nil {
 			oktetoLog.Debugf("err at signal SIGTERM: %v", err)
 		}
@@ -42,7 +42,7 @@ func (*LocalExec) RunCommand(ctx context.Context, dir string, name string, arg .
 			}
 			oktetoLog.Debugf("reading signal with error %v", err)
 		}
-		oktetoLog.Debugf("killing %s...", c.String())
+		oktetoLog.Debugf("killing %s - %s/%s", c.String(), dir, name)
 		return c.Process.Signal(syscall.SIGKILL)
 	}
 
