@@ -39,6 +39,7 @@ import (
 var (
 	errBadStackName     = "must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character"
 	deprecatedManifests = []string{"stack.yml", "stack.yaml"}
+	errDependsOn        = errors.New("Invalid depends_on")
 )
 
 // Stack represents an okteto stack
@@ -499,13 +500,13 @@ func validateDependsOn(s *Stack) error {
 	for svcName, svc := range s.Services {
 		for dependentSvc, condition := range svc.DependsOn {
 			if svcName == dependentSvc {
-				return fmt.Errorf(" Service '%s' depends can not depend of itself.", svcName)
+				return fmt.Errorf("%w: Service '%s' depends can not depend of itself.", errDependsOn, svcName)
 			}
 			if _, ok := s.Services[dependentSvc]; !ok {
-				return fmt.Errorf(" Service '%s' depends on service '%s' which is undefined.", svcName, dependentSvc)
+				return fmt.Errorf("%w: Service '%s' depends on service '%s' which is undefined.", errDependsOn, svcName, dependentSvc)
 			}
 			if condition.Condition == DependsOnServiceCompleted && !s.Services[dependentSvc].IsJob() {
-				return fmt.Errorf(" Service '%s' is not a job. Please make sure the 'restart_policy' is not set to 'always' in service '%s' ", dependentSvc, dependentSvc)
+				return fmt.Errorf("%w: Service '%s' is not a job. Please make sure the 'restart_policy' is not set to 'always' in service '%s' ", errDependsOn, dependentSvc, dependentSvc)
 			}
 		}
 	}
@@ -513,7 +514,7 @@ func validateDependsOn(s *Stack) error {
 	dependencyCycle := getDependentCyclic(s.Services.toGraph())
 	if len(dependencyCycle) > 0 {
 		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(dependencyCycle[:len(dependencyCycle)-1], ", "), dependencyCycle[len(dependencyCycle)-1])
-		return fmt.Errorf(" There was a cyclic dependendecy between %s.", svcsDependents)
+		return fmt.Errorf("%w: There was a cyclic dependendecy between %s.", errDependsOn, svcsDependents)
 	}
 	return nil
 }

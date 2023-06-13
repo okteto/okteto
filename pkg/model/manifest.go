@@ -412,7 +412,12 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 		}
 		s, stackErr := LoadStack("", composeFiles, true)
 		if stackErr != nil {
-			return nil, stackErr
+			// if err is from validation, then return the stackErr
+			if errors.Is(stackErr, errDependsOn) {
+				return nil, stackErr
+			}
+			// if not return original manifest err
+			return nil, err
 		}
 		stackManifest.Deploy.ComposeSection.Stack = s
 		if stackManifest.Deploy.ComposeSection.Stack.Name != "" {
