@@ -52,10 +52,6 @@ type PreviewScope graphql.String
 
 type labelList []graphql.String
 
-type deployPreviewResponseInterface interface {
-	response() deployPreviewResponse
-}
-
 type deployPreviewMutation struct {
 	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename)"`
 }
@@ -174,7 +170,7 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 	return previewResponse, nil
 }
 
-func (c *previewClient) getDeployVariables(name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string) map[string]interface{} {
+func (*previewClient) getDeployVariables(name, scope, repository, branch, sourceUrl, filename string, variables []types.Variable, labels []string) map[string]interface{} {
 	variablesVariable := make([]InputVariable, 0)
 	for _, v := range variables {
 		variablesVariable = append(variablesVariable, InputVariable{
