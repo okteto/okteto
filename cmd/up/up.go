@@ -930,7 +930,7 @@ func (up *upContext) shutdownHybridMode() {
 	if up.hybridCommand != nil {
 		pid := up.hybridCommand.Process.Pid
 		if existProcess(pid) {
-			if err := syscall.Kill(-pid, syscall.SIGINT); err != nil {
+			if err := killProcess(pid); err != nil {
 				oktetoLog.Warning("failed to stop gracefully local process related to command executed in hybrid mode: %s", err.Error())
 			}
 
@@ -941,6 +941,15 @@ func (up *upContext) shutdownHybridMode() {
 			}
 		}
 	}
+}
+
+// killProcess sends a SIGTERM signal to the given process
+func killProcess(pid int) error {
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	return p.Signal(syscall.SIGTERM)
 }
 
 func existProcess(pid int) bool {
