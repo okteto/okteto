@@ -52,7 +52,7 @@ commands:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:1.18.0
+      - image: okteto/golang-ci:2.3.0
 
 jobs:
   build-binaries:
