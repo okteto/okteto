@@ -15,12 +15,17 @@ package okteto
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
+)
+
+var (
+	ErrLabelsFeatureNotSupported = fmt.Errorf("Labels are not supported in the version of this Okteto context")
 )
 
 type previewClient struct {
@@ -60,11 +65,11 @@ func (d *deployPreviewMutation) response() deployPreviewResponse {
 	return d.Response
 }
 
-type deployPreviewMutatioWithLabels struct {
+type deployPreviewMutationWithLabels struct {
 	Response deployPreviewResponse `graphql:"deployPreview(name: $name, scope: $scope, repository: $repository, branch: $branch, sourceUrl: $sourceURL, variables: $variables, filename: $filename, labels: $labels)"`
 }
 
-func (d *deployPreviewMutatioWithLabels) response() deployPreviewResponse {
+func (d *deployPreviewMutationWithLabels) response() deployPreviewResponse {
 	return d.Response
 }
 
@@ -73,7 +78,11 @@ type destroyPreviewMutation struct {
 }
 
 type listPreviewQuery struct {
-	Response []previewEnv `graphql:"previews"`
+	Response []previewEnv `graphql:"previews(labels: $labels)"`
+}
+
+type listPreviewQueryDeprecated struct {
+	Response []deprecatedPreviewEnv `graphql:"previews"`
 }
 
 type listPreviewEndpoints struct {
@@ -119,10 +128,17 @@ type endpointURL struct {
 	Url graphql.String
 }
 
-type previewEnv struct {
+type deprecatedPreviewEnv struct {
 	Id       graphql.String
 	Sleeping graphql.Boolean
 	Scope    graphql.String
+}
+
+type previewEnv struct {
+	Id            graphql.String
+	Sleeping      graphql.Boolean
+	Scope         graphql.String
+	PreviewLabels []graphql.String
 }
 
 type deployPreviewResponse struct {
@@ -150,9 +166,14 @@ func (c *previewClient) DeployPreview(ctx context.Context, name, scope, reposito
 		}
 		response = mutationStruct.response()
 	} else {
-		mutationStruct := &deployPreviewMutatioWithLabels{}
+		mutationStruct := &deployPreviewMutationWithLabels{}
 		err := mutate(ctx, mutationStruct, mutationVariables, c.client)
+
 		if err != nil {
+			if strings.Contains(err.Error(), "Unknown argument \"labels\" on field \"deployPreview\" of type \"Mutation\"") {
+				return nil, oktetoErrors.UserError{E: ErrLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
+			}
+
 			return nil, c.translateErr(err, name)
 		}
 		response = mutationStruct.response()
@@ -222,10 +243,47 @@ func (c *previewClient) Destroy(ctx context.Context, name string) error {
 	return err
 }
 
-// ListPreviews list preview environments
-func (c *previewClient) List(ctx context.Context) ([]types.Preview, error) {
+// List lists preview environments
+func (c *previewClient) List(ctx context.Context, labels []string) ([]types.Preview, error) {
 	queryStruct := listPreviewQuery{}
 
+	variables := map[string]interface{}{}
+	labelsVariable := make(labelList, 0)
+	for _, l := range labels {
+		labelsVariable = append(labelsVariable, graphql.String(l))
+	}
+	variables["labels"] = labelsVariable
+	err := query(ctx, &queryStruct, variables, c.client)
+	if err != nil {
+		if strings.Contains(err.Error(), "Unknown argument \"labels\" on field \"previews\" of type \"Query\"") {
+			if len(labels) > 0 {
+				return nil, oktetoErrors.UserError{E: ErrLabelsFeatureNotSupported, Hint: "Please upgrade to the latest version or ask your administrator"}
+			}
+			return c.deprecatedList(ctx)
+		}
+		return nil, err
+	}
+
+	result := make([]types.Preview, 0)
+	for _, previewEnv := range queryStruct.Response {
+		labels := make([]string, 0)
+		for _, l := range previewEnv.PreviewLabels {
+			labels = append(labels, string(l))
+		}
+		result = append(result, types.Preview{
+			ID:            string(previewEnv.Id),
+			Sleeping:      bool(previewEnv.Sleeping),
+			Scope:         string(previewEnv.Scope),
+			PreviewLabels: labels,
+		})
+	}
+
+	return result, nil
+}
+
+// TODO: Remove it when all charts are updated to 1.9
+func (c *previewClient) deprecatedList(ctx context.Context) ([]types.Preview, error) {
+	queryStruct := listPreviewQueryDeprecated{}
 	err := query(ctx, &queryStruct, nil, c.client)
 	if err != nil {
 		return nil, err
@@ -239,7 +297,6 @@ func (c *previewClient) List(ctx context.Context) ([]types.Preview, error) {
 			Scope:    string(previewEnv.Scope),
 		})
 	}
-
 	return result, nil
 }
 

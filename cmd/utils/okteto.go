@@ -51,7 +51,7 @@ func HasAccessToOktetoClusterNamespace(ctx context.Context, namespace string, ok
 		}
 	}
 
-	previewList, err := oktetoClient.Previews().List(ctx)
+	previewList, err := oktetoClient.Previews().List(ctx, []string{})
 	if err != nil {
 		return false, err
 	}
