@@ -35,7 +35,6 @@ func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*
 	c.SysProcAttr = &syscall.SysProcAttr{
 		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
 	}
-	c.SysProcAttr.Foreground = true
 
 	return c, nil
 }
