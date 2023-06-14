@@ -3,6 +3,15 @@
 
 package up
 
+import (
+	"context"
+	"os"
+	"os/exec"
+	"runtime"
+	"strings"
+	"syscall"
+)
+
 func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*exec.Cmd, error) {
 	var c *exec.Cmd
 	if runtime.GOOS != "windows" {
@@ -25,7 +34,7 @@ func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*
 
 	c.SysProcAttr = &syscall.SysProcAttr{
 		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
-		Foreground: true
+		Foreground:    true,
 	}
 
 	return c, nil
