@@ -52,11 +52,14 @@ commands:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:1.18.0
+      - image: okteto/golang-ci:2.3.1
+  builder:
+    docker:
+      - image: golang:1.20.5-bullseye
 
 jobs:
   build-binaries:
-    executor: golang-ci
+    executor: builder
     resource_class: large
     steps:
       - checkout
