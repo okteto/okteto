@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/pkg/types"
+	"github.com/shurcooL/graphql"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -118,6 +119,21 @@ func TestDeployPreview(t *testing.T) {
 					},
 				},
 				err: nil,
+			},
+		},
+		{
+			name: "with variables - feature not enabled",
+			input: input{
+				client: &fakeGraphQLClient{
+					err: errors.New("Unknown argument \"labels\" on field \"deployPreview\" of type \"Mutation\""),
+				},
+				name: "test",
+				labels: []string{
+					"key=value",
+				},
+			},
+			expected: expected{
+				err: ErrLabelsFeatureNotSupported,
 			},
 		},
 		{
@@ -273,6 +289,7 @@ func TestDestroyPreview(t *testing.T) {
 func TestListPreview(t *testing.T) {
 	type input struct {
 		client *fakeGraphQLClient
+		labels []string
 	}
 	type expected struct {
 		response []types.Preview
@@ -289,6 +306,132 @@ func TestListPreview(t *testing.T) {
 				client: &fakeGraphQLClient{
 					queryResult: &listPreviewQuery{
 						Response: []previewEnv{
+							{
+								Id:       "test",
+								Sleeping: false,
+								Scope:    "test",
+							},
+						},
+					},
+					err: nil,
+				},
+			},
+			expected: expected{
+				response: []types.Preview{
+					{
+						ID:            "test",
+						Sleeping:      false,
+						Scope:         "test",
+						PreviewLabels: []string{},
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "no error with labels",
+			input: input{
+				labels: []string{"value", "key"},
+				client: &fakeGraphQLClient{
+					queryResult: &listPreviewQuery{
+						Response: []previewEnv{
+							{
+								Id:       "test",
+								Sleeping: false,
+								Scope:    "test",
+								PreviewLabels: []graphql.String{
+									"value",
+								},
+							},
+						},
+					},
+					err: nil,
+				},
+			},
+			expected: expected{
+				response: []types.Preview{
+					{
+						ID:       "test",
+						Sleeping: false,
+						Scope:    "test",
+						PreviewLabels: []string{
+							"value",
+						},
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "error",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: nil,
+					err:         assert.AnError,
+				},
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "error with labels",
+			input: input{
+				labels: []string{"value", "key"},
+				client: &fakeGraphQLClient{
+					queryResult: nil,
+					err:         assert.AnError,
+				},
+			},
+			expected: expected{
+				err: assert.AnError,
+			},
+		},
+		{
+			name: "error with labels on a non supported version",
+			input: input{
+				labels: []string{"value", "key"},
+				client: &fakeGraphQLClient{
+					queryResult: nil,
+					err:         errors.New("Unknown argument \"labels\" on field \"previews\" of type \"Query\""),
+				},
+			},
+			expected: expected{
+				err: ErrLabelsFeatureNotSupported,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pc := previewClient{
+				client: tc.input.client,
+			}
+			response, err := pc.List(context.Background(), tc.input.labels)
+			assert.ErrorIs(t, err, tc.expected.err)
+			assert.Equal(t, tc.expected.response, response)
+		})
+	}
+}
+
+func TestDeprecatedListPreview(t *testing.T) {
+	type input struct {
+		client *fakeGraphQLClient
+	}
+	type expected struct {
+		response []types.Preview
+		err      error
+	}
+	testCases := []struct {
+		name     string
+		input    input
+		expected expected
+	}{
+		{
+			name: "no error",
+			input: input{
+				client: &fakeGraphQLClient{
+					queryResult: &listPreviewQueryDeprecated{
+						Response: []deprecatedPreviewEnv{
 							{
 								Id:       "test",
 								Sleeping: false,
@@ -328,7 +471,7 @@ func TestListPreview(t *testing.T) {
 			pc := previewClient{
 				client: tc.input.client,
 			}
-			response, err := pc.List(context.Background())
+			response, err := pc.deprecatedList(context.Background())
 			assert.ErrorIs(t, err, tc.expected.err)
 			assert.Equal(t, tc.expected.response, response)
 		})
