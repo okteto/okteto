@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/discovery"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
 	apiv1 "k8s.io/api/core/v1"
@@ -787,55 +789,52 @@ func TestSetBuildDefaults(t *testing.T) {
 	}
 }
 
-func TestGetManifestFromFile(t *testing.T) {
+func Test_getManifestFromFile(t *testing.T) {
 	tests := []struct {
 		name          string
 		manifestBytes []byte
 		composeBytes  []byte
-		expectedErr   bool
+		expectedErr   error
 	}{
 		{
-			name:          "OktetoManifest does not exist and compose manifest is correct",
+			name:          "manifestPath to a valid compose file",
 			manifestBytes: nil,
 			composeBytes: []byte(`services:
   test:
     image: test`),
-			expectedErr: false,
 		},
 		{
-			name:          "OktetoManifest not contains any content and compose manifest does not exists",
+			name:          "manifestPath to empty okteto manifest, no compose file",
 			manifestBytes: []byte(``),
 			composeBytes:  nil,
-			expectedErr:   true,
+			expectedErr:   oktetoErrors.ErrEmptyManifest,
 		},
 		{
-			name:          "OktetoManifest is invalid and compose manifest does not exists",
+			name:          "manifestPath to invalid okteto manifest, no compose file",
 			manifestBytes: []byte(`asdasa: asda`),
 			composeBytes:  nil,
-			expectedErr:   true,
+			expectedErr:   oktetoErrors.ErrInvalidManifest,
 		},
 		{
-			name: "OktetoManifestV2 is ok",
+			name: "manifestPath to valid v2 okteto manifest",
 			manifestBytes: []byte(`dev:
   api:
     sync:
-    - .:/usr`),
+      - .:/usr`),
 			composeBytes: nil,
-			expectedErr:  false,
 		},
 		{
-			name: "OktetoManifestV1 is ok",
+			name: "manifestPath to valid v1 okteto manifest",
 			manifestBytes: []byte(`name: test
 sync:
-- .:/usr`),
+  - .:/usr`),
 			composeBytes: nil,
-			expectedErr:  false,
 		},
 		{
-			name:          "OktetoManifest and compose manifest does not exists",
+			name:          "manifestPath to not existent okteto manifest, no compose file",
 			manifestBytes: nil,
 			composeBytes:  nil,
-			expectedErr:   true,
+			expectedErr:   discovery.ErrOktetoManifestNotFound,
 		},
 	}
 	for _, tt := range tests {
@@ -855,11 +854,7 @@ sync:
 			}
 			_, err := getManifestFromFile(dir, file)
 
-			if tt.expectedErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
+			assert.ErrorIs(t, err, tt.expectedErr)
 
 		})
 	}
