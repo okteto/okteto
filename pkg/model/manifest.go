@@ -612,7 +612,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 	}
 
 	if isEmptyManifestFile(b) {
-		return nil, fmt.Errorf("%w: %w", oktetoErrors.ErrInvalidManifest, oktetoErrors.ErrEmptyManifest)
+		return nil, fmt.Errorf("%s: %w", oktetoErrors.ErrInvalidManifest, oktetoErrors.ErrEmptyManifest)
 	}
 
 	manifest, err := Read(b)
