@@ -77,7 +77,7 @@ func executeListPreviews(ctx context.Context, opts ListFlags) error {
 	for _, preview := range previewList {
 		previewLabels := "-"
 		if len(preview.PreviewLabels) > 0 {
-			previewLabels = strings.Join(preview.PreviewLabels, ",")
+			previewLabels = strings.Join(preview.PreviewLabels, ", ")
 		}
 		fmt.Fprintf(w, "%s\t%s\t%v\t%s\n", preview.ID, preview.Scope, preview.Sleeping, previewLabels)
 	}

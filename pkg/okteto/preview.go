@@ -25,7 +25,11 @@ import (
 )
 
 var (
-	ErrLabelsFeatureNotSupported = fmt.Errorf("Labels are not supported in the version of this Okteto context")
+	ErrLabelsFeatureNotSupported = fmt.Errorf(`Filtering preview environments by label requires a more recent version of Okteto.
+
+    Consider removing the "--label" flag, or please upgrade to the latest version.
+
+    For more information and upgrade instructions, please visit our docs at https://www.okteto.com/docs or contact your system administrator.`)
 )
 
 type previewClient struct {
