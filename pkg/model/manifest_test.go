@@ -836,6 +836,16 @@ sync:
 			composeBytes:  nil,
 			expectedErr:   discovery.ErrOktetoManifestNotFound,
 		},
+		{
+			name:          "manifestPath to a invalid compose file - depends_on error",
+			manifestBytes: nil,
+			composeBytes: []byte(`services:
+  api:
+    image: test
+    depends_on:
+      - frontend`),
+			expectedErr: errDependsOn,
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
