@@ -387,6 +387,7 @@ func GetManifestV2(manifestPath string) (*Manifest, error) {
 	return nil, discovery.ErrOktetoManifestNotFound
 }
 
+// getManifestFromFile retrieves the manifest from a given file, okteto manifest or docker-compose
 func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 	devManifest, err := getOktetoManifest(manifestPath)
 	if err != nil {
@@ -410,11 +411,13 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 		for _, composeInfo := range stackManifest.Deploy.ComposeSection.ComposesInfo {
 			composeFiles = append(composeFiles, composeInfo.File)
 		}
-		s, stackErr := LoadStack("", composeFiles, false)
-
-		// We failed to load a stack file and a manifest file, so we need to return
-		// only the original manifest error
+		s, stackErr := LoadStack("", composeFiles, true)
 		if stackErr != nil {
+			// if err is from validation, then return the stackErr
+			if errors.Is(stackErr, errDependsOn) {
+				return nil, stackErr
+			}
+			// if not return original manifest err
 			return nil, err
 		}
 		stackManifest.Deploy.ComposeSection.Stack = s
@@ -437,7 +440,8 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			for _, composeInfo := range devManifest.Deploy.ComposeSection.ComposesInfo {
 				stackFiles = append(stackFiles, composeInfo.File)
 			}
-			s, err := LoadStack("", stackFiles, false)
+			// LoadStack should perform validation of the stack read from the file on compose section
+			s, err := LoadStack("", stackFiles, true)
 			if err != nil {
 				return nil, err
 			}
@@ -608,7 +612,7 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 	}
 
 	if isEmptyManifestFile(b) {
-		return nil, fmt.Errorf("%w: %s", oktetoErrors.ErrInvalidManifest, oktetoErrors.ErrEmptyManifest)
+		return nil, fmt.Errorf("%s: %w", oktetoErrors.ErrInvalidManifest, oktetoErrors.ErrEmptyManifest)
 	}
 
 	manifest, err := Read(b)
