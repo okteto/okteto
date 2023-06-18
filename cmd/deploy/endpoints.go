@@ -227,7 +227,7 @@ func (dc *EndpointGetter) showEndpoints(ctx context.Context, opts *EndpointsOpti
 		}
 	default:
 		if len(eps) == 0 {
-			oktetoLog.Printf("There are no available endpoints for '%s'\n", opts.Name)
+			oktetoLog.Information("There are no available endpoints for '%s'.\n    Follow this link to know more about how to create public endpoints for your application:\n    https://www.okteto.com/docs/cloud/ssl/", opts.Name)
 		} else {
 			oktetoLog.Information("Endpoints available:")
 			oktetoLog.Printf("  - %s\n", strings.Join(eps, "\n  - "))
