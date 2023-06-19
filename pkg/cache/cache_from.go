@@ -13,13 +13,6 @@
 
 package cache
 
-import (
-	"fmt"
-
-	"github.com/okteto/okteto/pkg/constants"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
-)
-
 // CacheFrom is a list of images to import cache from.
 type CacheFrom []string
 
@@ -57,42 +50,4 @@ func (cf *CacheFrom) MarshalYAML() (interface{}, error) {
 	}
 
 	return cf, nil
-}
-
-// AddDefaultPullCache appends the default cache layers for a given image
-func (cf *CacheFrom) AddDefaultPullCache(reg oktetoRegistryInterface, image string) {
-	hasAccess, err := reg.HasGlobalPushAccess()
-	if err != nil {
-		oktetoLog.Infof("error trying to access globalPushAccess: %w", err)
-	}
-
-	_, imageRepo := reg.GetRegistryAndRepo(image)
-	imageName, _ := reg.GetRepoNameAndTag(imageRepo)
-
-	if hasAccess {
-		globalCacheImage := fmt.Sprintf("%s/%s:%s", constants.GlobalRegistry, imageName, defaultCacheTag)
-		cf.addCacheFromImage(globalCacheImage)
-		oktetoLog.Debugf("Dynamically adding cache_from: %s", globalCacheImage)
-	}
-
-	devCacheImage := fmt.Sprintf("%s/%s:%s", constants.DevRegistry, imageName, defaultCacheTag)
-	cf.addCacheFromImage(devCacheImage)
-	oktetoLog.Debugf("Dynamically adding cache_from: %s", devCacheImage)
-}
-
-// addCacheFromImage appends a cache image to the list if it's not already there
-func (cf *CacheFrom) addCacheFromImage(imageName string) {
-	if !cf.hasCacheFromImage(imageName) {
-		*cf = append(*cf, imageName)
-	}
-}
-
-// hasCacheFromImage checks if a cache image is already in the list
-func (cf *CacheFrom) hasCacheFromImage(imageName string) bool {
-	for _, cacheFrom := range *cf {
-		if cacheFrom == imageName {
-			return true
-		}
-	}
-	return false
 }
