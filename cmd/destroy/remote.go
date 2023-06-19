@@ -38,13 +38,9 @@ FROM {{ .OktetoCLIImage }} as okteto-cli
 
 FROM {{ .InstallerImage }} as installer
 
-FROM alpine as certs
-RUN apk update && apk add ca-certificates
-
 FROM {{ .UserDestroyImage }} as deploy
 
 ENV PATH="${PATH}:/okteto/bin"
-COPY --from=certs /etc/ssl/certs /etc/ssl/certs
 COPY --from=installer /app/bin/* /okteto/bin/
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
