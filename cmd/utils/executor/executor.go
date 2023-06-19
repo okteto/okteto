@@ -59,7 +59,7 @@ func NewExecutor(output string, runWithoutBash bool, dir string) *Executor {
 	}
 
 	shell := "bash"
-	if utils.LoadBoolean(constants.OKtetoDeployRemote) {
+	if utils.LoadBoolean(constants.OktetoDeployRemote) {
 		shell = "sh"
 	}
 

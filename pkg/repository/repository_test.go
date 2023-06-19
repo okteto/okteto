@@ -15,9 +15,10 @@ package repository
 
 import (
 	"context"
-	"github.com/go-git/go-git/v5"
 	"net/url"
 	"testing"
+
+	"github.com/go-git/go-git/v5"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/okteto/okteto/pkg/constants"
@@ -113,7 +114,7 @@ func TestNewRepo(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Setenv(constants.OktetoGitCommitEnvVar, tc.GitCommit)
-			t.Setenv(constants.OKtetoDeployRemote, string(tc.remoteDeploy))
+			t.Setenv(constants.OktetoDeployRemote, string(tc.remoteDeploy))
 			r := NewRepository("https://my-repo/okteto/okteto")
 			assert.Equal(t, "/okteto/okteto", r.url.Path)
 			assert.IsType(t, tc.expectedControl, r.control)

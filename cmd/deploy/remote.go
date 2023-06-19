@@ -43,60 +43,49 @@ import (
 
 const (
 	templateName           = "dockerfile"
-	dockerfileTemporalName = "deploy"
+	dockerfileTemporalName = "Dockerfile.deploy"
 	oktetoDockerignoreName = ".oktetodeployignore"
 	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
-
 
 FROM {{ .UserDeployImage }} as deploy
 
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
-{{range $key, $val := .OktetoBuildEnvVars }}
-ENV {{$key}} {{$val}}
-{{end}}
-ENV {{ .NamespaceEnvVar }} {{ .NamespaceValue }}
-ENV {{ .ContextEnvVar }} {{ .ContextValue }}
-ENV {{ .TokenEnvVar }} {{ .TokenValue }}
 ENV {{ .RemoteDeployEnvVar }} true
-{{ if ne .ActionNameValue "" }}
-ENV {{ .ActionNameEnvVar }} {{ .ActionNameValue }}
-{{ end }}
-{{ if ne .GitCommitValue "" }}
-ENV {{ .GitCommitEnvVar }} {{ .GitCommitValue }}
-{{ end }}
+ARG {{ .NamespaceArgName }}
+ARG {{ .ContextArgName }}
+ARG {{ .TokenArgName }}
+ARG {{ .ActionNameArgName }}
+ARG {{ .TlsCertBase64ArgName }}
+ARG {{ .InternalServerName }}
+RUN mkdir -p /etc/ssl/certs/
+RUN echo "${{ .TlsCertBase64ArgName }}" | base64 -d > /etc/ssl/certs/okteto.crt
 
 COPY . /okteto/src
 WORKDIR /okteto/src
 
-ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
-ARG OKTETO_TLS_CERT_BASE64
-ARG INTERNAL_SERVER_NAME=""
-RUN mkdir -p /etc/ssl/certs/
-RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
-RUN okteto deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" {{ .DeployFlags }}
+ARG {{ .GitCommitArgName }}
+ARG {{ .InvalidateCacheArgName }}
+
+RUN okteto deploy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DeployFlags }}
 `
 )
 
 type dockerfileTemplateProperties struct {
-	OktetoCLIImage     string
-	UserDeployImage    string
-	OktetoBuildEnvVars map[string]string
-	ContextEnvVar      string
-	ContextValue       string
-	NamespaceEnvVar    string
-	NamespaceValue     string
-	TokenEnvVar        string
-	TokenValue         string
-	ActionNameEnvVar   string
-	ActionNameValue    string
-	GitCommitEnvVar    string
-	GitCommitValue     string
-	RemoteDeployEnvVar string
-	DeployFlags        string
-	RandomInt          int
+	OktetoCLIImage         string
+	UserDeployImage        string
+	RemoteDeployEnvVar     string
+	ContextArgName         string
+	NamespaceArgName       string
+	TokenArgName           string
+	TlsCertBase64ArgName   string
+	InternalServerName     string
+	ActionNameArgName      string
+	GitCommitArgName       string
+	InvalidateCacheArgName string
+	DeployFlags            string
 }
 
 type remoteDeployCommand struct {
@@ -162,12 +151,23 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		return err
 	}
 
+	randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return err
+	}
+
 	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{OutputMode: "deploy"})
 	buildOptions.Manifest = deployOptions.Manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,
-		fmt.Sprintf("OKTETO_TLS_CERT_BASE64=%s", base64.StdEncoding.EncodeToString(sc.Certificate)),
-		fmt.Sprintf("INTERNAL_SERVER_NAME=%s", sc.ServerName),
+		fmt.Sprintf("%s=%s", model.OktetoContextEnvVar, okteto.Context().Name),
+		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
+		fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, okteto.Context().Token),
+		fmt.Sprintf("%s=%s", constants.OktetoTlsCertBase64EnvVar, base64.StdEncoding.EncodeToString(sc.Certificate)),
+		fmt.Sprintf("%s=%s", constants.OktetoInternalServerNameEnvVar, sc.ServerName),
+		fmt.Sprintf("%s=%s", model.OktetoActionNameEnvVar, os.Getenv(model.OktetoActionNameEnvVar)),
+		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
+		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
 	)
 	// we need to call Build() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
@@ -206,28 +206,19 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 
 	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
 
-	randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000))
-	if err != nil {
-		return "", err
-	}
-
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
-		UserDeployImage:    opts.Manifest.Deploy.Image,
-		OktetoBuildEnvVars: rd.builderV2.GetBuildEnvVars(),
-		ContextEnvVar:      model.OktetoContextEnvVar,
-		ContextValue:       okteto.Context().Name,
-		NamespaceEnvVar:    model.OktetoNamespaceEnvVar,
-		NamespaceValue:     okteto.Context().Namespace,
-		TokenEnvVar:        model.OktetoTokenEnvVar,
-		TokenValue:         okteto.Context().Token,
-		ActionNameEnvVar:   model.OktetoActionNameEnvVar,
-		ActionNameValue:    os.Getenv(model.OktetoActionNameEnvVar),
-		GitCommitEnvVar:    constants.OktetoGitCommitEnvVar,
-		GitCommitValue:     os.Getenv(constants.OktetoGitCommitEnvVar),
-		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
-		RandomInt:          int(randomNumber.Int64()),
-		DeployFlags:        strings.Join(getDeployFlags(opts), " "),
+		OktetoCLIImage:         getOktetoCLIVersion(config.VersionString),
+		UserDeployImage:        opts.Manifest.Deploy.Image,
+		RemoteDeployEnvVar:     constants.OktetoDeployRemote,
+		ContextArgName:         model.OktetoContextEnvVar,
+		NamespaceArgName:       model.OktetoNamespaceEnvVar,
+		TlsCertBase64ArgName:   constants.OktetoTlsCertBase64EnvVar,
+		InternalServerName:     constants.OktetoInternalServerNameEnvVar,
+		TokenArgName:           model.OktetoTokenEnvVar,
+		ActionNameArgName:      model.OktetoActionNameEnvVar,
+		GitCommitArgName:       constants.OktetoGitCommitEnvVar,
+		InvalidateCacheArgName: constants.OktetoInvalidateCacheEnvVar,
+		DeployFlags:            strings.Join(getDeployFlags(opts), " "),
 	}
 
 	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, dockerfileTemporalName))
@@ -314,7 +305,7 @@ func getOktetoCLIVersion(versionString string) string {
 	if match, _ := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
 		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
 	} else {
-		remoteOktetoImage := os.Getenv(constants.OKtetoDeployRemoteImage)
+		remoteOktetoImage := os.Getenv(constants.OktetoDeployRemoteImage)
 		if remoteOktetoImage != "" {
 			version = remoteOktetoImage
 		} else {

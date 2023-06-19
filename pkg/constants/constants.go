@@ -50,11 +50,20 @@ const (
 	// TimeFormat is the format to use when storing timestamps as a string
 	TimeFormat = "2006-01-02T15:04:05"
 
-	// OKtetoDeployRemote defines if deployment is executed remotely
-	OKtetoDeployRemote = "OKTETO_DEPLOY_REMOTE"
+	// OktetoDeployRemote defines if deployment is executed remotely
+	OktetoDeployRemote = "OKTETO_DEPLOY_REMOTE"
 
-	// OKtetoDeployRemoteImage defines okteto cli image used for deploy an environment remotely
-	OKtetoDeployRemoteImage = "OKTETO_REMOTE_CLI_IMAGE"
+	// OktetoTlsCertBase64 defines the TLS certificate in base64 for --remote
+	OktetoTlsCertBase64EnvVar = "OKTETO_TLS_CERT_BASE64"
+
+	// OktetoInternalServerName defines the internal server name for --remote
+	OktetoInternalServerNameEnvVar = "INTERNAL_SERVER_NAME"
+
+	// OktetoInvalidateCacheEnvVar defines a ramdom number to invalidate the "--remote" cache
+	OktetoInvalidateCacheEnvVar = "OKTETO_INVALIDATE_CACHE"
+
+	// OktetoDeployRemoteImage defines okteto cli image used for deploy an environment remotely
+	OktetoDeployRemoteImage = "OKTETO_REMOTE_CLI_IMAGE"
 
 	// OktetoCLIImageForRemoteTemplate defines okteto CLI image template to use for remote deployments
 	OktetoCLIImageForRemoteTemplate = "okteto/okteto:%s"

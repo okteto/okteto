@@ -296,10 +296,9 @@ func TestCreateDockerfile(t *testing.T) {
 		err            error
 	}
 	var tests = []struct {
-		name            string
-		config          config
-		expected        expected
-		actionNameValue string
+		name     string
+		config   config
+		expected expected
 	}{
 		{
 			name: "OS can't access working directory",
@@ -319,9 +318,8 @@ func TestCreateDockerfile(t *testing.T) {
 				opts: &Options{},
 			},
 			expected: expected{
-				dockerfileName: filepath.Clean("/test/deploy"),
+				dockerfileName: filepath.Clean("/test/Dockerfile.destroy"),
 			},
-			actionNameValue: "test",
 		},
 	}
 
@@ -334,7 +332,6 @@ func TestCreateDockerfile(t *testing.T) {
 				workingDirectoryCtrl: wdCtrl,
 				registry:             newFakeRegistry(),
 			}
-			t.Setenv(model.OktetoActionNameEnvVar, tt.actionNameValue)
 			dockerfileName, err := rdc.createDockerfile("/test", tt.config.opts)
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.dockerfileName, dockerfileName)
@@ -343,7 +340,7 @@ func TestCreateDockerfile(t *testing.T) {
 				_, err = rdc.fs.Stat(filepath.Join("/test", dockerfileTemporalNane))
 				assert.NoError(t, err)
 				content, _ := afero.ReadFile(rdc.fs, filepath.Join("/test", dockerfileTemporalNane))
-				assert.True(t, strings.Contains(string(content), fmt.Sprintf("ENV %s %s", model.OktetoActionNameEnvVar, tt.actionNameValue)))
+				assert.True(t, strings.Contains(string(content), fmt.Sprintf("ARG %s", model.OktetoActionNameEnvVar)))
 			}
 
 		})
@@ -419,7 +416,7 @@ func Test_getOktetoCLIVersion(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.cliImageEnv != "" {
-				t.Setenv(constants.OKtetoDeployRemoteImage, tt.cliImageEnv)
+				t.Setenv(constants.OktetoDeployRemoteImage, tt.cliImageEnv)
 			}
 
 			version := getOktetoCLIVersion(tt.versionString)

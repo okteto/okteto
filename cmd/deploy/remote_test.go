@@ -271,7 +271,7 @@ func TestCreateDockerfile(t *testing.T) {
 				},
 			},
 			expected: expected{
-				dockerfileName: filepath.Clean("/test/deploy"),
+				dockerfileName: filepath.Clean("/test/Dockerfile.deploy"),
 			},
 		},
 	}
@@ -371,7 +371,7 @@ func Test_getOktetoCLIVersion(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.cliImageEnv != "" {
-				t.Setenv(constants.OKtetoDeployRemoteImage, tt.cliImageEnv)
+				t.Setenv(constants.OktetoDeployRemoteImage, tt.cliImageEnv)
 			}
 
 			version := getOktetoCLIVersion(tt.versionString)

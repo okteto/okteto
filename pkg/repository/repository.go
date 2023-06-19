@@ -47,7 +47,7 @@ func NewRepository(path string) Repository {
 
 	var controller repositoryInterface = newGitRepoController()
 	// check if we are inside a remote deploy
-	if v := os.Getenv(constants.OKtetoDeployRemote); v != "" {
+	if v := os.Getenv(constants.OktetoDeployRemote); v != "" {
 		sha := os.Getenv(constants.OktetoGitCommitEnvVar)
 		controller = newOktetoRemoteRepoController(sha)
 	}

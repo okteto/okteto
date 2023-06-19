@@ -194,7 +194,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Builder:            buildv2.NewBuilderFromScratch(),
 				DeployWaiter:       NewDeployWaiter(k8sClientProvider),
 				EndpointGetter:     NewEndpointGetter,
-				isRemote:           utils.LoadBoolean(constants.OKtetoDeployRemote),
+				isRemote:           utils.LoadBoolean(constants.OktetoDeployRemote),
 				CfgMapHandler:      NewConfigmapHandler(k8sClientProvider),
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
@@ -530,7 +530,7 @@ func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, b
 
 	// isDeployRemote represents wheather the process is comming from a remote deploy
 	// if true it should get the local deployer
-	isDeployRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
+	isDeployRemote := utils.LoadBoolean(constants.OktetoDeployRemote)
 
 	// remote deployment should be done when flag RunInRemote is active OR deploy.image is fulfilled
 	if !isDeployRemote && (opts.RunInRemote || opts.Manifest.Deploy.Image != "") {
