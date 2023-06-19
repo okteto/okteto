@@ -163,12 +163,6 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				OutputMode: oktetoLog.TTYFormat,
 				Tag:        "okteto.dev/movies-service:okteto",
 				BuildArgs:  []string{namespaceEnvVar.String()},
-				CacheFrom: []string{
-					"okteto.dev/movies-service:cache",
-				},
-				ExportCache: []string{
-					"okteto.dev/movies-service:cache",
-				},
 			},
 		},
 		{
@@ -211,14 +205,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				File:       filepath.Join(serviceContext, serviceDockerfile),
 				Target:     "build",
 				Path:       "service",
-				CacheFrom: []string{
-					"cache-image",
-					"okteto.dev/movies-service:cache",
-				},
-				BuildArgs: []string{namespaceEnvVar.String(), "arg1=value1"},
-				ExportCache: []string{
-					"okteto.dev/movies-service:cache",
-				},
+				CacheFrom:  []string{"cache-image"},
+				BuildArgs:  []string{namespaceEnvVar.String(), "arg1=value1"},
 			},
 		},
 		{
@@ -259,12 +247,8 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Path:       "service",
 				CacheFrom: []string{
 					"cache-image",
-					"okteto.dev/movies-service:cache",
 				},
 				BuildArgs: []string{namespaceEnvVar.String(), "arg1=value1"},
-				ExportCache: []string{
-					"okteto.dev/movies-service:cache",
-				},
 			},
 		},
 		{
@@ -305,13 +289,11 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				Path:       "service",
 				CacheFrom: []string{
 					"cache-image",
-					"okteto.dev/mycustomimage:cache",
 				},
 				BuildArgs: []string{namespaceEnvVar.String(), "arg1=value1"},
 				Secrets:   []string{"id=mysecret,src=source"},
 				ExportCache: []string{
 					"export-image",
-					"okteto.dev/mycustomimage:cache",
 				},
 			},
 		},
@@ -328,14 +310,10 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				repo:             "movies-service",
 			},
 			expected: &types.BuildOptions{
-				CacheFrom:  []string{"okteto.dev/movies-service:cache"},
 				BuildArgs:  []string{namespaceEnvVar.String()},
 				Platform:   "linux/amd64",
 				Tag:        "okteto.dev/movies-service:okteto",
 				OutputMode: "tty",
-				ExportCache: []string{
-					"okteto.dev/movies-service:cache",
-				},
 			},
 		},
 	}
