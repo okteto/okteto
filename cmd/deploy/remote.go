@@ -256,12 +256,7 @@ func (rd *remoteDeployCommand) createDockerignore(cwd, tmpDir string) error {
 			return err
 		}
 	}
-	err := afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
 }
 
 func getDeployFlags(opts *Options) []string {

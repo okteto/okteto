@@ -347,7 +347,7 @@ func TestCreateDockerfile(t *testing.T) {
 	}
 }
 
-func TestCreateDockerignoreIfNeeded(t *testing.T) {
+func TestCreateDockerignore(t *testing.T) {
 	fs := afero.NewMemMapFs()
 
 	dockerignoreWd := "/test/"
@@ -378,7 +378,7 @@ func TestCreateDockerignoreIfNeeded(t *testing.T) {
 				fs:       fs,
 				registry: newFakeRegistry(),
 			}
-			err := rdc.createDockerignoreIfNeeded(tt.config.wd, "/temp")
+			err := rdc.createDockerignore(tt.config.wd, "/temp")
 			assert.NoError(t, err)
 		})
 	}
