@@ -76,6 +76,7 @@ WORKDIR /okteto/src
 ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
 ARG OKTETO_TLS_CERT_BASE64
 ARG INTERNAL_SERVER_NAME=""
+RUN mkdir -p /etc/ssl/certs/
 RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
 RUN okteto deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" {{ .DeployFlags }}
 `
