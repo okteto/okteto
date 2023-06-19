@@ -287,6 +287,12 @@ func getDeployFlags(opts *Options) []string {
 		deployFlags = append(deployFlags, strings.Join(varsToAddForDeploy, " "))
 	}
 
+	if opts.Wait {
+		deployFlags = append(deployFlags, "--wait")
+	}
+
+	deployFlags = append(deployFlags, fmt.Sprintf("--timeout %s", opts.Timeout))
+
 	return deployFlags
 }
 
