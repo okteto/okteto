@@ -16,14 +16,6 @@ package cache
 // CacheFrom is a list of images to import cache from.
 type CacheFrom []string
 
-type oktetoRegistryInterface interface {
-	HasGlobalPushAccess() (bool, error)
-	IsGlobalRegistry(image string) bool
-
-	GetRegistryAndRepo(image string) (string, string)
-	GetRepoNameAndTag(repo string) (string, string)
-}
-
 // UnmarshalYAML implements the Unmarshaler interface of the yaml pkg.
 func (cf *CacheFrom) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var single string
