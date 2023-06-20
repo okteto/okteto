@@ -17,6 +17,7 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 
 	v2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
@@ -169,44 +170,51 @@ func TestGetDeployFlags(t *testing.T) {
 		{
 			name: "no extra options",
 			config: config{
-				opts: &Options{},
+				opts: &Options{
+					Timeout: 2 * time.Minute,
+				},
 			},
+			expected: []string{"--timeout 2m0s"},
 		},
 		{
 			name: "name set",
 			config: config{
 				opts: &Options{
-					Name: "test",
+					Name:    "test",
+					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"test\""},
+			expected: []string{"--name \"test\"", "--timeout 5m0s"},
 		},
 		{
 			name: "name multiple words",
 			config: config{
 				opts: &Options{
-					Name: "this is a test",
+					Name:    "this is a test",
+					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"this is a test\""},
+			expected: []string{"--name \"this is a test\"", "--timeout 5m0s"},
 		},
 		{
 			name: "namespace set",
 			config: config{
 				opts: &Options{
 					Namespace: "test",
+					Timeout:   5 * time.Minute,
 				},
 			},
-			expected: []string{"--namespace test"},
+			expected: []string{"--namespace test", "--timeout 5m0s"},
 		},
 		{
 			name: "manifest path set",
 			config: config{
 				opts: &Options{
 					ManifestPathFlag: "/hello/this/is/a/test",
+					Timeout:          5 * time.Minute,
 				},
 			},
-			expected: []string{"--file /hello/this/is/a/test"},
+			expected: []string{"--file /hello/this/is/a/test", "--timeout 5m0s"},
 		},
 		{
 			name: "variables set",
@@ -216,9 +224,20 @@ func TestGetDeployFlags(t *testing.T) {
 						"a=b",
 						"c=d",
 					},
+					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--var a=b --var c=d"},
+			expected: []string{"--var a=b --var c=d", "--timeout 5m0s"},
+		},
+		{
+			name: "wait set",
+			config: config{
+				opts: &Options{
+					Wait:    true,
+					Timeout: 5 * time.Minute,
+				},
+			},
+			expected: []string{"--wait", "--timeout 5m0s"},
 		},
 	}
 
