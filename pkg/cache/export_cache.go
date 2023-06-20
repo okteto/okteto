@@ -13,13 +13,6 @@
 
 package cache
 
-import (
-	"fmt"
-	oktetoLog "github.com/okteto/okteto/pkg/log"
-
-	"github.com/okteto/okteto/pkg/constants"
-)
-
 // ExportCache is a list of images that will be created to export the cache.
 type ExportCache []string
 
@@ -49,31 +42,4 @@ func (ec *ExportCache) MarshalYAML() (interface{}, error) {
 	}
 
 	return ec, nil
-}
-
-// AddDefaultPushCache appends the default cache layers for a given image
-func (ec *ExportCache) AddDefaultPushCache(reg oktetoRegistryInterface, image string) {
-	_, imageRepo := reg.GetRegistryAndRepo(image)
-	imageName, _ := reg.GetRepoNameAndTag(imageRepo)
-
-	if reg.IsGlobalRegistry(image) {
-		globalCacheImage := fmt.Sprintf("%s/%s:%s", constants.GlobalRegistry, imageName, defaultCacheTag)
-		ec.add(globalCacheImage)
-		oktetoLog.Debugf("Dynamically adding export_cache: %s", globalCacheImage)
-		return
-	}
-
-	devCacheImage := fmt.Sprintf("%s/%s:%s", constants.DevRegistry, imageName, defaultCacheTag)
-	ec.add(devCacheImage)
-	oktetoLog.Debugf("Dynamically adding export_cache: %s", devCacheImage)
-}
-
-// add appends the image to the list of export cache images
-func (ec *ExportCache) add(image string) {
-	for _, c := range *ec {
-		if c == image {
-			return
-		}
-	}
-	*ec = append(*ec, image)
 }
