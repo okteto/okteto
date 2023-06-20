@@ -21,51 +21,6 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-type mockRegistry struct {
-	isGlobal bool
-	registry string
-	repo     string
-	tag      string
-}
-
-func (mr *mockRegistry) HasGlobalPushAccess() (bool, error) {
-	return mr.isGlobal, nil
-}
-
-func (mr *mockRegistry) IsGlobalRegistry(image string) bool {
-	return mr.isGlobal
-}
-
-func (mr *mockRegistry) GetRegistryAndRepo(_ string) (string, string) {
-	return mr.registry, mr.repo
-}
-
-func (mr *mockRegistry) GetRepoNameAndTag(_ string) (string, string) {
-	return mr.repo, mr.tag
-}
-
-type mockRegistryWithError struct {
-	registry string
-	repo     string
-	tag      string
-}
-
-func (*mockRegistryWithError) HasGlobalPushAccess() (bool, error) {
-	return false, assert.AnError
-}
-
-func (*mockRegistryWithError) IsGlobalRegistry(image string) bool {
-	return true
-}
-
-func (mr *mockRegistryWithError) GetRegistryAndRepo(_ string) (string, string) {
-	return mr.registry, mr.repo
-}
-
-func (mr *mockRegistryWithError) GetRepoNameAndTag(_ string) (string, string) {
-	return mr.repo, mr.tag
-}
-
 func Test_UnmarshalYAML(t *testing.T) {
 	tests := []struct {
 		name     string
