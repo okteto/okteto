@@ -217,12 +217,14 @@ func TrackDurationActivateUp(durationActivateUp time.Duration) {
 type TrackExecMetadata struct {
 	FirstArgIsDev bool
 	Success       bool
+	Mode          string
 }
 
 // TrackExec sends a tracking event to mixpanel when the user runs the exec command
 func TrackExec(m *TrackExecMetadata) {
 	props := map[string]interface{}{
 		"isFirstArgDev": m.FirstArgIsDev,
+		"mode":          m.Mode,
 	}
 	track(execEvent, m.Success, props)
 }
