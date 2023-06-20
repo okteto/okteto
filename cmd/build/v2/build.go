@@ -114,7 +114,7 @@ func (*OktetoBuilder) IsV1() bool {
 
 // Build builds the images defined by a manifest
 func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions) error {
-	if utils.LoadBoolean(constants.OKtetoDeployRemote) {
+	if utils.LoadBoolean(constants.OktetoDeployRemote) {
 		// Since the local build has already been built,
 		// we have the environment variables set and we can skip this code
 		return nil

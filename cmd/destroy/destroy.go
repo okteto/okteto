@@ -244,7 +244,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 			}
 		}
 
-		isRemote := utils.LoadBoolean(constants.OKtetoDeployRemote)
+		isRemote := utils.LoadBoolean(constants.OktetoDeployRemote)
 
 		destroyImage := ""
 		if manifest.Destroy != nil {

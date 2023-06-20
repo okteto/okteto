@@ -31,7 +31,7 @@ import (
 
 const (
 	templateName           = "destroy-dockerfile"
-	dockerfileTemporalNane = "deploy"
+	dockerfileTemporalNane = "Dockerfile.destroy"
 	oktetoDockerignoreName = ".oktetodeployignore"
 	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
@@ -41,49 +41,40 @@ FROM {{ .UserDestroyImage }} as deploy
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
-{{range $key, $val := .OktetoBuildEnvVars }}
-ENV {{$key}} {{$val}}
-{{end}}
-ENV {{ .NamespaceEnvVar }} {{ .NamespaceValue }}
-ENV {{ .ContextEnvVar }} {{ .ContextValue }}
-ENV {{ .TokenEnvVar }} {{ .TokenValue }}
 ENV {{ .RemoteDeployEnvVar }} true
-{{ if ne .ActionNameValue "" }}
-ENV {{ .ActionNameEnvVar }} {{ .ActionNameValue }}
-{{ end }}
-{{ if ne .GitCommitValue "" }}
-ENV {{ .GitCommitEnvVar }} {{ .GitCommitValue }}
-{{ end }}
+
+ARG {{ .NamespaceArgName }}
+ARG {{ .ContextArgName }}
+ARG {{ .TokenArgName }}
+ARG {{ .ActionNameArgName }}
+ARG {{ .TlsCertBase64ArgName }}
+ARG {{ .InternalServerName }}
+RUN mkdir -p /etc/ssl/certs/
+RUN echo "${{ .TlsCertBase64ArgName }}" | base64 -d > /etc/ssl/certs/okteto.crt
 
 COPY . /okteto/src
 WORKDIR /okteto/src
 
-ENV OKTETO_INVALIDATE_CACHE {{ .RandomInt }}
-ARG OKTETO_TLS_CERT_BASE64
-ARG INTERNAL_SERVER_NAME=""
-RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
-RUN okteto destroy --log-output=json --server-name="$INTERNAL_SERVER_NAME" {{ .DestroyFlags }}
+ARG {{ .GitCommitArgName }}
+ARG {{ .InvalidateCacheArgName }}
+
+RUN okteto destroy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DestroyFlags }}
 `
 )
 
 type dockerfileTemplateProperties struct {
-	OktetoCLIImage     string
-	UserDestroyImage   string
-	OktetoBuildEnvVars map[string]string
-	ContextEnvVar      string
-	ContextValue       string
-	NamespaceEnvVar    string
-	NamespaceValue     string
-	TokenEnvVar        string
-	TokenValue         string
-	ActionNameEnvVar   string
-	ActionNameValue    string
-	GitCommitEnvVar    string
-	GitCommitValue     string
-	RemoteDeployEnvVar string
-	DeployFlags        string
-	RandomInt          int
-	DestroyFlags       string
+	OktetoCLIImage         string
+	UserDestroyImage       string
+	RemoteDeployEnvVar     string
+	ContextArgName         string
+	NamespaceArgName       string
+	TokenArgName           string
+	TlsCertBase64ArgName   string
+	InternalServerName     string
+	ActionNameArgName      string
+	GitCommitArgName       string
+	InvalidateCacheArgName string
+	DestroyFlags           string
 }
 
 type remoteDestroyCommand struct {
@@ -152,12 +143,23 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		return err
 	}
 
+	randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return err
+	}
+
 	buildOptions := build.OptsFromBuildInfoForRemoteDeploy(buildInfo, &types.BuildOptions{Path: cwd, OutputMode: "destroy"})
 	buildOptions.Manifest = rd.manifest
 	buildOptions.BuildArgs = append(
 		buildOptions.BuildArgs,
-		fmt.Sprintf("OKTETO_TLS_CERT_BASE64=%s", base64.StdEncoding.EncodeToString(sc.Certificate)),
-		fmt.Sprintf("INTERNAL_SERVER_NAME=%s", sc.ServerName),
+		fmt.Sprintf("%s=%s", model.OktetoContextEnvVar, okteto.Context().Name),
+		fmt.Sprintf("%s=%s", model.OktetoNamespaceEnvVar, okteto.Context().Namespace),
+		fmt.Sprintf("%s=%s", model.OktetoTokenEnvVar, okteto.Context().Token),
+		fmt.Sprintf("%s=%s", constants.OktetoTlsCertBase64EnvVar, base64.StdEncoding.EncodeToString(sc.Certificate)),
+		fmt.Sprintf("%s=%s", constants.OktetoInternalServerNameEnvVar, sc.ServerName),
+		fmt.Sprintf("%s=%s", model.OktetoActionNameEnvVar, os.Getenv(model.OktetoActionNameEnvVar)),
+		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
+		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
 	)
 
 	// we need to call Build() method using a remote builder. This Builder will have
@@ -193,31 +195,23 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		return "", err
 	}
 
-	randomNumber, err := rand.Int(rand.Reader, big.NewInt(1000))
-	if err != nil {
-		return "", err
-	}
-
 	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
 	dockerfileSyntax := dockerfileTemplateProperties{
-		OktetoCLIImage:     getOktetoCLIVersion(config.VersionString),
-		UserDestroyImage:   rd.destroyImage,
-		ContextEnvVar:      model.OktetoContextEnvVar,
-		ContextValue:       okteto.Context().Name,
-		NamespaceEnvVar:    model.OktetoNamespaceEnvVar,
-		NamespaceValue:     okteto.Context().Namespace,
-		TokenEnvVar:        model.OktetoTokenEnvVar,
-		TokenValue:         okteto.Context().Token,
-		ActionNameEnvVar:   model.OktetoActionNameEnvVar,
-		ActionNameValue:    os.Getenv(model.OktetoActionNameEnvVar),
-		GitCommitEnvVar:    constants.OktetoGitCommitEnvVar,
-		GitCommitValue:     os.Getenv(constants.OktetoGitCommitEnvVar),
-		RemoteDeployEnvVar: constants.OKtetoDeployRemote,
-		RandomInt:          int(randomNumber.Int64()),
-		DestroyFlags:       strings.Join(getDestroyFlags(opts), " "),
+		OktetoCLIImage:         getOktetoCLIVersion(config.VersionString),
+		UserDestroyImage:       rd.destroyImage,
+		RemoteDeployEnvVar:     constants.OktetoDeployRemote,
+		ContextArgName:         model.OktetoContextEnvVar,
+		NamespaceArgName:       model.OktetoNamespaceEnvVar,
+		TokenArgName:           model.OktetoTokenEnvVar,
+		TlsCertBase64ArgName:   constants.OktetoTlsCertBase64EnvVar,
+		InternalServerName:     constants.OktetoInternalServerNameEnvVar,
+		ActionNameArgName:      model.OktetoActionNameEnvVar,
+		GitCommitArgName:       constants.OktetoGitCommitEnvVar,
+		InvalidateCacheArgName: constants.OktetoInvalidateCacheEnvVar,
+		DestroyFlags:           strings.Join(getDestroyFlags(opts), " "),
 	}
 
-	dockerfile, err := rd.fs.Create(filepath.Join(tempDir, "deploy"))
+	dockerfile, err := rd.fs.Create(filepath.Join(tempDir, dockerfileTemporalNane))
 	if err != nil {
 		return "", err
 	}
@@ -235,21 +229,22 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 }
 
 func (rd *remoteDestroyCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
-	dockerignoreFilePath := fmt.Sprintf("%s/%s", cwd, ".oktetodeployignore")
+	dockerignoreContent := []byte(``)
+	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
 	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-	} else {
-		dockerignoreContent, err := afero.ReadFile(rd.fs, dockerignoreFilePath)
-		if err != nil {
-			return err
-		}
 
-		err = afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
+	} else {
+		dockerignoreContent, err = afero.ReadFile(rd.fs, dockerignoreFilePath)
 		if err != nil {
 			return err
 		}
+	}
+	err := afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -286,7 +281,7 @@ func getOktetoCLIVersion(versionString string) string {
 	if match, _ := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
 		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
 	} else {
-		remoteOktetoImage := os.Getenv(constants.OKtetoDeployRemoteImage)
+		remoteOktetoImage := os.Getenv(constants.OktetoDeployRemoteImage)
 		if remoteOktetoImage != "" {
 			version = remoteOktetoImage
 		} else {
