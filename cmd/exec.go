@@ -37,6 +37,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	defaultDevMode = "sync"
+)
+
 // execFlags is the input of the user to exec command
 type execFlags struct {
 	manifestPath     string
@@ -94,9 +98,15 @@ func Exec() *cobra.Command {
 				err = executeExec(ctx, dev, execFlags.commandToExecute)
 			}
 
+			mode := dev.Mode
+			if mode == "" {
+				mode = defaultDevMode
+			}
+
 			analytics.TrackExec(&analytics.TrackExecMetadata{
 				FirstArgIsDev: manifest.Dev.HasDev(args[0]),
 				Success:       err == nil,
+				Mode:          mode,
 			})
 
 			if oktetoErrors.IsNotFound(err) {
