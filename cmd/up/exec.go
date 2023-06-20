@@ -22,7 +22,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -60,37 +59,8 @@ type HybridExecCtx struct {
 	RunOktetoExec   bool
 }
 
-func (he *hybridExecutor) RunCommand(ctx context.Context, cmd []string) error {
-	var c *exec.Cmd
-	if runtime.GOOS != "windows" {
-		c = exec.Command("bash", "-c", strings.Join(cmd, " "))
-	} else {
-		binary, err := expandExecutableInCurrentDirectory(cmd[0], he.workdir)
-		if err != nil {
-			return err
-		}
-		c = exec.Command(binary, cmd[1:]...)
-	}
-
-	c.Env = he.envs
-
-	c.Stdin = os.Stdin
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
-
-	c.Dir = he.workdir
-
-	err := c.Start()
-	if err != nil {
-		return err
-	}
-
-	err = c.Wait()
-	if err != nil {
-		return err
-	}
-
-	return nil
+func (he *hybridExecutor) RunCommand(cmd *exec.Cmd) error {
+	return cmd.Run()
 }
 
 func expandExecutableInCurrentDirectory(args0, dir string) (string, error) {
@@ -363,9 +333,7 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 	}
 
 	if up.Dev.RemoteModeEnabled() {
-		var executor devExecutor
 		if up.Dev.IsHybridModeEnabled() {
-			var err error
 			hybridCtx := &HybridExecCtx{
 				Dev:           up.Dev,
 				Name:          up.Manifest.Name,
@@ -374,15 +342,24 @@ func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
 				Workdir:       up.Dev.Workdir,
 				RunOktetoExec: false,
 			}
-			executor, err = NewHybridExecutor(ctx, hybridCtx)
+			executor, err := NewHybridExecutor(ctx, hybridCtx)
 			if err != nil {
 				return err
 			}
+
+			cmd, err := executor.GetCommandToExec(ctx, cmd)
+			if err != nil {
+				return err
+			}
+
+			up.hybridCommand = cmd
+
+			return executor.RunCommand(cmd)
 		} else {
-			executor = newSyncExecutor(up)
+			executor := newSyncExecutor(up)
+			return executor.RunCommand(ctx, cmd)
 		}
 
-		return executor.RunCommand(ctx, cmd)
 	}
 
 	return k8sExec.Exec(

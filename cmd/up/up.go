@@ -22,8 +22,10 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
+	"github.com/mitchellh/go-ps"
 	"github.com/moby/term"
 	buildv1 "github.com/okteto/okteto/cmd/build/v1"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -610,7 +612,7 @@ func (up *upContext) start() error {
 	defer up.pidController.delete()
 
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	pidFileCh := make(chan error, 1)
 
@@ -634,14 +636,21 @@ func (up *upContext) start() error {
 	select {
 	case <-stop:
 		oktetoLog.Infof("CTRL+C received, starting shutdown sequence")
+		up.interruptReceived = true
 		up.shutdown()
 		oktetoLog.Println()
 	case err := <-up.Exit:
+		if up.Dev.IsHybridModeEnabled() {
+			up.shutdownHybridMode()
+		}
 		if err != nil {
 			oktetoLog.Infof("exit signal received due to error: %s", err)
 			return err
 		}
 	case err := <-pidFileCh:
+		if up.Dev.IsHybridModeEnabled() {
+			up.shutdownHybridMode()
+		}
 		oktetoLog.Infof("exit signal received due to pid file modification: %s", err)
 		return err
 	}
@@ -669,6 +678,9 @@ func (up *upContext) activateLoop() {
 				oktetoLog.Infof("error getting pid: %w")
 			}
 			if pidFromFile != strconv.Itoa(os.Getpid()) {
+				if up.Dev.IsHybridModeEnabled() {
+					up.shutdownHybridMode()
+				}
 				up.Exit <- oktetoErrors.UserError{
 					E:    fmt.Errorf("development container has been deactivated by another 'okteto up' command"),
 					Hint: "Use 'okteto exec' to open another terminal to your development container",
@@ -904,9 +916,64 @@ func (up *upContext) shutdown() {
 		up.Forwarder.Stop()
 	}
 
+	if up.Dev.IsHybridModeEnabled() {
+		oktetoLog.Infof("stopping local process...")
+		up.shutdownHybridMode()
+	}
+
 	oktetoLog.Info("completed shutdown sequence")
 	up.ShutdownCompleted <- true
 
+}
+
+func (up *upContext) shutdownHybridMode() {
+	if up.hybridCommand != nil {
+		pid := up.hybridCommand.Process.Pid
+		if existProcess(pid) {
+			if err := killProcess(pid); err != nil {
+				oktetoLog.Warning("failed to stop gracefully local process related to command executed in hybrid mode: %s", err.Error())
+			}
+
+			waitTimeout := 15 * time.Second
+			hasFinished := hasHybridCommandFinished(pid, waitTimeout)
+			if !hasFinished {
+				oktetoLog.Warning("timeout waiting to finish hybrid command gracefully")
+			}
+		}
+	}
+}
+
+// killProcess sends a SIGTERM signal to the given process
+func killProcess(pid int) error {
+	p, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	return p.Signal(syscall.SIGTERM)
+}
+
+func existProcess(pid int) bool {
+	found, err := ps.FindProcess(pid)
+	if err == nil && found == nil {
+		return false
+	}
+	return true
+}
+
+func hasHybridCommandFinished(pid int, timeout time.Duration) bool {
+	ticker := time.NewTicker(1 * time.Second)
+	to := time.NewTicker(timeout)
+	for {
+		select {
+		case <-to.C:
+			return false
+		case <-ticker.C:
+			existProcess := existProcess(pid)
+			if !existProcess {
+				return true
+			}
+		}
+	}
 }
 
 func printDisplayContext(up *upContext) {

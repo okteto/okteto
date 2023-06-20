@@ -215,8 +215,15 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 			if err != nil {
 				return err
 			}
-			return executor.RunCommand(ctx, wrapped)
+
+			cmd, err := executor.GetCommandToExec(ctx, args)
+			if err != nil {
+				return err
+			}
+
+			return executor.RunCommand(cmd)
 		}
+
 		return ssh.Exec(ctx, dev.Interface, dev.RemotePort, true, os.Stdin, os.Stdout, os.Stderr, wrapped)
 	}
 	oktetoLog.StopSpinner()
