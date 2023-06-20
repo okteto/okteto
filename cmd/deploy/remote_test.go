@@ -297,7 +297,7 @@ func TestCreateDockerfile(t *testing.T) {
 	}
 }
 
-func TestCreateDockerignoreIfNeeded(t *testing.T) {
+func TestCreateDockerignore(t *testing.T) {
 	fs := afero.NewMemMapFs()
 	tempDir := "/temp"
 

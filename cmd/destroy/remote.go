@@ -216,7 +216,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		return "", err
 	}
 
-	err = rd.createDockerignoreIfNeeded(cwd, tempDir)
+	err = rd.createDockerignore(cwd, tempDir)
 	if err != nil {
 		return "", err
 	}
@@ -228,7 +228,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 
 }
 
-func (rd *remoteDestroyCommand) createDockerignoreIfNeeded(cwd, tmpDir string) error {
+func (rd *remoteDestroyCommand) createDockerignore(cwd, tmpDir string) error {
 	dockerignoreContent := []byte(``)
 	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
 	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
@@ -242,12 +242,7 @@ func (rd *remoteDestroyCommand) createDockerignoreIfNeeded(cwd, tmpDir string) e
 			return err
 		}
 	}
-	err := afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
 }
 
 func getDestroyFlags(opts *Options) []string {
