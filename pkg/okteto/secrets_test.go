@@ -415,8 +415,7 @@ func TestGetClusterMetadata(t *testing.T) {
 			},
 			expected: expected{
 				metadata: types.ClusterMetadata{
-					PipelineInstallerImage: "okteto/installer:1.8.9",
-					PipelineRunnerImage:    "okteto/pipeline-runner:1.0.0",
+					PipelineRunnerImage: "okteto/pipeline-runner:1.0.2",
 				},
 			},
 		},
@@ -459,15 +458,14 @@ func TestGetClusterMetadata(t *testing.T) {
 			},
 			expected: expected{
 				metadata: types.ClusterMetadata{
-					Certificate:            []byte("cert"),
-					ServerName:             "1.1.1.1",
-					PipelineInstallerImage: "installer-image",
-					PipelineRunnerImage:    "installer-runner-image",
+					Certificate:         []byte("cert"),
+					ServerName:          "1.1.1.1",
+					PipelineRunnerImage: "installer-runner-image",
 				},
 			},
 		},
 		{
-			name: "pipelineInstallerImage and pipelineRunnerImage cant be empty",
+			name: "pipelineRunnerImage cant be empty",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &metadataQuery{
@@ -507,7 +505,6 @@ func TestGetClusterMetadata(t *testing.T) {
 			}
 			assert.Equal(t, tc.expected.metadata.Certificate, result.Certificate)
 			assert.Equal(t, tc.expected.metadata.ServerName, result.ServerName)
-			assert.Equal(t, tc.expected.metadata.PipelineInstallerImage, result.PipelineInstallerImage)
 			assert.Equal(t, tc.expected.metadata.PipelineRunnerImage, result.PipelineRunnerImage)
 		})
 	}
