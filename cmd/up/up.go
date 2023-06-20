@@ -935,7 +935,7 @@ func (up *upContext) shutdownHybridMode() {
 			}
 
 			waitTimeout := 15 * time.Second
-			hasFinished := hasHybridCommandFinishes(pid, waitTimeout)
+			hasFinished := hasHybridCommandFinished(pid, waitTimeout)
 			if !hasFinished {
 				oktetoLog.Warning("timeout waiting to finish hybrid command gracefully")
 			}
@@ -960,7 +960,7 @@ func existProcess(pid int) bool {
 	return true
 }
 
-func hasHybridCommandFinishes(pid int, timeout time.Duration) bool {
+func hasHybridCommandFinished(pid int, timeout time.Duration) bool {
 	ticker := time.NewTicker(1 * time.Second)
 	to := time.NewTicker(timeout)
 	for {
