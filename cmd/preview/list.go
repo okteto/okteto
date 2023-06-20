@@ -55,7 +55,7 @@ func List(ctx context.Context) *cobra.Command {
 
 		},
 	}
-	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "set a preview environment label (can be set more than once)")
+	cmd.Flags().StringArrayVarP(&flags.labels, "label", "", []string{}, "tag and organize preview environments using labels (multiple --label flags accepted)")
 
 	return cmd
 }
