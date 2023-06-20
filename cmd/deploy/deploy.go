@@ -356,7 +356,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	}
 
 	if err := buildImages(ctx, dc.Builder.Build, dc.Builder.GetServicesToBuild, deployOptions); err != nil {
-		return dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err)
+		if errStatus := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
+			return errStatus
+		}
+		return err
 	}
 
 	if err := dc.recreateFailedPods(ctx, deployOptions.Name); err != nil {
@@ -407,8 +410,8 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 		data.Status = pipeline.DeployedStatus
 	}
 
-	if err := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); err != nil {
-		return err
+	if errStatus := dc.CfgMapHandler.updateConfigMap(ctx, cfg, data, err); errStatus != nil {
+		return errStatus
 	}
 
 	return err
