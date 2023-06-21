@@ -529,6 +529,14 @@ func (dev *Dev) IsHybridModeEnabled() bool {
 	return dev.Mode == constants.OktetoHybridModeFieldValue
 }
 
+func (dev *Dev) GetMode() string {
+	// default mode is "sync"
+	if dev.Mode == "" {
+		return constants.OktetoSyncModeFieldValue
+	}
+	return dev.Mode
+}
+
 func (dev *Dev) SetDefaults() error {
 	if dev.Command.Values == nil {
 		dev.Command.Values = []string{"sh"}
