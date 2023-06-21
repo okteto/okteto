@@ -620,11 +620,9 @@ func (up *upContext) start() error {
 		IsInteractive:          up.getInteractive(),
 		IsOktetoRepository:     utils.IsOktetoRepo(),
 		IsV2:                   up.Manifest.IsV2,
-		HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
-		HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
-		HasDeploySection: (up.Manifest.IsV2 &&
-			up.Manifest.Deploy != nil &&
-			(len(up.Manifest.Deploy.Commands) > 0 || up.Manifest.Deploy.ComposeSection.ComposesInfo != nil)),
+		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
+		HasBuildSection:        up.Manifest.HasBuildSection(),
+		HasDeploySection:       up.Manifest.HasDeploySection(),
 		HasReverse: len(up.Dev.Reverse) > 0,
 		Mode:       up.Dev.GetMode(),
 	})
