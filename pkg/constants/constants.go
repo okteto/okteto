@@ -116,7 +116,7 @@ const (
 	//OktetoHybridModeFieldValue represents the hybrid mode field value
 	OktetoHybridModeFieldValue = "hybrid"
 
-	//OktetoSyncModeFieldValue represents the sync mode field value
+	// OktetoSyncModeFieldValue represents the sync mode field value
 	OktetoSyncModeFieldValue = "sync"
 
 	//OktetoConfigMapVariablesField represents the field name related to variables seetion in config map
