@@ -1407,3 +1407,18 @@ func (b *BuildInfo) Copy() *BuildInfo {
 
 	return result
 }
+
+func (dev *Dev) IsInteractive() bool {
+	if len(dev.Command.Values) == 0 {
+		return true
+	}
+	if len(dev.Command.Values) == 1 {
+		switch dev.Command.Values[0] {
+		case "sh", "bash":
+			return true
+		default:
+			return false
+		}
+	}
+	return false
+}
