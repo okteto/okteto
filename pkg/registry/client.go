@@ -174,7 +174,7 @@ func (c client) getTransport() http.RoundTripper {
 
 	if serverName := c.config.GetServerNameOverride(); serverName != "" {
 		sslTransportOption.ServerName = serverName
-		sslTransportOption.URLsToIntercept = []string{c.config.GetRegistryURL()}
+		sslTransportOption.URLsToIntercept = []string{"//" + c.config.GetRegistryURL()}
 	}
 
 	transport := oktetoHttp.StrictSSLTransport(sslTransportOption)
