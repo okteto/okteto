@@ -1360,3 +1360,19 @@ func (m *Manifest) GetStack() *Stack {
 	}
 	return m.Deploy.ComposeSection.Stack
 }
+
+func (m *Manifest) HasDependenciesSection() bool {
+	return m.IsV2 && len(m.Dependencies) > 0
+}
+
+func (m *Manifest) HasBuildSection() bool {
+	return m.IsV2 && len(m.Build) > 0
+}
+
+func (m *Manifest) HasDeploySection() bool {
+	return m.IsV2 &&
+		m.Deploy != nil &&
+		(len(m.Deploy.Commands) > 0 ||
+			(m.Deploy.ComposeSection != nil &&
+				m.Deploy.ComposeSection.ComposesInfo != nil))
+}
