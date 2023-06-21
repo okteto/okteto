@@ -58,7 +58,7 @@ func (lg *LocalGit) Status(ctx context.Context, dirPath string, fixAttempt int) 
 		return git.Status{}, errLocalGitCannotGetStatusTooManyAttempts
 	}
 
-	output, err := lg.exec.RunCommand(ctx, dirPath, lg.gitPath, "status", "--porcelain", "-z")
+	output, err := lg.exec.RunCommand(ctx, dirPath, lg.gitPath, "--no-optional-locks", "status", "--porcelain", "-z")
 	if err != nil {
 		var exitError *exec.ExitError
 		errors.As(err, &exitError)
