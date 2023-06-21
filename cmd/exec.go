@@ -37,10 +37,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	defaultDevMode = "sync"
-)
-
 // execFlags is the input of the user to exec command
 type execFlags struct {
 	manifestPath     string
