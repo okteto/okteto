@@ -617,14 +617,14 @@ func (up *upContext) start() error {
 	pidFileCh := make(chan error, 1)
 
 	analytics.TrackUp(analytics.TrackUpMetadata{
-		IsInteractive:          up.getInteractive(),
+		IsInteractive:          up.Dev.IsInteractive(),
 		IsOktetoRepository:     utils.IsOktetoRepo(),
 		IsV2:                   up.Manifest.IsV2,
 		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
 		HasBuildSection:        up.Manifest.HasBuildSection(),
 		HasDeploySection:       up.Manifest.HasDeploySection(),
-		HasReverse: len(up.Dev.Reverse) > 0,
-		Mode:       up.Dev.GetMode(),
+		HasReverse:             len(up.Dev.Reverse) > 0,
+		Mode:                   up.Dev.GetMode(),
 	})
 
 	go up.activateLoop()
@@ -846,21 +846,6 @@ func (up *upContext) setDevContainer(app apps.App) error {
 	}
 
 	return nil
-}
-
-func (up *upContext) getInteractive() bool {
-	if len(up.Dev.Command.Values) == 0 {
-		return true
-	}
-	if len(up.Dev.Command.Values) == 1 {
-		switch up.Dev.Command.Values[0] {
-		case "sh", "bash":
-			return true
-		default:
-			return false
-		}
-	}
-	return false
 }
 
 func (up *upContext) getInsufficientSpaceError(err error) error {
