@@ -89,3 +89,18 @@ func (r Repository) IsEqual(otherRepo Repository) bool {
 func cleanPath(path string) string {
 	return strings.TrimSuffix(strings.TrimPrefix(path, "/"), ".git")
 }
+
+// GetAnonymizedRepo returns a clean repo url string without sensible information
+func (r Repository) GetAnonymizedRepo() string {
+	gitURL := r.url.String()
+
+	parsedRepo, err := giturls.Parse(gitURL)
+	if err != nil {
+		return ""
+	}
+
+	if parsedRepo.User.Username() != "" {
+		parsedRepo.User = nil
+	}
+	return parsedRepo.String()
+}

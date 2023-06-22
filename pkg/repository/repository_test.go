@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5"
+	giturls "github.com/whilp/git-urls"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/okteto/okteto/pkg/constants"
@@ -215,6 +216,45 @@ func TestCleanPath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := cleanPath(tt.input)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_GetAnonymizedRepo(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		expected string
+		repo     string
+	}{
+		{
+			name:     "https repo without credentials",
+			repo:     "https://github.com/okteto/okteto",
+			expected: "https://github.com/okteto/okteto",
+		},
+		{
+			name:     "ssh repo",
+			repo:     "git@github.com:okteto/okteto.git",
+			expected: "ssh://github.com/okteto/okteto.git",
+		},
+		{
+			name:     "https repo with credentials",
+			repo:     "https://git:PASSWORD@github.com/okteto/okteto",
+			expected: "https://github.com/okteto/okteto",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repoURL, err := giturls.Parse(tt.repo)
+			assert.NoError(t, err)
+
+			repo := Repository{
+				url: repoURL,
+			}
+			got := repo.GetAnonymizedRepo()
+
+			assert.Equal(t, tt.expected, got)
 		})
 	}
 }
