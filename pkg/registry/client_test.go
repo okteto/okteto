@@ -68,6 +68,7 @@ type fakeClientConfig struct {
 	isInsecure  bool
 	cert        *x509.Certificate
 	serverName  string
+	contextName string
 }
 
 func (f fakeClientConfig) GetRegistryURL() string                            { return f.registryURL }
@@ -76,6 +77,7 @@ func (f fakeClientConfig) GetToken() string                                  { r
 func (f fakeClientConfig) IsInsecureSkipTLSVerifyPolicy() bool               { return f.isInsecure }
 func (f fakeClientConfig) GetContextCertificate() (*x509.Certificate, error) { return f.cert, nil }
 func (f fakeClientConfig) GetServerNameOverride() string                     { return f.serverName }
+func (f fakeClientConfig) GetContextName() string                            { return f.contextName }
 
 func TestGetDigest(t *testing.T) {
 	unautorizedErr := &transport.Error{
