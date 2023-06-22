@@ -216,16 +216,27 @@ func TrackDurationActivateUp(durationActivateUp time.Duration) {
 
 // TrackExecMetadata is the metadata added to execEvent
 type TrackExecMetadata struct {
-	FirstArgIsDev bool
-	Success       bool
-	Mode          string
+	FirstArgIsDev          bool
+	Success                bool
+	Mode                   string
+	IsOktetoRepository     bool
+	IsInteractive          bool
+	HasBuildSection        bool
+	HasDeploySection       bool
+	HasDependenciesSection bool
 }
 
 // TrackExec sends a tracking event to mixpanel when the user runs the exec command
 func TrackExec(m *TrackExecMetadata) {
 	props := map[string]interface{}{
 		"isFirstArgDev": m.FirstArgIsDev,
-		"mode":          m.Mode,
+		// defined dict for Exec event
+		"mode":                   m.Mode,
+		"isOktetoRepository":     m.IsOktetoRepository,
+		"isInteractive":          m.IsInteractive,
+		"hasDependenciesSection": m.HasDependenciesSection,
+		"hasBuildSection":        m.HasBuildSection,
+		"hasDeploySection":       m.HasDeploySection,
 	}
 	track(execEvent, m.Success, props)
 }

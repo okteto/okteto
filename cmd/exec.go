@@ -98,15 +98,15 @@ func Exec() *cobra.Command {
 				err = executeExec(ctx, dev, execFlags.commandToExecute)
 			}
 
-			mode := dev.Mode
-			if mode == "" {
-				mode = defaultDevMode
-			}
-
 			analytics.TrackExec(&analytics.TrackExecMetadata{
-				FirstArgIsDev: manifest.Dev.HasDev(args[0]),
-				Success:       err == nil,
-				Mode:          mode,
+				FirstArgIsDev:          manifest.Dev.HasDev(args[0]),
+				Success:                err == nil,
+				Mode:                   dev.GetMode(),
+				IsOktetoRepository:     utils.IsOktetoRepo(),
+				IsInteractive:          dev.IsInteractive(),
+				HasDependenciesSection: manifest.HasDependenciesSection(),
+				HasBuildSection:        manifest.HasBuildSection(),
+				HasDeploySection:       manifest.HasDeploySection(),
 			})
 
 			if oktetoErrors.IsNotFound(err) {
