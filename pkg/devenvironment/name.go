@@ -82,12 +82,12 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 		optsRepo := repository.NewRepository(repoURL)
 		cmapRepo := repository.NewRepository(repo)
 		if !optsRepo.IsEqual(cmapRepo) {
-			oktetoLog.Infof("configmap %s with repo %s doesn't match with found repo %s", cmap.Name, repo, repoURL)
+			oktetoLog.Infof("configmap %s with repo %s doesn't match with found repo %s", cmap.Name, cmapRepo.GetAnonymizedRepo(), repoURL)
 			continue
 		}
 
 		if filename := cmap.Data["filename"]; filename != manifestPath {
-			oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", filename, repo, manifestPath)
+			oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", filename, cmapRepo.GetAnonymizedRepo(), manifestPath)
 			continue
 		}
 
