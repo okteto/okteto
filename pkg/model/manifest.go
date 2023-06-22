@@ -1362,14 +1362,23 @@ func (m *Manifest) GetStack() *Stack {
 }
 
 func (m *Manifest) HasDependenciesSection() bool {
+	if m == nil {
+		return false
+	}
 	return m.IsV2 && len(m.Dependencies) > 0
 }
 
 func (m *Manifest) HasBuildSection() bool {
+	if m == nil {
+		return false
+	}
 	return m.IsV2 && len(m.Build) > 0
 }
 
 func (m *Manifest) HasDeploySection() bool {
+	if m == nil {
+		return false
+	}
 	return m.IsV2 &&
 		m.Deploy != nil &&
 		(len(m.Deploy.Commands) > 0 ||

@@ -1109,3 +1109,190 @@ func Test_GetTimeout(t *testing.T) {
 		})
 	}
 }
+
+func Test_Manifest_HasDeploySection(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest *Manifest
+		expected bool
+	}{
+		{
+			name:     "nil manifest",
+			expected: false,
+		},
+		{
+			name:     "m.IsV2 is false",
+			manifest: &Manifest{},
+			expected: false,
+		},
+		{
+			name: "m.IsV2 && m.Deploy is nil",
+			manifest: &Manifest{
+				IsV2: true,
+			},
+			expected: false,
+		},
+		{
+			name: "m.IsV2 && m.Deploy.Commands is nil",
+			manifest: &Manifest{
+				IsV2:   true,
+				Deploy: &DeployInfo{},
+			},
+			expected: false,
+		},
+		{
+			name: "m.IsV2 && m.Deploy.Commands is emtpy",
+			manifest: &Manifest{
+				IsV2: true,
+				Deploy: &DeployInfo{
+					Commands: []DeployCommand{},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "m.IsV2 && m.Deploy.Commands has items",
+			manifest: &Manifest{
+				IsV2: true,
+				Deploy: &DeployInfo{
+					Commands: []DeployCommand{
+						{
+							Name:    "test",
+							Command: "echo test",
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "m.IsV2 && m.Deploy.ComposeSection is nil",
+			manifest: &Manifest{
+				IsV2:   true,
+				Deploy: &DeployInfo{},
+			},
+			expected: false,
+		},
+		{
+			name: "m.IsV2 && m.Deploy.ComposeSection.ComposesInfo is nil",
+			manifest: &Manifest{
+				IsV2: true,
+				Deploy: &DeployInfo{
+					ComposeSection: &ComposeSectionInfo{},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "m.IsV2 && m.Deploy.ComposeSection.ComposesInfo has items",
+			manifest: &Manifest{
+				IsV2: true,
+				Deploy: &DeployInfo{
+					ComposeSection: &ComposeSectionInfo{
+						ComposesInfo: ComposeInfoList{
+							{
+								File:             "docker-compose.yml",
+								ServicesToDeploy: ServicesToDeploy{"test"},
+							},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.manifest.HasDeploySection()
+			assert.Equal(t, tt.expected, got)
+		})
+
+	}
+}
+
+func Test_Manifest_HasDependenciesSection(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest *Manifest
+		expected bool
+	}{
+		{
+			name:     "nil manifest",
+			expected: false,
+		},
+		{
+			name:     "m.IsV2 is false",
+			manifest: &Manifest{},
+			expected: false,
+		},
+		{
+			name: "m.IsV2 && m.Dependencies is nil",
+			manifest: &Manifest{
+				IsV2: true,
+			},
+			expected: false,
+		},
+		{
+			name: "m.IsV2 && m.Dependencies has items",
+			manifest: &Manifest{
+				IsV2: true,
+				Dependencies: ManifestDependencies{
+					"test": &Dependency{},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.manifest.HasDependenciesSection()
+			assert.Equal(t, tt.expected, got)
+		})
+
+	}
+}
+
+func Test_Manifest_HasBuildSection(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest *Manifest
+		expected bool
+	}{
+		{
+			name:     "nil manifest",
+			expected: false,
+		},
+		{
+			name:     "m.IsV2 is false",
+			manifest: &Manifest{},
+			expected: false,
+		},
+		{
+			name: "m.IsV2 && m.Build is nil",
+			manifest: &Manifest{
+				IsV2: true,
+			},
+			expected: false,
+		},
+		{
+			name: "m.IsV2 && m.Build has items",
+			manifest: &Manifest{
+				IsV2: true,
+				Build: ManifestBuild{
+					"test": &BuildInfo{},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.manifest.HasBuildSection()
+			assert.Equal(t, tt.expected, got)
+		})
+
+	}
+}
