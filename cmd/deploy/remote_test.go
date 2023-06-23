@@ -350,7 +350,7 @@ func TestCreateDockerignore(t *testing.T) {
 			rdc := remoteDeployCommand{
 				fs: fs,
 			}
-			err := rdc.createDockerignore(tt.config.wd, tempDir)
+			err := rdc.createDockerignore(tt.config.wd, tempDir, "")
 			b, _ := afero.ReadFile(rdc.fs, filepath.Join(tempDir, ".dockerignore"))
 			assert.Equal(t, tt.expectedContent, string(b))
 			assert.NoError(t, err)

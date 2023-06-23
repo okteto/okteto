@@ -32,6 +32,7 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -226,7 +227,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		return "", err
 	}
 
-	err = rd.createDockerignore(cwd, tmpDir)
+	err = rd.createDockerignore(cwd, tmpDir, opts.ManifestPathFlag)
 	if err != nil {
 		return "", err
 	}
@@ -237,7 +238,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 	return dockerfile.Name(), nil
 }
 
-func (rd *remoteDeployCommand) createDockerignore(cwd, tmpDir string) error {
+func (rd *remoteDeployCommand) createDockerignore(cwd, tmpDir, manifestPathFlag string) error {
 	// if we do not create a .dockerignore (with or without content) used to create
 	// the remote executor, we would use the one located in root (the one used to
 	// build the services) so we would create a remote executor without certain files
@@ -256,7 +257,25 @@ func (rd *remoteDeployCommand) createDockerignore(cwd, tmpDir string) error {
 			return err
 		}
 	}
-	return afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
+
+	// write the content into the .dockerignore used for building the remote image
+	filename := fmt.Sprintf("%s/%s", tmpDir, ".dockerignore")
+
+	// in order to always sync the okteto manifest
+	// we force to be excluded of the dockerignore file
+	currentOktetoManifestFileName := manifestPathFlag
+	if currentOktetoManifestFileName == "" {
+		currentOktetoManifestFileName = discovery.FindManifestName(cwd)
+	}
+
+	// update the content of dockerignore if we find the okteto manifest
+	content := string(dockerignoreContent)
+	if currentOktetoManifestFileName != "" {
+		content = fmt.Sprintf(`%s
+!%s`, dockerignoreContent, currentOktetoManifestFileName)
+	}
+
+	return afero.WriteFile(rd.fs, filename, []byte(content), 0600)
 }
 
 func getDeployFlags(opts *Options) []string {
