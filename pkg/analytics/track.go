@@ -177,6 +177,7 @@ type TrackUpMetadata struct {
 	Success                bool
 	HasReverse             bool
 	IsHybridDev            bool
+	Mode                   string
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
@@ -190,7 +191,7 @@ func TrackUp(m TrackUpMetadata) {
 		"hasBuildSection":        m.HasBuildSection,
 		"hasDeploySection":       m.HasDeploySection,
 		"hasReverse":             m.HasReverse,
-		"isHybridDev":            m.IsHybridDev,
+		"mode":                   m.Mode,
 	}
 	track(upEvent, m.Success, props)
 }
@@ -215,14 +216,27 @@ func TrackDurationActivateUp(durationActivateUp time.Duration) {
 
 // TrackExecMetadata is the metadata added to execEvent
 type TrackExecMetadata struct {
-	FirstArgIsDev bool
-	Success       bool
+	FirstArgIsDev          bool
+	Success                bool
+	Mode                   string
+	IsOktetoRepository     bool
+	IsInteractive          bool
+	HasBuildSection        bool
+	HasDeploySection       bool
+	HasDependenciesSection bool
 }
 
 // TrackExec sends a tracking event to mixpanel when the user runs the exec command
 func TrackExec(m *TrackExecMetadata) {
 	props := map[string]interface{}{
 		"isFirstArgDev": m.FirstArgIsDev,
+		// defined dict for Exec event
+		"mode":                   m.Mode,
+		"isOktetoRepository":     m.IsOktetoRepository,
+		"isInteractive":          m.IsInteractive,
+		"hasDependenciesSection": m.HasDependenciesSection,
+		"hasBuildSection":        m.HasBuildSection,
+		"hasDeploySection":       m.HasDeploySection,
 	}
 	track(execEvent, m.Success, props)
 }

@@ -95,8 +95,14 @@ func Exec() *cobra.Command {
 			}
 
 			analytics.TrackExec(&analytics.TrackExecMetadata{
-				FirstArgIsDev: manifest.Dev.HasDev(args[0]),
-				Success:       err == nil,
+				FirstArgIsDev:          manifest.Dev.HasDev(args[0]),
+				Success:                err == nil,
+				Mode:                   dev.Mode,
+				IsOktetoRepository:     utils.IsOktetoRepo(),
+				IsInteractive:          dev.IsInteractive(),
+				HasDependenciesSection: manifest.HasDependenciesSection(),
+				HasBuildSection:        manifest.HasBuildSection(),
+				HasDeploySection:       manifest.HasDeploySection(),
 			})
 
 			if oktetoErrors.IsNotFound(err) {

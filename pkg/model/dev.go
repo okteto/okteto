@@ -643,6 +643,10 @@ func (dev *Dev) SetDefaults() error {
 		}
 	}
 
+	if dev.Mode == "" {
+		dev.Mode = constants.OktetoSyncModeFieldValue
+	}
+
 	return nil
 }
 
@@ -1398,4 +1402,19 @@ func (b *BuildInfo) Copy() *BuildInfo {
 	result.DependsOn = dependsOn
 
 	return result
+}
+
+func (dev *Dev) IsInteractive() bool {
+	if len(dev.Command.Values) == 0 {
+		return true
+	}
+	if len(dev.Command.Values) == 1 {
+		switch dev.Command.Values[0] {
+		case "sh", "bash":
+			return true
+		default:
+			return false
+		}
+	}
+	return false
 }
