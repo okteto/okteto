@@ -633,6 +633,7 @@ func TestInferFromStack(t *testing.T) {
 								},
 							},
 						},
+						Mode: "sync",
 					},
 				},
 				Deploy: &DeployInfo{

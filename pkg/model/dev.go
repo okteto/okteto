@@ -651,6 +651,10 @@ func (dev *Dev) SetDefaults() error {
 		}
 	}
 
+	if dev.Mode == "" {
+		dev.Mode = constants.OktetoSyncModeFieldValue
+	}
+
 	return nil
 }
 
