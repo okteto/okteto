@@ -49,7 +49,7 @@ const (
 	succesfullyDeployedmsg = "Development environment '%s' successfully deployed"
 )
 
-// Options options for deploy command
+// Options represents options for deploy command
 type Options struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.

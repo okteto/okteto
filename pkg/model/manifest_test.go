@@ -1297,3 +1297,78 @@ func Test_Manifest_HasBuildSection(t *testing.T) {
 
 	}
 }
+
+func Test_getInferredManifestFromK8sManifestFile(t *testing.T) {
+	wd := t.TempDir()
+	fullpath := filepath.Join(wd, "k8s.yml")
+	f, err := os.Create(fullpath)
+	assert.NoError(t, err)
+	defer func() {
+		if err := f.Close(); err != nil {
+			t.Fatalf("Error closing file %s: %s", fullpath, err)
+		}
+	}()
+	_, err = GetInferredManifest(wd)
+	assert.NoError(t, err)
+}
+
+func Test_getInferredManifestFromK8sManifestFolder(t *testing.T) {
+	wd := t.TempDir()
+	fullpath := filepath.Join(wd, "manifests")
+	assert.NoError(t, os.MkdirAll(filepath.Dir(fullpath), 0750))
+	f, err := os.Create(fullpath)
+	assert.NoError(t, err)
+	defer func() {
+		if err := f.Close(); err != nil {
+			t.Fatalf("Error closing file %s: %s", fullpath, err)
+		}
+	}()
+
+	_, err = GetInferredManifest(wd)
+	assert.NoError(t, err)
+}
+
+func Test_getInferredManifestFromHelmPath(t *testing.T) {
+	var tests = []struct {
+		name          string
+		filesToCreate []string
+		expected      string
+	}{
+		{
+			name:          "chart folder exists on wd",
+			filesToCreate: []string{filepath.Join("chart", "Chart.yaml")},
+			expected:      "charts",
+		},
+		{
+			name:          "chart folder inside helm folder exists on wd",
+			filesToCreate: []string{filepath.Join("helm", "charts", "Chart.yaml")},
+			expected:      filepath.Join("helm", "charts"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			wd := t.TempDir()
+			for _, fileToCreate := range tt.filesToCreate {
+				fullpath := filepath.Join(wd, fileToCreate)
+				assert.NoError(t, os.MkdirAll(filepath.Dir(fullpath), 0750))
+				f, err := os.Create(fullpath)
+				assert.NoError(t, err)
+				defer func() {
+					if err := f.Close(); err != nil {
+						t.Fatalf("Error closing file %s: %s", fullpath, err)
+					}
+				}()
+			}
+			_, err := GetInferredManifest(wd)
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func Test_getInferredManifestWhenNoManifestExist(t *testing.T) {
+	wd := t.TempDir()
+	result, err := GetInferredManifest(wd)
+	assert.Empty(t, result)
+	assert.ErrorIs(t, err, oktetoErrors.ErrCouldNotInferAnyManifest)
+}

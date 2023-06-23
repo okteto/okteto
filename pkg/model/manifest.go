@@ -524,14 +524,14 @@ func GetInferredManifest(cwd string) (*Manifest, error) {
 		}
 		oktetoLog.AddToBuffer(oktetoLog.InfoLevel, "Found helm chart on %s", chartPath)
 		tags := inferHelmTags(chartPath)
-		command := fmt.Sprintf("helm upgrade --install ${%s} %s %s", constants.OktetoAutodiscoveryReleaseName, chartPath, tags)
+		deployHelm := fmt.Sprintf("helm upgrade --install ${%s} %s %s", constants.OktetoAutodiscoveryReleaseName, chartPath, tags)
 		chartManifest := &Manifest{
 			Type: ChartType,
 			Deploy: &DeployInfo{
 				Commands: []DeployCommand{
 					{
-						Name:    command,
-						Command: command,
+						Name:    deployHelm,
+						Command: deployHelm,
 					},
 				},
 			},

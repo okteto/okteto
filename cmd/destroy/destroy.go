@@ -16,10 +16,6 @@ package destroy
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
-	"time"
-
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
@@ -27,7 +23,6 @@ import (
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/k8s/namespaces"
 	"github.com/okteto/okteto/pkg/k8s/secrets"
@@ -37,6 +32,9 @@ import (
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
+	"os"
+	"path/filepath"
+	"time"
 )
 
 const (
@@ -55,7 +53,7 @@ type secretHandler interface {
 	List(ctx context.Context, ns, labelSelector string) ([]v1.Secret, error)
 }
 
-// Options destroy commands options
+// Options represents the options for destroy command
 type Options struct {
 	// ManifestPathFlag is the option -f as introduced by the user when executing this command.
 	// This is stored at the configmap as filename to redeploy from the ui.
@@ -220,15 +218,15 @@ func getTempKubeConfigFile(name string) string {
 
 func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (destroyInterface, error) {
 	var (
-		deployer destroyInterface
-		err      error
+		destroyer destroyInterface
+		err       error
 	)
 
 	if opts.DestroyAll {
 		if !okteto.Context().IsOkteto {
 			return nil, oktetoErrors.ErrContextIsNotOktetoCluster
 		}
-		deployer, err = newLocalDestroyerAll(dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)
+		destroyer, err = newLocalDestroyerAll(dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)
 		if err != nil {
 			return nil, err
 		}
@@ -237,11 +235,14 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 	} else {
 		manifest, err := model.GetManifestV2(opts.ManifestPath)
 		if err != nil {
-			// Log error message but application can still be deleted
+			// error will only be available when there is no valid manifest found
+			// hence, we need not to destroy because the manifest would never be deployed
+			// Return the error message
 			oktetoLog.Infof("could not find manifest file to be executed: %s", err)
 			manifest = &model.Manifest{
 				Destroy: &model.DestroyInfo{},
 			}
+			return nil, err
 		}
 
 		isRemote := utils.LoadBoolean(constants.OktetoDeployRemote)
@@ -265,8 +266,16 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 		}
 		runInRemote := !isRemote && (destroyImage != "" || opts.RunInRemote)
 
+		// destroy section should not be nil whether the command is executed remotely or locally
+		// if the command is executed remotely and destroy section is nil, this will cause a panic
+		// Hence consider the command locally for successful execution.
+		// This will make sure all the resources are deleted.
+		if runInRemote == true && manifest.Destroy == nil {
+			runInRemote = false
+		}
+
 		if runInRemote {
-			deployer = newRemoteDestroyer(manifest)
+			destroyer = newRemoteDestroyer(manifest)
 			oktetoLog.Info("Destroying remotely...")
 		} else {
 			destroyerAll, err := newLocalDestroyerAll(dc.k8sClientProvider, dc.executor, dc.nsDestroyer, dc.oktetoClient)
@@ -274,10 +283,10 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 				return nil, err
 			}
 
-			deployer = newLocalDestroyer(manifest, destroyerAll)
+			destroyer = newLocalDestroyer(manifest, destroyerAll)
 			oktetoLog.Info("Destroying locally...")
 		}
 	}
 
-	return deployer, nil
+	return destroyer, nil
 }
