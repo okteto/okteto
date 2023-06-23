@@ -34,7 +34,6 @@ func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*
 
 	c.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid:    true,
-		Foreground: true,
 	}
 
 	return c, nil
