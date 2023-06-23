@@ -97,7 +97,7 @@ func Exec() *cobra.Command {
 			analytics.TrackExec(&analytics.TrackExecMetadata{
 				FirstArgIsDev:          manifest.Dev.HasDev(args[0]),
 				Success:                err == nil,
-				Mode:                   dev.GetMode(),
+				Mode:                   dev.Mode,
 				IsOktetoRepository:     utils.IsOktetoRepo(),
 				IsInteractive:          dev.IsInteractive(),
 				HasDependenciesSection: manifest.HasDependenciesSection(),

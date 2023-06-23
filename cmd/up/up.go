@@ -624,7 +624,7 @@ func (up *upContext) start() error {
 		HasBuildSection:        up.Manifest.HasBuildSection(),
 		HasDeploySection:       up.Manifest.HasDeploySection(),
 		HasReverse:             len(up.Dev.Reverse) > 0,
-		Mode:                   up.Dev.GetMode(),
+		Mode:                   up.Dev.Mode,
 	})
 
 	go up.activateLoop()
