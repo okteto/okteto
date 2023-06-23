@@ -84,7 +84,12 @@ func (oc oktetoBuilderConfig) GetGitCommit() string {
 	return commitSHA
 }
 
-// GetBuildTag returns a sha hash of the build info and the commit sha
+// IsClean checks if the repository is clean
+func (oc oktetoBuilderConfig) IsClean() (bool, error) {
+	return oc.repository.IsClean()
+}
+
+// GetBuildHash returns a sha hash of the build info and the commit sha
 func (oc oktetoBuilderConfig) GetBuildHash(buildInfo *model.BuildInfo) string {
 	commitSHA, err := oc.repository.GetSHA()
 	if err != nil {

@@ -55,7 +55,12 @@ func (ic imageChecker) checkIfCommitHashIsBuilt(manifestName, svcToBuild string,
 	if sha == "" {
 		return "", false
 	}
-	tagsToCheck := ic.tagger.getPossibleHashImages(manifestName, svcToBuild, sha)
+
+	isClean, err := ic.cfg.IsClean()
+	if err != nil {
+		// ignore
+	}
+	tagsToCheck := ic.tagger.getPossibleHashImages(manifestName, svcToBuild, sha, isClean)
 
 	for _, tag := range tagsToCheck {
 		imageWithDigest, err := ic.getImageSHA(tag, ic.registry)
@@ -73,14 +78,19 @@ func (ic imageChecker) checkIfCommitHashIsBuilt(manifestName, svcToBuild string,
 
 func (ic imageChecker) getImageDigestFromAllPossibleTags(manifestName, svcToBuild string, buildInfo *model.BuildInfo) (string, error) {
 	sha := ic.cfg.GetBuildHash(buildInfo)
+	isClean, err := ic.cfg.IsClean()
+
+	if err != nil {
+		// ignore error
+	}
 
 	var possibleTags []string
 	if !ic.cfg.IsOkteto() && shouldAddVolumeMounts(buildInfo) {
 		possibleTags = []string{buildInfo.Image}
 	} else if shouldAddVolumeMounts(buildInfo) {
-		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, sha)
+		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, sha, isClean)
 	} else if shouldBuildFromDockerfile(buildInfo) && buildInfo.Image == "" {
-		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, sha)
+		possibleTags = ic.tagger.getPossibleTags(manifestName, svcToBuild, sha, isClean)
 	} else if buildInfo.Image != "" {
 		possibleTags = []string{buildInfo.Image}
 	}

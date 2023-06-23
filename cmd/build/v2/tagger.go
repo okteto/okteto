@@ -24,8 +24,8 @@ import (
 
 type imageTaggerInterface interface {
 	tag(manifestName, svcName string, b *model.BuildInfo) string
-	getPossibleHashImages(manifestName, svcToBuildName, sha string) []string
-	getPossibleTags(manifestName, svcToBuildName, sha string) []string
+	getPossibleHashImages(manifestName, svcToBuildName, sha string, isClean bool) []string
+	getPossibleTags(manifestName, svcToBuildName, sha string, isClean bool) []string
 }
 
 type imageTagger struct {
@@ -36,8 +36,12 @@ type imageWithVolumesTagger struct {
 	cfg oktetoBuilderConfigInterface
 }
 
-func getTargetRegistries() []string {
-	registries := []string{}
+func getTargetRegistries(isClean bool) []string {
+	var registries []string
+
+	if !isClean {
+		return []string{constants.DevRegistry}
+	}
 
 	if okteto.IsOkteto() {
 		registries = append(registries, constants.DevRegistry, constants.GlobalRegistry)
@@ -72,7 +76,7 @@ func (i imageTagger) tag(manifestName, svcName string, b *model.BuildInfo) strin
 }
 
 // getPossibleHashImages returns all the possible images that can be built from a commit hash
-func (i imageTagger) getPossibleHashImages(manifestName, svcToBuildName, sha string) []string {
+func (i imageTagger) getPossibleHashImages(manifestName, svcToBuildName, sha string, isClean bool) []string {
 	if sha == "" {
 		return []string{}
 	}
@@ -80,17 +84,17 @@ func (i imageTagger) getPossibleHashImages(manifestName, svcToBuildName, sha str
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
 	tagsToCheck := []string{}
-	for _, targetRegistry := range getTargetRegistries() {
+	for _, targetRegistry := range getTargetRegistries(isClean) {
 		tagsToCheck = append(tagsToCheck, getImageFromTmpl(targetRegistry, sanitizedName, svcToBuildName, sha))
 	}
 	return tagsToCheck
 }
 
 // getPossibleTags returns all the possible images that can be built (with and without hash)
-func (i imageTagger) getPossibleTags(manifestName, svcToBuildName, sha string) []string {
-	tags := i.getPossibleHashImages(manifestName, svcToBuildName, sha)
+func (i imageTagger) getPossibleTags(manifestName, svcToBuildName, sha string, isClean bool) []string {
+	tags := i.getPossibleHashImages(manifestName, svcToBuildName, sha, isClean)
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	for _, targetRegistry := range getTargetRegistries() {
+	for _, targetRegistry := range getTargetRegistries(isClean) {
 		tags = append(tags, getImageFromTmpl(targetRegistry, sanitizedName, svcToBuildName, model.OktetoDefaultImageTag))
 	}
 	return tags
@@ -121,24 +125,24 @@ func (i imageWithVolumesTagger) tag(manifestName, svcName string, b *model.Build
 }
 
 // getPossibleHashImages returns all the possible images that can be built from a commit hash
-func (i imageWithVolumesTagger) getPossibleHashImages(manifestName, svcToBuildName, sha string) []string {
+func (i imageWithVolumesTagger) getPossibleHashImages(manifestName, svcToBuildName, sha string, isClean bool) []string {
 	if sha == "" {
 		return []string{}
 	}
 	// manifestName can be not sanitized when option name is used at deploy
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	tagsToCheck := []string{}
-	for _, targetRegistry := range getTargetRegistries() {
+	var tagsToCheck []string
+	for _, targetRegistry := range getTargetRegistries(isClean) {
 		tagsToCheck = append(tagsToCheck, getImageFromTmplWithVolumesAndSHA(targetRegistry, sanitizedName, svcToBuildName, sha))
 	}
 	return tagsToCheck
 }
 
 // getPossibleTags returns all the possible images that can be built (with and without hash)
-func (i imageWithVolumesTagger) getPossibleTags(manifestName, svcToBuildName, sha string) []string {
-	tags := i.getPossibleHashImages(manifestName, svcToBuildName, sha)
+func (i imageWithVolumesTagger) getPossibleTags(manifestName, svcToBuildName, sha string, isClean bool) []string {
+	tags := i.getPossibleHashImages(manifestName, svcToBuildName, sha, isClean)
 	sanitizedName := format.ResourceK8sMetaString(manifestName)
-	for _, targetRegistry := range getTargetRegistries() {
+	for _, targetRegistry := range getTargetRegistries(isClean) {
 		tags = append(tags, getImageFromTmpl(targetRegistry, sanitizedName, svcToBuildName, model.OktetoImageTagWithVolumes))
 	}
 	return tags
