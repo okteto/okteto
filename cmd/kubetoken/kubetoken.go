@@ -27,7 +27,7 @@ import (
 
 func KubeToken() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "kubetoken <context> <namespace>",
+		Use:   "kubetoken",
 		Short: "Print Kubernetes cluster credentials in ExecCredential format.",
 		Long: `Print Kubernetes cluster credentials in ExecCredential format.
 You can find more information on 'ExecCredential' and 'client side authentication' at (https://kubernetes.io/docs/reference/config-api/client-authentication.v1/) and  https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins`,
