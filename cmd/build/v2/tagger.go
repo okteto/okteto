@@ -40,7 +40,7 @@ func getTargetRegistries() []string {
 	registries := []string{}
 
 	if okteto.IsOkteto() {
-		registries = append(registries, constants.GlobalRegistry, constants.DevRegistry)
+		registries = append(registries, constants.DevRegistry, constants.GlobalRegistry)
 	}
 
 	return registries
