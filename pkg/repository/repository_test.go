@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/go-git/go-git/v5"
-	giturls "github.com/whilp/git-urls"
 
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/okteto/okteto/pkg/constants"
@@ -137,14 +136,14 @@ func TestIsEqual(t *testing.T) {
 			name: "r is nil -> false",
 			input: input{
 				r: Repository{},
-				o: Repository{url: &url.URL{}},
+				o: Repository{url: &repositoryURL{}},
 			},
 			expected: false,
 		},
 		{
 			name: "o is nil -> false",
 			input: input{
-				r: Repository{url: &url.URL{}},
+				r: Repository{url: &repositoryURL{}},
 				o: Repository{},
 			},
 			expected: false,
@@ -160,24 +159,24 @@ func TestIsEqual(t *testing.T) {
 		{
 			name: "different hostname -> false",
 			input: input{
-				r: Repository{url: &url.URL{Host: "my-hub"}},
-				o: Repository{url: &url.URL{Host: "my-hub2"}},
+				r: Repository{url: &repositoryURL{url.URL{Host: "my-hub"}}},
+				o: Repository{url: &repositoryURL{url.URL{Host: "my-hub2"}}},
 			},
 			expected: false,
 		},
 		{
 			name: "different path -> false",
 			input: input{
-				r: Repository{url: &url.URL{Host: "my-hub", Path: "okteto/repo1"}},
-				o: Repository{url: &url.URL{Host: "my-hub", Path: "okteto/repo2"}},
+				r: Repository{url: &repositoryURL{url.URL{Host: "my-hub", Path: "okteto/repo1"}}},
+				o: Repository{url: &repositoryURL{url.URL{Host: "my-hub", Path: "okteto/repo2"}}},
 			},
 			expected: false,
 		},
 		{
 			name: "equal -> true",
 			input: input{
-				r: Repository{url: &url.URL{Host: "my-hub", Path: "okteto/repo1"}},
-				o: Repository{url: &url.URL{Host: "my-hub", Path: "okteto/repo2"}},
+				r: Repository{url: &repositoryURL{url.URL{Host: "my-hub", Path: "okteto/repo1"}}},
+				o: Repository{url: &repositoryURL{url.URL{Host: "my-hub", Path: "okteto/repo2"}}},
 			},
 			expected: false,
 		},
@@ -221,39 +220,106 @@ func TestCleanPath(t *testing.T) {
 }
 
 func Test_GetAnonymizedRepo(t *testing.T) {
-
 	tests := []struct {
-		name     string
-		expected string
-		repo     string
+		name       string
+		repository *Repository
+		expected   string
 	}{
 		{
-			name:     "https repo without credentials",
-			repo:     "https://github.com/okteto/okteto",
+			name: "https repo without credentials",
+			repository: &Repository{
+				url: &repositoryURL{
+					url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+						Path:   "/okteto/okteto",
+					},
+				},
+			},
 			expected: "https://github.com/okteto/okteto",
 		},
 		{
-			name:     "ssh repo",
-			repo:     "git@github.com:okteto/okteto.git",
+			name: "ssh repo",
+			repository: &Repository{
+				url: &repositoryURL{
+					url.URL{
+						Scheme: "ssh",
+						Host:   "github.com",
+						Path:   "okteto/okteto.git",
+						User:   url.User("git"),
+					},
+				}},
 			expected: "ssh://github.com/okteto/okteto.git",
 		},
 		{
-			name:     "https repo with credentials",
-			repo:     "https://git:PASSWORD@github.com/okteto/okteto",
+			name: "https repo with credentials",
+			repository: &Repository{
+				url: &repositoryURL{
+					url.URL{
+						Scheme: "https",
+						Host:   "github.com",
+						Path:   "/okteto/okteto",
+						User:   url.UserPassword("git", "PASSWORD"),
+					},
+				}},
 			expected: "https://github.com/okteto/okteto",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repoURL, err := giturls.Parse(tt.repo)
-			assert.NoError(t, err)
+			got := tt.repository.GetAnonymizedRepo()
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
 
-			repo := Repository{
-				url: repoURL,
-			}
-			got := repo.GetAnonymizedRepo()
+func Test_getURLFromPath(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		expected repositoryURL
+	}{
+		{
+			name: "https repo without credentials",
+			path: "https://github.com/okteto/okteto",
+			expected: repositoryURL{
+				url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+					Path:   "/okteto/okteto",
+				},
+			},
+		},
+		{
+			name: "ssh repo",
+			path: "git@github.com:okteto/okteto.git",
+			expected: repositoryURL{
+				url.URL{
+					Scheme: "ssh",
+					Host:   "github.com",
+					Path:   "okteto/okteto.git",
+					User:   url.User("git"),
+				},
+			},
+		},
+		{
+			name: "https repo with credentials",
+			path: "https://git:PASSWORD@github.com/okteto/okteto",
+			expected: repositoryURL{
+				url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+					Path:   "/okteto/okteto",
+					User:   url.UserPassword("git", "PASSWORD"),
+				},
+			},
+		},
+	}
 
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getURLFromPath(tt.path)
 			assert.Equal(t, tt.expected, got)
 		})
 	}
