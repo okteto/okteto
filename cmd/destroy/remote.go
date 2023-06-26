@@ -17,6 +17,7 @@ import (
 
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 
@@ -216,7 +217,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		return "", err
 	}
 
-	err = rd.createDockerignore(cwd, tempDir)
+	err = rd.createDockerignore(cwd, tempDir, opts.ManifestPath)
 	if err != nil {
 		return "", err
 	}
@@ -228,7 +229,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 
 }
 
-func (rd *remoteDestroyCommand) createDockerignore(cwd, tmpDir string) error {
+func (rd *remoteDestroyCommand) createDockerignore(cwd, tmpDir, manifestPathFlag string) error {
 	dockerignoreContent := []byte(``)
 	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
 	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
@@ -242,7 +243,25 @@ func (rd *remoteDestroyCommand) createDockerignore(cwd, tmpDir string) error {
 			return err
 		}
 	}
-	return afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
+
+	// write the content into the .dockerignore used for building the remote image
+	filename := fmt.Sprintf("%s/%s", tmpDir, ".dockerignore")
+
+	// in order to always sync the okteto manifest
+	// we force to be excluded of the dockerignore file
+	currentOktetoManifestFileName := manifestPathFlag
+	if currentOktetoManifestFileName == "" {
+		currentOktetoManifestFileName = discovery.FindManifestName(cwd)
+	}
+
+	// update the content of dockerignore if we find the okteto manifest
+	content := string(dockerignoreContent)
+	if currentOktetoManifestFileName != "" {
+		content = fmt.Sprintf(`%s
+!%s`, dockerignoreContent, currentOktetoManifestFileName)
+	}
+
+	return afero.WriteFile(rd.fs, filename, []byte(content), 0600)
 }
 
 func getDestroyFlags(opts *Options) []string {

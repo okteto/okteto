@@ -378,7 +378,7 @@ func TestCreateDockerignore(t *testing.T) {
 				fs:       fs,
 				registry: newFakeRegistry(),
 			}
-			err := rdc.createDockerignore(tt.config.wd, "/temp")
+			err := rdc.createDockerignore(tt.config.wd, "/temp", "")
 			assert.NoError(t, err)
 		})
 	}
