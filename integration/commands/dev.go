@@ -99,7 +99,13 @@ func RunOktetoUpAndWait(oktetoPath string, upOptions *UpOptions) error {
 		return fmt.Errorf("okteto up failed to start: %s", err)
 	}
 
-	return cmd.Wait()
+	err := cmd.Wait()
+	if err != nil {
+		log.Printf("okteto up failed: %v", err)
+		log.Printf("okteto up output err: \n%s", string(out.Bytes()))
+		return err
+	}
+	return nil
 }
 
 func getUpCmd(oktetoPath string, upOptions *UpOptions) *exec.Cmd {

@@ -910,18 +910,23 @@ func (up *upContext) shutdown() {
 }
 
 func (up *upContext) shutdownHybridMode() {
-	if up.hybridCommand != nil {
-		pid := up.hybridCommand.Process.Pid
-		if existProcess(pid) {
-			if err := killProcess(pid); err != nil {
-				oktetoLog.Warning("failed to stop gracefully local process related to command executed in hybrid mode: %s", err.Error())
-			}
+	if up.hybridCommand == nil {
+		return
+	}
+	if up.hybridCommand.Process == nil {
+		return
+	}
 
-			waitTimeout := 15 * time.Second
-			hasFinished := hasHybridCommandFinished(pid, waitTimeout)
-			if !hasFinished {
-				oktetoLog.Warning("timeout waiting to finish hybrid command gracefully")
-			}
+	pid := up.hybridCommand.Process.Pid
+	if existProcess(pid) {
+		if err := killProcess(pid); err != nil {
+			oktetoLog.Warning("failed to stop gracefully local process related to command executed in hybrid mode: %s", err.Error())
+		}
+
+		waitTimeout := 15 * time.Second
+		hasFinished := hasHybridCommandFinished(pid, waitTimeout)
+		if !hasFinished {
+			oktetoLog.Warning("timeout waiting to finish hybrid command gracefully")
 		}
 	}
 }
