@@ -216,8 +216,8 @@ func TestImageTaggerGetPossibleHashImages(t *testing.T) {
 			name: "sha",
 			sha:  "sha",
 			expectedImages: []string{
-				"okteto.global/test-test:sha",
 				"okteto.dev/test-test:sha",
+				"okteto.global/test-test:sha",
 			},
 		},
 	}
@@ -244,8 +244,8 @@ func TestImageTaggerWithVolumesGetPossibleHashImages(t *testing.T) {
 			name: "sha",
 			sha:  "sha",
 			expectedImages: []string{
-				"okteto.global/test-test:okteto-with-volume-mounts-sha",
 				"okteto.dev/test-test:okteto-with-volume-mounts-sha",
+				"okteto.global/test-test:okteto-with-volume-mounts-sha",
 			},
 		},
 	}
@@ -267,18 +267,18 @@ func TestImageTaggerGetPossibleTags(t *testing.T) {
 			name: "no sha",
 			sha:  "",
 			expectedImages: []string{
-				"okteto.global/test-test:okteto",
 				"okteto.dev/test-test:okteto",
+				"okteto.global/test-test:okteto",
 			},
 		},
 		{
 			name: "sha",
 			sha:  "sha",
 			expectedImages: []string{
-				"okteto.global/test-test:sha",
 				"okteto.dev/test-test:sha",
-				"okteto.global/test-test:okteto",
+				"okteto.global/test-test:sha",
 				"okteto.dev/test-test:okteto",
+				"okteto.global/test-test:okteto",
 			},
 		},
 	}
@@ -300,18 +300,18 @@ func TestImageTaggerWithVolumesGetPossibleTags(t *testing.T) {
 			name: "no sha",
 			sha:  "",
 			expectedImages: []string{
-				"okteto.global/test-test:okteto-with-volume-mounts",
 				"okteto.dev/test-test:okteto-with-volume-mounts",
+				"okteto.global/test-test:okteto-with-volume-mounts",
 			},
 		},
 		{
 			name: "sha",
 			sha:  "sha",
 			expectedImages: []string{
-				"okteto.global/test-test:okteto-with-volume-mounts-sha",
 				"okteto.dev/test-test:okteto-with-volume-mounts-sha",
-				"okteto.global/test-test:okteto-with-volume-mounts",
+				"okteto.global/test-test:okteto-with-volume-mounts-sha",
 				"okteto.dev/test-test:okteto-with-volume-mounts",
+				"okteto.global/test-test:okteto-with-volume-mounts",
 			},
 		},
 	}
@@ -338,8 +338,8 @@ func Test_getTargetRegistries(t *testing.T) {
 			name:     "okteto-cluster",
 			isOkteto: true,
 			expected: []string{
-				"okteto.global",
 				"okteto.dev",
+				"okteto.global",
 			},
 		},
 	}
