@@ -69,7 +69,8 @@ WORKDIR /okteto/src
 ARG {{ .GitCommitArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
-RUN okteto deploy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DeployFlags }}
+RUN ssh-keyscan {{ join .KnownSshHosts " " }} >> ~/.ssh/known_hosts
+RUN --mount=id=remote,type=ssh okteto deploy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DeployFlags }}
 `
 )
 
@@ -86,6 +87,7 @@ type dockerfileTemplateProperties struct {
 	GitCommitArgName       string
 	InvalidateCacheArgName string
 	DeployFlags            string
+	KnownSshHosts          []string
 }
 
 type remoteDeployCommand struct {
@@ -169,6 +171,17 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
 		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
 	)
+
+	sshSession := types.BuildSshSession{
+		Id:     "remote",
+		Target: os.Getenv("SSH_AUTH_SOCK"),
+	}
+	if deployOptions.SshIdentityKey != "" {
+		sshSession.Target = deployOptions.SshIdentityKey
+	}
+
+	buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
+
 	// we need to call Build() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
@@ -204,7 +217,10 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		return "", err
 	}
 
-	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
+	tmpl := template.
+		Must(template.New(templateName).
+			Funcs(template.FuncMap{"join": strings.Join}).
+			Parse(dockerfileTemplate))
 
 	dockerfileSyntax := dockerfileTemplateProperties{
 		OktetoCLIImage:         getOktetoCLIVersion(config.VersionString),
@@ -219,6 +235,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		GitCommitArgName:       constants.OktetoGitCommitEnvVar,
 		InvalidateCacheArgName: constants.OktetoInvalidateCacheEnvVar,
 		DeployFlags:            strings.Join(getDeployFlags(opts), " "),
+		KnownSshHosts:          []string{"github.com", "gitlab.com"},
 	}
 
 	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, dockerfileTemporalName))

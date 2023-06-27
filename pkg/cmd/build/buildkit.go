@@ -27,6 +27,7 @@ import (
 	"github.com/moby/buildkit/cmd/buildctl/build"
 	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth/authprovider"
+	"github.com/moby/buildkit/session/sshforward/sshprovider"
 	"github.com/moby/buildkit/util/progress/progressui"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -91,6 +92,19 @@ func getSolveOpt(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 		attachable = append(attachable, newDockerAndOktetoAuthProvider(okteto.Context().Registry, okteto.Context().UserID, okteto.Context().Token, os.Stderr))
 	} else {
 		attachable = append(attachable, authprovider.NewDockerAuthProvider(os.Stderr))
+	}
+
+	for _, sess := range buildOptions.SshSessions {
+		oktetoLog.Debugf("mounting ssh agent to build from %s with key %s", sess.Target, sess.Id)
+		ssh, err := sshprovider.NewSSHAgentProvider([]sshprovider.AgentConfig{{
+			ID:    sess.Id,
+			Paths: []string{sess.Target},
+		}})
+
+		if err != nil {
+			return nil, fmt.Errorf("Failed to mount ssh agent for %s: %w", sess.Id, err)
+		}
+		attachable = append(attachable, ssh)
 	}
 
 	if len(buildOptions.Secrets) > 0 {
