@@ -214,6 +214,10 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 
 	envs = append(envs, eg.getDefaultLocalEnvs()...)
 
+	for _, env := range eg.dev.Environment {
+		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
+	}
+
 	return envs, nil
 }
 
