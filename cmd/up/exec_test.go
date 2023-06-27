@@ -41,6 +41,7 @@ func TestGetEnvs(t *testing.T) {
 	tests := []struct {
 		name                    string
 		expectedEnvs            []string
+		dev                     *model.Dev
 		client                  *fake.Clientset
 		fakeConfigMapEnvsGetter fakeGetter
 		fakeSecretEnvsGetter    fakeGetter
@@ -67,6 +68,10 @@ func TestGetEnvs(t *testing.T) {
 					},
 				},
 			}),
+			dev: &model.Dev{
+				Name:      "test",
+				Namespace: "test",
+			},
 		},
 		{
 			name:                    "only envs from secrets",
@@ -90,6 +95,10 @@ func TestGetEnvs(t *testing.T) {
 					},
 				},
 			}),
+			dev: &model.Dev{
+				Name:      "test",
+				Namespace: "test",
+			},
 		},
 		{
 			name: "only envs from image",
@@ -118,6 +127,10 @@ func TestGetEnvs(t *testing.T) {
 			fakeSecretEnvsGetter:    fakeGetter{},
 			fakeImageEnvsGetter:     fakeGetter{envs: []string{"FROMIMAGE=VALUE1"}},
 			expectedEnvs:            []string{"FROMIMAGE=VALUE1"},
+			dev: &model.Dev{
+				Name:      "test",
+				Namespace: "test",
+			},
 		},
 		{
 			name: "only envs from pod",
@@ -147,16 +160,51 @@ func TestGetEnvs(t *testing.T) {
 			fakeSecretEnvsGetter:    fakeGetter{},
 			fakeImageEnvsGetter:     fakeGetter{},
 			expectedEnvs:            []string{"FROMPOD=VALUE1"},
+			dev: &model.Dev{
+				Name:      "test",
+				Namespace: "test",
+			},
+		},
+		{
+			name: "only envs from environment section in manifest",
+			client: fake.NewSimpleClientset(&appsv1.StatefulSet{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test",
+					Namespace: "test",
+				},
+				Spec: appsv1.StatefulSetSpec{
+					Template: v1.PodTemplateSpec{
+						Spec: v1.PodSpec{
+							Containers: []v1.Container{
+								{
+									Env: []v1.EnvVar{},
+								},
+							},
+						},
+					},
+				},
+			}),
+			fakeConfigMapEnvsGetter: fakeGetter{},
+			fakeSecretEnvsGetter:    fakeGetter{},
+			fakeImageEnvsGetter:     fakeGetter{},
+			expectedEnvs:            []string{"FROMENVSECTION=VALUE1"},
+			dev: &model.Dev{
+				Name:      "test",
+				Namespace: "test",
+				Environment: model.Environment{
+					model.EnvVar{
+						Name:  "FROMENVSECTION",
+						Value: "VALUE1",
+					},
+				},
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			eg := envsGetter{
-				dev: &model.Dev{
-					Name:      "test",
-					Namespace: "test",
-				},
+				dev:                 tt.dev,
 				name:                "test",
 				namespace:           "test",
 				client:              tt.client,
