@@ -44,8 +44,9 @@ type repositoryURL struct {
 
 // String is a custom implementation for the url where User is removed
 func (r repositoryURL) String() string {
-	r.URL.User = nil
-	return r.URL.String()
+	repo := r.URL
+	repo.User = nil
+	return repo.String()
 }
 
 func getURLFromPath(path string) repositoryURL {
