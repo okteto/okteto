@@ -66,14 +66,16 @@ func (oh oktetoHelper) Get(_ string) (string, string, error) {
 
 // client operates with the registry API
 type client struct {
-	config ClientConfigInterface
-	get    func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error)
+	config  ClientConfigInterface
+	get     func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error)
+	tlsDial oktetoHttp.TLSDialFunc
 }
 
 func newOktetoRegistryClient(config ClientConfigInterface) client {
 	return client{
-		config: config,
-		get:    remote.Get,
+		config:  config,
+		get:     remote.Get,
+		tlsDial: oktetoHttp.DefaultTLSDial,
 	}
 }
 
@@ -171,7 +173,9 @@ func (c client) getTransportOption() remote.Option {
 	return remote.WithTransport(c.getTransport())
 }
 func (c client) getTransport() http.RoundTripper {
-	sslTransportOption := &oktetoHttp.SSLTransportOption{}
+	sslTransportOption := &oktetoHttp.SSLTransportOption{
+		TLSDial: c.tlsDial,
+	}
 
 	if serverName := c.config.GetServerNameOverride(); serverName != "" {
 		sslTransportOption.ServerName = serverName

@@ -37,6 +37,17 @@ func DefaultTransport() *http.Transport {
 	}
 }
 
+type TLSDialFunc func(network string, addr string, config *tls.Config) (TLSConn, error)
+
+func DefaultTLSDial(network string, addr string, config *tls.Config) (TLSConn, error) {
+	return tls.Dial(network, addr, config)
+}
+
+type TLSConn interface {
+	net.Conn
+	Handshake() error
+}
+
 // StrictSSLTransport returns an *http.Transport with RootCAs set with both the SystemCertPool and the given *x509.Certificates
 // If obtaining SystemCertPool fails, it uses an empty *x509.CertPool as base
 func StrictSSLTransport(opts *SSLTransportOption) *http.Transport {
@@ -69,14 +80,18 @@ func StrictSSLTransport(opts *SSLTransportOption) *http.Transport {
 			addr = opts.ServerName
 		}
 
-		conn, err := tls.Dial("tcp", addr, transport.TLSClientConfig)
+		tlsDial := opts.TLSDial
+		if tlsDial == nil {
+			tlsDial = DefaultTLSDial
+		}
+		tlsConn, err := tlsDial("tcp", addr, transport.TLSClientConfig)
 		if err != nil {
 			return nil, fmt.Errorf("tcp dial failed for %s: %w", addr, err)
 		}
-		if err := conn.Handshake(); err != nil {
+		if err := tlsConn.Handshake(); err != nil {
 			return nil, fmt.Errorf("tls handshake failed for %s: %w", addr, err)
 		}
-		return conn, err
+		return tlsConn, nil
 	}
 
 	return transport

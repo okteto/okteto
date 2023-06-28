@@ -6,4 +6,5 @@ type SSLTransportOption struct {
 	Certs           []*x509.Certificate
 	ServerName      string
 	URLsToIntercept []string
+	TLSDial         TLSDialFunc
 }
