@@ -227,6 +227,8 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 				return err
 			}
 
+			cmd.SysProcAttr.Foreground = true
+
 			return executor.RunCommand(cmd)
 		}
 
