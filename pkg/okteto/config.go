@@ -26,3 +26,4 @@ func (Config) GetToken() string                                  { return Contex
 func (Config) GetContextCertificate() (*x509.Certificate, error) { return GetContextCertificate() }
 func (Config) IsInsecureSkipTLSVerifyPolicy() bool               { return Context().IsInsecure }
 func (Config) GetServerNameOverride() string                     { return GetServerNameOverride() }
+func (Config) GetContextName() string                            { return Context().Name }
