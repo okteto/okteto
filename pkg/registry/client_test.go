@@ -43,31 +43,23 @@ func (c *fakeTLSConn) Handshake() error {
 	return c.handshakeErr
 }
 
-// nolint:unused
-func (c *fakeTLSConn) Close() error { return fmt.Errorf("Close() unimplemented") }
+func (*fakeTLSConn) Close() error { return fmt.Errorf("Close() unimplemented") }
 
-// nolint:unused
-func (c *fakeTLSConn) LocalAddr() net.Addr { return nil }
+func (*fakeTLSConn) LocalAddr() net.Addr { return nil }
 
-// nolint:unused
-func (c *fakeTLSConn) RemoteAddr() net.Addr { return nil }
+func (*fakeTLSConn) RemoteAddr() net.Addr { return nil }
 
-// nolint:unused
-func (c *fakeTLSConn) Read([]byte) (int, error) { return 0, fmt.Errorf("Read() unimplemented") }
+func (*fakeTLSConn) Read([]byte) (int, error) { return 0, fmt.Errorf("Read() unimplemented") }
 
-// nolint:unused
-func (c *fakeTLSConn) Write([]byte) (int, error) { return 0, fmt.Errorf("Write() unimplemented") }
+func (*fakeTLSConn) Write([]byte) (int, error) { return 0, fmt.Errorf("Write() unimplemented") }
 
-// nolint:unused
-func (c *fakeTLSConn) SetDeadline(time.Time) error { return fmt.Errorf("SetDeadline() unimplemented") }
+func (*fakeTLSConn) SetDeadline(time.Time) error { return fmt.Errorf("SetDeadline() unimplemented") }
 
-// nolint:unused
-func (c *fakeTLSConn) SetReadDeadline(time.Time) error {
+func (*fakeTLSConn) SetReadDeadline(time.Time) error {
 	return fmt.Errorf("SetReadDeadline() unimplemented")
 }
 
-// nolint:unused
-func (c *fakeTLSConn) SetWriteDeadline(time.Time) error {
+func (*fakeTLSConn) SetWriteDeadline(time.Time) error {
 	return fmt.Errorf("SetWriteDeadline() unimplemented")
 }
 
