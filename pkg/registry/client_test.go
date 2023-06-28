@@ -14,16 +14,81 @@
 package registry
 
 import (
+	"context"
+	"crypto/tls"
 	"crypto/x509"
+	"fmt"
+	"net"
+	"net/http"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	containerv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	"github.com/stretchr/testify/assert"
 )
+
+type fakeTLSConn struct {
+	handshake    bool
+	handshakeErr error
+}
+
+func (c *fakeTLSConn) Handshake() error {
+	c.handshake = true
+	return c.handshakeErr
+}
+
+// nolint:unused
+func (c *fakeTLSConn) Close() error { return fmt.Errorf("Close() unimplemented") }
+
+// nolint:unused
+func (c *fakeTLSConn) LocalAddr() net.Addr { return nil }
+
+// nolint:unused
+func (c *fakeTLSConn) RemoteAddr() net.Addr { return nil }
+
+// nolint:unused
+func (c *fakeTLSConn) Read([]byte) (int, error) { return 0, fmt.Errorf("Read() unimplemented") }
+
+// nolint:unused
+func (c *fakeTLSConn) Write([]byte) (int, error) { return 0, fmt.Errorf("Write() unimplemented") }
+
+// nolint:unused
+func (c *fakeTLSConn) SetDeadline(time.Time) error { return fmt.Errorf("SetDeadline() unimplemented") }
+
+// nolint:unused
+func (c *fakeTLSConn) SetReadDeadline(time.Time) error {
+	return fmt.Errorf("SetReadDeadline() unimplemented")
+}
+
+// nolint:unused
+func (c *fakeTLSConn) SetWriteDeadline(time.Time) error {
+	return fmt.Errorf("SetWriteDeadline() unimplemented")
+}
+
+type fakeTLSDialArgs struct {
+	network string
+	addr    string
+	config  *tls.Config
+}
+
+type fakeTLSDial struct {
+	requests []fakeTLSDialArgs
+	err      error
+	mtx      sync.RWMutex
+}
+
+func (t *fakeTLSDial) tlsDial(network string, addr string, config *tls.Config) (oktetoHttp.TLSConn, error) {
+	t.mtx.Lock()
+	t.requests = append(t.requests, fakeTLSDialArgs{network: network, addr: addr, config: config})
+	t.mtx.Unlock()
+	return &fakeTLSConn{}, t.err
+}
 
 // FakeClient has everything needed to set up a test faking API calls
 type fakeClient struct {
@@ -255,6 +320,130 @@ func TestGetOptions(t *testing.T) {
 			assert.NoError(t, err)
 			options := c.getOptions(ref)
 			assert.Len(t, options, 2)
+		})
+	}
+}
+
+func TestGetTransport(t *testing.T) {
+	type expected struct {
+		input  fakeTLSDialArgs
+		output fakeTLSDialArgs
+	}
+	var tests = []struct {
+		name     string
+		config   ClientConfigInterface
+		expected []expected
+	}{
+		{
+			name: "default",
+			config: fakeClientConfig{
+				registryURL: "registry.instance.foo",
+				contextName: "https://okteto.instance.foo",
+			},
+			expected: []expected{
+				{
+					input:  fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443"},
+					output: fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443", config: &tls.Config{}},
+				},
+				{
+					input:  fakeTLSDialArgs{network: "tcp", addr: "okteto.instance.foo:443"},
+					output: fakeTLSDialArgs{network: "tcp", addr: "okteto.instance.foo:443", config: &tls.Config{}},
+				},
+				{
+					input:  fakeTLSDialArgs{network: "tcp", addr: "google.com:443"},
+					output: fakeTLSDialArgs{network: "tcp", addr: "google.com:443", config: &tls.Config{}},
+				},
+			},
+		},
+		{
+			name: "default with server name",
+			config: fakeClientConfig{
+				registryURL: "registry.instance.foo",
+				contextName: "https://okteto.instance.foo",
+				serverName:  "1.2.3.4:443",
+			},
+			expected: []expected{
+				{
+					input:  fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443"},
+					output: fakeTLSDialArgs{network: "tcp", addr: "1.2.3.4:443", config: &tls.Config{ServerName: "registry.instance.foo"}},
+				},
+				{
+					input:  fakeTLSDialArgs{network: "tcp", addr: "okteto.instance.foo:443"},
+					output: fakeTLSDialArgs{network: "tcp", addr: "1.2.3.4:443", config: &tls.Config{ServerName: "okteto.instance.foo"}},
+				},
+				{
+					input:  fakeTLSDialArgs{network: "tcp", addr: "google.com:443"},
+					output: fakeTLSDialArgs{network: "tcp", addr: "google.com:443", config: &tls.Config{}},
+				},
+			},
+		},
+		{
+			name: "public override",
+			config: fakeClientConfig{
+				registryURL: "registry.instance.foo",
+				contextName: "https://instance.foo",
+			},
+			expected: []expected{
+				{
+					input:  fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443"},
+					output: fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443", config: &tls.Config{}},
+				},
+				{
+					input:  fakeTLSDialArgs{network: "tcp", addr: "instance.foo:443"},
+					output: fakeTLSDialArgs{network: "tcp", addr: "instance.foo:443", config: &tls.Config{}},
+				},
+				{
+					input:  fakeTLSDialArgs{network: "tcp", addr: "google.com:443"},
+					output: fakeTLSDialArgs{network: "tcp", addr: "google.com:443", config: &tls.Config{}},
+				},
+			},
+		},
+		{
+			name: "public override with server name",
+			config: fakeClientConfig{
+				registryURL: "registry.instance.foo",
+				contextName: "https://instance.foo",
+				serverName:  "1.2.3.4:443",
+			},
+			expected: []expected{
+				{
+					input:  fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443"},
+					output: fakeTLSDialArgs{network: "tcp", addr: "1.2.3.4:443", config: &tls.Config{ServerName: "registry.instance.foo"}},
+				},
+				{
+					input:  fakeTLSDialArgs{network: "tcp", addr: "instance.foo:443"},
+					output: fakeTLSDialArgs{network: "tcp", addr: "1.2.3.4:443", config: &tls.Config{ServerName: "instance.foo"}},
+				},
+				{
+					input:  fakeTLSDialArgs{network: "tcp", addr: "google.com:443"},
+					output: fakeTLSDialArgs{network: "tcp", addr: "google.com:443", config: &tls.Config{}},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, e := range tt.expected {
+				dialer := &fakeTLSDial{}
+				client := client{config: tt.config, tlsDial: dialer.tlsDial}
+
+				roundTripper := client.getTransport()
+				transport, ok := roundTripper.(*http.Transport)
+				assert.True(t, ok, "getTransport() is not *http.Transport")
+
+				conn, err := transport.DialTLSContext(context.TODO(), e.input.network, e.input.addr)
+				assert.NoError(t, err, "transport.DialTLSContext returned error")
+				assert.NotNil(t, conn, "transport.DialTLSContext returned nil net.Conn")
+
+				assert.Len(t, dialer.requests, 1)
+
+				assert.Equal(t, e.output.network, dialer.requests[0].network)
+				assert.Equal(t, e.output.addr, dialer.requests[0].addr)
+
+				assert.NotNil(t, dialer.requests[0].config)
+				assert.Equal(t, e.output.config.ServerName, dialer.requests[0].config.ServerName)
+			}
 		})
 	}
 }
