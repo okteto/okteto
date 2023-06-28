@@ -606,7 +606,14 @@ func (up *upContext) start() error {
 
 	if err := up.pidController.create(); err != nil {
 		oktetoLog.Infof("failed to create pid file for %s - %s: %s", up.Dev.Namespace, up.Dev.Name, err)
-		return fmt.Errorf("couldn't create pid file for %s - %s", up.Dev.Namespace, up.Dev.Name)
+
+		return oktetoErrors.UserError{
+			E: fmt.Errorf("couldn't create a pid file for %s - %s", up.Dev.Namespace, up.Dev.Name),
+			Hint: `This error can occur if the ".okteto" folder in your home has misconfigured permissions.
+    To resolve, try 'sudo chown -R <your-user>: ~/.okteto'
+
+    Alternatively, check the permissions of that directory and its content to ensure your user has write permissions.`,
+		}
 	}
 
 	defer up.pidController.delete()
