@@ -47,7 +47,7 @@ func TestInterceptAppend(t *testing.T) {
 			i.AppendURLs(tt.input...)
 
 			r := []string{}
-			for k, _ := range i {
+			for k := range i {
 				r = append(r, k)
 			}
 			assert.ElementsMatch(t, tt.expected, r)
