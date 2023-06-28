@@ -335,15 +335,15 @@ func TestGetTransport(t *testing.T) {
 			expected: []expected{
 				{
 					input:  fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443"},
-					output: fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443", config: &tls.Config{}}, // skipcq: GO-S1020
+					output: fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443", config: &tls.Config{}}, // skipcq: GO-S1020, GSC-G402
 				},
 				{
 					input:  fakeTLSDialArgs{network: "tcp", addr: "okteto.instance.foo:443"},
-					output: fakeTLSDialArgs{network: "tcp", addr: "okteto.instance.foo:443", config: &tls.Config{}}, // skipcq: GO-S1020
+					output: fakeTLSDialArgs{network: "tcp", addr: "okteto.instance.foo:443", config: &tls.Config{}}, // skipcq: GO-S1020, GSC-G402
 				},
 				{
 					input:  fakeTLSDialArgs{network: "tcp", addr: "google.com:443"},
-					output: fakeTLSDialArgs{network: "tcp", addr: "google.com:443", config: &tls.Config{}}, // skipcq: GO-S1020
+					output: fakeTLSDialArgs{network: "tcp", addr: "google.com:443", config: &tls.Config{}}, // skipcq: GO-S1020, GSC-G402
 				},
 			},
 		},
@@ -357,15 +357,15 @@ func TestGetTransport(t *testing.T) {
 			expected: []expected{
 				{
 					input:  fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443"},
-					output: fakeTLSDialArgs{network: "tcp", addr: "1.2.3.4:443", config: &tls.Config{ServerName: "registry.instance.foo"}}, // skipcq: GO-S1020
+					output: fakeTLSDialArgs{network: "tcp", addr: "1.2.3.4:443", config: &tls.Config{ServerName: "registry.instance.foo"}}, // skipcq: GO-S1020, GSC-G402
 				},
 				{
 					input:  fakeTLSDialArgs{network: "tcp", addr: "okteto.instance.foo:443"},
-					output: fakeTLSDialArgs{network: "tcp", addr: "1.2.3.4:443", config: &tls.Config{ServerName: "okteto.instance.foo"}}, // skipcq: GO-S1020
+					output: fakeTLSDialArgs{network: "tcp", addr: "1.2.3.4:443", config: &tls.Config{ServerName: "okteto.instance.foo"}}, // skipcq: GO-S1020, GSC-G402
 				},
 				{
 					input:  fakeTLSDialArgs{network: "tcp", addr: "google.com:443"},
-					output: fakeTLSDialArgs{network: "tcp", addr: "google.com:443", config: &tls.Config{}}, // skipcq: GO-S1020
+					output: fakeTLSDialArgs{network: "tcp", addr: "google.com:443", config: &tls.Config{}}, // skipcq: GO-S1020, GSC-G402
 				},
 			},
 		},
@@ -378,15 +378,15 @@ func TestGetTransport(t *testing.T) {
 			expected: []expected{
 				{
 					input:  fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443"},
-					output: fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443", config: &tls.Config{}}, // skipcq: GO-S1020
+					output: fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443", config: &tls.Config{}}, // skipcq: GO-S1020, GSC-G402
 				},
 				{
 					input:  fakeTLSDialArgs{network: "tcp", addr: "instance.foo:443"},
-					output: fakeTLSDialArgs{network: "tcp", addr: "instance.foo:443", config: &tls.Config{}}, // skipcq: GO-S1020
+					output: fakeTLSDialArgs{network: "tcp", addr: "instance.foo:443", config: &tls.Config{}}, // skipcq: GO-S1020, GSC-G402
 				},
 				{
 					input:  fakeTLSDialArgs{network: "tcp", addr: "google.com:443"},
-					output: fakeTLSDialArgs{network: "tcp", addr: "google.com:443", config: &tls.Config{}}, // skipcq: GO-S1020
+					output: fakeTLSDialArgs{network: "tcp", addr: "google.com:443", config: &tls.Config{}}, // skipcq: GO-S1020, GSC-G402
 				},
 			},
 		},
@@ -400,15 +400,15 @@ func TestGetTransport(t *testing.T) {
 			expected: []expected{
 				{
 					input:  fakeTLSDialArgs{network: "tcp", addr: "registry.instance.foo:443"},
-					output: fakeTLSDialArgs{network: "tcp", addr: "1.2.3.4:443", config: &tls.Config{ServerName: "registry.instance.foo"}}, // skipcq: GO-S1020
+					output: fakeTLSDialArgs{network: "tcp", addr: "1.2.3.4:443", config: &tls.Config{ServerName: "registry.instance.foo"}}, // skipcq: GO-S1020, GSC-G402
 				},
 				{
 					input:  fakeTLSDialArgs{network: "tcp", addr: "instance.foo:443"},
-					output: fakeTLSDialArgs{network: "tcp", addr: "1.2.3.4:443", config: &tls.Config{ServerName: "instance.foo"}}, // skipcq: GO-S1020
+					output: fakeTLSDialArgs{network: "tcp", addr: "1.2.3.4:443", config: &tls.Config{ServerName: "instance.foo"}}, // skipcq: GO-S1020, GSC-G402
 				},
 				{
 					input:  fakeTLSDialArgs{network: "tcp", addr: "google.com:443"},
-					output: fakeTLSDialArgs{network: "tcp", addr: "google.com:443", config: &tls.Config{}}, // skipcq: GO-S1020
+					output: fakeTLSDialArgs{network: "tcp", addr: "google.com:443", config: &tls.Config{}}, // skipcq: GO-S1020, GSC-G402
 				},
 			},
 		},
