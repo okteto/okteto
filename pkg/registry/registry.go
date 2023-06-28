@@ -34,6 +34,7 @@ type configInterface interface {
 	IsInsecureSkipTLSVerifyPolicy() bool
 	GetContextCertificate() (*x509.Certificate, error)
 	GetServerNameOverride() string
+	GetContextName() string
 }
 
 type registryConfig interface {
