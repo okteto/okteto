@@ -61,6 +61,9 @@ func StrictSSLTransport(opts *SSLTransportOption) *http.Transport {
 	}
 
 	for _, cert := range opts.Certs {
+		if cert == nil {
+			continue
+		}
 		pool.AddCert(cert)
 	}
 
