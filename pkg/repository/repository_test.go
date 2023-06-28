@@ -324,3 +324,20 @@ func Test_getURLFromPath(t *testing.T) {
 		})
 	}
 }
+
+func Test_String(t *testing.T) {
+	r := &repositoryURL{
+		url.URL{
+			Scheme: "http",
+			Host:   "okteto.com",
+			Path:   "docs",
+			User:   url.UserPassword("test", "password"),
+		},
+	}
+
+	expected := "http://okteto.com/docs"
+	got := r.String()
+
+	assert.Equal(t, expected, got)
+	assert.NotNil(t, r.URL.User)
+}
