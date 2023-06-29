@@ -722,6 +722,63 @@ func checkFileAndNotDirectory(path string) error {
 	return fmt.Errorf("Secret '%s' is not a regular file", path)
 }
 
+type hybridModeInfo struct {
+	Workdir     string            `json:"workdir,omitempty" yaml:"workdir,omitempty"`
+	Selector    Selector          `json:"selector,omitempty" yaml:"selector,omitempty"`
+	Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
+	Environment Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
+	Command     Command           `json:"command,omitempty" yaml:"command,omitempty"`
+	Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
+	Mode        string            `json:"mode,omitempty" yaml:"mode,omitempty"`
+
+	UnsupportedFields map[string]interface{} `yaml:",inline" json:"-"`
+}
+
+var hybridUnsupportedFields = []string{
+	"affinity",
+	"context",
+	"externalVolumes",
+	"image",
+	"imagePullPolicy",
+	"initContainer",
+	"initFromImage",
+	"lifecycle",
+	"namespace",
+	"nodeSelector",
+	"persistentVolume",
+	"push",
+	"replicas",
+	"secrets",
+	"securityContext",
+	"serviceAccount",
+	"sshServerPort",
+	"sync",
+	"tolerations",
+	"volumes",
+}
+
+func (h *hybridModeInfo) warnHybridUnsupportedFields() string {
+	var output string
+
+	var unsupportedFieldsUsed []string
+	for key := range h.UnsupportedFields {
+		for _, unsupportedFieldName := range hybridUnsupportedFields {
+			if key == unsupportedFieldName {
+				unsupportedFieldsUsed = append(unsupportedFieldsUsed, key)
+				break
+			}
+		}
+	}
+
+	sort.Strings(unsupportedFieldsUsed)
+
+	if len(unsupportedFieldsUsed) > 0 {
+		output = fmt.Sprintf("In hybrid mode, the field(s) '%s' specified in your manifest are ignored", strings.Join(unsupportedFieldsUsed, ", "))
+	}
+
+	return output
+}
+
 func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	type devType Dev // Prevent recursion
 	dev := devType(*d)
@@ -734,21 +791,15 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	err := unmarshal(mode)
 	if err != nil {
 		if mode.Mode == constants.OktetoHybridModeFieldValue {
-			type hybridModeInfo struct {
-				Workdir     string            `json:"workdir,omitempty" yaml:"workdir,omitempty"`
-				Selector    Selector          `json:"selector,omitempty" yaml:"selector,omitempty"`
-				Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
-				Environment Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
-				EnvFiles    EnvFiles          `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
-				Command     Command           `json:"command,omitempty" yaml:"command,omitempty"`
-				Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
-				Mode        string            `json:"mode,omitempty" yaml:"mode,omitempty"`
-			}
-
 			hybridModeDev := &hybridModeInfo{}
 			err := unmarshal(hybridModeDev)
 			if err != nil {
 				return err
+			}
+
+			warningMsg := hybridModeDev.warnHybridUnsupportedFields()
+			if warningMsg != "" {
+				oktetoLog.Warning(warningMsg)
 			}
 		}
 	}
