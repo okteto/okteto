@@ -251,7 +251,7 @@ func (rd *remoteDestroyCommand) createDockerignore(cwd, tmpDir, manifestPathFlag
 	// we force to be excluded of the dockerignore file
 	currentOktetoManifestFileName := manifestPathFlag
 	if currentOktetoManifestFileName == "" {
-		currentOktetoManifestFileName = discovery.FindManifestName(cwd)
+		currentOktetoManifestFileName = discovery.FindManifestNameWithFilesystem(cwd, rd.fs)
 	}
 
 	// update the content of dockerignore if we find the okteto manifest
