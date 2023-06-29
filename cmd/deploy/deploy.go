@@ -74,8 +74,6 @@ type Options struct {
 	Timeout    time.Duration
 
 	ShowCTA bool
-
-	SshIdentityKey string
 }
 
 // DeployCommand defines the config for deploying an app
@@ -264,7 +262,6 @@ func Deploy(ctx context.Context) *cobra.Command {
 	cmd.Flags().StringVarP(&options.Namespace, "namespace", "n", "", "overwrites the namespace where the development environment is deployed")
 	cmd.Flags().StringVarP(&options.K8sContext, "context", "c", "", "context where the development environment is deployed")
 	cmd.Flags().StringArrayVarP(&options.Variables, "var", "v", []string{}, "set a variable (can be set more than once)")
-	cmd.Flags().StringVarP(&options.SshIdentityKey, "identity-file", "i", "", "the identity key to use for ssh sessions")
 	cmd.Flags().BoolVarP(&options.Build, "build", "", false, "force build of images when deploying the development environment")
 	cmd.Flags().BoolVarP(&options.Dependencies, "dependencies", "", false, "deploy the dependencies from manifest")
 	cmd.Flags().BoolVarP(&options.RunWithoutBash, "no-bash", "", false, "execute commands without bash")

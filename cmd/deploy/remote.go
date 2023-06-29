@@ -26,6 +26,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/mitchellh/go-homedir"
+
 	builder "github.com/okteto/okteto/cmd/build"
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -69,8 +71,9 @@ WORKDIR /okteto/src
 ARG {{ .GitCommitArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
-RUN ssh-keyscan {{ join .KnownSshHosts " " }} >> ~/.ssh/known_hosts
-RUN --mount=id=remote,type=ssh okteto deploy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DeployFlags }}
+RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+  echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+  okteto deploy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DeployFlags }}
 `
 )
 
@@ -113,7 +116,10 @@ func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
 }
 
 func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options) error {
-
+	home, err := homedir.Dir()
+	if err != nil {
+		return err
+	}
 	sc, err := rd.clusterMetadata(ctx)
 	if err != nil {
 		return err
@@ -172,15 +178,15 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
 	)
 
-	sshSession := types.BuildSshSession{
-		Id:     "remote",
-		Target: os.Getenv("SSH_AUTH_SOCK"),
-	}
-	if deployOptions.SshIdentityKey != "" {
-		sshSession.Target = deployOptions.SshIdentityKey
-	}
+	sshSock := os.Getenv("SSH_AUTH_SOCK")
 
-	buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
+	if sshSock != "" {
+		sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
+		buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
+		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s/.ssh/known_hosts", home))
+	} else {
+		oktetoLog.Debug("SSH_AUTH_SOCK envvar is empty. Not mouting ssh-agent for build")
+	}
 
 	// we need to call Build() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
