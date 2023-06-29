@@ -265,14 +265,16 @@ func (rd *remoteDeployCommand) createDockerignore(cwd, tmpDir, manifestPathFlag 
 	// we force to be excluded of the dockerignore file
 	currentOktetoManifestFileName := manifestPathFlag
 	if currentOktetoManifestFileName == "" {
-		currentOktetoManifestFileName = discovery.FindManifestName(cwd)
+		currentOktetoManifestFileName = discovery.FindManifestNameWithFilesystem(cwd, rd.fs)
 	}
 
 	// update the content of dockerignore if we find the okteto manifest
-	content := string(dockerignoreContent)
+	content := ""
+	if string(dockerignoreContent) != "" {
+		content = string(dockerignoreContent) + "\n"
+	}
 	if currentOktetoManifestFileName != "" {
-		content = fmt.Sprintf(`%s
-!%s`, dockerignoreContent, currentOktetoManifestFileName)
+		content = content + fmt.Sprintf("!%s", currentOktetoManifestFileName) + "\n"
 	}
 
 	return afero.WriteFile(rd.fs, filename, []byte(content), 0600)

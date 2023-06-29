@@ -1,28 +1,32 @@
 package discovery
 
-import "path/filepath"
+import (
+	"path/filepath"
 
-func getInferredManifestFilePath(cwd string) string {
-	if oktetoManifestPath, err := GetOktetoManifestPath(cwd); err == nil {
+	"github.com/spf13/afero"
+)
+
+func getInferredManifestFilePath(cwd string, fs afero.Fs) string {
+	if oktetoManifestPath, err := GetOktetoManifestPathWithFilesystem(cwd, fs); err == nil {
 		return oktetoManifestPath
 	}
-	if pipelinePath, err := GetOktetoPipelinePath(cwd); err == nil {
+	if pipelinePath, err := GetOktetoPipelinePathWithFilesystem(cwd, fs); err == nil {
 		return pipelinePath
 	}
-	if composePath, err := GetComposePath(cwd); err == nil {
+	if composePath, err := GetComposePathWithFilesystem(cwd, fs); err == nil {
 		return composePath
 	}
-	if chartPath, err := GetHelmChartPath(cwd); err == nil {
+	if chartPath, err := GetHelmChartPathWithFilesystem(cwd, fs); err == nil {
 		return chartPath
 	}
-	if k8sManifestPath, err := GetK8sManifestPath(cwd); err == nil {
+	if k8sManifestPath, err := GetK8sManifestPathWithFilesystem(cwd, fs); err == nil {
 		return k8sManifestPath
 	}
 	return ""
 }
 
-func FindManifestName(cwd string) string {
-	path := getInferredManifestFilePath(cwd)
+func FindManifestNameWithFilesystem(cwd string, fs afero.Fs) string {
+	path := getInferredManifestFilePath(cwd, fs)
 	if path == "" {
 		return ""
 	}

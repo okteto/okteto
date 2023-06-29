@@ -317,14 +317,12 @@ func TestCreateDockerfile(t *testing.T) {
 }
 
 func TestCreateDockerignore(t *testing.T) {
-	fs := afero.NewMemMapFs()
-	tempDir := "/temp"
-
 	dockerignoreWd := "/test/"
-	assert.NoError(t, fs.MkdirAll(dockerignoreWd, 0755))
-	assert.NoError(t, afero.WriteFile(fs, filepath.Join(dockerignoreWd, ".oktetodeployignore"), []byte("FROM alpine"), 0644))
+
 	type config struct {
-		wd string
+		wd               string
+		manifestPathFlag string
+		hasManifest      bool
 	}
 	var tests = []struct {
 		name            string
@@ -332,14 +330,44 @@ func TestCreateDockerignore(t *testing.T) {
 		expectedContent string
 	}{
 		{
-			name: "dockerignore present copy .oktetodeployignore to .dockerignore",
+			name: "dockerignore present copy .oktetodeployignore to .dockerignore without manifest",
 			config: config{
 				wd: dockerignoreWd,
 			},
-			expectedContent: "FROM alpine",
+			expectedContent: "FROM alpine\n",
 		},
 		{
-			name:            "without dockerignore generate empty dockerignore",
+			name: "dockerignore present copy .oktetodeployignore to .dockerignore with manifest",
+			config: config{
+				wd:          dockerignoreWd,
+				hasManifest: true,
+			},
+			expectedContent: "FROM alpine\n!okteto.yaml\n",
+		},
+		{
+			name: "dockerignore present copy .oktetodeployignore to .dockerignore with manifestPath not empty",
+			config: config{
+				wd:               dockerignoreWd,
+				manifestPathFlag: "file-flag-okteto.yaml",
+			},
+			expectedContent: "FROM alpine\n!file-flag-okteto.yaml\n",
+		},
+		{
+			name: "without dockerignore, with manifest file flag, generate with ignore file content",
+			config: config{
+				manifestPathFlag: "file-flag-okteto.yaml",
+			},
+			expectedContent: "!file-flag-okteto.yaml\n",
+		},
+		{
+			name: "without dockerignore, with manifest, generate with ignore manifest content",
+			config: config{
+				hasManifest: true,
+			},
+			expectedContent: "!okteto.yaml\n",
+		},
+		{
+			name:            "without dockerignore, without manifest generate empty dockerignore",
 			config:          config{},
 			expectedContent: "",
 		},
@@ -347,13 +375,24 @@ func TestCreateDockerignore(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tempDir := t.TempDir()
+			fs := afero.NewMemMapFs()
+
+			assert.NoError(t, fs.MkdirAll(dockerignoreWd, 0755))
+			assert.NoError(t, afero.WriteFile(fs, filepath.Join(dockerignoreWd, ".oktetodeployignore"), []byte("FROM alpine"), 0644))
+			if tt.config.hasManifest {
+				assert.NoError(t, afero.WriteFile(fs, filepath.Join(tt.config.wd, "okteto.yaml"), []byte("hola"), 0644))
+			}
+
 			rdc := remoteDeployCommand{
 				fs: fs,
 			}
-			err := rdc.createDockerignore(tt.config.wd, tempDir, "")
+
+			err := rdc.createDockerignore(tt.config.wd, tempDir, tt.config.manifestPathFlag)
 			b, _ := afero.ReadFile(rdc.fs, filepath.Join(tempDir, ".dockerignore"))
 			assert.Equal(t, tt.expectedContent, string(b))
 			assert.NoError(t, err)
+
 		})
 	}
 }
