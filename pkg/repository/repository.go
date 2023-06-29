@@ -28,7 +28,7 @@ import (
 // like checking the commit or if the project has changes over it
 type Repository struct {
 	path string
-	url  *url.URL
+	url  *repositoryURL
 
 	control repositoryInterface
 }
@@ -38,12 +38,31 @@ type repositoryInterface interface {
 	getSHA() (string, error)
 }
 
-// NewRepository creates a repository controller
-func NewRepository(path string) Repository {
-	repoUrl, err := giturls.Parse(path)
+type repositoryURL struct {
+	url.URL
+}
+
+// String is a custom implementation for the url where User is removed
+func (r repositoryURL) String() string {
+	repo := r.URL
+	repo.User = nil
+	return repo.String()
+}
+
+func getURLFromPath(path string) repositoryURL {
+	url, err := giturls.Parse(path)
 	if err != nil {
 		oktetoLog.Infof("could not parse url: %w", err)
 	}
+
+	return repositoryURL{
+		*url,
+	}
+}
+
+// NewRepository creates a repository controller
+func NewRepository(path string) Repository {
+	repoURL := getURLFromPath(path)
 
 	var controller repositoryInterface = newGitRepoController()
 	// check if we are inside a remote deploy
@@ -53,7 +72,7 @@ func NewRepository(path string) Repository {
 	}
 	return Repository{
 		path:    path,
-		url:     repoUrl,
+		url:     &repoURL,
 		control: controller,
 	}
 }
@@ -88,4 +107,9 @@ func (r Repository) IsEqual(otherRepo Repository) bool {
 
 func cleanPath(path string) string {
 	return strings.TrimSuffix(strings.TrimPrefix(path, "/"), ".git")
+}
+
+// GetAnonymizedRepo returns a clean repo url string without sensible information
+func (r Repository) GetAnonymizedRepo() string {
+	return r.url.String()
 }
