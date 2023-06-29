@@ -100,6 +100,9 @@ type remoteDeployCommand struct {
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
 	clusterMetadata      func(context.Context) (*types.ClusterMetadata, error)
+
+	// defaults to SSH_AUTH_SOCK. Provided mostly for testing
+	sshAuthSockEnvvar string
 }
 
 // newRemoteDeployer creates the remote deployer from a
@@ -178,14 +181,17 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
 	)
 
-	sshSock := os.Getenv("SSH_AUTH_SOCK")
+	sshSock := os.Getenv(rd.sshAuthSockEnvvar)
+	if sshSock == "" {
+		sshSock = os.Getenv("SSH_AUTH_SOCK")
+	}
 
 	if sshSock != "" {
 		sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
 		buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
 		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s/.ssh/known_hosts", home))
 	} else {
-		oktetoLog.Debug("SSH_AUTH_SOCK envvar is empty. Not mouting ssh-agent for build")
+		oktetoLog.Debug("no ssh agent found. Not mouting ssh-agent for build")
 	}
 
 	// we need to call Build() method using a remote builder. This Builder will have
