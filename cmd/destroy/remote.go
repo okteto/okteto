@@ -17,9 +17,9 @@ import (
 
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/okteto/okteto/pkg/remote"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
@@ -33,7 +33,6 @@ import (
 const (
 	templateName           = "destroy-dockerfile"
 	dockerfileTemporalNane = "Dockerfile.destroy"
-	oktetoDockerignoreName = ".oktetodeployignore"
 	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
@@ -230,38 +229,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 }
 
 func (rd *remoteDestroyCommand) createDockerignore(cwd, tmpDir, manifestPathFlag string) error {
-	dockerignoreContent := []byte(``)
-	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
-	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-
-	} else {
-		dockerignoreContent, err = afero.ReadFile(rd.fs, dockerignoreFilePath)
-		if err != nil {
-			return err
-		}
-	}
-
-	// write the content into the .dockerignore used for building the remote image
-	filename := fmt.Sprintf("%s/%s", tmpDir, ".dockerignore")
-
-	// in order to always sync the okteto manifest
-	// we force to be excluded of the dockerignore file
-	currentOktetoManifestFileName := manifestPathFlag
-	if currentOktetoManifestFileName == "" {
-		currentOktetoManifestFileName = discovery.FindManifestNameWithFilesystem(cwd, rd.fs)
-	}
-
-	// update the content of dockerignore if we find the okteto manifest
-	content := string(dockerignoreContent)
-	if currentOktetoManifestFileName != "" {
-		content = fmt.Sprintf(`%s
-!%s`, dockerignoreContent, currentOktetoManifestFileName)
-	}
-
-	return afero.WriteFile(rd.fs, filename, []byte(content), 0600)
+	return remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, manifestPathFlag, rd.fs)
 }
 
 func getDestroyFlags(opts *Options) []string {

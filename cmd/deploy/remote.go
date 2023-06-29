@@ -32,12 +32,12 @@ import (
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/discovery"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/remote"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 )
@@ -45,7 +45,6 @@ import (
 const (
 	templateName           = "dockerfile"
 	dockerfileTemporalName = "Dockerfile.deploy"
-	oktetoDockerignoreName = ".oktetodeployignore"
 	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
@@ -244,40 +243,7 @@ func (rd *remoteDeployCommand) createDockerignore(cwd, tmpDir, manifestPathFlag 
 	// build the services) so we would create a remote executor without certain files
 	// necessary for the later deployment which would cause an error when deploying
 	// remotely due to the lack of these files.
-	dockerignoreContent := []byte(``)
-	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
-	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-
-	} else {
-		dockerignoreContent, err = afero.ReadFile(rd.fs, dockerignoreFilePath)
-		if err != nil {
-			return err
-		}
-	}
-
-	// write the content into the .dockerignore used for building the remote image
-	filename := fmt.Sprintf("%s/%s", tmpDir, ".dockerignore")
-
-	// in order to always sync the okteto manifest
-	// we force to be excluded of the dockerignore file
-	currentOktetoManifestFileName := manifestPathFlag
-	if currentOktetoManifestFileName == "" {
-		currentOktetoManifestFileName = discovery.FindManifestNameWithFilesystem(cwd, rd.fs)
-	}
-
-	// update the content of dockerignore if we find the okteto manifest
-	content := ""
-	if string(dockerignoreContent) != "" {
-		content = string(dockerignoreContent) + "\n"
-	}
-	if currentOktetoManifestFileName != "" {
-		content = content + fmt.Sprintf("!%s", currentOktetoManifestFileName) + "\n"
-	}
-
-	return afero.WriteFile(rd.fs, filename, []byte(content), 0600)
+	return remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, manifestPathFlag, rd.fs)
 }
 
 func getDeployFlags(opts *Options) []string {
