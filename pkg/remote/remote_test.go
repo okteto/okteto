@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCreateDockerignore(t *testing.T) {
+func TestCreateDockerignoreFileWithFilesystem(t *testing.T) {
 	dockerignoreWd := "/test/"
 
 	type config struct {
