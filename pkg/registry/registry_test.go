@@ -32,6 +32,7 @@ type FakeConfig struct {
 	InsecureSkipTLSVerifyPolicy bool
 	ContextCertificate          *x509.Certificate
 	ServerName                  string
+	ContextName                 string
 }
 
 func (fc FakeConfig) IsOktetoCluster() bool               { return fc.IsOktetoClusterCfg }
@@ -45,6 +46,7 @@ func (fc FakeConfig) GetContextCertificate() (*x509.Certificate, error) {
 	return fc.ContextCertificate, nil
 }
 func (fc FakeConfig) GetServerNameOverride() string { return fc.ServerName }
+func (fc FakeConfig) GetContextName() string        { return fc.ContextName }
 
 func TestGetImageTagWithDigest(t *testing.T) {
 	type expected struct {
