@@ -324,6 +324,63 @@ func TestGetEnvsError(t *testing.T) {
 	}
 }
 
+func TestGetEnvForHybridModeOverwrittesFromManifestDeclaration(t *testing.T) {
+	ctx := context.Background()
+
+	fakeConfigMapEnvsGetter := fakeGetter{envs: []string{"ENVTOOVERWRITE=FROMCONFIGMAP"}}
+	fakeSecretEnvsGetter := fakeGetter{envs: []string{"ENVTOOVERWRITE=FROMSECRET"}}
+	fakeImageEnvsGetter := fakeGetter{envs: []string{"ENVTOOVERWRITE=FROMIMAGE"}}
+	client := fake.NewSimpleClientset(&appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test",
+			Namespace: "test",
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Template: v1.PodTemplateSpec{
+				Spec: v1.PodSpec{
+					Containers: []v1.Container{
+						{
+							Env: []v1.EnvVar{
+								{
+									Name:  "ENVTOOVERWRITE",
+									Value: "FROMPOD",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	})
+	dev := &model.Dev{
+		Name:      "test",
+		Namespace: "test",
+		Environment: model.Environment{
+			model.EnvVar{
+				Name:  "ENVTOOVERWRITE",
+				Value: "FROMMANIFEST",
+			},
+		},
+	}
+	eg := envsGetter{
+		dev:                 dev,
+		name:                "test",
+		namespace:           "test",
+		client:              client,
+		configMapEnvsGetter: &fakeConfigMapEnvsGetter,
+		secretsEnvsGetter:   &fakeSecretEnvsGetter,
+		imageEnvsGetter:     &fakeImageEnvsGetter,
+		getDefaultLocalEnvs: func() []string { return []string{} },
+	}
+	envs, err := eg.getEnvs(ctx)
+	require.NoError(t, err)
+
+	// following docs, if exec.cmd.Env contains duplicate environment keys, only the last value in the
+	// slice for each duplicate key is used so we can check overwrittes by getting last value
+	// in envs list.
+	require.Equal(t, "ENVTOOVERWRITE=FROMMANIFEST", envs[len(envs)-1])
+}
+
 type fakeImageGetter struct {
 	imageMetadata registry.ImageMetadata
 	err           error
