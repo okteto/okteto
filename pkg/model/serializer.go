@@ -739,6 +739,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 				Selector    Selector          `json:"selector,omitempty" yaml:"selector,omitempty"`
 				Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
 				Environment Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
+				EnvFiles    EnvFiles          `json:"envFiles,omitempty" yaml:"envFiles,omitempty"`
 				Command     Command           `json:"command,omitempty" yaml:"command,omitempty"`
 				Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 				Mode        string            `json:"mode,omitempty" yaml:"mode,omitempty"`
