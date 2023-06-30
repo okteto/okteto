@@ -122,8 +122,11 @@ func TrackDeleteNamespace(success bool) {
 }
 
 // TrackPreviewDeploy sends a tracking event to mixpanel when the creates a preview environment
-func TrackPreviewDeploy(success bool) {
-	track(previewDeployEvent, success, nil)
+func TrackPreviewDeploy(success bool, scope string) {
+	props := map[string]interface{}{
+		"scope": scope,
+	}
+	track(previewDeployEvent, success, props)
 }
 
 // TrackPreviewDestroy sends a tracking event to mixpanel when the deletes a preview environment

@@ -104,7 +104,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 
 func (pw *Command) ExecuteDeployPreview(ctx context.Context, opts *DeployOptions) error {
 	resp, err := pw.deployPreview(ctx, opts)
-	analytics.TrackPreviewDeploy(err == nil)
+	analytics.TrackPreviewDeploy(err == nil, opts.scope)
 	if err != nil {
 		return err
 	}
