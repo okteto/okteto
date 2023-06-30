@@ -171,8 +171,9 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 	home, _ := homedir.Dir()
 
 	assertContains := func(o *types.BuildOptions) {
+		knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
 		assert.Contains(t, o.SshSessions, types.BuildSshSession{Id: "remote", Target: socket})
-		assert.Contains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s/.ssh/known_hosts", home))
+		assert.Contains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
 	}
 
 	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
