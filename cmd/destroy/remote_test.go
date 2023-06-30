@@ -16,11 +16,13 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/mitchellh/go-homedir"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -34,10 +36,14 @@ import (
 )
 
 type fakeBuilder struct {
-	err error
+	err           error
+	assertOptions func(o *types.BuildOptions)
 }
 
-func (f fakeBuilder) Build(_ context.Context, _ *types.BuildOptions) error {
+func (f fakeBuilder) Build(_ context.Context, opts *types.BuildOptions) error {
+	if f.assertOptions != nil {
+		f.assertOptions(opts)
+	}
 	return f.err
 }
 
@@ -189,7 +195,7 @@ func TestRemoteTest(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
 			tempCreator.SetError(tt.config.tempFsCreator)
 			rdc := remoteDestroyCommand{
-				builder:              fakeBuilder{tt.config.builderErr},
+				builder:              fakeBuilder{err: tt.config.builderErr},
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
@@ -386,4 +392,40 @@ func Test_getOktetoCLIVersion(t *testing.T) {
 			require.Equal(t, version, tt.expected)
 		})
 	}
+}
+
+func TestRemoteDeployWithSshAgent(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	socket := "my-socket-file"
+	home, _ := homedir.Dir()
+
+	assertContains := func(o *types.BuildOptions) {
+		knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
+		assert.Contains(t, o.SshSessions, types.BuildSshSession{Id: "remote", Target: socket})
+		assert.Contains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
+	}
+
+	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
+
+	os.Setenv(envvarName, socket)
+	defer func() {
+		t.Logf("cleaning up %s envvar", envvarName)
+		os.Unsetenv(envvarName)
+	}()
+	rdc := remoteDestroyCommand{
+		sshAuthSockEnvvar: envvarName,
+		// builder: &v1.OktetoBuilder{
+		// 	Registry: newFakeRegistry(),
+		// },
+		builder:              fakeBuilder{assertOptions: assertContains},
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
+		clusterMetadata: func(context.Context) (*types.ClusterMetadata, error) {
+			return &types.ClusterMetadata{}, nil
+		},
+	}
+
+	err := rdc.destroy(context.Background(), &Options{})
+	assert.NoError(t, err)
 }

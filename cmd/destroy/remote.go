@@ -13,6 +13,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/mitchellh/go-homedir"
 	builder "github.com/okteto/okteto/cmd/build"
 
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
@@ -58,7 +59,9 @@ WORKDIR /okteto/src
 ARG {{ .GitCommitArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
-RUN okteto destroy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DestroyFlags }}
+RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+  echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+  okteto destroy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DestroyFlags }}
 `
 )
 
@@ -86,6 +89,9 @@ type remoteDestroyCommand struct {
 	manifest             *model.Manifest
 	registry             remoteBuild.OktetoRegistryInterface
 	clusterMetadata      func(context.Context) (*types.ClusterMetadata, error)
+
+	// defaults to SSH_AUTH_SOCK. Provided mostly for testing
+	sshAuthSockEnvvar string
 }
 
 func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
@@ -104,6 +110,11 @@ func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
 }
 
 func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) error {
+	home, err := homedir.Dir()
+	if err != nil {
+		return err
+	}
+
 	sc, err := rd.clusterMetadata(ctx)
 	if err != nil {
 		return err
@@ -161,6 +172,21 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
 		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
 	)
+
+	sshSock := os.Getenv(rd.sshAuthSockEnvvar)
+	if sshSock == "" {
+		sshSock = os.Getenv("SSH_AUTH_SOCK")
+	}
+
+	if sshSock != "" {
+		knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
+		oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
+		sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
+		buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
+		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
+	} else {
+		oktetoLog.Debug("no ssh agent found. Not mouting ssh-agent for build")
+	}
 
 	// we need to call Build() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
