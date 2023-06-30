@@ -90,7 +90,6 @@ type dockerfileTemplateProperties struct {
 	GitCommitArgName       string
 	InvalidateCacheArgName string
 	DeployFlags            string
-	KnownSshHosts          []string
 }
 
 type remoteDeployCommand struct {
@@ -187,9 +186,11 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	}
 
 	if sshSock != "" {
+		knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
+		oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
 		sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
 		buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
-		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s/.ssh/known_hosts", home))
+		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
 	} else {
 		oktetoLog.Debug("no ssh agent found. Not mouting ssh-agent for build")
 	}
@@ -247,7 +248,6 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		GitCommitArgName:       constants.OktetoGitCommitEnvVar,
 		InvalidateCacheArgName: constants.OktetoInvalidateCacheEnvVar,
 		DeployFlags:            strings.Join(getDeployFlags(opts), " "),
-		KnownSshHosts:          []string{"github.com", "gitlab.com"},
 	}
 
 	dockerfile, err := rd.fs.Create(filepath.Join(tmpDir, dockerfileTemporalName))
