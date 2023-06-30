@@ -216,8 +216,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		return "", err
 	}
 
-	err = rd.createDockerignore(cwd, tempDir, opts.ManifestPath)
-	if err != nil {
+	if err = remote.CreateDockerignoreFileWithFilesystem(cwd, tempDir, opts.ManifestPathFlag, rd.fs); err != nil {
 		return "", err
 	}
 
@@ -226,10 +225,6 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 	}
 	return dockerfile.Name(), nil
 
-}
-
-func (rd *remoteDestroyCommand) createDockerignore(cwd, tmpDir, manifestPathFlag string) error {
-	return remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, manifestPathFlag, rd.fs)
 }
 
 func getDestroyFlags(opts *Options) []string {
