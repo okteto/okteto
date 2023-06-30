@@ -324,12 +324,12 @@ func TestGetEnvsError(t *testing.T) {
 	}
 }
 
-func TestGetEnvForHybridModeOverwrittesFromManifestDeclaration(t *testing.T) {
+func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 	ctx := context.Background()
 
-	fakeConfigMapEnvsGetter := fakeGetter{envs: []string{"ENVTOOVERWRITE=FROMCONFIGMAP"}}
-	fakeSecretEnvsGetter := fakeGetter{envs: []string{"ENVTOOVERWRITE=FROMSECRET"}}
-	fakeImageEnvsGetter := fakeGetter{envs: []string{"ENVTOOVERWRITE=FROMIMAGE"}}
+	fakeConfigMapEnvsGetter := fakeGetter{envs: []string{"ENVFROMCONFIGMAP=FROMCONFIGMAPVALUE"}}
+	fakeSecretEnvsGetter := fakeGetter{envs: []string{"ENVFROMSECRET=FROMSECRETVALUE"}}
+	fakeImageEnvsGetter := fakeGetter{envs: []string{"ENVFROMIMAGE=FROMIMAGEVALUE"}}
 	client := fake.NewSimpleClientset(&appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test",
@@ -342,8 +342,8 @@ func TestGetEnvForHybridModeOverwrittesFromManifestDeclaration(t *testing.T) {
 						{
 							Env: []v1.EnvVar{
 								{
-									Name:  "ENVTOOVERWRITE",
-									Value: "FROMPOD",
+									Name:  "ENVFROMPOD",
+									Value: "FROMPODVALUE",
 								},
 							},
 						},
@@ -357,11 +357,20 @@ func TestGetEnvForHybridModeOverwrittesFromManifestDeclaration(t *testing.T) {
 		Namespace: "test",
 		Environment: model.Environment{
 			model.EnvVar{
-				Name:  "ENVTOOVERWRITE",
-				Value: "FROMMANIFEST",
+				Name:  "ENVFROMMANIFEST",
+				Value: "FROMMANIFESTVALUE",
 			},
 		},
 	}
+
+	expectedEnvsSortedByPriority := []string{
+		"ENVFROMIMAGE=FROMIMAGEVALUE",
+		"ENVFROMSECRET=FROMSECRETVALUE",
+		"ENVFROMCONFIGMAP=FROMCONFIGMAPVALUE",
+		"ENVFROMPOD=FROMPODVALUE",
+		"ENVFROMMANIFEST=FROMMANIFESTVALUE",
+	}
+
 	eg := envsGetter{
 		dev:                 dev,
 		name:                "test",
@@ -374,11 +383,7 @@ func TestGetEnvForHybridModeOverwrittesFromManifestDeclaration(t *testing.T) {
 	}
 	envs, err := eg.getEnvs(ctx)
 	require.NoError(t, err)
-
-	// following docs, if exec.cmd.Env contains duplicate environment keys, only the last value in the
-	// slice for each duplicate key is used so we can check overwrittes by getting last value
-	// in envs list.
-	require.Equal(t, "ENVTOOVERWRITE=FROMMANIFEST", envs[len(envs)-1])
+	require.Equal(t, expectedEnvsSortedByPriority, envs)
 }
 
 type fakeImageGetter struct {

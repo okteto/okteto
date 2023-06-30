@@ -185,18 +185,6 @@ func newEnvsGetter(hybridCtx *HybridExecCtx) (*envsGetter, error) {
 func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 	var envs []string
 
-	configMapEnvs, err := eg.configMapEnvsGetter.getEnvsFromConfigMap(ctx, eg.name, eg.namespace, eg.client)
-	if err != nil {
-		return nil, err
-	}
-	envs = append(envs, configMapEnvs...)
-
-	secretsEnvs, err := eg.secretsEnvsGetter.getEnvsFromSecrets(ctx)
-	if err != nil {
-		return nil, err
-	}
-	envs = append(envs, secretsEnvs...)
-
 	app, err := apps.Get(ctx, eg.dev, eg.namespace, eg.client)
 	if err != nil {
 		return nil, err
@@ -207,6 +195,18 @@ func (eg *envsGetter) getEnvs(ctx context.Context) ([]string, error) {
 		return nil, err
 	}
 	envs = append(envs, imageEnvs...)
+
+	secretsEnvs, err := eg.secretsEnvsGetter.getEnvsFromSecrets(ctx)
+	if err != nil {
+		return nil, err
+	}
+	envs = append(envs, secretsEnvs...)
+
+	configMapEnvs, err := eg.configMapEnvsGetter.getEnvsFromConfigMap(ctx, eg.name, eg.namespace, eg.client)
+	if err != nil {
+		return nil, err
+	}
+	envs = append(envs, configMapEnvs...)
 
 	for _, env := range apps.GetDevContainer(app.PodSpec(), "").Env {
 		envs = append(envs, fmt.Sprintf("%s=%s", env.Name, env.Value))
