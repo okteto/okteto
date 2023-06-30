@@ -35,10 +35,14 @@ type configMapHandler interface {
 
 // deployInsideDeployConfigMapHandler is the runner used when the okteto is executed
 // inside an okteto deploy command
-type deployInsideDeployConfigMapHandler struct{}
+type deployInsideDeployConfigMapHandler struct {
+	k8sClientProvider okteto.K8sClientProvider
+}
 
-func newDeployInsideDeployConfigMapHandler() *deployInsideDeployConfigMapHandler {
-	return &deployInsideDeployConfigMapHandler{}
+func newDeployInsideDeployConfigMapHandler(provider okteto.K8sClientProvider) *deployInsideDeployConfigMapHandler {
+	return &deployInsideDeployConfigMapHandler{
+		k8sClientProvider: provider,
+	}
 }
 
 // oktetoDefaultConfigMapHandler is the runner used when the okteto is executed
@@ -55,7 +59,7 @@ func newDefaultConfigMapHandler(provider okteto.K8sClientProvider) *defaultConfi
 
 func NewConfigmapHandler(provider okteto.K8sClientProvider) configMapHandler {
 	if utils.LoadBoolean(constants.OktetoDeployRemote) {
-		return newDeployInsideDeployConfigMapHandler()
+		return newDeployInsideDeployConfigMapHandler(provider)
 	}
 	return newDefaultConfigMapHandler(provider)
 }
@@ -111,8 +115,12 @@ func (*deployInsideDeployConfigMapHandler) translateConfigMapAndDeploy(_ context
 	return nil, nil
 }
 
-func (*deployInsideDeployConfigMapHandler) getConfigmapVariablesEncoded(_ context.Context, _, _ string) (string, error) {
-	return "", nil
+func (ch *deployInsideDeployConfigMapHandler) getConfigmapVariablesEncoded(ctx context.Context, name, namespace string) (string, error) {
+	c, _, err := ch.k8sClientProvider.Provide(okteto.Context().Cfg)
+	if err != nil {
+		return "", err
+	}
+	return pipeline.GetConfigmapVariablesEncoded(ctx, name, namespace, c)
 }
 
 // updateConfigMap with the receiver deployInsideDeployConfigMapHandler doesn't do anything
