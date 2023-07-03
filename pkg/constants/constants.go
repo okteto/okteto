@@ -22,6 +22,9 @@ const (
 	// OktetoURLAnnotation indicates the okteto cluster public url
 	OktetoURLAnnotation = "dev.okteto.com/url"
 
+	// OktetoDevModeAnnotation indicates the development mode in use (sync or hybrid)
+	OktetoDevModeAnnotation = "dev.okteto.com/mode"
+
 	// OktetoExtension identifies the okteto extension in kubeconfig files
 	OktetoExtension = "okteto"
 

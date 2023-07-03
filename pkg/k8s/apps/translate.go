@@ -74,6 +74,8 @@ func (tr *Translation) translate() error {
 
 	tr.App.ObjectMeta().Annotations[model.AppReplicasAnnotation] = strconv.Itoa(int(replicas))
 	tr.App.ObjectMeta().Labels[constants.DevLabel] = "true"
+	tr.App.ObjectMeta().Annotations[constants.OktetoDevModeAnnotation] = tr.Dev.Mode
+	tr.DevApp.ObjectMeta().Annotations[constants.OktetoDevModeAnnotation] = tr.Dev.Mode
 	tr.App.SetReplicas(0)
 
 	for k, v := range tr.Dev.Metadata.Annotations {
@@ -134,6 +136,7 @@ func (tr *Translation) DevModeOff() error {
 	delete(tr.App.TemplateObjectMeta().Annotations, model.OktetoStignoreAnnotation)
 	delete(tr.App.ObjectMeta().Annotations, model.OktetoSyncAnnotation)
 	delete(tr.App.TemplateObjectMeta().Annotations, model.OktetoSyncAnnotation)
+	delete(tr.App.ObjectMeta().Annotations, constants.OktetoDevModeAnnotation)
 
 	for k := range tr.Dev.Metadata.Annotations {
 		delete(tr.App.ObjectMeta().Annotations, k)
