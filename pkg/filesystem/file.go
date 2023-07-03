@@ -19,7 +19,21 @@ import (
 	"path/filepath"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
+	"github.com/spf13/afero"
 )
+
+func FileExistsWithFilesystem(name string, fs afero.Fs) bool {
+	_, err := fs.Stat(name)
+	if os.IsNotExist(err) {
+		return false
+	}
+
+	if err != nil {
+		oktetoLog.Infof("failed to check if %s exists: %s", name, err)
+	}
+
+	return true
+}
 
 // FileExists return true if the file exists
 func FileExists(name string) bool {

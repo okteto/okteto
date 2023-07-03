@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/spf13/afero"
 )
 
 var (
@@ -43,6 +44,18 @@ func GetK8sManifestPath(cwd string) (string, error) {
 	for _, name := range possibleK8sManifestSubPaths {
 		path := filepath.Join(cwd, name)
 		if filesystem.FileExists(path) {
+			return path, nil
+		}
+	}
+	return "", ErrK8sManifestNotFound
+}
+
+// GetK8sManifestPath returns a k8s manifest file if exists, error otherwise
+func GetK8sManifestPathWithFilesystem(cwd string, fs afero.Fs) (string, error) {
+	// Files will be checked in the order defined in the list
+	for _, name := range possibleK8sManifestSubPaths {
+		path := filepath.Join(cwd, name)
+		if filesystem.FileExistsWithFilesystem(path, fs) {
 			return path, nil
 		}
 	}

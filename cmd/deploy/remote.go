@@ -37,6 +37,7 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/remote"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/afero"
 )
@@ -44,7 +45,6 @@ import (
 const (
 	templateName           = "dockerfile"
 	dockerfileTemporalName = "Dockerfile.deploy"
-	oktetoDockerignoreName = ".oktetodeployignore"
 	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
@@ -226,8 +226,12 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		return "", err
 	}
 
-	err = rd.createDockerignore(cwd, tmpDir)
-	if err != nil {
+	// if we do not create a .dockerignore (with or without content) used to create
+	// the remote executor, we would use the one located in root (the one used to
+	// build the services) so we would create a remote executor without certain files
+	// necessary for the later deployment which would cause an error when deploying
+	// remotely due to the lack of these files.
+	if err := remote.CreateDockerignoreFileWithFilesystem(cwd, tmpDir, opts.ManifestPathFlag, rd.fs); err != nil {
 		return "", err
 	}
 
@@ -235,28 +239,6 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		return "", err
 	}
 	return dockerfile.Name(), nil
-}
-
-func (rd *remoteDeployCommand) createDockerignore(cwd, tmpDir string) error {
-	// if we do not create a .dockerignore (with or without content) used to create
-	// the remote executor, we would use the one located in root (the one used to
-	// build the services) so we would create a remote executor without certain files
-	// necessary for the later deployment which would cause an error when deploying
-	// remotely due to the lack of these files.
-	dockerignoreContent := []byte(``)
-	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
-	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-
-	} else {
-		dockerignoreContent, err = afero.ReadFile(rd.fs, dockerignoreFilePath)
-		if err != nil {
-			return err
-		}
-	}
-	return afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
 }
 
 func getDeployFlags(opts *Options) []string {

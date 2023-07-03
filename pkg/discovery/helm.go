@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/spf13/afero"
 )
 
 var (
@@ -35,6 +36,18 @@ func GetHelmChartPath(cwd string) (string, error) {
 	for _, chartDir := range possibleHelmChartsSubPaths {
 		path := filepath.Join(cwd, filepath.Join(chartDir...), "Chart.yaml")
 		if filesystem.FileExists(path) {
+			return filepath.Dir(path), nil
+		}
+	}
+	return "", ErrHelmChartNotFound
+}
+
+// GetHelmChartPath returns a helm chart directory if exists, error otherwise
+func GetHelmChartPathWithFilesystem(cwd string, fs afero.Fs) (string, error) {
+	// Files will be checked in the order defined in the list
+	for _, chartDir := range possibleHelmChartsSubPaths {
+		path := filepath.Join(cwd, filepath.Join(chartDir...), "Chart.yaml")
+		if filesystem.FileExistsWithFilesystem(path, fs) {
 			return filepath.Dir(path), nil
 		}
 	}

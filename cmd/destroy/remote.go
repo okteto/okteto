@@ -19,6 +19,7 @@ import (
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/okteto/okteto/pkg/remote"
 
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
@@ -32,7 +33,6 @@ import (
 const (
 	templateName           = "destroy-dockerfile"
 	dockerfileTemporalNane = "Dockerfile.destroy"
-	oktetoDockerignoreName = ".oktetodeployignore"
 	dockerfileTemplate     = `
 FROM {{ .OktetoCLIImage }} as okteto-cli
 
@@ -216,8 +216,7 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 		return "", err
 	}
 
-	err = rd.createDockerignore(cwd, tempDir)
-	if err != nil {
+	if err = remote.CreateDockerignoreFileWithFilesystem(cwd, tempDir, opts.ManifestPathFlag, rd.fs); err != nil {
 		return "", err
 	}
 
@@ -226,23 +225,6 @@ func (rd *remoteDestroyCommand) createDockerfile(tempDir string, opts *Options) 
 	}
 	return dockerfile.Name(), nil
 
-}
-
-func (rd *remoteDestroyCommand) createDockerignore(cwd, tmpDir string) error {
-	dockerignoreContent := []byte(``)
-	dockerignoreFilePath := filepath.Join(cwd, oktetoDockerignoreName)
-	if _, err := rd.fs.Stat(dockerignoreFilePath); err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return err
-		}
-
-	} else {
-		dockerignoreContent, err = afero.ReadFile(rd.fs, dockerignoreFilePath)
-		if err != nil {
-			return err
-		}
-	}
-	return afero.WriteFile(rd.fs, fmt.Sprintf("%s/%s", tmpDir, ".dockerignore"), dockerignoreContent, 0600)
 }
 
 func getDestroyFlags(opts *Options) []string {

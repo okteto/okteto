@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 
 	"github.com/okteto/okteto/pkg/filesystem"
+	"github.com/spf13/afero"
 )
 
 var (
@@ -48,6 +49,17 @@ func GetComposePath(wd string) (string, error) {
 	for _, possibleStackManifest := range possibleComposeManifests {
 		manifestPath := filepath.Join(wd, filepath.Join(possibleStackManifest...))
 		if filesystem.FileExists(manifestPath) {
+			return manifestPath, nil
+		}
+	}
+	return "", ErrComposeFileNotFound
+}
+
+// GetComposePath returns a compose file if exists, error otherwise
+func GetComposePathWithFilesystem(wd string, fs afero.Fs) (string, error) {
+	for _, possibleStackManifest := range possibleComposeManifests {
+		manifestPath := filepath.Join(wd, filepath.Join(possibleStackManifest...))
+		if filesystem.FileExistsWithFilesystem(manifestPath, fs) {
 			return manifestPath, nil
 		}
 	}

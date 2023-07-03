@@ -347,43 +347,6 @@ func TestCreateDockerfile(t *testing.T) {
 	}
 }
 
-func TestCreateDockerignore(t *testing.T) {
-	fs := afero.NewMemMapFs()
-
-	dockerignoreWd := "/test/"
-	assert.NoError(t, fs.MkdirAll(dockerignoreWd, 0755))
-	assert.NoError(t, afero.WriteFile(fs, "/test/.oktetodeployignore", []byte("FROM alpine"), 0644))
-	type config struct {
-		wd string
-	}
-	var tests = []struct {
-		name   string
-		config config
-	}{
-		{
-			name: "dockerignore present",
-			config: config{
-				wd: dockerignoreWd,
-			},
-		},
-		{
-			name:   "without dockerignore",
-			config: config{},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			rdc := remoteDestroyCommand{
-				fs:       fs,
-				registry: newFakeRegistry(),
-			}
-			err := rdc.createDockerignore(tt.config.wd, "/temp")
-			assert.NoError(t, err)
-		})
-	}
-}
-
 func Test_getOktetoCLIVersion(t *testing.T) {
 	var tests = []struct {
 		name                                 string
