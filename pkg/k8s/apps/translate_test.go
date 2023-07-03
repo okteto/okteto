@@ -395,7 +395,7 @@ services:
 		t.Fatalf("Wrong d1 pod labels: '%v'", tr1.App.TemplateObjectMeta().Labels)
 
 	}
-	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "3", "key1": "value1"}
+	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "3", "key1": "value1", constants.OktetoDevModeAnnotation: constants.OktetoSyncModeFieldValue}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong d1 annotations: '%v'", tr1.App.ObjectMeta().Annotations)
 	}
@@ -429,7 +429,7 @@ services:
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations = map[string]string{"key1": "value1"}
+	expectedAnnotations = map[string]string{"key1": "value1", constants.OktetoDevModeAnnotation: constants.OktetoSyncModeFieldValue}
 	if !reflect.DeepEqual(tr1.DevApp.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong dev d1 annotations: '%v'", tr1.DevApp.ObjectMeta().Annotations)
 	}
@@ -552,7 +552,7 @@ services:
 	if !reflect.DeepEqual(tr2.App.TemplateObjectMeta().Labels, d2Orig.Spec.Template.Labels) {
 		t.Fatalf("Wrong d2 pod labels: '%v'", tr2.App.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations = map[string]string{model.AppReplicasAnnotation: "3", "key2": "value2"}
+	expectedAnnotations = map[string]string{model.AppReplicasAnnotation: "3", "key2": "value2", constants.OktetoDevModeAnnotation: constants.OktetoSyncModeFieldValue}
 	if !reflect.DeepEqual(tr2.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong d2 annotations: '%v'", tr2.App.ObjectMeta().Annotations)
 	}
@@ -577,7 +577,7 @@ services:
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev d2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations = map[string]string{"key2": "value2"}
+	expectedAnnotations = map[string]string{"key2": "value2", constants.OktetoDevModeAnnotation: constants.OktetoSyncModeFieldValue}
 	if !reflect.DeepEqual(tr2.DevApp.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong dev d2 annotations: '%v'", tr2.DevApp.ObjectMeta().Annotations)
 	}
@@ -1795,7 +1795,7 @@ services:
 	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Labels, sfs1Orig.Spec.Template.Labels) {
 		t.Fatalf("Wrong sfs1 pod labels: '%v'", tr1.App.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "2", "key1": "value1"}
+	expectedAnnotations := map[string]string{model.AppReplicasAnnotation: "2", "key1": "value1", constants.OktetoDevModeAnnotation: constants.OktetoSyncModeFieldValue}
 	if !reflect.DeepEqual(tr1.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong sfs1 annotations: '%v'", tr1.App.ObjectMeta().Annotations)
 	}
@@ -1821,7 +1821,7 @@ services:
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev sfs1 pod labels: '%v'", tr1.DevApp.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations = map[string]string{"key1": "value1"}
+	expectedAnnotations = map[string]string{"key1": "value1", constants.OktetoDevModeAnnotation: constants.OktetoSyncModeFieldValue}
 	if !reflect.DeepEqual(tr1.DevApp.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong dev sfs1 annotations: '%v'", tr1.DevApp.ObjectMeta().Annotations)
 	}
@@ -1946,7 +1946,7 @@ services:
 	if !reflect.DeepEqual(tr2.App.TemplateObjectMeta().Labels, sfs2Orig.Spec.Template.Labels) {
 		t.Fatalf("Wrong sfs2 pod labels: '%v'", tr2.App.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations = map[string]string{model.AppReplicasAnnotation: "3", "key2": "value2"}
+	expectedAnnotations = map[string]string{model.AppReplicasAnnotation: "3", "key2": "value2", constants.OktetoDevModeAnnotation: constants.OktetoSyncModeFieldValue}
 	if !reflect.DeepEqual(tr2.App.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong sfs2 annotations: '%v'", tr2.App.ObjectMeta().Annotations)
 	}
@@ -1971,7 +1971,7 @@ services:
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Labels, expectedPodLabels) {
 		t.Fatalf("Wrong dev sfs2 pod labels: '%v'", tr2.DevApp.TemplateObjectMeta().Labels)
 	}
-	expectedAnnotations = map[string]string{"key2": "value2"}
+	expectedAnnotations = map[string]string{"key2": "value2", constants.OktetoDevModeAnnotation: constants.OktetoSyncModeFieldValue}
 	if !reflect.DeepEqual(tr2.DevApp.ObjectMeta().Annotations, expectedAnnotations) {
 		t.Fatalf("Wrong dev sfs2 annotations: '%v'", tr2.DevApp.ObjectMeta().Annotations)
 	}

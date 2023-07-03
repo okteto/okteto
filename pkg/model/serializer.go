@@ -773,6 +773,8 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		dev.Workdir = localDir
 		dev.Image.Name = "busybox"
 
+	} else {
+		dev.Mode = constants.OktetoSyncModeFieldValue
 	}
 
 	*d = Dev(dev)
