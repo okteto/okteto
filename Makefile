@@ -3,12 +3,13 @@ VERSION_STRING := $(shell git rev-parse --short HEAD)
 endif
 
 BINDIR    := $(CURDIR)/bin
-PLATFORMS := linux/amd64/okteto-Linux-x86_64 darwin/amd64/okteto-Darwin-x86_64 windows/amd64/okteto.exe linux/arm64/okteto-Linux-arm64 darwin/arm64/okteto-Darwin-arm64
-BUILDCOMMAND := go build -trimpath -ldflags "-s -w -X github.com/okteto/okteto/pkg/config.VersionString=${VERSION_STRING}" -tags "osusergo netgo static_build"
+PLATFORMS := linux/amd64/okteto-Linux-x86_64/osusergo*netgo*static_build darwin/amd64/okteto-Darwin-x86_64/osusergo*netgo*static_build windows/amd64/okteto.exe/osusergo*static_build linux/arm64/okteto-Linux-arm64/osusergo*netgo*static_build darwin/arm64/okteto-Darwin-arm64/osusergo*netgo*static_build
+BUILDCOMMAND := go build -trimpath -ldflags "-s -w -X github.com/okteto/okteto/pkg/config.VersionString=${VERSION_STRING}"
 temp = $(subst /, ,$@)
 os = $(word 1, $(temp))
 arch = $(word 2, $(temp))
 label = $(word 3, $(temp))
+tags = $(subst *, ,$(word 4, $(temp)))
 
 UNAME := $(shell uname)
 ifeq ($(UNAME), Darwin)
@@ -21,9 +22,8 @@ endif
 
 .PHONY: release
 build-all: $(PLATFORMS)
-
 $(PLATFORMS):
-	GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 $(BUILDCOMMAND) -o "bin/$(label)"
+	GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 $(BUILDCOMMAND) -tags "$(tags)" -o "bin/$(label)"
 	$(SHACOMMAND) "bin/$(label)" > "bin/$(label).sha256"
 
 .PHONY: latest
