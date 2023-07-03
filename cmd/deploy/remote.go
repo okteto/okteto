@@ -72,7 +72,7 @@ ARG {{ .GitCommitArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
 RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
-  echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+  mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
   okteto deploy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DeployFlags }}
 `
 )
