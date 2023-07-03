@@ -77,6 +77,10 @@ const (
 - name: Failed command
   command: exit 1
 `
+	oktetoCmdWithMaskValuesTemplate = `deploy:
+- name: Mask command
+  command: echo $TOMASK
+`
 )
 
 func TestDeploySuccessOutput(t *testing.T) {
@@ -245,6 +249,88 @@ func TestCmdFailOutput(t *testing.T) {
 	}
 }
 
+func TestDeployRemoteMaskVariables(t *testing.T) {
+	integration.SkipIfNotOktetoCluster(t)
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	require.NoError(t, createCommandWitMaskValuesManifest(dir))
+
+	testNamespace := integration.GetTestNamespace("TestDeployRemoteMaskVariables", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+		IsRemote:   true,
+		Variables:  "TOMASK=hola-mundo",
+	}
+	require.NoError(t, commands.RunOktetoDeploy(oktetoPath, deployOptions))
+
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
+	require.NoError(t, err)
+	cmap, err := integration.GetConfigmap(context.Background(), testNamespace, fmt.Sprintf("okteto-git-%s", filepath.Base(dir)), c)
+	require.NoError(t, err)
+
+	uiOutput, err := base64.StdEncoding.DecodeString(cmap.Data["output"])
+	require.NoError(t, err)
+
+	var text oktetoLog.JSONLogFormat
+	stageLines := map[string][]string{}
+	prevStage := ""
+	numErrors := 0
+	for _, l := range strings.Split(string(uiOutput), "\n") {
+		if err := json.Unmarshal([]byte(l), &text); err != nil {
+			if prevStage != "done" {
+				t.Fatalf("not json format: %s", l)
+			}
+		}
+		if _, ok := stageLines[text.Stage]; ok {
+			stageLines[text.Stage] = append(stageLines[text.Stage], text.Message)
+		} else {
+			stageLines[text.Stage] = []string{text.Message}
+		}
+		prevStage = text.Stage
+		if text.Level == "error" {
+			numErrors++
+		}
+	}
+
+	require.Equal(t, 0, numErrors)
+	stagesToTest := []string{"Load manifest", "Mask command", "done"}
+	for _, ss := range stagesToTest {
+		if _, ok := stageLines[ss]; !ok {
+			t.Fatalf("deploy didn't have the stage '%s'", ss)
+		}
+		if ss == "Mask command" {
+			isMaskedValue := false
+			for _, cmdLog := range stageLines[ss] {
+				if cmdLog == "hola-mundo" {
+					t.Fatal("deploy didn't mask the variable value.")
+				}
+				if cmdLog == "***" {
+					isMaskedValue = true
+				}
+			}
+
+			if !isMaskedValue {
+				t.Fatal("deploy didn't mask the variable value.")
+			}
+		}
+	}
+}
+
 func TestComposeFailOutput(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
 	t.Parallel()
@@ -308,6 +394,15 @@ func TestComposeFailOutput(t *testing.T) {
 			t.Fatalf("deploy didn't have the stage '%s'", ss)
 		}
 	}
+}
+
+func createCommandWitMaskValuesManifest(dir string) error {
+	oktetoPath := filepath.Join(dir, "okteto.yml")
+	oktetoContent := []byte(oktetoCmdWithMaskValuesTemplate)
+	if err := os.WriteFile(oktetoPath, oktetoContent, 0600); err != nil {
+		return err
+	}
+	return nil
 }
 
 func createCommandFailureManifest(dir string) error {
