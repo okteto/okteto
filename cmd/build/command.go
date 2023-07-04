@@ -89,6 +89,26 @@ func Build(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			if okteto.IsOkteto() && options.Tag != "" {
+				oc, err := okteto.NewOktetoClient()
+				if err != nil {
+					return err
+				}
+				reg, _ := bc.Registry.GetRegistryAndRepo(options.Tag)
+				creds, err := oc.User().GetRegistryCredentials(ctx, reg)
+				if err != nil {
+					return err
+				}
+				registryWithAuth := registry.
+					NewOktetoRegistry(okteto.Config{}).
+					WithBasicAuthFor(reg, creds.Username, creds.Password)
+
+				bc.Registry = registryWithAuth
+				bc.Builder = &build.OktetoBuilder{
+					Registry: registryWithAuth,
+				}
+			}
+
 			builder, err := bc.getBuilder(options)
 			if err != nil {
 				return err

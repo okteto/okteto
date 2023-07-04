@@ -20,9 +20,12 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
 	"gopkg.in/yaml.v3"
+
+	dockertypes "github.com/docker/cli/cli/config/types"
 )
 
 type userClient struct {
@@ -51,6 +54,10 @@ type getDeprecatedContextQuery struct {
 	User    deprecatedUserQuery `graphql:"user"`
 	Secrets []secretQuery       `graphql:"getGitDeploySecrets"`
 	Cred    credQuery           `graphql:"credentials(space: $cred)"`
+}
+
+type getRegistryCredentialsQuery struct {
+	RegistryCredentials registryCredsQuery `graphql:"registryCredentials(registryUrl: $regHost)"`
 }
 
 type userQuery struct {
@@ -92,6 +99,15 @@ type credQuery struct {
 	Certificate graphql.String
 	Token       graphql.String
 	Namespace   graphql.String
+}
+
+type registryCredsQuery struct {
+	Username      graphql.String
+	Password      graphql.String
+	Auth          graphql.String
+	Serveraddress graphql.String
+	Identitytoken graphql.String
+	Registrytoken graphql.String
 }
 
 type metadataQuery struct {
@@ -307,4 +323,31 @@ func (c *userClient) GetClusterMetadata(ctx context.Context, ns string) (types.C
 		return metadata, fmt.Errorf("missing metadata")
 	}
 	return metadata, nil
+}
+
+func (c *userClient) GetRegistryCredentials(ctx context.Context, host string) (dockertypes.AuthConfig, error) {
+	var queryStruct getRegistryCredentialsQuery
+	vars := map[string]interface{}{
+		"regHost": graphql.String(host),
+	}
+	err := query(ctx, &queryStruct, vars, c.client)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "Cannot query field \"registryCredentials\" on type \"Query\"") {
+			return dockertypes.AuthConfig{}, nil
+		}
+		if errors.IsNotFound(err) {
+			return dockertypes.AuthConfig{}, nil
+		}
+		return dockertypes.AuthConfig{}, err
+	}
+	return dockertypes.AuthConfig{
+		Username:      string(queryStruct.RegistryCredentials.Username),
+		Password:      string(queryStruct.RegistryCredentials.Password),
+		Auth:          string(queryStruct.RegistryCredentials.Auth),
+		ServerAddress: string(queryStruct.RegistryCredentials.Serveraddress),
+		RegistryToken: string(queryStruct.RegistryCredentials.Registrytoken),
+		IdentityToken: string(queryStruct.RegistryCredentials.Identitytoken),
+	}, nil
+
 }
