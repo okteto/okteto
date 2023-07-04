@@ -9,7 +9,7 @@ aliases:
   - &release-branch-regex /^release-\d+\.\d+$/
 version: 2.1
 orbs:
-  win: circleci/windows@2.1.0
+  win: circleci/windows@5.0.0
 commands:
   integration-actions:
     steps:
@@ -52,7 +52,7 @@ commands:
 executors:
   golang-ci:
     docker:
-      - image: okteto/golang-ci:1.18.0
+      - image: okteto/golang-ci:2.3.1
 
 jobs:
   build-binaries:
@@ -103,8 +103,8 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Upgrade Golang
-          command: choco upgrade golang --version 1.18
+          name: Check Golang version
+          command: go version
       - restore_cache:
           keys:
             - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
@@ -181,8 +181,8 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Upgrade Golang
-          command: choco upgrade golang --version 1.18
+          name: Check Golang version
+          command: go version
       - restore_cache:
           keys:
             - v5-pkg-cache-windows-1-15-{{ checksum "go.sum" }}
@@ -194,10 +194,10 @@ jobs:
             go test ./...
       - run:
           name: Upgrade kubectl
-          command: choco install kubernetes-cli
+          command: choco install kubernetes-cli -y
       - run:
           name: Upgrade helm
-          command: choco install kubernetes-helm
+          command: choco install kubernetes-helm -y
       - attach_workspace:
           at: .\artifacts
       - run:
@@ -207,13 +207,13 @@ jobs:
           command: |
             new-item $HOME\.okteto -itemtype "directory" -force
             new-item $HOME\.okteto\.noanalytics -itemtype "file" -value "noanalytics" -force
-            & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' login --token $env:API_STAGING_TOKEN
-            & 'C:\Users\circleci\project\artifacts\bin\okteto.exe' kubeconfig
+            & "$($HOME)\project\artifacts\bin\okteto.exe" login --token $env:API_STAGING_TOKEN
+            & "$($HOME)\project\artifacts\bin\okteto.exe" kubeconfig
       - run:
           name: Run deprecated integration tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+            - OKTETO_PATH: 'C:\Users\circleci.PACKER-64370BA5\project\artifacts\bin\okteto.exe'
             - OKTETO_SKIP_CLEANUP: 'true'
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
@@ -223,7 +223,7 @@ jobs:
           name: Run build integration tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+            - OKTETO_PATH: 'C:\Users\circleci.PACKER-64370BA5\project\artifacts\bin\okteto.exe'
             - OKTETO_SKIP_CLEANUP: 'true'
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
@@ -231,7 +231,7 @@ jobs:
           name: Run deploy integration tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+            - OKTETO_PATH: 'C:\Users\circleci.PACKER-64370BA5\project\artifacts\bin\okteto.exe'
             - OKTETO_SKIP_CLEANUP: 'true'
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
@@ -239,7 +239,7 @@ jobs:
           name: Run up integration tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_PATH: 'C:\Users\circleci\project\artifacts\bin\okteto.exe'
+            - OKTETO_PATH: 'C:\Users\circleci.PACKER-64370BA5\project\artifacts\bin\okteto.exe'
             - OKTETO_SKIP_CLEANUP: 'true'
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
