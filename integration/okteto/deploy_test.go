@@ -252,7 +252,7 @@ func TestCmdFailOutput(t *testing.T) {
 	}
 }
 
-func TestDeployDestroyRemoteMaskVariables(t *testing.T) {
+func TestRemoteMaskVariables(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -261,7 +261,7 @@ func TestDeployDestroyRemoteMaskVariables(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createCommandWitMaskValuesManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeployDestroyRemoteMaskVariables", user)
+	testNamespace := integration.GetTestNamespace("TestRemoteMaskVariables", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
