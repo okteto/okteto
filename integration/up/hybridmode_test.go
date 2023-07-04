@@ -120,7 +120,7 @@ func TestUpUsingHybridMode(t *testing.T) {
 		Service:    "svc",
 		Deploy:     true,
 	}
-	output, err := commands.RunOktetoUpAndWait(oktetoPath, up1Options)
+	output, err := commands.RunOktetoUpAndWaitWithOutput(oktetoPath, up1Options)
 	require.NoError(t, err)
 
 	// Test warnings for unsupported fields

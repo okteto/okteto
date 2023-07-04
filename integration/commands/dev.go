@@ -87,7 +87,7 @@ func RunOktetoUp(oktetoPath string, upOptions *UpOptions) (*UpCommandProcessResu
 	}, nil
 }
 
-func RunOktetoUpAndWait(oktetoPath string, upOptions *UpOptions) (bytes.Buffer, error) {
+func RunOktetoUpAndWaitWithOutput(oktetoPath string, upOptions *UpOptions) (bytes.Buffer, error) {
 	cmd := getUpCmd(oktetoPath, upOptions)
 	var out bytes.Buffer
 	cmd.Stdout = &out
