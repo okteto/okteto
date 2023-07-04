@@ -78,8 +78,11 @@ const (
   command: exit 1
 `
 	oktetoCmdWithMaskValuesTemplate = `deploy:
-- name: Mask command
+- name: Mask command deploy
   command: echo $TOMASK
+destroy:
+  - name: Mask command destroy
+    command: echo $TOMASK
 `
 )
 
@@ -249,7 +252,7 @@ func TestCmdFailOutput(t *testing.T) {
 	}
 }
 
-func TestDeployRemoteMaskVariables(t *testing.T) {
+func TestDeployDestroyRemoteMaskVariables(t *testing.T) {
 	integration.SkipIfNotOktetoCluster(t)
 	t.Parallel()
 	oktetoPath, err := integration.GetOktetoPath()
@@ -258,7 +261,7 @@ func TestDeployRemoteMaskVariables(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, createCommandWitMaskValuesManifest(dir))
 
-	testNamespace := integration.GetTestNamespace("TestDeployRemoteMaskVariables", user)
+	testNamespace := integration.GetTestNamespace("TestDeployDestroyRemoteMaskVariables", user)
 	namespaceOpts := &commands.NamespaceOptions{
 		Namespace:  testNamespace,
 		OktetoHome: dir,
@@ -308,12 +311,12 @@ func TestDeployRemoteMaskVariables(t *testing.T) {
 	}
 
 	require.Equal(t, 0, numErrors)
-	stagesToTest := []string{"Load manifest", "Mask command", "done"}
+	stagesToTest := []string{"Load manifest", "Mask command deploy", "done"}
 	for _, ss := range stagesToTest {
 		if _, ok := stageLines[ss]; !ok {
 			t.Fatalf("deploy didn't have the stage '%s'", ss)
 		}
-		if ss == "Mask command" {
+		if ss == "Mask command deploy" {
 			isMaskedValue := false
 			for _, cmdLog := range stageLines[ss] {
 				if cmdLog == "hola-mundo" {
@@ -328,6 +331,31 @@ func TestDeployRemoteMaskVariables(t *testing.T) {
 				t.Fatal("deploy didn't mask the variable value.")
 			}
 		}
+	}
+
+	destroyOptions := &commands.DestroyOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		IsRemote:   true,
+	}
+
+	o, err := commands.RunOktetoDestroyAndGetOutput(oktetoPath, destroyOptions)
+	require.NoError(t, err)
+
+	ologs := strings.Split(o, "\n")
+	found := false
+	for i, log := range ologs {
+		if strings.HasSuffix(log, "Running stage 'Mask command destroy'") {
+			if ologs[i+1] != "***" {
+				t.Fatal("destroy didn't mask the variable value.")
+			}
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("destroy does not have the expected output.")
 	}
 }
 

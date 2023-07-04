@@ -49,6 +49,7 @@ type DestroyOptions struct {
 	OktetoHome   string
 	Token        string
 	Name         string
+	IsRemote     bool
 }
 
 // RunOktetoDeploy runs an okteto deploy command
@@ -139,6 +140,9 @@ func getDestroyCmd(oktetoPath string, destroyOptions *DestroyOptions) *exec.Cmd 
 	}
 	if destroyOptions.Namespace != "" {
 		cmd.Args = append(cmd.Args, "--namespace", destroyOptions.Namespace)
+	}
+	if destroyOptions.IsRemote {
+		cmd.Args = append(cmd.Args, "--remote")
 	}
 	cmd.Env = os.Environ()
 	if v := os.Getenv(model.OktetoURLEnvVar); v != "" {
