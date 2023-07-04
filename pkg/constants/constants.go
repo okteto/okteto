@@ -110,8 +110,11 @@ const (
 	// OktetoDivertHeaderName the default header name used by okteto to divert traffic
 	OktetoDivertHeaderName = "okteto-divert"
 
-	//OktetoDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
-	OktetoDivertAnnotationTemplate = "divert.okteto.com/%s-%s"
+	// OktetoDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
+	OktetoDivertAnnotationTemplate = "divert.okteto.com/%s"
+
+	// OktetoDeprecatedDivertAnnotationTemplate annotation for the okteto mutation webhook to divert a virtual service
+	OktetoDeprecatedDivertAnnotationTemplate = "divert.okteto.com/%s-%s"
 
 	//OktetoHybridModeFieldValue represents the hybrid mode field value
 	OktetoHybridModeFieldValue = "hybrid"
