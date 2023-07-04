@@ -104,9 +104,12 @@ type remoteDestroyCommand struct {
 func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
 	fs := afero.NewOsFs()
 	builder := remoteBuild.NewBuilderFromScratch()
+	if manifest.Destroy == nil {
+		manifest.Destroy = &model.DestroyInfo{}
+	}
 	return &remoteDestroyCommand{
 		builder:              builder,
-		destroyImage:         "",
+		destroyImage:         manifest.Destroy.Image,
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
