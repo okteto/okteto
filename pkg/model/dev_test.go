@@ -1063,43 +1063,56 @@ func Test_ExpandEnv(t *testing.T) {
 		value         string
 		expandIfEmpty bool
 		result        string
+		expectedErr   error
 	}{
+		{
+			name:          "broken var - missing closing curly bracket",
+			value:         "value-${BAR",
+			expandIfEmpty: true,
+			result:        "",
+			expectedErr:   fmt.Errorf("error expanding environment on 'value-${BAR': closing brace expected"),
+		},
 		{
 			name:          "no-var",
 			value:         "value",
 			expandIfEmpty: true,
 			result:        "value",
+			expectedErr:   nil,
 		},
 		{
 			name:          "var",
 			value:         "value-${BAR}-value",
 			expandIfEmpty: true,
 			result:        "value-bar-value",
+			expectedErr:   nil,
 		},
 		{
 			name:          "default",
 			value:         "value-${FOO:-foo}-value",
 			expandIfEmpty: true,
 			result:        "value-foo-value",
+			expectedErr:   nil,
 		},
 		{
 			name:          "only bar expanded",
 			value:         "${BAR}",
 			expandIfEmpty: true,
 			result:        "bar",
+			expectedErr:   nil,
 		},
 		{
 			name:          "only bar not expand if empty",
 			value:         "${FOO}",
 			expandIfEmpty: false,
 			result:        "${FOO}",
+			expectedErr:   nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := ExpandEnv(tt.value, tt.expandIfEmpty)
-			assert.NoError(t, err)
+			assert.Equal(t, err, tt.expectedErr)
 			assert.Equal(t, tt.result, result)
 		})
 	}

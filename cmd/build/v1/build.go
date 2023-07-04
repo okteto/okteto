@@ -16,6 +16,7 @@ package v1
 import (
 	"context"
 	"fmt"
+	"github.com/okteto/okteto/pkg/model"
 	"path/filepath"
 
 	"github.com/okteto/okteto/cmd/utils"
@@ -92,6 +93,12 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 		oktetoLog.Information("%s using your local docker daemon", buildMsg)
 	} else {
 		oktetoLog.Information("%s in %s...", buildMsg, okteto.Context().Builder)
+	}
+
+	var err error
+	options.Tag, err = model.ExpandEnv(options.Tag, true)
+	if err != nil {
+		return err
 	}
 
 	if err := bc.Builder.Run(ctx, options); err != nil {

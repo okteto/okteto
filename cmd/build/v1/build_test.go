@@ -91,10 +91,48 @@ func TestBuildWithErrorFromDockerfile(t *testing.T) {
 	// error from the build
 	assert.Error(t, err)
 	// the image is not at the fake registry
-	image, err := bc.Registry.GetImageTagWithDigest(tag)
+	image, err := bc.Registry.GetImageTagWithDigest(options.Tag)
 	assert.ErrorIs(t, err, oktetoErrors.ErrNotFound)
 	assert.Empty(t, image)
 }
+
+func TestBuildWithErrorFromImageExpansion(t *testing.T) {
+	ctx := context.Background()
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				Namespace: "test",
+			},
+		},
+		CurrentContext: "test",
+	}
+
+	registry := newFakeRegistry()
+	builder := test.NewFakeOktetoBuilder(registry)
+	bc := &OktetoBuilder{
+		Builder:  builder,
+		Registry: registry,
+	}
+	dir, err := createDockerfile(t)
+	assert.NoError(t, err)
+
+	t.Setenv("TEST_VAR", "unit-test")
+	// The missing closing brace breaks the var expansion
+	tag := "okteto.dev/test:${TEST_VAR"
+	options := &types.BuildOptions{
+		CommandArgs: []string{dir},
+		Tag:         tag,
+	}
+	err = bc.Build(ctx, options)
+	// error from the build
+	expectedErr := fmt.Errorf("error expanding environment on 'okteto.dev/test:${TEST_VAR': closing brace expected")
+	assert.Equal(t, err, expectedErr)
+	// the image is not at the fake registry
+	image, err := bc.Registry.GetImageTagWithDigest(options.Tag)
+	assert.ErrorIs(t, err, oktetoErrors.ErrNotFound)
+	assert.Empty(t, image)
+}
+
 func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	ctx := context.Background()
 	okteto.CurrentStore = &okteto.OktetoContextStore{
@@ -115,7 +153,8 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	dir, err := createDockerfile(t)
 	assert.NoError(t, err)
 
-	tag := "okteto.dev/test"
+	t.Setenv("TEST_VAR", "unit-test")
+	tag := "okteto.dev/test:${TEST_VAR}"
 	options := &types.BuildOptions{
 		CommandArgs: []string{dir},
 		Tag:         tag,
@@ -124,7 +163,7 @@ func TestBuildWithNoErrorFromDockerfile(t *testing.T) {
 	// no error from the build
 	assert.NoError(t, err)
 	// the image is at the fake registry
-	image, err := bc.Registry.GetImageTagWithDigest(tag)
+	image, err := bc.Registry.GetImageTagWithDigest(options.Tag)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, image)
 }
