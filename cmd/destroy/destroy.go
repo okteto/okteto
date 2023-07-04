@@ -270,7 +270,7 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 		// if the command is executed remotely and destroy section is nil, this will cause a panic
 		// Hence consider the command locally for successful execution.
 		// This will make sure all the resources are deleted.
-		if runInRemote == true && manifest.Destroy == nil {
+		if manifest.Destroy == nil {
 			runInRemote = false
 		}
 
