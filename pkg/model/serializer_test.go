@@ -15,6 +15,7 @@ package model
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"log"
 	"os"
 	"reflect"
@@ -25,7 +26,6 @@ import (
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	yaml "gopkg.in/yaml.v2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/utils/pointer"
@@ -2034,7 +2034,7 @@ forward:
 			},
 		},
 		{
-			name: "mode does not match with declaration",
+			name: "hybrid mode with unsupported fields does not break",
 			input: []byte(`mode: hybrid
 selector:
   app.kubernetes.io/part-of: okteto
@@ -2045,6 +2045,53 @@ sync:
   - ./producer:/usr/src/app
 forward:
   - 2345:2345`),
+			expected: &Dev{
+				Mode:    "hybrid",
+				Workdir: wd,
+				Selector: Selector{
+					"app.kubernetes.io/part-of":   "okteto",
+					"app.kubernetes.io/component": "producer",
+				},
+				Command: Command{
+					Values: []string{"sh"},
+				},
+				Image: &BuildInfo{
+					Name: "busybox",
+				},
+				Push:      &BuildInfo{},
+				Secrets:   []Secret{},
+				Probes:    &Probes{},
+				Lifecycle: &Lifecycle{},
+				Sync: Sync{
+					Compression:    true,
+					RescanInterval: 300,
+					Folders: []SyncFolder{
+						{
+							LocalPath:  "./producer",
+							RemotePath: "/usr/src/app",
+						},
+					},
+				},
+				Forward: []forward.Forward{
+					{
+						Local:  2345,
+						Remote: 2345,
+					},
+				},
+				Environment: Environment{},
+				Volumes:     []Volume{},
+				Services:    []*Dev{},
+				Metadata: &Metadata{
+					Labels:      Labels{},
+					Annotations: Annotations{},
+				},
+				PersistentVolumeInfo: &PersistentVolumeInfo{
+					Enabled: true,
+				},
+				InitContainer: InitContainer{
+					Image: "okteto/bin:1.4.2",
+				},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -2059,6 +2106,64 @@ forward:
 			} else {
 				assert.Error(t, err)
 			}
+		})
+	}
+}
+
+func TestWarnHybridUnsupportedFields(t *testing.T) {
+	tests := []struct {
+		name     string
+		hybrid   *hybridModeInfo
+		expected string
+	}{
+		{
+			name: "All fields are supported",
+			hybrid: &hybridModeInfo{
+				Workdir: "/test",
+				Mode:    "hybrid",
+				Command: Command{
+					Values: []string{"test"},
+				},
+			},
+			expected: "",
+		},
+		{
+			name: "All fields are unsupported",
+			hybrid: &hybridModeInfo{
+				UnsupportedFields: map[string]interface{}{
+					"replicas":  2,
+					"context":   "test",
+					"namespace": "test",
+				},
+			},
+			expected: "In hybrid mode, the field(s) 'context, namespace, replicas' specified in your manifest are ignored",
+		},
+		{
+			name: "Some fields are unsupported",
+			hybrid: &hybridModeInfo{
+				Mode: "sync",
+				Command: Command{
+					Values: []string{"test"},
+				},
+				UnsupportedFields: map[string]interface{}{
+					"context": "test",
+				},
+			},
+			expected: "In hybrid mode, the field(s) 'context' specified in your manifest are ignored",
+		},
+		{
+			name: "No fields",
+			hybrid: &hybridModeInfo{
+				UnsupportedFields: map[string]interface{}{},
+			},
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output := tt.hybrid.warnHybridUnsupportedFields()
+			assert.Equal(t, tt.expected, output)
 		})
 	}
 }

@@ -34,6 +34,8 @@ deploy:
   compose: docker-compose.yml
 dev:
   svc:
+    context: svc
+    namespace: user
     mode: hybrid
     command: "{{ .Shell }} checker.sh"
     reverse:
@@ -88,7 +90,7 @@ func TestUpUsingHybridMode(t *testing.T) {
 
 	oktetoManifestFileName := filepath.Join(dir, "okteto.yml")
 	fs := afero.NewOsFs()
-	oktetoManifstFile, err := fs.Create(oktetoManifestFileName)
+	oktetoManifestFile, err := fs.Create(oktetoManifestFileName)
 	require.NoError(t, err)
 
 	type oktetoManifestTemplate struct {
@@ -99,11 +101,11 @@ func TestUpUsingHybridMode(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		shell = "sh"
 	}
-	oktetoManifestSintax := oktetoManifestTemplate{
+	oktetoManifestSyntax := oktetoManifestTemplate{
 		Shell: shell,
 	}
 
-	require.NoError(t, tmpl.Execute(oktetoManifstFile, oktetoManifestSintax))
+	require.NoError(t, tmpl.Execute(oktetoManifestFile, oktetoManifestSyntax))
 	require.NoError(t, writeFile(filepath.Join(dir, "docker-compose.yml"), hybridCompose))
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 	require.NoError(t, writeFile(filepath.Join(dir, "Dockerfile"), svcDockerfile))
@@ -118,8 +120,11 @@ func TestUpUsingHybridMode(t *testing.T) {
 		Service:    "svc",
 		Deploy:     true,
 	}
-	err = commands.RunOktetoUpAndWait(oktetoPath, up1Options)
+	output, err := commands.RunOktetoUpAndWaitWithOutput(oktetoPath, up1Options)
 	require.NoError(t, err)
+
+	// Test warnings for unsupported fields
+	require.Contains(t, output.String(), "In hybrid mode, the field(s) 'context, namespace' specified in your manifest are ignored")
 
 	// Test okteto down command
 	down1Opts := &commands.DownOptions{
