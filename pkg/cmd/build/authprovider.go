@@ -22,7 +22,6 @@ import (
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/configfile"
 	"github.com/docker/cli/cli/config/types"
-	"github.com/moby/buildkit/session"
 	"github.com/moby/buildkit/session/auth"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"google.golang.org/grpc"
@@ -32,7 +31,7 @@ import (
 
 var oktetoRegistry = ""
 
-func newDockerAndOktetoAuthProvider(registryURL, username, password string, stderr io.Writer) session.Attachable {
+func newDockerAndOktetoAuthProvider(registryURL, username, password string, stderr io.Writer) *authProvider {
 	result := &authProvider{
 		config: config.LoadDefaultConfigFile(stderr),
 	}
@@ -45,8 +44,15 @@ func newDockerAndOktetoAuthProvider(registryURL, username, password string, stde
 	return result
 }
 
+type externalRegistryCredentialFunc func(ctx context.Context, host string) (types.AuthConfig, error)
+
 type authProvider struct {
 	config *configfile.ConfigFile
+
+	// externalAuth is an external registry credentials getter that live
+	// outside of the configfile. It is used to load external auth data without
+	// going through the target config file store
+	externalAuth externalRegistryCredentialFunc
 
 	// The need for this mutex is not well understood.
 	// Without it, the docker cli on OS X hangs when
@@ -71,12 +77,12 @@ func (*authProvider) VerifyTokenAuthority(_ context.Context, _ *auth.VerifyToken
 	return nil, status.Errorf(codes.Unimplemented, "method VerifyTokenAuthority not implemented")
 }
 
-func (ap *authProvider) Credentials(_ context.Context, req *auth.CredentialsRequest) (*auth.CredentialsResponse, error) {
-	res := &auth.CredentialsResponse{}
+func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRequest) (*auth.CredentialsResponse, error) {
 	if req.Host == oktetoRegistry {
-		res.Username = ap.config.AuthConfigs[oktetoRegistry].Username
-		res.Secret = ap.config.AuthConfigs[oktetoRegistry].Password
-		return res, nil
+		return &auth.CredentialsResponse{
+			Username: ap.config.AuthConfigs[oktetoRegistry].Username,
+			Secret:   ap.config.AuthConfigs[oktetoRegistry].Password,
+		}, nil
 	}
 
 	ap.mu.Lock()
@@ -88,17 +94,32 @@ func (ap *authProvider) Credentials(_ context.Context, req *auth.CredentialsRequ
 	if err != nil {
 		if isErrCredentialsHelperNotAccessible(err) {
 			oktetoLog.Infof("could not access %s defined in %s", ap.config.CredentialsStore, ap.config.Filename)
-			return res, nil
+			return &auth.CredentialsResponse{}, nil
 		}
 
 		return nil, err
 	}
 	if ac.IdentityToken != "" {
-		res.Secret = ac.IdentityToken
-	} else {
-		res.Username = ac.Username
-		res.Secret = ac.Password
+		return &auth.CredentialsResponse{
+			Secret: ac.IdentityToken,
+		}, nil
 	}
+
+	res := &auth.CredentialsResponse{
+		Username: ac.Username,
+		Secret:   ac.Password,
+	}
+
+	// local credentials takes precedence over cluster defined credentials
+	if ap.externalAuth != nil && (res.Username == "" || res.Secret == "") {
+		if auth, err := ap.externalAuth(ctx, req.Host); err != nil {
+			oktetoLog.Debugf("failed to load external auth for %s: %w", req.Host, err.Error())
+		} else {
+			res.Username = auth.Username
+			res.Secret = auth.Password
+		}
+	}
+
 	return res, nil
 }
 

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
@@ -37,16 +38,11 @@ type configInterface interface {
 	GetContextName() string
 }
 
-type registryConfig interface {
-	IsOktetoCluster() bool
-	GetRegistryURL() string
-}
-
 // OktetoRegistry represents the registry
 type OktetoRegistry struct {
 	client    clientInterface
 	imageCtrl ImageCtrl
-	config    registryConfig
+	config    configInterface
 }
 
 type OktetoImageReference struct {
@@ -62,6 +58,19 @@ func NewOktetoRegistry(config configInterface) OktetoRegistry {
 		imageCtrl: NewImageCtrl(config),
 		config:    config,
 	}
+}
+
+func (or OktetoRegistry) WithBasicAuthFor(registry, username, password string) OktetoRegistry {
+	if username == "" || password == "" {
+		oktetoLog.Debug("skipping basic auth for registry: '%s'. Both username and password must be defined")
+		return or
+	}
+	clone := NewOktetoRegistry(or.config)
+	clone.client = newOktetoRegistryClient(or.config).WithExternalAuth(registry, &authn.Basic{
+		Username: username,
+		Password: password,
+	})
+	return clone
 }
 
 func (or OktetoRegistry) GetImageTagWithDigest(image string) (string, error) {
