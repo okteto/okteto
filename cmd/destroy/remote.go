@@ -106,7 +106,7 @@ func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
 	builder := remoteBuild.NewBuilderFromScratch()
 	return &remoteDestroyCommand{
 		builder:              builder,
-		destroyImage:         manifest.Destroy.Image,
+		destroyImage:         "",
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),

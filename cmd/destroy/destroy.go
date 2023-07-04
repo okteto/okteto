@@ -266,14 +266,6 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 		}
 		runInRemote := !isRemote && (destroyImage != "" || opts.RunInRemote)
 
-		// destroy section should not be nil whether the command is executed remotely or locally
-		// if the command is executed remotely and destroy section is nil, this will cause a panic
-		// Hence consider the command locally for successful execution.
-		// This will make sure all the resources are deleted.
-		if manifest.Destroy == nil {
-			runInRemote = false
-		}
-
 		if runInRemote {
 			destroyer = newRemoteDestroyer(manifest)
 			oktetoLog.Info("Destroying remotely...")
