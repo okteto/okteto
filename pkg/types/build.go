@@ -15,6 +15,16 @@ package types
 
 import "github.com/okteto/okteto/pkg/model"
 
+// BuildSshSession is a reference to an ssh session which translates to a
+// --mount=ssh,id={id} argument in a buildkit run.
+// More info here: https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/reference.md#run---mounttypessh
+type BuildSshSession struct {
+	// Id is the name of the key for the mount. Defaults to "default"
+	Id string
+	// Target is the ssh-agent socket to mount the path to a *.pem file
+	Target string
+}
+
 // BuildOptions define the options available for build
 type BuildOptions struct {
 	BuildArgs     []string
@@ -34,6 +44,8 @@ type BuildOptions struct {
 	// CommandArgs comes from the user input on the command
 	CommandArgs  []string
 	EnableStages bool
+
+	SshSessions []BuildSshSession
 
 	Manifest *model.Manifest
 }

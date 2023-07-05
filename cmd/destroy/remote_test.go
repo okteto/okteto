@@ -16,6 +16,7 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -34,10 +35,14 @@ import (
 )
 
 type fakeBuilder struct {
-	err error
+	err           error
+	assertOptions func(o *types.BuildOptions)
 }
 
-func (f fakeBuilder) Build(_ context.Context, _ *types.BuildOptions) error {
+func (f fakeBuilder) Build(_ context.Context, opts *types.BuildOptions) error {
+	if f.assertOptions != nil {
+		f.assertOptions(opts)
+	}
 	return f.err
 }
 
@@ -189,7 +194,7 @@ func TestRemoteTest(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
 			tempCreator.SetError(tt.config.tempFsCreator)
 			rdc := remoteDestroyCommand{
-				builder:              fakeBuilder{tt.config.builderErr},
+				builder:              fakeBuilder{err: tt.config.builderErr},
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 				temporalCtrl:         tempCreator,
@@ -386,4 +391,72 @@ func Test_getOktetoCLIVersion(t *testing.T) {
 			require.Equal(t, version, tt.expected)
 		})
 	}
+}
+
+func TestRemoteDestroyWithSshAgent(t *testing.T) {
+	fs := afero.NewMemMapFs()
+	socket, err := os.CreateTemp("", "okteto-test-ssh-*")
+	require.NoError(t, err)
+	defer socket.Close()
+
+	knowHostFile, err := os.CreateTemp("", "okteto-test-know_hosts-*")
+	require.NoError(t, err)
+	defer socket.Close()
+
+	assertFn := func(o *types.BuildOptions) {
+		assert.Contains(t, o.SshSessions, types.BuildSshSession{Id: "remote", Target: socket.Name()})
+		assert.Contains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knowHostFile.Name()))
+	}
+
+	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
+
+	os.Setenv(envvarName, socket.Name())
+	defer func() {
+		t.Logf("cleaning up %s envvar", envvarName)
+		os.Unsetenv(envvarName)
+	}()
+	rdc := remoteDestroyCommand{
+		sshAuthSockEnvvar:    envvarName,
+		knownHostsPath:       knowHostFile.Name(),
+		builder:              fakeBuilder{assertOptions: assertFn},
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
+		clusterMetadata: func(context.Context) (*types.ClusterMetadata, error) {
+			return &types.ClusterMetadata{}, nil
+		},
+	}
+
+	assert.NoError(t, rdc.destroy(context.Background(), &Options{}))
+}
+
+func TestRemoteDestroyWithBadSshAgent(t *testing.T) {
+	fs := afero.NewMemMapFs()
+
+	assertFn := func(o *types.BuildOptions) {
+		assert.NotContains(t, o.SshSessions, types.BuildSshSession{Id: "remote", Target: "bad-socket"})
+		assert.NotContains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", "inexistent-file"))
+	}
+
+	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
+
+	os.Setenv(envvarName, "bad-socket")
+	defer func() {
+		t.Logf("cleaning up %s envvar", envvarName)
+		os.Unsetenv(envvarName)
+	}()
+
+	rdc := remoteDestroyCommand{
+		sshAuthSockEnvvar:    envvarName,
+		knownHostsPath:       "inexistent-file",
+		builder:              fakeBuilder{assertOptions: assertFn},
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
+		clusterMetadata: func(context.Context) (*types.ClusterMetadata, error) {
+			return &types.ClusterMetadata{}, nil
+		},
+	}
+
+	assert.NoError(t, rdc.destroy(context.Background(), &Options{}))
 }

@@ -26,6 +26,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/mitchellh/go-homedir"
+
 	builder "github.com/okteto/okteto/cmd/build"
 	remoteBuild "github.com/okteto/okteto/cmd/build/remote"
 	buildv2 "github.com/okteto/okteto/cmd/build/v2"
@@ -69,7 +71,9 @@ WORKDIR /okteto/src
 ARG {{ .GitCommitArgName }}
 ARG {{ .InvalidateCacheArgName }}
 
-RUN okteto deploy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DeployFlags }}
+RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+  mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+  okteto deploy --log-output=json --server-name="${{ .InternalServerName }}" {{ .DeployFlags }}
 `
 )
 
@@ -95,6 +99,12 @@ type remoteDeployCommand struct {
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
 	temporalCtrl         filesystem.TemporalDirectoryInterface
 	clusterMetadata      func(context.Context) (*types.ClusterMetadata, error)
+
+	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
+	sshAuthSockEnvvar string
+
+	// knownHostsPath  is the default known_hosts file path. Provided mostly for testing
+	knownHostsPath string
 }
 
 // newRemoteDeployer creates the remote deployer from a
@@ -111,7 +121,10 @@ func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
 }
 
 func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Options) error {
-
+	home, err := homedir.Dir()
+	if err != nil {
+		return err
+	}
 	sc, err := rd.clusterMetadata(ctx)
 	if err != nil {
 		return err
@@ -169,6 +182,37 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 		fmt.Sprintf("%s=%s", constants.OktetoGitCommitEnvVar, os.Getenv(constants.OktetoGitCommitEnvVar)),
 		fmt.Sprintf("%s=%d", constants.OktetoInvalidateCacheEnvVar, int(randomNumber.Int64())),
 	)
+
+	sshSock := os.Getenv(rd.sshAuthSockEnvvar)
+	if sshSock == "" {
+		sshSock = os.Getenv("SSH_AUTH_SOCK")
+	}
+
+	if sshSock != "" {
+		if _, err := os.Stat(sshSock); err != nil {
+			oktetoLog.Debugf("Not mounting ssh agent. Error reading socket: %s", err.Error())
+			sshSock = ""
+		} else {
+			sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
+			buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
+		}
+
+		// TODO: check if ~/.ssh/config exists and has UserKnownHostsFile defined
+		knownHostsPath := rd.knownHostsPath
+		if knownHostsPath == "" {
+			knownHostsPath = filepath.Join(home, ".ssh", "known_hosts")
+		}
+		if _, err := os.Stat(knownHostsPath); err != nil {
+			oktetoLog.Debugf("Not know_hosts file. Error reading file: %s", err.Error())
+		} else {
+			oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
+			buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
+		}
+
+	} else {
+		oktetoLog.Debug("no ssh agent found. Not mouting ssh-agent for build")
+	}
+
 	// we need to call Build() method using a remote builder. This Builder will have
 	// the same behavior as the V1 builder but with a different output taking into
 	// account that we must not confuse the user with build messages since this logic is
@@ -204,7 +248,10 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		return "", err
 	}
 
-	tmpl := template.Must(template.New(templateName).Parse(dockerfileTemplate))
+	tmpl := template.
+		Must(template.New(templateName).
+			Funcs(template.FuncMap{"join": strings.Join}).
+			Parse(dockerfileTemplate))
 
 	dockerfileSyntax := dockerfileTemplateProperties{
 		OktetoCLIImage:         getOktetoCLIVersion(config.VersionString),
