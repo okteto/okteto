@@ -186,11 +186,16 @@ func (rd *remoteDeployCommand) deploy(ctx context.Context, deployOptions *Option
 	}
 
 	if sshSock != "" {
-		knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
-		oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
-		sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
-		buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
-		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
+		if _, err := os.Stat(sshSock); err != nil {
+			oktetoLog.Debugf("Not mounting ssh agent. Error reading socket: %s", err.Error())
+			sshSock = ""
+		} else {
+			knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
+			oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
+			sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
+			buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
+			buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
+		}
 	} else {
 		oktetoLog.Debug("no ssh agent found. Not mouting ssh-agent for build")
 	}

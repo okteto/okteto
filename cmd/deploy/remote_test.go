@@ -167,18 +167,20 @@ func TestRemoteTest(t *testing.T) {
 
 func TestRemoteDeployWithSshAgent(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	socket := "my-socket-file"
 	home, _ := homedir.Dir()
+	socket, err := os.CreateTemp("", "okteto-test-*")
+	require.NoError(t, err)
+	defer socket.Close()
 
 	assertContains := func(o *types.BuildOptions) {
 		knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
-		assert.Contains(t, o.SshSessions, types.BuildSshSession{Id: "remote", Target: socket})
+		assert.Contains(t, o.SshSessions, types.BuildSshSession{Id: "remote", Target: socket.Name()})
 		assert.Contains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
 	}
 
 	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
 
-	os.Setenv(envvarName, socket)
+	os.Setenv(envvarName, socket.Name())
 	defer func() {
 		t.Logf("cleaning up %s envvar", envvarName)
 		os.Unsetenv(envvarName)
@@ -197,7 +199,7 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		},
 	}
 
-	err := rdc.deploy(context.Background(), &Options{
+	err = rdc.deploy(context.Background(), &Options{
 		Manifest: &model.Manifest{
 			Deploy: &model.DeployInfo{
 				Image: "test-image",
