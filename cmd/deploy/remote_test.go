@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mitchellh/go-homedir"
 	v2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
@@ -167,15 +166,17 @@ func TestRemoteTest(t *testing.T) {
 
 func TestRemoteDeployWithSshAgent(t *testing.T) {
 	fs := afero.NewMemMapFs()
-	home, _ := homedir.Dir()
-	socket, err := os.CreateTemp("", "okteto-test-*")
+	socket, err := os.CreateTemp("", "okteto-test-ssh-*")
 	require.NoError(t, err)
 	defer socket.Close()
 
-	assertContains := func(o *types.BuildOptions) {
-		knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
+	knowHostFile, err := os.CreateTemp("", "okteto-test-know_hosts-*")
+	require.NoError(t, err)
+	defer socket.Close()
+
+	assertFn := func(o *types.BuildOptions) {
 		assert.Contains(t, o.SshSessions, types.BuildSshSession{Id: "remote", Target: socket.Name()})
-		assert.Contains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
+		assert.Contains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knowHostFile.Name()))
 	}
 
 	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
@@ -187,10 +188,11 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 	}()
 	rdc := remoteDeployCommand{
 		sshAuthSockEnvvar: envvarName,
+		knownHostsPath:    knowHostFile.Name(),
 		builderV2: &v2.OktetoBuilder{
 			Registry: newFakeRegistry(),
 		},
-		builderV1:            fakeBuilder{assertOptions: assertContains},
+		builderV1:            fakeBuilder{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
 		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
@@ -200,6 +202,46 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 	}
 
 	err = rdc.deploy(context.Background(), &Options{
+		Manifest: &model.Manifest{
+			Deploy: &model.DeployInfo{
+				Image: "test-image",
+			},
+		},
+	})
+	assert.NoError(t, err)
+}
+
+func TestRemoteDeployWithBadSshAgent(t *testing.T) {
+	fs := afero.NewMemMapFs()
+
+	assertFn := func(o *types.BuildOptions) {
+		assert.NotContains(t, o.SshSessions, types.BuildSshSession{Id: "remote", Target: "bad-socket"})
+		assert.NotContains(t, o.Secrets, fmt.Sprintf("id=known_hosts,src=%s", "inexistent-file"))
+	}
+
+	envvarName := fmt.Sprintf("TEST_SOCKET_%s", os.Getenv("RANDOM"))
+
+	os.Setenv(envvarName, "bad-socket")
+	defer func() {
+		t.Logf("cleaning up %s envvar", envvarName)
+		os.Unsetenv(envvarName)
+	}()
+	rdc := remoteDeployCommand{
+		sshAuthSockEnvvar: envvarName,
+		knownHostsPath:    "inexistent-file",
+		builderV2: &v2.OktetoBuilder{
+			Registry: newFakeRegistry(),
+		},
+		builderV1:            fakeBuilder{assertOptions: assertFn},
+		fs:                   fs,
+		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
+		temporalCtrl:         filesystem.NewTemporalDirectoryCtrl(fs),
+		clusterMetadata: func(context.Context) (*types.ClusterMetadata, error) {
+			return &types.ClusterMetadata{}, nil
+		},
+	}
+
+	err := rdc.deploy(context.Background(), &Options{
 		Manifest: &model.Manifest{
 			Deploy: &model.DeployInfo{
 				Image: "test-image",

@@ -90,8 +90,11 @@ type remoteDestroyCommand struct {
 	registry             remoteBuild.OktetoRegistryInterface
 	clusterMetadata      func(context.Context) (*types.ClusterMetadata, error)
 
-	// defaults to SSH_AUTH_SOCK. Provided mostly for testing
+	// sshAuthSockEnvvar is the default for SSH_AUTH_SOCK. Provided mostly for testing
 	sshAuthSockEnvvar string
+
+	// knownHostsPath  is the default known_hosts file path. Provided mostly for testing
+	knownHostsPath string
 }
 
 func newRemoteDestroyer(manifest *model.Manifest) *remoteDestroyCommand {
@@ -179,11 +182,26 @@ func (rd *remoteDestroyCommand) destroy(ctx context.Context, opts *Options) erro
 	}
 
 	if sshSock != "" {
-		knownHostsPath := filepath.Join(home, ".ssh", "known_hosts")
-		oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
-		sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
-		buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
-		buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
+		if _, err := os.Stat(sshSock); err != nil {
+			oktetoLog.Debugf("Not mounting ssh agent. Error reading socket: %s", err.Error())
+			sshSock = ""
+		} else {
+			sshSession := types.BuildSshSession{Id: "remote", Target: sshSock}
+			buildOptions.SshSessions = append(buildOptions.SshSessions, sshSession)
+		}
+
+		// TODO: check if ~/.ssh/config exists and has UserKnownHostsFile defined
+		knownHostsPath := rd.knownHostsPath
+		if knownHostsPath == "" {
+			knownHostsPath = filepath.Join(home, ".ssh", "known_hosts")
+		}
+		if _, err := os.Stat(knownHostsPath); err != nil {
+			oktetoLog.Debugf("Not know_hosts file. Error reading file: %s", err.Error())
+		} else {
+			oktetoLog.Debugf("reading known hosts from %s", knownHostsPath)
+			buildOptions.Secrets = append(buildOptions.Secrets, fmt.Sprintf("id=known_hosts,src=%s", knownHostsPath))
+		}
+
 	} else {
 		oktetoLog.Debug("no ssh agent found. Not mouting ssh-agent for build")
 	}
