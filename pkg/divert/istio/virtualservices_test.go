@@ -52,7 +52,7 @@ func Test_translateDivertVirtualService(t *testing.T) {
 					Labels:    map[string]string{"l1": "v1"},
 					Annotations: map[string]string{
 						"a1": "v1",
-						fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy"}`,
+						fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, "2615052508acbfaddeba0eeded4131631ea31a02"): `{"namespace":"cindy"}`,
 					},
 				},
 			},
@@ -75,7 +75,7 @@ func Test_translateDivertVirtualService(t *testing.T) {
 					Labels:    map[string]string{"l1": "v1"},
 					Annotations: map[string]string{
 						"a1": "v1",
-						fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","routes":["one-route","another-route"]}`,
+						fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, "2615052508acbfaddeba0eeded4131631ea31a02"): `{"namespace":"cindy","routes":["one-route","another-route"]}`,
 					},
 				},
 			},
@@ -116,7 +116,28 @@ func Test_restoreDivertVirtualService(t *testing.T) {
 					Namespace: "staging",
 					Annotations: map[string]string{
 						"a1": "v1",
-						fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","header":{"name":"okteto-divert","match":"exact","value":"cindy"},"routes":null}`,
+						fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, "2615052508acbfaddeba0eeded4131631ea31a02"): `{"namespace":"cindy","header":{"name":"okteto-divert","match":"exact","value":"cindy"},"routes":null}`,
+					},
+				},
+			},
+			expected: &istioV1beta1.VirtualService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "service-a",
+					Namespace:   "staging",
+					Labels:      map[string]string{"l1": "v1"},
+					Annotations: map[string]string{"a1": "v1"},
+				},
+			},
+		},
+		{
+			name: "clean-deprecated-divert-annotation",
+			vs: &istioV1beta1.VirtualService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "service-a",
+					Namespace: "staging",
+					Annotations: map[string]string{
+						"a1": "v1",
+						fmt.Sprintf(constants.OktetoDeprecatedDivertAnnotationTemplate, "cindy", "test"): `{"namespace":"cindy","header":{"name":"okteto-divert","match":"exact","value":"cindy"},"routes":null}`,
 					},
 				},
 			},

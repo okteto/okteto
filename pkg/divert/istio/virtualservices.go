@@ -14,6 +14,8 @@
 package istio
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -28,7 +30,13 @@ import (
 )
 
 func (d *Driver) getDivertAnnotationName() string {
-	return fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, d.namespace, d.name)
+	divertHash := sha256.Sum256([]byte(fmt.Sprintf("%s-%s", d.namespace, d.name)))
+
+	return fmt.Sprintf(constants.OktetoDivertAnnotationTemplate, hex.EncodeToString(divertHash[:20]))
+}
+
+func (d *Driver) getDeprecatedDivertAnnotationName() string {
+	return fmt.Sprintf(constants.OktetoDeprecatedDivertAnnotationTemplate, d.namespace, d.name)
 }
 
 func (d *Driver) translateDivertVirtualService(vs *istioV1beta1.VirtualService, routes []string) (*istioV1beta1.VirtualService, error) {
@@ -54,6 +62,7 @@ func (d *Driver) restoreDivertVirtualService(vs *istioV1beta1.VirtualService) *i
 		result.Annotations = map[string]string{}
 	}
 	delete(result.Annotations, d.getDivertAnnotationName())
+	delete(result.Annotations, d.getDeprecatedDivertAnnotationName())
 	return result
 }
 
