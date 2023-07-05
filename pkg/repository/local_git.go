@@ -35,7 +35,7 @@ func (*LocalExec) RunCommand(ctx context.Context, dir string, name string, arg .
 			oktetoLog.Debugf("err at signal SIGTERM: %v", err)
 		}
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(3 * time.Second)
 		if err := c.Process.Signal(syscall.Signal(0)); err != nil {
 			if errors.Is(err, os.ErrProcessDone) {
 				return nil
