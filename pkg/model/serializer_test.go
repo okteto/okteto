@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/externalresource"
 	"github.com/okteto/okteto/pkg/model/forward"
 	"github.com/stretchr/testify/assert"
@@ -1113,6 +1114,7 @@ dev:
 				External:     externalresource.ExternalResourceSection{},
 				Dev: map[string]*Dev{
 					"test-1": {
+						Mode: constants.OktetoSyncModeFieldValue,
 						Name: "test-1",
 						Sync: Sync{
 							RescanInterval: 300,
@@ -1176,7 +1178,6 @@ dev:
 						},
 						Environment: Environment{},
 						Volumes:     []Volume{},
-						Mode:        "sync",
 					},
 					"test-2": {
 						Name: "test-2",
@@ -1242,7 +1243,7 @@ dev:
 						},
 						Environment: Environment{},
 						Volumes:     []Volume{},
-						Mode:        "sync",
+						Mode:        constants.OktetoSyncModeFieldValue,
 					},
 				},
 			},
@@ -1327,7 +1328,7 @@ sync:
 						},
 						Environment: Environment{},
 						Volumes:     []Volume{},
-						Mode:        "sync",
+						Mode:        constants.OktetoSyncModeFieldValue,
 					},
 				},
 			},
@@ -1434,6 +1435,7 @@ services:
 									Annotations: Annotations{},
 								},
 								Volumes: []Volume{},
+								Mode:    constants.OktetoSyncModeFieldValue,
 							},
 						},
 						InitContainer: InitContainer{
@@ -1449,7 +1451,7 @@ services:
 						},
 						Environment: Environment{},
 						Volumes:     []Volume{},
-						Mode:        "sync",
+						Mode:        constants.OktetoSyncModeFieldValue,
 					},
 				},
 			},
@@ -1546,7 +1548,7 @@ dev:
 						},
 						Environment: Environment{},
 						Volumes:     []Volume{},
-						Mode:        "sync",
+						Mode:        constants.OktetoSyncModeFieldValue,
 					},
 				},
 			},
@@ -1635,7 +1637,7 @@ dev:
 						},
 						Environment: Environment{},
 						Volumes:     []Volume{},
-						Mode:        "sync",
+						Mode:        constants.OktetoSyncModeFieldValue,
 					},
 					"test-2": {
 						Name: "test-2",
@@ -1701,7 +1703,7 @@ dev:
 						},
 						Environment: Environment{},
 						Volumes:     []Volume{},
-						Mode:        "sync",
+						Mode:        constants.OktetoSyncModeFieldValue,
 					},
 				},
 			},
@@ -1868,7 +1870,7 @@ command: ["sh", "-c", "yarn start"]
 reverse:
   - 8080:8080`),
 			expected: &Dev{
-				Mode:    "hybrid",
+				Mode:    constants.OktetoHybridModeFieldValue,
 				Workdir: wd,
 				Selector: Selector{
 					"app.kubernetes.io/part-of":   "okteto",
@@ -1924,7 +1926,7 @@ sync:
 forward:
   - 2345:2345`),
 			expected: &Dev{
-				Mode: "sync",
+				Mode: constants.OktetoSyncModeFieldValue,
 				Selector: Selector{
 					"app.kubernetes.io/part-of":   "okteto",
 					"app.kubernetes.io/component": "api",
@@ -1988,6 +1990,7 @@ sync:
 forward:
   - 2345:2345`),
 			expected: &Dev{
+				Mode: constants.OktetoSyncModeFieldValue,
 				Selector: Selector{
 					"app.kubernetes.io/part-of":   "okteto",
 					"app.kubernetes.io/component": "producer",
