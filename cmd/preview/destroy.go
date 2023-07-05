@@ -92,10 +92,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", false, "wait until the preview environment gets destroyed (defaults to false)")
-	if err := cmd.Flags().MarkHidden("filename"); err != nil {
-		oktetoLog.Infof("failed to hide deprecated flag: %s", err)
-	}
+	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", true, "wait until the preview environment gets destroyed (defaults to false)")
 	return cmd
 }
 
@@ -109,7 +106,7 @@ func (c destroyPreviewCommand) executeDestroyPreview(ctx context.Context, opts *
 	}
 
 	if !opts.wait {
-		oktetoLog.Success("Preview environment '%s' scheduled for destroy", opts.name)
+		oktetoLog.Success("Preview environment '%s' scheduled to destroy", opts.name)
 		return nil
 	}
 

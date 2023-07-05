@@ -15,7 +15,10 @@ import (
 
 func TestExecuteDestroyPreviewWithErrorDestroying(t *testing.T) {
 	ctx := context.Background()
-	opts := &DestroyOptions{name: "test-preview"}
+	opts := &DestroyOptions{
+		name: "test-preview",
+		wait: true,
+	}
 	previewResponse := client.FakePreviewResponse{
 		ErrDestroyPreview: assert.AnError,
 	}
@@ -37,7 +40,33 @@ func TestExecuteDestroyPreviewWithErrorDestroying(t *testing.T) {
 
 func TestExecuteDestroyPreviewWithoutError(t *testing.T) {
 	ctx := context.Background()
-	opts := &DestroyOptions{name: "test-preview"}
+	opts := &DestroyOptions{
+		name: "test-preview",
+		wait: true,
+	}
+	var previewResponse client.FakePreviewResponse
+	command := destroyPreviewCommand{
+		okClient: &client.FakeOktetoClient{
+			Preview: client.NewFakePreviewClient(
+				&previewResponse,
+			),
+			StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+		},
+		k8sClient: fake.NewSimpleClientset(),
+	}
+
+	err := command.executeDestroyPreview(ctx, opts)
+
+	require.NoError(t, err)
+	require.Equal(t, 1, previewResponse.DestroySuccessCount)
+}
+
+func TestExecuteDestroyPreviewWithoutWait(t *testing.T) {
+	ctx := context.Background()
+	opts := &DestroyOptions{
+		name: "test-preview",
+		wait: false,
+	}
 	var previewResponse client.FakePreviewResponse
 	command := destroyPreviewCommand{
 		okClient: &client.FakeOktetoClient{
@@ -57,7 +86,10 @@ func TestExecuteDestroyPreviewWithoutError(t *testing.T) {
 
 func TestExecuteDestroyPreviewWithFailedJob(t *testing.T) {
 	ctx := context.Background()
-	opts := &DestroyOptions{name: "test-preview"}
+	opts := &DestroyOptions{
+		name: "test-preview",
+		wait: true,
+	}
 	var previewResponse client.FakePreviewResponse
 	ns := v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -86,7 +118,10 @@ func TestExecuteDestroyPreviewWithFailedJob(t *testing.T) {
 func TestExecuteDestroyPreviewWithErrorStreaming(t *testing.T) {
 	ctx := context.Background()
 	var previewResponse client.FakePreviewResponse
-	opts := &DestroyOptions{name: "test-preview"}
+	opts := &DestroyOptions{
+		name: "test-preview",
+		wait: true,
+	}
 	command := destroyPreviewCommand{
 		okClient: &client.FakeOktetoClient{
 			Preview: client.NewFakePreviewClient(
