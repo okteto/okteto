@@ -92,7 +92,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 			return err
 		},
 	}
-	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", true, "wait until the preview environment gets destroyed (defaults to false)")
+	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", true, "wait until the preview environment gets destroyed (defaults to true)")
 	return cmd
 }
 
