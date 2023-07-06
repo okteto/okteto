@@ -235,14 +235,11 @@ func (dc *destroyCommand) getDestroyer(ctx context.Context, opts *Options) (dest
 	} else {
 		manifest, err := model.GetManifestV2(opts.ManifestPath)
 		if err != nil {
-			// error will only be available when there is no valid manifest found
-			// hence, we need not to destroy because the manifest would never be deployed
-			// Return the error message
+			// Log error message but application can still be deleted
 			oktetoLog.Infof("could not find manifest file to be executed: %s", err)
 			manifest = &model.Manifest{
 				Destroy: &model.DestroyInfo{},
 			}
-			return nil, err
 		}
 
 		isRemote := utils.LoadBoolean(constants.OktetoDeployRemote)
