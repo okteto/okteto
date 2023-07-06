@@ -20,10 +20,13 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	containerv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -31,6 +34,7 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type fakeTLSConn struct {
@@ -438,4 +442,33 @@ func TestGetTransport(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExternalAuth(t *testing.T) {
+	var called bool
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v2/myimage/manifests/latest" {
+			user, pass, ok := r.BasicAuth()
+			require.True(t, ok)
+			require.Equal(t, "myuser", user)
+			require.Equal(t, "mypass", pass)
+			called = true
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer s.Close()
+	registry, err := url.Parse(s.URL)
+	require.NoError(t, err)
+
+	image := fmt.Sprintf("%s/myimage:latest", registry.Host)
+
+	c := newOktetoRegistryClient(fakeClientConfig{isInsecure: true}).
+		WithExternalAuth(registry.Host, &authn.Basic{
+			Username: "myuser",
+			Password: "mypass",
+		})
+
+	_, err = c.GetDigest(image)
+	require.NoError(t, err)
+	require.True(t, called, "/v2/myimage/manifests/latest registry endpoint was not called")
 }
