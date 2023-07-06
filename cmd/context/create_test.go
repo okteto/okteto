@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -472,6 +473,114 @@ func TestCheckAccessToNamespace(t *testing.T) {
 			if hasAccess != tt.expectedAccess {
 				t.Fatalf("%s fail. expected %t but got: %t", tt.name, tt.expectedAccess, hasAccess)
 			}
+		})
+	}
+}
+
+func TestGetUserContext(t *testing.T) {
+	ctx := context.Background()
+	user := &types.User{
+		Token: "test",
+	}
+
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"test": {
+				UserID: "test",
+			},
+		},
+	}
+
+	x509Err := errors.New("x509: certificate signed by unknown authority")
+	type input struct {
+		ns      string
+		userErr []error
+	}
+	type output struct {
+		uc  *types.UserContext
+		err error
+	}
+	tt := []struct {
+		name   string
+		input  input
+		output output
+	}{
+		{
+			name: "existing namespace",
+			input: input{
+				ns: "test",
+			},
+			output: output{
+				uc: &types.UserContext{
+					User: types.User{
+						Token: "test",
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "unauthorized namespace",
+			input: input{
+				ns: "test",
+				userErr: []error{
+					fmt.Errorf("unauthorized. Please run 'okteto context url' and try again"),
+				},
+			},
+			output: output{
+				uc:  nil,
+				err: oktetoErrors.NotLoggedError{},
+			},
+		},
+		{
+			name: "x509 error",
+			input: input{
+				ns: "test",
+				userErr: []error{
+					x509Err,
+				},
+			},
+			output: output{
+				uc:  nil,
+				err: x509Err,
+			},
+		},
+		{
+			name: "not found + redirect to personal namespace",
+			input: input{
+				ns: "test",
+				userErr: []error{
+					fmt.Errorf("not found"),
+				},
+			},
+			output: output{
+				uc: &types.UserContext{
+					User: types.User{
+						Token: "test",
+					},
+				},
+				err: nil,
+			},
+		},
+	}
+	for _, tc := range tt {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			fakeOktetoClient := &client.FakeOktetoClient{
+				Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
+				Users:     client.NewFakeUsersClient(user, tc.input.userErr...),
+			}
+			cmd := ContextCommand{
+				OktetoClientProvider: client.NewFakeOktetoClientProvider(fakeOktetoClient),
+				OktetoContextWriter:  test.NewFakeOktetoContextWriter(),
+			}
+			uc, err := cmd.getUserContext(ctx, tc.input.ns)
+			assert.ErrorIs(t, tc.output.err, err)
+			assert.Equal(t, tc.output.uc, uc)
+
 		})
 	}
 }

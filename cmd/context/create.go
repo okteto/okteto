@@ -289,8 +289,12 @@ func getLoggedUserContext(ctx context.Context, c *ContextCommand, ctxOptions *Co
 	if ctxOptions.Namespace == "" {
 		ctxOptions.Namespace = user.Namespace
 	}
+
 	userContext, err := c.getUserContext(ctx, ctxOptions.Namespace)
 	if err != nil {
+		if oktetoErrors.IsNotFound(err) {
+
+		}
 		return nil, err
 	}
 
@@ -336,17 +340,28 @@ func (c ContextCommand) getUserContext(ctx context.Context, ns string) (*types.U
 	for retries <= 3 {
 		userContext, err := client.User().GetContext(ctx, ns)
 
-		if err != nil && oktetoErrors.IsForbidden(err) {
-			if err := c.OktetoContextWriter.Write(); err != nil {
-				oktetoLog.Infof("error updating okteto contexts: %v", err)
-				return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+		if err != nil {
+			if oktetoErrors.IsForbidden(err) {
+				if err := c.OktetoContextWriter.Write(); err != nil {
+					oktetoLog.Infof("error updating okteto contexts: %v", err)
+					return nil, fmt.Errorf(oktetoErrors.ErrCorruptedOktetoContexts, config.GetOktetoContextsStorePath())
+				}
+				return nil, oktetoErrors.NotLoggedError{
+					Context: okteto.Context().Name,
+				}
 			}
-			return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.Context().Name)
-		}
 
-		// If there is a TLS error, don't continue the loop and return the raw error
-		if err != nil && oktetoErrors.IsX509(err) {
-			return nil, err
+			// If there is a TLS error, don't continue the loop and return the raw error
+			if oktetoErrors.IsX509(err) {
+				return nil, err
+			}
+
+			if oktetoErrors.IsNotFound(err) {
+				userContext, err = client.User().GetContext(ctx, "")
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
 
 		if err != nil {
