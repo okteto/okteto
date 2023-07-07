@@ -567,8 +567,6 @@ func TestGetUserContext(t *testing.T) {
 	for _, tc := range tt {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
 			fakeOktetoClient := &client.FakeOktetoClient{
 				Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
 				Users:     client.NewFakeUsersClient(user, tc.input.userErr...),

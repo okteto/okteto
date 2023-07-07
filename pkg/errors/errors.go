@@ -59,8 +59,8 @@ func (e NotLoggedError) Error() string {
 	return fmt.Sprintf(ErrNotLogged, e.Context)
 }
 
-func (e NotLoggedError) Unwrap() error {
-	return notLogged
+func (NotLoggedError) Unwrap() error {
+	return ErrNotLoggedMsg
 }
 
 var (
@@ -68,7 +68,7 @@ var (
 	ErrCommandFailed = errors.New("command execution failed")
 
 	// notLogged is raised when the user is not logged in okteto
-	notLogged = errors.New("user is not logged in okteto")
+	ErrNotLoggedMsg = errors.New("user is not logged in okteto")
 
 	// ErrNotLogged is raised when we can't get the user token
 	ErrNotLogged = "your token is invalid. Please run 'okteto context use %s' and try again"
