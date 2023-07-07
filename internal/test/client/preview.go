@@ -33,6 +33,8 @@ type FakePreviewResponse struct {
 
 	ErrDestroyPreview   error
 	DestroySuccessCount int
+	ErrSleepPreview     error
+	ErrWakePreview      error
 }
 
 // NewFakePreviewClient returns a new fake preview client

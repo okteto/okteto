@@ -98,7 +98,7 @@ func Test_WakeNamespace(t *testing.T) {
 				},
 				CurrentContext: "test-context",
 			}
-			nsFakeCommand := newFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
+			nsFakeCommand := NewFakeNamespaceCommand(tt.fakeOkClient, tt.fakeK8sClient, usr)
 			err := nsFakeCommand.ExecuteWakeNamespace(ctx, tt.toWakeNs)
 			if tt.err != nil {
 				assert.ErrorIs(t, err, tt.err)

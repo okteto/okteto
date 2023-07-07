@@ -47,5 +47,7 @@ func Preview(ctx context.Context) *cobra.Command {
 	cmd.AddCommand(Destroy(ctx))
 	cmd.AddCommand(List(ctx))
 	cmd.AddCommand(Endpoints(ctx))
+	cmd.AddCommand(Sleep(ctx))
+	cmd.AddCommand(Wake(ctx))
 	return cmd
 }
