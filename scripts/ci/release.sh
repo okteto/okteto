@@ -103,7 +103,7 @@
         CHANNELS=
 
         is_oficial_release=false
-        
+
         # dev releases don't have tags
         if [ "$RELEASE_TAG" = "" ]; then
                 CHANNELS=("dev")
@@ -191,7 +191,7 @@
         done
 
         if [ "$is_oficial_release" = true ] ; then
-                 # upload artifacts to bucket root (https://downloads.okteto.com/cli)
+                 # upload artifacts to bucket root (gs://downloads.okteto.com/cli)
                 echo "Syncing artifacts from $BIN_PATH with $BIN_BUCKET_ROOT"
                 gsutil -m rsync -r "$BIN_PATH" "gs://$BIN_BUCKET_ROOT"
         fi
