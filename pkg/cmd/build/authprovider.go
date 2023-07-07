@@ -27,13 +27,16 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/okteto/okteto/pkg/okteto"
 )
 
 var oktetoRegistry = ""
 
 func newDockerAndOktetoAuthProvider(registryURL, username, password string, stderr io.Writer) *authProvider {
 	result := &authProvider{
-		config: config.LoadDefaultConfigFile(stderr),
+		config:       config.LoadDefaultConfigFile(stderr),
+		externalAuth: okteto.GetExternalRegistryCredentials,
 	}
 	oktetoRegistry = registryURL
 	result.config.AuthConfigs[registryURL] = types.AuthConfig{
@@ -44,7 +47,7 @@ func newDockerAndOktetoAuthProvider(registryURL, username, password string, stde
 	return result
 }
 
-type externalRegistryCredentialFunc func(ctx context.Context, host string) (types.AuthConfig, error)
+type externalRegistryCredentialFunc func(ctx context.Context, host string) (string, string, error)
 
 type authProvider struct {
 	config *configfile.ConfigFile
@@ -87,6 +90,8 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
+
+	originalHost := req.Host
 	if req.Host == "registry-1.docker.io" {
 		req.Host = "https://index.docker.io/v1/"
 	}
@@ -111,12 +116,12 @@ func (ap *authProvider) Credentials(ctx context.Context, req *auth.CredentialsRe
 	}
 
 	// local credentials takes precedence over cluster defined credentials
-	if ap.externalAuth != nil && (res.Username == "" || res.Secret == "") {
-		if auth, err := ap.externalAuth(ctx, req.Host); err != nil {
+	if res.Username == "" || res.Secret == "" {
+		if user, pass, err := ap.externalAuth(ctx, originalHost); err != nil {
 			oktetoLog.Debugf("failed to load external auth for %s: %w", req.Host, err.Error())
 		} else {
-			res.Username = auth.Username
-			res.Secret = auth.Password
+			res.Username = user
+			res.Secret = pass
 		}
 	}
 

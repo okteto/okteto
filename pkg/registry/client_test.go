@@ -20,13 +20,10 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	containerv1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -34,7 +31,6 @@ import (
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoHttp "github.com/okteto/okteto/pkg/http"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 type fakeTLSConn struct {
@@ -123,13 +119,14 @@ func (fc fakeClient) HasPushAccess(_ string) (bool, error) {
 }
 
 type fakeClientConfig struct {
-	registryURL string
-	userID      string
-	token       string
-	isInsecure  bool
-	cert        *x509.Certificate
-	serverName  string
-	contextName string
+	registryURL                 string
+	userID                      string
+	token                       string
+	isInsecure                  bool
+	cert                        *x509.Certificate
+	serverName                  string
+	contextName                 string
+	externalRegistryCredentials [2]string
 }
 
 func (f fakeClientConfig) GetRegistryURL() string                            { return f.registryURL }
@@ -139,6 +136,9 @@ func (f fakeClientConfig) IsInsecureSkipTLSVerifyPolicy() bool               { r
 func (f fakeClientConfig) GetContextCertificate() (*x509.Certificate, error) { return f.cert, nil }
 func (f fakeClientConfig) GetServerNameOverride() string                     { return f.serverName }
 func (f fakeClientConfig) GetContextName() string                            { return f.contextName }
+func (f fakeClientConfig) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
+	return f.externalRegistryCredentials[0], f.externalRegistryCredentials[1], nil
+}
 
 func TestGetDigest(t *testing.T) {
 	unautorizedErr := &transport.Error{
@@ -442,33 +442,4 @@ func TestGetTransport(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestExternalAuth(t *testing.T) {
-	var called bool
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/v2/myimage/manifests/latest" {
-			user, pass, ok := r.BasicAuth()
-			require.True(t, ok)
-			require.Equal(t, "myuser", user)
-			require.Equal(t, "mypass", pass)
-			called = true
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer s.Close()
-	registry, err := url.Parse(s.URL)
-	require.NoError(t, err)
-
-	image := fmt.Sprintf("%s/myimage:latest", registry.Host)
-
-	c := newOktetoRegistryClient(fakeClientConfig{isInsecure: true}).
-		WithExternalAuth(registry.Host, &authn.Basic{
-			Username: "myuser",
-			Password: "mypass",
-		})
-
-	_, err = c.GetDigest(image)
-	require.NoError(t, err)
-	require.True(t, called, "/v2/myimage/manifests/latest registry endpoint was not called")
 }

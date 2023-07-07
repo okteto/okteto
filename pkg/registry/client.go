@@ -43,6 +43,7 @@ type ClientConfigInterface interface {
 	GetContextCertificate() (*x509.Certificate, error)
 	GetServerNameOverride() string
 	GetContextName() string
+	GetExternalRegistryCredentials(registryHost string) (string, string, error)
 }
 
 type oktetoHelperConfig interface {
@@ -69,26 +70,14 @@ type client struct {
 	config  ClientConfigInterface
 	get     func(ref name.Reference, options ...remote.Option) (*remote.Descriptor, error)
 	tlsDial oktetoHttp.TLSDialFunc
-
-	externalAuth map[string]authn.Authenticator
 }
 
 func newOktetoRegistryClient(config ClientConfigInterface) client {
 	return client{
-		config:       config,
-		get:          remote.Get,
-		tlsDial:      oktetoHttp.DefaultTLSDial,
-		externalAuth: make(map[string]authn.Authenticator),
+		config:  config,
+		get:     remote.Get,
+		tlsDial: oktetoHttp.DefaultTLSDial,
 	}
-}
-
-func (c client) WithExternalAuth(registry string, auth authn.Authenticator) client {
-	c2 := newOktetoRegistryClient(c.config)
-	for k, v := range c.externalAuth {
-		c2.externalAuth[k] = v
-	}
-	c2.externalAuth[registry] = auth
-	return c2
 }
 
 func (c client) getDescriptor(image string) (*remote.Descriptor, error) {
@@ -179,11 +168,12 @@ func (c client) getAuthentication(ref name.Reference) remote.Option {
 		return remote.WithAuth(authenticator)
 	}
 
-	if auth, ok := c.externalAuth[registry]; ok {
-		return remote.WithAuth(auth)
-	}
+	kc := authn.NewMultiKeychain(
+		authn.DefaultKeychain,
+		authn.NewKeychainFromHelper(inlineHelper(c.config.GetExternalRegistryCredentials)),
+	)
 
-	return remote.WithAuthFromKeychain(authn.DefaultKeychain)
+	return remote.WithAuthFromKeychain(kc)
 }
 
 func (c client) getTransportOption() remote.Option {
@@ -211,4 +201,10 @@ func (c client) getTransport() http.RoundTripper {
 		transport = oktetoHttp.StrictSSLTransport(sslTransportOption)
 	}
 	return transport
+}
+
+type inlineHelper func(registryURL string) (string, string, error)
+
+func (fn inlineHelper) Get(registryURL string) (string, string, error) {
+	return fn(registryURL)
 }
