@@ -32,7 +32,9 @@ func (c *FakeUserClient) GetContext(_ context.Context, ns string) (*types.UserCo
 	if c.err != nil && len(c.err) > 0 {
 		err := c.err[0]
 		c.err = c.err[1:]
-		return nil, err
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return c.userCtx, nil
