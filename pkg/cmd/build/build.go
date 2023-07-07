@@ -48,9 +48,7 @@ type OktetoBuilderInterface interface {
 }
 
 // OktetoBuilder runs the build of an image
-type OktetoBuilder struct {
-	Registry registry.OktetoRegistry
-}
+type OktetoBuilder struct{}
 
 // OktetoRegistryInterface checks if an image is at the registry
 type OktetoRegistryInterface interface {
@@ -160,11 +158,7 @@ func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *type
 	}
 
 	if err == nil && buildOptions.Tag != "" {
-		reg := ob.Registry
-		if reg == (registry.OktetoRegistry{}) {
-			reg = registry.NewOktetoRegistry(okteto.Config{})
-		}
-		if _, err := reg.GetImageTagWithDigest(buildOptions.Tag); err != nil {
+		if _, err := registry.NewOktetoRegistry(okteto.Config{}).GetImageTagWithDigest(buildOptions.Tag); err != nil {
 			oktetoLog.Yellow(`Failed to push '%s' metadata to the registry:
 	  %s,
 	  Retrying ...`, buildOptions.Tag, err.Error())
