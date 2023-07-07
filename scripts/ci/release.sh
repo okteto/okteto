@@ -102,7 +102,8 @@
         # If the channel is unknown the release will fail
         CHANNELS=
 
-        IS_OFICIAL_RELEASE=false
+        is_oficial_release=false
+        
         # dev releases don't have tags
         if [ "$RELEASE_TAG" = "" ]; then
                 CHANNELS=("dev")
@@ -113,7 +114,7 @@
                 # Stable releases are added to all channel
                 if [ -z "$prerel" ]; then
                         CHANNELS=("stable" "beta" "dev")
-                        IS_OFICIAL_RELEASE=true
+                        is_oficial_release=true
                 elif [[ $prerel =~ $beta_prerel_regex ]]; then
                         CHANNELS=("beta" "dev")
 
@@ -189,7 +190,7 @@
                 echo "${chan} channel updated with ${tag}"
         done
 
-        if [ "$IS_OFICIAL_RELEASE" = true ] ; then
+        if [ "$is_oficial_release" = true ] ; then
                  # upload artifacts to bucket root (https://downloads.okteto.com/cli)
                 echo "Syncing artifacts from $BIN_PATH with $BIN_BUCKET_ROOT"
                 gsutil -m rsync -r "$BIN_PATH" "gs://$BIN_BUCKET_ROOT"
