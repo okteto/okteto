@@ -48,26 +48,30 @@ func newDestroyPreviewCommand(okClient types.OktetoInterface, k8sClient kubernet
 	}
 }
 
+type DestroyOptions struct {
+	name string
+	wait bool
+}
+
 // Destroy destroy a preview
 func Destroy(ctx context.Context) *cobra.Command {
-	var name string
-
+	opts := &DestroyOptions{}
 	cmd := &cobra.Command{
 		Use:   "destroy <name>",
 		Short: "Destroy a preview environment",
 		Args:  utils.ExactArgsAccepted(1, ""),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			name = getExpandedName(args[0])
+			opts.name = getExpandedName(args[0])
 
 			ctxResource := &model.ContextResource{}
-			if err := ctxResource.UpdateNamespace(name); err != nil {
+			if err := ctxResource.UpdateNamespace(opts.name); err != nil {
 				return err
 			}
 
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
-			oktetoLog.Information("Using %s @ %s as context", name, okteto.RemoveSchema(okteto.Context().Name))
+			oktetoLog.Information("Using %s @ %s as context", opts.name, okteto.RemoveSchema(okteto.Context().Name))
 
 			if !okteto.IsOkteto() {
 				return oktetoErrors.ErrContextIsNotOktetoCluster
@@ -83,29 +87,34 @@ func Destroy(ctx context.Context) *cobra.Command {
 			}
 			c := newDestroyPreviewCommand(oktetoClient, k8sClient)
 
-			err = c.executeDestroyPreview(ctx, name)
+			err = c.executeDestroyPreview(ctx, opts)
 			analytics.TrackPreviewDestroy(err == nil)
 			return err
 		},
 	}
-
+	cmd.Flags().BoolVarP(&opts.wait, "wait", "w", true, "wait until the preview environment gets destroyed (defaults to true)")
 	return cmd
 }
 
-func (c destroyPreviewCommand) executeDestroyPreview(ctx context.Context, name string) error {
-	oktetoLog.Spinner(fmt.Sprintf("Destroying %q preview environment", name))
+func (c destroyPreviewCommand) executeDestroyPreview(ctx context.Context, opts *DestroyOptions) error {
+	oktetoLog.Spinner(fmt.Sprintf("Destroying %q preview environment", opts.name))
 	oktetoLog.StartSpinner()
 	defer oktetoLog.StopSpinner()
 
-	if err := c.okClient.Previews().Destroy(ctx, name); err != nil {
+	if err := c.okClient.Previews().Destroy(ctx, opts.name); err != nil {
 		return fmt.Errorf("failed to destroy preview environment: %s", err)
 	}
 
-	if err := c.watchDestroy(ctx, name); err != nil {
+	if !opts.wait {
+		oktetoLog.Success("Preview environment '%s' scheduled to destroy", opts.name)
+		return nil
+	}
+
+	if err := c.watchDestroy(ctx, opts.name); err != nil {
 		return err
 	}
 
-	oktetoLog.Success("Preview environment destroyed")
+	oktetoLog.Success("Preview environment '%s' successfully destroyed", opts.name)
 	return nil
 }
 
