@@ -292,9 +292,6 @@ func getLoggedUserContext(ctx context.Context, c *ContextCommand, ctxOptions *Co
 
 	userContext, err := c.getUserContext(ctx, ctxOptions.Namespace)
 	if err != nil {
-		if oktetoErrors.IsNotFound(err) {
-
-		}
 		return nil, err
 	}
 
@@ -357,6 +354,7 @@ func (c ContextCommand) getUserContext(ctx context.Context, ns string) (*types.U
 			}
 
 			if oktetoErrors.IsNotFound(err) {
+				// fallback to personal namesapce using empty string as param
 				userContext, err = client.User().GetContext(ctx, "")
 				if err != nil {
 					return nil, err
