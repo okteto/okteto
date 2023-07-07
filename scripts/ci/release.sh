@@ -128,6 +128,8 @@
                 fi
         fi
 
+        BIN_BUCKET_ROOT="downloads.okteto.com/cli"
+        
         for chan in "${CHANNELS[@]}"; do
                 echo "---------------------------------------------------------------------------------"
                 tag="${RELEASE_TAG:-"$PSEUDO_TAG"}"
@@ -140,7 +142,7 @@
                 # BIN_BUCKET_NAME is the name of the bucket where the binaries are stored.
                 # Starting at Okteto CLI 2.0, all these binaries are publicly accessible at:
                 # https://downloads.okteto.com/cli/<channel>/<tag>
-                BIN_BUCKET_ROOT="downloads.okteto.com/cli"
+                
                 BIN_BUCKET_ROOT_WITH_CHAN="${BIN_BUCKET_ROOT}/${chan}"
                 BIN_BUCKET_NAME="${BIN_BUCKET_ROOT_WITH_CHAN}/${tag}"
 
