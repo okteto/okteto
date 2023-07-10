@@ -15,6 +15,7 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -35,6 +36,12 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+var (
+
+	// errDevModeNotValid is raised when development mode in manifest is not 'sync' nor 'hybrid'
+	errDevModeNotValid = errors.New("development mode not valid. Value must be one of: ['sync', 'hybrid']")
 )
 
 // BuildInfoRaw represents the build info for serialization
@@ -790,16 +797,25 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	mode := &modeInfo{}
 	err := unmarshal(mode)
 	if err != nil {
-		if mode.Mode == constants.OktetoHybridModeFieldValue {
-			hybridModeDev := &hybridModeInfo{}
-			err := unmarshal(hybridModeDev)
-			if err != nil {
-				return err
-			}
 
-			warningMsg := hybridModeDev.warnHybridUnsupportedFields()
-			if warningMsg != "" {
-				oktetoLog.Warning(warningMsg)
+		switch mode.Mode {
+		case "", constants.OktetoSyncModeFieldValue:
+		case constants.OktetoHybridModeFieldValue:
+			{
+				hybridModeDev := &hybridModeInfo{}
+				err := unmarshal(hybridModeDev)
+				if err != nil {
+					return err
+				}
+
+				warningMsg := hybridModeDev.warnHybridUnsupportedFields()
+				if warningMsg != "" {
+					oktetoLog.Warning(warningMsg)
+				}
+			}
+		default:
+			{
+				return errDevModeNotValid
 			}
 		}
 	}
