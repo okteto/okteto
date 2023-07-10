@@ -41,7 +41,7 @@ import (
 var (
 
 	// ErrDevModeNotValid is raised when development mode in manifest is not 'sync' nor 'hybrid'
-	ErrDevModeNotValid = errors.New("development mode not valid. Value must be one of: ['sync', 'hybrid']")
+	errDevModeNotValid = errors.New("development mode not valid. Value must be one of: ['sync', 'hybrid']")
 )
 
 // BuildInfoRaw represents the build info for serialization
@@ -815,7 +815,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			}
 		default:
 			{
-				return ErrDevModeNotValid
+				return errDevModeNotValid
 			}
 		}
 	}
