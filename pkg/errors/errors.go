@@ -210,6 +210,9 @@ var (
 
 	// ErrTimeout is raised when an operation has timed out
 	ErrTimeout = fmt.Errorf("operation timed out")
+
+	//ErrDevModeNotValid is raised when development mode in manifest is not 'sync' nor 'hybrid'
+	ErrDevModeNotValid = errors.New("development mode not valid. Value must be one of: ['sync', 'hybrid']")
 )
 
 // IsAlreadyExists raised if the Kubernetes API returns AlreadyExists

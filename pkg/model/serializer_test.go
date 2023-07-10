@@ -15,13 +15,14 @@ package model
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
 	"log"
 	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/externalresource"
@@ -2095,6 +2096,21 @@ forward:
 					Image: "okteto/bin:1.4.2",
 				},
 			},
+		},
+		{
+			name: "no valid mode return error",
+			input: []byte(`
+mode: invalid-mode
+selector:
+  app.kubernetes.io/part-of: okteto
+  app.kubernetes.io/component: producer
+image: okteto/golang:1
+command: sh
+sync:
+  - ./producer:/usr/src/app
+forward:
+  - 2345:2345`),
+			expected: nil,
 		},
 	}
 	for _, tt := range tests {

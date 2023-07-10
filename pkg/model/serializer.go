@@ -28,6 +28,7 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/okteto/okteto/pkg/cache"
 	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -790,16 +791,25 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	mode := &modeInfo{}
 	err := unmarshal(mode)
 	if err != nil {
-		if mode.Mode == constants.OktetoHybridModeFieldValue {
-			hybridModeDev := &hybridModeInfo{}
-			err := unmarshal(hybridModeDev)
-			if err != nil {
-				return err
-			}
 
-			warningMsg := hybridModeDev.warnHybridUnsupportedFields()
-			if warningMsg != "" {
-				oktetoLog.Warning(warningMsg)
+		switch mode.Mode {
+		case "", constants.OktetoSyncModeFieldValue:
+		case constants.OktetoHybridModeFieldValue:
+			{
+				hybridModeDev := &hybridModeInfo{}
+				err := unmarshal(hybridModeDev)
+				if err != nil {
+					return err
+				}
+
+				warningMsg := hybridModeDev.warnHybridUnsupportedFields()
+				if warningMsg != "" {
+					oktetoLog.Warning(warningMsg)
+				}
+			}
+		default:
+			{
+				return errors.ErrDevModeNotValid
 			}
 		}
 	}
