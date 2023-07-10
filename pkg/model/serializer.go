@@ -15,6 +15,7 @@ package model
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -28,7 +29,6 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/okteto/okteto/pkg/cache"
 	"github.com/okteto/okteto/pkg/constants"
-	"github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/externalresource"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -36,6 +36,12 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+var (
+
+	//ErrDevModeNotValid is raised when development mode in manifest is not 'sync' nor 'hybrid'
+	ErrDevModeNotValid = errors.New("development mode not valid. Value must be one of: ['sync', 'hybrid']")
 )
 
 // BuildInfoRaw represents the build info for serialization
@@ -809,7 +815,7 @@ func (d *Dev) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			}
 		default:
 			{
-				return errors.ErrDevModeNotValid
+				return ErrDevModeNotValid
 			}
 		}
 	}
