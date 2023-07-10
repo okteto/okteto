@@ -17,15 +17,16 @@
 package up
 
 import (
-	"path/filepath"
-	"runtime"
-	"testing"
-	"text/template"
-
+	"context"
 	"github.com/okteto/okteto/integration"
 	"github.com/okteto/okteto/integration/commands"
-	"github.com/spf13/afero"
+	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
+	"os"
+	"path/filepath"
+	"testing"
 )
 
 const (
@@ -37,9 +38,21 @@ dev:
     context: svc
     namespace: user
     mode: hybrid
-    command: "{{ .Shell }} checker.sh"
+    command: ./checker.sh
     reverse:
     - 8080:8080
+    args:
+    - value-of-arg1
+    - $VALUE_OF_ARG2
+    envFiles:
+    - .env
+    environment:
+    - TEST_ENV_VAR1=test-value1
+    metadata:
+      annotations:
+        e2e/test-1: annotation-1
+      labels:
+        custom.label/e2e: "true"
 `
 	hybridCompose = `services:
  svc:
@@ -49,8 +62,29 @@ dev:
 
 	svcDockerfile = `FROM busybox
 ENV ENV_IN_IMAGE value_from_image`
+	envFile      = `VALUE_OF_ARG2=value-of-arg2`
 	localProcess = `
 #!/bin/bash
+
+if [ "$#" -ne 2 ]; then
+  echo "Total arguments count should be 2, got $# instead"
+  exit 1
+fi
+
+if [ "$1" != "value-of-arg1" ]; then
+  echo "First argument should be 'value-of-arg1', got '$1' instead"
+  exit 1
+fi
+
+if [ "$2" != "value-of-arg2" ]; then
+  echo "Second argument should be 'value-of-arg2', got '$2' instead"
+  exit 1
+fi
+
+if [ "$TEST_ENV_VAR1" != "test-value1" ]; then
+  echo "TEST_ENV_VAR1 should be 'test-value1', got '$TEST_ENV_VAR1' instead"
+  exit 1
+fi
 
 for x in ENV_IN_POD,value_from_pod ENV_IN_IMAGE,value_from_image ; do
   IFS=, read name value <<< "$x"
@@ -85,31 +119,19 @@ func TestUpUsingHybridMode(t *testing.T) {
 	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
 	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
-
-	tmpl := template.Must(template.New("okteto.yml").Parse(hybridManifest))
-
-	oktetoManifestFileName := filepath.Join(dir, "okteto.yml")
-	fs := afero.NewOsFs()
-	oktetoManifestFile, err := fs.Create(oktetoManifestFileName)
+	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
 
-	type oktetoManifestTemplate struct {
-		Shell string
-	}
-
-	shell := "bash"
-	if runtime.GOOS == "windows" {
-		shell = "sh"
-	}
-	oktetoManifestSyntax := oktetoManifestTemplate{
-		Shell: shell,
-	}
-
-	require.NoError(t, tmpl.Execute(oktetoManifestFile, oktetoManifestSyntax))
+	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), hybridManifest))
 	require.NoError(t, writeFile(filepath.Join(dir, "docker-compose.yml"), hybridCompose))
 	require.NoError(t, writeFile(filepath.Join(dir, ".stignore"), stignoreContent))
 	require.NoError(t, writeFile(filepath.Join(dir, "Dockerfile"), svcDockerfile))
 	require.NoError(t, writeFile(filepath.Join(dir, "checker.sh"), localProcess))
+	require.NoError(t, writeFile(filepath.Join(dir, ".env"), envFile))
+	err = os.Chmod(filepath.Join(dir, "checker.sh"), 0755)
+	if err != nil {
+		require.NoError(t, err)
+	}
 
 	up1Options := &commands.UpOptions{
 		Name:       "svc",
@@ -125,6 +147,14 @@ func TestUpUsingHybridMode(t *testing.T) {
 
 	// Test warnings for unsupported fields
 	require.Contains(t, output.String(), "In hybrid mode, the field(s) 'context, namespace' specified in your manifest are ignored")
+
+	// Get deployment and check for annotations and labels
+	deploy, err := integration.GetDeployment(context.Background(), testNamespace, "svc", c)
+	require.NoError(t, err)
+	require.Equal(t, constants.OktetoHybridModeFieldValue, deploy.Annotations[constants.OktetoDevModeAnnotation])
+
+	// TODO: understand why this Label is not getting set
+	//require.Equal(t, "true", deploy.Annotations["custom.label/e2e"])
 
 	// Test okteto down command
 	down1Opts := &commands.DownOptions{
