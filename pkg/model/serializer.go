@@ -40,7 +40,7 @@ import (
 
 var (
 
-	// ErrDevModeNotValid is raised when development mode in manifest is not 'sync' nor 'hybrid'
+	// errDevModeNotValid is raised when development mode in manifest is not 'sync' nor 'hybrid'
 	errDevModeNotValid = errors.New("development mode not valid. Value must be one of: ['sync', 'hybrid']")
 )
 
