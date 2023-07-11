@@ -213,36 +213,39 @@ jobs:
           name: Run deprecated integration tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_PATH: 'C:\Users\circleci.PACKER-64370BA5\project\artifacts\bin\okteto.exe'
             - OKTETO_SKIP_CLEANUP: 'true'
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
+            $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
             go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m
             go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
       - run:
           name: Run build integration tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_PATH: 'C:\Users\circleci.PACKER-64370BA5\project\artifacts\bin\okteto.exe'
             - OKTETO_SKIP_CLEANUP: 'true'
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
-          command: go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
+          command: |
+            $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+            go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
       - run:
           name: Run deploy integration tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_PATH: 'C:\Users\circleci.PACKER-64370BA5\project\artifacts\bin\okteto.exe'
             - OKTETO_SKIP_CLEANUP: 'true'
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
-          command: go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
+          command: |
+            $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+            go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
       - run:
           name: Run up integration tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
-            - OKTETO_PATH: 'C:\Users\circleci.PACKER-64370BA5\project\artifacts\bin\okteto.exe'
             - OKTETO_SKIP_CLEANUP: 'true'
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
-          command: go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
+          command: |
+            $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+            go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
       - store_artifacts:
           path: C:\Users\circleci\.okteto
 
