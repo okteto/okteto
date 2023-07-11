@@ -53,8 +53,7 @@ More info about docker credentials helpers here: https://github.com/docker/docke
 	cmd.RunE = func(_ *cobra.Command, args []string) error {
 		action := args[0]
 		ctx := context.Background()
-		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{})
-		if err != nil {
+		if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 			return err
 		}
 		conf := okteto.Config{}
