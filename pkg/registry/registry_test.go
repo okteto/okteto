@@ -48,7 +48,7 @@ func (fc FakeConfig) GetContextCertificate() (*x509.Certificate, error) {
 }
 func (fc FakeConfig) GetServerNameOverride() string { return fc.ServerName }
 func (fc FakeConfig) GetContextName() string        { return fc.ContextName }
-func (f FakeConfig) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
+func (f FakeConfig) GetExternalRegistryCredentials(_ string) (string, string, error) {
 	return f.externalRegistryCredentials[0], f.externalRegistryCredentials[1], nil
 }
 
