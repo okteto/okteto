@@ -49,10 +49,10 @@ func (c *FakeUserClient) GetClusterCertificate(_ context.Context, cluster, ns st
 	return nil, nil
 }
 
-func (c *FakeUserClient) GetClusterMetadata(ctx context.Context, ns string) (types.ClusterMetadata, error) {
+func (c *FakeUserClient) GetClusterMetadata(_ context.Context, _ string) (types.ClusterMetadata, error) {
 	return types.ClusterMetadata{}, nil
 }
 
-func (c *FakeUserClient) GetRegistryCredentials(ctx context.Context, registry string) (dockertypes.AuthConfig, error) {
+func (c *FakeUserClient) GetRegistryCredentials(_ context.Context, _ string) (dockertypes.AuthConfig, error) {
 	return dockertypes.AuthConfig{}, nil
 }
