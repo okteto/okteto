@@ -34,6 +34,7 @@ import (
 	"github.com/okteto/okteto/cmd/namespace"
 	"github.com/okteto/okteto/cmd/pipeline"
 	"github.com/okteto/okteto/cmd/preview"
+	"github.com/okteto/okteto/cmd/registrytoken"
 	"github.com/okteto/okteto/cmd/stack"
 	"github.com/okteto/okteto/cmd/up"
 	"github.com/okteto/okteto/pkg/analytics"
@@ -124,6 +125,8 @@ func main() {
 	root.AddCommand(contextCMD.Context())
 	root.AddCommand(cmd.Kubeconfig())
 	root.AddCommand(kubetoken.KubeToken())
+	root.AddCommand(registrytoken.RegistryToken())
+
 	root.AddCommand(build.Build(ctx))
 
 	root.AddCommand(namespace.Namespace(ctx))
