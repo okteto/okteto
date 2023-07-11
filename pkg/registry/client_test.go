@@ -136,7 +136,7 @@ func (f fakeClientConfig) IsInsecureSkipTLSVerifyPolicy() bool               { r
 func (f fakeClientConfig) GetContextCertificate() (*x509.Certificate, error) { return f.cert, nil }
 func (f fakeClientConfig) GetServerNameOverride() string                     { return f.serverName }
 func (f fakeClientConfig) GetContextName() string                            { return f.contextName }
-func (f fakeClientConfig) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
+func (f fakeClientConfig) GetExternalRegistryCredentials(_ string) (string, string, error) {
 	return f.externalRegistryCredentials[0], f.externalRegistryCredentials[1], nil
 }
 
