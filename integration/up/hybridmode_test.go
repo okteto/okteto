@@ -24,7 +24,6 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/stretchr/testify/require"
-	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -122,7 +121,6 @@ func TestUpUsingHybridMode(t *testing.T) {
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, dir))
 	c, _, err := okteto.NewK8sClientProvider().Provide(kubeconfig.Get([]string{filepath.Join(dir, ".kube", "config")}))
 	require.NoError(t, err)
-	log.Printf("Using kubeconfig: '%s'", filepath.Join(dir, ".kube", "config"))
 
 	require.NoError(t, writeFile(filepath.Join(dir, "okteto.yml"), hybridManifest))
 	require.NoError(t, writeFile(filepath.Join(dir, "docker-compose.yml"), hybridCompose))
