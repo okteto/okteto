@@ -102,6 +102,8 @@
         # If the channel is unknown the release will fail
         CHANNELS=
 
+        is_oficial_release=false
+
         # dev releases don't have tags
         if [ "$RELEASE_TAG" = "" ]; then
                 CHANNELS=("dev")
@@ -112,7 +114,7 @@
                 # Stable releases are added to all channel
                 if [ -z "$prerel" ]; then
                         CHANNELS=("stable" "beta" "dev")
-
+                        is_oficial_release=true
                 elif [[ $prerel =~ $beta_prerel_regex ]]; then
                         CHANNELS=("beta" "dev")
 
@@ -126,6 +128,8 @@
                 fi
         fi
 
+        BIN_BUCKET_ROOT="downloads.okteto.com/cli"
+        
         for chan in "${CHANNELS[@]}"; do
                 echo "---------------------------------------------------------------------------------"
                 tag="${RELEASE_TAG:-"$PSEUDO_TAG"}"
@@ -138,8 +142,9 @@
                 # BIN_BUCKET_NAME is the name of the bucket where the binaries are stored.
                 # Starting at Okteto CLI 2.0, all these binaries are publicly accessible at:
                 # https://downloads.okteto.com/cli/<channel>/<tag>
-                BIN_BUCKET_ROOT="downloads.okteto.com/cli/${chan}"
-                BIN_BUCKET_NAME="${BIN_BUCKET_ROOT}/${tag}"
+                
+                BIN_BUCKET_ROOT_WITH_CHAN="${BIN_BUCKET_ROOT}/${chan}"
+                BIN_BUCKET_NAME="${BIN_BUCKET_ROOT_WITH_CHAN}/${tag}"
 
                 # VERSIONS_BUCKET_FILENAME are all the available versions for a release channel.
                 # This is also publicly accessible at:
@@ -180,7 +185,13 @@
                 latest="$(tail -n1 "${version_file}")"
 
                 if [ "$tag" = "$latest" ]; then
-                        gsutil -m rsync "gs://$BIN_BUCKET_NAME" "gs://$BIN_BUCKET_ROOT"
+                        gsutil -m rsync "gs://$BIN_BUCKET_NAME" "gs://$BIN_BUCKET_ROOT_WITH_CHAN"
+                        
+                        if [ "$is_oficial_release" = true ] ; then
+                                # upload artifacts to bucket root (gs://downloads.okteto.com/cli)
+                                echo "Syncing artifacts from $BIN_PATH with $BIN_BUCKET_ROOT"
+                                gsutil -m rsync -r "$BIN_PATH" "gs://$BIN_BUCKET_ROOT"
+                        fi
                 fi
 
                 gsutil -m -h "Cache-Control: no-store" -h "Content-Type: text/plain" cp "${version_file}" "gs://${VERSIONS_BUCKET_FILENAME}"
