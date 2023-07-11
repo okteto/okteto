@@ -186,17 +186,17 @@
 
                 if [ "$tag" = "$latest" ]; then
                         gsutil -m rsync "gs://$BIN_BUCKET_NAME" "gs://$BIN_BUCKET_ROOT_WITH_CHAN"
+                        
+                        if [ "$is_oficial_release" = true ] ; then
+                                # upload artifacts to bucket root (gs://downloads.okteto.com/cli)
+                                echo "Syncing artifacts from $BIN_PATH with $BIN_BUCKET_ROOT"
+                                gsutil -m rsync -r "$BIN_PATH" "gs://$BIN_BUCKET_ROOT"
+                        fi
                 fi
 
                 gsutil -m -h "Cache-Control: no-store" -h "Content-Type: text/plain" cp "${version_file}" "gs://${VERSIONS_BUCKET_FILENAME}"
                 echo "${chan} channel updated with ${tag}"
         done
-
-        if [ "$is_oficial_release" = true ] ; then
-                 # upload artifacts to bucket root (gs://downloads.okteto.com/cli)
-                echo "Syncing artifacts from $BIN_PATH with $BIN_BUCKET_ROOT"
-                gsutil -m rsync -r "$BIN_PATH" "gs://$BIN_BUCKET_ROOT"
-        fi
 
         ################################################################################
         # Update Github Release
