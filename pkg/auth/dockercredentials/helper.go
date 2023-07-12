@@ -35,12 +35,12 @@ func NewOktetoClusterHelper(getter RegistryCredentialsGetter) *OktetoClusterHelp
 }
 
 // Add appends credentials to the store.
-func (och *OktetoClusterHelper) Add(*credentials.Credentials) error {
+func (*OktetoClusterHelper) Add(*credentials.Credentials) error {
 	return ErrNotImplemented
 }
 
 // Delete removes credentials from the store.
-func (och *OktetoClusterHelper) Delete(serverURL string) error {
+func (*OktetoClusterHelper) Delete(_ string) error {
 	return ErrNotImplemented
 }
 
@@ -51,6 +51,6 @@ func (och *OktetoClusterHelper) Get(serverURL string) (string, string, error) {
 }
 
 // List returns the stored serverURLs and their associated usernames.
-func (och *OktetoClusterHelper) List() (map[string]string, error) {
+func (*OktetoClusterHelper) List() (map[string]string, error) {
 	return nil, ErrNotImplemented
 }
