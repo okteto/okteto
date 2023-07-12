@@ -287,8 +287,8 @@ func Up() *cobra.Command {
 					Err:                    err,
 				})
 
-				// only allow error.ErrManifestFoundButNoDeployCommands to go forward - autocreate property will deploy the app
-				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployCommands) {
+				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
+				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
 					return err
 				}
 
