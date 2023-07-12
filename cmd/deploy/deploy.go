@@ -284,8 +284,7 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.Debug("found okteto manifest")
 	dc.PipelineType = deployOptions.Manifest.Type
 
-	dependenciesEmpty := deployOptions.Manifest.Dependencies == nil || len(deployOptions.Manifest.Dependencies) == 0
-	if deployOptions.Manifest.Deploy == nil && dependenciesEmpty {
+	if deployOptions.Manifest.Deploy == nil && !deployOptions.Manifest.HasDependencies() {
 		return oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands
 	}
 
