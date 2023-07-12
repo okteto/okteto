@@ -36,7 +36,7 @@ var oktetoRegistry = ""
 func newDockerAndOktetoAuthProvider(registryURL, username, password string, stderr io.Writer) *authProvider {
 	result := &authProvider{
 		config:       config.LoadDefaultConfigFile(stderr),
-		externalAuth: okteto.GetExternalRegistryCredentials,
+		externalAuth: okteto.GetExternalRegistryCredentialsWithContext,
 	}
 	oktetoRegistry = registryURL
 	result.config.AuthConfigs[registryURL] = types.AuthConfig{

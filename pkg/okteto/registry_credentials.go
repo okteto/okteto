@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -44,7 +45,7 @@ func (r *externalRegistryCredentialsReader) read(ctx context.Context, registryOr
 	return ac.Username, ac.Password, err
 }
 
-func GetExternalRegistryCredentials(ctx context.Context, registryOrImage string) (string, string, error) {
+func GetExternalRegistryCredentialsWithContext(ctx context.Context, registryOrImage string) (string, string, error) {
 	c, err := NewOktetoClient()
 	if err != nil {
 		oktetoLog.Debugf("failed to create okteto client for getting registry credentials: %s", err.Error())
@@ -55,4 +56,15 @@ func GetExternalRegistryCredentials(ctx context.Context, registryOrImage string)
 		getter:   c.User().GetRegistryCredentials,
 	}
 	return r.read(ctx, registryOrImage)
+}
+
+// GetExternalRegistryCredentials returns registry credentials for a registry
+// defined in okteto.
+// This function is mostly executed by internal libraries (registry, docker
+// credentials helpers, etc) and we need to respect this signature.
+// For this reason, context is managed internally by the function.
+func GetExternalRegistryCredentials(registryOrImage string) (string, string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	return GetExternalRegistryCredentialsWithContext(ctx, registryOrImage)
 }

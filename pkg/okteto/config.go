@@ -14,7 +14,6 @@
 package okteto
 
 import (
-	"context"
 	"crypto/x509"
 )
 
@@ -31,5 +30,5 @@ func (Config) IsInsecureSkipTLSVerifyPolicy() bool               { return Contex
 func (Config) GetServerNameOverride() string                     { return GetServerNameOverride() }
 func (Config) GetContextName() string                            { return Context().Name }
 func (Config) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
-	return GetExternalRegistryCredentials(context.TODO(), registryHost)
+	return GetExternalRegistryCredentials(registryHost)
 }
