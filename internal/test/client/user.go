@@ -45,7 +45,7 @@ func (c *FakeUserClient) GetUserSecrets(_ context.Context) ([]types.Secret, erro
 	return c.userSecrets, nil
 }
 
-func (*FakeUserClient) GetClusterCertificate(_ context.Context, cluster, ns string) ([]byte, error) {
+func (*FakeUserClient) GetClusterCertificate(_ context.Context, _, _ string) ([]byte, error) {
 	return nil, nil
 }
 
