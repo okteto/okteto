@@ -43,11 +43,15 @@ func RegistryToken() *cobra.Command {
 
 Usage: echo gcr.io | okteto registrytoken get
 
+Valid arguments are: store, get, erase, list, version.
+
+At this time only "get" is supported
+
 More info about docker credentials helpers here: https://github.com/docker/docker-credential-helpers
   `,
 		Hidden:    true,
-		ValidArgs: []string{"get"},
-		Args:      cobra.OnlyValidArgs,
+		ValidArgs: []string{"store", "get", "erase", "list", "version"},
+		Args:      cobra.ExactValidArgs(1),
 	}
 
 	cmd.RunE = func(_ *cobra.Command, args []string) error {
