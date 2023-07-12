@@ -14,6 +14,7 @@ package client
 import (
 	"context"
 
+	dockertypes "github.com/docker/cli/cli/config/types"
 	"github.com/okteto/okteto/pkg/types"
 )
 
@@ -44,10 +45,14 @@ func (c *FakeUserClient) GetUserSecrets(_ context.Context) ([]types.Secret, erro
 	return c.userSecrets, nil
 }
 
-func (c *FakeUserClient) GetClusterCertificate(_ context.Context, cluster, ns string) ([]byte, error) {
+func (*FakeUserClient) GetClusterCertificate(_ context.Context, _, _ string) ([]byte, error) {
 	return nil, nil
 }
 
-func (c *FakeUserClient) GetClusterMetadata(ctx context.Context, ns string) (types.ClusterMetadata, error) {
+func (*FakeUserClient) GetClusterMetadata(_ context.Context, _ string) (types.ClusterMetadata, error) {
 	return types.ClusterMetadata{}, nil
+}
+
+func (*FakeUserClient) GetRegistryCredentials(_ context.Context, _ string) (dockertypes.AuthConfig, error) {
+	return dockertypes.AuthConfig{}, nil
 }

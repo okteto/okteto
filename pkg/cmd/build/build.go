@@ -56,14 +56,14 @@ type OktetoRegistryInterface interface {
 }
 
 // Run runs the build sequence
-func (*OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions) error {
+func (ob *OktetoBuilder) Run(ctx context.Context, buildOptions *types.BuildOptions) error {
 	buildOptions.OutputMode = setOutputMode(buildOptions.OutputMode)
 	if okteto.Context().Builder == "" {
-		if err := buildWithDocker(ctx, buildOptions); err != nil {
+		if err := ob.buildWithDocker(ctx, buildOptions); err != nil {
 			return err
 		}
 	} else {
-		if err := buildWithOkteto(ctx, buildOptions); err != nil {
+		if err := ob.buildWithOkteto(ctx, buildOptions); err != nil {
 			return err
 		}
 	}
@@ -85,7 +85,7 @@ func setOutputMode(outputMode string) string {
 
 }
 
-func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) error {
+func (ob *OktetoBuilder) buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) error {
 	oktetoLog.Infof("building your image on %s", okteto.Context().Builder)
 	buildkitClient, err := getBuildkitClient(ctx)
 	if err != nil {
@@ -186,7 +186,7 @@ func buildWithOkteto(ctx context.Context, buildOptions *types.BuildOptions) erro
 }
 
 // https://github.com/docker/cli/blob/56e5910181d8ac038a634a203a4f3550bb64991f/cli/command/image/build.go#L209
-func buildWithDocker(ctx context.Context, buildOptions *types.BuildOptions) error {
+func (ob *OktetoBuilder) buildWithDocker(ctx context.Context, buildOptions *types.BuildOptions) error {
 
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {

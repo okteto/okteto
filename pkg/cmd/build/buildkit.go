@@ -89,7 +89,8 @@ func getSolveOpt(buildOptions *types.BuildOptions) (*client.SolveOpt, error) {
 	}
 	attachable := []session.Attachable{}
 	if okteto.IsOkteto() {
-		attachable = append(attachable, newDockerAndOktetoAuthProvider(okteto.Context().Registry, okteto.Context().UserID, okteto.Context().Token, os.Stderr))
+		ap := newDockerAndOktetoAuthProvider(okteto.Context().Registry, okteto.Context().UserID, okteto.Context().Token, os.Stderr)
+		attachable = append(attachable, ap)
 	} else {
 		attachable = append(attachable, authprovider.NewDockerAuthProvider(os.Stderr))
 	}

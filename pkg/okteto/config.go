@@ -13,7 +13,9 @@
 
 package okteto
 
-import "crypto/x509"
+import (
+	"crypto/x509"
+)
 
 type Config struct{}
 
@@ -27,3 +29,6 @@ func (Config) GetContextCertificate() (*x509.Certificate, error) { return GetCon
 func (Config) IsInsecureSkipTLSVerifyPolicy() bool               { return Context().IsInsecure }
 func (Config) GetServerNameOverride() string                     { return GetServerNameOverride() }
 func (Config) GetContextName() string                            { return Context().Name }
+func (Config) GetExternalRegistryCredentials(registryHost string) (string, string, error) {
+	return GetExternalRegistryCredentials(registryHost)
+}

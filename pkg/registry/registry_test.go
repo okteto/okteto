@@ -33,6 +33,7 @@ type FakeConfig struct {
 	ContextCertificate          *x509.Certificate
 	ServerName                  string
 	ContextName                 string
+	externalRegistryCredentials [2]string
 }
 
 func (fc FakeConfig) IsOktetoCluster() bool               { return fc.IsOktetoClusterCfg }
@@ -47,6 +48,9 @@ func (fc FakeConfig) GetContextCertificate() (*x509.Certificate, error) {
 }
 func (fc FakeConfig) GetServerNameOverride() string { return fc.ServerName }
 func (fc FakeConfig) GetContextName() string        { return fc.ContextName }
+func (f FakeConfig) GetExternalRegistryCredentials(_ string) (string, string, error) {
+	return f.externalRegistryCredentials[0], f.externalRegistryCredentials[1], nil
+}
 
 func TestGetImageTagWithDigest(t *testing.T) {
 	type expected struct {

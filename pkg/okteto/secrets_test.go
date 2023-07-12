@@ -16,9 +16,11 @@ package okteto
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"testing"
 
+	dockertypes "github.com/docker/cli/cli/config/types"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/shurcooL/graphql"
@@ -614,6 +616,104 @@ func TestGetClusterCertificate(t *testing.T) {
 				assert.NoError(t, err)
 			}
 			assert.Equal(t, tc.expected.cert, result)
+		})
+	}
+}
+
+func TestGetRegistryCredentials(t *testing.T) {
+	ctx := context.Background()
+	type input struct {
+		client *fakeGraphQLClient
+		host   string
+	}
+	type expected struct {
+		authConfig dockertypes.AuthConfig
+		expectErr  bool
+	}
+	testCases := []struct {
+		name     string
+		cfg      input
+		expected expected
+	}{
+		{
+			name: "happy path",
+			cfg: input{
+				host: "1.1.1.1",
+				client: &fakeGraphQLClient{
+					queryResult: &getRegistryCredentialsQuery{
+						RegistryCredentials: registryCredsQuery{
+							Username:      "user",
+							Password:      "pass",
+							Serveraddress: "1.1.1.1",
+							Registrytoken: "token1",
+							Identitytoken: "token2",
+						},
+					},
+				},
+			},
+			expected: expected{
+				authConfig: dockertypes.AuthConfig{
+					Username:      "user",
+					Password:      "pass",
+					ServerAddress: "1.1.1.1",
+					RegistryToken: "token1",
+					IdentityToken: "token2",
+				},
+			},
+		},
+		{
+			name: "doesn't fail with old backend",
+			cfg: input{
+				host: "1.1.1.1",
+				client: &fakeGraphQLClient{
+					err: errors.New("Cannot query field \"registryCredentials\" on type \"Query\""),
+				},
+			},
+			expected: expected{
+				expectErr:  false,
+				authConfig: dockertypes.AuthConfig{},
+			},
+		},
+		{
+			name: "doesn't fail with not found",
+			cfg: input{
+				host: "1.1.1.1",
+				client: &fakeGraphQLClient{
+					err: errors.New("not-found"),
+				},
+			},
+			expected: expected{
+				expectErr:  false,
+				authConfig: dockertypes.AuthConfig{},
+			},
+		},
+		{
+			name: "fails with other errors",
+			cfg: input{
+				host: "1.1.1.1",
+				client: &fakeGraphQLClient{
+					err: errors.New("this is my error. There are many like it but this one is mine"),
+				},
+			},
+			expected: expected{
+				expectErr:  true,
+				authConfig: dockertypes.AuthConfig{},
+			},
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			uc := &userClient{
+				client: tc.cfg.client,
+			}
+			result, err := uc.GetRegistryCredentials(ctx, tc.cfg.host)
+			if tc.expected.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, tc.expected.authConfig, result)
 		})
 	}
 }

@@ -13,7 +13,9 @@
 
 package types
 
-import "github.com/okteto/okteto/pkg/model"
+import (
+	"github.com/okteto/okteto/pkg/model"
+)
 
 // BuildSshSession is a reference to an ssh session which translates to a
 // --mount=ssh,id={id} argument in a buildkit run.

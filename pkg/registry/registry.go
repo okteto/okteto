@@ -35,18 +35,14 @@ type configInterface interface {
 	GetContextCertificate() (*x509.Certificate, error)
 	GetServerNameOverride() string
 	GetContextName() string
-}
-
-type registryConfig interface {
-	IsOktetoCluster() bool
-	GetRegistryURL() string
+	GetExternalRegistryCredentials(registryHost string) (string, string, error)
 }
 
 // OktetoRegistry represents the registry
 type OktetoRegistry struct {
 	client    clientInterface
 	imageCtrl ImageCtrl
-	config    registryConfig
+	config    configInterface
 }
 
 type OktetoImageReference struct {

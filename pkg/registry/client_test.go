@@ -119,13 +119,14 @@ func (fc fakeClient) HasPushAccess(_ string) (bool, error) {
 }
 
 type fakeClientConfig struct {
-	registryURL string
-	userID      string
-	token       string
-	isInsecure  bool
-	cert        *x509.Certificate
-	serverName  string
-	contextName string
+	registryURL                 string
+	userID                      string
+	token                       string
+	isInsecure                  bool
+	cert                        *x509.Certificate
+	serverName                  string
+	contextName                 string
+	externalRegistryCredentials [2]string
 }
 
 func (f fakeClientConfig) GetRegistryURL() string                            { return f.registryURL }
@@ -135,6 +136,9 @@ func (f fakeClientConfig) IsInsecureSkipTLSVerifyPolicy() bool               { r
 func (f fakeClientConfig) GetContextCertificate() (*x509.Certificate, error) { return f.cert, nil }
 func (f fakeClientConfig) GetServerNameOverride() string                     { return f.serverName }
 func (f fakeClientConfig) GetContextName() string                            { return f.contextName }
+func (f fakeClientConfig) GetExternalRegistryCredentials(_ string) (string, string, error) {
+	return f.externalRegistryCredentials[0], f.externalRegistryCredentials[1], nil
+}
 
 func TestGetDigest(t *testing.T) {
 	unautorizedErr := &transport.Error{

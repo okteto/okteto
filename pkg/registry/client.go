@@ -43,6 +43,7 @@ type ClientConfigInterface interface {
 	GetContextCertificate() (*x509.Certificate, error)
 	GetServerNameOverride() string
 	GetContextName() string
+	GetExternalRegistryCredentials(registryHost string) (string, string, error)
 }
 
 type oktetoHelperConfig interface {
@@ -166,7 +167,13 @@ func (c client) getAuthentication(ref name.Reference) remote.Option {
 		}
 		return remote.WithAuth(authenticator)
 	}
-	return remote.WithAuthFromKeychain(authn.DefaultKeychain)
+
+	kc := authn.NewMultiKeychain(
+		authn.DefaultKeychain,
+		authn.NewKeychainFromHelper(inlineHelper(c.config.GetExternalRegistryCredentials)),
+	)
+
+	return remote.WithAuthFromKeychain(kc)
 }
 
 func (c client) getTransportOption() remote.Option {
@@ -194,4 +201,10 @@ func (c client) getTransport() http.RoundTripper {
 		transport = oktetoHttp.StrictSSLTransport(sslTransportOption)
 	}
 	return transport
+}
+
+type inlineHelper func(registryURL string) (string, string, error)
+
+func (fn inlineHelper) Get(registryURL string) (string, string, error) {
+	return fn(registryURL)
 }

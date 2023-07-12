@@ -16,6 +16,8 @@ package types
 import (
 	"context"
 	"time"
+
+	dockertypes "github.com/docker/cli/cli/config/types"
 )
 
 // OktetoInterface represents the client that connects to the backend to create API calls
@@ -33,6 +35,7 @@ type UserInterface interface {
 	GetContext(ctx context.Context, ns string) (*UserContext, error)
 	GetClusterCertificate(ctx context.Context, cluster, ns string) ([]byte, error)
 	GetClusterMetadata(ctx context.Context, ns string) (ClusterMetadata, error)
+	GetRegistryCredentials(ctx context.Context, host string) (dockertypes.AuthConfig, error)
 }
 
 // NamespaceInterface represents the client that connects to the namespace functions
