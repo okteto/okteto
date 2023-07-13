@@ -345,7 +345,8 @@ func TestDeployWithNeitherDeployNorDependencyInManifestFile(t *testing.T) {
 
 	err := c.RunDeploy(ctx, opts)
 
-	assert.Error(t, err)
+	assert.ErrorIs(t, err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands)
+
 	// No command was executed
 	assert.Len(t, e.executed, 0)
 	// Proxy wasn't started
