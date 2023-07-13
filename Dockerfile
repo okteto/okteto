@@ -41,6 +41,8 @@ RUN chmod +x /okteto/bin/okteto
 # Test
 RUN /okteto/bin/okteto version
 
+COPY docker-credential-okteto /okteto/bin/docker-credential-okteto
+
 FROM alpine:3
 
 RUN apk add --no-cache bash ca-certificates
@@ -50,6 +52,8 @@ COPY --from=helm-builder /usr/local/bin/helm /usr/local/bin/helm
 COPY --from=kustomize-builder /usr/local/bin/kustomize /usr/local/bin/kustomize
 
 COPY --from=builder /okteto/bin/okteto /usr/local/bin/okteto
+COPY --from=builder /okteto/bin/docker-credential-okteto /usr/local/bin/docker-credential-okteto
+
 
 ENV OKTETO_DISABLE_SPINNER=true
 
