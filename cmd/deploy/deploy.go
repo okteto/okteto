@@ -284,9 +284,10 @@ func (dc *DeployCommand) RunDeploy(ctx context.Context, deployOptions *Options) 
 	oktetoLog.Debug("found okteto manifest")
 	dc.PipelineType = deployOptions.Manifest.Type
 
-	if deployOptions.Manifest.Deploy == nil && deployOptions.Manifest.Dependencies == nil {
+	if deployOptions.Manifest.Deploy == nil && !deployOptions.Manifest.HasDependencies() {
 		return oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands
 	}
+
 	if len(deployOptions.servicesToDeploy) > 0 && deployOptions.Manifest.Deploy != nil && deployOptions.Manifest.Deploy.ComposeSection == nil {
 		return oktetoErrors.ErrDeployCantDeploySvcsIfNotCompose
 	}
