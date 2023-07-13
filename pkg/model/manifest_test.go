@@ -731,6 +731,44 @@ func TestSetManifestDefaultsFromDev(t *testing.T) {
 	}
 }
 
+func TestHasDependencies(t *testing.T) {
+	tests := []struct {
+		name     string
+		manifest Manifest
+		expected bool
+	}{
+		{
+			name: "nil dependencies",
+			manifest: Manifest{
+				Dependencies: nil,
+			},
+			expected: false,
+		},
+		{
+			name: "empty dependencies",
+			manifest: Manifest{
+				Dependencies: make(ManifestDependencies, 0),
+			},
+			expected: false,
+		},
+		{
+			name: "has dependencies",
+			manifest: Manifest{
+				Dependencies: ManifestDependencies{
+					"test": &Dependency{},
+				},
+			},
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, tt.manifest.HasDependencies())
+		})
+	}
+}
+
 func TestSetBuildDefaults(t *testing.T) {
 
 	tests := []struct {

@@ -1331,6 +1331,14 @@ func (m *Manifest) setManifestDefaultsFromDev() {
 	}
 }
 
+// HasDependencies returns true if the manifest has dependencies
+func (m *Manifest) HasDependencies() bool {
+	if m.Dependencies == nil {
+		return false
+	}
+	return len(m.Dependencies) > 0
+}
+
 // HasDev checks if manifestDevs has a dev name as key
 func (d ManifestDevs) HasDev(name string) bool {
 	_, ok := d[name]
