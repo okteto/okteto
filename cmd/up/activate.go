@@ -250,9 +250,11 @@ func (up *upContext) devMode(ctx context.Context, app apps.App, create bool) err
 }
 
 func (up *upContext) createDevContainer(ctx context.Context, app apps.App, create bool) error {
-	oktetoLog.Spinner("Activating your development container...")
-	oktetoLog.StartSpinner()
-	defer oktetoLog.StopSpinner()
+	if !up.Dev.IsHybridModeEnabled() {
+		oktetoLog.Spinner("Activating your development container...")
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
+	}
 
 	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Starting); err != nil {
 		return err
@@ -316,17 +318,18 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 }
 
 func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context, app apps.App) error {
-	msg := "Pulling images..."
-	if up.Dev.PersistentVolumeEnabled() {
-		msg = "Attaching persistent volume..."
-		if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Attaching); err != nil {
-			oktetoLog.Infof("error updating state: %s", err.Error())
+	if !up.Dev.IsHybridModeEnabled() {
+		msg := "Pulling images..."
+		if up.Dev.PersistentVolumeEnabled() {
+			msg = "Attaching persistent volume..."
+			if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Attaching); err != nil {
+				oktetoLog.Infof("error updating state: %s", err.Error())
+			}
 		}
+		oktetoLog.Spinner(msg)
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
 	}
-
-	oktetoLog.Spinner(msg)
-	oktetoLog.StartSpinner()
-	defer oktetoLog.StopSpinner()
 
 	optsWatchPod := metav1.ListOptions{
 		Watch:         true,
@@ -457,7 +460,9 @@ func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context,
 
 			oktetoLog.Infof("dev pod %s is now %s", pod.Name, pod.Status.Phase)
 			if pod.Status.Phase == apiv1.PodRunning {
-				oktetoLog.Success("Images successfully pulled")
+				if !up.Dev.IsHybridModeEnabled() {
+					oktetoLog.Success("Images successfully pulled")
+				}
 				return nil
 			}
 			if pod.DeletionTimestamp != nil {
