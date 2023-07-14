@@ -26,6 +26,11 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+const (
+	// defaultOktetoFilename is the default name of the manifest file
+	defaultOktetoFilename = "okteto.yml"
+)
+
 // DeprecatedInferName infers the dev environment name from the folder received as parameter.
 // It is deprecated as it doesn't take into account deployed dev environments to get the non-sanitized name.
 // This is only being effectively used in push command, which will be deleted in the next major version
@@ -86,11 +91,25 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 			continue
 		}
 
-		if filename := cmap.Data["filename"]; filename != manifestPath {
-			oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", filename, cmapRepo.GetAnonymizedRepo(), manifestPath)
-			continue
-		}
+		filename := cmap.Data["filename"]
 
+		// If the manifestPath is not the default one, we compare it with the one in the configmap
+
+		if manifestPath != filename {
+			if manifestPath == "" {
+				// If manifestPath is empty and filename is not equal to defaultOktetoFilename,
+				// log a message indicating the mismatch between the configmap and the provided manifest.
+				if filename != defaultOktetoFilename {
+					oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", filename, cmapRepo.GetAnonymizedRepo(), manifestPath)
+					continue
+				}
+			} else {
+				// If manifestPath is not empty and filename is not the same as manifestPath,
+				// log a message indicating the mismatch between the configmap and the provided manifest.
+				oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", filename, cmapRepo.GetAnonymizedRepo(), manifestPath)
+				continue
+			}
+		}
 		possibleNames = append(possibleNames, cmap.Data["name"])
 	}
 

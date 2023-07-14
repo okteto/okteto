@@ -2,6 +2,7 @@ package devenvironment
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -79,6 +80,17 @@ func TestInferName(t *testing.T) {
 			cwd:          "/tmp/my-dev-env",
 			expectedName: "multiple dev name 1",
 		},
+		{
+			name: "with-non-matching-criteria-but-default-one-dev",
+			getRepositoryURL: func(s string) (string, error) {
+				return "https://github.com/test/multiple-repo.git", nil
+			},
+			devEnvs:      getDevEnvironmentConfigMaps(),
+			ns:           "test",
+			manifestPath: "",
+			cwd:          "/tmp/my-dev-env",
+			expectedName: "single dev name with default filename saved",
+		},
 	}
 
 	for _, tt := range tests {
@@ -89,6 +101,9 @@ func TestInferName(t *testing.T) {
 				getRepositoryURL: tt.getRepositoryURL,
 			}
 
+			if "with-non-matching-criteria-but-default-one-dev" == tt.name {
+				fmt.Println("here")
+			}
 			result := inferer.InferName(ctx, tt.cwd, tt.ns, tt.manifestPath)
 			require.Equal(t, tt.expectedName, result)
 		})
@@ -137,6 +152,14 @@ func TestInferNameFromDevEnvsAndRepository(t *testing.T) {
 			manifestPath:  "my-manifest-multiple/okteto.yml",
 			expectedName:  "multiple dev name 1",
 		},
+		{
+			name:          "without-matching-criteria-but-default-one-dev",
+			repositoryURL: "https://github.com/test/multiple-repo.git",
+			devEnvs:       getDevEnvironmentConfigMaps(),
+			ns:            "test",
+			manifestPath:  "okteto.yml",
+			expectedName:  "single dev name with default filename saved",
+		},
 	}
 
 	for _, tt := range tests {
@@ -147,6 +170,10 @@ func TestInferNameFromDevEnvsAndRepository(t *testing.T) {
 				getRepositoryURL: func(s string) (string, error) {
 					return "", assert.AnError
 				},
+			}
+
+			if tt.name == "without-matching-criteria-but-default-one-dev" {
+				fmt.Println("here")
 			}
 
 			result := inferer.InferNameFromDevEnvsAndRepository(ctx, tt.repositoryURL, tt.ns, tt.manifestPath)
@@ -211,6 +238,20 @@ func getDevEnvironmentConfigMaps() []runtime.Object {
 				"name":       "multiple dev name 3",
 				"repository": "https://github.com/test/multiple-repo.git",
 				"filename":   "my-manifest-multiple/okteto.yml",
+			},
+		},
+		&apiv1.ConfigMap{
+			ObjectMeta: v1.ObjectMeta{
+				Name:      "single-dev-name-with-default-name-saved",
+				Namespace: "test",
+				Labels: map[string]string{
+					model.GitDeployLabel: "true",
+				},
+			},
+			Data: map[string]string{
+				"name":       "single dev name with default filename saved",
+				"repository": "https://github.com/test/multiple-repo.git",
+				"filename":   "okteto.yml",
 			},
 		},
 	}
