@@ -2,7 +2,6 @@ package devenvironment
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/okteto/okteto/pkg/model"
@@ -101,9 +100,6 @@ func TestInferName(t *testing.T) {
 				getRepositoryURL: tt.getRepositoryURL,
 			}
 
-			if "with-non-matching-criteria-but-default-one-dev" == tt.name {
-				fmt.Println("here")
-			}
 			result := inferer.InferName(ctx, tt.cwd, tt.ns, tt.manifestPath)
 			require.Equal(t, tt.expectedName, result)
 		})
@@ -170,10 +166,6 @@ func TestInferNameFromDevEnvsAndRepository(t *testing.T) {
 				getRepositoryURL: func(s string) (string, error) {
 					return "", assert.AnError
 				},
-			}
-
-			if tt.name == "without-matching-criteria-but-default-one-dev" {
-				fmt.Println("here")
 			}
 
 			result := inferer.InferNameFromDevEnvsAndRepository(ctx, tt.repositoryURL, tt.ns, tt.manifestPath)
