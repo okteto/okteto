@@ -81,7 +81,6 @@ func Build(ctx context.Context) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			options.CommandArgs = args
 			bc := NewBuildCommand()
-
 			// The context must be loaded before reading manifest. Otherwise,
 			// secrets will not be resolved when GetManifest is called and
 			// the manifest will load empty values.
@@ -170,11 +169,12 @@ func (*Command) loadContext(ctx context.Context, options *types.BuildOptions) er
 	ctxOpts := &contextCMD.ContextOptions{
 		Context:   options.K8sContext,
 		Namespace: options.Namespace,
+		Show:      true,
 	}
 
 	// before calling the context command, there is need to retrieve the context and
 	// namespace through the given manifest. If the manifest is a Dockerfile, this
-	// information cannot be extracted so call to GetContextResource is skkiped.
+	// information cannot be extracted so call to GetContextResource is skipped.
 	if err := validateDockerfile(options.File); err != nil {
 		ctxResource, err := model.GetContextResource(options.File)
 		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
