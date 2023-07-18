@@ -241,20 +241,22 @@ func (e Entrypoint) MarshalYAML() (interface{}, error) {
 func (c *Command) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var multi []string
 	err := unmarshal(&multi)
-	if err != nil {
-		var single string
-		err := unmarshal(&single)
-		if err != nil {
-			return err
-		}
-		if strings.Contains(single, " ") {
-			c.Values = []string{"sh", "-c", single}
-		} else {
-			c.Values = []string{single}
-		}
-	} else {
+	if err == nil {
 		c.Values = multi
+		return nil
 	}
+
+	var single string
+	err = unmarshal(&single)
+	if err != nil {
+		return err
+	}
+
+	cmd, err := shellquote.Split(single)
+	if err != nil {
+		return err
+	}
+	c.Values = cmd
 	return nil
 }
 
