@@ -211,6 +211,13 @@ func (up *upContext) activate() error {
 		analytics.TrackDurationActivateUp(durationActivateUp)
 
 		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
+
+		//cmd := up.Dev.Command.Values
+		//
+		//if len(up.Dev.Args.Values) > 0 {
+		//	cmd = append(cmd, up.Dev.Args.Values...)
+		//}
+		//up.CommandResult <- up.RunCommand(ctx, cmd)
 	}()
 
 	prevError := up.waitUntilExitOrInterruptOrApply(ctx)
