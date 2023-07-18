@@ -192,12 +192,12 @@ func TestCommandUnmarshalling(t *testing.T) {
 		{
 			"single-space",
 			[]byte("start.sh arg"),
-			Command{Values: []string{"sh", "-c", "start.sh arg"}},
+			Command{Values: []string{"start.sh", "arg"}},
 		},
 		{
 			"double-command",
 			[]byte("mkdir myproject && cd myproject"),
-			Command{Values: []string{"sh", "-c", "mkdir myproject && cd myproject"}},
+			Command{Values: []string{"mkdir", "myproject", "&&", "cd", "myproject"}},
 		},
 		{
 			"multiple",
@@ -214,9 +214,7 @@ func TestCommandUnmarshalling(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("didn't unmarshal correctly. Actual %+v, Expected %+v", result, tt.expected)
-			}
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
