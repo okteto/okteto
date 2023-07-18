@@ -236,7 +236,7 @@ func (o *DestroyOptions) setDefaults() error {
 		}
 		inferer := devenvironment.NewNameInferer(c)
 		// okteto pipeline destroy doesn't have a -f flag to specify the path, so we pass empty string
-		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), repo, okteto.Context().Namespace, "")
+		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), repo, okteto.Context().Namespace, "", "")
 	}
 
 	if o.Namespace == "" {
