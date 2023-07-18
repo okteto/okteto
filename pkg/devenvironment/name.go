@@ -19,10 +19,12 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/okteto/okteto/pkg/discovery"
 	"github.com/okteto/okteto/pkg/k8s/configmaps"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/repository"
+	"github.com/spf13/afero"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -49,6 +51,7 @@ func DeprecatedInferName(cwd string) string {
 type NameInferer struct {
 	k8s              kubernetes.Interface
 	getRepositoryURL func(string) (string, error)
+	fs               afero.Fs
 }
 
 // NewNameInferer allows to create a new instance of a name inferer
@@ -56,13 +59,14 @@ func NewNameInferer(k8s kubernetes.Interface) NameInferer {
 	return NameInferer{
 		k8s:              k8s,
 		getRepositoryURL: model.GetRepositoryURL,
+		fs:               afero.NewOsFs(),
 	}
 }
 
 // InferNameFromDevEnvsAndRepository it infers the name from the development environments deployed in the specified namespace
 // or from the git repository URL if no dev environment is found.
 // `manifestPath` is needed because we compare it with the one in dev environments to see if it is the dev environment we look for
-func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repoURL, namespace, manifestPath string) string {
+func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repoURL, namespace, manifestPath, discoveredFile string) string {
 	labelSelector := fmt.Sprintf("%s=true", model.GitDeployLabel)
 
 	oktetoLog.Infof("found repository url %s", repoURL)
@@ -91,22 +95,20 @@ func (n NameInferer) InferNameFromDevEnvsAndRepository(ctx context.Context, repo
 			continue
 		}
 
-		filename := cmap.Data["filename"]
-
+		cmapFilename := cmap.Data["filename"]
 		// If the manifestPath is not the default one, we compare it with the one in the configmap
-
-		if manifestPath != filename {
+		if manifestPath != cmapFilename {
 			if manifestPath == "" {
-				// If manifestPath is empty and filename is not equal to defaultOktetoFilename,
+				// If manifestPath is empty and filename is not equal to one of the default okteto name,
 				// log a message indicating the mismatch between the configmap and the provided manifest.
-				if filename != defaultOktetoFilename {
-					oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", filename, cmapRepo.GetAnonymizedRepo(), manifestPath)
+				if cmapFilename != discoveredFile {
+					oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", cmapFilename, cmapRepo.GetAnonymizedRepo(), manifestPath)
 					continue
 				}
 			} else {
 				// If manifestPath is not empty and filename is not the same as manifestPath,
 				// log a message indicating the mismatch between the configmap and the provided manifest.
-				oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", filename, cmapRepo.GetAnonymizedRepo(), manifestPath)
+				oktetoLog.Infof("configmap %s with manifest %s doesn't match with provided manifest %s", cmapFilename, cmapRepo.GetAnonymizedRepo(), manifestPath)
 				continue
 			}
 		}
@@ -142,5 +144,14 @@ func (n NameInferer) InferName(ctx context.Context, cwd, namespace, manifestPath
 		return filepath.Base(cwd)
 	}
 
-	return n.InferNameFromDevEnvsAndRepository(ctx, repoURL, namespace, manifestPath)
+	discoveredFile, err := discovery.GetOktetoManifestPathWithFilesystem(cwd, n.fs)
+	if err != nil {
+		oktetoLog.Info("could not detect okteto manifest file")
+	}
+	discoveredFile, err = filepath.Rel(cwd, discoveredFile)
+	if err != nil {
+		oktetoLog.Infof("could not get relative path for %s: %s", discoveredFile, err.Error())
+	}
+
+	return n.InferNameFromDevEnvsAndRepository(ctx, repoURL, namespace, manifestPath, discoveredFile)
 }
