@@ -213,7 +213,7 @@ func getClientForOktetoCluster(ctx context.Context) (*client.Client, error) {
 		return nil, errors.Wrapf(err, "invalid buildkit host %s", okteto.Context().Builder)
 	}
 
-	creds := client.WithCredentials(b.Hostname(), config.GetCertificatePath(), "", "")
+	creds := client.WithCredentialsAndSystemRoots(b.Hostname(), config.GetCertificatePath(), "", "")
 
 	oauthToken := &oauth2.Token{
 		AccessToken: okteto.Context().Token,
