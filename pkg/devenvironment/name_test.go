@@ -115,8 +115,8 @@ func TestInferName(t *testing.T) {
 			devEnvs:            getDevEnvironmentConfigMaps(),
 			ns:                 "test",
 			manifestPath:       "",
-			cwd:                filepath.Clean("/tmp/my-dev-env"),
-			oktetoManifestPath: filepath.Clean(".okteto/okteto.yml"),
+			cwd:                "/tmp/my-dev-env",
+			oktetoManifestPath: ".okteto/okteto.yml",
 			expectedName:       "single dev name with .okteto/okteto.yml filename saved",
 		},
 		{
@@ -127,8 +127,8 @@ func TestInferName(t *testing.T) {
 			devEnvs:            getDevEnvironmentConfigMaps(),
 			ns:                 "test",
 			manifestPath:       "",
-			cwd:                filepath.Clean("/tmp/my-dev-env"),
-			oktetoManifestPath: filepath.Clean(".okteto/okteto.yaml"),
+			cwd:                "/tmp/my-dev-env",
+			oktetoManifestPath: ".okteto/okteto.yaml",
 			expectedName:       "single dev name with .okteto/okteto.yaml filename saved",
 		},
 	}
