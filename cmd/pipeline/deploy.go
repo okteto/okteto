@@ -442,7 +442,7 @@ func (o *DeployOptions) setDefaults() error {
 			return err
 		}
 		inferer := devenvironment.NewNameInferer(c)
-		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), o.Repository, okteto.Context().Namespace, o.File)
+		o.Name = inferer.InferNameFromDevEnvsAndRepository(context.Background(), o.Repository, okteto.Context().Namespace, o.File, "")
 	}
 
 	currentRepoURL, err := model.GetRepositoryURL(cwd)
