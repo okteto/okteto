@@ -147,6 +147,8 @@ func (n NameInferer) InferName(ctx context.Context, cwd, namespace, manifestPath
 	if err != nil {
 		oktetoLog.Infof("could not get relative path for %s: %s", discoveredFile, err.Error())
 	}
+	// We need to sanitize paths to be UNIX style, as the ones in the configmaps are
+	sanitizedFile := filepath.ToSlash(discoveredFile)
 
-	return n.InferNameFromDevEnvsAndRepository(ctx, repoURL, namespace, manifestPath, discoveredFile)
+	return n.InferNameFromDevEnvsAndRepository(ctx, repoURL, namespace, manifestPath, sanitizedFile)
 }

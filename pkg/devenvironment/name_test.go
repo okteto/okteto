@@ -2,7 +2,6 @@ package devenvironment
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -142,7 +141,7 @@ func TestInferName(t *testing.T) {
 				fs:               afero.NewMemMapFs(),
 			}
 
-			inferer.fs.Create(filepath.Clean(fmt.Sprintf("/tmp/my-dev-env/%s", tt.oktetoManifestPath)))
+			inferer.fs.Create(filepath.Clean(filepath.Join(tt.cwd, tt.oktetoManifestPath)))
 			result := inferer.InferName(ctx, tt.cwd, tt.ns, tt.manifestPath)
 			require.Equal(t, tt.expectedName, result)
 		})
