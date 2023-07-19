@@ -13,13 +13,12 @@ import (
 func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*exec.Cmd, error) {
 	var c *exec.Cmd
 
-	//binary, err := expandExecutableInCurrentDirectory(cmd[0], he.workdir)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//c = exec.Command(binary, cmd[1:]...)
+	binary, err := expandExecutableInCurrentDirectory(cmd[0], he.workdir)
+	if err != nil {
+		return nil, err
+	}
+	c = exec.Command(binary, cmd[1:]...)
 
-	c = exec.Command(cmd[0], cmd[1:]...)
 	c.Env = he.envs
 
 	c.Stdin = os.Stdin

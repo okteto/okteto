@@ -73,6 +73,8 @@ func expandExecutableInCurrentDirectory(args0, dir string) (string, error) {
 		if err != nil {
 			// Try to get the path to the current executable
 			executable := filepath.Join(dir, args0)
+			fmt.Println(dir)
+			fmt.Println(executable)
 			_, err := exec.LookPath(executable)
 			if err != nil {
 				return "", fmt.Errorf("could not determine the script file")
