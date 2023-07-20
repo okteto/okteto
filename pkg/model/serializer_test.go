@@ -192,12 +192,12 @@ func TestCommandUnmarshalling(t *testing.T) {
 		{
 			"single-space",
 			[]byte("start.sh arg"),
-			Command{Values: []string{"start.sh", "arg"}},
+			Command{Values: []string{"sh", "-c", "start.sh arg"}},
 		},
 		{
 			"double-command",
 			[]byte("mkdir myproject && cd myproject"),
-			Command{Values: []string{"mkdir", "myproject", "&&", "cd", "myproject"}},
+			Command{Values: []string{"sh", "-c", "mkdir myproject && cd myproject"}},
 		},
 		{
 			"multiple",
@@ -210,6 +210,47 @@ func TestCommandUnmarshalling(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 
 			var result Command
+			if err := yaml.Unmarshal(tt.data, &result); err != nil {
+				t.Fatal(err)
+			}
+
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestHybridCommandUnmarshalling(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected hybridCommand
+	}{
+		{
+			"single-no-space",
+			[]byte("start.sh"),
+			hybridCommand{Values: []string{"start.sh"}},
+		},
+		{
+			"single-space",
+			[]byte("start.sh arg"),
+			hybridCommand{Values: []string{"start.sh", "arg"}},
+		},
+		{
+			"double-command",
+			[]byte("mkdir myproject && cd myproject"),
+			hybridCommand{Values: []string{"mkdir", "myproject", "&&", "cd", "myproject"}},
+		},
+		{
+			"multiple",
+			[]byte("['yarn', 'install']"),
+			hybridCommand{Values: []string{"yarn", "install"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			var result hybridCommand
 			if err := yaml.Unmarshal(tt.data, &result); err != nil {
 				t.Fatal(err)
 			}
@@ -2138,7 +2179,7 @@ func TestWarnHybridUnsupportedFields(t *testing.T) {
 			hybrid: &hybridModeInfo{
 				Workdir: "/test",
 				Mode:    "hybrid",
-				Command: Command{
+				Command: hybridCommand{
 					Values: []string{"test"},
 				},
 			},
@@ -2159,7 +2200,7 @@ func TestWarnHybridUnsupportedFields(t *testing.T) {
 			name: "Some fields are unsupported",
 			hybrid: &hybridModeInfo{
 				Mode: "sync",
-				Command: Command{
+				Command: hybridCommand{
 					Values: []string{"test"},
 				},
 				UnsupportedFields: map[string]interface{}{
