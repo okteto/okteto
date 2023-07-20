@@ -4,13 +4,12 @@
 package up
 
 import (
-	"context"
 	"os"
 	"os/exec"
 	"syscall"
 )
 
-func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*exec.Cmd, error) {
+func (he *hybridExecutor) GetCommandToExec(cmd []string) (*exec.Cmd, error) {
 	var c *exec.Cmd
 
 	binary, err := expandExecutableInCurrentDirectory(cmd[0], he.workdir)

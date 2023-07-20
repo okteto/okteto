@@ -4,24 +4,19 @@
 package up
 
 import (
-	"context"
 	"os"
 	"os/exec"
 	"syscall"
 )
 
-func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*exec.Cmd, error) {
+func (he *hybridExecutor) GetCommandToExec(cmd []string) (*exec.Cmd, error) {
 	var c *exec.Cmd
-	//if runtime.GOOS != "windows" {
-	//	c = exec.Command("bash", "-c", strings.Join(cmd, " "))
-	//} else {
+
 	binary, err := expandExecutableInCurrentDirectory(cmd[0], he.workdir)
 	if err != nil {
 		return nil, err
 	}
 	c = exec.Command(binary, cmd[1:]...)
-	//}
-	//c = exec.Command(cmd[0], cmd[1:]...)
 
 	c.Env = he.envs
 
