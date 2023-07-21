@@ -283,6 +283,23 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		file = extractFromContextAndDockerfile(b.Context, b.Dockerfile, svcName)
 	}
 
+	args := []model.BuildArg{}
+	optionsBuildArgs := map[string]string{}
+	for _, arg := range o.BuildArgs {
+		splittedArg := strings.SplitN(strings.Trim(arg, "\""), "=", 2)
+		optionsBuildArgs[splittedArg[0]] = splittedArg[1]
+		args = append(args, model.BuildArg{
+			Name: splittedArg[0], Value: splittedArg[1],
+		})
+	}
+
+	for _, e := range b.Args {
+		if _, exists := optionsBuildArgs[e.Name]; exists {
+			continue
+		}
+		args = append(args, e)
+	}
+
 	if reg.IsOktetoRegistry(b.Image) {
 		defaultBuildArgs := map[string]string{
 			model.OktetoContextEnvVar:   okteto.Context().Name,
@@ -302,11 +319,10 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 				continue
 			}
 
-			b.Args = append(b.Args, model.BuildArg{
+			args = append(args, model.BuildArg{
 				Name: key, Value: val,
 			})
 		}
-
 	}
 
 	opts := &types.BuildOptions{
@@ -315,7 +331,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 		Path:        b.Context,
 		Tag:         b.Image,
 		File:        file,
-		BuildArgs:   model.SerializeBuildArgs(b.Args),
+		BuildArgs:   model.SerializeBuildArgs(args),
 		NoCache:     o.NoCache,
 		ExportCache: b.ExportCache,
 		Platform:    o.Platform,
