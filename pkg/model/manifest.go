@@ -417,8 +417,7 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			if errors.Is(stackErr, errDependsOn) {
 				return nil, stackErr
 			}
-			// if not return original manifest err
-			return nil, err
+			return nil, stackErr
 		}
 		stackManifest.Deploy.ComposeSection.Stack = s
 		if stackManifest.Deploy.ComposeSection.Stack.Name != "" {

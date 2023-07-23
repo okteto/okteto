@@ -26,6 +26,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	"github.com/okteto/okteto/pkg/cache"
+	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/filesystem"
 	"github.com/okteto/okteto/pkg/model/forward"
 	apiv1 "k8s.io/api/core/v1"
@@ -1627,6 +1628,9 @@ func validateExtensions(stack StackRaw) error {
 	}
 
 	for svcName, svc := range stack.Services {
+		if svc == nil {
+			return fmt.Errorf("%s: %w", oktetoErrors.ErrInvalidManifest, fmt.Errorf("Service %s is empty", svcName))
+		}
 		for extension := range svc.Extensions {
 			nonValidFields = append(nonValidFields, fmt.Sprintf("services[%s].%s", svcName, extension))
 		}

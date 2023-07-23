@@ -886,6 +886,12 @@ func Test_validateCommandArgs(t *testing.T) {
 			expectedErr: false,
 		},
 		{
+			name:        "COMPOSE-service-empty",
+			manifest:    []byte("services:\n  app:\n"),
+			isCompose:   true,
+			expectedErr: true,
+		},
+		{
 			name:        "STACK-only-entrypoint",
 			manifest:    []byte("services:\n  app:\n    entrypoint: [\"/usr/bin/rpk\", \"redpanda\"]\n    image: okteto/vote:1"),
 			isCompose:   false,
