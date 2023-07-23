@@ -417,7 +417,12 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			if errors.Is(stackErr, errDependsOn) {
 				return nil, stackErr
 			}
-			return nil, stackErr
+
+			if strings.Contains(stackErr.Error(), oktetoErrors.ErrServiceEmpty.Error()) {
+				return nil, stackErr
+			}
+			// if not return original manifest err
+			return nil, err
 		}
 		stackManifest.Deploy.ComposeSection.Stack = s
 		if stackManifest.Deploy.ComposeSection.Stack.Name != "" {

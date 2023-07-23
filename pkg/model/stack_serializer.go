@@ -1629,7 +1629,7 @@ func validateExtensions(stack StackRaw) error {
 
 	for svcName, svc := range stack.Services {
 		if svc == nil {
-			return fmt.Errorf("%s: %w", oktetoErrors.ErrInvalidManifest, fmt.Errorf("Service %s is empty", svcName))
+			return fmt.Errorf("%s: %w", oktetoErrors.ErrInvalidManifest, oktetoErrors.ErrServiceEmpty)
 		}
 		for extension := range svc.Extensions {
 			nonValidFields = append(nonValidFields, fmt.Sprintf("services[%s].%s", svcName, extension))
