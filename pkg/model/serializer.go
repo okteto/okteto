@@ -241,19 +241,21 @@ func (e Entrypoint) MarshalYAML() (interface{}, error) {
 func (c *Command) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var multi []string
 	err := unmarshal(&multi)
-	if err != nil {
-		var single string
-		err := unmarshal(&single)
-		if err != nil {
-			return err
-		}
-		if strings.Contains(single, " ") {
-			c.Values = []string{"sh", "-c", single}
-		} else {
-			c.Values = []string{single}
-		}
-	} else {
+	if err == nil {
 		c.Values = multi
+		return nil
+	}
+
+	var single string
+	err = unmarshal(&single)
+	if err != nil {
+		return err
+	}
+
+	if strings.Contains(single, " ") {
+		c.Values = []string{"sh", "-c", single}
+	} else {
+		c.Values = []string{single}
 	}
 	return nil
 }
@@ -734,11 +736,36 @@ type hybridModeInfo struct {
 	Selector    Selector          `json:"selector,omitempty" yaml:"selector,omitempty"`
 	Forward     []forward.Forward `json:"forward,omitempty" yaml:"forward,omitempty"`
 	Environment Environment       `json:"environment,omitempty" yaml:"environment,omitempty"`
-	Command     Command           `json:"command,omitempty" yaml:"command,omitempty"`
+	Command     hybridCommand     `json:"command,omitempty" yaml:"command,omitempty"`
 	Reverse     []Reverse         `json:"reverse,omitempty" yaml:"reverse,omitempty"`
 	Mode        string            `json:"mode,omitempty" yaml:"mode,omitempty"`
 
 	UnsupportedFields map[string]interface{} `yaml:",inline" json:"-"`
+}
+
+type hybridCommand Command
+
+// UnmarshalYAML Implements the Unmarshaler interface of the yaml pkg.
+func (hc *hybridCommand) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var multi []string
+	err := unmarshal(&multi)
+	if err == nil {
+		hc.Values = multi
+		return nil
+	}
+
+	var single string
+	err = unmarshal(&single)
+	if err != nil {
+		return err
+	}
+
+	cmd, err := shellquote.Split(single)
+	if err != nil {
+		return err
+	}
+	hc.Values = cmd
+	return nil
 }
 
 var hybridUnsupportedFields = []string{

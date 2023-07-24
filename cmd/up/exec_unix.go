@@ -8,14 +8,13 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"strings"
 	"syscall"
 )
 
 func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*exec.Cmd, error) {
 	var c *exec.Cmd
 	if runtime.GOOS != "windows" {
-		c = exec.Command("bash", "-c", strings.Join(cmd, " "))
+		c = exec.Command(cmd[0], cmd[1:]...)
 	} else {
 		binary, err := expandExecutableInCurrentDirectory(cmd[0], he.workdir)
 		if err != nil {
@@ -33,7 +32,7 @@ func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*
 	c.Dir = he.workdir
 
 	c.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid:    true,
+		Setpgid: true,
 	}
 
 	return c, nil
