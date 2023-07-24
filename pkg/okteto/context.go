@@ -61,21 +61,22 @@ var (
 
 // OktetoContext contains the information related to an okteto context
 type OktetoContext struct {
-	Name              string               `json:"name" yaml:"name,omitempty"`
-	UserID            string               `json:"id,omitempty" yaml:"id,omitempty"`
-	Username          string               `json:"username,omitempty" yaml:"username,omitempty"`
-	Token             string               `json:"token,omitempty" yaml:"token,omitempty"`
-	Namespace         string               `json:"namespace" yaml:"namespace,omitempty"`
-	Cfg               *clientcmdapi.Config `json:"-" yaml:"-"`
-	Builder           string               `json:"builder,omitempty" yaml:"builder,omitempty"`
-	Registry          string               `json:"registry,omitempty" yaml:"registry,omitempty"`
-	Certificate       string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
-	PersonalNamespace string               `json:"personalNamespace,omitempty" yaml:"personalNamespace,omitempty"`
-	GlobalNamespace   string               `json:"-" yaml:"-"`
-	Analytics         bool                 `json:"-" yaml:"-"`
-	ClusterType       string               `json:"-" yaml:"-"`
-	IsOkteto          bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
-	IsInsecure        bool                 `json:"isInsecure,omitempty" yaml:"isInsecure,omitempty"`
+	Name               string               `json:"name" yaml:"name,omitempty"`
+	UserID             string               `json:"id,omitempty" yaml:"id,omitempty"`
+	Username           string               `json:"username,omitempty" yaml:"username,omitempty"`
+	Token              string               `json:"token,omitempty" yaml:"token,omitempty"`
+	Namespace          string               `json:"namespace" yaml:"namespace,omitempty"`
+	Cfg                *clientcmdapi.Config `json:"-" yaml:"-"`
+	Builder            string               `json:"builder,omitempty" yaml:"builder,omitempty"`
+	Registry           string               `json:"registry,omitempty" yaml:"registry,omitempty"`
+	Certificate        string               `json:"certificate,omitempty" yaml:"certificate,omitempty"`
+	PersonalNamespace  string               `json:"personalNamespace,omitempty" yaml:"personalNamespace,omitempty"`
+	GlobalNamespace    string               `json:"-" yaml:"-"`
+	Analytics          bool                 `json:"-" yaml:"-"`
+	ClusterType        string               `json:"-" yaml:"-"`
+	IsOkteto           bool                 `json:"isOkteto,omitempty" yaml:"isOkteto,omitempty"`
+	IsStoredAsInsecure bool                 `json:"isInsecure,omitempty" yaml:"isInsecure,omitempty"`
+	IsInsecure         bool                 `json:"-" yaml:"-"`
 }
 
 // OktetoContextViewer contains info to show
@@ -273,19 +274,22 @@ func HasBeenLogged(oktetoURL string) bool {
 func AddOktetoContext(name string, u *types.User, namespace, personalNamespace string) {
 	CurrentStore = ContextStore()
 	name = strings.TrimSuffix(name, "/")
-	CurrentStore.Contexts[name] = &OktetoContext{
-		Name:              name,
-		UserID:            u.ID,
-		Username:          u.ExternalID,
-		Token:             u.Token,
-		Namespace:         namespace,
-		PersonalNamespace: personalNamespace,
-		GlobalNamespace:   u.GlobalNamespace,
-		Builder:           u.Buildkit,
-		Registry:          u.Registry,
-		Certificate:       u.Certificate,
-		Analytics:         u.Analytics,
+	current := CurrentStore.Contexts[name]
+	if current == nil {
+		current = &OktetoContext{}
 	}
+	current.Name = name
+	current.UserID = u.ID
+	current.Username = u.ExternalID
+	current.Token = u.Token
+	current.Namespace = namespace
+	current.PersonalNamespace = personalNamespace
+	current.GlobalNamespace = u.GlobalNamespace
+	current.Builder = u.Buildkit
+	current.Registry = u.Registry
+	current.Certificate = u.Certificate
+	current.Analytics = u.Analytics
+
 	CurrentStore.CurrentContext = name
 }
 

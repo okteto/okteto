@@ -15,6 +15,7 @@ package context
 
 import (
 	"context"
+	"encoding/base64"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
@@ -50,13 +51,24 @@ func UpdateKubeconfigCMD() *cobra.Command {
 }
 
 func ExecuteUpdateKubeconfig() error {
-	if err := kubeconfig.Write(okteto.Context().Cfg, config.GetKubeconfigPath()[0]); err != nil {
+	ctx := okteto.Context()
+	k8sContext := okteto.Context().Name
+
+	if ctx.IsOkteto {
+		k8sContext = okteto.UrlToKubernetesContext(k8sContext)
+		if ctx.IsStoredAsInsecure {
+			certPEM, err := base64.StdEncoding.DecodeString(okteto.Context().Certificate)
+			if err != nil {
+				oktetoLog.Debugf("couldn't decode context certificate from base64: %s", err)
+				return err
+			}
+			ctx.Cfg.Clusters[k8sContext].CertificateAuthorityData = certPEM
+		}
+	}
+	if err := kubeconfig.Write(ctx.Cfg, config.GetKubeconfigPath()[0]); err != nil {
 		return err
 	}
-	k8sContext := okteto.Context().Name
-	if okteto.Context().IsOkteto {
-		k8sContext = okteto.UrlToKubernetesContext(k8sContext)
-	}
-	oktetoLog.Success("Updated kubernetes context '%s/%s' in '%s'", k8sContext, okteto.Context().Namespace, config.GetKubeconfigPath())
+
+	oktetoLog.Success("Updated kubernetes context '%s/%s' in '%s'", k8sContext, ctx.Namespace, config.GetKubeconfigPath())
 	return nil
 }
