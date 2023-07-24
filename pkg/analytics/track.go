@@ -333,6 +333,7 @@ type TrackDeployMetadata struct {
 	IsPreview              bool
 	HasDependenciesSection bool
 	HasBuildSection        bool
+	IsRemote               bool
 }
 
 // TrackDeploy sends a tracking event to mixpanel when the user deploys a pipeline
@@ -348,6 +349,7 @@ func TrackDeploy(m TrackDeployMetadata) {
 		"isPreview":              m.IsPreview,
 		"hasDependenciesSection": m.HasDependenciesSection,
 		"hasBuildSection":        m.HasBuildSection,
+		"isRemote":               m.IsRemote,
 	}
 	if m.Err != nil {
 		props["error"] = m.Err.Error()

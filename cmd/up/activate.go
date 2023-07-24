@@ -54,7 +54,7 @@ func (up *upContext) activate() error {
 	up.Forwarder = nil
 	defer func() {
 		if up.Dev.IsHybridModeEnabled() {
-			// interrupt signal handler already performs a gracefull shutdown
+			// interrupt signal handler already performs a graceful shutdown
 			if !up.interruptReceived {
 				up.shutdown()
 			}

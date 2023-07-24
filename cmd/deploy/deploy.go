@@ -212,12 +212,15 @@ func Deploy(ctx context.Context) *cobra.Command {
 				deployType := "custom"
 				hasDependencySection := false
 				hasBuildSection := false
+				isRunningOnRemoteDeployer := false
 				if options.Manifest != nil {
 					if options.Manifest.IsV2 &&
-						options.Manifest.Deploy != nil &&
-						options.Manifest.Deploy.ComposeSection != nil &&
-						options.Manifest.Deploy.ComposeSection.ComposesInfo != nil {
-						deployType = "compose"
+						options.Manifest.Deploy != nil {
+						isRunningOnRemoteDeployer = isRemoteDeployer(options.RunInRemote, options.Manifest.Deploy.Image)
+						if options.Manifest.Deploy.ComposeSection != nil &&
+							options.Manifest.Deploy.ComposeSection.ComposesInfo != nil {
+							deployType = "compose"
+						}
 					}
 
 					hasDependencySection = options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0
@@ -233,6 +236,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 					IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
 					HasDependenciesSection: hasDependencySection,
 					HasBuildSection:        hasBuildSection,
+					IsRemote:               isRunningOnRemoteDeployer,
 				})
 
 				exit <- err
@@ -532,12 +536,7 @@ func getDefaultTimeout() time.Duration {
 
 func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, builder *buildv2.OktetoBuilder, cmapHandler configMapHandler) (deployerInterface, error) {
 
-	// isDeployRemote represents wheather the process is comming from a remote deploy
-	// if true it should get the local deployer
-	isDeployRemote := utils.LoadBoolean(constants.OktetoDeployRemote)
-
-	// remote deployment should be done when flag RunInRemote is active OR deploy.image is fulfilled
-	if !isDeployRemote && (opts.RunInRemote || opts.Manifest.Deploy.Image != "") {
+	if isRemoteDeployer(opts.RunInRemote, opts.Manifest.Deploy.Image) {
 		// run remote
 		oktetoLog.Info("Deploying remotely...")
 		return newRemoteDeployer(builder), nil
@@ -551,6 +550,15 @@ func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, b
 		return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
 	}
 	return deployer, nil
+}
+
+func isRemoteDeployer(runInRemoteFlag bool, deployImage string) bool {
+	// isDeployRemote represents whether the process is coming from a remote deploy
+	// if true it should get the local deployer
+	isDeployRemote := utils.LoadBoolean(constants.OktetoDeployRemote)
+
+	// remote deployment should be done when flag RunInRemote is active OR deploy.image is fulfilled
+	return !isDeployRemote && (runInRemoteFlag || deployImage != "")
 }
 
 // deployDependencies deploy the dependencies in the manifest
@@ -605,4 +613,8 @@ func (dc *DeployCommand) recreateFailedPods(ctx context.Context, name string) er
 		}
 	}
 	return nil
+}
+
+func (dc *DeployCommand) trackDeploy() {
+
 }

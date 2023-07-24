@@ -3,12 +3,13 @@ package preview
 import (
 	"context"
 	"fmt"
+	"testing"
+
 	"github.com/okteto/okteto/internal/test/client"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func Test_listPreview(t *testing.T) {
@@ -113,7 +114,7 @@ func Test_PreviewListOutputValidation(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			name: "ouput format is yaml",
+			name: "output format is yaml",
 			output: ListFlags{
 				output: "yaml",
 			},

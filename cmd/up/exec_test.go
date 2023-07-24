@@ -363,7 +363,7 @@ func TestGetEnvForHybridModeWithProperPriority(t *testing.T) {
 		},
 	}
 
-	// acording to exec.Cmd.Env docs, if cmd.Env contains duplicate environment keys, only the last
+	// according to exec.Cmd.Env docs, if cmd.Env contains duplicate environment keys, only the last
 	// value in the slice for each duplicate key is used so most priority values needs to be add
 	// at the end of the list
 	expectedEnvsSortedByPriority := []string{

@@ -58,7 +58,7 @@ for x in ENV_IN_POD,value_from_pod ENV_IN_IMAGE,value_from_image ; do
     echo "env '$name' not found. Expected value '$value'"
     exit 1
   fi
-done 
+done
 
 echo "!Successful envs check!"
 exit 0`

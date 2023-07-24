@@ -467,7 +467,7 @@ func TestGetClusterMetadata(t *testing.T) {
 			},
 		},
 		{
-			name: "pipelineRunnerImage cant be empty",
+			name: "pipelineRunnerImage can't be empty",
 			cfg: input{
 				client: &fakeGraphQLClient{
 					queryResult: &metadataQuery{
