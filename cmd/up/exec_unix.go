@@ -31,8 +31,10 @@ func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*
 
 	c.Dir = he.workdir
 
+	// https://docs.studygolang.com/pkg/syscall/#SysProcAttr
 	c.SysProcAttr = &syscall.SysProcAttr{
-		Setpgid: true,
+		Setpgid:    true,
+		Foreground: true,
 	}
 
 	return c, nil
