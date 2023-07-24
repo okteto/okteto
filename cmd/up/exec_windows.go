@@ -12,6 +12,7 @@ import (
 	"syscall"
 )
 
+// GetCommandToExec implementation for windows GOOS
 func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*exec.Cmd, error) {
 	var c *exec.Cmd
 	if runtime.GOOS != "windows" {
@@ -32,7 +33,10 @@ func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*
 
 	c.Dir = he.workdir
 
+	// https://docs.studygolang.com/pkg/syscall/?GOOS=windows#SysProcAttr
 	c.SysProcAttr = &syscall.SysProcAttr{
+		// SysProcAttr for windows are different from linux,
+		// use CreationFlags to group the processes
 		CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
 	}
 
