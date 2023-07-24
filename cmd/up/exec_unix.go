@@ -11,6 +11,7 @@ import (
 	"syscall"
 )
 
+// GetCommandToExec for non-windows GOOS
 func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*exec.Cmd, error) {
 	var c *exec.Cmd
 	if runtime.GOOS != "windows" {
