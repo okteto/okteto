@@ -250,11 +250,13 @@ func (up *upContext) devMode(ctx context.Context, app apps.App, create bool) err
 }
 
 func (up *upContext) createDevContainer(ctx context.Context, app apps.App, create bool) error {
+	msg := "Preparing development environment..."
 	if !up.Dev.IsHybridModeEnabled() {
-		oktetoLog.Spinner("Activating your development container...")
-		oktetoLog.StartSpinner()
-		defer oktetoLog.StopSpinner()
+		msg = "Activating your development container..."
 	}
+	oktetoLog.Spinner(msg)
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Starting); err != nil {
 		return err
@@ -318,18 +320,19 @@ func (up *upContext) createDevContainer(ctx context.Context, app apps.App, creat
 }
 
 func (up *upContext) waitUntilDevelopmentContainerIsRunning(ctx context.Context, app apps.App) error {
+	msg := "Preparing development environment..."
 	if !up.Dev.IsHybridModeEnabled() {
-		msg := "Pulling images..."
+		msg = "Pulling images..."
 		if up.Dev.PersistentVolumeEnabled() {
 			msg = "Attaching persistent volume..."
 			if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Attaching); err != nil {
 				oktetoLog.Infof("error updating state: %s", err.Error())
 			}
 		}
-		oktetoLog.Spinner(msg)
-		oktetoLog.StartSpinner()
-		defer oktetoLog.StopSpinner()
 	}
+	oktetoLog.Spinner(msg)
+	oktetoLog.StartSpinner()
+	defer oktetoLog.StopSpinner()
 
 	optsWatchPod := metav1.ListOptions{
 		Watch:         true,
