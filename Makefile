@@ -39,41 +39,41 @@ lint:
 test:
 	go test -p 4 -race -coverprofile=coverage.txt -covermode=atomic ./...
 
-.PHONY: integration
-integration:
-	go test github.com/okteto/okteto/integration/... -tags="common integration actions" --count=1 -v -timeout 1h
+.PHONY: e2e
+e2e:
+	go test github.com/okteto/okteto/e2e/... -tags="common e2e actions" --count=1 -v -timeout 1h
 
-.PHONY: integration-actions
-integration-actions:
-	go test github.com/okteto/okteto/integration/actions -tags="actions" --count=1 -v -timeout 10m
+.PHONY: e2e-actions
+e2e-actions:
+	go test github.com/okteto/okteto/e2e/actions -tags="actions" --count=1 -v -timeout 10m
 
-.PHONY: integration-build
-integration-build:
-	go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
+.PHONY: e2e-build
+e2e-build:
+	go test github.com/okteto/okteto/e2e/build -tags="e2e" --count=1 -v -timeout 10m
 
-.PHONY: integration-deploy
-integration-deploy:
-	go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
+.PHONY: e2e-deploy
+e2e-deploy:
+	go test github.com/okteto/okteto/e2e/deploy -tags="e2e" --count=1 -v -timeout 20m
 
-.PHONY: integration-okteto
-integration-okteto:
-	go test github.com/okteto/okteto/integration/okteto -tags="integration" --count=1 -v -timeout 30m
+.PHONY: e2e-okteto
+e2e-okteto:
+	go test github.com/okteto/okteto/e2e/okteto -tags="e2e" --count=1 -v -timeout 30m
 
-.PHONY: integration-up
-integration-up:
-	go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
+.PHONY: e2e-up
+e2e-up:
+	go test github.com/okteto/okteto/e2e/up -tags="e2e" --count=1 -v -timeout 45m
 
-.PHONY: integration-deprecated
-integration-deprecated:
-	go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m && go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
+.PHONY: e2e-deprecated
+e2e-deprecated:
+	go test github.com/okteto/okteto/e2e/deprecated/push -tags="e2e" --count=1 -v -timeout 15m && go test github.com/okteto/okteto/e2e/deprecated/stack -tags="e2e" --count=1 -v -timeout 15m
 
 .PHONY: build
 build:
 	$(BUILDCOMMAND) -o ${BINDIR}/okteto
 
-.PHONY: build-integration
-build-integration:
-	go test github.com/okteto/okteto/integration -tags "common integration actions" -c -o ${BINDIR}/okteto-integration.test
+.PHONY: build-e2e
+build-e2e:
+	go test github.com/okteto/okteto/e2e -tags "common e2e actions" -c -o ${BINDIR}/okteto-e2e.test
 
 .PHONY: dep
 dep:

@@ -1,6 +1,6 @@
 /bin
 /docs
-/integration
+/e2e
 /.circleci
 /.github
 /.vscode

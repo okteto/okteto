@@ -136,10 +136,10 @@ make test
 
 This command will run all the unit tests, will try to detect race conditions, and will generate a test coverage report.
 
-Integration tests can be executed by running:
+E2e tests can be executed by running:
 
 ```
-make integration
+make e2e
 ```
 
 These tests will use your Kubernetes context to create a namespace and all the required k8s resources.

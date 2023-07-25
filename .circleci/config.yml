@@ -11,43 +11,43 @@ version: 2.1
 orbs:
   win: circleci/windows@5.0.0
 commands:
-  integration-actions:
+  e2e-actions:
     steps:
       - run:
-          name: Run actions integration tests
-          command: make integration-actions
+          name: Run actions e2e tests
+          command: make e2e-actions
 
-  integration-build:
+  e2e-build:
     steps:
       - run:
-          name: Run build integration tests
-          command: make integration-build
+          name: Run build e2e tests
+          command: make e2e-build
 
-  integration-deploy:
+  e2e-deploy:
     steps:
       - run:
-          name: Run deploy integration tests
-          command: make integration-deploy
+          name: Run deploy e2e tests
+          command: make e2e-deploy
 
-  integration-up:
+  e2e-up:
     steps:
       - run:
-          name: Run up integration tests
-          command: make integration-up
+          name: Run up e2e tests
+          command: make e2e-up
           environment:
             OKTETO_SKIP_CLEANUP: 'true'
 
-  integration-okteto:
+  e2e-okteto:
     steps:
       - run:
-          name: Run okteto integration tests
-          command: make integration-okteto
+          name: Run okteto e2e tests
+          command: make e2e-okteto
 
-  integration-deprecated:
+  e2e-deprecated:
     steps:
       - run:
-          name: Run deprecated integration tests
-          command: make integration-deprecated
+          name: Run deprecated e2e tests
+          command: make e2e-deprecated
 
 executors:
   golang-ci:
@@ -81,8 +81,8 @@ jobs:
           name: Check go.mod and go.sum
           command: go mod tidy && git diff --exit-code go.sum > /dev/null
       - run:
-          name: Compile integration tests
-          command: make build-integration
+          name: Compile e2e tests
+          command: make build-e2e
       - run:
           name: Test
           command: |
@@ -114,7 +114,7 @@ jobs:
             go mod download
             go version
             go test ./...
-  test-integration:
+  test-e2e:
     executor: golang-ci
     resource_class: large
     environment:
@@ -139,12 +139,12 @@ jobs:
             chmod +x /usr/local/bin/kubectl
             cp $(pwd)/artifacts/bin/okteto-Linux-x86_64 /usr/local/bin/okteto
              /usr/local/bin/okteto login --token ${API_STAGING_TOKEN}
-      - integration-deploy
-      - integration-up
-      - integration-actions
-      - integration-okteto
-      - integration-deprecated
-      - integration-build
+      - e2e-deploy
+      - e2e-up
+      - e2e-actions
+      - e2e-okteto
+      - e2e-deprecated
+      - e2e-build
       - save_cache:
           key: v4-pkg-cache-{{ checksum "go.sum" }}
           paths:
@@ -210,42 +210,42 @@ jobs:
             & "$($HOME)\project\artifacts\bin\okteto.exe" login --token $env:API_STAGING_TOKEN
             & "$($HOME)\project\artifacts\bin\okteto.exe" kubeconfig
       - run:
-          name: Run deprecated integration tests
+          name: Run deprecated e2e tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
             - OKTETO_SKIP_CLEANUP: 'true'
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
-            go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m
-            go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
+            go test github.com/okteto/okteto/e2e/deprecated/push -tags="e2e" --count=1 -v -timeout 15m
+            go test github.com/okteto/okteto/e2e/deprecated/stack -tags="e2e" --count=1 -v -timeout 15m
       - run:
-          name: Run build integration tests
+          name: Run build e2e tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
             - OKTETO_SKIP_CLEANUP: 'true'
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
-            go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
+            go test github.com/okteto/okteto/e2e/build -tags="e2e" --count=1 -v -timeout 10m
       - run:
-          name: Run deploy integration tests
+          name: Run deploy e2e tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
             - OKTETO_SKIP_CLEANUP: 'true'
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
-            go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
+            go test github.com/okteto/okteto/e2e/deploy -tags="e2e" --count=1 -v -timeout 20m
       - run:
-          name: Run up integration tests
+          name: Run up e2e tests
           environment:
             - OKTETO_URL: https://staging.okteto.dev/
             - OKTETO_SKIP_CLEANUP: 'true'
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
-            go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
+            go test github.com/okteto/okteto/e2e/up -tags="e2e" --count=1 -v -timeout 45m
       - store_artifacts:
           path: C:\Users\circleci\.okteto
 
@@ -361,7 +361,7 @@ workflows:
               only:
                 - master
                 - /.*(windows|win)/
-      - test-integration:
+      - test-e2e:
           requires:
             - build-binaries
           filters:
@@ -407,7 +407,7 @@ workflows:
               only: *release-branch-regex
             tags:
               ignore: /.*/
-      - test-integration:
+      - test-e2e:
           filters:
             branches:
               only: *release-branch-regex
@@ -416,7 +416,7 @@ workflows:
       - release-branch:
           requires:
             - build-binaries
-            - test-integration
+            - test-e2e
             - run-unit-test
             - run-windows-unit-test
           filters:

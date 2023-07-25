@@ -69,7 +69,7 @@ You will need to set some environment variables to start running e2e tests
 You can run all tests by running the following command:
 
 ```bash
-make integration
+make e2e
 ```
 
 ### Run specific e2e tests
@@ -79,37 +79,37 @@ There are different e2e tests that can be run individually:
 - Run actions: Run all e2e tests for actions
 
 ``` bash
-    make integration-actions # which is equivalent to run go test github.com/okteto/okteto/integration/actions -tags="actions" --count=1 -v -timeout 10m
+    make e2e-actions # which is equivalent to run go test github.com/okteto/okteto/e2e/actions -tags="actions" --count=1 -v -timeout 10m
 ```
 
 - Run build: Run all e2e tests that builds
 
 ``` bash
-    make integration-build # which is equivalent to run go test github.com/okteto/okteto/integration/build -tags="integration" --count=1 -v -timeout 10m
+    make e2e-build # which is equivalent to run go test github.com/okteto/okteto/e2e/build -tags="e2e" --count=1 -v -timeout 10m
 ```
 
 - Run deploy: Run all e2e tests that deploys
 
 ``` bash
-    make integration-deploy # which is equivalent to run go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
+    make e2e-deploy # which is equivalent to run go test github.com/okteto/okteto/e2e/deploy -tags="e2e" --count=1 -v -timeout 20m
 ```
 
 - Run okteto: Run all e2e tests that are only valid on okteto clusters
 
 ``` bash
-    make integration-okteto # which is equivalent to run go test github.com/okteto/okteto/integration/okteto -tags="integration" --count=1 -v -timeout 30m
+    make e2e-okteto # which is equivalent to run go test github.com/okteto/okteto/e2e/okteto -tags="e2e" --count=1 -v -timeout 30m
 ```
 
 - Run up: Run all e2e tests that uses okteto up as main command
 
 ``` bash
-    make integration-up # which is equivalent to run go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
+    make e2e-up # which is equivalent to run go test github.com/okteto/okteto/e2e/up -tags="e2e" --count=1 -v -timeout 45m
 ```
 
 - Run okteto: Run all e2e tests that are deprecated
 
 ``` bash
-    make integration-deprecated # which is equivalent to run go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m && go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
+    make e2e-deprecated # which is equivalent to run go test github.com/okteto/okteto/e2e/deprecated/push -tags="e2e" --count=1 -v -timeout 15m && go test github.com/okteto/okteto/e2e/deprecated/stack -tags="e2e" --count=1 -v -timeout 15m
 ```
 
 ## How to run pre-commit on your local branch

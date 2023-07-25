@@ -78,7 +78,7 @@ Any maintainer can merge the PR when:
 
 ### Tests
 
-All new features or bug fixes must have unit tests that cover the added code and the functionality it provides. When adding new features it is highly recommended that integration tests are also created and may be deemed required by a reviewer.
+All new features or bug fixes must have unit tests that cover the added code and the functionality it provides. When adding new features it is highly recommended that e2e tests are also created and may be deemed required by a reviewer.
 
 Tests should fail with helpful messages saying what was wrong, what inputs were provided, the expected result, and the actual result received in testing. Assume that the person debugging your failing test is not you, and is potentially new to the entire project.
 
