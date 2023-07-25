@@ -371,6 +371,68 @@ func Test_OptsFromBuildInfo(t *testing.T) {
 				OutputMode: "tty",
 			},
 		},
+		{
+			name:        "empty build arg",
+			serviceName: "service",
+			buildInfo: &model.BuildInfo{
+				Args: model.BuildArgs{
+					{
+						Name:  "arg1",
+						Value: "value2",
+					},
+				},
+			},
+			initialOpts: &types.BuildOptions{
+				BuildArgs: []string{
+					"arg1=\"\"",
+				},
+			},
+			isOkteto: true,
+			mr: mockRegistry{
+				isOktetoRegistry: true,
+				registry:         "okteto.dev",
+				repo:             "movies-service",
+			},
+			expected: &types.BuildOptions{
+				BuildArgs: []string{
+					namespaceEnvVar.String(),
+					"arg1=",
+				},
+				Tag:        "okteto.dev/movies-service:okteto",
+				OutputMode: "tty",
+			},
+		},
+		{
+			name:        "only key",
+			serviceName: "service",
+			buildInfo: &model.BuildInfo{
+				Args: model.BuildArgs{
+					{
+						Name:  "arg1",
+						Value: "value2",
+					},
+				},
+			},
+			initialOpts: &types.BuildOptions{
+				BuildArgs: []string{
+					"arg1",
+				},
+			},
+			isOkteto: true,
+			mr: mockRegistry{
+				isOktetoRegistry: true,
+				registry:         "okteto.dev",
+				repo:             "movies-service",
+			},
+			expected: &types.BuildOptions{
+				BuildArgs: []string{
+					namespaceEnvVar.String(),
+					"arg1=",
+				},
+				Tag:        "okteto.dev/movies-service:okteto",
+				OutputMode: "tty",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -287,10 +287,19 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	optionsBuildArgs := map[string]string{}
 	for _, arg := range o.BuildArgs {
 		splittedArg := strings.SplitN(strings.Trim(arg, "\""), "=", 2)
-		optionsBuildArgs[splittedArg[0]] = splittedArg[1]
-		args = append(args, model.BuildArg{
-			Name: splittedArg[0], Value: splittedArg[1],
-		})
+		if len(splittedArg) == 1 {
+			optionsBuildArgs[splittedArg[0]] = ""
+			args = append(args, model.BuildArg{
+				Name: splittedArg[0], Value: "",
+			})
+		} else if len(splittedArg) == 2 {
+			optionsBuildArgs[splittedArg[0]] = splittedArg[1]
+			args = append(args, model.BuildArg{
+				Name: splittedArg[0], Value: splittedArg[1],
+			})
+		} else {
+			oktetoLog.Infof("invalid build-arg '%s'", arg)
+		}
 	}
 
 	for _, e := range b.Args {
