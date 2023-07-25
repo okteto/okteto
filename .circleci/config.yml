@@ -415,7 +415,6 @@ workflows:
             - build-binaries
       - release-branch:
           requires:
-            - build-binaries
             - test-e2e
             - run-unit-test
             - run-windows-unit-test
@@ -438,7 +437,6 @@ workflows:
       - release:
           context: GKE
           requires:
-            - build-binaries
             - push-image-tag
 
   release:
@@ -477,7 +475,6 @@ workflows:
       - release:
           context: GKE
           requires:
-            - build-binaries
             - push-image-tag
           filters:
             branches:
