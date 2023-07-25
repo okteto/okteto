@@ -12,7 +12,7 @@ jobs:
     - name: Run a one-line script
       run: echo Running e2e tests on Windows
 
-  run-e2e-windows:
+  run-e2e-unix:
     if: ${{ github.event.label.name == 'run-e2e-unix' }}
     runs-on: ubuntu-latest
     steps:
