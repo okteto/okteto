@@ -271,21 +271,7 @@ func Up() *cobra.Command {
 				// the autocreate property is forced to be true
 				forceAutocreate = true
 			} else if upOptions.Deploy || (up.Manifest.IsV2 && !pipeline.IsDeployed(ctx, up.Manifest.Name, up.Manifest.Namespace, up.Client)) {
-				startTime := time.Now()
 				err := up.deployApp(ctx)
-
-				// tracking deploy either its been successful or not
-				analytics.TrackDeploy(analytics.TrackDeployMetadata{
-					Success:                err == nil,
-					IsOktetoRepo:           utils.IsOktetoRepo(),
-					Duration:               time.Since(startTime),
-					PipelineType:           up.Manifest.Type,
-					DeployType:             "automatic",
-					IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
-					HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
-					HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
-					Err:                    err,
-				})
 
 				// only allow error.ErrManifestFoundButNoDeployAndDependenciesCommands to go forward - autocreate property will deploy the app
 				if err != nil && !errors.Is(err, oktetoErrors.ErrManifestFoundButNoDeployAndDependenciesCommands) {
@@ -583,15 +569,32 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		PipelineCMD:        pc,
 		DeployWaiter:       deploy.NewDeployWaiter(k8sClientProvider),
 		EndpointGetter:     deploy.NewEndpointGetter,
+		AnalyticsTracker:   analytics.NewAnalyticsTracker(),
 	}
 
-	return c.RunDeploy(ctx, &deploy.Options{
+	startTime := time.Now()
+	err = c.RunDeploy(ctx, &deploy.Options{
 		Name:             up.Manifest.Name,
 		ManifestPathFlag: up.Options.ManifestPathFlag,
 		ManifestPath:     up.Options.ManifestPath,
 		Timeout:          5 * time.Minute,
 		Build:            false,
 	})
+
+	// tracking deploy either its been successful or not
+	c.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
+		Success:                err == nil,
+		IsOktetoRepo:           utils.IsOktetoRepo(),
+		Duration:               time.Since(startTime),
+		PipelineType:           up.Manifest.Type,
+		DeployType:             "automatic",
+		IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
+		HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
+		HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
+		Err:                    err,
+		IsRemote:               up.Manifest.IsV2 && up.Manifest.Deploy.Image != "",
+	})
+	return err
 }
 
 func (up *upContext) getManifest(path string) (*model.Manifest, error) {

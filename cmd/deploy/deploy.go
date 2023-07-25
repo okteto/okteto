@@ -90,7 +90,7 @@ type DeployCommand struct {
 	Fs                 afero.Fs
 	DivertDriver       divert.Driver
 	PipelineCMD        pipelineCMD.PipelineDeployerInterface
-	AnalyticsTracker   *analytics.AnalyticsTracker
+	AnalyticsTracker   DeployAnalyticsTracker
 
 	PipelineType       model.Archetype
 	isRemote           bool
