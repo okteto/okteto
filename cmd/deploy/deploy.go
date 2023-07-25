@@ -606,8 +606,8 @@ func (dc *DeployCommand) trackDeploy(manifest *model.Manifest, runInRemoteFlag b
 			}
 		}
 
-		hasDependencySection = manifest.IsV2 && len(manifest.Dependencies) > 0
-		hasBuildSection = manifest.IsV2 && len(manifest.Build) > 0
+		hasDependencySection = manifest.HasDependencies()
+		hasBuildSection = manifest.HasBuildSection()
 	}
 
 	dc.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{

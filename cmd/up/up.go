@@ -589,8 +589,8 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		PipelineType:           up.Manifest.Type,
 		DeployType:             "automatic",
 		IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
-		HasDependenciesSection: up.Manifest.IsV2 && len(up.Manifest.Dependencies) > 0,
-		HasBuildSection:        up.Manifest.IsV2 && len(up.Manifest.Build) > 0,
+		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
+		HasBuildSection:        up.Manifest.HasBuildSection(),
 		Err:                    err,
 		IsRemote:               up.Manifest.IsV2 && up.Manifest.Deploy.Image != "",
 	})
