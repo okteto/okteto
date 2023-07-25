@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -30,6 +31,13 @@ type LocalExec struct{}
 func (*LocalExec) RunCommand(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
 	c := exec.CommandContext(ctx, name, arg...)
 	c.Cancel = func() error {
+		// windows: https://pkg.go.dev/os#Signal
+		// Terminating the process with Signal is not implemented for windows.
+		// Windows platform will only be able to kill the process
+		if runtime.GOOS == "windows" {
+			return c.Process.Kill()
+		}
+
 		oktetoLog.Debugf("terminating %s - %s/%s", c.String(), dir, name)
 		if err := c.Process.Signal(syscall.SIGTERM); err != nil {
 			oktetoLog.Debugf("err at signal SIGTERM: %v", err)

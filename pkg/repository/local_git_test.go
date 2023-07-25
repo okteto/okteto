@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"os/exec"
+	"runtime"
 	"testing"
 	"time"
 
@@ -205,7 +206,12 @@ func Test_LocalExec_RunCommandWithContextCanceled(t *testing.T) {
 
 	localExec := &LocalExec{}
 	got, err := localExec.RunCommand(ctx, t.TempDir(), "sleep", "3600")
-	assert.ErrorContains(t, err, "signal: terminated")
+
+	if runtime.GOOS != "windows" {
+		assert.EqualError(t, err, "signal: terminated")
+	} else {
+		assert.EqualError(t, err, "exit status 1")
+	}
 	assert.Equal(t, []byte(""), got)
 }
 
