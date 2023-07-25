@@ -191,7 +191,7 @@ var (
 	ErrInvalidManifest = errors.New("invalid manifest")
 
 	// ErrServiceEmpty is raised whenever service is empty in docker-compose
-	ErrServiceEmpty = errors.New("Service cannot be empty")
+	ErrServiceEmpty = errors.New("service cannot be empty")
 
 	// ErrEmptyManifest is raised when cannot detected content to read in manifest
 	ErrEmptyManifest = errors.New("no content detected for okteto.yml file")
