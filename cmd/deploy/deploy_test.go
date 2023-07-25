@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/divert"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	"github.com/okteto/okteto/pkg/registry"
@@ -1110,4 +1111,57 @@ func TestDeployOnlyDependencies(t *testing.T) {
 	err := c.RunDeploy(ctx, opts)
 
 	assert.NoError(t, err)
+}
+
+func TestTrackDeploy(t *testing.T) {
+	tt := []struct {
+		name       string
+		manifest   *model.Manifest
+		remoteFlag bool
+		commandErr error
+	}{
+		{
+			name:       "error tracking deploy",
+			commandErr: assert.AnError,
+		},
+		{
+			name: "successful with V2",
+			manifest: &model.Manifest{
+				IsV2: true,
+				Deploy: &model.DeployInfo{
+					Commands: []model.DeployCommand{
+						{
+							Name:    "test",
+							Command: "test",
+						},
+					},
+				},
+			},
+			remoteFlag: true,
+		},
+		{
+			name: "successful with compose",
+			manifest: &model.Manifest{
+				IsV2: true,
+				Deploy: &model.DeployInfo{
+					ComposeSection: &model.ComposeSectionInfo{
+						ComposesInfo: model.ComposeInfoList{},
+					},
+				},
+			},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			dc := &DeployCommand{
+				AnalyticsTracker: &analytics.AnalyticsTracker{
+					TrackFn: func(_ string, _ bool, _ map[string]interface{}) {
+						return
+					},
+				},
+			}
+
+			dc.trackDeploy(tc.manifest, tc.remoteFlag, time.Now(), tc.commandErr)
+		})
+	}
 }

@@ -51,7 +51,6 @@ const (
 	doctorEvent              = "Doctor"
 	buildEvent               = "Build"
 	buildTransientErrorEvent = "BuildTransientError"
-	deployEvent              = "Deploy"
 	destroyEvent             = "Destroy"
 	deployStackEvent         = "Deploy Stack"
 	destroyStackEvent        = "Destroy Stack"
@@ -323,40 +322,6 @@ func TrackDestroyStack(success bool) {
 	track(destroyStackEvent, success, nil)
 }
 
-type TrackDeployMetadata struct {
-	Success                bool
-	IsOktetoRepo           bool
-	Err                    error
-	Duration               time.Duration
-	PipelineType           model.Archetype
-	DeployType             string
-	IsPreview              bool
-	HasDependenciesSection bool
-	HasBuildSection        bool
-	IsRemote               bool
-}
-
-// TrackDeploy sends a tracking event to mixpanel when the user deploys a pipeline
-func TrackDeploy(m TrackDeployMetadata) {
-	if m.PipelineType == "" {
-		m.PipelineType = "pipeline"
-	}
-	props := map[string]interface{}{
-		"pipelineType":           m.PipelineType,
-		"isOktetoRepository":     m.IsOktetoRepo,
-		"duration":               m.Duration.Seconds(),
-		"deployType":             m.DeployType,
-		"isPreview":              m.IsPreview,
-		"hasDependenciesSection": m.HasDependenciesSection,
-		"hasBuildSection":        m.HasBuildSection,
-		"isRemote":               m.IsRemote,
-	}
-	if m.Err != nil {
-		props["error"] = m.Err.Error()
-	}
-	track(deployEvent, m.Success, props)
-}
-
 // TrackDestroy sends a tracking event to mixpanel when the user destroys a pipeline from local
 func TrackDestroy(success bool, isDestroyAll bool) {
 	props := map[string]interface{}{
@@ -416,6 +381,7 @@ func TrackBuildPullError(oktetoBuilkitURL string, success bool) {
 
 func track(event string, success bool, props map[string]interface{}) {
 	if !get().Enabled {
+		oktetoLog.Info("failed to send analytics: analytics has been disabled")
 		return
 	}
 
@@ -425,6 +391,7 @@ func track(event string, success bool, props map[string]interface{}) {
 	}
 
 	if disabledByOktetoAdmin() {
+		oktetoLog.Info("failed to send analytics: analytics disabled by admin")
 		return
 	}
 
