@@ -458,18 +458,6 @@ workflows:
             tags:
               only:
                 - *release-regex
-      - run-unit-test:
-          filters:
-            branches:
-              ignore: /.*/
-            tags:
-              ignore: *release-regex
-      - run-windows-unit-test:
-          filters:
-            branches:
-              ignore: /.*/
-            tags:
-              ignore: *release-regex
       - push-image-tag:
           requires:
             - build-binaries
