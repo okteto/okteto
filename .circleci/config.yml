@@ -443,6 +443,10 @@ workflows:
       - push-image-tag:
           requires:
             - build-binaries
+            - run-unit-test
+            - run-windows-unit-test
+            - run-windows-e2e-test
+            - test-e2e
       - release:
           context: GKE
           requires:
