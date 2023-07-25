@@ -407,6 +407,12 @@ workflows:
               only: *release-branch-regex
             tags:
               ignore: /.*/
+      - run-windows-e2e-test:
+          filters:
+            branches:
+              only: *release-branch-regex
+          requires:
+            - build-binaries
       - test-e2e:
           filters:
             branches:
@@ -415,6 +421,7 @@ workflows:
             - build-binaries
       - release-branch:
           requires:
+            - run-windows-e2e-test
             - test-e2e
             - run-unit-test
             - run-windows-unit-test
