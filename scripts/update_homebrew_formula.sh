@@ -65,6 +65,12 @@ end
 EOF
 
 cat Formula/okteto.rb
+
+if [[ -z `git status --porcelain` ]]; then
+  echo "No changes detected in the repo"
+  exit 0
+fi
+
 git add Formula/okteto.rb
 git config user.name "okteto"
 git config user.email "ci@okteto.com"
