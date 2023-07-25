@@ -322,14 +322,6 @@ func TrackDestroyStack(success bool) {
 	track(destroyStackEvent, success, nil)
 }
 
-// TrackDestroy sends a tracking event to mixpanel when the user destroys a pipeline from local
-func TrackDestroy(success bool, isDestroyAll bool) {
-	props := map[string]interface{}{
-		"isDestroyAll": isDestroyAll,
-	}
-	track(destroyEvent, success, props)
-}
-
 // TrackLogin sends a tracking event to mixpanel when the user logs in
 func TrackLogin(success bool) {
 	track(loginEvent, success, nil)

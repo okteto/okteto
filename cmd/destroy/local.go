@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	pipelineCMD "github.com/okteto/okteto/cmd/pipeline"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/divert"
@@ -55,7 +54,6 @@ func (ld *localDestroyCommand) destroy(ctx context.Context, opts *Options) error
 			oktetoLog.Success("Development environment '%s' successfully destroyed", opts.Name)
 		}
 	}
-	analytics.TrackDestroy(err == nil, opts.DestroyAll)
 
 	return err
 }
