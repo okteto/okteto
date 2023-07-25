@@ -347,6 +347,9 @@ func ReadStack(bytes []byte, isCompose bool) (*Stack, error) {
 			_, _ = sb.WriteString("    See https://okteto.com/docs/reference/compose/ for details")
 			return nil, errors.New(sb.String())
 		}
+		if errors.Is(err, oktetoErrors.ErrServiceEmpty) {
+			return nil, err
+		}
 
 		msg := strings.Replace(err.Error(), "yaml: unmarshal errors:", "invalid compose manifest:", 1)
 		msg = strings.TrimSuffix(msg, "in type model.Stack")

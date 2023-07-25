@@ -843,6 +843,14 @@ func Test_getManifestFromFile(t *testing.T) {
     image: test`),
 		},
 		{
+			name:          "manifestPath to a invalid compose file with empty service",
+			manifestBytes: nil,
+			composeBytes: []byte(`services:
+  test:
+          `),
+			expectedErr: oktetoErrors.ErrServiceEmpty,
+		},
+		{
 			name:          "manifestPath to empty okteto manifest, no compose file",
 			manifestBytes: []byte(``),
 			composeBytes:  nil,
