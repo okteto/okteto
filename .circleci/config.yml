@@ -344,13 +344,19 @@ workflows:
       - run-unit-test:
           filters:
             branches:
-              ignore: *release-branch-regex
+              ignore:
+                - *release-branch-regex
+                - /.*(windows|win)/
+                - /.*(e2e)/
             tags:
               ignore: /.*/
       - run-windows-unit-test:
           filters:
             branches:
-              ignore: *release-branch-regex
+              ignore:
+                - *release-branch-regex
+                - /.*(windows|win)/
+                - /.*(e2e)/
             tags:
               ignore: /.*/
       - run-windows-e2e-test:
