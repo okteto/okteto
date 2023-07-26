@@ -2,25 +2,29 @@ name: Run CircleCI from label
 
 on:
   pull_request:
-    types: [ labeled ]
+    types: 
+      - opened
+      - labeled
+      - unlabeled
+      - synchronize
 
 jobs:
   run-e2e-windows:
-    if: ${{ github.event.label.name == 'run-e2e-windows' }}
+    if: contains(github.event.pull_request.labels.*.name, 'run-e2e-windows') && !contains(github.event.pull_request.labels.*.name, 'run-e2e')
     runs-on: ubuntu-latest
     steps:
     - name: Run a one-line script
       run: echo Running e2e tests on Windows
 
   run-e2e-unix:
-    if: ${{ github.event.label.name == 'run-e2e-unix' }}
+    if: contains(github.event.pull_request.labels.*.name, 'run-e2e-unix') && !contains(github.event.pull_request.labels.*.name, 'run-e2e')
     runs-on: ubuntu-latest
     steps:
     - name: Run a one-line script
       run: echo Running e2e tests on Unix
 
   run-e2e:
-    if: ${{ github.event.label.name == 'run-e2e' }}
+    if: contains(github.event.pull_request.labels.*.name, 'run-e2e') 
     runs-on: ubuntu-latest
     steps:
     - name: Run a one-line script
