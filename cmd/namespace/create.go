@@ -89,7 +89,7 @@ func (nc *NamespaceCommand) Create(ctx context.Context, opts *CreateOptions) err
 		Context:      okteto.Context().Name,
 	}
 
-	if opts.SetCurrentNs == true {
+	if opts.SetCurrentNs {
 		ctxOptions.Save = true
 		ctxOptions.Show = true
 	} else {

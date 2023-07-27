@@ -101,7 +101,7 @@ func RunOktetoUpAndWaitWithOutput(oktetoPath string, upOptions *UpOptions) (byte
 	err := cmd.Wait()
 	if err != nil {
 		log.Printf("okteto up failed: %v", err)
-		log.Printf("okteto up output err: \n%s", string(out.Bytes()))
+		log.Printf("okteto up output err: \n%s", out.String())
 		return out, err
 	}
 	return out, nil
