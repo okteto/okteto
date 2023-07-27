@@ -167,7 +167,11 @@ func CreateDockerfileWithVolumeMounts(image string, volumes []model.StackVolume)
 
 	_, _ = datawriter.Write([]byte(fmt.Sprintf("FROM %s\n", image)))
 	for _, volume := range volumes {
-		_, _ = datawriter.Write([]byte(fmt.Sprintf("COPY %s %s\n", filepath.ToSlash(volume.LocalPath), volume.RemotePath)))
+		_, err = datawriter.Write([]byte(fmt.Sprintf("COPY %s %s\n", filepath.ToSlash(volume.LocalPath), volume.RemotePath)))
+		if err != nil {
+			oktetoLog.Infof("failed to write volume %s: %s", volume.LocalPath, err)
+			continue
+		}
 	}
 
 	build.Dockerfile = tmpFile.Name()

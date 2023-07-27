@@ -2,6 +2,7 @@ package fake
 
 import (
 	k8sexternalresource "github.com/okteto/okteto/pkg/externalresource/k8s"
+	oktetoLog "github.com/okteto/okteto/pkg/log"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -21,7 +22,11 @@ type PossibleERErrors struct {
 
 func NewFakeExternalResourceV1(errs PossibleERErrors, objects ...runtime.Object) *FakeExternalResourceV1 {
 	scheme := runtime.NewScheme()
-	_ = k8sexternalresource.AddToScheme(scheme)
+	err := k8sexternalresource.AddToScheme(scheme)
+	if err != nil {
+		oktetoLog.Infof("error adding externalresource scheme: %s", err)
+
+	}
 	codecs := serializer.NewCodecFactory(scheme)
 
 	o := testing.NewObjectTracker(scheme, codecs.UniversalDecoder())

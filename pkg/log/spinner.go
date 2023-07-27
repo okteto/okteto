@@ -58,7 +58,10 @@ func (sl *spinnerLogger) unhold() {
 func newSpinner() *sp.Spinner {
 	spinner := sp.New(sp.CharSets[14], 100*time.Millisecond, sp.WithHiddenCursor(true))
 	spinner.PreUpdate = func(spinner *sp.Spinner) {
-		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
+		width, _, err := term.GetSize(int(os.Stdout.Fd()))
+		if err != nil {
+			Infof("failed to get terminal size: %s", err)
+		}
 		if width > 4 && len(spinner.FinalMSG)+2 > width {
 			spinner.Suffix = spinner.FinalMSG[:width-5] + "..."
 		} else {

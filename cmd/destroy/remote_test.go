@@ -344,7 +344,8 @@ func TestCreateDockerfile(t *testing.T) {
 			if tt.expected.err == nil {
 				_, err = rdc.fs.Stat(filepath.Join("/test", dockerfileTemporalNane))
 				assert.NoError(t, err)
-				content, _ := afero.ReadFile(rdc.fs, filepath.Join("/test", dockerfileTemporalNane))
+				content, err := afero.ReadFile(rdc.fs, filepath.Join("/test", dockerfileTemporalNane))
+				assert.NoError(t, err)
 				assert.True(t, strings.Contains(string(content), fmt.Sprintf("ARG %s", model.OktetoActionNameEnvVar)))
 			}
 

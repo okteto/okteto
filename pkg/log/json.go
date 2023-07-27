@@ -275,7 +275,11 @@ func convertToJSON(level, stage, message string) string {
 		Stage:     stage,
 		Timestamp: time.Now().Unix(),
 	}
-	messageJSON, _ := json.Marshal(messageStruct)
+	messageJSON, err := json.Marshal(messageStruct)
+	if err != nil {
+		Infof("error marshalling message: %s", err)
+		return ""
+	}
 	return string(messageJSON)
 }
 

@@ -380,7 +380,8 @@ func TestSetEnvsFromDependencyNoError(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			configMapData := make(map[string]string)
 			if tt.dataToSetInConfigMap != nil {
-				encondedEnvs, _ := json.Marshal(tt.dataToSetInConfigMap)
+				encondedEnvs, err := json.Marshal(tt.dataToSetInConfigMap)
+				assert.NoError(t, err)
 				encondedEnvsStr := base64.StdEncoding.EncodeToString(encondedEnvs)
 				configMapData[constants.OktetoDependencyEnvsKey] = encondedEnvsStr
 			}
