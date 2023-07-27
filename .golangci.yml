@@ -17,7 +17,6 @@ linters-settings:
 # All possible linters can be found here
 linters:
   disable:
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
@@ -25,6 +24,7 @@ linters:
     - unused
   enable:
     - errcheck
+    - gosimple
 # Enabled by your configuration linters:
 # deadcode: Finds unused code [fast: false, auto-fix: false]
 # gosimple (megacheck): Linter for Go source code that specializes in simplifying code [fast: false, auto-fix: false]
