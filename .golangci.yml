@@ -132,7 +132,6 @@ linters:
 # wrapcheck: Checks that errors returned from external packages are wrapped [fast: false, auto-fix: false]
 # wsl: Whitespace Linter - Forces you to use empty lines! [fast: true, auto-fix: false]
 
-
 # All possible options can be found here
 issues:
   # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
