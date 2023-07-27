@@ -625,7 +625,7 @@ func TestDestroyWithoutError(t *testing.T) {
 
 			// check if configmap has been created
 			cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
-			assert.NoError(t, err)
+			assert.Error(t, err)
 			assert.Nil(t, cfg)
 		})
 	}
@@ -981,6 +981,6 @@ func TestDestroyWithForceOptionAndFailedCommands(t *testing.T) {
 
 	// check if configmap has been created
 	cfg, err := configmaps.Get(ctx, pipeline.TranslatePipelineName(opts.Name), okteto.Context().Namespace, fakeClient)
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	assert.Nil(t, cfg)
 }
