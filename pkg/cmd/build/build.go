@@ -414,7 +414,10 @@ func parseTempSecrets(secretTempFolder string, buildOptions *types.BuildOptions)
 			}
 
 			// save expanded to temp file
-			_, _ = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
+			_, err = writer.Write([]byte(fmt.Sprintf("%s\n", srcContent)))
+			if err != nil {
+				return fmt.Errorf("unable to write to temp file: %s", err)
+			}
 			writer.Flush()
 		}
 		if err := tmpfile.Close(); err != nil {
