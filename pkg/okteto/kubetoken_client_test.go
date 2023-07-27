@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -73,7 +74,8 @@ func TestGetKubeToken(t *testing.T) {
 	expectedToken := "token"
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(expectedToken))
+		_, err := w.Write([]byte(expectedToken))
+		assert.NoError(t, err)
 	}))
 
 	defer s.Close()

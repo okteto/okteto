@@ -141,7 +141,8 @@ func TestInferName(t *testing.T) {
 				fs:               afero.NewMemMapFs(),
 			}
 
-			inferer.fs.Create(filepath.Clean(filepath.Join(tt.cwd, tt.oktetoManifestPath)))
+			_, err := inferer.fs.Create(filepath.Clean(filepath.Join(tt.cwd, tt.oktetoManifestPath)))
+			assert.NoError(t, err)
 			result := inferer.InferName(ctx, tt.cwd, tt.ns, tt.manifestPath)
 			require.Equal(t, tt.expectedName, result)
 		})

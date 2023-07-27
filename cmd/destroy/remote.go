@@ -319,9 +319,11 @@ func getDestroyFlags(opts *Options) []string {
 
 func getOktetoCLIVersion(versionString string) string {
 	var version string
-	if match, _ := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
+	if match, err := regexp.MatchString(`\d+\.\d+\.\d+`, versionString); match {
 		version = fmt.Sprintf(constants.OktetoCLIImageForRemoteTemplate, versionString)
 	} else {
+		oktetoLog.Infof("invalid okteto CLI version %s: %s", versionString, err)
+		oktetoLog.Info("using latest okteto CLI image")
 		remoteOktetoImage := os.Getenv(constants.OktetoDeployRemoteImage)
 		if remoteOktetoImage != "" {
 			version = remoteOktetoImage

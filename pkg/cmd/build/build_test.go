@@ -17,6 +17,7 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/require"
+	"github.com/tj/assert"
 )
 
 func Test_validateImage(t *testing.T) {
@@ -540,7 +541,8 @@ func Test_parseTempSecrets(t *testing.T) {
 	require.NoError(t, err)
 
 	writer := bufio.NewWriter(tmpTestSecretFile)
-	_, _ = writer.Write([]byte(fmt.Sprintf("%s\n", "content for ${SECRET_ENV}")))
+	_, err = writer.Write([]byte(fmt.Sprintf("%s\n", "content for ${SECRET_ENV}")))
+	assert.NoError(t, err)
 	writer.Flush()
 
 	tempFolder := t.TempDir()

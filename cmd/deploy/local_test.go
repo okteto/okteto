@@ -19,6 +19,7 @@ import (
 
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/spf13/afero"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,7 +37,8 @@ func TestDeployNotRemovingEnvFile(t *testing.T) {
 		ConfigMapHandler: &fakeCmapHandler{},
 		Fs:               fs,
 	}
-	localDeployer.runDeploySection(context.Background(), opts)
+	err = localDeployer.runDeploySection(context.Background(), opts)
+	assert.NoError(t, err)
 	_, err = fs.Stat(".env")
 	require.NoError(t, err)
 

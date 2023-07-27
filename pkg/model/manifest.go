@@ -634,7 +634,10 @@ func getOktetoManifest(devPath string) (*Manifest, error) {
 	for name, external := range manifest.External {
 		external.SetDefaults(name)
 		ef.ExternalResource = *external
-		ef.LoadMarkdownContent(devPath)
+		err := ef.LoadMarkdownContent(devPath)
+		if err != nil {
+			oktetoLog.Infof("error loading external resource %s: %s", name, err.Error())
+		}
 	}
 
 	for _, dev := range manifest.Dev {

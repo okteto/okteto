@@ -178,7 +178,10 @@ func RunOktetoDown(oktetoPath string, downOpts *DownOptions) error {
 
 	log.Printf("okteto down output:\n%s", string(o))
 	if err != nil {
-		m, _ := os.ReadFile(downOpts.ManifestPath)
+		m, err := os.ReadFile(downOpts.ManifestPath)
+		if err != nil {
+			return fmt.Errorf("okteto down failed: %s", err)
+		}
 		log.Printf("manifest: \n%s\n", string(m))
 		return fmt.Errorf("okteto down failed: %s", err)
 	}

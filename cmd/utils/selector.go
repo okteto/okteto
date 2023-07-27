@@ -414,7 +414,10 @@ func (s *OktetoSelector) renderDetails(item interface{}) [][]byte {
 }
 
 func (s *OktetoSelector) renderLabel(sb *screenbuf.ScreenBuf) {
-	width, _, _ := term.GetSize(int(os.Stdout.Fd()))
+	width, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil {
+		oktetoLog.Infof("error getting terminal size: %s", err)
+	}
 	for _, labelLine := range strings.Split(s.Label, "\n") {
 		if width == 0 {
 			labelLineBytes := render(s.OktetoTemplates.label, labelLine)

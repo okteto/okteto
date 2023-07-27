@@ -135,7 +135,7 @@ func (mc *ManifestCommand) RunInitV2(ctx context.Context, opts *InitOpts) (*mode
 	manifest := model.NewManifest()
 	var err error
 	if !opts.Overwrite {
-		manifest, _ = model.GetManifestV2(opts.DevPath)
+		manifest, err = model.GetManifestV2(opts.DevPath)
 		if err != nil && !errors.Is(err, discovery.ErrOktetoManifestNotFound) {
 			return nil, err
 		}
@@ -396,7 +396,10 @@ func getPathFromApp(wd, appName string) string {
 	if fInfo, err := os.Stat(possibleAppPath); err != nil {
 		oktetoLog.Infof("could not detect path: %s", err)
 	} else if fInfo.IsDir() {
-		path, _ := filepath.Rel(wd, possibleAppPath)
+		path, err := filepath.Rel(wd, possibleAppPath)
+		if err != nil {
+			oktetoLog.Infof("could not get relative path: %s", err)
+		}
 		return path
 	}
 	return wd

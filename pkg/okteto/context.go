@@ -162,7 +162,11 @@ func ContextExists() bool {
 }
 
 func UrlToKubernetesContext(uri string) string {
-	u, _ := url.Parse(uri)
+	u, err := url.Parse(uri)
+	if err != nil {
+		oktetoLog.Infof("error parsing url '%s': %v", uri, err)
+		return uri
+	}
 	return strings.ReplaceAll(u.Host, ".", "_")
 }
 

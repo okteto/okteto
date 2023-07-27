@@ -96,7 +96,8 @@ func Test_translateDivertVirtualService(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, _ := d.translateDivertVirtualService(tt.vs, tt.routes)
+			result, err := d.translateDivertVirtualService(tt.vs, tt.routes)
+			assert.NoError(t, err)
 			assert.Equal(t, result.Annotations, tt.expected.Annotations)
 		})
 	}

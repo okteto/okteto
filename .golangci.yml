@@ -1,6 +1,8 @@
 run:
   timeout: 5m
   go: 1.20
+
+
 # All possible options can be found here https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
 linters-settings:
   errcheck:
@@ -8,14 +10,22 @@ linters-settings:
     # Such cases aren't reported by default.
     # Default: false
     check-type-assertions: true
+    # report about assignment of errors to blank identifier: `num, _ := strconv.Atoi(numStr)`.
+    # Such cases aren't reported by default.
+    # Default: false
+    check-blank: true
+
+# All possible linters can be found here
 linters:
   disable:
-    # TODO: enable when fixed
-    - whitespace
+    - gosimple
+    - govet
+    - ineffassign
     - staticcheck
+    - typecheck
+    - unused
   enable:
     - errcheck
-    - unparam
 # Enabled by your configuration linters:
 # deadcode: Finds unused code [fast: false, auto-fix: false]
 # gosimple (megacheck): Linter for Go source code that specializes in simplifying code [fast: false, auto-fix: false]
@@ -114,3 +124,12 @@ linters:
 # whitespace: Tool for detection of leading and trailing whitespace [fast: true, auto-fix: true]
 # wrapcheck: Checks that errors returned from external packages are wrapped [fast: false, auto-fix: false]
 # wsl: Whitespace Linter - Forces you to use empty lines! [fast: true, auto-fix: false]
+
+
+# All possible options can be found here
+issues:
+  # Maximum issues count per one linter. Set to 0 to disable. Default is 50.
+  max-issues-per-linter: 0
+
+  # Maximum count of issues with the same text. Set to 0 to disable. Default is 3.
+  max-same-issues: 0

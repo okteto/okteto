@@ -23,6 +23,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v2"
 )
@@ -105,7 +106,8 @@ func TestRunJustCreateNecessaryFields(t *testing.T) {
 	}
 	require.NoError(t, mc.RunInitV1(ctx, opts))
 
-	file, _ := os.ReadFile(p)
+	file, err := os.ReadFile(p)
+	assert.NoError(t, err)
 	var result map[string]interface{}
 	require.NoError(t, yaml.Unmarshal([]byte(file), &result))
 

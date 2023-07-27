@@ -17,13 +17,18 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_shouldNotify(t *testing.T) {
-	one, _ := semver.NewVersion("1.0.0")
-	oneZeroOne, _ := semver.NewVersion("1.0.1")
-	oneOneZero, _ := semver.NewVersion("1.1.0")
-	two, _ := semver.NewVersion("2.0.0")
+	one, err := semver.NewVersion("1.0.0")
+	assert.NoError(t, err)
+	oneZeroOne, err := semver.NewVersion("1.0.1")
+	assert.NoError(t, err)
+	oneOneZero, err := semver.NewVersion("1.1.0")
+	assert.NoError(t, err)
+	two, err := semver.NewVersion("2.0.0")
+	assert.NoError(t, err)
 
 	type args struct {
 		latest  *semver.Version

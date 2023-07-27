@@ -255,7 +255,8 @@ forward:
 				t.Errorf("persistent volume was not enabled by default")
 			}
 
-			defaultTimeout, _ := GetTimeout()
+			defaultTimeout, err := GetTimeout()
+			assert.NoError(t, err)
 			if defaultTimeout != d.Timeout.Default {
 				t.Errorf("the default timeout wasn't applied, got %s, expected %s", d.Timeout, defaultTimeout)
 			}
@@ -1473,7 +1474,10 @@ func createEnvFile(content map[string]string) (string, error) {
 	}
 
 	for k, v := range content {
-		_, _ = file.WriteString(fmt.Sprintf("%s=%s\n", k, v))
+		_, err = file.WriteString(fmt.Sprintf("%s=%s\n", k, v))
+		if err != nil {
+			return "", err
+		}
 	}
 
 	if err := file.Sync(); err != nil {

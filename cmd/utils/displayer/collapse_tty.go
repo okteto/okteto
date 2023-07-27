@@ -96,7 +96,10 @@ func (d *TTYCollapseDisplayer) displayCommand(commandChan chan bool) {
 		for i := 0; i < len(spinnerChars); i++ {
 			select {
 			case <-t.C:
-				width, _, _ := term.GetSize(int(os.Stdout.Fd()))
+				width, _, err := term.GetSize(int(os.Stdout.Fd()))
+				if err != nil {
+					oktetoLog.Infof("Error getting terminal size: %s", err)
+				}
 				commandLines := renderCommand(spinnerChars[i], d.command, width)
 				for _, commandLine := range commandLines {
 					if _, err := d.screenbuf.Write(commandLine); err != nil {
@@ -228,7 +231,10 @@ func (d *TTYCollapseDisplayer) CleanUp(err error) {
 		if _, err := d.screenbuf.Write(message); err != nil {
 			oktetoLog.Infof("Error writing fail message: %s", err)
 		}
-		width, _, _ := term.GetSize(int(os.Stdout.Fd()))
+		width, _, err := term.GetSize(int(os.Stdout.Fd()))
+		if err != nil {
+			oktetoLog.Infof("Error getting terminal size: %s", err)
+		}
 		lines := renderLines(d.linesToDisplay, width)
 		for _, line := range lines {
 			if _, err := d.screenbuf.Write([]byte(line)); err != nil {

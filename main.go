@@ -117,7 +117,10 @@ func main() {
 	root.PersistentFlags().StringVar(&outputMode, "log-output", oktetoLog.TTYFormat, "output format for logs (tty, plain, json)")
 
 	root.PersistentFlags().StringVarP(&serverNameOverride, "server-name", "", "", "The address and port of the Okteto Ingress server")
-	_ = root.PersistentFlags().MarkHidden("server-name")
+	err := root.PersistentFlags().MarkHidden("server-name")
+	if err != nil {
+		oktetoLog.Infof("error hiding server-name flag: %s", err)
+	}
 
 	root.AddCommand(cmd.Analytics())
 	root.AddCommand(cmd.Version())
@@ -153,7 +156,7 @@ func main() {
 	root.AddCommand(cmd.Push(ctx))
 	root.AddCommand(pipeline.Pipeline(ctx))
 
-	err := root.Execute()
+	err = root.Execute()
 
 	if err != nil {
 		message := err.Error()

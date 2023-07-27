@@ -90,7 +90,8 @@ func Test_ConvertToJson(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			s := convertToJSON(tt.level, tt.stage, tt.message)
 			var resultJSON jsonMessage
-			json.Unmarshal([]byte(s), &resultJSON)
+			err := json.Unmarshal([]byte(s), &resultJSON)
+			assert.NoError(t, err)
 			// Ignore timestamp in tests
 			resultJSON.Timestamp = mockedTimestamp
 			assert.Equal(t, tt.expected, resultJSON)

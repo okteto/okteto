@@ -52,7 +52,8 @@ func TestExternalResource_LoadMarkdownContent(t *testing.T) {
 	manifestPath := "/test/okteto.yml"
 	markdownContent := "## Markdown content"
 	fs := afero.NewMemMapFs()
-	afero.WriteFile(fs, "/test/external/readme.md", []byte(markdownContent), 0600)
+	err := afero.WriteFile(fs, "/test/external/readme.md", []byte(markdownContent), 0600)
+	assert.NoError(t, err)
 
 	tests := []struct {
 		name                string

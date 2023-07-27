@@ -425,7 +425,10 @@ func (o *UpOptions) AddArgs(cmd *cobra.Command, args []string) error {
 	maxV1Args := 1
 	docsURL := "https://okteto.com/docs/reference/cli/#up"
 	if len(args) > maxV1Args {
-		cmd.Help()
+		if err := cmd.Help(); err != nil {
+			oktetoLog.Infof("could not show help: %s", err)
+		}
+
 		return oktetoErrors.UserError{
 			E:    fmt.Errorf("%q accepts at most %d arg(s), but received %d", cmd.CommandPath(), maxV1Args, len(args)),
 			Hint: fmt.Sprintf("Visit %s for more information.", docsURL),

@@ -855,7 +855,8 @@ func TestDeployK8sService(t *testing.T) {
 			fakeClient := fake.NewSimpleClientset(tt.k8sObjects...)
 			err := deployK8sService(context.Background(), "test", tt.stack, fakeClient)
 			assert.NoError(t, err)
-			svc, _ := services.Get(context.Background(), "test", "ns", fakeClient)
+			svc, err := services.Get(context.Background(), "test", "ns", fakeClient)
+			assert.NoError(t, err)
 			assert.Equal(t, svc.ObjectMeta.Labels[model.StackNameLabel], tt.expectedNameLabel)
 		})
 	}
@@ -1047,7 +1048,8 @@ func TestDeployK8sEndpoint(t *testing.T) {
 			err := deployK8sEndpoint(context.Background(), "test", "test", model.Port{ContainerPort: 80}, tt.stack, c)
 			assert.NoError(t, err)
 
-			obj, _ := c.Get(context.Background(), "test", "test")
+			obj, err := c.Get(context.Background(), "test", "test")
+			assert.NoError(t, err)
 			assert.NotNil(t, obj)
 		})
 	}

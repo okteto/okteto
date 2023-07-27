@@ -377,7 +377,8 @@ services:
 	}
 
 	// checking d1 state
-	d1App := tr1.App.(*DeploymentApp)
+	d1App, ok := tr1.App.(*DeploymentApp)
+	assert.True(t, ok)
 	if !reflect.DeepEqual(d1App.d.Spec.Strategy, appsv1.DeploymentStrategy{Type: appsv1.RollingUpdateDeploymentStrategyType}) {
 		t.Fatalf("d1 wrong strategy %v", d1App.d.Spec.Strategy)
 	}
@@ -402,14 +403,17 @@ services:
 	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Annotations, d1.Spec.Template.Annotations) {
 		t.Fatalf("Wrong d1 pod annotations: '%v'", tr1.App.TemplateObjectMeta().Annotations)
 	}
-	marshalledD1, _ := yaml.Marshal(tr1.App.PodSpec())
-	marshalledD1Orig, _ := yaml.Marshal(d1Orig.Spec.Template.Spec)
+	marshalledD1, err := yaml.Marshal(tr1.App.PodSpec())
+	assert.NoError(t, err)
+	marshalledD1Orig, err := yaml.Marshal(d1Orig.Spec.Template.Spec)
+	assert.NoError(t, err)
 	if !bytes.Equal(marshalledD1, marshalledD1Orig) {
 		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledD1), string(marshalledD1Orig))
 	}
 
 	// checking dev d1 state
-	devD1App := tr1.DevApp.(*DeploymentApp)
+	devD1App, ok := tr1.DevApp.(*DeploymentApp)
+	assert.True(t, ok)
 	if !reflect.DeepEqual(devD1App.d.Spec.Strategy, appsv1.DeploymentStrategy{Type: appsv1.RecreateDeploymentStrategyType}) {
 		t.Fatalf("dev d1 wrong strategy %v", d1App.d.Spec.Strategy)
 	}
@@ -437,8 +441,10 @@ services:
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Annotations, expectedPodAnnotations) {
 		t.Fatalf("Wrong dev d1 pod annotations: '%v'", tr1.DevApp.TemplateObjectMeta().Annotations)
 	}
-	marshalledDevD1, _ := yaml.Marshal(tr1.DevApp.PodSpec())
-	marshalledDevD1OK, _ := yaml.Marshal(dDevPod1OK)
+	marshalledDevD1, err := yaml.Marshal(tr1.DevApp.PodSpec())
+	assert.NoError(t, err)
+	marshalledDevD1OK, err := yaml.Marshal(dDevPod1OK)
+	assert.NoError(t, err)
 	if !bytes.Equal(marshalledDevD1, marshalledDevD1OK) {
 		t.Fatalf("Wrong dev d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD1), string(marshalledDevD1OK))
 	}
@@ -559,8 +565,10 @@ services:
 	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Annotations, d2Orig.Spec.Template.Annotations) {
 		t.Fatalf("Wrong d2 pod annotations: '%v'", tr2.App.TemplateObjectMeta().Annotations)
 	}
-	marshalledD2, _ := yaml.Marshal(tr2.App.PodSpec())
-	marshalledD2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
+	marshalledD2, err := yaml.Marshal(tr2.App.PodSpec())
+	assert.NoError(t, err)
+	marshalledD2Orig, err := yaml.Marshal(d2Orig.Spec.Template.Spec)
+	assert.NoError(t, err)
 	if !bytes.Equal(marshalledD2, marshalledD2Orig) {
 		t.Fatalf("Wrong d2 generation.\nActual %+v, \nExpected %+v", string(marshalledD2), string(marshalledD2Orig))
 	}
@@ -585,8 +593,10 @@ services:
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Annotations, expectedPodAnnotations) {
 		t.Fatalf("Wrong dev d2 pod annotations: '%v'", tr2.DevApp.TemplateObjectMeta().Annotations)
 	}
-	marshalledDevD2, _ := yaml.Marshal(tr2.DevApp.PodSpec())
-	marshalledDevD2OK, _ := yaml.Marshal(d2DevPodOK)
+	marshalledDevD2, err := yaml.Marshal(tr2.DevApp.PodSpec())
+	assert.NoError(t, err)
+	marshalledDevD2OK, err := yaml.Marshal(d2DevPodOK)
+	assert.NoError(t, err)
 	if !bytes.Equal(marshalledDevD2, marshalledDevD2OK) {
 		t.Fatalf("Wrong dev d2 generation.\nActual %+v, \nExpected %+v", string(marshalledDevD2), string(marshalledDevD2OK))
 	}
@@ -691,8 +701,10 @@ services:
 		t.Fatalf("d2 is running %d replicas", tr2.App.Replicas())
 	}
 
-	marshalledD2, _ := yaml.Marshal(tr2.App.PodSpec())
-	marshalledD2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
+	marshalledD2, err := yaml.Marshal(tr2.App.PodSpec())
+	assert.NoError(t, err)
+	marshalledD2Orig, err := yaml.Marshal(d2Orig.Spec.Template.Spec)
+	assert.NoError(t, err)
 	if !bytes.Equal(marshalledD2, marshalledD2Orig) {
 		t.Fatalf("Wrong d2 generation.\nActual %+v, \nExpected %+v", string(marshalledD2), string(marshalledD2Orig))
 	}
@@ -807,8 +819,10 @@ services:
 		t.Fatalf("d2 is running %d replicas", tr2.App.Replicas())
 	}
 
-	marshalledD2, _ := yaml.Marshal(tr2.App.PodSpec())
-	marshalledD2Orig, _ := yaml.Marshal(d2Orig.Spec.Template.Spec)
+	marshalledD2, err := yaml.Marshal(tr2.App.PodSpec())
+	assert.NoError(t, err)
+	marshalledD2Orig, err := yaml.Marshal(d2Orig.Spec.Template.Spec)
+	assert.NoError(t, err)
 	if !bytes.Equal(marshalledD2, marshalledD2Orig) {
 		t.Fatalf("Wrong d2 generation.\nActual %+v, \nExpected %+v", string(marshalledD2), string(marshalledD2Orig))
 	}
@@ -961,8 +975,10 @@ persistentVolume:
 			},
 		},
 	}
-	marshalledDev, _ := yaml.Marshal(tr.DevApp.PodSpec())
-	marshalledDevOK, _ := yaml.Marshal(dDevPodOK)
+	marshalledDev, err := yaml.Marshal(tr.DevApp.PodSpec())
+	assert.NoError(t, err)
+	marshalledDevOK, err := yaml.Marshal(dDevPodOK)
+	assert.NoError(t, err)
 
 	if !bytes.Equal(marshalledDev, marshalledDevOK) {
 		t.Fatalf("Wrong d1 generation.\nActual %+v, \nExpected %+v", string(marshalledDev), string(marshalledDevOK))
@@ -1803,8 +1819,10 @@ services:
 	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Annotations, expectedTemplateAnnotations) {
 		t.Fatalf("Wrong sfs1 pod annotations: '%v'", tr1.App.TemplateObjectMeta().Annotations)
 	}
-	marshalledSfs1, _ := yaml.Marshal(tr1.App.PodSpec())
-	marshalledSfs1Orig, _ := yaml.Marshal(sfs1Orig.Spec.Template.Spec)
+	marshalledSfs1, err := yaml.Marshal(tr1.App.PodSpec())
+	assert.NoError(t, err)
+	marshalledSfs1Orig, err := yaml.Marshal(sfs1Orig.Spec.Template.Spec)
+	assert.NoError(t, err)
 	if !bytes.Equal(marshalledSfs1, marshalledSfs1Orig) {
 		t.Fatalf("Wrong sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledSfs1), string(marshalledSfs1Orig))
 	}
@@ -1829,8 +1847,10 @@ services:
 	if !reflect.DeepEqual(tr1.DevApp.TemplateObjectMeta().Annotations, expectedPodAnnotations) {
 		t.Fatalf("Wrong dev sfs1 pod annotations: '%v'", tr1.DevApp.TemplateObjectMeta().Annotations)
 	}
-	marshalledDevSfs1, _ := yaml.Marshal(tr1.DevApp.PodSpec())
-	marshalledDevSfs1OK, _ := yaml.Marshal(sfs1PodDev)
+	marshalledDevSfs1, err := yaml.Marshal(tr1.DevApp.PodSpec())
+	assert.NoError(t, err)
+	marshalledDevSfs1OK, err := yaml.Marshal(sfs1PodDev)
+	assert.NoError(t, err)
 	if !bytes.Equal(marshalledDevSfs1, marshalledDevSfs1OK) {
 		t.Fatalf("Wrong dev sfs1 generation.\nActual %+v, \nExpected %+v", string(marshalledDevSfs1), string(marshalledDevSfs1OK))
 	}
@@ -1953,8 +1973,10 @@ services:
 	if !reflect.DeepEqual(tr1.App.TemplateObjectMeta().Annotations, sfs2Orig.Spec.Template.Annotations) {
 		t.Fatalf("Wrong sfs2 pod annotations: '%v'", tr2.App.TemplateObjectMeta().Annotations)
 	}
-	marshalledSfs2, _ := yaml.Marshal(tr2.App.PodSpec())
-	marshalledSfs2Orig, _ := yaml.Marshal(sfs2Orig.Spec.Template.Spec)
+	marshalledSfs2, err := yaml.Marshal(tr2.App.PodSpec())
+	assert.NoError(t, err)
+	marshalledSfs2Orig, err := yaml.Marshal(sfs2Orig.Spec.Template.Spec)
+	assert.NoError(t, err)
 	if !bytes.Equal(marshalledSfs2, marshalledSfs2Orig) {
 		t.Fatalf("Wrong sfs2 generation.\nActual %+v, \nExpected %+v", string(marshalledSfs2), string(marshalledSfs2Orig))
 	}
@@ -1979,8 +2001,10 @@ services:
 	if !reflect.DeepEqual(tr2.DevApp.TemplateObjectMeta().Annotations, expectedPodAnnotations) {
 		t.Fatalf("Wrong dev sfs2 pod annotations: '%v'", tr2.DevApp.TemplateObjectMeta().Annotations)
 	}
-	marshalledDevSfs2, _ := yaml.Marshal(tr2.DevApp.PodSpec())
-	marshalledDevSfs2OK, _ := yaml.Marshal(sfs2DevPod)
+	marshalledDevSfs2, err := yaml.Marshal(tr2.DevApp.PodSpec())
+	assert.NoError(t, err)
+	marshalledDevSfs2OK, err := yaml.Marshal(sfs2DevPod)
+	assert.NoError(t, err)
 	if !bytes.Equal(marshalledDevSfs2, marshalledDevSfs2OK) {
 		t.Fatalf("Wrong dev sfs2 generation.\nActual %+v, \nExpected %+v", string(marshalledDevSfs2), string(marshalledDevSfs2OK))
 	}
