@@ -2,7 +2,6 @@ run:
   timeout: 5m
   go: 1.20
 
-
 # All possible options can be found here https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
 linters-settings:
   errcheck:
@@ -124,7 +123,6 @@ linters:
 # whitespace: Tool for detection of leading and trailing whitespace [fast: true, auto-fix: true]
 # wrapcheck: Checks that errors returned from external packages are wrapped [fast: false, auto-fix: false]
 # wsl: Whitespace Linter - Forces you to use empty lines! [fast: true, auto-fix: false]
-
 
 # All possible options can be found here
 issues:
