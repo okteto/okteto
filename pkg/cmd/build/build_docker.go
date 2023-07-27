@@ -457,6 +457,9 @@ func ResolveAuthConfig(ctx context.Context, dockerCli *command.DockerCli, cli *c
 		configKey = info.IndexServerAddress
 	}
 
-	a, _ := dockerCli.ConfigFile().GetAuthConfig(configKey)
+	a, err := dockerCli.ConfigFile().GetAuthConfig(configKey)
+	if err != nil {
+		oktetoLog.Infof("Error getting credentials for %s: %s", configKey, err)
+	}
 	return dockerTypes.AuthConfig(a)
 }
