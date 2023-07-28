@@ -38,12 +38,9 @@ dev:
     context: svc
     namespace: user
     mode: hybrid
-    command: ./checker.sh
+    command: bash ./checker.sh
     reverse:
     - 8080:8080
-    args:
-    - value-of-arg1
-    - $VALUE_OF_ARG2
     envFiles:
     - .env
     environment:
@@ -66,18 +63,8 @@ ENV ENV_IN_IMAGE value_from_image`
 	localProcess = `
 #!/bin/bash
 
-if [ "$#" -ne 2 ]; then
-  echo "Total arguments count should be 2, got $# instead"
-  exit 1
-fi
-
-if [ "$1" != "value-of-arg1" ]; then
-  echo "First argument should be 'value-of-arg1', got '$1' instead"
-  exit 1
-fi
-
-if [ "$2" != "value-of-arg2" ]; then
-  echo "Second argument should be 'value-of-arg2', got '$2' instead"
+if [ "$#" -ne 0 ]; then
+  echo "This script does not accept any argument, got $# instead"
   exit 1
 fi
 
