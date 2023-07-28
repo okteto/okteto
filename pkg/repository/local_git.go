@@ -3,10 +3,16 @@ package repository
 import (
 	"context"
 	"errors"
-	"github.com/go-git/go-git/v5"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
+	"syscall"
+	"time"
+
+	oktetoLog "github.com/okteto/okteto/pkg/log"
+
+	"github.com/go-git/go-git/v5"
 )
 
 var (
@@ -24,6 +30,30 @@ type LocalExec struct{}
 
 func (*LocalExec) RunCommand(ctx context.Context, dir string, name string, arg ...string) ([]byte, error) {
 	c := exec.CommandContext(ctx, name, arg...)
+	c.Cancel = func() error {
+		// windows: https://pkg.go.dev/os#Signal
+		// Terminating the process with Signal is not implemented for windows.
+		// Windows platform will only be able to kill the process
+		if runtime.GOOS == "windows" {
+			return c.Process.Kill()
+		}
+
+		oktetoLog.Debugf("terminating %s - %s/%s", c.String(), dir, name)
+		if err := c.Process.Signal(syscall.SIGTERM); err != nil {
+			oktetoLog.Debugf("err at signal SIGTERM: %v", err)
+		}
+
+		time.Sleep(3 * time.Second)
+		if err := c.Process.Signal(syscall.Signal(0)); err != nil {
+			if errors.Is(err, os.ErrProcessDone) {
+				return nil
+			}
+			oktetoLog.Debugf("reading signal with error %v", err)
+		}
+		oktetoLog.Debugf("killing %s - %s/%s", c.String(), dir, name)
+		return c.Process.Signal(syscall.SIGKILL)
+	}
+
 	c.Dir = dir
 	c.Env = os.Environ()
 	return c.Output()
