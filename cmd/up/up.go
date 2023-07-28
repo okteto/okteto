@@ -924,51 +924,51 @@ func (up *upContext) shutdownHybridMode() {
 		return
 	}
 
-	pid := up.hybridCommand.Process.Pid
-	if existProcess(pid) {
-		if err := killProcess(pid); err != nil {
-			oktetoLog.Warning("failed to stop gracefully local process related to command executed in hybrid mode: %s", err.Error())
-		}
+	pList, err := ps.Processes()
+	if err != nil {
+		oktetoLog.Warning("error getting list of process %v", err)
+		return
+	}
 
-		waitTimeout := 15 * time.Second
-		hasFinished := hasHybridCommandFinished(pid, waitTimeout)
-		if !hasFinished {
-			oktetoLog.Warning("timeout waiting to finish hybrid command gracefully")
+	terminateChildProcess(up.hybridCommand.Process.Pid, pList)
+
+	if err := terminateProcess(up.hybridCommand.Process.Pid); err != nil {
+		oktetoLog.Debugf("error terminating process %s: %v", up.hybridCommand.Process.Pid, err)
+	}
+}
+
+func terminateChildProcess(parent int, pList []ps.Process) {
+	// assure all the child process are terminated when command is exited
+	for _, pR := range pList {
+		// skip when process is not child from parent
+		if pR.PPid() != parent {
+			continue
+		}
+		// iterate over the children of the parent
+		terminateChildProcess(pR.Pid(), pList)
+
+		if err := terminateProcess(pR.Pid()); err != nil {
+			oktetoLog.Debugf("error terminating process %s: %v", pR.Pid(), err)
+			continue
 		}
 	}
 }
 
-// killProcess sends a SIGTERM signal to the given process
-func killProcess(pid int) error {
+func terminateProcess(pid int) error {
 	p, err := os.FindProcess(pid)
 	if err != nil {
+		oktetoLog.Debugf("error getting child process %s: %v", pid, err)
 		return err
 	}
-	return p.Signal(syscall.SIGTERM)
-}
-
-func existProcess(pid int) bool {
-	found, err := ps.FindProcess(pid)
-	if err == nil && found == nil {
-		return false
+	if err := p.Signal(syscall.SIGTERM); err != nil {
+		oktetoLog.Debugf("error terminating child process %s: %v", p.Pid, err)
+		return err
 	}
-	return true
-}
-
-func hasHybridCommandFinished(pid int, timeout time.Duration) bool {
-	ticker := time.NewTicker(1 * time.Second)
-	to := time.NewTicker(timeout)
-	for {
-		select {
-		case <-to.C:
-			return false
-		case <-ticker.C:
-			existProcess := existProcess(pid)
-			if !existProcess {
-				return true
-			}
-		}
+	if _, err := p.Wait(); err != nil {
+		oktetoLog.Debugf("error waiting for child process to exit %s: %v", p.Pid, err)
+		return err
 	}
+	return nil
 }
 
 func printDisplayContext(up *upContext) {
