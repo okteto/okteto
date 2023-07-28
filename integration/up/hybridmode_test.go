@@ -59,7 +59,7 @@ dev:
 
 	svcDockerfile = `FROM busybox
 ENV ENV_IN_IMAGE value_from_image`
-	envFile      = `VALUE_OF_ARG2=value-of-arg2`
+	envFile      = `TEST_ENV_FILE_VAR1=from-file-1`
 	localProcess = `
 #!/bin/bash
 
@@ -70,6 +70,11 @@ fi
 
 if [ "$TEST_ENV_VAR1" != "test-value1" ]; then
   echo "TEST_ENV_VAR1 should be 'test-value1', got '$TEST_ENV_VAR1' instead"
+  exit 1
+fi
+
+if [ "$TEST_ENV_FILE_VAR1" != "from-file-1" ]; then
+  echo "TEST_ENV_FILE_VAR1 should be 'from-file-1', got '$TEST_ENV_FILE_VAR1' instead"
   exit 1
 fi
 
