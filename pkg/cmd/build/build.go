@@ -286,7 +286,7 @@ func OptsFromBuildInfo(manifestName, svcName string, b *model.BuildInfo, o *type
 	args := []model.BuildArg{}
 	optionsBuildArgs := map[string]string{}
 	for _, arg := range o.BuildArgs {
-		splittedArg := strings.SplitN(strings.Trim(arg, "\""), "=", 2)
+		splittedArg := strings.SplitN(arg, "=", 2)
 		if len(splittedArg) == 1 {
 			optionsBuildArgs[splittedArg[0]] = ""
 			args = append(args, model.BuildArg{
