@@ -516,7 +516,7 @@ workflows:
     when:
       equal: [ "run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
     jobs:
-      - build-binaries:
+      - build-binaries
       - run-windows-e2e-test:
           requires:
             - build-binaries
@@ -524,7 +524,7 @@ workflows:
     when:
       equal: [ "run-e2e-unix", << pipeline.parameters.GHA_Meta >>]
     jobs:
-      - build-binaries:
+      - build-binaries
       - test-integration:
           requires:
             - build-binaries
@@ -533,7 +533,7 @@ workflows:
     when:
       equal: [ "run-e2e", << pipeline.parameters.GHA_Meta >>]
     jobs:
-      - build-binaries:
+      - build-binaries
       - test-integration:
           requires:
             - build-binaries
