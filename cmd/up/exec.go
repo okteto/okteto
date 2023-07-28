@@ -60,7 +60,7 @@ type HybridExecCtx struct {
 	RunOktetoExec   bool
 }
 
-// GetCommandToExec for non-windows GOOS
+// GetCommandToExec returns the command to exec into the hybrid mode
 func (he *hybridExecutor) GetCommandToExec(ctx context.Context, cmd []string) (*exec.Cmd, error) {
 	var c *exec.Cmd
 	if runtime.GOOS != "windows" {
