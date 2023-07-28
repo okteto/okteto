@@ -530,7 +530,7 @@ workflows:
             - build-binaries
   
   run-e2e-tests:
-   when:
+    when:
         equal: [ "run-e2e", << pipeline.parameters.GHA_Meta >>]
     jobs:
       - build-binaries:
