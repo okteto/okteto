@@ -204,6 +204,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
 				runningInInstaller: config.RunningInInstaller(),
+				AnalyticsTracker:   analytics.NewAnalyticsTracker(),
 			}
 			startTime := time.Now()
 
