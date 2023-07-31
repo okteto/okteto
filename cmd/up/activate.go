@@ -208,7 +208,7 @@ func (up *upContext) activate() error {
 		}
 		printDisplayContext(up)
 		durationActivateUp := time.Since(up.StartTime)
-		analytics.TrackDurationActivateUp(durationActivateUp)
+		analytics.TrackSecondsActivateUp(durationActivateUp.Seconds())
 
 		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
 	}()

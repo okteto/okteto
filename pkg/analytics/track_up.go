@@ -1,17 +1,14 @@
 package analytics
 
 import (
-	"time"
-
 	"github.com/okteto/okteto/pkg/model"
 )
 
 const (
-	upEvent                 = "Up"
-	upErrorEvent            = "Up Error"
-	durationActivateUpEvent = "Up Duration Time"
-	syncErrorEvent          = "Sync Error"
-	reconnectEvent          = "Reconnect"
+	upEvent        = "Up"
+	upErrorEvent   = "Up Error"
+	syncErrorEvent = "Sync Error"
+	reconnectEvent = "Reconnect"
 )
 
 const (
@@ -58,12 +55,15 @@ func TrackUpError(success bool) {
 	track(upErrorEvent, success, nil)
 }
 
-// TrackDurationActivateUp sends a tracking event to mixpanel of the time that has elapsed in the execution of up
-func TrackDurationActivateUp(durationActivateUp time.Duration) {
+const eventActivateUp = "Up Duration Time"
+
+// TrackSecondsActivateUp sends a eventActivateUp to mixpanel
+// measures the duration for command up to be active, from start until first exec is done
+func TrackSecondsActivateUp(seconds float64) {
 	props := map[string]interface{}{
-		"duration": durationActivateUp,
+		"seconds": seconds,
 	}
-	track(durationActivateUpEvent, true, props)
+	track(eventActivateUp, true, props)
 }
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
