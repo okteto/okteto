@@ -98,3 +98,14 @@ func TrackSecondsToSyncContext(seconds float64) {
 	}
 	track(eventSecondsToSyncContext, true, props)
 }
+
+// eventSecondsUpCommandExecution measures the seconds a command is running during up
+const eventSecondsUpCommandExecution = "Up Command Execution Duration"
+
+// TrackUpTotalCommandExecution sends eventSecondsUpCommandExecution to mixpanel with duration as seconds
+func TrackSecondsUpCommandExecution(seconds float64) {
+	props := map[string]interface{}{
+		"seconds": seconds,
+	}
+	track(eventSecondsUpCommandExecution, true, props)
+}

@@ -210,7 +210,9 @@ func (up *upContext) activate() error {
 		durationActivateUp := time.Since(up.StartTime)
 		analytics.TrackSecondsActivateUp(durationActivateUp.Seconds())
 
+		startRunCommand := time.Now()
 		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
+		analytics.TrackSecondsUpCommandExecution(time.Since(startRunCommand).Seconds())
 	}()
 
 	prevError := up.waitUntilExitOrInterruptOrApply(ctx)
