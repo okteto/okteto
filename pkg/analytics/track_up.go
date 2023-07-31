@@ -98,13 +98,3 @@ func TrackSecondsToSyncContext(seconds float64) {
 	}
 	track(eventSecondsToSyncContext, true, props)
 }
-
-const eventSecondsUpDeployApp = "Up Deploy App Duration"
-
-// TrackSecondsUpDeployApp sends eventSecondsUpDeployApp to mixpanel
-func TrackSecondsUpDeployApp(seconds float64) {
-	props := map[string]interface{}{
-		"seconds": seconds,
-	}
-	track(eventSecondsUpDeployApp, true, props)
-}

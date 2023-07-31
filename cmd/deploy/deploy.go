@@ -206,13 +206,13 @@ func Deploy(ctx context.Context) *cobra.Command {
 				runningInInstaller: config.RunningInInstaller(),
 				AnalyticsTracker:   analytics.NewAnalyticsTracker(),
 			}
-			startTime := time.Now()
 
 			stop := make(chan os.Signal, 1)
 			signal.Notify(stop, os.Interrupt)
 			exit := make(chan error, 1)
 
 			go func() {
+				startTime := time.Now()
 				err := c.RunDeploy(ctx, options)
 
 				c.trackDeploy(options.Manifest, options.RunInRemote, startTime, err)
