@@ -349,13 +349,8 @@ workflows:
                 - master
   test:
     when:
-      and:
-        - not:
-            equal: [scheduled_pipeline, << pipeline.trigger_source >>]
-        - not:
-            matches:
-              pattern: "^run-e2e.*"
-              value: << pipeline.parameters.GHA_Meta >>
+      not:
+        equal: [scheduled_pipeline, << pipeline.trigger_source >>]
     jobs:
       - build-binaries:
           filters:
