@@ -138,6 +138,8 @@ func Up() *cobra.Command {
 				upOptions.ManifestPath = uptManifestPath
 			}
 			manifestOpts := contextCMD.ManifestOptions{Filename: upOptions.ManifestPath, Namespace: upOptions.Namespace, K8sContext: upOptions.K8sContext}
+
+			startOktetoContextConfig := time.Now()
 			oktetoManifest, err := contextCMD.LoadManifestWithContext(ctx, manifestOpts)
 			if err != nil {
 				if err.Error() == fmt.Errorf(oktetoErrors.ErrNotLogged, okteto.CloudURL).Error() {
@@ -177,6 +179,7 @@ func Up() *cobra.Command {
 					}
 				}
 			}
+			analytics.TrackSecondsUpOktetoContextConfig(time.Since(startOktetoContextConfig).Seconds())
 
 			wd, err := os.Getwd()
 			if err != nil {

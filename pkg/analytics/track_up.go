@@ -109,3 +109,14 @@ func TrackSecondsUpCommandExecution(seconds float64) {
 	}
 	track(eventSecondsUpCommandExecution, true, props)
 }
+
+// eventSecondsUpOktetoContextConfig measures the seconds it takes to configure okteto context under an up command
+const eventSecondsUpOktetoContextConfig = "Up Okteto Context Config Duration"
+
+// TrackUpTotalCommandExecution sends eventSecondsUpCommandExecution to mixpanel with duration as seconds
+func TrackSecondsUpOktetoContextConfig(seconds float64) {
+	props := map[string]interface{}{
+		"seconds": seconds,
+	}
+	track(eventSecondsUpOktetoContextConfig, true, props)
+}
