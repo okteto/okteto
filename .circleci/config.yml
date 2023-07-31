@@ -349,8 +349,16 @@ workflows:
                 - master
   test:
     when:
-      not:
-        equal: [scheduled_pipeline, << pipeline.trigger_source >>]
+      or:
+        - not:
+            equal: [scheduled_pipeline, << pipeline.trigger_source >>]
+        - or:
+            - not:
+                equal: [ "run-e2e", << pipeline.parameters.GHA_Meta >>]
+            - not:
+                equal: [ "run-e2e-windows", << pipeline.parameters.GHA_Meta >>]
+            - not:
+                equal: [ "run-e2e-unix", << pipeline.parameters.GHA_Meta >>]
     jobs:
       - build-binaries:
           filters:
