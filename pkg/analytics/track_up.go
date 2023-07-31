@@ -7,12 +7,11 @@ import (
 )
 
 const (
-	upEvent                  = "Up"
-	upErrorEvent             = "Up Error"
-	durationActivateUpEvent  = "Up Duration Time"
-	durationInitialSyncEvent = "Initial Sync Duration Time"
-	syncErrorEvent           = "Sync Error"
-	reconnectEvent           = "Reconnect"
+	upEvent                 = "Up"
+	upErrorEvent            = "Up Error"
+	durationActivateUpEvent = "Up Duration Time"
+	syncErrorEvent          = "Sync Error"
+	reconnectEvent          = "Reconnect"
 )
 
 const (
@@ -67,14 +66,6 @@ func TrackDurationActivateUp(durationActivateUp time.Duration) {
 	track(durationActivateUpEvent, true, props)
 }
 
-// TrackDurationInitialSync sends a tracking event to mixpanel with initial sync duration
-func TrackDurationInitialSync(durationInitialSync time.Duration) {
-	props := map[string]interface{}{
-		"duration": durationInitialSync,
-	}
-	track(durationInitialSyncEvent, true, props)
-}
-
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
 func TrackReconnect(success bool, cause string) {
 	props := map[string]interface{}{
@@ -88,4 +79,22 @@ func TrackSyncError() {
 	track(syncErrorEvent, false, nil)
 }
 
+const eventSecondsToScanLocalFolders = "Up Scan Local Folders Duration"
 
+// TrackSecondsToScanLocalFolders sends eventSecondsToScanLocalFolders to mixpanel with duration as seconds
+func TrackSecondsToScanLocalFolders(seconds float64) {
+	props := map[string]interface{}{
+		"seconds": seconds,
+	}
+	track(eventSecondsToScanLocalFolders, true, props)
+}
+
+const eventSecondsToSyncContext = "Up Sync Context Duration"
+
+// TrackSecondsToScanLocalFolders sends eventSecondsToScanLocalFolders to mixpanel with duration as seconds
+func TrackSecondsToSyncContext(seconds float64) {
+	props := map[string]interface{}{
+		"seconds": seconds,
+	}
+	track(eventSecondsToSyncContext, true, props)
+}

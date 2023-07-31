@@ -48,31 +48,27 @@ func (up *upContext) initializeSyncthing() error {
 }
 
 func (up *upContext) sync(ctx context.Context) error {
+	startSyncContext := time.Now()
 	if err := up.startSyncthing(ctx); err != nil {
 		return err
 	}
+	durationSyncContext := time.Since(startSyncContext)
+	analytics.TrackSecondsToSyncContext(durationSyncContext.Seconds())
 
-	start := time.Now()
-	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Synchronizing); err != nil {
-		return err
-	}
-
+	startScanFiles := time.Now()
 	if err := up.synchronizeFiles(ctx); err != nil {
 		return err
 	}
+	durationScanFiles := time.Since(startScanFiles)
+	analytics.TrackSecondsToScanLocalFolders(durationScanFiles.Seconds())
 
 	oktetoLog.Success("Files synchronized")
 
-	elapsed := time.Since(start)
-	analytics.TrackDurationInitialSync(elapsed)
-	maxDuration := time.Duration(1) * time.Minute
-	if elapsed > maxDuration {
-		minutes := elapsed / time.Minute
-		elapsed -= minutes * time.Minute
-		seconds := elapsed / time.Second
-		oktetoLog.Warning(`File synchronization took %dm %ds
+	// maxDuration = 1 Minute
+	if durationScanFiles.Minutes() > 1 {
+		oktetoLog.Warning(`File synchronization took %s
     Consider to update your '.stignore' to optimize the file synchronization
-    More information is available here: https://okteto.com/docs/reference/file-synchronization/`, minutes, seconds)
+    More information is available here: https://okteto.com/docs/reference/file-synchronization/`, durationScanFiles.String())
 	}
 
 	up.Sy.Type = "sendreceive"
