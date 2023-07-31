@@ -349,7 +349,7 @@ workflows:
                 - master
   test:
     when:
-      or:
+      and:
         - not:
             equal: [scheduled_pipeline, << pipeline.trigger_source >>]
         - or:
