@@ -948,8 +948,10 @@ func terminateChildProcess(parent int, pList []ps.Process) {
 		terminateChildProcess(pR.Pid(), pList)
 
 		if err := terminateProcess(pR.Pid()); err != nil {
+			if errors.Is(err, os.ErrProcessDone) {
+				continue
+			}
 			oktetoLog.Debugf("error terminating process %s: %v", pR.Pid(), err)
-			continue
 		}
 	}
 }
@@ -957,15 +959,18 @@ func terminateChildProcess(parent int, pList []ps.Process) {
 func terminateProcess(pid int) error {
 	p, err := os.FindProcess(pid)
 	if err != nil {
-		oktetoLog.Debugf("error getting child process %s: %v", pid, err)
+		oktetoLog.Debugf("error getting process %s: %v", pid, err)
 		return err
 	}
 	if err := p.Signal(syscall.SIGTERM); err != nil {
-		oktetoLog.Debugf("error terminating child process %s: %v", p.Pid, err)
+		if errors.Is(err, os.ErrProcessDone) {
+			return nil
+		}
+		oktetoLog.Debugf("error terminating process %s: %v", p.Pid, err)
 		return err
 	}
 	if _, err := p.Wait(); err != nil {
-		oktetoLog.Debugf("error waiting for child process to exit %s: %v", p.Pid, err)
+		oktetoLog.Debugf("error waiting for process to exit %s: %v", p.Pid, err)
 		return err
 	}
 	return nil
