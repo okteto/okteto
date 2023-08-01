@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -53,14 +52,14 @@ func (up *upContext) sync(ctx context.Context) error {
 		return err
 	}
 	durationSyncContext := time.Since(startSyncContext)
-	analytics.TrackSecondsToSyncContext(durationSyncContext.Seconds())
+	up.analyticsTracker.TrackSecondsToSyncContext(durationSyncContext.Seconds())
 
 	startScanFiles := time.Now()
 	if err := up.synchronizeFiles(ctx); err != nil {
 		return err
 	}
 	durationScanFiles := time.Since(startScanFiles)
-	analytics.TrackSecondsToScanLocalFolders(durationScanFiles.Seconds())
+	up.analyticsTracker.TrackSecondsToScanLocalFolders(durationScanFiles.Seconds())
 
 	oktetoLog.Success("Files synchronized")
 
@@ -162,7 +161,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	}()
 
 	if err := up.Sy.WaitForCompletion(ctx, reporter); err != nil {
-		analytics.TrackSyncError()
+		up.analyticsTracker.TrackSyncError()
 		switch err {
 		case oktetoErrors.ErrLostSyncthing:
 			return err

@@ -179,7 +179,8 @@ func Up() *cobra.Command {
 					}
 				}
 			}
-			analytics.TrackSecondsUpOktetoContextConfig(time.Since(startOktetoContextConfig).Seconds())
+			aTracker := analytics.NewAnalyticsTracker()
+			aTracker.TrackSecondsUpOktetoContextConfig(time.Since(startOktetoContextConfig).Seconds())
 
 			wd, err := os.Getwd()
 			if err != nil {
@@ -243,14 +244,15 @@ func Up() *cobra.Command {
 			}
 
 			up := &upContext{
-				Manifest:       oktetoManifest,
-				Dev:            nil,
-				Exit:           make(chan error, 1),
-				resetSyncthing: upOptions.Reset,
-				StartTime:      time.Now(),
-				Registry:       registry.NewOktetoRegistry(okteto.Config{}),
-				Options:        upOptions,
-				Fs:             afero.NewOsFs(),
+				Manifest:         oktetoManifest,
+				Dev:              nil,
+				Exit:             make(chan error, 1),
+				resetSyncthing:   upOptions.Reset,
+				StartTime:        time.Now(),
+				Registry:         registry.NewOktetoRegistry(okteto.Config{}),
+				Options:          upOptions,
+				Fs:               afero.NewOsFs(),
+				analyticsTracker: aTracker,
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -629,7 +631,7 @@ func (up *upContext) start() error {
 
 	pidFileCh := make(chan error, 1)
 
-	analytics.TrackUp(analytics.TrackUpMetadata{
+	up.analyticsTracker.TrackUp(analytics.TrackUpMetadata{
 		IsInteractive:          up.Dev.IsInteractive(),
 		IsOktetoRepository:     utils.IsOktetoRepo(),
 		IsV2:                   up.Manifest.IsV2,
@@ -892,7 +894,7 @@ func (up *upContext) shutdown() {
 
 	oktetoLog.Infof("starting shutdown sequence")
 	if !up.success {
-		analytics.TrackUpError(true)
+		up.analyticsTracker.TrackUpError(true)
 	}
 
 	if up.Cancel != nil {

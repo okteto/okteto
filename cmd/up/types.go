@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/moby/term"
+	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/model/forward"
@@ -65,6 +66,7 @@ type upContext struct {
 	Fs                    afero.Fs
 	hybridCommand         *exec.Cmd
 	interruptReceived     bool
+	analyticsTracker      *analytics.AnalyticsTracker
 }
 
 // Forwarder is an interface for the port-forwarding features

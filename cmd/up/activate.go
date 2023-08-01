@@ -150,7 +150,7 @@ func (up *upContext) activate() error {
 		if lastPodUID != up.Pod.UID {
 			cause = analytics.ReconnectCauseDevPodRecreated
 		}
-		analytics.TrackReconnect(true, cause)
+		up.analyticsTracker.TrackReconnect(true, cause)
 	}
 
 	up.isRetry = true
@@ -208,11 +208,11 @@ func (up *upContext) activate() error {
 		}
 		printDisplayContext(up)
 		durationActivateUp := time.Since(up.StartTime)
-		analytics.TrackSecondsActivateUp(durationActivateUp.Seconds())
+		up.analyticsTracker.TrackSecondsActivateUp(durationActivateUp.Seconds())
 
 		startRunCommand := time.Now()
 		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
-		analytics.TrackSecondsUpCommandExecution(time.Since(startRunCommand).Seconds())
+		up.analyticsTracker.TrackSecondsUpCommandExecution(time.Since(startRunCommand).Seconds())
 	}()
 
 	prevError := up.waitUntilExitOrInterruptOrApply(ctx)

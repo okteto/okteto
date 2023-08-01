@@ -35,7 +35,7 @@ type TrackUpMetadata struct {
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackUp(m TrackUpMetadata) {
+func (a *AnalyticsTracker) TrackUp(m TrackUpMetadata) {
 	props := map[string]interface{}{
 		"isInteractive":          m.IsInteractive,
 		"isV2":                   m.IsV2,
@@ -47,76 +47,76 @@ func TrackUp(m TrackUpMetadata) {
 		"hasReverse":             m.HasReverse,
 		"mode":                   m.Mode,
 	}
-	track(upEvent, m.Success, props)
+	a.trackFn(upEvent, m.Success, props)
 }
 
 // TrackUpError sends a tracking event to mixpanel when the okteto up command fails
-func TrackUpError(success bool) {
-	track(upErrorEvent, success, nil)
+func (a *AnalyticsTracker) TrackUpError(success bool) {
+	a.trackFn(upErrorEvent, success, nil)
 }
 
 const eventActivateUp = "Up Duration Time"
 
 // TrackSecondsActivateUp sends a eventActivateUp to mixpanel
 // measures the duration for command up to be active, from start until first exec is done
-func TrackSecondsActivateUp(seconds float64) {
+func (a *AnalyticsTracker) TrackSecondsActivateUp(seconds float64) {
 	props := map[string]interface{}{
 		"seconds": seconds,
 	}
-	track(eventActivateUp, true, props)
+	a.trackFn(eventActivateUp, true, props)
 }
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
-func TrackReconnect(success bool, cause string) {
+func (a *AnalyticsTracker) TrackReconnect(success bool, cause string) {
 	props := map[string]interface{}{
 		"cause": cause,
 	}
-	track(reconnectEvent, success, props)
+	a.trackFn(reconnectEvent, success, props)
 }
 
 // TrackSyncError sends a tracking event to mixpanel when the init sync fails
-func TrackSyncError() {
-	track(syncErrorEvent, false, nil)
+func (a *AnalyticsTracker) TrackSyncError() {
+	a.trackFn(syncErrorEvent, false, nil)
 }
 
 const eventSecondsToScanLocalFolders = "Up Scan Local Folders Duration"
 
 // TrackSecondsToScanLocalFolders sends eventSecondsToScanLocalFolders to mixpanel with duration as seconds
-func TrackSecondsToScanLocalFolders(seconds float64) {
+func (a *AnalyticsTracker) TrackSecondsToScanLocalFolders(seconds float64) {
 	props := map[string]interface{}{
 		"seconds": seconds,
 	}
-	track(eventSecondsToScanLocalFolders, true, props)
+	a.trackFn(eventSecondsToScanLocalFolders, true, props)
 }
 
 const eventSecondsToSyncContext = "Up Sync Context Duration"
 
 // TrackSecondsToScanLocalFolders sends eventSecondsToScanLocalFolders to mixpanel with duration as seconds
-func TrackSecondsToSyncContext(seconds float64) {
+func (a *AnalyticsTracker) TrackSecondsToSyncContext(seconds float64) {
 	props := map[string]interface{}{
 		"seconds": seconds,
 	}
-	track(eventSecondsToSyncContext, true, props)
+	a.trackFn(eventSecondsToSyncContext, true, props)
 }
 
 // eventSecondsUpCommandExecution measures the seconds a command is running during up
 const eventSecondsUpCommandExecution = "Up Command Execution Duration"
 
 // TrackUpTotalCommandExecution sends eventSecondsUpCommandExecution to mixpanel with duration as seconds
-func TrackSecondsUpCommandExecution(seconds float64) {
+func (a *AnalyticsTracker) TrackSecondsUpCommandExecution(seconds float64) {
 	props := map[string]interface{}{
 		"seconds": seconds,
 	}
-	track(eventSecondsUpCommandExecution, true, props)
+	a.trackFn(eventSecondsUpCommandExecution, true, props)
 }
 
 // eventSecondsUpOktetoContextConfig measures the seconds it takes to configure okteto context under an up command
 const eventSecondsUpOktetoContextConfig = "Up Okteto Context Config Duration"
 
 // TrackUpTotalCommandExecution sends eventSecondsUpCommandExecution to mixpanel with duration as seconds
-func TrackSecondsUpOktetoContextConfig(seconds float64) {
+func (a *AnalyticsTracker) TrackSecondsUpOktetoContextConfig(seconds float64) {
 	props := map[string]interface{}{
 		"seconds": seconds,
 	}
-	track(eventSecondsUpOktetoContextConfig, true, props)
+	a.trackFn(eventSecondsUpOktetoContextConfig, true, props)
 }
