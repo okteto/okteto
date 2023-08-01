@@ -926,7 +926,7 @@ func (up *upContext) shutdownHybridMode() {
 
 	pList, err := ps.Processes()
 	if err != nil {
-		oktetoLog.Warning("error getting list of process %v", err)
+		oktetoLog.Warning("error getting list of processes %v", err)
 		return
 	}
 
@@ -938,7 +938,7 @@ func (up *upContext) shutdownHybridMode() {
 }
 
 func terminateChildProcess(parent int, pList []ps.Process) {
-	// assure all the child process are terminated when command is exited
+	// assure all the child processes are terminated when command is exited
 	for _, pR := range pList {
 		// skip when process is not child from parent
 		if pR.PPid() != parent {
