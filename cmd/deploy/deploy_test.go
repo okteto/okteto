@@ -1113,6 +1113,10 @@ func TestDeployOnlyDependencies(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+type fakeTracker struct{}
+
+func (*fakeTracker) TrackDeploy(dm analytics.DeployMetadata) {}
+
 func TestTrackDeploy(t *testing.T) {
 	tt := []struct {
 		name       string
@@ -1154,11 +1158,7 @@ func TestTrackDeploy(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			dc := &DeployCommand{
-				AnalyticsTracker: &analytics.AnalyticsTracker{
-					TrackFn: func(_ string, _ bool, _ map[string]interface{}) {
-						return
-					},
-				},
+				AnalyticsTracker: &fakeTracker{},
 			}
 
 			dc.trackDeploy(tc.manifest, tc.remoteFlag, time.Now(), tc.commandErr)

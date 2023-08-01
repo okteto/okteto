@@ -40,5 +40,5 @@ func (a *AnalyticsTracker) TrackDeploy(metadata DeployMetadata) {
 	if metadata.Err != nil {
 		props["error"] = metadata.Err.Error()
 	}
-	a.TrackFn(deployEvent, metadata.Success, props)
+	a.trackFn(deployEvent, metadata.Success, props)
 }

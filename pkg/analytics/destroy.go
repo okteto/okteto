@@ -13,5 +13,5 @@ func (a *AnalyticsTracker) TrackDestroy(metadata DestroyMetadata) {
 		"isDestroyAll": metadata.IsDestroyAll,
 		"isRemote":     metadata.IsRemote,
 	}
-	a.TrackFn(destroyEvent, metadata.Success, props)
+	a.trackFn(destroyEvent, metadata.Success, props)
 }
