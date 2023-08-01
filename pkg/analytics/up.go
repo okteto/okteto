@@ -1,14 +1,13 @@
 package analytics
 
 import (
+	"time"
+
 	"github.com/okteto/okteto/pkg/model"
 )
 
 const (
-	upEvent        = "Up"
-	upErrorEvent   = "Up Error"
-	syncErrorEvent = "Sync Error"
-	reconnectEvent = "Reconnect"
+	upEvent = "Up"
 )
 
 const (
@@ -19,104 +18,118 @@ const (
 	ReconnectCauseDevPodRecreated = "dev-pod-recreated"
 )
 
-// TrackUpMetadata defines the properties an up can have
-type TrackUpMetadata struct {
-	IsV2                   bool
-	ManifestType           model.Archetype
-	IsInteractive          bool
-	IsOktetoRepository     bool
-	HasDependenciesSection bool
-	HasBuildSection        bool
-	HasDeploySection       bool
-	Success                bool
-	HasReverse             bool
-	IsHybridDev            bool
-	Mode                   string
+// UpMetadata defines the properties an up can have
+type UpMetadata struct {
+	IsV2                     bool
+	ManifestType             model.Archetype
+	IsInteractive            bool
+	IsOktetoRepository       bool
+	HasDependenciesSection   bool
+	HasBuildSection          bool
+	HasDeploySection         bool
+	Success                  bool
+	HasReverse               bool
+	IsHybridDev              bool
+	Mode                     string
+	ActivateDuration         time.Duration
+	ScanLocalFoldersDuration time.Duration
+	SyncContextDuration      time.Duration
+	CommandExecutionDuration time.Duration
+	ContextConfigDuration    time.Duration
+	HasReconnect             bool
+	ReconnectCause           string
+	Error                    string
+	IsSyncError              bool
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func (a *AnalyticsTracker) TrackUp(m TrackUpMetadata) {
+func (a *AnalyticsTracker) TrackUp(m *UpMetadata) {
 	props := map[string]interface{}{
-		"isInteractive":          m.IsInteractive,
-		"isV2":                   m.IsV2,
-		"manifestType":           m.ManifestType,
-		"isOktetoRepository":     m.IsOktetoRepository,
-		"hasDependenciesSection": m.HasDependenciesSection,
-		"hasBuildSection":        m.HasBuildSection,
-		"hasDeploySection":       m.HasDeploySection,
-		"hasReverse":             m.HasReverse,
-		"mode":                   m.Mode,
+		"isInteractive":                m.IsInteractive,
+		"isV2":                         m.IsV2,
+		"manifestType":                 m.ManifestType,
+		"isOktetoRepository":           m.IsOktetoRepository,
+		"hasDependenciesSection":       m.HasDependenciesSection,
+		"hasBuildSection":              m.HasBuildSection,
+		"hasDeploySection":             m.HasDeploySection,
+		"hasReverse":                   m.HasReverse,
+		"mode":                         m.Mode,
+		"contextConfigDurationSeconds": m.ContextConfigDuration.Seconds(),
+		"activateDurationSeconds":      m.ActivateDuration.Seconds(),
+		"scanLocalDurationSeconds":     m.ScanLocalFoldersDuration.Seconds(),
+		"syncContextDurationSeconds":   m.SyncContextDuration.Seconds(),
+		"commandExecDurationSeconds":   m.CommandExecutionDuration.Seconds(),
+		"hasReconnect":                 m.HasReconnect,
+		"reconnectCause":               m.ReconnectCause,
+		"error":                        m.Error,
+		"isSyncError":                  m.IsSyncError,
 	}
 	a.trackFn(upEvent, m.Success, props)
 }
 
-// TrackUpError sends a tracking event to mixpanel when the okteto up command fails
-func (a *AnalyticsTracker) TrackUpError(success bool) {
-	a.trackFn(upErrorEvent, success, nil)
+// NewUpMetadata returns a default instance for Up Event metadata
+func NewUpMetadata(isOktetoRepository bool) *UpMetadata {
+	return &UpMetadata{
+		IsOktetoRepository: isOktetoRepository,
+	}
 }
 
-const eventActivateUp = "Up Duration Time"
+func (m *UpMetadata) TrackMode(devManifest *model.Dev) {
+	m.IsInteractive = devManifest.IsInteractive()
+	m.HasReverse = len(devManifest.Reverse) > 0
+	m.Mode = devManifest.Mode
+}
 
-// TrackSecondsActivateUp sends a eventActivateUp to mixpanel
-// measures the duration for command up to be active, from start until first exec is done
-func (a *AnalyticsTracker) TrackSecondsActivateUp(seconds float64) {
-	props := map[string]interface{}{
-		"seconds": seconds,
-	}
-	a.trackFn(eventActivateUp, true, props)
+func (m *UpMetadata) TrackManifest(manifest *model.Manifest) {
+	m.IsV2 = manifest.IsV2
+	m.HasDependenciesSection = manifest.HasDependenciesSection()
+	m.HasBuildSection = manifest.HasBuildSection()
+	m.HasDeploySection = manifest.HasDeploySection()
+	m.ManifestType = manifest.Type
+}
+
+// TrackUpError sends a tracking event to mixpanel when the okteto up command fails
+func (m *UpMetadata) TrackUpError(err error) {
+	m.Error = err.Error()
 }
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
-func (a *AnalyticsTracker) TrackReconnect(success bool, cause string) {
-	props := map[string]interface{}{
-		"cause": cause,
-	}
-	a.trackFn(reconnectEvent, success, props)
+func (m *UpMetadata) TrackReconnect(cause string) {
+	m.HasReconnect = true
+	m.ReconnectCause = cause
 }
 
 // TrackSyncError sends a tracking event to mixpanel when the init sync fails
-func (a *AnalyticsTracker) TrackSyncError() {
-	a.trackFn(syncErrorEvent, false, nil)
+func (m *UpMetadata) TrackSyncError(err error) {
+	m.IsSyncError = true
+	m.Error = err.Error()
 }
-
-const eventSecondsToScanLocalFolders = "Up Scan Local Folders Duration"
 
 // TrackSecondsToScanLocalFolders sends eventSecondsToScanLocalFolders to mixpanel with duration as seconds
-func (a *AnalyticsTracker) TrackSecondsToScanLocalFolders(seconds float64) {
-	props := map[string]interface{}{
-		"seconds": seconds,
-	}
-	a.trackFn(eventSecondsToScanLocalFolders, true, props)
+func (m *UpMetadata) TrackScanLocalFoldersDuration(duration time.Duration) {
+	m.ScanLocalFoldersDuration = duration
 }
-
-const eventSecondsToSyncContext = "Up Sync Context Duration"
 
 // TrackSecondsToScanLocalFolders sends eventSecondsToScanLocalFolders to mixpanel with duration as seconds
-func (a *AnalyticsTracker) TrackSecondsToSyncContext(seconds float64) {
-	props := map[string]interface{}{
-		"seconds": seconds,
-	}
-	a.trackFn(eventSecondsToSyncContext, true, props)
+func (m *UpMetadata) TrackActivateDuration(duration time.Duration) {
+	m.ActivateDuration = duration
 }
 
-// eventSecondsUpCommandExecution measures the seconds a command is running during up
-const eventSecondsUpCommandExecution = "Up Command Execution Duration"
-
-// TrackUpTotalCommandExecution sends eventSecondsUpCommandExecution to mixpanel with duration as seconds
-func (a *AnalyticsTracker) TrackSecondsUpCommandExecution(seconds float64) {
-	props := map[string]interface{}{
-		"seconds": seconds,
-	}
-	a.trackFn(eventSecondsUpCommandExecution, true, props)
+// TrackSecondsToScanLocalFolders sends eventSecondsToScanLocalFolders to mixpanel with duration as seconds
+func (m *UpMetadata) TrackSecondsToSyncContext(duration time.Duration) {
+	m.SyncContextDuration = duration
 }
 
-// eventSecondsUpOktetoContextConfig measures the seconds it takes to configure okteto context under an up command
-const eventSecondsUpOktetoContextConfig = "Up Okteto Context Config Duration"
+// TrackUpTotalCommandExecution sends eventSecondsUpCommandExecution to mixpanel with duration as seconds
+func (m *UpMetadata) TrackSecondsUpCommandExecution(duration time.Duration) {
+	m.CommandExecutionDuration = duration
+}
 
 // TrackUpTotalCommandExecution sends eventSecondsUpCommandExecution to mixpanel with duration as seconds
-func (a *AnalyticsTracker) TrackSecondsUpOktetoContextConfig(seconds float64) {
-	props := map[string]interface{}{
-		"seconds": seconds,
-	}
-	a.trackFn(eventSecondsUpOktetoContextConfig, true, props)
+func (m *UpMetadata) TrackSecondsUpOktetoContextConfig(duration time.Duration) {
+	m.ContextConfigDuration = duration
+}
+
+func (m *UpMetadata) TrackSuccess(success bool) {
+	m.Success = success
 }

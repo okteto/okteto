@@ -52,14 +52,14 @@ func (up *upContext) sync(ctx context.Context) error {
 		return err
 	}
 	durationSyncContext := time.Since(startSyncContext)
-	up.analyticsTracker.TrackSecondsToSyncContext(durationSyncContext.Seconds())
+	up.analyticsMeta.TrackSecondsToSyncContext(durationSyncContext)
 
 	startScanFiles := time.Now()
 	if err := up.synchronizeFiles(ctx); err != nil {
 		return err
 	}
 	durationScanFiles := time.Since(startScanFiles)
-	up.analyticsTracker.TrackSecondsToScanLocalFolders(durationScanFiles.Seconds())
+	up.analyticsMeta.TrackScanLocalFoldersDuration(durationScanFiles)
 
 	oktetoLog.Success("Files synchronized")
 
@@ -161,7 +161,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	}()
 
 	if err := up.Sy.WaitForCompletion(ctx, reporter); err != nil {
-		up.analyticsTracker.TrackSyncError()
+		up.analyticsMeta.TrackSyncError(err)
 		switch err {
 		case oktetoErrors.ErrLostSyncthing:
 			return err

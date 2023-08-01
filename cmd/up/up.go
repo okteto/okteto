@@ -93,6 +93,12 @@ func Up() *cobra.Command {
 		Short: "Launch your development environment",
 		Args:  utils.MaximumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#up"),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			analyticsTracker := analytics.NewAnalyticsTracker()
+			upAnalyticsMeta := analytics.NewUpMetadata(utils.IsOktetoRepo())
+			defer func() {
+				analyticsTracker.TrackUp(upAnalyticsMeta)
+			}()
+
 			if okteto.InDevContainer() {
 				return oktetoErrors.ErrNotInDevContainer
 			}
@@ -179,8 +185,7 @@ func Up() *cobra.Command {
 					}
 				}
 			}
-			aTracker := analytics.NewAnalyticsTracker()
-			aTracker.TrackSecondsUpOktetoContextConfig(time.Since(startOktetoContextConfig).Seconds())
+			upAnalyticsMeta.TrackSecondsUpOktetoContextConfig(time.Since(startOktetoContextConfig))
 
 			wd, err := os.Getwd()
 			if err != nil {
@@ -244,15 +249,15 @@ func Up() *cobra.Command {
 			}
 
 			up := &upContext{
-				Manifest:         oktetoManifest,
-				Dev:              nil,
-				Exit:             make(chan error, 1),
-				resetSyncthing:   upOptions.Reset,
-				StartTime:        time.Now(),
-				Registry:         registry.NewOktetoRegistry(okteto.Config{}),
-				Options:          upOptions,
-				Fs:               afero.NewOsFs(),
-				analyticsTracker: aTracker,
+				Manifest:       oktetoManifest,
+				Dev:            nil,
+				Exit:           make(chan error, 1),
+				resetSyncthing: upOptions.Reset,
+				StartTime:      time.Now(),
+				Registry:       registry.NewOktetoRegistry(okteto.Config{}),
+				Options:        upOptions,
+				Fs:             afero.NewOsFs(),
+				analyticsMeta:  upAnalyticsMeta,
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -380,6 +385,7 @@ func Up() *cobra.Command {
 			err = up.start()
 
 			if err != nil {
+				up.analyticsMeta.TrackUpError(err)
 				switch err.(type) {
 				default:
 					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
@@ -630,17 +636,8 @@ func (up *upContext) start() error {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	pidFileCh := make(chan error, 1)
-
-	up.analyticsTracker.TrackUp(analytics.TrackUpMetadata{
-		IsInteractive:          up.Dev.IsInteractive(),
-		IsOktetoRepository:     utils.IsOktetoRepo(),
-		IsV2:                   up.Manifest.IsV2,
-		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
-		HasBuildSection:        up.Manifest.HasBuildSection(),
-		HasDeploySection:       up.Manifest.HasDeploySection(),
-		HasReverse:             len(up.Dev.Reverse) > 0,
-		Mode:                   up.Dev.Mode,
-	})
+	up.analyticsMeta.TrackManifest(up.Manifest)
+	up.analyticsMeta.TrackMode(up.Dev)
 
 	go up.activateLoop()
 
@@ -893,9 +890,8 @@ func (up *upContext) shutdown() {
 	}
 
 	oktetoLog.Infof("starting shutdown sequence")
-	if !up.success {
-		up.analyticsTracker.TrackUpError(true)
-	}
+
+	up.analyticsMeta.TrackSuccess(up.success)
 
 	if up.Cancel != nil {
 		up.Cancel()
