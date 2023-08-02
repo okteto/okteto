@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -79,10 +80,13 @@ type logger struct {
 	replacer    *strings.Replacer
 
 	spinner *spinnerLogger
+
+	lock sync.RWMutex
 }
 
 var log = &logger{
-	out: logrus.New(),
+	out:  logrus.New(),
+	lock: sync.RWMutex{},
 }
 
 func init() {

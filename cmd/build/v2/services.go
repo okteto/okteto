@@ -53,6 +53,8 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 			svcToDeployMap[svcToDeploy] = true
 		}
 	}
+
+	oktetoLog.Debugf("Services to deploy: %v", svcToDeployMap)
 	// check if images are at registry (global or dev) and set envs or send to build
 	toBuild := make(chan string, len(svcToDeployMap))
 	g, _ := errgroup.WithContext(ctx)
@@ -64,6 +66,7 @@ func (bc *OktetoBuilder) GetServicesToBuild(ctx context.Context, manifest *model
 		svc := service
 
 		g.Go(func() error {
+			oktetoLog.Debugf("checkServicesToBuild() call '%s'", toBuild)
 			return bc.checkServicesToBuild(svc, manifest, toBuild)
 		})
 	}
@@ -98,17 +101,21 @@ func (bc *OktetoBuilder) checkServicesToBuild(service string, manifest *model.Ma
 		buildInfo.Image = ""
 	}
 	imageChecker := getImageChecker(buildInfo, bc.Config, bc.Registry)
+	oktetoLog.Debugf("Getting image digest for service '%s'", service)
 	imageWithDigest, err := imageChecker.getImageDigestFromAllPossibleTags(manifest.Name, service, buildInfo)
 	if oktetoErrors.IsNotFound(err) {
 		oktetoLog.Debug("image not found, building image")
 		ch <- service
 		return nil
 	} else if err != nil {
+		oktetoLog.Debug("error getting image digest for service '%s': %s", service, err.Error())
 		return err
 	}
 	oktetoLog.Debug("Skipping build for image for service: %s", service)
 
+	oktetoLog.Debugf("Generating envs for service '%s' and digest '%s'", service, imageWithDigest)
 	bc.SetServiceEnvVars(service, imageWithDigest)
+	oktetoLog.Debugf("Generated envs for service '%s'", service)
 
 	if manifest.Deploy != nil && manifest.Deploy.ComposeSection != nil && manifest.Deploy.ComposeSection.Stack != nil {
 		stack := manifest.Deploy.ComposeSection.Stack
