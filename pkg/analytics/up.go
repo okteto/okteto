@@ -43,12 +43,12 @@ func (a *AnalyticsTracker) TrackUp(m TrackUpMetadata) {
 		"hasReverse":             m.HasReverse,
 		"mode":                   m.Mode,
 	}
-	track(upEvent, m.Success, props)
+	a.trackFn(upEvent, m.Success, props)
 }
 
 // TrackUpError sends a tracking event to mixpanel when the okteto up command fails
-func TrackUpError(success bool) {
-	track(upErrorEvent, success, nil)
+func (a *AnalyticsTracker) TrackUpError(success bool) {
+	a.trackFn(upErrorEvent, success, nil)
 }
 
 const (
@@ -60,35 +60,35 @@ const (
 )
 
 // TrackReconnect sends a tracking event to mixpanel when the development container reconnect
-func TrackReconnect(success bool, cause string) {
+func (a *AnalyticsTracker) TrackReconnect(success bool, cause string) {
 	props := map[string]interface{}{
 		"cause": cause,
 	}
-	track(reconnectEvent, success, props)
+	a.trackFn(reconnectEvent, success, props)
 }
 
 // TrackSyncError sends a tracking event to mixpanel when the init sync fails
-func TrackSyncError() {
-	track(syncErrorEvent, false, nil)
+func (a *AnalyticsTracker) TrackSyncError() {
+	a.trackFn(syncErrorEvent, false, nil)
 }
 
 // TrackDurationInitialSync sends a tracking event to mixpanel with initial sync duration
-func TrackDurationInitialSync(durationInitialSync time.Duration) {
+func (a *AnalyticsTracker) TrackDurationInitialSync(durationInitialSync time.Duration) {
 	props := map[string]interface{}{
 		"duration": durationInitialSync,
 	}
-	track(durationInitialSyncEvent, true, props)
+	a.trackFn(durationInitialSyncEvent, true, props)
+}
+
+// TrackDurationActivateUp sends a tracking event to mixpanel of the time that has elapsed in the execution of up
+func (a *AnalyticsTracker) TrackDurationActivateUp(durationActivateUp time.Duration) {
+	props := map[string]interface{}{
+		"duration": durationActivateUp,
+	}
+	a.trackFn(durationActivateUpEvent, true, props)
 }
 
 // TrackResetDatabase sends a tracking event to mixpanel when the syncthing database is reset
 func TrackResetDatabase(success bool) {
 	track(syncResetDatabase, success, nil)
-}
-
-// TrackDurationActivateUp sends a tracking event to mixpanel of the time that has elapsed in the execution of up
-func TrackDurationActivateUp(durationActivateUp time.Duration) {
-	props := map[string]interface{}{
-		"duration": durationActivateUp,
-	}
-	track(durationActivateUpEvent, true, props)
 }
