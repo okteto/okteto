@@ -48,6 +48,10 @@ func getClientConfig(kubeconfigPaths []string, kubeContext string) clientcmd.Cli
 	)
 }
 
+func GetPodsBySelector(ctx context.Context, ns, selector string, client kubernetes.Interface) (*corev1.PodList, error) {
+	return client.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{LabelSelector: selector})
+}
+
 // GetService returns a service given a namespace and a name
 func GetService(ctx context.Context, ns, name string, client kubernetes.Interface) (*corev1.Service, error) {
 	return client.CoreV1().Services(ns).Get(ctx, name, metav1.GetOptions{})
