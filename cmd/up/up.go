@@ -897,7 +897,7 @@ func (up *upContext) shutdown() {
 
 	oktetoLog.Infof("starting shutdown sequence")
 	if !up.success {
-		up.analyticsTracker.TrackUpError(true)
+		up.analyticsMeta.SetFailActivate()
 	}
 
 	if up.Cancel != nil {

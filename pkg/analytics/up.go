@@ -9,7 +9,6 @@ import (
 const (
 	// Event that tracks when a user activates a development container
 	upEvent                  = "Up"
-	upErrorEvent             = "Up Error"
 	durationActivateUpEvent  = "Up Duration Time"
 	durationInitialSyncEvent = "Initial Sync Duration Time"
 	reconnectEvent           = "Reconnect"
@@ -29,6 +28,7 @@ type UpMetadata struct {
 	HasReverse             bool
 	IsHybridDev            bool
 	Mode                   string
+	FailActivate           bool
 }
 
 func NewUpMetadata() *UpMetadata {
@@ -46,6 +46,7 @@ func (u *UpMetadata) toProps() map[string]interface{} {
 		"hasDeploySection":       u.HasDeploySection,
 		"hasReverse":             u.HasReverse,
 		"mode":                   u.Mode,
+		"failActivate":           u.FailActivate,
 	}
 }
 
@@ -68,14 +69,13 @@ func (u *UpMetadata) AddRepositoryProps(isOktetoRepository bool) {
 	u.IsOktetoRepository = isOktetoRepository
 }
 
+func (u *UpMetadata) SetFailActivate() {
+	u.FailActivate = true
+}
+
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
 func (a *AnalyticsTracker) TrackUp(success bool, m *UpMetadata) {
 	a.trackFn(upEvent, success, m.toProps())
-}
-
-// TrackUpError sends a tracking event to mixpanel when the okteto up command fails
-func (a *AnalyticsTracker) TrackUpError(success bool) {
-	a.trackFn(upErrorEvent, success, nil)
 }
 
 const (

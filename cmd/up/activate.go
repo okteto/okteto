@@ -176,6 +176,7 @@ func (up *upContext) activate() error {
 		return err
 	}
 
+	// success means all context is ready to run the activation
 	up.success = true
 
 	go func() {
