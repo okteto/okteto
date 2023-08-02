@@ -17,8 +17,8 @@ const (
 	syncResetDatabase        = "Sync Reset Database"
 )
 
-// TrackUpMetadata defines the properties an up can have
-type TrackUpMetadata struct {
+// UpMetadata defines the properties an up can have
+type UpMetadata struct {
 	IsV2                   bool
 	ManifestType           model.Archetype
 	IsInteractive          bool
@@ -31,11 +31,11 @@ type TrackUpMetadata struct {
 	Mode                   string
 }
 
-func NewTrackUpMetadata() *TrackUpMetadata {
-	return &TrackUpMetadata{}
+func NewUpMetadata() *UpMetadata {
+	return &UpMetadata{}
 }
 
-func (u *TrackUpMetadata) toProps() map[string]interface{} {
+func (u *UpMetadata) toProps() map[string]interface{} {
 	return map[string]interface{}{
 		"isInteractive":          u.IsInteractive,
 		"isV2":                   u.IsV2,
@@ -49,7 +49,7 @@ func (u *TrackUpMetadata) toProps() map[string]interface{} {
 	}
 }
 
-func (u *TrackUpMetadata) AddManifestProps(m *model.Manifest) {
+func (u *UpMetadata) AddManifestProps(m *model.Manifest) {
 	u.IsV2 = m.IsV2
 	u.ManifestType = m.Type
 	u.HasDependenciesSection = m.HasDependenciesSection()
@@ -57,19 +57,19 @@ func (u *TrackUpMetadata) AddManifestProps(m *model.Manifest) {
 	u.HasDeploySection = m.HasDeploySection()
 }
 
-func (u *TrackUpMetadata) AddDevProps(d *model.Dev) {
+func (u *UpMetadata) AddDevProps(d *model.Dev) {
 	u.HasReverse = len(d.Reverse) > 0
 	u.Mode = d.Mode
 	u.IsInteractive = d.IsInteractive()
 
 }
 
-func (u *TrackUpMetadata) AddRepositoryProps(isOktetoRepository bool) {
+func (u *UpMetadata) AddRepositoryProps(isOktetoRepository bool) {
 	u.IsOktetoRepository = isOktetoRepository
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func (a *AnalyticsTracker) TrackUp(success bool, m *TrackUpMetadata) {
+func (a *AnalyticsTracker) TrackUp(success bool, m *UpMetadata) {
 	a.trackFn(upEvent, success, m.toProps())
 }
 
