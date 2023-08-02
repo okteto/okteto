@@ -581,6 +581,11 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		Build:            false,
 	})
 
+	isRemote := false
+	if up.Manifest.Deploy != nil {
+		isRemote = up.Manifest.Deploy.Image != ""
+	}
+
 	// tracking deploy either its been successful or not
 	c.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
 		Success:                err == nil,
@@ -592,7 +597,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
 		HasBuildSection:        up.Manifest.HasBuildSection(),
 		Err:                    err,
-		IsRemote:               up.Manifest.IsV2 && up.Manifest.Deploy.Image != "",
+		IsRemote:               up.Manifest.IsV2 && isRemote,
 	})
 	return err
 }
