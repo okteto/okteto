@@ -250,6 +250,7 @@ func Up() *cobra.Command {
 				Options:          upOptions,
 				Fs:               afero.NewOsFs(),
 				analyticsTracker: analyticsTracker,
+				analyticsMeta:    analytics.NewUpMetadata(),
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -633,12 +634,11 @@ func (up *upContext) start() error {
 
 	pidFileCh := make(chan error, 1)
 
-	upMetadata := analytics.NewTrackUpMetadata()
-	upMetadata.AddManifestProps(up.Manifest)
-	upMetadata.AddDevProps(up.Dev)
-	upMetadata.AddRepositoryProps(utils.IsOktetoRepo())
+	up.analyticsMeta.AddManifestProps(up.Manifest)
+	up.analyticsMeta.AddDevProps(up.Dev)
+	up.analyticsMeta.AddRepositoryProps(utils.IsOktetoRepo())
 
-	up.analyticsTracker.TrackUp(true, upMetadata)
+	up.analyticsTracker.TrackUp(true, up.analyticsMeta)
 
 	go up.activateLoop()
 
