@@ -38,6 +38,8 @@ func Test_ConvertToJson(t *testing.T) {
 			stage:   "",
 			message: "foobar",
 			expected: jsonMessage{
+				Level:     "info",
+				Message:   "foobar",
 				Timestamp: mockedTimestamp,
 			},
 		},
