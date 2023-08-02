@@ -116,7 +116,6 @@ func Up() *cobra.Command {
 			checkLocalWatchesConfiguration()
 
 			ctx := context.Background()
-			analyticsTracker := analytics.NewAnalyticsTracker()
 
 			if upOptions.ManifestPath != "" {
 				// if path is absolute, its transformed to rel from root
@@ -240,6 +239,14 @@ func Up() *cobra.Command {
 				}
 			}
 
+			analyticsTracker := analytics.NewAnalyticsTracker()
+			upMeta := analytics.NewUpMetadata()
+
+			// when cmd up finishes, send the event to mixpanel
+			// information retrieved during the run of the cmd
+			// TODO: success param depending on err. After 1.13.11 success is being send false
+			defer analyticsTracker.TrackUp(false, upMeta)
+
 			up := &upContext{
 				Manifest:         oktetoManifest,
 				Dev:              nil,
@@ -250,7 +257,7 @@ func Up() *cobra.Command {
 				Options:          upOptions,
 				Fs:               afero.NewOsFs(),
 				analyticsTracker: analyticsTracker,
-				analyticsMeta:    analytics.NewUpMetadata(),
+				analyticsMeta:    upMeta,
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -637,8 +644,6 @@ func (up *upContext) start() error {
 	up.analyticsMeta.AddManifestProps(up.Manifest)
 	up.analyticsMeta.AddDevProps(up.Dev)
 	up.analyticsMeta.AddRepositoryProps(utils.IsOktetoRepo())
-
-	up.analyticsTracker.TrackUp(true, up.analyticsMeta)
 
 	go up.activateLoop()
 
