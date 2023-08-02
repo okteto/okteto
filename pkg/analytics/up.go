@@ -9,7 +9,6 @@ import (
 const (
 	// Event that tracks when a user activates a development container
 	upEvent                  = "Up"
-	durationActivateUpEvent  = "Up Duration Time"
 	durationInitialSyncEvent = "Initial Sync Duration Time"
 	reconnectEvent           = "Reconnect"
 	syncErrorEvent           = "Sync Error"
@@ -29,6 +28,7 @@ type UpMetadata struct {
 	IsHybridDev            bool
 	Mode                   string
 	FailActivate           bool
+	ActivateDuration       time.Duration
 }
 
 func NewUpMetadata() *UpMetadata {
@@ -37,16 +37,17 @@ func NewUpMetadata() *UpMetadata {
 
 func (u *UpMetadata) toProps() map[string]interface{} {
 	return map[string]interface{}{
-		"isInteractive":          u.IsInteractive,
-		"isV2":                   u.IsV2,
-		"manifestType":           u.ManifestType,
-		"isOktetoRepository":     u.IsOktetoRepository,
-		"hasDependenciesSection": u.HasDependenciesSection,
-		"hasBuildSection":        u.HasBuildSection,
-		"hasDeploySection":       u.HasDeploySection,
-		"hasReverse":             u.HasReverse,
-		"mode":                   u.Mode,
-		"failActivate":           u.FailActivate,
+		"isInteractive":           u.IsInteractive,
+		"isV2":                    u.IsV2,
+		"manifestType":            u.ManifestType,
+		"isOktetoRepository":      u.IsOktetoRepository,
+		"hasDependenciesSection":  u.HasDependenciesSection,
+		"hasBuildSection":         u.HasBuildSection,
+		"hasDeploySection":        u.HasDeploySection,
+		"hasReverse":              u.HasReverse,
+		"mode":                    u.Mode,
+		"failActivate":            u.FailActivate,
+		"activateDurationSeconds": u.ActivateDuration.Seconds(),
 	}
 }
 
@@ -71,6 +72,10 @@ func (u *UpMetadata) AddRepositoryProps(isOktetoRepository bool) {
 
 func (u *UpMetadata) SetFailActivate() {
 	u.FailActivate = true
+}
+
+func (u *UpMetadata) AddActivateDuration(duration time.Duration) {
+	u.ActivateDuration = duration
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
@@ -105,14 +110,6 @@ func (a *AnalyticsTracker) TrackDurationInitialSync(durationInitialSync time.Dur
 		"duration": durationInitialSync,
 	}
 	a.trackFn(durationInitialSyncEvent, true, props)
-}
-
-// TrackDurationActivateUp sends a tracking event to mixpanel of the time that has elapsed in the execution of up
-func (a *AnalyticsTracker) TrackDurationActivateUp(durationActivateUp time.Duration) {
-	props := map[string]interface{}{
-		"duration": durationActivateUp,
-	}
-	a.trackFn(durationActivateUpEvent, true, props)
 }
 
 // TrackResetDatabase sends a tracking event to mixpanel when the syncthing database is reset

@@ -209,7 +209,7 @@ func (up *upContext) activate() error {
 		}
 		printDisplayContext(up)
 		durationActivateUp := time.Since(up.StartTime)
-		up.analyticsTracker.TrackDurationActivateUp(durationActivateUp)
+		up.analyticsMeta.AddActivateDuration(durationActivateUp)
 
 		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
 	}()
