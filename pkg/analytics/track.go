@@ -35,7 +35,6 @@ const (
 	mixpanelToken = "92fe782cdffa212d8f03861fbf1ea301"
 
 	manifestHasChangedEvent  = "Manifest Has Changed"
-	durationInitialSyncEvent = "Initial Sync Duration Time"
 	downEvent                = "Down"
 	downVolumesEvent         = "DownVolumes"
 	pushEvent                = "Push"

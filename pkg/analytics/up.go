@@ -7,12 +7,13 @@ import (
 )
 
 const (
-	upEvent                 = "Up"
-	upErrorEvent            = "Up Error"
-	durationActivateUpEvent = "Up Duration Time"
-	reconnectEvent          = "Reconnect"
-	syncErrorEvent          = "Sync Error"
-	syncResetDatabase       = "Sync Reset Database"
+	upEvent                  = "Up"
+	upErrorEvent             = "Up Error"
+	durationActivateUpEvent  = "Up Duration Time"
+	durationInitialSyncEvent = "Initial Sync Duration Time"
+	reconnectEvent           = "Reconnect"
+	syncErrorEvent           = "Sync Error"
+	syncResetDatabase        = "Sync Reset Database"
 )
 
 // TrackUpMetadata defines the properties an up can have
