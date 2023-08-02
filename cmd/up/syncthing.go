@@ -61,7 +61,11 @@ func (up *upContext) sync(ctx context.Context) error {
 		return err
 	}
 
-	oktetoLog.Success("Files synchronized")
+	msg := "Files synchronized"
+	if up.Dev.IsHybridModeEnabled() {
+		msg = "Reverse tunnel configured"
+	}
+	oktetoLog.Success(msg)
 
 	elapsed := time.Since(start)
 	analytics.TrackDurationInitialSync(elapsed)
@@ -88,9 +92,11 @@ func (up *upContext) sync(ctx context.Context) error {
 }
 
 func (up *upContext) startSyncthing(ctx context.Context) error {
-	oktetoLog.Spinner("Starting the file synchronization service...")
-	oktetoLog.StartSpinner()
-	defer oktetoLog.StopSpinner()
+	if !up.Dev.IsHybridModeEnabled() {
+		oktetoLog.Spinner("Starting the file synchronization service...")
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
+	}
 
 	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.StartingSync); err != nil {
 		return err
@@ -112,7 +118,10 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 		return up.checkOktetoStartError(ctx, "Failed to connect to the synchronization service")
 	}
 
-	oktetoLog.Spinner("Scanning file system...")
+	if !up.Dev.IsHybridModeEnabled() {
+		oktetoLog.Spinner("Scanning file system...")
+	}
+
 	if err := up.Sy.WaitForScanning(ctx, true); err != nil {
 		return err
 	}
@@ -125,9 +134,11 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 }
 
 func (up *upContext) synchronizeFiles(ctx context.Context) error {
-	oktetoLog.Spinner("Synchronizing your files...")
-	oktetoLog.StartSpinner()
-	defer oktetoLog.StopSpinner()
+	if !up.Dev.IsHybridModeEnabled() {
+		oktetoLog.Spinner("Synchronizing your files...")
+		oktetoLog.StartSpinner()
+		defer oktetoLog.StopSpinner()
+	}
 
 	progressBar := utils.NewSyncthingProgressBar(40)
 	defer progressBar.Finish()

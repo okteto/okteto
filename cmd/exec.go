@@ -202,8 +202,6 @@ func executeExec(ctx context.Context, dev *model.Dev, args []string) error {
 		dev.LoadRemote(ssh.GetPublicKey())
 		oktetoLog.StopSpinner()
 		if dev.IsHybridModeEnabled() {
-			var err error
-
 			k8sClient, _, err := okteto.GetK8sClient()
 			if err != nil {
 				return err

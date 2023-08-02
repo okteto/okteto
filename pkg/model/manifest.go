@@ -417,6 +417,10 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 			if errors.Is(stackErr, errDependsOn) {
 				return nil, stackErr
 			}
+
+			if errors.Is(stackErr, oktetoErrors.ErrServiceEmpty) {
+				return nil, stackErr
+			}
 			// if not return original manifest err
 			return nil, err
 		}

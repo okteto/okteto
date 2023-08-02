@@ -14,9 +14,11 @@
 package preview
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -46,11 +48,19 @@ func Endpoints(ctx context.Context) *cobra.Command {
 				return err
 			}
 
+			jsonContextBuffer := bytes.NewBuffer([]byte{})
+			if output == "json" {
+				oktetoLog.SetOutput(jsonContextBuffer)
+			}
+
 			if err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{}); err != nil {
 				return err
 			}
 			if output != "json" {
 				oktetoLog.Information("Using %s @ %s as context", previewName, okteto.RemoveSchema(okteto.Context().Name))
+			} else {
+				oktetoLog.Info(jsonContextBuffer.String())
+				oktetoLog.SetOutput(os.Stdout)
 			}
 
 			if !okteto.IsOkteto() {

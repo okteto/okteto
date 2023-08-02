@@ -66,8 +66,11 @@ func (or OktetoRegistry) GetImageTagWithDigest(image string) (string, error) {
 	registry, repositoryWithTag := or.imageCtrl.GetRegistryAndRepo(expandedImage)
 	repository, _ := or.imageCtrl.GetRepoNameAndTag(repositoryWithTag)
 
+	oktetoLog.Debugf("Expanded image '%s', registry '%s', repository with tag '%s', repository '%s'", expandedImage, registry, repositoryWithTag, repository)
+
 	digest, err := or.client.GetDigest(expandedImage)
 	if err != nil {
+		oktetoLog.Debugf("error getting digest for expanded image '%s': %s", expandedImage, err.Error())
 		return "", fmt.Errorf("error getting image tag with digest: %w", err)
 	}
 

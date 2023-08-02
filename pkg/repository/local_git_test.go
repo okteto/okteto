@@ -2,9 +2,12 @@ package repository
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
 	"os/exec"
+	"runtime"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type mockLocalExec struct {
@@ -191,4 +194,32 @@ func TestLocalGit_Status(t *testing.T) {
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}
+}
+
+func Test_LocalExec_RunCommandWithContextCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func(cancel context.CancelFunc) {
+		time.Sleep(1 * time.Second)
+		cancel()
+	}(cancel)
+
+	localExec := &LocalExec{}
+	got, err := localExec.RunCommand(ctx, t.TempDir(), "sleep", "3600")
+
+	if runtime.GOOS != "windows" {
+		assert.EqualError(t, err, "signal: terminated")
+	} else {
+		assert.EqualError(t, err, "exit status 1")
+	}
+	assert.Equal(t, []byte(""), got)
+}
+
+func Test_LocalExec_RunCommand(t *testing.T) {
+	ctx := context.Background()
+
+	localExec := &LocalExec{}
+	got, err := localExec.RunCommand(ctx, t.TempDir(), "echo", "okteto")
+	assert.NoError(t, err)
+	assert.Equal(t, "okteto\n", string(got))
 }

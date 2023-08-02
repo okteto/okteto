@@ -38,25 +38,37 @@ func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	registryKey := fmt.Sprintf("OKTETO_BUILD_%s_REGISTRY", sanitizedSvc)
 	bc.lock.Lock()
 	bc.buildEnvironments[registryKey] = ref.Registry
-	os.Setenv(registryKey, ref.Registry)
+	err = os.Setenv(registryKey, ref.Registry)
+	if err != nil {
+		oktetoLog.Debugf("error to set registry env for service '%s'", service)
+	}
 	bc.lock.Unlock()
 
 	repositoryKey := fmt.Sprintf("OKTETO_BUILD_%s_REPOSITORY", sanitizedSvc)
 	bc.lock.Lock()
 	bc.buildEnvironments[repositoryKey] = ref.Repo
-	os.Setenv(repositoryKey, ref.Repo)
+	err = os.Setenv(repositoryKey, ref.Repo)
+	if err != nil {
+		oktetoLog.Debugf("error to set repository env for service '%s'", service)
+	}
 	bc.lock.Unlock()
 
 	imageKey := fmt.Sprintf("OKTETO_BUILD_%s_IMAGE", sanitizedSvc)
 	bc.lock.Lock()
 	bc.buildEnvironments[imageKey] = ref.Image
-	os.Setenv(imageKey, ref.Image)
+	err = os.Setenv(imageKey, ref.Image)
+	if err != nil {
+		oktetoLog.Debugf("error to set image env for service '%s'", service)
+	}
 	bc.lock.Unlock()
 
 	tagKey := fmt.Sprintf("OKTETO_BUILD_%s_TAG", sanitizedSvc)
 	bc.lock.Lock()
 	bc.buildEnvironments[tagKey] = ref.Tag
-	os.Setenv(tagKey, ref.Tag)
+	err = os.Setenv(tagKey, ref.Tag)
+	if err != nil {
+		oktetoLog.Debugf("error to set tag env for service '%s'", service)
+	}
 	bc.lock.Unlock()
 
 	sha := ref.Tag
@@ -66,7 +78,10 @@ func (bc *OktetoBuilder) SetServiceEnvVars(service, reference string) {
 	shaKey := fmt.Sprintf("OKTETO_BUILD_%s_SHA", sanitizedSvc)
 	bc.lock.Lock()
 	bc.buildEnvironments[shaKey] = sha
-	os.Setenv(shaKey, sha)
+	err = os.Setenv(shaKey, sha)
+	if err != nil {
+		oktetoLog.Debugf("error to set sha env for service '%s'", service)
+	}
 	bc.lock.Unlock()
 
 	oktetoLog.Debug("manifest env vars set")

@@ -2,5 +2,6 @@
 /docs
 /integration
 /.circleci
+/.git
 /.github
 /.vscode
