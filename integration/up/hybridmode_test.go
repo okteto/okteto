@@ -60,32 +60,31 @@ dev:
   - ENV_IN_POD=value_from_pod`
 
 	svcDockerfile = `FROM busybox
-ENV ENV_IN_IMAGE value_from_image`
+ENV ANOTHER_ENV value_from_image`
 	envFile      = `TEST_ENV_FILE_VAR1=from-file-1`
-	localProcess = `
-#!/bin/bash
+	localProcess = `#!/bin/bash
+set -e
 
-if [ "$#" -ne 0 ]; then
-  echo "This script does not accept any argument, got $# instead"
-  exit 1
-fi
+check_env_var() {
+  local name="$1"
+  local value="$2"
+  local var_value="${!name}"
 
-if [ "$TEST_ENV_VAR1" != "test-value1" ]; then
-  echo "TEST_ENV_VAR1 should be 'test-value1', got '$TEST_ENV_VAR1' instead"
-  exit 1
-fi
-
-if [ "$TEST_ENV_FILE_VAR1" != "from-file-1" ]; then
-  echo "TEST_ENV_FILE_VAR1 should be 'from-file-1', got '$TEST_ENV_FILE_VAR1' instead"
-  exit 1
-fi
-
-for x in ENV_IN_POD,value_from_pod ENV_IN_IMAGE,value_from_image ; do
-  IFS=, read name value <<< "$x"
-  if [ "${!name}" != "$value" ]; then
-    echo "env '$name' not found. Expected value '$value'"
+  if [ "$var_value" != "$value" ]; then
+    echo "$name should be '$value', got '$var_value' instead"
     exit 1
   fi
+}
+
+declare -A env_vars=(
+  ["TEST_ENV_VAR1"]="test-value1"
+  ["TEST_ENV_FILE_VAR1"]="from-file-1"
+  ["ENV_IN_POD"]="value_from_pod"
+  ["ENV_IN_IMAGE"]="value_from_image"
+)
+
+for name in "${!env_vars[@]}"; do
+  check_env_var "$name" "${env_vars[$name]}"
 done
 
 echo "!Successful envs check!"
