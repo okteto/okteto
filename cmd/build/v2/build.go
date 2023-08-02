@@ -117,6 +117,7 @@ func (bc *OktetoBuilder) Build(ctx context.Context, options *types.BuildOptions)
 	if utils.LoadBoolean(constants.OktetoDeployRemote) {
 		// Since the local build has already been built,
 		// we have the environment variables set and we can skip this code
+		oktetoLog.Debugf("skipping services build because running in remote")
 		return nil
 	}
 	if options.File != "" {
