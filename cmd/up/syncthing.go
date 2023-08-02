@@ -67,7 +67,7 @@ func (up *upContext) sync(ctx context.Context) error {
 	oktetoLog.Success(msg)
 
 	elapsed := time.Since(start)
-	up.analyticsTracker.TrackDurationInitialSync(elapsed)
+	up.analyticsMeta.AddInitialSyncDuration(elapsed)
 	maxDuration := time.Duration(1) * time.Minute
 	if elapsed > maxDuration {
 		minutes := elapsed / time.Minute

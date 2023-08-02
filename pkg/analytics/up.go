@@ -8,11 +8,10 @@ import (
 
 const (
 	// Event that tracks when a user activates a development container
-	upEvent                  = "Up"
-	durationInitialSyncEvent = "Initial Sync Duration Time"
-	reconnectEvent           = "Reconnect"
-	syncErrorEvent           = "Sync Error"
-	syncResetDatabase        = "Sync Reset Database"
+	upEvent           = "Up"
+	reconnectEvent    = "Reconnect"
+	syncErrorEvent    = "Sync Error"
+	syncResetDatabase = "Sync Reset Database"
 )
 
 // UpMetadata defines the properties an up can have
@@ -29,6 +28,7 @@ type UpMetadata struct {
 	Mode                   string
 	FailActivate           bool
 	ActivateDuration       time.Duration
+	InitialSyncDuration    time.Duration
 }
 
 func NewUpMetadata() *UpMetadata {
@@ -37,17 +37,18 @@ func NewUpMetadata() *UpMetadata {
 
 func (u *UpMetadata) toProps() map[string]interface{} {
 	return map[string]interface{}{
-		"isInteractive":           u.IsInteractive,
-		"isV2":                    u.IsV2,
-		"manifestType":            u.ManifestType,
-		"isOktetoRepository":      u.IsOktetoRepository,
-		"hasDependenciesSection":  u.HasDependenciesSection,
-		"hasBuildSection":         u.HasBuildSection,
-		"hasDeploySection":        u.HasDeploySection,
-		"hasReverse":              u.HasReverse,
-		"mode":                    u.Mode,
-		"failActivate":            u.FailActivate,
-		"activateDurationSeconds": u.ActivateDuration.Seconds(),
+		"isInteractive":              u.IsInteractive,
+		"isV2":                       u.IsV2,
+		"manifestType":               u.ManifestType,
+		"isOktetoRepository":         u.IsOktetoRepository,
+		"hasDependenciesSection":     u.HasDependenciesSection,
+		"hasBuildSection":            u.HasBuildSection,
+		"hasDeploySection":           u.HasDeploySection,
+		"hasReverse":                 u.HasReverse,
+		"mode":                       u.Mode,
+		"failActivate":               u.FailActivate,
+		"activateDurationSeconds":    u.ActivateDuration.Seconds(),
+		"initialSyncDurationSeconds": u.InitialSyncDuration.Seconds(),
 	}
 }
 
@@ -78,6 +79,10 @@ func (u *UpMetadata) AddActivateDuration(duration time.Duration) {
 	u.ActivateDuration = duration
 }
 
+func (u *UpMetadata) AddInitialSyncDuration(duration time.Duration) {
+	u.InitialSyncDuration = duration
+}
+
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
 func (a *AnalyticsTracker) TrackUp(success bool, m *UpMetadata) {
 	a.trackFn(upEvent, success, m.toProps())
@@ -102,14 +107,6 @@ func (a *AnalyticsTracker) TrackReconnect(success bool, cause string) {
 // TrackSyncError sends a tracking event to mixpanel when the init sync fails
 func (a *AnalyticsTracker) TrackSyncError() {
 	a.trackFn(syncErrorEvent, false, nil)
-}
-
-// TrackDurationInitialSync sends a tracking event to mixpanel with initial sync duration
-func (a *AnalyticsTracker) TrackDurationInitialSync(durationInitialSync time.Duration) {
-	props := map[string]interface{}{
-		"duration": durationInitialSync,
-	}
-	a.trackFn(durationInitialSyncEvent, true, props)
 }
 
 // TrackResetDatabase sends a tracking event to mixpanel when the syncthing database is reset
