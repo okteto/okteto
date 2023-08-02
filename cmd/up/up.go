@@ -633,16 +633,12 @@ func (up *upContext) start() error {
 
 	pidFileCh := make(chan error, 1)
 
-	up.analyticsTracker.TrackUp(analytics.TrackUpMetadata{
-		IsInteractive:          up.Dev.IsInteractive(),
-		IsOktetoRepository:     utils.IsOktetoRepo(),
-		IsV2:                   up.Manifest.IsV2,
-		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
-		HasBuildSection:        up.Manifest.HasBuildSection(),
-		HasDeploySection:       up.Manifest.HasDeploySection(),
-		HasReverse:             len(up.Dev.Reverse) > 0,
-		Mode:                   up.Dev.Mode,
-	})
+	upMetadata := analytics.NewTrackUpMetadata()
+	upMetadata.AddManifestProps(up.Manifest)
+	upMetadata.AddDevProps(up.Dev)
+	upMetadata.AddRepositoryProps(utils.IsOktetoRepo())
+
+	up.analyticsTracker.TrackUp(true, upMetadata)
 
 	go up.activateLoop()
 

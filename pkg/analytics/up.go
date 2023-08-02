@@ -7,6 +7,7 @@ import (
 )
 
 const (
+	// Event that tracks when a user activates a development container
 	upEvent                  = "Up"
 	upErrorEvent             = "Up Error"
 	durationActivateUpEvent  = "Up Duration Time"
@@ -25,26 +26,51 @@ type TrackUpMetadata struct {
 	HasDependenciesSection bool
 	HasBuildSection        bool
 	HasDeploySection       bool
-	Success                bool
 	HasReverse             bool
 	IsHybridDev            bool
 	Mode                   string
 }
 
-// TrackUp sends a tracking event to mixpanel when the user activates a development container
-func (a *AnalyticsTracker) TrackUp(m TrackUpMetadata) {
-	props := map[string]interface{}{
-		"isInteractive":          m.IsInteractive,
-		"isV2":                   m.IsV2,
-		"manifestType":           m.ManifestType,
-		"isOktetoRepository":     m.IsOktetoRepository,
-		"hasDependenciesSection": m.HasDependenciesSection,
-		"hasBuildSection":        m.HasBuildSection,
-		"hasDeploySection":       m.HasDeploySection,
-		"hasReverse":             m.HasReverse,
-		"mode":                   m.Mode,
+func NewTrackUpMetadata() *TrackUpMetadata {
+	return &TrackUpMetadata{}
+}
+
+func (u *TrackUpMetadata) toProps() map[string]interface{} {
+	return map[string]interface{}{
+		"isInteractive":          u.IsInteractive,
+		"isV2":                   u.IsV2,
+		"manifestType":           u.ManifestType,
+		"isOktetoRepository":     u.IsOktetoRepository,
+		"hasDependenciesSection": u.HasDependenciesSection,
+		"hasBuildSection":        u.HasBuildSection,
+		"hasDeploySection":       u.HasDeploySection,
+		"hasReverse":             u.HasReverse,
+		"mode":                   u.Mode,
 	}
-	a.trackFn(upEvent, m.Success, props)
+}
+
+func (u *TrackUpMetadata) AddManifestProps(m *model.Manifest) {
+	u.IsV2 = m.IsV2
+	u.ManifestType = m.Type
+	u.HasDependenciesSection = m.HasDependenciesSection()
+	u.HasBuildSection = m.HasBuildSection()
+	u.HasDeploySection = m.HasDeploySection()
+}
+
+func (u *TrackUpMetadata) AddDevProps(d *model.Dev) {
+	u.HasReverse = len(d.Reverse) > 0
+	u.Mode = d.Mode
+	u.IsInteractive = d.IsInteractive()
+
+}
+
+func (u *TrackUpMetadata) AddRepositoryProps(isOktetoRepository bool) {
+	u.IsOktetoRepository = isOktetoRepository
+}
+
+// TrackUp sends a tracking event to mixpanel when the user activates a development container
+func (a *AnalyticsTracker) TrackUp(success bool, m *TrackUpMetadata) {
+	a.trackFn(upEvent, success, m.toProps())
 }
 
 // TrackUpError sends a tracking event to mixpanel when the okteto up command fails
