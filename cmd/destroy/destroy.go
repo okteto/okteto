@@ -16,14 +16,9 @@ package destroy
 import (
 	"context"
 	"fmt"
-	"os"
-	"path/filepath"
-	"time"
-
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/cmd/utils/executor"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/devenvironment"
@@ -37,6 +32,9 @@ import (
 	oktetoPath "github.com/okteto/okteto/pkg/path"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
+	"os"
+	"path/filepath"
+	"time"
 )
 
 const (
@@ -78,11 +76,6 @@ type Options struct {
 type destroyInterface interface {
 	destroy(context.Context, *Options) error
 }
-
-type destroyAnalyticsTracker interface {
-	TrackDestroy(metadata analytics.DestroyMetadata)
-}
-
 type destroyCommand struct {
 	getManifest func(path string) (*model.Manifest, error)
 
@@ -93,7 +86,6 @@ type destroyCommand struct {
 	ConfigMapHandler  configMapHandler
 	oktetoClient      *okteto.OktetoClient
 	buildCtrl         buildCtrl
-	analyticsTracker  destroyAnalyticsTracker
 }
 
 // Destroy destroys the dev application defined by the manifest
@@ -187,7 +179,6 @@ func Destroy(ctx context.Context) *cobra.Command {
 				k8sClientProvider: okteto.NewK8sClientProvider(),
 				oktetoClient:      okClient,
 				buildCtrl:         newBuildCtrl(options.Name),
-				analyticsTracker:  analytics.NewAnalyticsTracker(),
 			}
 
 			kubeconfigPath := getTempKubeConfigFile(options.Name)
@@ -202,18 +193,7 @@ func Destroy(ctx context.Context) *cobra.Command {
 				return err
 			}
 
-			err = destroyer.destroy(ctx, options)
-
-			metadata := &analytics.DestroyMetadata{
-				Success: err == nil,
-			}
-			if _, ok := destroyer.(*localDestroyAllCommand); ok {
-				metadata.IsDestroyAll = true
-			} else if _, ok := destroyer.(*remoteDestroyCommand); ok {
-				metadata.IsRemote = true
-			}
-			c.analyticsTracker.TrackDestroy(*metadata)
-			return err
+			return destroyer.destroy(ctx, options)
 		},
 	}
 

@@ -1188,7 +1188,7 @@ func Test_Manifest_HasDeploySection(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "m.IsV2 && m.Deploy.Commands is empty",
+			name: "m.IsV2 && m.Deploy.Commands is emtpy",
 			manifest: &Manifest{
 				IsV2: true,
 				Deploy: &DeployInfo{

@@ -15,7 +15,6 @@ On this document we will cover how to run unit tests and e2e tests locally
   - [How to run pre-commit on your local branch](#how-to-run-pre-commit-on-your-local-branch)
     - [Install pre-commit](#install-pre-commit)
     - [How to run pre-commit locally](#how-to-run-pre-commit-locally)
-  - [How to run e2e tests from a PR?](#how-to-run-e2e-tests-from-a-pr)
 
 ## How to run unit tests locally?
 
@@ -138,12 +137,3 @@ You'll need to set your working directory on the root of your Okteto CLI project
 ```bash
 pre-commit run --all-files
 ```
-
-
-## How to run e2e tests from a PR?
-
-Use the following labels to trigger integration test on this branch:
-
-- `run-e2e`: triggers the workflow for unix and windows
-- `run-e2e-unix`: triggers the workflow for unix
-- `run-e2e-windows`: triggers the workflow just for windows
