@@ -60,7 +60,7 @@ dev:
   - ENV_IN_POD=value_from_pod`
 
 	svcDockerfile = `FROM busybox
-ENV ANOTHER_ENV value_from_image`
+ENV ENV_IN_IMAGE value_from_image`
 	envFile      = `TEST_ENV_FILE_VAR1=from-file-1`
 	localProcess = `#!/bin/bash
 set -e
