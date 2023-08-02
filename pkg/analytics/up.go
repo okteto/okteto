@@ -31,7 +31,7 @@ type TrackUpMetadata struct {
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func TrackUp(m TrackUpMetadata) {
+func (a *AnalyticsTracker) TrackUp(m TrackUpMetadata) {
 	props := map[string]interface{}{
 		"isInteractive":          m.IsInteractive,
 		"isV2":                   m.IsV2,
