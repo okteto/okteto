@@ -129,7 +129,7 @@
         fi
 
         BIN_BUCKET_ROOT="downloads.okteto.com/cli"
-        
+
         for chan in "${CHANNELS[@]}"; do
                 echo "---------------------------------------------------------------------------------"
                 tag="${RELEASE_TAG:-"$PSEUDO_TAG"}"
@@ -142,7 +142,7 @@
                 # BIN_BUCKET_NAME is the name of the bucket where the binaries are stored.
                 # Starting at Okteto CLI 2.0, all these binaries are publicly accessible at:
                 # https://downloads.okteto.com/cli/<channel>/<tag>
-                
+
                 BIN_BUCKET_ROOT_WITH_CHAN="${BIN_BUCKET_ROOT}/${chan}"
                 BIN_BUCKET_NAME="${BIN_BUCKET_ROOT_WITH_CHAN}/${tag}"
 
@@ -186,7 +186,7 @@
 
                 if [ "$tag" = "$latest" ]; then
                         gsutil -m rsync "gs://$BIN_BUCKET_NAME" "gs://$BIN_BUCKET_ROOT_WITH_CHAN"
-                        
+
                         if [ "$is_oficial_release" = true ] ; then
                                 # upload artifacts to bucket root (gs://downloads.okteto.com/cli)
                                 echo "Syncing artifacts from $BIN_PATH with $BIN_BUCKET_ROOT"
