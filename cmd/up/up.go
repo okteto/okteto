@@ -116,6 +116,7 @@ func Up() *cobra.Command {
 			checkLocalWatchesConfiguration()
 
 			ctx := context.Background()
+			analyticsTracker := analytics.NewAnalyticsTracker()
 
 			if upOptions.ManifestPath != "" {
 				// if path is absolute, its transformed to rel from root
@@ -240,14 +241,15 @@ func Up() *cobra.Command {
 			}
 
 			up := &upContext{
-				Manifest:       oktetoManifest,
-				Dev:            nil,
-				Exit:           make(chan error, 1),
-				resetSyncthing: upOptions.Reset,
-				StartTime:      time.Now(),
-				Registry:       registry.NewOktetoRegistry(okteto.Config{}),
-				Options:        upOptions,
-				Fs:             afero.NewOsFs(),
+				Manifest:         oktetoManifest,
+				Dev:              nil,
+				Exit:             make(chan error, 1),
+				resetSyncthing:   upOptions.Reset,
+				StartTime:        time.Now(),
+				Registry:         registry.NewOktetoRegistry(okteto.Config{}),
+				Options:          upOptions,
+				Fs:               afero.NewOsFs(),
+				analyticsTracker: analyticsTracker,
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -569,7 +571,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		PipelineCMD:        pc,
 		DeployWaiter:       deploy.NewDeployWaiter(k8sClientProvider),
 		EndpointGetter:     deploy.NewEndpointGetter,
-		AnalyticsTracker:   analytics.NewAnalyticsTracker(),
+		AnalyticsTracker:   up.analyticsTracker,
 	}
 
 	startTime := time.Now()
