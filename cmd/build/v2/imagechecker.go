@@ -85,8 +85,6 @@ func (ic imageChecker) getImageDigestFromAllPossibleTags(manifestName, svcToBuil
 		possibleTags = []string{buildInfo.Image}
 	}
 
-	oktetoLog.Debugf("Possible image tags for service '%s': %v", svcToBuild, possibleTags)
-
 	for _, tag := range possibleTags {
 		imageWithDigest, err := ic.getImageSHA(tag, ic.registry)
 		if err != nil {
@@ -94,15 +92,10 @@ func (ic imageChecker) getImageDigestFromAllPossibleTags(manifestName, svcToBuil
 				continue
 			}
 			// return error if the registry doesn't send a not found error
-
-			oktetoLog.Debugf("error checking image tag '%s' at registry %s: %s", tag, ic.registry, err.Error())
 			return "", fmt.Errorf("error checking image at registry %s: %v", tag, err)
 		}
 		return imageWithDigest, nil
 	}
-
-	oktetoLog.Debugf("images [%v] not found for service '%s'", possibleTags, svcToBuild)
-
 	return "", fmt.Errorf("images [%s] not found", strings.Join(possibleTags, ", "))
 }
 

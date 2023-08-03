@@ -193,10 +193,8 @@ func (w *TTYWriter) Fprintf(writer io.Writer, format string, a ...interface{}) {
 	if msg != "" && writer == w.out.Out {
 		msg = convertToJSON(InfoLevel, log.stage, msg)
 		if msg != "" {
-			log.lock.Lock()
 			log.buf.WriteString(msg)
 			log.buf.WriteString("\n")
-			log.lock.Unlock()
 		}
 	}
 
