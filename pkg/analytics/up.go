@@ -30,6 +30,7 @@ type UpMetadata struct {
 	ReconnectCause         string
 	ErrSync                bool
 	ErrResetDatabase       bool
+	Success                bool
 }
 
 func NewUpMetadata() *UpMetadata {
@@ -109,7 +110,11 @@ func (u *UpMetadata) AddErrResetDatabase() {
 	u.ErrResetDatabase = true
 }
 
+func (u *UpMetadata) CommandSuccess() {
+	u.Success = true
+}
+
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func (a *AnalyticsTracker) TrackUp(success bool, m *UpMetadata) {
-	a.trackFn(upEvent, success, m.toProps())
+func (a *AnalyticsTracker) TrackUp(m *UpMetadata) {
+	a.trackFn(upEvent, m.Success, m.toProps())
 }

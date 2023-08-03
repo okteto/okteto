@@ -242,10 +242,9 @@ func Up() *cobra.Command {
 			analyticsTracker := analytics.NewAnalyticsTracker()
 			upMeta := analytics.NewUpMetadata()
 
-			// when cmd up finishes, send the event to mixpanel
-			// information retrieved during the run of the cmd
-			// TODO: success param depending on err. After 1.13.11 success is being send false
-			defer analyticsTracker.TrackUp(false, upMeta)
+			// when cmd up finishes, send the event
+			// metadata retrieved during the run of the cmd
+			defer analyticsTracker.TrackUp(upMeta)
 
 			up := &upContext{
 				Manifest:         oktetoManifest,
@@ -382,21 +381,20 @@ func Up() *cobra.Command {
     https://www.okteto.com/docs/reference/manifest-migration/`))
 			}
 
-			err = up.start()
-
-			if err != nil {
+			if err = up.start(); err != nil {
 				switch err.(type) {
 				default:
-					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+					return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 				case oktetoErrors.CommandError:
 					oktetoLog.Infof("CommandError: %v", err)
+					return err
 				case oktetoErrors.UserError:
 					return err
 				}
-
 			}
 
-			return err
+			up.analyticsMeta.CommandSuccess()
+			return nil
 		},
 	}
 
