@@ -55,6 +55,10 @@ FROM {{ .UserDeployImage }} as deploy
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
+{{range $key, $val := .OktetoBuildEnvVars }}
+ENV {{$key}} {{$val}}
+{{end}}
+
 ENV {{ .RemoteDeployEnvVar }} true
 ARG {{ .NamespaceArgName }}
 ARG {{ .ContextArgName }}
@@ -85,6 +89,7 @@ type dockerfileTemplateProperties struct {
 	OktetoCLIImage         string
 	UserDeployImage        string
 	RemoteDeployEnvVar     string
+	OktetoBuildEnvVars     map[string]string
 	ContextArgName         string
 	NamespaceArgName       string
 	TokenArgName           string
@@ -262,6 +267,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		UserDeployImage:        opts.Manifest.Deploy.Image,
 		RemoteDeployEnvVar:     constants.OktetoDeployRemote,
 		ContextArgName:         model.OktetoContextEnvVar,
+		OktetoBuildEnvVars:     rd.builderV2.GetBuildEnvVars(),
 		NamespaceArgName:       model.OktetoNamespaceEnvVar,
 		TlsCertBase64ArgName:   constants.OktetoTlsCertBase64EnvVar,
 		InternalServerName:     constants.OktetoInternalServerNameEnvVar,
