@@ -43,14 +43,17 @@ func newPlainDisplayer(stdout, stderr io.Reader) *plainDisplayer {
 		stderrScanner = bufio.NewScanner(stderr)
 	}
 
+	commandContext, cancel := context.WithCancel(context.Background())
+
 	return &plainDisplayer{
-		stdoutScanner: stdoutScanner,
-		stderrScanner: stderrScanner,
+		stdoutScanner:  stdoutScanner,
+		stderrScanner:  stderrScanner,
+		commandContext: commandContext,
+		cancel:         cancel,
 	}
 }
 
 func (d *plainDisplayer) Display(_ string) {
-	d.commandContext, d.cancel = context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	wgDelta := 0
 	if d.stdoutScanner != nil {
