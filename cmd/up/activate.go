@@ -250,6 +250,9 @@ func (up *upContext) devMode(ctx context.Context, app apps.App, create bool) err
 }
 
 func (up *upContext) createDevContainer(ctx context.Context, app apps.App, create bool) error {
+	startCreateDev := time.Now()
+	defer up.analyticsMeta.DevContainerCreation(time.Since(startCreateDev))
+
 	msg := "Preparing development environment..."
 	if !up.Dev.IsHybridModeEnabled() {
 		msg = "Activating your development container..."

@@ -120,10 +120,11 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 	if !up.Dev.IsHybridModeEnabled() {
 		oktetoLog.Spinner("Scanning file system...")
 	}
-
+	startLocalScan := time.Now()
 	if err := up.Sy.WaitForScanning(ctx, true); err != nil {
 		return err
 	}
+	up.analyticsMeta.LocalFolderScan(time.Since(startLocalScan))
 
 	if err := up.Sy.WaitForScanning(ctx, false); err != nil {
 		return err
@@ -133,6 +134,9 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 }
 
 func (up *upContext) synchronizeFiles(ctx context.Context) error {
+	startSyncFiles := time.Now()
+	defer up.analyticsMeta.ContextSync(time.Since(startSyncFiles))
+
 	if !up.Dev.IsHybridModeEnabled() {
 		oktetoLog.Spinner("Synchronizing your files...")
 		oktetoLog.StartSpinner()

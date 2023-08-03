@@ -588,6 +588,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		Timeout:          5 * time.Minute,
 		Build:            false,
 	})
+	up.analyticsMeta.HasRunDeploy()
 
 	isRemote := false
 	if up.Manifest.Deploy != nil {
