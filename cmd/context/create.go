@@ -295,6 +295,16 @@ func getLoggedUserContext(ctx context.Context, c *ContextCommand, ctxOptions *Co
 		return nil, err
 	}
 
+	kubetokenClient, err := okteto.NewKubeTokenClient(ctxOptions.Context, ctxOptions.Token, ctxOptions.Namespace)
+	if err != nil {
+		return nil, err
+	}
+	kubetokenRes, err := kubetokenClient.RequestKubeToken()
+	if err != nil {
+		return nil, err
+	}
+	userContext.Credentials.Token = kubetokenRes.Status.Token
+
 	return userContext, nil
 }
 

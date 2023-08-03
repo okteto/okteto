@@ -125,7 +125,7 @@ type contextFileJSON struct {
 	} `yaml:"contexts"`
 }
 
-// GetSecrets returns the secrets from Okteto API
+// GetContext returns the secrets from Okteto API
 func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserContext, error) {
 	var queryStruct getContextQuery
 	variables := map[string]interface{}{
@@ -181,7 +181,7 @@ func (c *userClient) GetContext(ctx context.Context, ns string) (*types.UserCont
 	return result, nil
 }
 
-// GetSecrets returns the secrets from Okteto API
+// GetUserSecrets returns the secrets from Okteto API
 func (c *userClient) GetUserSecrets(ctx context.Context) ([]types.Secret, error) {
 	var queryStruct getSecretsQuery
 	err := query(ctx, &queryStruct, nil, c.client)

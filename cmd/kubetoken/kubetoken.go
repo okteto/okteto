@@ -58,12 +58,18 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			return fmt.Errorf("failed to initialize the kubetoken client: %w", err)
 		}
 
-		out, err := c.GetKubeToken()
+		out, err := c.RequestKubeToken()
 		if err != nil {
 			return fmt.Errorf("failed to get the kubetoken: %w", err)
 		}
 
-		cmd.Print(out)
+		json, err := out.ToJson()
+		if err != nil {
+			return fmt.Errorf("failed to marshal KubeTokenResponse: %w", err)
+		}
+
+		cmd.Print(json)
+
 		return nil
 	}
 

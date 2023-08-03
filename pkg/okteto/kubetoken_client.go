@@ -14,8 +14,10 @@
 package okteto
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	"net/http"
 
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -27,6 +29,10 @@ type KubeTokenClient struct {
 	httpClient  *http.Client
 	url         string
 	contextName string
+}
+
+type KubeTokenResponse struct {
+	authenticationv1.TokenRequest
 }
 
 func NewKubeTokenClient(contextName, token, namespace string) (*KubeTokenClient, error) {
@@ -46,24 +52,40 @@ func NewKubeTokenClient(contextName, token, namespace string) (*KubeTokenClient,
 	}, nil
 }
 
-func (c *KubeTokenClient) GetKubeToken() (string, error) {
+func (c *KubeTokenClient) RequestKubeToken() (*KubeTokenResponse, error) {
 	resp, err := c.httpClient.Get(c.url)
 	if err != nil {
-		return "", fmt.Errorf("failed GET request: %w", err)
+		return &KubeTokenResponse{}, fmt.Errorf("failed GET request: %w", err)
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return "", fmt.Errorf(oktetoErrors.ErrNotLogged, c.contextName)
+		return &KubeTokenResponse{}, fmt.Errorf(oktetoErrors.ErrNotLogged, c.contextName)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("GET request returned status %s", resp.Status)
+		return &KubeTokenResponse{}, fmt.Errorf("GET request returned status %s", resp.Status)
 	}
+
+	// CHECK FOR 404?
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read kubetoken response: %w", err)
+		return &KubeTokenResponse{}, fmt.Errorf("failed to read kubetoken response: %w", err)
 	}
 
-	return string(body), nil
+	var kubeTokenResponse KubeTokenResponse
+	err = json.Unmarshal(body, &kubeTokenResponse)
+	if err != nil {
+		return &KubeTokenResponse{}, fmt.Errorf("failed to unmarshal kubetoken response: %w", err)
+	}
+
+	return &kubeTokenResponse, nil
+}
+
+func (k *KubeTokenResponse) ToJson() (string, error) {
+	bytes, err := json.MarshalIndent(k, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
 }
