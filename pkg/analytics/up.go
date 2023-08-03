@@ -8,8 +8,7 @@ import (
 
 const (
 	// Event that tracks when a user activates a development container
-	upEvent           = "Up"
-	syncResetDatabase = "Sync Reset Database"
+	upEvent = "Up"
 )
 
 // UpMetadata defines the properties an up can have
@@ -30,6 +29,7 @@ type UpMetadata struct {
 	IsReconnect            bool
 	ReconnectCause         string
 	ErrSync                bool
+	ErrResetDatabase       bool
 }
 
 func NewUpMetadata() *UpMetadata {
@@ -53,6 +53,7 @@ func (u *UpMetadata) toProps() map[string]interface{} {
 		"isReconnect":                u.IsReconnect,
 		"reconnectCause":             u.ReconnectCause,
 		"errSync":                    u.ErrSync,
+		"errResetDatabase":           u.ErrResetDatabase,
 	}
 }
 
@@ -104,12 +105,11 @@ func (u *UpMetadata) AddErrSync() {
 	u.ErrSync = true
 }
 
+func (u *UpMetadata) AddErrResetDatabase() {
+	u.ErrResetDatabase = true
+}
+
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
 func (a *AnalyticsTracker) TrackUp(success bool, m *UpMetadata) {
 	a.trackFn(upEvent, success, m.toProps())
-}
-
-// TrackResetDatabase sends a tracking event to mixpanel when the syncthing database is reset
-func TrackResetDatabase(success bool) {
-	track(syncResetDatabase, success, nil)
 }

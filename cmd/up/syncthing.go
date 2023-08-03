@@ -183,6 +183,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 		case oktetoErrors.ErrInsufficientSpace:
 			return up.getInsufficientSpaceError(err)
 		case oktetoErrors.ErrNeedsResetSyncError:
+			up.analyticsMeta.AddErrResetDatabase()
 			return oktetoErrors.UserError{
 				E:    fmt.Errorf("the synchronization service state is inconsistent"),
 				Hint: `Try running 'okteto up --reset' to reset the synchronization service`,
