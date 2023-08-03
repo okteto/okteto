@@ -176,7 +176,7 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	}()
 
 	if err := up.Sy.WaitForCompletion(ctx, reporter); err != nil {
-		up.analyticsTracker.TrackSyncError()
+		up.analyticsMeta.AddErrSync()
 		switch err {
 		case oktetoErrors.ErrLostSyncthing:
 			return err

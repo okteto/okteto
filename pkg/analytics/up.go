@@ -9,7 +9,6 @@ import (
 const (
 	// Event that tracks when a user activates a development container
 	upEvent           = "Up"
-	syncErrorEvent    = "Sync Error"
 	syncResetDatabase = "Sync Reset Database"
 )
 
@@ -30,6 +29,7 @@ type UpMetadata struct {
 	InitialSyncDuration    time.Duration
 	IsReconnect            bool
 	ReconnectCause         string
+	ErrSync                bool
 }
 
 func NewUpMetadata() *UpMetadata {
@@ -52,6 +52,7 @@ func (u *UpMetadata) toProps() map[string]interface{} {
 		"initialSyncDurationSeconds": u.InitialSyncDuration.Seconds(),
 		"isReconnect":                u.IsReconnect,
 		"reconnectCause":             u.ReconnectCause,
+		"errSync":                    u.ErrSync,
 	}
 }
 
@@ -99,14 +100,13 @@ func (u *UpMetadata) AddReconnect(cause string) {
 	u.ReconnectCause = cause
 }
 
+func (u *UpMetadata) AddErrSync() {
+	u.ErrSync = true
+}
+
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
 func (a *AnalyticsTracker) TrackUp(success bool, m *UpMetadata) {
 	a.trackFn(upEvent, success, m.toProps())
-}
-
-// TrackSyncError sends a tracking event to mixpanel when the init sync fails
-func (a *AnalyticsTracker) TrackSyncError() {
-	a.trackFn(syncErrorEvent, false, nil)
 }
 
 // TrackResetDatabase sends a tracking event to mixpanel when the syncthing database is reset
