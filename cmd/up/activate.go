@@ -210,7 +210,10 @@ func (up *upContext) activate() error {
 		durationActivateUp := time.Since(up.StartTime)
 		up.analyticsMeta.ActivateDuration(durationActivateUp)
 
+		startRunCommand := time.Now()
 		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
+		up.analyticsMeta.ExecDuration(time.Since(startRunCommand))
+
 	}()
 
 	prevError := up.waitUntilExitOrInterruptOrApply(ctx)
@@ -243,16 +246,15 @@ func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
 }
 
 func (up *upContext) devMode(ctx context.Context, app apps.App, create bool) error {
+	startCreateDev := time.Now()
 	if err := up.createDevContainer(ctx, app, create); err != nil {
 		return err
 	}
+	up.analyticsMeta.DevContainerCreation(time.Since(startCreateDev))
 	return up.waitUntilDevelopmentContainerIsRunning(ctx, app)
 }
 
 func (up *upContext) createDevContainer(ctx context.Context, app apps.App, create bool) error {
-	startCreateDev := time.Now()
-	defer up.analyticsMeta.DevContainerCreation(time.Since(startCreateDev))
-
 	msg := "Preparing development environment..."
 	if !up.Dev.IsHybridModeEnabled() {
 		msg = "Activating your development container..."

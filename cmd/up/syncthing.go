@@ -56,9 +56,11 @@ func (up *upContext) sync(ctx context.Context) error {
 		return err
 	}
 
+	startSyncFiles := time.Now()
 	if err := up.synchronizeFiles(ctx); err != nil {
 		return err
 	}
+	up.analyticsMeta.ContextSync(time.Since(startSyncFiles))
 
 	msg := "Files synchronized"
 	if up.Dev.IsHybridModeEnabled() {
@@ -134,9 +136,6 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 }
 
 func (up *upContext) synchronizeFiles(ctx context.Context) error {
-	startSyncFiles := time.Now()
-	defer up.analyticsMeta.ContextSync(time.Since(startSyncFiles))
-
 	if !up.Dev.IsHybridModeEnabled() {
 		oktetoLog.Spinner("Synchronizing your files...")
 		oktetoLog.StartSpinner()

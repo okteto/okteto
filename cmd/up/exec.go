@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/cmd/pipeline"
@@ -357,9 +356,6 @@ func (up *upContext) cleanCommand(ctx context.Context) {
 }
 
 func (up *upContext) RunCommand(ctx context.Context, cmd []string) error {
-	startRunCommand := time.Now()
-	defer up.analyticsMeta.ExecDuration(time.Since(startRunCommand))
-
 	oktetoLog.Infof("starting remote command")
 	if err := config.UpdateStateFile(up.Dev.Name, up.Dev.Namespace, config.Ready); err != nil {
 		return err
