@@ -13,24 +13,24 @@ const (
 
 // UpMetadata defines the properties an up can have
 type UpMetadata struct {
-	IsV2                   bool
-	ManifestType           model.Archetype
-	IsInteractive          bool
-	IsOktetoRepository     bool
-	HasDependenciesSection bool
-	HasBuildSection        bool
-	HasDeploySection       bool
-	HasReverse             bool
-	IsHybridDev            bool
-	Mode                   string
-	FailActivate           bool
-	ActivateDuration       time.Duration
-	InitialSyncDuration    time.Duration
-	IsReconnect            bool
-	ReconnectCause         string
-	ErrSync                bool
-	ErrResetDatabase       bool
-	Success                bool
+	isV2                   bool
+	manifestType           model.Archetype
+	isInteractive          bool
+	isOktetoRepository     bool
+	hasDependenciesSection bool
+	hasBuildSection        bool
+	hasDeploySection       bool
+	hasReverse             bool
+	isHybridDev            bool
+	mode                   string
+	failActivate           bool
+	activateDuration       time.Duration
+	initialSyncDuration    time.Duration
+	isReconnect            bool
+	reconnectCause         string
+	errSync                bool
+	errResetDatabase       bool
+	success                bool
 }
 
 func NewUpMetadata() *UpMetadata {
@@ -39,54 +39,54 @@ func NewUpMetadata() *UpMetadata {
 
 func (u *UpMetadata) toProps() map[string]interface{} {
 	return map[string]interface{}{
-		"isInteractive":              u.IsInteractive,
-		"isV2":                       u.IsV2,
-		"manifestType":               u.ManifestType,
-		"isOktetoRepository":         u.IsOktetoRepository,
-		"hasDependenciesSection":     u.HasDependenciesSection,
-		"hasBuildSection":            u.HasBuildSection,
-		"hasDeploySection":           u.HasDeploySection,
-		"hasReverse":                 u.HasReverse,
-		"mode":                       u.Mode,
-		"failActivate":               u.FailActivate,
-		"activateDurationSeconds":    u.ActivateDuration.Seconds(),
-		"initialSyncDurationSeconds": u.InitialSyncDuration.Seconds(),
-		"isReconnect":                u.IsReconnect,
-		"reconnectCause":             u.ReconnectCause,
-		"errSync":                    u.ErrSync,
-		"errResetDatabase":           u.ErrResetDatabase,
+		"isInteractive":              u.isInteractive,
+		"isV2":                       u.isV2,
+		"manifestType":               u.manifestType,
+		"isOktetoRepository":         u.isOktetoRepository,
+		"hasDependenciesSection":     u.hasDependenciesSection,
+		"hasBuildSection":            u.hasBuildSection,
+		"hasDeploySection":           u.hasDeploySection,
+		"hasReverse":                 u.hasReverse,
+		"mode":                       u.mode,
+		"failActivate":               u.failActivate,
+		"activateDurationSeconds":    u.activateDuration.Seconds(),
+		"initialSyncDurationSeconds": u.initialSyncDuration.Seconds(),
+		"isReconnect":                u.isReconnect,
+		"reconnectCause":             u.reconnectCause,
+		"errSync":                    u.errSync,
+		"errResetDatabase":           u.errResetDatabase,
 	}
 }
 
 func (u *UpMetadata) AddManifestProps(m *model.Manifest) {
-	u.IsV2 = m.IsV2
-	u.ManifestType = m.Type
-	u.HasDependenciesSection = m.HasDependenciesSection()
-	u.HasBuildSection = m.HasBuildSection()
-	u.HasDeploySection = m.HasDeploySection()
+	u.isV2 = m.IsV2
+	u.manifestType = m.Type
+	u.hasDependenciesSection = m.HasDependenciesSection()
+	u.hasBuildSection = m.HasBuildSection()
+	u.hasDeploySection = m.HasDeploySection()
 }
 
 func (u *UpMetadata) AddDevProps(d *model.Dev) {
-	u.HasReverse = len(d.Reverse) > 0
-	u.Mode = d.Mode
-	u.IsInteractive = d.IsInteractive()
+	u.hasReverse = len(d.Reverse) > 0
+	u.mode = d.Mode
+	u.isInteractive = d.IsInteractive()
 
 }
 
 func (u *UpMetadata) AddRepositoryProps(isOktetoRepository bool) {
-	u.IsOktetoRepository = isOktetoRepository
+	u.isOktetoRepository = isOktetoRepository
 }
 
 func (u *UpMetadata) SetFailActivate() {
-	u.FailActivate = true
+	u.failActivate = true
 }
 
 func (u *UpMetadata) AddActivateDuration(duration time.Duration) {
-	u.ActivateDuration = duration
+	u.activateDuration = duration
 }
 
 func (u *UpMetadata) AddInitialSyncDuration(duration time.Duration) {
-	u.InitialSyncDuration = duration
+	u.initialSyncDuration = duration
 }
 
 const (
@@ -98,23 +98,23 @@ const (
 )
 
 func (u *UpMetadata) AddReconnect(cause string) {
-	u.IsReconnect = true
-	u.ReconnectCause = cause
+	u.isReconnect = true
+	u.reconnectCause = cause
 }
 
 func (u *UpMetadata) AddErrSync() {
-	u.ErrSync = true
+	u.errSync = true
 }
 
 func (u *UpMetadata) AddErrResetDatabase() {
-	u.ErrResetDatabase = true
+	u.errResetDatabase = true
 }
 
 func (u *UpMetadata) CommandSuccess() {
-	u.Success = true
+	u.success = true
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
 func (a *AnalyticsTracker) TrackUp(m *UpMetadata) {
-	a.trackFn(upEvent, m.Success, m.toProps())
+	a.trackFn(upEvent, m.success, m.toProps())
 }
