@@ -267,7 +267,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 2 * time.Minute,
 				},
 			},
-			expected: []string{"--timeout 2m0s", "--log-level warning"},
+			expected: []string{"--timeout 2m0s"},
 		},
 		{
 			name: "name set",
@@ -277,7 +277,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"test\"", "--timeout 5m0s", "--log-level warning"},
+			expected: []string{"--name \"test\"", "--timeout 5m0s"},
 		},
 		{
 			name: "name multiple words",
@@ -287,7 +287,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"this is a test\"", "--timeout 5m0s", "--log-level warning"},
+			expected: []string{"--name \"this is a test\"", "--timeout 5m0s"},
 		},
 		{
 			name: "namespace set",
@@ -297,7 +297,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout:   5 * time.Minute,
 				},
 			},
-			expected: []string{"--namespace test", "--timeout 5m0s", "--log-level warning"},
+			expected: []string{"--namespace test", "--timeout 5m0s"},
 		},
 		{
 			name: "manifest path set",
@@ -307,7 +307,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout:          5 * time.Minute,
 				},
 			},
-			expected: []string{"--file /hello/this/is/a/test", "--timeout 5m0s", "--log-level warning"},
+			expected: []string{"--file /hello/this/is/a/test", "--timeout 5m0s"},
 		},
 		{
 			name: "variables set",
@@ -320,7 +320,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--var a=b --var c=d", "--timeout 5m0s", "--log-level warning"},
+			expected: []string{"--var a=b --var c=d", "--timeout 5m0s"},
 		},
 		{
 			name: "wait set",
@@ -330,7 +330,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--wait", "--timeout 5m0s", "--log-level warning"},
+			expected: []string{"--wait", "--timeout 5m0s"},
 		},
 	}
 

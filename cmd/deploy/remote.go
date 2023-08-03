@@ -321,11 +321,6 @@ func getDeployFlags(opts *Options) []string {
 
 	deployFlags = append(deployFlags, fmt.Sprintf("--timeout %s", opts.Timeout))
 
-	logLevel := oktetoLog.GetLevel()
-	if logLevel != "" {
-		deployFlags = append(deployFlags, fmt.Sprintf("--log-level %s", logLevel))
-	}
-
 	return deployFlags
 }
 
