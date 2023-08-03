@@ -9,7 +9,6 @@ import (
 const (
 	// Event that tracks when a user activates a development container
 	upEvent           = "Up"
-	reconnectEvent    = "Reconnect"
 	syncErrorEvent    = "Sync Error"
 	syncResetDatabase = "Sync Reset Database"
 )
@@ -29,6 +28,8 @@ type UpMetadata struct {
 	FailActivate           bool
 	ActivateDuration       time.Duration
 	InitialSyncDuration    time.Duration
+	IsReconnect            bool
+	ReconnectCause         string
 }
 
 func NewUpMetadata() *UpMetadata {
@@ -49,6 +50,8 @@ func (u *UpMetadata) toProps() map[string]interface{} {
 		"failActivate":               u.FailActivate,
 		"activateDurationSeconds":    u.ActivateDuration.Seconds(),
 		"initialSyncDurationSeconds": u.InitialSyncDuration.Seconds(),
+		"isReconnect":                u.IsReconnect,
+		"reconnectCause":             u.ReconnectCause,
 	}
 }
 
@@ -83,11 +86,6 @@ func (u *UpMetadata) AddInitialSyncDuration(duration time.Duration) {
 	u.InitialSyncDuration = duration
 }
 
-// TrackUp sends a tracking event to mixpanel when the user activates a development container
-func (a *AnalyticsTracker) TrackUp(success bool, m *UpMetadata) {
-	a.trackFn(upEvent, success, m.toProps())
-}
-
 const (
 	// ReconnectCauseDefault is the default cause for a reconnection
 	ReconnectCauseDefault = "unrecognised"
@@ -96,12 +94,14 @@ const (
 	ReconnectCauseDevPodRecreated = "dev-pod-recreated"
 )
 
-// TrackReconnect sends a tracking event to mixpanel when the development container reconnect
-func (a *AnalyticsTracker) TrackReconnect(success bool, cause string) {
-	props := map[string]interface{}{
-		"cause": cause,
-	}
-	a.trackFn(reconnectEvent, success, props)
+func (u *UpMetadata) AddReconnect(cause string) {
+	u.IsReconnect = true
+	u.ReconnectCause = cause
+}
+
+// TrackUp sends a tracking event to mixpanel when the user activates a development container
+func (a *AnalyticsTracker) TrackUp(success bool, m *UpMetadata) {
+	a.trackFn(upEvent, success, m.toProps())
 }
 
 // TrackSyncError sends a tracking event to mixpanel when the init sync fails

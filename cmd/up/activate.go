@@ -150,7 +150,7 @@ func (up *upContext) activate() error {
 		if lastPodUID != up.Pod.UID {
 			cause = analytics.ReconnectCauseDevPodRecreated
 		}
-		up.analyticsTracker.TrackReconnect(true, cause)
+		up.analyticsMeta.AddReconnect(cause)
 	}
 
 	up.isRetry = true
