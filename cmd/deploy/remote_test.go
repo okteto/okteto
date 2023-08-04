@@ -415,7 +415,7 @@ RUN \
 
 RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
   mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
-  okteto deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --timeout 0s --log-level warning
+  okteto deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --timeout 0s
 `,
 				buildEnvVars: map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
 			},
