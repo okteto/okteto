@@ -87,7 +87,6 @@ func (u *UpMetricsMetadata) DevProps(d *model.Dev) {
 	u.hasReverse = len(d.Reverse) > 0
 	u.mode = d.Mode
 	u.isInteractive = d.IsInteractive()
-
 }
 
 // RepositoryProps adds the tracking properties of the repository
