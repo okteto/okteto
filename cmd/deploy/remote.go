@@ -55,9 +55,6 @@ FROM {{ .UserDeployImage }} as deploy
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
-{{range $key, $val := .OktetoBuildEnvVars }}
-ENV {{$key}} {{$val}}
-{{end}}
 
 ENV {{ .RemoteDeployEnvVar }} true
 ARG {{ .NamespaceArgName }}
@@ -71,6 +68,10 @@ RUN echo "${{ .TlsCertBase64ArgName }}" | base64 -d > /etc/ssl/certs/okteto.crt
 
 COPY . /okteto/src
 WORKDIR /okteto/src
+
+{{range $key, $val := .OktetoBuildEnvVars }}
+ENV {{$key}} {{$val}}
+{{end}}
 
 ARG {{ .GitCommitArgName }}
 ARG {{ .InvalidateCacheArgName }}
