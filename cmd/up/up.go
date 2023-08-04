@@ -240,7 +240,7 @@ func Up() *cobra.Command {
 			}
 
 			analyticsTracker := analytics.NewAnalyticsTracker()
-			upMeta := analytics.NewUpMetadata()
+			upMeta := analytics.NewUpMetricsMetadata()
 
 			// when cmd up finishes, send the event
 			// metadata retrieved during the run of the cmd

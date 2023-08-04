@@ -67,7 +67,7 @@ type upContext struct {
 	hybridCommand         *exec.Cmd
 	interruptReceived     bool
 	analyticsTracker      *analytics.AnalyticsTracker
-	analyticsMeta         *analytics.UpMetadata
+	analyticsMeta         *analytics.UpMetricsMetadata
 }
 
 // Forwarder is an interface for the port-forwarding features

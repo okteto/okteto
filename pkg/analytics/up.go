@@ -24,8 +24,8 @@ const (
 	upEvent = "Up"
 )
 
-// UpMetadata defines the properties an up can have
-type UpMetadata struct {
+// UpMetricsMetadata defines the properties of the Up event we want to track
+type UpMetricsMetadata struct {
 	isV2                   bool
 	manifestType           model.Archetype
 	isInteractive          bool
@@ -46,11 +46,11 @@ type UpMetadata struct {
 	success                bool
 }
 
-func NewUpMetadata() *UpMetadata {
-	return &UpMetadata{}
+func NewUpMetricsMetadata() *UpMetricsMetadata {
+	return &UpMetricsMetadata{}
 }
 
-func (u *UpMetadata) toProps() map[string]interface{} {
+func (u *UpMetricsMetadata) toProps() map[string]interface{} {
 	return map[string]interface{}{
 		"isInteractive":              u.isInteractive,
 		"isV2":                       u.isV2,
@@ -71,7 +71,7 @@ func (u *UpMetadata) toProps() map[string]interface{} {
 	}
 }
 
-func (u *UpMetadata) AddManifestProps(m *model.Manifest) {
+func (u *UpMetricsMetadata) AddManifestProps(m *model.Manifest) {
 	u.isV2 = m.IsV2
 	u.manifestType = m.Type
 	u.hasDependenciesSection = m.HasDependenciesSection()
@@ -79,26 +79,26 @@ func (u *UpMetadata) AddManifestProps(m *model.Manifest) {
 	u.hasDeploySection = m.HasDeploySection()
 }
 
-func (u *UpMetadata) AddDevProps(d *model.Dev) {
+func (u *UpMetricsMetadata) AddDevProps(d *model.Dev) {
 	u.hasReverse = len(d.Reverse) > 0
 	u.mode = d.Mode
 	u.isInteractive = d.IsInteractive()
 
 }
 
-func (u *UpMetadata) AddRepositoryProps(isOktetoRepository bool) {
+func (u *UpMetricsMetadata) AddRepositoryProps(isOktetoRepository bool) {
 	u.isOktetoRepository = isOktetoRepository
 }
 
-func (u *UpMetadata) SetFailActivate() {
+func (u *UpMetricsMetadata) SetFailActivate() {
 	u.failActivate = true
 }
 
-func (u *UpMetadata) AddActivateDuration(duration time.Duration) {
+func (u *UpMetricsMetadata) AddActivateDuration(duration time.Duration) {
 	u.activateDuration = duration
 }
 
-func (u *UpMetadata) AddInitialSyncDuration(duration time.Duration) {
+func (u *UpMetricsMetadata) AddInitialSyncDuration(duration time.Duration) {
 	u.initialSyncDuration = duration
 }
 
@@ -110,24 +110,24 @@ const (
 	ReconnectCauseDevPodRecreated = "dev-pod-recreated"
 )
 
-func (u *UpMetadata) AddReconnect(cause string) {
+func (u *UpMetricsMetadata) AddReconnect(cause string) {
 	u.isReconnect = true
 	u.reconnectCause = cause
 }
 
-func (u *UpMetadata) AddErrSync() {
+func (u *UpMetricsMetadata) AddErrSync() {
 	u.errSync = true
 }
 
-func (u *UpMetadata) AddErrResetDatabase() {
+func (u *UpMetricsMetadata) AddErrResetDatabase() {
 	u.errResetDatabase = true
 }
 
-func (u *UpMetadata) CommandSuccess() {
+func (u *UpMetricsMetadata) CommandSuccess() {
 	u.success = true
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container
-func (a *AnalyticsTracker) TrackUp(m *UpMetadata) {
+func (a *AnalyticsTracker) TrackUp(m *UpMetricsMetadata) {
 	a.trackFn(upEvent, m.success, m.toProps())
 }
