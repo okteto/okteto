@@ -639,9 +639,9 @@ func (up *upContext) start() error {
 
 	pidFileCh := make(chan error, 1)
 
-	up.analyticsMeta.AddManifestProps(up.Manifest)
-	up.analyticsMeta.AddDevProps(up.Dev)
-	up.analyticsMeta.AddRepositoryProps(utils.IsOktetoRepo())
+	up.analyticsMeta.ManifestProps(up.Manifest)
+	up.analyticsMeta.DevProps(up.Dev)
+	up.analyticsMeta.RepositoryProps(utils.IsOktetoRepo())
 
 	go up.activateLoop()
 
@@ -895,7 +895,7 @@ func (up *upContext) shutdown() {
 
 	oktetoLog.Infof("starting shutdown sequence")
 	if !up.success {
-		up.analyticsMeta.SetFailActivate()
+		up.analyticsMeta.FailActivate()
 	}
 
 	if up.Cancel != nil {

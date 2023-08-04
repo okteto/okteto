@@ -46,10 +46,12 @@ type UpMetricsMetadata struct {
 	success                bool
 }
 
+// NewUpMetricsMetadata returns an empty instance of UpMetricsMetadata
 func NewUpMetricsMetadata() *UpMetricsMetadata {
 	return &UpMetricsMetadata{}
 }
 
+// toProps transforms UpMetricsMetadata into a map to be able to send it to mixpanel
 func (u *UpMetricsMetadata) toProps() map[string]interface{} {
 	return map[string]interface{}{
 		"isInteractive":              u.isInteractive,
@@ -71,7 +73,8 @@ func (u *UpMetricsMetadata) toProps() map[string]interface{} {
 	}
 }
 
-func (u *UpMetricsMetadata) AddManifestProps(m *model.Manifest) {
+// ManifestProps adds the tracking properties of the repository manifest
+func (u *UpMetricsMetadata) ManifestProps(m *model.Manifest) {
 	u.isV2 = m.IsV2
 	u.manifestType = m.Type
 	u.hasDependenciesSection = m.HasDependenciesSection()
@@ -79,50 +82,65 @@ func (u *UpMetricsMetadata) AddManifestProps(m *model.Manifest) {
 	u.hasDeploySection = m.HasDeploySection()
 }
 
-func (u *UpMetricsMetadata) AddDevProps(d *model.Dev) {
+// DevProps adds the tracking properties of the service development manifest
+func (u *UpMetricsMetadata) DevProps(d *model.Dev) {
 	u.hasReverse = len(d.Reverse) > 0
 	u.mode = d.Mode
 	u.isInteractive = d.IsInteractive()
 
 }
 
-func (u *UpMetricsMetadata) AddRepositoryProps(isOktetoRepository bool) {
+// RepositoryProps adds the tracking properties of the repository
+func (u *UpMetricsMetadata) RepositoryProps(isOktetoRepository bool) {
 	u.isOktetoRepository = isOktetoRepository
 }
 
-func (u *UpMetricsMetadata) SetFailActivate() {
+// FailActivate sets to true the property failActivate
+func (u *UpMetricsMetadata) FailActivate() {
 	u.failActivate = true
 }
 
-func (u *UpMetricsMetadata) AddActivateDuration(duration time.Duration) {
+// ActivateDuration adds the duration of up activation
+func (u *UpMetricsMetadata) ActivateDuration(duration time.Duration) {
 	u.activateDuration = duration
 }
 
-func (u *UpMetricsMetadata) AddInitialSyncDuration(duration time.Duration) {
+// InitialSyncDuration adds the duration of the initial sync
+func (u *UpMetricsMetadata) InitialSyncDuration(duration time.Duration) {
 	u.initialSyncDuration = duration
 }
 
 const (
-	// ReconnectCauseDefault is the default cause for a reconnection
-	ReconnectCauseDefault = "unrecognised"
+	// reconnectCauseDefault is the default cause for a reconnection
+	reconnectCauseDefault = "unrecognised"
 
-	// ReconnectCauseDevPodRecreated is cause when pods UID change between retrys
-	ReconnectCauseDevPodRecreated = "dev-pod-recreated"
+	// reconnectCauseDevPodRecreated is cause when pods UID change between retrys
+	reconnectCauseDevPodRecreated = "dev-pod-recreated"
 )
 
-func (u *UpMetricsMetadata) AddReconnect(cause string) {
+// ReconnectDefault sets to true the property isReconnect and adds the cause "unrecognised"
+func (u *UpMetricsMetadata) ReconnectDefault() {
 	u.isReconnect = true
-	u.reconnectCause = cause
+	u.reconnectCause = reconnectCauseDefault
 }
 
-func (u *UpMetricsMetadata) AddErrSync() {
+// ReconnectDevPodRecreated sets to true the property isReconnect and adds the cause "dev-pod-recreated"
+func (u *UpMetricsMetadata) ReconnectDevPodRecreated() {
+	u.isReconnect = true
+	u.reconnectCause = reconnectCauseDevPodRecreated
+}
+
+// ErrSync sets to true the property errSync
+func (u *UpMetricsMetadata) ErrSync() {
 	u.errSync = true
 }
 
-func (u *UpMetricsMetadata) AddErrResetDatabase() {
+// ErrResetDatabase sets to true the property errResetDatabase
+func (u *UpMetricsMetadata) ErrResetDatabase() {
 	u.errResetDatabase = true
 }
 
+// CommandSuccess sets to true the property success
 func (u *UpMetricsMetadata) CommandSuccess() {
 	u.success = true
 }

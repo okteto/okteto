@@ -67,7 +67,7 @@ func (up *upContext) sync(ctx context.Context) error {
 	oktetoLog.Success(msg)
 
 	elapsed := time.Since(start)
-	up.analyticsMeta.AddInitialSyncDuration(elapsed)
+	up.analyticsMeta.InitialSyncDuration(elapsed)
 	maxDuration := time.Duration(1) * time.Minute
 	if elapsed > maxDuration {
 		minutes := elapsed / time.Minute
@@ -176,14 +176,14 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	}()
 
 	if err := up.Sy.WaitForCompletion(ctx, reporter); err != nil {
-		up.analyticsMeta.AddErrSync()
+		up.analyticsMeta.ErrSync()
 		switch err {
 		case oktetoErrors.ErrLostSyncthing:
 			return err
 		case oktetoErrors.ErrInsufficientSpace:
 			return up.getInsufficientSpaceError(err)
 		case oktetoErrors.ErrNeedsResetSyncError:
-			up.analyticsMeta.AddErrResetDatabase()
+			up.analyticsMeta.ErrResetDatabase()
 			return oktetoErrors.UserError{
 				E:    fmt.Errorf("the synchronization service state is inconsistent"),
 				Hint: `Try running 'okteto up --reset' to reset the synchronization service`,
