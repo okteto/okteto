@@ -450,8 +450,6 @@ func buildImages(ctx context.Context, build func(context.Context, *types.BuildOp
 			return err
 		}
 
-		oktetoLog.Debugf("getServicesToBuild result: '%v'", servicesToBuild)
-
 		if len(servicesToBuild) != 0 {
 			buildOptions := &types.BuildOptions{
 				EnableStages: true,
