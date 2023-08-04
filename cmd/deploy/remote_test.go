@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	v2 "github.com/okteto/okteto/cmd/build/v2"
 	"github.com/okteto/okteto/pkg/cmd/build"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -143,9 +142,6 @@ func TestRemoteTest(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
 			tempCreator.SetError(tt.config.tempFsCreator)
 			rdc := remoteDeployCommand{
-				builderV2: &v2.OktetoBuilder{
-					Registry: newFakeRegistry(),
-				},
 				builderV1:            fakeBuilder{err: tt.config.builderErr},
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
@@ -153,6 +149,7 @@ func TestRemoteTest(t *testing.T) {
 				clusterMetadata: func(context.Context) (*types.ClusterMetadata, error) {
 					return &types.ClusterMetadata{Certificate: tt.config.cert}, nil
 				},
+				getBuildEnvVars: func() map[string]string { return nil },
 			}
 			err := rdc.deploy(ctx, tt.config.options)
 			if tt.expected != nil {
@@ -187,11 +184,9 @@ func TestRemoteDeployWithSshAgent(t *testing.T) {
 		os.Unsetenv(envvarName)
 	}()
 	rdc := remoteDeployCommand{
-		sshAuthSockEnvvar: envvarName,
-		knownHostsPath:    knowHostFile.Name(),
-		builderV2: &v2.OktetoBuilder{
-			Registry: newFakeRegistry(),
-		},
+		sshAuthSockEnvvar:    envvarName,
+		getBuildEnvVars:      func() map[string]string { return nil },
+		knownHostsPath:       knowHostFile.Name(),
 		builderV1:            fakeBuilder{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
@@ -227,11 +222,8 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 		os.Unsetenv(envvarName)
 	}()
 	rdc := remoteDeployCommand{
-		sshAuthSockEnvvar: envvarName,
-		knownHostsPath:    "inexistent-file",
-		builderV2: &v2.OktetoBuilder{
-			Registry: newFakeRegistry(),
-		},
+		sshAuthSockEnvvar:    envvarName,
+		knownHostsPath:       "inexistent-file",
 		builderV1:            fakeBuilder{assertOptions: assertFn},
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewFakeWorkingDirectoryCtrl(filepath.Clean("/")),
@@ -239,6 +231,7 @@ func TestRemoteDeployWithBadSshAgent(t *testing.T) {
 		clusterMetadata: func(context.Context) (*types.ClusterMetadata, error) {
 			return &types.ClusterMetadata{}, nil
 		},
+		getBuildEnvVars: func() map[string]string { return nil },
 	}
 
 	err := rdc.deploy(context.Background(), &Options{
@@ -267,7 +260,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 2 * time.Minute,
 				},
 			},
-			expected: []string{"--timeout 2m0s", "--log-level warning"},
+			expected: []string{"--timeout 2m0s"},
 		},
 		{
 			name: "name set",
@@ -277,7 +270,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"test\"", "--timeout 5m0s", "--log-level warning"},
+			expected: []string{"--name \"test\"", "--timeout 5m0s"},
 		},
 		{
 			name: "name multiple words",
@@ -287,7 +280,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--name \"this is a test\"", "--timeout 5m0s", "--log-level warning"},
+			expected: []string{"--name \"this is a test\"", "--timeout 5m0s"},
 		},
 		{
 			name: "namespace set",
@@ -297,7 +290,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout:   5 * time.Minute,
 				},
 			},
-			expected: []string{"--namespace test", "--timeout 5m0s", "--log-level warning"},
+			expected: []string{"--namespace test", "--timeout 5m0s"},
 		},
 		{
 			name: "manifest path set",
@@ -307,7 +300,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout:          5 * time.Minute,
 				},
 			},
-			expected: []string{"--file /hello/this/is/a/test", "--timeout 5m0s", "--log-level warning"},
+			expected: []string{"--file /hello/this/is/a/test", "--timeout 5m0s"},
 		},
 		{
 			name: "variables set",
@@ -320,7 +313,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--var a=b --var c=d", "--timeout 5m0s", "--log-level warning"},
+			expected: []string{"--var a=b --var c=d", "--timeout 5m0s"},
 		},
 		{
 			name: "wait set",
@@ -330,7 +323,7 @@ func TestGetDeployFlags(t *testing.T) {
 					Timeout: 5 * time.Minute,
 				},
 			},
-			expected: []string{"--wait", "--timeout 5m0s", "--log-level warning"},
+			expected: []string{"--wait", "--timeout 5m0s"},
 		},
 	}
 
@@ -355,8 +348,10 @@ func TestCreateDockerfile(t *testing.T) {
 		opts *Options
 	}
 	type expected struct {
-		dockerfileName string
-		err            error
+		dockerfileName    string
+		dockerfileContent string
+		buildEnvVars      map[string]string
+		err               error
 	}
 	var tests = []struct {
 		name     string
@@ -384,6 +379,46 @@ func TestCreateDockerfile(t *testing.T) {
 			},
 			expected: expected{
 				dockerfileName: filepath.Clean("/test/Dockerfile.deploy"),
+				dockerfileContent: `
+FROM okteto/okteto:latest as okteto-cli
+
+FROM test-image as deploy
+
+ENV PATH="${PATH}:/okteto/bin"
+COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
+
+
+ENV OKTETO_DEPLOY_REMOTE true
+ARG OKTETO_NAMESPACE
+ARG OKTETO_CONTEXT
+ARG OKTETO_TOKEN
+ARG OKTETO_ACTION_NAME
+ARG OKTETO_TLS_CERT_BASE64
+ARG INTERNAL_SERVER_NAME
+RUN mkdir -p /etc/ssl/certs/
+RUN echo "$OKTETO_TLS_CERT_BASE64" | base64 -d > /etc/ssl/certs/okteto.crt
+
+COPY . /okteto/src
+WORKDIR /okteto/src
+
+
+ENV OKTETO_BUIL_SVC2_IMAGE TWO_VALUE
+
+ENV OKTETO_BUIL_SVC_IMAGE ONE_VALUE
+
+
+ARG OKTETO_GIT_COMMIT
+ARG OKTETO_INVALIDATE_CACHE
+
+RUN \
+  mkdir -p $HOME/.docker && \
+  echo '{"credsStore":"okteto"}' > $HOME/.docker/config.json
+
+RUN --mount=type=secret,id=known_hosts --mount=id=remote,type=ssh \
+  mkdir -p $HOME/.ssh && echo "UserKnownHostsFile=/run/secrets/known_hosts" >> $HOME/.ssh/config && \
+  okteto deploy --log-output=json --server-name="$INTERNAL_SERVER_NAME" --timeout 0s
+`,
+				buildEnvVars: map[string]string{"OKTETO_BUIL_SVC_IMAGE": "ONE_VALUE", "OKTETO_BUIL_SVC2_IMAGE": "TWO_VALUE"},
 			},
 		},
 	}
@@ -392,13 +427,21 @@ func TestCreateDockerfile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			wdCtrl.SetErrors(tt.config.wd)
 			rdc := remoteDeployCommand{
-				builderV2:            &v2.OktetoBuilder{},
+				getBuildEnvVars: func() map[string]string {
+					return tt.expected.buildEnvVars
+				},
 				fs:                   fs,
 				workingDirectoryCtrl: wdCtrl,
 			}
 			dockerfileName, err := rdc.createDockerfile("/test", tt.config.opts)
 			assert.ErrorIs(t, err, tt.expected.err)
 			assert.Equal(t, tt.expected.dockerfileName, dockerfileName)
+
+			if dockerfileName != "" {
+				bFile, err := afero.ReadFile(fs, dockerfileName)
+				assert.NoError(t, err)
+				assert.EqualValues(t, tt.expected.dockerfileContent, string(bFile))
+			}
 
 			if tt.expected.err == nil {
 				_, err = rdc.fs.Stat(filepath.Join("/test", dockerfileTemporalName))

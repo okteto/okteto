@@ -81,27 +81,20 @@ func newOktetoRegistryClient(config ClientConfigInterface) client {
 }
 
 func (c client) getDescriptor(image string) (*remote.Descriptor, error) {
-	oktetoLog.Debugf("getting descriptor for image '%s'", image)
 	ref, err := name.ParseReference(image)
 	if err != nil {
-		oktetoLog.Debugf("error parsing image reference for image '%s': %s", image, err.Error())
 		return nil, err
 	}
 
 	options := c.getOptions(ref)
 
-	oktetoLog.Debugf("generated options for reference '%v'", ref)
-
 	descriptor, err := c.get(ref, options...)
 	if err != nil {
-		oktetoLog.Debugf("error to get descriptor for image '%s': %s", image, err.Error())
 		if c.isNotFound(err) {
 			return nil, fmt.Errorf("error getting image descriptor: %w", oktetoErrors.ErrNotFound)
 		}
 		return nil, fmt.Errorf("error getting image descriptor: %w", err)
 	}
-
-	oktetoLog.Debugf("descriptor found for image '%s'", image)
 	return descriptor, nil
 }
 
@@ -109,11 +102,8 @@ func (c client) getDescriptor(image string) (*remote.Descriptor, error) {
 func (c client) GetDigest(image string) (string, error) {
 	descriptor, err := c.getDescriptor(image)
 	if err != nil {
-		oktetoLog.Debugf("error getting image digest for image '%s': %s", image, err.Error())
 		return "", fmt.Errorf("error getting image digest: %w", err)
 	}
-
-	oktetoLog.Debugf("digest for image '%s': %s", image, descriptor.Digest.String())
 	return descriptor.Digest.String(), nil
 }
 
