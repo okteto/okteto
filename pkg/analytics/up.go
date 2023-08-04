@@ -32,24 +32,26 @@ const (
 
 // UpMetricsMetadata defines the properties of the Up event we want to track
 type UpMetricsMetadata struct {
-	isV2                   bool
-	manifestType           model.Archetype
-	isInteractive          bool
-	isOktetoRepository     bool
-	hasDependenciesSection bool
-	hasBuildSection        bool
-	hasDeploySection       bool
-	hasReverse             bool
-	isHybridDev            bool
-	mode                   string
-	failActivate           bool
-	activateDuration       time.Duration
-	initialSyncDuration    time.Duration
-	isReconnect            bool
-	reconnectCause         string
-	errSync                bool
-	errResetDatabase       bool
-	success                bool
+	isV2                     bool
+	manifestType             model.Archetype
+	isInteractive            bool
+	isOktetoRepository       bool
+	hasDependenciesSection   bool
+	hasBuildSection          bool
+	hasDeploySection         bool
+	hasReverse               bool
+	isHybridDev              bool
+	mode                     string
+	failActivate             bool
+	activateDuration         time.Duration
+	initialSyncDuration      time.Duration
+	isReconnect              bool
+	reconnectCause           string
+	errSync                  bool
+	errSyncResetDatabase     bool
+	errSyncInsufficientSpace bool
+	errSyncLostSyncthing     bool
+	success                  bool
 
 	hasRunDeploy                 bool
 	oktetoCtxConfigDuration      time.Duration
@@ -82,7 +84,9 @@ func (u *UpMetricsMetadata) toProps() map[string]interface{} {
 		"isReconnect":                         u.isReconnect,
 		"reconnectCause":                      u.reconnectCause,
 		"errSync":                             u.errSync,
-		"errResetDatabase":                    u.errResetDatabase,
+		"errSyncResetDatabase":                u.errSyncResetDatabase,
+		"errSyncInsufficientSpace":            u.errSyncInsufficientSpace,
+		"errSyncLostSyncthing":                u.errSyncLostSyncthing,
 		"hasRunDeploy":                        u.hasRunDeploy,
 		"oktetoCtxConfigDurationSeconds":      u.oktetoCtxConfigDuration.Seconds(),
 		"devContainerCreationDurationSeconds": u.devContainerCreationDuration.Seconds(),
@@ -146,8 +150,18 @@ func (u *UpMetricsMetadata) ErrSync() {
 }
 
 // ErrResetDatabase sets to true the property errResetDatabase
-func (u *UpMetricsMetadata) ErrResetDatabase() {
-	u.errResetDatabase = true
+func (u *UpMetricsMetadata) ErrSyncResetDatabase() {
+	u.errSyncResetDatabase = true
+}
+
+// ErrResetDatabase sets to true the property errResetDatabase
+func (u *UpMetricsMetadata) ErrSyncInsufficientSpace() {
+	u.errSyncInsufficientSpace = true
+}
+
+// ErrResetDatabase sets to true the property errResetDatabase
+func (u *UpMetricsMetadata) ErrSyncLostSyncthing() {
+	u.errSyncLostSyncthing = true
 }
 
 // CommandSuccess sets to true the property success

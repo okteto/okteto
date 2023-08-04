@@ -202,12 +202,12 @@ func Test_UpMetricsMetadata_ReconnectDevPodRecreated(t *testing.T) {
 func Test_UpMetricsMetadata_Errors(t *testing.T) {
 	m := &UpMetricsMetadata{}
 	m.ErrSync()
-	m.ErrResetDatabase()
+	m.ErrSyncResetDatabase()
 	m.FailActivate()
 	assert.Equal(t, &UpMetricsMetadata{
-		errSync:          true,
-		errResetDatabase: true,
-		failActivate:     true,
+		errSync:              true,
+		errSyncResetDatabase: true,
+		failActivate:         true,
 	}, m)
 }
 
@@ -233,7 +233,7 @@ func Test_UpTracker(t *testing.T) {
 				success: false,
 				props: map[string]interface{}{
 					"activateDurationSeconds":             float64(0),
-					"errResetDatabase":                    false,
+					"errSyncResetDatabase":                false,
 					"errSync":                             false,
 					"failActivate":                        false,
 					"hasBuildSection":                     false,
@@ -254,6 +254,8 @@ func Test_UpTracker(t *testing.T) {
 					"hasRunDeploy":                        false,
 					"localFoldersScanDurationSeconds":     float64(0),
 					"oktetoCtxConfigDurationSeconds":      float64(0),
+					"errSyncInsufficientSpace":            false,
+					"errSyncLostSyncthing":                false,
 				},
 			},
 		},
@@ -267,7 +269,7 @@ func Test_UpTracker(t *testing.T) {
 				success: true,
 				props: map[string]interface{}{
 					"activateDurationSeconds":             float64(0),
-					"errResetDatabase":                    false,
+					"errSyncResetDatabase":                false,
 					"errSync":                             false,
 					"failActivate":                        false,
 					"hasBuildSection":                     false,
@@ -288,6 +290,8 @@ func Test_UpTracker(t *testing.T) {
 					"hasRunDeploy":                        false,
 					"localFoldersScanDurationSeconds":     float64(0),
 					"oktetoCtxConfigDurationSeconds":      float64(0),
+					"errSyncInsufficientSpace":            false,
+					"errSyncLostSyncthing":                false,
 				},
 			},
 		},
@@ -319,7 +323,7 @@ func Test_UpTracker(t *testing.T) {
 				success: true,
 				props: map[string]interface{}{
 					"activateDurationSeconds":             float64(60),
-					"errResetDatabase":                    false,
+					"errSyncResetDatabase":                false,
 					"errSync":                             false,
 					"failActivate":                        false,
 					"hasBuildSection":                     true,
@@ -340,6 +344,8 @@ func Test_UpTracker(t *testing.T) {
 					"hasRunDeploy":                        true,
 					"localFoldersScanDurationSeconds":     float64(60),
 					"oktetoCtxConfigDurationSeconds":      float64(60),
+					"errSyncInsufficientSpace":            false,
+					"errSyncLostSyncthing":                false,
 				},
 			},
 		},
@@ -360,7 +366,7 @@ func Test_UpTracker(t *testing.T) {
 				initialSyncDuration:    1 * time.Minute,
 				success:                false,
 				errSync:                true,
-				errResetDatabase:       true,
+				errSyncResetDatabase:   true,
 				failActivate:           true,
 			},
 			expected: mockEvent{
@@ -368,7 +374,7 @@ func Test_UpTracker(t *testing.T) {
 				success: false,
 				props: map[string]interface{}{
 					"activateDurationSeconds":             float64(60),
-					"errResetDatabase":                    true,
+					"errSyncResetDatabase":                true,
 					"errSync":                             true,
 					"failActivate":                        true,
 					"hasBuildSection":                     true,
@@ -389,6 +395,8 @@ func Test_UpTracker(t *testing.T) {
 					"hasRunDeploy":                        false,
 					"localFoldersScanDurationSeconds":     float64(0),
 					"oktetoCtxConfigDurationSeconds":      float64(0),
+					"errSyncInsufficientSpace":            false,
+					"errSyncLostSyncthing":                false,
 				},
 			},
 		},
@@ -416,7 +424,7 @@ func Test_UpTracker(t *testing.T) {
 				success: true,
 				props: map[string]interface{}{
 					"activateDurationSeconds":             float64(60),
-					"errResetDatabase":                    false,
+					"errSyncResetDatabase":                false,
 					"errSync":                             false,
 					"failActivate":                        false,
 					"hasBuildSection":                     true,
@@ -437,6 +445,8 @@ func Test_UpTracker(t *testing.T) {
 					"hasRunDeploy":                        false,
 					"localFoldersScanDurationSeconds":     float64(0),
 					"oktetoCtxConfigDurationSeconds":      float64(0),
+					"errSyncInsufficientSpace":            false,
+					"errSyncLostSyncthing":                false,
 				},
 			},
 		},
