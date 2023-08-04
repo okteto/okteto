@@ -191,6 +191,9 @@ func (c *ContextCommand) UseContext(ctx context.Context, ctxOptions *ContextOpti
 			currentCtx.Namespace = currentCtx.PersonalNamespace
 		}
 
+		currentCtx := ctxStore.Contexts[ctxOptions.Context]
+		currentCtx.IsStoredAsInsecure = okteto.IsInsecureSkipTLSVerifyPolicy()
+
 		if err := c.OktetoContextWriter.Write(); err != nil {
 			return err
 		}
