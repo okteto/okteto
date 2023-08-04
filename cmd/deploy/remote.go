@@ -55,6 +55,7 @@ FROM {{ .UserDeployImage }} as deploy
 ENV PATH="${PATH}:/okteto/bin"
 COPY --from=okteto-cli /usr/local/bin/* /okteto/bin/
 
+
 ENV {{ .RemoteDeployEnvVar }} true
 ARG {{ .NamespaceArgName }}
 ARG {{ .ContextArgName }}
@@ -67,6 +68,10 @@ RUN echo "${{ .TlsCertBase64ArgName }}" | base64 -d > /etc/ssl/certs/okteto.crt
 
 COPY . /okteto/src
 WORKDIR /okteto/src
+
+{{range $key, $val := .OktetoBuildEnvVars }}
+ENV {{$key}} {{$val}}
+{{end}}
 
 ARG {{ .GitCommitArgName }}
 ARG {{ .InvalidateCacheArgName }}
@@ -85,6 +90,7 @@ type dockerfileTemplateProperties struct {
 	OktetoCLIImage         string
 	UserDeployImage        string
 	RemoteDeployEnvVar     string
+	OktetoBuildEnvVars     map[string]string
 	ContextArgName         string
 	NamespaceArgName       string
 	TokenArgName           string
@@ -97,7 +103,7 @@ type dockerfileTemplateProperties struct {
 }
 
 type remoteDeployCommand struct {
-	builderV2            *buildv2.OktetoBuilder
+	getBuildEnvVars      func() map[string]string
 	builderV1            builder.Builder
 	fs                   afero.Fs
 	workingDirectoryCtrl filesystem.WorkingDirectoryInterface
@@ -115,7 +121,7 @@ type remoteDeployCommand struct {
 func newRemoteDeployer(builder *buildv2.OktetoBuilder) *remoteDeployCommand {
 	fs := afero.NewOsFs()
 	return &remoteDeployCommand{
-		builderV2:            builder,
+		getBuildEnvVars:      builder.GetBuildEnvVars,
 		builderV1:            remoteBuild.NewBuilderFromScratch(),
 		fs:                   fs,
 		workingDirectoryCtrl: filesystem.NewOsWorkingDirectoryCtrl(),
@@ -262,6 +268,7 @@ func (rd *remoteDeployCommand) createDockerfile(tmpDir string, opts *Options) (s
 		UserDeployImage:        opts.Manifest.Deploy.Image,
 		RemoteDeployEnvVar:     constants.OktetoDeployRemote,
 		ContextArgName:         model.OktetoContextEnvVar,
+		OktetoBuildEnvVars:     rd.getBuildEnvVars(),
 		NamespaceArgName:       model.OktetoNamespaceEnvVar,
 		TlsCertBase64ArgName:   constants.OktetoTlsCertBase64EnvVar,
 		InternalServerName:     constants.OktetoInternalServerNameEnvVar,
