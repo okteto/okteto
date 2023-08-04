@@ -57,30 +57,30 @@ func NewKubeTokenClient(contextName, token, namespace string) (*KubeTokenClient,
 func (c *KubeTokenClient) GetKubeToken() (*KubeTokenResponse, error) {
 	resp, err := c.httpClient.Get(c.url)
 	if err != nil {
-		return &KubeTokenResponse{}, fmt.Errorf("failed GET request: %w", err)
+		return nil, fmt.Errorf("failed GET request: %w", err)
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return &KubeTokenResponse{}, fmt.Errorf(oktetoErrors.ErrNotLogged, c.contextName)
+		return nil, fmt.Errorf(oktetoErrors.ErrNotLogged, c.contextName)
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		return &KubeTokenResponse{}, fmt.Errorf(ErrDynamicKubetokenNotSupported)
+		return nil, fmt.Errorf(ErrDynamicKubetokenNotSupported)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return &KubeTokenResponse{}, fmt.Errorf("GET request returned status %s", resp.Status)
+		return nil, fmt.Errorf("GET request returned status %s", resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return &KubeTokenResponse{}, fmt.Errorf("failed to read kubetoken response: %w", err)
+		return nil, fmt.Errorf("failed to read kubetoken response: %w", err)
 	}
 
 	var kubeTokenResponse KubeTokenResponse
 	err = json.Unmarshal(body, &kubeTokenResponse)
 	if err != nil {
-		return &KubeTokenResponse{}, fmt.Errorf("failed to unmarshal kubetoken response: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal kubetoken response: %w", err)
 	}
 
 	return &kubeTokenResponse, nil
