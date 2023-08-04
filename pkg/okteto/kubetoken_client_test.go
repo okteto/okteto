@@ -83,7 +83,7 @@ func TestGetKubeToken(t *testing.T) {
 		url:        s.URL,
 	}
 
-	token, err := c.RequestKubeToken()
+	token, err := c.GetKubeToken()
 	require.NoError(t, err)
 	require.Equal(t, expectedToken, token)
 }
@@ -105,6 +105,6 @@ func TestGetKubeTokenUnauthorizedErr(t *testing.T) {
 		contextName: context,
 	}
 
-	_, err := c.RequestKubeToken()
+	_, err := c.GetKubeToken()
 	require.Equal(t, fmt.Errorf(oktetoErrors.ErrNotLogged, context), err)
 }

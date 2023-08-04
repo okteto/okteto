@@ -25,6 +25,8 @@ import (
 
 const kubetokenPath = "auth/kubetoken"
 
+const ErrDynamicKubetokenNotSupported = "using dynamic kubetokens is not supported by your Okteto cluster"
+
 type KubeTokenClient struct {
 	httpClient  *http.Client
 	url         string
@@ -52,7 +54,7 @@ func NewKubeTokenClient(contextName, token, namespace string) (*KubeTokenClient,
 	}, nil
 }
 
-func (c *KubeTokenClient) RequestKubeToken() (*KubeTokenResponse, error) {
+func (c *KubeTokenClient) GetKubeToken() (*KubeTokenResponse, error) {
 	resp, err := c.httpClient.Get(c.url)
 	if err != nil {
 		return &KubeTokenResponse{}, fmt.Errorf("failed GET request: %w", err)
@@ -62,11 +64,13 @@ func (c *KubeTokenClient) RequestKubeToken() (*KubeTokenResponse, error) {
 		return &KubeTokenResponse{}, fmt.Errorf(oktetoErrors.ErrNotLogged, c.contextName)
 	}
 
+	if resp.StatusCode == http.StatusNotFound {
+		return &KubeTokenResponse{}, fmt.Errorf(ErrDynamicKubetokenNotSupported)
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		return &KubeTokenResponse{}, fmt.Errorf("GET request returned status %s", resp.Status)
 	}
-
-	// CHECK FOR 404?
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

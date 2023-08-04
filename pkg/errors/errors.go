@@ -67,7 +67,7 @@ var (
 	// ErrCommandFailed is raised when the command execution failed
 	ErrCommandFailed = errors.New("command execution failed")
 
-	// notLogged is raised when the user is not logged in okteto
+	// ErrNotLoggedMsg is raised when the user is not logged in okteto
 	ErrNotLoggedMsg = errors.New("user is not logged in okteto")
 
 	// ErrNotLogged is raised when we can't get the user token
@@ -76,7 +76,7 @@ var (
 	// ErrCtxNotSet is raised when we don't have ctx set
 	ErrCtxNotSet = fmt.Errorf("your context is not set. Please run 'okteto context' and select your context")
 
-	// ErrNotOktetoCluster is raised when we a command is only available on an okteto cluster
+	// ErrNotOktetoCluster is raised when a command is only available on an okteto cluster
 	ErrNotOktetoCluster = fmt.Errorf("user is not logged in okteto cluster. Please run 'okteto context use' and select your context")
 
 	// ErrNotFound is raised when an object is not found
@@ -124,7 +124,7 @@ var (
 	// ErrDivertNotSupported raised if the divert feature is not supported in the current cluster
 	ErrDivertNotSupported = fmt.Errorf("the 'divert' field is only supported in clusters that have Okteto installed")
 
-	// ContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
+	// ErrContextIsNotOktetoCluster raised if the cluster connected is not managed by okteto
 	ErrContextIsNotOktetoCluster = fmt.Errorf("this command is only available in clusters where Okteto is installed.\n Follow this link to know more about configuring Okteto at your cluster: https://www.okteto.com/docs/self-hosted/")
 
 	// ErrTokenFlagNeeded is raised when the command is executed from inside a pod from a ctx command
@@ -148,7 +148,7 @@ var (
 	// ErrCorruptedOktetoContexts raised when the okteto context store is corrupted
 	ErrCorruptedOktetoContexts = "okteto context store is corrupted. Delete the folder '%s' and try again"
 
-	// ErrIntSig raised if the we get an interrupt signal in the middle of a command
+	// ErrIntSig raised if we get an interrupt signal in the middle of a command
 	ErrIntSig = fmt.Errorf("interrupt signal received")
 
 	// ErrKubernetesLongTimeToCreateDevContainer raised when the creation of the dev container times out

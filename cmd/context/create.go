@@ -299,7 +299,7 @@ func getLoggedUserContext(ctx context.Context, c *ContextCommand, ctxOptions *Co
 	if err != nil {
 		return nil, err
 	}
-	kubetokenRes, err := kubetokenClient.RequestKubeToken()
+	kubetokenRes, err := kubetokenClient.GetKubeToken()
 	if err != nil {
 		return nil, err
 	}
