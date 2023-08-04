@@ -90,10 +90,15 @@ type DeployCommand struct {
 	Fs                 afero.Fs
 	DivertDriver       divert.Driver
 	PipelineCMD        pipelineCMD.PipelineDeployerInterface
+	AnalyticsTracker   DeployAnalyticsTracker
 
 	PipelineType       model.Archetype
 	isRemote           bool
 	runningInInstaller bool
+}
+
+type DeployAnalyticsTracker interface {
+	TrackDeploy(dm analytics.DeployMetadata)
 }
 
 type ExternalResourceInterface interface {
@@ -199,6 +204,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 				Fs:                 afero.NewOsFs(),
 				PipelineCMD:        pc,
 				runningInInstaller: config.RunningInInstaller(),
+				AnalyticsTracker:   analytics.NewAnalyticsTracker(),
 			}
 			startTime := time.Now()
 
@@ -209,32 +215,7 @@ func Deploy(ctx context.Context) *cobra.Command {
 			go func() {
 				err := c.RunDeploy(ctx, options)
 
-				deployType := "custom"
-				hasDependencySection := false
-				hasBuildSection := false
-				if options.Manifest != nil {
-					if options.Manifest.IsV2 &&
-						options.Manifest.Deploy != nil &&
-						options.Manifest.Deploy.ComposeSection != nil &&
-						options.Manifest.Deploy.ComposeSection.ComposesInfo != nil {
-						deployType = "compose"
-					}
-
-					hasDependencySection = options.Manifest.IsV2 && len(options.Manifest.Dependencies) > 0
-					hasBuildSection = options.Manifest.IsV2 && len(options.Manifest.Build) > 0
-				}
-
-				analytics.TrackDeploy(analytics.TrackDeployMetadata{
-					Success:                err == nil,
-					IsOktetoRepo:           utils.IsOktetoRepo(),
-					Duration:               time.Since(startTime),
-					PipelineType:           c.PipelineType,
-					DeployType:             deployType,
-					IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
-					HasDependenciesSection: hasDependencySection,
-					HasBuildSection:        hasBuildSection,
-				})
-
+				c.trackDeploy(options.Manifest, options.RunInRemote, startTime, err)
 				exit <- err
 			}()
 
@@ -532,12 +513,7 @@ func getDefaultTimeout() time.Duration {
 
 func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, builder *buildv2.OktetoBuilder, cmapHandler configMapHandler) (deployerInterface, error) {
 
-	// isDeployRemote represents wheather the process is comming from a remote deploy
-	// if true it should get the local deployer
-	isDeployRemote := utils.LoadBoolean(constants.OktetoDeployRemote)
-
-	// remote deployment should be done when flag RunInRemote is active OR deploy.image is fulfilled
-	if !isDeployRemote && (opts.RunInRemote || opts.Manifest.Deploy.Image != "") {
+	if isRemoteDeployer(opts.RunInRemote, opts.Manifest.Deploy.Image) {
 		// run remote
 		oktetoLog.Info("Deploying remotely...")
 		return newRemoteDeployer(builder), nil
@@ -551,6 +527,15 @@ func GetDeployer(ctx context.Context, manifest *model.Manifest, opts *Options, b
 		return nil, fmt.Errorf("could not initialize local deploy command: %w", err)
 	}
 	return deployer, nil
+}
+
+func isRemoteDeployer(runInRemoteFlag bool, deployImage string) bool {
+	// isDeployRemote represents whether the process is coming from a remote deploy
+	// if true it should get the local deployer
+	isDeployRemote := utils.LoadBoolean(constants.OktetoDeployRemote)
+
+	// remote deployment should be done when flag RunInRemote is active OR deploy.image is fulfilled
+	return !isDeployRemote && (runInRemoteFlag || deployImage != "")
 }
 
 // deployDependencies deploy the dependencies in the manifest
@@ -605,4 +590,36 @@ func (dc *DeployCommand) recreateFailedPods(ctx context.Context, name string) er
 		}
 	}
 	return nil
+}
+
+func (dc *DeployCommand) trackDeploy(manifest *model.Manifest, runInRemoteFlag bool, startTime time.Time, err error) {
+	deployType := "custom"
+	hasDependencySection := false
+	hasBuildSection := false
+	isRunningOnRemoteDeployer := false
+	if manifest != nil {
+		if manifest.IsV2 &&
+			manifest.Deploy != nil {
+			isRunningOnRemoteDeployer = isRemoteDeployer(runInRemoteFlag, manifest.Deploy.Image)
+			if manifest.Deploy.ComposeSection != nil &&
+				manifest.Deploy.ComposeSection.ComposesInfo != nil {
+				deployType = "compose"
+			}
+		}
+
+		hasDependencySection = manifest.HasDependencies()
+		hasBuildSection = manifest.HasBuildSection()
+	}
+
+	dc.AnalyticsTracker.TrackDeploy(analytics.DeployMetadata{
+		Success:                err == nil,
+		IsOktetoRepo:           utils.IsOktetoRepo(),
+		Duration:               time.Since(startTime),
+		PipelineType:           dc.PipelineType,
+		DeployType:             deployType,
+		IsPreview:              os.Getenv(model.OktetoCurrentDeployBelongsToPreview) == "true",
+		HasDependenciesSection: hasDependencySection,
+		HasBuildSection:        hasBuildSection,
+		IsRemote:               isRunningOnRemoteDeployer,
+	})
 }
