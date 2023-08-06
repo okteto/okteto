@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/okteto/okteto/cmd/utils"
+	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -28,12 +29,18 @@ import (
 func DeleteCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
-		Args:  utils.ExactArgsAccepted(1, "https://okteto.com/docs/reference/cli/#delete"),
-		Short: "Delete a context",
+		Args:  utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#delete"),
+		Short: "Delete multiple contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			args[0] = okteto.AddSchema(args[0])
-			args[0] = strings.TrimSuffix(args[0], "/")
-			return Delete(args[0])
+			analytics.TrackDeleteMultipleContexts(len(args))
+			for _, arg := range args {
+				arg = okteto.AddSchema(arg)
+				arg = strings.TrimSuffix(arg, "/")
+				if err := Delete(arg); err != nil {
+					return err
+				}
+			}
+			return nil
 		},
 	}
 	return cmd
