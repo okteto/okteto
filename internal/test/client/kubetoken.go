@@ -21,12 +21,6 @@ type FakeKubetokenClient struct {
 	err      error
 }
 
-// FakeKubetokenResponse mocks the kubetoken response
-//type FakeKubetokenResponse struct {
-//	Response types.KubetokenInterface
-//	Err      error
-//}
-
 // NewFakeKubetokenClient returns a new fake kubetoken client
 func NewFakeKubetokenClient(response types.KubeTokenResponse, err error) *FakeKubetokenClient {
 	return &FakeKubetokenClient{
