@@ -23,6 +23,17 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+)
+
+var (
+	oktetoExecConfig = &clientcmdapi.ExecConfig{
+		APIVersion:      "client.authentication.k8s.io/v1",
+		Command:         "okteto",
+		Args:            []string{"kubetoken"},
+		InstallHint:     "Okteto needs to be installed and in your PATH to use this context. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
+		InteractiveMode: "IfAvailable",
+	}
 )
 
 // UpdateKubeconfigCMD all contexts managed by okteto
@@ -71,4 +82,17 @@ func ExecuteUpdateKubeconfig(okContext *okteto.OktetoContext, kubeconfigPaths []
 	oktetoLog.Success("Updated kubernetes context '%s/%s' in '%s'", contextName, okContext.Namespace, kubeconfigPaths)
 
 	return nil
+}
+
+func updateUserAuthInfoWithExec(okCtx *okteto.OktetoContext, userID string) {
+	if okCtx.Cfg.AuthInfos == nil {
+		okCtx.Cfg.AuthInfos = clientcmdapi.NewConfig().AuthInfos
+		okCtx.Cfg.AuthInfos[userID] = clientcmdapi.NewAuthInfo()
+	}
+
+	if token := okCtx.Cfg.AuthInfos[userID].Token; token != "" {
+		okCtx.Cfg.AuthInfos[userID].Token = ""
+	}
+
+	okCtx.Cfg.AuthInfos[userID].Exec = oktetoExecConfig
 }
