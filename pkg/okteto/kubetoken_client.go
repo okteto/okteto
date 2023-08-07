@@ -14,8 +14,10 @@
 package okteto
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/okteto/okteto/pkg/types"
 	"io"
 	"net/http"
 	"net/url"
@@ -47,31 +49,37 @@ func getKubetokenURL(baseURL, namespace string) (*url.URL, error) {
 	return url.Parse(fmt.Sprintf(kubetokenPathTemplate, baseURL, namespace))
 }
 
-func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (string, error) {
+func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (*types.KubeTokenResponse, error) {
 	url, err := getKubetokenURL(baseURL, namespace)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	resp, err := c.httpClient.Get(url.String())
 	if err != nil {
-		return "", fmt.Errorf("GetKubeToken %w: %w", errRequest, err)
+		return nil, fmt.Errorf("GetKubeToken %w: %w", errRequest, err)
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return "", fmt.Errorf("GetKubeToken %w", errUnauthorized)
+		return nil, fmt.Errorf("GetKubeToken %w", errUnauthorized)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("GetKubeToken %w: %s", errStatus, resp.Status)
+		return nil, fmt.Errorf("GetKubeToken %w: %s", errStatus, resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read kubetoken response: %w", err)
+		return nil, fmt.Errorf("failed to read kubetoken response: %w", err)
 	}
 
-	return string(body), nil
+	var kubeTokenResponse types.KubeTokenResponse
+	err = json.Unmarshal(body, &kubeTokenResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal kubetoken response: %w", err)
+	}
+
+	return &kubeTokenResponse, nil
 }
 
 func (c *kubeTokenClient) CheckService(baseURL, namespace string) error {

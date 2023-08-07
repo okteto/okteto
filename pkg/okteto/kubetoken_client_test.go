@@ -1,11 +1,12 @@
 package okteto
 
 import (
+	"github.com/okteto/okteto/pkg/types"
+	"github.com/stretchr/testify/assert"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func Test_GetKubeToken(t *testing.T) {
@@ -34,7 +35,15 @@ func Test_GetKubeToken(t *testing.T) {
 			name: "success response",
 			httpFakeHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte("token"))
+				mockResponse := &types.KubeTokenResponse{
+					TokenRequest: authenticationv1.TokenRequest{
+						Status: authenticationv1.TokenRequestStatus{
+							Token: "token",
+						},
+					},
+				}
+				json, _ := mockResponse.ToJson()
+				w.Write([]byte(json))
 			}),
 			expectedToken: "token",
 		},
@@ -50,7 +59,9 @@ func Test_GetKubeToken(t *testing.T) {
 			}
 
 			got, err := fakeKubetokenClient.GetKubeToken(fakeHttpServer.URL, tt.namespace)
-			assert.Equal(t, tt.expectedToken, got)
+			if tt.expectedToken != "" {
+				assert.Equal(t, tt.expectedToken, got.Status.Token)
+			}
 			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}
