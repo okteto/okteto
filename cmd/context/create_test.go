@@ -316,9 +316,10 @@ func Test_createContext(t *testing.T) {
 			defer os.Remove(file)
 
 			fakeOktetoClient := &client.FakeOktetoClient{
-				Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-				Users:     client.NewFakeUsersClient(tt.user),
-				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
+				Users:           client.NewFakeUsersClient(tt.user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(types.KubeTokenResponse{}, nil),
 			}
 
 			ctxController := newFakeContextCommand(fakeOktetoClient, tt.user, tt.fakeObjects)
@@ -342,8 +343,9 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 	}
 
 	fakeOktetoClient := &client.FakeOktetoClient{
-		Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-		Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+		Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
+		Users:           client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+		KubetokenClient: client.NewFakeKubetokenClient(types.KubeTokenResponse{}, nil),
 	}
 
 	ctxController := newFakeContextCommand(fakeOktetoClient, user, nil)
@@ -568,8 +570,9 @@ func TestGetUserContext(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			fakeOktetoClient := &client.FakeOktetoClient{
-				Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-				Users:     client.NewFakeUsersClient(user, tc.input.userErr...),
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
+				Users:           client.NewFakeUsersClient(user, tc.input.userErr...),
+				KubetokenClient: client.NewFakeKubetokenClient(types.KubeTokenResponse{}, nil),
 			}
 			cmd := ContextCommand{
 				OktetoClientProvider: client.NewFakeOktetoClientProvider(fakeOktetoClient),

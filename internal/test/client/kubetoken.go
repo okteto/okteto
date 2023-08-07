@@ -13,25 +13,34 @@
 
 package client
 
+import "github.com/okteto/okteto/pkg/types"
+
 // FakeKubetokenClient mocks the kubetoken client interface
 type FakeKubetokenClient struct {
-	response FakeKubetokenResponse
+	response types.KubeTokenResponse
+	err      error
 }
 
 // FakeKubetokenResponse mocks the kubetoken response
-type FakeKubetokenResponse struct {
-	Token string
-	Err   error
-}
+//type FakeKubetokenResponse struct {
+//	Response types.KubetokenInterface
+//	Err      error
+//}
 
 // NewFakeKubetokenClient returns a new fake kubetoken client
-func NewFakeKubetokenClient(response FakeKubetokenResponse) *FakeKubetokenClient {
+func NewFakeKubetokenClient(response types.KubeTokenResponse, err error) *FakeKubetokenClient {
 	return &FakeKubetokenClient{
 		response: response,
+		err:      err,
 	}
 }
 
 // GetKubeToken returns a temp token
-func (c *FakeKubetokenClient) GetKubeToken(_, _ string) (string, error) {
-	return c.response.Token, c.response.Err
+func (c *FakeKubetokenClient) GetKubeToken(_, _ string) (types.KubeTokenResponse, error) {
+	return c.response, c.err
+}
+
+// CheckService mocks the CheckService method
+func (c *FakeKubetokenClient) CheckService(_, _ string) error {
+	return c.err
 }
