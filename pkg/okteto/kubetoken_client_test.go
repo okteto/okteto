@@ -36,7 +36,7 @@ func Test_GetKubeToken(t *testing.T) {
 			name: "success response",
 			httpFakeHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				mockResponse := &types.KubeTokenResponse{
+				mockResponse := types.KubeTokenResponse{
 					TokenRequest: authenticationv1.TokenRequest{
 						Status: authenticationv1.TokenRequestStatus{
 							Token: "token",

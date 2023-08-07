@@ -82,6 +82,6 @@ type StreamInterface interface {
 
 // KubetokenInterface represents the kubetoken client
 type KubetokenInterface interface {
-	GetKubeToken(baseURL, namespace string) (*KubeTokenResponse, error)
+	GetKubeToken(baseURL, namespace string) (KubeTokenResponse, error)
 	CheckService(baseURL, namespace string) error
 }

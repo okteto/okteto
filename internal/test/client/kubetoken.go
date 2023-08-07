@@ -15,7 +15,7 @@ package client
 
 // FakeKubetokenClient mocks the kubetoken client interface
 type FakeKubetokenClient struct {
-	response *FakeKubetokenResponse
+	response FakeKubetokenResponse
 }
 
 // FakeKubetokenResponse mocks the kubetoken response
@@ -25,7 +25,7 @@ type FakeKubetokenResponse struct {
 }
 
 // NewFakeKubetokenClient returns a new fake kubetoken client
-func NewFakeKubetokenClient(response *FakeKubetokenResponse) *FakeKubetokenClient {
+func NewFakeKubetokenClient(response FakeKubetokenResponse) *FakeKubetokenClient {
 	return &FakeKubetokenClient{
 		response: response,
 	}

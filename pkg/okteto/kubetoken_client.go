@@ -49,37 +49,37 @@ func getKubetokenURL(baseURL, namespace string) (*url.URL, error) {
 	return url.Parse(fmt.Sprintf(kubetokenPathTemplate, baseURL, namespace))
 }
 
-func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (*types.KubeTokenResponse, error) {
+func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (types.KubeTokenResponse, error) {
 	url, err := getKubetokenURL(baseURL, namespace)
 	if err != nil {
-		return nil, err
+		return types.KubeTokenResponse{}, err
 	}
 
 	resp, err := c.httpClient.Get(url.String())
 	if err != nil {
-		return nil, fmt.Errorf("GetKubeToken %w: %w", errRequest, err)
+		return types.KubeTokenResponse{}, fmt.Errorf("GetKubeToken %w: %w", errRequest, err)
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return nil, fmt.Errorf("GetKubeToken %w", errUnauthorized)
+		return types.KubeTokenResponse{}, fmt.Errorf("GetKubeToken %w", errUnauthorized)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GetKubeToken %w: %s", errStatus, resp.Status)
+		return types.KubeTokenResponse{}, fmt.Errorf("GetKubeToken %w: %s", errStatus, resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read kubetoken response: %w", err)
+		return types.KubeTokenResponse{}, fmt.Errorf("failed to read kubetoken response: %w", err)
 	}
 
 	var kubeTokenResponse types.KubeTokenResponse
 	err = json.Unmarshal(body, &kubeTokenResponse)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal kubetoken response: %w", err)
+		return types.KubeTokenResponse{}, fmt.Errorf("failed to unmarshal kubetoken response: %w", err)
 	}
 
-	return &kubeTokenResponse, nil
+	return kubeTokenResponse, nil
 }
 
 func (c *kubeTokenClient) CheckService(baseURL, namespace string) error {

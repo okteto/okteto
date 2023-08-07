@@ -27,12 +27,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type KubeTokenSerializer struct {
+type Serializer struct {
 	KubeToken types.KubeTokenResponse
 }
 
-func (k *KubeTokenSerializer) ToJson() (string, error) {
-	bytes, err := json.MarshalIndent(k.KubeToken, "", "  ")
+func (k *Serializer) ToJson() (string, error) {
+	bytes, err := json.MarshalIndent(k, "", "  ")
 	if err != nil {
 		return "", err
 	}
@@ -77,8 +77,8 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			return fmt.Errorf("failed to get the kubetoken: %w", err)
 		}
 
-		serializer := &KubeTokenSerializer{
-			KubeToken: *out,
+		serializer := &Serializer{
+			KubeToken: out,
 		}
 
 		jsonStr, err := serializer.ToJson()
