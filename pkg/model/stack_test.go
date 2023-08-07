@@ -1336,3 +1336,88 @@ func TestServicesToGraph(t *testing.T) {
 
 	}
 }
+
+func TestValidateServices(t *testing.T) {
+	tc := []struct {
+		name     string
+		services ComposeServices
+		expected error
+	}{
+		{
+			name: "no cycle - no connections",
+			services: ComposeServices{
+				"a": &Service{},
+				"b": &Service{},
+				"c": &Service{},
+			},
+			expected: nil,
+		},
+		{
+			name: "no cycle - connections",
+			services: ComposeServices{
+				"a": &Service{
+					DependsOn: DependsOn{
+						"b": DependsOnConditionSpec{},
+					},
+				},
+				"b": &Service{
+					DependsOn: DependsOn{
+						"c": DependsOnConditionSpec{},
+					},
+				},
+				"c": &Service{},
+			},
+			expected: nil,
+		},
+		{
+			name: "cycle - connections itself",
+			services: ComposeServices{
+				"a": &Service{
+					DependsOn: DependsOn{
+						"a": DependsOnConditionSpec{},
+					},
+				},
+			},
+			expected: errDependsOn,
+		},
+		{
+			name: "no cycle - undefined dependency",
+			services: ComposeServices{
+				"a": &Service{
+					DependsOn: DependsOn{
+						"b": DependsOnConditionSpec{},
+					},
+				},
+			},
+			expected: errDependsOn,
+		},
+		{
+			name: "cycle - indirect cycle",
+			services: ComposeServices{
+				"a": &Service{
+					DependsOn: DependsOn{
+						"b": DependsOnConditionSpec{},
+					},
+				},
+				"b": &Service{
+					DependsOn: DependsOn{
+						"c": DependsOnConditionSpec{},
+					},
+				},
+				"c": &Service{
+					DependsOn: DependsOn{
+						"a": DependsOnConditionSpec{},
+					},
+				},
+			},
+			expected: errDependsOn,
+		},
+	}
+	for _, tt := range tc {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.services.ValidateDependsOn(tt.services.getNames())
+			assert.ErrorIs(t, err, tt.expected)
+		})
+	}
+
+}

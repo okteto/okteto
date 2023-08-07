@@ -109,7 +109,7 @@ deploy:
 `
 	composeTemplateByManifest2 = `services:
 app:
-  image: okteto.dev/app:okteto
+  image: ${OKTETO_BUILD_APP_IMAGE}
   entrypoint: python -m http.server 8080
   ports:
 	- 8080
@@ -499,6 +499,54 @@ func TestDeployComposeFromOktetoManifest(t *testing.T) {
 
 	_, err = integration.GetService(context.Background(), testNamespace, "nginx", c)
 	require.True(t, k8sErrors.IsNotFound(err))
+}
+func TestComposeDependsOnNonExistingService(t *testing.T) {
+	t.Parallel()
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+
+	composePath := filepath.Join(dir, "docker-compose.yml")
+	composeContent := []byte(`
+services:
+  app:
+    image: alpine
+    depends_on:
+      - nginx
+`)
+	err = os.WriteFile(composePath, composeContent, 0600)
+	require.NoError(t, err)
+
+	testNamespace := integration.GetTestNamespace("TestNotPanic", user)
+	namespaceOpts := &commands.NamespaceOptions{
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	require.NoError(t, commands.RunOktetoCreateNamespace(oktetoPath, namespaceOpts))
+	defer commands.RunOktetoDeleteNamespace(oktetoPath, namespaceOpts)
+
+	deployOptions := &commands.DeployOptions{
+		Workdir:    dir,
+		Namespace:  testNamespace,
+		OktetoHome: dir,
+		Token:      token,
+	}
+	output, err := commands.RunOktetoDeployWithOutput(oktetoPath, deployOptions)
+	require.Error(t, err)
+	require.Contains(t, string(output), "Invalid depends_on: Service 'app' depends on service 'nginx' which is undefined.")
+
+	deployOptionsWithFile := &commands.DeployOptions{
+		Workdir:      dir,
+		Namespace:    testNamespace,
+		OktetoHome:   dir,
+		Token:        token,
+		ManifestPath: "docker-compose.yml",
+	}
+	output, err = commands.RunOktetoDeployWithOutput(oktetoPath, deployOptionsWithFile)
+	require.Error(t, err)
+	require.Contains(t, string(output), "Invalid depends_on: Service 'app' depends on service 'nginx' which is undefined.")
 }
 
 func createComposeScenarioByManifest(dir string) error {

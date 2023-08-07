@@ -863,6 +863,9 @@ func ValidateDefinedServices(s *model.Stack, servicesToDeploy []string) error {
 			return fmt.Errorf("service '%s' is not defined. Defined services are: [%s]", svcToDeploy, strings.Join(definedSvcs, ", "))
 		}
 	}
+	if err := s.Services.ValidateDependsOn(servicesToDeploy); err != nil {
+		return err
+	}
 	return nil
 }
 
