@@ -53,12 +53,12 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			return errors.ErrContextIsNotOktetoCluster
 		}
 
-		c, err := okteto.NewKubeTokenClient(octx.Name, octx.Token, octx.Namespace)
+		c, err := okteto.NewOktetoClient()
 		if err != nil {
 			return fmt.Errorf("failed to initialize the kubetoken client: %w", err)
 		}
 
-		out, err := c.GetKubeToken()
+		out, err := c.Kubetoken().GetKubeToken(octx.Name, octx.Namespace)
 		if err != nil {
 			return fmt.Errorf("failed to get the kubetoken: %w", err)
 		}

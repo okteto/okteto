@@ -1,110 +1,57 @@
 package okteto
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestNewKubeTokenClient(t *testing.T) {
-	t.Parallel()
-
-	tt := []struct {
-		testName       string
-		contextName    string
-		token          string
-		expectedError  error
-		expectedClient *KubeTokenClient
+func Test_GetKubeToken(t *testing.T) {
+	tests := []struct {
+		name            string
+		httpFakeHandler http.Handler
+		namespace       string
+		expectedToken   string
+		expectedErr     error
 	}{
 		{
-
-			testName:       "No token",
-			contextName:    "test",
-			token:          "",
-			expectedError:  fmt.Errorf(oktetoErrors.ErrNotLogged, "test"),
-			expectedClient: nil,
+			name: "error request status unauthorized",
+			httpFakeHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusUnauthorized)
+			}),
+			expectedErr: errUnauthorized,
 		},
 		{
-			testName:       "No context",
-			contextName:    "",
-			token:          "test",
-			expectedError:  oktetoErrors.ErrCtxNotSet,
-			expectedClient: nil,
+			name: "error request not success",
+			httpFakeHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+			}),
+			expectedErr: errStatus,
+		},
+		{
+			name: "success response",
+			httpFakeHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("token"))
+			}),
+			expectedToken: "token",
 		},
 	}
 
-	for _, tc := range tt {
-		tc := tc
-		t.Run(tc.testName, func(t *testing.T) {
-			t.Parallel()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeHttpServer := httptest.NewServer(tt.httpFakeHandler)
+			defer fakeHttpServer.Close()
 
-			client, err := NewKubeTokenClient(tc.contextName, tc.token, "test")
+			fakeKubetokenClient := &kubeTokenClient{
+				httpClient: fakeHttpServer.Client(),
+			}
 
-			require.Equal(t, tc.expectedError, err)
-			require.Equal(t, tc.expectedClient, client)
+			got, err := fakeKubetokenClient.GetKubeToken(fakeHttpServer.URL, tt.namespace)
+			assert.Equal(t, tt.expectedToken, got)
+			assert.ErrorIs(t, err, tt.expectedErr)
 		})
 	}
-
-	t.Run("Parse error", func(t *testing.T) {
-		t.Parallel()
-
-		_, err := NewKubeTokenClient("not!!://a.url", "mytoken", "test")
-		require.Error(t, err)
-	})
-
-	t.Run("No error", func(t *testing.T) {
-		t.Parallel()
-
-		client, err := NewKubeTokenClient("cloud.okteto.com", "mytoken", "testns")
-		require.NoError(t, err)
-
-		require.Equal(t, "https://cloud.okteto.com/auth/kubetoken/testns", client.url)
-		require.Equal(t, "cloud.okteto.com", client.contextName)
-	})
-}
-
-func TestGetKubeToken(t *testing.T) {
-	t.Parallel()
-
-	expectedToken := "token"
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(expectedToken))
-	}))
-
-	defer s.Close()
-
-	c := &KubeTokenClient{
-		httpClient: s.Client(),
-		url:        s.URL,
-	}
-
-	token, err := c.GetKubeToken()
-	require.NoError(t, err)
-	require.Equal(t, expectedToken, token)
-}
-
-func TestGetKubeTokenUnauthorizedErr(t *testing.T) {
-	t.Parallel()
-
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusUnauthorized)
-	}))
-
-	defer s.Close()
-
-	context := "testctx"
-
-	c := &KubeTokenClient{
-		httpClient:  s.Client(),
-		url:         s.URL,
-		contextName: context,
-	}
-
-	_, err := c.GetKubeToken()
-	require.Equal(t, fmt.Errorf(oktetoErrors.ErrNotLogged, context), err)
 }

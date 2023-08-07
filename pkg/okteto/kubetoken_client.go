@@ -14,50 +14,55 @@
 package okteto
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
-
-	oktetoErrors "github.com/okteto/okteto/pkg/errors"
+	"net/url"
 )
 
-const kubetokenPath = "auth/kubetoken"
+const (
+	// kubetokenPathTemplate (baseURL, namespace)
+	kubetokenPathTemplate = "%s/auth/kubetoken/%s"
+)
 
-type KubeTokenClient struct {
-	httpClient  *http.Client
-	url         string
-	contextName string
+var (
+	errRequest      = errors.New("failed request")
+	errStatus       = errors.New("status error")
+	errUnauthorized = errors.New("unauthorized")
+)
+
+type kubeTokenClient struct {
+	httpClient *http.Client
 }
 
-func NewKubeTokenClient(contextName, token, namespace string) (*KubeTokenClient, error) {
-	if contextName == "" {
-		return nil, oktetoErrors.ErrCtxNotSet
+func newKubeTokenClient(httpClient *http.Client) *kubeTokenClient {
+	return &kubeTokenClient{
+		httpClient: httpClient,
 	}
-
-	httpClient, url, err := newOktetoHttpClient(contextName, token, fmt.Sprintf("%s/%s", kubetokenPath, namespace))
-	if err != nil {
-		return nil, err
-	}
-
-	return &KubeTokenClient{
-		httpClient:  httpClient,
-		url:         url,
-		contextName: contextName,
-	}, nil
 }
 
-func (c *KubeTokenClient) GetKubeToken() (string, error) {
-	resp, err := c.httpClient.Get(c.url)
+func getKubetokenURL(baseURL, namespace string) (*url.URL, error) {
+	return url.Parse(fmt.Sprintf(kubetokenPathTemplate, baseURL, namespace))
+}
+
+func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (string, error) {
+	url, err := getKubetokenURL(baseURL, namespace)
 	if err != nil {
-		return "", fmt.Errorf("failed GET request: %w", err)
+		return "", err
+	}
+
+	resp, err := c.httpClient.Get(url.String())
+	if err != nil {
+		return "", fmt.Errorf("GetKubeToken %w: %w", errRequest, err)
 	}
 
 	if resp.StatusCode == http.StatusUnauthorized {
-		return "", fmt.Errorf(oktetoErrors.ErrNotLogged, c.contextName)
+		return "", fmt.Errorf("GetKubeToken %w", errUnauthorized)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("GET request returned status %s", resp.Status)
+		return "", fmt.Errorf("GetKubeToken %w: %s", errStatus, resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
