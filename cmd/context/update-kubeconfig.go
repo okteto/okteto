@@ -53,15 +53,23 @@ func UpdateKubeconfigCMD() *cobra.Command {
 
 			okCtx := okteto.Context()
 			kubeconfigPath := config.GetKubeconfigPath()
+			kubetokenEnabled := false
 
-			return ExecuteUpdateKubeconfig(okCtx, kubeconfigPath)
+			okClient, err := okteto.NewOktetoClient()
+			if err != nil {
+				return err
+			}
+			if err := okClient.Kubetoken().CheckService(okCtx.Name, okCtx.Namespace); err == nil {
+				kubetokenEnabled = true
+			}
+			return ExecuteUpdateKubeconfig(okCtx, kubeconfigPath, kubetokenEnabled)
 		},
 	}
 
 	return cmd
 }
 
-func ExecuteUpdateKubeconfig(okContext *okteto.OktetoContext, kubeconfigPaths []string) error {
+func ExecuteUpdateKubeconfig(okContext *okteto.OktetoContext, kubeconfigPaths []string, kubetokenEnabled bool) error {
 	contextName := okContext.Name
 	if okContext.IsOkteto {
 		contextName = okteto.UrlToKubernetesContext(contextName)
@@ -73,6 +81,10 @@ func ExecuteUpdateKubeconfig(okContext *okteto.OktetoContext, kubeconfigPaths []
 				return err
 			}
 			okContext.Cfg.Clusters[contextName].CertificateAuthorityData = certPEM
+		}
+
+		if kubetokenEnabled {
+			updateUserAuthInfoWithExec(okContext, okContext.UserID)
 		}
 	}
 

@@ -113,7 +113,7 @@ func Test_ExecuteUpdateKubeconfig(t *testing.T) {
 			okContext := okteto.Context()
 			kubeconfigPaths := []string{file}
 
-			err = ExecuteUpdateKubeconfig(okContext, kubeconfigPaths)
+			err = ExecuteUpdateKubeconfig(okContext, kubeconfigPaths, false)
 			assert.NoError(t, err, "error writing kubeconfig")
 
 			cfg := kubeconfig.Get(kubeconfigPaths)
