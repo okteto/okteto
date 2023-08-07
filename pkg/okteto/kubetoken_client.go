@@ -27,9 +27,10 @@ const (
 )
 
 var (
-	errRequest      = errors.New("failed request")
-	errStatus       = errors.New("status error")
-	errUnauthorized = errors.New("unauthorized")
+	errRequest               = errors.New("failed request")
+	errStatus                = errors.New("status error")
+	errUnauthorized          = errors.New("unauthorized")
+	errKubetokenNotAvailable = errors.New("kubetoken service not found")
 )
 
 type kubeTokenClient struct {
@@ -71,4 +72,26 @@ func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (string, error
 	}
 
 	return string(body), nil
+}
+
+func (c *kubeTokenClient) CheckService(baseURL, namespace string) error {
+	url, err := getKubetokenURL(baseURL, namespace)
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpClient.Head(url.String())
+	if err != nil {
+		return fmt.Errorf("CheckService %w: %w", errRequest, err)
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("GetKubeToken %w", errUnauthorized)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("CheckService %w: %s", errKubetokenNotAvailable, baseURL)
+	}
+
+	return nil
 }

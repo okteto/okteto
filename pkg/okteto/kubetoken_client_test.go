@@ -55,3 +55,47 @@ func Test_GetKubeToken(t *testing.T) {
 		})
 	}
 }
+
+func Test_CheckService(t *testing.T) {
+	tests := []struct {
+		name            string
+		httpFakeHandler http.Handler
+		namespace       string
+		expectedErr     error
+	}{
+		{
+			name: "error request status unauthorized",
+			httpFakeHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusUnauthorized)
+			}),
+			expectedErr: errUnauthorized,
+		},
+		{
+			name: "error service not available",
+			httpFakeHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+			}),
+			expectedErr: errKubetokenNotAvailable,
+		},
+		{
+			name: "success response",
+			httpFakeHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeHttpServer := httptest.NewServer(tt.httpFakeHandler)
+			defer fakeHttpServer.Close()
+
+			fakeKubetokenClient := &kubeTokenClient{
+				httpClient: fakeHttpServer.Client(),
+			}
+
+			err := fakeKubetokenClient.CheckService(fakeHttpServer.URL, tt.namespace)
+			assert.ErrorIs(t, err, tt.expectedErr)
+		})
+	}
+}
