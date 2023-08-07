@@ -18,13 +18,13 @@ import (
 	"testing"
 
 	"github.com/okteto/okteto/internal/test"
-	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-func Test_updateKubeconfig(t *testing.T) {
+func Test_ExecuteUpdateKubeconfig(t *testing.T) {
 
 	var tests = []struct {
 		name          string
@@ -59,7 +59,7 @@ func Test_updateKubeconfig(t *testing.T) {
 			name: "change current namespace",
 			kubeconfigCtx: test.KubeconfigFields{
 				Name:           []string{"to-change"},
-				Namespace:      []string{"to-change"},
+				Namespace:      []string{"test"},
 				CurrentContext: "to-change",
 			},
 			context: &okteto.OktetoContextStore{
@@ -106,24 +106,21 @@ func Test_updateKubeconfig(t *testing.T) {
 			okteto.CurrentStore = tt.context
 			file, err := test.CreateKubeconfig(tt.kubeconfigCtx)
 			if err != nil {
-				t.Fatal(err)
+				assert.NoError(t, err, "error creating temporal kubeconfig")
 			}
 			defer os.Remove(file)
 
-			err = ExecuteUpdateKubeconfig()
-			if err != nil {
-				t.Fatal(err)
-			}
-			cfg := kubeconfig.Get(config.GetKubeconfigPath())
-			if cfg == nil {
-				t.Fatal("not written cfg")
-			}
-			if cfg.CurrentContext != tt.context.CurrentContext {
-				t.Fatal("Not updated correctly")
-			}
-			if cfg.Contexts[tt.context.CurrentContext].Namespace != tt.context.Contexts[tt.context.CurrentContext].Namespace {
-				t.Fatal("not updated correctly")
-			}
+			okContext := okteto.Context()
+			kubeconfigPaths := []string{file}
+
+			err = ExecuteUpdateKubeconfig(okContext, kubeconfigPaths)
+			assert.NoError(t, err, "error writing kubeconfig")
+
+			cfg := kubeconfig.Get(kubeconfigPaths)
+			assert.NotNil(t, cfg, "kubeconfig is nil")
+			assert.Equal(t, tt.context.CurrentContext, cfg.CurrentContext, "current context has changed")
+			assert.Equal(t, tt.context.Contexts[tt.context.CurrentContext].Namespace, cfg.Contexts[tt.context.CurrentContext].Namespace, "namesapce has changed")
+
 		})
 	}
 }
