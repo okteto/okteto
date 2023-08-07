@@ -32,7 +32,7 @@ type Serializer struct {
 }
 
 func (k *Serializer) ToJson() (string, error) {
-	bytes, err := json.MarshalIndent(k, "", "  ")
+	bytes, err := json.MarshalIndent(k.KubeToken, "", "  ")
 	if err != nil {
 		return "", err
 	}
