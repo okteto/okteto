@@ -1,6 +1,7 @@
 package okteto
 
 import (
+	"encoding/json"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
 	authenticationv1 "k8s.io/api/authentication/v1"
@@ -42,8 +43,8 @@ func Test_GetKubeToken(t *testing.T) {
 						},
 					},
 				}
-				json, _ := mockResponse.ToJson()
-				w.Write([]byte(json))
+				jsonBytes, _ := json.Marshal(mockResponse)
+				w.Write(jsonBytes)
 			}),
 			expectedToken: "token",
 		},
