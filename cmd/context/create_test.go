@@ -507,6 +507,7 @@ func TestGetUserContext(t *testing.T) {
 		output                output
 		kubetokenMockResponse types.KubeTokenResponse
 		kubetokenMockError    error
+		useStaticToken        bool
 	}{
 		{
 			name: "existing namespace",
@@ -657,6 +658,31 @@ func TestGetUserContext(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "static kubetoken is returned when using feature flag",
+			input: input{
+				ns: "test",
+			},
+			output: output{
+				uc: &types.UserContext{
+					User: types.User{
+						Token: "test",
+					},
+					Credentials: types.Credential{
+						Token: "static",
+					},
+				},
+				err: nil,
+			},
+			useStaticToken: true,
+			kubetokenMockResponse: types.KubeTokenResponse{
+				TokenRequest: authenticationv1.TokenRequest{
+					Status: authenticationv1.TokenRequestStatus{
+						Token: "dynamic-token",
+					},
+				},
+			},
+		},
 	}
 	for _, tc := range tt {
 		tc := tc
@@ -668,6 +694,10 @@ func TestGetUserContext(t *testing.T) {
 				Credentials: types.Credential{
 					Token: "static",
 				},
+			}
+
+			if tc.useStaticToken {
+				t.Setenv("OKTETO_USE_STATIC_KUBETOKEN", "true")
 			}
 
 			fakeOktetoClient := &client.FakeOktetoClient{
