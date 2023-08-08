@@ -411,7 +411,8 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 		for _, composeInfo := range stackManifest.Deploy.ComposeSection.ComposesInfo {
 			composeFiles = append(composeFiles, composeInfo.File)
 		}
-		s, stackErr := LoadStack("", composeFiles, true)
+		// We need to ensure that LoadStack has false because we don't want to expand env vars
+		s, stackErr := LoadStack("", composeFiles, false)
 		if stackErr != nil {
 			// if err is from validation, then return the stackErr
 			if errors.Is(stackErr, errDependsOn) {
@@ -445,7 +446,8 @@ func getManifestFromFile(cwd, manifestPath string) (*Manifest, error) {
 				stackFiles = append(stackFiles, composeInfo.File)
 			}
 			// LoadStack should perform validation of the stack read from the file on compose section
-			s, err := LoadStack("", stackFiles, true)
+			// We need to ensure that LoadStack has false because we don't want to expand env vars
+			s, err := LoadStack("", stackFiles, false)
 			if err != nil {
 				return nil, err
 			}
