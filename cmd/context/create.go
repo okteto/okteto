@@ -383,6 +383,7 @@ func (c ContextCommand) getUserContext(ctx context.Context, ns string) (*types.U
 
 		kubetoken, err := client.Kubetoken().GetKubeToken(okteto.Context().Name, okteto.Context().Namespace)
 		if err != nil {
+			oktetoLog.Debug("Dynamic Kubetoken not available, falling back to static token")
 			return userContext, nil
 		}
 

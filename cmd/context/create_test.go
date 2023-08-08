@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	"os"
 	"strings"
 	"testing"
@@ -481,9 +482,6 @@ func TestCheckAccessToNamespace(t *testing.T) {
 
 func TestGetUserContext(t *testing.T) {
 	ctx := context.Background()
-	user := &types.User{
-		Token: "test",
-	}
 
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		CurrentContext: "test",
@@ -504,9 +502,11 @@ func TestGetUserContext(t *testing.T) {
 		err error
 	}
 	tt := []struct {
-		name   string
-		input  input
-		output output
+		name                  string
+		input                 input
+		output                output
+		kubetokenMockResponse types.KubeTokenResponse
+		kubetokenMockError    error
 	}{
 		{
 			name: "existing namespace",
@@ -517,6 +517,9 @@ func TestGetUserContext(t *testing.T) {
 				uc: &types.UserContext{
 					User: types.User{
 						Token: "test",
+					},
+					Credentials: types.Credential{
+						Token: "static",
 					},
 				},
 				err: nil,
@@ -561,18 +564,116 @@ func TestGetUserContext(t *testing.T) {
 					User: types.User{
 						Token: "test",
 					},
+					Credentials: types.Credential{
+						Token: "static",
+					},
 				},
 				err: nil,
+			},
+		},
+		{
+			name: "two retries, then success",
+			input: input{
+				ns: "test",
+				userErr: []error{
+					fmt.Errorf("first error"),
+					fmt.Errorf("second error"),
+				},
+			},
+			output: output{
+				uc: &types.UserContext{
+					User: types.User{
+						Token: "test",
+					},
+					Credentials: types.Credential{
+						Token: "static",
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "max retries exceeded",
+			input: input{
+				ns: "test",
+				userErr: []error{
+					assert.AnError,
+					assert.AnError,
+					assert.AnError,
+					assert.AnError,
+				},
+			},
+			output: output{
+				uc:  nil,
+				err: oktetoErrors.ErrInternalServerError,
+			},
+		},
+		{
+			name: "dynamic kubetoken not available, falling back to static token",
+			input: input{
+				ns: "test",
+			},
+			output: output{
+				uc: &types.UserContext{
+					User: types.User{
+						Token: "test",
+					},
+					Credentials: types.Credential{
+						Token: "static",
+					},
+				},
+				err: nil,
+			},
+			kubetokenMockResponse: types.KubeTokenResponse{
+				TokenRequest: authenticationv1.TokenRequest{
+					Status: authenticationv1.TokenRequestStatus{
+						Token: "",
+					},
+				},
+			},
+			kubetokenMockError: assert.AnError,
+		},
+		{
+			name: "dynamic kubetoken returned successfully and takes priority over static token",
+			input: input{
+				ns: "test",
+			},
+			output: output{
+				uc: &types.UserContext{
+					User: types.User{
+						Token: "test",
+					},
+					Credentials: types.Credential{
+						Token: "dynamic-token",
+					},
+				},
+				err: nil,
+			},
+			kubetokenMockResponse: types.KubeTokenResponse{
+				TokenRequest: authenticationv1.TokenRequest{
+					Status: authenticationv1.TokenRequestStatus{
+						Token: "dynamic-token",
+					},
+				},
 			},
 		},
 	}
 	for _, tc := range tt {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			userCtx := &types.UserContext{
+				User: types.User{
+					Token: "test",
+				},
+				Credentials: types.Credential{
+					Token: "static",
+				},
+			}
+
 			fakeOktetoClient := &client.FakeOktetoClient{
 				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-				Users:           client.NewFakeUsersClient(user, tc.input.userErr...),
-				KubetokenClient: client.NewFakeKubetokenClient(types.KubeTokenResponse{}, nil),
+				Users:           client.NewFakeUsersClientWithContext(userCtx, tc.input.userErr...),
+				KubetokenClient: client.NewFakeKubetokenClient(tc.kubetokenMockResponse, tc.kubetokenMockError),
 			}
 			cmd := ContextCommand{
 				OktetoClientProvider: client.NewFakeOktetoClientProvider(fakeOktetoClient),
@@ -581,7 +682,6 @@ func TestGetUserContext(t *testing.T) {
 			uc, err := cmd.getUserContext(ctx, tc.input.ns)
 			assert.ErrorIs(t, tc.output.err, err)
 			assert.Equal(t, tc.output.uc, uc)
-
 		})
 	}
 }
