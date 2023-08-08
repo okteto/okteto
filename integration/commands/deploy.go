@@ -52,8 +52,8 @@ type DestroyOptions struct {
 	IsRemote     bool
 }
 
-// RunOktetoDeploy runs an okteto deploy command
-func RunOktetoDeployWithOutput(oktetoPath string, deployOptions *DeployOptions) ([]byte, error) {
+// GetOktetoDeployCmdOutput runs an okteto deploy command
+func GetOktetoDeployCmdOutput(oktetoPath string, deployOptions *DeployOptions) ([]byte, error) {
 	cmd := getDeployCmd(oktetoPath, deployOptions)
 	log.Printf("Running '%s'", cmd.String())
 	stdout, err := cmd.StdoutPipe()
@@ -80,7 +80,7 @@ func RunOktetoDeployWithOutput(oktetoPath string, deployOptions *DeployOptions) 
 
 // RunOktetoDeploy runs an okteto deploy command
 func RunOktetoDeploy(oktetoPath string, deployOptions *DeployOptions) error {
-	_, err := RunOktetoDeployWithOutput(oktetoPath, deployOptions)
+	_, err := GetOktetoDeployCmdOutput(oktetoPath, deployOptions)
 	return err
 }
 

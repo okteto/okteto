@@ -512,7 +512,7 @@ type errDependsOnItself struct {
 }
 
 func (e *errDependsOnItself) Error() string {
-	return fmt.Sprintf("%s: Service '%s' depends can not depend of itself.", errDependsOn.Error(), e.service)
+	return fmt.Sprintf("%s: Service '%s' depends cannot depend of itself.", errDependsOn.Error(), e.service)
 }
 
 func (e *errDependsOnItself) Unwrap() error {
