@@ -14,7 +14,6 @@
 package commands
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -56,20 +55,6 @@ type DestroyOptions struct {
 func GetOktetoDeployCmdOutput(oktetoPath string, deployOptions *DeployOptions) ([]byte, error) {
 	cmd := getDeployCmd(oktetoPath, deployOptions)
 	log.Printf("Running '%s'", cmd.String())
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		log.Printf("error getting stdout pipe: %s", err)
-		return nil, err
-	}
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	go func() {
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			log.Println(scanner.Text())
-		}
-	}()
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, err
