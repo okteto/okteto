@@ -33,11 +33,12 @@ func (p *FakeOktetoClientProvider) Provide() (types.OktetoInterface, error) {
 }
 
 type FakeOktetoClient struct {
-	Namespace      types.NamespaceInterface
-	Users          types.UserInterface
-	Preview        types.PreviewInterface
-	PipelineClient types.PipelineInterface
-	StreamClient   types.StreamInterface
+	Namespace       types.NamespaceInterface
+	Users           types.UserInterface
+	Preview         types.PreviewInterface
+	PipelineClient  types.PipelineInterface
+	StreamClient    types.StreamInterface
+	KubetokenClient types.KubetokenInterface
 }
 
 func NewFakeOktetoClient() *FakeOktetoClient {
@@ -67,4 +68,9 @@ func (c *FakeOktetoClient) Pipeline() types.PipelineInterface {
 // Stream retrieves the SSE client
 func (c *FakeOktetoClient) Stream() types.StreamInterface {
 	return c.StreamClient
+}
+
+// Kubetoken retrieves the Kubetoken client
+func (c *FakeOktetoClient) Kubetoken() types.KubetokenInterface {
+	return c.KubetokenClient
 }

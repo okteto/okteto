@@ -27,6 +27,7 @@ type OktetoInterface interface {
 	Previews() PreviewInterface
 	Pipeline() PipelineInterface
 	Stream() StreamInterface
+	Kubetoken() KubetokenInterface
 }
 
 // UserInterface represents the client that connects to the user functions
@@ -77,4 +78,10 @@ type OktetoClientProvider interface {
 type StreamInterface interface {
 	PipelineLogs(ctx context.Context, name, namespace, actionName string) error
 	DestroyAllLogs(ctx context.Context, namespace string) error
+}
+
+// KubetokenInterface represents the kubetoken client
+type KubetokenInterface interface {
+	GetKubeToken(baseURL, namespace string) (KubeTokenResponse, error)
+	CheckService(baseURL, namespace string) error
 }
