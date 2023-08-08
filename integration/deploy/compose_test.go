@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/okteto/okteto/integration"
@@ -535,7 +536,7 @@ services:
 	}
 	output, err := commands.GetOktetoDeployCmdOutput(oktetoPath, deployOptions)
 	require.Error(t, err)
-	require.Contains(t, string(output), "Invalid depends_on: Service 'app' depends on service 'nginx' which is undefined.")
+	require.Contains(t, strings.ToLower(string(output)), "invalid depends_on: service 'app' depends on service 'nginx' which is undefined.")
 
 	deployOptionsWithFile := &commands.DeployOptions{
 		Workdir:      dir,
@@ -546,7 +547,7 @@ services:
 	}
 	output, err = commands.GetOktetoDeployCmdOutput(oktetoPath, deployOptionsWithFile)
 	require.Error(t, err)
-	require.Contains(t, string(output), "Invalid depends_on: Service 'app' depends on service 'nginx' which is undefined.")
+	require.Contains(t, strings.ToLower(string(output)), "invalid depends_on: service 'app' depends on service 'nginx' which is undefined.")
 }
 
 func createComposeScenarioByManifest(dir string) error {

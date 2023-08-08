@@ -57,7 +57,7 @@ func GetOktetoDeployCmdOutput(oktetoPath string, deployOptions *DeployOptions) (
 	log.Printf("Running '%s'", cmd.String())
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, err
+		return output, err
 	}
 	log.Printf("okteto deploy success")
 	return output, nil
