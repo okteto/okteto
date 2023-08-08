@@ -14,7 +14,6 @@
 package commands
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -52,28 +51,21 @@ type DestroyOptions struct {
 	IsRemote     bool
 }
 
-// RunOktetoDeploy runs an okteto deploy command
-func RunOktetoDeploy(oktetoPath string, deployOptions *DeployOptions) error {
+// GetOktetoDeployCmdOutput runs an okteto deploy command
+func GetOktetoDeployCmdOutput(oktetoPath string, deployOptions *DeployOptions) ([]byte, error) {
 	cmd := getDeployCmd(oktetoPath, deployOptions)
 	log.Printf("Running '%s'", cmd.String())
-	stdout, err := cmd.StdoutPipe()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.Printf("error getting stdout pipe: %s", err)
-		return err
+		return output, err
 	}
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	go func() {
-
-		scanner := bufio.NewScanner(stdout)
-		// optionally, resize scanner's capacity for lines over 64K, see next example
-		for scanner.Scan() {
-			log.Println(scanner.Text())
-		}
-	}()
-	err = cmd.Wait()
 	log.Printf("okteto deploy success")
+	return output, nil
+}
+
+// RunOktetoDeploy runs an okteto deploy command
+func RunOktetoDeploy(oktetoPath string, deployOptions *DeployOptions) error {
+	_, err := GetOktetoDeployCmdOutput(oktetoPath, deployOptions)
 	return err
 }
 
