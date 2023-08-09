@@ -287,12 +287,12 @@ func TrackBuildPullError(oktetoBuilkitURL string, success bool) {
 	track(buildPullErrorEvent, success, props)
 }
 
-// TrackContextDelete sends a tracking event to mixpanel indicating whether more than one context is deleted
+// TrackContextDelete sends a tracking event to mixpanel indicating one or more context have been deleted
 func TrackContextDelete(ctxs int) {
 	props := map[string]interface{}{
-		"hasMoreThanOneContext": ctxs > 1,
+		"hasMoreThanOneContext": ctxs,
 	}
-	track(deleteMultipleContexts, true, props)
+	track(deleteContexts, true, props)
 }
 
 func track(event string, success bool, props map[string]interface{}) {
