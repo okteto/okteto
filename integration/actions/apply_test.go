@@ -79,12 +79,11 @@ func TestApplyPipeline(t *testing.T) {
 
 	assert.NoError(t, executeCreateNamespaceAction(namespace))
 	assert.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, ""))
-	assert.NoError(t, executeApply(namespace))
+	assert.NoError(t, executeApply(namespace, oktetoPath))
 	assert.NoError(t, executeDeleteNamespaceAction(namespace))
 }
 
-func executeApply(namespace string) error {
-
+func executeApply(namespace, oktetoPath string) error {
 	dir, err := os.MkdirTemp("", namespace)
 	if err != nil {
 		return err
@@ -119,6 +118,7 @@ func executeApply(namespace string) error {
 		log.Printf("could not get kubepath: %s", err)
 	}
 	cmd.Env = append(cmd.Env, fmt.Sprintf("KUBECONFIG=%s", kubepath))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s:%s", os.Getenv("PATH"), oktetoPath))
 	o, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s %s: %s", command, strings.Join(args, " "), string(o))
