@@ -47,7 +47,7 @@ func TestPushAction(t *testing.T) {
 
 	require.NoError(t, executeCreateNamespaceAction(namespace))
 	require.NoError(t, commands.RunOktetoKubeconfig(oktetoPath, ""))
-	require.NoError(t, executeApply(namespace, oktetoPath))
+	require.NoError(t, executeApply(namespace))
 	require.NoError(t, executePushAction(t, namespace))
 	require.NoError(t, executeDeleteNamespaceAction(namespace))
 }
