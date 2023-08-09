@@ -62,7 +62,7 @@ const (
 	disableEvent             = "Disable Analytics"
 	stackNotSupportedField   = "Stack Field Not Supported"
 	buildPullErrorEvent      = "BuildPullError"
-	deleteMultipleContexts   = "Delete Multiple Contexts"
+	deleteContexts           = "Contexts Deletion"
 )
 
 var (
@@ -287,8 +287,8 @@ func TrackBuildPullError(oktetoBuilkitURL string, success bool) {
 	track(buildPullErrorEvent, success, props)
 }
 
-// TrackDeleteMultipleContexts sends a tracking event to mixpanel indicating whether more than one context is deleted
-func TrackDeleteMultipleContexts(ctxs int) {
+// TrackContextDelete sends a tracking event to mixpanel indicating whether more than one context is deleted
+func TrackContextDelete(ctxs int) {
 	props := map[string]interface{}{
 		"hasMoreThanOneContext": ctxs > 1,
 	}

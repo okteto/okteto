@@ -30,9 +30,8 @@ func DeleteCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
 		Args:  utils.MinimumNArgsAccepted(1, "https://okteto.com/docs/reference/cli/#delete"),
-		Short: "Delete multiple contexts",
+		Short: "Delete one or more contexts",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			analytics.TrackDeleteMultipleContexts(len(args))
 			for _, arg := range args {
 				arg = okteto.AddSchema(arg)
 				arg = strings.TrimSuffix(arg, "/")
@@ -40,6 +39,7 @@ func DeleteCMD() *cobra.Command {
 					return err
 				}
 			}
+			analytics.TrackContextDelete(len(args))
 			return nil
 		},
 	}
