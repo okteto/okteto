@@ -117,6 +117,14 @@ func Up() *cobra.Command {
 
 			ctx := context.Background()
 
+			analyticsTracker := analytics.NewAnalyticsTracker()
+			upMeta := analytics.NewUpMetricsMetadata()
+
+			// when cmd up finishes, send the event
+			// metadata retrieved during the run of the cmd
+			defer analyticsTracker.TrackUp(upMeta)
+
+			startOkContextConfig := time.Now()
 			if upOptions.ManifestPath != "" {
 				// if path is absolute, its transformed to rel from root
 				initialCWD, err := os.Getwd()
@@ -162,6 +170,7 @@ func Up() *cobra.Command {
 				}
 			}
 
+			upMeta.OktetoContextConfig(time.Since(startOkContextConfig))
 			if okteto.IsOkteto() {
 				create, err := utils.ShouldCreateNamespace(ctx, okteto.Context().Namespace)
 				if err != nil {
@@ -238,13 +247,6 @@ func Up() *cobra.Command {
 					}
 				}
 			}
-
-			analyticsTracker := analytics.NewAnalyticsTracker()
-			upMeta := analytics.NewUpMetricsMetadata()
-
-			// when cmd up finishes, send the event
-			// metadata retrieved during the run of the cmd
-			defer analyticsTracker.TrackUp(upMeta)
 
 			up := &upContext{
 				Manifest:         oktetoManifest,
@@ -588,6 +590,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		Timeout:          5 * time.Minute,
 		Build:            false,
 	})
+	up.analyticsMeta.HasRunDeploy()
 
 	isRemote := false
 	if up.Manifest.Deploy != nil {

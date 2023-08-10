@@ -32,24 +32,33 @@ const (
 
 // UpMetricsMetadata defines the properties of the Up event we want to track
 type UpMetricsMetadata struct {
-	isV2                   bool
-	manifestType           model.Archetype
-	isInteractive          bool
-	isOktetoRepository     bool
-	hasDependenciesSection bool
-	hasBuildSection        bool
-	hasDeploySection       bool
-	hasReverse             bool
-	isHybridDev            bool
-	mode                   string
-	failActivate           bool
-	activateDuration       time.Duration
-	initialSyncDuration    time.Duration
-	isReconnect            bool
-	reconnectCause         string
-	errSync                bool
-	errResetDatabase       bool
-	success                bool
+	isV2                     bool
+	manifestType             model.Archetype
+	isInteractive            bool
+	isOktetoRepository       bool
+	hasDependenciesSection   bool
+	hasBuildSection          bool
+	hasDeploySection         bool
+	hasReverse               bool
+	isHybridDev              bool
+	mode                     string
+	failActivate             bool
+	activateDuration         time.Duration
+	initialSyncDuration      time.Duration
+	isReconnect              bool
+	reconnectCause           string
+	errSync                  bool
+	errSyncResetDatabase     bool
+	errSyncInsufficientSpace bool
+	errSyncLostSyncthing     bool
+	success                  bool
+
+	hasRunDeploy                 bool
+	oktetoCtxConfigDuration      time.Duration
+	devContainerCreationDuration time.Duration
+	contextSyncDuration          time.Duration
+	localFoldersScanDuration     time.Duration
+	execDuration                 time.Duration
 }
 
 // NewUpMetricsMetadata returns an empty instance of UpMetricsMetadata
@@ -60,22 +69,30 @@ func NewUpMetricsMetadata() *UpMetricsMetadata {
 // toProps transforms UpMetricsMetadata into a map to be able to send it to mixpanel
 func (u *UpMetricsMetadata) toProps() map[string]interface{} {
 	return map[string]interface{}{
-		"isInteractive":              u.isInteractive,
-		"isV2":                       u.isV2,
-		"manifestType":               u.manifestType,
-		"isOktetoRepository":         u.isOktetoRepository,
-		"hasDependenciesSection":     u.hasDependenciesSection,
-		"hasBuildSection":            u.hasBuildSection,
-		"hasDeploySection":           u.hasDeploySection,
-		"hasReverse":                 u.hasReverse,
-		"mode":                       u.mode,
-		"failActivate":               u.failActivate,
-		"activateDurationSeconds":    u.activateDuration.Seconds(),
-		"initialSyncDurationSeconds": u.initialSyncDuration.Seconds(),
-		"isReconnect":                u.isReconnect,
-		"reconnectCause":             u.reconnectCause,
-		"errSync":                    u.errSync,
-		"errResetDatabase":           u.errResetDatabase,
+		"isInteractive":                       u.isInteractive,
+		"isV2":                                u.isV2,
+		"manifestType":                        u.manifestType,
+		"isOktetoRepository":                  u.isOktetoRepository,
+		"hasDependenciesSection":              u.hasDependenciesSection,
+		"hasBuildSection":                     u.hasBuildSection,
+		"hasDeploySection":                    u.hasDeploySection,
+		"hasReverse":                          u.hasReverse,
+		"mode":                                u.mode,
+		"failActivate":                        u.failActivate,
+		"activateDurationSeconds":             u.activateDuration.Seconds(),
+		"initialSyncDurationSeconds":          u.initialSyncDuration.Seconds(),
+		"isReconnect":                         u.isReconnect,
+		"reconnectCause":                      u.reconnectCause,
+		"errSync":                             u.errSync,
+		"errSyncResetDatabase":                u.errSyncResetDatabase,
+		"errSyncInsufficientSpace":            u.errSyncInsufficientSpace,
+		"errSyncLostSyncthing":                u.errSyncLostSyncthing,
+		"hasRunDeploy":                        u.hasRunDeploy,
+		"oktetoCtxConfigDurationSeconds":      u.oktetoCtxConfigDuration.Seconds(),
+		"devContainerCreationDurationSeconds": u.devContainerCreationDuration.Seconds(),
+		"contextSyncDurationSeconds":          u.contextSyncDuration.Seconds(),
+		"localFoldersScanDurationSeconds":     u.localFoldersScanDuration.Seconds(),
+		"execDurationSeconds":                 u.execDuration.Seconds(),
 	}
 }
 
@@ -133,13 +150,47 @@ func (u *UpMetricsMetadata) ErrSync() {
 }
 
 // ErrResetDatabase sets to true the property errResetDatabase
-func (u *UpMetricsMetadata) ErrResetDatabase() {
-	u.errResetDatabase = true
+func (u *UpMetricsMetadata) ErrSyncResetDatabase() {
+	u.errSyncResetDatabase = true
+}
+
+// ErrResetDatabase sets to true the property errResetDatabase
+func (u *UpMetricsMetadata) ErrSyncInsufficientSpace() {
+	u.errSyncInsufficientSpace = true
+}
+
+// ErrResetDatabase sets to true the property errResetDatabase
+func (u *UpMetricsMetadata) ErrSyncLostSyncthing() {
+	u.errSyncLostSyncthing = true
 }
 
 // CommandSuccess sets to true the property success
 func (u *UpMetricsMetadata) CommandSuccess() {
 	u.success = true
+}
+
+func (u *UpMetricsMetadata) HasRunDeploy() {
+	u.hasRunDeploy = true
+}
+
+func (u *UpMetricsMetadata) OktetoContextConfig(duration time.Duration) {
+	u.oktetoCtxConfigDuration = duration
+}
+
+func (u *UpMetricsMetadata) DevContainerCreation(duration time.Duration) {
+	u.devContainerCreationDuration = duration
+}
+
+func (u *UpMetricsMetadata) ContextSync(duration time.Duration) {
+	u.contextSyncDuration = duration
+}
+
+func (u *UpMetricsMetadata) LocalFolderScan(duration time.Duration) {
+	u.localFoldersScanDuration = duration
+}
+
+func (u *UpMetricsMetadata) ExecDuration(duration time.Duration) {
+	u.execDuration = duration
 }
 
 // TrackUp sends a tracking event to mixpanel when the user activates a development container

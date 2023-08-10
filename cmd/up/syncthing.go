@@ -56,9 +56,11 @@ func (up *upContext) sync(ctx context.Context) error {
 		return err
 	}
 
+	startSyncFiles := time.Now()
 	if err := up.synchronizeFiles(ctx); err != nil {
 		return err
 	}
+	up.analyticsMeta.ContextSync(time.Since(startSyncFiles))
 
 	msg := "Files synchronized"
 	if up.Dev.IsHybridModeEnabled() {
@@ -120,10 +122,11 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 	if !up.Dev.IsHybridModeEnabled() {
 		oktetoLog.Spinner("Scanning file system...")
 	}
-
+	startLocalScan := time.Now()
 	if err := up.Sy.WaitForScanning(ctx, true); err != nil {
 		return err
 	}
+	up.analyticsMeta.LocalFolderScan(time.Since(startLocalScan))
 
 	if err := up.Sy.WaitForScanning(ctx, false); err != nil {
 		return err
@@ -179,11 +182,13 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 		up.analyticsMeta.ErrSync()
 		switch err {
 		case oktetoErrors.ErrLostSyncthing:
+			up.analyticsMeta.ErrSyncLostSyncthing()
 			return err
 		case oktetoErrors.ErrInsufficientSpace:
+			up.analyticsMeta.ErrSyncInsufficientSpace()
 			return up.getInsufficientSpaceError(err)
 		case oktetoErrors.ErrNeedsResetSyncError:
-			up.analyticsMeta.ErrResetDatabase()
+			up.analyticsMeta.ErrSyncResetDatabase()
 			return oktetoErrors.UserError{
 				E:    fmt.Errorf("the synchronization service state is inconsistent"),
 				Hint: `Try running 'okteto up --reset' to reset the synchronization service`,
