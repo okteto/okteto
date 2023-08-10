@@ -43,14 +43,17 @@ func newJSONDisplayer(stdout, stderr io.Reader) *jsonDisplayer {
 		stderrScanner = bufio.NewScanner(stderr)
 	}
 
+	commandContext, cancel := context.WithCancel(context.Background())
+
 	return &jsonDisplayer{
-		stdoutScanner: stdoutScanner,
-		stderrScanner: stderrScanner,
+		stdoutScanner:  stdoutScanner,
+		stderrScanner:  stderrScanner,
+		commandContext: commandContext,
+		cancel:         cancel,
 	}
 }
 
 func (d *jsonDisplayer) Display(_ string) {
-	d.commandContext, d.cancel = context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	wgDelta := 0
 	if d.stdoutScanner != nil {

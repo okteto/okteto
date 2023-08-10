@@ -14,6 +14,7 @@
 package executor
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 
@@ -86,6 +87,11 @@ func (e *Executor) Execute(cmdInfo model.DeployCommand, env []string) error {
 	}
 
 	if err := e.displayer.startCommand(cmd); err != nil {
+		if execErr, ok := err.(*exec.Error); ok {
+			if execErr != nil && execErr.Name == e.shell {
+				return fmt.Errorf("%w: \"%s\" is a required dependency for executing the command", err, e.shell)
+			}
+		}
 		return err
 	}
 
