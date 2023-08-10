@@ -30,8 +30,15 @@ type addAPIKeyTransport struct {
 	T http.RoundTripper
 }
 
+const (
+	APIKeyHeader      = "X-Api-Key"
+	APIKeyHeaderValue = "cnd"
+)
+
+// RoundTrip implements the http.RoundTripper interface and is used to add the
+// desired request headers to http requests.
 func (akt *addAPIKeyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add("X-API-Key", "cnd")
+	req.Header.Add(APIKeyHeader, APIKeyHeaderValue)
 	return akt.T.RoundTrip(req)
 }
 
