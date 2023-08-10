@@ -119,7 +119,7 @@ func Test_ExecuteUpdateKubeconfig(t *testing.T) {
 			cfg := kubeconfig.Get(kubeconfigPaths)
 			assert.NotNil(t, cfg, "kubeconfig is nil")
 			assert.Equal(t, tt.context.CurrentContext, cfg.CurrentContext, "current context has changed")
-			assert.Equal(t, tt.context.Contexts[tt.context.CurrentContext].Namespace, cfg.Contexts[tt.context.CurrentContext].Namespace, "namesapce has changed")
+			assert.Equal(t, tt.context.Contexts[tt.context.CurrentContext].Namespace, cfg.Contexts[tt.context.CurrentContext].Namespace, "namespace has changed")
 
 		})
 	}
