@@ -26,16 +26,6 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-var (
-	oktetoExecConfig = &clientcmdapi.ExecConfig{
-		APIVersion:      "client.authentication.k8s.io/v1",
-		Command:         "okteto",
-		Args:            []string{"kubetoken"},
-		InstallHint:     "Okteto needs to be installed and in your PATH to use this context. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
-		InteractiveMode: "IfAvailable",
-	}
-)
-
 // UpdateKubeconfigCMD all contexts managed by okteto
 func UpdateKubeconfigCMD() *cobra.Command {
 	cmd := &cobra.Command{
@@ -106,5 +96,17 @@ func updateUserAuthInfoWithExec(okCtx *okteto.OktetoContext, userID string) {
 		okCtx.Cfg.AuthInfos[userID].Token = ""
 	}
 
-	okCtx.Cfg.AuthInfos[userID].Exec = oktetoExecConfig
+	okCtx.Cfg.AuthInfos[userID].Exec = getExecConfigForContextAndNamespace(okCtx.Name, okCtx.Namespace)
+}
+
+// getExecConfigForContextAndNamespace returns ExecConfig with kubetoken command including namespace and context flags
+func getExecConfigForContextAndNamespace(context, namespace string) *clientcmdapi.ExecConfig {
+	return &clientcmdapi.ExecConfig{
+		APIVersion:         "client.authentication.k8s.io/v1",
+		Command:            "okteto",
+		Args:               []string{"kubetoken", "--context", context, "--namespace", namespace},
+		InstallHint:        "Okteto needs to be installed and in your PATH to use this context. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
+		InteractiveMode:    "Never",
+		ProvideClusterInfo: true,
+	}
 }
