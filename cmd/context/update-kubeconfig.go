@@ -22,6 +22,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
@@ -41,62 +42,65 @@ func UpdateKubeconfigCMD() *cobra.Command {
 				return err
 			}
 
-			okCtx := okteto.Context()
-			kubeconfigPath := config.GetKubeconfigPath()
-			kubetokenEnabled := false
-
-			okClient, err := okteto.NewOktetoClient()
-			if err != nil {
-				return err
-			}
-			if err := okClient.Kubetoken().CheckService(okCtx.Name, okCtx.Namespace); err == nil {
-				kubetokenEnabled = true
-			}
-			return ExecuteUpdateKubeconfig(okCtx, kubeconfigPath, kubetokenEnabled)
+			return ExecuteUpdateKubeconfig(okteto.Context(), config.GetKubeconfigPath(), okteto.NewOktetoClientProvider())
 		},
 	}
 
 	return cmd
 }
 
-func ExecuteUpdateKubeconfig(okContext *okteto.OktetoContext, kubeconfigPaths []string, kubetokenEnabled bool) error {
-	contextName := okContext.Name
-	if okContext.IsOkteto {
+func ExecuteUpdateKubeconfig(okCtx *okteto.OktetoContext, kubeconfigPaths []string, okClientProvider types.OktetoClientProvider) error {
+	contextName := okCtx.Name
+	if okCtx.IsOkteto {
 		contextName = okteto.UrlToKubernetesContext(contextName)
-
-		if okContext.IsStoredAsInsecure {
-			certPEM, err := base64.StdEncoding.DecodeString(okteto.Context().Certificate)
-			if err != nil {
-				oktetoLog.Debugf("couldn't decode context certificate from base64: %s", err)
-				return err
-			}
-			okContext.Cfg.Clusters[contextName].CertificateAuthorityData = certPEM
-		}
-
-		if kubetokenEnabled {
-			updateUserAuthInfoWithExec(okContext, okContext.UserID)
+		if err := updateCfgClusterCertificate(contextName, okCtx); err != nil {
+			return err
 		}
 	}
 
-	if err := kubeconfig.Write(okContext.Cfg, kubeconfigPaths[0]); err != nil {
+	okClient, err := okClientProvider.Provide()
+	if err != nil {
 		return err
 	}
-	oktetoLog.Success("Updated kubernetes context '%s/%s' in '%s'", contextName, okContext.Namespace, kubeconfigPaths)
+	if err := okClient.Kubetoken().CheckService(okCtx.Name, okCtx.Namespace); err == nil {
+		updateCfgAuthInfoWithExec(okCtx)
+	} else {
+		oktetoLog.Debug("Error checking kubetoken service: %w", err)
+	}
 
+	if err := kubeconfig.Write(okCtx.Cfg, kubeconfigPaths[0]); err != nil {
+		return err
+	}
+
+	oktetoLog.Success("Updated kubernetes context '%s/%s' in '%s'", contextName, okCtx.Namespace, kubeconfigPaths)
 	return nil
 }
 
-func updateUserAuthInfoWithExec(okCtx *okteto.OktetoContext, userID string) {
+func updateCfgClusterCertificate(contextName string, okContext *okteto.OktetoContext) error {
+	if !okContext.IsStoredAsInsecure {
+		return nil
+	}
+
+	certPEM, err := base64.StdEncoding.DecodeString(okContext.Certificate)
+	if err != nil {
+		oktetoLog.Debugf("couldn't decode context certificate from base64: %s", err)
+		return err
+	}
+	okContext.Cfg.Clusters[contextName].CertificateAuthorityData = certPEM
+	return nil
+}
+
+func updateCfgAuthInfoWithExec(okCtx *okteto.OktetoContext) {
 	if okCtx.Cfg.AuthInfos == nil {
 		okCtx.Cfg.AuthInfos = clientcmdapi.NewConfig().AuthInfos
-		okCtx.Cfg.AuthInfos[userID] = clientcmdapi.NewAuthInfo()
+		okCtx.Cfg.AuthInfos[okCtx.UserID] = clientcmdapi.NewAuthInfo()
 	}
 
-	if token := okCtx.Cfg.AuthInfos[userID].Token; token != "" {
-		okCtx.Cfg.AuthInfos[userID].Token = ""
+	if token := okCtx.Cfg.AuthInfos[okCtx.UserID].Token; token != "" {
+		okCtx.Cfg.AuthInfos[okCtx.UserID].Token = ""
 	}
 
-	okCtx.Cfg.AuthInfos[userID].Exec = getExecConfigForContextAndNamespace(okCtx.Name, okCtx.Namespace)
+	okCtx.Cfg.AuthInfos[okCtx.UserID].Exec = getExecConfigForContextAndNamespace(okCtx.Name, okCtx.Namespace)
 }
 
 // getExecConfigForContextAndNamespace returns ExecConfig with kubetoken command including namespace and context flags
