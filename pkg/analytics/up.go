@@ -22,6 +22,12 @@ import (
 const (
 	// Event that tracks when a user activates a development container
 	upEvent = "Up"
+
+	// reconnectCauseDefault is the default cause for a reconnection
+	reconnectCauseDefault = "unrecognised"
+
+	// reconnectCauseDevPodRecreated is cause when pods UID change between retrys
+	reconnectCauseDevPodRecreated = "dev-pod-recreated"
 )
 
 // UpMetricsMetadata defines the properties of the Up event we want to track
@@ -108,14 +114,6 @@ func (u *UpMetricsMetadata) ActivateDuration(duration time.Duration) {
 func (u *UpMetricsMetadata) InitialSyncDuration(duration time.Duration) {
 	u.initialSyncDuration = duration
 }
-
-const (
-	// reconnectCauseDefault is the default cause for a reconnection
-	reconnectCauseDefault = "unrecognised"
-
-	// reconnectCauseDevPodRecreated is cause when pods UID change between retrys
-	reconnectCauseDevPodRecreated = "dev-pod-recreated"
-)
 
 // ReconnectDefault sets to true the property isReconnect and adds the cause "unrecognised"
 func (u *UpMetricsMetadata) ReconnectDefault() {
