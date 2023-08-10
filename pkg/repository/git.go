@@ -25,6 +25,10 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
+var (
+	errNotCleanRepo = errors.New("repository is not clean")
+)
+
 type gitRepoController struct {
 	path       string
 	repoGetter repositoryGetterInterface
@@ -100,18 +104,18 @@ func (r gitRepoController) isClean(ctx context.Context) (bool, error) {
 func (r gitRepoController) getSHA() (string, error) {
 	isClean, err := r.isClean(context.TODO())
 	if err != nil {
-		return "", fmt.Errorf("failed to check if repo is clean: %w", err)
+		return "", fmt.Errorf("%w: failed to check if repo is clean: %w", errNotCleanRepo, err)
 	}
 	if !isClean {
-		return "", nil
+		return "", errNotCleanRepo
 	}
 	repo, err := r.repoGetter.get(r.path)
 	if err != nil {
-		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+		return "", fmt.Errorf("%w: failed to analyze git repo: %w", errNotCleanRepo, err)
 	}
 	head, err := repo.Head()
 	if err != nil {
-		return "", fmt.Errorf("failed to analyze git repo: %w", err)
+		return "", fmt.Errorf("%w: failed to analyze git repo: %w", errNotCleanRepo, err)
 	}
 	return head.Hash().String(), nil
 }
