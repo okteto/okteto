@@ -100,15 +100,10 @@ func updateCfgAuthInfoWithExec(okCtx *okteto.OktetoContext) {
 		okCtx.Cfg.AuthInfos[okCtx.UserID].Token = ""
 	}
 
-	okCtx.Cfg.AuthInfos[okCtx.UserID].Exec = getExecConfigForContextAndNamespace(okCtx.Name, okCtx.Namespace)
-}
-
-// getExecConfigForContextAndNamespace returns ExecConfig with kubetoken command including namespace and context flags
-func getExecConfigForContextAndNamespace(context, namespace string) *clientcmdapi.ExecConfig {
-	return &clientcmdapi.ExecConfig{
+	okCtx.Cfg.AuthInfos[okCtx.UserID].Exec = &clientcmdapi.ExecConfig{
 		APIVersion:         "client.authentication.k8s.io/v1",
 		Command:            "okteto",
-		Args:               []string{"kubetoken", "--context", context, "--namespace", namespace},
+		Args:               []string{"kubetoken", "--context", okCtx.Name, "--namespace", okCtx.Namespace},
 		InstallHint:        "Okteto needs to be installed and in your PATH to use this context. Please visit https://www.okteto.com/docs/getting-started/ for more information.",
 		InteractiveMode:    "Never",
 		ProvideClusterInfo: true,
