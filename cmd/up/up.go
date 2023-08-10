@@ -239,15 +239,24 @@ func Up() *cobra.Command {
 				}
 			}
 
+			analyticsTracker := analytics.NewAnalyticsTracker()
+			upMeta := analytics.NewUpMetricsMetadata()
+
+			// when cmd up finishes, send the event
+			// metadata retrieved during the run of the cmd
+			defer analyticsTracker.TrackUp(upMeta)
+
 			up := &upContext{
-				Manifest:       oktetoManifest,
-				Dev:            nil,
-				Exit:           make(chan error, 1),
-				resetSyncthing: upOptions.Reset,
-				StartTime:      time.Now(),
-				Registry:       registry.NewOktetoRegistry(okteto.Config{}),
-				Options:        upOptions,
-				Fs:             afero.NewOsFs(),
+				Manifest:         oktetoManifest,
+				Dev:              nil,
+				Exit:             make(chan error, 1),
+				resetSyncthing:   upOptions.Reset,
+				StartTime:        time.Now(),
+				Registry:         registry.NewOktetoRegistry(okteto.Config{}),
+				Options:          upOptions,
+				Fs:               afero.NewOsFs(),
+				analyticsTracker: analyticsTracker,
+				analyticsMeta:    upMeta,
 			}
 			up.inFd, up.isTerm = term.GetFdInfo(os.Stdin)
 			if up.isTerm {
@@ -372,21 +381,20 @@ func Up() *cobra.Command {
     https://www.okteto.com/docs/reference/manifest-migration/`))
 			}
 
-			err = up.start()
-
-			if err != nil {
+			if err = up.start(); err != nil {
 				switch err.(type) {
 				default:
-					err = fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
+					return fmt.Errorf("%w\n    Find additional logs at: %s/okteto.log", err, config.GetAppHome(dev.Namespace, dev.Name))
 				case oktetoErrors.CommandError:
 					oktetoLog.Infof("CommandError: %v", err)
+					return err
 				case oktetoErrors.UserError:
 					return err
 				}
-
 			}
 
-			return err
+			up.analyticsMeta.CommandSuccess()
+			return nil
 		},
 	}
 
@@ -569,7 +577,7 @@ func (up *upContext) deployApp(ctx context.Context) error {
 		PipelineCMD:        pc,
 		DeployWaiter:       deploy.NewDeployWaiter(k8sClientProvider),
 		EndpointGetter:     deploy.NewEndpointGetter,
-		AnalyticsTracker:   analytics.NewAnalyticsTracker(),
+		AnalyticsTracker:   up.analyticsTracker,
 	}
 
 	startTime := time.Now()
@@ -631,16 +639,9 @@ func (up *upContext) start() error {
 
 	pidFileCh := make(chan error, 1)
 
-	analytics.TrackUp(analytics.TrackUpMetadata{
-		IsInteractive:          up.Dev.IsInteractive(),
-		IsOktetoRepository:     utils.IsOktetoRepo(),
-		IsV2:                   up.Manifest.IsV2,
-		HasDependenciesSection: up.Manifest.HasDependenciesSection(),
-		HasBuildSection:        up.Manifest.HasBuildSection(),
-		HasDeploySection:       up.Manifest.HasDeploySection(),
-		HasReverse:             len(up.Dev.Reverse) > 0,
-		Mode:                   up.Dev.Mode,
-	})
+	up.analyticsMeta.ManifestProps(up.Manifest)
+	up.analyticsMeta.DevProps(up.Dev)
+	up.analyticsMeta.RepositoryProps(utils.IsOktetoRepo())
 
 	go up.activateLoop()
 
@@ -894,7 +895,7 @@ func (up *upContext) shutdown() {
 
 	oktetoLog.Infof("starting shutdown sequence")
 	if !up.success {
-		analytics.TrackUpError(true)
+		up.analyticsMeta.FailActivate()
 	}
 
 	if up.Cancel != nil {
