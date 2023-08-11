@@ -26,12 +26,7 @@ func Kubeconfig() *cobra.Command {
 		Short: "Download credentials for the Kubernetes cluster selected via 'okteto context'",
 		Args:  utils.NoArgsAccepted("https://okteto.com/docs/reference/cli/#kubeconfig"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-
-			err := contextCMD.UpdateKubeconfigCMD().RunE(cmd, args)
-			if err != nil {
-				return err
-			}
-			return err
+			return contextCMD.UpdateKubeconfigCMD().RunE(cmd, args)
 		},
 	}
 	return cmd
