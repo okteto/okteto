@@ -29,6 +29,7 @@ import (
 	"github.com/okteto/okteto/pkg/k8s/apps"
 	"github.com/okteto/okteto/pkg/k8s/deployments"
 	"github.com/okteto/okteto/pkg/k8s/volumes"
+	"github.com/okteto/okteto/pkg/keda"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/model"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -171,7 +172,7 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 	exit := make(chan error, 1)
 
 	go func() {
-		c, _, err := okteto.GetK8sClient()
+		c, restConfig, err := okteto.GetK8sClient()
 		if err != nil {
 			exit <- err
 			return
@@ -199,6 +200,8 @@ func runDown(ctx context.Context, dev *model.Dev, rm bool) error {
 			exit <- err
 			return
 		}
+
+		keda.UnpauseKeda(app, restConfig)
 
 		oktetoLog.Success(fmt.Sprintf("Development container '%s' deactivated", dev.Name))
 
