@@ -39,7 +39,7 @@ import (
 var (
 	errBadStackName     = "must consist of lower case alphanumeric characters or '-', and must start and end with an alphanumeric character"
 	deprecatedManifests = []string{"stack.yml", "stack.yaml"}
-	errDependsOn        = errors.New("Invalid depends_on")
+	errDependsOn        = errors.New("invalid depends_on")
 )
 
 // Stack represents an okteto stack
@@ -58,6 +58,14 @@ type Stack struct {
 
 // ComposeServices represents the services declared in the compose
 type ComposeServices map[string]*Service
+
+func (cs ComposeServices) getNames() []string {
+	names := []string{}
+	for k := range cs {
+		names = append(names, k)
+	}
+	return names
+}
 
 // Service represents an okteto stack service
 type Service struct {
@@ -481,7 +489,7 @@ func (s *Stack) Validate() error {
 		}
 		svc.ignoreSyncVolumes()
 	}
-	return validateDependsOn(s)
+	return s.Services.ValidateDependsOn(s.Services.getNames())
 }
 
 // validateStackName checks if the name is compliant
@@ -499,22 +507,51 @@ func validateStackName(name string) error {
 	return nil
 }
 
-func validateDependsOn(s *Stack) error {
-	for svcName, svc := range s.Services {
+type errDependsOnItself struct {
+	service string
+}
+
+func (e *errDependsOnItself) Error() string {
+	return fmt.Sprintf("%s: Service '%s' depends cannot depend of itself.", errDependsOn.Error(), e.service)
+}
+
+func (e *errDependsOnItself) Unwrap() error {
+	return errDependsOn
+}
+
+type errDependsOnUndefined struct {
+	svc          string
+	dependentSvc string
+}
+
+func (e *errDependsOnUndefined) Error() string {
+	return fmt.Sprintf("%s: Service '%s' depends on service '%s' which is undefined.", errDependsOn.Error(), e.svc, e.dependentSvc)
+}
+
+func (e *errDependsOnUndefined) Unwrap() error {
+	return errDependsOn
+}
+
+func (cs ComposeServices) ValidateDependsOn(svcs []string) error {
+	for _, svcName := range svcs {
+		svc, ok := cs[svcName]
+		if !ok {
+			return fmt.Errorf("service '%s' is not defined in the stack", svcName)
+		}
 		for dependentSvc, condition := range svc.DependsOn {
 			if svcName == dependentSvc {
-				return fmt.Errorf("%w: Service '%s' depends can not depend of itself.", errDependsOn, svcName)
+				return &errDependsOnItself{service: svcName}
 			}
-			if _, ok := s.Services[dependentSvc]; !ok {
+			if _, ok := cs[dependentSvc]; !ok {
 				return fmt.Errorf("%w: Service '%s' depends on service '%s' which is undefined.", errDependsOn, svcName, dependentSvc)
 			}
-			if condition.Condition == DependsOnServiceCompleted && !s.Services[dependentSvc].IsJob() {
+			if condition.Condition == DependsOnServiceCompleted && !cs[dependentSvc].IsJob() {
 				return fmt.Errorf("%w: Service '%s' is not a job. Please make sure the 'restart_policy' is not set to 'always' in service '%s' ", errDependsOn, dependentSvc, dependentSvc)
 			}
 		}
 	}
 
-	dependencyCycle := getDependentCyclic(s.Services.toGraph())
+	dependencyCycle := getDependentCyclic(cs.toGraph())
 	if len(dependencyCycle) > 0 {
 		svcsDependents := fmt.Sprintf("%s and %s", strings.Join(dependencyCycle[:len(dependencyCycle)-1], ", "), dependencyCycle[len(dependencyCycle)-1])
 		return fmt.Errorf("%w: There was a cyclic dependendecy between %s.", errDependsOn, svcsDependents)

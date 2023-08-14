@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -57,9 +56,11 @@ func (up *upContext) sync(ctx context.Context) error {
 		return err
 	}
 
+	startSyncFiles := time.Now()
 	if err := up.synchronizeFiles(ctx); err != nil {
 		return err
 	}
+	up.analyticsMeta.ContextSync(time.Since(startSyncFiles))
 
 	msg := "Files synchronized"
 	if up.Dev.IsHybridModeEnabled() {
@@ -68,7 +69,7 @@ func (up *upContext) sync(ctx context.Context) error {
 	oktetoLog.Success(msg)
 
 	elapsed := time.Since(start)
-	analytics.TrackDurationInitialSync(elapsed)
+	up.analyticsMeta.InitialSyncDuration(elapsed)
 	maxDuration := time.Duration(1) * time.Minute
 	if elapsed > maxDuration {
 		minutes := elapsed / time.Minute
@@ -121,10 +122,11 @@ func (up *upContext) startSyncthing(ctx context.Context) error {
 	if !up.Dev.IsHybridModeEnabled() {
 		oktetoLog.Spinner("Scanning file system...")
 	}
-
+	startLocalScan := time.Now()
 	if err := up.Sy.WaitForScanning(ctx, true); err != nil {
 		return err
 	}
+	up.analyticsMeta.LocalFolderScan(time.Since(startLocalScan))
 
 	if err := up.Sy.WaitForScanning(ctx, false); err != nil {
 		return err
@@ -177,13 +179,16 @@ func (up *upContext) synchronizeFiles(ctx context.Context) error {
 	}()
 
 	if err := up.Sy.WaitForCompletion(ctx, reporter); err != nil {
-		analytics.TrackSyncError()
+		up.analyticsMeta.ErrSync()
 		switch err {
 		case oktetoErrors.ErrLostSyncthing:
+			up.analyticsMeta.ErrSyncLostSyncthing()
 			return err
 		case oktetoErrors.ErrInsufficientSpace:
+			up.analyticsMeta.ErrSyncInsufficientSpace()
 			return up.getInsufficientSpaceError(err)
 		case oktetoErrors.ErrNeedsResetSyncError:
+			up.analyticsMeta.ErrSyncResetDatabase()
 			return oktetoErrors.UserError{
 				E:    fmt.Errorf("the synchronization service state is inconsistent"),
 				Hint: `Try running 'okteto up --reset' to reset the synchronization service`,

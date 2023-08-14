@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"github.com/okteto/okteto/cmd/utils"
-	"github.com/okteto/okteto/pkg/analytics"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
@@ -146,11 +145,11 @@ func (up *upContext) activate() error {
 	}
 
 	if up.isRetry {
-		cause := analytics.ReconnectCauseDefault
 		if lastPodUID != up.Pod.UID {
-			cause = analytics.ReconnectCauseDevPodRecreated
+			up.analyticsMeta.ReconnectDevPodRecreated()
+		} else {
+			up.analyticsMeta.ReconnectDefault()
 		}
-		analytics.TrackReconnect(true, cause)
 	}
 
 	up.isRetry = true
@@ -176,6 +175,7 @@ func (up *upContext) activate() error {
 		return err
 	}
 
+	// success means all context is ready to run the activation
 	up.success = true
 
 	go func() {
@@ -208,9 +208,12 @@ func (up *upContext) activate() error {
 		}
 		printDisplayContext(up)
 		durationActivateUp := time.Since(up.StartTime)
-		analytics.TrackDurationActivateUp(durationActivateUp)
+		up.analyticsMeta.ActivateDuration(durationActivateUp)
 
+		startRunCommand := time.Now()
 		up.CommandResult <- up.RunCommand(ctx, up.Dev.Command.Values)
+		up.analyticsMeta.ExecDuration(time.Since(startRunCommand))
+
 	}()
 
 	prevError := up.waitUntilExitOrInterruptOrApply(ctx)
@@ -243,9 +246,11 @@ func (up *upContext) shouldRetry(ctx context.Context, err error) bool {
 }
 
 func (up *upContext) devMode(ctx context.Context, app apps.App, create bool) error {
+	startCreateDev := time.Now()
 	if err := up.createDevContainer(ctx, app, create); err != nil {
 		return err
 	}
+	up.analyticsMeta.DevContainerCreation(time.Since(startCreateDev))
 	return up.waitUntilDevelopmentContainerIsRunning(ctx, app)
 }
 

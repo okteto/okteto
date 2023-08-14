@@ -234,6 +234,7 @@ jobs:
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+            $env:Path+=";$($HOME)\project\artifacts\bin"
             go test github.com/okteto/okteto/integration/deprecated/push -tags="integration" --count=1 -v -timeout 15m
             go test github.com/okteto/okteto/integration/deprecated/stack -tags="integration" --count=1 -v -timeout 15m
       - run:
@@ -253,6 +254,7 @@ jobs:
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+            $env:Path+=";$($HOME)\project\artifacts\bin"
             go test github.com/okteto/okteto/integration/deploy -tags="integration" --count=1 -v -timeout 20m
       - run:
           name: Run up integration tests
@@ -262,6 +264,7 @@ jobs:
             - OKTETO_APPS_SUBDOMAIN: staging.okteto.net
           command: |
             $env:OKTETO_PATH="$($HOME)\project\artifacts\bin\okteto.exe"
+            $env:Path+=";$($HOME)\project\artifacts\bin"
             go test github.com/okteto/okteto/integration/up -tags="integration" --count=1 -v -timeout 45m
       - store_artifacts:
           path: C:\Users\circleci\.okteto
