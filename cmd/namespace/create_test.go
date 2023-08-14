@@ -64,7 +64,7 @@ func Test_createNamespace(t *testing.T) {
 			fakeOktetoClient := &client.FakeOktetoClient{
 				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
 				Users:           client.NewFakeUsersClient(usr),
-				KubetokenClient: client.NewFakeKubetokenClient(types.KubeTokenResponse{}, nil),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			}
 			nsCmd := &NamespaceCommand{
 				okClient: fakeOktetoClient,

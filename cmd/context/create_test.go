@@ -320,7 +320,7 @@ func Test_createContext(t *testing.T) {
 				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
 				Users:           client.NewFakeUsersClient(tt.user),
 				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
-				KubetokenClient: client.NewFakeKubetokenClient(types.KubeTokenResponse{}, nil),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			}
 
 			ctxController := newFakeContextCommand(fakeOktetoClient, tt.user, tt.fakeObjects)
@@ -346,7 +346,7 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 	fakeOktetoClient := &client.FakeOktetoClient{
 		Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
 		Users:           client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
-		KubetokenClient: client.NewFakeKubetokenClient(types.KubeTokenResponse{}, nil),
+		KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 	}
 
 	ctxController := newFakeContextCommand(fakeOktetoClient, user, nil)
@@ -505,8 +505,7 @@ func TestGetUserContext(t *testing.T) {
 		name                  string
 		input                 input
 		output                output
-		kubetokenMockResponse types.KubeTokenResponse
-		kubetokenMockError    error
+		kubetokenMockResponse client.FakeKubetokenResponse
 	}{
 		{
 			name: "existing namespace",
@@ -624,14 +623,16 @@ func TestGetUserContext(t *testing.T) {
 				},
 				err: nil,
 			},
-			kubetokenMockResponse: types.KubeTokenResponse{
-				TokenRequest: authenticationv1.TokenRequest{
-					Status: authenticationv1.TokenRequestStatus{
-						Token: "",
+			kubetokenMockResponse: client.FakeKubetokenResponse{
+				Token: types.KubeTokenResponse{
+					TokenRequest: authenticationv1.TokenRequest{
+						Status: authenticationv1.TokenRequestStatus{
+							Token: "",
+						},
 					},
 				},
+				Err: assert.AnError,
 			},
-			kubetokenMockError: assert.AnError,
 		},
 		{
 			name: "dynamic kubetoken returned successfully and takes priority over static token",
@@ -649,12 +650,15 @@ func TestGetUserContext(t *testing.T) {
 				},
 				err: nil,
 			},
-			kubetokenMockResponse: types.KubeTokenResponse{
-				TokenRequest: authenticationv1.TokenRequest{
-					Status: authenticationv1.TokenRequestStatus{
-						Token: "dynamic-token",
+			kubetokenMockResponse: client.FakeKubetokenResponse{
+				Token: types.KubeTokenResponse{
+					TokenRequest: authenticationv1.TokenRequest{
+						Status: authenticationv1.TokenRequestStatus{
+							Token: "dynamic-token",
+						},
 					},
 				},
+				Err: nil,
 			},
 		},
 	}
@@ -673,7 +677,7 @@ func TestGetUserContext(t *testing.T) {
 			fakeOktetoClient := &client.FakeOktetoClient{
 				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
 				Users:           client.NewFakeUsersClientWithContext(userCtx, tc.input.userErr...),
-				KubetokenClient: client.NewFakeKubetokenClient(tc.kubetokenMockResponse, tc.kubetokenMockError),
+				KubetokenClient: client.NewFakeKubetokenClient(tc.kubetokenMockResponse),
 			}
 			cmd := ContextCommand{
 				OktetoClientProvider: client.NewFakeOktetoClientProvider(fakeOktetoClient),
