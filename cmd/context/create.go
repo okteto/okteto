@@ -384,7 +384,7 @@ func (c ContextCommand) getUserContext(ctx context.Context, ns string) (*types.U
 		kubetoken, err := client.Kubetoken().GetKubeToken(okteto.Context().Name, okteto.Context().Namespace)
 		if err != nil {
 			if utils.LoadBoolean(model.OktetoUseStaticKubetokenEnvVar) {
-				oktetoLog.Info("You are using static kubernetes tokens because you set '%s', however the feature is not available and okteto CLI will be using a static token", model.OktetoUseStaticKubetokenEnvVar)
+				oktetoLog.Info("You opted-in to use static kubernetes tokens because you set '%s', however the feature is not available and okteto CLI will be using a static token", model.OktetoUseStaticKubetokenEnvVar)
 			}
 			oktetoLog.Debug("Dynamic kubernetes tokens not available: falling back to static token")
 			return userContext, nil
