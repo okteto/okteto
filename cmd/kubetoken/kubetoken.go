@@ -17,13 +17,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/okteto/okteto/pkg/types"
 	"os"
+
+	"github.com/okteto/okteto/pkg/okteto"
+	"github.com/okteto/okteto/pkg/types"
 
 	contextCMD "github.com/okteto/okteto/cmd/context"
 
-	"github.com/okteto/okteto/pkg/errors"
-	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/spf13/cobra"
 )
 
@@ -54,7 +54,19 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 	cmd.RunE = func(_ *cobra.Command, args []string) error {
 		ctx := context.Background()
 
-		err := contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
+		k8sClientProvider := okteto.NewK8sClientProvider()
+		okClientProvider := okteto.NewOktetoClientProvider()
+		err := newPreReqValidator(
+			withCtxName(contextName),
+			withNamespace(namespace),
+			withK8sClientProvider(k8sClientProvider),
+			withOktetoClientProvider(okClientProvider),
+		).Validate(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to validate pre-reqs: %w", err)
+		}
+
+		err = contextCMD.NewContextCommand().Run(ctx, &contextCMD.ContextOptions{
 			Context:   contextName,
 			Namespace: namespace,
 		})
@@ -62,17 +74,16 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			return err
 		}
 
-		octx := okteto.Context()
-		if !octx.IsOkteto {
-			return errors.ErrContextIsNotOktetoCluster
+		if err := newK8sSupportValidator(k8sClientProvider).Validate(ctx); err != nil {
+			return fmt.Errorf("failed to validate k8s support: %w", err)
 		}
 
-		c, err := okteto.NewOktetoClient()
+		c, err := okClientProvider.Provide()
 		if err != nil {
-			return fmt.Errorf("failed to initialize the kubetoken client: %w", err)
+			return fmt.Errorf("failed to create okteto client: %w", err)
 		}
 
-		out, err := c.Kubetoken().GetKubeToken(octx.Name, octx.Namespace)
+		out, err := c.Kubetoken().GetKubeToken(contextName, namespace)
 		if err != nil {
 			return fmt.Errorf("failed to get the kubetoken: %w", err)
 		}

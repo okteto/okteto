@@ -191,7 +191,10 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string,
 
 	// check the namespace label
 	if k8sNamespace == "" {
-		k8sNamespace = cfg.Contexts[k8sContext].Namespace
+		cfgK8sNamespace, exists := cfg.Contexts[k8sContext]
+		if exists {
+			k8sNamespace = cfgK8sNamespace.Namespace
+		}
 	}
 
 	if k8sNamespace == "" {
