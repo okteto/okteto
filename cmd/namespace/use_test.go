@@ -82,9 +82,10 @@ func Test_useNamespace(t *testing.T) {
 				Token: "test",
 			}
 			fakeOktetoClient := &client.FakeOktetoClient{
-				Namespace: client.NewFakeNamespaceClient(tt.currentNamespaces, nil),
-				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
-				Users:     client.NewFakeUsersClient(usr),
+				Namespace:       client.NewFakeNamespaceClient(tt.currentNamespaces, nil),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				Users:           client.NewFakeUsersClient(usr),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			}
 			nsCmd := &NamespaceCommand{
 				okClient: fakeOktetoClient,
