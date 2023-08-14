@@ -14,8 +14,9 @@
 package repository
 
 import (
-	"github.com/go-git/go-git/v5/plumbing"
 	"testing"
+
+	"github.com/go-git/go-git/v5/plumbing"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/stretchr/testify/assert"
@@ -235,7 +236,7 @@ func TestGetSHA(t *testing.T) {
 			},
 			expected: expected{
 				sha: "",
-				err: nil,
+				err: errNotCleanRepo,
 			},
 		},
 		{

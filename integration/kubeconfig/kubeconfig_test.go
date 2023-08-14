@@ -1,0 +1,48 @@
+//go:build integration
+// +build integration
+
+// Copyright 2023 The Okteto Authors
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+package kubeconfig
+
+import (
+	"path/filepath"
+	"testing"
+
+	"github.com/okteto/okteto/integration"
+	"github.com/okteto/okteto/integration/commands"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	"github.com/stretchr/testify/require"
+)
+
+// Test_KubeconfigHasExec kubeconfig command should use exec instead of token for the user auth
+func Test_KubeconfigHasExec(t *testing.T) {
+	t.Parallel()
+
+	oktetoPath, err := integration.GetOktetoPath()
+	require.NoError(t, err)
+
+	home := t.TempDir()
+
+	err = commands.RunOktetoKubeconfig(oktetoPath, home)
+	require.NoError(t, err)
+
+	cfg := kubeconfig.Get([]string{filepath.Join(home, ".kube", "config")})
+	require.Len(t, cfg.AuthInfos, 1)
+
+	for _, v := range cfg.AuthInfos {
+		require.NotNil(t, v)
+		require.Empty(t, v.Token)
+		require.NotNil(t, v.Exec)
+	}
+}

@@ -66,7 +66,11 @@ func Test_deleteNamespace(t *testing.T) {
 				Namespace:       client.NewFakeNamespaceClient(initNamespaces, nil),
 				Users:           client.NewFakeUsersClient(usr),
 				StreamClient:    client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+<<<<<<< HEAD
 				KubetokenClient: client.NewFakeKubetokenClient(types.KubeTokenResponse{}, nil),
+=======
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
+>>>>>>> origin
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
 		},
@@ -79,7 +83,11 @@ func Test_deleteNamespace(t *testing.T) {
 				Namespace:       client.NewFakeNamespaceClient(initNamespaces, nil),
 				Users:           client.NewFakeUsersClient(usr),
 				StreamClient:    client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+<<<<<<< HEAD
 				KubetokenClient: client.NewFakeKubetokenClient(types.KubeTokenResponse{}, nil),
+=======
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
+>>>>>>> origin
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
 		},
@@ -93,7 +101,11 @@ func Test_deleteNamespace(t *testing.T) {
 				Namespace:       client.NewFakeNamespaceClient(initNamespaces, nil),
 				Users:           client.NewFakeUsersClient(usr),
 				StreamClient:    client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+<<<<<<< HEAD
 				KubetokenClient: client.NewFakeKubetokenClient(types.KubeTokenResponse{}, nil),
+=======
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
+>>>>>>> origin
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
 		},
@@ -106,7 +118,11 @@ func Test_deleteNamespace(t *testing.T) {
 				Namespace:       client.NewFakeNamespaceClient(initNamespaces, nil),
 				Users:           client.NewFakeUsersClient(usr),
 				StreamClient:    client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+<<<<<<< HEAD
 				KubetokenClient: client.NewFakeKubetokenClient(types.KubeTokenResponse{}, nil),
+=======
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
+>>>>>>> origin
 			},
 			fakeK8sClient: fake.NewSimpleClientset(&v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -127,7 +143,7 @@ func Test_deleteNamespace(t *testing.T) {
 				Namespace:       client.NewFakeNamespaceClient(initNamespaces, nil),
 				Users:           client.NewFakeUsersClient(usr),
 				StreamClient:    client.NewFakeStreamClient(&client.FakeStreamResponse{StreamErr: assert.AnError}),
-				KubetokenClient: client.NewFakeKubetokenClient(types.KubeTokenResponse{}, nil),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
 		},

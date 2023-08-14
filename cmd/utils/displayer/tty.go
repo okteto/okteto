@@ -47,17 +47,20 @@ func newTTYDisplayer(stdout, stderr io.Reader) *ttyDisplayer {
 		stderrScanner = bufio.NewScanner(stderr)
 	}
 
+	commandContext, cancel := context.WithCancel(context.Background())
+
 	return &ttyDisplayer{
-		stdoutScanner: stdoutScanner,
-		stderrScanner: stderrScanner,
-		screenbuf:     screenbuf.New(os.Stdout),
+		stdoutScanner:  stdoutScanner,
+		stderrScanner:  stderrScanner,
+		screenbuf:      screenbuf.New(os.Stdout),
+		commandContext: commandContext,
+		cancel:         cancel,
 
 		linesToDisplay: []string{},
 	}
 }
 
 func (d *ttyDisplayer) Display(_ string) {
-	d.commandContext, d.cancel = context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 	wgDelta := 0
 	if d.stdoutScanner != nil {

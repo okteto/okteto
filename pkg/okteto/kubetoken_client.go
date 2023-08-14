@@ -50,12 +50,20 @@ func getKubetokenURL(baseURL, namespace string) (*url.URL, error) {
 }
 
 func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (types.KubeTokenResponse, error) {
+<<<<<<< HEAD
 	url, err := getKubetokenURL(baseURL, namespace)
+=======
+	endpoint, err := getKubetokenURL(baseURL, namespace)
+>>>>>>> origin
 	if err != nil {
 		return types.KubeTokenResponse{}, err
 	}
 
+<<<<<<< HEAD
 	resp, err := c.httpClient.Get(url.String())
+=======
+	resp, err := c.httpClient.Get(endpoint.String())
+>>>>>>> origin
 	if err != nil {
 		return types.KubeTokenResponse{}, fmt.Errorf("GetKubeToken %w: %w", errRequest, err)
 	}
@@ -83,20 +91,31 @@ func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (types.KubeTok
 }
 
 func (c *kubeTokenClient) CheckService(baseURL, namespace string) error {
+<<<<<<< HEAD
 	url, err := getKubetokenURL(baseURL, namespace)
+=======
+	endpoint, err := getKubetokenURL(baseURL, namespace)
+>>>>>>> origin
 	if err != nil {
 		return err
 	}
 
+<<<<<<< HEAD
 	resp, err := c.httpClient.Head(url.String())
+=======
+	resp, err := c.httpClient.Head(endpoint.String())
+>>>>>>> origin
 	if err != nil {
 		return fmt.Errorf("CheckService %w: %w", errRequest, err)
 	}
 
+<<<<<<< HEAD
 	if resp.StatusCode == http.StatusUnauthorized {
 		return fmt.Errorf("GetKubeToken %w", errUnauthorized)
 	}
 
+=======
+>>>>>>> origin
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("CheckService %w: %s", errKubetokenNotAvailable, baseURL)
 	}

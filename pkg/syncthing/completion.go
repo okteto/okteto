@@ -17,7 +17,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/okteto/okteto/pkg/analytics"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
@@ -77,7 +76,6 @@ func (s *Syncthing) WaitForCompletion(ctx context.Context, reporter chan float64
 			reporter <- wfc.progress
 
 			if wfc.needsDatabaseReset() {
-				analytics.TrackResetDatabase(true)
 				return oktetoErrors.ErrNeedsResetSyncError
 			}
 
