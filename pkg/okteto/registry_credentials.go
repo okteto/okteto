@@ -5,15 +5,56 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	dockertypes "github.com/docker/cli/cli/config/types"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
+var globalRegistryCache registryCache
+
+type registryCache struct {
+	cache map[string][2]string
+	m     sync.RWMutex
+}
+
+func (rc *registryCache) Get(host string) (user string, pass string, ok bool) {
+	rc.m.RLock()
+	defer rc.m.RUnlock()
+
+	var tuple [2]string
+	tuple, ok = rc.cache[host]
+
+	if ok {
+		user = tuple[0]
+		pass = tuple[1]
+	}
+	return
+}
+
+func (rc *registryCache) Set(host, user, pass string) {
+	rc.m.Lock()
+	defer rc.m.Unlock()
+
+	if rc.cache == nil {
+		rc.cache = make(map[string][2]string)
+	}
+
+	rc.cache[host] = [2]string{user, pass}
+}
+
+func (rc *registryCache) Delete(host string) {
+	rc.m.Lock()
+	defer rc.m.Unlock()
+	delete(rc.cache, host)
+}
+
 type externalRegistryCredentialsReader struct {
 	getter   func(ctx context.Context, host string) (dockertypes.AuthConfig, error)
 	isOkteto bool
+
+	cache *registryCache
 }
 
 func (r *externalRegistryCredentialsReader) read(ctx context.Context, registryOrImage string) (string, string, error) {
@@ -41,6 +82,19 @@ func (r *externalRegistryCredentialsReader) read(ctx context.Context, registryOr
 		registry = u.Host
 	}
 
+	if r.cache != nil {
+		if user, pass, ok := r.cache.Get(registry); ok {
+			return user, pass, nil
+		}
+
+		ac, err := r.getter(ctx, registry)
+		if err != nil {
+			return "", "", err
+		}
+		r.cache.Set(registry, ac.Username, ac.Password)
+		return ac.Username, ac.Password, err
+	}
+
 	ac, err := r.getter(ctx, registry)
 	return ac.Username, ac.Password, err
 }
@@ -54,6 +108,7 @@ func GetExternalRegistryCredentialsWithContext(ctx context.Context, registryOrIm
 	r := &externalRegistryCredentialsReader{
 		isOkteto: IsOkteto(),
 		getter:   c.User().GetRegistryCredentials,
+		cache:    &globalRegistryCache,
 	}
 	return r.read(ctx, registryOrImage)
 }
