@@ -289,12 +289,12 @@ func solveBuild(ctx context.Context, c *client.Client, opt *client.SolveOpt, pro
 				oktetoLog.Debugf("could not create console from file: %s ", err)
 			}
 			go func() {
-				if err := progressui.DisplaySolveStatus(context.TODO(), "", c, oktetoLog.GetOutputWriter(), ttyChannel); err != nil {
+				if err := progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel); err != nil {
 					oktetoLog.Infof("could not display solve status: %s", err)
 				}
 			}()
 			// not using shared context to not disrupt display but let it finish reporting errors
-			return progressui.DisplaySolveStatus(context.TODO(), "", nil, w, plainChannel)
+			return progressui.DisplaySolveStatus(context.TODO(), "", c, oktetoLog.GetOutputWriter(), ttyChannel)
 		case "deploy":
 			err := deployDisplayer(context.TODO(), plainChannel, &types.BuildOptions{OutputMode: "deploy"})
 			commandFailChannel <- err
