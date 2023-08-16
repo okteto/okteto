@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/okteto/okteto/pkg/model"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	"os"
 	"strconv"
@@ -705,7 +704,7 @@ func TestGetUserContext(t *testing.T) {
 				},
 			}
 
-			t.Setenv(model.OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tc.useStaticToken))
+			t.Setenv(constants.OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tc.useStaticToken))
 
 			fakeOktetoClient := &client.FakeOktetoClient{
 				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),

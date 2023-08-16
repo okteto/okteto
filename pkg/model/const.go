@@ -263,7 +263,4 @@ const (
 
 	// OktetoImageTagWithVolumes is the tag assigned to an image with volume mounts
 	OktetoImageTagWithVolumes = "okteto-with-volume-mounts"
-
-	// OktetoUseStaticKubetokenEnvVar is used to opt in to use static kubetoken
-	OktetoUseStaticKubetokenEnvVar = "OKTETO_USE_STATIC_KUBETOKEN"
 )

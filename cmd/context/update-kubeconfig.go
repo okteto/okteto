@@ -16,16 +16,20 @@ package context
 import (
 	"context"
 	"encoding/base64"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
-	"github.com/okteto/okteto/pkg/model"
-
+	"fmt"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
+	"github.com/okteto/okteto/pkg/constants"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+)
+
+var (
+	usingStaticKubetokenWarningMessage = fmt.Sprintf("Using static Kubernetes token due to env var: '%s'. This feature will be removed in the future. We recommend using a dynamic kubernetes token, to know more check out our documentation: https://www.okteto.com/docs", constants.OktetoUseStaticKubetokenEnvVar)
 )
 
 // UpdateKubeconfigCMD all contexts managed by okteto
@@ -64,15 +68,15 @@ func ExecuteUpdateKubeconfig(okCtx *okteto.OktetoContext, kubeconfigPaths []stri
 		return err
 	}
 
-	if !utils.LoadBoolean(model.OktetoUseStaticKubetokenEnvVar) {
+	if utils.LoadBoolean(constants.OktetoUseStaticKubetokenEnvVar) {
+		removeExecFromCfg(okCtx)
+		oktetoLog.Warning(usingStaticKubetokenWarningMessage)
+	} else {
 		if err := okClient.Kubetoken().CheckService(okCtx.Name, okCtx.Namespace); err == nil {
 			updateCfgAuthInfoWithExec(okCtx)
 		} else {
 			oktetoLog.Debug("Error checking kubetoken service: %w", err)
 		}
-	} else {
-		removeExecFromCfg(okCtx)
-		oktetoLog.Warning("Using static Kubernetes token due to env var: '%s'. This feature will be removed in the future. We recommend using a dynamic kubernetes token, to know more check out our documentation: https://www.okteto.com/docs", model.OktetoUseStaticKubetokenEnvVar)
 	}
 
 	if err := kubeconfig.Write(okCtx.Cfg, kubeconfigPaths[0]); err != nil {
