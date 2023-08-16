@@ -12,10 +12,15 @@ import (
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 )
 
-var globalRegistryCache registryCache
+var globalRegistryCredentialsCache registryCache
+
+type registryCacheItem struct {
+	user string
+	pass string
+}
 
 type registryCache struct {
-	cache map[string][2]string
+	cache map[string]registryCacheItem
 	m     sync.RWMutex
 }
 
@@ -23,12 +28,12 @@ func (rc *registryCache) Get(host string) (user string, pass string, ok bool) {
 	rc.m.RLock()
 	defer rc.m.RUnlock()
 
-	var tuple [2]string
-	tuple, ok = rc.cache[host]
+	var item registryCacheItem
+	item, ok = rc.cache[host]
 
 	if ok {
-		user = tuple[0]
-		pass = tuple[1]
+		user = item.user
+		pass = item.pass
 	}
 	return
 }
@@ -38,16 +43,10 @@ func (rc *registryCache) Set(host, user, pass string) {
 	defer rc.m.Unlock()
 
 	if rc.cache == nil {
-		rc.cache = make(map[string][2]string)
+		rc.cache = make(map[string]registryCacheItem)
 	}
 
-	rc.cache[host] = [2]string{user, pass}
-}
-
-func (rc *registryCache) Delete(host string) {
-	rc.m.Lock()
-	defer rc.m.Unlock()
-	delete(rc.cache, host)
+	rc.cache[host] = registryCacheItem{user, pass}
 }
 
 type externalRegistryCredentialsReader struct {
@@ -108,7 +107,7 @@ func GetExternalRegistryCredentialsWithContext(ctx context.Context, registryOrIm
 	r := &externalRegistryCredentialsReader{
 		isOkteto: IsOkteto(),
 		getter:   c.User().GetRegistryCredentials,
-		cache:    &globalRegistryCache,
+		cache:    &globalRegistryCredentialsCache,
 	}
 	return r.read(ctx, registryOrImage)
 }

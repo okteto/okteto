@@ -181,16 +181,4 @@ func TestRegistryCache(t *testing.T) {
 	require.Equal(t, "thedude", user)
 	require.Equal(t, "elduderino", pass)
 	require.True(t, ok)
-
-	rc.Delete("thebiglebowski.com")
-
-	user, pass, ok = rc.Get("thebiglebowski.com")
-	require.Equal(t, "", user)
-	require.Equal(t, "", pass)
-	require.False(t, ok)
-
-	require.NotPanics(t, func() {
-		rc := registryCache{}
-		rc.Delete("inexistent") // delete nil cache
-	})
 }
