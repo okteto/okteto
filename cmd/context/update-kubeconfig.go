@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
 	"github.com/okteto/okteto/pkg/constants"
@@ -29,7 +30,7 @@ import (
 )
 
 var (
-	usingStaticKubetokenWarningMessage = fmt.Sprintf("Using static Kubernetes token due to env var: '%s'. This feature will be removed in the future. We recommend using a dynamic kubernetes token.", constants.OktetoUseStaticKubetokenEnvVar)
+	usingStaticKubetokenWarningMessage = fmt.Sprintf("Using static Kubernetes token due to env var: '%s'. This authentication method is deprecated and will be removed in the future. We recommend using a dynamic kubernetes token. Please visit https://kubernetes.io/docs/concepts/configuration/secret/#service-account-token-secrets/ for more information.", constants.OktetoUseStaticKubetokenEnvVar)
 )
 
 // UpdateKubeconfigCMD all contexts managed by okteto
