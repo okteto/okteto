@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	usingStaticKubetokenWarningMessage = fmt.Sprintf("Using static Kubernetes token due to env var: '%s'. This feature will be removed in the future. We recommend using a dynamic kubernetes token, to know more check out our documentation: https://www.okteto.com/docs", constants.OktetoUseStaticKubetokenEnvVar)
+	usingStaticKubetokenWarningMessage = fmt.Sprintf("Using static Kubernetes token due to env var: '%s'. This feature will be removed in the future. We recommend using a dynamic kubernetes token.", constants.OktetoUseStaticKubetokenEnvVar)
 )
 
 // UpdateKubeconfigCMD all contexts managed by okteto
