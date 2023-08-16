@@ -14,7 +14,6 @@
 package context
 
 import (
-	"github.com/okteto/okteto/pkg/constants"
 	"os"
 	"testing"
 
@@ -256,7 +255,7 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(constants.OktetoUseStaticKubetokenEnvVar, "false")
+			t.Setenv(oktetoUseStaticKubetokenEnvVar, "false")
 
 			okteto.CurrentStore = tt.context
 			file, err := test.CreateKubeconfig(tt.kubeconfigCtx)
@@ -341,7 +340,7 @@ func Test_RemoveExecFromCfg(t *testing.T) {
 }
 
 func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing.T) {
-	t.Setenv(constants.OktetoUseStaticKubetokenEnvVar, "true")
+	t.Setenv(oktetoUseStaticKubetokenEnvVar, "true")
 
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		CurrentContext: "ctx-test",

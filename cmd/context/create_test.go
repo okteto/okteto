@@ -704,7 +704,7 @@ func TestGetUserContext(t *testing.T) {
 				},
 			}
 
-			t.Setenv(constants.OktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tc.useStaticToken))
+			t.Setenv(oktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tc.useStaticToken))
 
 			fakeOktetoClient := &client.FakeOktetoClient{
 				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),

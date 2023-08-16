@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/constants"
 	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
@@ -28,8 +27,13 @@ import (
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
+const (
+	// oktetoUseStaticKubetokenEnvVar is used to opt in to use static kubetoken
+	oktetoUseStaticKubetokenEnvVar = "OKTETO_USE_STATIC_KUBETOKEN"
+)
+
 var (
-	usingStaticKubetokenWarningMessage = fmt.Sprintf("Using static Kubernetes token due to env var: '%s'. This feature will be removed in the future. We recommend using a dynamic kubernetes token.", constants.OktetoUseStaticKubetokenEnvVar)
+	usingStaticKubetokenWarningMessage = fmt.Sprintf("Using static Kubernetes token due to env var: '%s'. This feature will be removed in the future. We recommend using a dynamic kubernetes token.", oktetoUseStaticKubetokenEnvVar)
 )
 
 // UpdateKubeconfigCMD all contexts managed by okteto
@@ -68,7 +72,7 @@ func ExecuteUpdateKubeconfig(okCtx *okteto.OktetoContext, kubeconfigPaths []stri
 		return err
 	}
 
-	if utils.LoadBoolean(constants.OktetoUseStaticKubetokenEnvVar) {
+	if utils.LoadBoolean(oktetoUseStaticKubetokenEnvVar) {
 		removeExecFromCfg(okCtx)
 		oktetoLog.Warning(usingStaticKubetokenWarningMessage)
 	} else {

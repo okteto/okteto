@@ -131,7 +131,4 @@ const (
 
 	//OktetoDependencyEnvsKey the key on the conqfig map that will store OKTETO_ENV values
 	OktetoDependencyEnvsKey = "dependencyEnvs"
-
-	// OktetoUseStaticKubetokenEnvVar is used to opt in to use static kubetoken
-	OktetoUseStaticKubetokenEnvVar = "OKTETO_USE_STATIC_KUBETOKEN"
 )

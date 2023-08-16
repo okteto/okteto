@@ -17,7 +17,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/okteto/okteto/pkg/constants"
 	"net/url"
 	"os"
 	"strings"
@@ -382,7 +381,7 @@ func (c ContextCommand) getUserContext(ctx context.Context, ns string) (*types.U
 			}
 		}
 
-		if utils.LoadBoolean(constants.OktetoUseStaticKubetokenEnvVar) {
+		if utils.LoadBoolean(oktetoUseStaticKubetokenEnvVar) {
 			oktetoLog.Warning(usingStaticKubetokenWarningMessage)
 			return userContext, nil
 		}
