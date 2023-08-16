@@ -19,6 +19,7 @@ import (
 	"fmt"
 	authenticationv1 "k8s.io/api/authentication/v1"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -506,6 +507,7 @@ func TestGetUserContext(t *testing.T) {
 		input                 input
 		output                output
 		kubetokenMockResponse client.FakeKubetokenResponse
+		useStaticToken        bool
 	}{
 		{
 			name: "existing namespace",
@@ -661,6 +663,34 @@ func TestGetUserContext(t *testing.T) {
 				Err: nil,
 			},
 		},
+		{
+			name: "static kubetoken is returned when using feature flag",
+			input: input{
+				ns: "test",
+			},
+			output: output{
+				uc: &types.UserContext{
+					User: types.User{
+						Token: "test",
+					},
+					Credentials: types.Credential{
+						Token: "static",
+					},
+				},
+				err: nil,
+			},
+			useStaticToken: true,
+			kubetokenMockResponse: client.FakeKubetokenResponse{
+				Token: types.KubeTokenResponse{
+					TokenRequest: authenticationv1.TokenRequest{
+						Status: authenticationv1.TokenRequestStatus{
+							Token: "dynamic-token",
+						},
+					},
+				},
+				Err: nil,
+			},
+		},
 	}
 	for _, tc := range tt {
 		tc := tc
@@ -673,6 +703,8 @@ func TestGetUserContext(t *testing.T) {
 					Token: "static",
 				},
 			}
+
+			t.Setenv(oktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tc.useStaticToken))
 
 			fakeOktetoClient := &client.FakeOktetoClient{
 				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
