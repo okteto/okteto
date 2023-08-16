@@ -14,6 +14,7 @@
 package context
 
 import (
+	"github.com/okteto/okteto/pkg/model"
 	"os"
 	"testing"
 
@@ -136,7 +137,7 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 			okteto.CurrentStore = tt.context
 			file, err := test.CreateKubeconfig(tt.kubeconfigCtx)
 			if err != nil {
-				assert.NoError(t, err, "error creating temporal kubeconfig")
+				assert.NoError(t, err, "error creating temporary kubeconfig")
 			}
 			defer os.Remove(file)
 
@@ -156,7 +157,6 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 }
 
 func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
-
 	var tests = []struct {
 		name             string
 		kubeconfigCtx    test.KubeconfigFields
@@ -256,10 +256,12 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(model.OktetoUseStaticKubetokenEnvVar, "false")
+
 			okteto.CurrentStore = tt.context
 			file, err := test.CreateKubeconfig(tt.kubeconfigCtx)
 			if err != nil {
-				assert.NoError(t, err, "error creating temporal kubeconfig")
+				assert.NoError(t, err, "error creating temporary kubeconfig")
 			}
 			defer os.Remove(file)
 
@@ -279,4 +281,108 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 			assert.Empty(t, cfg.AuthInfos[""].Token)
 		})
 	}
+}
+
+func Test_RemoveExecFromCfg(t *testing.T) {
+	var tests = []struct {
+		name     string
+		input    *okteto.OktetoContext
+		expected *okteto.OktetoContext
+	}{
+		{
+			name:     "nil context",
+			input:    nil,
+			expected: nil,
+		},
+		{
+			name:     "empty UserID",
+			input:    &okteto.OktetoContext{},
+			expected: &okteto.OktetoContext{},
+		},
+		{
+			name:     "nil config",
+			input:    &okteto.OktetoContext{UserID: "test-user"},
+			expected: &okteto.OktetoContext{UserID: "test-user"},
+		},
+		{
+			name:     "nil AuthInfos",
+			input:    &okteto.OktetoContext{UserID: "test-user", Cfg: &api.Config{}},
+			expected: &okteto.OktetoContext{UserID: "test-user", Cfg: &api.Config{}},
+		},
+		{
+			name:     "missing user in AuthInfos",
+			input:    &okteto.OktetoContext{UserID: "test-user", Cfg: &api.Config{AuthInfos: make(map[string]*api.AuthInfo)}},
+			expected: &okteto.OktetoContext{UserID: "test-user", Cfg: &api.Config{AuthInfos: make(map[string]*api.AuthInfo)}},
+		},
+		{
+			name: "Exec removed successfully",
+			input: &okteto.OktetoContext{
+				UserID: "test-user",
+				Cfg: &api.Config{AuthInfos: map[string]*api.AuthInfo{
+					"test-user": {Token: "test-token", Exec: &api.ExecConfig{Command: "test-cmd"}},
+				}},
+			},
+			expected: &okteto.OktetoContext{
+				UserID: "test-user",
+				Cfg: &api.Config{AuthInfos: map[string]*api.AuthInfo{
+					"test-user": {Token: "test-token", Exec: nil},
+				}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			removeExecFromCfg(tt.input)
+
+			assert.Equal(t, tt.expected, tt.input)
+		})
+	}
+}
+
+func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing.T) {
+	t.Setenv(model.OktetoUseStaticKubetokenEnvVar, "true")
+
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "ctx-test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"ctx-test": {
+				UserID:    "test-user",
+				Namespace: "ns-text",
+				Cfg: &api.Config{
+					AuthInfos: map[string]*api.AuthInfo{
+						"test-user": {Token: "test-token", Exec: &api.ExecConfig{Command: "test-cmd"}},
+					},
+				},
+			},
+		},
+	}
+
+	file, err := test.CreateKubeconfig(test.KubeconfigFields{
+		Name:           []string{"name-test"},
+		Namespace:      []string{"ns-test"},
+		CurrentContext: "ctx-test",
+	})
+
+	if err != nil {
+		assert.NoError(t, err, "error creating temporary kubeconfig")
+	}
+	defer os.Remove(file)
+
+	okContext := okteto.Context()
+	kubeconfigPaths := []string{file}
+	okClientProvider := client.NewFakeOktetoClientProvider(
+		&client.FakeOktetoClient{
+			KubetokenClient: client.NewFakeKubetokenClient(
+				client.FakeKubetokenResponse{},
+			),
+		},
+	)
+
+	err = ExecuteUpdateKubeconfig(okContext, kubeconfigPaths, okClientProvider)
+	assert.NoError(t, err, "error writing kubeconfig")
+
+	cfg := kubeconfig.Get(kubeconfigPaths)
+	assert.Nil(t, cfg.AuthInfos["test-user"].Exec)
+	assert.Equal(t, cfg.AuthInfos["test-user"].Token, "test-token")
 }

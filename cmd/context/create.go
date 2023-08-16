@@ -382,7 +382,7 @@ func (c ContextCommand) getUserContext(ctx context.Context, ns string) (*types.U
 		}
 
 		if utils.LoadBoolean(model.OktetoUseStaticKubetokenEnvVar) {
-			oktetoLog.Debugf("Using static Kubernetes token due to env var: '%s'. This feature will be removed in the future. We recommend using a dynamic kubernetes token, to know more check out our documentation: https://www.okteto.com/docs", model.OktetoUseStaticKubetokenEnvVar)
+			oktetoLog.Warning("Using static Kubernetes token due to env var: '%s'. This feature will be removed in the future. We recommend using a dynamic kubernetes token, to know more check out our documentation: https://www.okteto.com/docs", model.OktetoUseStaticKubetokenEnvVar)
 			return userContext, nil
 		}
 

@@ -16,10 +16,11 @@ package context
 import (
 	"context"
 	"encoding/base64"
+	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
+	"github.com/okteto/okteto/pkg/model"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
-	"github.com/okteto/okteto/pkg/k8s/kubeconfig"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
@@ -62,10 +63,16 @@ func ExecuteUpdateKubeconfig(okCtx *okteto.OktetoContext, kubeconfigPaths []stri
 	if err != nil {
 		return err
 	}
-	if err := okClient.Kubetoken().CheckService(okCtx.Name, okCtx.Namespace); err == nil {
-		updateCfgAuthInfoWithExec(okCtx)
+
+	if !utils.LoadBoolean(model.OktetoUseStaticKubetokenEnvVar) {
+		if err := okClient.Kubetoken().CheckService(okCtx.Name, okCtx.Namespace); err == nil {
+			updateCfgAuthInfoWithExec(okCtx)
+		} else {
+			oktetoLog.Debug("Error checking kubetoken service: %w", err)
+		}
 	} else {
-		oktetoLog.Debug("Error checking kubetoken service: %w", err)
+		removeExecFromCfg(okCtx)
+		oktetoLog.Warning("Using static Kubernetes token due to env var: '%s'. This feature will be removed in the future. We recommend using a dynamic kubernetes token, to know more check out our documentation: https://www.okteto.com/docs", model.OktetoUseStaticKubetokenEnvVar)
 	}
 
 	if err := kubeconfig.Write(okCtx.Cfg, kubeconfigPaths[0]); err != nil {
@@ -108,4 +115,12 @@ func updateCfgAuthInfoWithExec(okCtx *okteto.OktetoContext) {
 		InteractiveMode:    "Never",
 		ProvideClusterInfo: true,
 	}
+}
+
+func removeExecFromCfg(okCtx *okteto.OktetoContext) {
+	if okCtx == nil || okCtx.UserID == "" || okCtx.Cfg == nil || okCtx.Cfg.AuthInfos == nil || okCtx.Cfg.AuthInfos[okCtx.UserID] == nil {
+		return
+	}
+
+	okCtx.Cfg.AuthInfos[okCtx.UserID].Exec = nil
 }
