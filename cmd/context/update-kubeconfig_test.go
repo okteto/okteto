@@ -157,10 +157,9 @@ func Test_ExecuteUpdateKubeconfig_DisabledKubetoken(t *testing.T) {
 
 func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 	var tests = []struct {
-		name             string
-		kubeconfigCtx    test.KubeconfigFields
-		context          *okteto.OktetoContextStore
-		okClientProvider types.OktetoClientProvider
+		name          string
+		kubeconfigCtx test.KubeconfigFields
+		context       *okteto.OktetoContextStore
 	}{
 		{
 			name: "change current ctx",
@@ -182,16 +181,10 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 								},
 							},
 						},
+						IsOkteto: true,
 					},
 				},
 			},
-			okClientProvider: client.NewFakeOktetoClientProvider(
-				&client.FakeOktetoClient{
-					KubetokenClient: client.NewFakeKubetokenClient(
-						client.FakeKubetokenResponse{},
-					),
-				},
-			),
 		},
 		{
 			name: "change current namespace",
@@ -213,16 +206,10 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 								},
 							},
 						},
+						IsOkteto: true,
 					},
 				},
 			},
-			okClientProvider: client.NewFakeOktetoClientProvider(
-				&client.FakeOktetoClient{
-					KubetokenClient: client.NewFakeKubetokenClient(
-						client.FakeKubetokenResponse{},
-					),
-				},
-			),
 		},
 		{
 			name:          "create if it doesn't exist",
@@ -240,22 +227,24 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 								},
 							},
 						},
+						IsOkteto: true,
 					},
 				},
 			},
-			okClientProvider: client.NewFakeOktetoClientProvider(
-				&client.FakeOktetoClient{
-					KubetokenClient: client.NewFakeKubetokenClient(
-						client.FakeKubetokenResponse{},
-					),
-				},
-			),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(oktetoUseStaticKubetokenEnvVar, "false")
+
+			okClientProvider := client.NewFakeOktetoClientProvider(
+				&client.FakeOktetoClient{
+					KubetokenClient: client.NewFakeKubetokenClient(
+						client.FakeKubetokenResponse{},
+					),
+				},
+			)
 
 			okteto.CurrentStore = tt.context
 			file, err := test.CreateKubeconfig(tt.kubeconfigCtx)
@@ -267,7 +256,7 @@ func Test_ExecuteUpdateKubeconfig_EnabledKubetoken(t *testing.T) {
 			okContext := okteto.Context()
 			kubeconfigPaths := []string{file}
 
-			err = ExecuteUpdateKubeconfig(okContext, kubeconfigPaths, tt.okClientProvider)
+			err = ExecuteUpdateKubeconfig(okContext, kubeconfigPaths, okClientProvider)
 			assert.NoError(t, err, "error writing kubeconfig")
 
 			cfg := kubeconfig.Get(kubeconfigPaths)
@@ -353,6 +342,7 @@ func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing
 						"test-user": {Token: "test-token", Exec: &api.ExecConfig{Command: "test-cmd"}},
 					},
 				},
+				IsOkteto: true,
 			},
 		},
 	}
@@ -384,4 +374,42 @@ func Test_ExecuteUpdateKubeconfig_With_OktetoUseStaticKubetokenEnvVar(t *testing
 	cfg := kubeconfig.Get(kubeconfigPaths)
 	assert.Nil(t, cfg.AuthInfos["test-user"].Exec)
 	assert.Equal(t, cfg.AuthInfos["test-user"].Token, "test-token")
+}
+
+func Test_ExecuteUpdateKubeconfig_ForNonOktetoContext(t *testing.T) {
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		CurrentContext: "ctx-test",
+		Contexts: map[string]*okteto.OktetoContext{
+			"ctx-test": {
+				UserID:    "test-user",
+				Namespace: "ns-text",
+				Cfg: &api.Config{
+					AuthInfos: map[string]*api.AuthInfo{
+						"test-user": {Exec: &api.ExecConfig{Command: "test-cmd"}},
+					},
+				},
+				IsOkteto: false,
+			},
+		},
+	}
+
+	file, err := test.CreateKubeconfig(test.KubeconfigFields{
+		Name:           []string{"name-test"},
+		Namespace:      []string{"ns-test"},
+		CurrentContext: "ctx-test",
+	})
+
+	if err != nil {
+		assert.NoError(t, err, "error creating temporary kubeconfig")
+	}
+	defer os.Remove(file)
+
+	okContext := okteto.Context()
+	kubeconfigPaths := []string{file}
+
+	err = ExecuteUpdateKubeconfig(okContext, kubeconfigPaths, nil)
+	assert.NoError(t, err, "error writing kubeconfig")
+
+	cfg := kubeconfig.Get(kubeconfigPaths)
+	assert.NotNil(t, cfg.AuthInfos["test-user"].Exec)
 }
