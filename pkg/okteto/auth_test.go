@@ -102,6 +102,17 @@ func TestAuth(t *testing.T) {
 				err: nil,
 			},
 		},
+		{
+			name: "trial expired",
+			input: input{
+				client: fakeGraphQLClient{
+					err: fmt.Errorf("non-200 OK status code: 423"),
+				},
+			},
+			expected: expected{
+				err: okerrors.ErrTrialExpired,
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -16,6 +16,7 @@ package context
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -395,6 +396,10 @@ func (c ContextCommand) getUserContext(ctx context.Context, ctxName, ns, token s
 
 			// If there is a TLS error, don't continue the loop and return the raw error
 			if oktetoErrors.IsX509(err) {
+				return nil, err
+			}
+
+			if errors.Is(err, oktetoErrors.ErrTrialExpired) {
 				return nil, err
 			}
 

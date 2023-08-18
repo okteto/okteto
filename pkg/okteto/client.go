@@ -293,10 +293,16 @@ func translateAPIErr(err error) error {
 		return oktetoErrors.ErrNotFound
 
 	default:
-		if oktetoErrors.IsX509(err) {
+		switch {
+		case oktetoErrors.IsX509(err):
 			return oktetoErrors.UserError{
 				E:    err,
 				Hint: oktetoErrors.ErrX509Hint,
+			}
+		case strings.HasPrefix(err.Error(), "non-200 OK status code: 423"):
+			return oktetoErrors.UserError{
+				E:    oktetoErrors.ErrTrialExpired,
+				Hint: fmt.Sprintf("This command-line tool will no longer work. Please contact our sales team (sales@okteto.com) to obtain a new license key for %s", Context().Name),
 			}
 		}
 
