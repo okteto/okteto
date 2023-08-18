@@ -17,6 +17,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
+	"text/tabwriter"
+
 	contextCMD "github.com/okteto/okteto/cmd/context"
 	oktetoErrors "github.com/okteto/okteto/pkg/errors"
 	oktetoLog "github.com/okteto/okteto/pkg/log"
@@ -24,8 +28,6 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
-	"os"
-	"text/tabwriter"
 )
 
 // ListFlags are the flags available for list commands
@@ -114,6 +116,9 @@ func executeListPreviews(ctx context.Context, opts ListFlags) error {
 		fmt.Fprintf(w, "Name\tScope\tSleeping\tLabels\n")
 		for _, preview := range previewList {
 			previewLabels := "-"
+			if len(preview.PreviewLabels) > 0 {
+				previewLabels = strings.Join(preview.PreviewLabels, ", ")
+			}
 			fmt.Fprintf(w, "%s\t%s\t%v\t%s\n", preview.ID, preview.Scope, preview.Sleeping, previewLabels)
 		}
 		w.Flush()
