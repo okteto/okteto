@@ -110,7 +110,7 @@ func newPreReqValidator(opts ...option) *preReqValidator {
 
 // Validate validates that all the pre-reqs to execute the command are met
 func (v *preReqValidator) Validate(ctx context.Context) error {
-	oktetoLog.Info("validating pre-reqs")
+	oktetoLog.Info("validating pre-reqs for kubetoken")
 
 	ctx, cancel := context.WithTimeout(ctx, valdationTimeout)
 	defer cancel()
@@ -162,6 +162,7 @@ func (e errIsNotOktetoCtx) Error() string {
 }
 
 func (v *ctxValidator) Validate(ctx context.Context) error {
+	oktetoLog.Info("validating the context")
 	result := make(chan error, 1)
 	go func() {
 		if v.ctxName == "" {
@@ -209,6 +210,7 @@ func newOktetoSupportValidator(ctx context.Context, ctxName, ns string, k8sClien
 }
 
 func (v *oktetoSupportValidator) Validate(ctx context.Context) error {
+	oktetoLog.Info("validating okteto client support for kubetoken")
 	result := make(chan error, 1)
 	go func() {
 		okClient, err := v.oktetoClientProvider.Provide()
