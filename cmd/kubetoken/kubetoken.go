@@ -74,10 +74,6 @@ You can find more information on 'ExecCredential' and 'client side authenticatio
 			return err
 		}
 
-		if err := newK8sSupportValidator(k8sClientProvider).Validate(ctx); err != nil {
-			return fmt.Errorf("failed to validate k8s support: %w", err)
-		}
-
 		c, err := okClientProvider.Provide()
 		if err != nil {
 			return fmt.Errorf("failed to create okteto client: %w", err)

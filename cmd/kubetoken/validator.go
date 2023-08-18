@@ -18,28 +18,26 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
-	"sync"
 	"time"
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
-	authenticationv1 "k8s.io/api/authentication/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-const (
-	tokenRequestKind = "TokenRequest"
-)
-
 var (
-	errEmptyNamespace           = errors.New("namespace cannot be empty")
-	errEmptyContext             = errors.New("context name cannot be empty")
-	errTokenRequestNotSupported = errors.New("kubernetes cluster does not support TokenRequest")
+	errEmptyNamespace = errors.New("namespace cannot be empty")
+	errEmptyContext   = errors.New("context name cannot be empty")
 
 	valdationTimeout = 3 * time.Second
 )
+
+type k8sClientProvider interface {
+	Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
+}
 
 // validator is the interface that wraps the Validate method.
 type validator interface {
@@ -50,7 +48,7 @@ type preReqCfg struct {
 	ctxName string
 	ns      string
 
-	k8sClientProvider    okteto.K8sClientProvider
+	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider types.OktetoClientProvider
 }
 
@@ -68,7 +66,7 @@ func withNamespace(ns string) option {
 	}
 }
 
-func withK8sClientProvider(k8sClientProvider okteto.K8sClientProvider) option {
+func withK8sClientProvider(k8sClientProvider k8sClientProvider) option {
 	return func(cfg *preReqCfg) {
 		cfg.k8sClientProvider = k8sClientProvider
 	}
@@ -92,7 +90,7 @@ type preReqValidator struct {
 	ctxName string
 	ns      string
 
-	k8sClientProvider    okteto.K8sClientProvider
+	k8sClientProvider    k8sClientProvider
 	oktetoClientProvider types.OktetoClientProvider
 }
 
@@ -122,31 +120,9 @@ func (v *preReqValidator) Validate(ctx context.Context) error {
 		return fmt.Errorf("invalid context: %w", err)
 	}
 
-	var wg sync.WaitGroup
-	validators := []validator{
-		newNsValidator(v.ns, v.oktetoClientProvider),
-		newOktetoSupportValidator(ctx, v.ctxName, v.ns, v.k8sClientProvider, v.oktetoClientProvider),
-	}
-	errChan := make(chan error, len(validators))
-	for _, preReqValidator := range validators {
-		wg.Add(1)
-		go func(v validator) {
-			defer wg.Done()
-			err := v.Validate(ctx)
-			if err != nil {
-				cancel()
-			}
-			errChan <- err
-		}(preReqValidator)
-	}
-
-	wg.Wait()
-	close(errChan)
-
-	for err := range errChan {
-		if err != nil {
-			return err
-		}
+	err = newOktetoSupportValidator(ctx, v.ctxName, v.ns, v.k8sClientProvider, v.oktetoClientProvider).Validate(ctx)
+	if err != nil {
+		return fmt.Errorf("invalid okteto support: %w", err)
 	}
 	return nil
 }
@@ -155,13 +131,17 @@ func (v *preReqValidator) Validate(ctx context.Context) error {
 // that has already being added to your okteto context
 type ctxValidator struct {
 	ctxName           string
-	k8sClientProvider okteto.K8sClientProvider
+	k8sClientProvider k8sClientProvider
+	getContextStore   func() *okteto.OktetoContextStore
+	k8sCtxToOktetoURL func(ctx context.Context, k8sContext string, k8sNamespace string, clientProvider okteto.K8sClientProvider) string
 }
 
-func newCtxValidator(ctxName string, k8sClientProvider okteto.K8sClientProvider) *ctxValidator {
+func newCtxValidator(ctxName string, k8sClientProvider k8sClientProvider) *ctxValidator {
 	return &ctxValidator{
 		ctxName:           ctxName,
 		k8sClientProvider: k8sClientProvider,
+		getContextStore:   okteto.ContextStore,
+		k8sCtxToOktetoURL: okteto.K8sContextToOktetoUrl,
 	}
 }
 
@@ -189,9 +169,9 @@ func (v *ctxValidator) Validate(ctx context.Context) error {
 			return
 		}
 		if !isURL(v.ctxName) {
-			v.ctxName = okteto.K8sContextToOktetoUrl(ctx, v.ctxName, "", v.k8sClientProvider)
+			v.ctxName = v.k8sCtxToOktetoURL(ctx, v.ctxName, "", v.k8sClientProvider)
 		}
-		okCtx, exists := okteto.ContextStore().Contexts[v.ctxName]
+		okCtx, exists := v.getContextStore().Contexts[v.ctxName]
 		if !exists {
 			result <- errOktetoContextNotFound{v.ctxName}
 			return
@@ -211,185 +191,13 @@ func (v *ctxValidator) Validate(ctx context.Context) error {
 	}
 }
 
-// nsValidator validates that the namespace is valid and accessible
-type nsValidator struct {
-	ns                   string
-	nsAccessChecker      nsAccessChecker
-	previewAccessChecker previewAccessChecker
-}
-
-type errNamespaceForbidden struct {
-	ns string
-}
-
-func (e errNamespaceForbidden) Error() string {
-	return fmt.Sprintf("you don't have access to the namespace '%s'", e.ns)
-}
-
-type errPreviewForbidden struct {
-	ns string
-}
-
-func (e errPreviewForbidden) Error() string {
-	return fmt.Sprintf("you don't have access to the preview '%s'", e.ns)
-}
-
-type nsAccessChecker struct {
-	oktetoClientProvider types.OktetoClientProvider
-}
-
-func newOktetoNsAccessChecker(oktetoClientProvider types.OktetoClientProvider) nsAccessChecker {
-	return nsAccessChecker{
-		oktetoClientProvider: oktetoClientProvider,
-	}
-}
-
-func (c *nsAccessChecker) hasAccess(ctx context.Context, ns string) (bool, error) {
-	okClient, err := c.oktetoClientProvider.Provide()
-	if err != nil {
-		return false, err
-	}
-	nList, err := okClient.Namespaces().List(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	for i := range nList {
-		if nList[i].ID == ns {
-			return true, nil
-		}
-	}
-	return false, errNamespaceForbidden{ns}
-}
-
-type previewAccessChecker struct {
-	oktetoClientProvider types.OktetoClientProvider
-}
-
-func newOktetoPreviewAccessChecker(oktetoClientProvider types.OktetoClientProvider) previewAccessChecker {
-	return previewAccessChecker{
-		oktetoClientProvider: oktetoClientProvider,
-	}
-}
-
-func (c *previewAccessChecker) hasAccess(ctx context.Context, preview string) (bool, error) {
-	okClient, err := c.oktetoClientProvider.Provide()
-	if err != nil {
-		return false, err
-	}
-	previewList, err := okClient.Previews().List(ctx, []string{})
-	if err != nil {
-		return false, err
-	}
-
-	for i := range previewList {
-		if previewList[i].ID == preview {
-			return true, nil
-		}
-	}
-	return false, errPreviewForbidden{preview}
-}
-
-// newNsValidator returns a new nsValidator instance
-func newNsValidator(ns string, oktetoClientProvider types.OktetoClientProvider) *nsValidator {
-	return &nsValidator{
-		ns:                   ns,
-		nsAccessChecker:      newOktetoNsAccessChecker(oktetoClientProvider),
-		previewAccessChecker: newOktetoPreviewAccessChecker(oktetoClientProvider),
-	}
-}
-
-func (v *nsValidator) Validate(ctx context.Context) error {
-	result := make(chan error, 1)
-	go func() {
-		if v.ns == "" {
-			result <- errEmptyNamespace
-			return
-		}
-
-		hasAccess, err := v.nsAccessChecker.hasAccess(ctx, v.ns)
-		if err != nil && !errors.Is(err, errNamespaceForbidden{v.ns}) {
-			result <- err
-			return
-		}
-		if hasAccess {
-			result <- nil
-			return
-		}
-		hasAccess, err = v.previewAccessChecker.hasAccess(ctx, v.ns)
-		if err != nil && !errors.Is(err, errPreviewForbidden{v.ns}) {
-			result <- err
-			return
-		}
-		if hasAccess {
-			result <- nil
-			return
-		}
-		result <- errNamespaceForbidden{v.ns}
-	}()
-
-	select {
-	case err := <-result:
-		return err
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-type k8sTokenRequestSupportValidator struct {
-	k8sClientProvider okteto.K8sClientProvider
-	getApiConfig      func() *clientcmdapi.Config
-}
-
-func newK8sSupportValidator(k8sClientProvider okteto.K8sClientProvider) *k8sTokenRequestSupportValidator {
-	return &k8sTokenRequestSupportValidator{
-		k8sClientProvider: k8sClientProvider,
-		getApiConfig: func() *clientcmdapi.Config {
-			return okteto.Context().Cfg
-		},
-	}
-}
-
-func (v *k8sTokenRequestSupportValidator) Validate(ctx context.Context) error {
-	result := make(chan error, 1)
-	go func() {
-		c, _, err := v.k8sClientProvider.Provide(v.getApiConfig())
-		if err != nil {
-			result <- fmt.Errorf("error creating kubernetes client: %w", err)
-			return
-		}
-
-		authGroupVersion := schema.GroupVersion{Group: authenticationv1.GroupName, Version: "v1"}
-		apiResourceList, err := c.Discovery().ServerResourcesForGroupVersion(authGroupVersion.String())
-		if err != nil {
-			result <- errTokenRequestNotSupported
-			return
-		}
-
-		for _, apiResource := range apiResourceList.APIResources {
-			if apiResource.Kind == tokenRequestKind {
-				result <- nil
-				return
-			}
-		}
-		result <- errTokenRequestNotSupported
-	}()
-
-	select {
-	case err := <-result:
-		return err
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
 type oktetoSupportValidator struct {
 	ctxName              string
 	ns                   string
 	oktetoClientProvider types.OktetoClientProvider
 }
 
-func newOktetoSupportValidator(ctx context.Context, ctxName, ns string, k8sClientProvider okteto.K8sClientProvider, oktetoClientProvider types.OktetoClientProvider) *oktetoSupportValidator {
+func newOktetoSupportValidator(ctx context.Context, ctxName, ns string, k8sClientProvider k8sClientProvider, oktetoClientProvider types.OktetoClientProvider) *oktetoSupportValidator {
 	if !isURL(ctxName) {
 		ctxName = okteto.K8sContextToOktetoUrl(ctx, ctxName, "", k8sClientProvider)
 	}

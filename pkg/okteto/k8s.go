@@ -25,7 +25,6 @@ const (
 
 type K8sClientProvider interface {
 	Provide(clientApiConfig *clientcmdapi.Config) (kubernetes.Interface, *rest.Config, error)
-	GetIngressClient() (*ingresses.Client, error)
 }
 
 type K8sClient struct{}

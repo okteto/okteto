@@ -22,7 +22,6 @@ import (
 	"github.com/okteto/okteto/pkg/okteto"
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
@@ -52,15 +51,26 @@ func (f fakeOktetoClientProvider) Provide() (types.OktetoInterface, error) {
 
 func TestPreReqValidator(t *testing.T) {
 	type input struct {
-		ctxName           string
-		ns                string
-		k8sClientProvider okteto.K8sClientProvider
-		ctx               context.Context
+		ctxName              string
+		ns                   string
+		k8sClientProvider    okteto.K8sClientProvider
+		oktetoClientProvider types.OktetoClientProvider
+		ctx                  context.Context
 	}
 
 	ctx := context.Background()
 	cancelledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
+
+	okteto.CurrentStore = &okteto.OktetoContextStore{
+		Contexts: map[string]*okteto.OktetoContext{
+			"https://okteto.com": {
+				IsOkteto: true,
+			},
+			"k8s_cluster": {},
+		},
+		CurrentContext: "https://okteto.com",
+	}
 	tt := []struct {
 		name     string
 		input    input
@@ -75,21 +85,15 @@ func TestPreReqValidator(t *testing.T) {
 			expected: errEmptyContext,
 		},
 		{
-			name: "fail on namespace validation",
-			input: input{
-				ctxName: "https://okteto.com",
-				ns:      "",
-				ctx:     ctx,
-			},
-			expected: errEmptyNamespace,
-		},
-		{
 			name: "fail on okteto client validation",
 			input: input{
 				ctxName:           "https://okteto.com",
 				ns:                "test",
 				k8sClientProvider: fakeK8sClientProvider{err: assert.AnError},
-				ctx:               ctx,
+				oktetoClientProvider: fakeOktetoClientProvider{
+					err: assert.AnError,
+				},
+				ctx: ctx,
 			},
 			expected: assert.AnError,
 		},
@@ -99,6 +103,9 @@ func TestPreReqValidator(t *testing.T) {
 				ctxName: "https://okteto.com",
 				ns:      "test",
 				ctx:     cancelledCtx,
+				oktetoClientProvider: fakeOktetoClientProvider{
+					err: assert.AnError,
+				},
 			},
 			expected: context.Canceled,
 		},
@@ -108,8 +115,15 @@ func TestPreReqValidator(t *testing.T) {
 				ctxName: "https://okteto.com",
 				ns:      "test",
 				ctx:     ctx,
+				oktetoClientProvider: fakeOktetoClientProvider{
+					client: &client.FakeOktetoClient{
+						KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{
+							Token: types.KubeTokenResponse{},
+						}),
+					},
+				},
 			},
-			expected: context.Canceled,
+			expected: nil,
 		},
 	}
 	for _, tc := range tt {
@@ -118,9 +132,10 @@ func TestPreReqValidator(t *testing.T) {
 				withCtxName(tc.input.ctxName),
 				withNamespace(tc.input.ns),
 				withK8sClientProvider(tc.input.k8sClientProvider),
+				withOktetoClientProvider(tc.input.oktetoClientProvider),
 			)
-			err := v.Validate(context.Background())
-			assert.Equal(t, tc.expected, err)
+			err := v.Validate(tc.input.ctx)
+			assert.ErrorIs(t, err, tc.expected)
 		})
 	}
 }
@@ -205,208 +220,6 @@ func TestCtxValidator(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			v := newCtxValidator(tc.input.ctxName, tc.input.k8sClientProvider)
-			err := v.Validate(tc.input.ctx)
-			assert.ErrorIs(t, err, tc.expected)
-		})
-	}
-}
-
-func TestNsValidator(t *testing.T) {
-	type input struct {
-		ns           string
-		oktetoClient types.OktetoInterface
-		ctx          context.Context
-	}
-
-	ctx := context.Background()
-	cancelledCtx, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	tt := []struct {
-		name     string
-		input    input
-		expected error
-	}{
-		{
-			name: "context cancelled",
-			input: input{
-				ns: "test",
-				oktetoClient: &client.FakeOktetoClient{
-					Namespace: client.NewFakeNamespaceClient([]types.Namespace{}, nil),
-					Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
-				},
-				ctx: cancelledCtx,
-			},
-			expected: context.Canceled,
-		},
-		{
-			name: "ns Name is empty",
-			input: input{
-				ns:  "",
-				ctx: ctx,
-			},
-			expected: errEmptyNamespace,
-		},
-		{
-			name: "ns not found",
-			input: input{
-				ns: "test",
-				oktetoClient: &client.FakeOktetoClient{
-					Namespace: client.NewFakeNamespaceClient([]types.Namespace{}, nil),
-					Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
-				},
-				ctx: ctx,
-			},
-			expected: errNamespaceForbidden{ns: "test"},
-		},
-		{
-			name: "error retrieving ns",
-			input: input{
-				ns: "test",
-				oktetoClient: &client.FakeOktetoClient{
-					Namespace: client.NewFakeNamespaceClient([]types.Namespace{}, assert.AnError),
-					Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
-				},
-				ctx: ctx,
-			},
-			expected: assert.AnError,
-		},
-		{
-			name: "error retrieving preview",
-			input: input{
-				ns: "test",
-				oktetoClient: &client.FakeOktetoClient{
-					Namespace: client.NewFakeNamespaceClient([]types.Namespace{}, nil),
-					Preview: client.NewFakePreviewClient(&client.FakePreviewResponse{
-						ErrList: assert.AnError,
-					}),
-				},
-				ctx: ctx,
-			},
-			expected: assert.AnError,
-		},
-		{
-			name: "success ns is a namespace",
-			input: input{
-				ns: "test",
-				oktetoClient: &client.FakeOktetoClient{
-					Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-					Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
-				},
-				ctx: ctx,
-			},
-			expected: nil,
-		},
-		{
-			name: "success - ns is a preview",
-			input: input{
-				ns: "test",
-				oktetoClient: &client.FakeOktetoClient{
-					Namespace: client.NewFakeNamespaceClient([]types.Namespace{}, nil),
-					Preview: client.NewFakePreviewClient(&client.FakePreviewResponse{
-						PreviewList: []types.Preview{{ID: "test"}},
-					}),
-				},
-				ctx: ctx,
-			},
-			expected: nil,
-		},
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			v := newNsValidator(tc.input.ns, fakeOktetoClientProvider{tc.input.oktetoClient, nil})
-			err := v.Validate(tc.input.ctx)
-			assert.ErrorIs(t, err, tc.expected)
-		})
-	}
-}
-
-func TestK8sTokenRequestValidator(t *testing.T) {
-	type input struct {
-		ctx         context.Context
-		k8sClient   kubernetes.Interface
-		providerErr error
-	}
-
-	ctx := context.Background()
-	cancelledCtx, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	fakeK8sClientWithTokenRequest := fake.NewSimpleClientset()
-	fakeK8sClientWithTokenRequest.Resources = []*metav1.APIResourceList{
-		{
-			GroupVersion: "authentication.k8s.io/v1",
-			APIResources: []metav1.APIResource{
-				{
-					Kind: "TokenRequest",
-				},
-			},
-		},
-	}
-	fakeK8sClientWithoutTokenRequest := fake.NewSimpleClientset()
-	fakeK8sClientWithoutTokenRequest.Resources = []*metav1.APIResourceList{
-		{
-			GroupVersion: "authentication.k8s.io/v1",
-			APIResources: []metav1.APIResource{},
-		},
-	}
-
-	tt := []struct {
-		name     string
-		input    input
-		expected error
-	}{
-		{
-			name: "context cancelled",
-			input: input{
-				ctx:         cancelledCtx,
-				providerErr: assert.AnError,
-			},
-			expected: context.Canceled,
-		},
-		{
-			name: "error provider",
-			input: input{
-				ctx:         ctx,
-				providerErr: assert.AnError,
-			},
-			expected: assert.AnError,
-		},
-		{
-			name: "not have tokenrequest",
-			input: input{
-				ctx:       ctx,
-				k8sClient: fake.NewSimpleClientset(),
-			},
-			expected: errTokenRequestNotSupported,
-		},
-		{
-			name: "k8s doesn't support tokenrequest",
-			input: input{
-				ctx:       ctx,
-				k8sClient: fakeK8sClientWithoutTokenRequest,
-			},
-			expected: errTokenRequestNotSupported,
-		},
-		{
-			name: "success",
-			input: input{
-				ctx:       ctx,
-				k8sClient: fakeK8sClientWithTokenRequest,
-			},
-			expected: nil,
-		},
-	}
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			fakeK8sClientProvider := fakeK8sClientProvider{
-				client: tc.input.k8sClient,
-				err:    tc.input.providerErr,
-			}
-			v := newK8sSupportValidator(fakeK8sClientProvider)
-			v.getApiConfig = func() *clientcmdapi.Config {
-				return &clientcmdapi.Config{}
-			}
 			err := v.Validate(tc.input.ctx)
 			assert.ErrorIs(t, err, tc.expected)
 		})
