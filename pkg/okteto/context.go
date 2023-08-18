@@ -194,11 +194,9 @@ func K8sContextToOktetoUrl(ctx context.Context, k8sContext, k8sNamespace string,
 		cfgK8sNamespace, exists := cfg.Contexts[k8sContext]
 		if exists {
 			k8sNamespace = cfgK8sNamespace.Namespace
+		} else {
+			return k8sContext
 		}
-	}
-
-	if k8sNamespace == "" {
-		return k8sContext
 	}
 
 	n, err := c.CoreV1().Namespaces().Get(ctx, k8sNamespace, metav1.GetOptions{})
