@@ -45,7 +45,7 @@ type fakeOktetoClientProvider struct {
 	err    error
 }
 
-func (f fakeOktetoClientProvider) Provide() (types.OktetoInterface, error) {
+func (f fakeOktetoClientProvider) Provide(...okteto.Option) (types.OktetoInterface, error) {
 	return f.client, f.err
 }
 
@@ -54,7 +54,7 @@ func TestPreReqValidator(t *testing.T) {
 		ctxName              string
 		ns                   string
 		k8sClientProvider    okteto.K8sClientProvider
-		oktetoClientProvider types.OktetoClientProvider
+		oktetoClientProvider oktetoClientProvider
 		ctx                  context.Context
 	}
 

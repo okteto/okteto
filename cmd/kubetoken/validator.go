@@ -22,7 +22,6 @@ import (
 
 	oktetoLog "github.com/okteto/okteto/pkg/log"
 	"github.com/okteto/okteto/pkg/okteto"
-	"github.com/okteto/okteto/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
@@ -32,7 +31,7 @@ var (
 	errEmptyNamespace = errors.New("namespace cannot be empty")
 	errEmptyContext   = errors.New("context name cannot be empty")
 
-	valdationTimeout = 3 * time.Second
+	valdationTimeout = 30000 * time.Second
 )
 
 type k8sClientProvider interface {
@@ -49,7 +48,7 @@ type preReqCfg struct {
 	ns      string
 
 	k8sClientProvider    k8sClientProvider
-	oktetoClientProvider types.OktetoClientProvider
+	oktetoClientProvider oktetoClientProvider
 }
 
 type option func(*preReqCfg)
@@ -72,7 +71,7 @@ func withK8sClientProvider(k8sClientProvider k8sClientProvider) option {
 	}
 }
 
-func withOktetoClientProvider(oktetoClientProvider types.OktetoClientProvider) option {
+func withOktetoClientProvider(oktetoClientProvider oktetoClientProvider) option {
 	return func(cfg *preReqCfg) {
 		cfg.oktetoClientProvider = oktetoClientProvider
 	}
@@ -91,7 +90,7 @@ type preReqValidator struct {
 	ns      string
 
 	k8sClientProvider    k8sClientProvider
-	oktetoClientProvider types.OktetoClientProvider
+	oktetoClientProvider oktetoClientProvider
 }
 
 // newPreReqValidator returns a new preReqValidator
@@ -195,10 +194,10 @@ func (v *ctxValidator) Validate(ctx context.Context) error {
 type oktetoSupportValidator struct {
 	ctxName              string
 	ns                   string
-	oktetoClientProvider types.OktetoClientProvider
+	oktetoClientProvider oktetoClientProvider
 }
 
-func newOktetoSupportValidator(ctx context.Context, ctxName, ns string, k8sClientProvider k8sClientProvider, oktetoClientProvider types.OktetoClientProvider) *oktetoSupportValidator {
+func newOktetoSupportValidator(ctx context.Context, ctxName, ns string, k8sClientProvider k8sClientProvider, oktetoClientProvider oktetoClientProvider) *oktetoSupportValidator {
 	if !isURL(ctxName) {
 		ctxName = okteto.K8sContextToOktetoUrl(ctx, ctxName, "", k8sClientProvider)
 	}

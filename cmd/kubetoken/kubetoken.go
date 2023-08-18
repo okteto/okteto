@@ -31,6 +31,11 @@ type Serializer struct {
 	KubeToken types.KubeTokenResponse
 }
 
+// oktetoClientProvider provides an okteto client ready to use or fail
+type oktetoClientProvider interface {
+	Provide(...okteto.Option) (types.OktetoInterface, error)
+}
+
 func (k *Serializer) ToJson() (string, error) {
 	bytes, err := json.MarshalIndent(k.KubeToken, "", "  ")
 	if err != nil {
