@@ -90,7 +90,7 @@ const (
 	// StackEndpointNameLabel indicates the name of the endpoint an object belongs to
 	StackEndpointNameLabel = "stack.okteto.com/endpoint"
 
-	// StackIngressAutoGenerateHost generates a ingress host for
+	// OktetoIngressAutoGenerateHost generates a ingress host for
 	OktetoIngressAutoGenerateHost = "dev.okteto.com/generate-host"
 
 	// OktetoAutoIngressAnnotation indicates an ingress must be created for a service
@@ -200,7 +200,7 @@ const (
 	// SyncthingVersionEnvVar defines the syncthing version okteto should use
 	SyncthingVersionEnvVar = "OKTETO_SYNCTHING_VERSION"
 
-	// OktetoSkipContextTest if set skips the context test
+	// OktetoSkipContextTestEnvVar if set skips the context test
 	OktetoSkipContextTestEnvVar = "OKTETO_SKIP_CONTEXT_TEST"
 
 	// OktetoAutoDeployEnvVar if set the application will be deployed while running okteto up
@@ -237,10 +237,10 @@ const (
 	// GithubRepositoryEnvVar defines the repository to be used
 	GithubRepositoryEnvVar = "GITHUB_REPOSITORY"
 
-	// GithubRepositoryEnvVar defines the branch to be used
+	// GithubRefEnvVar defines the branch to be used
 	GithubRefEnvVar = "GITHUB_REF"
 
-	// GithubRepositoryEnvVar defines the server to be used
+	// GithubServerURLEnvVar defines the server to be used
 	GithubServerURLEnvVar = "GITHUB_SERVER_URL"
 
 	// ComposeFileEnvVar defines the compose files to use

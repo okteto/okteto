@@ -50,12 +50,12 @@ func getKubetokenURL(baseURL, namespace string) (*url.URL, error) {
 }
 
 func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (types.KubeTokenResponse, error) {
-	url, err := getKubetokenURL(baseURL, namespace)
+	endpoint, err := getKubetokenURL(baseURL, namespace)
 	if err != nil {
 		return types.KubeTokenResponse{}, err
 	}
 
-	resp, err := c.httpClient.Get(url.String())
+	resp, err := c.httpClient.Get(endpoint.String())
 	if err != nil {
 		return types.KubeTokenResponse{}, fmt.Errorf("GetKubeToken %w: %w", errRequest, err)
 	}
@@ -83,18 +83,14 @@ func (c *kubeTokenClient) GetKubeToken(baseURL, namespace string) (types.KubeTok
 }
 
 func (c *kubeTokenClient) CheckService(baseURL, namespace string) error {
-	url, err := getKubetokenURL(baseURL, namespace)
+	endpoint, err := getKubetokenURL(baseURL, namespace)
 	if err != nil {
 		return err
 	}
 
-	resp, err := c.httpClient.Head(url.String())
+	resp, err := c.httpClient.Head(endpoint.String())
 	if err != nil {
 		return fmt.Errorf("CheckService %w: %w", errRequest, err)
-	}
-
-	if resp.StatusCode == http.StatusUnauthorized {
-		return fmt.Errorf("GetKubeToken %w", errUnauthorized)
 	}
 
 	if resp.StatusCode != http.StatusOK {

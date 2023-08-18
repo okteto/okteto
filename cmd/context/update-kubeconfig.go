@@ -16,6 +16,7 @@ package context
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 
 	"github.com/okteto/okteto/cmd/utils"
 	"github.com/okteto/okteto/pkg/config"
@@ -25,6 +26,15 @@ import (
 	"github.com/okteto/okteto/pkg/types"
 	"github.com/spf13/cobra"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+)
+
+const (
+	// oktetoUseStaticKubetokenEnvVar is used to opt in to use static kubetoken
+	oktetoUseStaticKubetokenEnvVar = "OKTETO_USE_STATIC_KUBETOKEN"
+)
+
+var (
+	usingStaticKubetokenWarningMessage = fmt.Sprintf("Using static Kubernetes token due to env var: '%s'. This feature will be removed in the future. We recommend using a dynamic kubernetes token.", oktetoUseStaticKubetokenEnvVar)
 )
 
 // UpdateKubeconfigCMD all contexts managed by okteto
@@ -56,16 +66,22 @@ func ExecuteUpdateKubeconfig(okCtx *okteto.OktetoContext, kubeconfigPaths []stri
 		if err := updateCfgClusterCertificate(contextName, okCtx); err != nil {
 			return err
 		}
-	}
 
-	okClient, err := okClientProvider.Provide()
-	if err != nil {
-		return err
-	}
-	if err := okClient.Kubetoken().CheckService(okCtx.Name, okCtx.Namespace); err == nil {
-		updateCfgAuthInfoWithExec(okCtx)
-	} else {
-		oktetoLog.Debug("Error checking kubetoken service: %w", err)
+		okClient, err := okClientProvider.Provide()
+		if err != nil {
+			return err
+		}
+
+		if utils.LoadBoolean(oktetoUseStaticKubetokenEnvVar) {
+			removeExecFromCfg(okCtx)
+			oktetoLog.Warning(usingStaticKubetokenWarningMessage)
+		} else {
+			if err := okClient.Kubetoken().CheckService(okCtx.Name, okCtx.Namespace); err == nil {
+				updateCfgAuthInfoWithExec(okCtx)
+			} else {
+				oktetoLog.Debug("Error checking kubetoken service: %w", err)
+			}
+		}
 	}
 
 	if err := kubeconfig.Write(okCtx.Cfg, kubeconfigPaths[0]); err != nil {
@@ -108,4 +124,12 @@ func updateCfgAuthInfoWithExec(okCtx *okteto.OktetoContext) {
 		InteractiveMode:    "Never",
 		ProvideClusterInfo: true,
 	}
+}
+
+func removeExecFromCfg(okCtx *okteto.OktetoContext) {
+	if okCtx == nil || okCtx.UserID == "" || okCtx.Cfg == nil || okCtx.Cfg.AuthInfos == nil || okCtx.Cfg.AuthInfos[okCtx.UserID] == nil {
+		return
+	}
+
+	okCtx.Cfg.AuthInfos[okCtx.UserID].Exec = nil
 }

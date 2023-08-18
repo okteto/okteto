@@ -10,6 +10,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package constants
 
 const (
@@ -56,10 +57,10 @@ const (
 	// OktetoDeployRemote defines if deployment is executed remotely
 	OktetoDeployRemote = "OKTETO_DEPLOY_REMOTE"
 
-	// OktetoTlsCertBase64 defines the TLS certificate in base64 for --remote
+	// OktetoTlsCertBase64EnvVar defines the TLS certificate in base64 for --remote
 	OktetoTlsCertBase64EnvVar = "OKTETO_TLS_CERT_BASE64"
 
-	// OktetoInternalServerName defines the internal server name for --remote
+	// OktetoInternalServerNameEnvVar defines the internal server name for --remote
 	OktetoInternalServerNameEnvVar = "INTERNAL_SERVER_NAME"
 
 	// OktetoInvalidateCacheEnvVar defines a ramdom number to invalidate the "--remote" cache
@@ -127,6 +128,7 @@ const (
 
 	//OktetoConfigMapVariablesField represents the field name related to variables seetion in config map
 	OktetoConfigMapVariablesField = "variables"
+
 	//OktetoDependencyEnvsKey the key on the conqfig map that will store OKTETO_ENV values
 	OktetoDependencyEnvsKey = "dependencyEnvs"
 )
