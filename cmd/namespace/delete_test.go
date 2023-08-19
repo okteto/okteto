@@ -25,7 +25,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
-
 )
 
 func Test_deleteNamespace(t *testing.T) {
@@ -64,9 +63,10 @@ func Test_deleteNamespace(t *testing.T) {
 			initialNamespacesAtOktetoClient: initNamespaces,
 			finalNs:                         personalNamespace,
 			fakeOkClient: &client.FakeOktetoClient{
-				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
-				Users:        client.NewFakeUsersClient(usr),
-				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+				Namespace:       client.NewFakeNamespaceClient(initNamespaces, nil),
+				Users:           client.NewFakeUsersClient(usr),
+				StreamClient:    client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
 		},
@@ -76,9 +76,10 @@ func Test_deleteNamespace(t *testing.T) {
 			initialNamespacesAtOktetoClient: initNamespaces,
 			finalNs:                         currentNamespace,
 			fakeOkClient: &client.FakeOktetoClient{
-				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
-				Users:        client.NewFakeUsersClient(usr),
-				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+				Namespace:       client.NewFakeNamespaceClient(initNamespaces, nil),
+				Users:           client.NewFakeUsersClient(usr),
+				StreamClient:    client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
 		},
@@ -89,9 +90,10 @@ func Test_deleteNamespace(t *testing.T) {
 			finalNs:                         currentNamespace,
 			err:                             errFailedDeleteNamespace,
 			fakeOkClient: &client.FakeOktetoClient{
-				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
-				Users:        client.NewFakeUsersClient(usr),
-				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+				Namespace:       client.NewFakeNamespaceClient(initNamespaces, nil),
+				Users:           client.NewFakeUsersClient(usr),
+				StreamClient:    client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
 		},
@@ -101,9 +103,10 @@ func Test_deleteNamespace(t *testing.T) {
 			initialNamespacesAtOktetoClient: initNamespaces,
 			finalNs:                         currentNamespace,
 			fakeOkClient: &client.FakeOktetoClient{
-				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
-				Users:        client.NewFakeUsersClient(usr),
-				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+				Namespace:       client.NewFakeNamespaceClient(initNamespaces, nil),
+				Users:           client.NewFakeUsersClient(usr),
+				StreamClient:    client.NewFakeStreamClient(&client.FakeStreamResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			fakeK8sClient: fake.NewSimpleClientset(&v1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{
@@ -121,9 +124,10 @@ func Test_deleteNamespace(t *testing.T) {
 			initialNamespacesAtOktetoClient: initNamespaces,
 			finalNs:                         personalNamespace,
 			fakeOkClient: &client.FakeOktetoClient{
-				Namespace:    client.NewFakeNamespaceClient(initNamespaces, nil),
-				Users:        client.NewFakeUsersClient(usr),
-				StreamClient: client.NewFakeStreamClient(&client.FakeStreamResponse{StreamErr: assert.AnError}),
+				Namespace:       client.NewFakeNamespaceClient(initNamespaces, nil),
+				Users:           client.NewFakeUsersClient(usr),
+				StreamClient:    client.NewFakeStreamClient(&client.FakeStreamResponse{StreamErr: assert.AnError}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			},
 			fakeK8sClient: fake.NewSimpleClientset(),
 		},

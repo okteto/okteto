@@ -342,6 +342,7 @@ func (*ContextConfigWriter) Write() error {
 	return nil
 }
 
+// AddOktetoCredentialsToCfg populates the provided kubernetes config using the provided credentials obtained from the Okteto API
 func AddOktetoCredentialsToCfg(cfg *clientcmdapi.Config, cred *types.Credential, namespace, userName, oktetoURL string) {
 	// If the context is being initialized within the execution of `okteto deploy` deploy command it should not
 	// write the Okteto credentials into the kubeconfig. It would overwrite the proxy settings

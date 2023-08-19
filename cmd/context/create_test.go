@@ -17,7 +17,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	authenticationv1 "k8s.io/api/authentication/v1"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -316,9 +318,10 @@ func Test_createContext(t *testing.T) {
 			defer os.Remove(file)
 
 			fakeOktetoClient := &client.FakeOktetoClient{
-				Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-				Users:     client.NewFakeUsersClient(tt.user),
-				Preview:   client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
+				Users:           client.NewFakeUsersClient(tt.user),
+				Preview:         client.NewFakePreviewClient(&client.FakePreviewResponse{}),
+				KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 			}
 
 			ctxController := newFakeContextCommand(fakeOktetoClient, tt.user, tt.fakeObjects)
@@ -342,8 +345,9 @@ func TestAutoAuthWhenNotValidTokenOnlyWhenOktetoContextIsRun(t *testing.T) {
 	}
 
 	fakeOktetoClient := &client.FakeOktetoClient{
-		Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-		Users:     client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+		Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
+		Users:           client.NewFakeUsersClient(user, fmt.Errorf("unauthorized. Please run 'okteto context url' and try again")),
+		KubetokenClient: client.NewFakeKubetokenClient(client.FakeKubetokenResponse{}),
 	}
 
 	ctxController := newFakeContextCommand(fakeOktetoClient, user, nil)
@@ -479,9 +483,6 @@ func TestCheckAccessToNamespace(t *testing.T) {
 
 func TestGetUserContext(t *testing.T) {
 	ctx := context.Background()
-	user := &types.User{
-		Token: "test",
-	}
 
 	okteto.CurrentStore = &okteto.OktetoContextStore{
 		CurrentContext: "test",
@@ -502,9 +503,11 @@ func TestGetUserContext(t *testing.T) {
 		err error
 	}
 	tt := []struct {
-		name   string
-		input  input
-		output output
+		name                  string
+		input                 input
+		output                output
+		kubetokenMockResponse client.FakeKubetokenResponse
+		useStaticToken        bool
 	}{
 		{
 			name: "existing namespace",
@@ -515,6 +518,9 @@ func TestGetUserContext(t *testing.T) {
 				uc: &types.UserContext{
 					User: types.User{
 						Token: "test",
+					},
+					Credentials: types.Credential{
+						Token: "static",
 					},
 				},
 				err: nil,
@@ -559,17 +565,151 @@ func TestGetUserContext(t *testing.T) {
 					User: types.User{
 						Token: "test",
 					},
+					Credentials: types.Credential{
+						Token: "static",
+					},
 				},
 				err: nil,
+			},
+		},
+		{
+			name: "two retries, then success",
+			input: input{
+				ns: "test",
+				userErr: []error{
+					fmt.Errorf("first error"),
+					fmt.Errorf("second error"),
+				},
+			},
+			output: output{
+				uc: &types.UserContext{
+					User: types.User{
+						Token: "test",
+					},
+					Credentials: types.Credential{
+						Token: "static",
+					},
+				},
+				err: nil,
+			},
+		},
+		{
+			name: "max retries exceeded",
+			input: input{
+				ns: "test",
+				userErr: []error{
+					assert.AnError,
+					assert.AnError,
+					assert.AnError,
+					assert.AnError,
+				},
+			},
+			output: output{
+				uc:  nil,
+				err: oktetoErrors.ErrInternalServerError,
+			},
+		},
+		{
+			name: "dynamic kubetoken not available, falling back to static token",
+			input: input{
+				ns: "test",
+			},
+			output: output{
+				uc: &types.UserContext{
+					User: types.User{
+						Token: "test",
+					},
+					Credentials: types.Credential{
+						Token: "static",
+					},
+				},
+				err: nil,
+			},
+			kubetokenMockResponse: client.FakeKubetokenResponse{
+				Token: types.KubeTokenResponse{
+					TokenRequest: authenticationv1.TokenRequest{
+						Status: authenticationv1.TokenRequestStatus{
+							Token: "",
+						},
+					},
+				},
+				Err: assert.AnError,
+			},
+		},
+		{
+			name: "dynamic kubetoken returned successfully and takes priority over static token",
+			input: input{
+				ns: "test",
+			},
+			output: output{
+				uc: &types.UserContext{
+					User: types.User{
+						Token: "test",
+					},
+					Credentials: types.Credential{
+						Token: "dynamic-token",
+					},
+				},
+				err: nil,
+			},
+			kubetokenMockResponse: client.FakeKubetokenResponse{
+				Token: types.KubeTokenResponse{
+					TokenRequest: authenticationv1.TokenRequest{
+						Status: authenticationv1.TokenRequestStatus{
+							Token: "dynamic-token",
+						},
+					},
+				},
+				Err: nil,
+			},
+		},
+		{
+			name: "static kubetoken is returned when using feature flag",
+			input: input{
+				ns: "test",
+			},
+			output: output{
+				uc: &types.UserContext{
+					User: types.User{
+						Token: "test",
+					},
+					Credentials: types.Credential{
+						Token: "static",
+					},
+				},
+				err: nil,
+			},
+			useStaticToken: true,
+			kubetokenMockResponse: client.FakeKubetokenResponse{
+				Token: types.KubeTokenResponse{
+					TokenRequest: authenticationv1.TokenRequest{
+						Status: authenticationv1.TokenRequestStatus{
+							Token: "dynamic-token",
+						},
+					},
+				},
+				Err: nil,
 			},
 		},
 	}
 	for _, tc := range tt {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			userCtx := &types.UserContext{
+				User: types.User{
+					Token: "test",
+				},
+				Credentials: types.Credential{
+					Token: "static",
+				},
+			}
+
+			t.Setenv(oktetoUseStaticKubetokenEnvVar, strconv.FormatBool(tc.useStaticToken))
+
 			fakeOktetoClient := &client.FakeOktetoClient{
-				Namespace: client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
-				Users:     client.NewFakeUsersClient(user, tc.input.userErr...),
+				Namespace:       client.NewFakeNamespaceClient([]types.Namespace{{ID: "test"}}, nil),
+				Users:           client.NewFakeUsersClientWithContext(userCtx, tc.input.userErr...),
+				KubetokenClient: client.NewFakeKubetokenClient(tc.kubetokenMockResponse),
 			}
 			cmd := ContextCommand{
 				OktetoClientProvider: client.NewFakeOktetoClientProvider(fakeOktetoClient),
@@ -578,7 +718,6 @@ func TestGetUserContext(t *testing.T) {
 			uc, err := cmd.getUserContext(ctx, tc.input.ns)
 			assert.ErrorIs(t, tc.output.err, err)
 			assert.Equal(t, tc.output.uc, uc)
-
 		})
 	}
 }

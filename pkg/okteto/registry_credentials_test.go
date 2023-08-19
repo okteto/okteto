@@ -23,7 +23,6 @@ func TestExternalRegistryCredentialsOK(t *testing.T) {
 				Password: "pass",
 			}, nil
 		}
-
 	}
 
 	tt := []struct {
@@ -140,4 +139,46 @@ func TestExternalRegistryCredentialsOK(t *testing.T) {
 
 	}
 
+}
+
+func TestExternalRegistryCredentialsOKWithCache(t *testing.T) {
+	var calls int
+
+	r := externalRegistryCredentialsReader{
+		isOkteto: true,
+		cache:    &registryCache{},
+		getter: func(ctx context.Context, host string) (dockertypes.AuthConfig, error) {
+			calls++
+			require.Equal(t, "host.com", host)
+			return dockertypes.AuthConfig{
+				Username: "user",
+				Password: "pass",
+			}, nil
+		},
+	}
+
+	for i := 0; i < 20; i++ {
+		user, pass, err := r.read(context.Background(), "host.com")
+		require.NoError(t, err)
+		require.Equal(t, "user", user)
+		require.Equal(t, "pass", pass)
+	}
+
+	// We made 20 calls to r.read and getter should've only been executed once
+	require.Equal(t, 1, calls)
+}
+
+func TestRegistryCache(t *testing.T) {
+	rc := registryCache{}
+	user, pass, ok := rc.Get("host.com")
+	require.Equal(t, "", user)
+	require.Equal(t, "", pass)
+	require.False(t, ok)
+
+	rc.Set("thebiglebowski.com", "thedude", "elduderino")
+
+	user, pass, ok = rc.Get("thebiglebowski.com")
+	require.Equal(t, "thedude", user)
+	require.Equal(t, "elduderino", pass)
+	require.True(t, ok)
 }

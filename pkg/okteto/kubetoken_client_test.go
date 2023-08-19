@@ -80,7 +80,7 @@ func Test_CheckService(t *testing.T) {
 			httpFakeHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusUnauthorized)
 			}),
-			expectedErr: errUnauthorized,
+			expectedErr: errKubetokenNotAvailable,
 		},
 		{
 			name: "error service not available",
